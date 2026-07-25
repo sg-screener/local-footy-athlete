@@ -60,7 +60,6 @@ function profile(
     teamTrainingDaysPerWeek: phase === 'Off-season' ? 0 : 2,
     teamTrainingDays: phase === 'Off-season' ? [] : ['Tuesday', 'Thursday'],
     teamTrainingIntensity: 'Moderate',
-    sessionDurationMinutes: 60,
     trainingLocation: 'Commercial gym',
     equipment: ['Barbell', 'Dumbbells', 'Bench', 'Cable machine'],
     experienceLevel: '2-5 years',

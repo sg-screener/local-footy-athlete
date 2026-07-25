@@ -500,7 +500,6 @@ interface AthleteProfile {
   teamTrainingIntensity?: string;
   trainingDaysPerWeek?: number;
   preferredTrainingDays?: string[];
-  sessionDurationMinutes?: number;
   trainingLocation?: string;
   equipment?: string[];
   resolvedEquipmentTags?: string[];
@@ -1247,7 +1246,6 @@ function buildAthleteProfileContext(profile: AthleteProfile): string {
   if (profile.teamTrainingIntensity) lines.push(`  Intensity: ${profile.teamTrainingIntensity}`);
   if (profile.trainingDaysPerWeek) lines.push(`- Own training days: ${profile.trainingDaysPerWeek} days/week`);
   if (profile.preferredTrainingDays?.length) lines.push(`  Preferred days: ${profile.preferredTrainingDays.join(", ")}`);
-  if (profile.sessionDurationMinutes) lines.push(`- Session duration: ${profile.sessionDurationMinutes} minutes`);
   if (profile.trainingLocation) lines.push(`- Training location: ${profile.trainingLocation}`);
   if (profile.equipment?.length) lines.push(`- Equipment: ${profile.equipment.join(", ")}`);
   if (profile.resolvedEquipmentTags?.length) {
@@ -1307,7 +1305,6 @@ function buildLeanAthleteContext(profile: AthleteProfile): string {
   if (profile.gameDay) lines.push(`Game day: ${profile.gameDay}`);
   if (profile.teamTrainingDays?.length) lines.push(`Team training: ${profile.teamTrainingDays.join(', ')}`);
   if (profile.preferredTrainingDays?.length) lines.push(`Gym days: ${profile.preferredTrainingDays.join(', ')}`);
-  if (profile.sessionDurationMinutes) lines.push(`Session length: ${profile.sessionDurationMinutes}min`);
   if (profile.experienceLevel) {
     lines.push(`Experience: ${profile.experienceLevel}`);
     if (profile.experienceLevel === '2-5 years' || profile.experienceLevel === '5+ years') {

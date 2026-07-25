@@ -140,7 +140,6 @@ section('[6] program generation diagnostics include role bias');
     teamTrainingDays: [],
     trainingDaysPerWeek: 4,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-    sessionDurationMinutes: 60,
     trainingLocation: 'Commercial gym',
     equipment: ['barbell'],
     experienceLevel: '2-5 years',

@@ -363,10 +363,12 @@ export const LITERAL_EXEMPTION_KINDS: Record<LiteralExemptionKind, LiteralExempt
   },
   dead_mock_fixture: {
     ruling:
-      'Mock/demo data inside a screen unreachable from App.tsx. Deleted by the '
-      + 'Phase 1.6 purge, which makes this exemption self-liquidating: once the '
-      + 'file is gone the sweep stops finding the literal and the staleness '
-      + 'assertion forces the exemption out too.',
+      'Mock/demo data inside a screen unreachable from App.tsx. UNUSED as of the '
+      + 'Phase 1.6 purge (2026-07-25), which deleted every such screen — it held '
+      + '"Leg Curl" (a name Sam RETIRED) and "Squat" until then. The kind stays '
+      + 'declared because the staleness assertion is what emptied it: the purge '
+      + 'removed the files, the sweep stopped finding the literals, and the gate '
+      + 'forced the exemptions out. That is the mechanism working, not dead code.',
   },
   awaiting_sam_ruling: {
     ruling:
@@ -385,14 +387,7 @@ export const LITERAL_EXEMPTION_KINDS: Record<LiteralExemptionKind, LiteralExempt
  * real gap cannot be parked and forgotten.
  */
 export const LITERAL_EXEMPTIONS: Record<string, LiteralExemptionKind> = {
-  // ── Mock data in unreachable screens (Phase 1.6 purge deletes both files) ──
-  // 'Leg Curl' is a name Sam RETIRED, still sitting in a journal fixture — the
-  // clearest possible proof that the vocabulary switch alone could not see code.
-  'Leg Curl': 'dead_mock_fixture',
-  'Squat': 'dead_mock_fixture',
-
   // ── Session / block labels ──
-  'Upper Body Strength': 'session_label',
   'Conditioning': 'session_label',
 
   // ── Recovery flows: one card standing for a template ──

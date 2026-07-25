@@ -271,13 +271,6 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
     });
   }
 
-  if (onboardingData.sessionDurationMinutes) {
-    trainingRows.push({
-      label: 'Session Length',
-      value: `${onboardingData.sessionDurationMinutes} min`,
-      onEdit: () => handleEdit('SessionDuration'),
-    });
-  }
 
   const physicalRows: ReviewRowData[] = [
     {

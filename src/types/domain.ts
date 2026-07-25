@@ -44,7 +44,6 @@ export type TeamTrainingIntensity = 'Light' | 'Moderate' | 'Hard' | 'Very intens
 
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
-export type SessionDuration = 30 | 45 | 60 | 75 | 90;
 
 export type SquatStrength = "I don't squat" | 'Less than bodyweight' | 'Around bodyweight' | '1.5x bodyweight' | '2x bodyweight+' | 'Not sure';
 
@@ -107,7 +106,6 @@ export interface OnboardingData {
   trainingDaysUnsure?: boolean;
   preferredTrainingDays?: DayOfWeek[];
   availabilityConstraints?: ProgramAvailabilityConstraint[];
-  sessionDurationMinutes?: SessionDuration;
   trainingLocation?: TrainingLocation;
   equipment?: string[];
   /**

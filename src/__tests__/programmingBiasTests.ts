@@ -225,7 +225,6 @@ const BASE_PROFILE: OnboardingData = {
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
   teamTrainingIntensity: 'Hard',
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['Barbell', 'Dumbbells', 'Bench', 'Cable machine'],
   experienceLevel: '2-5 years',

@@ -858,21 +858,17 @@ export function buildProgramGenerationEdgePayload(args: {
 }
 
 /**
- * `sessionDurationMinutes` is deliberately NOT required — an interim state.
+ * Fields that improve a generated program but are not required to produce one.
  *
- * `SessionDurationScreen` is registered in the navigator but no screen has ever
- * navigated to it (the flow runs PreferredTrainingDays → GymExperience), so
- * onboarding has never collected this field. Requiring an answer the flow
- * cannot collect would refuse every genuine onboarding.
- *
- * Already ruled KILLED — see PROGRAMMING_DESIGN_SESSION_2026-07-23.md §D6b:
- * the screen and this field are to be DELETED, from onboarding data and from
- * both sides of the generation contract (client + edge function), in the
- * Phase 1.6 dead-affordance/orphan sweep. Do not wire the step in. This entry
- * exists only so the completeness gate is honest until that sweep lands.
+ * `sessionDurationMinutes` used to sit here as a documented interim state: the
+ * screen was registered in the navigator but nothing ever navigated to it, so
+ * onboarding never collected the field and requiring it would have refused
+ * every genuine onboarding. Sam ruled it KILLED
+ * (PROGRAMMING_DESIGN_SESSION_2026-07-23.md D6b) and the Phase 1.6 purge
+ * (2026-07-25) deleted the screen, the type, the field and BOTH sides of the
+ * generation contract — client and edge function. Nothing expects it now.
  */
 const RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
-  'sessionDurationMinutes',
   'biggestLimitation',
   'biggestFrustration',
   'successVision',
@@ -986,7 +982,6 @@ export function buildProgramGenerationRequestDiagnostics(
         teamTrainingDays: generationProfile.teamTrainingDays ?? [],
         trainingDaysPerWeek: generationProfile.trainingDaysPerWeek ?? null,
         preferredTrainingDays: generationProfile.preferredTrainingDays ?? [],
-        sessionDurationMinutes: generationProfile.sessionDurationMinutes ?? null,
         trainingLocation: generationProfile.trainingLocation ?? null,
         equipmentCount: generationProfile.equipment?.length ?? 0,
         resolvedEquipmentTags,

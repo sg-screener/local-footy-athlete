@@ -18,7 +18,6 @@ import { TeamTrainingDurationScreen } from '../screens/onboarding/TeamTrainingDu
 import { TeamTrainingIntensityScreen } from '../screens/onboarding/TeamTrainingIntensityScreen';
 import { TrainingCommitmentScreen } from '../screens/onboarding/TrainingCommitmentScreen';
 import { PreferredTrainingDaysScreen } from '../screens/onboarding/PreferredTrainingDaysScreen';
-import { SessionDurationScreen } from '../screens/onboarding/SessionDurationScreen';
 import { GymExperienceScreen } from '../screens/onboarding/GymExperienceScreen';
 import { SquatStrengthScreen } from '../screens/onboarding/SquatStrengthScreen';
 import { BenchStrengthScreen } from '../screens/onboarding/BenchStrengthScreen';
@@ -79,7 +78,6 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="TeamTrainingIntensity" component={TeamTrainingIntensityScreen} />
       <Stack.Screen name="TrainingCommitment" component={TrainingCommitmentScreen} />
       <Stack.Screen name="PreferredTrainingDays" component={PreferredTrainingDaysScreen} />
-      <Stack.Screen name="SessionDuration" component={SessionDurationScreen} />
       <Stack.Screen name="GymExperience" component={GymExperienceScreen} />
       <Stack.Screen name="SquatStrength" component={SquatStrengthScreen} />
       <Stack.Screen name="BenchStrength" component={BenchStrengthScreen} />

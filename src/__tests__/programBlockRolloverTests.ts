@@ -75,7 +75,6 @@ const IN_SEASON_PROFILE: OnboardingData = {
   teamTrainingDays: ['Tuesday', 'Thursday'],
   teamTrainingDuration: '60-90 minutes',
   teamTrainingIntensity: 'Hard',
-  sessionDurationMinutes: '45-60 minutes',
   trainingLocation: 'Commercial gym',
   equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   sprintExposure: '2+ times per week',

@@ -77,7 +77,6 @@ export function generateSweepScenarios(): Scenario[] {
               sprintExposure: readiness.sprintExposure as any,
               recentTrainingLoad: readiness.recentTrainingLoad as any,
               injuries: [],
-              sessionDurationMinutes: 60 as any,
               trainingLocation: 'Gym' as any,
               teamTrainingDuration: '90 min' as any,
               teamTrainingIntensity: 'High' as any,

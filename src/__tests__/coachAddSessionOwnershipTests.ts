@@ -91,7 +91,6 @@ function profile(): OnboardingData {
     teamTrainingDays: ['Tuesday', 'Thursday'],
     teamTrainingDuration: '60-90 minutes',
     teamTrainingIntensity: 'Hard',
-    sessionDurationMinutes: 60,
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',

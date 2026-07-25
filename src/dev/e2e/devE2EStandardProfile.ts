@@ -16,7 +16,6 @@ export const DEV_E2E_STANDARD_PROFILE: OnboardingData = {
   teamTrainingIntensity: 'Moderate',
   trainingDaysPerWeek: 5,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipmentSelectionCompleteness: 'complete',
   equipment: [

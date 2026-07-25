@@ -161,7 +161,6 @@ const OFF_PROFILE: OnboardingData = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['Barbell', 'Dumbbells', 'Bench'],
   experienceLevel: '5+ years',

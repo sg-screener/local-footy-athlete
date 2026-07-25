@@ -50,8 +50,3 @@ verify_jwt = false
 [functions.coach-send-message]
 verify_jwt = false
 
-[functions.generate-program]
-verify_jwt = false
-
-[functions.sync-exercises]
-verify_jwt = false

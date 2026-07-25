@@ -19,8 +19,7 @@ const BASE_PROFILE = {
   trainingDaysPerWeek: 5, preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const,
   teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const,
   teamTrainingIntensity: 'Hard' as const, teamTrainingDuration: '90 minutes' as const,
-  usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const,
-  sessionDurationMinutes: 60 as const, trainingLocation: 'Commercial gym' as const, equipment: ['Full Gym'],
+  usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const, trainingLocation: 'Commercial gym' as const, equipment: ['Full Gym'],
 };
 
 function pass(spec: MetamorphicRelationSpec, passed: boolean, expected: unknown, actual: unknown): GeneratedCheckResult {

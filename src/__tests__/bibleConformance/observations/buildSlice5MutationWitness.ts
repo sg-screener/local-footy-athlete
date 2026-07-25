@@ -74,8 +74,7 @@ function plannedPatterns(args: { phase: 'In-season' | 'Off-season'; game?: 'Satu
     conditioningLevel: 'Good', sprintExposure: 'Occasionally', recentTrainingLoad: 'Very consistent', injuries: [],
     seasonPhase: args.phase, trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], usualGameDay: args.game, gameDay: args.game,
-    sessionDurationMinutes: 60, trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], usualGameDay: args.game, gameDay: args.game, trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
   }, { weekInBlock: args.week, weekNumber: args.week, miniCycleNumber: args.week, weekKind: args.week === 4 ? 'deload' : 'build' }));
   return Array.from(new Set(plan.weeklyPlan.flatMap((entry) => entry.strengthIntent?.plannedPatterns ?? []))).sort();
 }

@@ -1899,7 +1899,6 @@ export default function CoachScreen() {
               teamTrainingIntensity: onboardingData.teamTrainingIntensity,
               trainingDaysPerWeek: onboardingData.trainingDaysPerWeek,
               preferredTrainingDays: onboardingData.preferredTrainingDays,
-              sessionDurationMinutes: onboardingData.sessionDurationMinutes,
               trainingLocation: onboardingData.trainingLocation,
               equipment: onboardingData.equipment,
               resolvedEquipmentTags: resolveEquipmentAvailability(

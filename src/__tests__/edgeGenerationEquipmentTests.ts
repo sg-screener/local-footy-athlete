@@ -163,19 +163,13 @@ section('[5] local and edge equipment decisions agree');
 
 section('[6] architectural wiring guards');
 {
+  // The legacy `generate-program` edge function was DELETED by the Phase 1.6
+  // purge (2026-07-25) — confirmed dead by import graph and it still named 21
+  // exercises Sam had retired. The four assertions that pinned its request
+  // schema went with it; only the live client wiring is still a real contract.
   const clientSource = fs.readFileSync(path.resolve(__dirname, '../services/api/generateProgram.ts'), 'utf8');
-  const edgeSource = fs.readFileSync(path.resolve(__dirname, '../../supabase/functions/generate-program/index.ts'), 'utf8');
-  const sharedTypes = fs.readFileSync(path.resolve(__dirname, '../../supabase/functions/shared/types.ts'), 'utf8');
   ok('live full-generation request uses the shared payload builder',
     /const requestBody = buildProgramGenerationEdgePayload\(/.test(clientSource));
-  ok('legacy generate-program request schema accepts resolvedEquipmentTags',
-    /GenerateProgramRequest[\s\S]{0,300}resolvedEquipmentTags\?/.test(sharedTypes));
-  ok('legacy edge normalizes resolvedEquipmentTags from the request',
-    /normalizeResolvedEquipmentTags\(body\.resolvedEquipmentTags\)/.test(edgeSource));
-  ok('legacy edge passes resolved tags into exercise selection',
-    /preSelectExercisesForMiniCycle\([\s\S]{0,400}resolvedEquipmentTags/.test(edgeSource));
-  ok('legacy edge filter uses the shared canonical equipment gate',
-    /edgeExerciseRequirementsAreAvailable\(\{[\s\S]{0,250}resolvedEquipmentTags/.test(edgeSource));
 }
 
 console.log(`\nedgeGenerationEquipmentTests: ${pass} passed, ${fail} failed`);

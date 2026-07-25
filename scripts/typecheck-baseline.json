@@ -7,85 +7,41 @@
     "Every entry below is owned by a named unit. Do not clear one by adding guards at call",
     "sites - that is the pattern CLAUDE.md's escalation rule exists to prevent."
   ],
-  "_ownership": {
-    "cluster-A-temporary-source-fact-union": {
-      "errors": 23,
-      "files": [
-        "src/screens/home/HomeScreenV2.tsx",
-        "src/rules/illnessRecoveryWeekMode.ts",
-        "src/utils/programControlActions.ts",
-        "src/utils/coachTurnController.ts",
-        "src/utils/visibleReadinessState.ts",
-        "src/rules/temporarySourceFact.ts",
-        "src/utils/lighterDayTransaction.ts"
-      ],
-      "cause": "InjuryEpisodeV1 does not extend TemporarySourceFactBase, so the TemporarySourceFact union is not uniform; polymorphic reads of .factId/.scope/.effectiveFrom/.factKind fail. Silent undefined at runtime.",
-      "owner": "docs/DURABLE_ATHLETE_STATE_FACT_OWNERSHIP_REASSESSMENT_2026-07-24.md - Option B Phase 2. DO NOT FIX INLINE (CLAUDE.md escalation rule); the 23-call-site evidence is recorded in that document."
-    },
-    "cluster-B-logged-set-fields": {
-      "errors": 15,
-      "files": [
-        "src/screens/workout/WorkoutLoggerScreen.tsx",
-        "src/screens/workout/SetLoggerRow.tsx",
-        "src/services/api/workoutService.ts",
-        "src/utils/calculations.ts",
-        "src/hooks/useWorkoutLog.ts"
-      ],
-      "cause": "LoggedSet declares no actualRpe/completed but the logging code reads and writes both. The screens are NOT MOUNTED - unreachable from App.tsx - so no athlete data is affected today.",
-      "owner": "docs/JOURNAL_DESIGN_2026-07-23.md - Phase 5C build. Fix type and implementation together; do not extend these screens as if they work."
-    },
-    "cluster-C-result-narrowing": {
-      "errors": 11,
-      "note": "Was recorded as 22; \u00a77.0 of the triage shows that double-counts. The same 11 product-scope errors are re-surfaced by tsconfig.tests.json because TS checks a file's whole dependency graph. 11 is the athlete-facing number.",
-      "rootCause": "RESOLVED by TYPECHECK_BASELINE_TRIAGE \u00a77 \u2014 three distinct mechanisms, not one. No longer a spike.",
-      "mechanisms": {
-        "1-strictNullChecks-off-kills-inline-narrowing": "fixtureMutationTransaction.ts, profileProgramTransaction.ts, coachFixtureChange.ts \u2014 guards are CORRECT; strictNullChecks:false is why TS keeps the wide type. OWNER: Phase 1.6 sweep.",
-        "2-narrowing-does-not-propagate-through-a-named-boolean": "planChangeProducer.ts (two sites; opaque boolean disjuncts TS cannot map back to `kind`) and injuryEpisodeCommand.ts:190. OWNER: planChangeProducer.ts \u2192 the 41dd803 follow-up; injuryEpisodeCommand.ts \u2192 Option B Phase 2 brief (docs/DURABLE_ATHLETE_STATE_FACT_OWNERSHIP_REASSESSMENT_2026-07-24.md), same injury/coach-command ownership boundary. Mechanism itself: Phase 1.6 sweep.",
-        "3-real-missing-case-gap-currently-dormant": "weeklyCoachUpdate.ts:150 \u2014 a genuine gap, but the file is unreachable. RESOLVES BY DELETION in the approved 109-file purge (see the unreachable-product-files finding). Do not fix; delete."
-      },
-      "owner": "ASSIGNED (Sam, 2026-07-24). No UNASSIGNED entries remain in this baseline."
-    },
-    "devtools-harness": {
-      "errors": 55,
-      "cause": "Explorer / dev-E2E harness. __DEV__-gated, never ships, but device-acceptance passes run through it - a broken harness silently invalidates the next pass.",
-      "owner": "Own scope (tsconfig.devtools.json) so it is checked and ratcheted rather than ignored, and reported separately from product health."
-    },
-    "test-harness": {
-      "errors": 390,
-      "cause": "Stale fixtures - same representation drift as cluster A, visible in mocks. Tests run via sucrase-node (transpile-only), so these block nothing today, but a test CAN assert against an always-undefined property and pass.",
-      "owner": "Opportunistic. Revisit coachCommandRouterTests.ts alongside cluster A."
-    }
-  },
-  "generatedAt": "2026-07-24",
+  "_ownership": [
+    "cluster-A-temporary-source-fact-union",
+    "cluster-B-logged-set-fields",
+    "cluster-C-result-narrowing",
+    "devtools-harness",
+    "test-harness",
+    "RESOLVED BY DELETION \u2014 Phase 1.6 purge, 2026-07-25. 12 baseline entries are gone",
+    "because their owning FILE is gone, not because anyone fixed a type error:",
+    "  [product] useWorkoutLog, AuthNavigator, TodayWorkoutCard, CustomizeWorkoutScreen,",
+    "            ProgramListScreen, WorkoutDetailScreen, SetLoggerRow, WorkoutLoggerScreen,",
+    "            programService, workoutService, calculations",
+    "  [tests]   activeCoachNotesTests (the crashed, never-run suite)",
+    "All were unreachable from App.tsx and from every test/dev entry point. Recorded",
+    "here so a future reader does not mistake a deletion for a fix, and so the",
+    "product count dropping 63 -> 38 is attributable rather than mysterious."
+  ],
+  "generatedAt": "2026-07-25",
   "scopes": {
     "product": {
       "label": "product src (ships to athletes)",
       "config": "tsconfig.compile.json",
-      "total": 65,
+      "total": 38,
       "files": {
         "src/dev/e2e/devE2EScenarioSession.ts": 1,
-        "src/hooks/useWorkoutLog.ts": 1,
-        "src/navigation/AuthNavigator.tsx": 1,
-        "src/rules/illnessRecoveryWeekMode.ts": 4,
+        "src/rules/illnessRecoveryWeekMode.ts": 2,
         "src/rules/reversibleAdjustmentLedger.ts": 1,
         "src/rules/temporarySourceFact.ts": 3,
         "src/screens/home/homeGameMutationController.ts": 1,
         "src/screens/home/HomeScreen.tsx": 1,
         "src/screens/home/HomeScreenV2.tsx": 5,
-        "src/screens/home/TodayWorkoutCard.tsx": 5,
         "src/screens/home/useHomeScreen.ts": 1,
-        "src/screens/program/CustomizeWorkoutScreen.tsx": 1,
-        "src/screens/program/ProgramListScreen.tsx": 1,
-        "src/screens/program/WorkoutDetailScreen.tsx": 1,
-        "src/screens/workout/SetLoggerRow.tsx": 4,
-        "src/screens/workout/WorkoutLoggerScreen.tsx": 4,
-        "src/services/api/programService.ts": 1,
-        "src/services/api/workoutService.ts": 4,
         "src/store/fixtureMutationTransaction.ts": 3,
         "src/store/injuryEpisodeCommand.ts": 1,
         "src/store/profileProgramTransaction.ts": 1,
         "src/store/programStore.ts": 1,
-        "src/utils/calculations.ts": 2,
         "src/utils/coachFixtureChange.ts": 2,
         "src/utils/coachTurnController.ts": 3,
         "src/utils/lighterDayTransaction.ts": 1,
@@ -98,7 +54,7 @@
     "devtools": {
       "label": "dev/E2E harness (never ships; gates device acceptance)",
       "config": "tsconfig.devtools.json",
-      "total": 55,
+      "total": 53,
       "files": {
         "src/dev/e2e/defaultDevE2ESeedCoordinator.ts": 1,
         "src/dev/e2e/devE2EScenarioManifestRegistry.ts": 1,
@@ -111,7 +67,7 @@
         "src/dev/e2e/explorerProductionBindings.ts": 7,
         "src/dev/e2e/explorerRuntime.ts": 1,
         "src/dev/e2e/explorerScenarioActiveTimeBudget.ts": 1,
-        "src/rules/illnessRecoveryWeekMode.ts": 4,
+        "src/rules/illnessRecoveryWeekMode.ts": 2,
         "src/rules/reversibleAdjustmentLedger.ts": 1,
         "src/rules/temporarySourceFact.ts": 3,
         "src/store/fixtureMutationTransaction.ts": 3,
@@ -125,10 +81,9 @@
     "tests": {
       "label": "test harness (runs untyped via sucrase-node)",
       "config": "tsconfig.tests.json",
-      "total": 390,
+      "total": 383,
       "files": {
         "src/__tests__/acceptedStateTransactionTests.ts": 3,
-        "src/__tests__/activeCoachNotesTests.ts": 4,
         "src/__tests__/athleteSessionDeletionTests.ts": 5,
         "src/__tests__/athleteSessionMoveTests.ts": 4,
         "src/__tests__/bibleConformance/expectations/slice4Rules.ts": 1,
@@ -201,7 +156,7 @@
         "src/__tests__/onboardingReliabilityTests.ts": 5,
         "src/__tests__/postGenerationConstraintValidationTests.ts": 5,
         "src/__tests__/programAdjustmentRequestTests.ts": 1,
-        "src/__tests__/programBlockRolloverTests.ts": 2,
+        "src/__tests__/programBlockRolloverTests.ts": 1,
         "src/__tests__/programControlActionsTests.ts": 3,
         "src/__tests__/programHydrationOwnershipTests.ts": 1,
         "src/__tests__/readinessSourceFactOwnershipTests.ts": 8,
@@ -238,7 +193,7 @@
         "src/dev/e2e/explorerProductionBindings.ts": 7,
         "src/dev/e2e/explorerRuntime.ts": 1,
         "src/dev/e2e/explorerScenarioActiveTimeBudget.ts": 1,
-        "src/rules/illnessRecoveryWeekMode.ts": 4,
+        "src/rules/illnessRecoveryWeekMode.ts": 2,
         "src/rules/reversibleAdjustmentLedger.ts": 1,
         "src/rules/temporarySourceFact.ts": 3,
         "src/screens/home/homeGameMutationController.ts": 1,
