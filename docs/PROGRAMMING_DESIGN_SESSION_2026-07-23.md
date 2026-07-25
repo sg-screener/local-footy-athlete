@@ -50,6 +50,39 @@ Agenda (from MASTER_PLAN 4.1):
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
 
+### D13 addendum — the ten template rulings (Sam, 2026-07-25)
+
+All ten spec questions ruled: 6 badges (second heavy lift reuses Main
+Lift) · Team Training = non-badged banner · Recovery days keep their
+own simple template · combined-day conditioning = one badged row
+expanding in place; conditioning-only days follow phase order · midline/
+prehab after accessories · **flow = mobility + prehab (any muscle
+group), but IMPORTANT prehab lives in the session itself — the app
+assumes athletes skip the flow, so the flow is never load-bearing** ·
+per-session-type flow menus = future Sam curation session (e.g. upper
+push: dead hangs, pec stretch, external rotations, scap pull-ups) ·
+spec's v1 mapping ships meanwhile · no flow on conditioning-only days
+(v1) · soft cosmetic checkmark, never logged · SessionTier "CORE"
+homonym excluded from the Midline rename.
+
+### D13 — Session template: one list, role badges, mobility on top (Sam, 2026-07-25)
+
+- **The session is ONE list.** No separate boxes for trunk/support,
+  recovery add-ons, or the power block — every exercise renders in the
+  single session list, each carrying a **role badge/icon**: power, main
+  lift, accessory, midline, prehab, conditioning.
+- **One optional "Mobility & Prehab flow" sits at the TOP**, collapsed —
+  tap to pop it open. Includes session-appropriate primers (e.g.
+  external rotations on upper days).
+- **TERMINOLOGY: "midline" replaces "trunk/core"** everywhere —
+  athlete-facing copy, badges, pool display names, docs (internal type
+  keys may keep their ids; words the athlete sees say midline).
+- Internal counting fences (power not-a-finisher etc.) are unchanged —
+  this is a render/composition ruling, not an accounting change.
+- Experience convention for the muscle sheet: "everyone (regression)" =
+  auto-programmed for new-to-training only; others via injury/equipment/
+  self-pick.
+
 ### D12 — Conditioning taxonomy: the russian-doll grid (Sam, 2026-07-25)
 
 - **Conditioning reorganises into a locked GRID, same philosophy as the
