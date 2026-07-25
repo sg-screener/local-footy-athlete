@@ -1380,52 +1380,32 @@ function buildSpeedBlock(
 /**
  * Render the engine's typed power-primer intent into a display PowerBlock.
  *
- * The concrete exercise is chosen here (where equipment is known). Bodyweight
- * jumps / explosive push-ups are the primary option and always available, so
- * equipment can only ADD a medicine-ball variant — it can never force an
- * unavailable implement. The block is intentionally NOT added to
- * `workout.exercises` and carries a counting fence marking it non-conditioning,
- * non-finisher, non-hard.
+ * BODYWEIGHT-ONLY. Sam retired the whole medicine-ball family — Chest Pass and
+ * Slam on 2026-07-24, Overhead Throw on 2026-07-25 — so the block no longer has
+ * an equipment-conditional branch at all, and `availableEquipment` is no longer
+ * read here. That is the honest shape until the power unit builds the pool this
+ * function is a placeholder for: exercise identity is still hardcoded, and
+ * docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md owns replacing it with a typed
+ * pool + selector.
+ *
+ * The block is intentionally NOT added to `workout.exercises` and carries a
+ * counting fence marking it non-conditioning, non-finisher, non-hard.
  */
 function buildPowerBlock(
   spec: NonNullable<SessionAllocation['powerPrimer']>,
   workoutId: string,
-  availableEquipment: ReadonlyArray<string> | undefined,
 ): PowerBlock {
-  const hasMedBall = (availableEquipment ?? []).some((e) => /med(icine)?[\s_-]*ball/i.test(e));
   const repsLabel = spec.repsMin === spec.repsMax ? `${spec.repsMin}` : `${spec.repsMin}-${spec.repsMax}`;
-  const options: PowerBlockOption[] = [];
-
-  if (spec.family === 'lower') {
-    options.push({
+  const options: PowerBlockOption[] = [{
+    name: spec.family === 'lower'
       // Sam's locked-list rename (2026-07-24): Pogo Jumps → Pogo Hops, one entry.
-      name: spec.reduced ? 'Pogo Hops' : 'Vertical Jump',
-      sets: spec.sets,
-      repsMin: spec.repsMin,
-      repsMax: spec.repsMax,
-      equipmentRequired: [],
-    });
-    if (hasMedBall && !spec.reduced) {
-      options.push({
-        name: 'Medicine Ball Overhead Throw',
-        sets: spec.sets,
-        repsMin: spec.repsMin,
-        repsMax: spec.repsMax,
-        equipmentRequired: ['Medicine Ball'],
-      });
-    }
-  } else {
-    options.push({
-      name: 'Explosive Push-up',
-      sets: spec.sets,
-      repsMin: spec.repsMin,
-      repsMax: spec.repsMax,
-      equipmentRequired: [],
-    });
-    // The medicine-ball chest pass was RETIRED by Sam's locked-list changeset
-    // (2026-07-24), so the upper power slot has one option. The lower slot keeps
-    // its Medicine Ball Overhead Throw, which he did not retire.
-  }
+      ? (spec.reduced ? 'Pogo Hops' : 'Vertical Jump')
+      : 'Explosive Push-up',
+    sets: spec.sets,
+    repsMin: spec.repsMin,
+    repsMax: spec.repsMax,
+    equipmentRequired: [],
+  }];
 
   const notes = [
     'Do this fresh, early in the session — before the main lifts.',
@@ -2445,11 +2425,10 @@ export function buildWorkoutsFromCoach(
     // fatiguing power.
     let resolvedPowerBlock: PowerBlock | undefined;
     if (planEntry?.powerPrimer && !deloadPolicy) {
-      resolvedPowerBlock = buildPowerBlock(
-        planEntry.powerPrimer,
-        workoutId,
-        effectiveAthletePrefs?.availableEquipment ?? onboardingData?.equipment,
-      );
+      // No equipment argument: the power block is bodyweight-only since Sam
+      // retired the medicine-ball family, so there is nothing for equipment to
+      // decide here.
+      resolvedPowerBlock = buildPowerBlock(planEntry.powerPrimer, workoutId);
     }
 
     // Deterministic plan intent always wins. Edge-authored typed intent is

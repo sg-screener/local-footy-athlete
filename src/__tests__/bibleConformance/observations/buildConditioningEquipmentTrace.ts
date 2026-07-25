@@ -44,8 +44,7 @@ function profileFor(scenario: Slice3GoldenScenario): OnboardingData {
     goals: ['Build Strength', 'Improve Fitness'], seasonPhase: 'Off-season',
     trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], sessionDurationMinutes: 60,
-    trainingLocation: 'Commercial gym', equipment,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [],    trainingLocation: 'Commercial gym', equipment,
     ...(scenario.id !== 'early-offseason-legacy-commercial'
       ? { equipmentSelectionCompleteness: 'complete' as const }
       : {}),

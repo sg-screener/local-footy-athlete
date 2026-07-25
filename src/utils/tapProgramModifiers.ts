@@ -1,3 +1,4 @@
+import { readinessFactTitle } from './readinessFactAttribution';
 import { useCoachUpdatesStore, type ActiveFatigueConstraint } from '../store/coachUpdatesStore';
 import type { OverrideContext } from '../types/domain';
 import { getMondayForDate } from './sessionResolver';
@@ -54,7 +55,15 @@ export function upsertTapRecoveryModeModifier(args: {
     appliesToDate,
     weekStartISO: args.scope === 'week' ? weekStart : undefined,
     expiresAt: args.scope === 'week' ? addDaysISO(weekStart, 6) : args.date,
-    modifierTitle: 'Recovery mode active',
+    // The athlete-facing name is OWNED by readinessFactAttribution (A4, L10
+    // device finding). Hardcoding it here was the second vocabulary that finding
+    // retired: a tap fact printed "Recovery mode active" while the same fact
+    // read as "Not 100% today" on the Program card. One owner, both surfaces.
+    modifierTitle: readinessFactTitle({
+      kind: 'fatigue',
+      scope: args.scope === 'week' ? 'week' : 'today',
+      severity: args.scope === 'week' ? 8 : 6,
+    }),
     modifierBody: 'Your training load is reduced while you recover.',
     modifierAffects: [args.scope === 'week' ? 'current_week' : 'current_day'],
     linkedOverrideDates: uniqueDates(args.appliedDates),
@@ -84,7 +93,7 @@ export function upsertTapLoadReductionModifier(args: {
     source: 'tap',
     weekStartISO: weekStart,
     expiresAt: addDaysISO(weekStart, 6),
-    modifierTitle: 'Load reduced this week',
+    modifierTitle: readinessFactTitle({ kind: 'fatigue', scope: 'week', severity: 7 }),
     modifierBody: 'Your week has been adjusted because you said you were cooked.',
     modifierAffects: ['current_week'],
     linkedOverrideDates: [],

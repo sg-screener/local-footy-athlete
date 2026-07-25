@@ -180,7 +180,6 @@ const profile: OnboardingData = {
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
   teamTrainingIntensity: 'Moderate',
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
   experienceLevel: '2-5 years',

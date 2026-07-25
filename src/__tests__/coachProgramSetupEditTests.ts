@@ -56,7 +56,6 @@ const baseProfile: OnboardingData = {
   seasonPhase: 'Pre-season',
   trainingDaysPerWeek: 5,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['barbell'],
   experienceLevel: '2-5 years',

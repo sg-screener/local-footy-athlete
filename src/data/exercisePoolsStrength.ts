@@ -214,10 +214,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Back Squat',  loadRatio: 1.00 },
         { name: 'Front Squat', loadRatio: 0.85 },
         { name: 'Box Squat',   loadRatio: 0.95 },
-        // Sam's locked list (2026-07-24). Ratio PROPOSED (mirrors Box Squat's
-        // 0.95 — a higher box is a shorter range, so slightly stronger) and
-        // parked in LOAD_HANDLING_PENDING_SAM until he rules line by line.
-        { name: 'High Box Squat', loadRatio: 1.00 },
+        // Sam ruled 2026-07-25: 1.2 x Box Squat, derived from Box Squat's own
+        // 0.95 — a higher box is a shorter range, so heavier, not lighter.
+        { name: 'High Box Squat', loadRatio: 1.14 },
       ],
     },
     accessory: {
@@ -247,9 +246,10 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Single-Leg RDL',    loadRatio: 0.45 },
         { name: 'Hip Thrusts',       loadRatio: 1.10 },
         { name: 'Kettlebell Swings', loadRatio: 0.35 },
-        // Sam's locked list (2026-07-24). Ratio PROPOSED (mirrors Hip Thrusts'
-        // 1.10, discounted for the shorter floor range) — pending his ruling.
-        { name: 'Glute Bridge',      loadRatio: 0.90 },
+        // Sam ruled 2026-07-25: bodyweight-with-optional. loadRatio 0 means no
+        // progression transfer to or from its hinge siblings, which is the
+        // honest reading of a lift with no prescribed load.
+        { name: 'Glute Bridge',      loadRatio: 0.00 },
       ],
     },
   },
@@ -279,8 +279,8 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Dips',            loadRatio: 0.60 },
         { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
         // Sam's locked list (2026-07-24) pools the Bible's pressing injury-swap
-        // rather than leaving it reachable by substitution only. Ratio PROPOSED
-        // (mirrors Single-Arm DB Bench Press exactly) — pending his ruling.
+        // rather than leaving it reachable by substitution only. Ratio mirrors
+        // Single-Arm DB Bench Press exactly; confirmed unchanged 2026-07-25.
         { name: 'Single-Arm DB Floor Press', loadRatio: 0.35 },
         // 'Speed Bench' is NOT here on purpose: it classifies as `power`, and
         // the power policy strips power rows from coach-built strength content

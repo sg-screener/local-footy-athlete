@@ -33,8 +33,15 @@ Existing entries (unchanged behaviour, now data):
 | Vertical Jump | lower | — | default; all phases where power allowed | Every rep fast and sharp. Stop if reps get slow. |
 | Pogo Jumps | lower | — | ONLY when reduced (lower niggle) — takes over the slot | (existing) |
 | Explosive Push-up | upper | — | default upper | (existing) |
-| Medicine Ball Overhead Throw | lower | Medicine Ball | alternate when med ball present, not reduced | (existing) |
-| Medicine Ball Chest Pass | upper | Medicine Ball | alternate when med ball present | (existing) |
+
+**RETIRED by Sam's locked list.** The two medicine-ball rows that used to sit
+here — `Medicine Ball Overhead Throw` (lower) and `Medicine Ball Chest Pass`
+(upper) — are gone: Chest Pass and Slam on 2026-07-24, Overhead Throw on
+2026-07-25. `buildPowerBlock` no longer has an equipment-conditional branch and
+no longer reads `availableEquipment`; the power block is **bodyweight-only**
+until this spec's pool is built. Rule 7 below ("equipment substitutes, never
+forces") therefore has nothing to substitute today — it still governs any
+equipment-gated entry the pool adds later, e.g. Depth Jumps needing a box.
 
 New entries (Sam, 2026-07-23):
 

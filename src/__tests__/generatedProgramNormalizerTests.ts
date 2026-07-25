@@ -73,7 +73,6 @@ const PROFILE: OnboardingData = {
   teamTrainingDays: ['Monday', 'Wednesday'],
   teamTrainingIntensity: 'High',
   teamTrainingDuration: '90 min' as any,
-  sessionDurationMinutes: 60 as any,
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
 } as OnboardingData;

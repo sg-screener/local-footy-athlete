@@ -38,7 +38,6 @@ const baseHealthy: Partial<OnboardingData> = {
   sprintExposure: '2+ times per week',
   recentTrainingLoad: 'Very consistent',
   injuries: [],
-  sessionDurationMinutes: 60 as any,
   trainingLocation: 'Gym' as any,
   teamTrainingDuration: '90 min' as any,
   teamTrainingIntensity: 'High',

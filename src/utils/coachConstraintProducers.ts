@@ -22,6 +22,7 @@
  * into upsertActiveConstraint.
  */
 
+import { readinessFactTitle } from './readinessFactAttribution';
 import type { CoachIntent } from './coachIntent';
 import type {
   ActiveFatigueConstraint,
@@ -234,7 +235,14 @@ export function buildFatigueConstraintFromIntent(
     source: 'coach',
     ...(weekScoped ? {} : { appliesToDate: selectedDate }),
     expiresAt: weekScoped ? weekEndForDate(selectedDate) : selectedDate,
-    modifierTitle: weekScoped ? 'Load reduced this week' : 'Recovery mode active',
+    // Owned by readinessFactAttribution — see tapProgramModifiers. Branching on
+    // scope to re-derive a name the owner already computes is exactly the
+    // duplication the A4 finding removed.
+    modifierTitle: readinessFactTitle({
+      kind: 'fatigue',
+      scope: weekScoped ? 'week' : 'today',
+      severity,
+    }),
     modifierBody: weekScoped
       ? 'Your week has been adjusted because you said you were cooked.'
       : 'Your training load is reduced today while you recover.',

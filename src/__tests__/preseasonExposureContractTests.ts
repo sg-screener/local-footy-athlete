@@ -48,7 +48,6 @@ const EXACT_PROFILE: OnboardingData = {
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Monday', 'Wednesday'],
   teamTrainingIntensity: 'Hard',
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
   experienceLevel: '2-5 years',

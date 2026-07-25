@@ -22,7 +22,6 @@ const HEALTHY_IN_SEASON_PROFILE: Record<string, unknown> = {
   teamTrainingDuration: '90 min',
   usualGameDay: 'Saturday',
   gameDay: 'Saturday',
-  sessionDurationMinutes: 60,
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
 };

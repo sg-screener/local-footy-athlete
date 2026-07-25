@@ -49,7 +49,6 @@ export type OnboardingStackParamList = {
   TeamTrainingIntensity: undefined;
   TrainingCommitment: undefined;
   PreferredTrainingDays: undefined;
-  SessionDuration: undefined;
   GymExperience: undefined;
   SquatStrength: undefined;
   BenchStrength: undefined;

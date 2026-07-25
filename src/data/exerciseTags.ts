@@ -120,9 +120,9 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Hard Row Intervals':       { tier: 'B-high', modality: 'row',  impact: 'low' },
   'Hard SkiErg Intervals':    { tier: 'B-high', modality: 'ski',  impact: 'low' },
   'Hard Assault Bike Intervals': { tier: 'B-high', modality: 'bike', impact: 'low' },
-  // Sam's locked list (2026-07-24) adds the format; the tier/modality/impact
-  // triple is PROPOSED (mirrors Hard Row Intervals / 4x4 VO2) and awaits his
-  // ruling — see the changeset's "PROPOSED — Erg EMOM classification".
+  // Sam's locked list (2026-07-24) adds the format; he ruled the
+  // tier/modality/impact triple on 2026-07-25 (mirrors Hard Row Intervals /
+  // 4x4 VO2 — a hard-intervals format on a low-impact mixed modality).
   'Erg EMOM':                 { tier: 'B-high', modality: 'mixed', impact: 'low' },
 
   // ── Tier B-low — Moderate Output ──

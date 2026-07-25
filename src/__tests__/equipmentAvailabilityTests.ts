@@ -181,7 +181,6 @@ section('4. Generation diagnostics serialize resolved equipment');
     seasonPhase: 'Off-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    sessionDurationMinutes: 60,
     trainingLocation: 'Commercial gym',
     equipment: ['Dumbbells Only'],
     experienceLevel: '2-5 years',
