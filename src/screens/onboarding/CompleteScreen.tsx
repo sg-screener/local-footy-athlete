@@ -17,9 +17,7 @@ import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
-import { DEFAULT_PROGRAM } from '../../data/defaultProgram';
 import {
-  ProgramGenError,
   buildProgramGenerationRequestDiagnostics,
   generateProgramFromProfile,
   getProgramGenerationProfileFieldDiagnostics,
@@ -29,6 +27,8 @@ import {
   seedOnboardingProgram,
   toOnboardingPipelineError,
 } from '../../utils/onboardingCompletion';
+import { runOnboardingProgramGeneration } from '../../utils/onboardingGenerationOutcome';
+import type { TrainingProgram } from '../../types/domain';
 import { logger } from '../../utils/logger';
 import { todayISOLocal } from '../../utils/appDate';
 import {
@@ -97,6 +97,9 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   // Set when generation was refused for a missing answer: the error state then
   // offers the step that owns it instead of a pointless retry.
   const [incompleteStep, setIncompleteStep] = useState<OnboardingStepName | null>(null);
+  // Whether the error state offers Try Again. A non-retryable failure (an auth
+  // or config problem) must not offer a retry that cannot possibly work.
+  const [canRetry, setCanRetry] = useState(true);
   // The currently-displayed loading line. Held in state so the fade-in
   // re-renders with the new copy.
   const [currentMessage, setCurrentMessage] = useState(BASE_SEQUENCE[0]);
@@ -267,6 +270,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   const generateProgram = async () => {
     setPhase('generating');
     setErrorMessage('');
+    setCanRetry(true);
 
     // Refuse before generating. Reaching this screen with a gap means Review
     // was bypassed (a deep link, a back-stack jump) — generating around it
@@ -286,49 +290,53 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
     // A retry starts a new attempt and may therefore capture a new date.
     const effectiveTodayISO = todayISOLocal();
 
-    let program: typeof DEFAULT_PROGRAM;
-    try {
-      program = await generateProgramFromProfile(onboardingData, {
+    // Generation owns the outcome AND its reason. The screen renders that
+    // outcome; it never elects a different program. The silent DEFAULT_PROGRAM
+    // substitution that used to live here is retired (Sam ruling, 2026-07-25):
+    // it discarded an honest typed refusal, installed a fixture that carries no
+    // exposure contract, and reported the resulting install throw to the
+    // athlete as a save failure — the wrong reason for the wrong event.
+    // See docs/ONBOARDING_GENERATION_OWNERSHIP_REASSESSMENT_2026-07-25.md.
+    const outcome = await runOnboardingProgramGeneration({
+      generate: () => generateProgramFromProfile(onboardingData, {
         todayISO: effectiveTodayISO,
-      });
-    } catch (err: any) {
-      const programGenError = err instanceof ProgramGenError ? err : null;
-      logger.error('[Onboarding][generation] Program generation failed', {
-        stage: 'generation',
-        message: err?.message || String(err),
-        kind: programGenError?.kind ?? 'unknown',
-        diagnostic: programGenError?.diagnostic ?? null,
-        stack: err instanceof Error ? err.stack ?? null : null,
-      });
-
-      // Overload errors: show error state with retry — don't silently fallback
-      if (err?.name === 'OverloadError') {
-        setErrorMessage(err.message);
-        setPhase('error');
-        return;
-      }
-
-      // Other errors: fallback to default program so onboarding isn't blocked
-      if (isDevBuild()) {
-        logger.warn('[ProgramGen][dev] Using DEFAULT_PROGRAM fallback after generation failure', {
-          warning:
-            'DEV WARNING: The app is using DEFAULT_PROGRAM. Coach-edit tests may not reflect a real generated program.',
-          diagnostic: programGenError?.diagnostic ?? err?.message ?? String(err),
-          details: programGenError?.details ?? null,
-          request: buildProgramGenerationRequestDiagnostics(
-            onboardingData,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            effectiveTodayISO,
-          ),
-          missingProfileFields: getProgramGenerationProfileFieldDiagnostics(onboardingData),
+      }),
+      onAttemptFailed: (failure, attempt) => {
+        logger.error('[Onboarding][generation] Program generation failed', {
+          stage: 'generation',
+          attempt,
+          kind: failure.failureKind,
+          isTransient: failure.isTransient,
+          diagnostic: failure.diagnostic,
         });
-      }
-      program = DEFAULT_PROGRAM;
+        if (isDevBuild()) {
+          logger.warn('[ProgramGen][dev] Generation attempt failed', {
+            attempt,
+            kind: failure.failureKind,
+            diagnostic: failure.diagnostic,
+            request: buildProgramGenerationRequestDiagnostics(
+              onboardingData,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              effectiveTodayISO,
+            ),
+            missingProfileFields: getProgramGenerationProfileFieldDiagnostics(onboardingData),
+          });
+        }
+      },
+    });
+
+    if (outcome.kind === 'failed') {
+      setCanRetry(outcome.canRetry);
+      setErrorMessage(outcome.userMessage);
+      setPhase('error');
+      return;
     }
+
+    const program: TrainingProgram = outcome.program;
 
     try {
       seedProgram(program, effectiveTodayISO);
@@ -339,31 +347,11 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
         'store_generated_program',
       );
       logOnboardingPipelineError('Program installation failed', pipelineError);
-      if (pipelineError.stage === 'section18_acceptance' && program !== DEFAULT_PROGRAM) {
-        if (isDevBuild()) {
-          logger.warn('[ProgramGen][dev] Using DEFAULT_PROGRAM fallback after Section 18 rejection', {
-            stage: pipelineError.stage,
-            diagnostic: pipelineError.message,
-          });
-        }
-        try {
-          seedProgram(DEFAULT_PROGRAM, effectiveTodayISO);
-        } catch (fallbackError) {
-          const fallbackPipelineError = toOnboardingPipelineError(
-            fallbackError,
-            'accepted_state_transaction',
-            'store_default_program_after_acceptance_failure',
-          );
-          logOnboardingPipelineError('DEFAULT_PROGRAM installation failed', fallbackPipelineError);
-          setErrorMessage('Your program was created, but it could not be saved. Please try again.');
-          setPhase('error');
-          return;
-        }
-      } else {
-        setErrorMessage('Your program was created, but it could not be saved. Please try again.');
-        setPhase('error');
-        return;
-      }
+      // A genuine install failure — and now the ONLY thing this copy can mean.
+      setCanRetry(true);
+      setErrorMessage('Your program was created, but it could not be saved. Please try again.');
+      setPhase('error');
+      return;
     }
 
     transitionToReady();
@@ -405,7 +393,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
   };
 
   const seedProgram = (
-    program: typeof DEFAULT_PROGRAM,
+    program: TrainingProgram,
     effectiveTodayISO: string,
   ) => {
     seedOnboardingProgram({
@@ -476,12 +464,14 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
           >
             {errorMessage || 'Failed to generate your program. Tap below to try again.'}
           </Text>
-          <Button
-            title={incompleteStep ? 'Finish that step' : 'Try Again'}
-            onPress={handleRetry}
-            size="lg"
-            fullWidth
-          />
+          {(incompleteStep || canRetry) && (
+            <Button
+              title={incompleteStep ? 'Finish that step' : 'Try Again'}
+              onPress={handleRetry}
+              size="lg"
+              fullWidth
+            />
+          )}
         </View>
       </SafeAreaView>
     );
