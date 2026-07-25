@@ -131,8 +131,14 @@ console.log('\n[4] `awaiting_sam_ruling` is a LOUD park, not a quiet one');
     .filter(([, kind]) => kind === 'awaiting_sam_ruling')
     .map(([name]) => name);
 
-  // The whole point of the kind: these are REAL exercise names the app renders
-  // with no cue. If one silently gains a cue, it should stop being parked.
+  // Emptiness is the proof. The kind surfaced six cueless names in the live
+  // "Add exercise" table and Sam ruled every one, so nothing is parked — and
+  // this assertion is what stops the next one being parked quietly.
+  okEmpty('nothing is parked awaiting a ruling', awaiting,
+    'each needs a row in docs/EXERCISE_NAME_LOCK_REPORT_2026-07-25.md first');
+
+  // The two guards below carry the contract for when something IS parked again:
+  // a parked name must genuinely render no cue, and must be visible in the report.
   okEmpty('every parked name genuinely renders no cue today',
     awaiting.filter((n) => buildCueText(n) !== null),
     'this now cues — it resolved, so remove the park');

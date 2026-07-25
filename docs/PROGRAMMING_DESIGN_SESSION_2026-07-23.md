@@ -50,6 +50,22 @@ Agenda (from MASTER_PLAN 4.1):
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
 
+### D12 — Conditioning taxonomy: the russian-doll grid (Sam, 2026-07-25)
+
+- **Conditioning reorganises into a locked GRID, same philosophy as the
+  exercise vocabulary:** modality (Run / Bike / Ski / Row / Air Bike) ×
+  session goal (finisher / long intervals / short intervals / hard
+  intervals / continuous) × a Sam-curated menu of 5–10 dose variants
+  per cell (e.g. hard intervals: "20:40 × 4, 1 min rest, repeat X min";
+  continuous: 30/40/50/60 min; long intervals: "3 × 8 min, 2 min rest").
+- Selection is russian-doll: modality → goal → dose. The existing 36
+  census conditioning formats and the Bible's conditioning menus
+  reorganise INTO the grid — no format survives outside it.
+- Interlocks with: D4 (swaps change modality, never goal), the 2-run
+  weekly floor, and the conditioning triple classification.
+- Builds in Phase 4.3 alongside the muscle-block mechanism. Sam curates
+  the cell menus the same way he curated exercises.
+
 ### D11 — Muscle blocks: no same-muscle stacking + visible muscles (Sam, 2026-07-24)
 
 - **Rule: a session must not stack multiple exercises targeting the
