@@ -728,6 +728,54 @@ function canonicaliseHydratedSafetyWorkout(
     : canonicaliseHydratedWorkout(workout, phase);
 }
 
+/**
+ * Thrown when a program reaches the accept boundary carrying a week the app
+ * cannot install: no `exposureContractV2` and no legacy `exposureContract` to
+ * migrate from.
+ *
+ * Every accepted-week read (`rebaseAcceptedEffectiveWeek`) requires a contract
+ * and throws without one. Accepting such a program used to succeed here and
+ * detonate later at an unrelated call site — `setGameDay` — so the athlete was
+ * told a save had failed when the real fault was an uninstallable week accepted
+ * several steps earlier (device blocker, 2026-07-25).
+ *
+ * Sam ruling (2026-07-26), option (b): refuse it HERE, by name. Deliberately not
+ * option (a) — minting the contract on this path is not separable from
+ * rebuilding the week, because hydration only survives the §18 gateway by
+ * handing it a profile-built regenerate/safeFallback candidate. Rebuilding a
+ * week as a side effect of accepting a program is exactly the silent
+ * reinterpretation this whole unit removed.
+ */
+export class AcceptedProgramContractMissingError extends Error {
+  readonly code = 'accepted_program_contract_missing';
+  readonly weekStarts: string[];
+  constructor(weekStarts: string[]) {
+    super(
+      'Accepted program is missing its weekly exposure contract for '
+        + `${weekStarts.join(', ')}. A program with no contract (v2 or legacy) `
+        + 'cannot be installed: every accepted-week read requires one. Structural '
+        + 'migration belongs to the hydration path, which can rebuild the week; '
+        + 'the accept path refuses rather than rebuilds.',
+    );
+    this.name = 'AcceptedProgramContractMissingError';
+    this.weekStarts = weekStarts;
+  }
+}
+
+/**
+ * The accept-path invariant: an ACCEPTED program is an INSTALLABLE program.
+ * Structural migration (which may rebuild a week) stays with hydration.
+ */
+export function assertAcceptedProgramInstallable(
+  program: TrainingProgram | null | undefined,
+): void {
+  if (!program) return;
+  const missing = (program.microcycles ?? [])
+    .filter((microcycle) => !microcycle.exposureContractV2 && !microcycle.exposureContract)
+    .map((microcycle) => microcycle.startDate?.slice(0, 10) ?? 'unknown-week');
+  if (missing.length > 0) throw new AcceptedProgramContractMissingError(missing);
+}
+
 function canonicaliseAcceptedBoundaryState(
   persistedState: Partial<ProgramState>,
   options: {
