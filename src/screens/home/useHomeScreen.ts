@@ -11,6 +11,7 @@ import { useAthletePreferencesStore } from '../../store/athletePreferencesStore'
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
+import { classifyProgramGenerationFailure } from '../../utils/onboardingGenerationOutcome';
 import {
   commitRebuiltProgram,
   decideSweepForCurrentStores,
@@ -244,7 +245,7 @@ export function useHomeScreen() {
   const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
   const [isRebuilding, setIsRebuilding] = useState(false);
   // rebuildError holds the USER-FACING copy only. Raw HTML / server payloads
-  // are never assigned here — see classifyRebuildError() below.
+  // are never assigned here — see classifyRebuildFailure() below.
   const [rebuildError, setRebuildError] = useState<string | null>(null);
   const [rebuildErrorCanRetry, setRebuildErrorCanRetry] = useState(true);
   const [rebuildMsgIdx, setRebuildMsgIdx] = useState(0);
@@ -653,24 +654,21 @@ export function useHomeScreen() {
   };
 
   /**
-   * Extract safe user-facing copy + retryability from a thrown error.
-   * - `ProgramGenError` instances carry typed `userMessage` + `canRetry`.
-   * - Anything else falls back to generic copy and is retryable by default
-   *   (it's almost always a transient/unknown failure from our side).
+   * Safe user-facing copy + retryability for a failed rebuild.
+   *
+   * This used to be a private closure here, which meant the app carried two
+   * independent answers to "generation failed — what do we tell the athlete?".
+   * Onboarding had no classifier at all and papered over failures instead; the
+   * two surfaces drifted until the same error produced honest copy on one and a
+   * misleading save error on the other. One owner now answers for both
+   * (see utils/onboardingGenerationOutcome.ts).
+   *
    * Raw HTML / server payloads NEVER flow here — generateProgram.ts already
    * redacts them to a safe `userMessage` before throwing.
    */
-  const classifyRebuildError = (err: any): { userMessage: string; canRetry: boolean } => {
-    if (err && typeof err === 'object' && err.name === 'ProgramGenError') {
-      return {
-        userMessage: err.userMessage || 'Something went wrong. Please try again.',
-        canRetry: err.canRetry !== false,
-      };
-    }
-    return {
-      userMessage: 'Something went wrong. Please try again.',
-      canRetry: true,
-    };
+  const classifyRebuildFailure = (err: unknown): { userMessage: string; canRetry: boolean } => {
+    const { userMessage, canRetry } = classifyProgramGenerationFailure(err);
+    return { userMessage, canRetry };
   };
 
   // ───────── Rebuild handlers ─────────
@@ -727,7 +725,7 @@ export function useHomeScreen() {
     } catch (err: any) {
       // Log diagnostic payload to dev console — UI only ever sees safe copy.
       logger.error('[Rebuild] failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildError(err);
+      const { userMessage, canRetry } = classifyRebuildFailure(err);
       setRebuildError(userMessage);
       setRebuildErrorCanRetry(canRetry);
     } finally {
@@ -868,7 +866,7 @@ export function useHomeScreen() {
       setPhaseShiftStep('confirm');
     } catch (err: any) {
       logger.error('[PhaseShift] failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildError(err);
+      const { userMessage, canRetry } = classifyRebuildFailure(err);
       setRebuildError(userMessage);
       setRebuildErrorCanRetry(canRetry);
       // Fall back to the step the user was on so they can retry. Off-season
@@ -1032,7 +1030,7 @@ export function useHomeScreen() {
       return true;
     } catch (err: any) {
       logger.error('[GameChange] Rebuild failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildError(err);
+      const { userMessage, canRetry } = classifyRebuildFailure(err);
       Alert.alert(
         'Couldn\u2019t update your week',
         userMessage,
@@ -1251,7 +1249,7 @@ export function useHomeScreen() {
       setRebuildModalVisible(false);
     } catch (err: any) {
       logger.error('[CoachNotes] rebuild after clear failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildError(err);
+      const { userMessage, canRetry } = classifyRebuildFailure(err);
       setRebuildError(userMessage);
       setRebuildErrorCanRetry(canRetry);
     } finally {
