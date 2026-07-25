@@ -52,7 +52,35 @@ name — `classifyPoolSlot` returns `null` for exactly the names needing substit
 
 ---
 
-## 3. NOT DONE — the mint-contract asymmetry is BLOCKED on a ruling
+## 3. RESOLVED (2026-07-26) — ruled (b), shipped, with one scope caveat
+
+Sam ruled **(b): fail fast at the accept boundary with a typed error naming the
+cause. No silent rebuilds on the accept path.** Shipped as `2a71841`.
+
+`AcceptedProgramContractMissingError` refuses a program whose microcycles carry
+neither `exposureContractV2` nor a legacy `exposureContract`, **before anything is
+installed**. It names the offending week start and carries a typed `code`
+(`accepted_program_contract_missing`) for pipeline-stage classification. Tests
+(`npm run test:accept-boundary-contract`, 9 assertions, wired into `test:bible`)
+assert the refusal fires, names the cause, leaves no trace in accepted state, and
+fires before any game day is marked — plus a negative control so the gate can
+never widen onto healthy programs.
+
+**Scope caveat, stated plainly.** The assertion sits on the **onboarding install
+path** (`seedOnboardingProgram`), not on every `setCurrentProgram`. That covers the
+athlete-facing blocker completely. Putting it on the store-wide accept boundary is
+the fuller reading of the ruling but is **not a small follow-up**: the slice-4
+bible fixtures (`pathMicrocycle` / `pathProgram`) seed deliberately bare structural
+programs through `setCurrentProgram`, so the store-wide gate refuses them
+correctly. Making those fixtures representative means giving them real contracts,
+which then have to satisfy `validateLiveProgramWrite` — i.e. rebuilding their week
+model. Two attempts at that drifted into fixture-fitting and were reverted rather
+than pushed. **Open question for a future unit:** fund the slice-4 fixture rework,
+then move the assertion into `canonicaliseAcceptedBoundaryState`.
+
+The original blocked analysis is kept below for the record.
+
+### Original blocked analysis (2026-07-25)
 
 This is the one ruling item I did not deliver. I reverted it rather than force it,
 and it needs your decision.
@@ -125,8 +153,14 @@ stay injury-free, 184/90, In-season, **Saturday** game day, Tue/Thu team trainin
 
 - **Sam's physical iPhone.** Simulator only. **L10: this is not done until you
   verify it on your phone.** Both paths above are the ones to re-run.
-- **The mint-contract asymmetry (ruling item 3).** Blocked, reverted, awaiting
-  your (a)/(b) decision above. No code shipped for it.
+- **The store-wide accept boundary.** Item 3 shipped on the onboarding install
+  path only; `setCurrentProgram` at large is still unguarded, pending the slice-4
+  bible fixture rework described above. Every other caller of `setCurrentProgram`
+  (coach edits, rebuilds, hydration) can still accept a contractless program and
+  fail later — unchanged from before this unit, but now explicitly known.
+- **The fail-fast on device.** Item 3's refusal is unit-tested only; it was not
+  driven on the simulator, because onboarding can no longer produce a contractless
+  program to trigger it (the fallback that did is gone).
 - **The original device transient.** Still not reproduced — the edge function was
   healthy for all 21 live generations. Which transient hit your device (network,
   cold start, provider overload) remains unknown. It no longer matters for the
