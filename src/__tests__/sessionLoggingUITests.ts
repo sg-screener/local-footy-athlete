@@ -147,7 +147,8 @@ assert(
   'V2 renders power as a badged list row',
 );
 assert(
-  /buildSessionTemplate/.test(v2) && !/<PowerPrimerSection/.test(v2),
+  /buildSessionTemplate/.test(v2) &&
+    !/<PowerPrimerSection/.test(v2.slice(v2.indexOf(') : ('))),
   'V2 gets power placement from the composition owner, not from its own branch order',
 );
 assert(/workout\.powerBlock\?\.title/.test(classic), 'Classic header summary includes the power block title');

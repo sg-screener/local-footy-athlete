@@ -481,10 +481,19 @@ console.log('\n[9] DayWorkoutScreenV2 renders one list from the composition owne
     'the screen consumes the composition owner',
     /buildSessionTemplate|sessionTemplate/.test(screen),
   );
+  // The primer box survives in exactly one place: the recovery-day template,
+  // which by ruling keeps what it always rendered (see
+  // recoverySimpleTemplateTests §3). Everywhere else power is the first badged
+  // list item, so the box must not appear on the badged branch.
+  const badgedBranch = screen.slice(screen.indexOf(') : ('));
   ok(
-    'the Power Primer box is gone',
-    !/PowerPrimerSection/.test(screen),
+    'the Power Primer box is gone from the badged list',
+    !/PowerPrimerSection/.test(badgedBranch),
     'power is now the first list item, badged Power',
+  );
+  ok(
+    'power is rendered as a list row instead',
+    /<PowerRow/.test(badgedBranch),
   );
   ok(
     'the Trunk / Support box is gone',

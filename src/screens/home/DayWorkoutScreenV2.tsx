@@ -16,6 +16,9 @@ import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { SessionRoleBadge } from '../../components/SessionRoleBadge';
+// Retained for the recovery-day template ONLY — every other day type renders
+// power as the first badged row of the one list (D13 §2 item 1).
+import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import { MobilityPrehabFlowSection } from '../../components/MobilityPrehabFlowSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
@@ -1207,6 +1210,15 @@ export default function DayWorkoutScreenV2() {
         */}
         {sessionTemplate.mode === 'recovery' ? (
           <>
+            {/*
+              "Keeps its own simple template" means exactly what it rendered
+              before, and the primer used to render ABOVE the branch split — so
+              it reached recovery days too. A recovery day carrying a power
+              block is contradictory and the builder normally strips it, but if
+              one is there the athlete was prescribed it, and dropping it
+              silently is worse than showing a box we no longer show elsewhere.
+            */}
+            <PowerPrimerSection block={workout.powerBlock} />
             <RecoveryBlock
               exercises={workout.exercises ?? []}
               expandedCues={expandedCues}
