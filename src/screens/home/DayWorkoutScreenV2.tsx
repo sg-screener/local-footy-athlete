@@ -16,6 +16,7 @@ import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { SessionRoleBadge } from '../../components/SessionRoleBadge';
+import { MobilityPrehabFlowSection } from '../../components/MobilityPrehabFlowSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
 import {
@@ -47,6 +48,8 @@ import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useDayWorkout } from './useDayWorkout';
+import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
+import { useResolvedWeekForDate } from '../../hooks/useSchedule';
 import {
   buildDayWorkoutSmokeContractErrorResult,
   deriveDayWorkoutSmokeContract,
@@ -480,6 +483,24 @@ export default function DayWorkoutScreenV2() {
   const sessionTemplate = React.useMemo(
     () => buildSessionTemplate(workout),
     [workout],
+  );
+
+  /**
+   * The collapsed Mobility & Prehab flow. Game week is read off the resolved
+   * week this date belongs to — a real signal the schedule already owns, rather
+   * than a flag the flow would otherwise have to guess at (and so never use).
+   */
+  const seasonPhase = useProfileStore(
+    (s: any) => s.onboardingData?.seasonPhase ?? null,
+  );
+  const resolvedWeek = useResolvedWeekForDate(date);
+  const isGameWeek = React.useMemo(
+    () => resolvedWeek.some((day) => day.indicator === 'game'),
+    [resolvedWeek],
+  );
+  const mobilityFlow = React.useMemo(
+    () => selectMobilityPrehabFlow({ workout, seasonPhase, isGameWeek }),
+    [workout, seasonPhase, isGameWeek],
   );
   React.useEffect(() => {
     if (!pendingComponentDeletionObservation) return;
@@ -1196,21 +1217,29 @@ export default function DayWorkoutScreenV2() {
             <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
           </>
         ) : (
-          <SessionList
-            items={sessionTemplate.items}
-            expandedCues={expandedCues}
-            toggleCue={toggleCue}
-            editingWeightId={editingWeightId}
-            editingWeightText={editingWeightText}
-            setEditingWeightText={setEditingWeightText}
-            formatWeight={formatWeight}
-            incrementWeight={incrementWeight}
-            decrementWeight={decrementWeight}
-            startEditingWeight={startEditingWeight}
-            commitWeightEdit={commitWeightEdit}
-            onSelectExercise={setSelectedExercise}
-            onChangeExercise={openSpecificExerciseEditor}
-          />
+          <>
+            {/*
+              Sits ABOVE the first list row, collapsed. Optional, never logged,
+              never gates Finish — see MobilityPrehabFlowSection for why it is
+              styled to read as available rather than as a first task.
+            */}
+            <MobilityPrehabFlowSection flow={mobilityFlow} />
+            <SessionList
+              items={sessionTemplate.items}
+              expandedCues={expandedCues}
+              toggleCue={toggleCue}
+              editingWeightId={editingWeightId}
+              editingWeightText={editingWeightText}
+              setEditingWeightText={setEditingWeightText}
+              formatWeight={formatWeight}
+              incrementWeight={incrementWeight}
+              decrementWeight={decrementWeight}
+              startEditingWeight={startEditingWeight}
+              commitWeightEdit={commitWeightEdit}
+              onSelectExercise={setSelectedExercise}
+              onChangeExercise={openSpecificExerciseEditor}
+            />
+          </>
         )}
 
         {/* ── Reopen of a completed session → read-only summary ── */}
