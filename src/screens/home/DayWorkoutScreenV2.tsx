@@ -3538,10 +3538,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Team Training block ──
-  teamTrainingSection: {
-    marginTop: spacing.xl,
-    gap: spacing.sm,
-  },
   teamTrainingCard: {
     gap: spacing.sm,
     borderColor: 'rgba(200, 255, 0, 0.18)',
