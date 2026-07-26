@@ -454,7 +454,7 @@ export function getSessionComponents(
     components.push({
       id: 'support',
       kind: 'support',
-      label: 'trunk/support work',
+      label: 'midline work',
       completionPolicy: 'optional_no_penalty',
     });
   }
@@ -528,7 +528,7 @@ export function componentQuestionLabel(
       : 'Did you complete the strength work?';
   }
   if (component.kind === 'power') return 'Did you complete the power work?';
-  if (component.kind === 'support') return 'Did you complete the trunk/support work?';
+  if (component.kind === 'support') return 'Did you complete the midline work?';
   if (component.kind === 'conditioning') return 'Did you complete the conditioning?';
   if (component.kind === 'team_training') return 'Did you complete team training?';
   if (component.kind === 'speed') return 'Did you complete the speed work?';
@@ -541,7 +541,7 @@ export function componentQuestionLabel(
 function componentReasonSubject(component: SessionComponent): string {
   if (component.kind === 'power') return 'the power work';
   if (component.kind === 'strength') return 'the strength work';
-  if (component.kind === 'support') return 'the trunk/support work';
+  if (component.kind === 'support') return 'the midline work';
   if (component.kind === 'conditioning') return 'the conditioning';
   if (component.kind === 'team_training') return 'team training';
   if (component.kind === 'speed') return 'the speed work';

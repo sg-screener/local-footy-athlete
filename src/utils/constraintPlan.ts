@@ -258,7 +258,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
     case 'wrist':
       return [
         'Lower body strength (squat / hinge / lunge)',
-        'Trunk + anti-rotation',
+        'Midline + anti-rotation',
         'Easy bike / rower / ski if pain-free',
         'Light accessories',
       ];
@@ -266,7 +266,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
       return [
         'Quad-dominant lower (goblet squats, leg press, step-ups)',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike if pain-free',
       ];
     case 'knee':
@@ -274,7 +274,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
       return [
         'Light hinge / hip-dominant work',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike if pain-free',
       ];
     case 'calf':
@@ -282,28 +282,28 @@ function buildSubstituteLabels(c: Constraint): string[] {
       return [
         'Hip-dominant lower (RDLs, hip thrusts)',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike if pain-free',
       ];
     case 'groin':
       return [
         'Bilateral lower (light squat / hinge)',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike',
       ];
     case 'hip':
       return [
         'Light bilateral lower',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike',
       ];
     case 'ankle':
       return [
         'Bilateral lower (no jumping / cutting)',
         'Upper body strength',
-        'Trunk',
+        'Midline',
         'Easy bike',
       ];
     case 'back':
@@ -313,7 +313,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
         'Bike / walk / mobility',
       ];
     default:
-      return ['Upper body', 'Trunk', 'Easy bike if pain-free'];
+      return ['Upper body', 'Midline', 'Easy bike if pain-free'];
   }
 }
 

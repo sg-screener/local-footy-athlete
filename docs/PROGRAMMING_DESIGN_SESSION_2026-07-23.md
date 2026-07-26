@@ -50,6 +50,89 @@ Agenda (from MASTER_PLAN 4.1):
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
 
+### D15 amendments + D16 deloads (Sam, 2026-07-25)
+
+- **TT-day gym pairing refined:** full-body strength CAN share a day
+  with team training (morning gym / evening track is normal). The rule
+  is an EXERCISE-SELECTION FILTER on TT days, not a pairing ban: avoid
+  high-soreness picks (RFE split squats, Nordics, back squats, heavy
+  RDLs) and heavy low-back/groin loading — but athletes "aren't made
+  of glass": low-rep RDLs fine, box squat fine, especially at 2–3
+  lifts. Implemented via existing tags (doms/eccentric/injury-map) +
+  dose cap, not a name list.
+- **D16 — Deload law:** OFF-SEASON: weeks 1–2 everything-optional rule,
+  weeks 3–4 transition rule, THEN 3–4-week deload cycles begin.
+  PRE-SEASON: scheduled 3–4-week deloads, definitely. IN-SEASON: NO
+  scheduled deloads — fatigue management + readiness awareness only
+  (games and byes self-regulate).
+- **Process ruling (Sam): the Bible gets AMENDED when new rulings
+  supersede it** — contradictions are removed, not accumulated. A
+  BIBLE AMENDMENT PASS is now a scheduled unit: apply every recorded
+  ruling (8-min erg cap over the old 10, conditioning taxonomy +
+  framework, run floor/cap, no sleds, midline, D1–D16) into
+  LFA_PROGRAMMING_BIBLE.md with a changelog; Sam signs the diff.
+
+### D15 — Weekly assembly rules (Sam, 2026-07-25) — PRINCIPLES, not fixed templates
+
+- Inputs: athlete's actual TT nights (they MOVE — pre-season TT is often
+  Mon/Wed because cricket owns Tue/Thu grounds), available days, phase,
+  game/fixture. The assembler places sessions by rule:
+  1. TT nights are anchors wherever they fall; attach upper work to a
+     TT night when gym-after-training works (e.g. Upper Pull + TT).
+  2. Hard running/top-end pairs with UPPER days; LOWER days pair with
+     off-leg conditioning (Bible law). Hinge day never meets sprints.
+  3. Lower exposures spaced; rest follows dense clusters; prefer
+     doubles + full off-days over one-session-per-day (Bible).
+  4. Fewer days ⇒ full-body consolidation (2 gym days = full-body ×2,
+     Mon/Wed in-season). Weekend available ⇒ volume slots; weekend
+     unavailable ⇒ compress into weekdays, same pairings.
+- In-season splits (Sam): 2 days = full-body Mon+Wed · 3 days = Lower
+  Mon, Upper Pull+TT, rest, Upper Push+TT · 4 days = + optional
+  accessories/prehab Wed + optional Gunshow Fri · everyone may take an
+  optional Gunshow G-1.
+- SKIP RULES: move-forward relocates only to legal days, else honestly
+  gone; missed/skip recorded, week continues, NEXT WEEK NEVER MORTGAGED.
+  PATTERN ABSORPTION: a missed upper pattern folds into the remaining
+  same-region session as a normal-sized combined day (key lifts in,
+  accessories out; never 12–14 lifts; never cross-region).
+- BYE WEEK: athlete chooses "Freshen up" (default) or "Push on" —
+  applies to the REMAINDER of the week whenever declared; push-on adds
+  one lower stimulus + extra OFF-LEG conditioning (RUNNING CAPS AT 3
+  DAYS/WEEK — standing rule, pairs with the 2-run floor) and the bye
+  Saturday hosts a hard high-speed session (150s @2:00, 400s, aerobic
+  power) where the body expects game intensity.
+- Canonical reference weeks (assembler must reproduce, not hardcode):
+  Sam's pre-season ideal — Mon Upper Pull+TT · Tue Lower · Wed TT ·
+  Thu rest · Fri Upper + hard conditioning/top-end · Sat Lower +
+  off-leg conditioning · Sun rest. Weekend-unavailable variant — Mon
+  TT · Tue Full Body · Wed TT · Thu Lowers · Fri Uppers + hard
+  conditioning.
+
+### D14 — MAS via 2 km time trial (Sam, 2026-07-25)
+
+- **Onboarding gains a 2 km time-trial screen** (min/sec roller, sits
+  with the squat/bench strength questions). 2 km chosen over 3 km: AFL
+  club standard — many athletes know their time cold.
+- **Skippable**: "Not sure / haven't tested" default; MAS defaults by
+  experience level so every MAS-based session still renders.
+- MAS stored on-device; %MAS intensities in run templates render as
+  per-athlete paces/rep distances (the personalisation layer for
+  time-first conditioning).
+- **Re-test loop (roadmap)**: the app prescribes a 2 km TT as a real
+  aerobic-power session every ~6–8 weeks, recalibrating MAS and feeding
+  the Journal's fitness trend.
+- Builds with the conditioning wiring (Step 2/3 of Sam's order).
+
+### D13 flow-rule language (Sam, 2026-07-25)
+
+- The future flow/primer curation session uses Sam's composable rule
+  format, executable because of the muscle/role/level metadata:
+  **"<session type>: flow = N × <category> + N × <category>"** —
+  e.g. "any upper push session: 2 shoulder mobility + 2 shoulder
+  prehab". Sam writes the sentences; they become enforced selection
+  rules. (Regression addendum: Banded Bicep Curl → everyone
+  (regression), 2026-07-25.)
+
 ### D13 addendum — the ten template rulings (Sam, 2026-07-25)
 
 All ten spec questions ruled: 6 badges (second heavy lift reuses Main
@@ -83,7 +166,30 @@ homonym excluded from the Midline rename.
   auto-programmed for new-to-training only; others via injury/equipment/
   self-pick.
 
-### D12 — Conditioning taxonomy: the russian-doll grid (Sam, 2026-07-25)
+### D12 revision 2 — templates-as-stimulus (Sam, 2026-07-25, supersedes grid)
+
+- **Architecture: template = the stimulus; modality = a rendering
+  rule.** Time-first prescriptions (self-scale across athlete speeds);
+  distance allowed for short/speed work; calories for EMOM-class.
+- **8 quality rows** (GRIND FOLDED INTO ANAEROBIC — Sam): Acceleration ·
+  Top End Speed · Repeat Sprint · COD/Decel · Anaerobic · Aerobic
+  Power · Aerobic Capacity · Flush.
+- **Modality rules:** Run/Ski/Row share distances; Bike = ×2; Air Bike
+  time-based via 250 m ≈ 1 min; work intervals >8 min = Run/Bike only
+  (Ski/Row/Air Bike hard cap 8 min, prefer ≤6 — supersedes Bible's old
+  10-min line); sprint-family (Accel/Top End/COD) run-only. NO SLEDS.
+- **TEMPLATE SCHEMA (Sam):** every template must carry — work period ·
+  rest period · sets/rounds (reps where relevant) · intensity · a
+  work:rest ratio correct for the quality · total session time.
+  Cleanup pass (Sam + Cowork) enforces the schema after Sam's first
+  table pass, validating each template against quality-appropriate
+  W:R and total-time bands.
+- Cleanup-pass note (Sam): FLUSH templates are largely near-duplicates —
+  consolidate to a small distinct set (likely: short easy spin/jog,
+  medium continuous, long nasal, easy erg alternates) on the second
+  pass.
+
+### D12 — Conditioning taxonomy: the russian-doll grid (Sam, 2026-07-25) [SUPERSEDED by revision 2 above]
 
 - **Conditioning reorganises into a locked GRID, same philosophy as the
   exercise vocabulary:** modality (Run / Bike / Ski / Row / Air Bike) ×

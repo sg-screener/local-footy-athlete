@@ -181,7 +181,11 @@ They belong to the follow-up purge unit — see NOT-COVERED in the report.
 ### Single-Arm DB Floor Press
 - Pool: Upper push
 - Cue: 
-- Cue not authored — ships the existing curated cue: Brace the trunk, press from the floor. | Don't let the torso rotate.
+- Cue not authored — ships the existing curated cue: Brace the midline, press from the floor. | Don't let the torso rotate.
+- Amended 2026-07-25 by the D13 terminology ruling ("midline" replaces
+  "trunk/core" in athlete-facing copy). The cue Sam declined to re-author on
+  2026-07-24 read "Brace the trunk, press from the floor."; only the body-region
+  word changed, so this line still records "ships the existing curated cue".
 - Video: (existing in app — Kneeling Jump / Lateral Jump / Single-Arm DB Floor Press use current entries; Erg EMOM = conditioning, none by design)
 
 ### Single-Leg Hip Thrust

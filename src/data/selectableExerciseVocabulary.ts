@@ -242,7 +242,7 @@ const REGISTRY_GROUP_LABELS: Record<string, string> = {
   groin_adductors: 'Groin / adductors',
   calves: 'Calves',
   lower_prehab: 'Lower prehab',
-  trunk_anti_rotation: 'Core / trunk',
+  trunk_anti_rotation: 'Midline',
   shoulder_health: 'Shoulder health',
   hamstring_light: 'Hamstring (light)',
   tissue_quality: 'Tissue quality',

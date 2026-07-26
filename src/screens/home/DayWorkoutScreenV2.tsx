@@ -120,7 +120,7 @@ type SwapReason =
 type AddExerciseKind =
   | 'Upper body'
   | 'Lower body'
-  | 'Core'
+  | 'Midline'
   | 'Prehab'
   | 'Mobility'
   | 'Conditioning finisher'
@@ -196,7 +196,7 @@ const SWAP_REASONS: SwapReason[] = [
 const ADD_EXERCISE_KINDS: AddExerciseKind[] = [
   'Upper body',
   'Lower body',
-  'Core',
+  'Midline',
   'Prehab',
   'Mobility',
   'Conditioning finisher',
@@ -344,7 +344,7 @@ function suggestAddExercise(
       { name: 'Reverse Lunges', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
       { name: 'Hip Thrust', sets: 2, repsMin: 10, repsMax: 12 },
     ],
-    Core: [
+    Midline: [
       { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12, perSide: true },
       { name: 'Dead Bug', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
     ],

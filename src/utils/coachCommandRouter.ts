@@ -2405,7 +2405,7 @@ const LOW_LOAD_CUSTOM_ACTIVITIES: Array<{ re: RegExp; label: string }> = [
   { re: /\bprehab\b/i, label: 'Prehab' },
   { re: /\bactivation\b/i, label: 'Activation' },
   { re: /\bbreath(?:ing)?\b/i, label: 'Breathing' },
-  { re: /\bcore\b/i, label: 'Core' },
+  { re: /\bcore\b/i, label: 'Midline' },
 ];
 
 export function extractAddConditioningIntent(

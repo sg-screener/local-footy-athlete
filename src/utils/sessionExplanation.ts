@@ -247,7 +247,7 @@ function buildLowerSquatSentence(
   if (placement === 'early_week') {
     return 'Squat-dominant session placed early to load your legs when freshness is highest.';
   }
-  return 'Squat-focused lower session to build strength through the quads and trunk under controlled intensity.';
+  return 'Squat-focused lower session to build strength through the quads and midline under controlled intensity.';
 }
 
 function buildLowerHingeSentence(

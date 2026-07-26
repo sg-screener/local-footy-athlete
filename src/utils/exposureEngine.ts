@@ -505,7 +505,7 @@ function regionToBlockedRegional(
         blocked,
         limited,
         allowed: [...lowerBodyAllowed, ...generalSafe],
-        safeFocus: ['Lower body', 'Trunk', 'Easy bike / rower / ski if pain-free', 'Light accessories'],
+        safeFocus: ['Lower body', 'Midline', 'Easy bike / rower / ski if pain-free', 'Light accessories'],
       };
     }
 
@@ -534,7 +534,7 @@ function regionToBlockedRegional(
       return {
         blocked, limited,
         allowed: [...upperBodyAllowed, ...generalSafe, 'horizontal_pull', 'vertical_pull', 'squat', 'knee_dominant'],
-        safeFocus: ['Upper body', 'Trunk', 'Quad-dominant lower if pain-free', 'Easy bike / rower / ski'],
+        safeFocus: ['Upper body', 'Midline', 'Quad-dominant lower if pain-free', 'Easy bike / rower / ski'],
       };
     }
 
@@ -557,7 +557,7 @@ function regionToBlockedRegional(
       return {
         blocked, limited,
         allowed: [...upperBodyAllowed, ...generalSafe, 'horizontal_pull', 'vertical_pull', 'hinge', 'posterior_chain', 'hip_dominant'],
-        safeFocus: ['Upper body', 'Hinge work (light)', 'Trunk', 'Easy bike'],
+        safeFocus: ['Upper body', 'Hinge work (light)', 'Midline', 'Easy bike'],
       };
     }
 
@@ -583,7 +583,7 @@ function regionToBlockedRegional(
           'squat', 'lunge', 'hinge', 'knee_dominant', 'hip_dominant',
           'posterior_chain', 'heavy_lower_strength', 'heavy_hinge', 'heavy_squat',
         ],
-        safeFocus: ['Upper body', 'Hip-dominant lower', 'Trunk', 'Easy bike if pain-free'],
+        safeFocus: ['Upper body', 'Hip-dominant lower', 'Midline', 'Easy bike if pain-free'],
       };
     }
 
@@ -604,7 +604,7 @@ function regionToBlockedRegional(
       return {
         blocked, limited,
         allowed: [...upperBodyAllowed, ...generalSafe, 'horizontal_pull', 'vertical_pull', 'squat', 'hinge', 'knee_dominant'],
-        safeFocus: ['Upper body', 'Bilateral lower', 'Trunk', 'Easy bike'],
+        safeFocus: ['Upper body', 'Bilateral lower', 'Midline', 'Easy bike'],
       };
     }
 
@@ -626,7 +626,7 @@ function regionToBlockedRegional(
       return {
         blocked, limited,
         allowed: [...upperBodyAllowed, ...generalSafe, 'horizontal_pull', 'vertical_pull', 'trunk'],
-        safeFocus: ['Upper body', 'Light bilateral lower', 'Trunk', 'Easy bike'],
+        safeFocus: ['Upper body', 'Light bilateral lower', 'Midline', 'Easy bike'],
       };
     }
 
@@ -650,7 +650,7 @@ function regionToBlockedRegional(
           ...upperBodyAllowed, ...generalSafe, 'horizontal_pull', 'vertical_pull',
           'squat', 'hinge', 'knee_dominant', 'hip_dominant', 'posterior_chain',
         ],
-        safeFocus: ['Upper body', 'Bilateral lower', 'Trunk', 'Easy bike'],
+        safeFocus: ['Upper body', 'Bilateral lower', 'Midline', 'Easy bike'],
       };
     }
 
@@ -679,7 +679,7 @@ function regionToBlockedRegional(
         safeFocus: [
           'Supported upper body',
           'Light unilateral lower (no axial load)',
-          'Trunk if pain-free',
+          'Midline if pain-free',
           'Bike / walk / mobility',
         ],
       };

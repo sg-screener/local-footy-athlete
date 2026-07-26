@@ -197,7 +197,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'accessories_prehab',
     label: 'Prehab & Accessories',
-    description: 'Small-muscle armour: groin, rotator cuff, trunk.',
+    description: 'Small-muscle armour: groin, rotator cuff, midline.',
     category: 'accessories',
     byeOnly: false,
     durationMinutes: 35,

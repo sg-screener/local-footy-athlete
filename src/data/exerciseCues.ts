@@ -79,7 +79,7 @@ export interface ExerciseCue {
 
 export const FAMILY_FALLBACKS: Record<MovementPattern, ExerciseCue> = {
   squat:            { primaryCue: 'Sit into the hips, chest up.',       secondaryCue: 'Control the descent.' },
-  lunge:            { primaryCue: 'Front shin vertical, trunk tall.',   secondaryCue: 'Steady on each rep.' },
+  lunge:            { primaryCue: 'Front shin vertical, tall through the midline.', secondaryCue: 'Steady on each rep.' },
   hinge:            { primaryCue: 'Push hips back, flat back.',         secondaryCue: 'Feel the hamstrings load.' },
   plyo:             { primaryCue: 'Land soft, absorb with hips.',       secondaryCue: 'Max intent, quality reps.' },
   horizontal_push:  { primaryCue: 'Set the shoulder blades, then press.', secondaryCue: 'Control down, drive up.' },
@@ -87,7 +87,7 @@ export const FAMILY_FALLBACKS: Record<MovementPattern, ExerciseCue> = {
   horizontal_pull:  { primaryCue: 'Pull to the torso, retract scaps.', secondaryCue: 'Squeeze at the top, slow return.' },
   vertical_pull:    { primaryCue: 'Start from a dead hang, lead with lats.', secondaryCue: 'Control the lowering.' },
   carry:            { primaryCue: 'Tall posture, shoulders packed.',    secondaryCue: 'Breathe and walk steady.' },
-  core:             { primaryCue: 'Brace through the trunk.',          secondaryCue: 'Hold without shifting.' },
+  core:             { primaryCue: 'Brace through the midline.',        secondaryCue: 'Hold without shifting.' },
   isolation_upper:  { primaryCue: 'Control the full range.',           secondaryCue: 'Squeeze at peak contraction.' },
   isolation_lower:  { primaryCue: 'Control the full range.',           secondaryCue: 'Squeeze at peak contraction.' },
   conditioning:     { primaryCue: 'Hold the prescribed effort.',       secondaryCue: 'Breathe rhythmically.' },
@@ -307,7 +307,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Couch Stretch': {
     primaryCue: 'Back knee to the wall, squeeze the glute.',
-    secondaryCue: 'Tall trunk, no arching.',
+    secondaryCue: 'Tall through the midline, no arching.',
   },
   'Crab Walks': {
     primaryCue: "Sit back into athletic position, band around feet, push off outside leg, keep knees slightly pointed out.",
@@ -419,7 +419,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Front Squat': {
     primaryCue: 'Elbows high, sit between the heels.',
-    secondaryCue: 'Stay tall through the trunk.',
+    secondaryCue: 'Stay tall through the midline.',
   },
   'Glute Bridge': {
     primaryCue: "Keep spine neutral, don’t arch low back, lift hips, squeeze glutes, add weight to hips if you can.",
@@ -677,7 +677,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Single-Arm DB Bench Press': {
     primaryCue: 'Fight the rotation.',
-    secondaryCue: 'Brace hard through the trunk.',
+    secondaryCue: 'Brace hard through the midline.',
   },
   'Single-Arm DB Row': {
     primaryCue: 'Elbow drives past the torso, pull to belly.',
@@ -780,7 +780,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Constant tension, no jerking.',
   },
   'Walking Lunges': {
-    primaryCue: 'Long stride, trunk upright.',
+    primaryCue: 'Long stride, tall through the midline.',
     secondaryCue: 'Steady and deliberate.',
   },
   'Weighted Dead Bug': {
@@ -788,7 +788,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Slow extension, full exhale.',
   },
   'Woodchop (Half Kneeling)': {
-    primaryCue: 'Drive with the trunk, arms guide.',
+    primaryCue: 'Drive with the midline, arms guide.',
     secondaryCue: 'Controlled rotation, not a throw.',
   },
   'Woodchop (Standing)': {
@@ -807,7 +807,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   // the existing Bible pressing-injury-swap cue is what ships. Recorded in the
   // changeset's ADDITIONS entry ("Cue not authored — ships the existing …").
   'Single-Arm DB Floor Press': {
-    primaryCue: 'Brace the trunk, press from the floor.',
+    primaryCue: 'Brace the midline, press from the floor.',
     secondaryCue: "Don't let the torso rotate.",
   },
 };

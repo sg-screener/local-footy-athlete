@@ -181,8 +181,8 @@ function rulesFor(result: GuidedInjuryFlowResult): string[] {
 
 function safeFocusFor(region: GuidedInjuryRegion, serious: boolean): string[] {
   if (serious) return ['Stop affected training', 'Seek medical or physio advice'];
-  if (region === 'upper_body') return ['Lower body training where suitable', 'Easy conditioning', 'Unaffected core work'];
-  if (region === 'lower_body') return ['Upper body training where suitable', 'Low-impact conditioning', 'Unaffected core work'];
+  if (region === 'upper_body') return ['Lower body training where suitable', 'Easy conditioning', 'Unaffected midline work'];
+  if (region === 'lower_body') return ['Upper body training where suitable', 'Low-impact conditioning', 'Unaffected midline work'];
   if (region === 'back_midline') return ['Supported upper body work', 'Easy conditioning', 'Unaffected low-risk work'];
   return ['Unaffected training only', 'Recovery work'];
 }

@@ -356,9 +356,9 @@ function deterministicInjuryBody(
 
   const safeLine =
     bucket.includes('shoulder') && summary.hasSafeLowerBikeCore
-      ? 'Lower-body, bike or core work stayed in where safe.'
+      ? 'Lower-body, bike or midline work stayed in where safe.'
       : (bucket.includes('hamstring') || bucket.includes('knee') || bucket.includes('adductor') || bucket.includes('groin')) && summary.hasSafeUpperBike
-        ? 'Upper-body, bike or core work stayed in where safe.'
+        ? 'Upper-body, bike or midline work stayed in where safe.'
         : '';
 
   return sentence([
