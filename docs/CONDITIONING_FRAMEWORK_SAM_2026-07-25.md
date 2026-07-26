@@ -15,15 +15,29 @@ outranks any earlier draft sorting.
 - Footy: power = high output in a hard passage; capacity = keep working
   across four quarters and recover to go again.
 
+## THE CLASSIFICATION LAW (Sam, 2026-07-25 amendment — governs the table below)
+
+**Intensity classifies. W:R is only a property.**
+
+A session belongs to the quality its *intensity* says it belongs to. Its
+work-to-rest ratio describes the session; it does not decide which quality the
+session is. A W:R (or an effort length) outside a quality's tabled band is a
+property of that session, not a misfiling and not an error. The bands below
+are descriptive of the typical case, not a filing test.
+
 ## The governing table (Sam's)
 
 | Quality | Effort length | Work:rest | Main objective |
 |---|---|---|---|
-| Anaerobic power (alactic) | 3–10 sec | 1:6–1:12 | Maximum speed and explosiveness |
+| Anaerobic power (alactic) | 3–10 sec | 1:6–1:12* | Maximum speed and explosiveness |
 | Repeated-sprint ability | 4–10 sec | 1:3–1:5 | Repeat high-speed efforts |
 | Anaerobic capacity (glycolytic) | 15–60 sec | 1:2–1:5 | Sustain hard work through fatigue |
 | Aerobic power | 1–5 min | 1:1–2:1 | High aerobic output |
 | Aerobic capacity | Longer/continuous | 3:1–continuous | Total sustainable aerobic work |
+
+\* **Sprint-family exemption** (Sam, 2026-07-25): for alactic sprint work the
+1:12 ceiling is not binding — full recovery at 1:10–1:15+ is allowed. The 1:6
+floor still holds.
 
 ## Aerobic power sessions (hard but controlled, near-max aerobic output)
 
