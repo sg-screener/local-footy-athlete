@@ -15,8 +15,7 @@ import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
-import { PowerPrimerSection } from '../../components/PowerPrimerSection';
-import { TrunkSupportSection } from '../../components/TrunkSupportSection';
+import { SessionRoleBadge } from '../../components/SessionRoleBadge';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
 import {
@@ -59,12 +58,15 @@ import {
   formatRest,
   inferRecoveryPrescriptionType,
   formatRecoveryPrescription,
-  buildStrengthLabels,
-  groupStrengthExercises,
   formatStrengthSetsReps,
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
 import { isTeamTrainingItem } from '../../utils/teamTraining';
+import {
+  buildSessionTemplate,
+  type SessionTemplateItem,
+} from '../../utils/sessionTemplate';
+import type { SessionRole } from '../../utils/sessionRoles';
 import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import { stableTestIdToken } from '../../utils/stableTestId';
 import { explorerTestId } from '../../utils/stableTestId';
@@ -445,12 +447,7 @@ export default function DayWorkoutScreenV2() {
     isRecovery,
     isConditioning,
     isCombinedDay,
-    hasTeamTraining,
     strengthExercises,
-    supportExercises,
-    conditioningExercises,
-    conditioningOptions,
-    conditioningRowCount,
   } = useDayWorkout();
 
   const smokeCoachBikeFlow =
@@ -473,6 +470,16 @@ export default function DayWorkoutScreenV2() {
   const editableExercises = React.useMemo(
     () => buildEditableExercises(workout, isTeamOnly),
     [workout, isTeamOnly],
+  );
+
+  /**
+   * The one list. Composed once from the whole workout — see
+   * `src/utils/sessionTemplate.ts` for why this is an owner rather than a
+   * render helper.
+   */
+  const sessionTemplate = React.useMemo(
+    () => buildSessionTemplate(workout),
+    [workout],
   );
   React.useEffect(() => {
     if (!pendingComponentDeletionObservation) return;
@@ -1163,30 +1170,34 @@ export default function DayWorkoutScreenV2() {
           </Text>
         ) : null}
 
-        {/* Typed pre-lift power work stays visible and separate from strength. */}
-        <PowerPrimerSection block={workout.powerBlock} />
+        {/*
+          ── The session body ──
 
-        {/* ── Main body: three render branches ── */}
-        {isConditioning ? (
-          <ConditioningPhases
-            exercises={conditioningExercises}
-            onChangeExercise={openSpecificExerciseEditor}
-          />
-        ) : isRecovery ? (
-          <RecoveryBlock
-            exercises={workout.exercises ?? []}
-            expandedCues={expandedCues}
-            toggleCue={toggleCue}
-            onSelectExercise={setSelectedExercise}
-            onChangeExercise={openSpecificExerciseEditor}
-          />
+          D13: the session is ONE list. `buildSessionTemplate` is the single
+          composition owner — it reads the whole workout once and emits every
+          applicable row in D2 order, each carrying its role badge. The screen
+          no longer decides what to mount; it renders what the owner returned.
+
+          This is why team training can no longer go missing on a conditioning
+          day (spec §2 item 4c): there is no branch left that could swallow it.
+
+          Recovery-type days are the one ruled exception (§6 item 3) — they keep
+          their own simple template, badge-free, with the add-on box intact.
+        */}
+        {sessionTemplate.mode === 'recovery' ? (
+          <>
+            <RecoveryBlock
+              exercises={workout.exercises ?? []}
+              expandedCues={expandedCues}
+              toggleCue={toggleCue}
+              onSelectExercise={setSelectedExercise}
+              onChangeExercise={openSpecificExerciseEditor}
+            />
+            <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
+          </>
         ) : (
-          <StrengthBlock
-            strengthExercises={strengthExercises}
-            conditioningOptions={conditioningOptions}
-            conditioningRowCount={conditioningRowCount}
-            isCombinedDay={isCombinedDay}
-            hasTeamTraining={hasTeamTraining}
+          <SessionList
+            items={sessionTemplate.items}
             expandedCues={expandedCues}
             toggleCue={toggleCue}
             editingWeightId={editingWeightId}
@@ -1201,10 +1212,6 @@ export default function DayWorkoutScreenV2() {
             onChangeExercise={openSpecificExerciseEditor}
           />
         )}
-
-        <TrunkSupportSection rows={supportExercises} />
-
-        <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
 
         {/* ── Reopen of a completed session → read-only summary ── */}
         {isAlreadyComplete && date ? (
@@ -1417,14 +1424,20 @@ function CoachNoteBanner({
 }
 
 /**
- * Strength branch — includes combined-day conditioning block underneath.
+ * The one list.
+ *
+ * Every item the composition owner emitted, rendered in the order it emitted
+ * them. There are no section headers and no boxes: what separates one row from
+ * the next is whitespace, exactly as the flat exercise list already did.
+ *
+ * The only grouping left is the superset rail — a pairing is a real
+ * prescription fact ("do these back to back"), not decoration, so consecutive
+ * members of one group are wrapped in the existing lime rail. Every other
+ * structural device the screen used to draw was a category header, and
+ * categories are now carried by each row's own badge.
  */
-interface StrengthBlockProps {
-  strengthExercises: any[];
-  conditioningOptions: any[];
-  conditioningRowCount: number;
-  isCombinedDay: boolean;
-  hasTeamTraining: boolean;
+interface SessionListProps {
+  items: SessionTemplateItem[];
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -1438,12 +1451,8 @@ interface StrengthBlockProps {
   onSelectExercise: (name: string) => void;
   onChangeExercise: (exercise: any) => void;
 }
-function StrengthBlock({
-  strengthExercises,
-  conditioningOptions,
-  conditioningRowCount,
-  isCombinedDay,
-  hasTeamTraining,
+function SessionList({
+  items,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -1456,95 +1465,245 @@ function StrengthBlock({
   commitWeightEdit,
   onSelectExercise,
   onChangeExercise,
-}: StrengthBlockProps) {
-  const labels = buildStrengthLabels(strengthExercises);
-  const groups = groupStrengthExercises(strengthExercises);
+}: SessionListProps) {
+  if (items.length === 0) return null;
+
+  const renderItem = (item: SessionTemplateItem, key: string) => {
+    if (item.kind === 'power') {
+      return <PowerRow key={key} block={item.block} />;
+    }
+    if (item.kind === 'team_training') {
+      return <TeamTrainingBanner key={key} />;
+    }
+    if (item.kind === 'conditioning_choice') {
+      return (
+        <ConditioningChoiceRow
+          key={key}
+          options={item.options}
+          onChangeExercise={onChangeExercise}
+        />
+      );
+    }
+    if (item.presentation === 'conditioning_phase') {
+      return (
+        <ConditioningPhaseRow
+          key={key}
+          exercise={item.row}
+          onChangeExercise={onChangeExercise}
+        />
+      );
+    }
+    if (item.presentation === 'addon') {
+      return <AddonRow key={key} role={item.role} exercise={item.row} />;
+    }
+    return (
+      <StrengthExerciseCard
+        key={key}
+        exercise={item.row}
+        role={item.role}
+        isGrouped={!!item.superset}
+        isLastInGroup={
+          !item.superset || item.superset.index === item.superset.size - 1
+        }
+        expandedCues={expandedCues}
+        toggleCue={toggleCue}
+        editingWeightId={editingWeightId}
+        editingWeightText={editingWeightText}
+        setEditingWeightText={setEditingWeightText}
+        formatWeight={formatWeight}
+        incrementWeight={incrementWeight}
+        decrementWeight={decrementWeight}
+        startEditingWeight={startEditingWeight}
+        commitWeightEdit={commitWeightEdit}
+        onSelectExercise={onSelectExercise}
+        onChangeExercise={onChangeExercise}
+      />
+    );
+  };
+
+  // Walk the flat list once, wrapping consecutive members of a superset group
+  // in the pairing rail. The owner already guarantees they are adjacent.
+  const rendered: React.ReactNode[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const groupId =
+      item.kind === 'exercise' && item.superset ? item.superset.groupId : null;
+    if (!groupId) {
+      rendered.push(renderItem(item, `session-item-${i}`));
+      continue;
+    }
+    const members: SessionTemplateItem[] = [];
+    let j = i;
+    while (
+      j < items.length &&
+      items[j].kind === 'exercise' &&
+      (items[j] as Extract<SessionTemplateItem, { kind: 'exercise' }>).superset
+        ?.groupId === groupId
+    ) {
+      members.push(items[j]);
+      j += 1;
+    }
+    rendered.push(
+      <View key={`superset-${groupId}-${i}`} style={styles.pairWrap}>
+        <View style={styles.pairTag}>
+          <Text style={styles.pairTagText}>SUPERSET</Text>
+        </View>
+        {members.map((member, offset) =>
+          renderItem(member, `session-item-${i + offset}`),
+        )}
+      </View>,
+    );
+    i = j - 1;
+  }
+
+  return <View style={styles.exerciseList}>{rendered}</View>;
+}
+
+/**
+ * Power work as the first list row.
+ *
+ * The old box carried a "POWER / EXPLOSIVE PRIMER" header and a "Before
+ * strength" / "Pair with main lift" placement tag. Both are retired: placement
+ * is now just list order, and the category is the badge. What survives is the
+ * content the athlete acts on — the prescription, the options to choose
+ * between, and the coaching notes.
+ */
+function PowerRow({ block }: { block: any }) {
+  const options = block?.options ?? [];
+  return (
+    <View
+      style={styles.exerciseCard}
+      testID="power-primer-section"
+      accessibilityLabel={`${block.title}. ${block.prescription}`}
+    >
+      <SessionRoleBadge role="power" />
+      <View style={styles.exerciseHeaderRow}>
+        <View style={styles.exerciseNameWrap}>
+          <Text style={styles.exerciseName} testID="power-primer-title">
+            {block.title}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.statsPrimary} testID="power-primer-prescription">
+        {block.prescription}
+      </Text>
+      {options.length > 1 ? (
+        <Text style={styles.chooseOneLabel}>Choose one:</Text>
+      ) : null}
+      <View style={styles.powerOptions}>
+        {options.map((option: any, index: number) => (
+          <View
+            key={`${block.id}-${option.name}-${index}`}
+            style={styles.powerOptionRow}
+            testID={`power-primer-option-${index}`}
+          >
+            <Text style={styles.powerOptionName}>{option.name}</Text>
+            <Text style={styles.powerOptionDose}>
+              {option.repsMin === option.repsMax
+                ? `${option.sets} × ${option.repsMin}`
+                : `${option.sets} × ${option.repsMin}-${option.repsMax}`}
+            </Text>
+          </View>
+        ))}
+      </View>
+      {(block.notes ?? []).map((note: string, index: number) => (
+        <Text key={`${block.id}-note-${index}`} style={styles.cueText}>
+          {note}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * An add-on exercise, now an ordinary badged row.
+ *
+ * The "Optional Recovery Add-on" box is gone, but the no-penalty meaning it
+ * carried is real prescription information, so it moves onto the row as a quiet
+ * marker rather than being dropped with the container.
+ */
+function AddonRow({ role, exercise }: { role: any; exercise: any }) {
+  const token = stableTestIdToken(exercise?.id);
+  return (
+    <View style={styles.exerciseCard} testID={`workout-exercise-row-${token}`}>
+      <View style={styles.addonBadgeRow}>
+        <SessionRoleBadge role={role} />
+        <Text style={styles.optionalMarker}>Optional</Text>
+      </View>
+      <View style={styles.exerciseHeaderRow}>
+        <View style={styles.exerciseNameWrap}>
+          <Text style={styles.exerciseName} numberOfLines={2}>
+            {displayExerciseName(exercise?.name)}
+          </Text>
+        </View>
+      </View>
+      <Text
+        style={styles.statsPrimary}
+        testID={`workout-exercise-prescription-${token}`}
+      >
+        {exercise?.prescription}
+      </Text>
+      {exercise?.notes ? (
+        <Text style={styles.cueText}>{exercise.notes}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * The combined-day "choose one of N" picker as a single list row.
+ *
+ * §6 item 4: no separate box and no carve-out from "one list" — one
+ * Conditioning-badged row that expands in place to reveal the choice. When
+ * there is only one option there is nothing to choose, so it opens straight
+ * away rather than asking for a tap that reveals a single answer.
+ */
+function ConditioningChoiceRow({
+  options,
+  onChangeExercise,
+}: {
+  options: Array<{ title: string; description: string; rows: any[] }>;
+  onChangeExercise: (exercise: any) => void;
+}) {
+  const isChoice = options.length > 1;
+  const [expanded, setExpanded] = React.useState(!isChoice);
+  const rowCount = options.reduce((sum, option) => sum + option.rows.length, 0);
+  if (rowCount === 0) return null;
 
   return (
-    <View>
-      {(isCombinedDay || hasTeamTraining) && strengthExercises.length > 0 ? (
-        <SectionLabel style={styles.sectionLabel}>Strength</SectionLabel>
-      ) : null}
-
-      {strengthExercises.length > 0 ? (
-        <View style={styles.exerciseList}>
-          {groups.map((group) => {
-            // Standalone exercise - no group wrapper needed.
-            if (!group.groupId || group.indices.length < 2) {
-              return group.indices.map((idx) => (
-                <StrengthExerciseCard
-                  key={strengthExercises[idx].id}
-                  exercise={strengthExercises[idx]}
-                  label={labels[idx]}
-                  isGrouped={false}
-                  expandedCues={expandedCues}
-                  toggleCue={toggleCue}
-                  editingWeightId={editingWeightId}
-                  editingWeightText={editingWeightText}
-                  setEditingWeightText={setEditingWeightText}
-                  formatWeight={formatWeight}
-                  incrementWeight={incrementWeight}
-                  decrementWeight={decrementWeight}
-                  startEditingWeight={startEditingWeight}
-                  commitWeightEdit={commitWeightEdit}
-                  onSelectExercise={onSelectExercise}
-                  onChangeExercise={onChangeExercise}
-                />
-              ));
-            }
-            // Paired/superset wrapper
-            return (
-              <View key={`group-${group.groupId}`} style={styles.pairWrap}>
-                <View style={styles.pairTag}>
-                  <Text style={styles.pairTagText}>SUPERSET</Text>
-                </View>
-                {group.indices.map((idx, i) => (
-                  <StrengthExerciseCard
-                    key={strengthExercises[idx].id}
-                    exercise={strengthExercises[idx]}
-                    label={labels[idx]}
-                    isGrouped
-                    isLastInGroup={i === group.indices.length - 1}
-                    expandedCues={expandedCues}
-                    toggleCue={toggleCue}
-                    editingWeightId={editingWeightId}
-                    editingWeightText={editingWeightText}
-                    setEditingWeightText={setEditingWeightText}
-                    formatWeight={formatWeight}
-                    incrementWeight={incrementWeight}
-                    decrementWeight={decrementWeight}
-                    startEditingWeight={startEditingWeight}
-                    commitWeightEdit={commitWeightEdit}
-                    onSelectExercise={onSelectExercise}
-                    onChangeExercise={onChangeExercise}
-                  />
-                ))}
-              </View>
-            );
-          })}
+    <View style={styles.exerciseCard} testID="conditioning-choice-row">
+      <SessionRoleBadge role="conditioning" />
+      <Pressable
+        onPress={isChoice ? () => setExpanded((prev) => !prev) : undefined}
+        accessibilityRole={isChoice ? 'button' : undefined}
+        accessibilityLabel={
+          isChoice
+            ? `${expanded ? 'Hide' : 'Show'} the ${options.length} conditioning options`
+            : undefined
+        }
+        style={styles.exerciseHeaderRow}
+      >
+        <View style={styles.exerciseNameWrap}>
+          <Text style={styles.exerciseName} numberOfLines={2}>
+            {isChoice ? `Choose one of ${options.length}` : options[0].title}
+          </Text>
         </View>
-      ) : null}
-
-      {/* Combined day: conditioning options appended below strength */}
-      {isCombinedDay && conditioningOptions.length > 0 && conditioningRowCount > 0 ? (
-        <View style={styles.conditioningSection}>
-          <SectionLabel style={styles.sectionLabel}>Conditioning</SectionLabel>
-          {conditioningOptions.length > 1 ? (
-            <Text style={styles.chooseOneLabel}>Choose one:</Text>
-          ) : null}
-          {conditioningOptions.map((opt, optIdx) => (
-            <Card
-              key={`cond-opt-${optIdx}`}
-              tone="accent"
-              radius="lg"
-              padding="md"
-              style={styles.conditioningOptionCard}
-            >
-              <Text style={styles.conditioningOptionTitle}>{opt.title}</Text>
-              {opt.description ? (
-                <Text style={styles.conditioningOptionDescription}>{opt.description}</Text>
+        {isChoice ? (
+          <Text style={styles.disclosureChevron}>{expanded ? '−' : '+'}</Text>
+        ) : null}
+      </Pressable>
+      {expanded
+        ? options.map((option, optionIndex) => (
+            <View key={`cond-opt-${optionIndex}`} style={styles.conditioningOption}>
+              {isChoice ? (
+                <Text style={styles.conditioningOptionTitle}>{option.title}</Text>
               ) : null}
-              {opt.rows.map((exercise: any, idx: number) => (
+              {option.description ? (
+                <Text style={styles.conditioningOptionDescription}>
+                  {option.description}
+                </Text>
+              ) : null}
+              {option.rows.map((exercise: any, idx: number) => (
                 <ConditioningRow
                   key={exercise.id}
                   exercise={exercise}
@@ -1552,27 +1711,29 @@ function StrengthBlock({
                   onChangeExercise={onChangeExercise}
                 />
               ))}
-            </Card>
-          ))}
-        </View>
-      ) : null}
-
-      {hasTeamTraining ? <TeamTrainingBlock /> : null}
+            </View>
+          ))
+        : null}
     </View>
   );
 }
 
 /**
- * A single strength exercise card. Renders:
- *   [label] Exercise Name              [▶ play]
+ * A single exercise row. Renders:
+ *   ROLE BADGE
+ *   Exercise Name                      [Change] [▶ play]
  *   Sets × Reps       Weight
  *                     [-] [value] [+]
- *   (optional notes + rest)
- *   (optional collapsible form cues)
+ *   (optional rest hint)
+ *   (curated coaching cue)
+ *
+ * The numeric index that used to lead the header row is retired: it marked a
+ * SEQUENCE, and D13 replaced sequence with kind. The badge takes that slot's
+ * job of classifying the row without competing with its name.
  */
 interface StrengthExerciseCardProps {
   exercise: any;
-  label: string;
+  role: SessionRole;
   isGrouped: boolean;
   isLastInGroup?: boolean;
   expandedCues: Record<string, boolean>;
@@ -1590,7 +1751,7 @@ interface StrengthExerciseCardProps {
 }
 function StrengthExerciseCard({
   exercise,
-  label,
+  role,
   isGrouped,
   isLastInGroup = true,
   expandedCues,
@@ -1627,7 +1788,7 @@ function StrengthExerciseCard({
       ]}
     >
       <ExerciseHeaderRow
-        label={label}
+        role={role}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
         onChange={
@@ -1836,51 +1997,50 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
 }
 
 /**
- * Conditioning session — descriptive phase cards.
+ * One conditioning phase, as a flat-list row.
+ *
+ * Was a tinted "phase card" inside the conditioning branch. The tint carried
+ * the category, so it retires with the box — the badge says Conditioning now,
+ * and the row sits on the page like every other row.
  */
-interface ConditioningPhasesProps {
-  exercises: any[];
+function ConditioningPhaseRow({
+  exercise,
+  onChangeExercise,
+}: {
+  exercise: any;
   onChangeExercise: (exercise: any) => void;
-}
-function ConditioningPhases({ exercises, onChangeExercise }: ConditioningPhasesProps) {
-  return (
-    <View style={styles.exerciseList}>
-      {exercises.map((exercise, index) => {
-        const phaseName = exercise.exercise?.name || `Phase ${index + 1}`;
-        const phaseDisplayName = displayExerciseName(phaseName, `Phase ${index + 1}`);
-        const description = exercise.notes || exercise.exercise?.description || '';
-        const restLabel = formatRest(exercise.restSeconds, 'recovery');
-        const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
+}) {
+  const phaseName = exercise.exercise?.name || 'Phase';
+  const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
+  const description = exercise.notes || exercise.exercise?.description || '';
+  const restLabel = formatRest(exercise.restSeconds, 'recovery');
+  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
-        return (
-          <Card
-            key={exercise.id}
-            tone="accent"
-            radius="xl"
-            padding="md"
-            testID={`workout-exercise-row-${exerciseToken}`}
-            style={styles.conditioningPhaseCard}
-          >
-            <View style={styles.conditioningPhaseHeader}>
-              <Text style={styles.conditioningPhaseName}>{phaseDisplayName}</Text>
-              {!isTeamTrainingItem(exercise) ? (
-                <ExerciseChangeAction onPress={() => onChangeExercise(exercise)} />
-              ) : null}
-            </View>
-            {description ? (
-              <Text
-                style={styles.conditioningPhaseBody}
-                testID={`workout-exercise-prescription-${exerciseToken}`}
-              >
-                {description}
-              </Text>
-            ) : null}
-            {restLabel ? (
-              <Text style={styles.conditioningRest}>{restLabel}</Text>
-            ) : null}
-          </Card>
-        );
-      })}
+  return (
+    <View
+      style={styles.exerciseCard}
+      testID={`workout-exercise-row-${exerciseToken}`}
+    >
+      <SessionRoleBadge role="conditioning" />
+      <View style={styles.exerciseHeaderRow}>
+        <View style={styles.exerciseNameWrap}>
+          <Text style={styles.exerciseName} numberOfLines={2}>
+            {phaseDisplayName}
+          </Text>
+        </View>
+        {!isTeamTrainingItem(exercise) ? (
+          <ExerciseChangeAction onPress={() => onChangeExercise(exercise)} />
+        ) : null}
+      </View>
+      {description ? (
+        <Text
+          style={styles.conditioningPhaseBody}
+          testID={`workout-exercise-prescription-${exerciseToken}`}
+        >
+          {description}
+        </Text>
+      ) : null}
+      {restLabel ? <Text style={styles.conditioningRest}>{restLabel}</Text> : null}
     </View>
   );
 }
@@ -1929,22 +2089,29 @@ function ConditioningRow({ exercise, idx, onChangeExercise }: ConditioningRowPro
   );
 }
 
-function TeamTrainingBlock() {
+/**
+ * Team training — a non-badged inline banner (§6 item 2).
+ *
+ * It sits at its ordering position in the flat list but carries no role badge:
+ * it isn't athlete-prescribed work the way the six badged categories are, it's
+ * a commitment the week already knows about. The "Team Training" section header
+ * goes with every other box header; the banner keeps its accent tint precisely
+ * because it is NOT one of the list's exercise rows.
+ */
+function TeamTrainingBanner() {
   return (
-    <View style={styles.teamTrainingSection} testID="team-training-section">
-      <SectionLabel style={styles.sectionLabel}>Team Training</SectionLabel>
-      <Card
-        tone="accent"
-        radius="lg"
-        padding="md"
-        style={styles.teamTrainingCard}
-      >
-        <Text style={styles.teamTrainingTitle}>Club/team field session.</Text>
-        <Text style={styles.teamTrainingBody}>
-          We'll account for the load in your week.
-        </Text>
-      </Card>
-    </View>
+    <Card
+      tone="accent"
+      radius="lg"
+      padding="md"
+      style={styles.teamTrainingCard}
+      testID="team-training-section"
+    >
+      <Text style={styles.teamTrainingTitle}>Club/team field session.</Text>
+      <Text style={styles.teamTrainingBody}>
+        We'll account for the load in your week.
+      </Text>
+    </Card>
   );
 }
 
@@ -1956,30 +2123,37 @@ function TeamTrainingBlock() {
  * fill intensifies) so the athlete gets visual confirmation of the tap.
  */
 interface ExerciseHeaderRowProps {
-  label: string;
+  /** The D13 role badge. Recovery-type days pass none — they keep the plain template. */
+  role?: SessionRole;
+  label?: string;
   name: string;
   onPlay: () => void;
   onChange?: () => void;
 }
-function ExerciseHeaderRow({ label, name, onPlay, onChange }: ExerciseHeaderRowProps) {
+function ExerciseHeaderRow({ role, label, name, onPlay, onChange }: ExerciseHeaderRowProps) {
   return (
-    <View style={styles.exerciseHeaderRow}>
-      <View style={styles.exerciseLabelBadge}>
-        <Text style={styles.exerciseLabelText}>{label}</Text>
+    <>
+      {role ? <SessionRoleBadge role={role} /> : null}
+      <View style={styles.exerciseHeaderRow}>
+        {label ? (
+          <View style={styles.exerciseLabelBadge}>
+            <Text style={styles.exerciseLabelText}>{label}</Text>
+          </View>
+        ) : null}
+        <Pressable
+          style={styles.exerciseNameWrap}
+          onPress={onPlay}
+          accessibilityRole="button"
+          accessibilityLabel={`Play ${name} demo`}
+        >
+          <Text style={styles.exerciseName} numberOfLines={2}>
+            {name}
+          </Text>
+        </Pressable>
+        {onChange ? <ExerciseChangeAction onPress={onChange} /> : null}
+        <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
       </View>
-      <Pressable
-        style={styles.exerciseNameWrap}
-        onPress={onPlay}
-        accessibilityRole="button"
-        accessibilityLabel={`Play ${name} demo`}
-      >
-        <Text style={styles.exerciseName} numberOfLines={2}>
-          {name}
-        </Text>
-      </Pressable>
-      {onChange ? <ExerciseChangeAction onPress={onChange} /> : null}
-      <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
-    </View>
+    </>
   );
 }
 
@@ -3214,20 +3388,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Conditioning (pure) ──
-  conditioningPhaseCard: {},
-  conditioningPhaseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: 4,
-  },
-  conditioningPhaseName: {
-    flex: 1,
-    color: colors.accent.lime,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
   conditioningPhaseBody: {
     color: '#D0D0D0',
     fontSize: 14,
@@ -3242,15 +3402,49 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // ── Combined-day conditioning block ──
-  conditioningSection: { marginTop: spacing.xl, gap: spacing.sm },
+  // ── Power, as the first list row ──
+  //
+  // Options sit on the page with the same zero-surface treatment as every
+  // exercise row; only the dose takes the lime, matching the weight control.
+  powerOptions: { gap: 2, marginTop: 4 },
+  powerOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  powerOptionName: { flex: 1, color: '#D0D0D0', fontSize: 14, fontWeight: '600' },
+  powerOptionDose: { color: colors.accent.lime, fontSize: 14, fontWeight: '700' },
+
+  // ── Add-on rows ──
+  //
+  // "Optional" rides beside the badge at the same eyebrow scale — it qualifies
+  // the badge ("Prehab, and you may skip it"), so it reads on the badge's line
+  // rather than announcing itself as a second signal.
+  addonBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  optionalMarker: {
+    color: '#5A5A5A',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+
+  // ── In-list conditioning choice ──
+  disclosureChevron: {
+    color: '#7A7A7A',
+    fontSize: 20,
+    fontWeight: '400',
+    paddingHorizontal: spacing.xs,
+  },
+  conditioningOption: { gap: spacing.xs, marginTop: spacing.xs },
   chooseOneLabel: {
     color: '#B0B0B0',
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.4,
   },
-  conditioningOptionCard: { gap: spacing.xs },
   conditioningOptionTitle: {
     color: colors.accent.lime,
     fontSize: 16,

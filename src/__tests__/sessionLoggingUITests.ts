@@ -135,15 +135,20 @@ assert(
 console.log('\n=== 6. Power primer is visible before the main workout in both screens ===');
 const classicPowerCall = classic.indexOf('<PowerPrimerSection block={workout.powerBlock} />');
 const classicMainBranch = classic.indexOf('{isConditioning ? (', classicPowerCall);
-const v2PowerCall = v2.indexOf('<PowerPrimerSection block={workout.powerBlock} />');
-const v2MainBranch = v2.indexOf('{isConditioning ? (', v2PowerCall);
 assert(
   classicPowerCall >= 0 && classicMainBranch > classicPowerCall,
   'Classic renders powerBlock before conditioning/recovery/strength work',
 );
+// V2 took the D13 one-list template (2026-07-25): power is no longer a box the
+// screen positions above a branch, it is the first ITEM the composition owner
+// emits. The ordering proof moved with it — see sessionTemplateOneListTests §2.
 assert(
-  v2PowerCall >= 0 && v2MainBranch > v2PowerCall,
-  'V2 renders powerBlock before conditioning/recovery/strength work',
+  /<PowerRow key=\{key\} block=\{item\.block\} \/>/.test(v2),
+  'V2 renders power as a badged list row',
+);
+assert(
+  /buildSessionTemplate/.test(v2) && !/<PowerPrimerSection/.test(v2),
+  'V2 gets power placement from the composition owner, not from its own branch order',
 );
 assert(/workout\.powerBlock\?\.title/.test(classic), 'Classic header summary includes the power block title');
 assert(/workout\.powerBlock\?\.title/.test(v2), 'V2 header summary includes the power block title');
@@ -164,9 +169,12 @@ assert(
   /<TrunkSupportSection rows=\{supportExercises\} \/>/.test(classic),
   'Classic renders the resolved trunk/support rows in their own section',
 );
+// V2 took the D13 one-list template (2026-07-25): trunk rows are no longer a
+// section, they are Midline-badged rows inside the single list. That the rows
+// still REACH the athlete is proved by sessionTemplateOneListTests §2/§7.
 assert(
-  /<TrunkSupportSection rows=\{supportExercises\} \/>/.test(v2),
-  'V2 renders the resolved trunk/support rows in their own section',
+  !/<TrunkSupportSection/.test(v2) && /SessionRoleBadge/.test(v2),
+  'V2 renders trunk rows as Midline-badged list rows, not as a Trunk / Support box',
 );
 assert(/testID="trunk-support-section"/.test(trunkSupportSection), 'trunk/support has a visible test seam');
 assert(/>Trunk \/ Support</.test(trunkSupportSection), 'trunk/support section is labelled honestly');
@@ -183,9 +191,12 @@ assert(
   /conditioningExercises\.map/.test(classic),
   'Classic conditioning phases render only resolved conditioning rows',
 );
+// V2 took the D13 one-list template (2026-07-25): conditioning rows arrive as
+// template items whose rows the composition owner resolved from
+// getSessionComponentRows — the screen never re-derives them by scanning names.
 assert(
-  /exercises=\{conditioningExercises\}/.test(v2),
-  'V2 conditioning phases render only resolved conditioning rows',
+  /<ConditioningPhaseRow[\s\S]{0,80}exercise=\{item\.row\}/.test(v2),
+  'V2 conditioning phases render only the rows the composition owner resolved',
 );
 const classicConditioningRenderer = classic.slice(
   classic.indexOf('const renderConditioningRow ='),
@@ -193,7 +204,7 @@ const classicConditioningRenderer = classic.slice(
 );
 const v2ConditioningRenderer = v2.slice(
   v2.indexOf('function ConditioningRow('),
-  v2.indexOf('function TeamTrainingBlock', v2.indexOf('function ConditioningRow(')),
+  v2.indexOf('function TeamTrainingBanner', v2.indexOf('function ConditioningRow(')),
 );
 assert(
   !/weightControl|prescribedWeightKg|formatWeight/.test(classicConditioningRenderer),
