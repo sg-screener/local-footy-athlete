@@ -118,7 +118,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Close Grip Bench**: Hands at or inside shoulder width, elbows tight. | Triceps do the work.
 - **Concentration Curl**: Elbow braced on the inner thigh. | Strict curl, no body swing.
 - **Copenhagen Plank (Half)**: Top leg on the bench, drive through the inner thigh. | Hold tension, no dropping.
-- **Couch Stretch**: Back knee to the wall, squeeze the glute. | Tall trunk, no arching.
+- **Couch Stretch**: Back knee to the wall, squeeze the glute. | Tall through the midline, no arching.
 - **Crocodile Breathing**: Face down, breathe into the belly. | Feel the floor push back on the exhale.
 - **DB Bench Press**: Shoulder blades set on the bench. | Control the dumbbells down and drive.
 - **DB Shoulder Press**: Start at the shoulders, press to lockout. | No arching through the lower back.
@@ -142,7 +142,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Foam Roll — IT Band**: Side-lying, slow passes from hip to knee. | Stack the legs to dial pressure.
 - **Foam Roll — Lats**: Side-lying with arm overhead. | Roll under the armpit, breathe into it.
 - **Foam Roll — T-Spine**: Mid-back over the roller, support the head. | Open the ribs and breathe.
-- **Front Squat**: Elbows high, sit between the heels. | Stay tall through the trunk.
+- **Front Squat**: Elbows high, sit between the heels. | Stay tall through the midline.
 - **Goblet Squat**: Elbows inside the knees at the bottom. | Smooth tempo, no rushing.
 - **Groin Squeeze**: Squeeze the ball between the knees — or your fists if no ball. | Hold each squeeze for a beat.
 - **Half-Kneeling Single-Arm Overhead Press**: Half-kneel, press straight overhead, knee on ground = arm overhead. | Fight the rotation, ribs stay down.
@@ -196,7 +196,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Seated DB Press**: Back flat against the pad, press to lockout. | Ribs down, control the descent.
 - **Shrugs**: Shoulders straight up to ears, no roll. | Squeeze at the top, controlled lower.
 - **Side Plank**: Stack the hips, straight line from head to feet, can add weight to top hip. | Breathe behind the brace.
-- **Single-Arm DB Bench Press**: Fight the rotation. | Brace hard through the trunk.
+- **Single-Arm DB Bench Press**: Fight the rotation. | Brace hard through the midline.
 - **Single-Arm DB Row**: Elbow drives past the torso, pull to belly. | Keep the hips and shoulders square.
 - **Single-Arm Lat Pulldown**: Pull the handle to the shoulder, lead with the lat, V grip attachment. | Control the return, full stretch at the top.
 - **Single-Arm Pulldown**: Use V grip on pulldown machine. | Stay tight through midline.
@@ -217,9 +217,9 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Trap Bar Deadlift**: Tight through the lats, push the floor away. | Hips and shoulders rise together.
 - **Tricep Circuit (Dirty 30)**: Move through all three positions without rest. | Empty the triceps by the final rep.
 - **Tricep Pushdown**: Keep elbows pinned, press to full lockout. | Constant tension, no jerking.
-- **Walking Lunges**: Long stride, trunk upright. | Steady and deliberate.
+- **Walking Lunges**: Long stride, tall through the midline. | Steady and deliberate.
 - **Weighted Dead Bug**: Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground. | Slow extension, full exhale.
-- **Woodchop (Half Kneeling)**: Drive with the trunk, arms guide. | Controlled rotation, not a throw.
+- **Woodchop (Half Kneeling)**: Drive with the midline, arms guide. | Controlled rotation, not a throw.
 - **Woodchop (Standing)**: Rotate through the torso, not the arms. | Feet stay planted.
 - **World's Greatest Stretch**: Lunge deep, elbow to instep. | Then rotate and reach to the sky.
 - **Z-Press**: Sit up tall, slight lean back when pressing. | Stay tight through midline. Can be done seated on a bench, or with dumbbells.

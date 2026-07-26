@@ -210,7 +210,7 @@ export const MOBILITY_FLOW_TEMPLATES: MobilityFlowTemplate[] = [
   },
   {
     id: 'low-back-friendly-trunk-reset',
-    name: 'Low Back Friendly Trunk Reset',
+    name: 'Low Back Friendly Midline Reset',
     durationMinutes: 10,
     roundsMin: 1,
     roundsMax: 2,
@@ -230,7 +230,7 @@ export const MOBILITY_FLOW_TEMPLATES: MobilityFlowTemplate[] = [
       { name: 'Side Plank', prescriptionType: 'duration', sets: 1, durationSecondsMin: 30, durationSecondsMax: 45, perSide: true },
     ],
     injuryCautions: [
-      { injury: 'lower_back', caution: 'Keep this neutral-spine and low effort; no loaded flexion or twisting.', avoidWhen: 'Any trunk position increases back or nerve symptoms.' },
+      { injury: 'lower_back', caution: 'Keep this neutral-spine and low effort; no loaded flexion or twisting.', avoidWhen: 'Any midline position increases back or nerve symptoms.' },
     ],
   },
   {

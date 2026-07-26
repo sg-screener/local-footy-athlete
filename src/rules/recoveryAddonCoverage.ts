@@ -155,14 +155,14 @@ interface FocusDefinition {
 
 const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
   trunk_core: {
-    label: 'Trunk/Core',
+    label: 'Midline',
     categories: ['trunk_anti_rotation'],
     exerciseNames: ['Dead Bug', 'Band Pallof Press', 'Side Plank', 'Bird Dog', 'McGill Sit Up'],
     exerciseTags: ['core', 'anti_rotation', 'anti_extension', 'mcgill_big_3'],
     mobilityFocusTags: ['lower_back_trunk'],
     templateIds: ['low-back-friendly-trunk-reset', 'post-training-downshift'],
-    defaultRestrictions: ['Keep trunk work controlled and low-soreness.'],
-    gMinusOneNote: 'G-1 trunk is breathing, McGill-style, or easy bracing only.',
+    defaultRestrictions: ['Keep midline work controlled and low-soreness.'],
+    gMinusOneNote: 'G-1 midline is breathing, McGill-style, or easy bracing only.',
   },
   adductors_groin: {
     label: 'Adductors/Groin',
@@ -241,7 +241,7 @@ function target(min: number, max: number): RecoveryAddonTargetRange {
 
 const PHASE_RULES: Record<SeasonPhase, Record<RecoveryAddonFocusArea, PhaseFocusRule>> = {
   'Off-season': {
-    trunk_core: rule(1, 2, 'primary', 'Regular trunk exposure for bracing and contact robustness.'),
+    trunk_core: rule(1, 2, 'primary', 'Regular midline exposure for bracing and contact robustness.'),
     adductors_groin: rule(1, 1, 'primary', 'Build adductor capacity while there is more room to recover.'),
     calves_tib_ankles: rule(1, 1, 'primary', 'Keep lower-leg capacity ticking without plyometric loading.'),
     hamstring_light_prehab: rule(0, 1, 'secondary', 'Use light hamstring work as robustness support, not a second hinge day.'),
@@ -250,7 +250,7 @@ const PHASE_RULES: Record<SeasonPhase, Record<RecoveryAddonFocusArea, PhaseFocus
     carries: rule(0, 1, 'secondary', 'Carries can be built here if back, grip, and shoulders tolerate them.'),
   },
   'Pre-season': {
-    trunk_core: rule(1, 1, 'primary', 'Maintain trunk robustness without stealing from team training.'),
+    trunk_core: rule(1, 1, 'primary', 'Maintain midline robustness without stealing from team training.'),
     adductors_groin: rule(1, 1, 'primary', 'Keep groin capacity present as running and COD ramp.'),
     calves_tib_ankles: rule(1, 1, 'primary', 'Keep calf/tib support regular but low-fatigue.'),
     hamstring_light_prehab: rule(0, 1, 'secondary', 'Use familiar light hamstring work; avoid soreness spikes.'),
@@ -259,7 +259,7 @@ const PHASE_RULES: Record<SeasonPhase, Record<RecoveryAddonFocusArea, PhaseFocus
     carries: rule(0, 1, 'optional', 'Carries are optional and should not compete with conditioning load.'),
   },
   'In-season': {
-    trunk_core: rule(1, 1, 'primary', 'Minimum effective trunk dose, familiar and low-soreness.'),
+    trunk_core: rule(1, 1, 'primary', 'Minimum effective midline dose, familiar and low-soreness.'),
     adductors_groin: rule(1, 1, 'primary', 'Small groin maintenance dose, not hard new adductor work.'),
     calves_tib_ankles: rule(1, 1, 'primary', 'Small lower-leg maintenance dose.'),
     hamstring_light_prehab: rule(0, 1, 'optional', 'Only familiar light hamstring work; no late-week soreness.'),
@@ -270,7 +270,7 @@ const PHASE_RULES: Record<SeasonPhase, Record<RecoveryAddonFocusArea, PhaseFocus
 };
 
 const DELOAD_RULES: Record<RecoveryAddonFocusArea, PhaseFocusRule> = {
-  trunk_core: rule(0, 1, 'primary', 'Light trunk only: McGill-style, breathing, or easy bracing.'),
+  trunk_core: rule(0, 1, 'primary', 'Light midline only: McGill-style, breathing, or easy bracing.'),
   adductors_groin: rule(0, 1, 'optional', 'Gentle adductor squeeze or short-range mobility only.', 'caution'),
   calves_tib_ankles: rule(0, 1, 'optional', 'Gentle ankle/calf mobility or low-volume tib work only.', 'caution'),
   hamstring_light_prehab: rule(0, 1, 'optional', 'Easy bridges/isometrics only if useful.', 'caution'),
@@ -390,7 +390,7 @@ function applyRecoveryBias(
         priority: 'secondary',
         status: 'caution',
         target: target(0, 1),
-      }, 'readiness', 'Light trunk only; skip if sick or it adds fatigue.');
+      }, 'readiness', 'Light midline only; skip if sick or it adds fatigue.');
     }
     return withCaution({
       ...recommendation,
@@ -673,7 +673,7 @@ function notesFor(
     notes.push('In-season coverage protects game freshness and stays familiar.');
   }
   if (context.weekKind === 'deload') {
-    notes.push('Deload coverage biases toward mobility/reset and light trunk work.');
+    notes.push('Deload coverage biases toward mobility/reset and light midline work.');
   }
   if (lowAvailability) {
     notes.push('Low availability uses minimum viable coverage and defers lower-priority support areas.');

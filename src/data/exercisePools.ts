@@ -207,7 +207,7 @@ export const LOWER_PREHAB_POOL: PoolExercise[] = [
 
 export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
   ex('band-pallof',       'Band Pallof Press',          3, 10, 12, 45, 'Band at chest height. Press out and hold.',   ['bands'],     [],                     'low', { prescriptionType: 'reps' }),
-  ex('dead-bug',          'Dead Bug',                   3, 8,  10, 30, 'Opposite arm and leg. Keep core tight.',      ['bodyweight'],[],                     'low', { prescriptionType: 'reps', perSide: true }),
+  ex('dead-bug',          'Dead Bug',                   3, 8,  10, 30, 'Opposite arm and leg. Keep the midline tight.',      ['bodyweight'],[],                     'low', { prescriptionType: 'reps', perSide: true }),
   ex('banded-dead-bug',   'Banded Dead Bug',            3, 8,  10, 30, 'Band around feet adds anti-extension challenge.', ['bands'], [],                    'low', { prescriptionType: 'reps', perSide: true }),
   ex('weighted-dead-bug', 'Weighted Dead Bug',          3, 6,  8,  45, 'Hold dumbbells overhead. Slow and controlled.', ['dumbbells'], [],                  'low', { prescriptionType: 'reps', perSide: true }),
   ex('mcgill-situp',      'McGill Sit Up',              3, 8,  10, 30, 'One knee bent, hands under low back. Lift shoulder blades only.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
