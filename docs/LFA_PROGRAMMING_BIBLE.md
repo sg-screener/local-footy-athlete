@@ -72,7 +72,7 @@ In-season
 * How to handle injuries: depends on severity. Anything above a 5/10 should be looked at more carefully. this will be handled in injury section below. Work around the injury as much as possible. Continue to do work on unaffected areas. Then lighten loads and or volume for injured areas. If severe then stop targeting that area at all and let them get physio advice. 
 * How to handle missed sessions: User is made aware of missed sessions in the app and can then choose if they did it, missed it, skipped it etc. skipped sessions are fine. If it happens every time then maybe program adjustments need to be made. but life gets in the way and people are going to be more or less diligent with logging their sessions. 
 * How to handle busy weeks: see what they can do, see what they know they're going to miss, if they schedule missed sessions early enough, the program may be able to adapt to get in majority of the missed work at another time during the week. But it's okay to just have a busy week and go back to normal the next week. 
-* How to handle bye weeks: If user is feeling good then training load can increase - not too much running (the standing cap is 3 running days per week) but sometimes byes are a good time to get in extra work and strength training - especially for lower body work. On the Saturday, or usual game day, a hard conditioning session is usually a good idea. Again, this depends on user readiness. Byes can be a good time to reset and rest and prepare for future weeks. 
+* How to handle bye weeks: If user is feeling good then training load can increase - not too much running (3 running days is the standing preference, 4 the hard max - see Section 17 B) but sometimes byes are a good time to get in extra work and strength training - especially for lower body work. On the Saturday, or usual game day, a hard conditioning session is usually a good idea. Again, this depends on user readiness. Byes can be a good time to reset and rest and prepare for future weeks. 
 * How to handle moving game day: sometimes this will allows an extra session into the week but then effect the following week - there should be no "core" or compulsory sessions the day before or after a game - for example game usually saturday, thursday might be team training and upper body push, friday gunshow, saturday game, sunday rest or recovery. If that get's moved to sunday then monday becomes rest and recovery - whatever was on that monday is either skipped or spread throughout the rest of the next week, and saturday becomes gunshow. Which means friday is free to do maybe accessories and a flushout off legs or soemthing like that. 
 * What should never be placed 1-2 days before a game: hard conditioning (not including team training as this is oftern G-2), heavy lowers 
 * What is acceptable 1-2 days before a game: upper body training, gunshow, accessories, low volume low range power work like high box squats for low reps and vertical jumps, any recovery stuff or mobility flows are fine. 
@@ -87,7 +87,7 @@ Pre-season
 * Strength goal: improve. A healthy no-game week with normal availability requires 4 main-strength exposures in early, mid and late pre-season. Safety or feasibility may reduce this only through an explicit typed authorised reason.
 * Sprint exposure goal: at least 1 genuine sprint/high-speed exposure per week. Team training and practice matches receive sprint/high-speed anchor credit, and no extra app sprint is required when those anchors already satisfy the floor. A second exposure may occur naturally, but it is not the shared required minimum.
 * Team training effect: most clubs will train for 90 mins or so and do 7-8km of running, pre season sessions are generally harder on the body than in season, especially if training hard outside of team training too. Most clubs will train 2-3 times per week in pre season. 
-* How to avoid overload: make sure core or compulsory sessions are limited to 4 conditioning and 4 strength. This includes team training as part of that 4. Optional lighter sessions or flushouts can be done to. Running is capped at 3 days per week and floored at 2 (standing rule - see Section 17 B). Sprinting limited to 2 nights per week which includes nights at team training. 
+* How to avoid overload: make sure core or compulsory sessions are limited to 4 conditioning and 4 strength. This includes team training as part of that 4. Optional lighter sessions or flushouts can be done to. Running is floored at 2 days per week, preferred at 3, and hard-capped at 4 (standing rule - see Section 17 B). The app programs 3 by default and only programs a 4th when the athlete has no equipment or it is pre-season; an athlete-added 4th is always valid. Sprinting limited to 2 nights per week which includes nights at team training. 
 * How fast should load progress: no faster than 10% per week. Unless very beginner to training. 
 * What not to overdo: sprint work outside of footy training. more than 2 lowers body sessions per week. 
 * How to handle soreness/injury: same as anything, if you can work around it do so, if it's severe then seek medical or phsyio advice. Get as much work as you can in around the injury. 
@@ -158,7 +158,7 @@ Skip rules:
 * Move-forward relocates a session only to a legal day. If there is no legal day, the session is honestly gone. 
 * A missed or skipped session is recorded, the week continues, and NEXT WEEK IS NEVER MORTGAGED. 
 * Pattern absorption: a missed upper pattern folds into the remaining same-region session as a normal-sized combined day - key lifts in, accessories out. Never 12-14 lifts. Never across regions. 
-Bye week: the athlete chooses "Freshen up" (default) or "Push on", and the choice applies to the REMAINDER of the week whenever it is declared. Push-on adds one lower stimulus plus extra OFF-LEG conditioning (running still capped at 3 days per week), and the bye Saturday hosts a hard high-speed session - 150s at 2:00, 400s, or aerobic power - on the day the body expects game intensity.
+Bye week: the athlete chooses "Freshen up" (default) or "Push on", and the choice applies to the REMAINDER of the week whenever it is declared. Push-on adds one lower stimulus plus extra OFF-LEG conditioning (the app still programs no more than 3 running days here; 4 is the hard max and only an athlete may add it), and the bye Saturday hosts a hard high-speed session - 150s at 2:00, 400s, or aerobic power - on the day the body expects game intensity.
 Canonical reference weeks (targets for the assembler, not templates to copy):
 
 * Pre-season ideal: Monday Upper Pull + TT, Tuesday Lower, Wednesday TT, Thursday rest, Friday Upper + hard conditioning/top-end, Saturday Lower + off-leg conditioning, Sunday rest. 
@@ -1294,7 +1294,7 @@ Standing modality rules
 * The sprint family (Acceleration, Top End Speed, COD/Decel) is run-only. 
 * NO SLEDS. 
 * Flush is a small distinct set, not a long list of near-duplicates. 
-* Running is capped at 3 days per week and floored at 2. See Section 17 B. 
+* Running is floored at 2 days per week, preferred at 3, hard-capped at 4. The app programs 3 by default. See Section 17 B. 
 Sam's programming emphasis for local footy
 Anaerobic power and repeat-sprint ability are usually MORE valuable than large amounts of brutal lactate work. Team training and matches already supply plenty of glycolytic stress; what is genuinely undertrained is true maximal sprinting with full recovery. Build capacity earlier in pre-season, then move toward aerobic power intervals and footy shuttles as the season approaches.
 MAS and the 2 km time trial
@@ -1320,7 +1320,7 @@ Progression:
 
 * Add 5 minutes. 
 * Add one extra easy aerobic day if recovery is good. Can also be optional. 
-* Good way to add work in off-leg if they have hard sprint sessions or hard conditioning during the week on legs. With running capped at 3 days a week, a 20 min bike flush or an easy mixed erg circuit is a game changer. 
+* Good way to add work in off-leg if they have hard sprint sessions or hard conditioning during the week on legs. With the app programming 3 running days by default, a 20 min bike flush or an easy mixed erg circuit is a game changer. 
 * Do not progress easy aerobic into a hard session by accident. 
 Special rules:
 
@@ -1433,7 +1433,7 @@ Rules:
 * Hard intervals can be included, but not every session needs to be hard. 
 * Running can be built gradually if the athlete tolerates it. 
 * Good time to fix weak engine without the pressure of games. 
-Good off-season qualities: Aerobic Capacity as the base, Aerobic Power intervals as the build, occasional Anaerobic work, and gradual running exposure inside the 3-day running cap. A mix of stimulus matters here - not all aerobic base. Prefer longer interval sessions over pure speed work early. Acceleration and Top End Speed come closer to the start of pre-season so the athlete is ready for speed and COD at training. Late off-season and the Christmas break are the only normal home for COD/Decel work, because those are the weeks with no team training.
+Good off-season qualities: Aerobic Capacity as the base, Aerobic Power intervals as the build, occasional Anaerobic work, and gradual running exposure inside the 3 running days the app programs in off-season. A mix of stimulus matters here - not all aerobic base. Prefer longer interval sessions over pure speed work early. Acceleration and Top End Speed come closer to the start of pre-season so the athlete is ready for speed and COD at training. Late off-season and the Christmas break are the only normal home for COD/Decel work, because those are the weeks with no team training.
 Conditioning by athlete level
 Poor conditioning
 
@@ -4198,11 +4198,21 @@ Assault bike
 Swimming - do not program this in but an athlete may choose to add swimming in
 Walking
 Mobility
-Default floor and cap:
-At least 2 and no more than 3 running days per week.
-Anchors count toward the cap: 2 team trainings plus a game is already 3, which is why in-season rarely needs any added app running.
-The 2-day floor does not apply in early off-season (weeks 1-2), where running is not required at all, or in bye recovery, where the reduced structure governs. Everywhere else, a healthy week that programs fewer than 2 running days needs an authorised typed reduction reason.
-Everything above the cap goes off-feet. The user can override and add more running, but the app should warn.
+Floor, preferred, and hard max (Sam, 2026-07-27 — THE RUNNING LAW):
+
+"Running: 2 days minimum per week, 3 preferred, 4 hard max. Team training counts toward the running days. The app programs 3 by default. The app may program a 4th running day only when: (a) the athlete has no equipment — off-leg conditioning isn't available, or (b) it is pre-season — where team training may itself be 1–3 of those running days, so the programmed extra may be just 1. In off-season and in-season the app never programs a 4th, but an athlete-added 4th is allowed and valid."
+
+This law has THREE numbers, and they are not interchangeable. Conflating them is the defect it exists to prevent:
+
+- FLOOR 2 — the minimum. Unchanged, and it keeps its existing exemptions (early off-season weeks 1-2, and bye recovery).
+- PREFERRED 3 — what the APP PROGRAMS by default. This is a generation target, not a limit.
+- HARD MAX 4 — the validator's ceiling, in EVERY phase. A 4th running day is valid, not an error. Only a 5th breaches the law.
+
+So a 4th running day is never invalid; it is simply something the app does not usually choose. The app may program the 4th itself only under (a) no equipment, so off-leg conditioning is not available to absorb the work, or (b) pre-season. In off-season and in-season the app never programs a 4th — but if the athlete adds one, it passes validation in any phase.
+
+Anchors count toward the running days: 2 team trainings plus a game is already 3, which is why in-season rarely needs any added app running. In pre-season, team training may itself be 1–3 of those days, so a programmed 4th may mean adding just one session.
+
+Everything above the hard max goes off-feet. The athlete can override and add more running, and the app should warn rather than refuse.
 Sprint/COD exposure
 Team training and games usually count as sprint/COD exposure.
 Default cap:
@@ -4303,7 +4313,7 @@ Heavy lower close to game day
 Adding hard work after a game
 Adding sprint/COD when already loaded
 5th main strength session
-More than 3 running days
+A 4th running day (the hard max; the app does not program a 4th in off-season or in-season)
 Message style:
 You have a game scheduled on {day}. This session may affect freshness. Are you sure you want to add it?
 Hard stop
@@ -4826,6 +4836,7 @@ Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07
 * Section 17 B, running exposure. Superseded "No more than 4 running exposures per week programmed by the app". Now floor 2 / cap 3 running days, with anchors counting toward the cap and the floor disapplied in early off-season and bye recovery.
 * Section 17 F, strong warning. Superseded "More than 4 running exposures" with "More than 3 running days".
 * Section 18 F, deload rules. Superseded "Pre-season automatically deloads every fourth week" and the automatic fourth-week off-season policy with Sam's 3–4-week cycle law, and made the in-season no-scheduled-deload rule explicit. Source: D16.
+* THE RUNNING LAW (Sam, 2026-07-27, device pass). SUPERSEDES the Bible Amendment Pass's own "floor 2 / cap 3" — including this changelog's earlier entries for Section 1 pre-season overload, Section 17 B running exposure and Section 17 F, which stay below as history. Sam's authored text: "Running: 2 days minimum per week, 3 preferred, 4 hard max. Team training counts toward the running days. The app programs 3 by default. The app may program a 4th running day only when: (a) the athlete has no equipment — off-leg conditioning isn't available, or (b) it is pre-season — where team training may itself be 1–3 of those running days, so the programmed extra may be just 1. In off-season and in-season the app never programs a 4th, but an athlete-added 4th is allowed and valid." The correction is that ONE number had been doing three jobs. There are three: floor 2 (unchanged, keeps its early-off-season and bye-recovery exemptions), PREFERRED 3 (what the app programs — a generation target), and HARD MAX 4 (the validator's ceiling in every phase). A 4th running day is therefore VALID everywhere and merely unusual; only a 5th breaches the law. Eight statements of the old cap were amended across Sections 1, 6, 17 B and 17 F; the changelog entries they came from are left intact as the record of what was true before.
 * Muscle/experience sheet reconciliation (Sam, 2026-07-27). Three authorised edits to `docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`, applied to sheet and code together so the equality gate stays green, and recorded in the sheet's own change-log row. (1) MetCon DELETED — the conditioning ruling retiring the name (FINAL ruling 20) wins over the muscle sheet, which still listed it; its row is gone and it is removed from `CONDITIONING_META`, so nothing can prescribe a MetCon. Its `EXERCISE_TAGS` entry is deliberately KEPT: `MetCon` remains a legacy `workoutType` literal that stored athlete programs may carry, and removing the taxonomy entry would degrade how those existing workouts classify — a data-migration question Sam did not ask for. (2) `Single-Arm Pulldown` KEEP with an authored row — Lats primary; Upper back + Midline secondary; `everyone`. It was the one selectable exercise with no metadata. (3) Three casing typos corrected as authorised edits rather than normalised on read: 'Everyone' twice (Suitcase Carry, Skull Crushers) and one lowercase 'midline' (Chin-Up Negative (Slow)). Gate counts move accordingly — `everyone` 130 to 131, `1+ years` 33 to 32, total unchanged at 193.
 * Section 11, experience crosswalk (Sam, 2026-07-27). ADDED THE EXPERIENCE CROSSWALK — the single authored bridge from the onboarding answer ('Complete beginner' / '1-2 years' / '2-5 years' / '5+ years') to the ladder (new / developing / consistent / advanced) to the authored exercise gates (everyone / everyone (regression) / 1+ years / 2+ years / advanced only), plus the two boundary rulings: regressions are visible to complete beginners ONLY, and "2+ years" includes the "2-5 years" answer. Nothing was superseded; three vocabularies were already in use with NO mapping between them, so exercise gating had no authored answer at all. Sam authored the table to close that gap. No other crosswalk may exist.
 * Section 6, conditioning simple rules (Sam, 2026-07-27). ADDED the dose-boundary rule: "Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose." Nothing was superseded; the Bible enforced this in code (`ALL-COND-DOSE-DESCRIPTOR-01`) but had never stated it. Authored by Sam to close that citation gap; the conformance rule now anchors to this sentence.
