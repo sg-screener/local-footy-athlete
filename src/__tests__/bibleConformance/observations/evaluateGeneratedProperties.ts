@@ -45,13 +45,13 @@ function strengthChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
   const source = pathWorkout({ id: entry.id, dayOfWeek: 1, name: 'Misleading Recovery Name', patterns: planned, primary, exercises });
   source.workoutType = 'Recovery';
   source.strengthPatternContributions = planned.length > 1 ? [planned[0]] : planned;
-  const forward = finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+  const forward = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
   const reversedSource = {
     ...source,
     strengthIntent: source.strengthIntent ? { ...source.strengthIntent, plannedPatterns: [...planned].reverse() } : undefined,
   };
-  const reversed = finaliseWorkoutAfterMutation(reversedSource, { phase: 'In-season', planIntentValid: true, referenceWorkout: reversedSource }).workout;
-  const twice = finaliseWorkoutAfterMutation(forward, { phase: 'In-season', planIntentValid: true, referenceWorkout: forward }).workout;
+  const reversed = finaliseWorkoutAfterMutation(reversedSource, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: reversedSource }).workout;
+  const twice = finaliseWorkoutAfterMutation(forward, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: forward }).workout;
   const a = canonicalWorkoutLedger(forward);
   const b = canonicalWorkoutLedger(reversed);
   const c = canonicalWorkoutLedger(twice);
@@ -87,10 +87,10 @@ function componentChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
   });
   const once = requested.has('team_training')
     ? source
-    : finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+    : finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
   const twice = requested.has('team_training')
     ? source
-    : finaliseWorkoutAfterMutation(once, { phase: 'In-season', planIntentValid: true, referenceWorkout: once }).workout;
+    : finaliseWorkoutAfterMutation(once, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: once }).workout;
   const a = canonicalWorkoutLedger(once);
   const b = canonicalWorkoutLedger(twice);
   const required = Array.from(requested).filter((value) => value !== 'power' || requested.has('strength'));
@@ -113,7 +113,7 @@ function conditioningChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[
       title: `${modality === 'running' ? 'Running' : modality} ${duration}min`, modality, intent,
     })),
   });
-  const output = finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+  const output = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
   const ledger = canonicalWorkoutLedger(output);
   const actual = ledger.conditioning.map((item) => item.modality).sort();
   const expected = [...modalities].sort();
@@ -146,7 +146,7 @@ function powerChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
     planIntentValid: true, referenceWorkout: source,
   };
   const once = finaliseWorkoutAfterMutation(source, context).workout;
-  const twice = finaliseWorkoutAfterMutation(once, { ...context, referenceWorkout: once }).workout;
+  const twice = finaliseWorkoutAfterMutation(once, { offseasonSubphase: 'not_off_season', ...context, referenceWorkout: once }).workout;
   const a = canonicalWorkoutLedger(once);
   const b = canonicalWorkoutLedger(twice);
   const shouldForbidContrast = heavy !== 'present' || phase === 'early_offseason' || phase === 'mid_offseason';
@@ -191,7 +191,7 @@ function constraintChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] 
   const validated = validateWorkoutAgainstActiveConstraints({
     workout: source, date: '2026-03-23', todayISO: '2026-03-23', activeConstraints: active,
     profile: { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] },
-    canonicalContext: { phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
+    canonicalContext: { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
   });
   const names = (validated.workout?.exercises ?? []).map((row) => row.exercise?.name ?? '');
   const ledger = validated.workout ? canonicalWorkoutLedger(validated.workout) : null;

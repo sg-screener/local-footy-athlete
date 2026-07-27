@@ -1809,6 +1809,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   for (const phaseCase of phaseCases) {
     const phaseCanonicalize = (_date: string, workout: Workout) =>
       finaliseWorkoutAfterMutation(workout, {
+        offseasonSubphase: 'not_off_season',
         ...phaseCase.context,
         date: MON,
         planIntentValid: true,

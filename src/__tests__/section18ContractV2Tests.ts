@@ -304,6 +304,7 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
     ...sourceWorkout,
     intensity: sourceWorkout.intensity === 'High' ? 'Moderate' : 'High',
   }, {
+    offseasonSubphase: 'not_off_season',
     phase: 'Pre-season',
     weekKind: week.weekKind,
     planIntentValid: false,

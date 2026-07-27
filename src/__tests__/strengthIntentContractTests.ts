@@ -249,7 +249,7 @@ const combined = workout(
   ['Back Squat', 'Romanian Deadlift', 'Bench Press'],
   { planEntryId: 'w1:monday:strength', strengthPatternContributions: ['hinge', 'squat'] },
 );
-const canonicalCombined = finaliseWorkoutAfterMutation(combined, { planIntentValid: true });
+const canonicalCombined = finaliseWorkoutAfterMutation(combined, { offseasonSubphase: 'not_off_season', planIntentValid: true });
 eq('combined lower preserves both valid main rows and removes unrelated drift',
   canonicalCombined.workout.strengthIntent?.effectivePatterns, ['squat', 'hinge']);
 ok('combined lower removes unrelated meaningful push drift',
@@ -268,6 +268,7 @@ const safetyRemoved = finaliseWorkoutAfterMutation({
     (row) => row.exercise?.name !== 'Back Squat',
   ),
 }, {
+  offseasonSubphase: 'not_off_season',
   planIntentValid: true,
   restoreMissingPlanPatterns: false,
 });
@@ -287,7 +288,7 @@ const fullBody = workout(
   ['Back Squat', 'Bench Press', 'Pull-Ups'],
   { planEntryId: 'w1:monday:strength' },
 );
-const canonicalFullBody = finaliseWorkoutAfterMutation(fullBody, { planIntentValid: true });
+const canonicalFullBody = finaliseWorkoutAfterMutation(fullBody, { offseasonSubphase: 'not_off_season', planIntentValid: true });
 eq('full body credits one lower plus push and pull, not all four',
   canonicalFullBody.workout.strengthIntent?.effectivePatterns, ['squat', 'push', 'pull']);
 eq('full-body visible identity remains an archetype label', canonicalFullBody.workout.name, 'Full Body Strength');

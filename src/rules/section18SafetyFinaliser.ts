@@ -10,6 +10,7 @@
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from '../utils/workoutContent';
 import {
+  canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
   type WorkoutCanonicalisationContext,
 } from '../utils/workoutCanonicalisation';
@@ -18,7 +19,10 @@ import {
   type Section18EffectiveWeekEvaluation,
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
-import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
+import {
+  contractOffseasonSubphase,
+  type WeeklyExposureContractV2,
+} from './weeklyExposureContractV2';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 
 export type Section18SafetyAction =
@@ -147,9 +151,22 @@ function canonicalContextFor(
   workout: Workout,
   base: WorkoutCanonicalisationContext | undefined,
 ): WorkoutCanonicalisationContext {
+  const phase = base?.phase ?? contract.identity.seasonPhase;
   return {
     ...base,
-    phase: base?.phase ?? contract.identity.seasonPhase,
+    phase,
+    // The contract knows where in the off-season this week sits, and this
+    // builder used to drop it. `updatePowerForPhase` then read the absence as
+    // 'early off-season' and deleted the athlete's power on a LATE off-season
+    // week. A deload always sets `lighterStrengthRequired`, so this pass always
+    // fires there and that is where it was found — but any safety
+    // transformation in off-season hit the same guess.
+    offseasonSubphase: canonicalContextSubphase(
+      phase,
+      base?.offseasonSubphase && base.offseasonSubphase !== 'not_off_season'
+        ? base.offseasonSubphase
+        : contractOffseasonSubphase(contract),
+    ),
     weekKind: base?.weekKind ?? contract.identity.weekKind,
     planIntentValid: base?.planIntentValid ?? !!workout.planEntryId,
     referenceWorkout: base?.referenceWorkout ?? workout,

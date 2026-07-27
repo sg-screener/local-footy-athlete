@@ -90,6 +90,7 @@ function row(workoutId: string, index: number, name: string): WorkoutExercise {
  *  assertion below would be vacuous. */
 function strengthWorkout(id: string, dayOfWeek: number, names: readonly string[]): Workout {
   return finaliseWorkoutAfterMutation(rawStrengthWorkout(id, dayOfWeek, names), {
+    offseasonSubphase: 'not_off_season',
     phase: 'In-season',
     restoreMissingPlanPatterns: false,
   }).workout;

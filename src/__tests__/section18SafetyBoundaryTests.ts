@@ -236,6 +236,7 @@ function allPatterns(result: ReturnType<typeof finish>): string[] {
 
 function canonicalWithoutSafety(candidate: Workout): Workout {
   return finaliseWorkoutAfterMutation(candidate, {
+    offseasonSubphase: 'not_off_season',
     phase: 'In-season',
     restoreMissingPlanPatterns: false,
   }).workout;
@@ -637,6 +638,61 @@ run('mutation', 'M6 skipping post-hydration safety validation is killed', () => 
   assert(!!rawHydrated.powerBlock, 'fixture did not contain unsafe hydrated power');
   const conformed = finish(contract, [rawHydrated]);
   assert(conformed.evaluation.ledger.power.achievedPrimerCount === 0, 'hydration finalizer did not kill mutation');
+});
+
+// ── The subphase is carried, never guessed ──
+//
+// This boundary rebuilds the canonicalisation context from the contract, and it
+// used to drop `offseasonSubphase`. `updatePowerForPhase` then read the absence
+// as `early_offseason` and deleted the power block with the reason
+// `early_offseason_power_blocked` — on a LATE off-season week, where power is
+// exactly what the athlete should be getting.
+//
+// It surfaced on deload weeks because a deload always sets
+// `lighterStrengthRequired`, so this pass always re-canonicalises there. But the
+// deload was never the trigger: ANY safety transformation in off-season hit the
+// same guess, through five builders including hydration, the coach command
+// executor and the plan-change producer. The context field is now REQUIRED, so
+// the compiler asks every builder the question; these two tests pin the
+// behaviour at the boundary where it was found.
+run('property', 'P8 a late off-season safety transformation keeps power', () => {
+  const contract = withSafety({
+    ...baseContract({ weekKind: 'deload' }),
+    identity: {
+      ...baseContract().identity,
+      seasonPhase: 'Off-season',
+      declaredSubphase: 'late_offseason',
+      weekKind: 'deload',
+    },
+  });
+  assert(contract.safety.lighterStrengthRequired, 'fixture did not trigger a safety transformation');
+  assert(!contract.safety.prohibitedPower, 'fixture prohibited power for an unrelated reason');
+  const before = workout('late-off', 1, ['Back Squat', 'Bench Press'], { power: 'lower' });
+  assert(!!before.powerBlock, 'fixture did not contain power');
+  const result = finish(contract, [before]);
+  assert(
+    !!result.workouts.find((candidate) => candidate.id === 'late-off')?.powerBlock,
+    'late off-season power was removed by the safety boundary',
+  );
+});
+
+// The complement, so the pin above cannot pass by the boundary simply never
+// removing power any more: a genuine EARLY off-season week must still lose it.
+run('property', 'P9 an early off-season safety transformation still removes power', () => {
+  const contract = withSafety({
+    ...baseContract({ weekKind: 'deload' }),
+    identity: {
+      ...baseContract().identity,
+      seasonPhase: 'Off-season',
+      declaredSubphase: 'early_offseason',
+      weekKind: 'deload',
+    },
+  });
+  const result = finish(contract, [workout('early-off', 1, ['Back Squat', 'Bench Press'], { power: 'lower' })]);
+  assert(
+    !result.workouts.find((candidate) => candidate.id === 'early-off')?.powerBlock,
+    'early off-season power survived, so the subphase is not being read at all',
+  );
 });
 
 console.log(`\nsection18SafetyBoundaryTests: ${passed} passed, ${failed} failed`);

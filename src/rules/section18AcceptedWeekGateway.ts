@@ -21,10 +21,12 @@ import {
 } from './section18EffectiveWeekEvaluator';
 import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
 import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
-import type {
-  Section18AuthorisedReduction,
-  WeeklyExposureContractV2,
+import {
+  contractOffseasonSubphase,
+  type Section18AuthorisedReduction,
+  type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
+import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import {
   buildDerivedSessionExpiryCandidates,
@@ -625,6 +627,10 @@ function resolveCandidate(args: {
     weekStart: args.input.weekStart,
     canonicalContext: {
       phase: args.candidate.contract.identity.seasonPhase,
+      offseasonSubphase: canonicalContextSubphase(
+        args.candidate.contract.identity.seasonPhase,
+        contractOffseasonSubphase(args.candidate.contract),
+      ),
       weekKind: args.candidate.contract.identity.weekKind,
       profile: args.input.profile ?? undefined,
     },

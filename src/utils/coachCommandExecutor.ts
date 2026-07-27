@@ -78,7 +78,7 @@ import {
   type ApplyUndoPlanDeps,
 } from './coachUndoEngine';
 import type { ModalityPreference } from '../store/coachPreferencesStore';
-import { useProgramStore } from '../store/programStore';
+import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
 import type { Workout, OverrideContext } from '../types/domain';
@@ -99,7 +99,10 @@ import {
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
-import { finaliseWorkoutAfterMutation } from './workoutCanonicalisation';
+import {
+  canonicalContextSubphase,
+  finaliseWorkoutAfterMutation,
+} from './workoutCanonicalisation';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -3628,6 +3631,13 @@ function defaultApplyAddSession(
     const finalisedWorkout = finaliseWorkoutAfterMutation(workout, {
       date: input.targetDate,
       phase,
+      // Read from the live phase clock, not defaulted. Without it an added
+      // off-season session reached the canonicaliser with the subphase missing,
+      // which used to read as early off-season and strip the session's power.
+      offseasonSubphase: canonicalContextSubphase(
+        phase,
+        liveOffseasonSubphaseForDate(input.targetDate),
+      ),
       planIntentValid: false,
     }).workout;
     // Route through the dedicated addition-transaction owner — the same primitive

@@ -1346,6 +1346,31 @@ function anchorStateFromLegacy(contract: WeeklyExposureContract): Section18Ancho
   return contract.anchors.gameOrPracticeMatchCredit > 0 ? 'game' : 'none';
 }
 
+const OFF_SEASON_SUBPHASES: ReadonlySet<string> = new Set([
+  'early_offseason',
+  'mid_offseason',
+  'late_offseason',
+]);
+
+/**
+ * The contract's own answer to "where in the off-season is this week".
+ *
+ * `declaredSubphase` spans off-season, pre-season and the in-season week kinds,
+ * so it needs narrowing before it can serve as an OFF-SEASON subphase. Null
+ * means the contract is not describing an off-season week — the caller decides
+ * what that means for it, which for a canonical context is `'not_off_season'`.
+ *
+ * Exists because the canonicalisation context now REQUIRES the resolution and
+ * several §18 builders had the contract in hand without reading this field.
+ */
+export function contractOffseasonSubphase(
+  contract: WeeklyExposureContractV2,
+): OffseasonSubphase | null {
+  if (contract.identity.seasonPhase !== 'Off-season') return null;
+  const declared = contract.identity.declaredSubphase;
+  return OFF_SEASON_SUBPHASES.has(declared) ? (declared as OffseasonSubphase) : null;
+}
+
 /** Deterministic persisted-v1 migration. Missing evidence remains unknown. */
 export function migrateLegacyWeeklyExposureContractV2(
   legacy: WeeklyExposureContract,

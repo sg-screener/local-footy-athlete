@@ -77,6 +77,7 @@ function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
     workoutType: 'Team Training', team: true,
   });
   const canonicalLower = finaliseWorkoutAfterMutation(lower, {
+    offseasonSubphase: 'not_off_season',
     phase: 'In-season', planIntentValid: true, referenceWorkout: lower,
   }).workout;
   const standaloneId = 'persist-modern-standalone-tempo';
@@ -116,7 +117,7 @@ function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
         createsHardDay: true, sprintCodExposure: true,
       },
     },
-  }, { phase: 'In-season', planIntentValid: true }).workout;
+  }, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true }).workout;
   const fullId = 'persist-modern-z-full';
   const full = finaliseWorkoutAfterMutation(pathWorkout({
     id: fullId, dayOfWeek: 5, name: 'Full Body Strength',
@@ -127,14 +128,14 @@ function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
       pathExercise(fullId, 2, 'Incline Dumbbell Press'),
       pathExercise(fullId, 3, 'Pull-Ups'),
     ],
-  }), { phase: 'In-season', planIntentValid: true }).workout;
+  }), { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true }).workout;
   return [
     {
       ...canonicalLower,
       name: 'Stale Upper Label', workoutType: 'Strength',
       ...({ strengthPattern: 'push', focus: 'Upper Push' } as any),
     },
-    finaliseWorkoutAfterMutation(team, { phase: 'In-season', planIntentValid: true, referenceWorkout: team }).workout,
+    finaliseWorkoutAfterMutation(team, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: team }).workout,
     standalone,
     upper,
     full,
@@ -170,7 +171,7 @@ function legacyWorkouts(dependencies: ProbeDependencies): Workout[] {
       pathExercise(upperId, 1, 'Chest Supported Row'),
     ],
     conditioning: [{ title: 'Row Tempo 5 x 3min', modality: 'row', intent: 'tempo' }],
-  }), { phase: 'In-season', planIntentValid: true }).workout;
+  }), { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true }).workout;
   const fullId = 'persist-legacy-z-full';
   const full = finaliseWorkoutAfterMutation({
     ...pathWorkout({
@@ -193,12 +194,12 @@ function legacyWorkouts(dependencies: ProbeDependencies): Workout[] {
         createsHardDay: true, sprintCodExposure: true,
       },
     },
-  }, { phase: 'In-season', planIntentValid: true }).workout;
+  }, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true }).workout;
   const conditioningId = 'persist-legacy-z-conditioning';
   const conditioning = finaliseWorkoutAfterMutation(pathWorkout({
     id: conditioningId, dayOfWeek: 4, name: 'Tempo Conditioning',
     conditioning: [{ title: 'SkiErg Tempo 6 x 2min', modality: 'ski', intent: 'tempo' }],
-  }), { phase: 'In-season', planIntentValid: true }).workout;
+  }), { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true }).workout;
   return [legacyLower, upper, full, conditioning];
 }
 
@@ -293,7 +294,7 @@ async function run(scenarioId: string) {
           options: [{ title: 'Bike Zone 2 25min', description: 'Bike Zone 2 25min', exerciseIds: [bike.id], ...({ modality: 'bike' } as any) }],
         },
         hasCombinedConditioning: true, attachedConditioningKind: 'component',
-      }, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+      }, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
     };
     result.liveEdit = canonicalWeekLedger([addBike(modernWorkouts(dependencies)[0])]);
     result.rehydratedEdit = canonicalWeekLedger([addBike(hydratedTwiceWorkouts[0])]);

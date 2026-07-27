@@ -39,7 +39,7 @@ function richWorkout() {
     exercises: [pathExercise(id, 0, 'Back Squat', { weight: 80 }), pathExercise(id, 1, 'Romanian Deadlift', { weight: 70 })],
     conditioning: [{ title: 'Bike Zone 2 25min', modality: 'bike' }], recoveryAddon: 'Easy Calf Isometric',
   });
-  return finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+  return finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
 }
 
 function constraintObservation(kind: 'injury' | 'equipment') {
@@ -59,7 +59,7 @@ function constraintObservation(kind: 'injury' | 'equipment') {
   const output = validateWorkoutAgainstActiveConstraints({
     workout: source, date: TODAY, todayISO: TODAY, activeConstraints: constraints,
     profile: { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] },
-    canonicalContext: { phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
+    canonicalContext: { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true, referenceWorkout: source },
   });
   return {
     activeConstraintIds: output.activeConstraintIds.slice().sort(),
@@ -93,7 +93,7 @@ export function buildSlice5MutationWitness(spec: MutationSpec): Slice5MutationWi
   } else if (spec.id === 'planned_credit_after_effective_removal') {
     const id = 'slice5-effective';
     const source = pathWorkout({ id, dayOfWeek: 1, name: 'Planned Combined', patterns: ['squat', 'hinge'], primary: 'squat', exercises: [pathExercise(id, 0, 'Back Squat', { weight: 80 })] });
-    const output = finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source, restoreMissingPlanPatterns: false }).workout;
+    const output = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source, restoreMissingPlanPatterns: false }).workout;
     const value = canonicalWeekLedger([output]).workouts[0];
     observation = { planned: value.plannedPatterns, effective: value.effectivePatterns };
   } else if (spec.id === 'canonical_restores_safety_removed_work') {

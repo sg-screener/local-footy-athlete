@@ -32,6 +32,7 @@ import { dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   buildSection18WeeklyExposureContractV2,
+  contractOffseasonSubphase,
   migrateLegacyWeeklyExposureContractV2,
   resolveSection18PhasePlannerSelection,
   type Section18Subphase,
@@ -39,6 +40,8 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
+import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
   finaliseSection18SafetyWeek,
   finaliseSection18SafetyWorkout,
@@ -370,6 +373,29 @@ function mondayForDate(date: string): string {
 }
 
 /**
+ * The resolved off-season subphase for a given date, from the live program's
+ * persisted phase clock.
+ *
+ * For athlete-mutation paths (the coach executor, the plan-change producer)
+ * that build a canonical context from the profile's season phase alone. The
+ * canonical context requires the subphase, and these callers legitimately have
+ * the clock — they just were not reading it, which is how an off-season swap or
+ * added session could silently lose its power block. Prefer the week's §18
+ * contract when one is in hand; this is for the paths where there is not one.
+ */
+export function liveOffseasonSubphaseForDate(
+  dateISO: string,
+): OffseasonSubphase | null {
+  const clock = useProgramStore.getState().currentProgram?.seasonPhaseClock;
+  if (!clock) return null;
+  return resolveSeasonPhaseClock({
+    selectedPhase: clock.selectedPhase,
+    persistedClock: clock,
+    targetWeekStartISO: mondayForDate(dateISO),
+  }).offseasonSubphase;
+}
+
+/**
  * Persistence is a legacy ingress boundary, not a second programming owner.
  * Old store envelopes may pre-date typed strength intent and canonical
  * component sections, so rehydrate them once through the same finaliser used
@@ -380,9 +406,18 @@ function canonicaliseHydratedWorkout(
   workout: Workout,
   phase?: string,
   weekKind?: Microcycle['weekKind'],
+  // The resolved off-season position. Required by the canonical context and
+  // therefore required here: this helper reaches the canonicaliser through
+  // `require()`, so the compiler cannot see the context it builds and would not
+  // have caught a missing subphase. Passing it explicitly keeps hydration
+  // honest by hand where the type system is blind.
+  offseasonSubphase?: OffseasonSubphase | null,
 ): Workout {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { finaliseWorkoutAfterMutation } = require('../utils/workoutCanonicalisation');
+  const {
+    finaliseWorkoutAfterMutation,
+    canonicalContextSubphase,
+  } = require('../utils/workoutCanonicalisation');
   const canonicalPhase = /pre/i.test(phase ?? '')
     ? 'Pre-season'
     : /off/i.test(phase ?? '')
@@ -392,6 +427,7 @@ function canonicaliseHydratedWorkout(
         : undefined;
   return finaliseWorkoutAfterMutation(workout, {
     phase: canonicalPhase,
+    offseasonSubphase: canonicalContextSubphase(canonicalPhase, offseasonSubphase),
     weekKind,
     // Persisted allocation ownership is legitimate ingress. This preserves
     // explicit legacy contribution arrays even before plan-entry IDs existed.
@@ -631,6 +667,8 @@ function canonicaliseHydratedMicrocycle(
           workout,
           selectedPhase ?? phase,
           phaseResolution?.weekKind ?? microcycle.weekKind,
+          phaseResolution?.offseasonSubphase ??
+            (exposureContractV2 ? contractOffseasonSubphase(exposureContractV2) : null),
         )
       : workout);
   if (exposureContractV2) {
@@ -643,6 +681,11 @@ function canonicaliseHydratedMicrocycle(
       weekStart: microcycle.startDate.slice(0, 10),
       canonicalContext: {
         phase: exposureContractV2.identity.seasonPhase,
+        offseasonSubphase: canonicalContextSubphase(
+          exposureContractV2.identity.seasonPhase,
+          phaseResolution?.offseasonSubphase ??
+            contractOffseasonSubphase(exposureContractV2),
+        ),
         weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
         section18EvidenceMode: 'preserve_legacy_unknown',
       },
@@ -715,6 +758,8 @@ function canonicaliseHydratedSafetyWorkout(
   workout: Workout,
   contract: WeeklyExposureContractV2 | undefined,
   phase?: string,
+  /** Clock-resolved fallback for a contract that does not name one. */
+  offseasonSubphase?: OffseasonSubphase | null,
 ): Workout {
   return contract
     ? finaliseSection18SafetyWorkout({
@@ -722,10 +767,14 @@ function canonicaliseHydratedSafetyWorkout(
         workout,
         canonicalContext: {
           phase: contract.identity.seasonPhase,
+          offseasonSubphase: canonicalContextSubphase(
+            contract.identity.seasonPhase,
+            contractOffseasonSubphase(contract) ?? offseasonSubphase,
+          ),
           section18EvidenceMode: 'preserve_legacy_unknown',
         },
       }).workout
-    : canonicaliseHydratedWorkout(workout, phase);
+    : canonicaliseHydratedWorkout(workout, phase, undefined, offseasonSubphase);
 }
 
 /**
@@ -813,6 +862,20 @@ function canonicaliseAcceptedBoundaryState(
     if (changed) currentProgram = { ...currentProgram, microcycles };
   }
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
+  // Where in the off-season hydrated content sits, resolved from the persisted
+  // phase clock — the same owner generation uses. Hydrated workouts that carry
+  // no contract of their own would otherwise reach the canonicaliser with the
+  // fact missing, and a missing subphase used to mean "early off-season, delete
+  // the power". Null when there is no clock, which for a pre-clock program can
+  // never canonicalise to Off-season anyway (`programPhase` has no off-season
+  // spelling the phase regex matches).
+  const hydratedOffseasonSubphase = currentProgram?.seasonPhaseClock
+    ? resolveSeasonPhaseClock({
+        selectedPhase: currentProgram.seasonPhaseClock.selectedPhase,
+        persistedClock: currentProgram.seasonPhaseClock,
+        targetWeekStartISO: mondayForDate(effectiveTodayISO),
+      }).offseasonSubphase
+    : null;
   let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
@@ -876,7 +939,8 @@ function canonicaliseAcceptedBoundaryState(
                   workout
                   ? !options.structuralMigrationRequired && !exposureContractV2
                     ? workout
-                    : canonicaliseHydratedSafetyWorkout(workout, exposureContractV2, phase)
+                    : canonicaliseHydratedSafetyWorkout(
+                        workout, exposureContractV2, phase, hydratedOffseasonSubphase)
                   : null,
               ]),
             ),
@@ -905,7 +969,8 @@ function canonicaliseAcceptedBoundaryState(
         {
           ...(!options.structuralMigrationRequired && !safetyContractForDate(date)
             ? workout
-            : canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase)),
+            : canonicaliseHydratedSafetyWorkout(
+                workout, safetyContractForDate(date), phase, hydratedOffseasonSubphase)),
           // Date-keyed overrides own a concrete calendar day. Older edit
           // writers used the 1..7 coaching convention (Sunday=7), whereas
           // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
@@ -1075,6 +1140,7 @@ function canonicaliseAcceptedBoundaryState(
             hydratedTodayWorkout,
             safetyContractForDate(effectiveTodayISO),
             phase,
+            hydratedOffseasonSubphase,
           )
       : hydratedTodayWorkout,
     dateOverrides,
@@ -1890,6 +1956,25 @@ export const useProgramStore = create<ProgramState>()(
             const hydrationReason = error instanceof ProgramHydrationIngressError
               ? error.reason
               : 'program_hydration_failed';
+            // The diagnostic events below are DEV-ONLY —
+            // `athleteActionDiagnosticsEnabled()` is false in a production
+            // build, so on a real device every emit here is a no-op and the
+            // thrown message was invisible. A hydration failure then looked
+            // like "the athlete's program is empty" with nothing to read.
+            //
+            // `logger.error` emits at every level in every build, so the
+            // message survives. This matters most for the invariant throws that
+            // reach here by design — a canonical context asserting a phase and
+            // subphase that contradict each other, for example: loud is the
+            // whole point of throwing, and it was being swallowed one layer up.
+            //
+            // Zustand catches this inside `persist`'s hydrate chain and routes
+            // it here once. There is no retry, so a throw degrades to in-memory
+            // defaults with a readable reason rather than a crash loop.
+            logger.error(
+              '[programStore] hydration failed; falling back to in-memory defaults.',
+              { reason: hydrationReason, message: error instanceof Error ? error.message : String(error) },
+            );
             emitAthleteActionEvent(trace, 'hydrated_state_checked', {
               hydrationSucceeded: false,
               originalRejectionCode: hydrationReason,

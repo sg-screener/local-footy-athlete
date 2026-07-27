@@ -44,7 +44,10 @@ import {
 } from './coachRevisionOverrideWriter';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
-import { finaliseWorkoutAfterMutation } from './workoutCanonicalisation';
+import {
+  canonicalContextSubphase,
+  finaliseWorkoutAfterMutation,
+} from './workoutCanonicalisation';
 import type {
   PlanChange,
   PlanChangeBinScopeId,
@@ -63,7 +66,7 @@ import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import { useProfileStore } from '../store/profileStore';
-import { useProgramStore } from '../store/programStore';
+import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import {
   commitAthleteSessionMoveTransaction,
   commitAthleteSessionDeletionTransaction,
@@ -1040,6 +1043,13 @@ function materializeAthleteSwapSession(args: {
       finaliseWorkoutAfterMutation(workout, {
         date,
         phase,
+        // Read from the live phase clock, not defaulted — see the note in the
+        // canonical context type. A swap on an off-season day used to arrive
+        // here without the subphase and lose its power block.
+        offseasonSubphase: canonicalContextSubphase(
+          phase,
+          liveOffseasonSubphaseForDate(date),
+        ),
         planIntentValid: false,
       }).workout,
   });

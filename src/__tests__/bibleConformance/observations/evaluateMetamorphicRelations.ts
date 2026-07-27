@@ -48,6 +48,7 @@ function finalLedger(args: {
   });
   if (args.description) workout.description = args.description;
   return canonicalWorkoutLedger(finaliseWorkoutAfterMutation(workout, {
+    offseasonSubphase: 'not_off_season',
     phase: 'In-season', planIntentValid: true, referenceWorkout: workout,
   }).workout);
 }
@@ -124,7 +125,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
   if (spec.id === 'remove-strength-mixed-to-conditioning') {
     const id = 'meta-remove-strength';
     const mixed = pathWorkout({ id, dayOfWeek: 1, name: 'Mixed', patterns: ['squat'], primary: 'squat', exercises: [], conditioning: [{ title: 'Bike 25min', modality: 'bike' }] });
-    const output = finaliseWorkoutAfterMutation(mixed, { phase: 'In-season', planIntentValid: false, restoreMissingPlanPatterns: false }).workout;
+    const output = finaliseWorkoutAfterMutation(mixed, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: false, restoreMissingPlanPatterns: false }).workout;
     const ledger = canonicalWorkoutLedger(output);
     return pass(spec, ledger.components.includes('conditioning') && !ledger.components.includes('strength'), ['conditioning'], ledger.components);
   }
@@ -190,8 +191,8 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
     return pass(spec, two.conditioning.some((entry) => entry.modality === 'bike'), one.conditioning, two.conditioning);
   }
   const source = pathWorkout({ id: 'meta-idempotent', dayOfWeek: 1, name: 'Idempotent', patterns: ['squat', 'hinge'], primary: 'squat', exercises: [pathExercise('meta-idempotent', 0, 'Back Squat'), pathExercise('meta-idempotent', 1, 'Romanian Deadlift')], conditioning: [{ title: 'Bike 25min', modality: 'bike' }] });
-  const once = finaliseWorkoutAfterMutation(source, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
-  const twice = finaliseWorkoutAfterMutation(once, { phase: 'In-season', planIntentValid: true, referenceWorkout: once }).workout;
+  const once = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
+  const twice = finaliseWorkoutAfterMutation(once, { offseasonSubphase: 'not_off_season', phase: 'In-season', planIntentValid: true, referenceWorkout: once }).workout;
   const onceLedger = canonicalWorkoutLedger(once);
   const twiceLedger = canonicalWorkoutLedger(twice);
   return pass(spec, JSON.stringify(onceLedger) === JSON.stringify(twiceLedger), onceLedger, twiceLedger);

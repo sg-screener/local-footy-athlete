@@ -1768,10 +1768,11 @@
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
-              "aerobic_base": 2,
+              "aerobic_base": 1,
               "gunshow_prehab": 2,
               "lower_strength": 2,
               "sprint": 1,
+              "tempo_conditioning": 1,
               "upper_strength": 2
             }
           },
@@ -1795,6 +1796,7 @@
                 }
               ],
               "components": [
+                "power",
                 "speed",
                 "strength",
                 "conditioning",
@@ -1812,7 +1814,32 @@
                 "Overhead Press",
                 "Push-ups"
               ],
-              "power": null
+              "power": {
+                "kind": "primer",
+                "family": "upper",
+                "title": "Power Primer",
+                "prescription": "2 x 3-5 — full rest, fast & sharp",
+                "placement": "pre_lift",
+                "items": [
+                  {
+                    "exercise": "Explosive Push-up",
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 5,
+                    "equipmentRequired": []
+                  }
+                ],
+                "notes": [
+                  "Do this fresh, early in the session — before the main lifts.",
+                  "Use this as a standalone primer before strength work."
+                ],
+                "fence": {
+                  "hardExposure": false,
+                  "mainStrength": false,
+                  "conditioningCredit": "none",
+                  "isFinisher": false
+                }
+              }
             },
             {
               "dayOfWeek": 2,
@@ -1851,6 +1878,7 @@
                 }
               ],
               "components": [
+                "power",
                 "strength"
               ],
               "countedRows": {
@@ -1864,7 +1892,32 @@
                 "Tricep Pushdowns",
                 "Romanian Deadlift"
               ],
-              "power": null
+              "power": {
+                "kind": "primer",
+                "family": "lower",
+                "title": "Power Primer",
+                "prescription": "2 x 3-5 — full rest, fast & sharp",
+                "placement": "pre_lift",
+                "items": [
+                  {
+                    "exercise": "Vertical Jump",
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 5,
+                    "equipmentRequired": []
+                  }
+                ],
+                "notes": [
+                  "Do this fresh, early in the session — before the main lifts.",
+                  "Use this as a standalone primer before strength work."
+                ],
+                "fence": {
+                  "hardExposure": false,
+                  "mainStrength": false,
+                  "conditioningCredit": "none",
+                  "isFinisher": false
+                }
+              }
             },
             {
               "dayOfWeek": 4,
@@ -1901,7 +1954,7 @@
                   "modality": "none"
                 },
                 {
-                  "category": "aerobic_base",
+                  "category": "tempo_conditioning",
                   "modality": "off_feet"
                 }
               ],
@@ -1952,10 +2005,16 @@
             "status": "accepted",
             "powerBudget": 2,
             "powerEligible": true,
-            "achievedPrimerCount": 0,
+            "achievedPrimerCount": 2,
             "removalReason": null,
-            "powerDaysBefore": [],
-            "powerDaysKept": [],
+            "powerDaysBefore": [
+              1,
+              3
+            ],
+            "powerDaysKept": [
+              1,
+              3
+            ],
             "powerDaysStripped": [],
             "visibleCounts": {
               "hardExposures": 3,
@@ -1970,10 +2029,11 @@
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
-                "aerobic_base": 2,
+                "aerobic_base": 1,
                 "gunshow_prehab": 2,
                 "lower_strength": 2,
                 "sprint": 1,
+                "tempo_conditioning": 1,
                 "upper_strength": 2
               }
             }

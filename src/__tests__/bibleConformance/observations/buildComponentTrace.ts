@@ -111,6 +111,7 @@ function buildAccessoryFixtureTrace(scenario: ComponentGoldenScenario): Componen
     updatedAt: NOW,
   };
   const workout = finaliseWorkoutAfterMutation(raw, {
+    offseasonSubphase: 'not_off_season',
     phase: 'In-season',
     planIntentValid: true,
   }).workout;

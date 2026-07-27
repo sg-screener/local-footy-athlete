@@ -129,7 +129,7 @@ ok('typed standalone domain preserves an unclassified easy conditioning row',
 
 const legacyRow = finaliseWorkoutAfterMutation(workout('Rower aerobic work', [
   row('Rower aerobic blocks', 0),
-]), { phase: 'Pre-season', planIntentValid: false }).workout;
+]), { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: false }).workout;
 assertConditioningOnly('legacy RowErg aerobic', legacyRow);
 
 console.log('\n[3] Planned Mixed and genuine Upper Pull remain valid');
@@ -161,8 +161,8 @@ ok('RowErg adds no pull pattern to planned Upper Push',
 const legacyPullOnce = finaliseWorkoutAfterMutation(workout('Upper Pull', [
   row('Barbell Row', 0),
   row('Pull-Ups', 1),
-], { workoutType: 'Strength' }), { phase: 'Pre-season' }).workout;
-const legacyPullTwice = finaliseWorkoutAfterMutation(legacyPullOnce, { phase: 'Pre-season' }).workout;
+], { workoutType: 'Strength' }), { offseasonSubphase: 'not_off_season', phase: 'Pre-season' }).workout;
+const legacyPullTwice = finaliseWorkoutAfterMutation(legacyPullOnce, { offseasonSubphase: 'not_off_season', phase: 'Pre-season' }).workout;
 ok('genuine legacy Upper Pull migrates from canonical strength rows',
   JSON.stringify(legacyPullOnce.strengthIntent?.effectivePatterns) === JSON.stringify(['pull']), legacyPullOnce.strengthIntent);
 ok('legacy strength migration is idempotent',

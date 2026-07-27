@@ -40,6 +40,30 @@ import { canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from './workoutContent';
 
+/**
+ * The ONE conversion from "phase + whatever the caller resolved" into the
+ * canonical context's required subphase.
+ *
+ * It refuses rather than guesses. If the phase is Off-season and the caller has
+ * no resolved subphase, that is a builder that does not know where in the
+ * off-season its week sits — which is exactly the state that used to silently
+ * delete the athlete's power work. Throwing here surfaces it at the builder, in
+ * the stack of whoever failed to carry the fact, instead of as missing content
+ * three layers downstream.
+ */
+export function canonicalContextSubphase(
+  phase: SeasonPhase | null | undefined,
+  resolved: OffseasonSubphase | null | undefined,
+): CanonicalContextOffseasonSubphase {
+  if (phase !== 'Off-season') return 'not_off_season';
+  if (resolved) return resolved;
+  throw new Error(
+    '[WorkoutCanonicalisation] an Off-season canonical context was built with no ' +
+    'resolved off-season subphase. Carry it from the season phase clock or the ' +
+    "Section 18 contract's declaredSubphase — it must not be defaulted.",
+  );
+}
+
 export type WorkoutCanonicalisationAction = {
   kind:
     | 'row_removed'
@@ -58,10 +82,40 @@ export type WorkoutCanonicalisationAction = {
   reason: string;
 };
 
+/**
+ * The resolved off-season position, stated by whoever builds the context.
+ *
+ * `'not_off_season'` is an ANSWER, not a blank: it says the resolver looked and
+ * this week is not an off-season week. That distinction is the whole point of
+ * the field being required — see the note on `offseasonSubphase` below.
+ */
+export type CanonicalContextOffseasonSubphase =
+  | OffseasonSubphase
+  | 'not_off_season';
+
 export interface WorkoutCanonicalisationContext {
   date?: string;
   phase?: SeasonPhase | null;
-  offseasonSubphase?: OffseasonSubphase | null;
+  /**
+   * REQUIRED, and deliberately so (Sam, 2026-07-27).
+   *
+   * This was optional, and `updatePowerForPhase` read a missing value as
+   * `'early_offseason'` — the conservative guess. The guess deleted power from
+   * any off-season week whose context happened not to carry the subphase, with
+   * the reason `early_offseason_power_blocked`, on a week the phase clock had
+   * resolved as LATE off-season. It was found on deload weeks (a deload always
+   * sets `lighterStrengthRequired`, so the §18 safety pass always re-canonicalises
+   * there) but the trigger was never the deload: FIVE builders did not carry the
+   * subphase, including hydration, the coach command executor and the plan-change
+   * producer, so any off-season mutation through those paths lost power too.
+   *
+   * The absence of a fact is not a fact. Making the field required puts the
+   * question to every builder at compile time; `'not_off_season'` is how a
+   * builder says "resolved, and there is no subphase here". A builder that
+   * cannot answer is a typed error, which is the loud failure this replaces the
+   * silent guess with.
+   */
+  offseasonSubphase: CanonicalContextOffseasonSubphase;
   weekKind?: WeekKind | null;
   readiness?: ReadinessLevel;
   /** True when a real game/practice-match anchor exists in the relevant week. */
@@ -390,8 +444,24 @@ function updatePowerForPhase(args: {
     args.context.profile?.experienceLevel === '5+ years';
   const gMinusTwoBlocked = args.context.hasGame && args.context.gOffset === -2 &&
     (args.context.readiness !== 'high' || !experiencedForGamePrimer);
+  // The subphase is READ, never derived. There is no `?? 'early_offseason'`
+  // here any more: that default deleted power from late off-season weeks whose
+  // builder simply had not carried the resolution. A builder that states
+  // `'not_off_season'` on an off-season week is contradicting itself, and that
+  // is surfaced loudly rather than resolved into a guess — see the throw below.
   const earlyOffseason = args.context.phase === 'Off-season' &&
-    (args.context.offseasonSubphase ?? 'early_offseason') === 'early_offseason';
+    args.context.offseasonSubphase === 'early_offseason';
+  if (
+    args.context.phase === 'Off-season' &&
+    args.context.offseasonSubphase === 'not_off_season'
+  ) {
+    throw new Error(
+      '[WorkoutCanonicalisation] canonical context claims phase=Off-season with ' +
+      'offseasonSubphase=not_off_season. The off-season subphase is a resolved ' +
+      'fact and this context states two contradictory ones; carry the resolution ' +
+      'from the phase clock (or the contract\'s declaredSubphase) instead.',
+    );
+  }
   // THE DELOAD LAW (Sam, 2026-07-27) removed `weekKind === 'deload'` from this
   // gate: "Power is not removed on a deload; a deload is not a reason to lose
   // sharpness." The deload transform shrinks the dose inside the primer instead.
@@ -464,11 +534,13 @@ function updatePowerForPhase(args: {
 /** Pure canonical finaliser shared by generation and every persisted mutation. */
 export function finaliseWorkoutAfterMutation(
   inputWorkout: Workout,
-  context: WorkoutCanonicalisationContext = {},
+  // No `= {}` default: an empty context would silently answer the subphase
+  // question with a guess, which is the defect this signature now forbids.
+  context: WorkoutCanonicalisationContext,
 ): WorkoutCanonicalisationResult {
   const actions: WorkoutCanonicalisationAction[] = [];
   const earlyOffseason = context.phase === 'Off-season' &&
-    (context.offseasonSubphase ?? 'early_offseason') === 'early_offseason';
+    context.offseasonSubphase === 'early_offseason';
   const originalJson = JSON.stringify(inputWorkout);
   let workout: Workout = {
     ...inputWorkout,

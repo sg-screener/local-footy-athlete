@@ -6,7 +6,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import type { Microcycle, PowerBlock, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
-import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import {
+  canonicalContextSubphase,
+  finaliseWorkoutAfterMutation,
+} from '../utils/workoutCanonicalisation';
 import {
   validateMicrocycleAgainstActiveConstraints,
   validateProgramAgainstActiveConstraints,
@@ -18,6 +21,10 @@ import { combinedConditioningCategoryLabel } from '../utils/weeklyPlanDisplay';
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
+/** True when `run` throws — used to pin the invariant throws. */
+function threw(run: () => unknown): boolean {
+  try { run(); return false; } catch { return true; }
+}
 function ok(name: string, condition: boolean, detail?: unknown): void {
   if (condition) { pass++; console.log(`  PASS ${name}`); return; }
   fail++; failures.push(name);
@@ -117,7 +124,7 @@ section('[1] raw conditioning becomes a canonical component');
     row('Bench Press', 0),
     row('Bike Zone 2 - 15 min', 1, { prescribedSets: 1, prescribedRepsMin: 1, prescribedRepsMax: 1 }),
   ]);
-  const result = finaliseWorkoutAfterMutation(source, { phase: 'Pre-season' });
+  const result = finaliseWorkoutAfterMutation(source, { offseasonSubphase: 'not_off_season', phase: 'Pre-season' });
   const rows = getSessionComponentRows(result.workout);
   ok('raw Bike Zone 2 is promoted out of strength rows',
     rows.conditioningRows.length === 1 && rows.strengthRows.length === 1, rows);
@@ -183,6 +190,7 @@ section('[3] typed power remains bounded by subphase and final strength content'
   const gameProtected = finaliseWorkoutAfterMutation(
     workout('Lower Squat', [heavySquat], { powerBlock: power('primer', 'lower') }),
     {
+      offseasonSubphase: 'not_off_season',
       phase: 'In-season', readiness: 'high', hasGame: true, gOffset: -1,
       profile: { experienceLevel: '5+ years' } as any,
     },
@@ -197,7 +205,7 @@ section('[4] trunk/support never creates fake conditioning identity');
   const result = finaliseWorkoutAfterMutation(workout('Trunk Support', [
     row('Pallof Press', 0),
     row('Side Plank', 1),
-  ]), { phase: 'Pre-season' });
+  ]), { offseasonSubphase: 'not_off_season', phase: 'Pre-season' });
   const rows = getSessionComponentRows(result.workout);
   ok('Pallof and Side Plank remain visible support rows', rows.supportRows.length === 2, rows);
   ok('support-only work creates no conditioning component',
@@ -223,7 +231,7 @@ section('[5] final components own type and modality-honest title');
   const withoutStrength = finaliseWorkoutAfterMutation({
     ...source,
     exercises: [bike],
-  }, { phase: 'Pre-season' });
+  }, { offseasonSubphase: 'not_off_season', phase: 'Pre-season' });
   eq('removing all strength rows makes the session Conditioning',
     withoutStrength.workout.workoutType, 'Conditioning' as any);
   ok('remaining conditioning stays visible and load-free',
@@ -248,6 +256,7 @@ section('[6] deterministic plan intent rejects main drift but permits minor bala
     planEntryId: reference.planEntryId,
     strengthPatternContributions: ['hinge', 'pull'],
   }), {
+    offseasonSubphase: 'not_off_season',
     ...EARLY,
     planIntentValid: true,
     referenceWorkout: reference,
@@ -270,7 +279,7 @@ section('[6] deterministic plan intent rejects main drift but permits minor bala
   ], {
     planEntryId: 'w1:wednesday:push:strength',
     strengthPatternContributions: ['push'],
-  }), { phase: 'Pre-season', planIntentValid: true });
+  }), { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true });
   ok('minor balancing row remains on Upper Push day',
     push.workout.exercises.some((item) => /Chest Supported Row/i.test(item.exercise?.name ?? '')));
   eq('minor pull accessory does not rename Upper Push', push.workout.name, 'Upper Push');
@@ -284,6 +293,7 @@ section('[7] stable plan identity moves with the workout, never the weekday');
     strengthPatternContributions: ['push'],
   });
   const moved = finaliseWorkoutAfterMutation({ ...planned, dayOfWeek: 4 }, {
+    offseasonSubphase: 'not_off_season',
     phase: 'Pre-season',
     planIntentValid: true,
     referenceWorkout: planned,
@@ -294,7 +304,7 @@ section('[7] stable plan identity moves with the workout, never the weekday');
   const stale = finaliseWorkoutAfterMutation({
     ...planned,
     planEntryId: 'missing-plan-entry',
-  }, { phase: 'Pre-season', planIntentValid: false });
+  }, { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: false });
   ok('stale plan identity is cleared rather than weekday-remapped',
     !stale.workout.planEntryId);
   eq('stale legacy workout is re-owned once from meaningful content',
@@ -375,6 +385,7 @@ section('[9] explicit Rest keeps plan identity without restoring removed trainin
     planEntryId: 'w1:monday:hinge:strength',
     strengthPatternContributions: ['hinge'],
   }), {
+    offseasonSubphase: 'not_off_season',
     phase: 'Pre-season',
     planIntentValid: true,
     referenceWorkout: workout('Lower Hinge', [row('Romanian Deadlift', 0)]),
@@ -395,11 +406,85 @@ section('[10] support copy cannot erase authoritative strength ownership');
       plannedPatterns: ['push'], effectivePatterns: ['push'],
     },
     strengthPatternContributions: ['push'],
-  }), { phase: 'Pre-season' });
+  }), { offseasonSubphase: 'not_off_season', phase: 'Pre-season' });
   ok('support-like name cannot clear typed push intent or its real main row',
     typedPush.workout.strengthIntent?.effectivePatterns.includes('push') === true &&
     typedPush.workout.exercises.some((item) => item.exercise?.name === 'Bench Press'),
     typedPush.workout);
+}
+
+section('[11] the off-season subphase is carried, never guessed');
+{
+  // `updatePowerForPhase` used to read a MISSING subphase as `early_offseason`.
+  // The guess had six consumers, not one: it deleted the power block, forced
+  // conditioning intent to aerobic, forced `conditioningCategory` to
+  // aerobic_base, stripped hard-conditioning and running rows, rewrote the
+  // conditioning block's title, and widened restored-lift reps to 8-12. Five
+  // production builders were not carrying the fact, so any off-season week that
+  // reached one of them was silently treated as early off-season.
+  //
+  // The field is now REQUIRED on the context, which is what puts the question
+  // to every builder at compile time. These tests pin the runtime half: the
+  // helper refuses rather than defaults, and it refuses in the one direction
+  // that matters.
+  ok(
+    'a non-off-season phase resolves without needing a subphase',
+    canonicalContextSubphase('Pre-season', null) === 'not_off_season' &&
+      canonicalContextSubphase('In-season', null) === 'not_off_season' &&
+      canonicalContextSubphase(undefined, null) === 'not_off_season',
+  );
+  ok(
+    'a resolved off-season subphase passes through unchanged',
+    canonicalContextSubphase('Off-season', 'late_offseason') === 'late_offseason' &&
+      canonicalContextSubphase('Off-season', 'early_offseason') === 'early_offseason',
+  );
+  ok(
+    'an Off-season context with no resolved subphase THROWS rather than guessing',
+    threw(() => canonicalContextSubphase('Off-season', null)),
+  );
+
+  // LEGACY PRE-CLOCK PROGRAMS CANNOT REACH THE THROW.
+  //
+  // Hydration passes `currentProgram.seasonPhaseClock?.selectedPhase ??
+  // currentProgram.programPhase`. A program persisted before the phase clock
+  // shipped has no clock, so the value is a `programPhase`, and NONE of its
+  // three spellings canonicalises to 'Off-season' through the phase regex in
+  // `canonicaliseHydratedWorkout`. 'Base-Building' is the off-season one, and
+  // it lands on 'In-season' — the /in/i probe matches the "in" inside
+  // "Building" before any off-season test is reached. That is an accident of
+  // the regex rather than a designed mapping, which is precisely why it is
+  // worth pinning: the legacy path's safety here is incidental, not intended.
+  //
+  // If a future edit tightens that regex — or teaches it to map 'Base-Building'
+  // onto Off-season, which is what it arguably MEANS — this test fails and the
+  // author has to supply the subphase in the same change. That coupling is the
+  // point; without it, tightening the regex would silently route legacy
+  // programs into the throw.
+  const legacyPhases = ['Base-Building', 'In-Season', 'Pre-Season-Skills'];
+  ok(
+    'no legacy programPhase spelling reaches the Off-season throw',
+    legacyPhases.every((phase) => {
+      const canonical = /pre/i.test(phase)
+        ? 'Pre-season'
+        : /off/i.test(phase)
+          ? 'Off-season'
+          : /in/i.test(phase)
+            ? 'In-season'
+            : undefined;
+      return !threw(() => canonicalContextSubphase(canonical as never, null));
+    }),
+    legacyPhases,
+  );
+
+  // And the contradiction the reader itself guards: a context that states
+  // Off-season while claiming there is no subphase is a lie, not a blank.
+  ok(
+    'an Off-season context claiming not_off_season THROWS at the reader',
+    threw(() => finaliseWorkoutAfterMutation(
+      workout('Lower Squat', [row('Back Squat', 0)], { powerBlock: power('primer', 'lower') }),
+      { phase: 'Off-season', offseasonSubphase: 'not_off_season' },
+    )),
+  );
 }
 
 console.log(`\nworkoutCanonicalisationTests: ${pass} passed, ${fail} failed`);
