@@ -1329,6 +1329,15 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: '',
     flagged: false,
   },
+  {
+    exercise: 'Scap Pull Ups',
+    pool: 'Shoulder health',
+    primary: ['Shoulders', 'Upper back', 'Lats'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
 
   /* ── Hamstring (light) ── */
   {

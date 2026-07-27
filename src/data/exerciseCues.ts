@@ -675,6 +675,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Keep elbows locked, glide shoulder blades.',
     secondaryCue: 'Move slowly, no sagging hips.',
   },
+  'Scap Pull Ups': {
+    primaryCue: "dead hang from bar and relax, pull yourself higher only using your shoulder blades, don't bend arms",
+    secondaryCue: '',
+  },
   'Seated Cable Row': {
     primaryCue: 'Sit tall, pull to the sternum.',
     secondaryCue: 'Slow on the return.',

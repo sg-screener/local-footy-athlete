@@ -79,7 +79,7 @@ const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
 
 console.log('\n[1] THE SHEET — still reads as Sam signed it');
 
-ok('the sheet holds 197 exercise rows', sheetRows.length === 197, `found ${sheetRows.length}`);
+ok('the sheet holds 198 exercise rows', sheetRows.length === 198, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -287,8 +287,12 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 //
 // Dumbbell Pullovers followed the same day, also `everyone` and not a
 // regression (134 -> 135). Total 196 -> 197.
+//
+// Scap Pull Ups closed the same day — the first of these into a PREHAB pool
+// (Shoulder health, beside its Scap Push-Up sibling) rather than Mobility.
+// Also `everyone` and not a regression (135 -> 136). Total 197 -> 198.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 135,
+  everyone: 136,
   everyone_regression: 11,
   one_plus_years: 32,
   two_plus_years: 17,

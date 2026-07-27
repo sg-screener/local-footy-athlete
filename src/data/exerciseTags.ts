@@ -620,6 +620,20 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     eccentric: 'low', lateWeek: 'good',
     injury: inj({ shoulder: 'caution', wrist: 'caution' }),
   },
+  // Sam, 2026-07-28. All TEN injury keys are written out deliberately: every
+  // region except shoulder is his STATED ruling of "safe", not the `inj()`
+  // default. An omitted key and a reviewed-and-safe key are indistinguishable
+  // once merged, so nothing here rides the blank-means-good trap.
+  'Scap Pull Ups': {
+    movement: 'vertical_pull', region: 'upper', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({
+      adductor: 'good', pubalgia: 'good', lowerBack: 'good', knee: 'good',
+      hamstring: 'good', calf: 'good', ankle: 'good', shoulder: 'caution',
+      elbow: 'good', wrist: 'good',
+    }),
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // UPPER BODY — VERTICAL PUSH
