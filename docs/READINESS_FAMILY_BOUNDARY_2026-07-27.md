@@ -1,166 +1,120 @@
-# Readiness law family — boundary report, 2026-07-27
+# Readiness law family — closing report, 2026-07-27
 
-Branch `close/readiness-law-family` (4 commits on top of `main` @ `cea7193`).
-Not merged. `stash@{0}` is untouched.
+Branch `close/readiness-law-family`, merged `--no-ff` to `main`.
+`test:bible` **EXIT=0**. `stash@{0}` left untouched.
 
-## Step 1 — the failing case, identified without runtime probes
+## The one principle
 
-`src/__tests__/acceptedStateTransactionTests.ts:846`, property **"no structural
-readiness change can bypass the gateway"**.
+Sam's ruling, which every fix below is a single application of:
 
-| | |
+> The deload law changes dose and intensity inside sessions, never session
+> identity or count. Counting counts structure; intensity and prescribed volume
+> must never feed identity.
+
+The family turned out to be **one defect wearing five costumes**: a number that
+describes *how hard* or *how much* was being read to decide *whether something
+exists*. Each site was found the same way — a deload softened something, and a
+session silently left the week's count.
+
+| where | what read intensity as identity |
 |---|---|
-| iteration | **`sore`** — a general **moderate soreness** fact (not `flat`/fatigue) |
-| profile | **Pre-season**, `early_preseason`, `weekKind: build` |
-| fact date | **WEDNESDAY 2026-07-15** — mid-week |
-| week start | Monday 2026-07-13 |
-| `governedFromISO` | **set, and correct: `2026-07-15`** |
-| contract | `requiredMinimum 3`, `plannerSelectedTarget 4`, kind `core`, **`achievedCount 3`** |
-| reductions | **`[]`** — none, as the readiness law requires |
-| finding | `planner_selected_target_miss:main_strength`, expected 4, actual 3 |
+| row classifier | main-lift role from prescribed **sets + row position** |
+| deload transform | its own main-lift test, keyed on the **raw** name while §18 resolved the alias |
+| anchor ledger | one boolean answered "is this an exposure?" *and* "was it hard?" |
+| safety policy | a readiness deload demoted the athlete's **game participation**, deleting its credit |
+| optional week | `targetCount: 0` lifted the requirement *and* stopped the sessions being built |
 
-The `flat` iteration passes; the loop simply aborts at `sore` first.
+## What was diagnosed and fixed
 
-## Step 2 — all three hypotheses were wrong
+**1. The originally-identified failing case.**
+`acceptedStateTransactionTests.ts:846`, the `sore` iteration — moderate soreness,
+Wednesday 2026-07-15, Pre-season. All three prior hypotheses were wrong: the
+contract was correct (target 4, no reductions) and remainder scoping worked
+(`governedFromISO` set, delivered days preserved). Saturday's hinge lift was
+still there — it had been **reclassified**. `Romanian Deadlift | main_strength |
+3x` → `strength_accessory | 2x` at index 2, because the deload halved its sets
+and trimmed the accessories out from in front of it. Only moderate-load lifts
+could be demoted this way; high-load lifts qualify on the registry tag alone.
+Masked on `main` by the retired `moderate_reduction` tier lowering the target to
+2 — the readiness law removed the mask, not the defect.
 
-- **(a) contract never decorated** — no. The contract was *correct*: target 4,
-  no reductions, and no optional week involved (`sessionsOptional` false).
-- **(b) whole-week case, fact at week start** — no. The fact is mid-week and
-  `governedFromISO` was set.
-- **(c) `asIllnessRecoveryWeek` zeroing the whole calendar week** — no.
-  Remainder scoping worked; delivered Mon/Tue were preserved.
+**2. Four regressions the gate had never reached.** `test:bible` stops at the
+first failing suite, so a stash recorded as "RED: 1 property test" was hiding
+four more, all passing on `main`. Every one is fixed.
 
-**The actual cause.** Saturday's planned hinge lift was still present. It had
-been **reclassified** from `main_strength` to `strength_accessory`.
+**3. The conditioning count** (Sam's ruling). Anchor credit conflated four
+questions behind `participation === 'normal_unrestricted'`. Split at all four
+sites together — ledger, claim owner, planner fill, validation guard — because
+leaving any one would have restored the conflation from that side. Then the root:
+**readiness no longer withdraws field participation**. That clause justified
+itself as safe because low readiness "authors matching main-strength,
+conditioning and sprint reductions in the same pass" — the readiness law deleted
+exactly those, leaving the contract asserting both "the athlete's game produced
+no sprint" and "this week requires a sprint exposure". A game is not a session
+the app doses; demoting it was the app inventing a fact about the athlete.
 
-`classifyGeneratedWorkoutRow` decides main-lift identity from prescribed
-**sets** and **position** — both of which a deload changes. Evidence:
+**4. The optional stamp.** A pre-season "absolutely cooked" week arrived as six
+recovery sessions where the athlete had four strength sessions — "nothing is
+required" implemented as "nothing is offered". One number was doing two jobs.
+`targetCount` is structure and is now preserved; `plannerSelectionKind:
+'optional'` is the single owner of the commitment — which exposed that
+`sprintHighSpeed` never passed `selectionKind` at all and silently defaulted to
+`'core'`, holding every optional week to a sprint target it has none of by
+design. The delivered-day half needed no change: T4 already pins it, green.
 
-| | pre-fact | post-deload |
+**5. Tasks 8 and 9 landed** — 3 structural ratchets + the behavioural
+`INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION` for both acting tiers.
+
+## Authored tests re-pointed — FLAGGED FOR SAM
+
+Four assertions pinned behaviour these laws superseded. Each was re-pointed at
+what its own name says, and **strengthened** rather than relaxed. Please confirm:
+
+| test | was | now |
 |---|---|---|
-| Saturday | `Romanian Deadlift \| main_strength \| 3x` @ index 5 | `Romanian Deadlift \| strength_accessory \| 2x` @ index 2 |
+| illness invariant 10 | `weekKind === 'deload'` (a retired proxy) | `deloadDoor` recorded **and** the main-lift dose actually shrank |
+| gateway 43 / P15 / M15 | restricted anchors get **no** credit of any kind | conditioning credited (attendance) **and** sprint/hard still denied — pins the whole split |
+| accepted-state regression 7 | low readiness **deletes** the day's power block | the day is still offered and its dose shrank |
+| readiness-illness Bible check | regex demanded quotes the sentence never had | matches the authored wording |
 
-The classifier's only clause that admits a moderate-load lift is
-`sets >= 3 && repsMax <= 12 && load === 'moderate'`. The deload halved 3→2 sets
-and trimmed the accessories ahead of it, closing both escape hatches at once.
-High-load lifts (Back Squat, OHP, Pull-Ups) qualify on the registry tag alone
-and were immune — the hinge slot alone carried it.
-
-A main-strength exposure was deleted from the week's **structure** with no
-authorised reduction to explain it. It was invisible on `main` because the
-retired `moderate_reduction` tier lowered the contract target to 2. **The
-readiness law removed the mask, not the defect.**
-
-Fixed at the single owner (the pool registry already answers this by identity,
-and the deload transform already trusts it) rather than at each of the 15
-consumers of `role === 'main_strength'`.
-
-A second defect surfaced from the test fixture: `deloadWeekRules` asked that
-registry with the **raw** name while §18 resolves the alias first, so
-"Romanian Deadlift" was an anchor to one owner and an accessory to the other —
-and the accessory trim deleted the session's main lift outright.
-
-## The four regressions that were hiding behind it
-
-`stash@{0}` recorded "RED: 1 property test". The `test:bible` chain stops at the
-first failing suite, so **everything after `test:accepted-state-transactions`
-had never been run**. All of the following pass on `main`:
-
-1. **R15 + R19** (`test:readiness-ownership`) — every severe-illness commit
-   failed visible verification. Cause: `asIllnessRecoveryWeek` zeroed both §18
-   numbers for strength but only the *minimum* for conditioning and sprint, so
-   the optional week stayed committed to core targets it has none of by design
-   (`planner_selected_target_miss:sprint_high_speed:0`). **Fixed.**
-2. **5 of 6 failures in `test:illness-recovery-mode`** — same cause. **Fixed.**
-3. **Invariant 10** (`test:illness-recovery-mode`) — asserted the retired
-   `weekKind` proxy. Re-pointed at `deloadDoor` + the actual dose. **Fixed.**
-4. **A Bible assertion** demanding typographic quotes the authored sentence
-   never had. **Fixed.**
-
-`test:fact-horizon` went from **13 failures to 3**.
-
-## NOT COVERED
-
-### 1. `poor_sleep_week` — the one remaining gate failure (3 assertions, one cause)
-
-`test:fact-horizon` T2, T4 and R3. Diagnosed, **not fixed**:
-
-```
-week 2026-07-24, mode in_season_game_week, weekKind build, governed 2026-07-24
-conditioning: requiredMinimum 3, achievedCount 2
-finding: required_minimum_shortfall:conditioning, expected 3, actual 2
-visible: Mon Strength/core, Tue Team/core, Thu Team/core,
-         Fri Strength/OPTIONAL, Sat Game/core, Sun Recovery/recovery
-```
-
-`cooked_week` passes on the same seed because it mints an *optional* week
-(required 0). `poor_sleep_week` maps to **`wrecked`** — deloaded, minimums
-still standing — and the deloaded week delivers one fewer **core conditioning
-exposure** than the minimum.
-
-This is the same family as the fix above (a dose transform changing what §18
-COUNTS), but closing it needs a ruling I did not want to guess at:
-
-> Under "one quality exposure max, the rest easy aerobic", do the downgraded
-> easy-aerobic rows still count as **core** conditioning exposures? And how do
-> required minimums reconcile across the delivered/governed boundary when a
-> mid-week fact regenerates only the remainder?
-
-Per `CLAUDE.md` ("if the correct abstraction is unclear, ask first") this is
-Sam's call, not a guess.
-
-### 2. Tasks 8 and 9 from the stash — NOT LANDED
-
-The three structural assertions, the reductions-typed invariant and
-`INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION` for both tiers were **not**
-written. Landing new invariants on top of a red gate would have buried the
-remaining defect. They should follow item 1.
-
-### 3. Step 3 — the `sessionsOptional` stamp's scoping: FLAGGED, NOT FIXED
-
-Evidence captured during diagnosis, from the allocator on an optional week:
-
-```
-deloaded:true optional:true  targetCount 0
-Mon..Sat ALL "recovery" — "Mobility, foam rolling, light movement"
-```
-
-Two concerns, neither closed:
-
-- **It empties the week.** Sam's law is explicit that "absolutely cooked" *does
-  not* empty the week — "it lifts the MINIMUMS so nothing is required, and the
-  sessions remain, offered." The allocator replaces every session with a
-  recovery session instead.
-- **It re-plans delivered days.** The all-recovery plan covers Monday and
-  Tuesday, i.e. days before the fact date. Whether they are restored downstream
-  was not established — the optional path did not reject, so no payload was
-  available to inspect, and confirming it would have needed the transaction
-  probing that was ruled out.
-
-Separately observed and unexplained: on the deloaded week the delivered Mon/Tue
-main lifts went 3x → 2x (contract `meaningfulMainLiftSetCeiling: 2` applies
-week-wide, including days before `governedFromISO`). Flagged, not investigated.
-
-### 4. Not verified
-
-- No device/simulator pass. Per Process Law L10 nothing here is "done".
-- `test:compile` and everything after `test:fact-horizon` in the chain still
-  have not run to completion — the gate stops at item 1.
-- Untouched: whether `if (false)` / `true &&` fossils left by the migration in
-  `coachingEngine.ts`, and the dead `readinessDeloaded || readinessDeloaded`
-  branches in `recoveryAddonCoverage.ts`, should be swept.
+The power one matters most: safety scenario 4 and property P2b both assert a
+deloaded week **keeps** power ("a deload is not a reason to lose sharpness").
+Regression 7 asserted the opposite and only passed because the week had been
+emptied by defect 4.
 
 ## Gate state
 
-| | before | after |
+| | start | end |
 |---|---|---|
-| `test:bible` | fails at suite 7 of 48 | fails at suite 18 of 48 |
-| failing assertions | 1 visible, 4 hidden regressions behind it | 3, one shared cause |
-| `test:accepted-state-transactions` | 9/10 properties | **10/10** |
-| `test:readiness-ownership` | 20/22 | **22/22** (matches main) |
-| `test:illness-recovery-mode` | 10/16 | **16/16** |
-| `test:readiness-illness-law` | 64/71 | **71/71** |
-| `test:deload-law` | 47/47 | **50/50** (+3 new) |
-| `test:fact-horizon` | 13 failures | 3 |
+| `test:bible` | fails at suite 7 of 48 | **EXIT=0** |
+| `test:accepted-state-transactions` | 9/10 properties | 25/25, 10/10, 10/10 |
+| `test:readiness-ownership` | 20/22 | 22/22 |
+| `test:illness-recovery-mode` | 10/16 | 17/17 |
+| `test:readiness-illness-law` | 64/71 | 112/112 |
+| `test:deload-law` | 47/47 | 50/50 |
+| `test:section18-safety` | 30/30 | 32/32 |
+| `test:section18-v2` | 57/57 | 69/69 |
+| `test:fact-horizon` | 13 failures | 14/14 |
+| `test:compile` | — | PASSED; 3 ratchet improvements locked in |
 
-**The gate is RED.** Nothing was merged to `main`.
+## NOT COVERED
+
+1. **No device or simulator pass.** Per Process Law L10 nothing here is "done"
+   until Sam accepts it on a real phone. This is the only gate that matters now.
+2. **The four re-pointed assertions** above are mine, not Sam's. If any reading
+   is wrong, the fix underneath it needs revisiting, not just the test.
+3. **Pattern selection shifts slightly on an optional week.** Pre-season cooked
+   keeps all 4 strength sessions on the same days, but two swap emphasis
+   (`Upper Pull`→`Upper Push`, `Lower Hinge`→`Lower Squat`) and one Recovery day
+   became Rest. Session COUNT and days are preserved, which is the law; the
+   pattern rotation inside them was not investigated.
+4. **Only `test:bible` was run** (48 suites incl. `test:compile`). The separate
+   `test:scenarios`, `test:qa`, `test:bible:extended` and the Maestro E2E lanes
+   were not.
+5. **Migration fossils left in place**, deliberately out of scope: `if (false)`
+   and `true &&` remnants in `coachingEngine.ts`, and the dead
+   `readinessDeloaded || readinessDeloaded` branches in `recoveryAddonCoverage.ts`.
+   They are inert; a sweep is its own unit.
+6. **`optional_week` is still named for illness.** The mode is minted by
+   readiness too. Renaming touches the §18 mode union, the subphase union and the
+   reduction reasons — recorded as naming debt by the migration, still owed.
