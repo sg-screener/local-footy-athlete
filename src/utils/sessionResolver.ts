@@ -1456,7 +1456,8 @@ export function resolveWeekWithConditioning(
   let primaryConditioningCount = 0;
 
   // ── Running exposure cap ──
-  // Max 4 running exposures per week, seeded from anchors that already exist
+  // Max 3 running days per week (amended §17.B — Sam's signed merge dropped
+  // this from 4), seeded from anchors that already exist
   // after base resolution. Team training, games and practice matches count.
   // When the cap is reached, additional running sessions are converted to
   // off-feet modalities (bike/row/ski) while preserving the conditioning stimulus.

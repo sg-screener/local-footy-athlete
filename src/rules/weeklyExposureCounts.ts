@@ -43,8 +43,21 @@ export const BIBLE_WEEKLY_CAPS = {
   maxMainStrengthSessions: 4,
   /** "3-5 conditioning exposures per week" (TT + games count in-season). */
   conditioningExposures: { min: 3, max: 5 },
-  /** "No more than 4 running exposures per week programmed by the app." */
-  maxRunningExposures: 4,
+  /**
+   * "At least 2 and no more than 3 running days per week." (amended §17.B)
+   *
+   * Supersedes the pre-amendment "No more than 4 running exposures per week
+   * programmed by the app" — Sam's signed merge dropped the cap to 3 and added
+   * the floor. Anchors count toward the cap: 2 team trainings plus a game is
+   * already 3, which is why in-season rarely needs any added app running.
+   */
+  maxRunningExposures: 3,
+  /**
+   * The 2-day floor. Scoped OFF in the two cases named by
+   * RUNNING_FLOOR_EXEMPTIONS; everywhere else a healthy week programming fewer
+   * than 2 running days needs an authorised typed reduction reason.
+   */
+  minRunningExposures: 2,
   /** One genuine weekly exposure from mid off-season onward; 2-3 remains the usual maximum. */
   sprintCodExposures: { min: 1, max: 3 },
   /**
@@ -59,6 +72,31 @@ export const BIBLE_WEEKLY_CAPS = {
   maxHardDays: 4,
   hardDaysAbsoluteMax: 5,
 } as const;
+
+/**
+ * The two cases where the 2-day running floor does not apply (amended §17.B):
+ * "The 2-day floor does not apply in early off-season (weeks 1-2), where
+ * running is not required at all, or in bye recovery, where the reduced
+ * structure governs."
+ *
+ * A TYPED reason rather than a boolean, so a caller has to say WHICH authored
+ * case it is claiming and the build can check the reason still exists.
+ */
+export type RunningFloorExemption = 'early_off_season_weeks_1_2' | 'bye_recovery';
+
+export const RUNNING_FLOOR_EXEMPTIONS: readonly RunningFloorExemption[] = [
+  'early_off_season_weeks_1_2',
+  'bye_recovery',
+];
+
+/** Context a caller may supply so the audit can scope the running floor. */
+export interface CapAuditContext {
+  /**
+   * The authored case exempting this week from the running floor, when one
+   * applies. Absent means the floor is enforced.
+   */
+  runningFloorExemption?: RunningFloorExemption | null;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -196,7 +234,10 @@ export function countWeeklyExposures(
  * caps are informational (a deload / away week legitimately sits under
  * range) — callers must not treat them as errors.
  */
-export function auditWeekAgainstCaps(counts: WeeklyExposureCounts): CapFinding[] {
+export function auditWeekAgainstCaps(
+  counts: WeeklyExposureCounts,
+  context: CapAuditContext = {},
+): CapFinding[] {
   const findings: CapFinding[] = [];
   const caps = BIBLE_WEEKLY_CAPS;
 
@@ -212,6 +253,19 @@ export function auditWeekAgainstCaps(counts: WeeklyExposureCounts): CapFinding[]
       cap: 'maxRunningExposures', kind: 'over',
       observed: counts.runningExposures, limit: caps.maxRunningExposures,
       detail: `${counts.runningExposures} running exposures (Bible max ${caps.maxRunningExposures})`,
+    });
+  }
+  // The floor is scoped, so it is checked only when no authored exemption is
+  // claimed. An exemption never touches the OVER-cap check above: early
+  // off-season not requiring running does not license four running days.
+  if (
+    !context.runningFloorExemption &&
+    counts.runningExposures < caps.minRunningExposures
+  ) {
+    findings.push({
+      cap: 'maxRunningExposures', kind: 'under',
+      observed: counts.runningExposures, limit: caps.minRunningExposures,
+      detail: `${counts.runningExposures} running days (Bible floor ${caps.minRunningExposures}; lifted in early off-season weeks 1-2 and bye recovery, otherwise needs an authorised typed reduction reason)`,
     });
   }
   if (counts.hardDays > caps.maxHardDays) {

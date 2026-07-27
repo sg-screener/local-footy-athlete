@@ -31,6 +31,7 @@ import {
   classifyBibleInjurySeverity,
   BIBLE_INJURY_SEVERITY_BANDS,
   BIBLE_WEEKLY_CAPS,
+  RUNNING_FLOOR_EXEMPTIONS,
   MAIN_LIFT_REP_SCHEMES,
   getProgrammingRoleBias,
   type SessionUnit,
@@ -416,9 +417,60 @@ ok('flags > 4 hard days', overCaps.has('maxHardDays'), `hardDays=${overCounts.ha
 ok('running counter includes on-feet hard conditioning', overCounts.runningExposures === 4, `got ${overCounts.runningExposures}`);
 ok('caps constants match Bible Section 17.B',
   BIBLE_WEEKLY_CAPS.maxMainStrengthSessions === 4 &&
-  BIBLE_WEEKLY_CAPS.maxRunningExposures === 4 &&
+  BIBLE_WEEKLY_CAPS.maxRunningExposures === 3 &&
+  BIBLE_WEEKLY_CAPS.minRunningExposures === 2 &&
   BIBLE_WEEKLY_CAPS.sprintCodExposures.max === 3 &&
   BIBLE_WEEKLY_CAPS.maxHardDays === 4);
+
+// ── Running floor and cap (amended Bible §17.B, Sam's signed merge) ──
+// "At least 2 and no more than 3 running days per week." The pre-amendment
+// reading was "no more than 4 running exposures", which this replaces.
+
+ok('a 4-running-day week is now OVER the cap', overCaps.has('maxRunningExposures'),
+  `running=${overCounts.runningExposures}, caps flagged: ${[...overCaps].join(', ')}`);
+
+const THREE_RUNNING_WEEK: WeekDayInput[] = [
+  { date: '2026-06-01', workout: teamDay('Team Training + Upper Pull', 'rows', [mkEx('Barbell Row')]) },
+  { date: '2026-06-03', workout: teamDay('Team Training + Upper Push', 'bench', [mkEx('Bench Press')]) },
+  { date: '2026-06-06', workout: mkWorkout({ name: 'Game Day', workoutType: 'Game' }) },
+];
+const threeCounts = countWeeklyExposures(THREE_RUNNING_WEEK, {});
+const threeFindings = auditWeekAgainstCaps(threeCounts);
+
+ok('anchors count toward the cap — 2 TT + a game is exactly 3',
+  threeCounts.runningExposures === 3, `got ${threeCounts.runningExposures}`);
+ok('a 3-running-day week is AT the cap, not over',
+  !threeFindings.some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
+  threeFindings.map((f) => `${f.kind}:${f.cap}`).join(', '));
+ok('a week at the cap does not breach the floor either',
+  !threeFindings.some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'));
+
+const ONE_RUNNING_WEEK: WeekDayInput[] = [
+  { date: '2026-06-01', workout: mkWorkout({ name: 'Game Day', workoutType: 'Game' }) },
+  { date: '2026-06-03', workout: mkWorkout({ name: 'Upper Body Strength', description: 'bench', exercises: [mkEx('Bench Press')] }) },
+];
+const oneCounts = countWeeklyExposures(ONE_RUNNING_WEEK, {});
+
+ok('a 1-running-day week breaches the 2-day floor',
+  auditWeekAgainstCaps(oneCounts).some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'),
+  `running=${oneCounts.runningExposures}`);
+
+// The floor is SCOPED OFF in two authored cases. Each is claimed by a TYPED
+// reason, never a bare boolean, so the build can check the reason still holds.
+ok('the floor is lifted in early off-season (weeks 1-2)',
+  !auditWeekAgainstCaps(oneCounts, { runningFloorExemption: 'early_off_season_weeks_1_2' })
+    .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'));
+ok('the floor is lifted in bye recovery',
+  !auditWeekAgainstCaps(oneCounts, { runningFloorExemption: 'bye_recovery' })
+    .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'));
+ok('exactly the two authored floor exemptions exist',
+  RUNNING_FLOOR_EXEMPTIONS.length === 2 &&
+  RUNNING_FLOOR_EXEMPTIONS.includes('early_off_season_weeks_1_2') &&
+  RUNNING_FLOOR_EXEMPTIONS.includes('bye_recovery'),
+  RUNNING_FLOOR_EXEMPTIONS.join(', '));
+ok('an exemption never suppresses an OVER-cap finding',
+  auditWeekAgainstCaps(overCounts, { runningFloorExemption: 'bye_recovery' })
+    .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'));
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 5. Bible injury severity bands (defined, not wired) ──');
