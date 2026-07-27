@@ -5,6 +5,7 @@ import type {
 } from '../types/domain';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
+import { resolveExerciseName } from '../utils/loadEstimation';
 import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
 
 export type DeloadConditioningCategory =
@@ -177,7 +178,16 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
 
 function isMainStrengthRow(exercise: WorkoutExercise): boolean {
   if (isConditioningExerciseRow(exercise)) return false;
-  return classifyPoolSlot(exercise.exercise?.name ?? '')?.role === 'anchor';
+  // The pool registry is keyed by CANONICAL names, and the generator writes
+  // display names — "Romanian Deadlift" for the pool's "RDLs". Asking the
+  // registry with the raw name returned null for those rows, so this test
+  // called a session's anchor lift an accessory and the trim below deleted it.
+  //
+  // The §18 evidence classifier already resolves the alias before asking, so
+  // the two readers of the same row disagreed. One key, asked the same way, is
+  // the fix; adding the missing names to the pool would leave the next alias
+  // to find the same hole.
+  return classifyPoolSlot(resolveExerciseName(exercise.exercise?.name ?? ''))?.role === 'anchor';
 }
 
 function isAccessoryStrengthRow(exercise: WorkoutExercise): boolean {
