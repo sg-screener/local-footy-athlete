@@ -167,6 +167,10 @@ function identityFor(mode: Section18WeekMode): {
   if (mode === 'in_season_bye_build') return { phase: 'In-season', subphase: 'bye_build', anchorState: 'bye' };
   if (mode === 'in_season_bye_recovery') return { phase: 'In-season', subphase: 'bye_recovery', anchorState: 'bye' };
   if (mode === 'practice_match_week') return { phase: 'Pre-season', subphase: 'practice_match_week', anchorState: 'practice_match' };
+  // An optional week is not a season position — it DECORATES one. The fixture
+  // gives it a real in-season game week to decorate; the old code let the mode
+  // name double as a subphase, which is the conflation this unit removed.
+  if (mode === 'optional_week') return { phase: 'In-season', subphase: 'game_week', anchorState: 'game' };
   if (mode.endsWith('_preseason')) return { phase: 'Pre-season', subphase: mode as Section18Subphase, anchorState: 'none' };
   return { phase: 'Off-season', subphase: mode as Section18Subphase, anchorState: 'none' };
 }
@@ -682,13 +686,13 @@ ok('a cooked-readiness week KEEPS power',
   contract('in_season_game_week', { cookedReadiness: true }).power.removalReason);
 
 ok('an illness_recovery week KEEPS power',
-  contract('illness_recovery').power.eligible === true,
-  contract('illness_recovery').power.removalReason);
+  contract('optional_week').power.eligible === true,
+  contract('optional_week').power.removalReason);
 
 // The reason literal must go with the behaviour — a removal reason that no
 // longer describes anything is how the old rule grows back.
 ok('no contract still cites the retired low_readiness_or_deload removal reason',
-  (['in_season_game_week', 'illness_recovery'] as const).every((mode) =>
+  (['in_season_game_week', 'optional_week'] as const).every((mode) =>
     contract(mode, { weekKind: 'deload', readiness: 'low', cookedReadiness: true })
       .power.removalReason !== 'low_readiness_or_deload'));
 

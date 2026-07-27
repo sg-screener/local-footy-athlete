@@ -800,7 +800,7 @@ async function main(): Promise<void> {
       profile: useProfileStore.getState().onboardingData,
       markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
     });
-    assert(committed.contract.identity.mode === 'illness_recovery',
+    assert(committed.contract.identity.mode === 'optional_week',
       `the COMMITTED accepted week must be illness_recovery, got ${committed.contract.identity.mode}`);
   });
 

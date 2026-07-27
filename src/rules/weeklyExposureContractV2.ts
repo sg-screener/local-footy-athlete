@@ -28,7 +28,7 @@ export type Section18WeekMode =
   | 'in_season_game_week'
   | 'in_season_bye_build'
   | 'in_season_bye_recovery'
-  | 'illness_recovery'
+  | 'optional_week'
   | 'early_offseason'
   | 'mid_offseason'
   | 'late_offseason'
@@ -46,7 +46,7 @@ export type Section18WeekMode =
  * See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
  */
 export function isOptionalOnlyWeekMode(mode: Section18WeekMode): boolean {
-  return mode === 'illness_recovery' ||
+  return mode === 'optional_week' ||
     mode === 'in_season_bye_recovery' ||
     mode === 'early_offseason';
 }
@@ -57,7 +57,6 @@ export type Section18Subphase =
   | 'game_week'
   | 'bye_build'
   | 'bye_recovery'
-  | 'illness_recovery'
   | 'practice_match_week';
 
 export type Section18AnchorState = 'game' | 'bye' | 'practice_match' | 'none';
@@ -478,7 +477,7 @@ const SAFETY_REDUCTION_REASONS = new Set<WeeklyExposureReductionReason>([
   'low_readiness',
   'injury_restriction',
   'bye_recovery_mode',
-  'illness_recovery_mode',
+  'optional_week_mode',
   'deload_policy',
   'training_age_limit',
   'full_pause',
@@ -510,7 +509,7 @@ function buildSafetyPolicy(args: {
 }): Section18SafetyPolicy {
   const fullPause = args.fullPause === true || args.reductions.some((entry) =>
     entry.reason === 'full_pause');
-  const illnessRecovery = args.mode === 'illness_recovery';
+  const optionalWeek = args.mode === 'optional_week';
   // THE ILLNESS LAW (Sam, 2026-07-27) — the SPLIT. illness_recovery used to
   // inherit bye_recovery's entire recovery-tier envelope: a main-lift ceiling of
   // 2, a Moderate intensity ceiling, a 2-set meaningful-lift ceiling and no
@@ -523,7 +522,7 @@ function buildSafetyPolicy(args: {
   // instruction ("every set easy, RPE 5-6"), not an invented reduction. It is
   // the removal of POWER and the cutting of COUNTS that the law forbids.
   const lighterStrengthRequired = args.cookedReadiness || byeRecovery ||
-    illnessRecovery || args.weekKind === 'deload';
+    optionalWeek || args.weekKind === 'deload';
   const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
   const mainCeiling = fullPause
     ? 0
@@ -553,9 +552,9 @@ function buildSafetyPolicy(args: {
   // The envelope split above means `byeRecovery` no longer covers illness. The
   // TYPED REASON must still be recorded for both — an untyped reduction is
   // exactly what INV_EXPOSURE_REDUCTION_HAS_REASON exists to catch.
-  const recoveryReason: WeeklyExposureReductionReason = illnessRecovery
-    ? 'illness_recovery_mode' : 'bye_recovery_mode';
-  if ((byeRecovery || illnessRecovery) && !reasons.includes(recoveryReason)) {
+  const recoveryReason: WeeklyExposureReductionReason = optionalWeek
+    ? 'optional_week_mode' : 'bye_recovery_mode';
+  if ((byeRecovery || optionalWeek) && !reasons.includes(recoveryReason)) {
     reasons.push(recoveryReason);
   }
   return {
@@ -635,7 +634,9 @@ function expectedSubphase(input: Section18ContractV2Input): Section18Subphase | 
       ? resolveSeasonSubphaseAtPhaseWeek(input.seasonPhase, phaseWeek)
       : null;
   }
-  if (input.mode === 'illness_recovery') return 'illness_recovery';
+  // The optional-week mode no longer answers here: it says what the week DOES,
+  // and this function answers where the week IS. An optional week keeps the
+  // season position it would have had, in every phase.
   if (input.anchorState === 'game') return 'game_week';
   return input.mode === 'in_season_bye_recovery' ? 'bye_recovery' : 'bye_build';
 }
@@ -737,18 +738,43 @@ export interface Section18PhasePlannerSelection {
 }
 
 /** Section 18 table translated directly; no legacy builder constants are read. */
+/**
+ * The mode an optional week would have carried. Its subphase is untouched by the
+ * optional stamp, so it still says where in the season this week sits; only the
+ * in-season subphases need mapping back to their mode names.
+ */
+function underlyingModeForSubphase(
+  input: { declaredSubphase?: Section18Subphase },
+): Section18WeekMode {
+  switch (input.declaredSubphase) {
+    case undefined: return 'in_season_bye_build';
+    // An optional week's subphase must be a real season position. If one ever
+    // arrives still carrying the mode name — persisted data from before the
+    // de-conflation, or a fixture — fall back rather than recurse forever.
+    case 'optional_week' as never: return 'in_season_bye_build';
+    case 'game_week': return 'in_season_game_week';
+    case 'bye_recovery': return 'in_season_bye_recovery';
+    case 'bye_build': return 'in_season_bye_build';
+    case 'practice_match_week': return 'practice_match_week';
+    default: return input.declaredSubphase as Section18WeekMode;
+  }
+}
+
 function policyFor(input: Pick<
   Section18ContractV2Input,
   'mode' | 'teamTrainingDays' | 'cookedReadiness' | 'readiness' | 'weekKind'
 > & {
-  /**
-   * Read ONLY by illness_recovery, to recover the week it decorates instead of
-   * inventing counts of its own. Optional because the phase-planner selection
-   * path has no anchor to offer; absent, illness_recovery decorates the bye
-   * build week, which is the conservative choice — it has the fuller structure,
-   * and the deload law says structure does not change.
-   */
+  /** Read only when recovering the week an optional stamp decorates. */
   anchorState?: Section18AnchorState;
+  /**
+   * The week's true season position, read ONLY by `optional_week` to recover the
+   * policy it decorates rather than inventing counts of its own. Optional
+   * because the phase-planner selection path has no subphase to offer; absent,
+   * an optional week decorates the bye build week, which is the conservative
+   * choice — it has the fuller structure, and the deload law says structure does
+   * not change.
+   */
+  declaredSubphase?: Section18Subphase;
 }): Section18ModePolicy {
   const tt = uniqueDays(input.teamTrainingDays).length;
   // THE DELOAD LAW (Sam, 2026-07-27): "Power/speed: KEEP a small sharp dose ...
@@ -793,7 +819,7 @@ function policyFor(input: Pick<
         balance: true,
         selectionKind: 'core',
       };
-    case 'illness_recovery': {
+    case 'optional_week': {
       // THE ILLNESS LAW (Sam, 2026-07-27) — severity decides exactly TWO things,
       // deload or not and optional or not. "No other illness-specific numbers
       // may exist."
@@ -810,15 +836,12 @@ function policyFor(input: Pick<
       // selection optional. The dose shrink is DELOAD_LAW's and is not a §18
       // ceiling.
       //
-      // Recovering the underlying week: illness_recovery is minted in-season
-      // only, so anchorState separates a game week from a bye week. It cannot
-      // distinguish bye_recovery from bye_build — bye_build is the correct
-      // conservative choice, because it is the week with the FULLER structure and
-      // the law says structure does not change.
-      const base = policyFor({
-        ...input,
-        mode: input.anchorState === 'game' ? 'in_season_game_week' : 'in_season_bye_build',
-      });
+      // Recovering the underlying week, in ANY phase. The declared subphase is
+      // the week's true season position and survives the optional stamp, so it
+      // is the honest source — this used to assume in-season and pick between a
+      // game week and a bye, which silently mis-typed every off-season and
+      // pre-season optional week.
+      const base = policyFor({ ...input, mode: underlyingModeForSubphase(input) });
       return {
         ...base,
         strength: { ...base.strength, required: 0, defaultTarget: 0 },
@@ -828,6 +851,14 @@ function policyFor(input: Pick<
           defaultTarget: 0,
           requiredAppMediumHardMinimum: 0,
           requiredAppHardMinimum: 0,
+          // The core conditioning CEILING is lifted too, as it always was on
+          // this mode. An optional week additionally offers easy recovery
+          // aerobic work (see `optionalRecoveryAerobic` below), and that work
+          // counts toward this total — so keeping the base week's ceiling would
+          // reject the week for accepting the very sessions the mode exists to
+          // offer. This is not a dose number: nothing here is required, so
+          // nothing here is capped. The athlete chooses.
+          max: null,
         },
         sprint: { ...base.sprint, required: 0 },
         // Nothing is required, so no pattern balance can be required either.
@@ -927,7 +958,7 @@ export function resolveSection18PhasePlannerSelection(
     weekKind: input.weekKind,
   });
   const recoveryMode = input.mode === 'in_season_bye_recovery';
-  const illnessRecovery = input.mode === 'illness_recovery';
+  const optionalWeek = input.mode === 'optional_week';
   const earlyOffseason = input.mode === 'early_offseason';
   const strongByeBuild = input.mode === 'in_season_bye_build' &&
     input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
@@ -959,10 +990,10 @@ export function resolveSection18PhasePlannerSelection(
   // Severe-illness recovery selects only OPTIONAL, reduced work: up to two light
   // optional lifts and one gentle aerobic session, with every enforceable floor
   // (main strength / core conditioning / sprint) at 0. Nothing is required.
-  const illnessOptionalStrength = illnessRecovery
+  const illnessOptionalStrength = optionalWeek
     ? Math.min(policy.strength.preferred.max, availableDayCount)
     : 0;
-  const optionalRecoveryAerobic = illnessRecovery
+  const optionalRecoveryAerobic = optionalWeek
     ? Math.min(1, Math.max(0, availableDayCount - illnessOptionalStrength))
     : recoveryMode
       ? teamTrainingCount === 0 && availableDayCount > mainStrength
@@ -1110,9 +1141,9 @@ export function buildSection18WeeklyExposureContractV2(
       },
       optionalRecoveryAerobic: {
         permitted: input.mode === 'in_season_bye_recovery' ||
-          input.mode === 'illness_recovery' || input.mode === 'early_offseason',
+          input.mode === 'optional_week' || input.mode === 'early_offseason',
         preferredRange: input.mode === 'in_season_bye_recovery' ||
-          input.mode === 'illness_recovery'
+          input.mode === 'optional_week'
           ? policy.conditioning.optionalFlush
           : input.mode === 'early_offseason'
             ? policy.conditioning.preferred

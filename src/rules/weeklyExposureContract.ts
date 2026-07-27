@@ -36,7 +36,7 @@ export type WeeklyExposureReductionReason =
   | 'game_load_protection'
   | 'practice_match_load'
   | 'bye_recovery_mode'
-  | 'illness_recovery_mode'
+  | 'optional_week_mode'
   | 'deload_policy'
   | 'spacing_safety_conflict'
   | 'training_age_limit'
@@ -61,7 +61,7 @@ export type WeeklyExposureContractMode =
   | 'in_season_game_week'
   | 'in_season_bye_build'
   | 'in_season_bye_recovery'
-  | 'illness_recovery'
+  | 'optional_week'
   | 'early_offseason'
   | 'mid_offseason'
   | 'late_offseason'
@@ -69,11 +69,17 @@ export type WeeklyExposureContractMode =
   | 'mid_preseason'
   | 'late_preseason';
 
+/**
+ * WHERE the week sits in the season. Deliberately NOT a place to record what a
+ * week DOES — `optional_week` used to be a member here as well as a mode, which
+ * meant an optional off-season week had to overwrite `mid_offseason` with
+ * something that is not a season position at all. Those are orthogonal axes; the
+ * mode carries the second one.
+ */
 export type WeeklyExposureContractSubphase =
   | 'game_week'
   | 'bye_build'
   | 'bye_recovery'
-  | 'illness_recovery'
   | 'early_offseason'
   | 'mid_offseason'
   | 'late_offseason'

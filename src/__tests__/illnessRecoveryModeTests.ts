@@ -177,7 +177,7 @@ function assertEverySurvivingSessionOptional(mc: GenMicro, label: string): void 
     notOptional.map((w) => `dow${w.dayOfWeek}:${w.workoutType}/${w.sessionTier}`).join(', '));
 }
 
-function inSeasonContractInput(weekModeOverride?: 'illness_recovery') {
+function inSeasonContractInput(weekModeOverride?: 'optional_week') {
   return {
     seasonPhase: 'In-season' as const,
     readiness: 'high' as const,
@@ -294,8 +294,8 @@ run('3 normal week unaffected: no override leaves the in-season contract identic
 // the generated recovery week is ACCEPTED by the gateway (never rejected for a
 // minimum it no longer requires).
 run('4 mode validates structurally: illness_recovery contract lifts minimums', () => {
-  const contract = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
-  assert(contract.identity.mode === 'illness_recovery',
+  const contract = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
+  assert(contract.identity.mode === 'optional_week',
     `weekModeOverride must mint illness_recovery, got ${contract.identity.mode}`);
   assert(contract.strength.required === 0,
     `illness_recovery must lift the strength minimum to 0, got ${contract.strength.required}`);
@@ -307,7 +307,7 @@ run('4 mode validates structurally: illness_recovery contract lifts minimums', (
 
 run('4b mode validates structurally: the generated illness_recovery week is accepted', () => {
   const week = generateWithIllness(true);
-  assert(week.exposureContract?.identity.mode === 'illness_recovery',
+  assert(week.exposureContract?.identity.mode === 'optional_week',
     `a seeded severe illness fact must derive an illness_recovery week, got ${week.exposureContract?.identity.mode}`);
   const result = quiet(() => runSection18AcceptedWeekGateway({
     contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK,
@@ -323,8 +323,8 @@ run('4b mode validates structurally: the generated illness_recovery week is acce
 // sole injection). The full generated-week store restore is the device-pass gate.
 run('2 cascade: clearing the severe illness fact restores the normal contract byte-identical', () => {
   const baseline = buildWeeklyExposureContract(inSeasonContractInput(undefined));
-  const withIllness = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
-  assert(withIllness.identity.mode === 'illness_recovery',
+  const withIllness = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
+  assert(withIllness.identity.mode === 'optional_week',
     'precondition: the override must mint illness_recovery');
   assert(JSON.stringify(withIllness) !== JSON.stringify(baseline),
     'precondition: illness_recovery must actually change the contract');
@@ -352,14 +352,14 @@ run('2 cascade: clearing the severe illness fact restores the normal contract by
 // game-proximity re-tiering — that was projection; this is authoring).
 run('5 illness_recovery GAME week: every surviving session is optional (team days included)', () => {
   const mc = generateWithIllness(true, true) as unknown as GenMicro;
-  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+  assert(mc.exposureContract?.identity?.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
   assertEverySurvivingSessionOptional(mc, 'illness_recovery game');
 });
 
 run('5b illness_recovery NON-game week: every surviving session is optional', () => {
   const mc = generateWithIllness(true, false) as unknown as GenMicro;
-  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+  assert(mc.exposureContract?.identity?.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
   assertEverySurvivingSessionOptional(mc, 'illness_recovery non-game');
 });
@@ -396,7 +396,7 @@ run('6 mode-level stamp is type-agnostic: strength AND team sessions both render
 // DEV-only validation from diverging from test:bible.
 run('7 optional-only week: no engine-validate coverage violation AND no emergency promotion', () => {
   const mc = generateWithIllness(true, true) as unknown as GenMicro;
-  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+  assert(mc.exposureContract?.identity?.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
   assert(lastEngineViolations.length === 0,
     `optional-only week logged engine-validate coverage violation(s): ${lastEngineViolations.join(' | ')}`);
@@ -423,9 +423,9 @@ run('7 optional-only week: no engine-validate coverage violation AND no emergenc
 // is a dose transformation and does not live here.
 run('8 illness week PRESERVES the structure of the week it replaced', () => {
   const normal = buildWeeklyExposureContract(inSeasonContractInput(undefined));
-  const ill = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
+  const ill = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
 
-  assert(ill.identity.mode === 'illness_recovery',
+  assert(ill.identity.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${ill.identity.mode}`);
 
   for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
@@ -437,7 +437,7 @@ run('8 illness week PRESERVES the structure of the week it replaced', () => {
 });
 
 run('8b illness week lifts every minimum — the law\'s "optional" flag', () => {
-  const ill = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
+  const ill = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
   for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
     assert(ill[domain].required === 0,
       `${domain}.required must be 0 in an optional week, got ${ill[domain].required}`);
@@ -514,7 +514,7 @@ run('9c the illness_recovery MODE is derived from the law, not minted beside it'
 // is exactly the failure this pins.
 run('10 an in-season severe-illness week GENERATES as a deload', () => {
   const mc = generateWithIllness(true, true) as unknown as GenMicro & { weekKind?: string };
-  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+  assert(mc.exposureContract?.identity?.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
   assert(mc.weekKind === 'deload',
     `severe illness must generate a DELOADED week, got weekKind=${String(mc.weekKind)} ` +

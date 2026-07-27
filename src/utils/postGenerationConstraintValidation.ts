@@ -616,8 +616,8 @@ function reResolveContractForActiveConstraints(args: {
     // the validation path would re-collapse the severe illness into a fatigue
     // tier and downgrade to bye_recovery — the reinterpretation seam the design
     // forbids. The gateway consumes the mode; it never re-reads facts.
-    weekModeOverride: args.contract.identity.mode === 'illness_recovery'
-      ? 'illness_recovery'
+    weekModeOverride: args.contract.identity.mode === 'optional_week'
+      ? 'optional_week'
       : undefined,
   });
 }

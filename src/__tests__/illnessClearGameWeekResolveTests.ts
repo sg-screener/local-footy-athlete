@@ -221,7 +221,7 @@ function currentBaseSurfaces(): Record<string, unknown> {
       const o = useProgramStore.getState().weekScopedOverlays[anchor];
       return (o?.exposureContractV2 as { identity?: { mode?: string } } | undefined)?.identity?.mode;
     })();
-    assert(illnessMode === 'illness_recovery', `precondition: illness week authored, mode=${illnessMode}`);
+    assert(illnessMode === 'optional_week', `precondition: illness week authored, mode=${illnessMode}`);
     await clearFact(anchor, commit.createdModifierIds?.[0]);
     const factActive = activeFactCount() > 0;
     const overlayGone = !useProgramStore.getState().weekScopedOverlays[anchor];

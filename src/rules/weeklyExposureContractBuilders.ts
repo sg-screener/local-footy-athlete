@@ -65,7 +65,7 @@ export interface WeeklyExposureContractInput {
    * re-derivation. When set it wins over readiness/injury/bye logic; the builder
    * never re-reads facts.
    */
-  weekModeOverride?: 'illness_recovery';
+  weekModeOverride?: 'optional_week';
 }
 
 const ALL_PATTERNS: readonly MainStrengthPattern[] = ['squat', 'hinge', 'push', 'pull'];
@@ -564,7 +564,10 @@ export function buildInSeasonByeRecoveryExposureContract(
 function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposureContract {
   return {
     ...contract,
-    identity: { ...contract.identity, mode: 'illness_recovery', subphase: 'illness_recovery' },
+    // ONLY the mode. The subphase is where the week sits in the season, and an
+    // optional week sits exactly where it always did — overwriting it was what
+    // made an optional off-season week impossible to express.
+    identity: { ...contract.identity, mode: 'optional_week' },
     strength: {
       ...contract.strength,
       // Nothing is required, so no pattern is required either.
@@ -597,7 +600,7 @@ export function buildInSeasonExposureContract(
     : byeRecoveryMode(input)
       ? buildInSeasonByeRecoveryExposureContract(input)
       : buildInSeasonByeBuildExposureContract(input);
-  return input.weekModeOverride === 'illness_recovery' ? asIllnessRecoveryWeek(base) : base;
+  return input.weekModeOverride === 'optional_week' ? asIllnessRecoveryWeek(base) : base;
 }
 
 export function buildEarlyOffseasonExposureContract(

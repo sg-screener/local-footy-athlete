@@ -382,7 +382,7 @@ export function applyGenerationSafetyToSection18Contract(args: {
   ]);
   const prohibitedPower = fullPause || cookedReadiness ||
     contract.identity.mode === 'in_season_bye_recovery' ||
-    contract.identity.mode === 'illness_recovery' ||
+    contract.identity.mode === 'optional_week' ||
     contract.identity.weekKind === 'deload' || contract.power.eligible === false;
   if (prohibitedPower) {
     contract.power.eligible = false;
@@ -390,8 +390,8 @@ export function applyGenerationSafetyToSection18Contract(args: {
       ? 'full_pause'
       : cookedReadiness
         ? 'low_readiness'
-        : contract.identity.mode === 'illness_recovery'
-          ? 'illness_recovery_mode'
+        : contract.identity.mode === 'optional_week'
+          ? 'optional_week_mode'
           : contract.identity.mode === 'in_season_bye_recovery'
             ? 'bye_recovery_mode'
             : contract.power.removalReason ?? 'deload_policy';
@@ -409,7 +409,7 @@ export function applyGenerationSafetyToSection18Contract(args: {
   if (hasFieldRestriction) affectedDomains.push('anchor_participation');
   if (prohibitedPower || prohibitedPowerFamilies.length > 0) affectedDomains.push('power');
   if (cookedReadiness || contract.identity.mode === 'in_season_bye_recovery' ||
-      contract.identity.mode === 'illness_recovery') {
+      contract.identity.mode === 'optional_week') {
     affectedDomains.push('session_dose');
   }
 

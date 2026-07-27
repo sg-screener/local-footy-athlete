@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     } as never, { todayISO: anchor });
     assert((res as { ok?: boolean }).ok === true,
       `severe illness rejected against a real composition base: "${(res as { message?: string }).message}"`);
-    assert(acceptedWeek(anchor).mode === 'illness_recovery',
+    assert(acceptedWeek(anchor).mode === 'optional_week',
       `the accepted week was not re-authored under illness_recovery (silent no-op), mode=${acceptedWeek(anchor).mode}`);
   });
 
@@ -249,7 +249,7 @@ async function main(): Promise<void> {
     const commit = await commitSevereIllness(anchor);
     assert((commit as { ok?: boolean }).ok === true, `commit rejected: "${(commit as { message?: string }).message}"`);
     const week = acceptedWeek(anchor);
-    assert(week.mode === 'illness_recovery', `not illness_recovery, mode=${week.mode}`);
+    assert(week.mode === 'optional_week', `not illness_recovery, mode=${week.mode}`);
     assert(week.blockingViolations.length === 0,
       `the effective illness_recovery week has §18 blocking violations: ${week.blockingViolations.join(',')}`);
   });

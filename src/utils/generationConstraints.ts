@@ -84,7 +84,7 @@ export interface GenerationConstraintContext {
    * facts to derive it; the validation path preserves the mode off the built
    * contract instead of re-reading facts.
    */
-  weekMode?: 'illness_recovery';
+  weekMode?: 'optional_week';
   /**
    * THE ILLNESS LAW's FIRST answer: is this week deloaded?
    *
@@ -139,7 +139,7 @@ export function buildGenerationConstraintContext(args: {
         weekStartISO: args.todayISO.slice(0, 10),
       })
     : { deloaded: false, sessionsOptional: false };
-  const weekMode = illness.sessionsOptional ? ('illness_recovery' as const) : undefined;
+  const weekMode = illness.sessionsOptional ? ('optional_week' as const) : undefined;
   const weekDeloaded = illness.deloaded ? true : undefined;
 
   if (injuries.length === 0 && !readiness && !weekMode && !weekDeloaded) return undefined;

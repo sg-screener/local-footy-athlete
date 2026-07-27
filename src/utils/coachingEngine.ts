@@ -525,15 +525,40 @@ function allocationEffectSignature(allocation: SessionAllocation | undefined): s
   });
 }
 
+/**
+ * The mode this week would have carried had it not been stamped optional.
+ *
+ * The legacy builder DECORATES a fully-built week, so its subphase already holds
+ * the true season position; this maps that back to a mode so the v2 identity can
+ * be resolved normally and only the mode swapped.
+ */
+function underlyingModeFor(legacy: WeeklyExposureContract): WeeklyExposureContract['identity']['mode'] {
+  const subphase = legacy.identity.subphase;
+  if (subphase === 'game_week') return 'in_season_game_week';
+  if (subphase === 'bye_recovery') return 'in_season_bye_recovery';
+  if (subphase === 'bye_build') return 'in_season_bye_build';
+  return subphase as WeeklyExposureContract['identity']['mode'];
+}
+
 function section18ModeAndSubphase(
   inputs: CoachingInputs,
   legacy: WeeklyExposureContract,
 ): { mode: Section18WeekMode; declaredSubphase: Section18Subphase; anchorState: 'game' | 'bye' | 'practice_match' | 'none' } {
-  // A minted illness_recovery mode is preserved verbatim into Contract v2 — it
-  // wins over game/bye typing (the athlete is recovering, not participating in
-  // anchors), so declared and expected subphase stay in agreement.
-  if (legacy.identity.mode === 'illness_recovery') {
-    return { mode: 'illness_recovery', declaredSubphase: 'illness_recovery', anchorState: 'bye' };
+  // An optional week overrides ONLY the mode. It used to also declare itself as
+  // a subphase and re-type its anchors as a bye, on the reasoning that "the
+  // athlete is recovering, not participating in anchors" — but that overwrote
+  // WHERE the week sits in the season with something that is not a season
+  // position, which is why an optional off-season week could not exist at all.
+  //
+  // The week keeps its real subphase and its real anchors; being optional is a
+  // statement about what is REQUIRED, not about where the athlete is in the
+  // year or what is on their calendar.
+  if (legacy.identity.mode === 'optional_week') {
+    const underlying = section18ModeAndSubphase(
+      inputs,
+      { ...legacy, identity: { ...legacy.identity, mode: underlyingModeFor(legacy) } },
+    );
+    return { ...underlying, mode: 'optional_week' };
   }
   if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
     return {
@@ -6881,7 +6906,7 @@ function applySection18ConditioningAllocation(
     });
     let remaining = Math.max(0, optionalRecoveryTarget - existing.length);
     const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery' ||
-      contract.identity.mode === 'illness_recovery';
+      contract.identity.mode === 'optional_week';
     const optionalCandidates = plan
       .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
         (preserveByeRecoveryRest || !hasStrength(session)))

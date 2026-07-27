@@ -283,7 +283,7 @@ function registerScenarios(): void {
     // Derivation alone is not the deliverable: bake-at-authoring is settled law,
     // so every reached week must be AUTHORED under the mode, not re-derived at
     // read time. This is the half that a fix inside the overlap test would miss.
-    assert(acceptedWeek(WEEK_2).mode === 'illness_recovery',
+    assert(acceptedWeek(WEEK_2).mode === 'optional_week',
       `next week's ACCEPTED mode is "${acceptedWeek(WEEK_2).mode}" — the fact reached the derivation but was never materialised`);
   });
 
@@ -456,7 +456,7 @@ function registerScenarios(): void {
       assert(markedAfter[date] === 'game', `game marking for ${date} was lost by the sick commit`);
     }
     // And the week still landed as an illness_recovery week.
-    assert(acceptedWeek(WEEK_1).mode === 'illness_recovery',
+    assert(acceptedWeek(WEEK_1).mode === 'optional_week',
       `landing week mode is "${acceptedWeek(WEEK_1).mode}", not illness_recovery`);
   });
 
@@ -489,7 +489,7 @@ function registerScenarios(): void {
       seasonPhaseClock: program.seasonPhaseClock,
       microcycleLimit: 1,
     }));
-    assert(nextBlock.microcycles[0]?.exposureContractV2?.identity.mode === 'illness_recovery',
+    assert(nextBlock.microcycles[0]?.exposureContractV2?.identity.mode === 'optional_week',
       `next block's first week generated as "${nextBlock.microcycles[0]?.exposureContractV2?.identity.mode}" — the open horizon did not cross the block rollover`);
 
     // Season-phase change: the fact survives the phase boundary too.
@@ -505,7 +505,7 @@ function registerScenarios(): void {
       } as never,
       microcycleLimit: 1,
     }));
-    assert(phaseChanged.microcycles[0]?.exposureContractV2?.identity.mode === 'illness_recovery',
+    assert(phaseChanged.microcycles[0]?.exposureContractV2?.identity.mode === 'optional_week',
       `phase-change week generated as "${phaseChanged.microcycles[0]?.exposureContractV2?.identity.mode}" — the open horizon did not cross the phase change`);
 
     // Only the athlete ends it: clear, then the same generation is normal.
@@ -527,7 +527,7 @@ function registerScenarios(): void {
       seasonPhaseClock: program.seasonPhaseClock,
       microcycleLimit: 1,
     }));
-    assert(afterClear.microcycles[0]?.exposureContractV2?.identity.mode !== 'illness_recovery',
+    assert(afterClear.microcycles[0]?.exposureContractV2?.identity.mode !== 'optional_week',
       'the cleared fact still shapes the next block — residue across the boundary');
   });
 
