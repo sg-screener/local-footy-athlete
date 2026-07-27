@@ -77,6 +77,25 @@ Queued for step-5 SCOPE REVIEW (Sam, 2026-07-27), not for silent repair:
   the wiring have to land together — which is why it is a scope-review
   item rather than a one-line gate addition.
 
+### NEXT UNIT (queued 2026-07-27) — the provenance lock
+
+Diagnose-first: design brief and report BEFORE building.
+
+Extend the exercise-name code-literal lock pattern to athlete-affecting
+NUMERIC constants. Target state:
+
+- every training-law number lives in a Sam-attributed module;
+- the build fails on athlete-affecting numeric literals outside them;
+- the attribution registry is frozen in BOTH directions, like the content
+  exemption kinds.
+
+The design must say how the remaining known-invented values get flagged
+`UNAUTHORED-PENDING-SAM` rather than silently blessed — Sam authors their
+replacements next. Named so far: deload content numbers, readiness-tier
+reductions, conditioning TIER_CAPS, and the illness severity trigger. Add
+to that list `NEW_ATHLETE_POLICY.maxCoreSessions`, held pending his ruling
+on the Section 18 mid-off-season beginner line.
+
 ## Standing riders
 
 - In-flight generation-gate ladder fix completes first (onboarding

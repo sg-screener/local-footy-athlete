@@ -91,26 +91,64 @@ const BEGINNER_EXERCISE_PRIORITY: TrainingAgePolicy['exercisePriority'] = {
   ],
 };
 
+/**
+ * The new-athlete policy — DOSE ONLY (Sam, 2026-07-27, Bible §11).
+ *
+ * A sweep found twelve beginner-only limits here; most were invented rather
+ * than authored, and one CONTRADICTED §11 (it capped sets at 2 while the Bible
+ * says 2-3). Sam's ruling: training age changes the DOSE, the COMPLEXITY and
+ * the PROGRESSION SPEED — not the structure of the week.
+ *
+ * So every STRUCTURAL field now matches the universal policy, and the only
+ * differences left are the dose values §11 actually authors. The rules-kernel
+ * suite asserts that: a new beginner-only structural limit fails the build.
+ *
+ * What died, and why:
+ *   maxCoreSessions / maxOptionalSessions / maxHardExposures — never authored;
+ *     the universal Section 17 B caps govern every training age.
+ *   maxExercisesPerStrengthSession: 3 — never authored. "Do not overload them
+ *     with too many exercises" is guidance about dose, not a numeric limit, and
+ *     a beginner-only cap is the second beginner/experienced representation
+ *     §11 forbids.
+ *   avoidCombinedStrengthConditioning — steered beginners away from combined
+ *     sessions the Bible PREFERS.
+ */
 const NEW_ATHLETE_POLICY: TrainingAgePolicy = {
   level: 'new',
-  maxCoreSessions: 2,
-  maxHardExposures: {
-    'In-season': 3,
-    'Pre-season': 3,
-    'Off-season': 3,
-  },
-  maxOptionalSessions: 1,
-  maxExercisesPerStrengthSession: 3,
-  maxSetsPerExercise: 2,
+  ...NORMAL_POLICY,
+  // ── The authored §11 dose, and nothing else ──
+  /** "Start with 2-3 sets on most lifts." The code used to forbid the 3. */
+  maxSetsPerExercise: 3,
   compoundRepMin: 4,
   compoundRepMax: 8,
+  /** "Not close to failure" — Sam blessed 6-7, so the number is authored now. */
   targetRpeMin: 6,
   targetRpeMax: 7,
-  initialLoadMultiplier: 0.75,
-  avoidCombinedStrengthConditioning: true,
+  /**
+   * Beginners start at 50% of the calculated load and adjust from there
+   * (Sam, 2026-07-27). A starting point, not a ceiling: load is athlete-owned
+   * per D1. Supersedes an invented 0.75.
+   */
+  initialLoadMultiplier: 0.5,
+  /** §11's "Good options" — simple, safe, easy-to-learn movements. */
   exercisePriority: BEGINNER_EXERCISE_PRIORITY,
+  /**
+   * ON HOLD pending Sam's ruling — NOT the universal-law abolition.
+   *
+   * Sam ruled this dies with the other beginner-only caps, on the strength of a
+   * sweep that reported no authored beginner core number. That sweep was WRONG:
+   * Bible §18's authoritative phase table carries "Beginners in mid off-season
+   * use 2 strength, 2-3 conditioning and 1 safe sprint exposure with reduced
+   * complexity and dose" — an authored beginner structural rule, in the section
+   * that outranks every earlier one.
+   *
+   * The real defect is narrower than "invented": the authored rule is scoped to
+   * MID OFF-SEASON, and this field applies it in EVERY phase. Deleting it would
+   * delete authored §18 law; leaving it keeps the over-application. Both need
+   * Sam, so the shipped behaviour is unchanged until he rules.
+   */
+  maxCoreSessions: 2,
 };
-
 /**
  * The policy body for an athlete at a ladder level.
  *

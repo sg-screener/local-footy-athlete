@@ -39,6 +39,7 @@ import {
   type SessionUnit,
   type WeekDayInput,
 } from '../rules';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import { ROLE_BUCKET_OPTIONS } from '../utils/roleBuckets';
 import type { SeasonPhase, Workout, WorkoutExercise } from '../types/domain';
 
@@ -565,6 +566,72 @@ ok('exactly the two authored floor exemptions exist',
     auditWeekAgainstCaps(fiveCounts, { runningFloorExemption: 'bye_recovery' })
       .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
     `running=${fiveCounts.runningExposures}`);
+}
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── 4b. THE BEGINNER FILE (Sam, 2026-07-27) ──');
+// Training age changes DOSE, COMPLEXITY and PROGRESSION SPEED — not the
+// structure of the week. A sweep found 12 beginner-only limits; most were
+// invented. These assertions pin what Sam ruled survives and what dies.
+{
+  const beginner = resolveTrainingAgePolicy('Complete beginner');
+  const normal = resolveTrainingAgePolicy('2-5 years');
+
+  // ── SURVIVES: authored dose ──
+  ok('beginner main lifts stay 4-8 reps',
+    beginner.compoundRepMin === 4 && beginner.compoundRepMax === 8);
+  ok('beginner sets follow §11 as written — 2-3, not a code-invented 2',
+    beginner.maxSetsPerExercise === 3, `got ${beginner.maxSetsPerExercise}`);
+  ok('beginner RPE 6-7 stays (Sam blessed the number)',
+    beginner.targetRpeMin === 6 && beginner.targetRpeMax === 7);
+  ok('beginners start at 50% of calculated load (Sam authored, was an invented 0.75)',
+    beginner.initialLoadMultiplier === 0.5, `got ${beginner.initialLoadMultiplier}`);
+  ok('the beginner simple-movement priority list survives',
+    Object.keys(beginner.exercisePriority).length > 0);
+
+  // ── DIES: universal law applies to every training age ──
+  ok('ONE exercise cap for every training age',
+    beginner.maxExercisesPerStrengthSession === normal.maxExercisesPerStrengthSession,
+    `beginner ${beginner.maxExercisesPerStrengthSession} vs normal ${normal.maxExercisesPerStrengthSession}`);
+  // HELD, not abolished: Bible §18's phase table authors "Beginners in mid
+  // off-season use 2 strength...". The defect is that the code applies that
+  // MID-OFF-SEASON rule in every phase — which needs Sam, not a deletion.
+  ok('the beginner core cap is HELD at its authored §18 value pending Sam',
+    beginner.maxCoreSessions === 2, `got ${beginner.maxCoreSessions}`);
+  ok('§18 still authors the beginner mid off-season structure',
+    require('fs').readFileSync(
+      require('path').resolve(__dirname, '../../docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8',
+    ).includes('Beginners in mid off-season use 2 strength'));
+  ok('no beginner-only optional-session cap', beginner.maxOptionalSessions === null,
+    `got ${beginner.maxOptionalSessions}`);
+  ok('no beginner-only hard-exposure cap', beginner.maxHardExposures === null,
+    `got ${JSON.stringify(beginner.maxHardExposures)}`);
+  ok('beginners are NOT steered away from combined strength+conditioning',
+    beginner.avoidCombinedStrengthConditioning === false);
+
+  // The structural point: outside the authored dose fields, a beginner's policy
+  // is the universal one. A future beginner-only limit fails here.
+  const STRUCTURAL_FIELDS = [
+    // maxCoreSessions is excluded while HELD — see above.
+    'maxHardExposures', 'maxOptionalSessions',
+    'maxExercisesPerStrengthSession', 'avoidCombinedStrengthConditioning',
+  ] as const;
+  const diverged = STRUCTURAL_FIELDS.filter(
+    (field) => JSON.stringify(beginner[field]) !== JSON.stringify(normal[field]));
+  ok('no structural field differs by training age', diverged.length === 0,
+    diverged.join(', '));
+
+  // Only DOSE fields may differ, and each one is authored in §11.
+  const AUTHORED_DOSE_DIFFERENCES = [
+    'level', 'maxCoreSessions', 'maxSetsPerExercise', 'compoundRepMin', 'compoundRepMax',
+    'targetRpeMin', 'targetRpeMax', 'initialLoadMultiplier', 'exercisePriority',
+  ];
+  const allFields = Object.keys(beginner) as Array<keyof typeof beginner>;
+  const unexpected = allFields.filter((field) =>
+    JSON.stringify(beginner[field]) !== JSON.stringify(normal[field])
+    && !AUTHORED_DOSE_DIFFERENCES.includes(field as string));
+  ok('every beginner difference is an authored §11 dose value', unexpected.length === 0,
+    unexpected.join(', '));
 }
 
 // ═════════════════════════════════════════════════════════════════════
