@@ -124,6 +124,27 @@ The most important remaining work. Sequence:
       (likely demote/hide — overlaps "apply to next week" prompts),
       anchor-ratio review, full-toggle methodology (pulled forward from
       old backlog).
+- 4.1a **Rep-max continuum table — Sam-authored. DESIGN MATERIAL, NOT A BUILD.**
+      Nothing in the app today translates a logged load across a rep-scheme
+      change. Verified read-only 2026-07-28: no e1RM, Epley, Brzycki or
+      percent-of-max anywhere in `src/`. `applyDelta` multiplies weight by
+      `weightMultiplier` and changes reps by `repsMinChange`/`repsMaxChange`
+      **independently** — the two never inform each other. So an athlete who
+      logs 100 kg × 3 and whose next block prescribes × 5 carries 100 kg
+      straight across, at a rep count it was never true for.
+      Sam's intended mechanism: a **Sam-authored table of % of max per rep
+      count**. Translation is then logged load → implied max → the new rep
+      count's % → **round DOWN** conservatively.
+      Two things make it worth doing properly rather than quickly:
+        - The app already owns exactly one load translation —
+          `resolveSiblingPerformedWeight` converts a performed weight between
+          pool siblings via `loadRatio`. Same shape, different axis
+          (exercise↔exercise, not reps↔reps). Whatever the continuum table
+          becomes should sit beside it, not invent a second idiom.
+        - It is **provenance-ready by construction**: a Sam-authored table is
+          `equality_bound` from day one — the strongest kind in the provenance
+          lock — instead of arriving as another unauthored multiplier needing a
+          ruling session later. See `docs/PROVENANCE_INVENTORY_2026-07-28.md`.
 - 4.2 Decisions written into the Bible/rules kernel as invariants,
       tests-first (same discipline as §18 work).
 - 4.3 Generation fixes to meet them; multi-week + all-season cold-start
