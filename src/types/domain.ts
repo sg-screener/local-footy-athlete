@@ -925,6 +925,32 @@ export interface WorkoutExercise {
   section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutExerciseSection18Evidence;
 
   /**
+   * What KIND of work this row is — authored by whoever builds the row, never
+   * inferred from its name.
+   *
+   * The vocabulary is `SessionRole`, the same six the session screen already
+   * orders by. It moved onto the row (Sam, 2026-07-27) so that the counting
+   * fence has a home in the DATA rather than in the shape of the data. Power's
+   * fence — not a hard exposure, not main strength, no conditioning credit, not
+   * a finisher — used to be enforced by power simply not being in this list.
+   * Once power is a row, `role: 'power'` is what carries the exemption, read at
+   * exactly one place (`src/rules/sessionRowCounting.ts`).
+   *
+   * OPTIONAL, and the absence means something precise: this row has NOT been
+   * declared exempt from counting, so it counts. That is the null hypothesis,
+   * not a guess — contrast the off-season subphase, where absence was being
+   * converted INTO a positive fact and had to become required. Here the field
+   * only ever REMOVES a row from counting, so an unauthored row is treated
+   * exactly as it is today and no count can move by omission.
+   *
+   * The vocabulary is deliberately general while only power migrates: the
+   * remaining roles are render facts today (`classifyExerciseRole`), and
+   * authoring all six at the 100-odd row builders would relocate name-inference
+   * rather than retire it.
+   */
+  role?: import('../utils/sessionRoles').SessionRole;
+
+  /**
    * How to interpret the reps numbers:
    *   - 'reps': standard rep count (default if omitted)
    *   - 'duration': repsMin/repsMax are seconds (e.g. 30–45s hold)

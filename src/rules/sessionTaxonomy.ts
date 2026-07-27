@@ -35,6 +35,7 @@ import {
   normalizeStrengthIntent,
   strengthRegionsForPatterns,
 } from './strengthPatternContributions';
+import { countingRows } from './sessionRowCounting';
 
 // ─── Taxonomy ────────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ function detectModality(workout: Workout, fallbackCategory: SessionCategory): Se
   let sawRunning = false;
   let sawErg = false;
 
-  for (const ex of workout.exercises ?? []) {
+  for (const ex of countingRows(workout)) {
     const name = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     if (!name) continue;
     const exposures = classifyExerciseExposures(name);
@@ -219,7 +220,7 @@ function strengthCategoryFrom(
 function strengthCategoryFromExercises(workout: Workout): SessionCategory | null {
   let lower = false;
   let upper = false;
-  for (const ex of workout.exercises ?? []) {
+  for (const ex of countingRows(workout)) {
     const name = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     if (!name) continue;
     const exp = classifyExerciseExposures(name);
@@ -234,7 +235,7 @@ function strengthCategoryFromExercises(workout: Workout): SessionCategory | null
 }
 
 function hasMainLiftExercises(workout: Workout): boolean {
-  return (workout.exercises ?? []).some((ex) => {
+  return countingRows(workout).some((ex) => {
     const name = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     return MAIN_LIFT_EXERCISE_RX.test(name);
   });
@@ -267,6 +268,12 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   }
 
   // ── Explicit rest stub ──
+  // The ONE raw `workout.exercises` read left in this module, and deliberately
+  // so: this asks "is there any work here at all", not "what kind of work is
+  // it". A day named Rest that carries a power row is not a rest day — the
+  // athlete has something to do — so the emptiness test must see every row,
+  // exempt or not. Every CLASSIFYING probe below goes through `countingRows`;
+  // `sessionRowCountingTests` pins that this stays the only exception.
   if (/^rest\b/i.test(workout.name ?? '') && (workout.exercises ?? []).length === 0) {
     return [{ category: 'rest', modality: 'none', reason: 'explicit rest stub' }];
   }
@@ -313,7 +320,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   //   (a) the exercises prove strength content, or
   //   (b) the NAME is not a conditioning session name. This stops
   //   "easy bike/row" style conditioning text false-matching the pull probe.
-  const hasStrengthExercises = (workout.exercises ?? []).some((ex) => {
+  const hasStrengthExercises = countingRows(workout).some((ex) => {
     const exName = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     return exName ? classifyExerciseExposures(exName).some((e) => STRENGTH_EXPOSURES.has(e)) : false;
   });
