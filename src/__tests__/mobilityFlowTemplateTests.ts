@@ -62,18 +62,18 @@ const knownMovements = new Set<string>([
   ...Object.values(POOL_REGISTRY).flatMap((pool) => pool.map((exercise) => exercise.name)),
 ]);
 
-function hasValidLocalMeta(movement: MobilityFlowMovement): boolean {
-  const meta = movement.localMeta;
-  return !!meta &&
-    meta.fatigue === 'low' &&
-    Array.isArray(meta.equipment) &&
-    Array.isArray(meta.contraindications) &&
-    typeof meta.notes === 'string' &&
-    meta.notes.trim().length > 0;
-}
-
-function movementIsKnownOrLocal(movement: MobilityFlowMovement): boolean {
-  return knownMovements.has(movement.name) || hasValidLocalMeta(movement);
+/**
+ * A movement resolves ONLY by being curated vocabulary.
+ *
+ * This used to read "known OR carries valid `localMeta`" — a movement outside
+ * the pools could ship anyway if it brought its own equipment, contraindication
+ * and notes metadata. Sam retired `localMeta` on 2026-07-27 (run-7 ruling 3):
+ * that escape hatch was standing permission to name a movement the app cannot
+ * cue and paper over the gap with local text, which is the same class as the
+ * builder's inline note strings reached from the data layer.
+ */
+function movementIsKnown(movement: MobilityFlowMovement): boolean {
+  return knownMovements.has(movement.name);
 }
 
 function hasSimplePrescription(movement: MobilityFlowMovement): boolean {
@@ -105,11 +105,10 @@ function workoutExercise(name: string, movement: MobilityFlowMovement, order: nu
     restSeconds: 0,
     prescriptionType: isDuration ? 'duration' : 'reps',
     perSide: movement.perSide,
-    notes: movement.notes,
     exercise: {
       id: `mobility-flow-${order}`,
       name,
-      description: movement.notes ?? name,
+      description: name,
       exerciseType: 'Mobility',
       muscleGroups: [],
       equipmentRequired: [],
@@ -169,7 +168,7 @@ for (const id of EXPECTED_TEMPLATE_IDS) {
 section('[2] movement prescriptions and resolution');
 for (const template of MOBILITY_FLOW_TEMPLATES) {
   for (const movement of template.movements) {
-    ok(`${template.id} / ${movement.name} resolves`, movementIsKnownOrLocal(movement));
+    ok(`${template.id} / ${movement.name} resolves`, movementIsKnown(movement));
     ok(`${template.id} / ${movement.name} uses simple prescription`, hasSimplePrescription(movement));
   }
 }

@@ -382,6 +382,57 @@ elsewhere in this document still resolves to the right ruling.
 10. **`SessionTier` "CORE" homonym — RULED.** Confirmed excluded from the
     Midline rename, exactly as §5 assumed.
 
+### §6b — Run-7 polish rulings (Sam, 2026-07-27)
+
+Three further rulings, given after the D13 build shipped and the device run-6
+pass. They amend §6 rather than reopening it.
+
+12. **One "Optional work" group header — RULED.** The optional cluster at the
+    session's end gets a single header; the per-row "OPTIONAL" labels die.
+    Implementation note: the header forced a change in `buildSessionTemplate`,
+    not just the renderer. Add-on rows were ranked by
+    `classifyExerciseRole(name)` like any other row, so an optional Side Plank
+    sorted as `midline` and landed **between** prescribed midline and prescribed
+    prehab work — a header over that would have claimed prescribed work was
+    optional. `optional` now outranks the role, so the cluster is contiguous and
+    last by construction; D2's order still applies **inside** it. The
+    team-training banner stays absolute last (it is context, not work). The
+    recovery-type branch keeps its own simple template per item 3, but shares the
+    one header component and loses its per-card "Optional" pill.
+
+13. **Form cues collapsed by default — RULED. SUPERSEDES the always-visible
+    rule.** Every exercise row now hides its cue behind a tappable "Form cues"
+    disclosure.
+
+    The superseded rule (L10 run-2 Stage 3, recorded in
+    `docs/L10_RUN2_STAGES_1-3_REPORT_2026-07-24.md`) required the curated cue to
+    render unconditionally, "never collapsed." It existed for one specific
+    reason: AI-generated per-exercise notes were rendering on the same rows, and
+    a collapsed cue would have let the generator's words outrank Sam's. Stage 3
+    killed the AI notes — the curated layer is now the only source of a row's
+    coaching text — so the reason expired and what remained was the same sentence
+    repeated down every row. This is noise reduction, **not** a change of
+    ownership: the words behind the disclosure are still curated, still reached
+    through `buildCueText` and canonicalisation, and the "no generator notes
+    rendered" half of the old pin is unchanged and still enforced.
+
+    Pin updated in place: `exerciseNameCanonicalisationTests` §4 now asserts the
+    disclosure and that one shared `CueDisclosure` owns the behaviour across
+    strength, recovery and add-on rows.
+
+14. **The builder-inline text class — RULED, retired.** `recoveryAddonBuilder.ts`
+    and `mobilityFlowTemplates.ts` carried hardcoded per-exercise note strings
+    that bypassed the curated cue layer. Add-on and flow rows now source their
+    display text from `EXERCISE_CUES` via canonicalisation, like every other row.
+    Killed by construction rather than by deletion: the `notes` field is gone
+    from `RecoveryAddonExercise` and `MobilityFlowMovement`, the builder's
+    `exercise()` helper no longer accepts a note argument, and
+    `MobilityFlowLocalMovementMeta` / `localMeta` — an escape hatch that let a
+    flow movement ship a non-curated NAME provided it brought its own text — is
+    gone with them. The no-uncurated-text invariant now extends to add-on rows
+    and is enforced at `attachRecoveryAddonsToWeek`, the first point at which
+    add-on rows exist.
+
 ### Still open
 
 11. **Dormant code in the rename scope** (§5.2): whether to rename

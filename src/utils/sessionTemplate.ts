@@ -3,6 +3,7 @@ import { getSessionComponentRows } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import {
+  SESSION_ROLE_ORDER,
   classifyExerciseRole,
   sessionRoleRank,
   type SessionRole,
@@ -153,19 +154,44 @@ function orderItems(
     .flatMap((cluster) => cluster.items);
 }
 
-/** D2's five-tier order (§3.1). */
+/**
+ * Optional work is a GROUP, not a tier.
+ *
+ * Sam's run-7 ruling 1 gives the optional cluster one header instead of a label
+ * on every row. A single header is only honest if it covers exactly the rows it
+ * claims, so "optional" has to outrank the role: before this, an add-on was
+ * ranked by `classifyExerciseRole(name)` like anything else, so an optional Side
+ * Plank sorted as `midline` and landed between prescribed midline and prescribed
+ * prehab work. A header over that would have told the athlete their prescribed
+ * groin work was optional.
+ *
+ * Adding the role count as an offset (rather than a separate sort key) keeps D2's
+ * order INSIDE the cluster for free: optional prehab still follows optional
+ * midline. Being optional changes which group a row is in, not what kind of work
+ * it is.
+ */
+function isOptional(item: SessionTemplateItem): boolean {
+  return item.kind === 'exercise' && item.optional;
+}
+
+/** D2's five-tier order (§3.1), with the optional cluster below all of it. */
 function d2Rank(item: SessionTemplateItem): number {
-  return sessionRoleRank(item.role);
+  // The banner is context, not work — it stays absolute last, below even the
+  // optional cluster (Sam, run-7).
+  if (item.kind === 'team_training') return SESSION_ROLE_ORDER.length * 2;
+  return sessionRoleRank(item.role) + (isOptional(item) ? SESSION_ROLE_ORDER.length : 0);
 }
 
 /**
  * A conditioning-only day runs its phases in the order the content already
  * carries (§6 item 4). D2's power→main→…→finisher order has nothing to order on
  * a day with no strength content, so the only ranking left is: the session's
- * own phases, then anything attached to them, then the team-training banner.
+ * own phases, then anything attached to them, then the optional cluster, then
+ * the team-training banner.
  */
 function phaseRank(item: SessionTemplateItem): number {
-  if (item.kind === 'team_training') return 2;
+  if (item.kind === 'team_training') return 3;
+  if (isOptional(item)) return 2;
   return item.role === 'conditioning' ? 0 : 1;
 }
 

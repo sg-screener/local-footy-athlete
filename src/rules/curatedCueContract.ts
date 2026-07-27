@@ -61,6 +61,49 @@ export function cuelessStrengthCards(workout: Partial<Workout> | null | undefine
 }
 
 /**
+ * The add-on rows in a workout that would render with no cue.
+ *
+ * Sam's run-7 ruling 3 extended the no-uncurated-text invariant here. Until then
+ * an add-on row's display text came from a note string hardcoded in
+ * `recoveryAddonBuilder`, so it was never missing and never checked — the
+ * hardcoded string WAS the fallback that hid the gap. With the inline strings
+ * retired, an add-on row shows the curated cue or nothing, which makes "nothing"
+ * a visible defect and therefore worth enforcing.
+ *
+ * Unlike the strength scope there is no render-path exemption: an add-on row
+ * renders on EVERY day type. The badged list gives it an ordinary row inside the
+ * optional cluster, and a recovery-type day — exempt from the strength contract
+ * because it has no strength rows — still renders its add-on box (§6 item 3).
+ */
+export function cuelessAddonRows(workout: Partial<Workout> | null | undefined): string[] {
+  const addons = (workout as { recoveryAddons?: Array<{ exercises?: Array<{ name?: string }> }> })
+    ?.recoveryAddons ?? [];
+  const cueless: string[] = [];
+  const seen = new Set<string>();
+  for (const addon of addons) {
+    for (const row of addon?.exercises ?? []) {
+      const name = row?.name;
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      if (buildCueText(name) === null) cueless.push(name);
+    }
+  }
+  return cueless;
+}
+
+/**
+ * Every name in a workout that would render as a cueless row — the whole session,
+ * not one partition of it. This is what the acceptance gate enforces.
+ */
+export function cuelessSessionCards(workout: Partial<Workout> | null | undefined): string[] {
+  const seen = new Set<string>([
+    ...cuelessStrengthCards(workout),
+    ...cuelessAddonRows(workout),
+  ]);
+  return [...seen];
+}
+
+/**
  * Enforce the cue contract over accepted workouts. THROWS
  * `ExerciseVocabularyViolation` naming every offender.
  *
@@ -80,9 +123,32 @@ export function enforceCuratedCueContract(
   workouts: ReadonlyArray<Partial<Workout> | null | undefined>,
   context: string,
 ): void {
+  refuse(workouts, context, cuelessSessionCards);
+}
+
+/**
+ * The same refusal, scoped to add-on rows only.
+ *
+ * Each stage enforces what IT produced. `attachRecoveryAddonsToWeek` adds add-on
+ * rows to workouts whose strength rows were already gated at acceptance, so
+ * re-checking those there would report the same violation twice and, worse,
+ * blame the attach stage for content it did not author.
+ */
+export function enforceCuratedAddonCueContract(
+  workouts: ReadonlyArray<Partial<Workout> | null | undefined>,
+  context: string,
+): void {
+  refuse(workouts, context, cuelessAddonRows);
+}
+
+function refuse(
+  workouts: ReadonlyArray<Partial<Workout> | null | undefined>,
+  context: string,
+  offendersIn: (workout: Partial<Workout> | null | undefined) => string[],
+): void {
   const seen = new Set<string>();
   for (const workout of workouts) {
-    for (const name of cuelessStrengthCards(workout)) seen.add(name);
+    for (const name of offendersIn(workout)) seen.add(name);
   }
   if (seen.size === 0) return;
   const violation = new ExerciseVocabularyViolation(context, [...seen]);

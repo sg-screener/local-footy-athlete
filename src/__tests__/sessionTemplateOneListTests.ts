@@ -616,5 +616,121 @@ console.log('\n[10] Rows are numbered 1 / 1a / 2 again (Sam, 2026-07-27)');
   );
 }
 
+/* ══ 11. The optional cluster: one group, at the end, under one header ══ */
+
+console.log('\n[11] Optional work is ONE contiguous cluster at the end of the list');
+{
+  // Sam's run-7 ruling 1: "the optional cluster at the session's end gets a
+  // single header; the per-row OPTIONAL labels die."
+  //
+  // A single header is only honest if the rows it heads are actually contiguous
+  // and actually last. Before this ruling they were neither: an add-on row was
+  // ranked by `classifyExerciseRole(name)` like any other row, so a Side Plank
+  // add-on sorted as `midline` and landed BETWEEN prescribed accessories and
+  // prescribed prehab. A header over that would have claimed prescribed work was
+  // optional. So the clustering belongs to the composition owner — the renderer
+  // must not be the thing deciding which rows a header covers.
+  const workout = workoutOf({
+    hasCombinedConditioning: true,
+    conditioningBlock: {
+      options: [{ title: 'Bike', description: '', exerciseIds: ['c1'] }],
+    },
+    exercises: [
+      strengthRow('Back Squat', { id: 'r1' }),
+      strengthRow('Bulgarian Split Squat', { id: 'r2' }),
+      strengthRow('Pallof Press', { id: 'r3' }),
+      // Prescribed prehab — ranks equal with the optional prehab add-on below,
+      // so before the ruling the two groups genuinely interleaved.
+      strengthRow('Copenhagen Plank (Half)', { id: 'r4' }),
+      strengthRow('Bike Intervals', { id: 'c1', workoutType: 'Conditioning' }),
+      strengthRow('Team Training', { id: 'tt', workoutType: 'Team Training' }),
+    ],
+    recoveryAddons: [
+      {
+        id: 'addon-1',
+        label: 'Midline',
+        durationMinutes: 8,
+        exercises: [
+          // Classifies `midline` — the row that used to interleave.
+          { id: 'a1', name: 'Side Plank', prescription: '2 x 30-45s / side' },
+          // Classifies `prehab`.
+          { id: 'a2', name: 'Tib Raises', prescription: '2 x 12-15' },
+        ],
+      },
+    ],
+  });
+
+  const items = buildSessionTemplate(workout).items;
+  const optionalFlags = items.map(
+    (item) => item.kind === 'exercise' && item.optional === true,
+  );
+  const firstOptional = optionalFlags.indexOf(true);
+  const lastOptional = optionalFlags.lastIndexOf(true);
+
+  ok(
+    'the optional rows are contiguous — nothing prescribed sits between them',
+    firstOptional !== -1 &&
+      optionalFlags.slice(firstOptional, lastOptional + 1).every(Boolean),
+    `optional flags: ${JSON.stringify(optionalFlags)} for ${JSON.stringify(names(items))}`,
+  );
+  ok(
+    'every prescribed row sorts ABOVE the cluster, conditioning finisher included',
+    items
+      .slice(0, firstOptional)
+      .every((item) => !(item.kind === 'exercise' && item.optional)) &&
+      items
+        .slice(0, firstOptional)
+        .some((item) => item.role === 'conditioning'),
+    `got ${JSON.stringify(names(items))}`,
+  );
+  ok(
+    'the team-training banner stays absolute last — it is context, not work',
+    items[items.length - 1].kind === 'team_training',
+    `got ${JSON.stringify(names(items))}`,
+  );
+  ok(
+    'a midline add-on no longer interleaves with prescribed midline work',
+    names(items).indexOf('Side Plank') > names(items).indexOf('Pallof Press'),
+    `got ${JSON.stringify(names(items))}`,
+  );
+
+  // The cluster keeps D2's order INSIDE itself: an optional prehab row still
+  // sorts after an optional midline row. Optional changes which GROUP a row is
+  // in, not what kind of work it is.
+  ok(
+    'D2 order still applies within the cluster',
+    names(items).indexOf('Tib Raises') > names(items).indexOf('Side Plank'),
+    `got ${JSON.stringify(names(items))}`,
+  );
+}
+
+console.log('\n[12] The screen renders one "Optional work" header, and no per-row label');
+{
+  const screen = fs.readFileSync(path.join(src, 'screens/home/DayWorkoutScreenV2.tsx'), 'utf8');
+
+  ok(
+    'the per-row "Optional" marker is gone from the add-on row',
+    !/styles\.optionalMarker/.test(screen),
+    'AddonRow must not print its own Optional eyebrow — one group header owns that meaning',
+  );
+  ok(
+    'the recovery branch no longer prints a per-card "Optional" pill',
+    !/styles\.recoveryAddonPill/.test(screen),
+    'the add-on card pill is a per-row OPTIONAL label by another name',
+  );
+  ok(
+    'one shared header component carries the words',
+    /OptionalWorkHeader/.test(screen),
+  );
+  // Comments stripped: the point is what the athlete READS, and the prose above
+  // these components necessarily names the box the ruling retired.
+  const code = screen.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok(
+    'the header reads "Optional work", and the old section label is gone',
+    /Optional work/.test(code) && !/Optional Recovery Add-on/.test(code),
+    'the recovery branch keeps its own template but shares the one header',
+  );
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) process.exit(1);
