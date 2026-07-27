@@ -94,8 +94,8 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
   for (const c of activeConstraints) {
     if (!c || c.status === 'resolved') continue;
     if (c.type === 'injury') {
-      const fullPause = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
-      const region = fullPause
+      const trainingPaused = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
+      const region = trainingPaused
         ? 'global'
         : c.region ?? (c.bucket ? bucketToRegion(c.bucket) : null);
       if (!region) continue;
@@ -105,7 +105,7 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
         severity: c.severity,
         status: c.status,
         startDate: c.startDate,
-        fullPause,
+        trainingPaused,
         safeFocus: c.safeFocus,
         advice: c.advice,
       }));

@@ -392,10 +392,17 @@ function updatePowerForPhase(args: {
     (args.context.readiness !== 'high' || !experiencedForGamePrimer);
   const earlyOffseason = args.context.phase === 'Off-season' &&
     (args.context.offseasonSubphase ?? 'early_offseason') === 'early_offseason';
+  // THE DELOAD LAW (Sam, 2026-07-27) removed `weekKind === 'deload'` from this
+  // gate: "Power is not removed on a deload; a deload is not a reason to lose
+  // sharpness." The deload transform shrinks the dose inside the primer instead.
+  //
+  // `readiness === 'low'` STAYS and is not the same signal: it is the CAPACITY
+  // score computed from onboarding answers, not the athlete's readiness
+  // declaration. Retiring it here would change what a detrained athlete is
+  // programmed, which this law does not govern.
   if (
     args.context.prohibitPower === true ||
     earlyOffseason ||
-    args.context.weekKind === 'deload' ||
     args.context.readiness === 'low' ||
     gameProtected ||
     gMinusTwoBlocked
@@ -407,9 +414,7 @@ function updatePowerForPhase(args: {
         ? 'early_offseason_power_blocked'
         : args.context.prohibitPower
           ? 'section18_safety_power_blocked'
-        : args.context.weekKind === 'deload'
-          ? 'deload_power_blocked'
-          : gameProtected || gMinusTwoBlocked
+        : gameProtected || gMinusTwoBlocked
             ? `game_proximity_power_blocked:G${args.context.gOffset! >= 0 ? '+' : ''}${args.context.gOffset}`
           : 'low_readiness_power_blocked',
     });

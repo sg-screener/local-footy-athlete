@@ -192,19 +192,22 @@ export function applyGenerationSafetyToSection18Contract(args: {
     ));
   const persistedAppSprintRestriction = contract.authorisedReductions.some((entry) =>
     entry.reason === 'low_readiness' && entry.metric === 'sprint_high_speed_frequency');
-  const cookedReadiness = readiness?.tier === 'moderate_reduction' ||
-    readiness?.tier === 'major_reduction' || readiness?.tier === 'full_pause' || persistedLowReadiness;
-  const fullPause = args.forceFullPause === true || readiness?.fullPause === true ||
-    contract.safety?.fullPause === true || contract.authorisedReductions.some((entry) =>
-      entry.reason === 'full_pause');
+  // One question now: is readiness deloading this week?
+  const cookedReadiness = readiness?.deloaded === true || persistedLowReadiness;
+  // READINESS IS NO LONGER A SOURCE (Sam, 2026-07-27). The app never empties a
+  // week on readiness alone — low readiness deloads instead. The capability
+  // survives for the doors that genuinely pause training: serious injury
+  // symptoms (via forceFullPause) and an explicit force. Adding readiness back
+  // here would restore the full-pause tier under a different name.
+  const trainingPaused = args.forceFullPause === true ||
+    contract.safety?.trainingPaused === true;
   const lowerBodyRestriction = prohibited.includes('squat') || prohibited.includes('hinge') ||
     context?.injuries.some((injury) =>
       (injury.region === 'lower_body' || injury.region === 'back_midline') &&
       (injury.removeRiskyWork || injury.pauseAffectedTraining)) === true;
   const upperBodyRestriction = prohibited.includes('push') || prohibited.includes('pull');
-  const significantReadinessRestriction = readiness?.tier === 'moderate_reduction' ||
-    readiness?.tier === 'major_reduction' || readiness?.tier === 'full_pause' ||
-    cookedReadiness || fullPause;
+  const significantReadinessRestriction = readiness?.deloaded === true ||
+    cookedReadiness || trainingPaused;
   const readinessFieldRestriction = significantReadinessRestriction;
   // FIELD participation — what the athlete produces at team training and on game
   // day: conditioning, running, high-speed exposure. It is threatened by a
@@ -268,66 +271,45 @@ export function applyGenerationSafetyToSection18Contract(args: {
       detail: 'An active lower-body or back restriction removes sprint/high-speed exposure and anchor credit.',
     });
   }
-  if (readiness?.tier === 'moderate_reduction') {
-    addReduction(contract, {
-      metric: 'main_strength_frequency',
-      reducedTarget: 2,
-      reason: 'low_readiness',
-      detail: 'Low readiness retains at most two controlled strength sessions.',
-    });
-    addReduction(contract, {
-      metric: 'conditioning_core_frequency',
-      reducedTarget: 1,
-      reason: 'low_readiness',
-      detail: 'Low readiness retains at most one low-stress app conditioning exposure.',
-    });
-    addReduction(contract, {
-      metric: 'sprint_high_speed_frequency',
-      reducedTarget: 0,
-      reason: 'low_readiness',
-      detail: 'Low readiness removes sprint/high-speed exposure and anchor credit.',
-    });
-  } else if (readiness?.tier === 'major_reduction' || fullPause) {
+  // READINESS MAKES NO COUNT REDUCTION (Sam's readiness law, 2026-07-27).
+  //
+  // Four graduated branches used to live here, cutting main strength to 2 or 0,
+  // conditioning to 1 or 0, and sprint to 0 or anchor-credit, by tier. The law
+  // abolishes that behaviour rather than rescaling it: "Readiness never REMOVES
+  // sessions. The deload law's 'same week, same days' holds: session counts are
+  // structure, and structure does not change." A deloaded week keeps its targets
+  // and the sessions arrive smaller — the shrink is DELOAD_LAW's, applied to the
+  // dose, and it is not a §18 frequency ceiling.
+  //
+  // Collapsing the tiers to one boolean and KEEPING the reductions is the trap
+  // the law names, and it is what the first pass at this migration did: three
+  // branches testing the same `readiness?.deloaded`, the last two unreachable,
+  // still cutting counts. The whole block is deleted instead.
+  //
+  // What survives is TRAINING PAUSED — a §18 safety capability owned by injury
+  // and the safety finaliser, never by readiness. That distinction is asserted:
+  // a readiness input alone can never produce `trainingPaused`.
+  if (trainingPaused) {
     for (const [metric, detail] of [
-      ['main_strength_frequency', 'Major readiness restriction removes main-strength training.'],
-      ['conditioning_core_frequency', 'Major readiness restriction removes core conditioning.'],
-      ['sprint_high_speed_frequency', 'Major readiness restriction removes sprint/high-speed exposure.'],
+      ['main_strength_frequency', 'Paused training removes main-strength work.'],
+      ['conditioning_core_frequency', 'Paused training removes core conditioning.'],
+      ['sprint_high_speed_frequency', 'Paused training removes sprint/high-speed exposure.'],
     ] as const) {
       addReduction(contract, {
         metric,
         reducedTarget: 0,
-        reason: fullPause ? 'full_pause' : 'low_readiness',
+        reason: 'full_pause',
         detail,
       });
     }
-  } else if (readiness?.avoidSprint) {
-    addReduction(contract, {
-      metric: 'sprint_high_speed_frequency',
-      reducedTarget: contract.anchors.length,
-      reason: 'low_readiness',
-      detail: 'Slight readiness restriction removes app-authored sprint while preserving normal healthy anchor credit.',
-    });
-  }
-  if (
-    cookedReadiness &&
-    !contract.authorisedReductions.some((entry) =>
-      entry.metric === 'sprint_high_speed_frequency' &&
-      (entry.reason === 'low_readiness' || entry.reason === 'full_pause'))
-  ) {
-    addReduction(contract, {
-      metric: 'sprint_high_speed_frequency',
-      reducedTarget: 0,
-      reason: fullPause ? 'full_pause' : 'low_readiness',
-      detail: 'Persisted cooked-readiness ownership removes sprint/high-speed exposure and anchor credit.',
-    });
-  }
-
-  if (cookedReadiness || fullPause) {
+    // Power goes only with a genuine pause. THE DELOAD LAW keeps it otherwise:
+    // "Power is not removed on a deload; a deload is not a reason to lose
+    // sharpness" — which retired the cooked-readiness removal that stood here.
     addReduction(contract, {
       metric: 'power_primer_budget',
       reducedTarget: 0,
-      reason: fullPause ? 'full_pause' : 'low_readiness',
-      detail: 'Cooked or paused readiness removes all formal power primers.',
+      reason: 'full_pause',
+      detail: 'Paused training removes all formal power primers.',
     });
   }
 
@@ -380,13 +362,17 @@ export function applyGenerationSafetyToSection18Contract(args: {
     ...(lowerBodyRestriction ? ['lower' as const] : []),
     ...(upperBodyRestriction ? ['upper' as const] : []),
   ]);
-  const prohibitedPower = fullPause || cookedReadiness ||
+  // THE DELOAD LAW: "Power/speed: KEEP a small sharp dose ... Power is not
+  // removed on a deload; a deload is not a reason to lose sharpness." Cooked
+  // readiness, a deload week and the illness week are all DELOAD DOORS, so all
+  // three stop removing power here. A bye recovery week is not a deload door and
+  // keeps its removal; a genuine training pause still removes everything.
+  const prohibitedPower = trainingPaused ||
     contract.identity.mode === 'in_season_bye_recovery' ||
-    contract.identity.mode === 'optional_week' ||
-    contract.identity.weekKind === 'deload' || contract.power.eligible === false;
+    contract.power.eligible === false;
   if (prohibitedPower) {
     contract.power.eligible = false;
-    contract.power.removalReason = fullPause
+    contract.power.removalReason = trainingPaused
       ? 'full_pause'
       : cookedReadiness
         ? 'low_readiness'
@@ -405,7 +391,7 @@ export function applyGenerationSafetyToSection18Contract(args: {
     affectedDomains.push('conditioning');
   }
   if (lowerBodyRestriction || readinessFieldRestriction || persistedAppSprintRestriction ||
-      readiness?.avoidSprint) affectedDomains.push('sprint_high_speed');
+      readiness?.deloaded) affectedDomains.push('sprint_high_speed');
   if (hasFieldRestriction) affectedDomains.push('anchor_participation');
   if (prohibitedPower || prohibitedPowerFamilies.length > 0) affectedDomains.push('power');
   if (cookedReadiness || contract.identity.mode === 'in_season_bye_recovery' ||
@@ -428,11 +414,15 @@ export function applyGenerationSafetyToSection18Contract(args: {
     // `injury_restriction` reduction above carries the honest number
     // (`anchors.length`: no app sprint, the athlete's own game exposure intact),
     // and `buildSafetyPolicy` now reads it rather than assuming zero.
-    prohibitedSprintHighSpeed: lowerBodyRestriction || significantReadinessRestriction || fullPause,
+    // Readiness dropped out of this term. `significantReadinessRestriction` is
+    // true for EVERY deloaded week, so leaving it here removed the week's sprint
+    // exposure whenever the athlete reported being tired — a count reduction the
+    // readiness law forbids. Injury and a genuine pause still remove sprint.
+    prohibitedSprintHighSpeed: lowerBodyRestriction || trainingPaused,
     prohibitedPower,
     prohibitedPowerFamilies,
     affectedSafetyDomains: unique(affectedDomains),
-    fullPause,
+    trainingPaused,
   });
   return contract;
 }

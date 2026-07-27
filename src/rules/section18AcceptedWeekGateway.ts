@@ -235,7 +235,7 @@ export function resolveFinalVisibleSection18Week(args: {
 }
 
 function powerReductionReason(contract: WeeklyExposureContractV2): Section18AuthorisedReduction['reason'] {
-  if (contract.safety.fullPause) return 'full_pause';
+  if (contract.safety.trainingPaused) return 'full_pause';
   if (contract.identity.weekKind === 'deload') return 'deload_policy';
   if (contract.identity.mode === 'optional_week') return 'optional_week_mode';
   if (contract.identity.mode === 'in_season_bye_recovery') return 'bye_recovery_mode';
@@ -277,12 +277,17 @@ function weeklyPowerBudget(args: {
 }): { contract: WeeklyExposureContractV2; workouts: Workout[]; budget: number; removed: number } {
   const contract = cloneContract(args.contract);
   const beginner = args.profile?.experienceLevel === 'Complete beginner';
+  // THE DELOAD LAW (Sam, 2026-07-27): "Power/speed: KEEP a small sharp dose ...
+  // Power is not removed on a deload; a deload is not a reason to lose
+  // sharpness." Three terms are gone from this budget: a scheduled deload week,
+  // the optional week (which IS a deloaded week), and the low_readiness safety
+  // reason. All three are deload doors, and the law reaches every door.
+  //
+  // A bye recovery week is NOT a deload door and keeps its removal; a beginner,
+  // a genuine training pause and an injury prohibition all still remove power.
   const ineligible = contract.power.eligible === false || beginner ||
-    contract.identity.weekKind === 'deload' ||
     contract.identity.mode === 'in_season_bye_recovery' ||
-    contract.identity.mode === 'optional_week' ||
-    contract.safety.fullPause || contract.safety.prohibitedPower ||
-    contract.safety.reasons.includes('low_readiness');
+    contract.safety.trainingPaused || contract.safety.prohibitedPower;
   const normalAnchors = contract.anchors.filter((anchor) =>
     anchor.participation === 'normal_unrestricted');
   const teamCount = normalAnchors.filter((anchor) => anchor.kind === 'team_training').length;

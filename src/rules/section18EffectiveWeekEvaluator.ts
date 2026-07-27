@@ -1019,7 +1019,7 @@ export function evaluateSection18EffectiveWeek(
     });
   }
   const patternCoverageSelected = contract.mainStrength.exposure.plannerSelectedTarget > 0 &&
-    !contract.safety.fullPause;
+    !contract.safety.trainingPaused;
   // Weekly pattern coverage is a whole-week authoring expectation. When the
   // contract governs only a remainder (mid-week boundary), the first days are
   // immutable history and a reduced remainder may honestly be unable to

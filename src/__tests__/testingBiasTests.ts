@@ -438,13 +438,8 @@ console.log('\n[7] game, injury and readiness gates win');
     readiness: {
       id: 'readiness-testing',
       sourceType: 'fatigue',
-      severity: 5,
-      tier: 'moderate_reduction',
-      avoidSprint: true,
-      avoidHardConditioning: true,
-      reduceHardExtras: true,
-      preferRecovery: false,
-      fullPause: false,
+      deloaded: true,
+      sessionsOptional: false,
     },
   };
   const tiredSpeed = planFor(profile({ biggestLimitation: 'Speed' }), readiness);

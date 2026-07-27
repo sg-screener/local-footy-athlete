@@ -327,13 +327,8 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
       readiness: {
         id: 'section18-v2-readiness',
         sourceType: 'fatigue',
-        severity: 7,
-        tier: 'moderate_reduction',
-        avoidSprint: true,
-        avoidHardConditioning: true,
-        reduceHardExtras: true,
-        preferRecovery: true,
-        fullPause: false,
+        deloaded: true,
+        sessionsOptional: false,
       },
     },
   });

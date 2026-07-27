@@ -434,16 +434,47 @@ export function runYearRoundExposureConformance(
   );
   scenarios++;
 
-  // Fixed reproduction: major readiness may produce zero final strength, but
-  // the target must say so with a typed low-readiness reason.
+  // RE-PINNED to Sam's readiness law (2026-07-27). This scenario used to assert
+  // the opposite — "major readiness may produce zero final strength, but the
+  // target must say so with a typed low-readiness reason" — which encoded the
+  // retired tier system: readiness cut the week's COUNTS by degree, and the
+  // contract recorded the cut. The law abolishes the behaviour rather than
+  // rescaling it, so the week keeps its structure and the work inside shrinks.
+  //
+  // The assertion is INVERTED, not weakened: a cooked athlete's week must still
+  // be ACCEPTED by §18, and now it must reach that acceptance with its sessions
+  // intact rather than by lowering the bar to meet an emptied week.
   const major = generateProgramLocally(profile({ seasonPhase: 'Off-season' }), {
     todayISO: '2026-07-13',
     activeConstraints: [activeMajorReadinessConstraint()],
   });
   const majorWeek = major.microcycles[0];
   requireFinalAccepted('major readiness final week', majorWeek.exposureContract, majorWeek.workouts, '2026-07-13');
-  if (!majorWeek.exposureContract?.reductions.some((entry) => entry.reason === 'low_readiness')) {
-    throw new Error('major readiness final week omitted its typed reduction');
+  const readinessCountReductions = (majorWeek.exposureContract?.reductions ?? []).filter(
+    (entry) => entry.reason === 'low_readiness' || entry.reason === 'full_pause');
+  if (readinessCountReductions.length > 0) {
+    throw new Error(
+      'readiness alone reduced the week\'s exposure counts, which Sam\'s readiness law forbids: ' +
+      readinessCountReductions.map((entry) => `${entry.domain}->${entry.to}:${entry.reason}`).join(', '));
+  }
+  // RE-PINNED AGAIN to Sam's three-tier readiness door (superseding this file's
+  // own earlier re-pin, written when readiness was a single boolean). This
+  // fixture reports severity 8, which is "Absolutely cooked" — the tier that
+  // deloads AND lifts every minimum. So a zero requirement is the LAW here, not
+  // a count cut, and asserting `required > 0` asserted the wrong tier.
+  //
+  // The distinction Sam drew is the one that matters, and it is what this now
+  // checks: lifting a MINIMUM offers the week without demanding it; cutting a
+  // COUNT takes the sessions away. The first is authorised, the second never is.
+  const worked = majorWeek.workouts.filter((workout) =>
+    workout.workoutType !== 'Rest' && workout.workoutType !== 'Game');
+  if (worked.length === 0) {
+    throw new Error('an absolutely-cooked week was emptied; the law lifts minimums, it does not remove sessions');
+  }
+  if (worked.some((workout) => workout.sessionTier !== 'optional')) {
+    throw new Error(
+      'an absolutely-cooked week must offer every session as optional: ' +
+      worked.map((workout) => `${workout.workoutType}/${workout.sessionTier}`).join(', '));
   }
   scenarios++;
 

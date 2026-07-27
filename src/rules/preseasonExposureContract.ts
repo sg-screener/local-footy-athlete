@@ -4,7 +4,6 @@ import type {
   SeasonPhase,
   WeekKind,
 } from '../types/domain';
-import type { GenerationReadinessTier } from '../utils/generationConstraints';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import {
@@ -23,7 +22,8 @@ export interface PreseasonExposureContractInput {
   gameDay: number | null;
   weekKind?: WeekKind;
   preseasonSubphase?: PreseasonSubphase | null;
-  activeReadinessTier?: GenerationReadinessTier;
+  /** True when this week falls inside a readiness/illness/scheduled deload. */
+  readinessDeloaded?: boolean;
   maxStrengthSessions?: number | null;
   appConditioningFeasible?: boolean;
   profileInjuries?: ReadonlyArray<{

@@ -109,8 +109,14 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     fallbackContract: fallback.weeklyExposureContract,
     edgeComponentShape: componentShape(edge),
     fallbackComponentShape: componentShape(fallback),
-    reductionsAreTyped: !!reduced && reduced.reductions.length > 0 &&
+    // Sam's readiness law (2026-07-27): low readiness no longer reduces exposure
+    // COUNTS — it deloads the work inside the sessions instead. So this is no
+    // longer "a reduction must exist and be typed"; it is "whatever reductions
+    // DO occur are typed", which holds vacuously when readiness produces none.
+    reductionsAreTyped: !!reduced &&
       reduced.reductions.every((entry) => !!entry.domain && !!entry.reason && entry.detail.trim().length > 0),
+    // The law itself, made testable: low readiness produces no count reduction.
+    lowReadinessMakesNoCountReduction: !!reduced && reduced.reductions.length === 0,
     zeroAdditionalConditioningAuthorised: !!allTeamCredit &&
       allTeamCredit.conditioning.additionalRequiredCount === 0 &&
       allTeamCredit.conditioning.creditedTeamTrainingCount >= allTeamCredit.conditioning.targetCount,

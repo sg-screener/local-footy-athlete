@@ -164,7 +164,7 @@ function hasWorkoutSafetyTransformation(
   contract: WeeklyExposureContractV2,
   workout: Workout,
 ): boolean {
-  if (contract.safety.fullPause) return true;
+  if (contract.safety.trainingPaused) return true;
   if (contract.safety.lighterStrengthRequired && mainStrengthSession(workout)) return true;
   if (contract.safety.prohibitedPatterns.length > 0 && (
     (workout.exercises ?? []).length > 0 ||
@@ -183,7 +183,7 @@ function conformWorkout(args: {
 }): { workout: Workout; actions: Section18SafetyAction[] } {
   const { contract } = args;
   const actions: Section18SafetyAction[] = [];
-  if (contract.safety.fullPause) {
+  if (contract.safety.trainingPaused) {
     return { workout: collapseWorkoutToRest(args.workout), actions: ['full_pause_collapsed'] };
   }
   // This boundary owns safety conformance only. A healthy, unrestricted week

@@ -8,6 +8,7 @@ export const PRESEASON_EXPOSURE_INVARIANT_IDS = [
   'INV_TEAM_TRAINING_CREDIT_CORRECT',
   'INV_EDGE_FALLBACK_EXPOSURE_EQUIVALENT',
   'INV_EXPOSURE_REDUCTION_HAS_REASON',
+  'INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION',
   'INV_ZERO_EXTRA_CONDITIONING_HAS_AUTHORISED_REASON',
 ] as const;
 
@@ -34,7 +35,15 @@ export interface PreseasonExposureWitness {
   fallbackContract: unknown;
   edgeComponentShape: unknown;
   fallbackComponentShape: unknown;
+  /**
+   * "Whatever reductions DO occur are typed" — reworked from "a reduction must
+   * exist and be typed". Under Sam's readiness law the healthy answer is that
+   * readiness produces NO reduction at all, so the old form asserted the very
+   * behaviour the law abolished.
+   */
   reductionsAreTyped: boolean;
+  /** The law made testable: low readiness produces no COUNT reduction. */
+  lowReadinessMakesNoCountReduction: boolean;
   zeroAdditionalConditioningAuthorised: boolean;
 }
 export interface PreseasonExposureInvariantFailure {
@@ -112,6 +121,11 @@ export function evaluatePreseasonExposureWitness(
     'INV_EXPOSURE_REDUCTION_HAS_REASON',
     witness.reductionsAreTyped,
     true, witness.reductionsAreTyped,
+  );
+  check(
+    'INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION',
+    witness.lowReadinessMakesNoCountReduction,
+    true, witness.lowReadinessMakesNoCountReduction,
   );
   check(
     'INV_ZERO_EXTRA_CONDITIONING_HAS_AUTHORISED_REASON',

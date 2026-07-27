@@ -163,7 +163,7 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
     gameDay,
     availabilityDaysPerWeek: availabilityDays(args.profile),
     availableTrainingDays: args.profile.preferredTrainingDays,
-    readinessTier: readinessTierFor(args.generationConstraints),
+    readinessDeloaded: args.generationConstraints?.readiness?.deloaded === true,
     activeInjuries: activeInjuriesFor(args.generationConstraints),
   });
   const targetCount = Math.min(
@@ -325,7 +325,7 @@ function availabilityDays(profile: OnboardingData): number | undefined {
 function readinessTierFor(
   generationConstraints: GenerationConstraintContext | undefined,
 ): RecoveryAddonReadinessTier | undefined {
-  return generationConstraints?.readiness?.tier;
+  return generationConstraints?.readiness?.deloaded;
 }
 
 function activeInjuriesFor(

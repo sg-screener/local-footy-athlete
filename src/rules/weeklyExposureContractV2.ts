@@ -301,7 +301,7 @@ export interface Section18SafetyPolicy {
   prohibitedPowerFamilies: Array<'lower' | 'upper'>;
   affectedDomains: Section18SafetyDomain[];
   unaffectedDomains: Section18SafetyDomain[];
-  fullPause: boolean;
+  trainingPaused: boolean;
   mainStrengthFrequencyCeiling: number | null;
   conditioningFrequencyCeiling: number | null;
   sprintHighSpeedFrequencyCeiling: number | null;
@@ -457,7 +457,7 @@ export interface Section18ContractV2Input {
   prohibitedPower?: boolean;
   prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
   affectedSafetyDomains?: readonly Section18SafetyDomain[];
-  fullPause?: boolean;
+  trainingPaused?: boolean;
   authorisedUnavoidableAnchorExcess?: number;
   equipment?: Partial<Section18EquipmentPolicyState>;
   source?: WeeklyExposureContractV2['source'];
@@ -505,9 +505,9 @@ function buildSafetyPolicy(args: {
   prohibitedPower: boolean;
   prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
   affectedSafetyDomains?: readonly Section18SafetyDomain[];
-  fullPause?: boolean;
+  trainingPaused?: boolean;
 }): Section18SafetyPolicy {
-  const fullPause = args.fullPause === true || args.reductions.some((entry) =>
+  const trainingPaused = args.trainingPaused === true || args.reductions.some((entry) =>
     entry.reason === 'full_pause');
   const optionalWeek = args.mode === 'optional_week';
   // THE ILLNESS LAW (Sam, 2026-07-27) — the SPLIT. illness_recovery used to
@@ -524,21 +524,21 @@ function buildSafetyPolicy(args: {
   const lighterStrengthRequired = args.cookedReadiness || byeRecovery ||
     optionalWeek || args.weekKind === 'deload';
   const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
-  const mainCeiling = fullPause
+  const mainCeiling = trainingPaused
     ? 0
     : byeRecovery
       ? Math.min(2, reducedMainCeiling ?? 2)
       : reducedMainCeiling;
-  const conditioningCeiling = fullPause
+  const conditioningCeiling = trainingPaused
     ? 0
     : safetyFrequencyCeiling(args.reductions, 'conditioning_core_frequency');
-  const sprintCeiling = fullPause || args.prohibitedSprintHighSpeed
+  const sprintCeiling = trainingPaused || args.prohibitedSprintHighSpeed
     ? 0
     : safetyFrequencyCeiling(args.reductions, 'sprint_high_speed_frequency');
   // THE DELOAD LAW: a deload and a cooked athlete no longer remove power —
   // "a deload is not a reason to lose sharpness". A bye recovery week still
   // does; that mode is not a deload door and Sam's law does not reach it.
-  const prohibitedPower = fullPause || args.prohibitedPower || byeRecovery;
+  const prohibitedPower = trainingPaused || args.prohibitedPower || byeRecovery;
   const affected = new Set<Section18SafetyDomain>(args.affectedSafetyDomains ?? []);
   if (args.prohibitedPatterns.length > 0 || mainCeiling !== null) affected.add('main_strength');
   if (conditioningCeiling !== null) affected.add('conditioning');
@@ -560,12 +560,12 @@ function buildSafetyPolicy(args: {
   return {
     requiredSafePatterns: [...args.requiredSafePatterns],
     prohibitedPatterns: [...args.prohibitedPatterns],
-    prohibitedSprintHighSpeed: fullPause || args.prohibitedSprintHighSpeed === true,
+    prohibitedSprintHighSpeed: trainingPaused || args.prohibitedSprintHighSpeed === true,
     prohibitedPower,
     prohibitedPowerFamilies: Array.from(new Set(args.prohibitedPowerFamilies ?? [])),
     affectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => affected.has(domain)),
     unaffectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => !affected.has(domain)),
-    fullPause,
+    trainingPaused,
     mainStrengthFrequencyCeiling: mainCeiling,
     conditioningFrequencyCeiling: conditioningCeiling,
     sprintHighSpeedFrequencyCeiling: sprintCeiling,
@@ -954,7 +954,14 @@ export function resolveSection18PhasePlannerSelection(
     mode: input.mode,
     teamTrainingDays: Array.from({ length: teamTrainingCount }, (_, index) => index),
     readiness: input.readiness,
-    cookedReadiness: input.readiness === 'low',
+    // READINESS IS A HOMONYM (Sam, 2026-07-27). `input.readiness` is the
+    // CAPACITY score `calculateReadiness` computes from onboarding answers —
+    // recent training load, conditioning level, sprint exposure. It changes only
+    // when the profile changes and means "this athlete's baseline is low", NOT
+    // "I am cooked today". Feeding it in here handed a detrained athlete the
+    // safety envelope of someone who had declared themselves wrecked. Sam ruled
+    // it CUT: cooked readiness comes from the readiness FACT and nothing else.
+    cookedReadiness: false,
     weekKind: input.weekKind,
   });
   const recoveryMode = input.mode === 'in_season_bye_recovery';
@@ -1075,12 +1082,14 @@ export function buildSection18WeeklyExposureContractV2(
       prohibitedPatterns: prohibited,
       requiredSafePatterns,
       reductions,
-      cookedReadiness: input.cookedReadiness === true || input.readiness === 'low',
+      // The same homonym cut as above: the capacity score does not make an
+      // athlete "cooked". Only the readiness door's own flag does.
+      cookedReadiness: input.cookedReadiness === true,
       prohibitedSprintHighSpeed: input.prohibitedSprintHighSpeed,
       prohibitedPower: input.prohibitedPower === true || !powerEligible,
       prohibitedPowerFamilies: input.prohibitedPowerFamilies,
       affectedSafetyDomains: input.affectedSafetyDomains,
-      fullPause: input.fullPause,
+      trainingPaused: input.trainingPaused,
     }),
     identity: {
       seasonPhase: input.seasonPhase,
@@ -1229,7 +1238,7 @@ export function refreshSection18SafetyPolicy(
     | 'prohibitedPower'
     | 'prohibitedPowerFamilies'
     | 'affectedSafetyDomains'
-    | 'fullPause'
+    | 'trainingPaused'
     | 'cookedReadiness'
   >> = {},
 ): WeeklyExposureContractV2 {
@@ -1254,7 +1263,7 @@ export function refreshSection18SafetyPolicy(
     prohibitedPowerFamilies: overrides.prohibitedPowerFamilies ??
       contract.safety?.prohibitedPowerFamilies,
     affectedSafetyDomains: overrides.affectedSafetyDomains ?? contract.safety?.affectedDomains,
-    fullPause: overrides.fullPause ?? contract.safety?.fullPause,
+    trainingPaused: overrides.trainingPaused ?? contract.safety?.trainingPaused,
   });
   return contract;
 }
