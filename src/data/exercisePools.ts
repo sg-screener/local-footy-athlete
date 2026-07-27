@@ -233,9 +233,13 @@ export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
   ex('bottoms-up-press',  'Bottoms-Up KB Press',        2, 6,  8,  45, 'Bell inverted. Wrist stacked, ribs down.',    ['kettlebell'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('scap-push-up',      'Scap Push-Up',               2, 10, 15, 30, 'Elbows locked. Glide the shoulder blades.',   ['bodyweight'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps' }),
   // Sam's authored addition (2026-07-28). Equipment-gated on the bar, so
-  // `filterPool` drops it for Home gym and Outdoor. Contraindication is
-  // shoulder ONLY — Sam's ruling; the bar hang does not gate wrist/elbow here
-  // the way its Scap Push-Up sibling does.
+  // `filterPool` drops it for Home gym and Outdoor.
+  //
+  // Contraindication is shoulder ONLY. That is narrower than the Scap Push-Up
+  // sibling above, which also gates `wrist` — the divergence was raised with
+  // Sam and CONFIRMED DELIBERATE (2026-07-28). A passive bar hang loads the
+  // wrist differently from a locked-out push-up position. Settled, not an
+  // oversight: do not "restore" wrist here.
   ex('scap-pull-up',      'Scap Pull Ups',              2, 10, 10, 30, 'Pause 1 sec at top each rep', ['pullup_bar'], ['shoulder'], 'low', { prescriptionType: 'reps' }),
 ];
 
