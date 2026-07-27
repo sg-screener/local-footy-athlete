@@ -1,5 +1,6 @@
 LFA Programming Rules
-If any section is unclear or conflicts with another section, use Section 17 Addendum as the final authority.
+If any section is unclear or conflicts with another section, resolve it in this order: Section 18 (approved programming policy tables) wins first, then Section 17 Addendum, then the earlier sections.
+Conditioning qualities, doses, work:rest bands and template properties are owned by the two authored-final conditioning documents named in Section 6 (`docs/CONDITIONING_FRAMEWORK_SAM_2026-07-25.md` and `docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx`). This document states the law and the placement rules; it does not restate the doses.
 0. Core LFA principles
 LFA is a strength and conditioning app for local footy athletes. It is not a medical advice app, diagnosis tool, or rehab program.
 The app’s job is to build and adjust S&C programming around the athlete’s real life: their season phase, game day, team training, goals, schedule, injuries, soreness, illness, equipment access, missed sessions, and readiness.
@@ -13,7 +14,7 @@ If an athlete is injured, sick, sore, busy, or missing equipment, the app should
 Example:
 Shoulder issue:
 Avoid affected pressing or upper-body work.
-Keep lower-body strength, bike conditioning, core, mobility, and other safe work where appropriate.
+Keep lower-body strength, bike conditioning, midline, mobility, and other safe work where appropriate.
 The goal is to keep athletes training intelligently around problems, not to make them fragile or afraid to train.
 At the same time, if something is too severe, complex, or outside normal S&C adjustment, LFA should stop affected training and tell the athlete to seek medical or physio advice. The app should not pretend to diagnose or rehab injuries.
 The user is ultimately in control. They can override the system and add extra work if they want. The app should allow this, but it should give a clear warning when the user is likely doing too much.
@@ -71,11 +72,12 @@ In-season
 * How to handle injuries: depends on severity. Anything above a 5/10 should be looked at more carefully. this will be handled in injury section below. Work around the injury as much as possible. Continue to do work on unaffected areas. Then lighten loads and or volume for injured areas. If severe then stop targeting that area at all and let them get physio advice. 
 * How to handle missed sessions: User is made aware of missed sessions in the app and can then choose if they did it, missed it, skipped it etc. skipped sessions are fine. If it happens every time then maybe program adjustments need to be made. but life gets in the way and people are going to be more or less diligent with logging their sessions. 
 * How to handle busy weeks: see what they can do, see what they know they're going to miss, if they schedule missed sessions early enough, the program may be able to adapt to get in majority of the missed work at another time during the week. But it's okay to just have a busy week and go back to normal the next week. 
-* How to handle bye weeks: If user is feeling good then training load can increase - not too much running (keep to 4 or less per week) but sometimes byes are a good time to get in extra work and strength training - especially for lower body work. On the Saturday, or usual game day, a hard conditioning session is usually a good idea. Again, this depends on user readiness. Byes can be a good time to reset and rest and prepare for future weeks. 
+* How to handle bye weeks: If user is feeling good then training load can increase - not too much running (the standing cap is 3 running days per week) but sometimes byes are a good time to get in extra work and strength training - especially for lower body work. On the Saturday, or usual game day, a hard conditioning session is usually a good idea. Again, this depends on user readiness. Byes can be a good time to reset and rest and prepare for future weeks. 
 * How to handle moving game day: sometimes this will allows an extra session into the week but then effect the following week - there should be no "core" or compulsory sessions the day before or after a game - for example game usually saturday, thursday might be team training and upper body push, friday gunshow, saturday game, sunday rest or recovery. If that get's moved to sunday then monday becomes rest and recovery - whatever was on that monday is either skipped or spread throughout the rest of the next week, and saturday becomes gunshow. Which means friday is free to do maybe accessories and a flushout off legs or soemthing like that. 
 * What should never be placed 1-2 days before a game: hard conditioning (not including team training as this is oftern G-2), heavy lowers 
 * What is acceptable 1-2 days before a game: upper body training, gunshow, accessories, low volume low range power work like high box squats for low reps and vertical jumps, any recovery stuff or mobility flows are fine. 
 * What should happen the day after a game: rest or recovery day - user can always add a session i.e. a flushout or aerobic base session if they want to (some athletes like doing this) but maybe just put a warning
+* Deload rules: NO scheduled in-season deloads. Games and byes self-regulate the load. In-season backing-off happens through fatigue management and readiness awareness only - bye recovery, a readiness call, or an injury decision. Do not put a calendar deload into an in-season block.
 * Ideal weekly structure: 3 options. Assuming saturday game and 2 team trainings on tuesday and thursday. Option 1 = monday lower body strength and optional flushout/ aerobic conditioning off-leg, tuesday upper body pull plus team training, wednesday rest or optional flushout/ aerobic conditioning off-leg, thursday upper body push and team training, friday gunshow or recovery, saturday game, sunday rest or recovery. 2nd option, lower body squat + optional flushout/ aerobic conditioning off-leg, tuesday upper body pull + team training, wednesday lower body hinge + optional flushout/ aerobic conditioning off-leg, thursday upper body push + team training, friday gunshow or recovery, saturday game, sunday rest or recovery. 3rd option. monday Full body strength + optional flushout/ aerobic conditioning off-leg, tuesday team training, wednesday Full body strength + optional flushout/ aerobic conditioning off-leg, thursday team training, friday gunshow or recovery, saturday game, sunday rest or recovery.
 Pre-season
 
@@ -85,13 +87,13 @@ Pre-season
 * Strength goal: improve. A healthy no-game week with normal availability requires 4 main-strength exposures in early, mid and late pre-season. Safety or feasibility may reduce this only through an explicit typed authorised reason.
 * Sprint exposure goal: at least 1 genuine sprint/high-speed exposure per week. Team training and practice matches receive sprint/high-speed anchor credit, and no extra app sprint is required when those anchors already satisfy the floor. A second exposure may occur naturally, but it is not the shared required minimum.
 * Team training effect: most clubs will train for 90 mins or so and do 7-8km of running, pre season sessions are generally harder on the body than in season, especially if training hard outside of team training too. Most clubs will train 2-3 times per week in pre season. 
-* How to avoid overload: make sure core or compulsory sessions are limited to 4 conditioning and 4 strength. This includes team training as part of that 4. Optional lighter sessions or flushouts can be done to. Running limited to 4 times per week. Sprinting limited to 2 nights per week which includes nights at team training. 
+* How to avoid overload: make sure core or compulsory sessions are limited to 4 conditioning and 4 strength. This includes team training as part of that 4. Optional lighter sessions or flushouts can be done to. Running is capped at 3 days per week and floored at 2 (standing rule - see Section 17 B). Sprinting limited to 2 nights per week which includes nights at team training. 
 * How fast should load progress: no faster than 10% per week. Unless very beginner to training. 
 * What not to overdo: sprint work outside of footy training. more than 2 lowers body sessions per week. 
 * How to handle soreness/injury: same as anything, if you can work around it do so, if it's severe then seek medical or phsyio advice. Get as much work as you can in around the injury. 
 * Ideal weekly structure: training is generally monday wednesday and sometimes fridat - occasionally teams will train 4 times in pre season but that's very rare. Healthy no-game early, mid and late pre-season all require 4 main-strength and 4 total conditioning exposures. Team training counts toward the conditioning total, so 2 team trainings normally leave 2 app conditioning components. Generally upper lower upper lower 2 team trainings and 2 extra conditioning plus optional 5th cardio. You can double up upper body sessions with team training. Other weeks may be more like 3 x full body and 2 team trainings with 1-2 extra conditioning. Some people may be more like lower body, upper body and full body, and 2 team sessions plus 1-2 extra conditioning sessions. if can only do 2 strength sessions should be 2 x full body and those sessions should be pretty solid. You can have 1 hard conditioning session outside of TT if TT is 2x per week. and then 1-2 lighter sessions like a flushout or aerobic base. you don't need to add app sprint work if team training already supplies the weekly sprint/high-speed floor.
 * Early pre-season vs late pre-season: early pre season is more base building, longer sessions, slightly lighter intensity, then as the season moves closer to end of pre season = shorten sessions, reduce volume, but increase intensity. Phase progression changes prescription, dose, intensity and specificity; it does not delete the healthy 4-strength / 4-conditioning baseline frequency.
-* Deload rules: once every 4 weeks or so deload. This can be just changing the program and starting with a lighter week in the new program. I've always liked 3-4 weekly cycles. Deload when user is fatigued or showing a lack of readiness too. 
+* Deload rules: pre-season runs SCHEDULED deloads on 3-4 week cycles, definitely. This can be just changing the program and starting with a lighter week in the new program. Deload as well when the user is fatigued or showing a lack of readiness.
 Off-season
 
 * Main goal: build size, strength and muscle. Especially if their goal is to build size. Recover any injuries form the year prior. 
@@ -105,7 +107,7 @@ Off-season
 * What not to overdo: focusing on strengths too much. For example, an athlete is super fit but weak, not much point in smashing out running and fitness stuff. They should be focused on strength = off season is fix weakness season. 
 * Ideal weekly structure: this really all depends on their goals and weaknesses. 3-4 strengths, 3-5 conditionioning and 1-2 mobility is probably a decent starting point. You should have an idea of ideal programming from my pre season and in season templates. For someone who needed general strength and fitness I would do lower body + conditoning, upper body + conditoning, rest wednesday, ower body + conditoning, upper body + conditoning, saturday long slow run, sunday rest = something like that is very good but it is general = again focus on their weaknesses. 
 * Early off-season vs late off-season: early off season as soon as season finishes, the first two weeks should be optional sessions for everything, people should enjoy time off, early off season = no running and only light aerobic work / base building work. Later in off-season can start building running capacity. Early off season focused on just movign and feeling good, slightly more bodybuilderr style programming - sets of 8-12 to add some body armour. Then 6-8 reps as move toward end of off season. Pre season generally starts round november. Games finish in august/september. So generally have 2 months in off season, sometimes 3. 
-* Deload rules: once every 4 weeks or so deload. This can be just changing the program and starting with a lighter week in the new program. I've always liked 3-4 weekly cycles. Deload when user is fatigued or showing a lack of readiness too. May need less deload here in terms of conditioning - but lifting will be causing some soreness so changing the stimulus and having lighter weeks is good. 
+* Deload rules: the off-season deload ladder runs in three stages. Weeks 1-2 (early off-season) are the OPTIONAL block - everything optional, zero completed sessions is a valid honest week, and no deload applies because nothing is compulsory. Weeks 3-4 are the TRANSITION block - normal training returns, but week 4 does not automatically deload. From week 5 onward, normal 3-4 week deload cycles begin. Deload as well when the user is fatigued or showing a lack of readiness. May need less deload here in terms of conditioning - but lifting will be causing some soreness so changing the stimulus and having lighter weeks is good. 
 2. Weekly structure rules
 This is where you define how the week should be built.
 
@@ -131,6 +133,36 @@ This is where you define how the week should be built.
 * Rules around bye week: train harder i.e. mini pre season like an off season week OR use as a really good time to rest and recover i.e. bigger deload week 
 * Rules around missed sessions: doesn't matter too much. Different athletes wil be more or less diligent filling them in. Just give the pop up in the app "did you complete this session" - if continue missing sessions then program may need to change. 
 * Rules around busy/away weeks: depends on what the athlete can do. they will say when they'r away and maybe make all sessions optional during that time. If busy then can move sessions if the week allows it or simply skip. 
+Weekly assembly rules
+These are PRINCIPLES, not fixed templates. The assembler must reproduce the canonical weeks below from the rules, not hardcode them.
+Inputs: the athlete's actual team-training nights, their available days, the season phase, and the game/fixture. Team-training nights MOVE - pre-season TT is often Monday/Wednesday because cricket owns the Tuesday/Thursday grounds - so never assume Tuesday/Thursday.
+Placement rules:
+
+* Team-training nights are anchors wherever they fall. Attach upper work to a TT night when gym-after-training works, e.g. Upper Pull + TT. 
+* Hard running and top-end work pair with UPPER days. LOWER days pair with off-leg conditioning. A hinge day never meets a sprint session. 
+* Space lower exposures. Rest follows dense clusters. Prefer doubles plus full off-days over one session per day. 
+* Fewer available days means full-body consolidation. Two gym days = full body x2 (Monday/Wednesday in-season). Weekend available = use it for volume slots; weekend unavailable = compress into weekdays with the same pairings. 
+In-season splits:
+
+* 2 days: full body Monday + Wednesday. 
+* 3 days: Lower Monday, Upper Pull + TT, rest, Upper Push + TT. 
+* 4 days: as above plus optional accessories/prehab Wednesday and an optional Gunshow Friday. 
+* Everyone may take an optional Gunshow at G-1. 
+Team-training day gym pairing: full-body strength CAN share a day with team training. Morning gym / evening track is normal. The rule is an EXERCISE-SELECTION FILTER on TT days, not a pairing ban.
+
+* On a TT day, avoid high-soreness picks - RFE split squats, Nordics, back squats, heavy RDLs - and avoid heavy low-back and groin loading. 
+* Athletes are not made of glass. Low-rep RDLs are fine. Box squat is fine. Especially at 2-3 lifts for the day. 
+* This filter is applied through the existing soreness/eccentric/injury-map tags plus a dose cap. It is never a hardcoded exercise-name list. 
+Skip rules:
+
+* Move-forward relocates a session only to a legal day. If there is no legal day, the session is honestly gone. 
+* A missed or skipped session is recorded, the week continues, and NEXT WEEK IS NEVER MORTGAGED. 
+* Pattern absorption: a missed upper pattern folds into the remaining same-region session as a normal-sized combined day - key lifts in, accessories out. Never 12-14 lifts. Never across regions. 
+Bye week: the athlete chooses "Freshen up" (default) or "Push on", and the choice applies to the REMAINDER of the week whenever it is declared. Push-on adds one lower stimulus plus extra OFF-LEG conditioning (running still capped at 3 days per week), and the bye Saturday hosts a hard high-speed session - 150s at 2:00, 400s, or aerobic power - on the day the body expects game intensity.
+Canonical reference weeks (targets for the assembler, not templates to copy):
+
+* Pre-season ideal: Monday Upper Pull + TT, Tuesday Lower, Wednesday TT, Thursday rest, Friday Upper + hard conditioning/top-end, Saturday Lower + off-leg conditioning, Sunday rest. 
+* Pre-season weekend-unavailable variant: Monday TT, Tuesday Full Body, Wednesday TT, Thursday Lowers, Friday Uppers + hard conditioning. 
 3. Hard exposure rules
 This needs its own section.
 Define what counts as stress.
@@ -156,7 +188,7 @@ Low stress
 * Mobility
 * Walk/bike flush
 * Upper pump
-* Easy core
+* Easy midline
 * Note on this - do not program ski erg rower or assault bike as a 25 min flush being an easy session - don't even program it at all - you can do a 30 min regular bike but for something like a row or ski 3x8 on 2 off or something is better - it is just uncomfortable on there to do a straight 30 min session on the rower and it is not something I would program - also feel free to make it like 8 min on 2 min off row, 8 min on 2 min off ski, 8 min on 2 min off bike as much session = i would do that quite often for a flush out session
 Then write rules:
 
@@ -183,6 +215,15 @@ Injuries
 Fatigue/readiness
 Goals
 The app should not treat every session as equal. A lower strength day, team training, hard conditioning day, recovery session and rest day all create different stress.
+Session structure and ordering
+Canonical order inside a session: power -> main -> secondary -> accessories -> finisher.
+Midline and prehab sit after the accessories.
+EXCEPTION - contrast training. A heavy lift may superset with an explosive lift of the SAME pattern (heavy bench -> explosive push-up, heavy squat -> vertical jump). The pairing sits at the MAIN slot; it is not appended to the end of the session. Contrast is allowed only for athletes at training age `consistent` or `advanced`. A `developing` athlete does not receive contrast work.
+ONE MAIN PER PATTERN PER SESSION. Never two heavy lifts of the same movement pattern in one session. Deadlift + RDL is two heavy hinges and is illegal. Box squat + back squat is two heavy squats and is illegal. A second heavy lift in a session must be a different pattern.
+Lower-session heavy-slot ladder, in fill order: heavy squat pattern -> heavy hinge pattern -> single-leg knee-dominant -> single-leg hip-dominant -> accessories. An athlete is better served by a squat and a hinge than by two squats; if both are present, think single-leg knee-dominant and single-leg hip-dominant, then accessories.
+The session is ONE list. There are no separate boxes for midline/support work, recovery add-ons or the power block - every exercise renders in the single session list carrying a role badge: power, main lift, accessory, midline, prehab, conditioning. A second heavy lift reuses the Main Lift badge.
+One optional "Mobility & Prehab flow" sits at the TOP of the session, collapsed. It includes session-appropriate primers, e.g. external rotations on upper days. The flow is NEVER load-bearing: the app assumes athletes skip it, so any prehab that actually matters lives in the session itself, not in the flow.
+Team training renders as a non-badged banner. Recovery days keep their own simple template. On a combined day, conditioning is one badged row that expands in place; on a conditioning-only day the rows follow phase order, and there is no flow.
 Lower strength
 Purpose: Build or maintain lower-body strength, power, muscle, robustness and body armour for footy.
 Lower strength should help the athlete handle:
@@ -202,14 +243,14 @@ Single-leg
 Hamstring
 Adductor/groin
 Calf/Achilles
-Core/carry
+Midline/carry
 Squat: Build knee-dominant lower-body strength. Good options include back squat, front squat, box squat, goblet squat, safety bar squat, Bulgarian split squat if used as a main lift.
 Hinge: Build posterior-chain strength. Good options include trap bar deadlift, deadlift, RDL, single-leg RDL, hip thrust, back extension.
 Single-leg: Build unilateral strength, balance, hip control and lower-limb robustness. Good options include Bulgarian split squat, reverse lunge, step-up, split squat, walking lunge, single-leg RDL.
 Hamstring: Build hamstring strength and capacity for sprinting, kicking and repeat efforts. Good options include Nordics, hamstring curls, RDLs, single-leg RDLs, hip thrusts, bridges, Bosch holds.
 Adductor: Build groin/adductor capacity for sprinting, kicking, lateral movement and COD. Good options include groin squeeze, Copenhagens, adductor machine, lateral lunge.
 Calf: Build lower-leg and tendon capacity for running, sprinting, jumping and repeat efforts. Good options include standing calf raise, seated calf raise, single-leg calf raise, tib raises.
-Core: Build trunk stiffness, bracing and control. Good options include dead bug, Pallof press, side plank, carries, chops, hanging knee raises.
+Midline: Build midline stiffness, bracing and control. Good options include dead bug, Pallof press, side plank, carries, chops, hanging knee raises.
 In-season version: Lower strength should be familiar, lower volume, high quality and not too close to game day.
 Usually best early in the week.
 For Saturday game:
@@ -323,7 +364,7 @@ Hammer curls
 Tricep pushdowns
 Skull crushers
 Lateral raises
-Core: Can be included on upper days if it does not make the session too long or too fatiguing.
+Midline: Can be included on upper days if it does not make the session too long or too fatiguing.
 Good options:
 Pallof press
 Side plank
@@ -393,7 +434,7 @@ If shoulder pain is active:
 Reduce painful pressing
 Avoid heavy overhead work
 Avoid dips if painful
-Use landmine press, neutral DB press, floor press, push-up variation, rows or lower-body/core work if tolerated
+Use landmine press, neutral DB press, floor press, push-up variation, rows or lower-body/midline work if tolerated
 Anything 6/10 or above should recommend physio/medical advice and avoid painful pressing/overhead/contact work.
 Full body
 Purpose: Cover the main strength patterns when the athlete has fewer strength days, a busy week, or needs a compact session.
@@ -410,7 +451,7 @@ A simple full-body session should usually include:
 1 squat or hinge
 1 push
 1 pull
-1 single-leg, accessory or core/carry
+1 single-leg, accessory or midline/carry
 Optional small prehab/accessory
 Example:
 Box squat
@@ -446,7 +487,7 @@ Triceps
 Delts
 Upper-back pump
 Shoulder/scap work
-Core
+Midline
 Calves
 Adductors
 Hamstring-light work
@@ -457,7 +498,7 @@ What it should not become:
 
 * A hidden hard lower-body session. 
 * A hard conditioning session. 
-* A replacement for missing core strength work. 
+* A replacement for missing main strength work. 
 * A compulsory session that makes the week too busy. 
 * A session that leaves the athlete sore for game day. 
 Recovery
@@ -478,7 +519,7 @@ Walking
 Light mobility
 Breathing/reset work
 Tissue quality
-Gentle core
+Gentle midline
 Light prehab
 Easy movement flow
 Duration: Usually 10-40 minutes.
@@ -711,17 +752,18 @@ Easy bike
 Mobility flow
 Breathing
 Light tissue quality
-Gentle core/prehab
+Gentle midline/prehab
 It should not turn into hard conditioning or a secret extra session.
 5. Strength programming rules
 This section should be very detailed.
 Main lift rules
 
 * Main lift purpose: Build strength and power in basic movement pattern, do the basics ruthlessly well. If you can get a strong bench, squat, RDL, pull up, row and overhead press - you're going to be very well rounded and have a good amount of body armour. Using these same lifts all year round we can minimise the chance of random soreness in season because your body is used to lifting this way. Which means we can continue piling on the weights getting stronger and more powerful all yeah and maintaining muscle mass. 
-I generally break it down into hinge, squat, push (overhead and horizontal), pull (overhead and horizontal), knee dominant leg, hip dominant single leg, arms, lower body accessories, core, carry. Then those categories can be broken down further if needed like single arm, rotational core, anti-flexion, anti-extension and so on. 
+I generally break it down into hinge, squat, push (overhead and horizontal), pull (overhead and horizontal), knee dominant leg, hip dominant single leg, arms, lower body accessories, midline, carry. Then those categories can be broken down further if needed like single arm, rotational midline, anti-flexion, anti-extension and so on. 
 * Sets/reps in-season: 2-4 sets of 2-4 reps in season. 3x3 is generally pretty good. Especially for lower body. Upper body could be closer to that 3x5. And even 3x6 for pulling exercises - I find your pulling muscles can generally tolerate higher loads. Soreness should not be too much of an issue in season because we have already learned all these moves in off season so doing split squats or nordics will not be surprise soreness your body is not used to especailly if you keep the reps low, high quality and volume not too high
 * Sets/reps pre-season: This can be slightly more than in season. I like 2-4 sets of 4-6 reps here, 3x5 is generally good for strength and muscle building at the same time. Anything more than 6 becomes more focused on muscle building anything less than 5 is more about strength and less muscle building and you want a combination here. Same principles apply with the push vs pull stuff 
 * Sets/reps off-season: Slightly more than pre season. 2-4 sets of 6-8 reps here is good. 3 x 8 is a good base. Some exercises can go up to 12 reps especially for things like pull ups, lat pull downs and row variations. But again, if something is strong, and heavy and says they want to work on fitness mostly, I'd keep the muscle building to a minimum more focused on the 2-4 range. If there goal is muscle mass it should be more in the realm of 6-10 reps. 3 sets is a good starting point for most things. 
+* How reps are PRESCRIBED vs how they are WRITTEN: the rep ranges throughout this Bible remain the generation source, but the athlete is shown a SINGLE MIDDLE NUMBER, not a range. 3x8-12 is written as 3x10; 2-4 sets of 4-6 resolves to a single set count and a single rep number. Assume-prescribed logging then reads exactly what was prescribed - 3x10 done = 3x10. This supersedes any earlier top-of-range vs floor-of-range toggle. 
 * Intensity/RPE: Depends on season phase, in season should be big weights, not to complete fatigue or max though. Could say 7/8 out of 10. Pre season off season with slightly higher reps they can go closer to failure and grind a little bit more in the 8/9 out of 10 range.
 * Rest: I don't really prescribe rest. If i said anything about rest it would be rest until you feel ready to do the next set. On main lifts, you should not be breathing heavy going into a lift. 
 * When to go heavy: year round, don't go as close to failure in season. I have no problem with an athlete doing heavy lowers on a monday and sometimes even a wednesday if they have been training year round. Just keep the reps high quality, not too close to failure, and limiting range of motion for something like a box squat can help. 
@@ -746,7 +788,7 @@ This means balancing:
 * horizontal pull
 * vertical pull
 * single-leg work
-* trunk / carry work
+* midline / carry work
 Gunshow, accessories, prehab, mobility and recovery work are useful, but they do not replace proper upper or lower strength exposure.
 The app should not treat all strength sessions as interchangeable.
 A lower strength session creates different stress and adaptation than an upper strength session. A squat/knee-dominant lower session creates a different stimulus than a hinge/hip-dominant lower session. A push session should be balanced with enough pulling over time.
@@ -755,8 +797,8 @@ This does not mean every week must be perfectly balanced. Game day, team trainin
 Examples:
 
 * If lower strength is unsafe close to game day, preserve upper strength where possible.
-* If pressing is restricted by a shoulder issue, pulling, lower body, core and shoulder-friendly work may dominate temporarily.
-* If hamstring or lower-back issues restrict hinging, squat/knee-dominant work, upper body and safe core work may dominate temporarily.
+* If pressing is restricted by a shoulder issue, pulling, lower body, midline and shoulder-friendly work may dominate temporarily.
+* If hamstring or lower-back issues restrict hinging, squat/knee-dominant work, upper body and safe midline work may dominate temporarily.
 * If the athlete only has one gym day, full body may be the best option.
 Simple rule: Protect the game first, but do not make the program softer than it needs to be.
 When a full lower or full-body session cannot fit safely, the app should consider:
@@ -777,9 +819,9 @@ Squat accessories: Walking Lunges, Reverse Lunges, Step Ups.
 Hinge accessories: Hip Thrusts, Kettlebell Swings, back extensions
 Lower accessories include Nordic Lower, Hamstring curl, Leg Extension, Calf Raises, Tib Raise, Adductor Machine.
 Gunshow: biceps x2, triceps x2, delts x1, upper-back pump x1.
-* Prehab/accessories: trunk anti-rotation, groin adductors, shoulder health, calves, hamstring-light, bosch hold
+* Prehab/accessories: midline anti-rotation, groin adductors, shoulder health, calves, hamstring-light, bosch hold
 * Pool examples: Bicep Curl, Incline DB curl, Hammer Curl, Tricep Pushdown, Skull Crushers, Lateral Raise, Incline Y Raise, Face Pull, Nordic Lower, Calf Raises, Adductor Machine, Crab walks, copenhagen planks, groin squeeze, 
-* Core/carries: Dead bug, Pallof press, Side plank, Farmer carry, Suitcase carry, bear carry, cable / chop variations, hanging knee/leg raises, dragon flags, ab wheel, 
+* Midline/carries: Dead bug, Pallof press, Side plank, Farmer carry, Suitcase carry, bear carry, cable / chop variations, hanging knee/leg raises, dragon flags, ab wheel, 
 Lower squat rules
 Purpose: Build lower-body strength, power, knee-dominant strength, muscle, and body armour for footy. Squat patterns help athletes handle contact, acceleration, deceleration, jumping, landing, and general lower-body robustness.
 Examples: Back squat, front squat, box squat, goblet squat, safety bar squat, Bulgarian split squat if used as a main lift.
@@ -875,7 +917,7 @@ Special rules:
 * In-season hamstring work should be lower volume and familiar to the athlete. 
 * Off-season and pre-season can build more hamstring capacity. 
 * If a hamstring issue is active, reduce sprinting, max velocity work, aggressive running, heavy hinges, Nordics, and high-volume hamstring loading. 
-* Keep safe work in where possible, such as upper body, core, easy bike, and non-painful lower-body work. 
+* Keep safe work in where possible, such as upper body, midline, easy bike, and non-painful lower-body work. 
 Simple sets/reps guide:
 
 1. 
@@ -895,11 +937,11 @@ Special rules:
 * More volume and harder variations are better suited to off-season and pre-season. 
 * If groin pain is active, reduce sprinting, kicking, hard change of direction, deep lateral lunges and heavy adductor loading. 
 * If symptoms are high, pause affected work and recommend physio/medical advice. 
-* Keep safe work in where possible, such as upper body, core, easy bike, and non-painful lower-body work.
+* Keep safe work in where possible, such as upper body, midline, easy bike, and non-painful lower-body work.
 Calf/Achilles rules
 
 * Purpose: Build lower-leg strength and tendon capacity for sprinting, jumping, landing, change of direction, repeated running, and staying durable through footy.
-Examples: Standing calf raise, seated calf raise, single-leg calf raise, pogo jumps, skipping, sled pushes, tib raises.
+Examples: Standing calf raise, seated calf raise, single-leg calf raise, pogo jumps, skipping, tib raises. NO SLEDS - sleds are not part of the LFA vocabulary in any session type.
 Special rules:
 * Straight-knee calf work targets more of the gastrocnemius. 
 * Bent-knee calf work targets more of the soleus, which is important for running repeat efforts. 
@@ -907,7 +949,7 @@ Special rules:
 * In-season should usually be small maintenance doses, not sudden high-volume calf work. 
 * Plyometric prep can include pogos, skips, low hops, and landing work, but only if tolerated. used in warm up occasionally but would rarely program, may come back to in future
 * If calf/Achilles pain is active, reduce sprinting, jumping, hard running, hill sprints, and high-volume calf raises. 
-* Keep safe work in where possible, such as upper body, core, bike conditioning, and non-painful lower-body work. 
+* Keep safe work in where possible, such as upper body, midline, bike conditioning, and non-painful lower-body work. 
 Simple sets/reps guide:
 
 1. 
@@ -915,9 +957,9 @@ Simple sets/reps guide:
 * Calf raises: 2 sets of 8-15. 
 * Seated/bent-knee calf raises: 2 sets of 10-20. 
 * Pogos/skips: small doses only, especially in-season. may be used in a warm up in the future, otherwise would never program 
-Core/trunk rules
+Midline rules
 
-* Purpose: Build trunk strength, bracing, control and body armour for footy. Core work should help the athlete transfer force, stay strong in contact, sprint, change direction, land, twist, brace and hold good positions under fatigue.
+* Purpose: Build midline strength, bracing, control and body armour for footy. Midline work should help the athlete transfer force, stay strong in contact, sprint, change direction, land, twist, brace and hold good positions under fatigue.
 Key categories:
 Anti-extension: Stops the athlete from overextending through the lower back.
 Examples: Dead bug, ab wheel, plank, stir the pot, hollow hold.
@@ -927,24 +969,24 @@ Lateral / anti-lateral flexion: Builds side-body strength and control.
 Examples: Side plank, suitcase carry, side plank row.
 Flexion: Direct ab work, usually higher control and not the main priority.
 Examples: Hanging knee raises, hanging leg raises, dragon flags
-Carries: Build trunk stiffness, grip, shoulder stability, posture and contact robustness.
+Carries: Build midline stiffness, grip, shoulder stability, posture and contact robustness.
 Examples: Farmer carry, suitcase carry, bear carry
-Sets/reps guide: Core and carries are mostly secondary/accessory work.
+Sets/reps guide: Midline and carries are mostly secondary/accessory work.
 * Timed holds: 2-3 sets of 30-60 seconds. 
 * Carries: 2-4 sets of 20-60 metres or 30-60 seconds. 
-* Rep-based core: 2-3 sets of 8-15 reps. 
+* Rep-based midline: 2-3 sets of 8-15 reps. 
 * Harder movements like ab wheel, dragon flags or heavy carries should stay lower volume. 
-* Arms/core/accessory style work does not need strict progression. Pick a level that feels useful, controlled and repeatable. 
+* Arms/midline/accessory style work does not need strict progression. Pick a level that feels useful, controlled and repeatable. 
 Special rules:
 
 1. 
 
-* Core should be included regularly, but it should not destroy the athlete. 
-* In-season core should be familiar, low-soreness and not too fatiguing. 
+* Midline should be included regularly, but it should not destroy the athlete. 
+* In-season midline should be familiar, low-soreness and not too fatiguing. 
 * Pre-season and off-season can use more volume or harder carry variations. 
-* Carries are useful for footy because they build bracing, grip, posture, trunk stiffness and general robustness. 
-* If lower back, hip, groin, rib or shoulder issues are active, choose core variations that do not aggravate them. 
-* Avoid turning core into a massive fatigue session when the athlete already has hard lifting, team training or a game coming up.
+* Carries are useful for footy because they build bracing, grip, posture, midline stiffness and general robustness. 
+* If lower back, hip, groin, rib or shoulder issues are active, choose midline variations that do not aggravate them. 
+* Avoid turning midline into a massive fatigue session when the athlete already has hard lifting, team training or a game coming up.
 Upper push rules
 Purpose: Build upper-body pushing strength, chest/shoulder/triceps strength, contact strength, body armour, and general upper-body power for footy.
 Examples: Bench press, incline bench, close-grip bench, DB bench press, incline DB bench, push-ups, dips, overhead press, landmine press, DB shoulder press, half-kneeling single-arm OHP, Z-press.
@@ -1026,15 +1068,32 @@ Broad jump
 Countermovement jump
 Low box squat jump
 RFE split squat jump
-Medicine ball throw variations if available
+Depth jump
+Lateral jump
+Lateral bounds
+Kneeling jump
 Upper-body power:
 Speed bench
 Explosive push-ups
 Explosive landmine press
-Medicine ball chest pass if available
-Medicine ball slam/throw if available
+Medicine ball work has been REMOVED from LFA entirely. Chest pass, slam and overhead throw are retired; the power block is bodyweight-first and never depends on a medicine ball being available.
+Power exercise selection and experience gating
+The app picks ONE primary power exercise per session from the power pool, and the pick is block-stable: the same exercise every week within a training block, rotating at block rollover so vertical, lateral and depth qualities all get trained across blocks. No per-week randomness. The athlete can change the pick and the change persists for the block.
+Experience gating uses ONE ladder for the whole app: new -> developing -> consistent -> advanced. Every power entry declares a minimum on that ladder.
+
+* Vertical jump: no minimum. Default lower entry, any phase where power is allowed. 
+* Lateral jump: no minimum, beginner-friendly, any phase where power is allowed. 
+* Explosive push-up: no minimum. Default upper entry. 
+* Depth jumps: off-season and pre-season only, minimum `developing`, and only if a knee-height box is available. 
+* Lateral bounds: off-season and pre-season only, minimum `developing`. 
+* Kneeling jump: off-season and pre-season only, minimum `consistent`. 
+* In-season the pool narrows to the familiar low-impact entries only: vertical jump and lateral jump. 
+* When a lower niggle reduces power work, pogo jumps take over the lower slot regardless of any other eligibility. 
+* Equipment substitutes, it never forces: no box means no depth jumps and the selector falls back. A zero-equipment option always exists for every family, phase and experience level. 
+Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Everyone else reaches it through the injury door, an equipment constraint, or their own pick - it is never auto-programmed for them.
 Contrast training
 Contrast training means pairing a heavy strength movement with an explosive movement that uses a similar pattern.
+Contrast is gated to athletes at training age `consistent` or `advanced`. A `developing` athlete gets a power primer, never contrast. The pairing sits at the main slot and draws its explosive movement from the same power pool and the same gates as the primer.
 The goal is to lift heavy, then immediately express power.
 Example:
 Heavy box squat
@@ -1055,13 +1114,11 @@ Box squat -> box jump
 Back squat -> broad jump
 Trap bar deadlift -> broad jump
 Split squat -> RFE split squat jump
-Heavy sled push -> short acceleration
 Upper-body contrast examples:
 Bench press -> explosive push-up
 Speed bench -> explosive push-up
 Landmine press -> explosive landmine press
 DB bench -> explosive push-up
-Heavy row -> med ball slam/throw if available
 Sets / reps for contrast training
 Contrast training should stay low volume.
 Simple guide:
@@ -1180,17 +1237,76 @@ Conditioning should help the athlete play better footy, recover better, and hand
 The goal is not to randomly flog the athlete. The goal is to build or maintain the right engine for the time of year.
 In-season conditioning should support performance and freshness. Pre-season conditioning should build game readiness. Off-season conditioning should build general fitness, aerobic base, and weak points without interfering too much with strength/muscle goals.
 Team training and games count as conditioning load. The app should not ignore them.
+Conditioning framework authority
+Conditioning doses are NOT defined in this Bible. Two authored-final documents own them:
+
+* `docs/CONDITIONING_FRAMEWORK_SAM_2026-07-25.md` - the physiology: definitions, the governing quality table, intensities, W:R bands, set-length rules, template properties and the standing modality rules. 
+* `docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx` - the 55 authored templates across the 8 quality tabs, each carrying its full schema. 
+Both are signed off by Sam and changes require Sam. This Bible states the law, the placement rules and the phase emphasis; it does not restate the 55 doses. Where an earlier conditioning example, work:rest list or session menu in this document disagrees with those two files, the two files win.
+THE CLASSIFICATION LAW
+INTENSITY CLASSIFIES. W:R IS ONLY A PROPERTY.
+A session belongs to the quality its INTENSITY says it belongs to. Its work-to-rest ratio describes the session; it does not decide which quality the session is. A W:R or an effort length that sits outside a quality's tabled band is a PROPERTY of that session - not a misfiling, and not an error. The bands are descriptive of the typical case. They are not a filing test.
+Do not build a validator, a swap rule or a generation gate that reclassifies a session because its ratio fell outside a band.
+The eight qualities
+Conditioning is organised into eight quality rows. No conditioning format exists outside them.
+
+* Acceleration 
+* Top End Speed 
+* Repeat Sprint 
+* COD/Decel 
+* Anaerobic (the old GRIND bucket is folded in here) 
+* Aerobic Power 
+* Aerobic Capacity 
+* Flush 
+Aerobic power is how fast the aerobic system can produce energy - roughly VO2max, the engine's top speed. Aerobic capacity is how much aerobic work can be sustained or accumulated - the fuel tank. For footy: power is a high output in a hard passage; capacity is working across four quarters and recovering to go again.
+The governing quality table:
+
+* Anaerobic power (alactic): effort 3-10 sec, W:R 1:6-1:12, objective maximum speed and explosiveness. 
+* Repeated-sprint ability: effort 4-10 sec, W:R 1:3-1:5, objective repeat high-speed efforts. 
+* Anaerobic capacity (glycolytic): effort 15-60 sec, W:R 1:2-1:5, objective sustain hard work through fatigue. 
+* Aerobic power: effort 1-5 min, W:R 1:1-2:1, objective high aerobic output. 
+* Aerobic capacity: longer or continuous, W:R 3:1 to continuous, objective total sustainable aerobic work. 
+Sprint-family exemption: for alactic sprint work the 1:12 ceiling is NOT binding - full recovery at 1:10-1:15 and beyond is allowed. The 1:6 floor still holds.
+Set-length rule for short-intermittent work: high-%MAS short reps (the 15:15 class, reps up to about 40 seconds) build aerobic power ONLY while the set stays contained - block of about 4-5 minutes maximum, with rest between blocks. A short-rep session that runs unbroken past that is no longer aerobic-power work. This rule does not touch 1-minute shuttle reps or the 2-4 minute interval rows.
+Where the old buckets went
+The earlier easy-aerobic / tempo / hard-interval buckets in this section are retained as PLACEMENT and FEEDBACK guidance only. Their doses now live in the templates sheet:
+
+* Easy aerobic -> Flush, and the lower end of Aerobic Capacity. 
+* Tempo / extensive conditioning -> Aerobic Capacity (extensive tempo, aerobic shuttles), and the lower end of Aerobic Power. 
+* Hard intervals -> Aerobic Power and Anaerobic. 
+* Sprint, repeat-effort and COD work -> Acceleration, Top End Speed, Repeat Sprint and COD/Decel. Placement rules for those stay in Section 7. 
+Template schema
+Every template must carry: work period, rest period, sets/rounds (reps where relevant), intensity, a work:rest ratio, and total session time. A template missing any of these is not shippable.
+Template properties
+A template may carry a property that limits WHEN or HOW it is prescribed. Properties bind at selection time. They are never written into the dose.
+
+* FINISHER ROLE ONLY - never prescribed as the session itself. 
+* FALLBACK ONLY - only for athletes with genuinely no equipment; never in-season or pre-season. 
+* AVAILABILITY GATE, no-team-training weeks only, LOW selection priority - the whole COD/Decel row. Prescribe it only in weeks with NO team training (late off-season, the Christmas break) and cut it first when something has to give. Team training already supplies the cutting volume. 
+* MID-SESSION MIXING ALLOWED - flush work only. The athlete may rotate machines and/or running between rounds within the one session. 
+* SET LENGTH <= 4-5 min - the short-intermittent rule above. 
+* NO SKI / ROW (flywheel spin-up) - Ski and Row are excluded from every sub-10-second template, including the 10-second rows. The flywheel cannot spin up inside the effort, so the rep produces no real work. Air Bike, Bike and Run carry the short templates. 
+Standing modality rules
+
+* Time-first prescriptions. Distance is allowed for short and speed work. Calories for EMOM-class work. 
+* Run, Ski and Row share distances. Bike is x2. Air Bike is prescribed by time, via 250 m being roughly 1 minute. 
+* Work intervals longer than 8 minutes are Run or Bike only. Ski, Row and Air Bike have a HARD CAP of 8 minutes in any one work interval, and 6 minutes or less is preferred. This supersedes the old 10-minute erg line wherever it appeared. 
+* The sprint family (Acceleration, Top End Speed, COD/Decel) is run-only. 
+* NO SLEDS. 
+* Flush is a small distinct set, not a long list of near-duplicates. 
+* Running is capped at 3 days per week and floored at 2. See Section 17 B. 
+Sam's programming emphasis for local footy
+Anaerobic power and repeat-sprint ability are usually MORE valuable than large amounts of brutal lactate work. Team training and matches already supply plenty of glycolytic stress; what is genuinely undertrained is true maximal sprinting with full recovery. Build capacity earlier in pre-season, then move toward aerobic power intervals and footy shuttles as the season approaches.
+MAS and the 2 km time trial
+MAS is collected in onboarding through a 2 km time trial, sitting with the strength questions. 2 km is the AFL club standard and many athletes know their time cold.
+The question is skippable - "not sure / haven't tested" is the default, and MAS then defaults by experience level so every MAS-based session still renders.
+MAS is stored on device. The %MAS intensities in run templates render as per-athlete paces and rep distances; this is the personalisation layer for time-first conditioning.
+The app may prescribe a 2 km time trial as a genuine aerobic-power session every 6-8 weeks or so to recalibrate MAS and feed the fitness trend.
 Easy aerobic
 Purpose: Build aerobic base, improve recovery, add low-stress conditioning, and help the athlete handle more total work without getting cooked.
 Best modes: Easy run, bike, rower, ski, air bike, easy circuits.
-Duration: Usually 15-45 minutes depending on phase, fitness level and weekly load.
-Simple guide:
-
-* Short flush: 15-25 min. 
-* Normal easy aerobic: 25-40 min. 
-* Longer aerobic base: 35-60 min if appropriate. 
-* Can be continuous or easy intervals such as 3x8 min 2 min rest between rotating through different ergos. 
-Intensity: Easy. Conversational. Around 3-6 / 10.
+Doses: the Flush tab and the lower end of the Aerobic Capacity tab in the templates sheet. Do not invent durations here.
+Intensity: Easy. Conversational. Around 3-6 / 10. Roughly 65-80% MAS and 70-85% HRmax at the capacity end; below that for flush.
 The athlete should finish feeling better or steady, not smashed.
 When to use:
 
@@ -1204,7 +1320,7 @@ Progression:
 
 * Add 5 minutes. 
 * Add one extra easy aerobic day if recovery is good. Can also be optional. 
-* Good way to add work in off-leg if they have hard sprint sessions or hard conditioning during the week on legs. With max 4 running sessions a 20 min bike flush or a 30 min easy circuit of bike ski row is a game changer. 
+* Good way to add work in off-leg if they have hard sprint sessions or hard conditioning during the week on legs. With running capped at 3 days a week, a 20 min bike flush or an easy mixed erg circuit is a game changer. 
 * Do not progress easy aerobic into a hard session by accident. 
 Special rules:
 
@@ -1215,27 +1331,7 @@ Special rules:
 Tempo / extensive conditioning
 Purpose: Build repeat effort ability, running rhythm, aerobic power and work capacity without going as hard as true intervals.
 This should sit between easy aerobic and hard conditioning.
-Running examples:
-
-* Tempo runs. 
-* Cruise intervals. 
-* Controlled shuttles. 
-* Repeat 100s / 200s at controlled pace. 
-* Footy-style run-throughs. 
-* Extensive intervals where the athlete can keep quality. 
-Bike/row/ski/air bike examples:
-
-* 30 sec on / 30 sec easy. 
-* 1 min on / 1 min easy. 
-* 2 min on / 1 min easy. 
-* Controlled 10-20 min blocks. 
-* Moderate erg intervals. 
-Work/rest:
-
-* 1:1. 
-* 2:1. 
-* 3:1
-* 3-5 min moderate blocks with easy recovery. 
+Doses: the Aerobic Capacity tab (extensive tempo, aerobic shuttles, long aerobic intervals) and the lower end of the Aerobic Power tab. The shapes this bucket used to list - tempo runs, cruise intervals, controlled shuttles, repeat 100s and 200s, footy run-throughs, moderate erg intervals - are all authored templates on those tabs now. Do not write a new dose here.
 Intensity: Usually 6-8 / 10.
 Hard enough to train the engine, but not a max effort flogging.
 When to use:
@@ -1252,26 +1348,9 @@ Special rules:
 * Tempo should not become a hidden sprint/COD session so monitoring intensity is important. 
 Hard intervals
 Purpose: Build high-output conditioning, VO2, repeat effort ability, glycolytic capacity and the ability to keep working under fatigue.
-This is the “hard conditioning” bucket.
-Examples:
-
-* 4x4 min hard intervals. 
-* 1km repeats. 
-* MAS 15:15 style work. 
-* 200m / 400m repeats. 
-* Footy fartlek. 
-* Assault bike intervals. 
-* Rower/ski/bike hard intervals. 
-* Erg EMOM. 
-* Off-feet metcon. 
-Work/rest examples:
-
-* 4-5 x 4 min hard / 3 min easy. 
-* 4-6 x 1km with controlled rest. up to 3 min rest. 
-* 8 rounds blocks of 15 sec hard / 15 sec easy. 2 min rest between and repeat. 
-* 8-12 x 30 sec hard / 30-60 sec easy. 
-* 6-10 x 10-20 sec hard on assault bike/rower/ski. 
-* 20-30 min total hard conditioning time depending on the athlete. 
+This is the “hard conditioning” bucket. It splits across two quality rows: Aerobic Power (1-5 min efforts, near-max aerobic output, roughly 90-110% MAS and 90-95% HRmax late) and Anaerobic (15-60 sec efforts, heavy burn, total hard work 3-8 min).
+Doses: the Aerobic Power and Anaerobic tabs of the templates sheet. The shapes this bucket used to list - 4x4, 1km repeats, MAS 15:15, 200/400 repeats, footy fartlek, erg EMOM, air bike intervals, footy shuttles - are all authored templates there, already carrying quality-correct ratios and total times. Do not write a new dose here.
+The set-length rule applies: any 15:15-class block stays at 4-5 minutes or under, with rest between blocks.
 How many reps: Depends on athlete level, phase, and what else is in the week.
 Simple guide:
 
@@ -1315,9 +1394,9 @@ When to use:
 * When the athlete has team training/game load already. 
 * When conditioning is needed but sprint/COD/running is not appropriate. 
 Bike: Good all-round option. Useful for hard intervals, aerobic flushes, recovery rides, and leg-sparing conditioning.
-Rower: Good engine option, but can load the back/hips/hamstrings, so be careful with lower-back or hamstring issues. Don't program more than 10 minute rounds on this. Prefer max of 4-8min at any one time to be sitting on a rower. 
-Ski: Good option when lower-limb load needs to be reduced. Can be useful for upper-body conditioning and aerobic flushes. Don't program more than 10 minute rounds on this. Prefer max of 4-8min at any one time using ski erg. 
-Assault bike: Good for hard intervals, short power work, and off-feet conditioning. Can get brutal quickly, so dose matters. Best one for sprints as it uses whole body and requires 0 skill. 
+Rower: Good engine option, but can load the back/hips/hamstrings, so be careful with lower-back or hamstring issues. HARD CAP 8 minutes in any one work interval, and 4-6 min is preferred. Anything longer than 8 minutes must be Run or Bike.
+Ski: Good option when lower-limb load needs to be reduced. Can be useful for upper-body conditioning and aerobic flushes. HARD CAP 8 minutes in any one work interval, and 4-6 min is preferred. Anything longer than 8 minutes must be Run or Bike.
+Assault bike: Good for hard intervals, short power work, and off-feet conditioning. Can get brutal quickly, so dose matters. Best one for sprints as it uses whole body and requires 0 skill. Same 8-minute hard cap on a single work interval. Ski and Row are excluded from every sub-10-second template because the flywheel cannot spin up inside the effort - Air Bike, Bike and Run carry the short work.
 Why it matters: Off-feet conditioning lets the app keep the athlete fit without constantly adding more running load.
 This is especially useful for local footy because games and team training already include running, sprinting, deceleration, change of direction and contact.
 Conditioning by phase
@@ -1332,13 +1411,7 @@ Rules:
 * Be careful adding hard running if the athlete already has team training. 
 * Bye weeks can allow a little more work if the athlete is fresh. 
 * If the athlete is cooked, sick, sore or injured, reduce conditioning first before smashing strength. 
-Good in-season conditioning:
-
-* Easy bike flush. 
-* Short zone 2 off-feet. 
-* Light tempo if there is enough space from game day. 
-* Very small hard conditioning dose only when appropriate. Such as air bike sprints 3x20 seconds flat out every 2 min or 6x10 second every minute. 
-* Easy circuits such as EMOM's, 30:30x30, 8 on 2 off x 3 rounds, etc. 
+Good in-season qualities: Flush first, then the easy end of Aerobic Capacity, then a small Anaerobic or Repeat Sprint dose only when the week genuinely has room. Pick the template from those tabs; do not improvise a dose.
 Pre-season
 Goal: Build game readiness, repeat effort capacity, and running/conditioning tolerance while respecting team training load.
 Rules:
@@ -1349,15 +1422,7 @@ Rules:
 * More hard conditioning is allowed than in-season, but load still needs to be managed. 
 * Use a mix of aerobic base, tempo, hard intervals, and sprint exposure. Ideal week looks like speed exposure, repeat sprint ability, hard conditioning, and low slow aerobic base building. Some of that you get during training and some you won't. 
 * Build progressively. Do not jump from nothing to a huge running load. 
-Good pre-season conditioning:
-
-* Tempo intervals. 
-* VO2 intervals. 
-* Repeat-effort work. 
-* Easy aerobic base. 
-* Off-feet conditioning when legs are overloaded. 
-* MAS running. 
-* 1km repeats. 
+Good pre-season qualities: Aerobic Power and footy shuttles as the season approaches, Repeat Sprint, Top End Speed, Aerobic Capacity underneath it, and Flush around the hard days. Off-feet modalities when legs are overloaded. COD/Decel is gated OFF in any week that has team training.
 Off-season
 Goal: Build aerobic base, improve general fitness, support body composition goals, and prepare the athlete for harder pre-season work.
 Rules:
@@ -1368,15 +1433,7 @@ Rules:
 * Hard intervals can be included, but not every session needs to be hard. 
 * Running can be built gradually if the athlete tolerates it. 
 * Good time to fix weak engine without the pressure of games. 
-Good off-season conditioning:
-
-* Zone 2 work. 
-* Tempo intervals. 
-* Bike/row/ski/air bike intervals. 
-* Occasional hard conditioning. 
-* Gradual running exposure. 
-* A good mix of stimulus is useful here, i.e. not just all aerobic base, still good to get some intensity but potentially having longer interval sessions vs pure speed work. 
-* Speed work can come closer to the start of pre season so you're ready for speed/COD at training.
+Good off-season qualities: Aerobic Capacity as the base, Aerobic Power intervals as the build, occasional Anaerobic work, and gradual running exposure inside the 3-day running cap. A mix of stimulus matters here - not all aerobic base. Prefer longer interval sessions over pure speed work early. Acceleration and Top End Speed come closer to the start of pre-season so the athlete is ready for speed and COD at training. Late off-season and the Christmas break are the only normal home for COD/Decel work, because those are the weeks with no team training.
 Conditioning by athlete level
 Poor conditioning
 
@@ -1480,7 +1537,9 @@ Simple conditioning rules
 * Off-feet conditioning is useful when running load is high. 
 * Lower-limb injuries should shift conditioning away from running. 
 * If the athlete says conditioning is too hard repeatedly, the app must respond. 
-* Footy athletes must be able to sprint, repeat spring, grind for up to 1 min, have a big engine as well as play for 2 hours. So conditioning should prepare them for all of that. 
+* Footy athletes must be able to sprint, repeat spring, grind for up to 1 min, have a big engine as well as play for 2 hours. So conditioning should prepare them for all of that. That is exactly what the eight quality rows cover. 
+* Running sits between 2 and 3 days per week. Everything above that goes off-feet. 
+* Doses come from the templates sheet. A layer that invents its own conditioning dose is a defect. 
 Conditioning finisher rules
 Conditioning finishers are small add-ons, not hidden second sessions.
 A finisher should have a clear purpose:
@@ -1488,33 +1547,24 @@ A finisher should have a clear purpose:
 * easy recovery / flush
 * aerobic base touch
 * true tempo / moderate conditioning
-* trunk / carry / robustness work
+* midline / carry / robustness work
 * low-impact conditioning when running load is already high
 Not every strength session needs a finisher.
 The app should not automatically add conditioning to every strength day just to fill space. If the week already has enough conditioning exposure, or the finisher does not improve the week, it can be skipped.
 Avoid boring default prescriptions.
 LFA should not repeatedly prescribe the same 15-20 minute straight row, ski or bike finishers across the week.
 Long easy aerobic work can be useful, but it should not be the default finisher every time. It should be used when it has a clear purpose.
-Preferred finisher variety:
-
-* 8-12 min easy flush
-* 10-15 min aerobic intervals
-* 30:30 controlled tempo blocks
-* 1 min on / 1 min easy tempo
-* 2 min on / 1 min easy bike/row/ski
-* short loaded carries
-* trunk circuits
-* mobility / prehab circuits
-* no finisher when the week does not need one
+Preferred finisher variety comes from the Flush tab plus short loaded carries, midline circuits, mobility/prehab circuits - or no finisher at all when the week does not need one.
+Only a template carrying the FINISHER ROLE ONLY property may be used as a finisher and nothing else; a finisher-role template is never prescribed as the session itself. Every other template may serve as a session or, where the dose fits, as an add-on.
 Lower body days:
 
-* usually easy off-feet aerobic, short flush, mobility, trunk or no finisher
+* usually easy off-feet aerobic, short flush, mobility, midline or no finisher
 * avoid hard conditioning after heavy lower
 * avoid sprint/COD after hinge-heavy work
 Upper body days:
 
 * good place for tempo or moderate conditioning
-* can also use trunk, carries or aerobic intervals
+* can also use midline, carries or aerobic intervals
 * still avoid hidden VO2/sprint unless specifically planned
 Game/team training weeks:
 
@@ -1547,7 +1597,7 @@ Simple examples:
 * 6-10 x 10m. 
 * 4-8 x 20m. 
 * 4-6 x 30m. 
-* Hill sprints or sled pushes can be used carefully. 
+* Hill sprints can be used carefully. NO SLEDS. 
 Reps: Usually 4-10 quality reps depending on phase, athlete level and weekly load.
 Rest: Enough to keep quality high.
 
@@ -1615,7 +1665,7 @@ Special rules:
 Change of direction
 Purpose: COD is important for footy, but LFA does not usually prescribe dedicated COD/agility sessions. Most local footballers already get enough cutting, reacting, braking and changing direction through team training and games.
 The app should not waste training time trying to turn COD into a major standalone quality unless there is a clear reason.
-Main philosophy: Strength training, sprint exposure, good lower-body strength, trunk control, single-leg work, and regular footy training should cover most COD needs.
+Main philosophy: Strength training, sprint exposure, good lower-body strength, midline control, single-leg work, and regular footy training should cover most COD needs.
 I do not believe most local athletes will make big enough improvements in agility or COD from isolated cone drills to make it worth prioritising over strength, conditioning, sprinting, recovery and staying available.
 When COD might appear: Only occasionally, usually:
 
@@ -1808,6 +1858,17 @@ The app should:
 The goal is not “injury = stop everything.”
 The goal is:
 Do as much useful work as possible without making the issue worse.
+Injury is a dialogue, not a diagnosis
+It is a conversation between an S&C coach and an athlete. The app is not trying to prescribe rehab - that is the physio's job. The app's job is to figure out what the athlete can and cannot do, and prescribe that.
+THE APP NEVER ASSUMES. IT ASKS.
+Default: an injury pauses AFFECTED-REGION work only. Team nights and games KEEP their conditioning and sprint credit. A shoulder does not stop someone running, and the app must not silently withdraw field credit because an injury was recorded.
+When severity or region genuinely threatens participation - roughly 6/10 and above, or where the region is directly relevant to running and playing - the injury flow asks, in this order:
+
+* "Can you still train and play?" 
+* If no: "Will you be doing any work on those days?" 
+* If yes: "Want me to prescribe a session that fits?" 
+Every answer is a recorded typed fact. Withdrawing anchor credit and reducing the matching weekly requirement are ONE atomic authored decision - never a silent credit removal that leaves the requirement standing, and never a requirement reduction with the credit left in place. Any replacement session is generated respecting the injury, owned by the same transaction, disclosed to the athlete, and undoable as one cascade.
+The coach chat asks the same questions through the same door. There is one injury dialogue, not two.
 Exercise swap hierarchy
 When an exercise hurts or is not tolerated, the app should use this order:
 Same movement pattern if possible
@@ -1815,7 +1876,7 @@ Same movement pattern if possible
 Same or similar muscle group if the movement pattern is not tolerated
  Example: pull-ups hurt -> chest-supported row or pulldown. 
 Unaffected body area if the area needs a break
- Example: shoulder issue -> lower body, bike, core, easy conditioning. But be careful not adding too much load to the other areas that are already working during the rest of the week. 
+ Example: shoulder issue -> lower body, bike, midline, easy conditioning. But be careful not adding too much load to the other areas that are already working during the rest of the week. 
 Recovery / easy conditioning if strength work is not appropriate 
 Pause affected training and recommend advice if issue is severe 
 Bad swaps are swaps that are basically the same aggravating stress.
@@ -1823,7 +1884,7 @@ Example:
 Bad swap:
 Bench press hurts -> lighter bench press
 Better swap:
-Bench press hurts -> neutral-grip DB floor press, push-up, landmine press, or lower-body/core if pressing is not tolerated
+Bench press hurts -> neutral-grip DB floor press, push-up, landmine press, or lower-body/midline if pressing is not tolerated
 General severity rules
 1-3 / 10
 Mild issue.
@@ -1898,7 +1959,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body strength 
-* Core/trunk work if tolerated 
+* Midline work if tolerated 
 * Easy bike 
 * Controlled lower-body strength that does not aggravate it 
 * Isometric groin squeeze if tolerated 
@@ -1909,7 +1970,7 @@ Good swaps:
 * Deep lateral lunge -> controlled split squat or step-up 
 * Hard Copenhagen -> short-lever Copenhagen hold or groin squeeze 
 * Heavy adductor machine -> light adductor squeeze or skip adductor work 
-* Heavy lower -> upper body/core if symptoms are worse 
+* Heavy lower -> upper body/midline if symptoms are worse 
 Bad swaps:
 
 * Groin pain from lateral lunges -> Cossack squats 
@@ -1964,7 +2025,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body strength 
-* Core 
+* Midline 
 * Easy bike 
 * Non-painful quad-dominant lower work 
 * Light glute work if tolerated 
@@ -1972,7 +2033,7 @@ Usually okay
 Strength swaps
 Good swaps:
 
-* RDL -> hip thrust, glute bridge, or upper body/core 
+* RDL -> hip thrust, glute bridge, or upper body/midline 
 * Deadlift -> box squat or controlled squat if tolerated 
 * Nordic -> hamstring bridge/isometric or skip 
 * Single-leg RDL -> step-up or split squat if tolerated 
@@ -2029,7 +2090,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body strength 
-* Core 
+* Midline 
 * Bike if tolerated - ski erg potentially 
 * Hip-dominant work if tolerated 
 * Controlled range lower work 
@@ -2039,7 +2100,7 @@ Good swaps:
 
 * Deep squat -> box squat or reduced range squat 
 * Lunge -> step-up or split squat with controlled range 
-* Heavy knee-dominant work -> hip thrust or upper body/core 
+* Heavy knee-dominant work -> hip thrust or upper body/midline 
 * Jump/plyo -> controlled strength or bike or ski erg 
 Bad swaps:
 
@@ -2092,7 +2153,7 @@ Usually okay
 
 * Lower body strength 
 * Bike conditioning 
-* Core if shoulder-friendly 
+* Midline if shoulder-friendly 
 * Lower-body accessories 
 * Some pulling if tolerated 
 * Shoulder-friendly pressing if mild 
@@ -2104,7 +2165,7 @@ Good swaps:
 * Overhead press -> landmine press 
 * Dips -> push-ups or tricep pushdown 
 * Pull-ups hurt -> rows or pulldowns 
-* Pressing not tolerated -> lower body/core 
+* Pressing not tolerated -> lower body/midline 
 Bad swaps:
 
 * Shoulder pain from bench -> lighter bench 
@@ -2161,7 +2222,7 @@ Usually okay
 * Machine/pulldown work 
 * Bike 
 * Easy walking 
-* Light core that does not aggravate it 
+* Light midline that does not aggravate it 
 * Lower-body work only if tolerated and controlled 
 * McgIll Big 3 - side plank, bird dogs, mcgill curl ups 3 sets
 Strength swaps
@@ -2225,7 +2286,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body strength 
-* Core 
+* Midline 
 * Bike 
 * Ski if tolerated 
 * Controlled lower-body strength if not painful 
@@ -2236,7 +2297,7 @@ Good swaps:
 * Calf raises -> skip or low-volume isometric if tolerated 
 * Running/sprint exposure -> bike 
 * Plyos -> controlled strength 
-* Lunges/step-ups -> upper body/core if ankle/calf aggravated 
+* Lunges/step-ups -> upper body/midline if ankle/calf aggravated 
 Bad swaps:
 
 * Achilles pain -> pogos 
@@ -2289,7 +2350,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body strength 
-* Core if tolerated 
+* Midline if tolerated 
 * Bike if tolerated 
 * Controlled lower-body strength in tolerable range 
 * Easy recovery 
@@ -2298,7 +2359,7 @@ Good swaps:
 
 * Deep squat -> box squat or reduced range 
 * Lunge -> step-up or controlled split squat 
-* Heavy lower -> upper body/core 
+* Heavy lower -> upper body/midline 
 * Aggressive lateral work -> straight-line/easy work 
 Bad swaps:
 
@@ -2351,7 +2412,7 @@ Avoid / reduce
 Usually okay
 
 * Upper body 
-* Core 
+* Midline 
 * Bike if tolerated 
 * Hip-dominant work if tolerated 
 * Easy recovery 
@@ -2359,7 +2420,7 @@ Usually okay
 Strength swaps
 Good swaps:
 
-* Squat/lunge -> hip thrust or upper body/core 
+* Squat/lunge -> hip thrust or upper body/midline 
 * Leg extension -> skip or reduce range/load 
 * Split squat -> box squat or step-up if tolerated 
 * Hard lower -> easy bike or recovery 
@@ -2415,7 +2476,7 @@ Usually okay
 
 * Lower body strength 
 * Bike conditioning 
-* Core that does not require painful gripping 
+* Midline that does not require painful gripping 
 * Machines/cables if tolerated 
 * Neutral-grip upper work if tolerated 
 Strength swaps
@@ -2425,7 +2486,7 @@ Good swaps:
 * Pull-ups -> neutral-grip pulldown or chest-supported row 
 * Barbell row -> chest-supported machine row 
 * Curls -> skip or light cable curl if tolerated 
-* Carries -> core without grip 
+* Carries -> midline without grip 
 Bad swaps:
 
 * Elbow pain from pull-ups -> chin-ups 
@@ -2476,7 +2537,7 @@ Examples:
 * Hamstring: bike -> easy run -> acceleration -> max velocity. 
 * Groin: squeeze/isometric -> controlled lower -> straight-line run -> COD/kicking. 
 * Shoulder: neutral DB/floor press -> push-up/landmine -> bench/OHP. 
-* Lower back: supported upper/bike -> controlled core -> lower strength -> hinge/loading. 
+* Lower back: supported upper/bike -> controlled midline -> lower strength -> hinge/loading. 
 * Calf/Achilles: bike -> walk/jog -> calf strength -> running -> sprint/jump. 
 Simple injury rules
 
@@ -2751,7 +2812,7 @@ More of
 * Lower-body strength 
 * Upper-body strength 
 * Carries 
-* Trunk/core strength 
+* Midline strength 
 * Contact/body armour work 
 * Acceleration 
 * Power 
@@ -2844,9 +2905,9 @@ What the app should not do
 * Do not remove strength completely just because they are running-based players. 
 Key position / ruck / tall
 Description
-Key position players, rucks and taller athletes need strength, size, jumping ability, power, body armour, trunk strength, shoulder robustness and durability.
+Key position players, rucks and taller athletes need strength, size, jumping ability, power, body armour, midline strength, shoulder robustness and durability.
 They still need a fitness base, but they usually do not need the same top-end speed or running emphasis as outside mids.
-Taller athletes often do well with controlled single-leg work, knee robustness work, trunk strength, and overhead shoulder stability.
+Taller athletes often do well with controlled single-leg work, knee robustness work, midline strength, and overhead shoulder stability.
 More of
 
 * Muscle mass 
@@ -2854,7 +2915,7 @@ More of
 * Lower-body strength 
 * Upper-body strength 
 * Posterior-chain strength 
-* Trunk/carries 
+* Midline/carries 
 * Jumping power 
 * Controlled power work 
 * Single-leg strength 
@@ -2877,7 +2938,7 @@ Size
 Power
 Jumping
 Single-leg strength
-Trunk
+Midline
 Shoulder stability
 Knee robustness
 Controlled conditioning
@@ -2921,7 +2982,7 @@ More of
 * Upper-body strength 
 * Tackling strength 
 * Break-tackle strength 
-* Trunk stiffness 
+* Midline stiffness 
 * Groin/adductor robustness 
 * Hamstring robustness 
 * Calf/Achilles robustness 
@@ -2952,7 +3013,7 @@ Adductor work
 Calf work
 Upper-body push/pull
 Carries
-Anti-rotation core
+Anti-rotation midline
 Hard conditioning when phase allows
 What the app should not do
 
@@ -2967,7 +3028,7 @@ More work capacity, strength, body armour, acceleration, carries, repeat effort 
 Outside mid / high half-forward / high half-back =
 More running base, repeat running, top-end speed, lower-leg robustness and strength maintenance.
 Key position / ruck / tall =
-More strength, size, jumping power, single-leg work, trunk, shoulder stability, knee robustness and controlled conditioning.
+More strength, size, jumping power, single-leg work, midline, shoulder stability, knee robustness and controlled conditioning.
 Small forward / small back =
 More acceleration, COD, repeat sprint, strength-to-weight, tackling strength and groin/hamstring/calf robustness.
 Position rules by phase
@@ -3026,6 +3087,9 @@ The app should still build the best simple week based on season phase, game day,
 11. Training age / athlete level rules
 Main idea
 Training age should change the dose, complexity and progression speed, not completely change the whole program.
+There is ONE experience ladder for the whole app: new -> developing -> consistent -> advanced. Every gated exercise, template or method declares its minimum on that ladder. Do not introduce a second beginner/experienced representation alongside it.
+Two gates that ride on that ladder: contrast training requires `consistent` or above (Section 4), and the harder power entries require `developing` or `consistent` (Section 5).
+Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Every other athlete reaches it through the injury door, an equipment constraint, or their own pick.
 A new athlete and an advanced athlete still need the same big rocks:
 Squat
 Hinge
@@ -3035,7 +3099,7 @@ Single-leg
 Hamstrings
 Adductors
 Calves
-Core/carries
+Midline/carries
 Conditioning
 Recovery
 But they should not get the same amount, difficulty, or progression.
@@ -3120,7 +3184,7 @@ Strength dose: Normal LFA dose. These athletes can handle the main structure wel
 They can usually tolerate:
 2-4 sets on main lifts
 2-3 sets on accessories
-regular hamstring/groin/core/calf work
+regular hamstring/groin/midline/calf work
 normal weekly strength structure
 In-season, volume still needs to be controlled, but familiar lifts can stay in year-round.
 Exercise complexity: Can use the main anchors confidently.
@@ -3168,7 +3232,7 @@ Weighted pull-ups
 Heavy rows
 Barbell pressing
 Overhead pressing
-Harder core/carry variations
+Harder midline/carry variations
 Nordics/Copenhagens
 Conditioning dose: Depends on goals and current fitness.
 Advanced strength athletes may not need more hard conditioning if it interferes with their strength/power. Very fit advanced athletes may need more specific conditioning to get a stimulus.
@@ -3210,7 +3274,7 @@ Good focus:
 * Horizontal push. 
 * Horizontal/vertical pull. 
 * Single-leg control. 
-* Core/carries. 
+* Midline/carries. 
 * Easy conditioning. 
 Avoid:
 
@@ -3246,7 +3310,7 @@ Pull
 Rows
 Pull-ups
 Carries
-Core/bracing
+Midline/bracing
 General gym tolerance
 Programming bias:
 
@@ -3275,7 +3339,7 @@ May need more lower-body strength focus.
 Strong squat + weaker bench:
 May need more upper push/upper-body strength focus.
 Strong lower + poor pull-up/row ability:
-May need more upper pull and trunk/carry work.
+May need more upper pull and midline/carry work.
 Programming bias:
 
 * Keep the full program balanced. 
@@ -3428,7 +3492,7 @@ Bias: Prioritise availability, tissue capacity, and avoiding spikes in load.
 More of:
 
 * Consistent strength basics 
-* Hamstring, adductor, calf, trunk work, shoulder prehab 
+* Hamstring, adductor, calf, midline work, shoulder prehab 
 * Recovery 
 * Gradual progressions 
 * Load warnings 
@@ -3678,7 +3742,7 @@ Examples:
 * Swap today’s Rower flush to Bike. 
 * Move today’s session to tomorrow. 
 * Skip today’s conditioning. 
-* Add core to today’s session. 
+* Add midline to today’s session. 
 Should it create Coach Note? Usually no.
 A Coach Note is only needed if the reason is still actively affecting the program.
 Example:
@@ -3691,7 +3755,7 @@ Examples:
 
 * Avoid Bench Press in future upper sessions. 
 * Replace Rower with Bike where possible. 
-* Add more core work to upper sessions. 
+* Add more midline work to upper sessions. 
 * Avoid heavy hinging while hamstring issue is active. 
 * Use off-feet conditioning while calf/Achilles is sore. 
 Should it create Coach Note? Yes.
@@ -3740,7 +3804,7 @@ Add to day
 Rules: Add to day means stacking something extra onto an existing day.
 Examples:
 Add easy conditioning after upper body.
-Add core to a strength session.
+Add midline to a strength session.
 Add recovery work after team training.
 Add a short pump/prehab session.
 Rules:
@@ -4065,7 +4129,7 @@ Walk
 Easy bike flush
 Upper pump
 Gunshow
-Easy core
+Easy midline
 Light prehab
 Important: a session can move up or down depending on the athlete.
 Example:
@@ -4099,7 +4163,7 @@ When there is no explicit athlete modality preference and the app is choosing a 
 * SkiErg: 10%
 
 Bike and mixed erg work are the preferred defaults for steady aerobic work when the required equipment is available. RowErg and SkiErg remain valid rotation options, but should not dominate long easy-aerobic defaults.
-A mixed erg block may include bike plus RowErg or SkiErg. No continuous RowErg or SkiErg block should be longer than 10 minutes. Longer RowErg or SkiErg aerobic work must be intervalised, with complete rest between aerobic blocks rather than easy work during the rest period.
+A mixed erg block may include bike plus RowErg or SkiErg. No continuous RowErg, SkiErg or Air Bike work interval may be longer than 8 minutes, and 4-6 minutes is preferred. Any work interval longer than 8 minutes must be Run or Bike. Longer RowErg or SkiErg aerobic work must be intervalised, with complete rest between aerobic blocks rather than easy work during the rest period.
 This weighting is a deterministic fallback, not runtime randomness. A specific programmed modality, an explicit athlete preference and equipment availability override the default weighting.
 Running exposure
 Running exposure includes:
@@ -4119,9 +4183,11 @@ Assault bike
 Swimming - do not program this in but an athlete may choose to add swimming in
 Walking
 Mobility
-Default cap:
-No more than 4 running exposures per week programmed by the app.
-The user can override and add more running, but the app should warn.
+Default floor and cap:
+At least 2 and no more than 3 running days per week.
+Anchors count toward the cap: 2 team trainings plus a game is already 3, which is why in-season rarely needs any added app running.
+The 2-day floor does not apply in early off-season (weeks 1-2), where running is not required at all, or in bye recovery, where the reduced structure governs. Everywhere else, a healthy week that programs fewer than 2 running days needs an authorised typed reduction reason.
+Everything above the cap goes off-feet. The user can override and add more running, but the app should warn.
 Sprint/COD exposure
 Team training and games usually count as sprint/COD exposure.
 Default cap:
@@ -4222,7 +4288,7 @@ Heavy lower close to game day
 Adding hard work after a game
 Adding sprint/COD when already loaded
 5th main strength session
-More than 4 running exposures
+More than 3 running days
 Message style:
 You have a game scheduled on {day}. This session may affect freshness. Are you sure you want to add it?
 Hard stop
@@ -4251,7 +4317,7 @@ Stopping affected training does not always mean stopping all training.
 Example:
 Shoulder issue:
 Pause painful pressing.
-Keep lower body, bike, core and safe pulling if tolerated.
+Keep lower body, bike, midline and safe pulling if tolerated.
 Example:
 Bad lower back issue:
 May need to pause most or all training temporarily, depending symptoms.
@@ -4606,10 +4672,10 @@ Repair or regenerate automatically. Use a safe fallback if repair fails. Athlete
 
 F. Deload rules
 
-* Pre-season automatically deloads every fourth week.
-* The first four-week Off-season block is an explicit exception: Weeks 1–2 are early, Weeks 3–4 are mid, and Week 4 does not automatically deload.
-* After the first block, late-off-season blocks may use the approved automatic fourth-week deload policy. A deload never resets the subphase.
-* In-season deload occurs through bye recovery or a readiness/injury decision.
+* Pre-season runs scheduled deloads on 3–4-week cycles. This is definite, not optional.
+* The first four-week Off-season block is an explicit exception: Weeks 1–2 are the early everything-optional block, Weeks 3–4 are the mid transition block, and Week 4 does not automatically deload.
+* After that first block, off-season deload cycles begin and run on the same 3–4-week cycle. A deload never resets the subphase.
+* In-season has NO scheduled deloads. Games and byes self-regulate the load. In-season backing-off occurs only through bye recovery or a readiness/injury decision.
 * Preserve strength and conditioning frequency where possible.
 * Reduce sets, volume, duration, load and intensity before reducing frequency.
 * Preserve 1 controlled sprint exposure unless explicitly reduced.
@@ -4710,3 +4776,39 @@ Cross-path rules
 * When source and target phase-table signatures differ, Repeat Week regenerates from the target phase table instead of copying the source target or deficient source structure.
 * When the signatures match, source prescriptions may be preserved, but target anchors, typed constraints and final Section 18 validation still win.
 * Detailed `required_core` and `planner_selected_core` identity remains attached to planner allocations and canonical workouts. An aggregate `core` compatibility projection may be used only by an unchanged legacy safety consumer; it does not replace the detailed phase-planner identity or allow optional work to receive core credit.
+
+19. Amendment changelog
+
+Sam's standing process ruling (2026-07-25): the Bible is AMENDED when a ruling supersedes it. Contradictions are removed, not accumulated. Every amendment below names the text it replaced.
+
+Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07-23 D1–D16 + addenda; CONDITIONING_FRAMEWORK_SAM_2026-07-25 authored-final; CONDITIONING_TEMPLATES_FINAL_2026-07-25; SAM_EXECUTION_ORDER_2026-07-25; POWER_EXERCISE_POOL_SPEC_2026-07-23)
+
+* Header. Superseded "use Section 17 Addendum as the final authority" — Section 18 already declares that it wins over earlier sections, so the pointer was wrong. Authority is now Section 18, then Section 17, then earlier sections, with conditioning doses owned by the two authored-final conditioning documents.
+* Section 1, in-season. ADDED the deload rule that was missing from the in-season list: no scheduled in-season deloads; games and byes self-regulate; backing off happens through readiness/bye recovery only. Source: D16.
+* Section 1, in-season bye weeks. Superseded "keep to 4 or less per week" running. Now the standing 3-day cap. Source: D15.
+* Section 1, pre-season overload. Superseded "Running limited to 4 times per week". Now capped at 3 and floored at 2. Source: D15 standing rule.
+* Section 1, pre-season deload. Superseded "once every 4 weeks or so deload … I've always liked 3-4 weekly cycles". Now scheduled 3–4-week cycles, definite. Source: D16.
+* Section 1, off-season deload. Superseded the same "once every 4 weeks or so" line. Now the three-stage ladder: weeks 1–2 optional block, weeks 3–4 transition, 3–4-week cycles from week 5. Source: D16.
+* Section 2. ADDED "Weekly assembly rules" — inputs, the four placement rules, in-season 2/3/4-day splits, the team-training-day exercise-selection filter, skip rules and pattern absorption, the bye-week choice, and Sam's two canonical reference weeks. Nothing was superseded; this filled a gap. Source: D15 + D15 amendments.
+* Section 4. ADDED "Session structure and ordering" — canonical order power → main → secondary → accessories → finisher; the contrast exception gated to `consistent`/`advanced`; one-main-per-pattern; the lower-session heavy-slot ladder; the one-list/role-badge composition and the top-of-session mobility flow that is never load-bearing. Nothing was superseded; the Bible had no ordering rule. Source: D2, D13, D13 addendum.
+* Section 5, main lift rules. ADDED the prescription-display law: ranges remain the generation source, the athlete sees a single middle number, logging assumes it. Supersedes the old top-of-range vs floor-of-range toggle question. Source: D9.
+* Section 5, calf examples. Superseded "sled pushes" in the calf/Achilles example list. NO SLEDS. Source: conditioning framework standing rules.
+* Section 5, power categories. Superseded "Medicine ball throw variations if available", "Medicine ball chest pass if available" and "Medicine ball slam/throw if available". Med-ball work is retired from LFA; ADDED depth jump, lateral jump, lateral bounds and kneeling jump, plus the block-stable selection rule and the per-entry experience gates. Source: POWER_EXERCISE_POOL_SPEC + the locked exercise list.
+* Section 5, contrast pairings. Superseded "Heavy sled push -> short acceleration" and "Heavy row -> med ball slam/throw if available".
+* Section 5, contrast training. ADDED the `consistent`/`advanced` gate, superseding the looser "experienced athletes" reading. Source: D2.
+* Section 6. ADDED the conditioning framework authority block, THE CLASSIFICATION LAW (intensity classifies, W:R is only a property), the eight quality rows, the governing quality table with the sprint-family exemption, the short-intermittent set-length rule, the template schema, the six template properties, the standing modality rules, Sam's local-footy emphasis, and the MAS / 2 km time-trial layer. Source: conditioning framework + D12 revision 2 + D14.
+* Section 6, easy aerobic. Superseded the "Simple guide" duration list (short flush 15-25, normal 25-40, longer 35-60, 3x8 min ergs). Doses now come from the Flush and Aerobic Capacity tabs.
+* Section 6, tempo/extensive. Superseded the running-example list, the bike/row/ski example list and the 1:1 / 2:1 / 3:1 work-rest list. Those shapes are authored templates now.
+* Section 6, hard intervals. Superseded the nine-item example list and the six-item work/rest list. Split explicitly across Aerobic Power and Anaerobic, with the set-length rule attached.
+* Section 6, off-feet. Superseded "Don't program more than 10 minute rounds" on both Rower and Ski. HARD CAP is 8 minutes on any single work interval, 4–6 preferred, and anything longer is Run or Bike only. ADDED the NO SKI / ROW flywheel exclusion for sub-10-second work.
+* Section 6, phase menus. Superseded the "Good in-season / pre-season / off-season conditioning" format lists with quality-row guidance, including the COD/Decel availability gate (no-team-training weeks only).
+* Section 6, finishers. Superseded the "Preferred finisher variety" dose list with the FINISHER ROLE ONLY property rule.
+* Section 6, simple rules. ADDED the 2–3 running-day band and the rule that a layer inventing its own conditioning dose is a defect.
+* Section 7, acceleration. Superseded "Hill sprints or sled pushes can be used carefully". NO SLEDS.
+* Section 8. ADDED "Injury is a dialogue, not a diagnosis" — the app asks and never assumes; an injury pauses affected-region work only and team nights and games KEEP their conditioning and sprint credit; the three-question flow at ≈6/10 or region-relevant severity; credit withdrawal and requirement reduction as one atomic authored decision; one door shared with coach chat. Source: D10.
+* Section 11. ADDED the single experience ladder (new → developing → consistent → advanced), the two gates riding on it, and the "everyone (regression)" convention. Source: POWER_EXERCISE_POOL_SPEC experience standard + D13.
+* Section 17 B, erg blocks. Superseded "No continuous RowErg or SkiErg block should be longer than 10 minutes". Now 8 minutes hard cap, 4–6 preferred, Air Bike included, longer work is Run or Bike.
+* Section 17 B, running exposure. Superseded "No more than 4 running exposures per week programmed by the app". Now floor 2 / cap 3 running days, with anchors counting toward the cap and the floor disapplied in early off-season and bye recovery.
+* Section 17 F, strong warning. Superseded "More than 4 running exposures" with "More than 3 running days".
+* Section 18 F, deload rules. Superseded "Pre-season automatically deloads every fourth week" and the automatic fourth-week off-season policy with Sam's 3–4-week cycle law, and made the in-season no-scheduled-deload rule explicit. Source: D16.
+* Terminology, whole document. "Trunk" and the muscle-group sense of "core" are replaced by MIDLINE (75 lines). The compulsory-session sense of "core" — core session, core exposure, `required_core`, `planner_selected_core`, "0. Core LFA principles" — is a homonym and is deliberately untouched. One ambiguous line in the Gunshow section, "A replacement for missing core strength work", was rewritten to "main strength work" to remove the ambiguity. Source: D13.
