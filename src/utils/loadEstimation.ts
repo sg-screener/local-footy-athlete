@@ -692,6 +692,34 @@ export function resolveExerciseName(name: string): string {
   return name;
 }
 
+// ─── Athlete-Chosen Load ───
+//
+// The third honest answer to "how is this exercise loaded", added 2026-07-28
+// for Sam's Dumbbell Pullovers ruling. The other two could not express it:
+//
+//   TRUE_BODYWEIGHT / PREHAB_NO_LOAD — both return null (correct), but both
+//     also make `isTrueBodyweightExercise` true, and `formatWeight`
+//     (useDayWorkout.ts) renders the label off that. A dumbbell exercise would
+//     read "BW", and "BW + 12kg" once the athlete entered a weight.
+//   EXERCISE_LOAD_MAP — `ExerciseLoadProfile` REQUIRES `anchor` + `ratio`, so
+//     any entry derives a working weight from the athlete's squat/bench 1RM.
+//     Sam ruled this load athlete-chosen; there is no honest ratio to publish.
+//
+// Leaving a name out of all three is the worst option: the name-pattern
+// fallback invented 12.5kg for Dumbbell Pullovers.
+//
+// So: NO prescribed weight (null, like the sets above) but NOT bodyweight —
+// the card shows "—" until the athlete enters their own number, which then
+// renders verbatim as "12kg". Sam, 2026-07-28.
+export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
+  'Dumbbell Pullovers',
+]);
+
+/** True when load is real but athlete-chosen — no estimate, and never "BW". */
+export function isAthleteChosenLoadExercise(exerciseName: string): boolean {
+  return ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolveExerciseName(exerciseName));
+}
+
 // ─── Prehab / Rehab Exercise Handling ───
 //
 // Small prehab and tissue-quality exercises should NOT get load estimates
@@ -825,6 +853,9 @@ export function estimateStartingWeight(
 
   // Prehab / rehab / tissue work — no fake precision
   if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) return null;
+
+  // Real load, but the athlete picks it. Nothing to prescribe.
+  if (ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolved)) return null;
 
   const anchors = estimateAnchors(onboardingData);
   const profile = EXERCISE_LOAD_MAP[resolved];
@@ -965,6 +996,11 @@ function estimateFromNamePattern(
  */
 export function isTrueBodyweightExercise(exerciseName: string): boolean {
   const resolved = resolveExerciseName(exerciseName);
+
+  // Checked FIRST and returns false: these carry real external load, so no
+  // later heuristic — tags or the name-pattern catch-all — may promote them to
+  // "BW". This early exit is what keeps the athlete-facing label honest.
+  if (ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolved)) return false;
 
   if (TRUE_BODYWEIGHT_EXERCISES.has(resolved)) return true;
   if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) return true;

@@ -28,6 +28,7 @@ import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
+  isAthleteChosenLoadExercise,
   resolveExerciseName,
 } from '../utils/loadEstimation';
 import {
@@ -120,6 +121,10 @@ console.log('\n[3] Anchor-resolves — every loaded exercise keeps a load profil
     // exemption is the single record of that queue — see
     // src/data/selectableExerciseVocabulary.ts.
     .filter((name) => !isExempt(name, 'load'))
+    // Sam, 2026-07-28: a third honest answer. Real external load, but the
+    // athlete chooses it, so there is no profile to publish and it is not
+    // bodyweight either. See ATHLETE_CHOSEN_LOAD_EXERCISES in loadEstimation.
+    .filter((name) => !isAthleteChosenLoadExercise(name))
     .filter((name) => {
       const resolved = resolveExerciseName(name);
       return !EXERCISE_LOAD_MAP[resolved] && !isTrueBodyweightExercise(name);

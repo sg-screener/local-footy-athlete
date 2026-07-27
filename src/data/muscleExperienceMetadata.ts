@@ -1569,6 +1569,15 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: '',
     flagged: false,
   },
+  {
+    exercise: 'Dumbbell Pullovers',
+    pool: 'Mobility',
+    primary: ['Upper back', 'Shoulders'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
 
   /* ── Easy cardio (zone 1) ── */
   {

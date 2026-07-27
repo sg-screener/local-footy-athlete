@@ -250,6 +250,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Butterfly Stretch':                'https://youtube.com/shorts/oO_Y-r72Kj4?si=hGR47gGVVQw5ofo-',
   'Pissing Dog Against Wall':         'https://youtube.com/shorts/dSbrnhnkZwY?si=q928QMcTGEXM2WlE',
   'Jefferson Curl':                   'https://youtube.com/shorts/BlYDql9MvBU?si=fwnMBJV81r9fwnlB',
+  'Dumbbell Pullovers':               'https://youtube.com/shorts/QoLckcLvNB0?si=oWGDGXzDprOJSwWx',
 };
 
 // ─── Name Normalisation ────────────────────────────────────────────

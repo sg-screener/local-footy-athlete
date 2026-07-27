@@ -79,7 +79,7 @@ const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
 
 console.log('\n[1] THE SHEET — still reads as Sam signed it');
 
-ok('the sheet holds 196 exercise rows', sheetRows.length === 196, `found ${sheetRows.length}`);
+ok('the sheet holds 197 exercise rows', sheetRows.length === 197, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -284,8 +284,11 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // Sam's 2026-07-28 mobility additions — Butterfly Stretch, Pissing Dog Against
 // Wall, Jefferson Curl — are all `everyone` and not regressions (131 -> 134).
 // Total 193 -> 196.
+//
+// Dumbbell Pullovers followed the same day, also `everyone` and not a
+// regression (134 -> 135). Total 196 -> 197.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 134,
+  everyone: 135,
   everyone_regression: 11,
   one_plus_years: 32,
   two_plus_years: 17,
