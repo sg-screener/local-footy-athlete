@@ -26,7 +26,11 @@ import {
   type Section18AuthorisedReduction,
   type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
-import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
+import {
+  canonicalContextSubphase,
+  finaliseWorkoutAfterMutation,
+} from '../utils/workoutCanonicalisation';
+import { hasPowerRow, powerRows, withoutPowerRows } from './sessionRowCounting';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import {
   buildDerivedSessionExpiryCandidates,
@@ -304,7 +308,7 @@ function weeklyPowerBudget(args: {
         : 2;
   const fixtureDay = fixture?.dayOfWeek;
   const candidates = args.workouts
-    .filter((workout) => !!workout.powerBlock)
+    .filter(hasPowerRow)
     .map((workout, index) => ({
       workout,
       index,
@@ -322,18 +326,36 @@ function weeklyPowerBudget(args: {
   const usedFamilies = new Set<string>();
   for (const candidate of candidates) {
     if (keep.size >= budget || candidate.tooCloseToFixture || candidate.anchorDay) continue;
-    const family = candidate.workout.powerBlock!.family;
-    if (usedFamilies.has(family) && candidates.some((other) =>
-      !keep.has(other.workout.id) && other.workout.powerBlock?.family !== family &&
+    const family = powerRows(candidate.workout)[0]?.power?.family;
+    if (family && usedFamilies.has(family) && candidates.some((other) =>
+      !keep.has(other.workout.id) && powerRows(other.workout)[0]?.power?.family !== family &&
       !other.tooCloseToFixture && !other.anchorDay)) continue;
     keep.add(candidate.workout.id);
-    usedFamilies.add(family);
+    if (family) usedFamilies.add(family);
   }
-  const workouts = args.workouts.map((workout) =>
-    workout.powerBlock && !keep.has(workout.id)
-      ? (({ powerBlock: _removed, ...rest }) => rest as Workout)(workout)
-      : { ...workout });
-  const achieved = workouts.filter((workout) => !!workout.powerBlock).length;
+  // THE STRIP. This used to delete a field — `({ powerBlock, ...rest }) => rest`
+  // — which no owner could see: nothing recorded that content left, and the
+  // workout's name and type could go on describing work that was gone. As rows,
+  // a strip is an ordinary content mutation and goes back through the canonical
+  // owner, so identity and §18 evidence are re-derived from what actually
+  // survives.
+  const workouts = args.workouts.map((workout) => {
+    if (!hasPowerRow(workout) || keep.has(workout.id)) return { ...workout };
+    return finaliseWorkoutAfterMutation(withoutPowerRows(workout), {
+      phase: contract.identity.seasonPhase,
+      offseasonSubphase: canonicalContextSubphase(
+        contract.identity.seasonPhase,
+        contractOffseasonSubphase(contract),
+      ),
+      weekKind: contract.identity.weekKind,
+      profile: args.profile ?? undefined,
+      planIntentValid: !!workout.planEntryId,
+      referenceWorkout: workout,
+      // The removal is the point; restoring a pattern here would undo it.
+      restoreMissingPlanPatterns: false,
+    }).workout;
+  });
+  const achieved = workouts.filter(hasPowerRow).length;
   contract.power.eligible = !ineligible;
   contract.power.plannerSelectedWeeklyBudget = budget;
   contract.power.achievedPrimerCount = achieved;
@@ -435,7 +457,7 @@ function mergeCoreWork(source: Workout, target: Workout): Workout | null {
     ...(source.strengthPatternContributions
       ? { strengthPatternContributions: [...source.strengthPatternContributions] }
       : {}),
-    ...(source.powerBlock && !target.powerBlock ? { powerBlock: source.powerBlock } : {}),
+
     ...(source.speedBlock && !target.speedBlock ? { speedBlock: source.speedBlock } : {}),
     ...(sourceConditioning && !targetConditioning ? {
       hasCombinedConditioning: true,
@@ -643,7 +665,7 @@ function resolveCandidate(args: {
   if (power.removed > 0 || power.budget < 2) {
     initialRepairs.push({
       kind: 'weekly_power_budget',
-      detail: `Weekly selector kept ${power.workouts.filter((workout) => !!workout.powerBlock).length} primers within budget ${power.budget}.`,
+      detail: `Weekly selector kept ${power.workouts.filter(hasPowerRow).length} primers within budget ${power.budget}.`,
     });
   }
   const baseContract = power.contract;

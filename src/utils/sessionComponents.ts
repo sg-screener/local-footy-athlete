@@ -12,6 +12,7 @@ import {
 } from './teamTraining';
 import { getExerciseTags } from '../data/exerciseTags';
 import { resolveExerciseName } from './loadEstimation';
+import { hasPowerRow, isPowerRow } from '../rules/sessionRowCounting';
 
 export type SessionComponentKind =
   | 'power'
@@ -199,7 +200,6 @@ function materializeAcceptedVisibleSections(args: {
     strengthPatternContributions: hasStrength
       ? args.source.strengthPatternContributions
       : undefined,
-    powerBlock: hasStrength ? args.source.powerBlock : undefined,
     recoveryAddons: hasRecovery ? args.source.recoveryAddons : undefined,
     coachAddedConditioningLabel: onlyConditioning
       ? title
@@ -314,8 +314,8 @@ function hasSpeedBlock(workout: Partial<Workout>): boolean {
   return !!workout.speedBlock;
 }
 
-function hasPowerBlock(workout: Partial<Workout>): boolean {
-  return !!workout.powerBlock;
+function hasPower(workout: Partial<Workout>): boolean {
+  return hasPowerRow(workout);
 }
 
 function hasRecoveryAddon(workout: Partial<Workout>): boolean {
@@ -367,20 +367,40 @@ function legacyConditioningTailIds(workout: Partial<Workout>, rows: any[]): Set<
   return new Set(rows.slice(splitIdx).map((row) => row?.id).filter(Boolean));
 }
 
+/**
+ * Split a day's rows into the populations the app reasons about.
+ *
+ * POWER IS ITS OWN POPULATION (Sam, 2026-07-28). This function serves two
+ * masters — the session screen, which must render every row, and the counters,
+ * which must not count power. While power was a block beside the list the two
+ * jobs never collided; as a row they would, and `strengthRows` would silently
+ * gain main-lift-looking power work. Giving power its own bucket kills that
+ * conflation rather than papering over it: renderers ask for `powerRows`,
+ * counters ask for `strengthRows`, and neither has to know about the other.
+ *
+ * The split is by AUTHORED role, before any name or tag probe runs — the same
+ * ordering rule the taxonomy's choke point enforces, and for the same reason:
+ * `Explosive Push-up` would otherwise read as a strength row here too.
+ */
 export function getSessionComponentRows(workout: Partial<Workout> | null | undefined): {
+  powerRows: any[];
   strengthRows: any[];
   supportRows: any[];
   conditioningRows: any[];
   teamTrainingRows: any[];
 } {
   if (!workout) {
-    return { strengthRows: [], supportRows: [], conditioningRows: [], teamTrainingRows: [] };
+    return {
+      powerRows: [], strengthRows: [], supportRows: [], conditioningRows: [], teamTrainingRows: [],
+    };
   }
 
   const teamState = getTeamTrainingWorkoutState(workout);
-  const renderableRows = (teamState.renderableExercises ?? []).filter(
+  const allRenderable = (teamState.renderableExercises ?? []).filter(
     (row) => !isTeamTrainingItem(row),
   );
+  const powerRows = allRenderable.filter(isPowerRow);
+  const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
 
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
   const legacyConditioningIds = blockConditioningIds.size > 0
@@ -400,6 +420,7 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     : renderableRows.filter((row) => !conditioningIds.has(row?.id) && !supportIds.has(row?.id));
 
   return {
+    powerRows,
     strengthRows,
     supportRows,
     conditioningRows,
@@ -423,7 +444,7 @@ export function getSessionComponents(
   const { strengthRows, supportRows, conditioningRows } = getSessionComponentRows(workout);
   const components: SessionComponent[] = [];
 
-  if (hasPowerBlock(workout)) {
+  if (hasPower(workout)) {
     components.push({
       id: 'power',
       kind: 'power',

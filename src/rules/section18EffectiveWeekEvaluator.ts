@@ -20,6 +20,7 @@ import type {
   Section18SprintCreditSource,
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
+import { powerRows } from './sessionRowCounting';
 
 export type Section18FindingSeverity = 'blocking' | 'advisory';
 
@@ -204,7 +205,6 @@ function dateForDay(weekStart: string, dayOfWeek: number): string {
 function isExplicitRestStub(workout: Workout): boolean {
   return workout.workoutType === 'Rest' &&
     (workout.exercises ?? []).length === 0 &&
-    !workout.powerBlock &&
     !workout.conditioningBlock &&
     !workout.speedBlock;
 }
@@ -212,7 +212,7 @@ function isExplicitRestStub(workout: Workout): boolean {
 function typedWorkoutActive(workout: Workout): boolean {
   if (isExplicitRestStub(workout)) return false;
   if ((workout.exercises ?? []).length > 0) return true;
-  if (workout.powerBlock || workout.conditioningBlock || workout.speedBlock) return true;
+  if (workout.conditioningBlock || workout.speedBlock) return true;
   if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') return true;
   return workout.workoutType !== 'Rest';
 }
@@ -456,9 +456,9 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         daySprint = true;
         dayHard = true;
       }
-      if (workout.powerBlock) {
+      for (const row of powerRows(workout)) {
         primerCount += 1;
-        primerSources.push({ dayOfWeek: day, family: workout.powerBlock.family });
+        primerSources.push({ dayOfWeek: day, family: row.power?.family as never });
         dayPower = true;
       }
 

@@ -109,15 +109,40 @@ function strength(
   workout.exercises = expanded.map((pattern, index) => row(workout.id, index, 'main_strength', pattern));
   workout.intensity = opts.hard ? 'High' : 'Moderate';
   if (opts.power) {
-    workout.powerBlock = {
-      id: `power-${dayOfWeek}`,
-      title: 'Primer',
-      prescription: '2 x 3',
-      kind: 'primer',
-      family: 'lower',
-      exercises: [],
-      notes: [],
-    } as Workout['powerBlock'];
+    // Power is a ROW with a typed role now, not a block beside the list.
+    workout.exercises = [
+      {
+        id: `power-${dayOfWeek}`,
+        workoutId: workout.id,
+        exerciseId: `power-${dayOfWeek}-ex`,
+        exerciseOrder: 0,
+        prescribedSets: 2,
+        prescribedRepsMin: 3,
+        prescribedRepsMax: 3,
+        restSeconds: 120,
+        role: 'power',
+        power: { family: 'lower', kind: 'primer' },
+        section18Evidence: {
+          protocolVersion: 1,
+          role: 'power',
+          strengthPattern: null,
+          mainStrengthPattern: null,
+          provenance: 'canonical_row_classifier',
+        },
+        exercise: {
+          id: `power-${dayOfWeek}-ex`,
+          name: 'Vertical Jump',
+          description: 'Vertical Jump',
+          muscleGroups: [],
+          exerciseType: 'Plyometric',
+          equipmentRequired: [],
+          difficultyLevel: 'Intermediate',
+          createdAt: '', updatedAt: '',
+        },
+        createdAt: '', updatedAt: '',
+      },
+      ...workout.exercises,
+    ];
   }
   return workout;
 }

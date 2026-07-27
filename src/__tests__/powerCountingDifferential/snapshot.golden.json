@@ -507,7 +507,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -519,26 +519,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -591,7 +588,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -603,26 +600,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -813,7 +807,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -825,26 +819,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -897,7 +888,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -909,26 +900,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1180,7 +1168,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Speed warm-up",
@@ -1192,27 +1180,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1270,7 +1254,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 1,
-                "total": 7
+                "total": 8
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -1282,27 +1266,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Vertical Jump",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1493,7 +1473,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Speed warm-up",
@@ -1505,27 +1485,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1583,7 +1559,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 1,
-                "total": 7
+                "total": 8
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -1595,27 +1571,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Vertical Jump",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1806,7 +1778,7 @@
                 "strength": 4,
                 "support": 0,
                 "conditioning": 1,
-                "total": 5
+                "total": 6
               },
               "strengthRowNames": [
                 "Speed warm-up",
@@ -1817,27 +1789,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "2 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -1885,7 +1853,7 @@
                 "strength": 3,
                 "support": 0,
                 "conditioning": 0,
-                "total": 3
+                "total": 4
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -1895,27 +1863,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "2 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Vertical Jump",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -2093,7 +2057,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Speed warm-up",
@@ -2105,27 +2069,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -2183,7 +2143,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 1,
-                "total": 7
+                "total": 8
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -2195,27 +2155,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Vertical Jump",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -3830,7 +3786,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -3842,26 +3798,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -3914,7 +3867,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -3926,26 +3879,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -4136,7 +4086,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -4148,26 +4098,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -4220,7 +4167,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -4232,26 +4179,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -4950,7 +4894,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -4962,26 +4906,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -5034,7 +4975,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -5046,26 +4987,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "2 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Pogo Hops",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -5256,7 +5194,7 @@
                 "strength": 5,
                 "support": 0,
                 "conditioning": 1,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Quality speed warm-up (short)",
@@ -5268,26 +5206,23 @@
               "power": {
                 "kind": "primer",
                 "family": "upper",
-                "title": "Power Primer",
-                "prescription": "3 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Explosive Push-up",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -5340,7 +5275,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -5352,26 +5287,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "2 x 3 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Pogo Hops",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 3,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
                   "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -5614,7 +5546,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -5626,27 +5558,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -5872,7 +5800,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -5884,27 +5812,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -6130,7 +6054,7 @@
                 "strength": 5,
                 "support": 1,
                 "conditioning": 0,
-                "total": 6
+                "total": 7
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -6142,27 +6066,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -6387,7 +6307,7 @@
                 "strength": 3,
                 "support": 0,
                 "conditioning": 0,
-                "total": 3
+                "total": 4
               },
               "strengthRowNames": [
                 "Bicep Curls",
@@ -6397,27 +6317,23 @@
               "power": {
                 "kind": "primer",
                 "family": "lower",
-                "title": "Power Primer",
-                "prescription": "2 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -6684,7 +6600,7 @@
                 "strength": 2,
                 "support": 1,
                 "conditioning": 0,
-                "total": 3
+                "total": 4
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -6693,27 +6609,23 @@
               "power": {
                 "kind": "contrast",
                 "family": "lower",
-                "title": "Contrast Power",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -6900,7 +6812,7 @@
                 "strength": 2,
                 "support": 1,
                 "conditioning": 0,
-                "total": 3
+                "total": 4
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -6909,27 +6821,23 @@
               "power": {
                 "kind": "contrast",
                 "family": "lower",
-                "title": "Contrast Power",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -7135,7 +7043,7 @@
                 "strength": 2,
                 "support": 1,
                 "conditioning": 0,
-                "total": 3
+                "total": 4
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -7144,27 +7052,23 @@
               "power": {
                 "kind": "contrast",
                 "family": "lower",
-                "title": "Contrast Power",
-                "prescription": "3 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },
@@ -7421,7 +7325,7 @@
                 "strength": 2,
                 "support": 0,
                 "conditioning": 0,
-                "total": 2
+                "total": 3
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -7430,27 +7334,23 @@
               "power": {
                 "kind": "contrast",
                 "family": "lower",
-                "title": "Contrast Power",
-                "prescription": "2 x 3-5 — full rest, fast & sharp",
-                "placement": "pre_lift",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 2,
                     "repsMin": 3,
                     "repsMax": 5,
-                    "equipmentRequired": []
+                    "equipmentRequired": [],
+                    "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts.",
-                  "Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
                 ],
                 "fence": {
-                  "hardExposure": false,
-                  "mainStrength": false,
-                  "conditioningCredit": "none",
-                  "isFinisher": false
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
                 }
               }
             },

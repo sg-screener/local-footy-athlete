@@ -29,6 +29,7 @@ import type {
   Slice3TraceStage,
   StrengthPattern,
 } from '../types';
+import { powerRows } from '../../../rules/sessionRowCounting';
 
 const NOW = '2026-03-23T00:00:00.000Z';
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -86,7 +87,7 @@ function baseWorkout(args: {
     titles: string[];
     modalities?: Array<'bike' | 'row' | 'ski' | 'running'>;
   };
-  powerBlock?: PowerBlock;
+  powerRow?: WorkoutExercise;
   isTeamDay?: boolean;
 }): Workout {
   const planned = args.patterns ?? [];
@@ -136,38 +137,55 @@ function baseWorkout(args: {
           : {}),
       })),
     } : undefined,
-    powerBlock: args.powerBlock,
-    exercises: args.exercises,
+
+    exercises: [
+      ...(args.powerRow ? [{ ...args.powerRow, workoutId: args.id }] : []),
+      ...args.exercises,
+    ],
     ...({ isTeamDay: args.isTeamDay } as any),
     createdAt: NOW,
     updatedAt: NOW,
   };
 }
 
-function powerBlock(spec: NonNullable<ReturnType<typeof decidePowerPrimer>>): PowerBlock {
-  const option = spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-Up';
+function powerRow(spec: NonNullable<ReturnType<typeof decidePowerPrimer>>): WorkoutExercise {
+  const name = spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-Up';
   return {
     id: `power:${spec.kind}:${spec.family}`,
-    kind: spec.kind,
-    family: spec.family,
-    title: spec.kind === 'contrast' ? 'Contrast Power' : 'Power Primer',
-    prescription: `${spec.sets} x ${spec.repsMin}-${spec.repsMax}`,
-    placement: 'pre_lift',
-    options: [{
-      name: option,
-      sets: spec.sets,
-      repsMin: spec.repsMin,
-      repsMax: spec.repsMax,
+    workoutId: 'slice3',
+    exerciseId: `power-${spec.family}`,
+    exerciseOrder: 0,
+    prescribedSets: spec.sets,
+    prescribedRepsMin: spec.repsMin,
+    prescribedRepsMax: spec.repsMax,
+    restSeconds: 120,
+    notes: spec.kind === 'contrast' ? 'Contrast: pair with the heavy lift.' : 'Stay sharp.',
+    role: 'power',
+    power: { family: spec.family, kind: spec.kind },
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
+    },
+    exercise: {
+      id: `power-${spec.family}`,
+      name,
+      description: name,
+      muscleGroups: [],
+      exerciseType: 'Plyometric',
       equipmentRequired: [],
-    }],
-    notes: spec.kind === 'contrast' ? ['Contrast: pair with the heavy lift.'] : ['Stay sharp.'],
-    counting: { hardExposure: false, mainStrength: false, conditioningCredit: 'none', isFinisher: false },
+      difficultyLevel: 'Intermediate',
+      createdAt: '', updatedAt: '',
+    },
+    createdAt: '', updatedAt: '',
   };
 }
 
-function powerFor(context: PowerPrimerContext): PowerBlock | undefined {
+function powerFor(context: PowerPrimerContext): WorkoutExercise | undefined {
   const spec = decidePowerPrimer(context);
-  return spec ? powerBlock(spec) : undefined;
+  return spec ? powerRow(spec) : undefined;
 }
 
 function canonicalPatterns(values: readonly string[] | undefined): StrengthPattern[] {
@@ -227,15 +245,17 @@ function conditioningLedger(workout: Workout | null): HarnessConditioningEntry[]
 }
 
 function powerLedger(workout: Workout | null): HarnessPowerIntent {
-  const block = workout?.powerBlock;
-  if (!block) return { kind: 'none' };
-  if (block.kind === 'primer') return { kind: 'primer', explosiveFamily: block.family };
+  const row = workout ? powerRows(workout)[0] : undefined;
+  if (!row) return { kind: 'none' };
+  const family = row.power!.family;
+  if (row.power!.kind === 'primer') return { kind: 'primer', explosiveFamily: family };
   const aligned = alignPowerBlockToFinalWorkoutContent(workout!);
   return {
     kind: 'contrast',
-    explosiveFamily: block.family,
-    heavyLiftFamily: block.family,
-    heavyLiftPresent: aligned.action === 'unchanged' && aligned.workout.powerBlock?.kind === 'contrast',
+    explosiveFamily: family,
+    heavyLiftFamily: family,
+    heavyLiftPresent: aligned.action === 'unchanged' &&
+      powerRows(aligned.workout)[0]?.power?.kind === 'contrast',
   };
 }
 
@@ -314,7 +334,7 @@ function exposureLedger(workouts: Array<{ date: string; workout: Workout | null 
     }
     hardConditioning += classification.units.filter((unit) =>
       unit.conditioningRole === 'hard' && unit.contributions.conditioning > 0).length;
-    if (workout.powerBlock) power++;
+    if (powerRows(workout).length > 0) power++;
   }
   return {
     squatStrength,
@@ -401,7 +421,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
     const block = powerFor(specContext);
     const raw = baseWorkout({
       id, name: mid ? 'Lower Strength + Power Primer' : 'Lower Strength + Contrast Power',
-      patterns: ['squat'], primary: 'squat', powerBlock: block,
+      patterns: ['squat'], primary: 'squat', powerRow: block,
       exercises: [row(id, 0, invalid ? 'Goblet Squat' : 'Back Squat', {
         equipment: invalid ? ['Dumbbells'] : ['Barbell', 'Rack'], reps: invalid ? 10 : 4, weight: invalid ? undefined : 100,
       })],
@@ -416,7 +436,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
     const id = 'g2-lower';
     const raw = baseWorkout({
       id, dayOfWeek: 4, name: 'Renamed Session', intensity: 'High', patterns: ['squat', 'hinge'], primary: 'squat',
-      powerBlock: powerFor({
+      powerRow: powerFor({
         phase: 'In-season', strengthPattern: 'lower_combined', hasGame: true, gOffset: -2,
         isTeamDay: false, readiness: 'high', isBeginner: false,
         experienced: true, injuries: [], powerGoalNudge: false,
@@ -517,10 +537,16 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
 
   if (scenario.id === 'low-readiness-downgrade') {
     const raw = mixedLowerWorkout('readiness-mixed', 1, false);
-    raw.powerBlock = powerBlock({
-      kind: 'primer', family: 'lower', sets: 3, repsMin: 3, repsMax: 3,
-      reduced: false, reason: 'pre-readiness candidate',
-    });
+    raw.exercises = [
+      {
+        ...powerRow({
+          kind: 'primer', family: 'lower', sets: 3, repsMin: 3, repsMax: 3,
+          reduced: false, reason: 'pre-readiness candidate',
+        }),
+        workoutId: raw.id,
+      },
+      ...raw.exercises,
+    ];
     const generated = canonical(raw, { phase: 'Pre-season', readiness: 'low' });
     const evidence: HarnessTransformEvidence[] = generated.evidence.some((item) => item.domain === 'power')
       ? [{ domain: 'constraint', action: 'downgrade', code: 'low_readiness_power_blocked', components: ['power'] }]
@@ -558,7 +584,7 @@ function mixedLowerWorkout(id: string, dayOfWeek: number, withPower = false): Wo
   const bike = `${id}:row:2`;
   return baseWorkout({
     id, dayOfWeek, name: 'Lower Strength + Bike Intervals', intensity: 'High', patterns: ['squat', 'hinge'], primary: 'squat',
-    powerBlock: withPower ? powerBlock({ kind: 'primer', family: 'lower', sets: 3, repsMin: 3, repsMax: 3, reduced: false, reason: 'fixture' }) : undefined,
+    powerRow: withPower ? powerRow({ kind: 'primer', family: 'lower', sets: 3, repsMin: 3, repsMax: 3, reduced: false, reason: 'fixture' }) : undefined,
     exercises: [
       row(id, 0, 'Back Squat', { equipment: ['Barbell', 'Rack'], reps: 5, weight: 100 }),
       row(id, 1, 'Romanian Deadlift', { equipment: ['Barbell'], reps: 6, weight: 90 }),

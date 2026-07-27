@@ -79,6 +79,7 @@ import {
   type Section18AcceptedWeekCandidate,
 } from '../rules/section18AcceptedWeekGateway';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
+import { hasPowerRow } from '../rules/sessionRowCounting';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -336,7 +337,7 @@ export function validateWorkoutAgainstActiveConstraints(
       removedComponents: Array.from(new Set([
         ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
         ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
-        ...(alignedWorkout.powerBlock ? ['power' as const] : []),
+        ...(hasPowerRow(alignedWorkout) ? ['power' as const] : []),
         ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
       ])),
     };
@@ -365,7 +366,7 @@ export function validateWorkoutAgainstActiveConstraints(
         ...(canonicalRemovedPower ? ['power' as const] : []),
         ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
         ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
-        ...(alignedWorkout.powerBlock || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
+        ...(hasPowerRow(alignedWorkout) || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
         ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
       ])),
     };

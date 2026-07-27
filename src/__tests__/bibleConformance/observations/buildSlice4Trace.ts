@@ -23,7 +23,7 @@ import type {
 import {
   canonicalWeekLedger,
   pathExercise,
-  pathPowerBlock,
+  pathPowerRow,
   pathProgram,
   pathWorkout,
   PATH_PROFILE,
@@ -242,7 +242,7 @@ function contrastRemovalObservation(): Slice4PathObservation[] {
   const source = finaliseWorkoutAfterMutation(pathWorkout({
     id, dayOfWeek: 1, name: 'Lower Contrast', patterns: ['squat'], primary: 'squat',
     exercises: [pathExercise(id, 0, 'Back Squat', { weight: 100, reps: 4 })],
-    powerBlock: pathPowerBlock('contrast'),
+    powerRow: pathPowerRow('contrast'),
   }), { phase: 'Off-season', offseasonSubphase: 'late_offseason', planIntentValid: true }).workout;
   seedProgram([source]);
   const date = '2026-03-23';

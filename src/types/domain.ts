@@ -951,6 +951,26 @@ export interface WorkoutExercise {
   role?: import('../utils/sessionRoles').SessionRole;
 
   /**
+   * The two power facts a row must carry that a name and a dose cannot express.
+   *
+   * Present if and only if `role === 'power'` — pinned by
+   * `sessionRowCountingTests`. `family` is read by the §18 weekly budget (which
+   * prefers family diversity across the week) and by the safety policy's
+   * `prohibitedPowerFamilies`; `kind` distinguishes a standalone primer from
+   * contrast work paired with the heavy set.
+   *
+   * Everything else the retired `PowerBlock` carried is already row data: the
+   * exercise NAME is the row's exercise, the DOSE is `prescribedSets` and the
+   * rep range, and the placement/contrast guidance is the row's `notes`. Only
+   * these two had nowhere else to live, which is why they are the only survivors
+   * of the block.
+   */
+  power?: {
+    family: import('../rules/powerPrimerPolicy').PowerFamily;
+    kind: import('../rules/powerPrimerPolicy').PowerKind;
+  };
+
+  /**
    * How to interpret the reps numbers:
    *   - 'reps': standard rep count (default if omitted)
    *   - 'duration': repsMin/repsMax are seconds (e.g. 30–45s hold)

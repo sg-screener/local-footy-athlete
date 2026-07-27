@@ -5,7 +5,9 @@
  * whether that proposal is still honest after generation, filtering or edits.
  */
 
-import type { PowerFamily, Workout } from '../types/domain';
+import type { Workout } from '../types/domain';
+import type { PowerFamily } from './powerPrimerPolicy';
+import { powerRows, withoutPowerRows } from './sessionRowCounting';
 import { getExerciseTags } from '../data/exerciseTags';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { getSessionComponentRows } from '../utils/sessionComponents';
@@ -56,32 +58,35 @@ function rowSignal(row: any): {
 export function alignPowerBlockToFinalWorkoutContent(
   workout: Workout,
 ): PowerBlockAlignmentResult {
-  const block = workout.powerBlock;
-  if (!block) return { workout, action: 'unchanged', reason: null };
+  const rows = powerRows(workout);
+  if (rows.length === 0) return { workout, action: 'unchanged', reason: null };
+  const family = rows[0].power?.family;
+  const kind = rows[0].power?.kind;
 
+  // `strengthRows` no longer contains power — the component owner gives power its
+  // own population — so this reads only real strength content, which is what it
+  // always meant to ask.
   const signals = getSessionComponentRows(workout).strengthRows.map(rowSignal);
-  const sameFamily = signals.filter((signal) => signal.family === block.family);
+  const sameFamily = signals.filter((signal) => signal.family === family);
   if (sameFamily.length === 0) {
     return {
-      workout: { ...workout, powerBlock: undefined },
+      workout: withoutPowerRows(workout),
       action: 'removed',
       reason: 'no_same_family_strength_content',
     };
   }
 
-  if (block.kind === 'contrast' && !sameFamily.some((signal) => signal.heavy)) {
+  if (kind === 'contrast' && !sameFamily.some((signal) => signal.heavy)) {
     return {
       workout: {
         ...workout,
-        powerBlock: {
-          ...block,
-          kind: 'primer',
-          title: 'Power Primer',
-          notes: [
-            ...block.notes.filter((note) => !/^contrast:/i.test(note)),
-            'Use this as a standalone primer before strength work.',
-          ],
-        },
+        exercises: (workout.exercises ?? []).map((row) => row.role === 'power' && row.power
+          ? {
+              ...row,
+              power: { ...row.power, kind: 'primer' as const },
+              notes: `${(row.notes ?? '').replace(/\s*Contrast:[^]*$/i, '').trim()} Use this as a standalone primer before strength work.`.trim(),
+            }
+          : row),
       },
       action: 'downgraded',
       reason: 'no_heavy_same_family_main_lift',

@@ -3,7 +3,7 @@
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
-import { pathExercise, pathPowerBlock, pathWorkout, canonicalWorkoutLedger } from './buildCanonicalPathLedger';
+import { pathExercise, pathPowerRow, pathWorkout, canonicalWorkoutLedger } from './buildCanonicalPathLedger';
 import { buildSlice4ScenarioTrace } from './buildSlice4Trace';
 import { SLICE4_GOLDEN_SCENARIOS } from '../scenarios/slice4Goldens';
 import type {
@@ -81,7 +81,7 @@ function componentChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
     patterns: requested.has('strength') ? [strengthPattern] : [], primary: requested.has('strength') ? strengthPattern : null,
     exercises,
     conditioning: requested.has('conditioning') ? [{ title: 'Bike Zone 2 25min', modality: 'bike' }] : undefined,
-    powerBlock: requested.has('power') ? pathPowerBlock('primer') : undefined,
+    powerRow: requested.has('power') ? pathPowerRow('primer') : undefined,
     team: requested.has('team_training'),
     recoveryAddon: requested.has('recovery') ? 'Easy Calf Isometric' : undefined,
   });
@@ -137,7 +137,7 @@ function powerChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
   const patterns: StrengthPattern[] = heavy === 'mismatched' ? ['push'] : ['squat'];
   const source = pathWorkout({
     id: entry.id, dayOfWeek: 1, name: 'Generated Power', patterns, primary: patterns[0], exercises,
-    powerBlock: state === 'none' ? undefined : pathPowerBlock(state),
+    powerRow: state === 'none' ? undefined : pathPowerRow(state),
   });
   const context = {
     phase: phase === 'in_season' ? 'In-season' as const : 'Off-season' as const,

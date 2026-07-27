@@ -80,6 +80,7 @@ import {
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
 import { todayISOLocal } from './appDate';
+import { hasPowerRow } from '../rules/sessionRowCounting';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -961,7 +962,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   if (
     templateWorkout?.workoutType === 'Rest' &&
     templateWorkout.exercises.length === 0 &&
-    !templateWorkout.powerBlock &&
+    !hasPowerRow(templateWorkout) &&
     !templateWorkout.conditioningBlock &&
     !templateWorkout.speedBlock
   ) {

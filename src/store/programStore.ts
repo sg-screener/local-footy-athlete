@@ -98,6 +98,7 @@ import {
   projectAcceptedMaterialContextDerivedFields,
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
+import { hasPowerRow } from '../rules/sessionRowCounting';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -548,7 +549,7 @@ function deriveContractlessLegacyContract(args: {
       optionalFlush: selection.optionalFlush,
       optionalRecoveryAerobic: selection.optionalRecoveryAerobic,
       sprintHighSpeed: selection.sprintHighSpeed,
-      powerPrimers: workouts.filter((workout) => !!workout.powerBlock).length,
+      powerPrimers: workouts.filter(hasPowerRow).length,
     },
     prohibitedPatternProvenance: 'legacy_missing',
     source: 'legacy_migration',

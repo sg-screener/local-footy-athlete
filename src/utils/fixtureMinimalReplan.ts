@@ -39,6 +39,7 @@ import {
   currentAthleteActionTrace,
   emitAthleteActionEvent,
 } from './athleteActionDiagnostics';
+import { powerRows } from '../rules/sessionRowCounting';
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
@@ -171,7 +172,7 @@ function workoutSignature(workout: Workout | undefined): string {
     })),
     conditioning: workout.conditioningBlock ?? null,
     speed: workout.speedBlock ?? null,
-    power: workout.powerBlock ?? null,
+    power: powerRows(workout)[0]?.power ?? null,
   });
 }
 

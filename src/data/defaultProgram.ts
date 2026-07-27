@@ -1386,25 +1386,34 @@ function buildSpeedBlock(
 }
 
 /**
- * Render the engine's typed power-primer intent into a display PowerBlock.
+ * Render the engine's typed power-primer intent into a POWER ROW.
+ *
+ * Sam's ruling (2026-07-27): power is a row in `exercises[]` with a typed role,
+ * not a block beside the list. What used to be a `PowerBlock` is now ordinary
+ * row data — the pool's chosen exercise is the row's exercise, the policy's dose
+ * is the row's sets and rep range, and the placement/contrast guidance is the
+ * row's notes. Only `family` and `kind` had nowhere else to live, so they are
+ * the row's `power` field.
  *
  * Identity is chosen by `selectPowerExercise` from Sam's typed pool
- * (docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md, wired 2026-07-27). No exercise
- * name is hardcoded here beyond the unreachable null fallback, and the med-ball
- * family stays retired. Equipment is read again — the pool has an
- * equipment-gated entry (Depth Jumps needs a box) and the selector drops it for
- * athletes without one rather than substituting.
+ * (docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md). No exercise name is hardcoded
+ * here beyond the unreachable null fallback, and the med-ball family stays
+ * retired. Equipment is read again — the pool has an equipment-gated entry
+ * (Depth Jumps needs a box) and the selector drops it for athletes without one
+ * rather than substituting.
  *
- * The block is intentionally NOT added to `workout.exercises` and carries a
- * counting fence marking it non-conditioning, non-finisher, non-hard.
+ * THE FENCE. It used to be enforced by absence: power was not in `exercises[]`,
+ * so nothing that iterated the list could count it. Now the row is in the list
+ * and `role: 'power'` carries the exemption, read at one place
+ * (`src/rules/sessionRowCounting.ts`). The four fence facts are unchanged — not
+ * a hard exposure, not main strength, no conditioning credit, not a finisher —
+ * and the differential golden is what proves it.
  */
-function buildPowerBlock(
+function buildPowerRow(
   spec: NonNullable<SessionAllocation['powerPrimer']>,
   workoutId: string,
   selection: PowerBlockSelectionInput = {},
-): PowerBlock {
-  const repsLabel = spec.repsMin === spec.repsMax ? `${spec.repsMin}` : `${spec.repsMin}-${spec.repsMax}`;
-
+): WorkoutExercise {
   // Identity comes from the pool + selector; DOSE still comes from the policy's
   // spec. That split is the spec's law, which is why the entry contributes only
   // a name and its equipment, and every number below is `spec.*`.
@@ -1417,45 +1426,48 @@ function buildPowerBlock(
     blockId: selection.blockId ?? 'block-1',
     kind: spec.kind,
   });
-
-  const options: PowerBlockOption[] = [{
-    // The selector covers every real (family, phase, experience) cell, so null
-    // is unreachable in practice; falling back to the family's bodyweight
-    // default keeps a missing power block from being worse than a plain one.
-    name: picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up'),
-    sets: spec.sets,
-    repsMin: spec.repsMin,
-    repsMax: spec.repsMax,
-    equipmentRequired: [...(picked?.equipmentRequired ?? [])],
-  }];
+  // The selector covers every real (family, phase, experience) cell, so null is
+  // unreachable in practice; falling back to the family's bodyweight default
+  // keeps a missing power row from being worse than a plain one.
+  const name = picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up');
 
   // PLACEMENT and CONTRAST guidance only. Per-exercise coaching text is NOT
-  // here any more: rows render curated `EXERCISE_CUES` like every other row, so
-  // a second cue channel through `notes` would be the bypass Sam's run-7 ruling
-  // closed. What stays is the information the block carries that no exercise
-  // cue could: when to do it, and how contrast pairs with the heavy set.
-  const notes = [
-    'Do this fresh, early in the session — before the main lifts.',
-  ];
-  if (spec.kind === 'contrast') {
-    notes.push('Contrast: perform sharply straight after your heavy set, then rest fully before the next round.');
-  }
+  // here: rows render curated `EXERCISE_CUES` like every other row, so a second
+  // cue channel through notes would be the bypass Sam's run-7 ruling closed.
+  // What stays is the information no exercise cue could carry — when to do it,
+  // and how contrast pairs with the heavy set.
+  const notes = spec.kind === 'contrast'
+    ? 'Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round.'
+    : 'Do this fresh, early in the session — before the main lifts.';
 
   return {
     id: `power-${workoutId}`,
-    kind: spec.kind,
-    family: spec.family,
-    title: spec.kind === 'contrast' ? 'Contrast Power' : 'Power Primer',
-    prescription: `${spec.sets} x ${repsLabel} — full rest, fast & sharp`,
-    placement: 'pre_lift',
-    options,
+    workoutId,
+    exerciseId: `power-${workoutId}-exercise`,
+    // Power is pre-lift and must sort first. `exerciseOrder` 0 puts it ahead of
+    // every generated strength row, which start at 1.
+    exerciseOrder: 0,
+    prescribedSets: spec.sets,
+    prescribedRepsMin: spec.repsMin,
+    prescribedRepsMax: spec.repsMax,
+    restSeconds: 120,
     notes,
-    counting: {
-      hardExposure: false,
-      mainStrength: false,
-      conditioningCredit: 'none',
-      isFinisher: false,
+    role: 'power',
+    power: { family: spec.family, kind: spec.kind },
+    section18Evidence: {
+      protocolVersion: 1,
+      // Authored, not inferred. `Explosive Push-up` classifies as a main lift by
+      // name, so letting the row classifier answer here would hand §18
+      // main-strength evidence for power work — the same trap the taxonomy's
+      // choke point exists to close, one layer down.
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
     },
+    exercise: findOrCreateExercise(name),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -2485,7 +2497,7 @@ export function buildWorkoutsFromCoach(
     // sharp dose — few reps, full recovery, stop the moment speed drops." This
     // used to skip power entirely on deload weeks, which the law supersedes —
     // a deload is not a reason to lose sharpness. The dose shrinks instead.
-    let resolvedPowerBlock: PowerBlock | undefined;
+    let resolvedPowerRow: WorkoutExercise | undefined;
     if (planEntry?.powerPrimer) {
       const powerSpec = deloadPolicy
         ? (() => {
@@ -2505,7 +2517,7 @@ export function buildWorkoutsFromCoach(
           })()
         : planEntry.powerPrimer;
 
-      if (powerSpec) resolvedPowerBlock = buildPowerBlock(powerSpec, workoutId, {
+      if (powerSpec) resolvedPowerRow = buildPowerRow(powerSpec, workoutId, {
         phase: onboardingData?.seasonPhase,
         experienceLevel: onboardingData?.experienceLevel,
         availableEquipment: onboardingData?.equipment ?? [],
@@ -2555,9 +2567,12 @@ export function buildWorkoutsFromCoach(
         : {}),
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
       ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
-      ...(resolvedPowerBlock ? { powerBlock: resolvedPowerBlock } : {}),
+
       durationMinutes: 0,
-      exercises: finalExercises,
+      // Power leads the list. It is pre-lift work and D2's session order puts it
+      // first; placing it here means the ROW ORDER already carries that fact, so
+      // no renderer has to know power is special to show it in the right place.
+      exercises: resolvedPowerRow ? [resolvedPowerRow, ...finalExercises] : finalExercises,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

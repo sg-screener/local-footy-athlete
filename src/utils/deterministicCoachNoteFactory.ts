@@ -12,6 +12,7 @@ import type {
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
 import type { ConditioningModality } from '../data/exerciseTags';
 import { getSessionComponentRows } from './sessionComponents';
+import { hasPowerRow } from '../rules/sessionRowCounting';
 
 type DeterministicCoachNoteVisibleWorkout = Pick<
   Workout,
@@ -119,7 +120,7 @@ function sessionShapeProof(workout: Workout): DeterministicCoachNoteEffectEviden
     conditioningModalities,
     exerciseNames: workout.exercises.map((row) => row.exercise?.name ?? row.exerciseId),
     hasSpeedBlock: !!workout.speedBlock,
-    hasPowerBlock: !!workout.powerBlock,
+    hasPowerBlock: hasPowerRow(workout),
   };
 }
 
@@ -199,7 +200,7 @@ function evidenceStillVisible(
     workout.exercises.map((row) => row.exercise?.name ?? row.exerciseId).join('\u0000') ===
       proof.exerciseNames.join('\u0000') &&
     !!workout.speedBlock === proof.hasSpeedBlock &&
-    !!workout.powerBlock === proof.hasPowerBlock;
+    hasPowerRow(workout) === proof.hasPowerBlock;
   if (!shapeStillVisible) return false;
   if (evidence.reason === 'early_offseason' || evidence.reason === 'mid_offseason') {
     return proof.hasConditioningComponent &&

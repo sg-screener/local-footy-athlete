@@ -9,6 +9,7 @@ import type {
 } from '../types/domain';
 import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
+import { hasPowerRow, withoutPowerRows } from './sessionRowCounting';
 
 export interface DerivedSessionExpiry {
   planEntryId: string | null;
@@ -226,7 +227,7 @@ export function stampPlannerDerivedSessionProvenance(args: {
         validWhile: [],
       }));
     }
-    if (workout.powerBlock) {
+    if (hasPowerRow(workout)) {
       records.push(createDerivedSessionProvenance({
         origin: 'optional_planner_addition',
         scope: 'power_component',
@@ -348,7 +349,7 @@ function withoutDerivedScope(
     ...workout,
     derivedSessionProvenance: provenance.length > 0 ? provenance : undefined,
   };
-  if (record.scope === 'power_component') return { ...base, powerBlock: undefined };
+  if (record.scope === 'power_component') return withoutPowerRows(base);
   if (record.scope === 'speed_component') return { ...base, speedBlock: undefined };
   if (record.scope === 'recovery_component') return { ...base, recoveryAddons: [] };
   if (record.scope === 'strength_component') {

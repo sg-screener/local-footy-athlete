@@ -52,6 +52,7 @@ import { countWeeklyExposures } from '../../rules/weeklyExposureCounts';
 import { getSessionComponentRows, getSessionComponents } from '../../utils/sessionComponents';
 import { runSection18AcceptedWeekGateway } from '../../rules/section18AcceptedWeekGateway';
 import type { StressContext } from '../../rules/stressClassification';
+import { powerRows } from '../../rules/sessionRowCounting';
 import { projectPower, powerDays, type ProjectedPower } from './powerProjection';
 import { POWER_SCENARIOS, type PowerScenario } from './scenarios';
 
@@ -262,21 +263,29 @@ function weekSnapshot(microcycle: Microcycle, profile: OnboardingData): WeekSnap
  * fence stay production values rather than harness inventions.
  */
 function overFillPower(workouts: readonly Workout[]): Workout[] {
-  const template = workouts.map((workout) => workout.powerBlock).find(Boolean);
+  const template = workouts.flatMap((workout) => powerRows(workout)).find(Boolean);
   if (!template) return workouts.map((workout) => ({ ...workout }));
   let index = 0;
   return workouts.map((workout) => {
-    const strengthRows = getSessionComponentRows(workout).strengthRows.length;
-    if (strengthRows === 0) return { ...workout };
+    if (getSessionComponentRows(workout).strengthRows.length === 0) return { ...workout };
+    // OVERWRITE rather than skip, including days that already carry power. The
+    // probe's job is to hand the §18 selector a known over-budget week with a
+    // known family pattern; letting generation's own families survive on some
+    // days would make the selector's input depend on the stage, and the recorded
+    // keep/strip would stop being comparable across stages.
     const family = index % 2 === 0 ? 'lower' : 'upper';
     index += 1;
     return {
       ...workout,
-      powerBlock: {
-        ...template,
-        id: `probe-power-${workout.dayOfWeek}`,
-        family: family as typeof template.family,
-      },
+      exercises: [
+        {
+          ...template,
+          id: `probe-power-${workout.dayOfWeek}`,
+          workoutId: workout.id,
+          power: { ...template.power!, family: family as typeof template.power.family },
+        },
+        ...(workout.exercises ?? []).filter((row) => row.role !== 'power'),
+      ],
     };
   });
 }
@@ -288,7 +297,7 @@ function overBudgetProbe(
   const microcycle = program.microcycles.find((cycle) =>
     !!cycle.exposureContractV2 &&
     cycle.exposureContractV2.power?.eligible !== false &&
-    cycle.workouts.some((workout) => !!workout.powerBlock));
+    cycle.workouts.some((workout) => powerRows(workout).length > 0));
   if (!microcycle?.exposureContractV2) return null;
 
   const weekStart = microcycle.startDate.slice(0, 10);
@@ -308,10 +317,10 @@ function overBudgetProbe(
     powerDaysKept: kept,
     powerDaysStripped: before.filter((day) => !kept.includes(day)),
     keptFamilies: result.canonicalWorkouts
-      .filter((workout) => !!workout.powerBlock)
+      .filter((workout) => powerRows(workout).length > 0)
       .map((workout) => ({
         dayOfWeek: workout.dayOfWeek,
-        family: workout.powerBlock!.family,
+        family: String(powerRows(workout)[0]?.power?.family ?? ''),
       }))
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
     achievedPrimerCount: result.contract.power?.achievedPrimerCount ?? null,

@@ -169,17 +169,29 @@ ok(
 // golden. Assert the values directly so the fence has a statement of its own
 // that no regeneration can quietly satisfy.
 
+// STAGE 3: the fence is measured, not copied. It used to be a stored object on
+// the block, which could say `false` while the counters said otherwise. Now it
+// is the production choke point's own verdict plus the §18 evidence the row
+// carries, so a power row that started earning credit would fail here rather
+// than quietly ship with an honest-looking object attached.
 const fences = allDays.map((day) => day.power?.fence).filter(Boolean);
 ok(
-  'every projected power item carries the authored counting fence',
+  'every power row is authored role:power and counted by nothing',
   fences.every((fence) =>
-    fence!.hardExposure === false &&
-    fence!.mainStrength === false &&
-    fence!.conditioningCredit === 'none' &&
-    fence!.isFinisher === false),
+    fence!.role === 'power' &&
+    fence!.countedByAnything === false &&
+    fence!.section18Role === 'power'),
   JSON.stringify(fences.find((fence) =>
-    fence!.hardExposure !== false || fence!.mainStrength !== false ||
-    fence!.conditioningCredit !== 'none' || fence!.isFinisher !== false)),
+    fence!.role !== 'power' || fence!.countedByAnything !== false ||
+    fence!.section18Role !== 'power')),
+);
+// Power is pre-lift work, and its position in the one list is what tells the
+// athlete that without any renderer knowing power is special.
+ok(
+  'every power row leads its session',
+  allDays.every((day) => (day.power?.items ?? []).every((item) => item.order === 0)),
+  JSON.stringify(allDays.find((day) =>
+    (day.power?.items ?? []).some((item) => item.order !== 0))?.power?.items),
 );
 
 // A power day must never be the reason a day counts as main strength or as a
@@ -259,34 +271,26 @@ function gunshowSession(extraRows: WorkoutExercise[] = []): Workout {
 }
 
 const withoutPower = gunshowSession();
-const withPowerBlock: Workout = {
-  ...gunshowSession(),
-  powerBlock: {
-    id: 'trap-power',
-    kind: 'primer',
-    family: 'upper',
-    title: 'Power Primer',
-    prescription: '3 x 3 — full rest, fast & sharp',
-    placement: 'pre_lift',
-    options: [{
-      name: 'Explosive Push-up',
-      sets: 3,
-      repsMin: 3,
-      repsMax: 3,
-      equipmentRequired: [],
-    }],
-    notes: ['Do this fresh, early in the session — before the main lifts.'],
-    counting: {
-      hardExposure: false,
-      mainStrength: false,
-      conditioningCredit: 'none',
-      isFinisher: false,
-    },
+const withPowerRow: Workout = gunshowSession([{
+  ...row('Explosive Push-up', 2),
+  exerciseOrder: 0,
+  prescribedSets: 3,
+  prescribedRepsMin: 3,
+  prescribedRepsMax: 3,
+  notes: 'Do this fresh, early in the session — before the main lifts.',
+  role: 'power',
+  power: { family: 'upper', kind: 'primer' },
+  section18Evidence: {
+    protocolVersion: 1,
+    role: 'power',
+    strengthPattern: null,
+    mainStrengthPattern: null,
+    provenance: 'canonical_row_classifier',
   },
-};
+}]);
 
 const baseUnits = classifyDaySessions(withoutPower).map((unit) => unit.category);
-const powerUnits = classifyDaySessions(withPowerBlock).map((unit) => unit.category);
+const powerUnits = classifyDaySessions(withPowerRow).map((unit) => unit.category);
 
 ok(
   'the trap baseline classifies as gunshow_prehab, not strength',
@@ -302,7 +306,7 @@ ok(
 
 const trapDays = (workout: Workout) => [{ date: '2026-07-15', workout }];
 const baseCounts = countWeeklyExposures(trapDays(withoutPower));
-const powerCounts = countWeeklyExposures(trapDays(withPowerBlock));
+const powerCounts = countWeeklyExposures(trapDays(withPowerRow));
 ok(
   'adding Explosive Push-up power changes no weekly count',
   baseCounts.mainStrengthExposures === powerCounts.mainStrengthExposures &&
@@ -319,7 +323,7 @@ ok(
 // assertions above would pass trivially on a day that has no power at all.
 ok(
   'the trap session really does carry projected power',
-  projectPower(withPowerBlock)?.items[0]?.exercise === 'Explosive Push-up' &&
+  projectPower(withPowerRow)?.items[0]?.exercise === 'Explosive Push-up' &&
     projectPower(withoutPower) === null,
 );
 

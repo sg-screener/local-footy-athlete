@@ -393,14 +393,27 @@ const programSource = fs.readFileSync(
   path.join(repoRoot, 'src/data/defaultProgram.ts'),
   'utf8',
 );
-const fence = /counting: \{\s*hardExposure: false,\s*mainStrength: false,\s*conditioningCredit: 'none',\s*isFinisher: false,\s*\}/;
-ok('the power block counting fence is byte-identical', fence.test(programSource));
+// STAGE 3 RE-POINT. These two used to grep `defaultProgram.ts` for the block's
+// literal `counting: { hardExposure: false, ... }` object and for
+// `buildPowerBlock`. Power is a ROW now, and that object is gone — the fence
+// lives in the authored role, read at one choke point. Deleting the assertions
+// would lose the guard, so they are re-pointed at what carries the same
+// meaning in the row era.
+ok(
+  'the power row is authored role:power — the fence in its new form',
+  /role: 'power',/.test(programSource) &&
+    /power: \{ family: spec\.family, kind: spec\.kind \},/.test(programSource),
+);
+ok(
+  'the power row stamps power Section 18 evidence, never a name-classified one',
+  /section18Evidence: \{[\s\S]{0,400}?role: 'power',/.test(programSource),
+);
 
 // Dose must still come from the policy's spec, not from the pool. If a future
 // edit read a number off a pool entry, this is where it shows up.
 ok(
-  'buildPowerBlock stamps the dose from the policy spec, not the pool',
-  /sets: spec\.sets,\s*repsMin: spec\.repsMin,\s*repsMax: spec\.repsMax,/.test(programSource),
+  'buildPowerRow stamps the dose from the policy spec, not the pool',
+  /prescribedSets: spec\.sets,\s*prescribedRepsMin: spec\.repsMin,\s*prescribedRepsMax: spec\.repsMax,/.test(programSource),
 );
 
 /* ── Result ── */

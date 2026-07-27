@@ -26,6 +26,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 import path from 'node:path';
 
 import type { Workout, WorkoutExercise } from '../types/domain';
@@ -279,6 +280,38 @@ console.log('\n[4] STRUCTURAL — the taxonomy has no un-filtered row iteration'
     !/classifyExercise|getExerciseTags|EXERCISE_|_RX/.test(
       source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''),
     ),
+  );
+}
+
+console.log('\n[5] STRUCTURAL — no second strip path survives');
+
+// The reassessment's other structural gate. Nine production sites removed power
+// by deleting the field: `powerBlock: undefined`, or the spread-and-drop
+// `({ powerBlock: _removed, ...rest }) => rest`. A field delete is invisible to
+// every owner — nothing canonicalises after it, nothing records that content
+// left, and the workout's name and type can go on describing work that is gone.
+// Row removal goes back through the canonical owner instead.
+//
+// Asserted over PRODUCTION source only. Test fixtures may still name the field
+// while the type exists (Stage 4 retires it), and forbidding it there would say
+// nothing about how the app behaves.
+{
+  const productionFiles = execSync(
+    "git ls-files 'src/**/*.ts' 'src/**/*.tsx' | grep -v '__tests__'",
+    { cwd: repoRoot, encoding: 'utf8' },
+  ).split('\n').filter(Boolean);
+
+  const offenders = productionFiles.filter((file) => {
+    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    return /powerBlock:\s*undefined/.test(source) ||
+      /powerBlock:\s*_removed/.test(source);
+  });
+  ok(
+    'no production file strips power by deleting the field',
+    offenders.length === 0,
+    offenders.join(', '),
   );
 }
 

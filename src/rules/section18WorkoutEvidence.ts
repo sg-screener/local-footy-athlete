@@ -15,6 +15,7 @@ import type {
   WorkoutExerciseSection18Evidence,
   WorkoutSection18Evidence,
 } from './weeklyExposureContractV2';
+import { countingIndices } from './sessionRowCounting';
 
 export type Section18EvidenceMode = 'infer' | 'preserve_legacy_unknown';
 
@@ -26,6 +27,21 @@ function inferredRowEvidence(
   row: WorkoutExercise,
   index: number,
 ): WorkoutExerciseSection18Evidence {
+  // AUTHORED ROLE FIRST — the same ordering rule the taxonomy's choke point
+  // enforces, one layer down. `classifyGeneratedWorkoutRow` reads the NAME, and
+  // `Explosive Push-up` classifies as a main lift; letting it answer here would
+  // stamp main-strength §18 evidence on power work and hand it back every credit
+  // its fence denies. Power is the only role with a Section 18 spelling today;
+  // the rest still come from the classifier.
+  if (row.role === 'power') {
+    return {
+      protocolVersion: 1,
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
+    };
+  }
   const classification = classifyGeneratedWorkoutRow({
     name: rowName(row),
     sets: row.prescribedSets,
@@ -134,10 +150,13 @@ export function withSection18WorkoutEvidence(
     ? new Set(normalizeStrengthIntent(workout.strengthIntent).effectivePatterns)
     : null;
   const creditedPatterns = new Set<string>();
+  // Position among COUNTED work — a leading power row must not renumber the
+  // lifts behind it into losing their main-lift claim.
+  const evidenceIndices = countingIndices(workout.exercises ?? []);
   return {
     ...workout,
     exercises: (workout.exercises ?? []).map((row, index) => {
-      let evidence = inferredRowEvidence(row, index);
+      let evidence = inferredRowEvidence(row, evidenceIndices[index]);
       if (plannedPatterns && evidence.role === 'main_strength') {
         const pattern = evidence.mainStrengthPattern;
         const ownsContribution = !!pattern &&

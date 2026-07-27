@@ -24,6 +24,7 @@ import {
   finaliseSection18SafetyWorkout,
 } from '../rules/section18SafetyFinaliser';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import { hasPowerRow } from '../rules/sessionRowCounting';
 
 const WEEK_START = '2026-07-13';
 const NOW = '2026-07-13T00:00:00.000Z';
@@ -120,18 +121,43 @@ function workout(
     intensity: options.intensity ?? 'High',
     workoutType: options.anchor ? 'Team Training' : names.length > 0 ? 'Strength' : 'Recovery',
     sessionTier: names.length > 0 ? 'core' : 'recovery',
-    exercises: names.map((name, index) => row(id, index, name)),
-    ...(options.power
-      ? {
-          powerBlock: {
-            id: `${id}-power`, kind: 'primer' as const, family: options.power,
-            title: 'Power Primer', prescription: '3 x 3', placement: 'pre_lift' as const,
-            options: [{ name: options.power === 'lower' ? 'Vertical Jump' : 'Explosive Push-up', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [] }],
-            notes: [],
-            counting: { hardExposure: false as const, mainStrength: false as const, conditioningCredit: 'none' as const, isFinisher: false as const },
-          },
-        }
-      : {}),
+    // Power is a ROW with a typed role, leading the list.
+    exercises: [
+      ...(options.power
+        ? [{
+            id: `${id}-power`,
+            workoutId: id,
+            exerciseId: `${id}-power-ex`,
+            exerciseOrder: 0,
+            prescribedSets: 3,
+            prescribedRepsMin: 3,
+            prescribedRepsMax: 3,
+            restSeconds: 120,
+            role: 'power' as const,
+            power: { family: options.power, kind: 'primer' as const },
+            section18Evidence: {
+              protocolVersion: 1 as const,
+              role: 'power' as const,
+              strengthPattern: null,
+              mainStrengthPattern: null,
+              provenance: 'canonical_row_classifier' as const,
+            },
+            exercise: {
+              id: `${id}-power-ex`,
+              name: options.power === 'lower' ? 'Vertical Jump' : 'Explosive Push-up',
+              description: 'Power',
+              muscleGroups: [],
+              exerciseType: 'Plyometric' as const,
+              equipmentRequired: [],
+              difficultyLevel: 'Intermediate' as const,
+              createdAt: NOW, updatedAt: NOW,
+            },
+            createdAt: NOW, updatedAt: NOW,
+          }]
+        : []),
+      ...names.map((name, index) => row(id, index, name)),
+    ],
+
     ...(options.sprint
       ? {
           speedBlock: {
@@ -428,7 +454,7 @@ run('scenario', '15 explicit user override cannot bypass active safety', () => {
   assert(!patterns.includes('squat') && !patterns.includes('hinge'),
     `override kept a prohibited pattern: ${patterns.join(', ')}`);
   assert(!safe.speedBlock, 'override kept sprint work under a lower-body restriction');
-  assert(!safe.powerBlock, 'override kept a prohibited lower power family');
+  assert(!hasPowerRow(safe), 'override kept a prohibited lower power family');
 });
 
 console.log('\n-- Seven safety properties --');
@@ -546,7 +572,7 @@ run('property', 'P7 explicit overrides cannot weaken active safety rules', () =>
   const contract = withSafety(baseContract(), injuryContext('lower_body'));
   for (let day = 0; day < 7; day++) {
     const safe = finaliseSection18SafetyWorkout({ contract, workout: workout(`p7-${day}`, day, ['Back Squat'], { sprint: true, power: 'lower' }) }).workout;
-    assert(!safe.speedBlock && !safe.powerBlock && !safe.exercises.some((exercise) => exercise.section18Evidence?.strengthPattern === 'squat'), `override ${day} escaped`);
+    assert(!safe.speedBlock && !hasPowerRow(safe) && !safe.exercises.some((exercise) => exercise.section18Evidence?.strengthPattern === 'squat'), `override ${day} escaped`);
   }
 });
 
@@ -635,7 +661,7 @@ run('mutation', 'M5 lowering the contract to match unsafe output is killed', () 
 run('mutation', 'M6 skipping post-hydration safety validation is killed', () => {
   const contract = withSafety(baseContract(), injuryContext('lower_body'));
   const rawHydrated = canonicalWithoutSafety(workout('m6', 1, ['Back Squat'], { power: 'lower' }));
-  assert(!!rawHydrated.powerBlock, 'fixture did not contain unsafe hydrated power');
+  assert(hasPowerRow(rawHydrated), 'fixture did not contain unsafe hydrated power');
   const conformed = finish(contract, [rawHydrated]);
   assert(conformed.evaluation.ledger.power.achievedPrimerCount === 0, 'hydration finalizer did not kill mutation');
 });
@@ -668,10 +694,10 @@ run('property', 'P8 a late off-season safety transformation keeps power', () => 
   assert(contract.safety.lighterStrengthRequired, 'fixture did not trigger a safety transformation');
   assert(!contract.safety.prohibitedPower, 'fixture prohibited power for an unrelated reason');
   const before = workout('late-off', 1, ['Back Squat', 'Bench Press'], { power: 'lower' });
-  assert(!!before.powerBlock, 'fixture did not contain power');
+  assert(hasPowerRow(before), 'fixture did not contain power');
   const result = finish(contract, [before]);
   assert(
-    !!result.workouts.find((candidate) => candidate.id === 'late-off')?.powerBlock,
+    hasPowerRow(result.workouts.find((candidate) => candidate.id === 'late-off')!),
     'late off-season power was removed by the safety boundary',
   );
 });
@@ -690,7 +716,7 @@ run('property', 'P9 an early off-season safety transformation still removes powe
   });
   const result = finish(contract, [workout('early-off', 1, ['Back Squat', 'Bench Press'], { power: 'lower' })]);
   assert(
-    !result.workouts.find((candidate) => candidate.id === 'early-off')?.powerBlock,
+    !hasPowerRow(result.workouts.find((candidate) => candidate.id === 'early-off')!),
     'early off-season power survived, so the subphase is not being read at all',
   );
 });

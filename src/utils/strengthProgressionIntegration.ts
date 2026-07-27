@@ -57,6 +57,7 @@ import type { FeedbackCompletion, FeedbackFeeling, SessionFeedback } from '../st
 import { analyzeFeedbackPatterns, applyPatternBiases } from './feedbackPatterns';
 import { type AdaptationResult, applyReadinessBias } from './feedbackAdapter';
 import type { ProgramBlockState } from './programBlockState';
+import { participatesInCounting } from '../rules/sessionRowCounting';
 
 // ─── Feedback → Domain Feeling Bridge ───
 
@@ -538,6 +539,13 @@ export function applyStrengthProgression(
   const now = new Date().toISOString();
 
   const newExercises = workout.exercises.map(ex => {
+    // AUTHORED ROLE FIRST. Power's dose is owned by `powerPrimerPolicy` and
+    // shrunk by `deloadPowerDose`; a progression layer adding a set to a jump
+    // would be a second owner dosing the same work, which Section 6 names as a
+    // defect outright. It was live the moment power became a row: the name
+    // probe below reads `Explosive Push-up` as pressing work and progressed it
+    // from 3 sets to 4 in week 4 of a block. Found by the differential harness.
+    if (!participatesInCounting(ex)) return ex;
     const name = ex.exercise?.name || '';
     const role = classifyExerciseRole(name);
 

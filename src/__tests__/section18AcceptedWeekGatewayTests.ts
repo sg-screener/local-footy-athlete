@@ -592,8 +592,12 @@ check('15 G+1 recovery is active recovery, never full rest',
     powerBlock: undefined, speedBlock: undefined, conditioningBlock: undefined,
     conditioningCategory: undefined, conditioningFlavour: undefined,
     hasCombinedConditioning: false,
-    exercises: source.exercises.slice(0, 1).map((row) => ({
-      ...clone(row), workoutId: 'accessory-only',
+    // Pick a real accessory, not the leading POWER row: a power row carries
+    // `role: 'power'` and is counted by nothing, so re-stamping its §18
+    // evidence would build a day that reads as full rest and test the wrong
+    // thing entirely.
+    exercises: source.exercises.filter((row) => row.role !== 'power').slice(0, 1).map((row) => ({
+      ...clone(row), workoutId: 'accessory-only', role: undefined,
       section18Evidence: {
         protocolVersion: 1, role: 'strength_accessory', strengthPattern: null,
         mainStrengthPattern: null, provenance: 'canonical_row_classifier',

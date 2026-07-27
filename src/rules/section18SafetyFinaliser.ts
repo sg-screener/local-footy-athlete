@@ -24,6 +24,7 @@ import {
   type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import { hasPowerRow, powerRows, withoutPowerRows } from './sessionRowCounting';
 
 export type Section18SafetyAction =
   | 'prohibited_content_removed'
@@ -57,14 +58,17 @@ function unique<T>(values: readonly T[]): T[] {
 function stripMainStrength(workout: Workout): Workout {
   return {
     ...workout,
+    // Power goes with the main strength it primes. It used to be dropped by the
+    // `powerBlock: undefined` below; as a row it is filtered here, which keeps
+    // the two facts in one place instead of two.
     exercises: (workout.exercises ?? []).filter((row) =>
+      row.role !== 'power' &&
       row.section18Evidence?.role !== 'main_strength' &&
       row.section18Evidence?.role !== 'legacy_unknown'),
     planEntryId: undefined,
     strengthIntent: undefined,
     strengthIntentDiagnostics: undefined,
     strengthPatternContributions: undefined,
-    powerBlock: undefined,
   };
 }
 
@@ -187,9 +191,9 @@ function hasWorkoutSafetyTransformation(
     (workout.exercises ?? []).length > 0 ||
     (workout.strengthIntent?.effectivePatterns.length ?? 0) > 0
   )) return true;
-  if (contract.safety.prohibitedPower && !!workout.powerBlock) return true;
-  if (workout.powerBlock &&
-      contract.safety.prohibitedPowerFamilies.includes(workout.powerBlock.family)) return true;
+  if (contract.safety.prohibitedPower && hasPowerRow(workout)) return true;
+  if (powerRows(workout).some((row) =>
+    contract.safety.prohibitedPowerFamilies.includes(row.power?.family as never))) return true;
   return contract.safety.prohibitedSprintHighSpeed && !!workout.speedBlock;
 }
 
@@ -242,14 +246,14 @@ function conformWorkout(args: {
       exercises: [...(workout.exercises ?? []), safePatternFallbackRow(workout, pattern)],
     };
   }
-  if (before.powerBlock && !workout.powerBlock) actions.push('power_removed');
+  if (hasPowerRow(before) && !hasPowerRow(workout)) actions.push('power_removed');
   if (before.speedBlock && !workout.speedBlock) actions.push('sprint_removed');
 
   if (
-    workout.powerBlock &&
-    contract.safety.prohibitedPowerFamilies.includes(workout.powerBlock.family)
+    powerRows(workout).some((row) =>
+      contract.safety.prohibitedPowerFamilies.includes(row.power?.family as never))
   ) {
-    workout = { ...workout, powerBlock: undefined };
+    workout = withoutPowerRows(workout, contract.safety.prohibitedPowerFamilies);
     actions.push('power_removed');
   }
 
@@ -336,19 +340,20 @@ function safetyFindings(
         evidence: [workout.id, row.id],
       });
     }
-    if (contract.safety.prohibitedPower && workout.powerBlock) {
+    if (contract.safety.prohibitedPower && hasPowerRow(workout)) {
       findings.push({
         code: 'power_policy_breach', severity: 'blocking', domain: 'power',
-        expected: 0, actual: workout.powerBlock.family,
+        expected: 0, actual: powerRows(workout).map((row) => row.power?.family).join(','),
         detail: 'An ineligible power primer remains after safety conformance.',
         evidence: [workout.id],
       });
     }
-    if (workout.powerBlock &&
-        contract.safety.prohibitedPowerFamilies.includes(workout.powerBlock.family)) {
+    const prohibitedFamilyRow = powerRows(workout).find((row) =>
+      contract.safety.prohibitedPowerFamilies.includes(row.power?.family as never));
+    if (prohibitedFamilyRow) {
       findings.push({
         code: 'power_policy_breach', severity: 'blocking', domain: 'power',
-        expected: `not ${workout.powerBlock.family}`, actual: workout.powerBlock.family,
+        expected: `not ${prohibitedFamilyRow.power?.family}`, actual: prohibitedFamilyRow.power?.family,
         detail: 'A power primer from an injury-prohibited family remains.',
         evidence: [workout.id],
       });

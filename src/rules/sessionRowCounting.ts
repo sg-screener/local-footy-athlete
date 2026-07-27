@@ -80,6 +80,89 @@ export function countingRows(
 }
 
 /**
+ * Position among the session's COUNTED work.
+ *
+ * `generatedWorkoutRowClassification` reads position as one signal of main-lift
+ * identity ("the first row or two of a strength session is the main lift").
+ * Power is pre-lift and leads the list, so a naive array index renumbers every
+ * lift behind it: the session's second main lift slid from index 1 to index 2,
+ * lost its main-lift claim, and the canonicaliser then RESTORED the "missing"
+ * pattern as a fresh Back Squat row. Found by the differential harness on two
+ * in-season days, in a delta that had nothing to do with power's own counts.
+ *
+ * So the index a classifier sees is the position among rows that count, which
+ * power does not. Exempt rows get a sentinel far outside every positional
+ * window rather than a real index — they are not in the ordering at all, and a
+ * `-1` would silently satisfy an `index <= 1` test.
+ *
+ * This is a NARROW repair of the perturbation power introduced. It leaves the
+ * deeper problem standing and visible: position feeding identity at all is the
+ * pattern Sam's readiness law names as wrong ("dose/intensity/position must
+ * never feed identity"). Retiring that clause would reclassify rows that are
+ * main lifts ONLY by position and move counts across the app, so it belongs to
+ * its own unit with its own before/after — not to this one.
+ */
+export const NON_COUNTING_ROW_INDEX = 99;
+
+export function countingIndices(rows: readonly WorkoutExercise[]): number[] {
+  let counted = 0;
+  return rows.map((row) =>
+    participatesInCounting(row) ? counted++ : NON_COUNTING_ROW_INDEX);
+}
+
+/** Whether a row is power work. The authored role decides — never the name. */
+export function isPowerRow(row: Pick<WorkoutExercise, 'role'>): boolean {
+  return row.role === 'power';
+}
+
+/**
+ * The day's power rows, in authored order.
+ *
+ * The complement of what the counters see. `getSessionComponentRows` uses it to
+ * give power its own population, the §18 weekly budget uses it to find and strip
+ * candidates, and the session screen uses it to render power as an ordinary row.
+ */
+export function powerRows(
+  workout: Partial<Workout> | null | undefined,
+): readonly WorkoutExercise[] {
+  return (workout?.exercises ?? []).filter(isPowerRow);
+}
+
+/** Whether the day carries power at all — the row-era `!!workout.powerBlock`. */
+export function hasPowerRow(workout: Partial<Workout> | null | undefined): boolean {
+  return (workout?.exercises ?? []).some(isPowerRow);
+}
+
+/**
+ * Remove power from a day — the row-era replacement for `powerBlock: undefined`.
+ *
+ * Nine sites used to delete the field. A field delete is invisible to every
+ * owner: nothing canonicalises after it, nothing records that content left, and
+ * the workout's name and type can end up describing work that is no longer
+ * there. Row removal is an ordinary content mutation, so it goes back through
+ * `finaliseWorkoutAfterMutation` at the call sites that own week content — which
+ * is what Sam meant by stripping "through the transaction owner".
+ *
+ * This helper does the removal only. It deliberately does NOT canonicalise:
+ * callers differ in the context they can supply (a §18 pass has the contract, a
+ * safety pass has the phase clock), and inventing a context here is exactly the
+ * defaulting the subphase fix removed.
+ *
+ * `familiesToRemove` scopes the removal to an injured region; omit it to remove
+ * all power.
+ */
+export function withoutPowerRows(
+  workout: Workout,
+  familiesToRemove?: readonly string[],
+): Workout {
+  const rows = workout.exercises ?? [];
+  const survivors = rows.filter((row) =>
+    !isPowerRow(row) ||
+    (familiesToRemove !== undefined && !familiesToRemove.includes(row.power?.family ?? '')));
+  return survivors.length === rows.length ? workout : { ...workout, exercises: survivors };
+}
+
+/**
  * Rows that count against the per-session exercise cap.
  *
  * Section 11 (Sam, 2026-07-27): "There is now ONE per-session exercise cap for

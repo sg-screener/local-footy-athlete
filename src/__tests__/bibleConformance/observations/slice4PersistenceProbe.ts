@@ -16,7 +16,7 @@ type ProbeDependencies = {
     typeof import('./buildCanonicalPathLedger').canonicalWeekLedger;
   pathExercise: typeof import('./buildCanonicalPathLedger').pathExercise;
   pathMicrocycle: typeof import('./buildCanonicalPathLedger').pathMicrocycle;
-  pathPowerBlock: typeof import('./buildCanonicalPathLedger').pathPowerBlock;
+  pathPowerRow: typeof import('./buildCanonicalPathLedger').pathPowerRow;
   pathProgram: typeof import('./buildCanonicalPathLedger').pathProgram;
   pathWorkout: typeof import('./buildCanonicalPathLedger').pathWorkout;
   PATH_PROFILE: typeof import('./buildCanonicalPathLedger').PATH_PROFILE;
@@ -48,7 +48,7 @@ function loadProbeDependencies(): ProbeDependencies {
     canonicalWeekLedger: ledger.canonicalWeekLedger,
     pathExercise: ledger.pathExercise,
     pathMicrocycle: ledger.pathMicrocycle,
-    pathPowerBlock: ledger.pathPowerBlock,
+    pathPowerRow: ledger.pathPowerRow,
     pathProgram: ledger.pathProgram,
     pathWorkout: ledger.pathWorkout,
     PATH_PROFILE: ledger.PATH_PROFILE,
@@ -57,7 +57,7 @@ function loadProbeDependencies(): ProbeDependencies {
 
 function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
   const {
-    finaliseWorkoutAfterMutation, pathExercise, pathPowerBlock, pathWorkout,
+    finaliseWorkoutAfterMutation, pathExercise, pathPowerRow, pathWorkout,
   } = dependencies;
   const lowerId = 'persist-modern-lower';
   const lower = pathWorkout({
@@ -69,7 +69,7 @@ function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
       pathExercise(lowerId, 2, 'Pallof Press', { reps: 10 }),
     ],
     conditioning: [{ title: 'Bike Zone 2 25min', modality: 'bike' }],
-    powerBlock: pathPowerBlock('primer'), recoveryAddon: 'Calf and adductor reset',
+    powerRow: pathPowerRow('primer'), recoveryAddon: 'Calf and adductor reset',
   });
   const teamId = 'persist-modern-team';
   const team = pathWorkout({

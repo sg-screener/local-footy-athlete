@@ -178,15 +178,10 @@ console.log('\n[1] Exactly six roles, with a source-grounded mapping rule');
 console.log('\n[2] One list in D2 order — power → main → accessory → midline → prehab → conditioning');
 {
   const workout = workoutOf({
-    powerBlock: {
-      id: 'pb1',
-      kind: 'primer',
-      title: 'Broad Jumps',
-      prescription: '3 × 3',
-      options: [{ name: 'Broad Jump', sets: 3, repsMin: 3, repsMax: 3 }],
-      notes: [],
-    },
     exercises: [
+      // Power is a ROW now (Sam, 2026-07-28) — same list, typed role. It is
+      // authored LAST here on purpose: D2 order must come from the role the row
+      // carries, not from where the fixture happened to put it.
       // Deliberately authored OUT of D2 order so a passing test proves the
       // owner sorts, rather than that the fixture was already sorted.
       strengthRow('Hammer Curl'),
@@ -195,6 +190,11 @@ console.log('\n[2] One list in D2 order — power → main → accessory → mid
       strengthRow('Banded TKE'),
       strengthRow('Romanian Deadlift'),
       strengthRow('Bulgarian Split Squat'),
+      // Power is a ROW now (Sam, 2026-07-28) — same list, typed role. Authored
+      // LAST on purpose: D2 order must come from the role the row carries, not
+      // from where the fixture happened to put it.
+      { ...strengthRow('Broad Jump'), role: 'power' as const,
+        power: { family: 'lower' as const, kind: 'primer' as const } },
     ],
   });
 

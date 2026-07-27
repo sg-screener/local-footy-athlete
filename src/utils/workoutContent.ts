@@ -19,7 +19,7 @@ export function hasMeaningfulWorkoutContent(
   if ((workout.exercises ?? []).length > 0) return true;
   if ((workout.conditioningBlock?.options ?? []).length > 0) return true;
   if (workout.speedBlock) return true;
-  if (workout.powerBlock) return true;
+  if ((workout.exercises ?? []).some((row) => row.role === 'power')) return true;
   if ((workout.recoveryAddons ?? []).length > 0) return true;
 
   return false;
@@ -56,7 +56,6 @@ export function collapseWorkoutToRest(workout: Workout): Workout {
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
     speedBlock: undefined,
-    powerBlock: undefined,
     recoveryAddons: undefined,
     exercises: [],
     ...({ isTeamDay: false } as any),

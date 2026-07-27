@@ -17,6 +17,7 @@ import type {
   HarnessSessionComponent,
   StrengthPattern,
 } from '../types';
+import { powerRows } from '../../../rules/sessionRowCounting';
 
 const NOW = '2026-03-23T00:00:00.000Z';
 const PATTERNS: StrengthPattern[] = ['squat', 'hinge', 'push', 'pull'];
@@ -45,14 +46,37 @@ export function pathExercise(
   };
 }
 
-export function pathPowerBlock(kind: 'primer' | 'contrast' = 'contrast'): PowerBlock {
+export function pathPowerRow(kind: 'primer' | 'contrast' = 'contrast'): WorkoutExercise {
   return {
-    id: `path-power-${kind}`, kind, family: 'lower',
-    title: kind === 'contrast' ? 'Contrast Power' : 'Power Primer',
-    prescription: '3 x 3', placement: 'pre_lift',
-    options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [] }],
-    notes: kind === 'contrast' ? ['Contrast: pair with the heavy lift.'] : ['Stay sharp.'],
-    counting: { hardExposure: false, mainStrength: false, conditioningCredit: 'none', isFinisher: false },
+    id: `path-power-${kind}`,
+    workoutId: 'path',
+    exerciseId: 'path-power-lower',
+    exerciseOrder: 0,
+    prescribedSets: 3,
+    prescribedRepsMin: 3,
+    prescribedRepsMax: 3,
+    restSeconds: 120,
+    notes: kind === 'contrast' ? 'Contrast: pair with the heavy lift.' : 'Stay sharp.',
+    role: 'power',
+    power: { family: 'lower', kind },
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
+    },
+    exercise: {
+      id: 'path-power-lower',
+      name: 'Vertical Jump',
+      description: 'Vertical Jump',
+      muscleGroups: [],
+      exerciseType: 'Plyometric',
+      equipmentRequired: [],
+      difficultyLevel: 'Intermediate',
+      createdAt: '', updatedAt: '',
+    },
+    createdAt: '', updatedAt: '',
   };
 }
 
@@ -66,7 +90,7 @@ export function pathWorkout(args: {
   sessionTier?: Workout['sessionTier'];
   exercises?: WorkoutExercise[];
   conditioning?: Array<{ title: string; modality: 'bike' | 'row' | 'ski' | 'running'; intent?: 'aerobic' | 'tempo' | 'high-intensity' }>;
-  powerBlock?: PowerBlock;
+  powerRow?: WorkoutExercise;
   team?: boolean;
   recoveryAddon?: string;
 }): Workout {
@@ -75,7 +99,11 @@ export function pathWorkout(args: {
   const upper = patterns.some((value) => value === 'push' || value === 'pull');
   const conditioningRows = (args.conditioning ?? []).map((entry, index) =>
     pathExercise(args.id, (args.exercises?.length ?? 0) + index, entry.title));
-  const allRows = [...(args.exercises ?? []), ...conditioningRows];
+  const allRows = [
+    ...(args.powerRow ? [{ ...args.powerRow, workoutId: args.id }] : []),
+    ...(args.exercises ?? []),
+    ...conditioningRows,
+  ];
   return {
     id: args.id, microcycleId: 'slice4:mc', dayOfWeek: args.dayOfWeek,
     name: args.name, description: args.name, durationMinutes: 60,
@@ -103,7 +131,7 @@ export function pathWorkout(args: {
         ...({ modality: entry.modality } as any),
       })),
     } : undefined,
-    powerBlock: args.powerBlock,
+
     recoveryAddons: args.recoveryAddon ? [{
       id: `${args.id}:recovery`, title: 'Recovery Add-on', label: 'Recovery Add-on',
       kind: 'prehab', focusArea: 'general', optional: true, skipPolicy: 'no_penalty',
@@ -160,13 +188,16 @@ function conditioning(workout: Workout): HarnessConditioningEntry[] {
 }
 
 function power(workout: Workout): HarnessPowerIntent {
-  if (!workout.powerBlock) return { kind: 'none' };
-  if (workout.powerBlock.kind === 'primer') return { kind: 'primer', explosiveFamily: workout.powerBlock.family };
+  const row = powerRows(workout)[0];
+  if (!row) return { kind: 'none' };
+  const family = row.power!.family;
+  if (row.power!.kind === 'primer') return { kind: 'primer', explosiveFamily: family };
   const aligned = alignPowerBlockToFinalWorkoutContent(workout);
   return {
-    kind: 'contrast', explosiveFamily: workout.powerBlock.family,
-    heavyLiftFamily: workout.powerBlock.family,
-    heavyLiftPresent: aligned.action === 'unchanged' && aligned.workout.powerBlock?.kind === 'contrast',
+    kind: 'contrast', explosiveFamily: family,
+    heavyLiftFamily: family,
+    heavyLiftPresent: aligned.action === 'unchanged' &&
+      powerRows(aligned.workout)[0]?.power?.kind === 'contrast',
   };
 }
 
@@ -234,7 +265,7 @@ function exposure(workouts: Workout[]): HarnessExposureLedger {
       if (classified.strengthRegion === 'lower' || classified.strengthRegion === 'full_body') lowerStrengthFatigue++;
     }
     hardConditioning += classified.units.filter((unit) => unit.conditioningRole === 'hard' && unit.contributions.conditioning > 0).length;
-    if (workout.powerBlock) powerCount++;
+    if (powerRows(workout).length > 0) powerCount++;
   }
   return {
     squatStrength, hingeStrength, upperPushStrength, upperPullStrength,

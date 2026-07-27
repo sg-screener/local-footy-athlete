@@ -88,7 +88,6 @@ function teamTrainingAnchorContainer(source: Workout): Workout {
     strengthIntent: undefined,
     strengthIntentDiagnostics: undefined,
     strengthPatternContributions: undefined,
-    powerBlock: undefined,
     recoveryAddons: undefined,
     exercises: [],
   } as Workout;
@@ -161,7 +160,6 @@ function stackTemplate(args: {
     strengthIntent: strengthOwner?.strengthIntent,
     strengthIntentDiagnostics: strengthOwner?.strengthIntentDiagnostics,
     strengthPatternContributions: strengthOwner?.strengthPatternContributions,
-    powerBlock: strengthOwner?.powerBlock,
     recoveryAddons: [
       ...(args.base.recoveryAddons ?? []),
       ...(args.template.recoveryAddons ?? []),

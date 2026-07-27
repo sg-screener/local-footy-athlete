@@ -1,5 +1,6 @@
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { ResolvedDay } from './sessionResolver';
+import { powerRows } from '../rules/sessionRowCounting';
 
 export interface SemanticExerciseSnapshot {
   identity: string;
@@ -179,7 +180,7 @@ export function snapshotSemanticWorkout(
   }
 
   appendStructuredComponent(components, workout, 'speed', workout.speedBlock);
-  appendStructuredComponent(components, workout, 'power', workout.powerBlock);
+  appendStructuredComponent(components, workout, 'power', powerRows(workout)[0] ?? undefined);
   for (const [index, recovery] of (workout.recoveryAddons ?? []).entries()) {
     components.push({
       identity: `${componentIdentity(workout, 'recovery')}:${index}`,

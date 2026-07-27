@@ -511,12 +511,14 @@ export function buildTagAwareSession(
   // Canonical typed strength intent owns composition. Name/type parsing is
   // retained only for legacy templates that have not crossed the ingress yet.
   const exerciseCount = templateWorkout.exercises.length || 5;
+  // Position among COUNTED work — see `countingIndices`.
+  const contentIndices = countingIndices(templateWorkout.exercises);
   const contentClassifications = templateWorkout.exercises
     .map((row, index) => classifyGeneratedWorkoutRow({
       name: row.exercise?.name ?? row.exerciseId,
       sets: row.prescribedSets,
       repsMax: row.prescribedRepsMax,
-      index,
+      index: contentIndices[index],
     }));
   const contentPatterns = contentClassifications
     .filter((classification) => classification.kind === 'strength_main' && !!classification.mainPattern)
@@ -670,6 +672,7 @@ import {
   type ConditioningProgressionOutput,
 } from './conditioningProgressionRules';
 import { calculateConditioningLoad } from './progressionHelpers';
+import { countingIndices } from '../rules/sessionRowCounting';
 
 export interface ConditioningProgressionData {
   sessionFeedback?: Record<string, SessionFeedback>;

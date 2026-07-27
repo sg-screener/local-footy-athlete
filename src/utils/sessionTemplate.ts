@@ -225,7 +225,12 @@ function exerciseItem(
 ): SessionTemplateItem {
   return {
     kind: 'exercise',
-    role: options.role ?? classifyExerciseRole(rowName(row)),
+    // AUTHORED role first. `classifyExerciseRole` reads the name, and a power
+    // row named `Explosive Push-up` classifies as ordinary pressing work — it
+    // would badge and ORDER as an accessory instead of leading the session. Role
+    // is authored, not inferred; the name classifier is the fallback for rows
+    // nobody has authored yet.
+    role: options.role ?? row?.role ?? classifyExerciseRole(rowName(row)),
     presentation,
     row,
     superset: options.superset ?? null,
@@ -258,16 +263,18 @@ export function buildSessionTemplate(
 
   const items: SessionTemplateItem[] = [];
 
-  if (workout.powerBlock) {
-    items.push({ kind: 'power', role: 'power', block: workout.powerBlock });
-  }
-
   // Strength and trunk/support rows are one population here. The shared
   // component owner splits them for counting purposes, but a superset can pair
   // across that split (a main lift with a midline hold), so the pairing must be
   // read from the AUTHORED row order, not from the split halves — otherwise the
   // two members arrive in different passes and the pairing is lost.
+  // Power joins the one list as an ordinary row. The component owner gives it
+  // its own population so counters never see it; the SCREEN has no such need —
+  // Sam's one-list ruling is that every exercise renders in the single session
+  // list, and D2's order (which `d2Rank` applies from the authored role) puts
+  // power first without the renderer knowing anything special about it.
   const sessionRows = inAuthoredOrder(workout, [
+    ...componentRows.powerRows,
     ...componentRows.strengthRows,
     ...componentRows.supportRows,
   ]);

@@ -1026,19 +1026,27 @@ export function applyConstraintsToTypedComponents(
     removedComponents.push('speed');
   }
 
-  if (workout.powerBlock) {
-    const typedPowerExposure = workout.powerBlock.family === 'lower'
-      ? 'plyometric explosive lower jump'
-      : 'explosive push';
-    const powerOptions = workout.powerBlock.options.filter((option) =>
-      !textIsRemovedByConstraints(`${typedPowerExposure} ${option.name}`, constraints) &&
-      (!options.equipmentAvailable || options.equipmentAvailable(option.equipmentRequired)),
-    );
-    if (powerOptions.length !== workout.powerBlock.options.length) {
-      workout = powerOptions.length > 0
-        ? { ...workout, powerBlock: { ...workout.powerBlock, options: powerOptions } }
-        : { ...workout, powerBlock: undefined };
-      if (powerOptions.length === 0) removedComponents.push('power');
+  // Power rows are filtered by the SAME constraint text as before — the typed
+  // exposure phrase plus the exercise name. What changed is only where the row
+  // lives; the exposure vocabulary is untouched, which is why an injury that
+  // blocked a jump before still blocks it now.
+  {
+    const before = (workout.exercises ?? []).filter((row) => row.role === 'power');
+    if (before.length > 0) {
+      const survivors = (workout.exercises ?? []).filter((row) => {
+        if (row.role !== 'power') return true;
+        const typedPowerExposure = row.power?.family === 'lower'
+          ? 'plyometric explosive lower jump'
+          : 'explosive push';
+        const name = String(row.exercise?.name ?? '');
+        if (textIsRemovedByConstraints(`${typedPowerExposure} ${name}`, constraints)) return false;
+        return !options.equipmentAvailable ||
+          options.equipmentAvailable(row.exercise?.equipmentRequired ?? []);
+      });
+      if (survivors.length !== (workout.exercises ?? []).length) {
+        workout = { ...workout, exercises: survivors };
+        if (!survivors.some((row) => row.role === 'power')) removedComponents.push('power');
+      }
     }
   }
 
@@ -1137,7 +1145,6 @@ function recoverySubstitution(workout: Workout, coachNotes: string[]): Workout {
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
     speedBlock: undefined,
-    powerBlock: undefined,
     recoveryAddons: undefined,
     exercises: [],
     coachNotes,

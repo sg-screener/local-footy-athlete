@@ -538,7 +538,6 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
     strengthIntent: hasStrength ? source.strengthIntent : undefined,
     strengthIntentDiagnostics: hasStrength ? source.strengthIntentDiagnostics : undefined,
     strengthPatternContributions: hasStrength ? source.strengthPatternContributions : undefined,
-    powerBlock: hasStrength ? source.powerBlock : undefined,
     recoveryAddons: hasRecovery ? source.recoveryAddons : undefined,
     coachAddedConditioningLabel: onlyConditioning
       ? title
@@ -564,7 +563,6 @@ function buildRestOverride(source: Workout): Workout {
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
     speedBlock: undefined,
-    powerBlock: undefined,
     recoveryAddons: undefined,
     exercises: [],
     ...({ isTeamDay: false } as any),

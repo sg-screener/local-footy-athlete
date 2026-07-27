@@ -39,6 +39,12 @@ import {
 import { canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from './workoutContent';
+import {
+  countingIndices,
+  hasPowerRow,
+  powerRows,
+  withoutPowerRows,
+} from '../rules/sessionRowCounting';
 
 /**
  * The ONE conversion from "phase + whatever the caller resolved" into the
@@ -435,8 +441,10 @@ function updatePowerForPhase(args: {
   actions: WorkoutCanonicalisationAction[];
 }): Workout {
   let workout = args.workout;
-  const block = workout.powerBlock;
-  if (!block) return workout;
+  const rows = powerRows(workout);
+  if (rows.length === 0) return workout;
+  const primary = rows[0];
+  const blockTitle = primary.power?.kind === 'contrast' ? 'Contrast Power' : 'Power Primer';
   const gameProtected = args.context.hasGame &&
     args.context.gOffset !== undefined &&
     [0, -1, 1].includes(args.context.gOffset);
@@ -479,7 +487,7 @@ function updatePowerForPhase(args: {
   ) {
     args.actions.push({
       kind: 'power_removed',
-      item: block.title,
+      item: blockTitle,
       reason: earlyOffseason
         ? 'early_offseason_power_blocked'
         : args.context.prohibitPower
@@ -488,15 +496,15 @@ function updatePowerForPhase(args: {
             ? `game_proximity_power_blocked:G${args.context.gOffset! >= 0 ? '+' : ''}${args.context.gOffset}`
           : 'low_readiness_power_blocked',
     });
-    return { ...workout, powerBlock: undefined };
+    return withoutPowerRows(workout);
   }
   const isTeamDay = classifyVisibleSession(workout).anchors.teamTraining;
+  const isContrast = primary.power?.kind === 'contrast';
   const preSeasonTeamContrast = args.context.phase === 'Pre-season' &&
-    isTeamDay && block.kind === 'contrast';
-  const gMinusTwoContrast = args.context.hasGame && args.context.gOffset === -2 &&
-    block.kind === 'contrast';
+    isTeamDay && isContrast;
+  const gMinusTwoContrast = args.context.hasGame && args.context.gOffset === -2 && isContrast;
   if (
-    block.kind === 'contrast' && (
+    isContrast && (
       (args.context.phase === 'Off-season' &&
         args.context.offseasonSubphase === 'mid_offseason') ||
       preSeasonTeamContrast ||
@@ -505,28 +513,31 @@ function updatePowerForPhase(args: {
   ) {
     args.actions.push({
       kind: 'power_downgraded',
-      item: block.title,
+      item: blockTitle,
       reason: gMinusTwoContrast
         ? 'game_proximity_primer_only:G-2'
         : preSeasonTeamContrast
         ? 'preseason_team_day_primer_only'
         : 'mid_offseason_primer_only',
     });
+    // The downgrade is a DOSE/pairing change on the row, not a new object: drop
+    // the contrast pairing sentence from the notes and mark the row a primer.
     workout = {
       ...workout,
-      powerBlock: {
-        ...block,
-        kind: 'primer',
-        title: 'Power Primer',
-        notes: block.notes.filter((note) => !/^contrast:/i.test(note)),
-      },
+      exercises: (workout.exercises ?? []).map((row) => row.role === 'power' && row.power
+        ? {
+            ...row,
+            power: { ...row.power, kind: 'primer' as const },
+            notes: (row.notes ?? '').replace(/\s*Contrast:[^]*$/i, '').trim() || undefined,
+          }
+        : row),
     };
   }
   const aligned = alignPowerBlockToFinalWorkoutContent(workout);
   if (aligned.action === 'removed') {
-    args.actions.push({ kind: 'power_removed', item: block.title, reason: aligned.reason! });
+    args.actions.push({ kind: 'power_removed', item: blockTitle, reason: aligned.reason! });
   } else if (aligned.action === 'downgraded') {
-    args.actions.push({ kind: 'power_downgraded', item: block.title, reason: aligned.reason! });
+    args.actions.push({ kind: 'power_downgraded', item: blockTitle, reason: aligned.reason! });
   }
   return aligned.workout;
 }
@@ -547,10 +558,14 @@ export function finaliseWorkoutAfterMutation(
     exercises: [...(inputWorkout.exercises ?? [])],
   };
   const originalConditioningIds = linkedConditioningIds(workout);
+  // Position among COUNTED work, not among array slots. Power leads the list and
+  // counts toward nothing, so it must not renumber the lifts behind it — see
+  // `countingIndices`.
+  const classifyIndices = countingIndices(workout.exercises);
   const classified: ClassifiedRow[] = workout.exercises.map((row, index) => ({
     row,
     index,
-    classification: classifyRow(row, index),
+    classification: classifyRow(row, classifyIndices[index]),
     linkedConditioning: originalConditioningIds.has(row.id),
   }));
 
@@ -633,6 +648,11 @@ export function finaliseWorkoutAfterMutation(
 
   const conditioningRows: ClassifiedRow[] = [];
   const strengthAndSupportRows: ClassifiedRow[] = [];
+  // Authored power rows pass through the triage untouched. They are not
+  // strength, not support and not conditioning, and the canonicaliser has no
+  // opinion to add about them — identity came from the pool and dose from the
+  // policy, both upstream of here.
+  const authoredPowerRows: ClassifiedRow[] = [];
   const recoveryAddonRows: ClassifiedRow[] = [];
   const sourceIsRecovery = workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery';
   for (const item of classified) {
@@ -644,6 +664,20 @@ export function finaliseWorkoutAfterMutation(
         item: name,
         reason: `section18_prohibited_pattern:${pattern}`,
       });
+      continue;
+    }
+    // AUTHORED ROLE WINS. This rule used to remove every row the classifier
+    // called power, because power lived in `workout.powerBlock` and a
+    // power-looking ROW could only be a generator inventing one. Now the power
+    // policy's own output IS a row, so the rule has to tell the two apart — and
+    // the authored role is what tells them apart, not the name.
+    //
+    // The old behaviour survives exactly where it still applies: a row that
+    // LOOKS like power but carries no authored role is still a stray, still
+    // removed, still for the same reason. `workoutCanonicalisationTests` [2]
+    // pins that half.
+    if (item.row.role === 'power') {
+      authoredPowerRows.push(item);
       continue;
     }
     if (item.classification.kind === 'power') {
@@ -730,17 +764,24 @@ export function finaliseWorkoutAfterMutation(
 
   const finalConditioningRows = conditioningRows.map((item) =>
     canonicalConditioningRow(item, earlyOffseason, actions));
-  const finalRows = [...strengthAndSupportRows.map(({ row }) => row), ...finalConditioningRows];
+  // Power leads. Its position in the one list is what carries "do this fresh,
+  // before the main lifts" — no renderer has to know power is special.
+  const finalRows = [
+    ...authoredPowerRows.map(({ row }) => row),
+    ...strengthAndSupportRows.map(({ row }) => row),
+    ...finalConditioningRows,
+  ];
   const finalConditioningBlock = buildCanonicalConditioningBlock({
     workout,
     rows: conditioningRows,
     finalRows,
     earlyOffseason,
   });
+  const finalIndices = countingIndices(finalRows);
   const finalClassified = finalRows.map((row, index) => ({
     row,
     index,
-    classification: classifyRow(row, index),
+    classification: classifyRow(row, finalIndices[index]),
     linkedConditioning: !!finalConditioningBlock?.options.some((option) =>
       option.exerciseIds.includes(row.id)),
   }));
