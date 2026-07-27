@@ -40,6 +40,7 @@ import {
 } from '../rules/temporarySourceFact';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
+import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -287,48 +288,93 @@ for (const label of ['A bit off', 'Properly sick', "Can't get out of bed"]) {
 ok('the superseded "Coming down with something" label is gone',
   !sheet.includes('Coming down with something'));
 
-/* ── "Nothing is required" means every domain ── */
+/* ── "Nothing is required" is not "nothing is offered" ── */
 
-// The optional tier's whole content is "deloaded AND nothing is required". §18
-// enforces two separate numbers per domain: a required MINIMUM and a
-// planner-selected CORE target, and a missed core target is blocking on its own
-// — `required: 0` does not excuse it. So an optional week has to drop BOTH, in
-// EVERY domain, or the contract still commits the week to core work that every
-// session was deliberately stamped optional against, and §18 rejects the whole
-// commit.
+// The optional tier's whole content is "deloaded AND nothing is required".
+// §18 enforces two separate numbers per domain — a required MINIMUM and a
+// planner-selected CORE target — and a missed core target is blocking on its
+// own, so `required: 0` alone does not lift the commitment.
 //
-// This is asserted across all three domains together because the defect it
-// pins was a PARTIAL decoration: strength dropped both numbers while
-// conditioning and sprint dropped only the minimum, so the optional week
-// remained impossible via a domain nobody had looked at. A per-domain spot
-// check would have passed on strength and missed it.
-console.log('\n[9] OPTIONAL WEEK — no domain keeps a core target');
+// But the commitment and the STRUCTURE are different things, and they were
+// being lifted with the same lever. Zeroing `targetCount` stopped §18 demanding
+// the sessions AND stopped the generator building them, so a pre-season
+// "absolutely cooked" week arrived as six recovery sessions: "nothing is
+// required" implemented as "nothing is offered". Sam's law is the opposite —
+// "it does not empty the week. It lifts the MINIMUMS so nothing is required,
+// and the sessions remain, OFFERED."
+//
+// One owner each: `targetCount` is structure and is PRESERVED; the commitment
+// is lifted by `plannerSelectionKind: 'optional'`, which is the only thing §18
+// enforces on.
+console.log('\n[9] OPTIONAL WEEK — nothing required, everything still offered');
 
 for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
-  const optional = buildWeeklyExposureContract({
+  const input = {
     seasonPhase: phase,
     readiness: 'medium',
     selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [],
     hasGame: false,
     gameDay: null,
-    weekModeOverride: 'optional_week',
-  } as never);
+  } as const;
+  const normal = buildWeeklyExposureContract(input as never);
+  const optional = buildWeeklyExposureContract({ ...input, weekModeOverride: 'optional_week' } as never);
 
   ok(`${phase}: the optional week is minted`,
     optional.identity.mode === 'optional_week', optional.identity.mode);
 
-  for (const [domain, exposure] of [
-    ['strength', optional.strength],
-    ['conditioning', optional.conditioning],
-    ['sprint/COD', optional.sprintCod],
+  for (const [domain, key] of [
+    ['strength', 'strength'], ['conditioning', 'conditioning'], ['sprint/COD', 'sprintCod'],
   ] as const) {
+    const lifted = optional[key] as { required: number; targetCount: number };
+    const before = normal[key] as { required: number; targetCount: number };
     ok(`${phase}: ${domain} requires nothing`,
-      (exposure as { required: number }).required === 0,
-      `required=${(exposure as { required: number }).required}`);
-    ok(`${phase}: ${domain} COMMITS to nothing either`,
-      (exposure as { targetCount: number }).targetCount === 0,
-      `targetCount=${(exposure as { targetCount: number }).targetCount}`);
+      lifted.required === 0, `required=${lifted.required}`);
+    ok(`${phase}: ${domain} still OFFERS the week's real session count`,
+      lifted.targetCount === before.targetCount,
+      `optional targetCount=${lifted.targetCount}, the week it replaced had ${before.targetCount}`);
+  }
+}
+
+// The commitment is lifted at its own owner, in EVERY domain. Sprint was the
+// one that silently kept `selectionKind: 'core'` while strength and
+// conditioning were marked optional, so §18 held every optional week to a core
+// sprint target it has none of by design — which is what rejected every
+// severe-illness commit.
+for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
+  const v2 = buildSection18WeeklyExposureContractV2({
+    seasonPhase: phase,
+    declaredSubphase: phase === 'In-season' ? 'game_week' : phase === 'Pre-season'
+      ? 'early_preseason' : 'mid_offseason',
+    mode: 'optional_week',
+    blockNumber: 1, weekInBlock: 1, globalWeek: 1, phaseWeek: 1,
+    phaseWeekProvenance: 'explicit_phase_clock',
+    weekKind: 'build',
+    anchorState: 'none',
+    teamTrainingDays: [],
+    fixtureDay: null,
+    readiness: 'medium',
+    plannerSelected: {
+      mainStrength: 4, coreConditioning: 4, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0,
+    },
+    prohibitedPatterns: [],
+    prohibitedPatternProvenance: 'explicit_none',
+    equipment: {
+      appConditioningFeasible: true, substitutionStatus: 'not_required', consideredSubstitutions: [],
+    },
+  } as never);
+
+  for (const [domain, exposure] of [
+    ['strength', v2.mainStrength.exposure],
+    ['conditioning', v2.conditioning.core],
+    ['sprint/high-speed', v2.sprintHighSpeed.exposure],
+  ] as const) {
+    ok(`${phase}: ${domain} commits to nothing — selection is optional`,
+      exposure.plannerSelectionKind === 'optional',
+      `plannerSelectionKind=${exposure.plannerSelectionKind}`);
+    ok(`${phase}: ${domain} carries no enforceable core target`,
+      (exposure.plannerSelectedTarget ?? 0) === 0,
+      `plannerSelectedTarget=${exposure.plannerSelectedTarget}`);
   }
 }
 

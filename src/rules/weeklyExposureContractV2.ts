@@ -1081,6 +1081,9 @@ export function buildSection18WeeklyExposureContractV2(
     : input.plannerSelected.optionalMainStrength ?? 0;
   const coreStrengthSelected = selectedKind === 'optional' ? 0 : input.plannerSelected.mainStrength;
   const coreConditioningSelected = selectedKind === 'optional' ? 0 : input.plannerSelected.coreConditioning;
+  const coreSprintSelected = selectedKind === 'optional'
+    ? 0
+    : input.plannerSelected.sprintHighSpeed;
   const optionalFlushSelected = selectedKind === 'optional'
     ? input.plannerSelected.coreConditioning
     : input.plannerSelected.optionalFlush ?? 0;
@@ -1208,7 +1211,15 @@ export function buildSection18WeeklyExposureContractV2(
         defaultTarget: policy.sprint.required,
         preferred: policy.sprint.preferred,
         maximum: policy.sprint.max,
-        selected: input.plannerSelected.sprintHighSpeed,
+        // Sprint was the ONE domain that never received the week's selection
+        // kind, so it silently defaulted to 'core' while strength and
+        // conditioning were correctly marked optional. §18 then held every
+        // optional week to a core sprint target the mode has none of by design,
+        // and rejected the commit — which is what made a severe illness
+        // impossible to report. The kind and the core selection move together
+        // here exactly as they do for the other two.
+        selected: coreSprintSelected,
+        selectionKind: selectedKind,
       }),
       achievedSources: [],
       reductions: reductions.filter((entry) => entry.metric === 'sprint_high_speed_frequency'),

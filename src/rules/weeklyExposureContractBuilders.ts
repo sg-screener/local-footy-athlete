@@ -554,27 +554,13 @@ function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposure
     identity: { ...contract.identity, mode: 'optional_week' },
     strength: {
       ...contract.strength,
-      // Nothing is required, so no pattern is required either.
+      // Nothing is REQUIRED, so no pattern is required either.
       requiredPatterns: [],
       required: 0,
-      // Nor is anything COMMITTED. "Nothing is required this week" covers the
-      // planner-selected target too: the sessions are still built and offered,
-      // but §18 must not hold the week to a core target that every session was
-      // deliberately stamped optional against. Leaving this at the phase's
-      // number is what produced `planner_selected_target_miss` — the contract
-      // demanding three core sessions from a week that has none by design.
-      targetCount: 0,
     },
     conditioning: {
       ...contract.conditioning,
       required: 0,
-      // The same reasoning as strength above, and it has to be applied HERE
-      // too. Dropping only the minimum left the week committed to the phase's
-      // core conditioning target — three or four sessions — from a week that
-      // has none by design, and §18 rejects a missed core target on its own
-      // regardless of the minimum being zero. That partial decoration is what
-      // made every severe-illness commit fail its visible verification.
-      targetCount: 0,
       // Credited counts stay FACTUAL — the athlete's anchors are still on the
       // calendar. Only the floor they imply drops.
       additionalRequiredCount: 0,
@@ -582,11 +568,24 @@ function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposure
     sprintCod: {
       ...contract.sprintCod,
       required: 0,
-      targetCount: 0,
       additionalRequiredCount: 0,
     },
   };
 }
+
+// `targetCount` is DELIBERATELY untouched above, in all three domains.
+//
+// It used to be zeroed here to stop §18 rejecting the week for a missed
+// planner-selected target. That worked, and it also emptied the week: this
+// number is what the generator reads to decide how many sessions to BUILD, so
+// zeroing it meant a pre-season "absolutely cooked" week arrived as six
+// recovery sessions. "Nothing is required" had been implemented as "nothing is
+// offered", against Sam's law — "it does not empty the week. It lifts the
+// MINIMUMS so nothing is required, and the sessions remain, OFFERED."
+//
+// One lever per question. `targetCount` is STRUCTURE and is preserved; the
+// commitment is lifted by `plannerSelectionKind: 'optional'` in Contract v2,
+// which is the only thing §18 enforces a core target on.
 
 export function buildInSeasonExposureContract(
   input: WeeklyExposureContractInput,

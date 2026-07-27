@@ -445,6 +445,33 @@ run('8 illness week PRESERVES the structure of the week it replaced', () => {
   }
 });
 
+// SAM'S LAW: "Absolutely cooked" / bed-bound "does NOT empty the week. It lifts
+// the MINIMUMS so nothing is required, and the sessions remain, OFFERED."
+//
+// Invariant 8 pins that on the CONTRACT. This pins it on what the athlete
+// actually opens. The two are not the same claim: the contract can preserve the
+// week's structure while generation replaces every session with "Mobility, foam
+// rolling, light movement", which is what it did — an optional week arrived as
+// six recovery sessions, so "nothing is required" had been implemented as
+// "nothing is offered".
+//
+// Expressed as a COUNT against the healthy week, because counts are structure
+// (Sam, 2026-07-27) and that is the thing an optional week must not change.
+run('8c the illness week OFFERS the sessions it no longer requires', () => {
+  const ill = generateWithIllness(true, true) as unknown as GenMicro;
+  const healthy = generateWithIllness(false, true) as unknown as GenMicro;
+  const mainStrengthSessions = (week: GenMicro): number => (week.workouts ?? [])
+    .filter((workout) => (workout.exercises ?? [])
+      .some((entry) => entry.section18Evidence?.role === 'main_strength')).length;
+
+  assert(mainStrengthSessions(healthy) > 0,
+    'precondition: the healthy week must have strength sessions to preserve');
+  assert(mainStrengthSessions(ill) === mainStrengthSessions(healthy),
+    `the illness week offers ${mainStrengthSessions(ill)} strength sessions, ` +
+    `the week it replaced had ${mainStrengthSessions(healthy)} — ` +
+    'an optional week lifts the minimums, it does not empty the week');
+});
+
 run('8b illness week lifts every minimum — the law\'s "optional" flag', () => {
   const ill = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
   for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
