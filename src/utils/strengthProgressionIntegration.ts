@@ -304,12 +304,20 @@ const EXCLUDED_MOVEMENTS = new Set([
 ]);
 
 /**
- * Classify an exercise into a progression role.
+ * Whether an exercise may receive load/volume progression, and at which tier.
  *
- * Returns null for exercises that should not receive progression
- * (accessories, trunk, isolation, pump, conditioning, untagged).
+ * Returns null for exercises that should not progress (accessories, trunk,
+ * isolation, pump, conditioning, untagged).
+ *
+ * RENAMED from `classifyExerciseRole` (Sam, 2026-07-28) to end a homonym:
+ * `sessionRoles.classifyExerciseRole` answers "what KIND of work is this row"
+ * with the six-member `SessionRole` vocabulary, and this one answers "may this
+ * row progress" with primary/secondary/null. Two exported functions with the
+ * same name and disjoint return vocabularies is an import waiting to go to the
+ * wrong place. `sessionRowCountingTests` still asserts the two vocabularies are
+ * disjoint, so a future merge stays loud.
  */
-export function classifyExerciseRole(exerciseName: string): ExerciseRole | null {
+export function classifyProgressionEligibility(exerciseName: string): ExerciseRole | null {
   const tags = EXERCISE_TAGS[exerciseName];
   if (!tags) return null;
 
@@ -331,7 +339,7 @@ export function workoutHasProgressableStrengthRows(workout: Workout): boolean {
     return false;
   }
   return workout.exercises.some((exercise) =>
-    !!classifyExerciseRole(exercise.exercise?.name || '')
+    !!classifyProgressionEligibility(exercise.exercise?.name || '')
   );
 }
 
@@ -547,7 +555,7 @@ export function applyStrengthProgression(
     // from 3 sets to 4 in week 4 of a block. Found by the differential harness.
     if (!participatesInCounting(ex)) return ex;
     const name = ex.exercise?.name || '';
-    const role = classifyExerciseRole(name);
+    const role = classifyProgressionEligibility(name);
 
     // Skip non-progression exercises
     if (!role) return ex;

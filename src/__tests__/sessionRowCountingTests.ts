@@ -41,7 +41,7 @@ import {
   participatesInCounting,
 } from '../rules/sessionRowCounting';
 import { SESSION_ROLE_ORDER, type SessionRole } from '../utils/sessionRoles';
-import { classifyExerciseRole as progressionClassify } from '../utils/strengthProgressionIntegration';
+import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -293,11 +293,13 @@ console.log('\n[5] The role vocabularies map 1:1, in both directions');
 //
 //   `SessionRole`        (6)  what a row IS — authored, ordered by, counted by
 //   `Section18RowRole`   (7)  the same fact in Section 18's spelling
-//   `classifyExerciseRole` in strengthProgressionIntegration — a HOMONYM, not a
+//   `classifyProgressionEligibility` in strengthProgressionIntegration — was a
 //                             third vocabulary: it answers "may this row
 //                             progress" with primary/secondary/null. Pinned
-//                             below as a homonym so nobody imports the wrong
-//                             one believing it returns a session role.
+//                             renamed in Stage 5 so nobody imports the wrong
+//                             one believing it returns a session role; the
+//                             disjointness assertion below keeps a future
+//                             re-merge loud.
 //
 // The first two are a genuine second representation and are queued for collapse
 // as their own unit. Until then the crosswalk is the one bridge and these
@@ -341,7 +343,7 @@ console.log('\n[5] The role vocabularies map 1:1, in both directions');
     SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE.join(','),
   );
 
-  // The homonym. `strengthProgressionIntegration.classifyExerciseRole` shares a
+  // The homonym. `strengthProgressionIntegration.classifyProgressionEligibility` no longer shares a
   // NAME with `sessionRoles.classifyExerciseRole` and answers a different
   // question with a disjoint vocabulary. Asserting disjointness is what makes a
   // future accidental merge of the two loud.
@@ -354,7 +356,7 @@ console.log('\n[5] The role vocabularies map 1:1, in both directions');
   );
   ok(
     'the progression classifier answers eligibility, not identity (null is a valid answer)',
-    progressionClassify('Something The Pools Never Heard Of') === null,
+    classifyProgressionEligibility('Something The Pools Never Heard Of') === null,
   );
 }
 

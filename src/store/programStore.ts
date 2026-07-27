@@ -41,6 +41,10 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
+import {
+  migrateStoredPowerBlock,
+  migrateStoredPowerBlocks,
+} from '../rules/legacyPowerBlockMigration';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
   finaliseSection18SafetyWeek,
@@ -742,7 +746,16 @@ export function canonicaliseHydratedProgram(
   program: TrainingProgram,
   profile?: OnboardingData | null,
 ): TrainingProgram {
-  const clockedProgram = ensureProgramSeasonPhaseClock(program);
+  // Defence in depth: this is exported and reachable without going through
+  // `canonicaliseHydratedState`. The migration is idempotent, so running it
+  // twice is free and missing it once is an athlete's lost power work.
+  const clockedProgram = ensureProgramSeasonPhaseClock({
+    ...program,
+    microcycles: (program.microcycles ?? []).map((microcycle) => ({
+      ...microcycle,
+      workouts: migrateStoredPowerBlocks(microcycle.workouts ?? []),
+    })),
+  });
   return {
     ...clockedProgram,
     microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
@@ -1180,10 +1193,97 @@ export interface HydratedStateCanonicalisationOptions {
  * Accepted envelopes receive only the safe derived projection; supported
  * legacy envelopes additionally receive the structural migration pipeline.
  */
+/**
+ * Lift every stored `powerBlock` on every hydration surface into power rows.
+ *
+ * Runs ABOVE the `ingressKind` branch below, deliberately. An
+ * `accepted_canonical` program takes an early return that skips the whole
+ * boundary canonicalisation — and accepted-canonical is exactly what a program
+ * written by a Stage 2 build IS, so putting the migration inside that
+ * canonicalisation would leave the athletes who most need it unmigrated. Sam's
+ * requirement is "unconditionally, before any write path can persist"; this is
+ * the only point that satisfies both words.
+ *
+ * Idempotent by construction — `migrateStoredPowerBlock` returns the same object
+ * when there is no block — so running it on every read forever costs nothing and
+ * cannot drift.
+ */
+/**
+ * Refuse to publish a program that still carries a legacy stored block.
+ *
+ * Loud on purpose. The alternative — persisting it — loses real prescribed work
+ * with no record, which is the one outcome this whole stage exists to prevent.
+ */
+function assertNoUnmigratedPowerBlock(program: TrainingProgram | null): void {
+  if (!program) return;
+  const offenders = (program.microcycles ?? []).flatMap((microcycle) =>
+    (microcycle.workouts ?? []).filter((workout) => !!workout.powerBlock));
+  if (offenders.length === 0) return;
+  throw new Error(
+    '[programStore] refusing to publish a program carrying a legacy powerBlock; ' +
+    'it has not been through the read-path migration and persisting it would ' +
+    `drop the athlete's power work (workouts: ${offenders.map((w) => w.id).join(', ')})`,
+  );
+}
+
+function migrateHydratedStatePowerBlocks(
+  state: Partial<ProgramState>,
+): Partial<ProgramState> {
+  const next: Partial<ProgramState> = { ...state };
+
+  if (next.currentProgram) {
+    next.currentProgram = {
+      ...next.currentProgram,
+      microcycles: (next.currentProgram.microcycles ?? []).map((microcycle) => ({
+        ...microcycle,
+        workouts: migrateStoredPowerBlocks(microcycle.workouts ?? []),
+      })),
+    };
+  }
+  if (next.currentMicrocycle) {
+    next.currentMicrocycle = {
+      ...next.currentMicrocycle,
+      workouts: migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
+    };
+  }
+  if (next.todayWorkout) {
+    next.todayWorkout = migrateStoredPowerBlock(next.todayWorkout);
+  }
+  if (next.dateOverrides) {
+    next.dateOverrides = Object.fromEntries(
+      Object.entries(next.dateOverrides).map(([date, workout]) => [
+        date,
+        workout ? migrateStoredPowerBlock(workout) : workout,
+      ]),
+    );
+  }
+  if (next.weekScopedOverlays) {
+    next.weekScopedOverlays = Object.fromEntries(
+      Object.entries(next.weekScopedOverlays).map(([weekStart, overlay]) => [
+        weekStart,
+        overlay
+          ? {
+              ...overlay,
+              workoutsByDate: Object.fromEntries(
+                Object.entries(overlay.workoutsByDate ?? {}).map(([date, workout]) => [
+                  date,
+                  workout ? migrateStoredPowerBlock(workout) : workout,
+                ]),
+              ),
+            }
+          : overlay,
+      ]),
+    );
+  }
+  return next;
+}
+
 export function canonicaliseHydratedState(
-  persistedState: Partial<ProgramState>,
+  rawPersistedState: Partial<ProgramState>,
   options: HydratedStateCanonicalisationOptions,
 ): Partial<ProgramState> {
+  // FIRST, and above every branch below. See `migrateHydratedStatePowerBlocks`.
+  const persistedState = migrateHydratedStatePowerBlocks(rawPersistedState);
   if (options.ingressKind === 'accepted_canonical') {
     return projectHydratedStateDerivedFields(
       persistedState as Record<string, unknown>,
@@ -1411,6 +1511,14 @@ export const useProgramStore = create<ProgramState>()(
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program, options) => {
+        // THE SECOND LOCK. Nothing writes `powerBlock` any more, so a program
+        // reaching this boundary still carrying one has not been through the
+        // read-path migration — and persisting it would drop the athlete's
+        // power on the next round trip. That is precisely the silent loss Sam
+        // ruled out, so the path is made impossible rather than unlikely.
+        // Ingress migrates unconditionally; this refuses the case where it
+        // somehow did not.
+        assertNoUnmigratedPowerBlock(program);
         const effectiveTodayISO = options?.todayISO ?? todayISOLocal();
         const candidateProgram = program
           ? postValidateProgram(ensureProgramSeasonPhaseClock(program), effectiveTodayISO)
