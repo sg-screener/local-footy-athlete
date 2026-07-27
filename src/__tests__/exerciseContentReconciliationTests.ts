@@ -31,6 +31,7 @@ import { EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
 import {
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
+  isAthleteChosenLoadExercise,
   resolveExerciseName,
 } from '../utils/loadEstimation';
 import {
@@ -154,6 +155,7 @@ console.log('\n[1] Pool → cue / video / load / tags (typed exemptions only)');
     selectable.filter((n) =>
       !EXERCISE_LOAD_MAP[resolveExerciseName(n)]
       && !isTrueBodyweightExercise(n)
+      && !isAthleteChosenLoadExercise(n)          // real load, athlete picks it (Sam 2026-07-28)
       && !isExempt(n, 'cue')                      // conditioning formats carry no load
       && !isExempt(n, 'load')));                  // Sam's pending line-by-line ruling
 
