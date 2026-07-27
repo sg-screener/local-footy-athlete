@@ -3091,6 +3091,20 @@ Training age should change the dose, complexity and progression speed, not compl
 There is ONE experience ladder for the whole app: new -> developing -> consistent -> advanced. Every gated exercise, template or method declares its minimum on that ladder. Do not introduce a second beginner/experienced representation alongside it.
 Two gates that ride on that ladder: contrast training requires `consistent` or above (Section 4), and the harder power entries require `developing` or `consistent` (Section 5).
 Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Every other athlete reaches it through the injury door, an equipment constraint, or their own pick.
+THE EXPERIENCE CROSSWALK (Sam, 2026-07-27) — the single authored bridge between the onboarding answer, the ladder and the authored exercise gates. Three vocabularies exist for good reasons: the athlete answers in years at onboarding, the app reasons on the ladder, and Sam's authored sheets gate in years-of-training. This table is the ONLY mapping between them. No other crosswalk may exist anywhere in the app.
+
+| Onboarding answer | Ladder level | Sees exercises marked |
+|---|---|---|
+| Complete beginner | new | everyone + everyone (regression) |
+| 1-2 years | developing | everyone + 1+ years |
+| 2-5 years | consistent | everyone + 1+ years + 2+ years |
+| 5+ years | advanced | everything except regressions |
+
+Two boundary rulings are part of this law:
+
+1. Regressions are visible to complete beginners ONLY. A "1-2 years" athlete never sees them. This is the auto-programming rule; the injury door, equipment constraints and the athlete's own pick remain open to everyone per the regression convention above.
+2. "2+ years" includes the "2-5 years" onboarding answer.
+
 A new athlete and an advanced athlete still need the same big rocks:
 Squat
 Hinge
@@ -4812,5 +4826,6 @@ Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07
 * Section 17 B, running exposure. Superseded "No more than 4 running exposures per week programmed by the app". Now floor 2 / cap 3 running days, with anchors counting toward the cap and the floor disapplied in early off-season and bye recovery.
 * Section 17 F, strong warning. Superseded "More than 4 running exposures" with "More than 3 running days".
 * Section 18 F, deload rules. Superseded "Pre-season automatically deloads every fourth week" and the automatic fourth-week off-season policy with Sam's 3–4-week cycle law, and made the in-season no-scheduled-deload rule explicit. Source: D16.
+* Section 11, experience crosswalk (Sam, 2026-07-27). ADDED THE EXPERIENCE CROSSWALK — the single authored bridge from the onboarding answer ('Complete beginner' / '1-2 years' / '2-5 years' / '5+ years') to the ladder (new / developing / consistent / advanced) to the authored exercise gates (everyone / everyone (regression) / 1+ years / 2+ years / advanced only), plus the two boundary rulings: regressions are visible to complete beginners ONLY, and "2+ years" includes the "2-5 years" answer. Nothing was superseded; three vocabularies were already in use with NO mapping between them, so exercise gating had no authored answer at all. Sam authored the table to close that gap. No other crosswalk may exist.
 * Section 6, conditioning simple rules (Sam, 2026-07-27). ADDED the dose-boundary rule: "Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose." Nothing was superseded; the Bible enforced this in code (`ALL-COND-DOSE-DESCRIPTOR-01`) but had never stated it. Authored by Sam to close that citation gap; the conformance rule now anchors to this sentence.
 * Terminology, whole document. "Trunk" and the muscle-group sense of "core" are replaced by MIDLINE (75 lines). The compulsory-session sense of "core" — core session, core exposure, `required_core`, `planner_selected_core`, "0. Core LFA principles" — is a homonym and is deliberately untouched. One ambiguous line in the Gunshow section, "A replacement for missing core strength work", was rewritten to "main strength work" to remove the ambiguity. Source: D13.
