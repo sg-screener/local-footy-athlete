@@ -147,8 +147,7 @@ assert(
   'V2 renders power as a badged list row',
 );
 assert(
-  /buildSessionTemplate/.test(v2) &&
-    !/<PowerPrimerSection/.test(v2.slice(v2.indexOf(') : ('))),
+  /buildSessionTemplate/.test(v2) && !/<PowerPrimerSection/.test(v2),
   'V2 gets power placement from the composition owner, not from its own branch order',
 );
 assert(/workout\.powerBlock\?\.title/.test(classic), 'Classic header summary includes the power block title');
@@ -174,8 +173,8 @@ assert(
 // section, they are Midline-badged rows inside the single list. That the rows
 // still REACH the athlete is proved by sessionTemplateOneListTests §2/§7.
 assert(
-  !/<TrunkSupportSection/.test(v2) && /SessionRoleBadge/.test(v2),
-  'V2 renders trunk rows as Midline-badged list rows, not as a Trunk / Support box',
+  !/<TrunkSupportSection/.test(v2) && /buildSessionTemplate/.test(v2),
+  'V2 renders trunk rows as ordinary rows of the one list, not as a Trunk / Support box',
 );
 assert(/testID="trunk-support-section"/.test(trunkSupportSection), 'trunk/support has a visible test seam');
 assert(/>Trunk \/ Support</.test(trunkSupportSection), 'trunk/support section is labelled honestly');

@@ -51,6 +51,11 @@ Intensity: longer reps ~90–100% MAS; short intermittent ~100–110% MAS;
 HR ~90–95% max late; consistent output; finish near the aerobic ceiling,
 not merely fatigued.
 
+**SET-LENGTH RULE for short-intermittent work (Sam, 2026-07-25).** High-%MAS
+short reps (the 15:15 class) build aerobic power *provided the set stays
+contained*: **set/block ≤ ~4–5 min**, with rest between blocks. A short-rep
+session that runs unbroken past that is no longer aerobic-power work.
+
 ## Aerobic capacity sessions (more total work, lower intensity)
 
 1. Continuous aerobic run — 30–50 min comfortable (continuous)
@@ -99,6 +104,23 @@ footy shuttles as the season approaches.
 
 Work period · rest period · sets/rounds (reps where relevant) ·
 intensity · quality-correct W:R · total session time.
+
+## Template properties (Sam, 2026-07-25 — scope rules, not doses)
+
+A template may carry a property that limits *when or how* it is prescribed.
+These are enforced at selection time, not written into the dose.
+
+- **FINISHER ROLE ONLY** — never prescribed as the session itself. Currently:
+  Tabata Finisher (also erg-only, single set, 4 min max).
+- **FALLBACK ONLY** — only for athletes with genuinely no equipment; never
+  in-season or pre-season. Currently: Bodyweight Circuit.
+- **AVAILABILITY GATE — no-team-training weeks only, LOW selection priority.**
+  Applies to the whole Change of Direction/Decel row: prescribe only in weeks
+  with NO team training (late off-season, Christmas break), and cut it first
+  when something has to give. Team training already supplies cutting volume.
+- **MID-SESSION MIXING ALLOWED** — flush-only; the athlete may rotate machines
+  and/or running between rounds within the one session.
+- **SET LENGTH ≤ 4–5 min** — the short-intermittent MAS rule above.
 
 ## Standing rules (carried forward)
 

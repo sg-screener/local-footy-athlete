@@ -14,13 +14,14 @@
  *
  *   - the recovery exercise rows           (RecoveryBlock, unchanged)
  *   - the optional add-on box              (RecoveryAddonSection, unchanged)
- *   - the power primer, if one exists      (rendered ABOVE the old branch)
  *   - trunk/support rows                   (never rendered here — the component
  *                                           owner returns none for recovery)
  *
- * The third of those is the one worth having a test for: the primer used to be
- * rendered before the branch split, so it reached recovery days too, and a
- * one-list rewrite that only thinks about badged days drops it silently.
+ * And one thing that must NOT arrive. The power primer used to render above the
+ * branch split, so it reached recovery days by accident of layout. Stage 4
+ * originally restored it on conservation grounds; Sam ruled on 2026-07-27 that
+ * power work does not belong on a recovery day at all, so the legacy behaviour
+ * was preserving a bug. §4 pins its absence.
  *
  * Run: npm run test:recovery-template
  */
@@ -153,12 +154,6 @@ console.log('\n[3] Nothing a recovery day used to render was lost');
     'the optional add-on box still renders',
     /<RecoveryAddonSection/.test(recoveryBranch),
   );
-  ok(
-    'a power block on a recovery day still renders',
-    /<PowerPrimerSection/.test(recoveryBranch),
-    'the primer used to render ABOVE the branch split, so it reached recovery days too',
-  );
-
   // Trunk/support was never shown on a recovery day: the shared component owner
   // returns no support rows for one. Pinned so "we dropped the box" can never be
   // mistaken for "we dropped content".
@@ -173,6 +168,36 @@ console.log('\n[3] Nothing a recovery day used to render was lost');
   ok(
     'and it returns no strength rows either',
     rows.strengthRows.length === 0,
+  );
+}
+
+/* ══ 4. Power work does not belong on a recovery day ══ */
+
+console.log('\n[4] The power primer is gone from recovery days (Sam, 2026-07-27)');
+{
+  ok(
+    'the screen no longer renders a power primer anywhere',
+    !/PowerPrimerSection/.test(screen),
+    'it survived on recovery days only as a legacy of rendering above the old branch split',
+  );
+
+  // The owner never emitted a power item for a recovery day, so removing the
+  // render call leaves no path by which power can reach one.
+  const withPower = buildSessionTemplate(
+    recoveryWorkout({
+      powerBlock: {
+        id: 'pb1',
+        kind: 'primer',
+        title: 'Broad Jumps',
+        prescription: '3 x 3',
+        options: [],
+        notes: [],
+      },
+    }),
+  );
+  ok(
+    'the composition owner emits no power item for a recovery day either',
+    withPower.items.every((item) => item.kind !== 'power'),
   );
 }
 
