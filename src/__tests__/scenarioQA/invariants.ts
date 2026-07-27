@@ -215,13 +215,12 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
     !!sat.conditioningFlavour &&
     (!sat.hasCombinedConditioning || sat.attachedConditioningKind === 'component');
   const isPeakLike = sat.tier === 'core' && (isLowerStrengthTopUp || isTypedConditioningTopUp);
-  const readinessTier = inputs.generationConstraints?.readiness?.tier;
+  // Readiness is deloaded-or-not now (Sam's readiness law, 2026-07-27); the
+  // three tier alternatives all meant "deloaded" at different magnitudes.
   const isLighterBye =
     plan.readiness === 'low' ||
     inputs.weekKind === 'deload' ||
-    readinessTier === 'moderate_reduction' ||
-    readinessTier === 'major_reduction' ||
-    readinessTier === 'full_pause' ||
+    inputs.generationConstraints?.readiness?.deloaded === true ||
     (inputs.generationConstraints?.injuries ?? []).some((injury) =>
       injury.removeRiskyWork || injury.pauseAffectedTraining);
   const isLightReset =

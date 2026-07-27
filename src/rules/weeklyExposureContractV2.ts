@@ -72,6 +72,27 @@ export type AnchorParticipationState =
   | 'did_not_participate'
   | 'unknown';
 
+/**
+ * Whether an anchor's participation state means the athlete WAS THERE.
+ *
+ * Sam, 2026-07-27: "Counting counts structure; intensity and prescribed volume
+ * must never feed identity." A conditioning exposure exists because the athlete
+ * attended the session, not because they attended it at full intensity — so a
+ * `modified`, `rehab`, `restricted`, `non_contact` or `reduced_running` anchor
+ * still claims conditioning. `did_not_participate` is absence and `unknown` is
+ * legacy content with no evidence either way; neither has ever credited.
+ *
+ * Sprint/high-speed and hard-day claims are INTENSITY and stay behind
+ * `normal_unrestricted`. Keeping one helper for the identity half is what stops
+ * the two questions collapsing back into one boolean, which is how a deload
+ * came to delete a session from the week's count.
+ */
+export function anchorAttendanceClaimsConditioning(
+  participation: AnchorParticipationState,
+): boolean {
+  return participation !== 'did_not_participate' && participation !== 'unknown';
+}
+
 export type Section18ConditioningRole =
   | 'required_core'
   | 'planner_selected_core'
@@ -215,7 +236,9 @@ export function stampSection18GovernedBoundary(args: {
         participation,
         participationProvenance: 'delivered_history' as const,
         currentProductionClaim: {
-          conditioning: normal,
+          // Attendance, not intensity (Sam, 2026-07-27) — see
+          // `anchorAttendanceClaimsConditioning`.
+          conditioning: anchorAttendanceClaimsConditioning(participation),
           sprintHighSpeed: normal,
           hardDay: normal,
         },
@@ -301,7 +324,7 @@ export interface Section18SafetyPolicy {
   prohibitedPowerFamilies: Array<'lower' | 'upper'>;
   affectedDomains: Section18SafetyDomain[];
   unaffectedDomains: Section18SafetyDomain[];
-  fullPause: boolean;
+  trainingPaused: boolean;
   mainStrengthFrequencyCeiling: number | null;
   conditioningFrequencyCeiling: number | null;
   sprintHighSpeedFrequencyCeiling: number | null;
@@ -457,7 +480,7 @@ export interface Section18ContractV2Input {
   prohibitedPower?: boolean;
   prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
   affectedSafetyDomains?: readonly Section18SafetyDomain[];
-  fullPause?: boolean;
+  trainingPaused?: boolean;
   authorisedUnavoidableAnchorExcess?: number;
   equipment?: Partial<Section18EquipmentPolicyState>;
   source?: WeeklyExposureContractV2['source'];
@@ -505,9 +528,9 @@ function buildSafetyPolicy(args: {
   prohibitedPower: boolean;
   prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
   affectedSafetyDomains?: readonly Section18SafetyDomain[];
-  fullPause?: boolean;
+  trainingPaused?: boolean;
 }): Section18SafetyPolicy {
-  const fullPause = args.fullPause === true || args.reductions.some((entry) =>
+  const trainingPaused = args.trainingPaused === true || args.reductions.some((entry) =>
     entry.reason === 'full_pause');
   const optionalWeek = args.mode === 'optional_week';
   // THE ILLNESS LAW (Sam, 2026-07-27) — the SPLIT. illness_recovery used to
@@ -524,21 +547,21 @@ function buildSafetyPolicy(args: {
   const lighterStrengthRequired = args.cookedReadiness || byeRecovery ||
     optionalWeek || args.weekKind === 'deload';
   const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
-  const mainCeiling = fullPause
+  const mainCeiling = trainingPaused
     ? 0
     : byeRecovery
       ? Math.min(2, reducedMainCeiling ?? 2)
       : reducedMainCeiling;
-  const conditioningCeiling = fullPause
+  const conditioningCeiling = trainingPaused
     ? 0
     : safetyFrequencyCeiling(args.reductions, 'conditioning_core_frequency');
-  const sprintCeiling = fullPause || args.prohibitedSprintHighSpeed
+  const sprintCeiling = trainingPaused || args.prohibitedSprintHighSpeed
     ? 0
     : safetyFrequencyCeiling(args.reductions, 'sprint_high_speed_frequency');
   // THE DELOAD LAW: a deload and a cooked athlete no longer remove power —
   // "a deload is not a reason to lose sharpness". A bye recovery week still
   // does; that mode is not a deload door and Sam's law does not reach it.
-  const prohibitedPower = fullPause || args.prohibitedPower || byeRecovery;
+  const prohibitedPower = trainingPaused || args.prohibitedPower || byeRecovery;
   const affected = new Set<Section18SafetyDomain>(args.affectedSafetyDomains ?? []);
   if (args.prohibitedPatterns.length > 0 || mainCeiling !== null) affected.add('main_strength');
   if (conditioningCeiling !== null) affected.add('conditioning');
@@ -560,12 +583,12 @@ function buildSafetyPolicy(args: {
   return {
     requiredSafePatterns: [...args.requiredSafePatterns],
     prohibitedPatterns: [...args.prohibitedPatterns],
-    prohibitedSprintHighSpeed: fullPause || args.prohibitedSprintHighSpeed === true,
+    prohibitedSprintHighSpeed: trainingPaused || args.prohibitedSprintHighSpeed === true,
     prohibitedPower,
     prohibitedPowerFamilies: Array.from(new Set(args.prohibitedPowerFamilies ?? [])),
     affectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => affected.has(domain)),
     unaffectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => !affected.has(domain)),
-    fullPause,
+    trainingPaused,
     mainStrengthFrequencyCeiling: mainCeiling,
     conditioningFrequencyCeiling: conditioningCeiling,
     sprintHighSpeedFrequencyCeiling: sprintCeiling,
@@ -954,7 +977,14 @@ export function resolveSection18PhasePlannerSelection(
     mode: input.mode,
     teamTrainingDays: Array.from({ length: teamTrainingCount }, (_, index) => index),
     readiness: input.readiness,
-    cookedReadiness: input.readiness === 'low',
+    // READINESS IS A HOMONYM (Sam, 2026-07-27). `input.readiness` is the
+    // CAPACITY score `calculateReadiness` computes from onboarding answers —
+    // recent training load, conditioning level, sprint exposure. It changes only
+    // when the profile changes and means "this athlete's baseline is low", NOT
+    // "I am cooked today". Feeding it in here handed a detrained athlete the
+    // safety envelope of someone who had declared themselves wrecked. Sam ruled
+    // it CUT: cooked readiness comes from the readiness FACT and nothing else.
+    cookedReadiness: false,
     weekKind: input.weekKind,
   });
   const recoveryMode = input.mode === 'in_season_bye_recovery';
@@ -1051,6 +1081,9 @@ export function buildSection18WeeklyExposureContractV2(
     : input.plannerSelected.optionalMainStrength ?? 0;
   const coreStrengthSelected = selectedKind === 'optional' ? 0 : input.plannerSelected.mainStrength;
   const coreConditioningSelected = selectedKind === 'optional' ? 0 : input.plannerSelected.coreConditioning;
+  const coreSprintSelected = selectedKind === 'optional'
+    ? 0
+    : input.plannerSelected.sprintHighSpeed;
   const optionalFlushSelected = selectedKind === 'optional'
     ? input.plannerSelected.coreConditioning
     : input.plannerSelected.optionalFlush ?? 0;
@@ -1075,12 +1108,14 @@ export function buildSection18WeeklyExposureContractV2(
       prohibitedPatterns: prohibited,
       requiredSafePatterns,
       reductions,
-      cookedReadiness: input.cookedReadiness === true || input.readiness === 'low',
+      // The same homonym cut as above: the capacity score does not make an
+      // athlete "cooked". Only the readiness door's own flag does.
+      cookedReadiness: input.cookedReadiness === true,
       prohibitedSprintHighSpeed: input.prohibitedSprintHighSpeed,
       prohibitedPower: input.prohibitedPower === true || !powerEligible,
       prohibitedPowerFamilies: input.prohibitedPowerFamilies,
       affectedSafetyDomains: input.affectedSafetyDomains,
-      fullPause: input.fullPause,
+      trainingPaused: input.trainingPaused,
     }),
     identity: {
       seasonPhase: input.seasonPhase,
@@ -1176,7 +1211,15 @@ export function buildSection18WeeklyExposureContractV2(
         defaultTarget: policy.sprint.required,
         preferred: policy.sprint.preferred,
         maximum: policy.sprint.max,
-        selected: input.plannerSelected.sprintHighSpeed,
+        // Sprint was the ONE domain that never received the week's selection
+        // kind, so it silently defaulted to 'core' while strength and
+        // conditioning were correctly marked optional. §18 then held every
+        // optional week to a core sprint target the mode has none of by design,
+        // and rejected the commit — which is what made a severe illness
+        // impossible to report. The kind and the core selection move together
+        // here exactly as they do for the other two.
+        selected: coreSprintSelected,
+        selectionKind: selectedKind,
       }),
       achievedSources: [],
       reductions: reductions.filter((entry) => entry.metric === 'sprint_high_speed_frequency'),
@@ -1229,7 +1272,7 @@ export function refreshSection18SafetyPolicy(
     | 'prohibitedPower'
     | 'prohibitedPowerFamilies'
     | 'affectedSafetyDomains'
-    | 'fullPause'
+    | 'trainingPaused'
     | 'cookedReadiness'
   >> = {},
 ): WeeklyExposureContractV2 {
@@ -1254,7 +1297,7 @@ export function refreshSection18SafetyPolicy(
     prohibitedPowerFamilies: overrides.prohibitedPowerFamilies ??
       contract.safety?.prohibitedPowerFamilies,
     affectedSafetyDomains: overrides.affectedSafetyDomains ?? contract.safety?.affectedDomains,
-    fullPause: overrides.fullPause ?? contract.safety?.fullPause,
+    trainingPaused: overrides.trainingPaused ?? contract.safety?.trainingPaused,
   });
   return contract;
 }

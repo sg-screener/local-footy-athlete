@@ -169,7 +169,7 @@ export interface Constraint {
   /** Human-readable reason for logs. */
   label?: string;
   /** Typed medical-stop policy: preserve only existing recovery/game anchors. */
-  fullPause?: boolean;
+  trainingPaused?: boolean;
 }
 
 export type ExerciseDecisionKind = 'keep' | 'limit' | 'remove';
@@ -700,7 +700,7 @@ export function buildInjuryConstraint(args: {
   severity: number;
   status?: 'active' | 'improving' | 'resolved';
   startDate?: string;
-  fullPause?: boolean;
+  trainingPaused?: boolean;
   safeFocus?: string[];
   advice?: string[];
 }): Constraint {
@@ -725,7 +725,7 @@ export function buildInjuryConstraint(args: {
     safeFocus: args.safeFocus ?? sets.safeFocus,
     advice: args.advice ?? advice,
     label: `injury:${region}@${severity}/10`,
-    fullPause: args.fullPause === true,
+    trainingPaused: args.trainingPaused === true,
   };
 }
 
@@ -739,25 +739,27 @@ export function buildFatigueConstraint(args: {
   startDate?: string;
 }): Constraint {
   const severity = args.severity;
-  const tier = generalSeverityToTier(severity);
+  // FATIGUE NEVER BLOCKS AN EXPOSURE TYPE (Sam, 2026-07-27).
+  //
+  // This used to graduate on severity: at 7+ it blocked nine exposure types and
+  // allowed only mobility/recovery/easy-erg/low-load-accessory/trunk, so a
+  // strength session lost every row and collapsed to Rest. That is a session
+  // REMOVAL, which the readiness law forbids — and because it happened by side
+  // effect rather than through a recorded reduction, it survived the migration
+  // that retired all the recorded ones.
+  //
+  // Fatigue now only ever LIMITS, and the same set at every severity: the
+  // magnitude is gone because "how bad" is no longer a question this layer may
+  // ask. What actually shrinks the work is DELOAD_LAW, applied through the
+  // readiness door, and the session survives.
+  //
+  // Injury is untouched — `buildInjuryConstraint` and `buildSorenessConstraint`
+  // still block, because a medical restriction is not a readiness call.
   const blocked: Exposure[] = [];
-  const limited: Exposure[] = [];
-  if (tier === 'severe') {
-    blocked.push(
-      'sprint', 'high_speed_running', 'plyometric', 'explosive_lower',
-      'explosive_push', 'heavy_lower_strength', 'max_effort_strength',
-      'hard_erg', 'change_of_direction',
-    );
-    limited.push('high_volume_accessory', 'heavy_squat', 'heavy_hinge', 'heavy_pull');
-  } else if (tier === 'moderate') {
-    blocked.push('max_effort_strength');
-    limited.push(
-      'sprint', 'plyometric', 'heavy_lower_strength', 'heavy_squat',
-      'heavy_hinge', 'hard_erg', 'high_volume_accessory',
-    );
-  } else {
-    limited.push('max_effort_strength', 'hard_erg');
-  }
+  const limited: Exposure[] = [
+    'max_effort_strength', 'hard_erg', 'sprint', 'plyometric',
+    'heavy_lower_strength', 'heavy_squat', 'heavy_hinge', 'high_volume_accessory',
+  ];
   return {
     id: args.id ?? `fatigue-${Date.now()}`,
     type: 'fatigue',
@@ -940,10 +942,12 @@ export function scoreExerciseAgainstConstraints(
   if (limitHits.length > 0) {
     const exps = Array.from(new Set(limitHits.map((h) => h.exposure)));
     const ids = Array.from(new Set(limitHits.map((h) => h.constraintId)));
+    // Only INJURY may escalate a limit into a removal. Fatigue used to do the
+    // same at severity 7+, which turned "go lighter" into "delete the row" and
+    // emptied sessions — the readiness law's forbidden count reduction, arriving
+    // by side effect. A limited exposure under fatigue stays limited.
     const shouldRemoveLimited = limitHits.some((h) =>
-      h.constraintType === 'injury'
-        ? injurySeverityPausesAffectedTraining(h.severity)
-        : generalSeverityToTier(h.severity) === 'severe');
+      h.constraintType === 'injury' && injurySeverityPausesAffectedTraining(h.severity));
     if (shouldRemoveLimited) {
       return {
         decision: 'remove',
@@ -1170,10 +1174,11 @@ export function classifySessionAgainstConstraints(
   let action: SessionAction = 'unchanged';
   if (impact === 'none') action = 'unchanged';
   else if (totalScored > 0 && removedNames.length / totalScored >= 0.75) {
+    // Converting a session to 'recovery' changes the week's shape. Only an
+    // injury pause may do it; fatigue at severity 7+ used to, which is how a
+    // tired athlete's strength day silently became a recovery day.
     action = constraints.some((c) =>
-      (c.type === 'injury' && injurySeverityPausesAffectedTraining(c.severity ?? 0)) ||
-      ((c.type === 'fatigue' || c.type === 'schedule') &&
-        generalSeverityToTier(c.severity ?? 0) === 'severe'))
+      c.type === 'injury' && injurySeverityPausesAffectedTraining(c.severity ?? 0))
       ? 'recovery'
       : 'rebuild';
   } else if (impact === 'high') action = 'rebuild';
@@ -1213,17 +1218,17 @@ export function applyConstraintsToSession(
       applied: false,
     };
   }
-  const fullPause = active.find((constraint) => constraint.fullPause === true);
-  if (fullPause) {
+  const trainingPaused = active.find((constraint) => constraint.trainingPaused === true);
+  if (trainingPaused) {
     const removedNames = (workout.exercises ?? [])
       .map((exercise: any) => exercise.exercise?.name ?? '')
       .filter(Boolean);
     const coachNotes = [...(workout.coachNotes ?? [])];
-    for (const focus of fullPause.safeFocus) {
+    for (const focus of trainingPaused.safeFocus) {
       const note = `Focus: ${focus}`;
       if (!coachNotes.includes(note)) coachNotes.push(note);
     }
-    for (const advice of fullPause.advice ?? []) {
+    for (const advice of trainingPaused.advice ?? []) {
       if (!coachNotes.includes(advice)) coachNotes.push(advice);
     }
     const classification: SessionClassification = {
@@ -1234,7 +1239,7 @@ export function applyConstraintsToSession(
         decision: 'remove',
         matchedExposures: [],
         triggeringExposures: [],
-        triggeringConstraintIds: [fullPause.id],
+        triggeringConstraintIds: [trainingPaused.id],
         reason: 'typed injury training pause',
       })),
       removedNames,

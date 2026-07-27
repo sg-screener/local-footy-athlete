@@ -132,7 +132,7 @@ function activeUnavailableDates(
   return unavailable;
 }
 
-function fullPause(activeConstraints: readonly ActiveConstraint[]): boolean {
+function trainingPaused(activeConstraints: readonly ActiveConstraint[]): boolean {
   return activeConstraints.some((constraint) =>
     constraint.type === 'injury' &&
     constraint.status !== 'resolved' &&
@@ -201,7 +201,7 @@ export function resolveFixtureConditionedAvailability(
   const safetyUnavailable = new Set(
     (input.safetyUnavailableDates ?? []).filter((date) => isDateInWeek(date, weekStart)),
   );
-  if (fullPause(input.activeConstraints ?? [])) {
+  if (trainingPaused(input.activeConstraints ?? [])) {
     for (let offset = 0; offset < 7; offset++) safetyUnavailable.add(addDays(weekStart, offset));
   }
 

@@ -327,13 +327,8 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
       readiness: {
         id: 'section18-v2-readiness',
         sourceType: 'fatigue',
-        severity: 7,
-        tier: 'moderate_reduction',
-        avoidSprint: true,
-        avoidHardConditioning: true,
-        reduceHardExtras: true,
-        preferRecovery: true,
-        fullPause: false,
+        deloaded: true,
+        sessionsOptional: false,
       },
     },
   });
@@ -702,6 +697,61 @@ ok('a full pattern restriction still removes power',
   contract('in_season_game_week', {
     prohibitedPatterns: ['squat', 'hinge', 'push', 'pull'],
   }).power.eligible === false);
+
+/* ── Attendance counts; intensity does not ── */
+
+// SAM'S RULING (2026-07-27): "The deload law changes dose and intensity inside
+// sessions, never session identity or count ... Counting counts structure;
+// intensity and prescribed volume must never feed identity."
+//
+// The evaluator credited anchor conditioning behind ONE boolean —
+// `participation === 'normal_unrestricted'` — which answered four different
+// questions at once: is this a conditioning exposure, was it a sprint exposure,
+// was it a hard day, and how much stress did it carry. Only the first is
+// identity; the other three are intensity.
+//
+// So a deload that softened the athlete's GAME to `reduced_running` deleted the
+// game from the week's conditioning COUNT, and §18 rejected the week for a
+// required-minimum shortfall it had itself created. The athlete still played
+// the game. Attendance is what makes it an exposure.
+//
+// Both halves are asserted, because the fix is a SPLIT and a split can fail in
+// either direction: a restricted anchor must still COUNT, and must still not
+// earn sprint or hard-day credit.
+console.log('\n-- Anchor credit: attendance is identity, participation is intensity --');
+
+for (const participation of
+  ['modified', 'rehab', 'restricted', 'non_contact', 'reduced_running'] as const) {
+  const c = contract('in_season_game_week', {
+    teamTrainingDays: [2, 4],
+    teamParticipation: normalParticipation(2),
+    fixtureDay: 6,
+    fixtureParticipation: participation,
+  });
+  const evaluation = evaluate(c, []);
+  const row = evaluation.ledger.anchors.find((entry) => entry.dayOfWeek === 6);
+
+  ok(`a ${participation} anchor still COUNTS as a conditioning exposure`,
+    row?.conditioningCredited === true, row);
+  ok(`a ${participation} anchor earns NO sprint credit`,
+    row?.sprintCredited === false, row);
+  ok(`a ${participation} anchor earns NO hard-day credit`,
+    row?.hardDayCredited === false, row);
+}
+
+// The two states that are NOT attendance keep their existing behaviour. Without
+// these the "fix" would be indistinguishable from crediting every anchor.
+for (const participation of ['did_not_participate', 'unknown'] as const) {
+  const c = contract('in_season_game_week', {
+    teamTrainingDays: [2, 4],
+    teamParticipation: normalParticipation(2),
+    fixtureDay: 6,
+    fixtureParticipation: participation,
+  });
+  const row = evaluate(c, []).ledger.anchors.find((entry) => entry.dayOfWeek === 6);
+  ok(`a ${participation} anchor is NOT a conditioning exposure`,
+    row?.conditioningCredited === false, row);
+}
 
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);
 console.log(`SECTION18_V2_TOTALS scenarios=12 rules=12 properties=${propertyCount} mutations=${mutationCount}`);

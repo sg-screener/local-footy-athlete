@@ -123,7 +123,6 @@ import {
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
-  GenerationReadinessTier,
 } from './generationConstraints';
 import {
   resolveProfileTargetWeekAvailability,
@@ -661,9 +660,7 @@ function buildParallelSection18Contract(args: {
   const imbalanceReduction = legacy.reductions.find((entry) =>
     entry.reason === 'injury_restriction' || entry.reason === 'low_readiness' ||
     entry.reason === 'insufficient_availability' || entry.reason === 'training_age_limit');
-  const readinessTier = inputs.generationConstraints?.readiness?.tier;
-  const cookedReadiness = readinessTier === 'moderate_reduction' ||
-    readinessTier === 'major_reduction' || readinessTier === 'full_pause';
+  const cookedReadiness = inputs.generationConstraints?.readiness?.deloaded === true;
 
   const contract = buildSection18WeeklyExposureContractV2({
     seasonPhase: inputs.seasonPhase,
@@ -885,15 +882,24 @@ export function calculateReadiness(inputs: CoachingInputs): {
 
   const activeReadiness = inputs.generationConstraints?.readiness;
   if (activeReadiness) {
-    const before = level;
-    if (activeReadiness.tier === 'full_pause' || activeReadiness.tier === 'major_reduction') {
-      level = 'low';
-    } else if (activeReadiness.tier === 'moderate_reduction' && level === 'high') {
-      level = 'medium';
-    }
+    // THE LAUNDERING SITE — deleted (Sam, 2026-07-27).
+    //
+    // This used to step the CAPACITY score down on `deloaded` (high -> medium,
+    // otherwise -> low). That converted the law's boolean straight back into a
+    // magnitude, and every `readiness === 'low'` branch in this engine then read
+    // it — so one declaration of "wrecked" quietly reclassified the athlete as
+    // permanently detrained and rebuilt their week as recovery work.
+    //
+    // It is also the HOMONYM running backwards: `level` is the profile capacity
+    // score, a different signal that this law does not govern. A deload changes
+    // the DOSE, which is DELOAD_LAW's job, not the athlete's training status.
     factors.push(
-      `Active readiness constraint (${activeReadiness.label ?? activeReadiness.tier}, ${activeReadiness.severity}/10) ` +
-      `applied before generation${before !== level ? `: ${before} → ${level}` : ''}`,
+      // The "/10" was the last severity read outside the door. It was only a log
+      // string, which is exactly how these leak: harmless today, then something
+      // graduates on it. The two flags say everything this line needs.
+      `Active readiness constraint (${activeReadiness.label ?? 'low readiness'}` +
+      `${activeReadiness.sessionsOptional ? ', optional' : activeReadiness.deloaded ? ', deloaded' : ''}) ` +
+      'recorded; the deload transform owns what it changes',
     );
   }
 
@@ -1065,7 +1071,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     weekKind: inputs.weekKind,
     offseasonSubphase,
     preseasonSubphase,
-    activeReadinessTier: inputs.generationConstraints?.readiness?.tier,
+    readinessDeloaded: inputs.generationConstraints?.readiness?.deloaded === true,
     maxStrengthSessions: trainingAgePolicy.maxCoreSessions,
     appConditioningFeasible: inputs.appConditioningFeasible,
     attemptedConditioningSubstitutions:
@@ -1101,22 +1107,19 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     );
     coreRange = { min: earlyCoreTarget, max: earlyCoreTarget };
   }
-  const activeReadinessTier = inputs.generationConstraints?.readiness?.tier;
-  if (activeReadinessTier === 'full_pause') {
-    coreRange = { min: 0, max: 0 };
-  } else if (activeReadinessTier === 'major_reduction') {
-    coreRange = { min: Math.min(coreRange.min, 1), max: Math.min(coreRange.max, 2) };
-  } else if (activeReadinessTier === 'moderate_reduction') {
-    coreRange = { min: Math.min(coreRange.min, 2), max: Math.min(coreRange.max, 3) };
-  }
+  // RETIRED (Sam's readiness law, 2026-07-27). These cut the week's core session
+  // COUNT by tier — 0/0, 1-2, 2-3. Counts are STRUCTURE, and the deload law
+  // holds structure constant while the work inside shrinks: "same week, same
+  // days". A deloaded week keeps its sessions and they arrive smaller.
 
   // The phase contract owns the allocation floor and any safety-reduced cap,
   // while the existing phase allocator may still use the contract's preferred
   // range. Required and preferred exposure are deliberately not collapsed
   // into one exact count (for example, healthy off-season remains 3 required
   // with a valid fourth preferred strength exposure).
-  const maySelectPreferredStrength =
-    activeReadinessTier !== 'full_pause' && activeReadinessTier !== 'major_reduction';
+  // Preferred strength is no longer withheld by readiness — that was a count
+  // reduction too.
+  const maySelectPreferredStrength = true;
   coreRange = {
     min: weeklyExposureContract.strength.targetCount,
     max: maySelectPreferredStrength
@@ -1143,7 +1146,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     (inputs.teamTrainingDays || []).length >= 2 &&
     !inputs.hasGame &&
     inputs.availableDays >= 5 &&
-    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
+    // Readiness no longer withholds the preferred 4th strength session — that
+    // was a COUNT reduction, which the deload law replaces with shrinking work.
+    true;
   if (shouldTarget4Strength) {
     if (readiness === 'medium') coreRange = { min: 3, max: 4 };
     else if (readiness === 'high') coreRange = { min: 4, max: 4 };
@@ -1185,7 +1190,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     inputs.availableDays >= 5 &&
     readiness !== 'low' &&
     !hasSevereInjury &&
-    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
+    // Readiness no longer withholds the preferred 4th strength session — that
+    // was a COUNT reduction, which the deload law replaces with shrinking work.
+    true;
   if (shouldTarget3Strength) {
     coreRange = { min: 3, max: 3 };
   }
@@ -1207,7 +1214,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     inputs.availableDays >= 5 &&
     readiness !== 'low' &&
     !hasSevereInjury &&
-    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
+    // Readiness no longer withholds the preferred 4th strength session — that
+    // was a COUNT reduction, which the deload law replaces with shrinking work.
+    true;
   if (shouldTarget3StrengthPreSeasonGame) {
     coreRange = { min: 3, max: 3 };
   }
@@ -1952,17 +1961,10 @@ function buildWeeklyPlan(
       })
     : null;
 
-  const readinessTierRank = (tier: GenerationReadinessTier | undefined): number => {
-    switch (tier) {
-      case 'full_pause': return 4;
-      case 'major_reduction': return 3;
-      case 'moderate_reduction': return 2;
-      case 'slight_reduction': return 1;
-      default: return 0;
-    }
-  };
-  const readinessAtLeast = (tier: GenerationReadinessTier): boolean =>
-    readinessTierRank(activeReadiness?.tier) >= readinessTierRank(tier);
+  // RETIRED: the tier RANKING is gone with the tiers. Readiness is a boolean,
+  // so "at least this bad" has no meaning — there is one state, deloaded.
+  // `readinessAtLeast` deleted: a fossil of the tier ladder with no callers
+  // left once the graduated sites went. It asked "how bad", which has no answer.
   const activeInjuries = generationConstraints?.injuries ?? [];
   const injuryMatches = (
     injury: GenerationInjuryConstraint,
@@ -1991,16 +1993,19 @@ function buildWeeklyPlan(
   const hasSevereProfileInjury = (inputs.injuries ?? []).some((injury) =>
     injury.severity === 'Severe',
   );
+  // The readiness DECLARATION dropped out: it fed the support-slot removal
+  // below, which is a count cut. `readiness === 'low'` stays — that is the
+  // CAPACITY score (the homonym), a genuine statement about what this athlete
+  // can absorb, and it is not what Sam's law governs. Injury stays too.
+  // (The stray `false ||` is a fossil of a retired tier term.)
   const lighterByeWeek = weekContext.isByeWeek && (
     inputs.weekKind === 'deload' ||
     readiness === 'low' ||
-    readinessAtLeast('moderate_reduction') ||
-    !!activeReadiness?.preferRecovery ||
     hasRiskRestrictedInjury ||
     hasSevereProfileInjury
   );
 
-  if (activeReadiness?.fullPause) {
+  if (false) {
     return daySlots.map((slot) => ({
       tier: 'recovery',
       focus: 'Recovery only - full pause until symptoms settle',
@@ -2344,7 +2349,7 @@ function buildWeeklyPlan(
       const allowConditioningTopUp =
         teamSlots.length <= 1 &&
         !trainingAgePolicy.avoidCombinedStrengthConditioning &&
-        !activeReadiness?.avoidHardConditioning &&
+        true &&
         !hasRiskRestrictedInjury;
       let lowerSlot: ByeSlot | undefined;
       if (!restrictedLower) {
@@ -2370,9 +2375,10 @@ function buildWeeklyPlan(
       }
     }
 
-    let supportSlotsRemaining = lighterByeWeek && (
-      inputs.weekKind === 'deload' || activeReadiness?.preferRecovery
-    ) ? 0 : 1;
+    // A readiness declaration no longer removes the support slot — that is a
+    // count cut. A SCHEDULED deload week still may: that door is the block
+    // plan's own structural decision, not an athlete-driven reduction.
+    let supportSlotsRemaining = lighterByeWeek && inputs.weekKind === 'deload' ? 0 : 1;
     for (const slot of daySlots) {
       const existing = allocations.get(slot.dayName);
       if (existing) {
@@ -2587,12 +2593,17 @@ function buildWeeklyPlan(
       ) {
         return true;
       }
-      if (activeReadiness?.avoidHardConditioning &&
-          (category === 'sprint' || category === 'vo2' || category === 'glycolytic')) {
-        return true;
-      }
+      // QUALITY BAN — deleted (Sam, 2026-07-27). A deloaded week banned every
+      // quality conditioning category outright, which is STRICTER than the law
+      // it was enforcing: DELOAD_LAW keeps "one quality exposure at most, and
+      // everything else easy aerobic". A scattered category ban is disguised
+      // enforcement of a rule that already has exactly one home. Any add-path
+      // asking "can a quality session join this deloaded week?" asks the law's
+      // one-quality-max rule, not a local list.
+
+      // Readiness dropped out: banning sprint on a deloaded week contradicts
+      // "power/speed KEEPS a small sharp dose". An INJURY still bans it.
       if (category === 'sprint' && (
-        activeReadiness?.avoidSprint ||
         lowerLimbIssue(4) ||
         (lowerLimbIssue(1) && triggersMention(/\b(sprint|speed|max velocity|running|cod|change of direction)\b/))
       )) {
@@ -2622,8 +2633,10 @@ function buildWeeklyPlan(
     function conditioningPolicyProps(category: CondCategory): Partial<SessionAllocation> {
       const aerobic = category === 'aerobic_base';
       const conditioningOffFeet = aerobic && policyRequiresOffFeetAerobic();
+      // `reduced` here shapes the conditioning DOSE, not the week's structure —
+      // but a deloaded week's dose is DELOAD_LAW's to set, not this allocator's.
+      // Leaving readiness in would give a deload two dose owners that disagree.
       const reduced =
-        activeReadiness?.avoidHardConditioning ||
         lowerLimbIssue(4) ||
         (preseasonPolicy?.conditioning.hardDose === 'reduced' &&
           isHardConditioningCategory(category));
@@ -2717,7 +2730,12 @@ function buildWeeklyPlan(
     if (!weeklyExposureContract) {
       if (inputs.availableDays <= 3) condTarget = 3;
       else if (inputs.conditioningLevel === 'Poor') condTarget = Math.max(3, core);
-      if (readinessAtLeast('moderate_reduction') || activeReadiness?.avoidHardConditioning || core <= 2) {
+      // Readiness dropped out of this cut: it reduced the conditioning COUNT,
+      // which is structure. (Note the tautology it left behind — `(x === true)
+      // || x` — a fossil of the four-tier chain this was mechanically collapsed
+      // from, and a sign the collapse was textual rather than considered.)
+      // A small core count is a genuine structural reason and stays.
+      if (core <= 2) {
         condTarget = Math.max(3, condTarget - 1);
       }
       condTarget = Math.max(3, Math.min(5, condTarget));
@@ -3274,7 +3292,9 @@ function buildWeeklyPlan(
         teamTrainingDays: Array.from(teamDayNumSet),
         gameOrPracticeMatchDays: isGameWeek && gameDayNum !== null ? [gameDayNum] : [],
         plannedOnFeetSprintExposures,
-        readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
+        // A deload KEEPS a small sharp speed dose, so it no longer withholds sprint.
+        // `readiness` here is the CAPACITY score, a different signal, and it stays.
+        readinessAllowsSprint: readiness === 'high',
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
         offseasonSubphase,
         preseasonSubphase,
@@ -6179,7 +6199,9 @@ function buildWeeklyPlan(
       teamTrainingDays: Array.from(teamDaySetTail),
       gameOrPracticeMatchDays: gameAnchorDayNum !== null ? [gameAnchorDayNum] : [],
       plannedOnFeetSprintExposures: plannedSprintRows,
-      readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
+      // A deload KEEPS a small sharp speed dose, so it no longer withholds sprint.
+        // `readiness` here is the CAPACITY score, a different signal, and it stays.
+        readinessAllowsSprint: readiness === 'high',
       injuryAllowsSprint: !lowerLimbSprintBlocked,
       offseasonSubphase,
       preseasonSubphase,
@@ -6244,33 +6266,19 @@ function buildWeeklyPlan(
     }
   }
 
-  // Major readiness reductions keep safe/easy work, but app-authored hard
-  // sessions become visible recovery substitutions instead of disappearing.
-  // Team anchors remain intact; full_pause already returns recovery above.
-  if (activeReadiness?.tier === 'major_reduction') {
-    adjusted = adjusted.map((session) => {
-      if (!session.isHardExposure || session.isTeamDay) return session;
-      return {
-        ...session,
-        tier: 'recovery',
-        focus: 'Recovery / easy movement - keep this light while readiness returns',
-        isHardExposure: false,
-        stressLevel: 'low',
-        strengthPattern: undefined,
-        hasCombinedConditioning: false,
-        attachedConditioningKind: undefined,
-        conditioningFlavour: undefined,
-        conditioningCategory: undefined,
-        conditioningVariant: undefined,
-        conditioningFeel: undefined,
-        conditioningOffFeet: undefined,
-        ergModality: undefined,
-        speedWorkKind: undefined,
-        speedPlacement: undefined,
-        speedBlock: undefined,
-      };
-    });
-  }
+  // RECOVERY SUBSTITUTION — deleted (Sam, 2026-07-27).
+  //
+  // A deloaded week used to rewrite every app-authored hard session into
+  // "Recovery / easy movement", stripping its strength pattern, conditioning
+  // category and speed block. The session survived as an object and vanished as
+  // TRAINING, which is why it read as a count reduction to §18 while looking
+  // like a preserved structure here.
+  //
+  // Sam's law: same week, same days — the work shrinks. A deloaded hard session
+  // stays a hard session's SHAPE at a deload dose: half the sets at RPE 5-6, one
+  // quality conditioning exposure kept, and a small sharp speed dose kept
+  // because "a deload is not a reason to lose sharpness". DELOAD_LAW owns all of
+  // that, and it is the only owner.
 
   // Final sort (weekend-peak / field-load / core-streak may have mutated)
   adjusted.sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
@@ -6931,8 +6939,13 @@ function applySection18ConditioningAllocation(
     return;
   }
 
+  // Reads the CLAIM and nothing else. Re-deriving `normal_unrestricted` here
+  // alongside it made this a second, stricter owner of the same question: the
+  // claim said a reduced-running anchor is a conditioning exposure, this
+  // disagreed, and the planner authored an app session to cover a gap that did
+  // not exist — which then breached the week's conditioning maximum. One owner
+  // (Sam, 2026-07-27: intensity must never feed identity).
   const creditedAnchors = contract.anchors.filter((anchor) =>
-    anchor.participation === 'normal_unrestricted' &&
     anchor.currentProductionClaim.conditioning).length;
   const requiredApp = Math.max(
     0,
@@ -8159,7 +8172,9 @@ function buildAIConstraints(
   if (inputs.weekKind === 'deload') {
     sprintLoading = 'do-not-add';
   }
-  if (activeReadiness?.avoidSprint || lowerLimbGenerationIssue) {
+  // A readiness declaration no longer blocks adding speed. The SCHEDULED deload
+  // week above still does (block-plan structure), and an injury always does.
+  if (lowerLimbGenerationIssue) {
     sprintLoading = 'do-not-add';
   }
 
@@ -8167,8 +8182,8 @@ function buildAIConstraints(
   let conditioningLoading: AIConstraints['conditioningLoading'] = 'full';
   if (inputs.seasonPhase === 'In-season') {
     conditioningLoading = 'light-only'; // No extra running in-season
-  } else if (activeReadiness?.preferRecovery || activeReadiness?.avoidHardConditioning) {
-    conditioningLoading = activeReadiness.preferRecovery ? 'light-only' : 'moderate';
+  // A deloaded week's conditioning dose is DELOAD_LAW's ("half the total work,
+  // one quality exposure at most"), not a second 'moderate' hint set here.
   } else if (readiness === 'low') {
     conditioningLoading = 'moderate';
   }

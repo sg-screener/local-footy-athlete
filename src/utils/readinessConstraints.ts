@@ -152,10 +152,31 @@ export function buildReadinessActiveConstraints(
   }
 
   if (typeof signal.timeAvailableMinutes === 'number' && signal.timeAvailableMinutes < 35) {
+    // TIME IS A SESSION FACT, NOT A READINESS STATE (Sam, 2026-07-27).
+    //
+    // "Short on time" used to ride the readiness ladder: it produced an untyped
+    // schedule constraint whose SEVERITY was read as a readiness magnitude, so a
+    // 25-minute Wednesday could deload the athlete's whole week — and at the top
+    // of the ladder would have made every session optional. Having 25 minutes on
+    // one day says nothing about how recovered someone is.
+    //
+    // It is now a typed, DATE-SCOPED time cap. The affected session shrinks to
+    // fit through the existing cap path; every other day is untouched; the week
+    // is not deloaded and no exposure COUNT changes, so there is nothing for a
+    // count reduction to record. `insufficient_availability` remains the typed
+    // reason for genuine availability-driven exposure reductions, which come
+    // from how many days the athlete has, not from how long one session is.
+    //
+    // What a proper 25-minute session KEEPS is Sam-authored content and belongs
+    // to execution-order step 5; this routes the existing shrink honestly rather
+    // than inventing that answer here.
     const shortTime: ActiveScheduleConstraint = {
       ...baseFields(signal, 'short-time', 'Short time'),
       type: 'schedule',
       severity: signal.timeAvailableMinutes < 20 ? 7 : 5,
+      scheduleKind: 'time_cap',
+      maxSessionMinutes: signal.timeAvailableMinutes,
+      timeCapDates: [signal.date.slice(0, 10)],
       rules: ['long accessory blocks', 'extra optional work'],
       safeFocus: ['Main lift / main conditioning stimulus', '1-2 key accessories', 'Short warm-up + exit'],
       advice: [],

@@ -227,14 +227,9 @@ const COOKED_READINESS: GenerationConstraintContext = {
   readiness: {
     id: 'fatigue-cooked',
     sourceType: 'fatigue',
-    severity: 6,
-    tier: 'moderate_reduction',
+    deloaded: true,
+    sessionsOptional: false,
     label: 'Cooked',
-    avoidSprint: true,
-    avoidHardConditioning: true,
-    reduceHardExtras: true,
-    preferRecovery: false,
-    fullPause: false,
   },
 };
 

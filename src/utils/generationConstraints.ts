@@ -22,14 +22,33 @@ import {
 } from '../rules/injurySeverityBands';
 import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
 import { deriveIllnessWeekDirective } from '../rules/illnessRecoveryWeekMode';
+import {
+  READINESS_TIERS,
+  resolveReadinessDirective,
+  type ReadinessTier,
+} from '../rules/readinessIllnessLaw';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { constraintAppliesToDate } from './readinessConstraints';
 
-export type GenerationReadinessTier =
-  | 'slight_reduction'
-  | 'moderate_reduction'
-  | 'major_reduction'
-  | 'full_pause';
+/**
+ * RETIRED (Sam's readiness law, 2026-07-27).
+ *
+ * The four-tier system — slight / moderate / major / full pause, each with its
+ * own reductions — is gone down to the type. Readiness says one thing now:
+ * DELOADED, or not.
+ *
+ * Every tier graduated on how much to CUT from the week, and the deload law
+ * holds structure constant while the work inside shrinks — so there is nothing
+ * left for a magnitude to express. The behavioural flags went with it:
+ * avoidSprint and avoidHardConditioning are subsumed by "conditioning half, one
+ * quality exposure max"; reduceHardExtras by the accessories rule;
+ * preferRecovery died with recovery substitution.
+ *
+ * NOTE: readiness could also force a full pause. It cannot any more — the app
+ * never empties a week on readiness alone. The §18 safety capability that
+ * received it still exists as `safety.trainingPaused`, reachable only from
+ * serious-injury symptoms or an explicit force.
+ */
 
 export type GenerationInjuryRegion =
   | 'lower_body'
@@ -60,17 +79,27 @@ export interface GenerationInjuryConstraint {
   injuryKeys: InjuryKey[];
 }
 
+/**
+ * The whole readiness answer downstream ever sees: the law's two flags.
+ *
+ * `severity` is DELIBERATELY ABSENT. Sam, 2026-07-27: "raw readiness severity
+ * becomes private to the door that mints the directive. No module outside it
+ * may read severity — downstream consumes only the two flags." Keeping the
+ * number here "just for display" is exactly how the tier system regrew last
+ * time: something graduates on it, then something else copies that.
+ *
+ * What the flags MEAN is owned by DELOAD_LAW, shared with the scheduled-deload
+ * and illness doors, so readiness cannot grow a private dose.
+ */
 export interface GenerationReadinessConstraint {
   id: string;
-  sourceType: 'fatigue' | 'schedule';
-  severity: number;
-  tier: GenerationReadinessTier;
+  /** Only a fatigue signal reaches this door; time/schedule facts are session-scoped. */
+  sourceType: 'fatigue';
   label?: string;
-  avoidSprint: boolean;
-  avoidHardConditioning: boolean;
-  reduceHardExtras: boolean;
-  preferRecovery: boolean;
-  fullPause: boolean;
+  /** The next 7 days are deloaded. Session COUNTS are untouched. */
+  deloaded: boolean;
+  /** "Absolutely cooked" — minimums lifted. Still not a removal. */
+  sessionsOptional: boolean;
 }
 
 export interface GenerationConstraintContext {
@@ -139,8 +168,19 @@ export function buildGenerationConstraintContext(args: {
         weekStartISO: args.todayISO.slice(0, 10),
       })
     : { deloaded: false, sessionsOptional: false };
-  const weekMode = illness.sessionsOptional ? ('optional_week' as const) : undefined;
-  const weekDeloaded = illness.deloaded ? true : undefined;
+  // BOTH doors answer the same two questions, so both feed the same two
+  // outputs. "Absolutely cooked" and bed-bound illness produce an identical
+  // week — nothing required, everything offered — and routing only one of them
+  // through the optional week mode would leave the other with a planner-selected
+  // CORE target it can never meet, which §18 rightly rejects.
+  //
+  // NAMING DEBT, deliberate and recorded: the mode is still called
+  // `illness_recovery` while it now means "optional-only week" and can be minted
+  // by readiness. Renaming it touches the §18 mode union, the subphase union and
+  // the reduction reasons, so it is its own unit — not smuggled into this pass.
+  const sessionsOptional = illness.sessionsOptional || readiness?.sessionsOptional === true;
+  const weekMode = sessionsOptional ? ('optional_week' as const) : undefined;
+  const weekDeloaded = illness.deloaded || readiness?.deloaded === true ? true : undefined;
 
   if (injuries.length === 0 && !readiness && !weekMode && !weekDeloaded) return undefined;
   return {
@@ -286,61 +326,65 @@ function buildInjuryLikeConstraint(args: {
   };
 }
 
+/**
+ * THE READINESS DOOR — the ONLY place a readiness/fatigue severity is read.
+ *
+ * "Raw severity is private to the door that mints the directive. No module
+ * outside it may read severity — downstream consumes only the two flags."
+ * (Sam, 2026-07-27.) Everything past this function sees `deloaded` and
+ * `sessionsOptional`, so there is no number left downstream to graduate on and
+ * the tier system cannot grow back.
+ *
+ * The strongest ACTIVE tier wins when several signals overlap, and "strongest"
+ * is decided here, on the raw severity, before it goes private.
+ */
 function strongestReadinessConstraint(
   constraints: readonly ActiveConstraint[],
 ): GenerationReadinessConstraint | undefined {
-  const readiness = constraints
-    .map((constraint) => readinessFromConstraint(constraint))
-    .filter((constraint): constraint is GenerationReadinessConstraint => !!constraint)
-    .sort((a, b) => b.severity - a.severity)[0];
-  return readiness;
-}
-
-function readinessFromConstraint(
-  constraint: ActiveConstraint,
-): GenerationReadinessConstraint | null {
-  if (constraint.type !== 'fatigue' && constraint.type !== 'schedule') return null;
-  const c = constraint as ActiveFatigueConstraint | ActiveScheduleConstraint;
-  const severity = clampSeverity(c.severity);
-  const text = `${c.reasonLabel ?? ''} ${(c.rules ?? []).join(' ')} ${(c.safeFocus ?? []).join(' ')}`.toLowerCase();
-  const bedridden = /\b(bedridden|severe symptoms|can't get out of bed|cannot get out of bed)\b/.test(text);
-  const fatigue = constraint.type === 'fatigue' ? constraint as ActiveFatigueConstraint : null;
-  const poorSleepPattern = fatigue?.readinessKind === 'poor_sleep'
-    ? fatigue.readinessPattern
-    : undefined;
-  const tier = poorSleepPattern === 'single_night'
-    ? 'slight_reduction'
-    : poorSleepPattern === 'repeated'
-      ? 'moderate_reduction'
-      : readinessTierFor(severity, text, bedridden);
+  const ranked = constraints
+    .map((constraint) => readinessTierFromConstraint(constraint))
+    .filter((entry): entry is { constraint: ActiveConstraint; tier: ReadinessTier; rank: number } =>
+      !!entry)
+    .sort((a, b) => b.rank - a.rank);
+  const strongest = ranked[0];
+  if (!strongest) return undefined;
+  const c = strongest.constraint as ActiveFatigueConstraint | ActiveScheduleConstraint;
+  const directive = resolveReadinessDirective(strongest.tier);
   return {
     id: c.id,
-    sourceType: constraint.type,
-    severity,
-    tier,
+    sourceType: 'fatigue',
     label: c.reasonLabel,
-    avoidSprint: severity >= 3 || tier !== 'slight_reduction',
-    avoidHardConditioning: severity >= 3 || tier !== 'slight_reduction',
-    reduceHardExtras: true,
-    preferRecovery: tier === 'major_reduction' || tier === 'full_pause',
-    fullPause: tier === 'full_pause',
+    deloaded: directive.deloaded,
+    sessionsOptional: directive.sessionsOptional,
   };
 }
 
-function readinessTierFor(
-  severity: number,
-  text: string,
-  bedridden: boolean,
-): GenerationReadinessTier {
-  if (bedridden || severity >= 9) return 'full_pause';
-  if (severity >= 8 || /\b(sick|recovery mode|very cooked|run down)\b/.test(text)) {
-    return 'major_reduction';
-  }
-  if (severity >= 4 || /\b(cooked|poor sleep|load reduced|busy week)\b/.test(text)) {
-    return 'moderate_reduction';
-  }
-  return 'slight_reduction';
+/**
+ * Classify a raw constraint into one of Sam's three readiness tiers.
+ *
+ * The thresholds are the door's own business and appear nowhere else. They
+ * follow the shared health-fact boundary already used by every other signal:
+ * below 4 is inert, and the top of the scale is the "absolutely cooked" call
+ * that also lifts the minimums.
+ */
+function readinessTierFromConstraint(
+  constraint: ActiveConstraint,
+): { constraint: ActiveConstraint; tier: ReadinessTier; rank: number } | null {
+  // FATIGUE ONLY. A schedule constraint is not a readiness declaration — "I have
+  // 25 minutes on Wednesday" says nothing about how recovered the athlete is, and
+  // reading its severity as a readiness magnitude let a busy day deload a whole
+  // week. Time is a SESSION fact and shrinks its own session (see
+  // `readinessConstraints`, `scheduleKind: 'time_cap'`).
+  if (constraint.type !== 'fatigue') return null;
+  const c = constraint as ActiveFatigueConstraint | ActiveScheduleConstraint;
+  const severity = clampSeverity(c.severity);
+  const tier: ReadinessTier = severity >= 8
+    ? 'absolutely_cooked'
+    : severity >= 4 ? 'wrecked' : 'tired';
+  return { constraint, tier, rank: READINESS_TIERS.indexOf(tier) };
 }
+
+
 
 function onboardingInjuryForGenerationConstraint(
   injury: GenerationInjuryConstraint,

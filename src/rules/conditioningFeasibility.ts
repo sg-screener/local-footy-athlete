@@ -193,7 +193,9 @@ function substitutionDecision(args: {
   const stress = stressFor(entry);
   const genuineSprint = entry.conditioningCategory === 'sprint';
   const runningSafe = !lowerRestricted && !entry.conditioningOffFeet &&
-    !(genuineSprint && readiness?.avoidSprint);
+    // A deloaded week caps quality exposures at one, and sprint is a quality
+    // exposure — so "deloaded" is the whole question here now.
+    !(genuineSprint && readiness?.deloaded);
 
   attempted.push('outdoor_running');
   if (runningSafe) return { family: 'outdoor_running', attempted };
@@ -229,7 +231,9 @@ function substitutionDecision(args: {
 export function resolveConditioningSubstitutionPolicy(
   context: ConditioningFeasibilityContext,
 ): ConditioningSubstitutionPolicy {
-  const fullPause = context.generationConstraints?.readiness?.fullPause === true;
+  // Readiness can no longer pause training — only serious injury or an explicit
+  // force can, through §18's safety.trainingPaused.
+  const trainingPaused = false;
   const lowerRestricted = lowerLimbRestriction(context.profile, context.generationConstraints);
   const upperRestricted = upperLimbRestriction(context.profile, context.generationConstraints);
   const ergs = allowedErgs(
@@ -240,11 +244,11 @@ export function resolveConditioningSubstitutionPolicy(
   const treadmill = context.equipment.conditioningModalities.includes('treadmill') && !lowerRestricted;
   const running = !lowerRestricted;
   const bodyweight = context.equipment.tags.includes('bodyweight') && !(lowerRestricted && upperRestricted);
-  const feasible = !fullPause && (ergs.length > 0 || treadmill || running || bodyweight);
+  const feasible = !trainingPaused && (ergs.length > 0 || treadmill || running || bodyweight);
   const substitutionNeeded = feasible && ergs.length === 0;
   return {
     appConditioningFeasible: feasible,
-    substitutionStatus: fullPause
+    substitutionStatus: trainingPaused
       ? 'exhausted'
       : substitutionNeeded
         ? 'substituted'
@@ -253,7 +257,7 @@ export function resolveConditioningSubstitutionPolicy(
           : 'exhausted',
     consideredSubstitutions: substitutionNeeded || !feasible ? [...COARSE_SUBSTITUTIONS] : [],
     attemptedFamilies: substitutionNeeded || !feasible ? [...ALL_FAMILIES] : ['selected_modality'],
-    feasibilityReason: fullPause
+    feasibilityReason: trainingPaused
       ? 'readiness_full_pause'
       : feasible
         ? substitutionNeeded ? 'safe_non_machine_substitute_available' : 'selected_or_machine_modality_available'
@@ -280,15 +284,15 @@ export function resolveConditioningFeasibility(
     context.generationConstraints,
   );
   const readiness = context.generationConstraints?.readiness;
-  if (readiness?.fullPause || (
-    readiness?.avoidHardConditioning && stressFor(entry) === 'hard'
+  if ((
+    readiness?.deloaded && stressFor(entry) === 'hard'
   )) {
     return removeConditioning(entry, {
       status: 'removed',
       ...(requested ? { requestedModality: requested } : {}),
       allowedModalities: allowed,
       attemptedSubstitutionFamilies: [],
-      feasibilityDetail: readiness.fullPause
+      feasibilityDetail: false
         ? 'full_pause_blocks_conditioning'
         : 'readiness_blocks_required_intensity',
       reason: 'readiness_blocks_conditioning',

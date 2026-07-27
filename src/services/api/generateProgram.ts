@@ -390,7 +390,13 @@ export function buildGeneratedMicrocycles(args: {
     // identical to never deriving it — the week would be normal-dose and merely
     // optional, which Sam ruled out.
     const doorDeload = generationConstraints?.weekDeloaded === true;
-    const effectiveWeekKind: WeekKind = doorDeload ? 'deload' : blockState.weekKind;
+    // The door changes the DOSE, not the week's identity. `weekKind` is
+    // structure — the block plan's own statement about what this week is — and
+    // Sam's law holds structure constant while the work shrinks. Overwriting it
+    // here also collided with a real block rule (the first four Off-season
+    // weeks are an approved no-deload exception), because that rule governs what
+    // the app SCHEDULES and an athlete-declared deload is not a schedule change.
+    const effectiveWeekKind: WeekKind = blockState.weekKind;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
     const profileEquipment = resolveEquipmentCapabilities(
       profile,
@@ -630,6 +636,7 @@ export function buildGeneratedMicrocycles(args: {
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: effectiveWeekKind,
+      deloadDoor: doorDeload ? 'illness' : undefined,
       exposureContract,
       exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,

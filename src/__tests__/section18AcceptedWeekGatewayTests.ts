@@ -725,11 +725,26 @@ check('21 generation cannot store a blocking final-visible violation',
     repairedOverride?.workoutType === 'Rest');
 }
 {
+  // RE-PINNED to a genuine §18 SAFETY prohibition (Sam, 2026-07-27).
+  //
+  // This drove the case from the `low` fixture, whose "low" is
+  // `conditioningLevel: 'Poor'` + `recentTrainingLoad: 'Hardly at all'` — the
+  // onboarding CAPACITY score, not a readiness declaration. Sam cut the
+  // conflation that let capacity mark §18 power ineligible, so that week no
+  // longer prohibits power at this boundary; generation still strips its primers
+  // through capacity's own lever (check 4 above still passes).
+  //
+  // The guarantee under test — a §18 safety prohibition is authoritative at
+  // commit and unsafe hydrated content cannot survive it — is unchanged, and now
+  // rides a prohibition that actually exists.
   const base = firstWeek(low);
   const primer = firstWeek(mid).workouts.find((workout) => workout.powerBlock)?.powerBlock;
   const unsafe = base.workouts.map((workout) => ({ ...workout, ...(primer ? { powerBlock: primer } : {}) }));
+  const prohibited = clone(base.exposureContractV2!);
+  prohibited.safety.prohibitedPower = true;
+  prohibited.power.eligible = false;
   const accepted = requireSection18AcceptedWeek({
-    contract: clone(base.exposureContractV2!), workouts: unsafe,
+    contract: prohibited, workouts: unsafe,
     weekStart: WEEK_START, profile: low.profile,
   });
   check('28 safety reductions remain authoritative at commit',
@@ -1103,8 +1118,18 @@ const typedDeniedEvaluation = anchorEvaluation(
   firstWeek(game).exposureContractV2!,
   (anchor) => anchor.kind === 'team_training' ? 'modified' : 'reduced_running',
 );
+// Re-pointed at what this check is FOR — hard-day and sprint credit, which is
+// what its name, P15 and M15 all say. It also asserted `!conditioningCredited`,
+// from when all three claims moved behind one boolean. Sam's ruling
+// (2026-07-27) separates them: the athlete ATTENDED the modified session and
+// the reduced-running game, so both remain conditioning exposures; neither
+// earns sprint or hard-day credit, which are intensity claims.
+//
+// The conditioning half is now asserted POSITIVELY here rather than dropped, so
+// this pins the whole split instead of half of it. Check 42 keeps the boundary:
+// `unknown` participation still earns nothing at all.
 typedAnchorHardOwnership = typedDeniedEvaluation.ledger.anchors.every((anchor) =>
-  !anchor.conditioningCredited && !anchor.sprintCredited && !anchor.hardDayCredited) &&
+  anchor.conditioningCredited && !anchor.sprintCredited && !anchor.hardDayCredited) &&
   typedDeniedEvaluation.ledger.restStress.hardDays.length === 0;
 check('43 modified TT and reduced-running game cannot regain hard credit through visible fallback',
   typedAnchorHardOwnership, typedDeniedEvaluation.ledger);

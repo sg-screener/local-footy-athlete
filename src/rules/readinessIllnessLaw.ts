@@ -36,10 +36,81 @@
  * the illness directive deliberately carries no window at all.
  */
 
+/* ── The shape both doors share ── */
+
+/**
+ * What a tier DOES. EXACTLY two fields, by Sam's law — "severity decides
+ * exactly two things: deload or not, optional or not."
+ *
+ * Adding a third field here would be the beginning of a private dosing system,
+ * which is what these laws retired; the test asserts the key set.
+ */
+export interface TierDirective {
+  readonly deloaded: boolean;
+  readonly sessionsOptional: boolean;
+}
+
+/**
+ * The ONE tier ladder. Both doors have three tiers and both map them the same
+ * way, so the mapping lives once:
+ *
+ *   noted     nothing happens to the program
+ *   deloaded  the deload transform applies; every minimum still stands
+ *   optional  deloaded AND nothing is required
+ *
+ * The doors differ in exactly ONE thing, and it is not this: the HORIZON.
+ * Readiness runs a fixed 7-day rolling window; illness holds open until
+ * cleared. Keeping the ladder shared is what stops one door growing a dose the
+ * other lacks.
+ */
+export type LawTier = 'noted' | 'deloaded' | 'optional';
+
+const NOTHING: TierDirective = { deloaded: false, sessionsOptional: false };
+
+export function resolveTierDirective(tier: LawTier): TierDirective {
+  switch (tier) {
+    case 'noted':
+      // The fact is still RECORDED and can move other signals; this law simply
+      // does not reach into the program.
+      return NOTHING;
+    case 'deloaded':
+      return { deloaded: true, sessionsOptional: false };
+    case 'optional':
+      return { deloaded: true, sessionsOptional: true };
+  }
+}
+
 /* ── Readiness ── */
 
 /** "the next 7 days are deloaded" — a rolling window, not a calendar week. */
 export const READINESS_DELOAD_WINDOW_DAYS = 7;
+
+/**
+ * THE READINESS DOOR — three tiers, Sam's labels (2026-07-27).
+ *
+ *   tired              "Tired"             noted only
+ *   wrecked            "Wrecked"           7 days deloaded
+ *   absolutely_cooked  "Absolutely cooked" 7 days deloaded + every session optional
+ *
+ * This SUPERSEDES the two-level draft and the original single boolean. Note
+ * what "absolutely cooked" does NOT do: it does not empty the week. It lifts
+ * the MINIMUMS so nothing is required, and the sessions remain, offered — which
+ * is how "the app never empties a week on readiness alone" survives alongside a
+ * third tier.
+ */
+export type ReadinessTier = 'tired' | 'wrecked' | 'absolutely_cooked';
+
+export const READINESS_TIERS: readonly ReadinessTier[] = [
+  'tired',
+  'wrecked',
+  'absolutely_cooked',
+];
+
+export function resolveReadinessDirective(tier: ReadinessTier): TierDirective {
+  return resolveTierDirective(
+    tier === 'absolutely_cooked' ? 'optional' : tier === 'wrecked' ? 'deloaded' : 'noted',
+  );
+}
 
 export interface ReadinessDeloadWindow {
   /** Inclusive first day: the day the low-readiness call was made. */
@@ -97,17 +168,11 @@ export const ILLNESS_SEVERITY_TIERS: readonly IllnessSeverityTier[] = [
 ];
 
 /**
- * What an illness tier does. EXACTLY two fields, by Sam's law — "severity
- * decides exactly two things: deload or not, optional or not. No other
- * illness-specific numbers may exist."
- *
- * Adding a third field here would be the beginning of a private illness dosing
- * system, which is what the law forbids; the test asserts the key set.
+ * Illness speaks the same directive as readiness. Kept as an alias rather than
+ * a second interface: two identically-shaped types are how two dosing systems
+ * start.
  */
-export interface IllnessDirective {
-  readonly deloaded: boolean;
-  readonly sessionsOptional: boolean;
-}
+export type IllnessDirective = TierDirective;
 
 /**
  * Note what is absent: any window. Moderate and severe hold while the illness
@@ -116,17 +181,12 @@ export interface IllnessDirective {
  * would invite a caller to apply the wrong one.
  */
 export function resolveIllnessDirective(tier: IllnessSeverityTier): IllnessDirective {
-  switch (tier) {
-    case 'mild':
-      // Training unchanged. The illness is still logged as a fact, and that
-      // fact can lower readiness — which may open a readiness deload by its
-      // own door. This law does not reach into the program.
-      return { deloaded: false, sessionsOptional: false };
-    case 'moderate':
-      return { deloaded: true, sessionsOptional: false };
-    case 'severe':
-      return { deloaded: true, sessionsOptional: true };
-  }
+  // The same ladder readiness uses. MILD is 'noted': the illness is still
+  // logged as a fact, and that fact can lower readiness — which may open a
+  // deload by the OTHER door. This law does not reach into the program.
+  return resolveTierDirective(
+    tier === 'severe' ? 'optional' : tier === 'moderate' ? 'deloaded' : 'noted',
+  );
 }
 
 /* ── The one question a generator asks ── */

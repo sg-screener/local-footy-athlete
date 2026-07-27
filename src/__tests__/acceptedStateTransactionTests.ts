@@ -501,7 +501,26 @@ run('regression', '7 low readiness commits a canonical fact and reduced visible 
   const visibleDay = projectedDay(date).workout;
   assert(!!getAcceptedMaterialContext().readinessSignalsByDate[date], 'accepted readiness missing');
   assert(!!useReadinessStore.getState().signalsByDate[date], 'readiness mirror missing');
-  assert(!visibleDay?.powerBlock, 'low readiness left power on affected day');
+  // RE-POINTED (Sam, 2026-07-27). This asserted `!visibleDay?.powerBlock` —
+  // that low readiness DELETED the day's power block. The deload law retired
+  // that outright: "Power/speed: keep a small sharp dose ... a deload is not a
+  // reason to lose sharpness." Safety scenario 4 and property P2b now assert the
+  // opposite, so this was the last site still pinning the superseded rule.
+  //
+  // It passed only because the day had been emptied by a different defect: an
+  // optional week zeroed its structural counts, so every session was replaced
+  // by recovery work and the power block disappeared along with the session
+  // carrying it. With the sessions restored, the contradiction surfaced.
+  //
+  // What the regression is FOR is unchanged — a canonical fact and a REDUCED
+  // visible program commit together — so that is what it now asserts: the day
+  // is still offered, and its dose shrank.
+  const beforeDay = before.visible.find((workout) => workout.dayOfWeek === powerDay);
+  const sets = (workout: typeof beforeDay): number =>
+    (workout?.exercises ?? []).reduce((total, row) => total + (row.prescribedSets ?? 0), 0);
+  assert(!!visibleDay, 'low readiness deleted the affected day instead of deloading it');
+  assert(sets(visibleDay as typeof beforeDay) < sets(beforeDay),
+    `the affected day was not deloaded: ${sets(visibleDay as typeof beforeDay)} sets vs ${sets(beforeDay)} before`);
   assert(after.evaluation.blockingViolations.length === 0, 'readiness-reduced week has blockers');
 });
 

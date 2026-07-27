@@ -221,7 +221,9 @@ function injuryContext(bodyPart: string, severity: number, injuryKeys: any[] = [
   };
 }
 
-function readinessContext(tier: NonNullable<GenerationConstraintContext['readiness']>['tier']): GenerationConstraintContext {
+// Readiness is deloaded-or-not (Sam, 2026-07-27); the tier and its four
+// behavioural flags are retired.
+function readinessContext(): GenerationConstraintContext {
   return {
     activeConstraintIds: ['fatigue-low-readiness'],
     activeInjuryKeys: [],
@@ -229,14 +231,9 @@ function readinessContext(tier: NonNullable<GenerationConstraintContext['readine
     readiness: {
       id: 'fatigue-low-readiness',
       sourceType: 'fatigue',
-      severity: 7,
-      tier,
       label: 'Cooked',
-      avoidSprint: true,
-      avoidHardConditioning: true,
-      reduceHardExtras: true,
-      preferRecovery: tier === 'major_reduction' || tier === 'full_pause',
-      fullPause: tier === 'full_pause',
+      deloaded: true,
+      sessionsOptional: false,
     },
   };
 }
@@ -363,7 +360,7 @@ section('[7] injury/readiness constraints downgrade add-ons');
   const cooked = attach({
     workouts: baseWeek(),
     phase: 'Pre-season',
-    constraints: readinessContext('major_reduction'),
+    constraints: readinessContext(),
   });
   ok('major readiness trims optional support to recovery/trunk',
     focusAreas(cooked).every((focus) => ['mobility_reset', 'trunk_core'].includes(focus)),

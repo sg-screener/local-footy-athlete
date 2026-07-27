@@ -162,7 +162,16 @@ function generateWithIllness(severe: boolean, withGame = true) {
   return program.microcycles[0];
 }
 
-type GenWorkout = { dayOfWeek: number; workoutType?: string; sessionTier?: string };
+type GenRow = {
+  prescribedSets?: number;
+  section18Evidence?: { role?: string };
+};
+type GenWorkout = {
+  dayOfWeek: number;
+  workoutType?: string;
+  sessionTier?: string;
+  exercises?: GenRow[];
+};
 type GenMicro = { exposureContract?: { identity?: { mode?: string } }; workouts: GenWorkout[] };
 
 /** Sam 2026-07-24: in an optional-only week mode, EVERY surviving session (any type that
@@ -436,6 +445,33 @@ run('8 illness week PRESERVES the structure of the week it replaced', () => {
   }
 });
 
+// SAM'S LAW: "Absolutely cooked" / bed-bound "does NOT empty the week. It lifts
+// the MINIMUMS so nothing is required, and the sessions remain, OFFERED."
+//
+// Invariant 8 pins that on the CONTRACT. This pins it on what the athlete
+// actually opens. The two are not the same claim: the contract can preserve the
+// week's structure while generation replaces every session with "Mobility, foam
+// rolling, light movement", which is what it did — an optional week arrived as
+// six recovery sessions, so "nothing is required" had been implemented as
+// "nothing is offered".
+//
+// Expressed as a COUNT against the healthy week, because counts are structure
+// (Sam, 2026-07-27) and that is the thing an optional week must not change.
+run('8c the illness week OFFERS the sessions it no longer requires', () => {
+  const ill = generateWithIllness(true, true) as unknown as GenMicro;
+  const healthy = generateWithIllness(false, true) as unknown as GenMicro;
+  const mainStrengthSessions = (week: GenMicro): number => (week.workouts ?? [])
+    .filter((workout) => (workout.exercises ?? [])
+      .some((entry) => entry.section18Evidence?.role === 'main_strength')).length;
+
+  assert(mainStrengthSessions(healthy) > 0,
+    'precondition: the healthy week must have strength sessions to preserve');
+  assert(mainStrengthSessions(ill) === mainStrengthSessions(healthy),
+    `the illness week offers ${mainStrengthSessions(ill)} strength sessions, ` +
+    `the week it replaced had ${mainStrengthSessions(healthy)} — ` +
+    'an optional week lifts the minimums, it does not empty the week');
+});
+
 run('8b illness week lifts every minimum — the law\'s "optional" flag', () => {
   const ill = buildWeeklyExposureContract(inSeasonContractInput('optional_week'));
   for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
@@ -513,12 +549,35 @@ run('9c the illness_recovery MODE is derived from the law, not minted beside it'
 // then failing to consume it looks identical to not deriving it at all, which
 // is exactly the failure this pins.
 run('10 an in-season severe-illness week GENERATES as a deload', () => {
-  const mc = generateWithIllness(true, true) as unknown as GenMicro & { weekKind?: string };
+  const mc = generateWithIllness(true, true) as unknown as GenMicro & {
+    weekKind?: string; deloadDoor?: string;
+  };
   assert(mc.exposureContract?.identity?.mode === 'optional_week',
     `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
-  assert(mc.weekKind === 'deload',
-    `severe illness must generate a DELOADED week, got weekKind=${String(mc.weekKind)} ` +
+  // RE-POINTED at the owner, not the proxy. This asserted `weekKind === 'deload'`,
+  // which was how a door deload used to be carried: generation overwrote the
+  // block plan's `weekKind`. That is the week's STRUCTURE — the block's own
+  // statement of what this week is — and an athlete-declared deload is not a
+  // schedule change; overwriting it also collided with the approved
+  // first-four-Off-season-weeks no-deload rule. The door is now carried as
+  // `deloadDoor`, which is what `resolveDoorDeloadPolicy` reads to apply the
+  // dose.
+  //
+  // What the invariant is FOR is unchanged and is what it now asserts directly:
+  // "normal-dose optional is the regression this pins." So it checks the door is
+  // recorded AND that the dose actually shrank, rather than trusting either
+  // proxy to imply it.
+  assert(mc.deloadDoor === 'illness',
+    `severe illness must record the deload door, got deloadDoor=${String(mc.deloadDoor)} ` +
     '(normal-dose optional is the regression this pins)');
+  const healthy = generateWithIllness(false, true) as unknown as GenMicro;
+  const mainLiftSets = (week: GenMicro): number => Math.max(0, ...(week.workouts ?? [])
+    .flatMap((workout) => (workout.exercises ?? [])
+      .filter((entry) => entry.section18Evidence?.role === 'main_strength')
+      .map((entry) => entry.prescribedSets ?? 0)));
+  assert(mainLiftSets(mc) < mainLiftSets(healthy),
+    `the illness week must arrive at a DELOADED dose, got ${mainLiftSets(mc)} ` +
+    `main-lift sets vs ${mainLiftSets(healthy)} healthy`);
 });
 
 run('10b a healthy in-season week is NOT deloaded', () => {

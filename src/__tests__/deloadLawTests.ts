@@ -36,7 +36,9 @@ import {
   deloadPowerDose,
   isConditioningExerciseRow,
 } from '../rules/deloadWeekRules';
-import type { WorkoutExercise } from '../types/domain';
+import { withSection18WorkoutEvidence } from '../rules/section18WorkoutEvidence';
+import { createStrengthIntent } from '../rules/strengthPatternContributions';
+import type { Workout, WorkoutExercise } from '../types/domain';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -297,6 +299,98 @@ ok('an in-season door deload HOLDS the weight',
     ?.intensityMultiplier === 1.0,
   String(resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: 'In-season' })
     ?.intensityMultiplier));
+
+/* ── Structure survives the dose ── */
+
+// "Same week, same days — the structure doesn't change, the work shrinks."
+//
+// Section 18 counts a week's main-strength EXPOSURES, and a row's main-lift
+// role is INFERRED from its prescribed dose and its position in the session.
+// So the deload transform — which halves main-lift sets and trims accessories
+// out from in front of them — can move a lift across that inference boundary
+// and delete an exposure the planner selected. That is a count reduction by
+// side effect: it never appears as an authorised reduction, so every layer
+// that audits reductions reports the week as untouched while §18 sees one
+// fewer strength session and rejects the week.
+//
+// This is the sibling of the readiness law's rule ("readiness never REMOVES
+// sessions") on the EVIDENCE side, and it binds every deload door, not just
+// readiness — the scheduled deload week reaches the same transform.
+//
+// Only a MODERATE-load main pattern can be demoted this way. A high-load lift
+// (Back Squat, Overhead Press) qualifies on its registry tag alone and is
+// dose-independent, which is why this went unseen: the hinge slot is the one
+// that carries it.
+console.log('\n[7] STRUCTURE HOLDS — a deloaded dose cannot demote a main lift');
+
+const hingeSession = (rows: WorkoutExercise[]): Workout => ({
+  id: 'w', microcycleId: 'm', dayOfWeek: 6, name: 'Lower Hinge', description: '',
+  durationMinutes: 50, intensity: 'Moderate', workoutType: 'Strength',
+  sessionTier: 'core',
+  strengthIntent: createStrengthIntent({ archetype: 'lower', plannedPatterns: ['hinge'] }),
+  exercises: rows,
+  createdAt: NOW, updatedAt: NOW,
+} as unknown as Workout);
+
+const mainLiftCount = (workout: Workout): number =>
+  (workout.exercises ?? []).filter((entry) =>
+    entry.section18Evidence?.role === 'main_strength').length;
+
+const describeRows = (workout: Workout): string =>
+  (workout.exercises ?? []).map((entry) =>
+    `${entry.exercise?.name}|${entry.section18Evidence?.role}|${entry.prescribedSets}x`).join(' , ');
+
+{
+  // Four accessories ahead of the planned hinge lift. The deload keeps two of
+  // them ("2-3, or half, whichever is less"), which leaves the main lift at
+  // index 2 — past the position clause — at the halved dose of 2 sets, past
+  // the set clause. Both of the inference's escape hatches close at once, and
+  // the exposure disappears.
+  const rows = [
+    row('Bicep Curls', 2),
+    row('Tricep Pushdowns', 2),
+    row('Face Pulls', 2),
+    row('Lateral Raises', 2),
+    row('RDLs', 3),
+  ];
+
+  const full = withSection18WorkoutEvidence(hingeSession(rows), 'infer');
+  ok('the planned hinge lift IS a main-strength exposure at full dose',
+    mainLiftCount(full) === 1, describeRows(full));
+
+  const deloaded = withSection18WorkoutEvidence(
+    hingeSession(applyStrengthDeloadToExercises(rows, policy)), 'infer');
+
+  ok('it is STILL a main-strength exposure after the deload',
+    mainLiftCount(deloaded) === 1, describeRows(deloaded));
+}
+
+{
+  // The same lift under the name the generator actually writes. The deload's
+  // own main-lift test reads the raw name against the pool registry, while the
+  // §18 evidence classifier resolves the alias first — so one owner calls this
+  // row an anchor and the other calls it an accessory, and the accessory trim
+  // deletes the session's planned main lift outright.
+  //
+  // Two classifiers over one row is the defect; the alias is only what exposes
+  // it. Any generated name that is not itself a pool key does the same.
+  const rows = [
+    row('Bicep Curls', 2),
+    row('Tricep Pushdowns', 2),
+    row('Face Pulls', 2),
+    row('Lateral Raises', 2),
+    row('Romanian Deadlift', 3),
+  ];
+  const deloaded = applyStrengthDeloadToExercises(rows, policy);
+
+  ok('the deload never TRIMS a planned main lift as if it were an accessory',
+    deloaded.some((entry) => entry.exercise?.name === 'Romanian Deadlift'),
+    deloaded.map((entry) => `${entry.exercise?.name}|${entry.prescribedSets}x`).join(' , '));
+
+  ok('and the alias-named lift is still counted as a main-strength exposure',
+    mainLiftCount(withSection18WorkoutEvidence(hingeSession(deloaded), 'infer')) === 1,
+    describeRows(withSection18WorkoutEvidence(hingeSession(deloaded), 'infer')));
+}
 
 /* ── Result ── */
 

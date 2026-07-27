@@ -165,7 +165,7 @@ function buildActiveConstraints(input: ProjectInput): Constraint[] {
       severity: injury.severity,
       status: injury.status,
       startDate: new Date().toISOString(),
-      fullPause: true,
+      trainingPaused: true,
       safeFocus: injury.safeFocus,
       advice: injury.advice,
     }));

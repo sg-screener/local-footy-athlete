@@ -179,15 +179,17 @@ console.log('\n[2] existing readiness tiers drive generation');
   const slight = buildGenerationConstraintContext({ activeConstraints: [oneNight], todayISO: TODAY });
   const moderate = buildGenerationConstraintContext({ activeConstraints: [repeated], todayISO: TODAY });
 
-  eq('single night is a slight generation reduction', slight?.readiness?.tier, 'slight_reduction');
-  eq('repeated poor sleep is a moderate generation reduction', moderate?.readiness?.tier, 'moderate_reduction');
-  ok('single night blocks extra sprint', slight?.readiness?.avoidSprint === true);
-  ok('single night blocks hard conditioning', slight?.readiness?.avoidHardConditioning === true);
-  ok('single night does not collapse plan to recovery', slight?.readiness?.preferRecovery === false);
-  ok('repeated sleep blocks sprint and hard conditioning',
-    moderate?.readiness?.avoidSprint === true && moderate?.readiness?.avoidHardConditioning === true);
-  ok('repeated sleep still does not become sickness/recovery mode',
-    moderate?.readiness?.preferRecovery === false && moderate?.readiness?.fullPause === false);
+  // Sam's readiness law (2026-07-27): both patterns produce the SAME answer —
+  // deloaded. The old slight/moderate split graduated the size of the cut, and
+  // magnitudes are retired; the deload law shrinks the work instead.
+  ok('single night deloads', slight?.readiness?.deloaded === true);
+  ok('repeated poor sleep deloads', moderate?.readiness?.deloaded === true);
+  ok('poor sleep never empties a week — readiness cannot pause training',
+    !('fullPause' in (slight?.readiness ?? {})) && !('fullPause' in (moderate?.readiness ?? {})));
+  ok('readiness carries no magnitude of any kind',
+    Object.keys(moderate?.readiness ?? {}).every((key) =>
+      ['id', 'sourceType', 'severity', 'label', 'deloaded'].includes(key)),
+    Object.keys(moderate?.readiness ?? {}).join(', '));
 
   eq('single-night generation effect is gone next day',
     buildGenerationConstraintContext({ activeConstraints: [oneNight], todayISO: addDays(TODAY, 1) }),

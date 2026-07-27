@@ -191,18 +191,27 @@ function scheduleTimeCap(
   return caps.length > 0 ? Math.min(...caps) : null;
 }
 
+/**
+ * A hard stop DELETES every non-recovery session in the day (the caller returns
+ * `workout: null`). Only a medical signal may do that.
+ *
+ * READINESS MAY NEVER HARD-STOP. Sam's law: "There is no full pause. The app
+ * never empties a week on readiness alone. An athlete who is extremely fatigued
+ * gets the deload; they can always skip sessions themselves, and genuinely
+ * severe cases route through the illness or injury doors, which are separate."
+ *
+ * This line used to read `readiness?.fullPause === true`, and the tier migration
+ * rewrote it to `readiness?.deloaded === true`. That looks like a rename and is
+ * not one: `fullPause` was the rarest tier, while `deloaded` is true for EVERY
+ * low-readiness signal — so a single "I'm tired" emptied the athlete's whole
+ * week. Widening hid inside a rename because both sides were booleans on the
+ * same object.
+ */
 function isGlobalHardStop(
   constraints: readonly ActiveConstraint[],
-  date: string,
 ): boolean {
-  if (constraints.some((constraint) =>
-    constraint.type === 'injury' && constraint.seriousSymptoms === true)) {
-    return true;
-  }
-  return buildGenerationConstraintContext({
-    activeConstraints: constraints,
-    todayISO: date,
-  })?.readiness?.fullPause === true;
+  return constraints.some((constraint) =>
+    constraint.type === 'injury' && constraint.seriousSymptoms === true);
 }
 
 function engineConstraintsFor(
@@ -247,9 +256,11 @@ export function validateWorkoutAgainstActiveConstraints(
   }));
   const lowerBodyRestriction = prohibitedPatterns.includes('squat') ||
     prohibitedPatterns.includes('hinge');
-  const readinessPowerBlocked = generationContext?.readiness?.tier === 'moderate_reduction' ||
-    generationContext?.readiness?.tier === 'major_reduction' ||
-    generationContext?.readiness?.tier === 'full_pause';
+  // THE DELOAD LAW keeps power: "Power is not removed on a deload; a deload is
+  // not a reason to lose sharpness." The tier migration mapped three tiers onto
+  // `deloaded`, which would have blocked power on EVERY deloaded week — the
+  // opposite of the law, and the same widening the hard-stop above suffered.
+  const readinessPowerBlocked = false;
   const canonical = finaliseWorkoutAfterMutation(input.workout, {
     ...input.canonicalContext,
     date: input.date,
@@ -260,8 +271,11 @@ export function validateWorkoutAgainstActiveConstraints(
       ...prohibitedPatterns,
     ]),
     prohibitPower: input.canonicalContext?.prohibitPower === true || readinessPowerBlocked,
+    // Readiness no longer removes sprint either — that is a count reduction, and
+    // the deload law shrinks the WORK inside a sprint session rather than
+    // deleting it. An injury restriction still does.
     prohibitSprintHighSpeed: input.canonicalContext?.prohibitSprintHighSpeed === true ||
-      lowerBodyRestriction || generationContext?.readiness?.avoidSprint === true,
+      lowerBodyRestriction,
   });
   const canonicalRemovedNames = canonical.actions
     .filter((action) => action.kind === 'row_removed' && !!action.item)
@@ -337,7 +351,7 @@ export function validateWorkoutAgainstActiveConstraints(
     scheduleDurationChanged = true;
   }
 
-  if (isGlobalHardStop(active, input.date) && !isRecoveryWorkout(alignedWorkout)) {
+  if (isGlobalHardStop(active) && !isRecoveryWorkout(alignedWorkout)) {
     return {
       workout: null,
       changed: true,
@@ -599,7 +613,7 @@ function reResolveContractForActiveConstraints(args: {
       seasonPhase: args.contract.identity.phase,
       explicitSubphase: preseasonSubphase,
     }),
-    activeReadinessTier: generationContext?.readiness?.tier,
+    readinessDeloaded: generationContext?.readiness?.deloaded === true,
     maxStrengthSessions: profile.experienceLevel
       ? resolveTrainingAgePolicy(profile.experienceLevel).maxCoreSessions
       : null,
@@ -612,10 +626,10 @@ function reResolveContractForActiveConstraints(args: {
       : args.contract.identity.mode === 'in_season_bye_build'
         ? 'build'
         : undefined,
-    // PRESERVE a minted illness_recovery mode across re-derivation. Without this
-    // the validation path would re-collapse the severe illness into a fatigue
-    // tier and downgrade to bye_recovery — the reinterpretation seam the design
-    // forbids. The gateway consumes the mode; it never re-reads facts.
+    // PRESERVE a minted optional-week mode across re-derivation. Without this the
+    // validation path would re-collapse the fact into a fatigue tier and
+    // downgrade the mode — the reinterpretation seam the design forbids. The
+    // gateway consumes the mode; it never re-reads facts.
     weekModeOverride: args.contract.identity.mode === 'optional_week'
       ? 'optional_week'
       : undefined,

@@ -19,12 +19,14 @@ export type RecoveryAddonFocusArea =
 export type RecoveryAddonCoveragePriority = 'primary' | 'secondary' | 'optional';
 export type RecoveryAddonCoverageStatus = 'recommended' | 'caution' | 'reduced' | 'avoid';
 
-export type RecoveryAddonReadinessTier =
-  | 'normal'
-  | 'slight_reduction'
-  | 'moderate_reduction'
-  | 'major_reduction'
-  | 'full_pause';
+/**
+ * RETIRED as a tier (Sam's readiness law, 2026-07-27) — kept as a BOOLEAN.
+ *
+ * This file carried its own copy of the four-tier vocabulary. Readiness now
+ * says one thing: deloaded, or not. Every branch below that graduated by tier
+ * collapses to that single question.
+ */
+export type RecoveryAddonReadinessTier = boolean;
 
 export type RecoveryAddonCoverageMode =
   | 'broad_support'
@@ -50,7 +52,7 @@ export interface RecoveryAddonCoverageContext {
   availabilityDaysPerWeek?: number;
   availableTrainingDays?: readonly DayOfWeek[];
   readiness?: ReadinessLevel;
-  readinessTier?: RecoveryAddonReadinessTier;
+  readinessDeloaded?: RecoveryAddonReadinessTier;
   activeInjuries?: readonly RecoveryAddonActiveInjury[];
 }
 
@@ -299,7 +301,7 @@ export function recommendRecoveryAddonCoverage(
 ): RecoveryAddonCoveragePlan {
   const weekKind = context.weekKind ?? 'build';
   const lowAvailability = isLowAvailability(context);
-  const readinessTier = effectiveReadinessTier(context);
+  const readinessDeloaded = effectiveReadinessTier(context);
   const gMinusOneActive = context.daysUntilGame === 1;
   const baseRules = weekKind === 'deload' ? DELOAD_RULES : PHASE_RULES[context.phase];
 
@@ -307,9 +309,9 @@ export function recommendRecoveryAddonCoverage(
     buildRecommendation(focusArea, baseRules[focusArea]),
   );
 
-  if (readinessTier === 'full_pause' || readinessTier === 'major_reduction') {
-    recommendations = applyRecoveryBias(recommendations, readinessTier);
-  } else if (readinessTier === 'moderate_reduction') {
+  // One question: deloaded or not. `applyRecoveryBias` used to take a magnitude;
+  // a deloaded week biases recovery, full stop.
+  if (readinessDeloaded) {
     recommendations = recommendations.map(reduceOptionalHarderSupport);
   }
 
@@ -328,8 +330,8 @@ export function recommendRecoveryAddonCoverage(
     deferredFocusAreas = filtered.deferredFocusAreas;
   }
 
-  const totalTarget = totalTargetFor(context, readinessTier, lowAvailability);
-  const mode = modeFor(context, readinessTier, lowAvailability);
+  const totalTarget = totalTargetFor(context, readinessDeloaded, lowAvailability);
+  const mode = modeFor(context, readinessDeloaded, lowAvailability);
 
   return {
     phase: context.phase,
@@ -339,7 +341,7 @@ export function recommendRecoveryAddonCoverage(
     recommendations,
     deferredFocusAreas,
     gMinusOnePolicy: gMinusOnePolicy(gMinusOneActive),
-    notes: notesFor(context, readinessTier, lowAvailability),
+    notes: notesFor(context, readinessDeloaded, lowAvailability),
     counting: ZERO_CREDIT,
   };
 }
@@ -374,14 +376,14 @@ function buildRecommendation(
 
 function applyRecoveryBias(
   recommendations: RecoveryAddonCoverageRecommendation[],
-  readinessTier: RecoveryAddonReadinessTier,
+  readinessDeloaded: RecoveryAddonReadinessTier,
 ): RecoveryAddonCoverageRecommendation[] {
   return recommendations.map((recommendation) => {
     if (recommendation.focusArea === 'mobility_reset') {
       return withCaution({
         ...recommendation,
         priority: 'primary',
-        target: readinessTier === 'full_pause' ? target(0, 1) : target(1, 2),
+        target: readinessDeloaded ? target(0, 1) : target(1, 2),
       }, 'readiness', 'Use mobility/breathing only if it improves recovery today.');
     }
     if (recommendation.focusArea === 'trunk_core') {
@@ -635,11 +637,11 @@ function minimumViableCoverage(
 
 function totalTargetFor(
   context: RecoveryAddonCoverageContext,
-  readinessTier: RecoveryAddonReadinessTier,
+  readinessDeloaded: RecoveryAddonReadinessTier,
   lowAvailability: boolean,
 ): RecoveryAddonTargetRange {
-  if (readinessTier === 'full_pause') return target(0, 1);
-  if (readinessTier === 'major_reduction') return target(1, 2);
+  if (readinessDeloaded) return target(0, 1);
+  if (readinessDeloaded) return target(1, 2);
   if (lowAvailability) return target(1, 2);
   if (context.weekKind === 'deload') return target(1, 2);
   if (context.phase === 'Off-season') return target(2, 4);
@@ -649,10 +651,10 @@ function totalTargetFor(
 
 function modeFor(
   context: RecoveryAddonCoverageContext,
-  readinessTier: RecoveryAddonReadinessTier,
+  readinessDeloaded: RecoveryAddonReadinessTier,
   lowAvailability: boolean,
 ): RecoveryAddonCoverageMode {
-  if (readinessTier === 'full_pause' || readinessTier === 'major_reduction') return 'readiness_recovery';
+  if (readinessDeloaded || readinessDeloaded) return 'readiness_recovery';
   if (lowAvailability) return 'minimum_viable';
   if (context.weekKind === 'deload') return 'deload_recovery';
   if (context.phase === 'Off-season') return 'broad_support';
@@ -662,7 +664,7 @@ function modeFor(
 
 function notesFor(
   context: RecoveryAddonCoverageContext,
-  readinessTier: RecoveryAddonReadinessTier,
+  readinessDeloaded: RecoveryAddonReadinessTier,
   lowAvailability: boolean,
 ): string[] {
   const notes = [
@@ -678,7 +680,7 @@ function notesFor(
   if (lowAvailability) {
     notes.push('Low availability uses minimum viable coverage and defers lower-priority support areas.');
   }
-  if (readinessTier === 'moderate_reduction' || readinessTier === 'major_reduction' || readinessTier === 'full_pause') {
+  if (readinessDeloaded || readinessDeloaded || readinessDeloaded) {
     notes.push('Reduced readiness trims optional support before it adds fatigue.');
   }
   if (context.daysUntilGame === 1) {
@@ -707,9 +709,9 @@ function isLowAvailability(context: RecoveryAddonCoverageContext): boolean {
 }
 
 function effectiveReadinessTier(context: RecoveryAddonCoverageContext): RecoveryAddonReadinessTier {
-  if (context.readinessTier) return context.readinessTier;
-  if (context.readiness === 'low') return 'moderate_reduction';
-  return 'normal';
+  if (context.readinessDeloaded) return context.readinessDeloaded;
+  if (context.readiness === 'low') return true;
+  return false;
 }
 
 const STATUS_RANK: Record<RecoveryAddonCoverageStatus, number> = {

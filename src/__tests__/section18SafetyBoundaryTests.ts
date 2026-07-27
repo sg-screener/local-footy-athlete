@@ -2,6 +2,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 import type { Microcycle, Workout, WorkoutExercise } from '../types/domain';
+import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import type {
   GenerationConstraintContext,
@@ -74,7 +75,33 @@ function row(workoutId: string, index: number, name: string): WorkoutExercise {
     },
     createdAt: NOW,
     updatedAt: NOW,
+    // Rows carry their OWN typed evidence.
+    //
+    // They used to ship with none and rely on the safety layer's pattern
+    // RESTORATION to classify them — restoration that only ran because a
+    // low-readiness frequency ceiling forced it. Sam's readiness law retired that
+    // ceiling, so the trigger is gone and unevidenced rows now classify as
+    // nothing at all. The fixture was leaning on a side effect of the behaviour
+    // under test; evidencing it directly makes these scenarios measure the safety
+    // layer rather than the restoration that used to run beside it.
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'main_strength',
+      strengthPattern: patternForExerciseName(name),
+      mainStrengthPattern: patternForExerciseName(name),
+      provenance: 'canonical_row_classifier',
+    },
   };
+}
+
+/** The fixture's own name -> pattern map; the production classifier owns the real one. */
+function patternForExerciseName(name: string): MainStrengthPattern | null {
+  const lowered = name.toLowerCase();
+  if (lowered.includes('squat')) return 'squat';
+  if (lowered.includes('deadlift') || lowered.includes('hinge') || lowered.includes('thrust')) return 'hinge';
+  if (lowered.includes('bench') || lowered.includes('press') || lowered.includes('push')) return 'push';
+  if (lowered.includes('pull') || lowered.includes('row') || lowered.includes('chin')) return 'pull';
+  return null;
 }
 
 function workout(
@@ -179,17 +206,14 @@ function injuryContext(region: 'lower_body' | 'upper_body'): GenerationConstrain
   return { activeConstraintIds: [injury.id], injuries: [injury], activeInjuryKeys: injury.injuryKeys };
 }
 
-function readinessContext(tier: GenerationReadinessConstraint['tier']): GenerationConstraintContext {
+// Readiness is deloaded-or-not (Sam, 2026-07-27). The tiers and their four
+// behavioural flags are retired; severity survives for display only.
+function readinessContext(severity = 6): GenerationConstraintContext {
   const readiness: GenerationReadinessConstraint = {
-    id: `readiness-${tier}`,
+    id: `readiness-deloaded-${severity}`,
     sourceType: 'fatigue',
-    severity: tier === 'full_pause' ? 10 : tier === 'major_reduction' ? 8 : 6,
-    tier,
-    avoidSprint: true,
-    avoidHardConditioning: true,
-    reduceHardExtras: true,
-    preferRecovery: tier !== 'moderate_reduction',
-    fullPause: tier === 'full_pause',
+    deloaded: true,
+    sessionsOptional: false,
   };
   return { activeConstraintIds: [readiness.id], injuries: [], activeInjuryKeys: [], readiness };
 }
@@ -240,20 +264,33 @@ run('scenario', '3 upper-body injury removes affected push and preserves safe lo
   assert(patterns.includes('squat') && patterns.includes('hinge'), 'safe lower work was lost');
 });
 
-run('scenario', '4 low/cooked readiness removes every power primer', () => {
-  const result = finish(withSafety(baseContract(), readinessContext('moderate_reduction')), [
+// INVERTED to THE DELOAD LAW (Sam, 2026-07-27): "Power/speed: KEEP a small
+// sharp dose ... Power is not removed on a deload; a deload is not a reason to
+// lose sharpness." This asserted the exact behaviour the law retires, so it is
+// re-pinned to the law rather than deleted — the case still matters, the
+// expected answer flipped.
+run('scenario', '4 a deloaded readiness week KEEPS its power primers', () => {
+  const result = finish(withSafety(baseContract(), readinessContext(6)), [
     workout('power-a', 1, ['Back Squat'], { power: 'lower' }),
     workout('power-b', 3, ['Bench Press'], { power: 'upper' }),
   ]);
-  assert(result.evaluation.ledger.power.achievedPrimerCount === 0, 'power survived low readiness');
+  assert(result.evaluation.ledger.power.achievedPrimerCount > 0,
+    'readiness removed power, which the deload law keeps');
 });
 
-run('scenario', '5 low-readiness strength frequency reduction survives final canonical construction', () => {
-  const result = finish(withSafety(baseContract(), readinessContext('moderate_reduction')), [
+// INVERTED to Sam's readiness law: "Readiness never REMOVES sessions ... session
+// counts are structure, and structure does not change." This pinned the count
+// cut itself — three strength sessions reduced to two, with a typed ceiling of
+// 2 recorded as proof. Both the cut and its ceiling are gone; the assertion now
+// proves the sessions SURVIVE.
+run('scenario', '5 a deloaded readiness week keeps every strength session', () => {
+  const result = finish(withSafety(baseContract(), readinessContext(6)), [
     workout('s1', 1, ['Back Squat']), workout('s2', 3, ['Bench Press']), workout('s3', 5, ['Pull-Ups']),
   ]);
-  assert(result.evaluation.ledger.mainStrength.achievedCount === 2, 'strength target exceeded two');
-  assert(result.contract.safety.mainStrengthFrequencyCeiling === 2, 'typed ceiling was rewritten');
+  assert(result.evaluation.ledger.mainStrength.achievedCount === 3,
+    `readiness cut the strength count to ${result.evaluation.ledger.mainStrength.achievedCount}`);
+  assert(result.contract.safety.mainStrengthFrequencyCeiling === null,
+    'readiness imposed a main-strength frequency ceiling, which is a count reduction');
 });
 
 run('scenario', '6 bye recovery retains exactly two lighter strength sessions and no power', () => {
@@ -267,11 +304,14 @@ run('scenario', '6 bye recovery retains exactly two lighter strength sessions an
   assert(result.workouts.flatMap((candidate) => candidate.exercises).filter((exercise) => exercise.section18Evidence?.role === 'main_strength').every((exercise) => exercise.prescribedSets <= 2), 'bye strength set dose exceeded two');
 });
 
-run('scenario', '7 deload power behavior remains zero primers', () => {
+// INVERTED with scenario 4: the SCHEDULED deload door keeps power for the same
+// authored reason the readiness door does. One law, every door.
+run('scenario', '7 a scheduled deload week KEEPS its power primers', () => {
   const result = finish(withSafety(baseContract({ weekKind: 'deload' })), [
     workout('deload', 1, ['Back Squat'], { power: 'lower' }),
   ]);
-  assert(result.evaluation.ledger.power.achievedPrimerCount === 0, 'deload retained power');
+  assert(result.evaluation.ledger.power.achievedPrimerCount > 0,
+    'a deload removed power; DELOAD_LAW.keepPower says otherwise');
 });
 
 run('scenario', '8 constrained TT participation states receive no automatic sprint credit', () => {
@@ -332,7 +372,7 @@ run('scenario', '12 rebuild and rollover-style revalidation reject a deficient f
 });
 
 run('scenario', '13 rehydration cannot restore prohibited content or power', () => {
-  const contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
+  const contract = withSafety(baseContract(), readinessContext(6));
   contract.strengthPatterns.prohibitedPatterns = ['squat'];
   contract.strengthPatterns.requiredSafePatterns = ['hinge', 'push', 'pull'];
   const hydratedOnce = finish(withSafety(contract), [workout('hydrate', 1, ['Back Squat', 'Bench Press'], { power: 'lower' })]);
@@ -341,19 +381,53 @@ run('scenario', '13 rehydration cannot restore prohibited content or power', () 
   assert(hydratedTwice.evaluation.ledger.power.achievedPrimerCount === 0 && !allPatterns(hydratedTwice).includes('squat'), 'hydration restored unsafe content');
 });
 
-run('scenario', '14 full-pause/red-flag state cannot store training content', () => {
-  const result = finish(withSafety(baseContract(), readinessContext('full_pause')), [
+// INVERTED to Sam's readiness law: "There is no full pause. The app never empties
+// a week on readiness alone." This scenario drove readiness to severity 10 — the
+// old `full_pause` tier — and asserted the week was emptied to Rest. Readiness
+// can no longer produce a training pause at ANY severity, so the assertion is
+// turned around rather than dropped: the sessions must SURVIVE.
+run('scenario', '14 readiness never empties a week, at any severity', () => {
+  const result = finish(withSafety(baseContract(), readinessContext(10)), [
+    workout('cooked-strength', 1, ['Back Squat']),
+    workout('cooked-anchor', 2, [], { anchor: true, sprint: true }),
+  ]);
+  assert(result.workouts.some((candidate) => candidate.workoutType !== 'Rest'),
+    'readiness alone emptied the week to Rest, which the law forbids');
+});
+
+// The capability itself is NOT gone — it moved to its only legitimate owner. A
+// genuine training pause still collapses every session, and that is what keeps
+// scenario 14's inversion honest: the guarantee survives, its trigger narrowed.
+run('scenario', '14b a genuine training pause DOES empty the week', () => {
+  const paused = withSafety(baseContract());
+  paused.safety.trainingPaused = true;
+  const result = finish(paused, [
     workout('paused-strength', 1, ['Back Squat']),
     workout('paused-anchor', 2, [], { anchor: true, sprint: true }),
   ]);
-  assert(result.workouts.every((candidate) => candidate.workoutType === 'Rest' && candidate.exercises.length === 0), 'full pause stored training');
+  assert(result.workouts.every((candidate) => candidate.workoutType === 'Rest' && candidate.exercises.length === 0),
+    'a training pause stored training content');
 });
 
+// RE-PINNED to the guarantee it actually owns. This asserted that an unsafe
+// override collapses to Rest — but that collapse was an artefact of the fixture's
+// unevidenced rows (the same artefact that made scenario 5 read zero): with no
+// typed evidence, nothing could be restored, so the session emptied.
+//
+// Evidenced properly, the safety layer does the better thing the Bible asks for:
+// it SUBSTITUTES a safe pattern rather than deleting the athlete's session. The
+// guarantee is that nothing unsafe survives — not that nothing survives.
 run('scenario', '15 explicit user override cannot bypass active safety', () => {
   const contract = withSafety(baseContract(), injuryContext('lower_body'));
   const unsafeOverride = workout('override', 6, ['Back Squat', 'Romanian Deadlift'], { sprint: true, power: 'lower' });
   const safe = finaliseSection18SafetyWorkout({ contract, workout: unsafeOverride }).workout;
-  assert(safe.workoutType === 'Rest' && !safe.speedBlock && !safe.powerBlock, 'override bypassed safety');
+  const patterns = (safe.exercises ?? [])
+    .map((exercise) => exercise.section18Evidence?.strengthPattern)
+    .filter(Boolean);
+  assert(!patterns.includes('squat') && !patterns.includes('hinge'),
+    `override kept a prohibited pattern: ${patterns.join(', ')}`);
+  assert(!safe.speedBlock, 'override kept sprint work under a lower-body restriction');
+  assert(!safe.powerBlock, 'override kept a prohibited lower power family');
 });
 
 console.log('\n-- Seven safety properties --');
@@ -366,15 +440,70 @@ run('property', 'P1 prohibited patterns never appear in the final effective cont
   }
 });
 
+// RE-PINNED: the property still holds, but readiness no longer makes power
+// ineligible, so it was proving the property against a case that is now eligible.
+// An INJURY still makes it ineligible, and that is the honest fixture.
 run('property', 'P2 ineligible power count is always zero', () => {
   for (const family of ['lower', 'upper'] as const) {
-    const result = finish(withSafety(baseContract(), readinessContext('moderate_reduction')), [workout(`p2-${family}`, 1, [family === 'lower' ? 'Back Squat' : 'Bench Press'], { power: family })]);
-    assert(result.evaluation.ledger.power.achievedPrimerCount === 0, `${family} power survived`);
+    const result = finish(withSafety(baseContract(), injuryContext(family === 'lower' ? 'lower_body' : 'upper_body')), [workout(`p2-${family}`, 1, [family === 'lower' ? 'Back Squat' : 'Bench Press'], { power: family })]);
+    assert(result.evaluation.ledger.power.achievedPrimerCount === 0, `${family} power survived an injury prohibition`);
   }
 });
 
+run('property', 'P2b a deloaded readiness week keeps power in every family', () => {
+  for (const family of ['lower', 'upper'] as const) {
+    const result = finish(withSafety(baseContract(), readinessContext(6)), [workout(`p2b-${family}`, 1, [family === 'lower' ? 'Back Squat' : 'Bench Press'], { power: family })]);
+    assert(result.evaluation.ledger.power.achievedPrimerCount > 0,
+      `${family} power was removed by readiness; the deload law keeps it`);
+  }
+});
+
+// RE-PINNED to an INJURY cap. Readiness no longer reduces a frequency target at
+// all, so this property had no reduction left to defend; an injury restriction
+// still caps strength frequency to the safely available patterns, which is a real
+// cap and the right subject for "canonicalisation cannot raise it".
+// SAM'S RULING (2026-07-27): "The deload law changes dose and intensity inside
+// sessions, never session identity or count."
+//
+// A team training session and a game are not app-prescribed sessions — the app
+// cannot dose them. Demoting the athlete's participation in them is the app
+// asserting a FACT about what the athlete will do on Saturday, and it withdraws
+// their conditioning and sprint production with it.
+//
+// The comment that authorised this justified it explicitly: low readiness
+// "authors matching main-strength, conditioning and sprint reductions in the
+// same pass, so its contracts stay satisfiable". The readiness law DELETED
+// exactly those reductions. What was left withdrew the credit and kept the
+// requirement, so the contract asserted both "the athlete's game produced no
+// sprint" and "this week requires a sprint exposure" — unsatisfiable before the
+// gate even ran. That is the identical shape as the D10 injury defect
+// documented in `section18SafetyPolicy`, whose resolution was that no injury
+// region silently withdraws field participation.
+run('property', 'P2c a readiness deload never withdraws the athlete\'s field participation', () => {
+  for (const severity of [4, 6, 8, 10]) {
+    const contract = withSafety(baseContract(), readinessContext(severity));
+    for (const anchor of contract.anchors) {
+      assert(anchor.participation === 'normal_unrestricted',
+        `severity ${severity} demoted the ${anchor.kind} anchor to ${anchor.participation}`);
+      assert(anchor.currentProductionClaim.conditioning,
+        `severity ${severity} withdrew ${anchor.kind} conditioning production`);
+      assert(anchor.currentProductionClaim.sprintHighSpeed,
+        `severity ${severity} withdrew ${anchor.kind} sprint production`);
+    }
+  }
+});
+
+// The capability is not gone — it moved to the doors that own a medical stop.
+run('property', 'P2d a genuine training pause DOES withdraw field participation', () => {
+  const paused = applyGenerationSafetyToSection18Contract({
+    contract: baseContract(), generationConstraints: readinessContext(9), forceFullPause: true,
+  });
+  assert(paused.anchors.every((anchor) => anchor.participation !== 'normal_unrestricted'),
+    'a training pause left field participation untouched');
+});
+
 run('property', 'P3 canonicalisation cannot increase a safety-reduced frequency target', () => {
-  const contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
+  const contract = withSafety(baseContract(), injuryContext('lower_body'));
   for (let count = 0; count <= 6; count++) {
     const result = finish(contract, Array.from({ length: count }, (_, index) => workout(`p3-${count}-${index}`, index, [index % 2 ? 'Bench Press' : 'Back Squat'])));
     assert(result.evaluation.ledger.mainStrength.achievedCount <= 2, `frequency ${count} escaped cap`);
@@ -398,8 +527,11 @@ run('property', 'P5 healthy unrestricted anchor credit remains stable', () => {
   }
 });
 
+// RE-PINNED to an injury reduction. The guarantee — a typed safety reduction is
+// never weakened by re-writing the week — is unchanged and still worth proving;
+// readiness simply no longer authors a reduction for it to defend.
 run('property', 'P6 safety reductions survive every repeated write boundary', () => {
-  let contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
+  let contract = withSafety(baseContract(), injuryContext('lower_body'));
   let workouts = [workout('p6-a', 1, ['Back Squat']), workout('p6-b', 3, ['Bench Press']), workout('p6-c', 5, ['Pull-Ups'])];
   for (let pass = 0; pass < 6; pass++) {
     const result = finish(contract, workouts);
@@ -454,15 +586,28 @@ run('mutation', 'M3 withdrawing anchor credit without a matching reduction is ki
     'credit-withdrawal-without-reduction mutation escaped');
 });
 
-run('mutation', 'M4 retaining power under low readiness is killed', () => {
-  const contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
-  const unsafe = canonicalWithoutSafety(workout('m4', 1, ['Back Squat'], { power: 'lower' }));
-  const observed = evaluateSection18EffectiveWeek({ contract, workouts: [unsafe], weekStart: WEEK_START });
-  assert(observed.blockingViolations.some((finding) => finding.code === 'power_policy_breach'), 'low-readiness power escaped');
+// INVERTED then RE-AIMED. Retaining power under low readiness is no longer a
+// mutation to kill — it is the law. The mutation that still matters is retaining
+// power under an INJURY prohibition, so the test now proves both halves: the
+// readiness week raises no breach, and the injury week does.
+run('mutation', 'M4 retaining power under an injury prohibition is killed', () => {
+  const readinessWeek = withSafety(baseContract(), readinessContext(6));
+  const withPower = canonicalWithoutSafety(workout('m4', 1, ['Back Squat'], { power: 'lower' }));
+  const readinessObserved = evaluateSection18EffectiveWeek({ contract: readinessWeek, workouts: [withPower], weekStart: WEEK_START });
+  assert(!readinessObserved.blockingViolations.some((finding) => finding.code === 'power_policy_breach'),
+    'a deloaded readiness week reported power as a breach; the deload law keeps power');
+
+  const injuryWeek = withSafety(baseContract(), injuryContext('lower_body'));
+  const injuryObserved = evaluateSection18EffectiveWeek({ contract: injuryWeek, workouts: [withPower], weekStart: WEEK_START });
+  assert(injuryObserved.blockingViolations.some((finding) => finding.code === 'power_policy_breach'),
+    'injury-prohibited power escaped');
 });
 
+// RE-PINNED to an injury reduction, for the same reason as P6: the mutation —
+// lowering the contract until the unsafe week passes — is still real, but the
+// reduction it lowers must be one that still exists.
 run('mutation', 'M5 lowering the contract to match unsafe output is killed', () => {
-  const contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
+  const contract = withSafety(baseContract(), injuryContext('lower_body'));
   const unsafeWorkouts = [
     workout('m5-a', 1, ['Back Squat']),
     workout('m5-b', 3, ['Bench Press']),
@@ -472,8 +617,8 @@ run('mutation', 'M5 lowering the contract to match unsafe output is killed', () 
   assert(conformed.evaluation.ledger.mainStrength.achievedCount === 2,
     'source policy did not enforce the approved reduction');
   const mutated = JSON.parse(JSON.stringify(contract)) as WeeklyExposureContractV2;
-  const reduction = mutated.authorisedReductions.find((entry) => entry.metric === 'main_strength_frequency' && entry.reason === 'low_readiness');
-  assert(!!reduction, 'fixture lacked readiness reduction');
+  const reduction = mutated.authorisedReductions.find((entry) => entry.metric === 'main_strength_frequency' && entry.reason === 'injury_restriction');
+  assert(!!reduction, 'fixture lacked the injury reduction');
   reduction.reducedTarget = 3;
   mutated.safety.mainStrengthFrequencyCeiling = 3;
   const unsafeAccepted = finish(mutated, unsafeWorkouts);
@@ -484,8 +629,10 @@ run('mutation', 'M5 lowering the contract to match unsafe output is killed', () 
   );
 });
 
+// RE-PINNED to an injury prohibition: hydrated power must still be stripped by
+// the finaliser, but readiness is no longer what makes it unsafe.
 run('mutation', 'M6 skipping post-hydration safety validation is killed', () => {
-  const contract = withSafety(baseContract(), readinessContext('moderate_reduction'));
+  const contract = withSafety(baseContract(), injuryContext('lower_body'));
   const rawHydrated = canonicalWithoutSafety(workout('m6', 1, ['Back Squat'], { power: 'lower' }));
   assert(!!rawHydrated.powerBlock, 'fixture did not contain unsafe hydrated power');
   const conformed = finish(contract, [rawHydrated]);
