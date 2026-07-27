@@ -110,7 +110,6 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Free Sprint Session':      { tier: 'A',      modality: 'run',  impact: 'high' },
 
   // ── Tier B-high — High Output ──
-  'MetCon':                   { tier: 'B-high', modality: 'mixed', impact: 'high' },
   'Long Run':                 { tier: 'B-high', modality: 'run',  impact: 'high' },
   '6x1km':                    { tier: 'B-high', modality: 'run',  impact: 'high' },
   '1km Repeat Intervals':     { tier: 'B-high', modality: 'run',  impact: 'high' },

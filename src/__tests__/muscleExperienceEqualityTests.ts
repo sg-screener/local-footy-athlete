@@ -26,7 +26,7 @@ import {
   REGRESSION_CONVENTION,
   SELECTABLE_WITHOUT_METADATA,
   METADATA_WITHOUT_SELECTABLE_EXERCISE,
-  AUTHORED_SPELLING_VARIANTS,
+  CORRECTED_SPELLING_VARIANTS,
   EXPERIENCE_CROSSWALK,
   ONBOARDING_EXPERIENCE_ANSWERS,
   visibleGatesForOnboardingAnswer,
@@ -53,8 +53,12 @@ const repoRoot = path.resolve(__dirname, '../..');
 const SHEET = path.join(repoRoot, 'docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx');
 const DESIGN_DOC = path.join(repoRoot, 'docs/PROGRAMMING_DESIGN_SESSION_2026-07-23.md');
 const SHEET_TAB = 'Muscle + Experience v3';
-/** Four authored preamble rows (sign-off, vocabulary legend, terminology) sit above the header. */
-const SHEET_HEADER_ROW = 5;
+/**
+ * Five authored preamble rows sit above the header: sign-off, vocabulary legend,
+ * regression note, terminology, and the change-log row Sam's 2026-07-27
+ * reconciliation added.
+ */
+const SHEET_HEADER_ROW = 6;
 
 let passed = 0;
 const failures: string[] = [];
@@ -273,12 +277,13 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
   gateCounts.set(entry.experienceGate, (gateCounts.get(entry.experienceGate) ?? 0) + 1);
 }
 
-// Counts from the authored sheet, case-normalised: 'Everyone' folds into
-// 'everyone' (two rows — see AUTHORED_SPELLING_VARIANTS).
+// Counts from the authored sheet after Sam's 2026-07-27 reconciliation:
+// Single-Arm Pulldown added as `everyone` (130 -> 131) and MetCon deleted, which
+// was a `1+ years` row (33 -> 32). Total unchanged at 193.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 130,
+  everyone: 131,
   everyone_regression: 11,
-  one_plus_years: 33,
+  one_plus_years: 32,
   two_plus_years: 17,
   advanced_only: 2,
 };
@@ -309,10 +314,58 @@ ok(
     .length === 11,
 );
 
+// Sam corrected these in the workbook (2026-07-27) rather than leaving them
+// normalised on read. Assert the corrections actually landed in the SHEET, so
+// the record cannot decay back into a tolerated-variants list.
 ok(
-  'the authored spelling variants are recorded rather than hidden',
-  AUTHORED_SPELLING_VARIANTS.length >= 3 &&
-    AUTHORED_SPELLING_VARIANTS.every((variant) => variant.authored !== '' && variant.reading !== ''),
+  'the corrected spelling variants are recorded',
+  CORRECTED_SPELLING_VARIANTS.length === 3 &&
+    CORRECTED_SPELLING_VARIANTS.every((v) => v.was !== '' && v.now !== '' && v.where !== ''),
+);
+
+ok(
+  'no capitalised "Everyone" remains in the sheet',
+  !sheetRows.some((row) => row['Experience Level'] === 'Everyone'),
+  sheetRows.filter((row) => row['Experience Level'] === 'Everyone').map((r) => r.Exercise).join(', '),
+);
+
+ok(
+  'no lowercase "midline" remains in the sheet',
+  !sheetRows.some((row) =>
+    ['Primary Muscle Group(s)', 'Secondary Muscle Group(s)'].some((column) =>
+      /\bmidline\b/.test(row[column]),
+    ),
+  ),
+);
+
+ok(
+  "the sheet's own change-log row records Sam's reconciliation",
+  (() => {
+    const preamble = readSheetRecords(SHEET, SHEET_TAB, 1)
+      .map((record) => Object.values(record).join(' '))
+      .join('\n');
+    return /CHANGE LOG — Sam 2026-07-27/.test(preamble);
+  })(),
+);
+
+ok(
+  'MetCon is gone from the sheet (conditioning ruling 20 wins)',
+  !sheetRows.some((row) => row.Exercise === 'MetCon'),
+);
+
+ok(
+  'Single-Arm Pulldown has its authored row',
+  (() => {
+    const entry = muscleMetadataFor('Single-Arm Pulldown');
+    return (
+      entry !== null &&
+      entry.pool === 'Upper pull vertical' &&
+      entry.primary.join(',') === 'Lats' &&
+      entry.secondary.join(',') === 'Upper back,Midline' &&
+      entry.experienceGate === 'everyone'
+    );
+  })(),
+  JSON.stringify(muscleMetadataFor('Single-Arm Pulldown')),
 );
 
 /* ── The experience crosswalk ── */

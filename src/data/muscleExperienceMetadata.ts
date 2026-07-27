@@ -112,25 +112,30 @@ export {
 import type { ExperienceGate } from '../rules/experienceCrosswalk';
 
 /**
- * Authored spelling variants in the FINAL sheet, recorded rather than silently
- * normalised. Each is read case-insensitively; a NEW variant fails the gate
- * instead of being absorbed.
+ * Spelling variants that WERE in the FINAL sheet and have been corrected.
  *
- * Reported to Sam — these are typos in an otherwise clean sheet, not rulings.
+ * Sam authorised the corrections on 2026-07-27 rather than leaving them
+ * normalised-on-read: 'Everyone' twice and one lowercase 'midline'. They are now
+ * fixed in the workbook itself and recorded in its change-log row and in Bible
+ * Section 19.
+ *
+ * The list stays as a RECORD, and the equality suite asserts the sheet now
+ * carries none of them — so this cannot quietly become a tolerated-variants list
+ * again. A new variant fails the build instead of being absorbed.
  */
-export interface AuthoredSpellingVariant {
-  readonly authored: string;
-  readonly reading: string;
+export interface CorrectedSpellingVariant {
+  readonly was: string;
+  readonly now: string;
   readonly where: string;
 }
 
-export const AUTHORED_SPELLING_VARIANTS: readonly AuthoredSpellingVariant[] = [
-  { authored: 'Everyone', reading: 'everyone', where: 'Suitcase Carry (sheet row 61)' },
-  { authored: 'Everyone', reading: 'everyone', where: 'Skull Crushers (sheet row 64)' },
+export const CORRECTED_SPELLING_VARIANTS: readonly CorrectedSpellingVariant[] = [
+  { was: 'Everyone', now: 'everyone', where: 'Suitcase Carry — experience level' },
+  { was: 'Everyone', now: 'everyone', where: 'Skull Crushers — experience level' },
   {
-    authored: 'midline',
-    reading: 'Midline',
-    where: 'Chin-Up Negative (Slow) secondary muscles (sheet row 88)',
+    was: 'midline',
+    now: 'Midline',
+    where: 'Chin-Up Negative (Slow) — secondary muscle groups',
   },
 ];
 
@@ -187,10 +192,11 @@ export const MUSCLE_METADATA_POOLS: readonly string[] = [
 /**
  * Selectable exercises the authored sheet gives no metadata for.
  *
- * Recorded so the gap is visible: Stage B must not assume every selectable
- * exercise has muscle tags.
+ * EMPTY as of Sam's 2026-07-27 reconciliation: he ruled `Single-Arm Pulldown`
+ * KEEP and authored its row, closing the only gap. The list and its gate stay so
+ * a future selectable addition without metadata is caught rather than assumed.
  */
-export const SELECTABLE_WITHOUT_METADATA: readonly string[] = ['Single-Arm Pulldown'];
+export const SELECTABLE_WITHOUT_METADATA: readonly string[] = [];
 
 export interface MetadataWithoutSelectableExercise {
   readonly exercise: string;
@@ -226,7 +232,6 @@ export const METADATA_WITHOUT_SELECTABLE_EXERCISE: readonly MetadataWithoutSelec
 
 /** Generated from the sheet and held to it by `npm run test:muscle-experience`. */
 export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
-
   /* ── Lower squat ── */
   {
     exercise: 'Back Squat',
@@ -995,6 +1000,15 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: 'Moved per Sam from Arms—biceps (it lived in the biceps pool; now vertical pull).',
     flagged: false,
   },
+  {
+    exercise: 'Single-Arm Pulldown',
+    pool: 'Upper pull vertical',
+    primary: ['Lats'],
+    secondary: ['Upper back', 'Midline'],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
 
   /* ── Shoulders ── */
   {
@@ -1697,15 +1711,6 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     flagged: true,
   },
   {
-    exercise: 'MetCon',
-    pool: 'Conditioning',
-    primary: [],
-    secondary: [],
-    experienceGate: 'one_plus_years',
-    note: '⚑ mixed high-output format with technical/coordination demand across movements — the training-age ladder is a rough fit for a session format.',
-    flagged: true,
-  },
-  {
     exercise: 'Long Run',
     pool: 'Conditioning',
     primary: [],
@@ -2013,6 +2018,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: 'FLAG — gate proposed, confirm',
     flagged: false,
   },
+
 ];
 
 /** Metadata for one exercise, or null when the sheet carries none. */
