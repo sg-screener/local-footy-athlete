@@ -207,6 +207,63 @@ Two things in it that are findings rather than data entry:
 - A third tab carries the **anchor multipliers**, which are unauthored too and sit
   upstream of all 77 — an error there moves every suggested weight in the app at once.
 
+## Logged debt — the `applyTrainingAgePrescription` strength-context gap
+
+**Status: accepted as debt (Sam, 2026-07-28). Dormant. Not scheduled. Tripwired.**
+
+`startingWeightForAthlete` owns Sam's beginner load multiplier and both paths call
+it. But the **generation** path only reaches the owner from inside
+`applyTrainingAgePrescription`, which early-returns unless
+`isStrengthPrescriptionContext` is true. The owner does not model that gate, and the
+render-time fallback has no gate at all.
+
+So the paths agree everywhere they both compute a weight, **except** for a
+prescribed-load exercise on a non-strength surface with no stored weight — generation
+would skip the multiplier, the fallback would apply it.
+
+**Why it is not fixed now.** That gate also owns sets, reps and RPE for beginners.
+Touching it changes three prescriptions, not one, and deserves its own before/after.
+Scope was deliberately not expanded.
+
+**Why it is dormant.** Not because the code prevents it — because of today's exercise
+*data*. No exercise carrying a prescribed load ratio is reachable on a non-strength
+surface that asks for a weight. Every recovery-context pool (`tissue_quality`,
+`mobility`, `easy_cardio`, `breathing_reset`) and every mobility-flow movement is
+bodyweight, prehab or unauthored, where the owner returns `null` either way.
+
+### The tripwire — `test:nonstrength-tripwire`
+
+Data changes silently; a comment would not notice. The gate fails if a prescribed-load
+exercise ever reaches a weight-bearing non-strength surface. **If it fires, the gap is
+live and this unit is due** — and the fix is the gate, not relocating the exercise.
+
+Both branches are mutation-proven to fire, since a guard that has never failed is
+indistinguishable from one that cannot.
+
+### What building the tripwire found
+
+The first revision tested *"a prescribed-load name on any non-strength surface"* and
+**fired immediately** — `Face Pull` and `Suitcase Carry`, offered by
+`recoveryAddonExerciseVocabulary()` (which enumerates by running the real selection
+logic, so they are genuine placements).
+
+That turned out to be the check being wrong rather than the gap being live. The
+recovery-add-on surface has **no weight channel**: `RecoveryAddonExercise` is
+`{ id, name, prescription, source }`, the builder never sets `prescribedWeightKg`, and
+`RecoveryAddonSection` renders the `prescription` string. Nothing there asks the
+estimator anything, so the two paths cannot disagree on that surface.
+
+The condition is therefore about *weight-bearing* surfaces, and the carve-out is
+pinned by three assertions on the **surface** rather than trusted: the builder assigns
+no weight, the row type carries no weight field, and the two known names are still the
+only prescribed-load entries in that vocabulary. The moment add-ons gain a weight, the
+carve-out is void and those two are live.
+
+This also corrects what I told Sam when the residual was first reported: I described
+it as "narrow — such exercises are almost always bodyweight authority". Two named
+exercises on a real surface already sit outside that description. The conclusion holds
+for a different and better-evidenced reason than the one I gave.
+
 ## Part B — pending Sam, grouped by athlete-facing consequence
 
 Per rider 1: grouped by what the athlete experiences, not by file. Highest stakes first.
