@@ -207,6 +207,68 @@ Two things in it that are findings rather than data entry:
 - A third tab carries the **anchor multipliers**, which are unauthored too and sit
   upstream of all 77 — an error there moves every suggested weight in the app at once.
 
+## Small unit — onboarding numeric answers have no authored bounds
+
+**Status: logged 2026-07-28, read-only finding. Needs Sam-authored ranges before build.**
+
+**The answer to "does onboarding validate numeric answers": no.** The only check is
+`> 0`.
+
+`BodyMeasurementsScreen` is the sole free-numeric input in the whole onboarding flow —
+every other numeric answer (team training days, duration, commitment) is a picker and
+is bounded by construction. Its validation is, in full:
+
+```ts
+const isValid =
+  heightCm.trim() && weightKg.trim() &&
+  parseFloat(heightCm) > 0 && parseFloat(weightKg) > 0;
+```
+
+No upper bound, no lower bound beyond zero, no `maxLength` on the field, and **no
+schema validator anywhere in the app** — there is no `zod`/`yup`/`superstruct`
+dependency, and `onboardingSteps.filled()` tests presence, not range.
+
+### Why it matters more than a typical input-validation gap
+
+Bodyweight is not a record field. It is the **first term of the anchor chain**:
+`anchor 1RM = bodyweight × multiplier`, and all 77 load ratios multiply that. A wrong
+bodyweight moves every suggested weight in the app at once — the same blast radius as
+the multiplier table it feeds.
+
+Measured:
+
+| Entered bodyweight | squat 1RM | Back Squat card |
+|---|---|---|
+| 3 kg | 3 kg | **20 kg** ← silently floored |
+| 40 kg | 40 kg | 32.5 kg |
+| 80 kg | 80 kg | 65 kg |
+| 300 kg | 300 kg | 245 kg |
+| 5000 kg | 5000 kg | **4100 kg** |
+
+`800` instead of `80` is one keystroke on a numeric keypad with no length limit.
+
+**Both failure directions are silent, in different ways.** Too high propagates
+faithfully into an absurd prescription. Too low gets clamped — not by any judgement
+about the athlete, but by `MIN_WEIGHTS.barbell`, an unrelated mechanism that happens
+to catch it. A 3 kg athlete gets a plausible-looking 20 kg card. **Neither direction
+refuses.** A clamp that produces a sane-looking number from nonsense is the harder of
+the two to notice.
+
+### The unit
+
+Sam authors the acceptable ranges (bodyweight floor/ceiling, height floor/ceiling).
+Out-of-range answers are **re-asked** — never silently accepted, and never clamped,
+since a clamp is the app substituting its own number for the athlete's and is the same
+defect class as the render-truth "BW".
+
+Provenance-ready by construction: Sam-authored ranges arrive as a `ruling_anchor`
+rather than as two more unauthored constants needing a later ruling session.
+
+**Note:** `heightCm` is collected and validated the same way but feeds **no**
+programming decision — it reaches the review screen and the coach's context only.
+Worth ranging for data quality, but it is not on the load path and should not be
+scoped as if it were.
+
 ## Logged debt — the `applyTrainingAgePrescription` strength-context gap
 
 **Status: accepted as debt (Sam, 2026-07-28). Dormant. Not scheduled. Tripwired.**
