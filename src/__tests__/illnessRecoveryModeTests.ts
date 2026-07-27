@@ -508,6 +508,25 @@ run('9c the illness_recovery MODE is derived from the law, not minted beside it'
     'moderate illness must still deload the week');
 });
 
+// ── Invariant 10 — the deload REACHES the generated week, not just the
+// derivation. Sam: "never normal-dose optional." Deriving `weekDeloaded` and
+// then failing to consume it looks identical to not deriving it at all, which
+// is exactly the failure this pins.
+run('10 an in-season severe-illness week GENERATES as a deload', () => {
+  const mc = generateWithIllness(true, true) as unknown as GenMicro & { weekKind?: string };
+  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+    `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
+  assert(mc.weekKind === 'deload',
+    `severe illness must generate a DELOADED week, got weekKind=${String(mc.weekKind)} ` +
+    '(normal-dose optional is the regression this pins)');
+});
+
+run('10b a healthy in-season week is NOT deloaded', () => {
+  const mc = generateWithIllness(false, true) as unknown as GenMicro & { weekKind?: string };
+  assert(mc.weekKind !== 'deload',
+    `a healthy week must not be deloaded, got weekKind=${String(mc.weekKind)}`);
+});
+
 console.log(`\nillness_recovery week-mode invariants: ${passes} passing, ${failures.length} failing`);
 if (failures.length > 0) {
   console.log('Currently RED (expected pre-implementation):');

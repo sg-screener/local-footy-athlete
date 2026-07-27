@@ -95,6 +95,13 @@ export interface RotationContext {
   weekKind?: WeekKind;
   /** Week-level generation intensity multiplier. Optional for rotation-only callers. */
   intensityMultiplier?: number;
+  /**
+   * Which door opened this deload, when it was not the scheduled one. The
+   * scheduled door is phase-gated by D16; the readiness and illness doors are
+   * not, and in-season they are the ONLY way a week deloads. Absent means the
+   * scheduled door (or no deload at all).
+   */
+  deloadDoor?: 'readiness' | 'illness';
   /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
   offseasonSubphase?: OffseasonSubphase;
 }

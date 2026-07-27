@@ -75,6 +75,7 @@ import {
   deloadConditioningFlavour,
   isHardDeloadConditioningCategory,
   resolveDeloadWeekPolicy,
+  resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
 } from '../rules/deloadWeekRules';
 import {
@@ -1614,10 +1615,19 @@ export function buildWorkoutsFromCoach(
     seasonPhase: onboardingData?.seasonPhase,
     explicitSubphase: rotationContext?.offseasonSubphase,
   });
-  const deloadPolicy = resolveDeloadWeekPolicy(
-    onboardingData?.seasonPhase,
-    rotationContext?.weekKind,
-  );
+  // Two doors, ONE transformation. The scheduled door is phase-gated (D16: no
+  // scheduled in-season deloads); the readiness and illness doors are not, and
+  // in-season they are the only way a week deloads at all. Routing them through
+  // the phase-gated resolver would silently return null and drop the deload.
+  const deloadPolicy = rotationContext?.deloadDoor
+    ? resolveDoorDeloadPolicy({
+        door: rotationContext.deloadDoor,
+        seasonPhase: onboardingData?.seasonPhase,
+      })
+    : resolveDeloadWeekPolicy(
+        onboardingData?.seasonPhase,
+        rotationContext?.weekKind,
+      );
   const profileEquipment = resolveEquipmentCapabilities(onboardingData);
   const availableEquipment = effectiveAthletePrefs?.availableEquipment ?? profileEquipment.tags;
   const conditioningModalities = effectiveAthletePrefs?.conditioningModalities ?? (

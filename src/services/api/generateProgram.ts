@@ -5,6 +5,7 @@ import {
   type DayOfWeek,
   type ConditioningEquipmentModality,
   type Workout,
+  type WeekKind,
 } from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
@@ -382,6 +383,14 @@ export function buildGeneratedMicrocycles(args: {
           temporarySourceFacts: args.temporarySourceFacts,
         })
       : args.generationConstraints;
+    // THE ILLNESS LAW's first answer, applied. The illness door has no phase gate
+    // (D16 names readiness/bye recovery as the in-season way to back off), so an
+    // active moderate-or-severe illness deloads this week whatever the block plan
+    // scheduled. Deriving `weekDeloaded` and not consuming it here would look
+    // identical to never deriving it — the week would be normal-dose and merely
+    // optional, which Sam ruled out.
+    const doorDeload = generationConstraints?.weekDeloaded === true;
+    const effectiveWeekKind: WeekKind = doorDeload ? 'deload' : blockState.weekKind;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
     const profileEquipment = resolveEquipmentCapabilities(
       profile,
@@ -418,7 +427,7 @@ export function buildGeneratedMicrocycles(args: {
           miniCycleNumber: blockState.miniCycleNumber,
           weekInBlock: blockState.weekInBlock,
           weekNumber: blockState.weekNumber,
-          weekKind: blockState.weekKind,
+          weekKind: effectiveWeekKind,
           phaseWeekNumber: blockState.phaseWeekNumber,
           phaseEntryWeekStartISO: blockState.phaseClock.phaseEntryWeekStartISO,
           phaseClockSelectedPhase: blockState.phaseClock.selectedPhase,
@@ -483,9 +492,10 @@ export function buildGeneratedMicrocycles(args: {
             miniCycleNumber: blockState.miniCycleNumber,
             weekInBlock: blockState.weekInBlock,
             weekStartISO: blockState.weekStart,
-            weekKind: blockState.weekKind,
+            weekKind: effectiveWeekKind,
             intensityMultiplier: blockState.intensityMultiplier,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+            deloadDoor: doorDeload ? 'illness' : undefined,
           },
           {
             ...mergeAthletePrefsWithGenerationConstraints(args.athletePrefs, generationConstraints),
@@ -494,7 +504,7 @@ export function buildGeneratedMicrocycles(args: {
           },
         ),
         profile,
-        weekKind: blockState.weekKind,
+        weekKind: effectiveWeekKind,
         generationConstraints,
       });
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
@@ -619,7 +629,7 @@ export function buildGeneratedMicrocycles(args: {
       startDate: dateAtNoonISO(blockState.weekStart),
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
-      weekKind: blockState.weekKind,
+      weekKind: effectiveWeekKind,
       exposureContract,
       exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,
