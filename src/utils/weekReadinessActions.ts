@@ -39,7 +39,7 @@ const READINESS_SOURCE = {
  * - `sick_week` → SEVERE illness week-fact (derives the illness_recovery §18
  *   week mode: minimums lifted, remaining work optional/reduced — never a
  *   shutdown_week or recovery-mode writer).
- * - `sniffle_today` → MINOR illness (record-only + inert; the sheet surfaces the
+ * - `sniffle_today` → MILD illness (record-only + inert; the sheet surfaces the
  *   opt-in "soften today?" offer for today-scoped tiers).
  */
 export function readinessActionForKind(
@@ -65,7 +65,7 @@ export function readinessActionForKind(
       type: 'set_illness_status',
       source: READINESS_SOURCE,
       scope: 'today_only',
-      payload: { date: todayISO, todayISO, severity: 'minor' },
+      payload: { date: todayISO, todayISO, severity: 'mild' },
       requiresRebuild: false,
       createsActiveModifier: true,
       oneOffOnly: false,

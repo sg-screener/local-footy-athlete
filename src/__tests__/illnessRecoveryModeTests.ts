@@ -234,7 +234,7 @@ run('1 illness-recovery derivable ONLY from an active severe illness fact', () =
   assert(
     !deriveIllnessRecoveryWeekMode({
       temporarySourceFacts: [createTemporaryIllnessFact({
-        observedDate: WEEK, scope: dateScope(WEEK), severity: 'minor',
+        observedDate: WEEK, scope: dateScope(WEEK), severity: 'mild',
         sourceSurface: 'week_readiness_sheet',
       })],
       weekStartISO: WEEK,

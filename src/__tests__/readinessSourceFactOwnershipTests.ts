@@ -718,7 +718,7 @@ async function main(): Promise<void> {
     const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
     seed();
     const minor = createTemporaryIllnessFact({
-      observedDate: WEEK, scope: dateScope, severity: 'minor',
+      observedDate: WEEK, scope: dateScope, severity: 'mild',
       sourceSurface: 'week_readiness_sheet',
     });
     const result = await transactTemporarySourceFact({
@@ -761,7 +761,7 @@ async function main(): Promise<void> {
     const inertCompose = composeTemporarySourceFactCompatibility({
       temporarySourceFacts: [createTemporaryIllnessFact({
         observedDate: WEEK, scope: { kind: 'date', date: WEEK, from: WEEK, until: WEEK },
-        severity: 'minor', sourceSurface: 'week_readiness_sheet',
+        severity: 'mild', sourceSurface: 'week_readiness_sheet',
       })],
       activeConstraints: [],
     });
@@ -826,7 +826,7 @@ async function main(): Promise<void> {
       { kind: 'cooked_week', type: 'set_fatigue_status', scope: 'current_week', date: ANCHOR, level: 'cooked' },
       { kind: 'poor_sleep_today', type: 'set_poor_sleep_status', scope: 'today_only', date: TODAY, pattern: 'single_night' },
       { kind: 'poor_sleep_week', type: 'set_poor_sleep_status', scope: 'current_week', date: ANCHOR, pattern: 'repeated' },
-      { kind: 'sniffle_today', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'minor' },
+      { kind: 'sniffle_today', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'mild' },
       { kind: 'sick_week', type: 'set_illness_status', scope: 'current_week', date: ANCHOR, severity: 'severe' },
     ] as const;
 

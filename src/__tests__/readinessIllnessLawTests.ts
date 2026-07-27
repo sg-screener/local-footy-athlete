@@ -34,6 +34,10 @@ import {
   isDateInReadinessDeloadWindow,
   type IllnessSeverityTier,
 } from '../rules/readinessIllnessLaw';
+import {
+  createTemporaryIllnessFact,
+  normalizeTemporarySourceFacts,
+} from '../rules/temporarySourceFact';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -151,6 +155,78 @@ ok('the illness law is in the Bible', bible.includes('THE ILLNESS LAW (Sam, 2026
 ok('the Bible states there is no full pause', /There is no "full pause"/.test(bible));
 ok('the Bible states readiness never removes sessions',
   /Readiness never REMOVES sessions/.test(bible));
+
+/* ── One severity vocabulary ── */
+
+console.log('\n[5] ONE severity vocabulary — the fact store speaks the law\'s tiers');
+
+// The fact store used to declare its own binary `'minor' | 'severe'` union, a
+// second illness vocabulary sitting beside the law's three tiers. With only two
+// values MODERATE had no storage, so a flu-level illness could not be recorded
+// at all — it either did nothing or emptied the week. The store now uses the
+// law's type, so the two cannot drift apart.
+ok('a moderate illness fact can be created and keeps its tier',
+  createTemporaryIllnessFact({
+    observedDate: '2026-07-27',
+    scope: { kind: 'week', weekStart: '2026-07-27', from: '2026-07-27', until: '2026-08-02' },
+    sourceSurface: 'test',
+    severity: 'moderate',
+  }).severity === 'moderate');
+
+// mild is INERT (< 4 on the shared health-fact threshold), moderate and severe
+// DERIVE. Moderate must clear the threshold or "deloaded while active" could
+// never fire.
+const tierLevel = (severity: IllnessSeverityTier) => createTemporaryIllnessFact({
+  observedDate: '2026-07-27',
+  scope: { kind: 'week', weekStart: '2026-07-27', from: '2026-07-27', until: '2026-08-02' },
+  sourceSurface: 'test',
+  severity,
+}).athleteReportedLevel;
+
+ok('mild is inert on the shared threshold', tierLevel('mild') === 'slight',
+  `got ${String(tierLevel('mild'))}`);
+ok('moderate DERIVES on the shared threshold', tierLevel('moderate') === 'moderate',
+  `got ${String(tierLevel('moderate'))}`);
+ok('severe DERIVES on the shared threshold', tierLevel('severe') === 'high',
+  `got ${String(tierLevel('severe'))}`);
+
+// Sam's migration ruling. The old `severe` drove the optional-sessions week
+// mode, which is exactly the new SEVERE behaviour — mapping it to moderate
+// would silently downgrade a bed-bound athlete's stored fact to flu.
+const hydrate = (storedSeverity: string) => normalizeTemporarySourceFacts({
+  value: [{
+    factId: `legacy-${storedSeverity}`,
+    factKind: 'illness',
+    severity: storedSeverity,
+    status: 'active',
+    observedDate: '2026-07-27',
+    effectiveFrom: '2026-07-27',
+    effectiveUntil: '2026-08-02',
+  }],
+})[0] as { severity: IllnessSeverityTier } | undefined;
+
+ok('a stored legacy `minor` hydrates as MILD', hydrate('minor')?.severity === 'mild',
+  `got ${String(hydrate('minor')?.severity)}`);
+ok('a stored legacy `severe` hydrates as SEVERE — never downgraded to moderate',
+  hydrate('severe')?.severity === 'severe',
+  `got ${String(hydrate('severe')?.severity)}`);
+ok('an unrecognised stored severity falls back to the inert tier',
+  hydrate('banana')?.severity === 'mild',
+  `got ${String(hydrate('banana')?.severity)}`);
+
+/* ── The doors ── */
+
+console.log('\n[6] THE THREE SICK DOORS — Sam\'s labels, authored');
+
+ok('the three sick doors are in the Bible',
+  bible.includes('THE THREE SICK DOORS (Sam, 2026-07-27)'));
+for (const label of ['A bit off', 'Properly sick', "Can't get out of bed"]) {
+  ok(`the Bible records the door "${label}"`, bible.includes(label));
+}
+ok('the Bible records that this supersedes the R16 two-option ruling',
+  /SUPERSEDES the R16 door-routing ruling/.test(bible));
+ok('the Bible records the day-granular owner',
+  bible.includes('THE DELOAD/OPTIONAL OWNER (Sam, 2026-07-27)'));
 
 /* ── Result ── */
 

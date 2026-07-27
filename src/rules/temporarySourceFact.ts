@@ -1,3 +1,4 @@
+import type { IllnessSeverityTier } from './readinessIllnessLaw';
 import type { ActiveConstraint, ActiveFatigueConstraint, ActiveSorenessConstraint } from '../store/coachUpdatesStore';
 import type {
   ActiveEquipmentConstraint,
@@ -107,15 +108,23 @@ export interface TemporaryPoorSleepFact extends TemporarySourceFactBase<'poor_sl
 
 /**
  * Illness ("under the weather") — a SIBLING health fact, not a variant of injury
- * or fatigue. Follows the shared severity doctrine: `minor` is INERT (record-only,
- * zero derivation — a light sniffle merely records; the adjustment is opt-in via
- * the "soften today?" offer) and `severe` is DERIVING (auto-protect). The tier is
- * carried by `athleteReportedLevel` through the same `projectionScore` threshold
- * every health fact uses (minor → below 4, severe → at/above), so the inert vs.
- * deriving boundary is identical to fatigue's.
+ * or fatigue.
+ *
+ * Severity is THE ILLNESS LAW's tier, imported rather than re-declared. This
+ * interface used to carry its own binary `'minor' | 'severe'` union — a second
+ * illness vocabulary beside the law's three tiers, and one with no room for
+ * MODERATE, so a flu-level illness had nowhere to be stored. One vocabulary now,
+ * so the two cannot drift.
+ *
+ * The inert/deriving boundary is unchanged and still the shared health-fact one:
+ * the tier is carried by `athleteReportedLevel` through `projectionScore`, with
+ * mild below 4 (INERT — record-only; a light sniffle merely records, and any
+ * adjustment is opt-in via the "soften today?" offer) and moderate/severe at or
+ * above it (DERIVING). What each deriving tier DOES is the law's answer, not
+ * this file's.
  */
 export interface TemporaryIllnessFact extends TemporarySourceFactBase<'illness'> {
-  severity: 'minor' | 'severe';
+  severity: IllnessSeverityTier;
 }
 
 export interface TemporaryEquipmentFact extends TemporarySourceFactBase<'equipment'> {
@@ -312,6 +321,25 @@ function normalizeWeekdays(value: unknown): DayOfWeek[] {
       typeof day === 'string' && DAY_NAMES.has(day as DayOfWeek))));
 }
 
+/**
+ * Hydrate a stored illness severity into the law's tier.
+ *
+ * Facts written before THE THREE SICK DOORS carry the old binary vocabulary.
+ * Sam's migration ruling: `minor` → MILD and `severe` → SEVERE. NOT severe →
+ * moderate — the old `severe` is exactly what drove the optional-sessions week
+ * mode, which is what the new SEVERE tier does, so remapping it would silently
+ * downgrade a bed-bound athlete's stored record to flu. MODERATE is new and has
+ * no historical producer; nothing stored is reinterpreted, and no data is
+ * invented. Anything unrecognised falls back to the INERT tier, so a corrupt
+ * value can never derive a program change.
+ */
+function normalizeIllnessSeverity(value: unknown): IllnessSeverityTier {
+  if (value === 'severe') return 'severe';
+  if (value === 'moderate') return 'moderate';
+  // 'mild' (current) and 'minor' (legacy) are the same tier.
+  return 'mild';
+}
+
 function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | null {
   if (!isRecord(value) || typeof value.factId !== 'string') return null;
   if (value.factKind !== 'fatigue' && value.factKind !== 'soreness' &&
@@ -382,7 +410,7 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
     return {
       ...base,
       factKind: 'illness',
-      severity: value.severity === 'severe' ? 'severe' : 'minor',
+      severity: normalizeIllnessSeverity(value.severity),
     };
   }
   if (value.factKind === 'equipment') {
@@ -1015,7 +1043,7 @@ export function createTemporaryFatigueFact(args: {
 export function createTemporaryIllnessFact(args: {
   observedDate: string;
   scope: TemporarySourceFactScope;
-  severity: 'minor' | 'severe';
+  severity: IllnessSeverityTier;
   sourceActor?: TemporarySourceFactActor;
   sourceSurface: TemporarySourceFactSurface;
   now?: string;
@@ -1023,10 +1051,14 @@ export function createTemporaryIllnessFact(args: {
 }): TemporaryIllnessFact {
   const now = args.now ?? new Date().toISOString();
   // The tier drives the projection score through the shared health-fact
-  // threshold: minor → 'slight' (< 4, inert / record-only), severe → 'high'
-  // (>= 4, deriving / auto-protect). Same boundary fatigue uses.
+  // threshold: mild → 'slight' (3, < 4, inert / record-only), moderate →
+  // 'moderate' (5) and severe → 'high' (7), both >= 4 and therefore deriving.
+  // Same boundary fatigue uses. Moderate MUST clear the threshold or the law's
+  // "deloaded while the fact is active" could never fire.
   const athleteReportedLevel: TemporaryAthleteReportedLevel =
-    args.severity === 'severe' ? 'high' : 'slight';
+    args.severity === 'severe' ? 'high'
+      : args.severity === 'moderate' ? 'moderate'
+        : 'slight';
   return {
     protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
     factId: args.factId ?? stableTemporarySourceFactId({

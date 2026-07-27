@@ -41,6 +41,7 @@ import {
   resolveTapSwapEnvironment,
 } from './tapSwapHierarchy';
 import type { PoorSleepPattern } from './readinessConstraints';
+import type { IllnessSeverityTier } from '../rules/readinessIllnessLaw';
 import {
   athleteActionDiagnosticHash,
   athleteActionDiagnosticsEnabled,
@@ -197,7 +198,7 @@ export type ProgramControlAction =
   | ProgramControlActionBase<'set_illness_status', {
       date: string;
       todayISO?: string;
-      severity: 'minor' | 'severe';
+      severity: IllnessSeverityTier;
     }>
   | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
   | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
@@ -1224,7 +1225,11 @@ async function executeProgramControlActionDurablyWithinTrace(
     const todayISO = (action.payload.todayISO ?? context.todayISO ?? date).slice(0, 10);
     const fact = createTemporaryIllnessFact({
       observedDate: date,
-      scope: action.payload.severity === 'severe'
+      // MILD is the record-only tier and stays today-scoped. MODERATE and
+      // SEVERE both hold "for as long as the illness fact is ACTIVE" — open
+      // until cleared on the illness horizon, per the law — so both take the
+      // durable scope. The test is which tiers DERIVE, not which one is worst.
+      scope: action.payload.severity !== 'mild'
         ? durableStateFactScope({ anchorDate: date, todayISO })
         : temporaryFactScope({ kind: 'date', date }),
       severity: action.payload.severity,
