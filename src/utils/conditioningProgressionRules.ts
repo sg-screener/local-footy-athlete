@@ -84,6 +84,20 @@ interface TierCaps {
   minRest: number;        // seconds
 }
 
+/**
+ * MARKED FOR DELETION — Stage B scope (Sam's ruling, 2026-07-27).
+ *
+ * These caps were never authored. They are invented numbers that decide an
+ * athlete's conditioning dose, which Section 6 names as a defect outright:
+ * "Doses come from the templates sheet. A layer that invents its own
+ * conditioning dose is a defect."
+ *
+ * The authored templates own conditioning ENTIRELY once Stage B switches
+ * selection onto them, so there is nothing left for this machinery to
+ * progress. It is deleted with that switch rather than migrated — carrying it
+ * alongside would mean two systems dosing conditioning, the older one making
+ * its numbers up. Do not add to it, and do not build anything new on it.
+ */
 const TIER_CAPS: Record<ConditioningTierLabel, TierCaps> = {
   'A':      { maxReps: 8,  maxIntervals: 8, maxDuration: 40, minRest: 90  },
   'B-high': { maxReps: 12, maxIntervals: 8, maxDuration: 40, minRest: 30  },

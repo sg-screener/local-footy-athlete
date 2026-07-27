@@ -91,8 +91,63 @@ NUMERIC constants. Target state:
 
 The design must say how the remaining known-invented values get flagged
 `UNAUTHORED-PENDING-SAM` rather than silently blessed — Sam authors their
-replacements next. Named so far: deload content numbers, readiness-tier
-reductions, conditioning TIER_CAPS, and the illness severity trigger.
+replacements next. The list this brief was written around is now EMPTY: every value
+it named has an authored replacement or a deletion ruling —
+`NEW_ATHLETE_POLICY.maxCoreSessions` (deleted with the §18 beginner line),
+conditioning `TIER_CAPS` (ruled DELETED), the deload content numbers, the
+readiness-tier reductions and the illness severity trigger (all authored by
+Sam on 2026-07-27).
+
+That does NOT make the mechanism unnecessary — it makes it cheap to adopt.
+The lock still has to exist for what the sweep has not found yet, and the
+`UNAUTHORED-PENDING-SAM` marker is what keeps a newly-found invented number
+visible instead of silently blessed. Starting from an empty list means the
+lock can be strict from day one rather than shipping with a backlog.
+
+### Queued authored-law units (Sam, 2026-07-27)
+
+In order. Each ends with gates green and pins the authored values in tests.
+
+1. **The deload law.** Same week, same days — structure holds, work shrinks.
+   Main lifts half the sets, weight same or slightly down, every set RPE 5-6,
+   fast and clean, nowhere near failure. Accessories cut to 2-3 or half,
+   whichever is less. Power/speed keep a small sharp dose — few reps, full
+   recovery, stop the moment speed drops. Conditioning half the total work,
+   one quality exposure max, rest easy aerobic. The test: every session ends
+   feeling like there was plenty left; fresher by end of week, not detrained
+   and not sore. **The conditioning half is NEW LAW** — the old code left
+   conditioning untouched on deloads.
+
+2. **The readiness law** (builds on the deload unit, so it follows it). The
+   invented readiness-tier system — moderate / major / full_pause caps — DIES.
+   Low readiness, whether athlete-declared or app-detected, means the next
+   7 days are deloaded: the deload law applied as a ROLLING WINDOW from the
+   declaration day, not the remainder of the calendar week. Sick and injured
+   remain their own separate doors, unchanged. One owner applies the deload
+   transformation across the window, routed through the accepted-state
+   transaction like every other mutation. Tests pin the window behaviour —
+   declare Friday, the next 7 days deload, not just the weekend.
+
+3. **The illness law** (reuses the deload mechanism, so it ships with that
+   family). Three tiers, all riding the deload law, replacing the old
+   "recovery mode only on severe" trigger:
+
+   - **Mild** — training unchanged. Logged as a FACT that can lower
+     readiness, which may itself trigger the readiness deload. No direct
+     program change.
+   - **Moderate (flu-level)** — the week is deloaded for as long as the
+     illness fact is ACTIVE: open until cleared per the existing illness
+     horizon, NOT the readiness law's 7-day window. Clearing returns to
+     normal through the existing clear behaviour.
+   - **Severe (bed-bound)** — deloaded AND every session becomes optional
+     while active.
+
+   Severity decides exactly TWO things: deload or not, optional or not. No
+   other illness-specific numbers may exist. Tests pin all three tiers.
+
+4. **Conditioning progression machinery DELETION** — folded into Stage B's
+   scope, not a standalone unit. `TIER_CAPS` and its governing code go when
+   the templates take over conditioning selection.
 
 ## Standing riders
 
