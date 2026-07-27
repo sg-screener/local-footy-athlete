@@ -78,6 +78,23 @@ not place. Sam ruled on each; the library below already reflects them.
   programming pass (see PROGRAMMING_DESIGN_SESSION D3/D11); Abductor Machine
   joins the pool then.
 
+## Amendment — power cues, Sam 2026-07-27
+
+Sam authored cues for the three power exercises that had none. They were the
+blocker on the power pool: `power_pool_pending` waived cue+video, and
+`PowerRow` hardcoded `block.notes` precisely because the two power exercises
+that shipped (`Vertical Jump`, `Explosive Push-up`) could not be cued.
+
+- **Vertical Jump** — "Every rep fast and sharp. Land soft in athletic stance. Stop if reps get slow."
+- **Explosive Push-up** — "Explode up, hands leave the floor. Land soft. Stop when reps slow. Sore wrists? Elevate hands on box."
+- **RFE Split Squat Jump** — "Back foot on bench, slight lean forward, jump straight up off the front leg. Land soft and controlled."
+
+All three are within the 18-word hard cap (15 / 18 / 18), which Sam confirmed
+stands. His words and sentence ORDER are unchanged; the primary/secondary split
+below falls on his own sentence boundaries, mechanics into primary and
+control/regression into secondary. Collapsing any of them into a single primary
+with `(none)` secondary is a one-line change if he prefers that shape.
+
 ## Final cue library (name → primary | secondary)
 
 - **90/90 Breathing**: Knees and hips at 90, exhale fully. | Pause at the bottom of each breath.
@@ -134,6 +151,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Easy Row**: Controlled rhythm, long strokes. | This is active recovery, not training.
 - **Easy Ski**: Smooth technique, conversational pace. | Focus on form, not intensity.
 - **Explosive Landmine Press**: Split stance, drive hard into the bar. | Full lockout, reset quickly.
+- **Explosive Push-up**: Explode up, hands leave the floor. Land soft. | Stop when reps slow. Sore wrists? Elevate hands on box.
 - **Face Pull**: Pull to the forehead, open the hands out. | Squeeze the rear delts, slow return.
 - **Farmer Carry**: Shoulders packed, walk tall. | Breathe and keep moving. Weight shown is per hand.
 - **Flush Run**: Easy jog, nothing above zone one or two. | Move and loosen up.
@@ -189,6 +207,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **RDLs**: Push hips back, bar slides down leg. | Feel the hamstrings load on the way down.
 - **Rear Delt Fly**: Rest on incline bench, pinch the shoulder blades. | Light weight, feel the squeeze.
 - **Reverse Lunges**: Step back, drop straight down. | Front knee tracks over the toe.
+- **RFE Split Squat Jump**: Back foot on bench, slight lean forward, jump straight up off the front leg. | Land soft and controlled.
 - **Row Intervals**: Full catch, explosive drive. | Maintain power, recover completely.
 - **Scap Push-Up**: Keep elbows locked, glide shoulder blades. | Move slowly, no sagging hips.
 - **Seated Cable Row**: Sit tall, pull to the sternum. | Slow on the return.
@@ -217,6 +236,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Trap Bar Deadlift**: Tight through the lats, push the floor away. | Hips and shoulders rise together.
 - **Tricep Circuit (Dirty 30)**: Move through all three positions without rest. | Empty the triceps by the final rep.
 - **Tricep Pushdown**: Keep elbows pinned, press to full lockout. | Constant tension, no jerking.
+- **Vertical Jump**: Every rep fast and sharp. Land soft in athletic stance. | Stop if reps get slow.
 - **Walking Lunges**: Long stride, tall through the midline. | Steady and deliberate.
 - **Weighted Dead Bug**: Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground. | Slow extension, full exhale.
 - **Woodchop (Half Kneeling)**: Drive with the midline, arms guide. | Controlled rotation, not a throw.

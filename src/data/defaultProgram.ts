@@ -7,6 +7,7 @@ import {
   UserProfile,
   SessionTier,
   OnboardingData,
+  ExperienceLevel,
   SeasonPhase,
   AttachedConditioningKind,
   ConditioningBlock,
@@ -50,6 +51,8 @@ import {
   type ConditioningFeel,
   type ConditioningVariant,
 } from '../utils/sessionBuilder';
+import { selectPowerExercise } from '../rules/powerExercisePool';
+import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import {
   ACCESSORY_REP_GUIDELINES,
   LOWER_SECONDARY_REP_GUIDELINES,
@@ -1380,13 +1383,12 @@ function buildSpeedBlock(
 /**
  * Render the engine's typed power-primer intent into a display PowerBlock.
  *
- * BODYWEIGHT-ONLY. Sam retired the whole medicine-ball family — Chest Pass and
- * Slam on 2026-07-24, Overhead Throw on 2026-07-25 — so the block no longer has
- * an equipment-conditional branch at all, and `availableEquipment` is no longer
- * read here. That is the honest shape until the power unit builds the pool this
- * function is a placeholder for: exercise identity is still hardcoded, and
- * docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md owns replacing it with a typed
- * pool + selector.
+ * Identity is chosen by `selectPowerExercise` from Sam's typed pool
+ * (docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md, wired 2026-07-27). No exercise
+ * name is hardcoded here beyond the unreachable null fallback, and the med-ball
+ * family stays retired. Equipment is read again — the pool has an
+ * equipment-gated entry (Depth Jumps needs a box) and the selector drops it for
+ * athletes without one rather than substituting.
  *
  * The block is intentionally NOT added to `workout.exercises` and carries a
  * counting fence marking it non-conditioning, non-finisher, non-hard.
@@ -1394,22 +1396,41 @@ function buildSpeedBlock(
 function buildPowerBlock(
   spec: NonNullable<SessionAllocation['powerPrimer']>,
   workoutId: string,
+  selection: PowerBlockSelectionInput = {},
 ): PowerBlock {
   const repsLabel = spec.repsMin === spec.repsMax ? `${spec.repsMin}` : `${spec.repsMin}-${spec.repsMax}`;
+
+  // Identity comes from the pool + selector; DOSE still comes from the policy's
+  // spec. That split is the spec's law, which is why the entry contributes only
+  // a name and its equipment, and every number below is `spec.*`.
+  const picked = selectPowerExercise({
+    family: spec.family,
+    phase: selection.phase ?? 'Pre-season',
+    trainingAge: ladderLevelForProfile(selection.experienceLevel),
+    reduced: spec.reduced,
+    availableEquipment: selection.availableEquipment ?? [],
+    blockId: selection.blockId ?? 'block-1',
+    kind: spec.kind,
+  });
+
   const options: PowerBlockOption[] = [{
-    name: spec.family === 'lower'
-      // Sam's locked-list rename (2026-07-24): Pogo Jumps → Pogo Hops, one entry.
-      ? (spec.reduced ? 'Pogo Hops' : 'Vertical Jump')
-      : 'Explosive Push-up',
+    // The selector covers every real (family, phase, experience) cell, so null
+    // is unreachable in practice; falling back to the family's bodyweight
+    // default keeps a missing power block from being worse than a plain one.
+    name: picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up'),
     sets: spec.sets,
     repsMin: spec.repsMin,
     repsMax: spec.repsMax,
-    equipmentRequired: [],
+    equipmentRequired: [...(picked?.equipmentRequired ?? [])],
   }];
 
+  // PLACEMENT and CONTRAST guidance only. Per-exercise coaching text is NOT
+  // here any more: rows render curated `EXERCISE_CUES` like every other row, so
+  // a second cue channel through `notes` would be the bypass Sam's run-7 ruling
+  // closed. What stays is the information the block carries that no exercise
+  // cue could: when to do it, and how contrast pairs with the heavy set.
   const notes = [
     'Do this fresh, early in the session — before the main lifts.',
-    'Every rep fast and sharp. Stop or reduce if reps get slow or sloppy.',
   ];
   if (spec.kind === 'contrast') {
     notes.push('Contrast: perform sharply straight after your heavy set, then rest fully before the next round.');
@@ -1431,6 +1452,19 @@ function buildPowerBlock(
       isFinisher: false,
     },
   };
+}
+
+/** Context the power selector needs that the policy's dose spec does not carry. */
+interface PowerBlockSelectionInput {
+  phase?: SeasonPhase;
+  experienceLevel?: ExperienceLevel | null;
+  availableEquipment?: readonly string[];
+  /**
+   * Training-block identity — the mini-cycle number, NOT the microcycle/week.
+   * Seeding on the week would re-pick every week and break the spec's
+   * block-stability rule.
+   */
+  blockId?: string;
 }
 
 function buildExercisesForSpeedBlock(
@@ -2425,10 +2459,13 @@ export function buildWorkoutsFromCoach(
     // fatiguing power.
     let resolvedPowerBlock: PowerBlock | undefined;
     if (planEntry?.powerPrimer && !deloadPolicy) {
-      // No equipment argument: the power block is bodyweight-only since Sam
-      // retired the medicine-ball family, so there is nothing for equipment to
-      // decide here.
-      resolvedPowerBlock = buildPowerBlock(planEntry.powerPrimer, workoutId);
+      resolvedPowerBlock = buildPowerBlock(planEntry.powerPrimer, workoutId, {
+        phase: onboardingData?.seasonPhase,
+        experienceLevel: onboardingData?.experienceLevel,
+        availableEquipment: onboardingData?.equipment ?? [],
+        // Mini-cycle = the 3-4 week block. Stable all block, rotates at rollover.
+        blockId: `mini-${rotationContext?.miniCycleNumber ?? 1}`,
+      });
     }
 
     // Deterministic plan intent always wins. Edge-authored typed intent is

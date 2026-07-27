@@ -55,7 +55,21 @@ surfaced real gaps (see "Still no video"), plus one for the unified Groin Squeez
 
 ## Still no video
 
-NONE — every pool exercise has a video after this changeset.
+**TWO — Sam's URLs needed (opened 2026-07-27 by the power-pool wiring).**
+
+- **Vertical Jump** — no `EXERCISE_DEMO_VIDEOS` entry at all.
+- **Explosive Push-up** — has an entry, but its `url` is `null`.
+
+Neither was a pool exercise when this changeset was written, so "NONE" was true
+at the time: `power_pool_pending` waived their video as a side effect of waiving
+pool + cue + video together. Wiring the power pool made them real pool
+exercises, and Sam authored their CUES the same day — so the cue half is closed
+and only the video half is open.
+
+They are held by the narrow `awaiting_sam_video` exemption, which waives video
+ALONE (cue, tag and load gates still apply). Add a URL here and remove the name
+from `AWAITING_SAM_VIDEO` in `selectableExerciseVocabulary.ts`; the ordinary
+video gate then covers it again.
 
 **Correction history.** An earlier draft listed five as missing; the 2026-07-24
 correction called that stale and claimed nothing remained. **That correction was

@@ -1513,7 +1513,14 @@ function SessionList({
 
   const renderItem = (item: SessionTemplateItem, key: string, index: number) => {
     if (item.kind === 'power') {
-      return <PowerRow key={key} block={item.block} />;
+      return (
+        <PowerRow
+          key={key}
+          block={item.block}
+          expandedCues={expandedCues}
+          toggleCue={toggleCue}
+        />
+      );
     }
     if (item.kind === 'team_training') {
       return <TeamTrainingBanner key={key} />;
@@ -1649,8 +1656,33 @@ function OptionalWorkHeader() {
  * content the athlete acts on — the prescription, the options to choose
  * between, and the coaching notes.
  */
-function PowerRow({ block }: { block: any }) {
+/**
+ * Power block row.
+ *
+ * Renders CURATED cues like every other row (Sam, 2026-07-27). It used to print
+ * `block.notes` in cue styling — per-exercise coaching text reaching the athlete
+ * without passing through `EXERCISE_CUES`, the same bypass the run-7 ruling
+ * closed elsewhere. The blocker was real: the two power exercises that shipped,
+ * `Vertical Jump` and `Explosive Push-up`, had NO curated cue, so there was
+ * nothing else to render. Sam authored them, so the row now behaves normally.
+ *
+ * `block.notes` still renders, but it now carries only PLACEMENT and CONTRAST
+ * guidance — "do this fresh, before the main lifts" — which is information about
+ * the block rather than about the movement, and which no exercise cue could
+ * carry. Per-exercise words come from the curated layer alone.
+ */
+function PowerRow({
+  block,
+  expandedCues,
+  toggleCue,
+}: {
+  block: any;
+  expandedCues: Record<string, boolean>;
+  toggleCue: (exerciseId: string) => void;
+}) {
   const options = block?.options ?? [];
+  const primaryName: string | null = options[0]?.name ?? null;
+  const cueText = primaryName ? buildCueText(primaryName) : null;
   return (
     <View
       style={styles.exerciseCard}
@@ -1687,10 +1719,17 @@ function PowerRow({ block }: { block: any }) {
         ))}
       </View>
       {(block.notes ?? []).map((note: string, index: number) => (
-        <Text key={`${block.id}-note-${index}`} style={styles.cueText}>
+        <Text key={`${block.id}-note-${index}`} style={styles.powerBlockNote}>
           {note}
         </Text>
       ))}
+
+      <CueDisclosure
+        exerciseId={String(block.id ?? 'power')}
+        cueText={cueText}
+        expandedCues={expandedCues}
+        toggleCue={toggleCue}
+      />
     </View>
   );
 }
@@ -3544,6 +3583,15 @@ const styles = StyleSheet.create({
   // Options sit on the page with the same zero-surface treatment as every
   // exercise row; only the dose takes the lime, matching the weight control.
   powerOptions: { gap: 2, marginTop: 4 },
+  // Placement / contrast guidance about the BLOCK. Deliberately not `cueText`:
+  // per-exercise coaching words come from the curated cue layer via
+  // CueDisclosure, and sharing the cue style would blur that boundary again.
+  powerBlockNote: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
+  },
   powerOptionRow: {
     flexDirection: 'row',
     alignItems: 'baseline',

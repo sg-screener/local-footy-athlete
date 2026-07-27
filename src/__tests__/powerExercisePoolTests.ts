@@ -3,16 +3,13 @@
  *
  *   docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md (Sam, APPROVED design input)
  *
- * Covers P1-P5 and P7. Two invariants are deliberately NOT here:
+ * Covers P1-P7. One invariant is deliberately NOT here:
  *
- *   P6 (counting fence byte-identical) belongs to whatever WIRES the selector
- *      into `buildPowerBlock`. Nothing is wired yet, so there is no fence to
- *      compare — asserting it here would assert against the old hardcoded
- *      path and prove nothing about the new one.
  *   P8 (athlete override persists for the block, routed through the
  *      transaction owner, undo restores the app pick) is ruled into execution
- *      order step 5, where the per-session controls get designed once. See the
- *      Step 5 queue in docs/SAM_EXECUTION_ORDER_2026-07-25.md.
+ *      order step 5, where the per-session controls (+ / - / swap / move) get
+ *      designed once — a power-only affordance would be the special case Sam
+ *      rejected. See the Step 5 queue in docs/SAM_EXECUTION_ORDER_2026-07-25.md.
  *
  * Run: npm run test:power-pool
  */
@@ -32,6 +29,8 @@ import {
   type PowerSelectionContext,
 } from '../rules/powerExercisePool';
 import { TRAINING_AGE_LEVELS, type TrainingAgeLevel } from '../rules/experienceCrosswalk';
+import { isSelectable, exemptionsFor, isExempt } from '../data/selectableExerciseVocabulary';
+import { EXERCISE_CUES } from '../data/exerciseCues';
 import type { SeasonPhase } from '../types/domain';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -327,24 +326,120 @@ for (const level of TRAINING_AGE_LEVELS) {
 
 /* ── Vocabulary honesty ── */
 
-console.log('\n[8] UNWIRED — the pool changes no athlete-visible behaviour yet');
+console.log('\n[8] WIRED — the pool is now a real selectability source');
 
 ok(
   'every pool name is a real curated exercise name',
   POWER_EXERCISE_POOL.every((entry) => entry.name.trim() !== ''),
 );
 
-// The pool is not one of the four selectability sources, so building it must not
-// have made anything selectable. Wiring it retires `power_pool_pending`, which
-// is what makes the cue/video gates bite — deliberately a separate unit.
+// Wiring the pool retired `power_pool_pending` for the names it places, which is
+// what makes the content-completeness gates bite. Both directions matter: the
+// pool must BE a source (or nothing it names can be prescribed), and every entry
+// must now carry a curated cue (or the gates it just became subject to fail).
+const unselectable = POWER_EXERCISE_POOL.filter((entry) => !isSelectable(entry.name));
 ok(
-  'the pool is not yet a selectability source',
+  'every pool entry is selectable — the pool is a selectability source',
+  unselectable.length === 0,
+  unselectable.map((entry) => entry.name).join(', '),
+);
+
+const stillExempt = POWER_EXERCISE_POOL.filter((entry) =>
+  exemptionsFor(entry.name).includes('power_pool_pending'),
+);
+ok(
+  'no placed entry still claims the power_pool_pending exemption',
+  stillExempt.length === 0,
+  stillExempt.map((entry) => entry.name).join(', '),
+);
+
+const cueless = POWER_EXERCISE_POOL.filter(
+  (entry) => !EXERCISE_CUES[entry.name] || EXERCISE_CUES[entry.name].primaryCue.trim() === '',
+);
+ok(
+  'every pool entry has a curated cue — the block can be cued like any row',
+  cueless.length === 0,
+  cueless.map((entry) => entry.name).join(', '),
+);
+
+// Wiring turned these into pool exercises, which exposed a video gap that
+// `power_pool_pending` had been hiding by waiving video wholesale. The narrow
+// exemption keeps the gap visible and must stay narrow: video ONLY, never cue.
+const videoExempt = POWER_EXERCISE_POOL.filter((entry) =>
+  exemptionsFor(entry.name).includes('awaiting_sam_video'),
+).map((entry) => entry.name);
+
+ok(
+  'exactly the two known entries await a video from Sam',
+  videoExempt.slice().sort().join(',') === ['Explosive Push-up', 'Vertical Jump'].join(','),
+  `found: ${videoExempt.join(', ')}`,
+);
+
+ok(
+  'awaiting_sam_video waives video ALONE — never a cue',
+  videoExempt.every((name) => !isExempt(name, 'cue') && isExempt(name, 'video')),
+);
+
+ok(
+  'the open video gap is recorded where Sam looks for it',
   (() => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const vocab = require('../data/selectableExerciseVocabulary');
-    return vocab.isSelectable('Vertical Jump') === false;
+    const videoDoc = fs.readFileSync(
+      path.join(repoRoot, 'docs/VIDEO_CHANGESET_2026-07-24.md'),
+      'utf8',
+    );
+    const section = videoDoc.split('## Still no video')[1] ?? '';
+    return videoExempt.every((name) => section.includes(name));
   })(),
-  'Vertical Jump became selectable — the cue/video gates now apply and it has no cue',
+);
+
+// Sam's cue sheet is canonical over the spec table's cue text (CUE_CHANGESET
+// 2026-07-23, "align the power pool spec cues to these"), so `authoredCueIntent`
+// must never be what an athlete reads.
+ok(
+  'authoredCueIntent is provenance only, never a render path',
+  !/authoredCueIntent/.test(
+    fs.readFileSync(path.join(repoRoot, 'src/screens/home/DayWorkoutScreenV2.tsx'), 'utf8'),
+  ) &&
+    !/authoredCueIntent/.test(
+      fs.readFileSync(path.join(repoRoot, 'src/data/defaultProgram.ts'), 'utf8'),
+    ),
+);
+
+// The migration this unit closes: per-exercise coaching text must not reach the
+// athlete through `block.notes` in cue styling.
+const screenSource = fs.readFileSync(
+  path.join(repoRoot, 'src/screens/home/DayWorkoutScreenV2.tsx'),
+  'utf8',
+);
+ok(
+  'PowerRow renders curated cues through CueDisclosure',
+  /function PowerRow[\s\S]*?<CueDisclosure/.test(screenSource),
+);
+ok(
+  'PowerRow no longer prints block.notes in cue styling',
+  !/block\.notes[\s\S]{0,200}styles\.cueText/.test(screenSource),
+);
+
+/* ── P6 — the counting fence survived the wiring ── */
+
+console.log('\n[9] P6 — the counting fence is untouched');
+
+// The fence is what keeps the power block honest: not conditioning, not a
+// finisher, not a hard exposure, not main strength. Wiring identity selection
+// must not have shifted it, so assert the literal is still exactly those four
+// values. The §18 / bible / ownership suites cover the behavioural half.
+const programSource = fs.readFileSync(
+  path.join(repoRoot, 'src/data/defaultProgram.ts'),
+  'utf8',
+);
+const fence = /counting: \{\s*hardExposure: false,\s*mainStrength: false,\s*conditioningCredit: 'none',\s*isFinisher: false,\s*\}/;
+ok('the power block counting fence is byte-identical', fence.test(programSource));
+
+// Dose must still come from the policy's spec, not from the pool. If a future
+// edit read a number off a pool entry, this is where it shows up.
+ok(
+  'buildPowerBlock stamps the dose from the policy spec, not the pool',
+  /sets: spec\.sets,\s*repsMin: spec\.repsMin,\s*repsMax: spec\.repsMax,/.test(programSource),
 );
 
 /* ── Result ── */

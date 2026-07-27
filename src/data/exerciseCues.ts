@@ -381,6 +381,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Split stance, drive hard into the bar.',
     secondaryCue: 'Full lockout, reset quickly.',
   },
+  'Explosive Push-up': {
+    primaryCue: 'Explode up, hands leave the floor. Land soft.',
+    secondaryCue: 'Stop when reps slow. Sore wrists? Elevate hands on box.',
+  },
   'Erg EMOM': {
     primaryCue: "Hit X number of calories every minute, the faster you do them the more rest you get.",
     secondaryCue: "",
@@ -643,6 +647,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Step back, drop straight down.',
     secondaryCue: 'Front knee tracks over the toe.',
   },
+  'RFE Split Squat Jump': {
+    primaryCue: 'Back foot on bench, slight lean forward, jump straight up off the front leg.',
+    secondaryCue: 'Land soft and controlled.',
+  },
   'Row Intervals': {
     primaryCue: 'Full catch, explosive drive.',
     secondaryCue: 'Maintain power, recover completely.',
@@ -778,6 +786,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   'Tricep Pushdown': {
     primaryCue: 'Keep elbows pinned, press to full lockout.',
     secondaryCue: 'Constant tension, no jerking.',
+  },
+  'Vertical Jump': {
+    primaryCue: 'Every rep fast and sharp. Land soft in athletic stance.',
+    secondaryCue: 'Stop if reps get slow.',
   },
   'Walking Lunges': {
     primaryCue: 'Long stride, tall through the midline.',

@@ -108,7 +108,7 @@ They belong to the follow-up purge unit — see NOT-COVERED in the report.
 - hamstring curls → Hamstring Curl  (one entry per Sam "no double ups" — cue exists, NEEDS pool s)
 - seated DB OHP → Seated DB Press  (already curated — alias)
 - RFE split squats → Bulgarian Split Squats  (RFE = rear-foot-elevated = Bulgarian — alias)
-- RFE Split Squat Jump → RFE Split Squat Jump  (kept — power-class jump, power unit owns)
+- RFE Split Squat Jump → RFE Split Squat Jump  (kept — power-class jump; cue authored by Sam 2026-07-27, pool placement still open)
 - trap bar DL → Trap Bar Deadlift  (curated exists — alias cleanup (Sam: only need one))
 - weighted pull-ups → Pull-Ups  (REMOVE as entry; add weight line to Pull-Ups cue (proposed b)
 - Pogo Jumps / Pogo Jump → **Pogo Hops** (Sam rename; power block reduced-option adopts new name)
@@ -306,27 +306,48 @@ Merge survivors, for completeness: **Vertical Jump**, **Explosive Push-up**,
 **Inverted Row (Bodyweight)**, **Seated DB Press**, **Bulgarian Split Squats**,
 **Trap Bar Deadlift**, **Pull-Ups** (all five already curated and pooled).
 
-## POWER — STAGED, not placed
+## POWER — PLACED (2026-07-27), three still staged
 
 Per Sam's note: wire per `docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md` where it
-is built, else stage with pointers — do not invent placement. That spec is
-APPROVED but NOT BUILT (`selectPowerExercise` does not exist; `buildPowerBlock`
-still hardcodes identity at `src/data/defaultProgram.ts:1389`).
+is built, else stage with pointers — do not invent placement. **That spec is now
+BUILT and WIRED** (2026-07-27): `POWER_EXERCISE_POOL` + `selectPowerExercise` in
+`src/rules/powerExercisePool.ts`, consumed by `buildPowerBlock`, which no longer
+hardcodes identity. The pool is a real selectability source, so its entries are
+ordinary vocabulary and `power_pool_pending` no longer covers them.
 
-So these six ship their cue, video and tags, and are excluded from the AI
-vocabulary by the typed exemption kind `power_pool_pending`. Pool placement
-lands with the power unit, which owns it:
+Sam authored the two missing cues the same day, which was the actual blocker —
+`PowerRow` hardcoded `block.notes` precisely because the two power exercises that
+shipped could not be cued.
+
+**Placed in the Power pool:**
 
 | Name | Cue ships | Video ships | Spec row |
 |---|---|---|---|
-| Vertical Jump | yes | no — none pinned | spec "Existing entries", lower default |
-| Explosive Push-up | yes | no — none pinned | spec "Existing entries", upper default |
-| Pogo Hops | yes (new) | yes (new) | spec "Existing entries", reduced-lower takeover |
-| Kneeling Jump | yes (new) | yes (already in app) | spec "New entries", min training age `consistent` |
-| Lateral Jump | yes (new) | yes (already in app) | spec "New entries", no training-age minimum |
-| Speed Trap Bar Deadlift | yes (new) | yes (new) | NOT in the spec — new speed-lift family, see below |
+| Vertical Jump | yes (Sam 2026-07-27) | **no — `awaiting_sam_video`** | spec "Existing entries", lower default |
+| Explosive Push-up | yes (Sam 2026-07-27) | **no — `awaiting_sam_video`** | spec "Existing entries", upper default |
+| Pogo Hops | yes | yes | spec "Existing entries", reduced-lower takeover |
+| Kneeling Jump | yes | yes | spec "New entries", min training age `consistent` |
+| Lateral Jump | yes | yes | spec "New entries", no training-age minimum |
+| Depth Jumps | yes | yes | spec "New entries", min `developing`, needs a Box |
+| Lateral Bounds | yes | yes | spec "New entries", min `developing` |
+
+Wiring the pool turned `Vertical Jump` and `Explosive Push-up` into pool
+exercises, which exposed a video gap that `power_pool_pending` had been hiding by
+waiving pool + cue + video together. They are now held by the narrow
+`awaiting_sam_video` exemption — video ALONE, so the cue, tag and load gates
+still cover them — and listed in `docs/VIDEO_CHANGESET_2026-07-24.md` under
+"Still no video". Two URLs are Sam's to supply.
+
+**Still STAGED — the spec's tables do not place these:**
+
+| Name | Cue ships | Video ships | Why still staged |
+|---|---|---|---|
+| Speed Trap Bar Deadlift | yes | yes | NOT in the spec — barbell speed lift, see below |
 | Speed Bench | yes | yes | NOT in the spec — pre-existing `power`-classified lift |
-| RFE Split Squat Jump | no — none authored | no — none pinned | spec-adjacent; kept per merge ruling |
+| RFE Split Squat Jump | yes (Sam 2026-07-27) | no — none pinned | spec-adjacent; kept per merge ruling |
+
+These three carry a curated cue and lack only a POOL, so `power_pool_pending`
+now waives placement for a much smaller set than when it was written.
 
 **Open for the power unit** (recorded, not invented here): the spec's pool has a
 `family` axis of `lower` / `upper` only. `Speed Trap Bar Deadlift` and

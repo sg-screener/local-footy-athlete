@@ -33,6 +33,7 @@
  *   POOL_REGISTRY          arms / prehab / core / mobility / recovery
  *   MOBILITY_FLOW_TEMPLATES recovery flow movements
  *   CONDITIONING_META      conditioning formats
+ *   POWER_EXERCISE_POOL    power-block entries (Sam's power spec, wired 2026-07-27)
  *
  * Enforced by: exerciseLockedListTests §5, exerciseContentReconciliationTests,
  * generationVocabularyContractTests §1.
@@ -41,6 +42,7 @@
 import { POOL_REGISTRY } from './exercisePools';
 import { STRENGTH_POOLS, type PoolSlotKey, type PoolRole } from './exercisePoolsStrength';
 import { MOBILITY_FLOW_TEMPLATES } from './mobilityFlowTemplates';
+import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import { CONDITIONING_META } from './exerciseTags';
 
 // ─── Typed exemption kinds ───
@@ -55,7 +57,8 @@ export type ContentExemptionKind =
   | 'zone1_recovery'
   | 'mobility_untagged'
   | 'power_pool_pending'
-  | 'load_ruling_pending';
+  | 'load_ruling_pending'
+  | 'awaiting_sam_video';
 
 /** The completeness fields an exemption kind can waive. */
 export type ContentField = 'cue' | 'video' | 'tags' | 'pool' | 'load';
@@ -89,12 +92,24 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
   power_pool_pending: {
     waives: ['pool', 'cue', 'video'],
     ruling:
-      'Power exercise. Its pool placement is owned by '
-      + 'docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md, which is APPROVED but NOT '
-      + 'BUILT (selectPowerExercise does not exist; buildPowerBlock still '
-      + 'hardcodes identity). Sam, locked-list: wire it where that spec is built, '
-      + 'do not invent placement here. Excluded from the AI vocabulary until '
-      + 'placed — the app names these, the generator does not.',
+      'Power exercise with no pool placement. The power pool itself was BUILT and '
+      + 'wired on 2026-07-27 (POWER_EXERCISE_POOL + selectPowerExercise), so the '
+      + 'seven entries that spec places are no longer exempt. What remains are the '
+      + 'speed-lift / contrast names the spec\'s tables do not place: they carry a '
+      + 'curated cue and a video, and lack only a pool. Sam: do not invent '
+      + 'placement here. Excluded from the AI vocabulary until placed — the app '
+      + 'names these, the generator does not.',
+  },
+  awaiting_sam_video: {
+    waives: ['video'],
+    ruling:
+      'Selectable and fully cued, but has no demo video yet. Wiring the power '
+      + 'pool (2026-07-27) turned these two into pool exercises, and '
+      + 'power_pool_pending had been waiving their video as a side effect of '
+      + 'waiving everything. Sam authored their CUES on 2026-07-27; the two URLs '
+      + 'are his to supply. Narrow on purpose — it waives video ALONE, so the cue, '
+      + 'tag and load gates still cover them, and it is listed in '
+      + 'docs/VIDEO_CHANGESET_2026-07-24.md under "Still no video".',
   },
   load_ruling_pending: {
     waives: ['load'],
@@ -123,6 +138,18 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
  * check). A second copy would be a second thing to forget.
  */
 export const LOAD_RULING_PENDING = new Set<string>([]);
+
+/**
+ * Selectable, cued, but with no demo video yet — Sam's two URLs to supply.
+ *
+ * Both became pool exercises when the power pool was wired (2026-07-27). Keep
+ * this list EMPTY-able: as soon as Sam adds a URL to the video changeset, the
+ * name comes out of here and the ordinary video gate covers it again.
+ */
+export const AWAITING_SAM_VIDEO = new Set<string>([
+  'Vertical Jump',
+  'Explosive Push-up',
+]);
 
 /**
  * Zone-1 cyclical recovery. Selectable (EASY_CARDIO_POOL) and cued, but not
@@ -162,11 +189,14 @@ const MOBILITY_UNTAGGED = new Set<string>([
  * fails if the two diverge.
  */
 export const POWER_POOL_PENDING = new Set<string>([
-  'Vertical Jump',
-  'Explosive Push-up',
-  'Pogo Hops',
-  'Kneeling Jump',
-  'Lateral Jump',
+  // Sam's power pool (POWER_EXERCISE_POOL) is now a real selectability source,
+  // so the seven entries it places are no longer pending and no longer exempt —
+  // Sam authored the two missing cues (2026-07-27) and the completeness gates
+  // now cover them like any other selectable exercise.
+  //
+  // These three are NOT in the spec's pool tables. They are speed-lift and
+  // contrast entries whose placement the spec does not decide, so they stay
+  // pending. Each HAS a curated cue and video; what they still lack is a pool.
   'Speed Trap Bar Deadlift',
   'Speed Bench',
   'RFE Split Squat Jump',
@@ -189,6 +219,7 @@ export function exemptionsFor(name: string): ContentExemptionKind[] {
   if (POWER_POOL_PENDING.has(name)) kinds.push('power_pool_pending');
   if (MOBILITY_UNTAGGED.has(name)) kinds.push('mobility_untagged');
   if (LOAD_RULING_PENDING.has(name)) kinds.push('load_ruling_pending');
+  if (AWAITING_SAM_VIDEO.has(name)) kinds.push('awaiting_sam_video');
   return kinds;
 }
 
@@ -286,6 +317,7 @@ export function selectableVocabularyGroups(): VocabularyGroup[] {
     'Recovery flows',
     MOBILITY_FLOW_TEMPLATES.flatMap((t) => t.movements.map((m) => m.name)),
   );
+  push('Power', POWER_EXERCISE_POOL.map((entry) => entry.name));
   push('Conditioning', Object.keys(CONDITIONING_META));
 
   return groups;

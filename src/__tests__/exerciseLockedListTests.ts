@@ -24,6 +24,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { isPowerPoolExercise } from '../rules/powerExercisePool';
 import { POOL_REGISTRY, type PoolExercise } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
@@ -162,9 +163,19 @@ function parseFinalNames(): { entry: string; ships: string; pool: string; placem
 }
 
 /** The POWER — STAGED table's first column. */
+/**
+ * The names still STAGED, not placed.
+ *
+ * The POWER section now carries TWO tables — placed entries and still-staged
+ * ones — since the pool was built and wired on 2026-07-27. Parsing is anchored
+ * to the "Still STAGED" sub-heading so a placed entry can never be miscounted as
+ * staged, which would let a real pool member keep a placement exemption.
+ */
 function parsePowerStaged(): string[] {
   const names: string[] = [];
-  for (const line of section('## POWER — STAGED, not placed').split('\n')) {
+  const powerSection = section('## POWER — PLACED (2026-07-27), three still staged');
+  const stagedTable = powerSection.split('**Still STAGED')[1] ?? '';
+  for (const line of stagedTable.split('\n')) {
     if (!line.startsWith('| ')) continue;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
     if (cells.length !== 4) continue;
@@ -273,7 +284,8 @@ function main(): void {
         && additions.every((a) => shipsAs.has(a.entry)),
       `table rows=${finalNames.length} additions=${additions.length}; `
         + `missing: ${additions.filter((a) => !shipsAs.has(a.entry)).map((a) => a.entry).join(', ')}`);
-    ok('the power staging table parsed', powerStaged.length === 8, `parsed ${powerStaged.length}`);
+    // Was 8 before the pool was built; five of those are now really placed.
+    ok('the power staging table parsed', powerStaged.length === 3, `parsed ${powerStaged.length}`);
     ok('the ruled-load table parsed', loadRulings.length === 7, `parsed ${loadRulings.length}`);
   }
 
@@ -369,9 +381,12 @@ function main(): void {
       'Upper push': (n) => slotHas('horizontal_push', n),
       'Conditioning': (n) => Boolean(CONDITIONING_META[n]),
       // Sam's note: wire per POWER_EXERCISE_POOL_SPEC where it is built, else
-      // stage with pointers. It is not built, so "placed" here means "carries
-      // the typed staging exemption", never a guessed pool slot.
-      'Power': (n) => hasExemption(n, 'power_pool_pending'),
+      // stage with pointers. It IS built now (POWER_EXERCISE_POOL +
+      // selectPowerExercise, wired 2026-07-27), so "placed" means real pool
+      // membership. The speed-lift names that spec's tables do not place remain
+      // legitimately staged behind the typed exemption — still never a guessed
+      // pool slot.
+      'Power': (n) => isPowerPoolExercise(n) || hasExemption(n, 'power_pool_pending'),
     };
 
     const wrongName: string[] = [];

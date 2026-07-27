@@ -21,6 +21,7 @@ import { EXERCISE_CUES } from '../data/exerciseCues';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVideoService';
+import { AWAITING_SAM_VIDEO } from '../data/selectableExerciseVocabulary';
 import {
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
@@ -359,8 +360,27 @@ function main(): void {
       }
     }
     ok('every authored URL is applied verbatim', wrong.length === 0, wrong.join('\n      '));
-    ok('the changeset records no remaining gaps',
-      /NONE — every pool exercise has a video after this changeset\./.test(videoDoc));
+    // This used to assert the literal sentence "NONE — every pool exercise has a
+    // video after this changeset." That was true when written, and became false
+    // when the power-pool wiring (2026-07-27) turned two exempt names into pool
+    // exercises. Deriving the check from AWAITING_SAM_VIDEO is stronger than any
+    // fixed string: stale prose cannot satisfy it, and when Sam supplies a URL
+    // and empties the set, the doc section must be emptied to match.
+    const stillNoVideo = videoDoc.split('## Still no video')[1] ?? '';
+    const awaiting = [...AWAITING_SAM_VIDEO];
+
+    ok('every name awaiting a video is recorded in the changeset',
+      awaiting.filter((name) => !stillNoVideo.includes(name)).length === 0,
+      awaiting.filter((name) => !stillNoVideo.includes(name)).join(', '));
+
+    ok('every name awaiting a video genuinely has none',
+      awaiting.filter((name) => !!lookupExerciseDemo(name).url).length === 0,
+      awaiting.filter((name) => !!lookupExerciseDemo(name).url).join(', '));
+
+    ok('the changeset claims no gaps only when there are none',
+      awaiting.length > 0
+        ? !/NONE — every pool exercise has a video/.test(videoDoc)
+        : /NONE — every pool exercise has a video/.test(videoDoc));
   }
 
   console.log('\n[9] Depth Jumps / Lateral Bounds power-pool spec matches the sheet');
