@@ -207,6 +207,55 @@ Two things in it that are findings rather than data entry:
 - A third tab carries the **anchor multipliers**, which are unauthored too and sit
   upstream of all 77 — an error there moves every suggested weight in the app at once.
 
+## ✅ SAM'S ANCHOR-MULTIPLIER RULINGS — 2026-07-28
+
+The multiplier pre-section of `LOAD_RATIO_REVIEW_2026-07-28.xlsx` is **complete**.
+These sit upstream of all 77 ratios: `anchor 1RM = bodyweight × multiplier`.
+
+> Squat ladder: I don't squat 0.5 · Less than bodyweight 0.75 · Around bodyweight 1.0 · 1.5x bodyweight 1.5 · 2x bodyweight+ 2.0 · Not sure = the "Less than bodyweight" value, tied — if less-than ever changes, Not-sure follows it.
+
+> Bench ladder: I don't bench 0.5 · Less than bodyweight 0.75 · Around bodyweight 1.0 · 1.25x bodyweight 1.25 · 1.5x bodyweight+ 1.5 · Not sure = tied to "Less than bodyweight", same rule.
+
+> Missing bodyweight: FAIL LOUD, no default.
+
+### What changed against the unauthored values
+
+| Answer | Anchor | Was | Ruled |
+|---|---|---|---|
+| I don't squat | squat | 0.6 | **0.5** |
+| Less than bodyweight | squat | 0.8 | **0.75** |
+| Not sure | squat | 0.8 | **tied → 0.75** |
+| I don't bench | bench | 0.4 | **0.5** |
+| Less than bodyweight | bench | 0.65 | **0.75** |
+| Not sure | bench | 0.65 | **tied → 0.75** |
+| Around bodyweight / 1.25x / 1.5x / 2x+ | both | — | unchanged |
+| Missing bodyweight | — | 82 kg default | **FAIL LOUD** |
+
+Six of thirteen rows moved. The bench ladder's floor and "less than" both rose, which
+raises every bench-anchored starting weight for the athletes who answered that way —
+and answers the gap flagged at the top of the sheet, where every bench-anchored
+kilogram had been resting on the app's own `0.65` default rather than on anything Sam
+had said.
+
+### "Tied" is structural, not a copied number
+
+`Not sure` **derives** from `Less than bodyweight` in code — it is not a second literal
+that happens to match today. Sam's rule is explicit that if less-than moves, Not-sure
+follows, so a duplicated `0.75` would be a second representation waiting to drift.
+`test:anchor-multipliers` asserts the tie is a reference and not a literal.
+
+### FAIL LOUD replaces the 82 kg default
+
+`DEFAULT_BODYWEIGHT_KG = 82` ("average AFL player") is **gone**. With no recorded
+bodyweight there is no anchor, so `estimateAnchors` refuses and no weight is
+prescribed — the card shows `—` rather than a number derived from a guess about the
+athlete's body. Same principle as the render-truth "BW": absence renders as absence.
+
+This is now rarely reachable, because onboarding requires a bodyweight in 30–200 kg
+before it will advance. It remains reachable for profiles created before that gate.
+
+**Shipped** as `src/data/anchorMultipliers.ts` + `test:anchor-multipliers`.
+
 ## Small unit — onboarding numeric answers have no authored bounds
 
 **Status: logged 2026-07-28, read-only finding. Needs Sam-authored ranges before build.**

@@ -26,34 +26,16 @@
 
 import type { OnboardingData, SquatStrength, BenchStrength } from '../types/domain';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
-
-// ─── Constants ───
-
-const DEFAULT_BODYWEIGHT_KG = 82; // Average AFL player if not provided
+import {
+  BENCH_ANCHOR_MULTIPLIERS,
+  SQUAT_ANCHOR_MULTIPLIERS,
+} from '../data/anchorMultipliers';
 
 // ─── Anchor 1RM Estimation ───
-
-/**
- * Convert a categorical squat strength level to an estimated 1RM multiplier
- * relative to bodyweight. Conservative — better to start light.
- */
-const SQUAT_MULTIPLIERS: Record<SquatStrength, number> = {
-  "I don't squat":       0.6,
-  'Less than bodyweight': 0.8,
-  'Around bodyweight':    1.0,
-  '1.5x bodyweight':     1.5,
-  '2x bodyweight+':      2.0,
-  'Not sure':            0.8,
-};
-
-const BENCH_MULTIPLIERS: Record<BenchStrength, number> = {
-  "I don't bench":        0.4,
-  'Less than bodyweight': 0.65,
-  'Around bodyweight':    1.0,
-  '1.25x bodyweight':    1.25,
-  '1.5x bodyweight+':    1.5,
-  'Not sure':            0.65,
-};
+//
+// The multiplier ladders are AUTHORED and live in `data/anchorMultipliers` —
+// Sam ruled them 2026-07-28. They are not restated here: one owner, so a change
+// to the ruling cannot leave a stale copy behind in this module.
 
 export interface AnchorEstimates {
   bodyweightKg: number;
@@ -62,13 +44,28 @@ export interface AnchorEstimates {
 }
 
 /**
- * Derive numeric 1RM estimates from onboarding data.
- * Returns conservative estimates — starting too light is always better than too heavy.
+ * Derive 1RM anchors from onboarding data, or REFUSE.
+ *
+ * FAIL LOUD (Sam, 2026-07-28): "Missing bodyweight: FAIL LOUD, no default."
+ * This used to substitute `DEFAULT_BODYWEIGHT_KG = 82` ("average AFL player").
+ * That number was a guess about the athlete's body which then prescribed every
+ * load in the app — the whole chain hangs off it. With no recorded bodyweight
+ * there is no anchor, so nothing is prescribed and the card shows "—".
+ *
+ * Same principle as the render-truth "BW", applied at the top of the chain
+ * rather than the bottom: absence renders as absence.
+ *
+ * Rarely reached now — onboarding requires a bodyweight in 30–200 kg before it
+ * will advance — but still reachable for profiles created before that gate.
+ *
+ * @returns the anchors, or null when no bodyweight is recorded.
  */
-export function estimateAnchors(data: OnboardingData): AnchorEstimates {
-  const bw = data.weightKg || DEFAULT_BODYWEIGHT_KG;
-  const squatMul = SQUAT_MULTIPLIERS[data.squatStrength || 'Not sure'];
-  const benchMul = BENCH_MULTIPLIERS[data.benchStrength || 'Not sure'];
+export function estimateAnchors(data: OnboardingData): AnchorEstimates | null {
+  const bw = data.weightKg;
+  if (!bw || bw <= 0) return null;
+
+  const squatMul = SQUAT_ANCHOR_MULTIPLIERS[data.squatStrength || 'Not sure'];
+  const benchMul = BENCH_ANCHOR_MULTIPLIERS[data.benchStrength || 'Not sure'];
 
   return {
     bodyweightKg: bw,
@@ -937,6 +934,8 @@ export function estimateStartingWeight(
   if (authority.kind !== 'prescribed') return null;
 
   const anchors = estimateAnchors(onboardingData);
+  if (anchors === null) return null;
+
   const { profile } = authority;
   const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
   const rounded = roundToEquipment(anchor1RM * profile.ratio, profile.equipment);

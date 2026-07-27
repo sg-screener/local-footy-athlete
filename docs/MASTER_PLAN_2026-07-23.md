@@ -145,6 +145,19 @@ The most important remaining work. Sequence:
           `equality_bound` from day one — the strongest kind in the provenance
           lock — instead of arriving as another unauthored multiplier needing a
           ruling session later. See `docs/PROVENANCE_INVENTORY_2026-07-28.md`.
+      **The load-ratio sheet's baked-in rep assumption is a known stopgap.**
+      Every ratio in `EXERCISE_LOAD_MAP` bakes in a rep-range discount, which
+      means it silently assumes ONE rep scheme — the ratio is a working weight,
+      not a percentage, so it can only be right for the reps it was tuned
+      against. When the continuum table lands, starting estimates become
+      rep-aware (anchor → implied max → % for the prescribed reps), and at that
+      point most per-exercise ratios become candidates to **collapse** into
+      simpler relative-strength ratios plus the one table. That is a reduction
+      in representations, not an addition: 77 tuned constants become N
+      relative-strength ratios and one authored continuum.
+      **Sam's 2026-07-28 rulings are therefore scoped as FIRST-SESSION VALUES,
+      not permanent law** — they make today's estimates authored and honest;
+      they are not a commitment to the per-exercise-ratio shape surviving 4.1a.
 - 4.2 Decisions written into the Bible/rules kernel as invariants,
       tests-first (same discipline as §18 work).
 - 4.3 Generation fixes to meet them; multi-week + all-season cold-start
