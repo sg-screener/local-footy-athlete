@@ -659,6 +659,46 @@ let mutationCount = 0;
     has(mutant, 'planner_selected_target_miss'));
 }
 
+// ── THE DELOAD LAW (Sam, 2026-07-27) — "Power/speed: KEEP a small sharp dose.
+// Power is not removed on a deload; a deload is not a reason to lose sharpness."
+//
+// §18 removed power on every deload, every low-readiness week and every cooked
+// week, through `noPower`, and on the illness week through its own removal
+// reason. The deload law shipped in the DOSE layer (`deloadWeekRules`) and never
+// reached §18, so the contradiction was live in two representations at once:
+// DELOAD_LAW.keepPower === true while §18 set eligible: false.
+console.log('\n[deload law] power survives every door that deloads');
+
+ok('a scheduled deload week KEEPS power',
+  contract('in_season_game_week', { weekKind: 'deload' }).power.eligible === true,
+  contract('in_season_game_week', { weekKind: 'deload' }).power.removalReason);
+
+ok('a low-readiness week KEEPS power',
+  contract('in_season_game_week', { readiness: 'low' }).power.eligible === true,
+  contract('in_season_game_week', { readiness: 'low' }).power.removalReason);
+
+ok('a cooked-readiness week KEEPS power',
+  contract('in_season_game_week', { cookedReadiness: true }).power.eligible === true,
+  contract('in_season_game_week', { cookedReadiness: true }).power.removalReason);
+
+ok('an illness_recovery week KEEPS power',
+  contract('illness_recovery').power.eligible === true,
+  contract('illness_recovery').power.removalReason);
+
+// The reason literal must go with the behaviour — a removal reason that no
+// longer describes anything is how the old rule grows back.
+ok('no contract still cites the retired low_readiness_or_deload removal reason',
+  (['in_season_game_week', 'illness_recovery'] as const).every((mode) =>
+    contract(mode, { weekKind: 'deload', readiness: 'low', cookedReadiness: true })
+      .power.removalReason !== 'low_readiness_or_deload'));
+
+// A genuine SAFETY prohibition still removes power. The law retires deload as a
+// reason to remove it, not injury.
+ok('a full pattern restriction still removes power',
+  contract('in_season_game_week', {
+    prohibitedPatterns: ['squat', 'hinge', 'push', 'pull'],
+  }).power.eligible === false);
+
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);
 console.log(`SECTION18_V2_TOTALS scenarios=12 rules=12 properties=${propertyCount} mutations=${mutationCount}`);
 if (fail > 0) process.exit(1);

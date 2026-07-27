@@ -105,10 +105,11 @@ function createBaseContract(
     .filter((day) => selectedSet.has(day));
   const fixtureCredit = input.hasGame && input.gameDay !== null ? 1 : 0;
   const anchorCredit = teamDays.length + fixtureCredit;
-  // In illness_recovery the athlete isn't attending anchors, so anchor credit
-  // must not FLOOR any requirement — nothing is required this week. Credited
-  // counts stay factual; only the required/selected floors drop.
-  const floorCredit = targets.mode === 'illness_recovery' ? 0 : anchorCredit;
+  // No mode-specific floor lives here any more. illness_recovery used to zero
+  // the anchor credit at this line so it could not FLOOR a requirement; it is now
+  // a decoration applied AFTER the week is built (`asIllnessRecoveryWeek`), which
+  // zeroes the requirements directly. Credited counts stay factual either way.
+  const floorCredit = anchorCredit;
   const conditioningRequired = Math.max(targets.conditioning.required, floorCredit);
   const selectedConditioning = Math.max(
     targets.conditioning.selectedTarget ?? targets.conditioning.required,
@@ -543,39 +544,60 @@ export function buildInSeasonByeRecoveryExposureContract(
   return applyCommonSafetyReductions(contract, input);
 }
 
-export function buildIllnessRecoveryExposureContract(
-  input: WeeklyExposureContractInput,
-): WeeklyExposureContract {
-  const selected = phaseSelection(input, 'illness_recovery');
-  const teams = uniqueExposureDays(input.teamTrainingDayNumbers).length;
-  const contract = createBaseContract(input, {
-    mode: 'illness_recovery',
-    subphase: 'illness_recovery',
-    // Every §18 minimum is lifted: nothing is required this week. Selected work
-    // is OPTIONAL, reduced and recovery-tier — not cleared to rest.
-    strength: { required: 0, preferredMin: 0, preferredMax: 2, selectedTarget: selected.mainStrength },
-    conditioning: { required: 0, preferredMin: 0, preferredMax: teams, selectedTarget: selected.coreConditioning },
-    sprintCod: { required: 0, preferredMin: 0, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 4 },
-    allowCombined: false,
-    preferredHardDays: 0,
-    permittedHardDays: 4,
-  });
-  return applyCommonSafetyReductions(contract, input);
+/**
+ * Stamp a built week as illness_recovery: nothing required, everything optional.
+ *
+ * THE ILLNESS LAW (Sam, 2026-07-27) — severity decides exactly TWO things,
+ * deload or not and optional or not. This is the second flag, and the ONLY thing
+ * illness does to the contract.
+ *
+ * This used to be `buildIllnessRecoveryExposureContract`, which REPLACED the
+ * phase contract with a hand-written one carrying its own counts: strength
+ * capped at 2, conditioning at the team-day count, one sprint, four rest days,
+ * no combined sessions. Every one of those was an illness-specific number, which
+ * the law forbids, and every one was a COUNT — which the deload law holds
+ * constant ("same week, same days: the structure does not change, the work
+ * shrinks"). Deleting them without inventing replacements is only possible by
+ * decorating the week that would otherwise have been built, so that is what this
+ * does. The shrink is DELOAD_LAW's, applied to the dose, and does not live here.
+ */
+function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposureContract {
+  return {
+    ...contract,
+    identity: { ...contract.identity, mode: 'illness_recovery', subphase: 'illness_recovery' },
+    strength: {
+      ...contract.strength,
+      // Nothing is required, so no pattern is required either.
+      requiredPatterns: [],
+      required: 0,
+    },
+    conditioning: {
+      ...contract.conditioning,
+      required: 0,
+      // Credited counts stay FACTUAL — the athlete's anchors are still on the
+      // calendar. Only the floor they imply drops.
+      additionalRequiredCount: 0,
+    },
+    sprintCod: {
+      ...contract.sprintCod,
+      required: 0,
+      additionalRequiredCount: 0,
+    },
+  };
 }
 
 export function buildInSeasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
-  // A minted illness_recovery mode wins over game/bye logic; the builder never
-  // re-reads facts, only the derived mode.
-  if (input.weekModeOverride === 'illness_recovery') {
-    return buildIllnessRecoveryExposureContract(input);
-  }
-  if (input.hasGame && input.gameDay !== null) return buildInSeasonGameWeekExposureContract(input);
-  return byeRecoveryMode(input)
-    ? buildInSeasonByeRecoveryExposureContract(input)
-    : buildInSeasonByeBuildExposureContract(input);
+  // A minted illness_recovery mode DECORATES the week the athlete would have
+  // had; it no longer wins over game/bye logic by replacing it. The builder
+  // never re-reads facts, only the derived mode.
+  const base = input.hasGame && input.gameDay !== null
+    ? buildInSeasonGameWeekExposureContract(input)
+    : byeRecoveryMode(input)
+      ? buildInSeasonByeRecoveryExposureContract(input)
+      : buildInSeasonByeBuildExposureContract(input);
+  return input.weekModeOverride === 'illness_recovery' ? asIllnessRecoveryWeek(base) : base;
 }
 
 export function buildEarlyOffseasonExposureContract(

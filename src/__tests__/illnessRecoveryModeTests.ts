@@ -403,6 +403,43 @@ run('7 optional-only week: no engine-validate coverage violation AND no emergenc
     promotedCore.map((w) => `dow${w.dayOfWeek}:${w.workoutType}`).join(', '));
 });
 
+// ── Invariant 8 (THE ILLNESS LAW, Sam 2026-07-27) — the illness week is THE WEEK
+// THE ATHLETE WOULD HAVE HAD, with nothing required.
+//
+// The mode used to REPLACE the phase contract with a hand-written one carrying its
+// own counts (strength max 2, one sprint, four rest days). Those are illness-specific
+// numbers, which the law forbids: "severity decides exactly TWO things — deload or
+// not, optional or not. No other illness-specific numbers may exist." They are also
+// COUNTS, and the deload law holds counts constant — "same week, same days: the
+// structure does not change, the work shrinks."
+//
+// So the mode DECORATES the normal week rather than replacing it. Structure is
+// identical to the week that would otherwise have been built; only the minimums drop
+// to zero and the selection becomes optional. The work shrinks by DELOAD_LAW, which
+// is a dose transformation and does not live here.
+run('8 illness week PRESERVES the structure of the week it replaced', () => {
+  const normal = buildWeeklyExposureContract(inSeasonContractInput(undefined));
+  const ill = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
+
+  assert(ill.identity.mode === 'illness_recovery',
+    `precondition: illness_recovery mode, got ${ill.identity.mode}`);
+
+  for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
+    assert(ill[domain].preferred.max === normal[domain].preferred.max,
+      `${domain} preferred.max changed: the illness week invented its own count ` +
+      `(${ill[domain].preferred.max}) instead of keeping the week's structure ` +
+      `(${normal[domain].preferred.max})`);
+  }
+});
+
+run('8b illness week lifts every minimum — the law\'s "optional" flag', () => {
+  const ill = buildWeeklyExposureContract(inSeasonContractInput('illness_recovery'));
+  for (const domain of ['strength', 'conditioning', 'sprintCod'] as const) {
+    assert(ill[domain].required === 0,
+      `${domain}.required must be 0 in an optional week, got ${ill[domain].required}`);
+  }
+});
+
 console.log(`\nillness_recovery week-mode invariants: ${passes} passing, ${failures.length} failing`);
 if (failures.length > 0) {
   console.log('Currently RED (expected pre-implementation):');

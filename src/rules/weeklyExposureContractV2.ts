@@ -511,11 +511,19 @@ function buildSafetyPolicy(args: {
   const fullPause = args.fullPause === true || args.reductions.some((entry) =>
     entry.reason === 'full_pause');
   const illnessRecovery = args.mode === 'illness_recovery';
-  // illness_recovery shares bye_recovery's recovery-tier safety (lighter, capped,
-  // no power) — the difference is that its §18 minimums are lifted (see policyFor),
-  // not its safety envelope.
-  const byeRecovery = args.mode === 'in_season_bye_recovery' || illnessRecovery;
-  const lighterStrengthRequired = args.cookedReadiness || byeRecovery || args.weekKind === 'deload';
+  // THE ILLNESS LAW (Sam, 2026-07-27) — the SPLIT. illness_recovery used to
+  // inherit bye_recovery's entire recovery-tier envelope: a main-lift ceiling of
+  // 2, a Moderate intensity ceiling, a 2-set meaningful-lift ceiling and no
+  // power. Two doors sharing one envelope, and it belonged to neither — the
+  // illness door's dose is the DELOAD LAW's, and a bye is not an illness. What
+  // illness does to the week is "nothing required, everything optional", which
+  // is `policyFor`'s business, not the safety envelope's.
+  const byeRecovery = args.mode === 'in_season_bye_recovery';
+  // A deload week still trains LIGHTER — that is the deload law's own
+  // instruction ("every set easy, RPE 5-6"), not an invented reduction. It is
+  // the removal of POWER and the cutting of COUNTS that the law forbids.
+  const lighterStrengthRequired = args.cookedReadiness || byeRecovery ||
+    illnessRecovery || args.weekKind === 'deload';
   const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
   const mainCeiling = fullPause
     ? 0
@@ -528,8 +536,10 @@ function buildSafetyPolicy(args: {
   const sprintCeiling = fullPause || args.prohibitedSprintHighSpeed
     ? 0
     : safetyFrequencyCeiling(args.reductions, 'sprint_high_speed_frequency');
-  const prohibitedPower = fullPause || args.prohibitedPower || byeRecovery ||
-    args.weekKind === 'deload' || args.cookedReadiness;
+  // THE DELOAD LAW: a deload and a cooked athlete no longer remove power —
+  // "a deload is not a reason to lose sharpness". A bye recovery week still
+  // does; that mode is not a deload door and Sam's law does not reach it.
+  const prohibitedPower = fullPause || args.prohibitedPower || byeRecovery;
   const affected = new Set<Section18SafetyDomain>(args.affectedSafetyDomains ?? []);
   if (args.prohibitedPatterns.length > 0 || mainCeiling !== null) affected.add('main_strength');
   if (conditioningCeiling !== null) affected.add('conditioning');
@@ -540,9 +550,14 @@ function buildSafetyPolicy(args: {
   const reasons = Array.from(new Set(args.reductions
     .filter((entry) => SAFETY_REDUCTION_REASONS.has(entry.reason))
     .map((entry) => entry.reason)));
+  // The envelope split above means `byeRecovery` no longer covers illness. The
+  // TYPED REASON must still be recorded for both — an untyped reduction is
+  // exactly what INV_EXPOSURE_REDUCTION_HAS_REASON exists to catch.
   const recoveryReason: WeeklyExposureReductionReason = illnessRecovery
     ? 'illness_recovery_mode' : 'bye_recovery_mode';
-  if (byeRecovery && !reasons.includes(recoveryReason)) reasons.push(recoveryReason);
+  if ((byeRecovery || illnessRecovery) && !reasons.includes(recoveryReason)) {
+    reasons.push(recoveryReason);
+  }
   return {
     requiredSafePatterns: [...args.requiredSafePatterns],
     prohibitedPatterns: [...args.prohibitedPatterns],
@@ -725,16 +740,32 @@ export interface Section18PhasePlannerSelection {
 function policyFor(input: Pick<
   Section18ContractV2Input,
   'mode' | 'teamTrainingDays' | 'cookedReadiness' | 'readiness' | 'weekKind'
->): Section18ModePolicy {
+> & {
+  /**
+   * Read ONLY by illness_recovery, to recover the week it decorates instead of
+   * inventing counts of its own. Optional because the phase-planner selection
+   * path has no anchor to offer; absent, illness_recovery decorates the bye
+   * build week, which is the conservative choice — it has the fuller structure,
+   * and the deload law says structure does not change.
+   */
+  anchorState?: Section18AnchorState;
+}): Section18ModePolicy {
   const tt = uniqueDays(input.teamTrainingDays).length;
-  const noPower = input.cookedReadiness || input.readiness === 'low' || input.weekKind === 'deload';
+  // THE DELOAD LAW (Sam, 2026-07-27): "Power/speed: KEEP a small sharp dose ...
+  // Power is not removed on a deload; a deload is not a reason to lose
+  // sharpness." This file used to compute `noPower` from cooked readiness, low
+  // readiness and a deload week — all three of which are DELOAD DOORS, so all
+  // three removed the one thing the law says a deload keeps. The deload law
+  // shipped in the dose layer and never reached §18, leaving the contradiction
+  // live in two representations. Power now survives every deload door; only a
+  // genuine safety prohibition removes it, below.
   switch (input.mode) {
     case 'in_season_game_week':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
         conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
-        power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
@@ -745,7 +776,7 @@ function policyFor(input: Pick<
         strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
-        power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
@@ -762,23 +793,48 @@ function policyFor(input: Pick<
         balance: true,
         selectionKind: 'core',
       };
-    case 'illness_recovery':
-      // Severe-illness recovery week: EVERY §18 minimum is lifted (nothing is
-      // required this week) and all selection is optional. The REDUCTION to
-      // recovery-tier is owned by the severe-illness auto-protect constraint
-      // (prohibited hard/sprint/power), exactly as severe fatigue; the mode's
-      // maximums mirror bye_recovery's proven envelope so the auto-protect
-      // recomposed week is never rejected for a ceiling it already respects.
+    case 'illness_recovery': {
+      // THE ILLNESS LAW (Sam, 2026-07-27) — severity decides exactly TWO things,
+      // deload or not and optional or not. "No other illness-specific numbers
+      // may exist."
+      //
+      // This case used to hand-write a whole policy: strength capped at 2, a
+      // light-only conditioning stress, a zero hard-core maximum, one sprint,
+      // four rest days, a hard-day cap and no power — borrowed wholesale from
+      // bye_recovery's envelope. Every one of those was an illness-specific
+      // number, and the count ceilings were also STRUCTURE, which the deload law
+      // holds constant while the work shrinks.
+      //
+      // So the mode DECORATES the week the athlete would otherwise have had.
+      // Only the two flags the law authorises are applied: nothing required, and
+      // selection optional. The dose shrink is DELOAD_LAW's and is not a §18
+      // ceiling.
+      //
+      // Recovering the underlying week: illness_recovery is minted in-season
+      // only, so anchorState separates a game week from a bye week. It cannot
+      // distinguish bye_recovery from bye_build — bye_build is the correct
+      // conservative choice, because it is the week with the FULLER structure and
+      // the law says structure does not change.
+      const base = policyFor({
+        ...input,
+        mode: input.anchorState === 'game' ? 'in_season_game_week' : 'in_season_bye_build',
+      });
       return {
-        strength: { required: 0, defaultTarget: 0, preferred: { min: 0, max: 2 }, max: 2 },
-        conditioning: { required: 0, defaultTarget: 0, preferred: { min: 0, max: tt }, max: null, stress: ['light'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
-        sprint: { required: 0, preferred: { min: 0, max: 1 }, max: null },
-        power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'illness_recovery_mode' },
-        rest: { required: 2, preferred: { min: 2, max: 4 } },
-        hardDays: { preferred: { min: 0, max: 2 }, permittedMaximum: 4 },
+        ...base,
+        strength: { ...base.strength, required: 0, defaultTarget: 0 },
+        conditioning: {
+          ...base.conditioning,
+          required: 0,
+          defaultTarget: 0,
+          requiredAppMediumHardMinimum: 0,
+          requiredAppHardMinimum: 0,
+        },
+        sprint: { ...base.sprint, required: 0 },
+        // Nothing is required, so no pattern balance can be required either.
         balance: false,
         selectionKind: 'optional',
       };
+    }
     case 'early_offseason':
       return {
         strength: { required: 0, defaultTarget: 0, preferred: { min: 2, max: 3 }, max: 3 },
@@ -795,7 +851,7 @@ function policyFor(input: Pick<
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 1 },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
-        power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
@@ -806,7 +862,7 @@ function policyFor(input: Pick<
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 2 },
         sprint: { required: 1, preferred: { min: 1, max: 2 }, max: 2 },
-        power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
@@ -817,7 +873,7 @@ function policyFor(input: Pick<
         strength: { required: 3, defaultTarget: 3, preferred: { min: 3, max: tt === 0 ? 4 : 3 }, max: tt === 0 ? 4 : 3 },
         conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
-        power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
@@ -831,7 +887,7 @@ function policyFor(input: Pick<
         strength: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 4, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
-        power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
+        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
