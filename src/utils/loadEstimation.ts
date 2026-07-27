@@ -25,7 +25,6 @@
  */
 
 import type { OnboardingData, SquatStrength, BenchStrength } from '../types/domain';
-import { EXERCISE_TAGS } from '../data/exerciseTags';
 
 // ─── Constants ───
 
@@ -828,197 +827,131 @@ const MIN_WEIGHTS: Record<EquipmentClass, number> = {
   kettlebell: 8,  // Lightest standard KB
   bodyweight: 0,
 };
+// ─── Load Authority: the single owner of "how is this loaded?" ───
+//
+// RENDER-TRUTH (Sam, 2026-07-28). Every athlete-facing load claim — the "BW"
+// on a card, the kilograms in a weight field — must derive from something
+// authored. This resolver is the only thing entitled to answer, and it answers
+// by NAMING its source.
+//
+// It replaces three heuristics that answered without one:
+//
+//   estimateFromNamePattern  an 18-row regex→ratio table — a second load map
+//                            keyed by name, authored by nobody. It invented
+//                            12.5kg for Dumbbell Pullovers, and closed with an
+//                            "absolute last resort" of bodyweight × 0.15 that
+//                            gave a confident number to ANY unrecognised name,
+//                            including ones the generator invents.
+//   estimateFromTags         a hardcoded 10kg for loaded core.
+//   tag-category promotion   movement === 'plyo' | 'conditioning' → "BW".
+//
+// A movement category is not an authority on kilograms, and a name is not
+// evidence about load. Where nothing authored covers an exercise the honest
+// answer is `unauthored`, which renders as absence — not as the confident
+// "BW" that made the Pullovers card lie while every gate passed.
+
+/** Where a load claim came from. `unauthored` is a real answer, not a failure. */
+export type LoadAuthority =
+  | { kind: 'bodyweight'; source: 'TRUE_BODYWEIGHT_EXERCISES' | 'PREHAB_NO_LOAD_EXERCISES' }
+  | { kind: 'athlete_chosen'; source: 'ATHLETE_CHOSEN_LOAD_EXERCISES' }
+  | { kind: 'prescribed'; source: 'EXERCISE_LOAD_MAP'; profile: ExerciseLoadProfile }
+  | { kind: 'unauthored' };
+
+/**
+ * Resolve which authored source, if any, governs this exercise's load.
+ *
+ * Order matters and mirrors the authored precedence:
+ *   1. athlete-chosen — real external load, nothing honest to prescribe
+ *   2. true bodyweight — ruled unloaded
+ *   3. prehab / no-load — ruled unloaded, different reason
+ *   4. the ruled ratio map
+ *   5. nothing — say so
+ */
+export function resolveLoadAuthority(exerciseName: string): LoadAuthority {
+  const resolved = resolveExerciseName(exerciseName);
+
+  if (ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolved)) {
+    return { kind: 'athlete_chosen', source: 'ATHLETE_CHOSEN_LOAD_EXERCISES' };
+  }
+  if (TRUE_BODYWEIGHT_EXERCISES.has(resolved)) {
+    return { kind: 'bodyweight', source: 'TRUE_BODYWEIGHT_EXERCISES' };
+  }
+  if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) {
+    return { kind: 'bodyweight', source: 'PREHAB_NO_LOAD_EXERCISES' };
+  }
+
+  const profile = EXERCISE_LOAD_MAP[resolved];
+  if (profile) {
+    // A ratio of 0 on bodyweight equipment is an authored "unloaded", not a
+    // prescription of nothing.
+    if (profile.equipment === 'bodyweight') {
+      return { kind: 'bodyweight', source: 'TRUE_BODYWEIGHT_EXERCISES' };
+    }
+    return { kind: 'prescribed', source: 'EXERCISE_LOAD_MAP', profile };
+  }
+
+  return { kind: 'unauthored' };
+}
+
+/**
+ * THE RENDER SEAM. One input, one decision.
+ *
+ * The label and the number used to be decided separately — `formatWeight`
+ * asked `isTrueBodyweightExercise` for the label and `estimateStartingWeight`
+ * for the number, so the two could disagree about the same exercise. They
+ * disagreed on Dumbbell Pullovers. Deriving both from a single resolved
+ * authority is what makes that disagreement unrepresentable.
+ *
+ * @param authority the resolved source of truth for this exercise
+ * @param weightKg  the athlete's own entry or a prescribed value; null if none
+ */
+export function formatLoadLabel(authority: LoadAuthority, weightKg: number | null): string {
+  if (authority.kind === 'bodyweight') {
+    return weightKg && weightKg > 0 ? `BW + ${weightKg}kg` : 'BW';
+  }
+  // athlete_chosen, prescribed and unauthored all render the number if there
+  // is one and a dash if there is not. None of them may claim "BW": for
+  // athlete_chosen that is the Pullovers defect, and for unauthored it would
+  // be a claim we have no basis for.
+  if (weightKg === null || weightKg === undefined || weightKg === 0) return '-';
+  return `${weightKg}kg`;
+}
 
 // ─── Public API ───
 
 /**
  * Estimate a starting working weight for a named exercise.
  *
- * Resolution order:
- *   1. Resolve name aliases (AI phrasing → canonical name)
- *   2. Check true bodyweight set → null
- *   3. Check prehab/no-load set → null
- *   4. Look up EXERCISE_LOAD_MAP → calculated weight
- *   5. Fall back to tag-based heuristic
+ * Returns a number ONLY for `prescribed` authority — an entry in the ruled
+ * EXERCISE_LOAD_MAP. Bodyweight, athlete-chosen and unauthored all return
+ * null, because none of them has an authored ratio to compute from.
  *
- * @returns weight in kg, or null if the exercise is genuinely bodyweight / unloaded.
+ * @returns weight in kg, or null when nothing authored prescribes one.
  */
 export function estimateStartingWeight(
   exerciseName: string,
   onboardingData: OnboardingData,
 ): number | null {
-  const resolved = resolveExerciseName(exerciseName);
-
-  // True bodyweight exercises always return null
-  if (TRUE_BODYWEIGHT_EXERCISES.has(resolved)) return null;
-
-  // Prehab / rehab / tissue work — no fake precision
-  if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) return null;
-
-  // Real load, but the athlete picks it. Nothing to prescribe.
-  if (ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolved)) return null;
+  const authority = resolveLoadAuthority(exerciseName);
+  if (authority.kind !== 'prescribed') return null;
 
   const anchors = estimateAnchors(onboardingData);
-  const profile = EXERCISE_LOAD_MAP[resolved];
-
-  if (profile) {
-    if (profile.equipment === 'bodyweight') return null;
-
-    const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
-    const raw = anchor1RM * profile.ratio;
-    const rounded = roundToEquipment(raw, profile.equipment);
-    return Math.max(rounded, MIN_WEIGHTS[profile.equipment]);
-  }
-
-  // ── Fallback: use exercise tags to make a reasonable guess ──
-  return estimateFromTags(resolved, anchors);
-}
-
-/**
- * Heuristic fallback for exercises not in EXERCISE_LOAD_MAP.
- * Uses exercise tags (movement pattern, region, load level) to pick
- * a conservative starting weight.
- */
-function estimateFromTags(
-  exerciseName: string,
-  anchors: AnchorEstimates,
-): number | null {
-  const tags = EXERCISE_TAGS[exerciseName];
-  if (!tags) {
-    // No tags — try name-pattern heuristic before giving up
-    return estimateFromNamePattern(exerciseName, anchors);
-  }
-
-  // Plyo → always bodyweight
-  if (tags.movement === 'plyo') return null;
-
-  // Core → mostly bodyweight or very light
-  if (tags.movement === 'core') {
-    if (tags.load === 'low') return null; // Likely true BW core
-    return 10;
-  }
-
-  // Conditioning → no weight
-  if (tags.movement === 'conditioning') return null;
-
-  // Choose anchor based on region
-  const anchor1RM = tags.region === 'lower' || tags.region === 'full'
-    ? anchors.squat1RM
-    : anchors.bench1RM;
-
-  // Approximate ratio by load level
-  const loadRatios: Record<string, number> = {
-    high: 0.65,
-    moderate: 0.35,
-    low: 0.15,
-  };
-  const ratio = loadRatios[tags.load] || 0.25;
-
-  // Determine equipment class from the exercise's known equipment
-  let equipment: EquipmentClass = 'barbell';
-  if (tags.load === 'low') equipment = 'dumbbell';
-  if (tags.unilateral) equipment = 'dumbbell';
-
-  const raw = anchor1RM * ratio;
-  const rounded = roundToEquipment(raw, equipment);
-  return Math.max(rounded, MIN_WEIGHTS[equipment]);
-}
-
-/**
- * Last-resort heuristic for completely unknown exercises (no tags, no map entry).
- * Parses the exercise name for common movement keywords and picks
- * a conservative anchor + ratio. Better than a flat number because it
- * scales with the athlete's strength level.
- *
- * Returns null for anything that looks like BW / conditioning.
- * Returns a conservative moderate weight as absolute fallback.
- */
-function estimateFromNamePattern(
-  exerciseName: string,
-  anchors: AnchorEstimates,
-): number | null {
-  const lower = exerciseName.toLowerCase();
-
-  // ── Pattern → {anchor, ratio, equipment} ──
-  // Checked BEFORE BW keywords so "Farmers Walk" matches carry, not "walk"
-  type PatternMatch = { anchor: 'squat' | 'bench'; ratio: number; equipment: EquipmentClass };
-
-  const patterns: [RegExp, PatternMatch][] = [
-    // Heavy compounds — squat-anchored
-    [/squat|deadlift|clean|snatch/,   { anchor: 'squat', ratio: 0.65, equipment: 'barbell' }],
-    [/lunge|split|step.?up/,          { anchor: 'squat', ratio: 0.18, equipment: 'dumbbell' }],
-    [/leg.?press|hack/,               { anchor: 'squat', ratio: 0.80, equipment: 'machine' }],
-    [/leg.?curl|hamstring/,           { anchor: 'squat', ratio: 0.25, equipment: 'machine' }],
-    [/leg.?ext|knee.?ext/,            { anchor: 'squat', ratio: 0.30, equipment: 'machine' }],
-    [/calf/,                          { anchor: 'squat', ratio: 0.45, equipment: 'machine' }],
-    [/hip.?thrust|glute.?bridge/,     { anchor: 'squat', ratio: 0.65, equipment: 'barbell' }],
-
-    // Heavy compounds — bench-anchored
-    [/bench|chest.?press|floor.?press/, { anchor: 'bench', ratio: 0.65, equipment: 'barbell' }],
-    [/overhead.?press|shoulder.?press|military/, { anchor: 'bench', ratio: 0.50, equipment: 'barbell' }],
-    [/row/,                           { anchor: 'bench', ratio: 0.55, equipment: 'barbell' }],
-    [/pull.?down|pulldown/,           { anchor: 'bench', ratio: 0.50, equipment: 'cable' }],
-
-    // Isolation — bench-anchored
-    [/fly|flye|crossover|pec/,        { anchor: 'bench', ratio: 0.15, equipment: 'cable' }],
-    [/curl/,                          { anchor: 'bench', ratio: 0.12, equipment: 'dumbbell' }],
-    [/tricep|pushdown|extension|skull|crush/, { anchor: 'bench', ratio: 0.15, equipment: 'cable' }],
-    [/raise|lateral|delt/,            { anchor: 'bench', ratio: 0.09, equipment: 'dumbbell' }],
-    [/shrug/,                         { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' }],
-    [/face.?pull|rear.?delt/,         { anchor: 'bench', ratio: 0.15, equipment: 'cable' }],
-
-    // Carries
-    [/carry|farmer|suitcase/,         { anchor: 'squat', ratio: 0.25, equipment: 'dumbbell' }],
-  ];
-
-  for (const [pattern, match] of patterns) {
-    if (pattern.test(lower)) {
-      const anchor1RM = match.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
-      const raw = anchor1RM * match.ratio;
-      const rounded = roundToEquipment(raw, match.equipment);
-      return Math.max(rounded, MIN_WEIGHTS[match.equipment]);
-    }
-  }
-
-  // ── BW / conditioning keywords → no weight ──
-  // Checked AFTER patterns so "Farmers Walk" matches carry pattern, not "walk"
-  const bwKeywords = ['run', 'sprint', 'jog', 'walk', 'plank', 'stretch', 'foam', 'mobility', 'breathing', 'jump', 'bound', 'skip'];
-  if (bwKeywords.some(kw => lower.includes(kw))) return null;
-
-  // Absolute last resort — a conservative moderate dumbbell weight
-  // scaled to bodyweight. Better than a fixed 20kg for all athletes.
-  const fallback = roundToEquipment(anchors.bodyweightKg * 0.15, 'dumbbell');
-  return Math.max(fallback, MIN_WEIGHTS.dumbbell);
+  const { profile } = authority;
+  const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
+  const rounded = roundToEquipment(anchor1RM * profile.ratio, profile.equipment);
+  return Math.max(rounded, MIN_WEIGHTS[profile.equipment]);
 }
 
 /**
  * Check if an exercise is genuinely bodyweight-based.
- * Uses name resolution → explicit BW set → prehab set → tag fallback.
+ *
+ * True only when an authored source says so. An exercise nothing covers is
+ * NOT bodyweight — it is unknown, and the caller must render it as unknown.
  */
 export function isTrueBodyweightExercise(exerciseName: string): boolean {
-  const resolved = resolveExerciseName(exerciseName);
-
-  // Checked FIRST and returns false: these carry real external load, so no
-  // later heuristic — tags or the name-pattern catch-all — may promote them to
-  // "BW". This early exit is what keeps the athlete-facing label honest.
-  if (ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolved)) return false;
-
-  if (TRUE_BODYWEIGHT_EXERCISES.has(resolved)) return true;
-  if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) return true;
-
-  // Fallback: check exercise tags for plyo or conditioning patterns
-  const tags = EXERCISE_TAGS[resolved];
-  if (tags) {
-    if (tags.movement === 'plyo') return true;
-    if (tags.movement === 'conditioning') return true;
-  }
-
-  // Name-pattern catch-all for obvious BW movements the AI might invent
-  const lower = resolved.toLowerCase();
-  if (/push.?up|pull.?up|chin.?up|dip(?:s|$)|plank|burpee/.test(lower)) return true;
-
-  return false;
+  return resolveLoadAuthority(exerciseName).kind === 'bodyweight';
 }
+
 
 /**
  * Apply load estimates to an array of workout exercises.

@@ -7,7 +7,12 @@ import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachContextStateStore } from '../../store/coachContextStateStore';
 import { extractModalitiesFromSession } from '../../utils/coachReferenceResolver';
-import { isTrueBodyweightExercise, estimateStartingWeight } from '../../utils/loadEstimation';
+import {
+  estimateStartingWeight,
+  formatLoadLabel,
+  isTrueBodyweightExercise,
+  resolveLoadAuthority,
+} from '../../utils/loadEstimation';
 import {
   DESCRIPTIVE_CONDITIONING_TYPES,
   LEGACY_FLAVOUR_TITLE,
@@ -168,21 +173,22 @@ export function useDayWorkout() {
     [weightOverrides, onboardingData],
   );
 
-  /** Format weight for display — only true BW exercises show BW / BW + Xkg. */
+  /**
+   * Format weight for display.
+   *
+   * RENDER-TRUTH (Sam, 2026-07-28): the label is formatted from the resolved
+   * load AUTHORITY, not decided here. This function used to ask
+   * `isTrueBodyweightExercise` for the label and `getDisplayWeight` for the
+   * number independently, so the two could disagree about one exercise — which
+   * is how the Dumbbell Pullovers card read "BW" for a dumbbell movement.
+   * `formatLoadLabel` takes both from one resolution, so they cannot.
+   */
   const formatWeight = useCallback(
-    (exercise: any): string => {
-      const weightKg = getDisplayWeight(exercise);
-      const isBW = isBWExercise(exercise);
-
-      if (isBW) {
-        if (weightKg && weightKg > 0) return `BW + ${weightKg}kg`;
-        return 'BW';
-      }
-
-      if (weightKg === null || weightKg === undefined || weightKg === 0) return '-';
-      return `${weightKg}kg`;
-    },
-    [getDisplayWeight, isBWExercise],
+    (exercise: any): string => formatLoadLabel(
+      resolveLoadAuthority(exercise.exercise?.name || ''),
+      getDisplayWeight(exercise),
+    ),
+    [getDisplayWeight],
   );
 
   /** Increment weight by 2.5kg. BW → BW + 2.5kg. */
