@@ -27,7 +27,7 @@
  *                     conditioning load") + off-feet sprint work.
  */
 
-import type { Workout } from '../types/domain';
+import type { SeasonPhase, Workout } from '../types/domain';
 import { logger } from '../utils/logger';
 import {
   classifyVisibleSession,
@@ -44,18 +44,30 @@ export const BIBLE_WEEKLY_CAPS = {
   /** "3-5 conditioning exposures per week" (TT + games count in-season). */
   conditioningExposures: { min: 3, max: 5 },
   /**
-   * "At least 2 and no more than 3 running days per week." (amended §17.B)
+   * THE HARD MAX — the validator's ceiling, in EVERY phase (§17.B, Sam
+   * 2026-07-27): "2 days minimum per week, 3 preferred, 4 hard max."
    *
-   * Supersedes the pre-amendment "No more than 4 running exposures per week
-   * programmed by the app" — Sam's signed merge dropped the cap to 3 and added
-   * the floor. Anchors count toward the cap: 2 team trainings plus a game is
-   * already 3, which is why in-season rarely needs any added app running.
+   * A 4th running day is VALID everywhere and merely unusual. Only a 5th
+   * breaches the law. This is NOT what the app programs — see
+   * `preferredRunningExposures` and `programmedRunningDayAllowance`.
+   *
+   * Sam's device pass corrected the Bible Amendment Pass here: that pass read
+   * one number as doing all three jobs and set the ceiling to 3, which made a
+   * perfectly legal athlete-added 4th day look like a breach.
    */
-  maxRunningExposures: 3,
+  maxRunningExposures: 4,
   /**
-   * The 2-day floor. Scoped OFF in the two cases named by
-   * RUNNING_FLOOR_EXEMPTIONS; everywhere else a healthy week programming fewer
-   * than 2 running days needs an authorised typed reduction reason.
+   * THE PREFERRED COUNT — what the app PROGRAMS by default. A generation
+   * target, not a limit; exceeding it is not a validation finding.
+   *
+   * Anchors count toward it: 2 team trainings plus a game is already 3, which
+   * is why in-season rarely needs any added app running.
+   */
+  preferredRunningExposures: 3,
+  /**
+   * THE FLOOR. Scoped OFF in the two cases named by RUNNING_FLOOR_EXEMPTIONS;
+   * everywhere else a healthy week programming fewer than 2 running days needs
+   * an authorised typed reduction reason. Unchanged by the 2026-07-27 law.
    */
   minRunningExposures: 2,
   /** One genuine weekly exposure from mid off-season onward; 2-3 remains the usual maximum. */
@@ -88,6 +100,56 @@ export const RUNNING_FLOOR_EXEMPTIONS: readonly RunningFloorExemption[] = [
   'early_off_season_weeks_1_2',
   'bye_recovery',
 ];
+
+/**
+ * The two authored conditions under which the APP may program a 4th running day
+ * (§17.B, Sam 2026-07-27). Typed reasons rather than a boolean, so a caller has
+ * to say WHICH case it is claiming and the build can check the reason still
+ * exists.
+ *
+ *   no_equipment — off-leg conditioning is not available to absorb the work.
+ *   pre_season   — team training may itself be 1-3 of the running days, so the
+ *                  programmed extra may be just one session.
+ *
+ * In off-season and in-season the app never programs a 4th. An athlete-added
+ * 4th remains valid in every phase — that is the VALIDATOR's business
+ * (`maxRunningExposures`), not this function's.
+ */
+export type FourthRunningDayReason = 'no_equipment' | 'pre_season';
+
+export const FOURTH_RUNNING_DAY_REASONS: readonly FourthRunningDayReason[] = [
+  'no_equipment',
+  'pre_season',
+];
+
+export interface ProgrammedRunningAllowance {
+  /** How many running days the app may PROGRAM for this athlete this week. */
+  readonly days: number;
+  /** Why a 4th was unlocked, or null when the default 3 applies. */
+  readonly reason: FourthRunningDayReason | null;
+}
+
+/**
+ * How many running days the APP may program — the generation-side half of the
+ * running law. Deliberately separate from `auditWeekAgainstCaps`, because
+ * "what the app chooses" and "what is legal" are different questions and
+ * collapsing them is exactly the defect Sam's device pass caught.
+ */
+export function programmedRunningDayAllowance(context: {
+  readonly phase: SeasonPhase;
+  /** False when the athlete has no equipment, so off-leg work is unavailable. */
+  readonly hasEquipment: boolean;
+}): ProgrammedRunningAllowance {
+  // (a) No equipment — there is no off-feet option to absorb the extra work.
+  if (!context.hasEquipment) {
+    return { days: BIBLE_WEEKLY_CAPS.maxRunningExposures, reason: 'no_equipment' };
+  }
+  // (b) Pre-season — team training may already be 1-3 of these days.
+  if (context.phase === 'Pre-season') {
+    return { days: BIBLE_WEEKLY_CAPS.maxRunningExposures, reason: 'pre_season' };
+  }
+  return { days: BIBLE_WEEKLY_CAPS.preferredRunningExposures, reason: null };
+}
 
 /** Context a caller may supply so the audit can scope the running floor. */
 export interface CapAuditContext {
@@ -252,7 +314,7 @@ export function auditWeekAgainstCaps(
     findings.push({
       cap: 'maxRunningExposures', kind: 'over',
       observed: counts.runningExposures, limit: caps.maxRunningExposures,
-      detail: `${counts.runningExposures} running exposures (Bible max ${caps.maxRunningExposures})`,
+      detail: `${counts.runningExposures} running days (Bible hard max ${caps.maxRunningExposures}; the app programs ${caps.preferredRunningExposures} by default)`,
     });
   }
   // The floor is scoped, so it is checked only when no authored exemption is

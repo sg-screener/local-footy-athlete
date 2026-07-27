@@ -32,13 +32,15 @@ import {
   BIBLE_INJURY_SEVERITY_BANDS,
   BIBLE_WEEKLY_CAPS,
   RUNNING_FLOOR_EXEMPTIONS,
+  programmedRunningDayAllowance,
+  FOURTH_RUNNING_DAY_REASONS,
   MAIN_LIFT_REP_SCHEMES,
   getProgrammingRoleBias,
   type SessionUnit,
   type WeekDayInput,
 } from '../rules';
 import { ROLE_BUCKET_OPTIONS } from '../utils/roleBuckets';
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { SeasonPhase, Workout, WorkoutExercise } from '../types/domain';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -417,16 +419,96 @@ ok('flags > 4 hard days', overCaps.has('maxHardDays'), `hardDays=${overCounts.ha
 ok('running counter includes on-feet hard conditioning', overCounts.runningExposures === 4, `got ${overCounts.runningExposures}`);
 ok('caps constants match Bible Section 17.B',
   BIBLE_WEEKLY_CAPS.maxMainStrengthSessions === 4 &&
-  BIBLE_WEEKLY_CAPS.maxRunningExposures === 3 &&
+  BIBLE_WEEKLY_CAPS.maxRunningExposures === 4 &&
+  BIBLE_WEEKLY_CAPS.preferredRunningExposures === 3 &&
   BIBLE_WEEKLY_CAPS.minRunningExposures === 2 &&
   BIBLE_WEEKLY_CAPS.sprintCodExposures.max === 3 &&
   BIBLE_WEEKLY_CAPS.maxHardDays === 4);
+
+// ── THE RUNNING LAW (Sam, 2026-07-27) ──
+// "2 days minimum, 3 preferred, 4 hard max." Three numbers doing three
+// different jobs. The defect this replaces was ONE number doing all three.
+
+ok('floor / preferred / hard max are three DIFFERENT numbers',
+  BIBLE_WEEKLY_CAPS.minRunningExposures === 2 &&
+  BIBLE_WEEKLY_CAPS.preferredRunningExposures === 3 &&
+  BIBLE_WEEKLY_CAPS.maxRunningExposures === 4,
+  `${BIBLE_WEEKLY_CAPS.minRunningExposures}/${BIBLE_WEEKLY_CAPS.preferredRunningExposures}/${BIBLE_WEEKLY_CAPS.maxRunningExposures}`);
+
+// VALIDATION half: a 4th running day is valid in EVERY phase. Only a 5th breaches.
+{
+  const fourRunningDays: WeekDayInput[] = [
+    { date: '2026-06-01', workout: teamDay('Team Training + Upper Pull', 'rows', [mkEx('Barbell Row')]) },
+    { date: '2026-06-03', workout: teamDay('Team Training + Upper Push', 'bench', [mkEx('Bench Press')]) },
+    { date: '2026-06-05', workout: mkWorkout({ name: '6x1km Repeats', workoutType: '6x1km', intensity: 'Maximal', exercises: [mkEx('1km Repeat Intervals Run')] }) },
+    { date: '2026-06-06', workout: mkWorkout({ name: 'Game Day', workoutType: 'Game' }) },
+  ];
+  const counts4 = countWeeklyExposures(fourRunningDays, {});
+  ok('a 4-running-day week counts as 4', counts4.runningExposures === 4, `got ${counts4.runningExposures}`);
+  ok('an athlete-added 4th running day is VALID, not an over-cap breach',
+    !auditWeekAgainstCaps(counts4).some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
+    auditWeekAgainstCaps(counts4).filter((f) => f.cap === 'maxRunningExposures').map((f) => `${f.kind}:${f.detail}`).join('; '));
+
+  const fiveRunningDays: WeekDayInput[] = [
+    ...fourRunningDays,
+    { date: '2026-06-07', workout: mkWorkout({ name: 'Tempo Run', workoutType: 'Tempo-Run', exercises: [mkEx('Tempo Run')] }) },
+  ];
+  const counts5 = countWeeklyExposures(fiveRunningDays, {});
+  ok('a 5th running day DOES breach the hard max',
+    auditWeekAgainstCaps(counts5).some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
+    `running=${counts5.runningExposures}`);
+}
+
+// PROGRAMMING half: what the APP may emit, which is a different question.
+ok('the app programs 3 running days by default in-season',
+  programmedRunningDayAllowance({ phase: 'In-season', hasEquipment: true }).days === 3);
+ok('the app programs 3 running days by default in off-season',
+  programmedRunningDayAllowance({ phase: 'Off-season', hasEquipment: true }).days === 3);
+
+ok('condition (a) — no equipment lets the app program a 4th',
+  programmedRunningDayAllowance({ phase: 'In-season', hasEquipment: false }).days === 4);
+ok('condition (a) records WHY the 4th was allowed',
+  programmedRunningDayAllowance({ phase: 'In-season', hasEquipment: false }).reason === 'no_equipment');
+
+ok('condition (b) — pre-season lets the app program a 4th',
+  programmedRunningDayAllowance({ phase: 'Pre-season', hasEquipment: true }).days === 4);
+ok('condition (b) records WHY the 4th was allowed',
+  programmedRunningDayAllowance({ phase: 'Pre-season', hasEquipment: true }).reason === 'pre_season');
+
+// Sam's explicit requirement: off/in-season generation NEVER emits a 4th, while
+// an athlete-added 4th still passes validation. Both halves in one place.
+for (const phase of ['Off-season', 'In-season'] as SeasonPhase[]) {
+  ok(`${phase}: the app never programs a 4th running day`,
+    programmedRunningDayAllowance({ phase, hasEquipment: true }).days === 3
+      && programmedRunningDayAllowance({ phase, hasEquipment: true }).reason === null);
+}
+
+ok('an equipped off-season athlete is still held to 3 programmed days',
+  programmedRunningDayAllowance({ phase: 'Off-season', hasEquipment: true }).days === 3);
+
+ok('the programmed allowance never exceeds the validator hard max',
+  (['Off-season', 'Pre-season', 'In-season'] as SeasonPhase[]).every((phase) =>
+    [true, false].every((hasEquipment) =>
+      programmedRunningDayAllowance({ phase, hasEquipment }).days <= BIBLE_WEEKLY_CAPS.maxRunningExposures)));
+
+ok('the programmed allowance never drops below the floor',
+  (['Off-season', 'Pre-season', 'In-season'] as SeasonPhase[]).every((phase) =>
+    [true, false].every((hasEquipment) =>
+      programmedRunningDayAllowance({ phase, hasEquipment }).days >= BIBLE_WEEKLY_CAPS.minRunningExposures)));
+
+ok('exactly two authored reasons can unlock a 4th programmed running day',
+  FOURTH_RUNNING_DAY_REASONS.length === 2
+    && FOURTH_RUNNING_DAY_REASONS.includes('no_equipment')
+    && FOURTH_RUNNING_DAY_REASONS.includes('pre_season'),
+  FOURTH_RUNNING_DAY_REASONS.join(', '));
 
 // ── Running floor and cap (amended Bible §17.B, Sam's signed merge) ──
 // "At least 2 and no more than 3 running days per week." The pre-amendment
 // reading was "no more than 4 running exposures", which this replaces.
 
-ok('a 4-running-day week is now OVER the cap', overCaps.has('maxRunningExposures'),
+// Under Sam's 2026-07-27 law the hard max is 4, so this 4-running-day week is
+// legal. It was an over-cap example only while the ceiling was mistakenly 3.
+ok('a 4-running-day week is NOT over the hard max', !overCaps.has('maxRunningExposures'),
   `running=${overCounts.runningExposures}, caps flagged: ${[...overCaps].join(', ')}`);
 
 const THREE_RUNNING_WEEK: WeekDayInput[] = [
@@ -468,9 +550,22 @@ ok('exactly the two authored floor exemptions exist',
   RUNNING_FLOOR_EXEMPTIONS.includes('early_off_season_weeks_1_2') &&
   RUNNING_FLOOR_EXEMPTIONS.includes('bye_recovery'),
   RUNNING_FLOOR_EXEMPTIONS.join(', '));
-ok('an exemption never suppresses an OVER-cap finding',
-  auditWeekAgainstCaps(overCounts, { runningFloorExemption: 'bye_recovery' })
-    .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'));
+{
+  // A floor exemption must never silence an over-cap finding. Needs a genuinely
+  // over-cap week, which is now 5 running days rather than 4.
+  const fiveRunning: WeekDayInput[] = [
+    { date: '2026-06-01', workout: teamDay('Team Training + Upper Pull', 'rows', [mkEx('Barbell Row')]) },
+    { date: '2026-06-03', workout: teamDay('Team Training + Upper Push', 'bench', [mkEx('Bench Press')]) },
+    { date: '2026-06-04', workout: mkWorkout({ name: '6x1km Repeats', workoutType: '6x1km', intensity: 'Maximal', exercises: [mkEx('1km Repeat Intervals Run')] }) },
+    { date: '2026-06-06', workout: mkWorkout({ name: 'Game Day', workoutType: 'Game' }) },
+    { date: '2026-06-07', workout: mkWorkout({ name: 'Tempo Run', workoutType: 'Tempo-Run', exercises: [mkEx('Tempo Run')] }) },
+  ];
+  const fiveCounts = countWeeklyExposures(fiveRunning, {});
+  ok('an exemption never suppresses an OVER-cap finding',
+    auditWeekAgainstCaps(fiveCounts, { runningFloorExemption: 'bye_recovery' })
+      .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
+    `running=${fiveCounts.runningExposures}`);
+}
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 5. Bible injury severity bands (defined, not wired) ──');

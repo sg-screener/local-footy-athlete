@@ -72,6 +72,7 @@ import {
 import {
   BIBLE_WEEKLY_CAPS,
   countWeeklyExposures,
+  programmedRunningDayAllowance,
 } from '../rules/weeklyExposureCounts';
 import {
   attachPrescriptionEffectEvidence,
@@ -1455,14 +1456,36 @@ export function resolveWeekWithConditioning(
   const inSeasonPrimaryCap = state.seasonPhase === 'In-season' ? 1 : Infinity;
   let primaryConditioningCount = 0;
 
-  // ── Running exposure cap ──
-  // Max 3 running days per week (amended §17.B — Sam's signed merge dropped
-  // this from 4), seeded from anchors that already exist
-  // after base resolution. Team training, games and practice matches count.
-  // When the cap is reached, additional running sessions are converted to
-  // off-feet modalities (bike/row/ski) while preserving the conditioning stimulus.
-  // This is invisible to the user — same session intent, different modality.
-  const MAX_RUNNING_SESSIONS = BIBLE_WEEKLY_CAPS.maxRunningExposures;
+  // ── Running days the app may PROGRAM ──
+  // THE RUNNING LAW (§17.B, Sam 2026-07-27): 2 minimum, 3 preferred, 4 hard max.
+  // This is the PROGRAMMING half — 3 by default, 4 only under the two authored
+  // conditions. It is deliberately NOT the validator's hard max: an athlete may
+  // add a 4th (or the app may program one here) and that stays perfectly valid.
+  // Seeded from anchors that already exist after base resolution; team training,
+  // games and practice matches all count toward it.
+  //
+  // At the limit, further running sessions convert to off-feet modalities
+  // (bike/row/ski) while preserving the conditioning stimulus — same session
+  // intent, different modality.
+  //
+  // Condition (a) is "no equipment — off-leg conditioning isn't available", so
+  // it turns on whether the athlete has a machine to do that off-leg work ON.
+  // Bodyweight/bands alone cannot absorb a converted running session, which is
+  // exactly why the law lets the 4th day stay on feet.
+  const hasOffLegEquipment = (state.athleteContext?.equipmentTags ?? []).some(
+    (tag) => tag === 'bike_or_treadmill' || tag === 'machine',
+  );
+  const runningAllowance = programmedRunningDayAllowance({
+    phase: state.seasonPhase ?? 'Pre-season',
+    hasEquipment: hasOffLegEquipment,
+  });
+  const MAX_RUNNING_SESSIONS = runningAllowance.days;
+  if (runningAllowance.reason) {
+    logger.debug(
+      `[RUNNING-LAW] 4th running day unlocked: ${runningAllowance.reason} `
+      + `(phase=${state.seasonPhase}, offLegEquipment=${hasOffLegEquipment})`,
+    );
+  }
   let runningSessionCount = countWeeklyExposures(
     result.map((day) => ({ date: day.date, workout: day.workout })),
   ).runningExposures;
