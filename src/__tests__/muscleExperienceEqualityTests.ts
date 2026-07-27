@@ -1,0 +1,629 @@
+/**
+ * Muscle + experience metadata and the D17 session flow — doc<->code equality.
+ *
+ *   docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx          (Sam, AUTHORED FINAL)
+ *   docs/PROGRAMMING_DESIGN_SESSION_2026-07-23.md  §D17   (Sam, AUTHORED)
+ *
+ * Both are sources of truth. This suite parses them directly and holds the
+ * typed modules to them, so a Sam edit fails the build until code matches.
+ *
+ * Run: npm run test:muscle-experience
+ */
+
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+process.env.TZ = 'Australia/Melbourne';
+
+import fs from 'fs';
+import path from 'path';
+
+import {
+  EXERCISE_MUSCLE_METADATA,
+  MUSCLE_GROUPS,
+  MUSCLE_METADATA_POOLS,
+  EXPERIENCE_GATES,
+  EXPERIENCE_GATE_SOURCE_TEXT,
+  EXPERIENCE_LADDER,
+  REGRESSION_CONVENTION,
+  SELECTABLE_WITHOUT_METADATA,
+  METADATA_WITHOUT_SELECTABLE_EXERCISE,
+  AUTHORED_SPELLING_VARIANTS,
+  EXPERIENCE_CROSSWALK,
+  ONBOARDING_EXPERIENCE_ANSWERS,
+  visibleGatesForOnboardingAnswer,
+  muscleMetadataFor,
+  type ExperienceGate,
+  type ExperienceLadderLevel,
+  type MuscleGroup,
+} from '../data/muscleExperienceMetadata';
+import {
+  SESSION_FLOW_MENUS,
+  FLOW_RESOLUTION_ORDER,
+  FLOW_DOSING,
+  FLOW_CATEGORY_MUSCLE_MAPPING,
+  FLOW_IS_NEVER_LOAD_BEARING,
+  DAY_KINDS_WITHOUT_FLOW,
+  type FlowDayType,
+} from '../data/sessionFlowMenus';
+import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import { readSheetRecords } from './support/xlsxReader';
+
+const repoRoot = path.resolve(__dirname, '../..');
+const SHEET = path.join(repoRoot, 'docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx');
+const DESIGN_DOC = path.join(repoRoot, 'docs/PROGRAMMING_DESIGN_SESSION_2026-07-23.md');
+const SHEET_TAB = 'Muscle + Experience v3';
+/** Four authored preamble rows (sign-off, vocabulary legend, terminology) sit above the header. */
+const SHEET_HEADER_ROW = 5;
+
+let passed = 0;
+const failures: string[] = [];
+
+function ok(name: string, condition: unknown, detail?: string): void {
+  if (condition) {
+    passed += 1;
+    console.log(`  PASS ${name}`);
+    return;
+  }
+  failures.push(name);
+  console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
+}
+
+const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
+
+/* ── The sheet ── */
+
+console.log('\n[1] THE SHEET — still reads as Sam signed it');
+
+ok('the sheet holds 193 exercise rows', sheetRows.length === 193, `found ${sheetRows.length}`);
+
+ok(
+  'every row names an exercise and a pool',
+  sheetRows.every((row) => row.Exercise.trim() !== '' && row.Pool.trim() !== ''),
+);
+
+ok(
+  'every row declares at least one primary muscle group',
+  sheetRows.every((row) => row['Primary Muscle Group(s)'].trim() !== ''),
+);
+
+ok(
+  'every row declares an experience level',
+  sheetRows.every((row) => row['Experience Level'].trim() !== ''),
+);
+
+/* ── Equality, both directions ── */
+
+console.log('\n[2] EQUALITY — every authored row ships exactly, and nothing else does');
+
+ok(
+  'the module ships one entry per authored row',
+  EXERCISE_MUSCLE_METADATA.length === sheetRows.length,
+  `module ${EXERCISE_MUSCLE_METADATA.length} vs sheet ${sheetRows.length}`,
+);
+
+const byExercise = new Map(EXERCISE_MUSCLE_METADATA.map((entry) => [entry.exercise, entry]));
+
+ok(
+  'no exercise appears twice',
+  byExercise.size === EXERCISE_MUSCLE_METADATA.length,
+  `${EXERCISE_MUSCLE_METADATA.length - byExercise.size} duplicate(s)`,
+);
+
+/**
+ * Split an authored muscle cell into groups.
+ *
+ * "—" is the sheet's placeholder for "no secondary muscle", not a muscle, and
+ * casing is normalised because the sheet carries a small number of authored
+ * spelling variants (see AUTHORED_SPELLING_VARIANTS).
+ */
+function parseMuscleCell(cell: string): string[] {
+  return cell
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part !== '' && part !== '—')
+    .map((part) => part.toLowerCase());
+}
+
+const mismatches: string[] = [];
+for (const row of sheetRows) {
+  const entry = byExercise.get(row.Exercise);
+  if (!entry) {
+    mismatches.push(`${row.Exercise}: absent from the module`);
+    continue;
+  }
+  if (entry.pool !== row.Pool) {
+    mismatches.push(`${row.Exercise} · pool: sheet ${row.Pool} vs code ${entry.pool}`);
+  }
+  const sheetPrimary = parseMuscleCell(row['Primary Muscle Group(s)']);
+  const codePrimary = entry.primary.map((muscle) => muscle.toLowerCase());
+  if (sheetPrimary.join('|') !== codePrimary.join('|')) {
+    mismatches.push(
+      `${row.Exercise} · primary: sheet [${sheetPrimary.join(', ')}] vs code [${codePrimary.join(', ')}]`,
+    );
+  }
+  const sheetSecondary = parseMuscleCell(row['Secondary Muscle Group(s)']);
+  const codeSecondary = entry.secondary.map((muscle) => muscle.toLowerCase());
+  if (sheetSecondary.join('|') !== codeSecondary.join('|')) {
+    mismatches.push(
+      `${row.Exercise} · secondary: sheet [${sheetSecondary.join(', ')}] vs code [${codeSecondary.join(', ')}]`,
+    );
+  }
+  const authoredGate = row['Experience Level'].trim().toLowerCase();
+  if (EXPERIENCE_GATE_SOURCE_TEXT[entry.experienceGate].toLowerCase() !== authoredGate) {
+    mismatches.push(
+      `${row.Exercise} · gate: sheet "${authoredGate}" vs code ${entry.experienceGate}`,
+    );
+  }
+  if (entry.note !== row.Notes) {
+    mismatches.push(`${row.Exercise} · note drifted`);
+  }
+}
+
+ok(
+  'every authored field ships verbatim',
+  mismatches.length === 0,
+  mismatches.slice(0, 6).join('\n      '),
+);
+
+const sheetNames = new Set(sheetRows.map((row) => row.Exercise));
+const invented = EXERCISE_MUSCLE_METADATA.filter((entry) => !sheetNames.has(entry.exercise));
+ok(
+  'the module invents no exercise Sam did not author',
+  invented.length === 0,
+  invented.map((entry) => entry.exercise).join(', '),
+);
+
+ok(
+  'all 24 authored pools are recorded',
+  MUSCLE_METADATA_POOLS.length === 24,
+  `found ${MUSCLE_METADATA_POOLS.length}`,
+);
+
+ok(
+  'every entry sits in a recorded pool',
+  EXERCISE_MUSCLE_METADATA.every((entry) => MUSCLE_METADATA_POOLS.includes(entry.pool)),
+);
+
+ok('the lookup resolves an authored exercise', muscleMetadataFor('Back Squat')?.pool === 'Lower squat');
+ok('the lookup returns null for an unknown name', muscleMetadataFor('Sled Push') === null);
+
+/* ── Muscle vocabulary ── */
+
+console.log('\n[3] MUSCLE VOCABULARY — Midline terminology, no untyped group');
+
+const authoredMuscles = new Set<string>();
+for (const row of sheetRows) {
+  for (const column of ['Primary Muscle Group(s)', 'Secondary Muscle Group(s)'] as const) {
+    for (const muscle of parseMuscleCell(row[column])) authoredMuscles.add(muscle);
+  }
+}
+
+ok(
+  'every authored muscle group is a typed group',
+  [...authoredMuscles].every((muscle) =>
+    MUSCLE_GROUPS.some((group) => group.toLowerCase() === muscle),
+  ),
+  [...authoredMuscles]
+    .filter((muscle) => !MUSCLE_GROUPS.some((group) => group.toLowerCase() === muscle))
+    .join(', '),
+);
+
+ok(
+  'no typed group is unused by the sheet',
+  MUSCLE_GROUPS.every((group) => authoredMuscles.has(group.toLowerCase())),
+  MUSCLE_GROUPS.filter((group) => !authoredMuscles.has(group.toLowerCase())).join(', '),
+);
+
+ok(
+  'Midline is the trunk vocabulary — "Core" and "Trunk" are retired',
+  MUSCLE_GROUPS.includes('Midline' as MuscleGroup) &&
+    !MUSCLE_GROUPS.some((group) => /^(core|trunk)$/i.test(group)),
+);
+
+// The type system already makes "—" unrepresentable as a MuscleGroup, so
+// asserting that is a tautology the compiler rejects. The real risk is the
+// placeholder surviving the PARSE and being counted as a muscle, so check the
+// observable consequence: a row the sheet marks "—" must ship no secondary tags.
+const emDashRows = sheetRows.filter((row) => row['Secondary Muscle Group(s)'].trim() === '—');
+
+ok(
+  'the em-dash placeholder appears in the sheet (the check below is live)',
+  emDashRows.length > 0,
+  'no row uses "—" — has the sheet changed its placeholder?',
+);
+
+ok(
+  'a row marked "—" ships no secondary muscle groups',
+  emDashRows.every((row) => (byExercise.get(row.Exercise)?.secondary.length ?? -1) === 0),
+  emDashRows
+    .filter((row) => (byExercise.get(row.Exercise)?.secondary.length ?? -1) !== 0)
+    .map((row) => row.Exercise)
+    .join(', '),
+);
+
+/* ── Experience gates ── */
+
+console.log('\n[4] EXPERIENCE — five authored gates on the one ladder');
+
+ok('exactly five experience gates exist', EXPERIENCE_GATES.length === 5,
+  `found ${EXPERIENCE_GATES.length}`);
+
+// The sheet's own legend row declares the five permitted values. Parsed rather
+// than restated so a Sam edit to the legend is caught.
+const legend = readSheetRecords(SHEET, SHEET_TAB, 1)
+  .map((record) => Object.values(record).join(' '))
+  .find((text) => text.includes('EXPERIENCE VALUES'));
+
+ok('the sheet still declares its five experience values', legend !== undefined);
+
+if (legend) {
+  const missingFromLegend = EXPERIENCE_GATES.filter(
+    (gate) => !legend.toLowerCase().includes(EXPERIENCE_GATE_SOURCE_TEXT[gate].toLowerCase()),
+  );
+  ok(
+    "every typed gate appears in the sheet's own legend",
+    missingFromLegend.length === 0,
+    missingFromLegend.join(', '),
+  );
+}
+
+const gateCounts = new Map<ExperienceGate, number>();
+for (const entry of EXERCISE_MUSCLE_METADATA) {
+  gateCounts.set(entry.experienceGate, (gateCounts.get(entry.experienceGate) ?? 0) + 1);
+}
+
+// Counts from the authored sheet, case-normalised: 'Everyone' folds into
+// 'everyone' (two rows — see AUTHORED_SPELLING_VARIANTS).
+const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
+  everyone: 130,
+  everyone_regression: 11,
+  one_plus_years: 33,
+  two_plus_years: 17,
+  advanced_only: 2,
+};
+
+for (const [gate, expected] of Object.entries(AUTHORED_GATE_COUNTS)) {
+  ok(
+    `${gate} gates ${expected} exercise(s)`,
+    gateCounts.get(gate as ExperienceGate) === expected,
+    `found ${gateCounts.get(gate as ExperienceGate) ?? 0}`,
+  );
+}
+
+ok(
+  'the one ladder is new -> developing -> consistent -> advanced',
+  EXPERIENCE_LADDER.join(' -> ') === 'new -> developing -> consistent -> advanced',
+  EXPERIENCE_LADDER.join(' -> '),
+);
+
+ok(
+  'the regression convention is auto-programmed for new athletes only',
+  REGRESSION_CONVENTION.autoProgrammedFor.join(',') === 'new' &&
+    REGRESSION_CONVENTION.reachableByOthersVia.length === 3,
+);
+
+ok(
+  'the regression gate binds to the authored rows',
+  EXERCISE_MUSCLE_METADATA.filter((entry) => entry.experienceGate === 'everyone_regression')
+    .length === 11,
+);
+
+ok(
+  'the authored spelling variants are recorded rather than hidden',
+  AUTHORED_SPELLING_VARIANTS.length >= 3 &&
+    AUTHORED_SPELLING_VARIANTS.every((variant) => variant.authored !== '' && variant.reading !== ''),
+);
+
+/* ── The experience crosswalk ── */
+
+console.log('\n[4b] CROSSWALK — Sam\'s single authored bridge between the three vocabularies');
+
+const bible = fs.readFileSync(path.join(repoRoot, 'docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8');
+
+ok(
+  'the crosswalk is authored law in the Bible',
+  bible.includes('THE EXPERIENCE CROSSWALK (Sam, 2026-07-27)'),
+);
+
+ok(
+  'the Bible states the crosswalk is the only mapping',
+  /No other crosswalk may exist/.test(bible),
+);
+
+ok(
+  'all four onboarding answers are bridged',
+  EXPERIENCE_CROSSWALK.length === 4,
+  `found ${EXPERIENCE_CROSSWALK.length}`,
+);
+
+/** Sam's authored table, row for row. */
+const AUTHORED_CROSSWALK: ReadonlyArray<
+  readonly [string, ExperienceLadderLevel, readonly ExperienceGate[]]
+> = [
+  ['Complete beginner', 'new', ['everyone', 'everyone_regression']],
+  ['1-2 years', 'developing', ['everyone', 'one_plus_years']],
+  ['2-5 years', 'consistent', ['everyone', 'one_plus_years', 'two_plus_years']],
+  ['5+ years', 'advanced', ['everyone', 'one_plus_years', 'two_plus_years', 'advanced_only']],
+];
+
+for (const [answer, level, gates] of AUTHORED_CROSSWALK) {
+  const row = EXPERIENCE_CROSSWALK.find((candidate) => candidate.onboardingAnswer === answer);
+  if (!row) {
+    ok(`"${answer}" is bridged`, false);
+    continue;
+  }
+  ok(`"${answer}" maps to ${level}`, row.ladderLevel === level, `found ${row.ladderLevel}`);
+  ok(
+    `"${answer}" sees ${gates.join(' + ')}`,
+    row.visibleGates.slice().sort().join(',') === gates.slice().sort().join(','),
+    `found ${row.visibleGates.join(', ')}`,
+  );
+  // The Bible's own table row must still say this, so an edit there fails here.
+  ok(
+    `"${answer}" still reads that way in the Bible`,
+    bible.includes(`| ${answer} | ${level} |`),
+  );
+}
+
+ok(
+  'BOUNDARY 1 — regressions are visible to complete beginners ONLY',
+  EXPERIENCE_CROSSWALK.filter((row) => row.visibleGates.includes('everyone_regression')).map(
+    (row) => row.onboardingAnswer,
+  ).join(',') === 'Complete beginner',
+  EXPERIENCE_CROSSWALK.filter((row) => row.visibleGates.includes('everyone_regression'))
+    .map((row) => row.onboardingAnswer)
+    .join(','),
+);
+
+ok(
+  'BOUNDARY 1 — a "1-2 years" athlete never sees a regression',
+  !(
+    EXPERIENCE_CROSSWALK.find((row) => row.onboardingAnswer === '1-2 years')?.visibleGates.includes(
+      'everyone_regression',
+    ) ?? true
+  ),
+);
+
+ok(
+  'BOUNDARY 1 — advanced sees everything EXCEPT regressions',
+  (() => {
+    const advanced = EXPERIENCE_CROSSWALK.find((row) => row.ladderLevel === 'advanced');
+    if (!advanced) return false;
+    const expected = EXPERIENCE_GATES.filter((gate) => gate !== 'everyone_regression');
+    return (
+      advanced.visibleGates.slice().sort().join(',') === expected.slice().sort().join(',')
+    );
+  })(),
+);
+
+ok(
+  'BOUNDARY 2 — "2+ years" includes the "2-5 years" answer',
+  EXPERIENCE_CROSSWALK.find(
+    (row) => row.onboardingAnswer === '2-5 years',
+  )?.visibleGates.includes('two_plus_years') === true,
+);
+
+ok(
+  'both boundary rulings are recorded as law in the Bible',
+  /Regressions are visible to complete beginners ONLY/.test(bible) &&
+    /"2\+ years" includes the "2-5 years" onboarding answer/.test(bible),
+);
+
+ok(
+  'the crosswalk covers every onboarding answer the app can produce',
+  ONBOARDING_EXPERIENCE_ANSWERS.every((answer) =>
+    EXPERIENCE_CROSSWALK.some((row) => row.onboardingAnswer === answer),
+  ),
+  ONBOARDING_EXPERIENCE_ANSWERS.filter(
+    (answer) => !EXPERIENCE_CROSSWALK.some((row) => row.onboardingAnswer === answer),
+  ).join(', '),
+);
+
+ok(
+  'every ladder level is reachable from some onboarding answer',
+  EXPERIENCE_LADDER.every((level) =>
+    EXPERIENCE_CROSSWALK.some((row) => row.ladderLevel === level),
+  ),
+);
+
+ok(
+  'the resolver agrees with the table for every answer',
+  EXPERIENCE_CROSSWALK.every(
+    (row) =>
+      visibleGatesForOnboardingAnswer(row.onboardingAnswer).slice().sort().join(',') ===
+      row.visibleGates.slice().sort().join(','),
+  ),
+);
+
+ok(
+  'the resolver admits an authored exercise at the right level',
+  visibleGatesForOnboardingAnswer('Complete beginner').includes('everyone_regression') &&
+    !visibleGatesForOnboardingAnswer('5+ years').includes('everyone_regression') &&
+    visibleGatesForOnboardingAnswer('2-5 years').includes('two_plus_years') &&
+    !visibleGatesForOnboardingAnswer('1-2 years').includes('two_plus_years'),
+);
+
+// A gate no answer can ever see would silently orphan every exercise carrying
+// it — the failure mode this catches.
+ok(
+  'no authored gate is unreachable by every athlete',
+  EXPERIENCE_GATES.every((gate) =>
+    EXPERIENCE_CROSSWALK.some((row) => row.visibleGates.includes(gate)),
+  ),
+  EXPERIENCE_GATES.filter(
+    (gate) => !EXPERIENCE_CROSSWALK.some((row) => row.visibleGates.includes(gate)),
+  ).join(', '),
+);
+
+/* ── Vocabulary reconciliation ── */
+
+console.log('\n[5] RECONCILIATION — metadata against the selectable vocabulary');
+
+const selectable = new Set(selectableExerciseNames());
+const metadataNames = new Set(EXERCISE_MUSCLE_METADATA.map((entry) => entry.exercise));
+
+const unlistedGaps = [...selectable].filter((name) => !metadataNames.has(name));
+ok(
+  'every selectable exercise without metadata is a recorded gap',
+  unlistedGaps.every((name) => SELECTABLE_WITHOUT_METADATA.includes(name)),
+  unlistedGaps.filter((name) => !SELECTABLE_WITHOUT_METADATA.includes(name)).join(', '),
+);
+
+ok(
+  'no recorded gap has quietly been closed',
+  SELECTABLE_WITHOUT_METADATA.every((name) => !metadataNames.has(name)),
+  SELECTABLE_WITHOUT_METADATA.filter((name) => metadataNames.has(name)).join(', '),
+);
+
+const notSelectable = [...metadataNames].filter((name) => !selectable.has(name));
+ok(
+  'every metadata entry that is not yet selectable is recorded',
+  notSelectable.every((name) =>
+    METADATA_WITHOUT_SELECTABLE_EXERCISE.some((record) => record.exercise === name),
+  ),
+  notSelectable
+    .filter(
+      (name) => !METADATA_WITHOUT_SELECTABLE_EXERCISE.some((record) => record.exercise === name),
+    )
+    .join(', '),
+);
+
+ok(
+  'every not-yet-selectable entry names why',
+  METADATA_WITHOUT_SELECTABLE_EXERCISE.every((record) => record.reason.trim() !== ''),
+);
+
+/* ── D17 flow menus ── */
+
+console.log('\n[6] D17 FLOW — Sam\'s authored menus, counts and dosing');
+
+const designDoc = fs.readFileSync(DESIGN_DOC, 'utf8');
+const d17 = /### D17 —[\s\S]*?(?=\n### )/.exec(designDoc);
+
+ok('the D17 section is still in the design doc', d17 !== null);
+const d17Text = d17 ? d17[0] : '';
+
+ok('D17 is still marked AUTHORED', /AUTHORED/.test(d17Text));
+
+ok(
+  'all five day-type menus are encoded',
+  SESSION_FLOW_MENUS.length === 5,
+  `found ${SESSION_FLOW_MENUS.length}: ${SESSION_FLOW_MENUS.map((menu) => menu.dayType).join(', ')}`,
+);
+
+/** Sam's authored counts, keyed by day type. Every count is law. */
+const AUTHORED_MENUS: ReadonlyArray<readonly [FlowDayType, Readonly<Record<string, number>>]> = [
+  ['lower_general', { hip_mobility: 2, hip_prehab: 2 }],
+  ['lower_squat', { hip_mobility: 2, hip_prehab: 1, knee_prehab: 1 }],
+  [
+    'lower_hinge',
+    { hip_mobility: 1, hamstring_or_low_back_mobility: 1, hip_prehab: 1, hamstring_prehab: 1 },
+  ],
+  ['upper', { shoulder_mobility: 1, upper_body_mobility: 1, shoulder_prehab: 2 }],
+  ['full_body', { hip_mobility: 1, shoulder_mobility: 1, hip_prehab: 1, shoulder_prehab: 1 }],
+];
+
+for (const [dayType, expected] of AUTHORED_MENUS) {
+  const menu = SESSION_FLOW_MENUS.find((candidate) => candidate.dayType === dayType);
+  if (!menu) {
+    ok(`${dayType} menu exists`, false);
+    continue;
+  }
+  const actual: Record<string, number> = {};
+  for (const slot of menu.slots) actual[slot.category] = slot.count;
+  ok(
+    `${dayType} = ${Object.entries(expected).map(([k, v]) => `${v} ${k}`).join(' + ')}`,
+    JSON.stringify(actual) === JSON.stringify(expected),
+    `found ${JSON.stringify(actual)}`,
+  );
+}
+
+ok(
+  'total flow items per day is 4 on every menu',
+  SESSION_FLOW_MENUS.every(
+    (menu) => menu.slots.reduce((sum, slot) => sum + slot.count, 0) === 4,
+  ),
+  SESSION_FLOW_MENUS.map(
+    (menu) => `${menu.dayType}=${menu.slots.reduce((sum, slot) => sum + slot.count, 0)}`,
+  ).join(', '),
+);
+
+ok(
+  'resolution order is hinge > squat > general lower',
+  FLOW_RESOLUTION_ORDER.join(' > ') === 'lower_hinge > lower_squat > lower_general',
+  FLOW_RESOLUTION_ORDER.join(' > '),
+);
+
+ok(
+  'mobility dosing is 2 sets x 30-60 sec',
+  FLOW_DOSING.mobility.sets === 2 &&
+    FLOW_DOSING.mobility.secondsLow === 30 &&
+    FLOW_DOSING.mobility.secondsHigh === 60,
+);
+
+ok(
+  'prehab dosing is 2 sets x 10-20 reps',
+  FLOW_DOSING.prehab.sets === 2 &&
+    FLOW_DOSING.prehab.repsLow === 10 &&
+    FLOW_DOSING.prehab.repsHigh === 20,
+);
+
+ok('a curated dose overrides the universal flow dose', FLOW_DOSING.curatedDoseWins === true);
+
+ok(
+  'the dosing numbers still match the authored D17 text',
+  /2 sets ×\s*\n?\s*30–60 sec/.test(d17Text) && /2 sets ×\s*\n?\s*10–20 reps/.test(d17Text),
+);
+
+ok('the flow is never load-bearing (D13)', FLOW_IS_NEVER_LOAD_BEARING === true);
+
+ok(
+  'conditioning-only and recovery days have no flow',
+  DAY_KINDS_WITHOUT_FLOW.slice().sort().join(',') === 'conditioning_only,recovery',
+  DAY_KINDS_WITHOUT_FLOW.join(','),
+);
+
+ok(
+  'every menu category has a muscle-metadata mapping',
+  SESSION_FLOW_MENUS.every((menu) =>
+    menu.slots.every((slot) => slot.category in FLOW_CATEGORY_MUSCLE_MAPPING),
+  ),
+);
+
+ok(
+  'every category mapping names at least one metadata pool or muscle group',
+  Object.values(FLOW_CATEGORY_MUSCLE_MAPPING).every(
+    (mapping) => mapping.pools.length > 0 || mapping.muscleGroups.length > 0,
+  ),
+);
+
+ok(
+  'every mapped pool is a real authored pool',
+  Object.values(FLOW_CATEGORY_MUSCLE_MAPPING).every((mapping) =>
+    mapping.pools.every((pool) => MUSCLE_METADATA_POOLS.includes(pool)),
+  ),
+  Object.entries(FLOW_CATEGORY_MUSCLE_MAPPING)
+    .flatMap(([category, mapping]) =>
+      mapping.pools
+        .filter((pool) => !MUSCLE_METADATA_POOLS.includes(pool))
+        .map((pool) => `${category} -> ${pool}`),
+    )
+    .join(', '),
+);
+
+ok(
+  'every mapped muscle group is a typed group',
+  Object.values(FLOW_CATEGORY_MUSCLE_MAPPING).every((mapping) =>
+    mapping.muscleGroups.every((muscle) => MUSCLE_GROUPS.includes(muscle)),
+  ),
+);
+
+/* ── Result ── */
+
+console.log(
+  `\nMuscle + experience equality: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
+);
+if (failures.length > 0) {
+  console.error('\nFAILURES:');
+  for (const failure of failures) console.error(`  - ${failure}`);
+  process.exit(1);
+}

@@ -223,15 +223,24 @@ export function readXlsx(filePath: string): XlsxSheet[] {
   return sheets;
 }
 
-/** Read one named sheet as header-keyed records, dropping fully blank rows. */
+/**
+ * Read one named sheet as header-keyed records, dropping fully blank rows.
+ *
+ * `headerRow` is 1-based and defaults to the first row. Sam's sheets sometimes
+ * carry authored preamble above the header (sign-off line, vocabulary legend),
+ * so the header is not always row 1.
+ */
 export function readSheetRecords(
   filePath: string,
   sheetName: string,
+  headerRow = 1,
 ): Array<Record<string, string>> {
   const sheet = readXlsx(filePath).find((candidate) => candidate.name === sheetName);
   if (!sheet) throw new Error(`xlsx: no sheet named "${sheetName}" in ${filePath}`);
-  const [header, ...body] = sheet.rows;
-  if (!header) throw new Error(`xlsx: sheet "${sheetName}" is empty`);
+  if (headerRow < 1) throw new Error(`xlsx: headerRow must be 1-based, got ${headerRow}`);
+  const header = sheet.rows[headerRow - 1];
+  const body = sheet.rows.slice(headerRow);
+  if (!header) throw new Error(`xlsx: sheet "${sheetName}" has no row ${headerRow}`);
 
   const columns = header.map((cell) => cell.trim());
   return body
