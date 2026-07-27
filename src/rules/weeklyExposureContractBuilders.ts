@@ -4,7 +4,6 @@ import type {
   SeasonPhase,
   WeekKind,
 } from '../types/domain';
-import type { GenerationReadinessTier } from '../utils/generationConstraints';
 import { resolveWeekIntensityMultiplier } from './deloadWeekRules';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
@@ -36,7 +35,8 @@ export interface WeeklyExposureContractInput {
   weekKind?: WeekKind;
   offseasonSubphase?: OffseasonSubphase | null;
   preseasonSubphase?: PreseasonSubphase | null;
-  activeReadinessTier?: GenerationReadinessTier;
+  /** True when this week falls inside a readiness/illness/scheduled deload. */
+  readinessDeloaded?: boolean;
   maxStrengthSessions?: number | null;
   /** False means the resolved equipment set cannot deliver an app conditioning block. */
   appConditioningFeasible?: boolean;
@@ -283,35 +283,13 @@ function applyCommonSafetyReductions(
     return offset !== -2 && offset !== -1 && offset !== 1;
   });
 
-  const tier = input.activeReadinessTier;
-  if (tier === 'slight_reduction') {
-    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'low_readiness',
-      'Slight readiness reduction removes app-authored sprint while preserving normal anchor exposure.');
-  } else if (tier === 'full_pause') {
-    contract = reduceAllocationTarget(contract, 'main_strength', 0, 'full_pause',
-      'The active full-pause readiness state removes app training.');
-    contract.strength.requiredPatterns = [];
-    contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'full_pause',
-      'Only unavoidable team/game anchors remain during a full pause.');
-    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'full_pause',
-      'Only unavoidable team/game sprint credit remains during a full pause.');
-  } else if (tier === 'major_reduction') {
-    contract = reduceAllocationTarget(contract, 'main_strength', 0, 'low_readiness',
-      'Major readiness reduction authorises a recovery-only app week when final safe content contains no main strength.');
-    contract.strength.requiredPatterns = [];
-    contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'low_readiness',
-      'Major readiness reduction removes app-authored conditioning.');
-    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'low_readiness',
-      'Major readiness reduction removes app-authored sprint/COD.');
-  } else if (tier === 'moderate_reduction' || input.readiness === 'low') {
-    contract = reduceAllocationTarget(contract, 'main_strength', Math.min(2, selected.length), 'low_readiness',
-      'Low or moderately reduced readiness consolidates strength into controlled sessions.');
-    contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit + Math.min(1, conditioningPlacementDays.length), 'low_readiness',
-      'Low readiness keeps at most one low-stress app conditioning exposure.');
-    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'low_readiness',
-      'Low readiness removes app-authored sprint/COD.');
-    contract.conditioning.allowCombinedStrengthConditioning = false;
-  }
+  // RETIRED (Sam's readiness law, 2026-07-27). These reduced session COUNTS by
+  // tier — main_strength to 0 on a full pause, sprint_cod on a slight reduction.
+  // Counts are STRUCTURE, and the deload law holds structure constant while the
+  // work inside shrinks. A deloaded week keeps its targets; the sessions arrive
+  // smaller. Reinstating a reduction here at any magnitude would be the tier
+  // system in disguise.
+  void input.readinessDeloaded;
 
   const blockedPatterns = resolveRestrictedMainStrengthPatterns(input);
   if (blockedPatterns.size > 0) {
@@ -443,10 +421,16 @@ function applyCommonSafetyReductions(
 
 function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
   if (input.byeMode) return input.byeMode === 'recovery';
+  // A readiness DECLARATION no longer selects this mode. Bye recovery carries a
+  // strength maximum of 2 against a build week's 3, so switching into it on
+  // `readinessDeloaded` cut a session — a count reduction dressed as a mode
+  // choice, which is exactly what Sam's law forbids and the hardest kind to see:
+  // no reduction is recorded anywhere, the week simply arrives smaller.
+  //
+  // The other three triggers stay. A SCHEDULED deload week is the block plan's
+  // own structure; `readiness === 'low'` is the CAPACITY score, a different
+  // signal this law does not govern; and an injury pause is medical.
   return input.weekKind === 'deload' || input.readiness === 'low' ||
-    input.activeReadinessTier === 'moderate_reduction' ||
-    input.activeReadinessTier === 'major_reduction' ||
-    input.activeReadinessTier === 'full_pause' ||
     (input.activeInjuries ?? []).some((injury) => injury.pauseAffectedTraining);
 }
 
@@ -573,10 +557,24 @@ function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposure
       // Nothing is required, so no pattern is required either.
       requiredPatterns: [],
       required: 0,
+      // Nor is anything COMMITTED. "Nothing is required this week" covers the
+      // planner-selected target too: the sessions are still built and offered,
+      // but §18 must not hold the week to a core target that every session was
+      // deliberately stamped optional against. Leaving this at the phase's
+      // number is what produced `planner_selected_target_miss` — the contract
+      // demanding three core sessions from a week that has none by design.
+      targetCount: 0,
     },
     conditioning: {
       ...contract.conditioning,
       required: 0,
+      // The same reasoning as strength above, and it has to be applied HERE
+      // too. Dropping only the minimum left the week committed to the phase's
+      // core conditioning target — three or four sessions — from a week that
+      // has none by design, and §18 rejects a missed core target on its own
+      // regardless of the minimum being zero. That partial decoration is what
+      // made every severe-illness commit fail its visible verification.
+      targetCount: 0,
       // Credited counts stay FACTUAL — the athlete's anchors are still on the
       // calendar. Only the floor they imply drops.
       additionalRequiredCount: 0,
@@ -584,6 +582,7 @@ function asIllnessRecoveryWeek(contract: WeeklyExposureContract): WeeklyExposure
     sprintCod: {
       ...contract.sprintCod,
       required: 0,
+      targetCount: 0,
       additionalRequiredCount: 0,
     },
   };
@@ -595,12 +594,14 @@ export function buildInSeasonExposureContract(
   // A minted illness_recovery mode DECORATES the week the athlete would have
   // had; it no longer wins over game/bye logic by replacing it. The builder
   // never re-reads facts, only the derived mode.
-  const base = input.hasGame && input.gameDay !== null
+  // The optional-week decoration is applied by `buildWeeklyExposureContract`
+  // for EVERY phase now, not here: readiness can make an off-season week
+  // optional too, and this branch never ran for those.
+  return input.hasGame && input.gameDay !== null
     ? buildInSeasonGameWeekExposureContract(input)
     : byeRecoveryMode(input)
       ? buildInSeasonByeRecoveryExposureContract(input)
       : buildInSeasonByeBuildExposureContract(input);
-  return input.weekModeOverride === 'optional_week' ? asIllnessRecoveryWeek(base) : base;
 }
 
 export function buildEarlyOffseasonExposureContract(
@@ -619,20 +620,9 @@ export function buildEarlyOffseasonExposureContract(
     permittedHardDays: 4,
   });
   const reduced = applyCommonSafetyReductions(contract, input);
-  if (
-    (input.activeReadinessTier === 'major_reduction' ||
-      input.activeReadinessTier === 'full_pause') &&
-    selected.optionalMainStrength > 0
-  ) {
-    addExposureReduction(reduced.reductions, {
-      domain: 'main_strength',
-      reason: input.activeReadinessTier === 'full_pause' ? 'full_pause' : 'low_readiness',
-      metric: 'weekly_exposure_count',
-      from: selected.optionalMainStrength,
-      to: 0,
-      detail: 'Typed readiness ownership removes planner-selected optional early off-season strength.',
-    });
-  }
+  // RETIRED: removed planner-selected optional early off-season strength on low
+  // readiness — another COUNT reduction the deload law replaces.
+  void input.readinessDeloaded;
   return reduced;
 }
 
@@ -765,6 +755,17 @@ export function buildPreseasonExposureContract(
 export function buildWeeklyExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
+  const built = buildForPhase(input);
+  // ONE decoration point, every phase. The optional-only week used to be minted
+  // inside the in-season branch because only a severe illness could produce it,
+  // and illness_recovery is in-season. "Absolutely cooked" readiness can make an
+  // off-season or pre-season week optional too, and that path silently skipped
+  // the decoration — leaving the contract demanding core sessions from a week
+  // whose every session had been stamped optional.
+  return input.weekModeOverride === 'optional_week' ? asIllnessRecoveryWeek(built) : built;
+}
+
+function buildForPhase(input: WeeklyExposureContractInput): WeeklyExposureContract {
   if (input.seasonPhase === 'In-season') return buildInSeasonExposureContract(input);
   if (input.seasonPhase === 'Off-season') {
     // A stale onboarding game-day value is not an off-season fixture anchor.

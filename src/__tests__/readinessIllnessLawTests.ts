@@ -39,6 +39,7 @@ import {
   normalizeTemporarySourceFacts,
 } from '../rules/temporarySourceFact';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
+import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -153,7 +154,11 @@ console.log('\n[4] AUTHORED — both laws recorded');
 const bible = fs.readFileSync(path.join(repoRoot, 'docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8');
 ok('the readiness law is in the Bible', bible.includes('THE READINESS LAW (Sam, 2026-07-27)'));
 ok('the illness law is in the Bible', bible.includes('THE ILLNESS LAW (Sam, 2026-07-27)'));
-ok('the Bible states there is no full pause', /There is no "full pause"/.test(bible));
+// The authored sentence carries no quotation marks ("There is no full pause —
+// the app never empties a week on readiness alone"). The regex demanded them,
+// so it was asserting a typographic detail rather than the law, and failed
+// against the Bible entry that does record the consequence.
+ok('the Bible states there is no full pause', /There is no "?full pause"?/.test(bible));
 ok('the Bible states readiness never removes sessions',
   /Readiness never REMOVES sessions/.test(bible));
 
@@ -281,6 +286,51 @@ for (const label of ['A bit off', 'Properly sick', "Can't get out of bed"]) {
 // sheet is how two vocabularies survive a rename.
 ok('the superseded "Coming down with something" label is gone',
   !sheet.includes('Coming down with something'));
+
+/* ── "Nothing is required" means every domain ── */
+
+// The optional tier's whole content is "deloaded AND nothing is required". §18
+// enforces two separate numbers per domain: a required MINIMUM and a
+// planner-selected CORE target, and a missed core target is blocking on its own
+// — `required: 0` does not excuse it. So an optional week has to drop BOTH, in
+// EVERY domain, or the contract still commits the week to core work that every
+// session was deliberately stamped optional against, and §18 rejects the whole
+// commit.
+//
+// This is asserted across all three domains together because the defect it
+// pins was a PARTIAL decoration: strength dropped both numbers while
+// conditioning and sprint dropped only the minimum, so the optional week
+// remained impossible via a domain nobody had looked at. A per-domain spot
+// check would have passed on strength and missed it.
+console.log('\n[9] OPTIONAL WEEK — no domain keeps a core target');
+
+for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
+  const optional = buildWeeklyExposureContract({
+    seasonPhase: phase,
+    readiness: 'medium',
+    selectedDayNumbers: [1, 2, 3, 4, 5, 6],
+    teamTrainingDayNumbers: [],
+    hasGame: false,
+    gameDay: null,
+    weekModeOverride: 'optional_week',
+  } as never);
+
+  ok(`${phase}: the optional week is minted`,
+    optional.identity.mode === 'optional_week', optional.identity.mode);
+
+  for (const [domain, exposure] of [
+    ['strength', optional.strength],
+    ['conditioning', optional.conditioning],
+    ['sprint/COD', optional.sprintCod],
+  ] as const) {
+    ok(`${phase}: ${domain} requires nothing`,
+      (exposure as { required: number }).required === 0,
+      `required=${(exposure as { required: number }).required}`);
+    ok(`${phase}: ${domain} COMMITS to nothing either`,
+      (exposure as { targetCount: number }).targetCount === 0,
+      `targetCount=${(exposure as { targetCount: number }).targetCount}`);
+  }
+}
 
 /* ── Result ── */
 
