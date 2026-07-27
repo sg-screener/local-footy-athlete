@@ -79,7 +79,9 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
     waives: ['video', 'tags'],
     ruling:
       'Zone-1 cyclical recovery — walking, skipping, easy cycling. Not movements '
-      + 'to demo, and they carry none of the strength taxonomy\'s properties.',
+      + 'to demo, and they carry none of the strength taxonomy\'s properties. '
+      + 'Sam\'s original ruling, formalised with his attribution 2026-07-27 when '
+      + 'the reconciliation gate began requiring one for every exemption kind.',
   },
   mobility_untagged: {
     waives: ['tags'],

@@ -123,19 +123,13 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
       .filter(([, spec]) => !spec.ruling || spec.ruling.trim() === '')
       .map(([kind]) => kind));
 
-  // NOTE: `zone1_recovery` predates this rule and carries no attribution. It is
-  // listed as a KNOWN pre-existing gap rather than fabricated — Sam's sign-off
-  // is what closes it. Every OTHER kind must be attributed, and any NEW kind
-  // must be too, which is the forward-looking rule Sam asked for.
-  const ATTRIBUTION_PENDING = ['zone1_recovery'];
-  const unattributed = Object.entries(EXEMPTION_KINDS)
-    .filter(([kind, spec]) => !/Sam/.test(spec.ruling) && !ATTRIBUTION_PENDING.includes(kind))
-    .map(([kind]) => kind);
-  ok('every exemption kind names Sam as the ruling authority', unattributed);
-
-  ok('the attribution-pending list has not grown',
-    ATTRIBUTION_PENDING.filter((k) => !(k in EXEMPTION_KINDS)).concat(
-      ATTRIBUTION_PENDING.length > 1 ? ['more than the one known pre-existing kind'] : []));
+  // Every kind is Sam-attributed as of 2026-07-27 — the known-gap list is gone,
+  // not emptied, for the same reason `awaiting_sam_video` was deleted: a list
+  // that can hold exceptions is a place for the next one to hide.
+  ok('every exemption kind names Sam as the ruling authority',
+    Object.entries(EXEMPTION_KINDS)
+      .filter(([, spec]) => !/Sam/.test(spec.ruling))
+      .map(([kind]) => kind));
 
   // Coverage, stated positively: nothing is missing for an UNEXPLAINED reason.
   ok('no selectable exercise lacks a cue for an unexplained reason',
