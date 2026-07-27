@@ -11,6 +11,7 @@ import type { GenerationConstraintContext } from '../utils/generationConstraints
 import { resolveRestrictedMainStrengthPatterns } from './weeklyExposureContractBuilders';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import {
+  anchorAttendanceClaimsConditioning,
   refreshSection18SafetyPolicy,
   type AnchorParticipationState,
   type Section18AuthorisedReduction,
@@ -240,10 +241,30 @@ export function applyGenerationSafetyToSection18Contract(args: {
   // 8/10 knee" no longer asserts "the athlete's own Saturday game produced
   // nothing". The finaliser still strips app-authored speed blocks.
   //
-  // Low readiness continues to withdraw field participation, and legitimately so:
-  // it authors matching main-strength, conditioning and sprint reductions in the
-  // same pass, so its contracts stay satisfiable.
-  const hasFieldRestriction = readinessFieldRestriction;
+  // READINESS NO LONGER WITHDRAWS FIELD PARTICIPATION (Sam, 2026-07-27).
+  //
+  // The clause this replaces justified itself in one breath: low readiness may
+  // withdraw field participation "legitimately so: it authors matching
+  // main-strength, conditioning and sprint reductions in the same pass, so its
+  // contracts stay satisfiable." The readiness law DELETED exactly those
+  // matching reductions — counts are structure — and this half of the bargain
+  // was left standing alone.
+  //
+  // What remained was the D10 defect above, rebuilt from the readiness side:
+  // the contract asserted both "the athlete's own game produced no sprint" and
+  // "this week requires a sprint exposure", unsatisfiable before the gate ran,
+  // so a deloaded week could not be committed at all.
+  //
+  // It is also the law itself. A deload changes dose and intensity inside the
+  // sessions the app PRESCRIBES; team training and a game are neither dosed nor
+  // prescribed by the app. Demoting them is the app inventing a fact about what
+  // the athlete will do on Saturday — and that fact then removed the exposure
+  // from the week's count, which is the identity/intensity conflation Sam's
+  // ruling forbids.
+  //
+  // The capability survives where a medical stop genuinely owns it: an explicit
+  // participation fact the athlete recorded, and a training pause.
+  const hasFieldRestriction = trainingPaused;
 
   if (prohibited.length > 0) {
     addReduction(contract, {
@@ -347,7 +368,11 @@ export function applyGenerationSafetyToSection18Contract(args: {
           ? 'derived_active_constraint'
           : 'derived_healthy_unrestricted',
       currentProductionClaim: {
-        conditioning: normal,
+        // The conditioning claim follows ATTENDANCE; the other two are
+        // intensity claims and stay behind full participation. Softening an
+        // anchor is what a deload does, and it must not remove the session
+        // from the week's count.
+        conditioning: anchorAttendanceClaimsConditioning(participation),
         sprintHighSpeed: normal,
         hardDay: normal,
       },

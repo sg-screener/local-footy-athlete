@@ -72,6 +72,27 @@ export type AnchorParticipationState =
   | 'did_not_participate'
   | 'unknown';
 
+/**
+ * Whether an anchor's participation state means the athlete WAS THERE.
+ *
+ * Sam, 2026-07-27: "Counting counts structure; intensity and prescribed volume
+ * must never feed identity." A conditioning exposure exists because the athlete
+ * attended the session, not because they attended it at full intensity — so a
+ * `modified`, `rehab`, `restricted`, `non_contact` or `reduced_running` anchor
+ * still claims conditioning. `did_not_participate` is absence and `unknown` is
+ * legacy content with no evidence either way; neither has ever credited.
+ *
+ * Sprint/high-speed and hard-day claims are INTENSITY and stay behind
+ * `normal_unrestricted`. Keeping one helper for the identity half is what stops
+ * the two questions collapsing back into one boolean, which is how a deload
+ * came to delete a session from the week's count.
+ */
+export function anchorAttendanceClaimsConditioning(
+  participation: AnchorParticipationState,
+): boolean {
+  return participation !== 'did_not_participate' && participation !== 'unknown';
+}
+
 export type Section18ConditioningRole =
   | 'required_core'
   | 'planner_selected_core'
@@ -215,7 +236,9 @@ export function stampSection18GovernedBoundary(args: {
         participation,
         participationProvenance: 'delivered_history' as const,
         currentProductionClaim: {
-          conditioning: normal,
+          // Attendance, not intensity (Sam, 2026-07-27) — see
+          // `anchorAttendanceClaimsConditioning`.
+          conditioning: anchorAttendanceClaimsConditioning(participation),
           sprintHighSpeed: normal,
           hardDay: normal,
         },

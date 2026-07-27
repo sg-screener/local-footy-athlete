@@ -162,7 +162,16 @@ function generateWithIllness(severe: boolean, withGame = true) {
   return program.microcycles[0];
 }
 
-type GenWorkout = { dayOfWeek: number; workoutType?: string; sessionTier?: string };
+type GenRow = {
+  prescribedSets?: number;
+  section18Evidence?: { role?: string };
+};
+type GenWorkout = {
+  dayOfWeek: number;
+  workoutType?: string;
+  sessionTier?: string;
+  exercises?: GenRow[];
+};
 type GenMicro = { exposureContract?: { identity?: { mode?: string } }; workouts: GenWorkout[] };
 
 /** Sam 2026-07-24: in an optional-only week mode, EVERY surviving session (any type that

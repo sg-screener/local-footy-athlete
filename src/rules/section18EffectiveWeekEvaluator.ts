@@ -9,6 +9,7 @@
 import type { Workout } from '../types/domain';
 import { classifyVisibleSession } from './sessionClassificationAdapter';
 import { normalizeStrengthIntent, type MainStrengthPattern } from './strengthPatternContributions';
+import { anchorAttendanceClaimsConditioning } from './weeklyExposureContractV2';
 import type {
   AnchorParticipationState,
   Section18AnchorContract,
@@ -258,6 +259,26 @@ function normalParticipation(anchor: Section18AnchorContract): boolean {
   return anchor.participation === 'normal_unrestricted';
 }
 
+/**
+ * Did the athlete TAKE PART? — which is a different question from how hard.
+ *
+ * Sam, 2026-07-27: "Counting counts structure; intensity and prescribed volume
+ * must never feed identity." Anchor credit used to answer four questions with
+ * one boolean (`normal_unrestricted`): is this a conditioning exposure, was it
+ * a sprint exposure, was it a hard day, and how much stress did it carry. Only
+ * the first is identity. So softening a game to `reduced_running` — which is
+ * exactly what a deload does — deleted the game from the week's conditioning
+ * COUNT, and §18 then rejected the week for a shortfall it had created itself.
+ * The athlete still played the game.
+ *
+ * Deliberately delegates to the ONE exported rule rather than restating it: the
+ * contract builder, the safety policy and this evaluator all have to give the
+ * same answer, and a second copy here is how they would drift apart again.
+ */
+function attendedAnchor(anchor: { participation: AnchorParticipationState }): boolean {
+  return anchorAttendanceClaimsConditioning(anchor.participation);
+}
+
 function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeekLedger {
   const patterns: Record<MainStrengthPattern, number> = { squat: 0, hinge: 0, push: 0, pull: 0 };
   const patternDays: Record<MainStrengthPattern, number[]> = { squat: [], hinge: [], push: [], pull: [] };
@@ -306,8 +327,12 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   let creditedAnchorIndex = 0;
   const anchors: Section18AnchorLedgerRow[] = input.contract.anchors.map((anchor) => {
     activeDays.add(anchor.dayOfWeek);
-    const credited = normalParticipation(anchor);
-    if (credited) {
+    // ATTENDANCE decides the exposure; PARTICIPATION decides its intensity.
+    // These were one boolean, which is what let a deload delete a session from
+    // the week's count.
+    const attended = attendedAnchor(anchor);
+    const fullParticipation = normalParticipation(anchor);
+    if (attended) {
       const role: Section18ConditioningRole = creditedAnchorIndex <
         input.contract.conditioning.core.requiredMinimum
         ? 'required_core'
@@ -316,13 +341,22 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       conditioningCredits.push({
         dayOfWeek: anchor.dayOfWeek,
         role,
-        stress: 'hard',
+        // The exposure is real either way; only how hard it was changes. A
+        // restricted anchor recorded as 'hard' would put the intensity back
+        // into the ledger by the other door.
+        stress: fullParticipation ? 'hard' : 'moderate',
         source: anchor.kind,
         participation: anchor.participation,
       });
       coreConditioning += 1;
       anchorCore += 1;
-      conditioningByStress.hard += 1;
+      if (fullParticipation) conditioningByStress.hard += 1;
+      else conditioningByStress.moderate += 1;
+    }
+    if (fullParticipation) {
+      // Sprint/high-speed credit and hard-day credit are INTENSITY claims and
+      // stay behind full participation — a modified or reduced-running anchor
+      // never earned them and still does not.
       sprintSources.push({
         kind: anchor.kind,
         dayOfWeek: anchor.dayOfWeek,
@@ -336,9 +370,9 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       kind: anchor.kind,
       dayOfWeek: anchor.dayOfWeek,
       participation: anchor.participation,
-      conditioningCredited: credited,
-      sprintCredited: credited,
-      hardDayCredited: credited,
+      conditioningCredited: attended,
+      sprintCredited: fullParticipation,
+      hardDayCredited: fullParticipation,
       currentProductionClaim: anchor.currentProductionClaim,
     };
   });
@@ -994,10 +1028,18 @@ export function evaluateSection18EffectiveWeek(
   for (const anchor of ledger.anchors) {
     const claim = anchor.currentProductionClaim;
     if (anchor.participation === 'normal_unrestricted') continue;
-    if (!claim.conditioning && !claim.sprintHighSpeed && !claim.hardDay) continue;
+    // This guard used to require full participation before ANY of the three
+    // claims, because all three moved together. They no longer do: a
+    // conditioning claim is justified by ATTENDANCE (the athlete was at the
+    // session), while sprint and hard-day claims remain intensity statements
+    // that only full participation justifies. Leaving the guard undivided would
+    // have re-imposed the conflation the split just removed — from the
+    // validation side instead of the counting side.
+    const unjustifiedConditioning = claim.conditioning && !attendedAnchor(anchor);
+    if (!unjustifiedConditioning && !claim.sprintHighSpeed && !claim.hardDay) continue;
     addFinding(findings, {
       code: 'unjustified_anchor_credit', severity: 'blocking', domain: 'anchor_credit',
-      expected: 'normal unrestricted participation before conditioning/sprint/hard credit',
+      expected: 'attendance before conditioning credit; normal unrestricted participation before sprint/hard credit',
       actual: { participation: anchor.participation, claim },
       detail: `${anchor.kind} production credit is not justified by participation state.`,
       evidence: [`day=${anchor.dayOfWeek}`, `anchor=${anchor.id}`],

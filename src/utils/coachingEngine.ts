@@ -6939,8 +6939,13 @@ function applySection18ConditioningAllocation(
     return;
   }
 
+  // Reads the CLAIM and nothing else. Re-deriving `normal_unrestricted` here
+  // alongside it made this a second, stricter owner of the same question: the
+  // claim said a reduced-running anchor is a conditioning exposure, this
+  // disagreed, and the planner authored an app session to cover a gap that did
+  // not exist — which then breached the week's conditioning maximum. One owner
+  // (Sam, 2026-07-27: intensity must never feed identity).
   const creditedAnchors = contract.anchors.filter((anchor) =>
-    anchor.participation === 'normal_unrestricted' &&
     anchor.currentProductionClaim.conditioning).length;
   const requiredApp = Math.max(
     0,

@@ -462,6 +462,46 @@ run('property', 'P2b a deloaded readiness week keeps power in every family', () 
 // all, so this property had no reduction left to defend; an injury restriction
 // still caps strength frequency to the safely available patterns, which is a real
 // cap and the right subject for "canonicalisation cannot raise it".
+// SAM'S RULING (2026-07-27): "The deload law changes dose and intensity inside
+// sessions, never session identity or count."
+//
+// A team training session and a game are not app-prescribed sessions — the app
+// cannot dose them. Demoting the athlete's participation in them is the app
+// asserting a FACT about what the athlete will do on Saturday, and it withdraws
+// their conditioning and sprint production with it.
+//
+// The comment that authorised this justified it explicitly: low readiness
+// "authors matching main-strength, conditioning and sprint reductions in the
+// same pass, so its contracts stay satisfiable". The readiness law DELETED
+// exactly those reductions. What was left withdrew the credit and kept the
+// requirement, so the contract asserted both "the athlete's game produced no
+// sprint" and "this week requires a sprint exposure" — unsatisfiable before the
+// gate even ran. That is the identical shape as the D10 injury defect
+// documented in `section18SafetyPolicy`, whose resolution was that no injury
+// region silently withdraws field participation.
+run('property', 'P2c a readiness deload never withdraws the athlete\'s field participation', () => {
+  for (const severity of [4, 6, 8, 10]) {
+    const contract = withSafety(baseContract(), readinessContext(severity));
+    for (const anchor of contract.anchors) {
+      assert(anchor.participation === 'normal_unrestricted',
+        `severity ${severity} demoted the ${anchor.kind} anchor to ${anchor.participation}`);
+      assert(anchor.currentProductionClaim.conditioning,
+        `severity ${severity} withdrew ${anchor.kind} conditioning production`);
+      assert(anchor.currentProductionClaim.sprintHighSpeed,
+        `severity ${severity} withdrew ${anchor.kind} sprint production`);
+    }
+  }
+});
+
+// The capability is not gone — it moved to the doors that own a medical stop.
+run('property', 'P2d a genuine training pause DOES withdraw field participation', () => {
+  const paused = applyGenerationSafetyToSection18Contract({
+    contract: baseContract(), generationConstraints: readinessContext(9), forceFullPause: true,
+  });
+  assert(paused.anchors.every((anchor) => anchor.participation !== 'normal_unrestricted'),
+    'a training pause left field participation untouched');
+});
+
 run('property', 'P3 canonicalisation cannot increase a safety-reduced frequency target', () => {
   const contract = withSafety(baseContract(), injuryContext('lower_body'));
   for (let count = 0; count <= 6; count++) {
