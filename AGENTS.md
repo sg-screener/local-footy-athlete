@@ -99,3 +99,38 @@ over command/resolver/event chains unless there is a clear reason not to.
 - Keep implementation scoped to the pipeline layer that owns the behaviour.
 - Do not expose, repeat, or commit API keys. Supabase/OpenAI secrets belong in
   deployed secrets only.
+
+## Environment Facts
+
+### This working tree is SHARED with concurrent sessions
+
+More than one agent session can be working in this checkout at the same time.
+Another session can check out a different branch, commit, and merge **while your
+session is mid-unit**. Git branch state is therefore shared mutable state that
+nothing tells you has changed.
+
+**Run `git branch --show-current` immediately before every commit, not once at
+the start and not at session end.** Which branch you are on is a fact to verify,
+not a fact to remember.
+
+This is recorded because it has already gone wrong. On 2026-07-28 a session
+created `feat/provenance-lock-phase1`, committed five times, and then a
+concurrent session branched off that tip, merged to `main`, and left HEAD on
+`main`. The next ten commits of a fifteen-commit unit went straight to `main`
+while the session went on reporting "branch …, unmerged" at the end of every
+turn. Nothing was lost and no gate broke — the damage was purely that the
+author's account of where the work lived was wrong for most of a long session,
+including in what it told the repo owner.
+
+Practical consequences:
+
+- Verify the branch before each commit. A stale assumption is silent; the check
+  costs nothing.
+- `git stash` / `git stash pop` are unsafe here — a concurrent session can
+  observe or disturb the stash, and a branch switch between stash and pop lands
+  the changes somewhere unintended. Prefer committing to a scratch commit, or
+  copying files to the session scratchpad.
+- Before reporting "merged" or "unmerged", ask git rather than recalling:
+  `git merge-base --is-ancestor <branch> main` and `git log main..<branch>`.
+- A branch fully contained in `main` should be deleted rather than left as a
+  pointer someone can build on.
