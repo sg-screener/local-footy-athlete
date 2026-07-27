@@ -41,6 +41,7 @@ import {
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
 import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -106,11 +107,167 @@ ok('readiness exposes only a window, never a magnitude',
     && !('reduction' in declared),
   Object.keys(declared ?? {}).join(', '));
 
-// NOTE — two structural assertions belong to the MIGRATION commit, not here:
-// that no production file still names a retired tier, and that
-// weeklyExposureContractBuilders no longer zeroes main_strength. The law is
-// authored and encoded; retiring the 81 call sites is its own pass, and
-// asserting the end state before that pass would ship a red gate.
+/* ── The retirement, enforced ── */
+
+// These three were deferred while the 81 call sites were being retired —
+// asserting the end state mid-migration would have shipped a red gate. The
+// migration has landed, so they become RATCHETS: the tiers are not merely gone,
+// they cannot grow back without failing the gate.
+console.log('\n[2b] STRUCTURAL — the retired tiers cannot return');
+
+const PRODUCTION_SOURCES = (function walk(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === '__tests__' ? [] : walk(full);
+    return /\.tsx?$/.test(entry.name) ? [full] : [];
+  });
+})(path.join(repoRoot, 'src'));
+
+// 1. No production file may name a retired tier. The four-tier system is gone
+//    down to the TYPE, so a surviving name is a surviving representation —
+//    something would read it, then something else would copy that.
+{
+  const RETIRED = /\b(slight_reduction|moderate_reduction|major_reduction|GenerationReadinessTier)\b/;
+  const offenders = PRODUCTION_SOURCES
+    .filter((file) => RETIRED.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(repoRoot, file));
+  ok('no production file names a retired readiness tier',
+    offenders.length === 0, offenders.join(', '));
+}
+
+// 2. The contract builders may not zero a main-strength count on readiness.
+//    This is the specific site the law was written against: a readiness input
+//    reaching in and cutting the week's strength COUNT.
+{
+  const builders = fs.readFileSync(
+    path.join(repoRoot, 'src/rules/weeklyExposureContractBuilders.ts'), 'utf8');
+  const active = builders.split('\n')
+    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+    .join('\n');
+  // Every surviving mention must be a `void` no-op — the deliberate marker that
+  // the input is received and consciously ignored. A real READ (a ternary, a
+  // guard, an argument) is the tier system reaching back into the counts, and
+  // is what this fails on. The interface's own `readinessDeloaded?: boolean`
+  // declaration is not a read.
+  const reads = active.split('\n')
+    .filter((line) => /\binput\.readinessDeloaded\b/.test(line))
+    .filter((line) => !/^\s*void\s+input\.readinessDeloaded;\s*$/.test(line));
+  ok('the contract builders never read readiness to cut a strength count',
+    reads.length === 0, reads.join(' | '));
+}
+
+// 3. Reductions are TYPED. A count reduction is expressible — injury and a
+//    training pause still author them — so the invariant below can only be
+//    stated against a real vocabulary, not an absent one.
+{
+  const source = fs.readFileSync(
+    path.join(repoRoot, 'src/rules/weeklyExposureContractV2.ts'), 'utf8');
+  ok('the frequency metrics a count reduction would use are typed and present',
+    ['main_strength_frequency', 'conditioning_core_frequency', 'sprint_high_speed_frequency']
+      .every((metric) => source.includes(`'${metric}'`)));
+}
+
+/* ── INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION ── */
+
+// The law's load-bearing consequence, asserted for BOTH acting tiers:
+//
+//   "Readiness never REMOVES sessions. The old tiers cut session counts by
+//    degree, and counts are structure — which the deload law holds constant
+//    while the work inside shrinks."
+//
+// Stated against BEHAVIOUR, not against the absence of the deleted code: a
+// readiness input authors no frequency reduction, and the week's structural
+// counts are byte-identical to the healthy week's. A future change that cuts a
+// count by some new route fails here even if it never uses the word 'tier'.
+//
+// 'tired' is excluded deliberately — it is 'noted', reaches the program not at
+// all, and would pass this trivially.
+console.log('\n[2c] INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION — both acting tiers');
+
+const FREQUENCY_METRICS = [
+  'main_strength_frequency',
+  'conditioning_core_frequency',
+  'sprint_high_speed_frequency',
+  'strength_pattern_count',
+] as const;
+
+function safetyContract(readiness?: { deloaded: boolean; sessionsOptional: boolean }) {
+  const base = buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'In-season',
+    declaredSubphase: 'game_week',
+    mode: 'in_season_game_week',
+    blockNumber: 1, weekInBlock: 1, globalWeek: 1, phaseWeek: 1,
+    phaseWeekProvenance: 'explicit_phase_clock',
+    weekKind: 'build',
+    anchorState: 'game',
+    teamTrainingDays: [2, 4],
+    fixtureDay: 6,
+    readiness: 'medium',
+    plannerSelected: {
+      mainStrength: 4, coreConditioning: 4, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 2,
+    },
+    prohibitedPatterns: [],
+    prohibitedPatternProvenance: 'explicit_none',
+    equipment: {
+      appConditioningFeasible: true, substitutionStatus: 'not_required', consideredSubstitutions: [],
+    },
+  } as never);
+  return applyGenerationSafetyToSection18Contract({
+    contract: base,
+    generationConstraints: readiness
+      ? {
+          activeConstraintIds: ['r'], injuries: [], activeInjuryKeys: [],
+          readiness: { id: 'r', sourceType: 'fatigue', ...readiness },
+        } as never
+      : undefined,
+  });
+}
+
+const healthyWeek = safetyContract();
+
+for (const [tier, directive] of [
+  ['wrecked', { deloaded: true, sessionsOptional: false }],
+  ['absolutely cooked', { deloaded: true, sessionsOptional: true }],
+] as const) {
+  const week = safetyContract(directive);
+
+  const frequencyReductions = week.authorisedReductions.filter((entry) =>
+    (FREQUENCY_METRICS as readonly string[]).includes(entry.metric));
+  ok(`${tier}: authors NO frequency reduction`,
+    frequencyReductions.length === 0,
+    frequencyReductions.map((entry) => `${entry.metric}<-${entry.reason}`).join(', '));
+
+  ok(`${tier}: authors no reduction citing low_readiness at all`,
+    week.authorisedReductions.every((entry) => entry.reason !== 'low_readiness'),
+    week.authorisedReductions.map((entry) => `${entry.metric}<-${entry.reason}`).join(', '));
+
+  for (const [domain, before, after] of [
+    ['main strength', healthyWeek.mainStrength.exposure, week.mainStrength.exposure],
+    ['conditioning', healthyWeek.conditioning.core, week.conditioning.core],
+    ['sprint/high-speed', healthyWeek.sprintHighSpeed.exposure, week.sprintHighSpeed.exposure],
+  ] as const) {
+    ok(`${tier}: ${domain} keeps the healthy week's required minimum`,
+      after.requiredMinimum === before.requiredMinimum,
+      `${after.requiredMinimum} vs ${before.requiredMinimum}`);
+    ok(`${tier}: ${domain} keeps the healthy week's permitted maximum`,
+      after.permittedMaximum === before.permittedMaximum,
+      `${after.permittedMaximum} vs ${before.permittedMaximum}`);
+  }
+
+  // The other half of the law, so this cannot be satisfied by doing nothing at
+  // all: the week IS deloaded — the dose shrinks even though no count moves.
+  ok(`${tier}: the week is still marked for a lighter dose`,
+    week.safety.lighterStrengthRequired === true ||
+    week.safety.strengthIntensityCeiling !== null ||
+    week.safety.affectedDomains.includes('session_dose'),
+    JSON.stringify(week.safety.affectedDomains));
+
+  // And power survives, which is what separates a deload from the retired
+  // major_reduction tier.
+  ok(`${tier}: power survives — a deload is not a reason to lose sharpness`,
+    week.power.eligible === true, String(week.power.removalReason));
+}
+
 /* ── Illness ── */
 
 console.log('\n[3] THE ILLNESS LAW — three tiers, exactly two decisions');
