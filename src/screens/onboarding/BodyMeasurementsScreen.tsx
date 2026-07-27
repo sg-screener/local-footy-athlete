@@ -12,6 +12,10 @@ import { colors } from '../../theme/colors';
 import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import {
+  validateOnboardingMeasurement,
+  type MeasurementValidation,
+} from '../../data/onboardingNumericBounds';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
@@ -21,6 +25,12 @@ type BodyMeasurementsScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'BodyMeasurements'
 >;
+
+/** The re-ask text for a refused answer, or null when there is nothing to say. */
+function refusalMessage(result: MeasurementValidation | null): string | null {
+  if (result === null || result.ok) return null;
+  return result.message ?? null;
+}
 
 export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   navigation,
@@ -34,11 +44,27 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   const { label: stepLabel, progressPercent } = useOnboardingProgress('BodyMeasurements');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const isValid =
-    heightCm.trim() &&
-    weightKg.trim() &&
-    parseFloat(heightCm) > 0 &&
-    parseFloat(weightKg) > 0;
+  // Sam's ruled ranges (2026-07-28). The numbers live in
+  // `onboardingNumericBounds` and are NOT restated here — one owner, so a change
+  // to the ruling cannot leave a stale copy behind on this screen.
+  //
+  // An out-of-range answer is RE-ASKED, never clamped. Clamping would substitute
+  // the app's number for the athlete's and carry on as though they had agreed;
+  // bodyweight is the first term of the anchor chain, so that number then
+  // prescribes every load in the app.
+  const heightIssue = heightCm.trim()
+    ? validateOnboardingMeasurement('heightCm', parseFloat(heightCm))
+    : null;
+  const weightIssue = weightKg.trim()
+    ? validateOnboardingMeasurement('weightKg', parseFloat(weightKg))
+    : null;
+
+  const heightError = refusalMessage(heightIssue);
+  const weightError = refusalMessage(weightIssue);
+
+  const isValid = Boolean(
+    heightIssue?.ok && weightIssue?.ok,
+  );
 
   const handleContinue = () => {
     if (isValid) {
@@ -112,6 +138,15 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
             />
             <Text style={styles.inputUnit}>cm</Text>
           </Pressable>
+          {heightError ? (
+            <Text
+              variant="bodySmall"
+              color={colors.status.error}
+              style={styles.inputError}
+            >
+              {heightError}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.inputWrapper}>
@@ -147,6 +182,15 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
             />
             <Text style={styles.inputUnit}>kg</Text>
           </Pressable>
+          {weightError ? (
+            <Text
+              variant="bodySmall"
+              color={colors.status.error}
+              style={styles.inputError}
+            >
+              {weightError}
+            </Text>
+          ) : null}
         </View>
       </View>
     </OnboardingLayout>
@@ -163,6 +207,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     lineHeight: 20,
+  },
+  inputError: {
+    marginTop: 6,
+    lineHeight: 18,
   },
   inputsContainer: {
     flexDirection: 'row',

@@ -254,15 +254,24 @@ to catch it. A 3 kg athlete gets a plausible-looking 20 kg card. **Neither direc
 refuses.** A clamp that produces a sane-looking number from nonsense is the harder of
 the two to notice.
 
-### The unit
+### ✅ SAM'S RULING — 2026-07-28
 
-Sam authors the acceptable ranges (bodyweight floor/ceiling, height floor/ceiling).
-Out-of-range answers are **re-asked** — never silently accepted, and never clamped,
-since a clamp is the app substituting its own number for the athlete's and is the same
-defect class as the render-truth "BW".
+> Bodyweight accepted range 30–200 kg. Height accepted range 100–230 cm.
+> Out-of-range answers are re-asked with a plain message — never silently accepted,
+> never clamped. Height stays off the load path — data-quality scope only.
 
-Provenance-ready by construction: Sam-authored ranges arrive as a `ruling_anchor`
-rather than as two more unauthored constants needing a later ruling session.
+Both ranges are **inclusive** at their endpoints. This paragraph is the anchor the
+`ruling_anchor` provenance record resolves against — `onboardingNumericBounds.ts`
+carries a verbatim quote from it and `test:onboarding-bounds` fails if this text
+changes or stops containing the numbers, so the code and the ruling cannot drift.
+
+**Shipped** as `src/data/onboardingNumericBounds.ts` + `test:onboarding-bounds`.
+Out-of-range input is refused in both directions and no value is coerced: the athlete
+is re-asked, and the app never substitutes its own number for theirs — a clamp is the
+same defect class as the render-truth "BW".
+
+Provenance-ready by construction: these arrive as a `ruling_anchor` rather than as two
+more unauthored constants needing a later ruling session.
 
 **Note:** `heightCm` is collected and validated the same way but feeds **no**
 programming decision — it reaches the review screen and the coach's context only.
