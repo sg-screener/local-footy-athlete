@@ -79,7 +79,7 @@ const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
 
 console.log('\n[1] THE SHEET — still reads as Sam signed it');
 
-ok('the sheet holds 193 exercise rows', sheetRows.length === 193, `found ${sheetRows.length}`);
+ok('the sheet holds 196 exercise rows', sheetRows.length === 196, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -280,8 +280,12 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // Counts from the authored sheet after Sam's 2026-07-27 reconciliation:
 // Single-Arm Pulldown added as `everyone` (130 -> 131) and MetCon deleted, which
 // was a `1+ years` row (33 -> 32). Total unchanged at 193.
+//
+// Sam's 2026-07-28 mobility additions — Butterfly Stretch, Pissing Dog Against
+// Wall, Jefferson Curl — are all `everyone` and not regressions (131 -> 134).
+// Total 193 -> 196.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 131,
+  everyone: 134,
   everyone_regression: 11,
   one_plus_years: 32,
   two_plus_years: 17,

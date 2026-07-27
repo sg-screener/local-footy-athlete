@@ -757,6 +757,9 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Dead Hang',
   'Toe Stretch',
   'Calf Stretch',
+  'Butterfly Stretch',
+  'Pissing Dog Against Wall',
+  'Jefferson Curl',
   // Cardio / conditioning (recovery context)
   'Outdoor Walk',
   'Light Skipping',

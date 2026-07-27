@@ -378,10 +378,15 @@ console.log('\n[6] STRUCTURAL — no second strip path survives');
     { cwd: repoRoot, encoding: 'utf8' },
   ).split('\n').filter(Boolean);
 
+  const stripComments = (source: string): string => source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
+  const readSource = (file: string): string =>
+    stripComments(fs.readFileSync(path.join(repoRoot, file), 'utf8'));
+
   const offenders = productionFiles.filter((file) => {
-    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const source = readSource(file);
     return /powerBlock:\s*undefined/.test(source) ||
       /powerBlock:\s*_removed/.test(source);
   });
@@ -396,14 +401,35 @@ console.log('\n[6] STRUCTURAL — no second strip path survives');
   // therefore serialised it into every program generated before 2026-07-28.
   // Stage 5 migrates those; until then the field must be inert. A write would
   // resurrect the representation this unit removed.
-  const writers = productionFiles.filter((file) => {
-    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
-    // An assignment (`powerBlock:` in an object literal, or `.powerBlock =`),
-    // as opposed to a read (`workout.powerBlock`, `?.powerBlock`).
-    return /(^|[^.?])\bpowerBlock\s*:/m.test(source) || /\.powerBlock\s*=/.test(source);
-  });
+  //
+  // A WRITE is `powerBlock:` in an object literal, or `.powerBlock =`.
+  //
+  // A destructuring BINDING PATTERN — `const { powerBlock: _lifted, ...rest } =
+  // workout` — is the exact opposite: it lifts the field OFF the object, and is
+  // how the one sanctioned remover (`legacyPowerBlockMigration`) retires stored
+  // blocks. What distinguishes it is position: a binding pattern sits to the
+  // LEFT of `=`, an object literal never does. So binding patterns are removed
+  // before the write test runs. Detecting on `powerBlock:` alone cannot tell the
+  // two apart, and read the migration that DELETES the field as the write it
+  // exists to prevent.
+  const writesPowerBlock = (source: string): boolean => {
+    const code = stripComments(source).replace(/\{[^{}]*\}\s*=(?!=)/g, '');
+    return /(^|[^.?])\bpowerBlock\s*:/m.test(code) || /\.powerBlock\s*=/.test(code);
+  };
+
+  // The detector is a regex over source text and it was just made narrower, so
+  // prove it still fires on a real write. A guard loosened until it passes is
+  // worse than no guard: this pins the narrowing to destructuring alone.
+  ok('the write detector catches an object-literal write',
+    writesPowerBlock('const w = { powerBlock: block };'));
+  ok('the write detector catches a property assignment',
+    writesPowerBlock('workout.powerBlock = block;'));
+  ok('the write detector allows a plain read',
+    !writesPowerBlock('const b = workout.powerBlock ?? null;'));
+  ok('the write detector allows destructuring removal',
+    !writesPowerBlock('const { powerBlock: _lifted, ...rest } = workout;'));
+
+  const writers = productionFiles.filter((file) => writesPowerBlock(readSource(file)));
   ok(
     'nothing writes the legacy powerBlock field — it is a reader-only door',
     writers.length === 0,

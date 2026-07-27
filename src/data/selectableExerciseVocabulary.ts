@@ -147,13 +147,15 @@ const ZONE_1_RECOVERY = new Set<string>([
  */
 const MOBILITY_UNTAGGED = new Set<string>([
   '90/90 Breathing', 'Adductor Rockback', 'ATG Split Squat', 'Box Breathing',
-  'Calf Stretch', 'Cat-Cow', 'Chest / Pec Stretch (Doorway)',
+  'Butterfly Stretch', 'Calf Stretch', 'Cat-Cow',
+  'Chest / Pec Stretch (Doorway)',
   "Child's Pose with Breathing", 'Couch Stretch', 'Crocodile Breathing',
   'Dead Hang', 'Deep Squat Hold', 'Elephant Walks',
   'Foam Roll — Calves & Outer Shins', 'Foam Roll — Hip Flexor, Quad, Adductors',
   'Foam Roll — IT Band', 'Foam Roll — Lats', 'Foam Roll — T-Spine',
-  'Hip 90/90 Stretch', 'Lacrosse Ball Glute Release', 'Lat Stretch',
-  'Open Book Thoracic Rotation', 'Pigeon Stretch', 'QL Back Extension',
+  'Hip 90/90 Stretch', 'Jefferson Curl', 'Lacrosse Ball Glute Release',
+  'Lat Stretch', 'Open Book Thoracic Rotation', 'Pigeon Stretch',
+  'Pissing Dog Against Wall', 'QL Back Extension',
   'Toe Stretch', "World's Greatest Stretch",
 ]);
 

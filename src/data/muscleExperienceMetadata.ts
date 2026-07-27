@@ -1542,6 +1542,33 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: '',
     flagged: false,
   },
+  {
+    exercise: 'Butterfly Stretch',
+    pool: 'Mobility',
+    primary: ['Groin', 'Hips'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
+  {
+    exercise: 'Pissing Dog Against Wall',
+    pool: 'Mobility',
+    primary: ['Glutes', 'Hips'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
+  {
+    exercise: 'Jefferson Curl',
+    pool: 'Mobility',
+    primary: ['Upper back', 'Low back', 'Hamstrings'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: '',
+    flagged: false,
+  },
 
   /* ── Easy cardio (zone 1) ── */
   {
