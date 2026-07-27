@@ -150,7 +150,7 @@ const MOBILITY_UNTAGGED = new Set<string>([
   'Butterfly Stretch', 'Calf Stretch', 'Cat-Cow',
   'Chest / Pec Stretch (Doorway)',
   "Child's Pose with Breathing", 'Couch Stretch', 'Crocodile Breathing',
-  'Dead Hang', 'Deep Squat Hold', 'Elephant Walks',
+  'Dead Hang', 'Deep Squat Hold', 'Dumbbell Pullovers', 'Elephant Walks',
   'Foam Roll — Calves & Outer Shins', 'Foam Roll — Hip Flexor, Quad, Adductors',
   'Foam Roll — IT Band', 'Foam Roll — Lats', 'Foam Roll — T-Spine',
   'Hip 90/90 Stretch', 'Jefferson Curl', 'Lacrosse Ball Glute Release',

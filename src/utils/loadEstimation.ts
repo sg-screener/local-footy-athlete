@@ -760,6 +760,17 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Butterfly Stretch',
   'Pissing Dog Against Wall',
   'Jefferson Curl',
+  // Dumbbell Pullovers is LOADED — the odd one out in this set, and deliberate.
+  // Sam's ruling (2026-07-28) is that its load is ATHLETE-CHOSEN with nothing
+  // prescribed. This set is the only mechanism that delivers that: it returns
+  // null, so the card shows "—" and the athlete enters their own weight.
+  // EXERCISE_LOAD_MAP cannot express it — `ExerciseLoadProfile` requires
+  // `anchor` + `ratio`, which would derive a working weight from the athlete's
+  // squat/bench 1RM. Leaving it unlisted is worse still: the name-pattern
+  // fallback invents 12.5kg. So the set's rule is "no load ESTIMATE, no false
+  // precision" (see the header) rather than "no external load" — band work here
+  // is loaded too. Read the constant's name with that in mind.
+  'Dumbbell Pullovers',
   // Cardio / conditioning (recovery context)
   'Outdoor Walk',
   'Light Skipping',

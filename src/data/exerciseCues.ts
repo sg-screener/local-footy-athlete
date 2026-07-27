@@ -361,6 +361,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'One knee on bench, one hand on bench, extend to full lockout.',
     secondaryCue: 'Squeeze at the top, slow return.',
   },
+  'Dumbbell Pullovers': {
+    primaryCue: "Rest upper back on bench, dumbbell over, don't allow ribs to flare up, pause at end range",
+    secondaryCue: '',
+  },
   'Dumbbell Skull Crusher': {
     primaryCue: 'Lower to the sides of the head, press up.',
     secondaryCue: 'Elbows stay fixed in place.',

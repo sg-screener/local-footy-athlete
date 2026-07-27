@@ -275,6 +275,11 @@ export const MOBILITY_POOL: PoolExercise[] = [
   ex('butterfly-stretch', 'Butterfly Stretch',            2, 6,  10, 30, 'Hold each rep 6–10 seconds',             ['bodyweight'], ['ankle', 'knee', 'hip', 'groin'], 'low', { prescriptionType: 'reps' }),
   ex('pissing-dog-wall',  'Pissing Dog Against Wall',     2, 6,  6,  30, 'Each side. Hold each rep 5 seconds',     ['bodyweight'], ['hip', 'lower_back'],             'low', { prescriptionType: 'reps' }),
   ex('jefferson-curl',    'Jefferson Curl',               2, 5,  5,  30, 'Slow reps',                              ['bodyweight'], ['lower_back', 'hamstring', 'neck'], 'low', { prescriptionType: 'reps' }),
+  // Sam's authored addition (2026-07-28). Equipment-gated like `dead-hang`:
+  // `filterPool` drops it for any athlete whose location lacks the tags, so
+  // Home gym (dumbbells, no bench) and Outdoor never see it. `bench` is carried
+  // because the cue requires one — Sam's ruling, 2026-07-28.
+  ex('db-pullovers',      'Dumbbell Pullovers',           2, 3,  3,  30, 'Hold each rep 10 seconds',               ['dumbbells', 'bench'], ['shoulder'], 'low', { prescriptionType: 'reps' }),
 ];
 
 /**
