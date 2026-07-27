@@ -103,6 +103,7 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Explosive Push-up',
   'Dips',
   'Scap Push-Up',
+  'Scap Pull Ups',
   'Inverted Row (Bodyweight)',
   'Chin-Up Negative (Slow)',
   'Bodyweight Squat',
