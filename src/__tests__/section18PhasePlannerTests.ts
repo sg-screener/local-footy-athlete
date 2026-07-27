@@ -324,8 +324,19 @@ runCase('scenario', '19 mid off-season three available days produce typed S3', (
 runCase('scenario', '20 mid off-season produces C3-4 with at most one hard exposure', () => {
   invariant(midNormal.ledger.achieved.conditioning >= 3 && midNormal.ledger.achieved.conditioning <= 4 && midNormal.appCore.filter((entry) => HARD_CATEGORIES.has(entry.conditioningCategory ?? '')).length <= 1, 'mid conditioning shape drifted');
 });
-runCase('scenario', '21 mid off-season beginner produces S2/C2-3/sprint1', () => {
-  invariant(midBeginner.ledger.achieved.main_strength === 2 && midBeginner.ledger.achieved.conditioning >= 2 && midBeginner.ledger.achieved.conditioning <= 3 && midBeginner.ledger.achieved.sprint_cod >= 1, 'beginner phase table drifted', midBeginner.ledger);
+// Sam retired §18's beginner mid-off-season line on 2026-07-27: beginners
+// follow the universal phase table in every phase. The fixtures differ ONLY by
+// experienceLevel, so asserting EQUALITY with the normal athlete states the
+// universal law directly — stronger than re-pinning a fresh set of numbers,
+// because it fails if either side drifts.
+runCase('scenario', '21 mid off-season beginner follows the universal phase table', () => {
+  invariant(
+    midBeginner.ledger.achieved.main_strength === midNormal.ledger.achieved.main_strength
+    && midBeginner.ledger.achieved.conditioning === midNormal.ledger.achieved.conditioning
+    && midBeginner.ledger.achieved.sprint_cod === midNormal.ledger.achieved.sprint_cod,
+    'beginner diverged from the universal phase table',
+    { beginner: midBeginner.ledger.achieved, normal: midNormal.ledger.achieved },
+  );
 });
 
 runCase('scenario', '22 late off-season normal week produces S4/C4/sprint1', () => {

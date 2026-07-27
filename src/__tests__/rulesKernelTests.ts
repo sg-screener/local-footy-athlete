@@ -593,15 +593,20 @@ console.log('\n── 4b. THE BEGINNER FILE (Sam, 2026-07-27) ──');
   ok('ONE exercise cap for every training age',
     beginner.maxExercisesPerStrengthSession === normal.maxExercisesPerStrengthSession,
     `beginner ${beginner.maxExercisesPerStrengthSession} vs normal ${normal.maxExercisesPerStrengthSession}`);
-  // HELD, not abolished: Bible §18's phase table authors "Beginners in mid
-  // off-season use 2 strength...". The defect is that the code applies that
-  // MID-OFF-SEASON rule in every phase — which needs Sam, not a deletion.
-  ok('the beginner core cap is HELD at its authored §18 value pending Sam',
-    beginner.maxCoreSessions === 2, `got ${beginner.maxCoreSessions}`);
-  ok('§18 still authors the beginner mid off-season structure',
-    require('fs').readFileSync(
-      require('path').resolve(__dirname, '../../docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8',
-    ).includes('Beginners in mid off-season use 2 strength'));
+  ok('no beginner-only core-session cap', beginner.maxCoreSessions === null,
+    `got ${beginner.maxCoreSessions}`);
+  // Sam retired the §18 line that authored a beginner mid-off-season structure
+  // (2026-07-27). It was the last beginner-specific structural rule in the
+  // Bible and the only authority a beginner core cap rested on.
+  // Scoped to the LIVE sections: §19 quotes the removed line verbatim, because
+  // an amendment entry must name the text it replaced. Grepping the whole file
+  // would fail on the changelog doing its job.
+  ok('§18 no longer authors a beginner-only phase structure', (() => {
+    const bibleText = require('fs').readFileSync(
+      require('path').resolve(__dirname, '../../docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8');
+    const live = bibleText.split('19. Amendment changelog')[0];
+    return !live.includes('Beginners in mid off-season use 2 strength');
+  })());
   ok('no beginner-only optional-session cap', beginner.maxOptionalSessions === null,
     `got ${beginner.maxOptionalSessions}`);
   ok('no beginner-only hard-exposure cap', beginner.maxHardExposures === null,
@@ -612,8 +617,7 @@ console.log('\n── 4b. THE BEGINNER FILE (Sam, 2026-07-27) ──');
   // The structural point: outside the authored dose fields, a beginner's policy
   // is the universal one. A future beginner-only limit fails here.
   const STRUCTURAL_FIELDS = [
-    // maxCoreSessions is excluded while HELD — see above.
-    'maxHardExposures', 'maxOptionalSessions',
+    'maxCoreSessions', 'maxHardExposures', 'maxOptionalSessions',
     'maxExercisesPerStrengthSession', 'avoidCombinedStrengthConditioning',
   ] as const;
   const diverged = STRUCTURAL_FIELDS.filter(
@@ -623,7 +627,7 @@ console.log('\n── 4b. THE BEGINNER FILE (Sam, 2026-07-27) ──');
 
   // Only DOSE fields may differ, and each one is authored in §11.
   const AUTHORED_DOSE_DIFFERENCES = [
-    'level', 'maxCoreSessions', 'maxSetsPerExercise', 'compoundRepMin', 'compoundRepMax',
+    'level', 'maxSetsPerExercise', 'compoundRepMin', 'compoundRepMax',
     'targetRpeMin', 'targetRpeMax', 'initialLoadMultiplier', 'exercisePriority',
   ];
   const allFields = Object.keys(beginner) as Array<keyof typeof beginner>;

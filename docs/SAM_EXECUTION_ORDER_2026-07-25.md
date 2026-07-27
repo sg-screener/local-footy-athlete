@@ -92,9 +92,7 @@ NUMERIC constants. Target state:
 The design must say how the remaining known-invented values get flagged
 `UNAUTHORED-PENDING-SAM` rather than silently blessed — Sam authors their
 replacements next. Named so far: deload content numbers, readiness-tier
-reductions, conditioning TIER_CAPS, and the illness severity trigger. Add
-to that list `NEW_ATHLETE_POLICY.maxCoreSessions`, held pending his ruling
-on the Section 18 mid-off-season beginner line.
+reductions, conditioning TIER_CAPS, and the illness severity trigger.
 
 ## Standing riders
 

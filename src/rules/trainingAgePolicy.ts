@@ -104,8 +104,11 @@ const BEGINNER_EXERCISE_PRIORITY: TrainingAgePolicy['exercisePriority'] = {
  * suite asserts that: a new beginner-only structural limit fails the build.
  *
  * What died, and why:
- *   maxCoreSessions / maxOptionalSessions / maxHardExposures — never authored;
- *     the universal Section 17 B caps govern every training age.
+ *   maxCoreSessions / maxOptionalSessions / maxHardExposures — the universal
+ *     Section 17 B caps and the Section 18 phase table govern every training
+ *     age. The Section 18 line that once authored a beginner mid-off-season
+ *     structure was retired by Sam on 2026-07-27, so nothing is left for a
+ *     beginner-only core cap to rest on.
  *   maxExercisesPerStrengthSession: 3 — never authored. "Do not overload them
  *     with too many exercises" is guidance about dose, not a numeric limit, and
  *     a beginner-only cap is the second beginner/experienced representation
@@ -132,22 +135,6 @@ const NEW_ATHLETE_POLICY: TrainingAgePolicy = {
   initialLoadMultiplier: 0.5,
   /** §11's "Good options" — simple, safe, easy-to-learn movements. */
   exercisePriority: BEGINNER_EXERCISE_PRIORITY,
-  /**
-   * ON HOLD pending Sam's ruling — NOT the universal-law abolition.
-   *
-   * Sam ruled this dies with the other beginner-only caps, on the strength of a
-   * sweep that reported no authored beginner core number. That sweep was WRONG:
-   * Bible §18's authoritative phase table carries "Beginners in mid off-season
-   * use 2 strength, 2-3 conditioning and 1 safe sprint exposure with reduced
-   * complexity and dose" — an authored beginner structural rule, in the section
-   * that outranks every earlier one.
-   *
-   * The real defect is narrower than "invented": the authored rule is scoped to
-   * MID OFF-SEASON, and this field applies it in EVERY phase. Deleting it would
-   * delete authored §18 law; leaving it keeps the over-application. Both need
-   * Sam, so the shipped behaviour is unchanged until he rules.
-   */
-  maxCoreSessions: 2,
 };
 /**
  * The policy body for an athlete at a ladder level.

@@ -535,10 +535,15 @@ ok(
   `null -> ${resolveTrainingAgePolicy(null).level}, undefined -> ${resolveTrainingAgePolicy(undefined).level}`,
 );
 
+// Discriminates on an AUTHORED §11 dose value. `maxCoreSessions` used to serve
+// here, but Sam abolished every beginner-only structural limit (2026-07-27), so
+// structural fields no longer distinguish the two bodies — by design.
 ok(
   'the beginner policy body still rides on the new level',
-  resolveTrainingAgePolicy('Complete beginner').maxCoreSessions === 2 &&
-    resolveTrainingAgePolicy('2-5 years').maxCoreSessions === null,
+  resolveTrainingAgePolicy('Complete beginner').initialLoadMultiplier === 0.5 &&
+    resolveTrainingAgePolicy('2-5 years').initialLoadMultiplier === 1 &&
+    Object.keys(resolveTrainingAgePolicy('Complete beginner').exercisePriority).length > 0 &&
+    Object.keys(resolveTrainingAgePolicy('2-5 years').exercisePriority).length === 0,
 );
 
 // Structural: the second crosswalk is GONE, not merely in agreement. A switch on
