@@ -8,10 +8,10 @@ import { useProfileStore } from '../../store/profileStore';
 import { useCoachContextStateStore } from '../../store/coachContextStateStore';
 import { extractModalitiesFromSession } from '../../utils/coachReferenceResolver';
 import {
-  estimateStartingWeight,
   formatLoadLabel,
   isTrueBodyweightExercise,
   resolveLoadAuthority,
+  startingWeightForAthlete,
 } from '../../utils/loadEstimation';
 import {
   DESCRIPTIVE_CONDITIONING_TYPES,
@@ -156,9 +156,16 @@ export function useDayWorkout() {
       if (!isNaN(storedNum) && storedNum > 0) return storedNum;
 
       // 3. Render-time fallback: estimate from onboarding data.
+      //
+      //    Goes through `startingWeightForAthlete`, NOT the raw estimator. This
+      //    fallback used to call `estimateStartingWeight` directly and so
+      //    skipped the beginner multiplier that the generation path applies —
+      //    the same complete beginner read one number on a generated card and
+      //    another on a card that fell through to here. One owner now answers
+      //    for both (Sam, 2026-07-28).
       if (onboardingData && name) {
         if (isTrueBodyweightExercise(name)) return null;
-        const estimated = estimateStartingWeight(name, onboardingData);
+        const estimated = startingWeightForAthlete(name, onboardingData);
         if (__DEV__) {
           // eslint-disable-next-line no-console
           logger.debug(

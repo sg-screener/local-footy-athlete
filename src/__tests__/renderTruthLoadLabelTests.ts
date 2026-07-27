@@ -45,6 +45,7 @@ import {
   resolveLoadAuthority,
 } from '../utils/loadEstimation';
 import type { OnboardingData } from '../types/domain';
+import { stripComments } from './support/sourceText';
 
 const src = path.resolve(__dirname, '..');
 
@@ -164,13 +165,8 @@ console.log('\n[5] The invention channels are GONE from the module');
   // Comments are stripped first. The module's header DESCRIBES the heuristics
   // it retired, naming them verbatim so the next reader knows why they are
   // gone — a bare `includes` would read that explanation as the offence.
-  const source = fs.readFileSync(path.join(src, 'utils/loadEstimation.ts'), 'utf8')
-    .split('\n')
-    .filter((l) => {
-      const t = l.trim();
-      return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
-    })
-    .join('\n');
+  const source = stripComments(
+    fs.readFileSync(path.join(src, 'utils/loadEstimation.ts'), 'utf8'));
 
   ok('the name-pattern shadow load map is deleted',
     !/function estimateFromNamePattern/.test(source),

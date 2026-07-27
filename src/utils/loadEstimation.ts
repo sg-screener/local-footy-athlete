@@ -25,6 +25,7 @@
  */
 
 import type { OnboardingData, SquatStrength, BenchStrength } from '../types/domain';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 
 // ─── Constants ───
 
@@ -950,6 +951,46 @@ export function estimateStartingWeight(
  */
 export function isTrueBodyweightExercise(exerciseName: string): boolean {
   return resolveLoadAuthority(exerciseName).kind === 'bodyweight';
+}
+
+/**
+ * THE STARTING WEIGHT AN ATHLETE ACTUALLY SEES. One owner, both paths.
+ *
+ * `estimateStartingWeight` answers a narrower question — what the authored
+ * ratio computes — and knows nothing about who is lifting. This applies the
+ * athlete-level adjustment Sam ruled on 2026-07-27: "Beginners start at 50% of
+ * the calculated load and adjust from there."
+ *
+ * WHY THIS EXISTS. The generation path applied that multiplier; the render-time
+ * fallback in `useDayWorkout` called `estimateStartingWeight` directly and did
+ * not. The same complete beginner could read 27.5 kg on a freshly generated
+ * card and 52.5 kg on one that fell through to the fallback — one question,
+ * two owners, the same shape as the load-label defect one layer up. Both paths
+ * now call this, and `singleLoadEstimationOwnerTests` asserts no other module
+ * in product code reads `initialLoadMultiplier` at all.
+ *
+ * Rounding happens AFTER the multiplier. Halving and then snapping to the bar
+ * increment is not the same as snapping and then halving, and the athlete has
+ * to load a real bar.
+ */
+export function startingWeightForAthlete(
+  exerciseName: string,
+  onboardingData: OnboardingData,
+): number | null {
+  const authority = resolveLoadAuthority(exerciseName);
+  if (authority.kind !== 'prescribed') return null;
+
+  const base = estimateStartingWeight(exerciseName, onboardingData);
+  if (base === null) return null;
+
+  const { initialLoadMultiplier } = resolveTrainingAgePolicy(onboardingData.experienceLevel);
+  if (initialLoadMultiplier === 1) return base;
+
+  const { equipment } = authority.profile;
+  return Math.max(
+    roundToEquipment(base * initialLoadMultiplier, equipment),
+    MIN_WEIGHTS[equipment],
+  );
 }
 
 

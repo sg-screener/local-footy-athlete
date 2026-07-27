@@ -28,10 +28,10 @@ import {
 import {
   applyLoadEstimates,
   EXERCISE_LOAD_MAP,
-  estimateStartingWeight,
   isTrueBodyweightExercise,
   resolveExerciseName,
   roundToEquipment,
+  startingWeightForAthlete,
 } from '../utils/loadEstimation';
 import {
   buildConditioningTemplate,
@@ -944,13 +944,13 @@ function applyTrainingAgePrescription(
 
     let prescribedWeightKg = exercise.prescribedWeightKg;
     if (!isTrueBodyweightExercise(exerciseName)) {
-      const estimated = estimateStartingWeight(exerciseName, onboardingData);
-      const equipment = EXERCISE_LOAD_MAP[resolveExerciseName(exerciseName)]?.equipment;
-      if (estimated && equipment) {
-        const beginnerCap = roundToEquipment(
-          estimated * policy.initialLoadMultiplier,
-          equipment,
-        );
+      // The multiplier is NOT applied here any more. `startingWeightForAthlete`
+      // owns it, so the render-time fallback in useDayWorkout gets the same
+      // number this does — previously it did not, and a beginner saw two
+      // different weights for one exercise depending on which path filled the
+      // card in (Sam, 2026-07-28).
+      const beginnerCap = startingWeightForAthlete(exerciseName, onboardingData);
+      if (beginnerCap) {
         prescribedWeightKg = prescribedWeightKg && prescribedWeightKg > 0
           ? Math.min(prescribedWeightKg, beginnerCap)
           : beginnerCap;
