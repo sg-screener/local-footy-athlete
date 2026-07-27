@@ -269,6 +269,12 @@ export const MOBILITY_POOL: PoolExercise[] = [
   ex('ql-back-extension', 'QL Back Extension',            2, 8,  10, 15, 'Pinned in a 45° hyper. Bend sideways slowly.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('atg-split-squat',   'ATG Split Squat',              2, 6,  8,  30, 'Front foot elevated. Slow, pause at the bottom.', ['bodyweight'], ['knee', 'hip'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('elephant-walks',    'Elephant Walks',               2, 8,  10, 15, 'Fold forward over blocks. Alternate legs slowly.', ['bodyweight'], ['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
+  // Sam's authored additions (2026-07-28). `notes` carries his coaching
+  // instruction for the hold/tempo the typed dose fields cannot express;
+  // nothing parses it.
+  ex('butterfly-stretch', 'Butterfly Stretch',            2, 6,  10, 30, 'Hold each rep 6–10 seconds',             ['bodyweight'], ['ankle', 'knee', 'hip', 'groin'], 'low', { prescriptionType: 'reps' }),
+  ex('pissing-dog-wall',  'Pissing Dog Against Wall',     2, 6,  6,  30, 'Each side. Hold each rep 5 seconds',     ['bodyweight'], ['hip', 'lower_back'],             'low', { prescriptionType: 'reps' }),
+  ex('jefferson-curl',    'Jefferson Curl',               2, 5,  5,  30, 'Slow reps',                              ['bodyweight'], ['lower_back', 'hamstring', 'neck'], 'low', { prescriptionType: 'reps' }),
 ];
 
 /**

@@ -249,6 +249,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Slight lean forward.',
     secondaryCue: 'Control the descent, no bouncing.',
   },
+  'Butterfly Stretch': {
+    primaryCue: 'Upper back and butt against wall, feet together, knees towards ground, add weight to knee if too easy',
+    secondaryCue: '',
+  },
   'Cable Face Pull': {
     primaryCue: 'Pull to the forehead, open the hands out.',
     secondaryCue: 'Squeeze the rear delts.',
@@ -497,6 +501,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Straight body, pull chest to bar.',
     secondaryCue: 'Scale with foot position.',
   },
+  'Jefferson Curl': {
+    primaryCue: 'Tuck your chin and slowly roll down one segment at a time. Add small weight when easy',
+    secondaryCue: '',
+  },
   'Jump Squats': {
     primaryCue: 'Quarter squat, jump with intent.',
     secondaryCue: 'Land soft, reset between reps.',
@@ -608,6 +616,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   'Pigeon Stretch': {
     primaryCue: 'Front shin across bench, square the hips.',
     secondaryCue: 'Sink in and breathe.',
+  },
+  'Pissing Dog Against Wall': {
+    primaryCue: 'Keep back neutral, lift outside leg out and up, can use bent leg to start',
+    secondaryCue: '',
   },
   'Plank': {
     primaryCue: "Keep spine neutral, brace midline, squeeze butt, breathe.",

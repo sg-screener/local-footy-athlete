@@ -246,6 +246,10 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Elephant Walks':                   'https://youtube.com/shorts/GMYMWEkki6U?si=eFuoyRDoDux_QhHW',
   'Cossack Squat':                    'https://youtube.com/shorts/MJvazUpmdZU?si=I8QDr6TOUMUWEtN6',
   'Lateral Lunge':                    'https://youtube.com/shorts/5JPYr0JEFtY?si=OxHmKfhzZ_GApjoY',
+  // Sam's authored mobility additions (2026-07-28).
+  'Butterfly Stretch':                'https://youtube.com/shorts/oO_Y-r72Kj4?si=hGR47gGVVQw5ofo-',
+  'Pissing Dog Against Wall':         'https://youtube.com/shorts/dSbrnhnkZwY?si=q928QMcTGEXM2WlE',
+  'Jefferson Curl':                   'https://youtube.com/shorts/BlYDql9MvBU?si=fwnMBJV81r9fwnlB',
 };
 
 // ─── Name Normalisation ────────────────────────────────────────────
