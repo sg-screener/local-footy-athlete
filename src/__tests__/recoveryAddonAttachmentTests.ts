@@ -180,7 +180,8 @@ function focusAreas(workouts: Workout[]): string[] {
 
 function addonText(workouts: Workout[]): string {
   return allAddons(workouts).map((addon) =>
-    `${addon.focusArea} ${addon.label} ${addon.exercises.map((exercise) => `${exercise.name} ${exercise.prescription} ${exercise.notes ?? ''}`).join(' ')}`,
+    // No `notes` — an add-on row is a curated name and a dose (run-7 ruling 3).
+    `${addon.focusArea} ${addon.label} ${addon.exercises.map((exercise) => `${exercise.name} ${exercise.prescription}`).join(' ')}`,
   ).join(' | ');
 }
 

@@ -627,7 +627,10 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
 
   return (
     <View style={styles.recoveryAddonSection}>
-      <Text style={styles.sectionHeader}>OPTIONAL RECOVERY ADD-ON</Text>
+      {/* Classic tracks V2's run-7 rulings rather than keeping an older copy of
+          them: one "Optional work" header, no per-card pill, and no per-exercise
+          note text (the field it read is retired — ruling 3). */}
+      <Text style={styles.sectionHeader}>OPTIONAL WORK</Text>
       {addons.map((addon) => (
         <Card key={addon.id} style={styles.recoveryAddonCard}>
           <View style={styles.recoveryAddonHeader}>
@@ -635,21 +638,23 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
               <Text style={styles.recoveryAddonEyebrow}>{addon.label}</Text>
               <Text style={styles.recoveryAddonTitle}>{addon.durationMinutes} min support work</Text>
             </View>
-            <Text style={styles.recoveryAddonPill}>Optional</Text>
           </View>
           {addon.placementNote ? (
             <Text style={styles.recoveryAddonMeta}>{addon.placementNote}</Text>
           ) : null}
           <View style={styles.recoveryAddonExercises}>
-            {addon.exercises.map((exercise) => (
-              <View key={exercise.id} style={styles.recoveryAddonExercise}>
-                <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
-                <Text style={styles.recoveryAddonPrescription}>{exercise.prescription}</Text>
-                {exercise.notes ? (
-                  <Text style={styles.recoveryAddonNotes}>{exercise.notes}</Text>
-                ) : null}
-              </View>
-            ))}
+            {addon.exercises.map((exercise) => {
+              const addonCue = buildCueText(exercise.name);
+              return (
+                <View key={exercise.id} style={styles.recoveryAddonExercise}>
+                  <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
+                  <Text style={styles.recoveryAddonPrescription}>{exercise.prescription}</Text>
+                  {addonCue ? (
+                    <Text style={styles.recoveryAddonNotes}>{addonCue}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
           <Text style={styles.recoveryAddonSkip}>Skip with no penalty if it adds fatigue.</Text>
         </Card>
@@ -961,12 +966,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     lineHeight: 20,
-  },
-  recoveryAddonPill: {
-    color: colors.accent.lime,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
   },
   recoveryAddonMeta: {
     color: colors.text.secondary,

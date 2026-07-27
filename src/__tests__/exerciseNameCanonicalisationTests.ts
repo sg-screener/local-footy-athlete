@@ -42,7 +42,14 @@ import {
 } from '../utils/exerciseCanonicalisation';
 import { isExempt } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
-import { cuelessStrengthCards, enforceCuratedCueContract } from '../rules/curatedCueContract';
+import {
+  cuelessSessionCards,
+  cuelessStrengthCards,
+  enforceCuratedAddonCueContract,
+  enforceCuratedCueContract,
+} from '../rules/curatedCueContract';
+import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
+import { recoveryAddonExerciseVocabulary } from '../utils/recoveryAddonBuilder';
 
 const src = path.resolve(__dirname, '..');
 
@@ -121,7 +128,7 @@ console.log('\n[3] Anchor-resolves — every loaded exercise keeps a load profil
     `no load profile: ${unloaded.join(', ')}`);
 }
 
-console.log('\n[4] Ordering — curated cue is the always-visible lead; generator notes are gone');
+console.log('\n[4] Ownership — the curated cue is the ONLY source of a row\'s coaching text');
 {
   const screen = fs.readFileSync(path.join(src, 'screens/home/DayWorkoutScreenV2.tsx'), 'utf8');
   ok(
@@ -129,10 +136,33 @@ console.log('\n[4] Ordering — curated cue is the always-visible lead; generato
     !/styles\.exerciseNotes/.test(screen.replace(/exerciseNotes:\s*\{[\s\S]*?\},/, '')),
     'exercise.notes (styles.exerciseNotes) must not be rendered on the session screen',
   );
+  // SUPERSEDED 2026-07-27 (Sam, run-7 ruling 2). This assertion used to require
+  // the cue be ALWAYS VISIBLE, never behind a "Form cues" disclosure. That rule
+  // existed for one reason: AI-generated per-exercise notes were rendering
+  // alongside the curated cue, and a collapsed cue would have let the generator's
+  // words outrank Sam's. The AI notes are dead — assertion 1 above is what keeps
+  // them dead — so the reason is gone, and what is left is noise on every row.
+  // The cue is now collapsed by default behind a tappable disclosure.
+  //
+  // The ownership guarantee is UNCHANGED and is what this section still pins:
+  // whatever coaching text a row shows comes from EXERCISE_CUES via
+  // canonicalisation. Collapsed or expanded is a presentation ruling; the source
+  // of the words is the invariant.
   ok(
-    'the curated cue renders directly (not collapsed behind a note-gated toggle)',
-    /cueText \? <Text style=\{styles\.cueText\}>\{cueText\}<\/Text>/.test(screen),
-    'the cue is always visible, never hidden behind a "Form cues" disclosure',
+    'the cue is collapsed behind a "Form cues" disclosure, not always visible',
+    /Form cues/.test(screen) &&
+      !/cueText \? <Text style=\{styles\.cueText\}>\{cueText\}<\/Text>/.test(screen),
+    'run-7 ruling 2 supersedes the always-visible rule — see the comment above',
+  );
+  ok(
+    'the superseded note-gated CueToggle is retired, not left beside the new one',
+    !/function CueToggle\b/.test(screen),
+    'two disclosure implementations is how the always-visible rule got contradicted in-file',
+  );
+  ok(
+    'one shared disclosure owns the behaviour — strength, recovery and add-on rows alike',
+    (screen.match(/<CueDisclosure/g) ?? []).length >= 3,
+    'a per-row reimplementation is how the two layers drifted apart last time',
   );
   ok(
     'buildCueText canonicalises before lookup',
@@ -371,6 +401,147 @@ console.log('\n[10] Bounded superset matching — equipment/position qualifiers 
   ok('every position-free curated key survives a prepended position qualifier',
     positionBroken.length === 0,
     `went cueless with "Incline": ${positionBroken.slice(0, 12).join(' | ')}`);
+}
+
+console.log('\n[11] The builder-inline text class — add-on and flow rows source from EXERCISE_CUES');
+{
+  // Sam's run-7 ruling 3, and the found instance:
+  // `recoveryAddonBuilder.ts:544` shipped `exercise('Seated Calf Raise', '2 x 10-15',
+  // 'Quiet tempo, no bouncing.')`. That string reached the athlete's screen having
+  // never passed through Sam's cue library — a second, invisible authoring surface
+  // sitting beside the curated one. (The curated Seated Calf Raise cue already ends
+  // "Slow tempo, no bouncing." — the inline string was a paraphrase of the very cue
+  // it was displacing.)
+  //
+  // The class is killed by CONSTRUCTION, not by deleting fifteen strings: the
+  // `notes` field is gone from `RecoveryAddonExercise` and `MobilityFlowMovement`,
+  // and `localMeta` — which let a flow movement ship its own name AND its own text,
+  // bypassing the vocabulary entirely — is gone with it. A field that does not
+  // exist cannot be repopulated by a future patch.
+  // Comments stripped throughout: retiring a channel means retiring the CODE,
+  // and the prose that records why necessarily quotes what it retired.
+  const codeOf = (relative: string): string =>
+    fs.readFileSync(path.join(src, relative), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '');
+  const builder = codeOf('utils/recoveryAddonBuilder.ts');
+  const templates = codeOf('data/mobilityFlowTemplates.ts');
+  const domain = codeOf('types/domain.ts');
+
+  ok(
+    'the found instance is gone',
+    !/Quiet tempo, no bouncing/.test(builder),
+    'recoveryAddonBuilder:544',
+  );
+  ok(
+    'the builder\'s exercise() helper can no longer carry a note argument',
+    /function exercise\(name: string, prescription: string\): RecoveryAddonExercise/.test(builder),
+    'the third parameter IS the channel — removing it retires every call site at once',
+  );
+  ok(
+    'RecoveryAddonExercise has no notes field left to populate',
+    /export interface RecoveryAddonExercise \{[^}]*\}/.test(domain) &&
+      !/export interface RecoveryAddonExercise \{[^}]*notes/.test(domain),
+  );
+  ok(
+    'MobilityFlowMovement carries neither notes nor a localMeta escape hatch',
+    !/export interface MobilityFlowMovement \{[^}]*notes/.test(templates) &&
+      !/localMeta/.test(templates),
+    'localMeta let a movement bypass the curated vocabulary with its own text',
+  );
+
+  // The positive half: everything those rows can name must actually HAVE curated
+  // text, or retiring the inline strings would have traded uncurated text for no
+  // text. Swept over the real content, not a fixture.
+  const flowNames = new Set<string>();
+  for (const template of MOBILITY_FLOW_TEMPLATES) {
+    for (const movement of template.movements) flowNames.add(movement.name);
+  }
+  const cuelessFlow = [...flowNames].filter((name) => buildCueText(name) === null);
+  ok(
+    'every mobility-flow movement resolves a curated cue',
+    cuelessFlow.length === 0,
+    `no curated cue: ${cuelessFlow.join(', ')}`,
+  );
+
+  // The vocabulary is enumerated BY RUNNING the builder over its whole decision
+  // space, not by copying its names into this file. A second list is the thing
+  // that drifts — that lesson is already paid for (see the coach-chat second
+  // vocabulary list, retired in `3639841`).
+  const addonVocabulary = recoveryAddonExerciseVocabulary();
+  ok(
+    'the enumerator actually reaches the builder\'s content',
+    addonVocabulary.length >= 10,
+    `only found ${addonVocabulary.length} names`,
+  );
+  const cuelessAddon = addonVocabulary.filter((name) => buildCueText(name) === null);
+  ok(
+    'every add-on exercise the builder can emit resolves a curated cue',
+    cuelessAddon.length === 0,
+    `no curated cue: ${cuelessAddon.join(', ')}`,
+  );
+}
+
+console.log('\n[12] The invariant extends to add-on rows — the class cannot return');
+{
+  // `enforceCuratedCueContract` ran inside `buildWorkoutsFromCoach`, which
+  // completes BEFORE `attachRecoveryAddonsToWeek` wraps its output — so add-on
+  // rows were invisible to it. Extending the same predicate over them is what
+  // makes "no uncurated text" true of the whole session rather than of the
+  // strength rows only.
+  const withCuedAddon: any = {
+    workoutType: 'Strength',
+    exercises: [{ id: 'a', exercise: { name: 'Back Squat' } }],
+    recoveryAddons: [{ id: 'ad', exercises: [{ id: 'x', name: 'Side Plank' }] }],
+  };
+  const withCuelessAddon: any = {
+    workoutType: 'Strength',
+    exercises: [{ id: 'a', exercise: { name: 'Back Squat' } }],
+    recoveryAddons: [{ id: 'ad', exercises: [{ id: 'x', name: 'Some Made Up Move' }] }],
+  };
+
+  ok(
+    'a cueless add-on row is a violation',
+    JSON.stringify(cuelessSessionCards(withCuelessAddon)) === JSON.stringify(['Some Made Up Move']),
+    `got ${JSON.stringify(cuelessSessionCards(withCuelessAddon))}`,
+  );
+  ok(
+    'a cued add-on row is not',
+    cuelessSessionCards(withCuedAddon).length === 0,
+    `got ${JSON.stringify(cuelessSessionCards(withCuedAddon))}`,
+  );
+  ok(
+    'and it is ENFORCED — a cueless add-on refuses the week, it does not ship blank',
+    (() => {
+      try { enforceCuratedAddonCueContract([withCuelessAddon], 'unit'); return false; }
+      catch (e) { return e instanceof ExerciseVocabularyViolation; }
+    })(),
+  );
+  // Each stage enforces what IT produced. `attachRecoveryAddonsToWeek` runs over
+  // workouts whose strength rows were already gated at acceptance, so blaming the
+  // attach stage for a strength row would double-report and misattribute.
+  ok(
+    'the attach-stage gate does NOT re-judge strength rows',
+    (() => {
+      const cuelessStrength: any = {
+        workoutType: 'Strength',
+        exercises: [{ id: 'a', exercise: { name: 'Some Made Up Move' } }],
+        recoveryAddons: [{ id: 'ad', exercises: [{ id: 'x', name: 'Side Plank' }] }],
+      };
+      try { enforceCuratedAddonCueContract([cuelessStrength], 'unit'); return true; }
+      catch { return false; }
+    })(),
+  );
+  ok(
+    'a recovery-type day\'s add-on rows are checked too — they render on that branch',
+    cuelessSessionCards({
+      workoutType: 'Recovery',
+      sessionTier: 'recovery',
+      exercises: [{ id: 'd', exercise: { name: 'Brisk Walking' } }],
+      recoveryAddons: [{ id: 'ad', exercises: [{ id: 'x', name: 'Some Made Up Move' }] }],
+    } as any).length === 1,
+    'the recovery branch keeps the add-on box, so its rows are in render scope',
+  );
 }
 
 console.log(`\nexercise canonicalisation: ${passed} passed, ${failures.length} failed`);

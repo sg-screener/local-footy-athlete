@@ -30,6 +30,7 @@ import {
 } from '../rules/testingBias';
 import { computeProgrammingBias } from '../rules/programmingBias';
 import { attachRecoveryAddonEffectEvidence } from './deterministicCoachNoteFactory';
+import { enforceCuratedAddonCueContract } from '../rules/curatedCueContract';
 
 const ZERO_CREDIT = {
   hardExposure: false,
@@ -130,7 +131,28 @@ interface Candidate {
   daysUntilGame: number | null;
 }
 
+/**
+ * Attach the week's add-ons, then hold them to the cue contract.
+ *
+ * The gate has to live HERE rather than beside the strength one. That gate runs
+ * inside `buildWorkoutsFromCoach`, which finishes before this function wraps its
+ * output — so add-on rows were structurally invisible to it. Sam's run-7 ruling 3
+ * asked for the no-uncurated-text invariant to cover add-on rows, and an
+ * invariant enforced at a point the content does not yet exist is not enforced at
+ * all.
+ *
+ * It throws for the same reason the strength contract does (device run 5): a
+ * violation logged is a violation shipped. A cueless add-on row can only arise
+ * from this file naming something the curated layer has never heard of, which is
+ * an authoring mistake to fix, not a runtime condition to tolerate.
+ */
 export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Workout[] {
+  const attached = buildWeekWithRecoveryAddons(args);
+  enforceCuratedAddonCueContract(attached, 'attachRecoveryAddonsToWeek');
+  return attached;
+}
+
+function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] {
   if (args.workouts.length === 0) return args.workouts;
 
   const phase = args.profile.seasonPhase ?? 'Pre-season';
@@ -519,54 +541,54 @@ function exercisesFor(
   switch (recommendation.focusArea) {
     case 'trunk_core':
       return [
-        exercise('Side Plank', '2 x 30-45s/side', 'Easy bracing, leave 2-3 reps in reserve.'),
-        exercise('Bird Dog', '2 x 6-8/side', 'Slow controlled reps; keep hips quiet.'),
-        exercise('McGill Curl-Up', '2 x 5-6/side', 'Low effort, no grinding.'),
+        exercise('Side Plank', '2 x 30-45s/side'),
+        exercise('Bird Dog', '2 x 6-8/side'),
+        exercise('McGill Curl-Up', '2 x 5-6/side'),
       ];
     case 'adductors_groin':
       if (recommendation.status !== 'recommended' || isGMinusOne || weekKind === 'deload') {
         return [
-          exercise('Groin Squeeze', '2 x 20-30s', 'Gentle squeeze only; no pain chase.'),
+          exercise('Groin Squeeze', '2 x 20-30s'),
         ];
       }
       return [
-        exercise('Groin Squeeze', '2 x 20-30s', 'Smooth ramp up and down.'),
-        exercise('Copenhagen Plank (Half)', '2 x 15-25s/side', 'Controlled, short lever, stop well before strain.'),
+        exercise('Groin Squeeze', '2 x 20-30s'),
+        exercise('Copenhagen Plank (Half)', '2 x 15-25s/side'),
       ];
     case 'calves_tib_ankles':
       if (recommendation.status !== 'recommended' || isGMinusOne || weekKind === 'deload') {
         return [
-          exercise('Tib Raises', '2 x 10-12', 'Easy pace; stop if shin/calf/Achilles symptoms flare.'),
+          exercise('Tib Raises', '2 x 10-12'),
         ];
       }
       return [
-        exercise('Tib Raises', '2 x 12-15', 'Controlled reps.'),
-        exercise('Seated Calf Raise', '2 x 10-15', 'Quiet tempo, no bouncing.'),
+        exercise('Tib Raises', '2 x 12-15'),
+        exercise('Seated Calf Raise', '2 x 10-15'),
       ];
     case 'hamstring_light_prehab':
       if (recommendation.status !== 'recommended' || isGMinusOne || phase === 'In-season' || weekKind === 'deload') {
         return [
-          exercise('Glute Bridge', '2 x 8-10', 'Easy squeeze; no cramping or hamstring tug.'),
+          exercise('Glute Bridge', '2 x 8-10'),
         ];
       }
       return [
-        exercise('Glute Bridge', '2 x 8-10', 'Easy activation before hamstring loading.'),
-        exercise('Nordic Lower', '2 x 3-4', 'Low-rep only; stop before soreness becomes the point.'),
+        exercise('Glute Bridge', '2 x 8-10'),
+        exercise('Nordic Lower', '2 x 3-4'),
       ];
     case 'shoulder_scap':
       if (recommendation.status !== 'recommended' || weekKind === 'deload') {
         return [
-          exercise('Banded External Rotation', '2 x 8-12/side', 'Pain-free range only.'),
+          exercise('Banded External Rotation', '2 x 8-12/side'),
         ];
       }
       return [
-        exercise('Face Pull', '2 x 12-15', 'Light, clean shoulder blades.'),
-        exercise('Banded External Rotation', '2 x 8-12/side', 'Pain-free range only.'),
+        exercise('Face Pull', '2 x 12-15'),
+        exercise('Banded External Rotation', '2 x 8-12/side'),
       ];
     case 'carries':
       if (recommendation.status !== 'recommended' || isGMinusOne || weekKind === 'deload') return [];
       return [
-        exercise('Suitcase Carry', '2-3 x 20-40m/side', 'Tall posture, light-moderate load, no grind.'),
+        exercise('Suitcase Carry', '2-3 x 20-40m/side'),
       ];
     default:
       return [];
@@ -583,11 +605,15 @@ function mobilityExercises(
   const template = templateId
     ? MOBILITY_FLOW_TEMPLATES.find((item) => item.id === templateId)
     : null;
+  // Name and dose only. The template's `notes` pass-through was the second half
+  // of the same channel ruling 3 retired — a flow movement could carry its own
+  // display text straight past `EXERCISE_CUES`, and `localMeta` let it carry its
+  // own NAME too. Both are gone; a flow movement is now a curated name, so its
+  // text is the curated cue by construction.
   return movementsFromTemplate(template).map((movement) => ({
     id: `recovery-addon-mobility-${slug(movement.name)}`,
     name: movement.name,
     prescription: formatMovementPrescription(movement),
-    ...(movement.notes ? { notes: movement.notes } : {}),
     source: 'mobility_flow_template',
   }));
 }
@@ -624,14 +650,84 @@ function formatMovementPrescription(movement: MobilityFlowMovement): string {
   return `${sets} x ${range(min, max)} ${unit}${side}`;
 }
 
-function exercise(name: string, prescription: string, notes?: string): RecoveryAddonExercise {
+/**
+ * An add-on row: a curated NAME and a DOSE, and nothing else.
+ *
+ * This helper used to take a third `notes` argument, and fifteen call sites
+ * above supplied one — "Quiet tempo, no bouncing.", "Pain-free range only.",
+ * "Easy bracing, leave 2-3 reps in reserve." Those strings rendered on the
+ * athlete's session screen having never passed through `EXERCISE_CUES`: a second
+ * authoring surface sitting beside Sam's curated one, invisible to every gate
+ * that guards the first. Several of them paraphrased the very cue they displaced
+ * — the curated `Seated Calf Raise` cue already ends "Slow tempo, no bouncing."
+ *
+ * Sam retired the class on 2026-07-27 (run-7 ruling 3). The parameter is gone
+ * rather than merely unused, because the parameter IS the channel: a name and a
+ * dose are structure, which the builder owns, and the words are curation, which
+ * it does not. The row's display text now comes from `buildCueText(name)` at
+ * render, exactly like every other row in the app.
+ */
+function exercise(name: string, prescription: string): RecoveryAddonExercise {
   return {
     id: `recovery-addon-${slug(name)}`,
     name,
     prescription,
-    ...(notes ? { notes } : {}),
     source: 'exercise_pool',
   };
+}
+
+/**
+ * Every exercise name this builder can put in front of an athlete.
+ *
+ * Enumerated by RUNNING the real selection logic across its whole decision space
+ * rather than by listing names, so the no-uncurated-text invariant sweeps what
+ * the builder actually emits and cannot drift from it. A second hand-maintained
+ * list is precisely the failure mode this repo has already paid for once.
+ */
+export function recoveryAddonExerciseVocabulary(): string[] {
+  const focusAreas: RecoveryAddonFocusArea[] = [
+    'trunk_core',
+    'adductors_groin',
+    'calves_tib_ankles',
+    'hamstring_light_prehab',
+    'shoulder_scap',
+    'mobility_reset',
+    'carries',
+  ];
+  const statuses: Array<RecoveryAddonCoverageRecommendation['status']> = [
+    'recommended',
+    'caution',
+    'reduced',
+    'avoid',
+  ];
+  const phases: SeasonPhase[] = ['Off-season', 'Pre-season', 'In-season'];
+  const weekKinds: WeekKind[] = ['build', 'deload'];
+
+  const names = new Set<string>();
+  for (const focusArea of focusAreas) {
+    for (const status of statuses) {
+      for (const phase of phases) {
+        for (const weekKind of weekKinds) {
+          for (const isGMinusOne of [false, true]) {
+            // One template at a time: `templateIdFor` picks `templateIds[0]`, so
+            // passing the whole catalog at once would only ever reach one flow.
+            for (const template of MOBILITY_FLOW_TEMPLATES) {
+              // Only the fields `exercisesFor` reads.
+              const recommendation = {
+                focusArea,
+                status,
+                templateIds: [template.id],
+              } as RecoveryAddonCoverageRecommendation;
+              for (const row of exercisesFor(recommendation, phase, weekKind, isGMinusOne)) {
+                names.add(row.name);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return [...names].sort();
 }
 
 function range(min: number, max: number): string {

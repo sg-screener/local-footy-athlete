@@ -382,11 +382,20 @@ export type RecoveryAddonKind =
   | 'prehab'
   | 'breathing';
 
+/**
+ * An add-on row is a curated NAME and a DOSE.
+ *
+ * It carried a `notes?: string` until Sam's run-7 ruling 3 (2026-07-27). That
+ * field was the transport for per-exercise text hardcoded in
+ * `recoveryAddonBuilder` — display words that never passed through
+ * `EXERCISE_CUES`. The row's coaching text now comes from the curated layer at
+ * render, via `buildCueText(name)`, exactly like every other row; the field is
+ * deleted rather than left unused so the channel cannot be reopened by a patch.
+ */
 export interface RecoveryAddonExercise {
   id: string;
   name: string;
   prescription: string;
-  notes?: string;
   source?: 'exercise_pool' | 'mobility_flow_template' | 'local';
 }
 

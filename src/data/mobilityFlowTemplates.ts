@@ -1,5 +1,5 @@
 import type { SeasonPhase } from '../types/domain';
-import type { EquipmentTag, FatigueLevel, InjuryTag } from './exercisePools';
+import type { FatigueLevel } from './exercisePools';
 
 export type MobilityFlowFocusTag =
   | 'hips'
@@ -24,13 +24,24 @@ export type MobilityFlowInjuryCautionKey =
 
 export type MobilityFlowPrescriptionType = 'duration' | 'reps' | 'breathing_reps';
 
-export interface MobilityFlowLocalMovementMeta {
-  fatigue: 'low';
-  equipment: EquipmentTag[];
-  contraindications: InjuryTag[];
-  notes: string;
-}
-
+/**
+ * A flow movement: a curated NAME and a DOSE.
+ *
+ * It used to carry two more things, both retired by Sam's run-7 ruling 3:
+ *
+ *   - `notes?: string` — per-movement display text that rendered in-session
+ *     (through `recoveryAddonBuilder`'s mobility branch) without passing through
+ *     `EXERCISE_CUES`. The same channel as the builder's inline note strings,
+ *     reached from the data layer instead of the code.
+ *   - `localMeta` — an escape hatch that let a movement NOT in the curated pools
+ *     ship anyway, provided it brought its own equipment/contraindication/notes
+ *     metadata. Nothing used it, but it was standing permission for exactly the
+ *     class of bug the ruling closes: an author could name a movement the app
+ *     cannot cue, and the local text would paper over the gap.
+ *
+ * Every movement name here must therefore be curated vocabulary — that is what
+ * `exerciseNameCanonicalisationTests` §11 sweeps.
+ */
 export interface MobilityFlowMovement {
   name: string;
   prescriptionType: MobilityFlowPrescriptionType;
@@ -40,9 +51,6 @@ export interface MobilityFlowMovement {
   durationSecondsMin?: number;
   durationSecondsMax?: number;
   perSide?: boolean;
-  notes?: string;
-  /** Present only for movements that are not in the shared exercise pools. */
-  localMeta?: MobilityFlowLocalMovementMeta;
 }
 
 export interface MobilityFlowInjuryCaution {

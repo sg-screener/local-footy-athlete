@@ -1220,7 +1220,11 @@ export default function DayWorkoutScreenV2() {
               onSelectExercise={setSelectedExercise}
               onChangeExercise={openSpecificExerciseEditor}
             />
-            <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
+            <RecoveryAddonSection
+              addons={workout.recoveryAddons ?? []}
+              expandedCues={expandedCues}
+              toggleCue={toggleCue}
+            />
           </>
         ) : (
           <>
@@ -1533,7 +1537,14 @@ function SessionList({
       );
     }
     if (item.presentation === 'addon') {
-      return <AddonRow key={key} exercise={item.row} />;
+      return (
+        <AddonRow
+          key={key}
+          exercise={item.row}
+          expandedCues={expandedCues}
+          toggleCue={toggleCue}
+        />
+      );
     }
     return (
       <StrengthExerciseCard
@@ -1560,11 +1571,21 @@ function SessionList({
     );
   };
 
+  // Where the optional cluster starts. The owner guarantees it is contiguous and
+  // last, so ONE index is all the renderer needs to know — it never decides which
+  // rows the header covers, it only draws the boundary the owner already set.
+  const optionalStart = items.findIndex(
+    (item) => item.kind === 'exercise' && item.optional,
+  );
+
   // Walk the flat list once, wrapping consecutive members of a superset group
   // in the pairing rail. The owner already guarantees they are adjacent.
   const rendered: React.ReactNode[] = [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
+    if (i === optionalStart) {
+      rendered.push(<OptionalWorkHeader key="optional-work-header" />);
+    }
     const groupId =
       item.kind === 'exercise' && item.superset ? item.superset.groupId : null;
     if (!groupId) {
@@ -1596,6 +1617,27 @@ function SessionList({
   }
 
   return <View style={styles.exerciseList}>{rendered}</View>;
+}
+
+/**
+ * The one header the optional cluster gets.
+ *
+ * Sam's run-7 ruling 1. The meaning it carries — this is no-penalty, skip it if
+ * it adds fatigue — used to be repeated on every add-on row as an "Optional"
+ * eyebrow, and again as a pill on the recovery branch's add-on card. Saying it
+ * once above the group says it exactly as well and stops the word competing with
+ * the exercise names underneath it.
+ *
+ * Both branches share this component so the wording cannot drift apart: recovery
+ * days keep their own simple template (§6 item 3), but not their own vocabulary
+ * for the same idea.
+ */
+function OptionalWorkHeader() {
+  return (
+    <Text style={styles.optionalWorkHeader} testID="optional-work-header">
+      Optional work
+    </Text>
+  );
 }
 
 /**
@@ -1654,21 +1696,34 @@ function PowerRow({ block }: { block: any }) {
 }
 
 /**
- * An add-on exercise, now an ordinary badged row.
+ * An add-on exercise, now an ordinary row inside the optional cluster.
  *
- * The "Optional Recovery Add-on" box is gone, but the no-penalty meaning it
- * carried is real prescription information, so it moves onto the row as a quiet
- * marker rather than being dropped with the container.
+ * The "Optional Recovery Add-on" box is gone and so is the per-row eyebrow that
+ * replaced it — the group header above the cluster carries the no-penalty
+ * meaning once (Sam, run-7 ruling 1).
+ *
+ * Its coaching text comes from the curated cue layer via `buildCueText`, exactly
+ * like every other row. It used to come from a note string hardcoded in
+ * `recoveryAddonBuilder`, which is how "Quiet tempo, no bouncing" reached the
+ * athlete without passing through Sam's cues (run-7 ruling 3).
  */
-function AddonRow({ exercise }: { exercise: any }) {
+function AddonRow({
+  exercise,
+  expandedCues,
+  toggleCue,
+}: {
+  exercise: any;
+  expandedCues: Record<string, boolean>;
+  toggleCue: (exerciseId: string) => void;
+}) {
   const token = stableTestIdToken(exercise?.id);
+  const name = exercise?.name;
   return (
     <View style={styles.exerciseCard} testID={`workout-exercise-row-${token}`}>
-      <Text style={styles.optionalMarker}>Optional</Text>
       <View style={styles.exerciseHeaderRow}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} numberOfLines={2}>
-            {displayExerciseName(exercise?.name)}
+            {displayExerciseName(name)}
           </Text>
         </View>
       </View>
@@ -1678,9 +1733,12 @@ function AddonRow({ exercise }: { exercise: any }) {
       >
         {exercise?.prescription}
       </Text>
-      {exercise?.notes ? (
-        <Text style={styles.cueText}>{exercise.notes}</Text>
-      ) : null}
+      <CueDisclosure
+        exerciseId={String(exercise?.id ?? '')}
+        cueText={buildCueText(name)}
+        expandedCues={expandedCues}
+        toggleCue={toggleCue}
+      />
     </View>
   );
 }
@@ -1896,11 +1954,16 @@ function StrengthExerciseCard({
         </View>
       ) : null}
 
-      {/* Curated coaching cue — always visible, the athlete-facing lead.
-          Generator per-exercise notes are deliberately NOT rendered: the
+      {/* Curated coaching cue, collapsed by default (Sam, run-7 ruling 2).
+          Generator per-exercise notes are still deliberately NOT rendered: the
           curated layer owns every athlete-visible word; generation provides
           structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
-      {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
+      <CueDisclosure
+        exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
+        cueText={cueText}
+        expandedCues={expandedCues}
+        toggleCue={toggleCue}
+      />
     </Card>
   );
 }
@@ -1966,9 +2029,15 @@ function RecoveryBlock({
               ) : null}
             </View>
 
-            {/* Curated cue only — always visible; generator notes are not
-                rendered (Stage 3 ownership: curated layer owns the words). */}
-            {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
+            {/* Curated cue only, collapsed by default (run-7 ruling 2);
+                generator notes are not rendered (Stage 3 ownership: the
+                curated layer owns the words). */}
+            <CueDisclosure
+              exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
+              cueText={cueText}
+              expandedCues={expandedCues}
+              toggleCue={toggleCue}
+            />
           </Card>
         );
       })}
@@ -1976,15 +2045,28 @@ function RecoveryBlock({
   );
 }
 
+/**
+ * Recovery days keep their own simple template (§6 item 3), so the add-on box
+ * survives here where it died in the badged list. What it does NOT keep is its
+ * own vocabulary for a shared idea: it mounts the same `OptionalWorkHeader` as
+ * the list branch, and the per-card "Optional" pill is gone — it was the same
+ * per-row label ruling 1 retired, wearing a different shape.
+ */
 interface RecoveryAddonSectionProps {
   addons: RecoveryAddonBlock[];
+  expandedCues: Record<string, boolean>;
+  toggleCue: (exerciseId: string) => void;
 }
-function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
+function RecoveryAddonSection({
+  addons,
+  expandedCues,
+  toggleCue,
+}: RecoveryAddonSectionProps) {
   if (addons.length === 0) return null;
 
   return (
     <View style={styles.recoveryAddonSection}>
-      <SectionLabel style={styles.sectionLabel}>Optional Recovery Add-on</SectionLabel>
+      <OptionalWorkHeader />
       {addons.map((addon) => (
         <Card
           key={addon.id}
@@ -1998,7 +2080,6 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
               <Text style={styles.recoveryAddonEyebrow}>{addon.label}</Text>
               <Text style={styles.recoveryAddonTitle}>{addon.durationMinutes} min support work</Text>
             </View>
-            <Text style={styles.recoveryAddonPill}>Optional</Text>
           </View>
           {addon.placementNote ? (
             <Text style={styles.recoveryAddonMeta}>{addon.placementNote}</Text>
@@ -2017,9 +2098,14 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
                 >
                   {exercise.prescription}
                 </Text>
-                {exercise.notes ? (
-                  <Text style={styles.recoveryAddonNotes}>{exercise.notes}</Text>
-                ) : null}
+                {/* Same curated source as every other row (run-7 ruling 3) —
+                    this used to print a note string hardcoded in the builder. */}
+                <CueDisclosure
+                  exerciseId={String(exercise.id ?? '')}
+                  cueText={buildCueText(exercise.name)}
+                  expandedCues={expandedCues}
+                  toggleCue={toggleCue}
+                />
               </View>
             ))}
           </View>
@@ -2232,25 +2318,57 @@ function PlayButton({ onPress, accessibilityLabel }: PlayButtonProps) {
 }
 
 /**
- * Collapsible form-cue toggle. When there are no notes, cue shows by default.
+ * The curated cue, collapsed behind a "Form cues" disclosure.
+ *
+ * ## Why this reverses the always-visible ruling
+ *
+ * Sam's run-7 ruling 2. The cue used to render unconditionally, and that rule
+ * had a specific reason: AI-generated per-exercise notes were rendering on the
+ * same rows, so collapsing the cue would have let the generator's words outrank
+ * Sam's. Stage 3 killed the AI notes — the curated layer is now the ONLY source
+ * of a row's coaching text — so the reason expired, and what was left was the
+ * same sentence repeated down every row of the session. This is noise reduction,
+ * not a change of ownership: the words behind the disclosure are still Sam's,
+ * still reached through `buildCueText` and canonicalisation.
+ *
+ * It replaces a `CueToggle` that was already here but unreachable — it only
+ * collapsed when a row had generator notes, and no row has had those since
+ * Stage 3, so in practice it always took its always-visible branch.
+ *
+ * ## One implementation, three row types
+ *
+ * Strength, recovery and add-on rows all mount THIS component. They previously
+ * each rendered their own `{cueText ? <Text> : null}`, which is how the two
+ * render layers drifted; the shared component means "collapsed by default" is
+ * one fact rather than three copies that have to agree.
+ *
+ * A row with no curated cue renders nothing at all — never an empty disclosure
+ * that opens onto blank space.
  */
-interface CueToggleProps {
-  cueText: string;
+interface CueDisclosureProps {
+  cueText: string | null;
   exerciseId: string;
-  hasNotes: boolean;
-  expanded: boolean;
-  onToggle: (exerciseId: string) => void;
+  expandedCues: Record<string, boolean>;
+  toggleCue: (exerciseId: string) => void;
 }
-function CueToggle({ cueText, exerciseId, hasNotes, expanded, onToggle }: CueToggleProps) {
-  if (!hasNotes) {
-    return <Text style={styles.cueText}>{cueText}</Text>;
-  }
+function CueDisclosure({
+  cueText,
+  exerciseId,
+  expandedCues,
+  toggleCue,
+}: CueDisclosureProps) {
+  if (!cueText) return null;
+  const expanded = !!expandedCues[exerciseId];
   return (
     <View style={styles.cueContainer}>
       <Pressable
-        onPress={() => onToggle(exerciseId)}
+        onPress={() => toggleCue(exerciseId)}
         hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         style={styles.cueToggleRow}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={expanded ? 'Hide form cues' : 'Show form cues'}
+        testID={`exercise-cue-toggle-${stableTestIdToken(exerciseId)}`}
       >
         <Text style={styles.cueToggleText}>
           {expanded ? '▾ Form cues' : '▸ Form cues'}
@@ -3370,12 +3488,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 20,
   },
-  recoveryAddonPill: {
-    color: colors.accent.lime,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
   recoveryAddonMeta: {
     color: '#9A9A9A',
     fontSize: 12.5,
@@ -3403,12 +3515,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
-  },
-  recoveryAddonNotes: {
-    color: '#7A7A7A',
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
   },
   recoveryAddonSkip: {
     color: '#6E6E6E',
@@ -3447,18 +3553,20 @@ const styles = StyleSheet.create({
   powerOptionName: { flex: 1, color: '#D0D0D0', fontSize: 14, fontWeight: '600' },
   powerOptionDose: { color: colors.accent.lime, fontSize: 14, fontWeight: '700' },
 
-  // ── Add-on rows ──
+  // ── The optional cluster's one header ──
   //
-  // With the role badge gone, "Optional" is the row's only eyebrow. It stays at
-  // eyebrow scale rather than growing into the gap: it qualifies the row, it is
-  // not a heading for it.
-  optionalMarker: {
+  // Eyebrow scale, not heading scale. It divides the list rather than opening a
+  // new section: the work below it is still the same session, just no-penalty.
+  // Held quiet so it separates without competing with the exercise names — the
+  // reason a label on every row was worse than a label on the group.
+  optionalWorkHeader: {
     color: '#5A5A5A',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '800',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
 
   // ── In-list conditioning choice ──
