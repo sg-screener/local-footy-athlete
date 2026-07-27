@@ -33,7 +33,11 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
+import {
+  deriveIllnessRecoveryWeekMode,
+  deriveIllnessWeekDirective,
+} from '../rules/illnessRecoveryWeekMode';
+import { resolveDoorDeloadPolicy } from '../rules/deloadWeekRules';
 import {
   createTemporaryIllnessFact,
   createTemporaryFatigueFact,
@@ -438,6 +442,70 @@ run('8b illness week lifts every minimum — the law\'s "optional" flag', () => 
     assert(ill[domain].required === 0,
       `${domain}.required must be 0 in an optional week, got ${ill[domain].required}`);
   }
+});
+
+// ── Invariant 9 (THE DELOAD/OPTIONAL OWNER, Sam 2026-07-27) — the week-mode
+// subsystem IS the illness law's implementation. It answers the law's two
+// questions and nothing else, for all three tiers, and `illness_recovery` is
+// DERIVED from the second answer rather than minted beside it.
+run('9 the week derivation answers the law\'s two questions, per tier', () => {
+  const tierFacts = (severity: 'mild' | 'moderate' | 'severe') => [createTemporaryIllnessFact({
+    observedDate: WEEK, scope: weekScope(WEEK), severity,
+    sourceSurface: 'week_readiness_sheet',
+  })];
+
+  const expected = {
+    mild: { deloaded: false, sessionsOptional: false },
+    moderate: { deloaded: true, sessionsOptional: false },
+    severe: { deloaded: true, sessionsOptional: true },
+  } as const;
+
+  for (const tier of ['mild', 'moderate', 'severe'] as const) {
+    const directive = deriveIllnessWeekDirective({
+      temporarySourceFacts: tierFacts(tier), weekStartISO: WEEK,
+    });
+    assert(directive.deloaded === expected[tier].deloaded,
+      `${tier}.deloaded: expected ${expected[tier].deloaded}, got ${directive.deloaded}`);
+    assert(directive.sessionsOptional === expected[tier].sessionsOptional,
+      `${tier}.sessionsOptional: expected ${expected[tier].sessionsOptional}, ` +
+      `got ${directive.sessionsOptional}`);
+  }
+});
+
+// The regression this closes: with the illness-private numbers deleted (C2) and
+// nothing marking the week deloaded, a severe-illness week would be NORMAL DOSE
+// and merely optional. Sam: "never normal-dose optional." MODERATE is the tier
+// that proves deload and optional are genuinely independent — it deloads
+// without lifting a single minimum.
+run('9b an in-season SEVERE illness week is deloaded AND optional', () => {
+  const severe = deriveIllnessWeekDirective({
+    temporarySourceFacts: [createTemporaryIllnessFact({
+      observedDate: WEEK, scope: weekScope(WEEK), severity: 'severe',
+      sourceSurface: 'week_readiness_sheet',
+    })],
+    weekStartISO: WEEK,
+  });
+  assert(severe.deloaded && severe.sessionsOptional,
+    `severe illness must be deloaded AND optional, got ${JSON.stringify(severe)}`);
+
+  // In-season is the phase illness_recovery is minted in, and the door has no
+  // phase gate — otherwise this week could never deload at all (D16).
+  const policy = resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: 'In-season' });
+  assert(policy?.weekKind === 'deload',
+    'the illness door must open a deload in-season');
+});
+
+run('9c the illness_recovery MODE is derived from the law, not minted beside it', () => {
+  const moderate = [createTemporaryIllnessFact({
+    observedDate: WEEK, scope: weekScope(WEEK), severity: 'moderate',
+    sourceSurface: 'week_readiness_sheet',
+  })];
+  // Moderate deloads but does NOT lift minimums, so it must NOT mint the
+  // optional-only week mode. This is the pair coming apart, exactly as authored.
+  assert(!deriveIllnessRecoveryWeekMode({ temporarySourceFacts: moderate, weekStartISO: WEEK }),
+    'moderate illness must not mint the optional-only illness_recovery mode');
+  assert(deriveIllnessWeekDirective({ temporarySourceFacts: moderate, weekStartISO: WEEK }).deloaded,
+    'moderate illness must still deload the week');
 });
 
 console.log(`\nillness_recovery week-mode invariants: ${passes} passing, ${failures.length} failing`);

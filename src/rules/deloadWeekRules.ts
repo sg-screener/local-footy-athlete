@@ -58,9 +58,20 @@ export const DELOAD_LAW = {
   beatUpLoadMultiplier: 0.9,
 } as const;
 
+/**
+ * Which door opened this deload. The TRANSFORMATION is the same for all three —
+ * "no door invents its own reductions" — but only the scheduled door is
+ * phase-gated (see `resolveDoorDeloadPolicy`).
+ */
+export type DeloadDoor = 'scheduled' | 'readiness' | 'illness';
+
 export interface DeloadWeekPolicy {
   weekKind: 'deload';
-  seasonPhase: 'Off-season' | 'Pre-season';
+  /**
+   * In-season is reachable through the readiness and illness doors only; the
+   * scheduled door never mints it (D16).
+   */
+  seasonPhase: SeasonPhase;
   intensityMultiplier: number;
   /**
    * True when the athlete is beat up, which is the ONLY case Sam's law drops
@@ -86,6 +97,15 @@ export function resolveWeekIntensityMultiplier(
   return 1.0;
 }
 
+/**
+ * The SCHEDULED door: a deload week the block plan laid down in advance.
+ *
+ * Phase-gated by D16 — "no scheduled in-season deloads; games and byes
+ * self-regulate; backing off happens through readiness/bye recovery only." The
+ * gate belongs to THIS door alone. Gating the readiness and illness doors the
+ * same way would leave in-season with no way to deload at all, which is the
+ * opposite of what D16 says.
+ */
 export function resolveDeloadWeekPolicy(
   seasonPhase: SeasonPhase | null | undefined,
   weekKind: WeekKind | null | undefined,
@@ -96,6 +116,31 @@ export function resolveDeloadWeekPolicy(
     weekKind: 'deload',
     seasonPhase,
     intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
+  };
+}
+
+/**
+ * The READINESS and ILLNESS doors: an athlete-driven deload, in ANY phase.
+ *
+ * These are the doors D16 names as the in-season way to back off, so they carry
+ * no phase gate. What they open is the SAME transformation the scheduled door
+ * opens — `DELOAD_LAW`, untouched — because "no door invents its own
+ * reductions." The only thing that varies by phase is the intensity multiplier,
+ * and in-season it resolves to 1.0: the weight is HELD, which is Sam's default
+ * ("Weight stays the same, or drops slightly if the athlete is beat up"). The
+ * halved sets and RPE 5-6 are the whole change.
+ */
+export function resolveDoorDeloadPolicy(args: {
+  door: Exclude<DeloadDoor, 'scheduled'>;
+  seasonPhase: SeasonPhase | null | undefined;
+  athleteIsBeatUp?: boolean;
+}): DeloadWeekPolicy | null {
+  const seasonPhase = args.seasonPhase ?? 'In-season';
+  return {
+    weekKind: 'deload',
+    seasonPhase,
+    intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, 'deload'),
+    athleteIsBeatUp: args.athleteIsBeatUp,
   };
 }
 

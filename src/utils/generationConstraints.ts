@@ -21,7 +21,7 @@ import {
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
 import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
-import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
+import { deriveIllnessWeekDirective } from '../rules/illnessRecoveryWeekMode';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { constraintAppliesToDate } from './readinessConstraints';
 
@@ -85,6 +85,16 @@ export interface GenerationConstraintContext {
    * contract instead of re-reading facts.
    */
   weekMode?: 'illness_recovery';
+  /**
+   * THE ILLNESS LAW's FIRST answer: is this week deloaded?
+   *
+   * Deliberately separate from `weekMode`, which carries the SECOND answer
+   * (sessions optional). MODERATE illness sets this WITHOUT setting the mode —
+   * it deloads a week whose minimums all stand — so one field could never have
+   * carried both. The transformation itself is DELOAD_LAW's, applied through the
+   * illness door, which has no phase gate (D16).
+   */
+  weekDeloaded?: boolean;
 }
 
 /** Schedule-history notes describe an accepted mutation; they are not load/readiness inputs. */
@@ -121,21 +131,25 @@ export function buildGenerationConstraintContext(args: {
       .flatMap((injury) => injury.injuryKeys),
   ));
 
-  const weekMode = args.temporarySourceFacts &&
-    deriveIllnessRecoveryWeekMode({
-      temporarySourceFacts: args.temporarySourceFacts,
-      weekStartISO: args.todayISO.slice(0, 10),
-    })
-    ? ('illness_recovery' as const)
-    : undefined;
+  // ONE read of the facts produces BOTH of the law's answers. Asking twice is how
+  // the deload and the optional stamp drift apart.
+  const illness = args.temporarySourceFacts
+    ? deriveIllnessWeekDirective({
+        temporarySourceFacts: args.temporarySourceFacts,
+        weekStartISO: args.todayISO.slice(0, 10),
+      })
+    : { deloaded: false, sessionsOptional: false };
+  const weekMode = illness.sessionsOptional ? ('illness_recovery' as const) : undefined;
+  const weekDeloaded = illness.deloaded ? true : undefined;
 
-  if (injuries.length === 0 && !readiness && !weekMode) return undefined;
+  if (injuries.length === 0 && !readiness && !weekMode && !weekDeloaded) return undefined;
   return {
     activeConstraintIds: live.map((constraint) => constraint.id),
     injuries,
     readiness,
     activeInjuryKeys,
     weekMode,
+    weekDeloaded,
   };
 }
 

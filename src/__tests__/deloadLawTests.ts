@@ -30,6 +30,7 @@ import path from 'path';
 import {
   DELOAD_LAW,
   resolveDeloadWeekPolicy,
+  resolveDoorDeloadPolicy,
   applyStrengthDeloadToExercises,
   applyConditioningDeloadToExercises,
   deloadPowerDose,
@@ -253,6 +254,49 @@ ok('a normal week resolves no deload',
 // "no door invents its own reductions" forbids.
 ok('the law is exported independently of any trigger',
   typeof DELOAD_LAW === 'object' && DELOAD_LAW !== null);
+
+/* ── The doors ── */
+
+// "The same transformation is applied by EVERY door that deloads: a scheduled
+// deload week, a low-readiness call (rolling 7 days), and an active moderate-or-
+// severe illness. No door invents its own reductions."
+//
+// The doors do NOT share a phase rule, and that asymmetry is authored. D16: "no
+// scheduled in-season deloads; games and byes self-regulate; backing off happens
+// through readiness/bye recovery only." So the SCHEDULED door is phase-gated,
+// and the readiness/illness doors are precisely the in-season way to back off —
+// gating them by phase would leave in-season with no way to deload at all.
+//
+// Both directions are asserted here. A gate that is merely absent is trusted;
+// a gate that is tested is enforced.
+console.log('\n[5] THE DOORS — one transformation, and only ONE phase gate');
+
+for (const phase of ['Off-season', 'Pre-season'] as const) {
+  ok(`the SCHEDULED door opens in ${phase}`,
+    resolveDeloadWeekPolicy(phase, 'deload') !== null);
+}
+
+// D16, enforced rather than assumed.
+ok('the SCHEDULED door is CLOSED in-season (D16: no scheduled in-season deloads)',
+  resolveDeloadWeekPolicy('In-season', 'deload') === null);
+
+for (const door of ['readiness', 'illness'] as const) {
+  for (const phase of ['Off-season', 'Pre-season', 'In-season'] as const) {
+    const policy = resolveDoorDeloadPolicy({ door, seasonPhase: phase });
+    ok(`the ${door} door deloads in ${phase}`, policy !== null);
+    ok(`the ${door} door in ${phase} carries the law's transformation, not its own`,
+      policy?.weekKind === 'deload');
+  }
+}
+
+// Sam's default: "Weight stays the same, or drops slightly if the athlete is
+// beat up." In-season resolves to 1.0, so the weight is held — the halved sets
+// and RPE 5-6 are the whole change.
+ok('an in-season door deload HOLDS the weight',
+  resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: 'In-season' })
+    ?.intensityMultiplier === 1.0,
+  String(resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: 'In-season' })
+    ?.intensityMultiplier));
 
 /* ── Result ── */
 
