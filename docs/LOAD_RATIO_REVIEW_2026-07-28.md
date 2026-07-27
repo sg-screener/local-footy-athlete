@@ -1,69 +1,85 @@
 # Load ratio review — for Sam to correct and sign
 
-**Date:** 2026-07-28
-**Workbook:** `docs/LOAD_RATIO_REVIEW_2026-07-28.xlsx` (the signable copy — edit that, not this)
-**Unit:** provenance lock, Unit 3
-**Inventory:** `docs/PROVENANCE_INVENTORY_2026-07-28.md`
+**Date:** 2026-07-28  
+**Workbook:** `docs/LOAD_RATIO_REVIEW_2026-07-28.xlsx` — **the signable copy. Edit that, not this.**  
+**Unit:** provenance lock, Unit 3  
+**Background:** `docs/ANCHOR_CHAIN_WALKTHROUGH_2026-07-28.md` explains the chain in plain English.
 
-## Why this exists
+## Ruling order
 
-`EXERCISE_LOAD_MAP` decides the kilograms the app suggests for every barbell,
-dumbbell, cable and machine lift. It has **77 entries**. **Six** were ruled on
-2026-07-25. The other **71 have never been ruled by anyone** — they were written
-into code and have been prescribing weight to athletes since.
+| # | Section | Rows | |
+|---|---|---|---|
+| 1 | Anchor multipliers | 13 | **upstream of everything — rule first** |
+| 2 | Suspicious ratios | 4 | something specific looks wrong |
+| 3 | Plausible ratios | 61 | a skim |
+| 4 | Floor-out ratios | 6 | these currently do **nothing** |
+| 5 | Already ruled | 6 | context only |
 
-`LOAD_RULING_PENDING` is empty and its gate passes green, which reads as
-"everything is ruled". Nothing was ever parked there, so the emptiness was never
-evidence of anything. That is the defect this sheet closes.
-
-## How a ratio works
-
-    working weight = anchor 1RM x ratio, rounded to the equipment increment
-
-The ratio is **not** a percentage of 1RM. It bakes in the rep-range discount, so
-the output is a direct working weight.
-
-## The reference athlete
-
-**squat 1RM = 88 kg** — your reference athlete, pinned by
-`LOAD_RULINGS_LITERAL_LOCK_PURGE_REPORT_2026-07-25.md`; three of the four figures
-in that document fall out of it exactly.
-
-**bench 1RM = 57.2 kg (0.65 × 88)** — **an assumption, not your figure.** That
-document never pinned a bench anchor. If it is wrong, every bench-anchored
-kilogram below is wrong with it. Worth correcting first.
-
-## What my flags mean
-
-They are a starting point, not a verdict. `plausible` means nothing looked wrong
-to me — I am not an S&C coach and it is not evidence the number is right.
-`suspicious` means something specific looks off, and the reason is in the row.
+`4 + 61 + 6 + 6 = 77` ratios. The 4 suspicious and 6 floor-out together are the 10 I flagged —
+split because they are different decisions.
 
 ---
 
-## Suspicious — 10
+# 1. Anchor multipliers — rule these first
+
+Anchor 1RM = **bodyweight × multiplier**. All 77 ratios then multiply that anchor,
+so an error here moves every suggested weight in the app at once.
+
+"First card weight" applies the representative lift (Back Squat / Bench Press, both
+ratio 0.82) so the multiplier is visible in the units an athlete actually reads.
+
+| Kind | Onboarding answer | Anchor | Current | 1RM @ 80 kg | First card weight | **SAM: value** |
+|---|---|---|---|---|---|---|
+| squat multiplier | I don't squat | squat | 0.6 | 48 kg | 40 kg |   |
+| squat multiplier | Less than bodyweight | squat | 0.8 | 64 kg | 52.5 kg |   |
+| squat multiplier | Around bodyweight | squat | 1 | 80 kg | 65 kg |   |
+| squat multiplier | 1.5x bodyweight | squat | 1.5 | 120 kg | 97.5 kg |   |
+| squat multiplier | 2x bodyweight+ | squat | 2 | 160 kg | 130 kg |   |
+| squat multiplier | Not sure | squat | 0.8 | 64 kg | 52.5 kg |   |
+| bench multiplier | I don't bench | bench | 0.4 | 32 kg | 25 kg |   |
+| bench multiplier | Less than bodyweight | bench | 0.65 | 52 kg | 42.5 kg |   |
+| bench multiplier | Around bodyweight | bench | 1 | 80 kg | 65 kg |   |
+| bench multiplier | 1.25x bodyweight | bench | 1.25 | 100 kg | 82.5 kg |   |
+| bench multiplier | 1.5x bodyweight+ | bench | 1.5 | 120 kg | 97.5 kg |   |
+| bench multiplier | Not sure | bench | 0.65 | 52 kg | 42.5 kg |   |
+| fallback bodyweight kg | (no bodyweight recorded) | n/a | 82 kg | n/a | n/a |  |
+
+### The missing-bodyweight fallback needs a different kind of answer
+
+If an athlete has no bodyweight recorded, the code substitutes **82 kg** ("average
+AFL player"). Nobody authored that. Two ways to settle it:
+
+- **A — give it a number** you will stand behind, and it stays a default.
+- **B — fail loud.** Refuse to print a weight when bodyweight is unknown, the way an
+  unauthored exercise now shows `-` rather than a confident "BW". Costs a real number
+  on the card for an athlete who skipped the question; buys never guessing an
+  athlete's bodyweight to two figures.
+
+Write a number, or the words `FAIL LOUD`, in that row.
+
+### Note on the bench anchor
+
+Your 2026-07-25 ruling pinned squat 1RM and **never pinned bench**. Every
+bench-anchored kilogram in sections 2–5 rests on `0.65 × bodyweight`, which is the
+app's own default rather than anything you said. This section is where that is fixed.
+
+---
+
+# 2. Suspicious — 4
 
 | Exercise | Anchor | Ratio | Equipment | kg @ ref | Why flagged | **SAM: ratio** |
 |---|---|---|---|---|---|---|
-| Bicep Curl (Barbell) | bench | 0.3 | barbell | 20 kg | ratio floors out — computes 17.2kg, below the 20kg minimum, so the ratio never applies |   |
-| Bottoms-Up KB Press | bench | 0.08 | kettlebell | 8 kg | ratio floors out — computes 4.6kg, below the 8kg minimum, so the ratio never applies |   |
-| Concentration Curl | bench | 0.08 | dumbbell | 5 kg | ratio floors out — computes 4.6kg, below the 5kg minimum, so the ratio never applies |   |
 | Deadlift | squat | 1 | barbell | 87.5 kg | working weight at or above the anchor 1RM |   |
-| Dumbbell Kickback | bench | 0.08 | dumbbell | 5 kg | ratio floors out — computes 4.6kg, below the 5kg minimum, so the ratio never applies |   |
-| Explosive Landmine Press | bench | 0.25 | barbell | 20 kg | ratio floors out — computes 14.3kg, below the 20kg minimum, so the ratio never applies |   |
 | Farmer Carry | bench | 0.355 | dumbbell | 20 kg | 3-decimal precision implies a derivation nobody recorded |   |
-| Incline Y Raise | bench | 0.07 | dumbbell | 5 kg | ratio floors out — computes 4.0kg, below the 5kg minimum, so the ratio never applies |   |
 | Leg Press | squat | 1.3 | machine | 115 kg | working weight at or above the anchor 1RM |   |
 | Suitcase Carry | bench | 0.355 | dumbbell | 20 kg | 3-decimal precision implies a derivation nobody recorded |   |
 
-**The "floors out" group is the most interesting finding.** Six ratios compute a
-weight below the equipment minimum, so the athlete always receives the minimum and
-the ratio never applies at all. Those numbers look like decisions but have no
-effect — changing them changes nothing until the minimum moves.
-
 ---
 
-## Plausible — 61
+# 3. Plausible — 61
+
+Nothing looked wrong to me. That is not evidence they are right, only that I had no
+specific reason to flag them.
 
 | Exercise | Anchor | Ratio | Equipment | kg @ ref | Why flagged | **SAM: ratio** |
 |---|---|---|---|---|---|---|
@@ -131,9 +147,33 @@ effect — changing them changes nothing until the minimum moves.
 
 ---
 
-## Already ruled — 6
+# 4. Floor-out — 6 ratios that currently do nothing
 
-Shown for context. No action needed.
+Each computes a weight **below its equipment minimum**, so the athlete always
+receives the minimum and the ratio never applies. They look like decisions and have
+no effect — changing the number changes nothing until the minimum moves.
+
+So the decision is not "what should the ratio be" but:
+
+- **delete as noise** — the minimum is the right answer for these movements, so
+  remove the ratio and stop pretending something decides.
+- **re-author** — the minimum is wrong for these movements; give a ratio **and** say
+  what the equipment minimum should be.
+
+| Exercise | Anchor | Ratio | Equipment | kg @ ref | Why flagged | **SAM: ratio** |
+|---|---|---|---|---|---|---|
+| Bicep Curl (Barbell) | bench | 0.3 | barbell | 20 kg | ratio floors out — computes 17.2kg, below the 20kg minimum, so the ratio never applies |   |
+| Bottoms-Up KB Press | bench | 0.08 | kettlebell | 8 kg | ratio floors out — computes 4.6kg, below the 8kg minimum, so the ratio never applies |   |
+| Concentration Curl | bench | 0.08 | dumbbell | 5 kg | ratio floors out — computes 4.6kg, below the 5kg minimum, so the ratio never applies |   |
+| Dumbbell Kickback | bench | 0.08 | dumbbell | 5 kg | ratio floors out — computes 4.6kg, below the 5kg minimum, so the ratio never applies |   |
+| Explosive Landmine Press | bench | 0.25 | barbell | 20 kg | ratio floors out — computes 14.3kg, below the 20kg minimum, so the ratio never applies |   |
+| Incline Y Raise | bench | 0.07 | dumbbell | 5 kg | ratio floors out — computes 4.0kg, below the 5kg minimum, so the ratio never applies |   |
+
+---
+
+# 5. Already ruled — 6
+
+Ruled 2026-07-25. Context only, no action needed.
 
 | Exercise | Anchor | Ratio | Equipment | kg @ ref | Why flagged | **SAM: ratio** |
 |---|---|---|---|---|---|---|
@@ -146,15 +186,8 @@ Shown for context. No action needed.
 
 ---
 
-## Upstream: the anchor multipliers
-
-These convert an onboarding answer into the anchor 1RM that every ratio above
-multiplies. They are unauthored too, and they sit **upstream of all 77** — an error
-here moves every suggested weight in the app at once. They are on the "Anchor
-multipliers" tab of the workbook.
-
 ## After sign-off
 
-The workbook becomes the source of truth and the code follows it, held by an
-equality test in both directions — the same arrangement as the conditioning
-templates. A hand-edited ratio then fails the build.
+The workbook becomes the source of truth and the code follows it, held by an equality
+test in both directions — the same arrangement as the conditioning templates. A
+hand-edited ratio then fails the build.

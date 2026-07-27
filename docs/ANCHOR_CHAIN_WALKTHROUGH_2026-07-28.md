@@ -100,9 +100,16 @@ asked about the middle one right now:
 
 | Layer | Where | Authored? |
 |---|---|---|
-| Bodyweight → anchor 1RM multipliers | 11 values, "Anchor multipliers" tab | **No** |
-| Anchor × ratio | 77 values, "Load ratios" tab | 6 yes, **71 no** |
+| Bodyweight → anchor 1RM multipliers | **13 rows**, tab 1 | **No** |
+| Anchor × ratio | 77 rows, tabs 2–5 | 6 yes, **71 no** |
 | Experience multiplier | 2 values | **Yes** (you, 2026-07-27) |
+
+> **Correction.** An earlier revision of this table said "11 values" for the top layer.
+> That number was wrong — I wrote it without counting. It is **12 onboarding answers
+> (6 squat, 6 bench) plus the missing-bodyweight fallback = 13 rows**, covering 8
+> distinct multiplier values. Recording it here rather than quietly fixing it, since
+> an uncounted number in a unit about unauthored numbers is the whole problem in
+> miniature.
 
 The top layer is upstream of all 77 ratios — an error there moves every suggested
 weight in the app at once, so it may be worth ruling on before the ratios beneath it.
