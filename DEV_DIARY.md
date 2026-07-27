@@ -6,6 +6,87 @@ the top.
 
 ---
 
+## Monday 28 July 2026 — Power stops being a special case
+
+**What happened.**
+Power work — the jumps and explosive push-ups that go at the start of a
+session — used to live in its own little box, separate from the rest of the
+exercises. It looked different, it was built differently, and the app had to
+remember to treat it differently everywhere. That worked, but it made power
+the one thing in the session that nothing else understood, and every new
+feature had to be taught about it all over again.
+
+It's now just an exercise, like everything else. Same list, same card, same
+place — first, because it's meant to be done fresh. It carries a label saying
+"this is power work", and one part of the app reads that label to make sure
+power still doesn't count toward your weekly training load. Because it
+shouldn't: a few jumps aren't a hard session, aren't a strength session, and
+aren't conditioning. That was true before and it's still true — but now it's
+something the app states, instead of something that just happened to be true
+because power was kept in a separate box.
+
+The reason this took five careful steps rather than one is that moving
+something into the counting list is exactly how you accidentally start
+counting it. So before touching anything, we built a machine that recorded
+every number the app produces — hard days, strength sessions, conditioning,
+the lot — for thirty-two different athlete scenarios. Then after each step we
+checked every one of those numbers against the recording. If a number moved
+and we couldn't say why, we stopped.
+
+It kept catching things. Six real problems, none of which anyone had spotted
+by reading the code. Two of them were already broken before we started:
+**power was being deleted from every deload week**, which is the opposite of
+what the programming rules say (a deload keeps power, just less of it) — and
+separately, some weeks were quietly having their tempo conditioning downgraded
+to easy aerobic because the app had forgotten which part of the off-season it
+was in. Both are fixed. The other four were problems we introduced and caught
+the same day, including one where putting power first in the list made the app
+lose track of which lift was the main lift, and another where the app started
+adding an extra set to the jumps as if they were barbell work.
+
+Last thing: athletes who are partway through a program already have power
+saved in the old shape. There's now a one-time conversion that lifts it into
+the new shape the moment their program loads — same exercise, same sets, same
+reps. It deliberately does not re-decide anything. If you were given Vertical
+Jump for 3 sets of 3, that's what you keep.
+
+**What to expect on the phone (the device pass sheet).**
+Four things should look different. Everything else should look identical — if
+anything else moved, that's a bug, not a feature:
+
+* Power renders as a normal exercise row at the top of the session — with its
+  curated cue and demo video, which the old box never showed.
+* Deload weeks keep a shrunk power primer instead of losing power entirely.
+* Late off-season weeks that hit a safety adjustment keep their programmed
+  tempo conditioning instead of being handed easy aerobic.
+* Athletes mid-block keep their existing power primer unchanged — same
+  exercise, same dose.
+
+**What's not done yet.**
+Two jobs are written down and deliberately left for their own day. The first:
+the app still uses an exercise's *position* in the list as a hint about
+whether it's a main lift, which is the same "how much / where it sits decides
+what it is" thinking the readiness rules already threw out. We patched around
+it rather than removing it, because removing it changes numbers across the
+whole app and deserves its own before-and-after. The second: there are still
+two different internal vocabularies for describing what kind of work a row is,
+and they should be one. Neither blocks anything; both are guarded by tests
+that go red if they drift.
+
+Also worth saying plainly: the per-session exercise limit that the Bible
+talks about isn't actually enforced anywhere in the app yet. It's computed and
+then ignored. That's not new and nothing was invented to fill the gap — the
+place a limit would be counted from now exists and is documented, ready for
+when the per-session controls get designed.
+
+**What's next.**
+Device pass, against the four-line sheet above. The last two steps of this
+work have to ship together — the conversion for existing athletes is what
+stops anyone mid-program from opening the app and finding their power work
+missing.
+
+---
+
 ## Wednesday 23 July 2026 — the day the app got real, in both directions
 
 Huge day. Maybe the most important one yet, and not for the reasons I
