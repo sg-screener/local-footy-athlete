@@ -50,6 +50,35 @@ Agenda (from MASTER_PLAN 4.1):
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
 
+### D17 — Mobility & Prehab flow menus (Sam, 2026-07-27, AUTHORED)
+
+Sam's composable flow rules — the app selects the specific exercises
+from the matching pools/muscle-tags; counts are law:
+
+- **Lower days (general):** 2 hip mobility + 2 hip prehab
+- **Lower SQUAT days:** 2 hip mobility + 1 hip prehab + 1 knee prehab
+- **Lower HINGE days:** 1 hip mobility + 1 hamstring-or-low-back
+  mobility + 1 hip prehab + 1 hamstring prehab
+- **Any UPPER day:** 1 shoulder mobility + 1 upper-body mobility +
+  2 shoulder prehab
+- Resolution order: hinge rule > squat rule > general lower; the app
+  chooses the specific exercises and slots (rotation for variety).
+  Category mapping via muscle metadata: hip prehab = groin/adductor +
+  hip/glute entries; knee prehab = the TKE/Spanish-squat/step-down
+  crew; hamstring prehab = hamstring-light pool; shoulder prehab =
+  shoulder-health pool; upper mobility = t-spine/lat/chest/dead-hang.
+- Flow stays never-load-bearing (D13); conditioning-only and recovery
+  days have no flow (v1).
+- CONFIRMED (Sam): **full-body days = 1 hip mobility + 1 shoulder
+  mobility + 1 hip prehab + 1 shoulder prehab.**
+- **FLOW DOSING (Sam, 2026-07-27):** mobility items = 2 sets ×
+  30–60 sec (per side where applicable); prehab items = 2 sets ×
+  10–20 reps. Universal across the flow — covers most things; an
+  exercise whose curated prescription differs (e.g. a hold-based
+  prehab) keeps its curated dose.
+- D17 is now AUTHORED-COMPLETE — the final authoring item in the
+  programming system.
+
 ### D15 amendments + D16 deloads (Sam, 2026-07-25)
 
 - **TT-day gym pairing refined:** full-body strength CAN share a day
