@@ -1540,6 +1540,7 @@ Simple conditioning rules
 * Footy athletes must be able to sprint, repeat spring, grind for up to 1 min, have a big engine as well as play for 2 hours. So conditioning should prepare them for all of that. That is exactly what the eight quality rows cover. 
 * Running sits between 2 and 3 days per week. Everything above that goes off-feet. 
 * Doses come from the templates sheet. A layer that invents its own conditioning dose is a defect. 
+* Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose. 
 Conditioning finisher rules
 Conditioning finishers are small add-ons, not hidden second sessions.
 A finisher should have a clear purpose:
@@ -4811,4 +4812,5 @@ Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07
 * Section 17 B, running exposure. Superseded "No more than 4 running exposures per week programmed by the app". Now floor 2 / cap 3 running days, with anchors counting toward the cap and the floor disapplied in early off-season and bye recovery.
 * Section 17 F, strong warning. Superseded "More than 4 running exposures" with "More than 3 running days".
 * Section 18 F, deload rules. Superseded "Pre-season automatically deloads every fourth week" and the automatic fourth-week off-season policy with Sam's 3–4-week cycle law, and made the in-season no-scheduled-deload rule explicit. Source: D16.
+* Section 6, conditioning simple rules (Sam, 2026-07-27). ADDED the dose-boundary rule: "Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose." Nothing was superseded; the Bible enforced this in code (`ALL-COND-DOSE-DESCRIPTOR-01`) but had never stated it. Authored by Sam to close that citation gap; the conformance rule now anchors to this sentence.
 * Terminology, whole document. "Trunk" and the muscle-group sense of "core" are replaced by MIDLINE (75 lines). The compulsory-session sense of "core" — core session, core exposure, `required_core`, `planner_selected_core`, "0. Core LFA principles" — is a homonym and is deliberately untouched. One ambiguous line in the Gunshow section, "A replacement for missing core strength work", was rewritten to "main strength work" to remove the ambiguity. Source: D13.

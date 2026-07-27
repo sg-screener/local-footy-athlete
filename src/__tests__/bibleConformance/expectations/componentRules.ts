@@ -25,8 +25,8 @@ export const COMPONENT_BIBLE_RULES: readonly BibleComponentRule[] = [
   },
   {
     id: 'ALL-TRUNK-SUPPORT-01',
-    section: 'Core/trunk rules',
-    anchorQuote: 'Core and carries are mostly secondary/accessory work.',
+    section: 'Midline rules',
+    anchorQuote: 'Midline and carries are mostly secondary/accessory work.',
     statement: 'Pallof Press and Side Plank remain support work and never manufacture conditioning or main-pattern credit.',
     applicableScenarios: ['strength-plus-trunk-support'],
     expectation: {

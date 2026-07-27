@@ -98,8 +98,8 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     expectation: { headlineFromMainWork: true },
   },
   {
-    id: 'ALL-COND-STRUCTURE-IDENTITY-01', category: 'identity', section: 'Conditioning session types',
-    anchorQuote: 'Can be continuous or easy intervals such as 3x8 min 2 min rest between rotating through different ergos.',
+    id: 'ALL-COND-STRUCTURE-IDENTITY-01', category: 'identity', section: 'Conditioning template schema',
+    anchorQuote: 'Every template must carry: work period, rest period, sets/rounds (reps where relevant), intensity, a work:rest ratio, and total session time.',
     statement: 'Weekly conditioning identity derives from final purpose and meaningful work structure rather than a generic category fallback.',
     applicableScenarios: ['standalone-conditioning-ownership', 'generation-ai-fallback-equivalence'],
     expectation: { genericAerobicBaseForbidden: true, mainWorkOwnsStructure: true },
@@ -126,8 +126,8 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     expectation: { modalityDoesNotOwnIdentity: true },
   },
   {
-    id: 'ALL-COND-DOSE-DESCRIPTOR-01', category: 'identity', section: 'Conditioning session structure',
-    anchorQuote: 'Duration: Usually 15-45 minutes depending on phase, fitness level and weekly load.',
+    id: 'ALL-COND-DOSE-DESCRIPTOR-01', category: 'identity', section: 'Conditioning simple rules',
+    anchorQuote: "Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose.",
     statement: 'Canonical dose metadata reflects meaningful work and ignores warm-up and cool-down, while weekly cards remain structure-only.',
     applicableScenarios: ['standalone-conditioning-ownership'],
     expectation: { doseFromMainWork: true, weeklyDoseHidden: true },
