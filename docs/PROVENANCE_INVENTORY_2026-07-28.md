@@ -145,6 +145,68 @@ Two caveats on Part A, both of which weaken it more than the ✅ column suggests
 
 ---
 
+## Unit 2 — Stage B cross-reference (Sam's ruling 2)
+
+Doomed values must not reach the ruling queue. Classified at the **symbol** level
+after reading each site — a regex pass over file names produced obvious nonsense
+(it flagged `phaseRepSchemes.ts`, which is Bible-anchored and live) and was discarded.
+
+| Verdict | Decisions | |
+|---|---|---|
+| `pending_sam` | **590** | genuinely needs a ruling |
+| `authored` | 137 | conditioning templates + `phaseRepSchemes` |
+| `dies_at_stage_b` | **118** | conditioning/speed/COD dose machinery the sheet replaces |
+| `dead_code` | **28** | verified unreachable |
+| **Total distinct** | **873** | |
+
+**Part B: 736 → 590. 146 decisions (20%) removed from Sam's queue.**
+
+The sheet's 55 templates cover **speed and COD as well as energy-system work** — it
+carries `10 m Acceleration Reps`, `Fly 20`, `45-Degree Cut Reps`. That is why
+`speedTemplates.ts` and the sprint prescriptions are in scope; established by reading
+the template list, not assumed from the module's name.
+
+The 28 `dead_code` are `createDefaultMicrocycle`, which feeds `DEFAULT_PROGRAM` — and
+`DEFAULT_PROGRAM` is imported by nothing outside its own file, since the silent
+onboarding fallback was retired. Checked by hand.
+
+**Where the pin is not applied:** the tier cap table in `conditioningProgressionRules.ts`
+(`maxReps` / `maxIntervals` / `maxDuration` / `minRest`) constrains doses rather than
+authoring them, and no authored template supersedes a *cap*. Its fate at Stage B is
+genuinely unclear, so it stays in `pending_sam` rather than being pinned on a guess.
+
+The pin is enforced by `test:pending-lists`: while Stage B is unlanded every pinned
+symbol must exist; once it lands every pinned symbol must be gone. Landing is detected
+by the templates module being imported by the generation path — behaviour, not a flag
+someone remembers to flip.
+
+## Unit 3 — the load-ratio sheet (Sam's ruling 3)
+
+`docs/LOAD_RATIO_REVIEW_2026-07-28.xlsx` (+ `.md` twin), in the conditioning-sheet
+mould. All 77 `EXERCISE_LOAD_MAP` entries prefilled with current values, the computed
+kg at the reference athlete, and a flag:
+
+| Flag | Count |
+|---|---|
+| `suspicious` | 10 |
+| `plausible` | 61 |
+| `RULED` (2026-07-25, shown for context) | 6 |
+
+Round-trip proven with the repo's own `xlsxReader` — 77 records, 3 tabs, all flags
+parsed. A sheet the equality test cannot read would be decoration.
+
+Two things in it that are findings rather than data entry:
+
+- **Six ratios "floor out".** They compute a weight below the equipment minimum, so
+  the athlete always receives the minimum and the ratio never applies. They look like
+  decisions and have no effect.
+- **The bench anchor is an assumption.** The 2026-07-25 ruling pinned squat 1RM = 88 kg
+  but never pinned a bench figure. Every bench-anchored kilogram in the sheet rests on
+  `0.65 × bodyweight`, which is the app's own default — flagged at the top of both the
+  workbook and the doc, because if it is wrong it is wrong for all of them at once.
+- A third tab carries the **anchor multipliers**, which are unauthored too and sit
+  upstream of all 77 — an error there moves every suggested weight in the app at once.
+
 ## Part B — pending Sam, grouped by athlete-facing consequence
 
 Per rider 1: grouped by what the athlete experiences, not by file. Highest stakes first.
