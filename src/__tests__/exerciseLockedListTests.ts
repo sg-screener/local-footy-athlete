@@ -24,6 +24,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { PENDING_LISTS } from '../data/provenancePendingLists';
 import { isPowerPoolExercise } from '../rules/powerExercisePool';
 import { POOL_REGISTRY, type PoolExercise } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
@@ -501,6 +502,17 @@ function main(): void {
     // ruling in the document.
     okEmpty('nothing is parked awaiting a load ruling', [...LOAD_RULING_PENDING],
       'Sam ruled all seven on 2026-07-25; a new entry here needs a RULED row first');
+
+    // …but emptiness alone proves nothing about WHY the list is empty, and this
+    // assertion read as "everything is ruled" while 71 unruled ratios sat in
+    // EXERCISE_LOAD_MAP having never been parked (Sam's ruling, 2026-07-28:
+    // absence must never render as approval). So the empty set must now be
+    // backed by a recorded ruling with attribution — `ruled_empty`, not the
+    // indistinguishable `never_populated`.
+    ok('the empty queue is a RECORDED ruling, not an unworked list',
+      PENDING_LISTS.load_ruling.status === 'ruled_empty',
+      `PENDING_LISTS.load_ruling is "${PENDING_LISTS.load_ruling.status}" — an empty `
+      + 'LOAD_RULING_PENDING is only meaningful if Sam actually emptied it');
     okEmpty('no exercise still claims the load exemption',
       [...ruledSet].filter((n) => hasExemption(n, 'load_ruling_pending')));
 
