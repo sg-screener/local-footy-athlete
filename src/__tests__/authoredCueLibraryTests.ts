@@ -301,10 +301,23 @@ function main(): void {
       // Load handling is defined two ways in this app: an entry in
       // EXERCISE_LOAD_MAP, or membership of TRUE_BODYWEIGHT_EXERCISES. The
       // rename must not drop the exercise out of BOTH.
-      const resolved = resolveExerciseName(name);
-      ok(`${name} keeps defined load handling`,
-        Boolean(EXERCISE_LOAD_MAP[resolved]) || isTrueBodyweightExercise(name),
-        `resolveExerciseName('${name}') gave '${resolved}': no load profile and not bodyweight`);
+      //
+      // Conditioning modalities are exempt for the SAME reason they are exempt
+      // from the video assertion just above: they are sessions, not movements.
+      // A bike sprint has no external load to handle.
+      //
+      // That exemption was previously unnecessary — not because the reasoning
+      // did not apply, but because `isTrueBodyweightExercise` promoted anything
+      // tagged `movement: 'conditioning'` to bodyweight. This gate was being
+      // satisfied by the very inference that made the athlete-facing label
+      // dishonest (render-truth, Sam 2026-07-28). With the inference gone the
+      // exemption has to be stated rather than accidentally supplied.
+      if (!CONDITIONING_META[name]) {
+        const resolved = resolveExerciseName(name);
+        ok(`${name} keeps defined load handling`,
+          Boolean(EXERCISE_LOAD_MAP[resolved]) || isTrueBodyweightExercise(name),
+          `resolveExerciseName('${name}') gave '${resolved}': no load profile and not bodyweight`);
+      }
     }
   }
 

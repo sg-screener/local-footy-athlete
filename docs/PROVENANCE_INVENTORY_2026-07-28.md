@@ -249,14 +249,29 @@ Measured across all 195 selectable exercises:
 
 | Path | Count | Authored? |
 |---|---|---|
-| `TRUE_BODYWEIGHT_EXERCISES` | 42 | ✅ explicit set |
-| `EXERCISE_LOAD_MAP` | 74 | ⚠️ present, but 71 unruled (Part B) |
+| `TRUE_BODYWEIGHT_EXERCISES` | 43 | ✅ explicit set |
+| `PREHAB_NO_LOAD_EXERCISES` | 49 | ✅ explicit set |
+| `EXERCISE_LOAD_MAP` | 73 | ⚠️ present, but 71 unruled (Part B) |
 | `ATHLETE_CHOSEN_LOAD_EXERCISES` | 1 | ✅ the Pullovers fix |
 | **tag `conditioning`** | **13** | ❌ inferred |
-| **name regex** | **49** | ❌ inferred |
-| no ruling, falls through to `false` | 16 | ❌ nothing |
+| no authored source | 16 | ❌ nothing — and these got an *invented weight* |
 
-**62 of 195 exercises display a load claim derived from a category or a name guess.**
+> **CORRECTION (recorded when Unit 1 shipped).** An earlier revision of this
+> section claimed **62** exercises took their label from an inference, counting
+> 49 as "name regex". That was wrong, and the error was mine: my probe checked
+> `ATHLETE_CHOSEN` and `TRUE_BODYWEIGHT` itself, then delegated to
+> `isTrueBodyweightExercise` — which consults `PREHAB_NO_LOAD_EXERCISES`
+> *before* the regex. So 49 exercises with a perfectly good authored source
+> were attributed to the guess that never ran for them.
+>
+> The correct label-inference exposure was **13** (tag `conditioning`), not 62.
+>
+> The *weight* invention channel was the more serious half and I understated it
+> by counting exercises: `estimateFromNamePattern`'s 18-row regex→ratio table
+> and its `bodyweight × 0.15` "absolute last resort" applied to **any name not
+> in the authored sets** — including names the generator invents at runtime, of
+> which there is no fixed count. That is the mechanism that produced 12.5kg for
+> Dumbbell Pullovers, and it was unbounded.
 
 The Dumbbell Pullovers fix added `ATHLETE_CHOSEN_LOAD_EXERCISES` plus an early exit —
 a correct fix for one exercise, and a per-exercise guard for the class. It has one
@@ -269,6 +284,40 @@ nothing authored exists, the card must show nothing rather than a confident "BW"
 
 Gap 3 is the one that proves the unit. Every existing gate passed and the athlete read
 a false number.
+
+### ✅ Gap 3 CLOSED — Unit 1, `test:render-truth`
+
+`resolveLoadAuthority` is now the single owner of "how is this loaded?", and it answers
+by naming its source. `formatLoadLabel` is the render seam: label and number come from
+one resolution, so they cannot disagree the way they did on Pullovers.
+`estimateFromNamePattern`, `estimateFromTags` and the two tag-category promotions are
+deleted, not guarded.
+
+Final state across the 195 selectable exercises:
+
+| | Count |
+|---|---|
+| `prescribed` ← `EXERCISE_LOAD_MAP` | 73 |
+| `bodyweight` ← `PREHAB_NO_LOAD_EXERCISES` | 49 |
+| `bodyweight` ← `TRUE_BODYWEIGHT_EXERCISES` | 43 |
+| `athlete_chosen` ← `ATHLETE_CHOSEN_LOAD_EXERCISES` | 1 |
+| `unauthored` — **all 29 are conditioning sessions** | 29 |
+| **`unauthored` movements** | **0** |
+
+Every selectable *movement* now resolves to an authored source. The 29 unauthored are
+bike/row/ski/swim sessions, which have no external load to author.
+
+**What closing it exposed.** `authoredCueLibraryTests` asserts *"X keeps defined load
+handling"*. Its comment says that means membership of `EXERCISE_LOAD_MAP` or
+`TRUE_BODYWEIGHT_EXERCISES` — but the code called `isTrueBodyweightExercise`, the
+function, which accepted the tag inference. **The reconciliation gate was being
+satisfied by the very guess that made the label dishonest**, which is Sam's original
+description of Gap 3, found in the gate itself rather than in the render path. Removing
+the inference turned that assertion red for `Air Bike Sprints`; it is now exempted for
+the same stated reason the video assertion four lines above already exempted it —
+conditioning modalities are sessions, not movements.
+
+The old green was false. That is the argument for the whole unit in one assertion.
 
 ---
 
