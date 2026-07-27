@@ -23,6 +23,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVideoService';
@@ -82,6 +83,70 @@ const selectable = selectableExerciseNames();
 const selectableSet = new Set(selectable);
 const cues = new Set(Object.keys(EXERCISE_CUES));
 const videos = new Set(Object.keys(EXERCISE_DEMO_VIDEOS));
+
+console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed');
+{
+  // Sam, 2026-07-27: the reconciliation gate must prove there is no hole being
+  // held open, and that no exemption class can appear without his ruling.
+  //
+  // "Zero exemptions of any kind" is enforced for the class that CAN hide a
+  // hole — the pending/awaiting kinds, which exist to defer work. The three
+  // remaining kinds are Sam's own BY-DESIGN rulings, not deferrals:
+  // conditioning formats have no videos by design (his locked-list note),
+  // zone-1 walks are not movements to demo, and stretching carries none of the
+  // STRENGTH taxonomy's properties. Deleting those would not close holes; it
+  // would demand videos for 36 session formats and tags for 26 stretches.
+  const PENDING_KINDS = Object.keys(EXEMPTION_KINDS).filter((kind) =>
+    /_pending$|^awaiting_/.test(kind));
+
+  const heldOpen = selectable.filter((n) =>
+    exemptionsFor(n).some((kind) => PENDING_KINDS.includes(kind)));
+  ok('zero selectable exercises carry a pending/awaiting exemption', heldOpen);
+
+  // The kind SET is frozen. A new class cannot appear without editing this
+  // list, and the assertion below forces that edit to carry Sam's attribution.
+  const AUTHORISED_KINDS = [
+    'conditioning_format',
+    'zone1_recovery',
+    'mobility_untagged',
+    'power_pool_pending',
+    'load_ruling_pending',
+  ];
+  ok('no exemption kind exists outside the authorised set',
+    Object.keys(EXEMPTION_KINDS).filter((k) => !AUTHORISED_KINDS.includes(k)));
+  ok('no authorised kind was silently deleted',
+    AUTHORISED_KINDS.filter((k) => !(k in EXEMPTION_KINDS)));
+
+  // Every kind must state WHY, and name the person who ruled it.
+  ok('every exemption kind states a ruling',
+    Object.entries(EXEMPTION_KINDS)
+      .filter(([, spec]) => !spec.ruling || spec.ruling.trim() === '')
+      .map(([kind]) => kind));
+
+  // NOTE: `zone1_recovery` predates this rule and carries no attribution. It is
+  // listed as a KNOWN pre-existing gap rather than fabricated — Sam's sign-off
+  // is what closes it. Every OTHER kind must be attributed, and any NEW kind
+  // must be too, which is the forward-looking rule Sam asked for.
+  const ATTRIBUTION_PENDING = ['zone1_recovery'];
+  const unattributed = Object.entries(EXEMPTION_KINDS)
+    .filter(([kind, spec]) => !/Sam/.test(spec.ruling) && !ATTRIBUTION_PENDING.includes(kind))
+    .map(([kind]) => kind);
+  ok('every exemption kind names Sam as the ruling authority', unattributed);
+
+  ok('the attribution-pending list has not grown',
+    ATTRIBUTION_PENDING.filter((k) => !(k in EXEMPTION_KINDS)).concat(
+      ATTRIBUTION_PENDING.length > 1 ? ['more than the one known pre-existing kind'] : []));
+
+  // Coverage, stated positively: nothing is missing for an UNEXPLAINED reason.
+  ok('no selectable exercise lacks a cue for an unexplained reason',
+    selectable.filter((n) => !cues.has(n) && !isExempt(n, 'cue')));
+  ok('no selectable exercise lacks a video for an unexplained reason',
+    selectable.filter((n) => !lookupExerciseDemo(n).url && !isExempt(n, 'video')));
+
+  // Metadata is waived by NO exemption kind, so coverage is unconditional.
+  ok('every selectable exercise has muscle/experience metadata',
+    selectable.filter((n) => !muscleMetadataFor(n)));
+}
 
 console.log('\n[1] Pool → cue / video / load / tags (typed exemptions only)');
 {

@@ -323,8 +323,8 @@ shipped could not be cued.
 
 | Name | Cue ships | Video ships | Spec row |
 |---|---|---|---|
-| Vertical Jump | yes (Sam 2026-07-27) | **no — `awaiting_sam_video`** | spec "Existing entries", lower default |
-| Explosive Push-up | yes (Sam 2026-07-27) | **no — `awaiting_sam_video`** | spec "Existing entries", upper default |
+| Vertical Jump | yes (Sam 2026-07-27) | yes (Sam 2026-07-27) | spec "Existing entries", lower default |
+| Explosive Push-up | yes (Sam 2026-07-27) | yes (Sam 2026-07-27) | spec "Existing entries", upper default |
 | Pogo Hops | yes | yes | spec "Existing entries", reduced-lower takeover |
 | Kneeling Jump | yes | yes | spec "New entries", min training age `consistent` |
 | Lateral Jump | yes | yes | spec "New entries", no training-age minimum |
@@ -333,10 +333,11 @@ shipped could not be cued.
 
 Wiring the pool turned `Vertical Jump` and `Explosive Push-up` into pool
 exercises, which exposed a video gap that `power_pool_pending` had been hiding by
-waiving pool + cue + video together. They are now held by the narrow
-`awaiting_sam_video` exemption — video ALONE, so the cue, tag and load gates
-still cover them — and listed in `docs/VIDEO_CHANGESET_2026-07-24.md` under
-"Still no video". Two URLs are Sam's to supply.
+waiving pool + cue + video together. Sam supplied both URLs on 2026-07-27, so the
+gap is CLOSED and the narrow `awaiting_sam_video` exemption that briefly held
+them is RETIRED — the kind is deleted, not left empty, so it cannot become a
+hiding place for a future hole. Every entry in the Power pool now carries a
+curated cue and a real demo video with no exemption of any kind.
 
 **Still STAGED — the spec's tables do not place these:**
 

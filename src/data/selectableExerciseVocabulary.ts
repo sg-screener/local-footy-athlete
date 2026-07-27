@@ -57,8 +57,7 @@ export type ContentExemptionKind =
   | 'zone1_recovery'
   | 'mobility_untagged'
   | 'power_pool_pending'
-  | 'load_ruling_pending'
-  | 'awaiting_sam_video';
+  | 'load_ruling_pending';
 
 /** The completeness fields an exemption kind can waive. */
 export type ContentField = 'cue' | 'video' | 'tags' | 'pool' | 'load';
@@ -100,17 +99,6 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
       + 'placement here. Excluded from the AI vocabulary until placed — the app '
       + 'names these, the generator does not.',
   },
-  awaiting_sam_video: {
-    waives: ['video'],
-    ruling:
-      'Selectable and fully cued, but has no demo video yet. Wiring the power '
-      + 'pool (2026-07-27) turned these two into pool exercises, and '
-      + 'power_pool_pending had been waiving their video as a side effect of '
-      + 'waiving everything. Sam authored their CUES on 2026-07-27; the two URLs '
-      + 'are his to supply. Narrow on purpose — it waives video ALONE, so the cue, '
-      + 'tag and load gates still cover them, and it is listed in '
-      + 'docs/VIDEO_CHANGESET_2026-07-24.md under "Still no video".',
-  },
   load_ruling_pending: {
     waives: ['load'],
     ruling:
@@ -139,17 +127,6 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
  */
 export const LOAD_RULING_PENDING = new Set<string>([]);
 
-/**
- * Selectable, cued, but with no demo video yet — Sam's two URLs to supply.
- *
- * Both became pool exercises when the power pool was wired (2026-07-27). Keep
- * this list EMPTY-able: as soon as Sam adds a URL to the video changeset, the
- * name comes out of here and the ordinary video gate covers it again.
- */
-export const AWAITING_SAM_VIDEO = new Set<string>([
-  'Vertical Jump',
-  'Explosive Push-up',
-]);
 
 /**
  * Zone-1 cyclical recovery. Selectable (EASY_CARDIO_POOL) and cued, but not
@@ -219,7 +196,6 @@ export function exemptionsFor(name: string): ContentExemptionKind[] {
   if (POWER_POOL_PENDING.has(name)) kinds.push('power_pool_pending');
   if (MOBILITY_UNTAGGED.has(name)) kinds.push('mobility_untagged');
   if (LOAD_RULING_PENDING.has(name)) kinds.push('load_ruling_pending');
-  if (AWAITING_SAM_VIDEO.has(name)) kinds.push('awaiting_sam_video');
   return kinds;
 }
 

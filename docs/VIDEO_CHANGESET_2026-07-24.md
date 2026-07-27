@@ -5,10 +5,12 @@ src/services/exerciseVideoService.ts EXERCISE_DEMO_VIDEOS (after the cue
 changeset's renames/deletions). 36 URLs below are Sam's picks — apply
 EXACTLY, keep ?si= params as given.
 
-## Set / replace (42)
+## Set / replace (44)
 
 Amended 2026-07-24: the original 36, plus five added when applying the changeset
 surfaced real gaps (see "Still no video"), plus one for the unified Groin Squeeze.
+Amended 2026-07-27: plus two Sam authored when the power-pool wiring made
+`Vertical Jump` and `Explosive Push-up` pool exercises.
 
 - **Abductor Machine**: https://youtube.com/shorts/S_FGYHNHJ_c?si=Wqz3kGC0csTyr5Lh
 - **Ab Wheel**: https://youtube.com/shorts/QHXLnvbJ444?si=MzhlejwMTRGa4s8-
@@ -27,6 +29,7 @@ surfaced real gaps (see "Still no video"), plus one for the unified Groin Squeez
 - **Deadlift**: https://youtube.com/shorts/vfKwjT5-86k?si=wy5FDB7Fhe0in82l
 - **Dumbbell Kickback**: https://youtube.com/shorts/ZGjHc9NnJ-4?si=aXyJRxuhsVVrExqa
 - **Explosive Landmine Press**: https://youtube.com/shorts/gKdmAu3yqcc?si=Wp34uZedWc7tV8m7
+- **Explosive Push-up**: https://youtube.com/shorts/xiSBrm-Rgms?si=nNAVvm14ukNM5Qsh
 - **Front Squat**: https://youtube.com/shorts/N4WGYDGu6bI?si=ca0DyggYeEZBOAVa
 - **Groin Squeeze**: https://youtube.com/shorts/Wt8y_Gagay0?si=vn3LP-2AA546wK7N
 - **Incline Bench**: https://youtube.com/shorts/L9UKMQw1Nss?si=b0Gf95olarmdMwfc
@@ -51,45 +54,17 @@ surfaced real gaps (see "Still no video"), plus one for the unified Groin Squeez
 - **Skull Crushers**: https://youtube.com/shorts/zR9gty7LUxE?si=LomBZEO0pV6BKWC-
 - **Speed Bench**: https://youtube.com/shorts/bv1vwhBwjUY?si=qAgsG_WoYjDeX-KV
 - **Tricep Pushdown**: https://youtube.com/shorts/xguGXQAvbKk?si=cwE217VcW9OJN1_y
+- **Vertical Jump**: https://youtube.com/shorts/ML2Rl3KE-Gc?si=0TYIQTJsvm8XF8O6
 - **Z-Press**: https://youtube.com/shorts/5T4Ax70UqC0?si=loaS9aL3Z1SBWPxh
 
 ## Still no video
 
-**TWO — Sam's URLs needed (opened 2026-07-27 by the power-pool wiring).**
+NONE — every pool exercise has a video after this changeset.
 
-- **Vertical Jump** — no `EXERCISE_DEMO_VIDEOS` entry at all.
-- **Explosive Push-up** — has an entry, but its `url` is `null`.
-
-Neither was a pool exercise when this changeset was written, so "NONE" was true
-at the time: `power_pool_pending` waived their video as a side effect of waiving
-pool + cue + video together. Wiring the power pool made them real pool
-exercises, and Sam authored their CUES the same day — so the cue half is closed
-and only the video half is open.
-
-They are held by the narrow `awaiting_sam_video` exemption, which waives video
-ALONE (cue, tag and load gates still apply). Add a URL here and remove the name
-from `AWAITING_SAM_VIDEO` in `selectableExerciseVocabulary.ts`; the ordinary
-video gate then covers it again.
-
-**Correction history.** An earlier draft listed five as missing; the 2026-07-24
-correction called that stale and claimed nothing remained. **That correction was
-itself incomplete.** Applying the changeset against the pools showed four kept,
-cued pool exercises with no entry in `EXERCISE_DEMO_VIDEOS` at all (absent, not
-null, and unreachable via the alias map):
-
-- Adductor Machine
-- Neutral-Grip Pulldown
-- Overhead Carry
-- Z-Press
-
-Sam supplied all four above, plus one for the new Abductor Machine. The "NONE
-remaining" claim is now true and is enforced by
-`src/__tests__/authoredCueLibraryTests.ts` §6, which fails the build if any pool
-exercise stops resolving a video.
-
-Zone-1 recovery modalities (Light Walk or Stationary Bike, Incline Treadmill
-Walk, Outdoor Walk, Light Skipping) remain out of the map by design and are
-excluded from that invariant.
+Reopened 2026-07-27 when the power-pool wiring turned `Vertical Jump` and
+`Explosive Push-up` into pool exercises with no demo. Sam supplied both URLs the
+same day and the gap closed again. The `awaiting_sam_video` exemption that held
+them is RETIRED, not left empty — see the locked-list changeset.
 
 ## Unchanged
 

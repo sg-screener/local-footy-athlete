@@ -170,7 +170,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   // 'explosive push up' aliases resolve to a known exercise rather than dangle.
   // Sam's locked list collapses "explosive push-ups"/"Explosive Push-Ups" onto
   // this single entry; placement is owned by the power unit.
-  'Explosive Push-up':                null,
+  'Explosive Push-up':                'https://youtube.com/shorts/xiSBrm-Rgms?si=nNAVvm14ukNM5Qsh',
   'Long-Lever Copenhagen':            'https://youtube.com/shorts/NBQIxbMAalk?si=nU796DqBg9LT0fSG',
 
   // ═══ Prehab — Calves ═══
@@ -219,6 +219,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Lateral Jump': 'https://youtube.com/shorts/m1JDpuGzCZw?si=alXGCw-wq5sxSuhK',
   'Neutral-Grip Pulldown': 'https://youtube.com/shorts/QuSqYj7tFbI?si=5lS2n9Tsohh7LPBP',
   'Overhead Carry': 'https://youtube.com/shorts/_f17ljGZWq0?si=AFi4XzPiPtMbxS3P',
+  'Vertical Jump':                    'https://youtube.com/shorts/ML2Rl3KE-Gc?si=0TYIQTJsvm8XF8O6',
   'Z-Press': 'https://youtube.com/shorts/5T4Ax70UqC0?si=loaS9aL3Z1SBWPxh',
 
   // ═══ Sam's locked-list additions (2026-07-24) ═══

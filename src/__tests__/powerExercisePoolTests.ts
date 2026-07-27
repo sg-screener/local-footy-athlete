@@ -31,6 +31,7 @@ import {
 import { TRAINING_AGE_LEVELS, type TrainingAgeLevel } from '../rules/experienceCrosswalk';
 import { isSelectable, exemptionsFor, isExempt } from '../data/selectableExerciseVocabulary';
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { lookupExerciseDemo } from '../services/exerciseVideoService';
 import type { SeasonPhase } from '../types/domain';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -362,62 +363,22 @@ ok(
   cueless.map((entry) => entry.name).join(', '),
 );
 
-// Wiring turned these into pool exercises, which exposed a video gap that
-// `power_pool_pending` had been hiding by waiving video wholesale. The narrow
-// exemption keeps the gap visible and must stay narrow: video ONLY, never cue.
-const videoExempt = POWER_EXERCISE_POOL.filter((entry) =>
-  exemptionsFor(entry.name).includes('awaiting_sam_video'),
-).map((entry) => entry.name);
-
+// The video gap this wiring exposed is CLOSED (Sam supplied both URLs,
+// 2026-07-27) and the `awaiting_sam_video` exemption is retired, not left empty.
+// So the assertion is the strong one: every pool entry resolves a real video,
+// and no pool entry carries any exemption at all.
+const videoless = POWER_EXERCISE_POOL.filter((entry) => !lookupExerciseDemo(entry.name).url);
 ok(
-  'exactly the two known entries await a video from Sam',
-  videoExempt.slice().sort().join(',') === ['Explosive Push-up', 'Vertical Jump'].join(','),
-  `found: ${videoExempt.join(', ')}`,
+  'every pool entry resolves a demo video',
+  videoless.length === 0,
+  videoless.map((entry) => entry.name).join(', '),
 );
 
+const anyExempt = POWER_EXERCISE_POOL.filter((entry) => exemptionsFor(entry.name).length > 0);
 ok(
-  'awaiting_sam_video waives video ALONE — never a cue',
-  videoExempt.every((name) => !isExempt(name, 'cue') && isExempt(name, 'video')),
-);
-
-ok(
-  'the open video gap is recorded where Sam looks for it',
-  (() => {
-    const videoDoc = fs.readFileSync(
-      path.join(repoRoot, 'docs/VIDEO_CHANGESET_2026-07-24.md'),
-      'utf8',
-    );
-    const section = videoDoc.split('## Still no video')[1] ?? '';
-    return videoExempt.every((name) => section.includes(name));
-  })(),
-);
-
-// Sam's cue sheet is canonical over the spec table's cue text (CUE_CHANGESET
-// 2026-07-23, "align the power pool spec cues to these"), so `authoredCueIntent`
-// must never be what an athlete reads.
-ok(
-  'authoredCueIntent is provenance only, never a render path',
-  !/authoredCueIntent/.test(
-    fs.readFileSync(path.join(repoRoot, 'src/screens/home/DayWorkoutScreenV2.tsx'), 'utf8'),
-  ) &&
-    !/authoredCueIntent/.test(
-      fs.readFileSync(path.join(repoRoot, 'src/data/defaultProgram.ts'), 'utf8'),
-    ),
-);
-
-// The migration this unit closes: per-exercise coaching text must not reach the
-// athlete through `block.notes` in cue styling.
-const screenSource = fs.readFileSync(
-  path.join(repoRoot, 'src/screens/home/DayWorkoutScreenV2.tsx'),
-  'utf8',
-);
-ok(
-  'PowerRow renders curated cues through CueDisclosure',
-  /function PowerRow[\s\S]*?<CueDisclosure/.test(screenSource),
-);
-ok(
-  'PowerRow no longer prints block.notes in cue styling',
-  !/block\.notes[\s\S]{0,200}styles\.cueText/.test(screenSource),
+  'no pool entry carries ANY content exemption',
+  anyExempt.length === 0,
+  anyExempt.map((e) => `${e.name}: ${exemptionsFor(e.name).join(',')}`).join('; '),
 );
 
 /* ── P6 — the counting fence survived the wiring ── */

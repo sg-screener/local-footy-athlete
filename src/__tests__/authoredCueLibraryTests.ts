@@ -18,10 +18,10 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { selectableExerciseNames, isExempt } from '../data/selectableExerciseVocabulary';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVideoService';
-import { AWAITING_SAM_VIDEO } from '../data/selectableExerciseVocabulary';
 import {
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
@@ -154,10 +154,12 @@ function main(): void {
     // 36 original picks, + 5 added on 2026-07-24 when applying the changeset
     // exposed four real gaps and Sam added the new Abductor Machine, + 1 for
     // the unified Groin Squeeze = 42 supplied. The locked list then retired the
-    // two machine exercises the same day, so 40 of them still ship.
-    ok('video changeset yielded Sam\'s 42 picks, less the 2 it superseded',
-      authoredVideos.size === 40 && supersededVideos.size === 2,
-      `parsed ${authoredVideos.size} live video URLs (expected 40), `
+    // two machine exercises the same day, so 40 of those still ship. Sam added
+    // 2 more on 2026-07-27 (Vertical Jump, Explosive Push-up) when the
+    // power-pool wiring made them pool exercises = 44 supplied, 42 shipping.
+    ok('video changeset yielded Sam\'s 44 picks, less the 2 it superseded',
+      authoredVideos.size === 42 && supersededVideos.size === 2,
+      `parsed ${authoredVideos.size} live video URLs (expected 42), `
         + `${supersededVideos.size} superseded (expected 2)`);
 
     ok('both supersessions are declared by the documents themselves',
@@ -360,27 +362,18 @@ function main(): void {
       }
     }
     ok('every authored URL is applied verbatim', wrong.length === 0, wrong.join('\n      '));
-    // This used to assert the literal sentence "NONE — every pool exercise has a
-    // video after this changeset." That was true when written, and became false
-    // when the power-pool wiring (2026-07-27) turned two exempt names into pool
-    // exercises. Deriving the check from AWAITING_SAM_VIDEO is stronger than any
-    // fixed string: stale prose cannot satisfy it, and when Sam supplies a URL
-    // and empties the set, the doc section must be emptied to match.
-    const stillNoVideo = videoDoc.split('## Still no video')[1] ?? '';
-    const awaiting = [...AWAITING_SAM_VIDEO];
+    // Was a hardcoded sentence, then derived from AWAITING_SAM_VIDEO. That
+    // exemption is RETIRED (Sam supplied both URLs, 2026-07-27), so the check
+    // returns to its strongest form: derive from what actually ships. Every
+    // selectable, demoable exercise must resolve a video — no list to consult.
+    const videolessSelectable = selectableExerciseNames().filter(
+      (name) => !isExempt(name, 'video') && !lookupExerciseDemo(name).url,
+    );
+    ok('every selectable exercise resolves a video', videolessSelectable.length === 0,
+      videolessSelectable.join(', '));
 
-    ok('every name awaiting a video is recorded in the changeset',
-      awaiting.filter((name) => !stillNoVideo.includes(name)).length === 0,
-      awaiting.filter((name) => !stillNoVideo.includes(name)).join(', '));
-
-    ok('every name awaiting a video genuinely has none',
-      awaiting.filter((name) => !!lookupExerciseDemo(name).url).length === 0,
-      awaiting.filter((name) => !!lookupExerciseDemo(name).url).join(', '));
-
-    ok('the changeset claims no gaps only when there are none',
-      awaiting.length > 0
-        ? !/NONE — every pool exercise has a video/.test(videoDoc)
-        : /NONE — every pool exercise has a video/.test(videoDoc));
+    ok('the changeset records no remaining gaps',
+      /NONE — every pool exercise has a video after this changeset\./.test(videoDoc));
   }
 
   console.log('\n[9] Depth Jumps / Lateral Bounds power-pool spec matches the sheet');
