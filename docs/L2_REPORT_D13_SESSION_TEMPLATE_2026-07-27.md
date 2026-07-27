@@ -7,6 +7,11 @@ Unit: build the D13 session template per `docs/SESSION_TEMPLATE_SPEC_2026-07-25.
 visual unit — §7 lists everything that needs Sam's eyes on a real phone, because
 no gate in this repo can see layout.
 
+**Update 2026-07-27 — Sam ruled two of the visual calls before his device pass;
+both are applied (`a20f7bb`) and folded into this report. See §8.** The device
+pass now covers only the remaining calls: the collapsed flow's read, and
+whitespace-vs-headers on long days.
+
 ---
 
 ## 1. What shipped
@@ -23,9 +28,10 @@ Four staged commits on `feat/d13-session-template`, merged `--no-ff`:
 
 ### Stage 1 — the session is ONE list
 
-Seven render boxes collapse into a single ordered list of typed rows. Every
-exercise is a flat-list row carrying one of exactly six badges: **Power / Main
-Lift / Accessory / Midline / Prehab / Conditioning**.
+Seven render boxes collapse into a single ordered list of typed rows, ordered by
+one of exactly six internal roles: **power / main_lift / accessory / midline /
+prehab / conditioning**. (These shipped as visible badge text and were ruled back
+to internal-only on 2026-07-27 — see §8.)
 
 The important part is not the badges, it is the **owner**. The screen used to
 mount one of three mutually-exclusive branches (`isConditioning` / `isRecovery` /
@@ -38,15 +44,14 @@ New owners, all pure and React-free so the rules are testable without a renderer
 
 - `src/utils/sessionTemplate.ts` — composition and D2 ordering
 - `src/utils/sessionRoles.ts` — exercise name → role
-- `src/components/SessionRoleBadge.tsx` — the badge
 
 **The spec's found bug is fixed by construction.** `TeamTrainingBlock` only
 existed inside the strength branch, so a conditioning day that also carried a
 club session rendered none of it. There is no longer a branch that could swallow
 it. The fix is the absence of the structure, not a fourth mount site.
 
-Rulings applied: six badges only, "secondary" is a list position (§6.1); team
-training is a non-badged inline banner (§6.2); the combined-day picker is one
+Rulings applied: six roles only, "secondary" is a list position (§6.1); team
+training is an inline banner (§6.2); the combined-day picker is one
 Conditioning row that expands in place (§6.4); midline and prehab sit after
 accessory (§6.5); conditioning-only days follow phase order, not D2 (§6.4).
 
@@ -112,10 +117,14 @@ that actually conserved and **found one thing it did not**.
 `PowerPrimerSection` used to render *above* the branch split, so it reached
 recovery days too. Stage 1 gave the recovery branch `RecoveryBlock` +
 `RecoveryAddonSection` only, silently dropping a power block on a recovery day.
-Such a day is contradictory and the builder normally strips the block — but if
-one is there the athlete was prescribed it. The primer is restored on the
-recovery branch only. Three suites that had asserted "the primer box is gone"
-full stop now assert the precise thing.
+I restored it on conservation grounds.
+
+**Sam then ruled that restoration wrong (§8.2):** power work does not belong on
+a recovery day at all, so the primer only ever reached one by accident of layout
+and stage 4 was preserving a bug rather than conserving content. It is now
+removed entirely and the test pins its absence. The conservation *method* still
+earned its keep — it is what surfaced the behaviour for a ruling instead of
+leaving it to be discovered on device.
 
 ---
 
@@ -136,11 +145,10 @@ drift. All four want Sam's ruling.
 3. **`Band Pull-Apart` resolves to Prehab, not Accessory.** It sits in *both*
    `upper_back_pump` and `shoulder_health`. Determinism was the requirement;
    joint-health membership is the more specific claim, so Prehab wins.
-4. **The numeric index ("1", "2", "1a") is gone from exercise rows**, replaced by
-   the badge in that slot. The index marked a *sequence*; D13 replaces sequence
-   with *kind*, and "Main Lift" does not fit an 18px inline column. **This is the
-   most visible change of the unit and the one most likely to want reverting** —
-   see §7.
+4. ~~**The numeric index ("1", "2", "1a") is gone from exercise rows**, replaced
+   by the badge in that slot.~~ **OVERTURNED by Sam, 2026-07-27 (§8.1).** The
+   index is back and the badge text is gone. The pinned test was inverted rather
+   than deleted, so a future revert stays visible.
 
 ---
 
@@ -150,10 +158,9 @@ The screen already has a documented visual language (flat `#0C0C0C` page, no
 card surfaces, whitespace as separation, one lime accent, micro-caps eyebrows).
 I extended it rather than re-branding.
 
-- **All six badges share one muted grey** (`#5A5A5A`, the retired index label's
-  tone), as a micro-caps eyebrow above the exercise name. Colour-coding six
-  badges would either spend the single lime accent across the whole list or
-  invent a five-hue key to learn. The badge does one job: it names the kind.
+- ~~**All six badges share one muted grey**, as a micro-caps eyebrow above the
+  exercise name.~~ **Superseded (§8.1):** there are no badges. The row leads with
+  its index again, in the tone it always had.
 - **The superset rail is unchanged** — a pairing is a real prescription fact, so
   it stays the only grouping device left.
 - **The flow gets one hairline-ruled line and no fill** — it must read as
@@ -177,14 +184,14 @@ I extended it rather than re-branding.
 A clean baseline `test:bible` was captured **before** any edit (EXIT=0), so
 nothing here is misattributed to a pre-existing failure.
 
-Four new suites, 129 assertions, all wired into `test:bible`:
+Four new suites, 134 assertions, all wired into `test:bible`:
 
 | Suite | Assertions |
 |---|---|
-| `sessionTemplateOneListTests` | 56 |
+| `sessionTemplateOneListTests` | 61 |
 | `mobilityPrehabFlowTests` | 36 |
-| `midlineTerminologyTests` | 24 |
-| `recoverySimpleTemplateTests` | 13 |
+| `midlineTerminologyTests` | 23 |
+| `recoverySimpleTemplateTests` | 14 |
 
 ---
 
@@ -228,16 +235,8 @@ No gate in this repo can see layout — the source contracts read source text.
 This unit changes the primary screen's whole composition, so the device pass is
 the real acceptance. In rough priority:
 
-**Highest — the badge decision**
-
-1. **Badges replacing the numeric index.** Every exercise row now leads with
-   "MAIN LIFT" / "ACCESSORY" / "MIDLINE" instead of "1" / "2" / "1a". Does the
-   list still feel navigable without numbers? This is a one-line revert if not.
-2. **Badge tone.** All six are the same muted grey. On a real screen, does
-   Conditioning-on-a-conditioning-day read as too quiet, given it is the whole
-   session that day?
-3. **Badge repetition.** A day with five accessories shows "ACCESSORY" five
-   times down the page. Check whether that reads as informative or as noise.
+Items 1-3 (the badge decision) and item 18's power-primer question were **settled
+by Sam's 2026-07-27 rulings** and are no longer device questions — see §8.
 
 **High — the flow**
 
@@ -261,12 +260,14 @@ the real acceptance. In rough priority:
 10. **The combined-day conditioning row.** Tap "Choose one of 2" and confirm it
     expands in place and reads as a choice, not as two prescribed sessions.
 11. **Power as the first row.** It lost its "POWER / EXPLOSIVE PRIMER" header and
-    its "Before strength" tag. Is placement alone enough to say when to do it?
-12. **The team-training banner.** It keeps its accent tint and sits last with no
-    badge. Confirm it reads as a commitment, not as an unbadged exercise.
-13. **Add-on rows.** "OPTIONAL" now rides beside the badge instead of a box with
-    "Skip with no penalty if it adds fatigue." Is the no-penalty meaning still
-    clear enough?
+    its "Before strength" tag, and now carries no label at all. Is placement
+    alone enough to say what it is and when to do it? This is the row most
+    exposed by the badge-text removal.
+12. **The team-training banner.** It keeps its accent tint and sits last.
+    Confirm it reads as a commitment, not as an exercise.
+13. **Add-on rows.** "OPTIONAL" is now the row's only eyebrow, replacing a box
+    with "Skip with no penalty if it adds fatigue." Is the no-penalty meaning
+    still clear enough?
 
 **Medium — the rename and the day types**
 
@@ -279,6 +280,45 @@ the real acceptance. In rough priority:
     pinned by a test, but worth one look.
 17. **A conditioning-only day WITH team training** — the found bug. This
     previously rendered nothing for team training; confirm the banner is there.
-18. **A recovery day** — should look exactly as it did before this unit.
-19. **The weight editor keyboard** on a badged row, since the header row markup
-    changed around it.
+18. **A recovery day** — should look exactly as it did before this unit, minus
+    any power primer (§8.2).
+19. **The weight editor keyboard** on an exercise row, since the header row
+    markup changed around it.
+20. **Superset numbering** — confirm a pair reads "2a / 2b" and the next row
+    picks up at "3".
+
+---
+
+## 8. Sam's rulings, 2026-07-27 (applied — `a20f7bb`)
+
+### 8.1 The numeric index returns; role text goes
+
+Rows read "1 / 1a / 2" exactly as before. Sam's reasoning: the D2 ordering
+already tells the athlete what matters, so a big "MAIN LIFT" label earns nothing.
+
+The role is **not** removed — it stays internal data driving list ordering,
+mobility-flow selection, and the muscle-block logic still to come. What went is
+the athlete-facing vocabulary: `SESSION_ROLE_BADGES` and `SessionRoleBadge.tsx`
+are deleted, so no dangling athlete-facing string can drift. `SessionRole` and
+`SESSION_ROLE_ORDER` are untouched.
+
+**On the discreet icon Sam left open:** I took nothing. Six roles need six glyphs
+the athlete would have to learn — the same "earns nothing" problem in a different
+medium — and this screen has no icon vocabulary to draw on, only two inline SVGs
+that are both controls rather than labels. "When in doubt, nothing" applied.
+
+Numbering went into the owner as `sessionListLabels(items)` rather than back into
+the screen. With one list a number is a property of the *list* — a superset takes
+one slot however its members are ordered — so it is derived and unit-tested
+rather than eyeballed. Rows that were never numbered (power, add-ons,
+conditioning phases, the team banner) stay unnumbered: numbering an optional
+add-on beside prescribed work would quietly promote it.
+
+### 8.2 No power primer on recovery days
+
+Removed entirely. The conservation test is **inverted, not deleted** — it now
+pins the primer's absence *and* pins that the composition owner emits no power
+item for a recovery day, so no path remains by which one could return silently.
+
+`PowerPrimerSection.tsx` stays on disk because `DayWorkoutScreenClassic` still
+imports it and still compiles.
