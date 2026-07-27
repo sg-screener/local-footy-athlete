@@ -30,6 +30,12 @@ import {
   BENCH_ANCHOR_MULTIPLIERS,
   SQUAT_ANCHOR_MULTIPLIERS,
 } from '../data/anchorMultipliers';
+import {
+  EQUIPMENT,
+  prescribableWeight,
+  roundDownToLattice,
+  type EquipmentKind,
+} from '../data/equipmentLattice';
 
 // ─── Anchor 1RM Estimation ───
 //
@@ -155,19 +161,19 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
  */
 export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   // ═══ LOWER BODY — BARBELL PRIMARY ═══
-  'Back Squat':           { anchor: 'squat', ratio: 0.82, equipment: 'barbell' },
-  'Front Squat':          { anchor: 'squat', ratio: 0.70, equipment: 'barbell' },
-  'Box Squat':            { anchor: 'squat', ratio: 0.75, equipment: 'barbell' },
+  'Back Squat':           { anchor: 'squat', ratio: 0.8, equipment: 'barbell' },
+  'Front Squat':          { anchor: 'squat', ratio: 0.5, equipment: 'barbell' },
+  'Box Squat':            { anchor: 'squat', ratio: 0.9, equipment: 'barbell' },
   // Sam, 2026-07-25: High Box Squat is 1.2 x Box Squat — a higher box is a
   // shorter range, so heavier, not lighter. 0.75 x 1.2 = 0.90.
-  'High Box Squat':       { anchor: 'squat', ratio: 0.90, equipment: 'barbell' },
-  'Deadlift':             { anchor: 'squat', ratio: 1.00, equipment: 'barbell' },
+  'High Box Squat':       { anchor: 'squat', ratio: 1.08, equipment: 'barbell' },
+  'Deadlift':             { anchor: 'squat', ratio: 0.75, equipment: 'barbell' },
   'Trap Bar Deadlift':    { anchor: 'squat', ratio: 0.90, equipment: 'barbell' },
   'RDLs':                 { anchor: 'squat', ratio: 0.65, equipment: 'barbell' },
   'Hip Thrusts':          { anchor: 'squat', ratio: 0.70, equipment: 'barbell' },
 
   // ═══ LOWER BODY — DUMBBELL / UNILATERAL ═══
-  'Bulgarian Split Squats': { anchor: 'squat', ratio: 0.22, equipment: 'dumbbell' },
+  'Bulgarian Split Squats': { anchor: 'squat', ratio: 0.2, equipment: 'dumbbell' },
   'Walking Lunges':         { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Reverse Lunges':         { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Step Ups':               { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
@@ -182,14 +188,14 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Kettlebell Swings':      { anchor: 'squat', ratio: 0.20, equipment: 'kettlebell' },
 
   // ═══ LOWER BODY — MACHINE ═══
-  'Leg Press':              { anchor: 'squat', ratio: 1.30, equipment: 'machine' },
+  'Leg Press':              { anchor: 'squat', ratio: 1.0, equipment: 'machine' },
 
   // ═══ CARRIES — stored and displayed PER HAND (Sam, 2026-07-24) ═══
   // Farmer's total is 0.71 x bench across both hands; the number the athlete
   // sees is one hand's worth. Suitcase is a single dumbbell at the same
   // per-hand load. Their cues state this.
-  'Farmer Carry':           { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
-  'Suitcase Carry':         { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
+  'Farmer Carry':           { anchor: 'bench', ratio: 0.4, equipment: 'dumbbell' },
+  'Suitcase Carry':         { anchor: 'bench', ratio: 0.4, equipment: 'dumbbell' },
   'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
 
   // ═══ SAM'S LOCKED-LIST LOAD RULINGS (2026-07-25) ═══
@@ -205,69 +211,64 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
 
   // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
   // Same machine as Lat Pulldown, different handle — mirrors it exactly.
-  'Neutral-Grip Pulldown':  { anchor: 'bench', ratio: 0.55, equipment: 'cable' },
-  'Single-Leg Squat (to Box)': { anchor: 'squat', ratio: 0.16, equipment: 'dumbbell' },
+  'Neutral-Grip Pulldown':  { anchor: 'bench', ratio: 0.5, equipment: 'cable' },
+  'Single-Leg Squat (to Box)': { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Z-Press':                { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
 
   'Single-Leg Leg Press':   { anchor: 'squat', ratio: 0.60, equipment: 'machine' },
   'Calf Raises':            { anchor: 'squat', ratio: 0.50, equipment: 'machine' },
 
   // ═══ UPPER BODY — BARBELL PRIMARY ═══
-  'Bench Press':            { anchor: 'bench', ratio: 0.82, equipment: 'barbell' },
-  'Incline Bench':          { anchor: 'bench', ratio: 0.72, equipment: 'barbell' },
+  'Bench Press':            { anchor: 'bench', ratio: 0.8, equipment: 'barbell' },
+  'Incline Bench':          { anchor: 'bench', ratio: 0.7, equipment: 'barbell' },
   'Close Grip Bench':       { anchor: 'bench', ratio: 0.75, equipment: 'barbell' },
-  'Overhead Press':         { anchor: 'bench', ratio: 0.58, equipment: 'barbell' },
+  'Overhead Press':         { anchor: 'bench', ratio: 0.6, equipment: 'barbell' },
   'Barbell Row':            { anchor: 'bench', ratio: 0.70, equipment: 'barbell' },
   'Speed Bench':            { anchor: 'bench', ratio: 0.55, equipment: 'barbell' },
-  'Bicep Curl (Barbell)':   { anchor: 'bench', ratio: 0.30, equipment: 'barbell' },
 
   // ═══ UPPER BODY — DUMBBELL ═══
-  'DB Bench Press':           { anchor: 'bench', ratio: 0.32, equipment: 'dumbbell' },
-  'Incline DB Bench':         { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' },
-  'DB Shoulder Press':        { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
-  'Seated DB Press':          { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
-  'Half-Kneeling Single-Arm Overhead Press': { anchor: 'bench', ratio: 0.18, equipment: 'dumbbell' },
-  'Single-Arm DB Row':        { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' },
-  'Single-Arm DB Bench Press': { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' },
+  'DB Bench Press':           { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'Incline DB Bench':         { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'DB Shoulder Press':        { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'Seated DB Press':          { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'Half-Kneeling Single-Arm Overhead Press': { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'Single-Arm DB Row':        { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'Single-Arm DB Bench Press': { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
   'Single-Arm DB Floor Press': { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
-  'Lateral Raise':            { anchor: 'bench', ratio: 0.09, equipment: 'dumbbell' },
+  'Lateral Raise':            { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
 
   // ═══ UPPER BODY — CABLE / MACHINE ═══
   'Seated Cable Row':         { anchor: 'bench', ratio: 0.50, equipment: 'cable' },
   'Lat Pulldown':             { anchor: 'bench', ratio: 0.55, equipment: 'cable' },
   'Single-Arm Lat Pulldown':  { anchor: 'bench', ratio: 0.30, equipment: 'cable' },
-  'Face Pull':                { anchor: 'bench', ratio: 0.18, equipment: 'cable' },
-  'Cable Face Pull':          { anchor: 'bench', ratio: 0.18, equipment: 'cable' },
-  'Chest Supported Row':      { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' },
+  'Face Pull':                { anchor: 'bench', ratio: 0.2, equipment: 'cable' },
+  'Cable Face Pull':          { anchor: 'bench', ratio: 0.2, equipment: 'cable' },
+  'Chest Supported Row':      { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
   'Landmine Press':           { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
-  'Bottoms-Up KB Press':      { anchor: 'bench', ratio: 0.08, equipment: 'kettlebell' },
-  'Explosive Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
   'Bear Carry':               { anchor: 'squat', ratio: 0.30, equipment: 'dumbbell' },
 
   // ═══ CORE (low load — most are BW but some use cable/band) ═══
-  'Woodchop (Standing)':      { anchor: 'bench', ratio: 0.12, equipment: 'cable' },
+  'Woodchop (Standing)':      { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
   'Woodchop (Half Kneeling)': { anchor: 'bench', ratio: 0.10, equipment: 'cable' },
   'Hanging Leg Raise':        { anchor: 'bench', ratio: 0.00, equipment: 'bodyweight' }, // True BW
   'Weighted Dead Bug':        { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
 
   // ═══ ARMS / PUMP (pool exercises from derived sessions) ═══
   'Bicep Curl (Dumbbell)':      { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
-  'Hammer Curl':                { anchor: 'bench', ratio: 0.12, equipment: 'dumbbell' },
+  'Hammer Curl':                { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
   'Incline Dumbbell Curl':      { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
   'Lying Dumbbell Curl':        { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
-  'Concentration Curl':         { anchor: 'bench', ratio: 0.08, equipment: 'dumbbell' },
+  'Concentration Curl':         { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Pushdown':            { anchor: 'bench', ratio: 0.20, equipment: 'cable' },
   'Overhead Tricep Extension':  { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
-  'Skull Crushers':             { anchor: 'bench', ratio: 0.18, equipment: 'dumbbell' },  // Usually EZ bar or DBs, not full barbell
-  'Dumbbell Skull Crusher':     { anchor: 'bench', ratio: 0.14, equipment: 'dumbbell' },
-  'Dumbbell Kickback':          { anchor: 'bench', ratio: 0.08, equipment: 'dumbbell' },
+  'Skull Crushers':             { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },  // Usually EZ bar or DBs, not full barbell
+  'Dumbbell Skull Crusher':     { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
+  'Dumbbell Kickback':          { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Circuit (Dirty 30)':  { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
-  'Rear Delt Fly':              { anchor: 'bench', ratio: 0.09, equipment: 'dumbbell' },
-  'Incline Y Raise':            { anchor: 'bench', ratio: 0.07, equipment: 'dumbbell' },
-  'Chest Supported DB Row':     { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
-  'Chest-Supported DB Row':     { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
+  'Rear Delt Fly':              { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
+  'Chest-Supported DB Row':     { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
   'Shrugs':                     { anchor: 'bench', ratio: 0.30, equipment: 'dumbbell' },
-  'Single-Arm Shrug':           { anchor: 'bench', ratio: 0.18, equipment: 'dumbbell' },
+  'Single-Arm Shrug':           { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
 
   // ═══ COMMON GYM EXERCISES (missing from original map) ═══
   'Leg Extension':              { anchor: 'squat', ratio: 0.30, equipment: 'machine' },
@@ -561,8 +562,11 @@ const EXERCISE_ALIASES: Record<string, string> = {
 
   // ── Misc ──
   'chest supported row':      'Chest Supported Row',
-  'chest supported db row':   'Chest Supported DB Row',
-  'incline db row':           'Chest Supported DB Row',
+  // Spelling-variant twin collapsed by Sam's ruling (2026-07-28): one exercise,
+  // one ratio. Both spellings stay RESOLVABLE so stored programs and athlete
+  // history written under the retired spelling keep working.
+  'chest supported db row':   'Chest-Supported DB Row',
+  'incline db row':           'Chest-Supported DB Row',
   'nordic curl':              'Nordic Lower',
   'nordic curls':             'Nordic Lower',
   'nordic ham curl':          'Nordic Lower',
@@ -713,6 +717,28 @@ export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
   'Dumbbell Pullovers',
 ]);
 
+/**
+ * Exercises that prescribe their EQUIPMENT MINIMUM, not a ratio of an anchor.
+ *
+ * SAM'S RULING (2026-07-28): *"these prescribe the equipment minimum by default
+ * (20 kg barbell curl, 8 kg bottoms-up KB press, etc.)"*.
+ *
+ * Each of these previously carried a ratio that FLOORED OUT — it computed below
+ * the equipment minimum, so the athlete always received the minimum and the
+ * ratio never applied. Those numbers looked like decisions and decided nothing.
+ * A dead ratio is worse than no ratio: it invites tuning that changes no
+ * athlete's card, and it reads as authored intent to the next person.
+ *
+ * So the minimum is now the STATED prescription rather than an accident of
+ * arithmetic, and the ratio is gone rather than left dead in the map.
+ */
+export const EQUIPMENT_MINIMUM_PRESCRIPTIONS: Record<string, EquipmentKind> = {
+  'Bicep Curl (Barbell)': 'barbell',
+  'Bottoms-Up KB Press': 'kettlebell',
+  'Explosive Landmine Press': 'barbell',
+  'Incline Y Raise': 'dumbbell',
+};
+
 /** True when load is real but athlete-chosen — no estimate, and never "BW". */
 export function isAthleteChosenLoadExercise(exerciseName: string): boolean {
   return ATHLETE_CHOSEN_LOAD_EXERCISES.has(resolveExerciseName(exerciseName));
@@ -799,32 +825,18 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
 
 // ─── Rounding ───
 
-const ROUND_INCREMENTS: Record<EquipmentClass, number> = {
-  barbell: 2.5,
-  dumbbell: 2.5,
-  cable: 5,
-  machine: 5,
-  kettlebell: 4, // KBs come in 4kg jumps (8, 12, 16, 20, 24...)
-  bodyweight: 0,
-};
+/**
+ * Rounding and minimums now come from the single authored owner,
+ * `data/equipmentLattice` — Sam ruled them 2026-07-28. This module used to
+ * define `ROUND_INCREMENTS` and `MIN_WEIGHTS` itself, and `defaultProgram`
+ * carried a byte-identical third copy of the minimums.
+ */
 
-/** Round a weight to the nearest equipment-appropriate increment. */
+/** Round to a loadable weight. Kept as the module's public name; delegates. */
 export function roundToEquipment(weight: number, equipment: EquipmentClass): number {
-  const inc = ROUND_INCREMENTS[equipment];
-  if (inc <= 0) return Math.round(weight);
-  return Math.round(weight / inc) * inc;
+  return roundDownToLattice(weight, equipment);
 }
 
-// ─── Minimums ───
-
-const MIN_WEIGHTS: Record<EquipmentClass, number> = {
-  barbell: 20,    // Empty Olympic bar
-  dumbbell: 5,    // Lightest useful DB
-  cable: 5,       // One plate
-  machine: 10,    // Lightest useful machine load
-  kettlebell: 8,  // Lightest standard KB
-  bodyweight: 0,
-};
 // ─── Load Authority: the single owner of "how is this loaded?" ───
 //
 // RENDER-TRUTH (Sam, 2026-07-28). Every athlete-facing load claim — the "BW"
@@ -853,6 +865,7 @@ export type LoadAuthority =
   | { kind: 'bodyweight'; source: 'TRUE_BODYWEIGHT_EXERCISES' | 'PREHAB_NO_LOAD_EXERCISES' }
   | { kind: 'athlete_chosen'; source: 'ATHLETE_CHOSEN_LOAD_EXERCISES' }
   | { kind: 'prescribed'; source: 'EXERCISE_LOAD_MAP'; profile: ExerciseLoadProfile }
+  | { kind: 'equipment_minimum'; source: 'EQUIPMENT_MINIMUM_PRESCRIPTIONS'; equipment: EquipmentKind }
   | { kind: 'unauthored' };
 
 /**
@@ -877,6 +890,14 @@ export function resolveLoadAuthority(exerciseName: string): LoadAuthority {
   if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) {
     return { kind: 'bodyweight', source: 'PREHAB_NO_LOAD_EXERCISES' };
   }
+  const minimumEquipment = EQUIPMENT_MINIMUM_PRESCRIPTIONS[resolved];
+  if (minimumEquipment) {
+    return {
+      kind: 'equipment_minimum',
+      source: 'EQUIPMENT_MINIMUM_PRESCRIPTIONS',
+      equipment: minimumEquipment,
+    };
+  }
 
   const profile = EXERCISE_LOAD_MAP[resolved];
   if (profile) {
@@ -889,6 +910,28 @@ export function resolveLoadAuthority(exerciseName: string): LoadAuthority {
   }
 
   return { kind: 'unauthored' };
+}
+
+/**
+ * Which equipment an exercise needs, from the authority rather than the raw map.
+ *
+ * Reading `EXERCISE_LOAD_MAP[name]?.equipment` directly is a trap: a missing
+ * entry is indistinguishable from "no equipment requirement", and callers
+ * uniformly treat undefined as "allowed for everyone". When Sam's ruling moved
+ * four exercises off ratios onto `EQUIPMENT_MINIMUM_PRESCRIPTIONS`, that alone
+ * silently made a barbell curl available to an athlete with no barbell — the
+ * pool filter stopped seeing its equipment. One owner answers this now.
+ *
+ * @returns the equipment kind, or null when nothing authored says.
+ */
+export function equipmentClassFor(exerciseName: string): EquipmentKind | null {
+  const authority = resolveLoadAuthority(exerciseName);
+  switch (authority.kind) {
+    case 'prescribed': return authority.profile.equipment;
+    case 'equipment_minimum': return authority.equipment;
+    case 'bodyweight': return 'bodyweight';
+    default: return null;
+  }
 }
 
 /**
@@ -931,6 +974,12 @@ export function estimateStartingWeight(
   onboardingData: OnboardingData,
 ): number | null {
   const authority = resolveLoadAuthority(exerciseName);
+
+  // Ruled to prescribe the equipment minimum — no anchor, no ratio, and so no
+  // dependence on the athlete's strength answers.
+  if (authority.kind === 'equipment_minimum') {
+    return EQUIPMENT[authority.equipment].minimumKg;
+  }
   if (authority.kind !== 'prescribed') return null;
 
   const anchors = estimateAnchors(onboardingData);
@@ -938,8 +987,7 @@ export function estimateStartingWeight(
 
   const { profile } = authority;
   const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
-  const rounded = roundToEquipment(anchor1RM * profile.ratio, profile.equipment);
-  return Math.max(rounded, MIN_WEIGHTS[profile.equipment]);
+  return prescribableWeight(anchor1RM * profile.ratio, profile.equipment);
 }
 
 /**
@@ -977,6 +1025,11 @@ export function startingWeightForAthlete(
   onboardingData: OnboardingData,
 ): number | null {
   const authority = resolveLoadAuthority(exerciseName);
+  // An equipment minimum is the lightest loadable option already — the beginner
+  // multiplier has nothing left to take off it.
+  if (authority.kind === 'equipment_minimum') {
+    return EQUIPMENT[authority.equipment].minimumKg;
+  }
   if (authority.kind !== 'prescribed') return null;
 
   const base = estimateStartingWeight(exerciseName, onboardingData);
@@ -986,10 +1039,7 @@ export function startingWeightForAthlete(
   if (initialLoadMultiplier === 1) return base;
 
   const { equipment } = authority.profile;
-  return Math.max(
-    roundToEquipment(base * initialLoadMultiplier, equipment),
-    MIN_WEIGHTS[equipment],
-  );
+  return prescribableWeight(base * initialLoadMultiplier, equipment);
 }
 
 

@@ -70,7 +70,7 @@ import {
   type PoolEntry,
 } from '../data/exercisePoolsStrength';
 import {
-  EXERCISE_LOAD_MAP,
+  equipmentClassFor,
   resolveExerciseName,
   type EquipmentClass,
 } from './loadEstimation';
@@ -154,8 +154,7 @@ export type DiffAxis =
 // ─── Equipment lookup ───
 
 function equipmentOf(name: string): EquipmentClass | null {
-  const profile = EXERCISE_LOAD_MAP[name];
-  return profile?.equipment ?? null;
+  return equipmentClassFor(name);
 }
 
 // ─── Injury filtering (mirrors exerciseFilter:passesInjuryFilter) ───

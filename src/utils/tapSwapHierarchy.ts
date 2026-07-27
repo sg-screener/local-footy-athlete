@@ -21,7 +21,7 @@ import {
   resolveEquipmentAvailability,
 } from './equipmentAvailability';
 import {
-  EXERCISE_LOAD_MAP,
+  equipmentClassFor,
   resolveExerciseName,
   type EquipmentClass,
 } from './loadEstimation';
@@ -180,7 +180,7 @@ export function resolveTapSwapEnvironment(args: {
 }
 
 function equipmentForExercise(name: string): EquipmentClass | null {
-  return EXERCISE_LOAD_MAP[resolveExerciseName(name)]?.equipment ?? null;
+  return equipmentClassFor(name);
 }
 
 function recoveryChoice(environment: TapSwapEnvironment): TapSwapChoice {

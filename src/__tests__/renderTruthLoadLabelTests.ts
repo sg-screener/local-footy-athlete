@@ -80,11 +80,13 @@ console.log('\n[1] Every selectable exercise resolves a NAMED authority');
   // names WHERE the claim came from. There is no fifth kind — an exercise the
   // authored sources do not cover is `unauthored`, explicitly, rather than
   // being quietly handed to a heuristic.
-  const badKind = names.filter((n) => {
-    const a = resolveLoadAuthority(n);
-    return !['bodyweight', 'athlete_chosen', 'prescribed', 'unauthored'].includes(a.kind);
-  });
-  okEmpty('every exercise resolves to one of the four authority kinds', badKind);
+  // The kinds grow as Sam rules new honest answers — `equipment_minimum` was
+  // added 2026-07-28 for exercises that prescribe the lightest loadable weight
+  // rather than a ratio. What must NOT grow is the set of ways an answer can be
+  // reached without an authored source, which is what [2] pins.
+  const KINDS = ['bodyweight', 'athlete_chosen', 'prescribed', 'equipment_minimum', 'unauthored'];
+  const badKind = names.filter((n) => !KINDS.includes(resolveLoadAuthority(n).kind));
+  okEmpty('every exercise resolves to a known authority kind', badKind, KINDS.join(' | '));
 
   const authoredWithoutSource = names.filter((n) => {
     const a = resolveLoadAuthority(n);
@@ -104,6 +106,7 @@ console.log('\n[2] THE LOCK — no load claim is inferred from a category or a n
     'PREHAB_NO_LOAD_EXERCISES',
     'ATHLETE_CHOSEN_LOAD_EXERCISES',
     'EXERCISE_LOAD_MAP',
+    'EQUIPMENT_MINIMUM_PRESCRIPTIONS',
   ];
   const inferred = names
     .map((n) => ({ n, a: resolveLoadAuthority(n) }))

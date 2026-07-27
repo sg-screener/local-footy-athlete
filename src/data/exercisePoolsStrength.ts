@@ -34,7 +34,7 @@ import type { EquipmentTag } from './exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
 import type { ExperienceLevel, WeekKind } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
-import { EXERCISE_LOAD_MAP, type EquipmentClass } from '../utils/loadEstimation';
+import { equipmentClassFor, type EquipmentClass } from '../utils/loadEstimation';
 import {
   resolveTrainingAgePolicy,
   type TrainingAgePoolSlot,
@@ -745,7 +745,7 @@ function entryAllowedByEquipment(
 ): boolean {
   const allowed = equipmentClassesForTags(availableEquipment);
   if (!allowed) return true;
-  const klass = EXERCISE_LOAD_MAP[entry.name]?.equipment;
+  const klass = equipmentClassFor(entry.name);
   if (!klass) return true;
   return klass === 'bodyweight' || allowed.has(klass);
 }

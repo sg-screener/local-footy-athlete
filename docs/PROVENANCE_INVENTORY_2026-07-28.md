@@ -256,6 +256,56 @@ before it will advance. It remains reachable for profiles created before that ga
 
 **Shipped** as `src/data/anchorMultipliers.ts` + `test:anchor-multipliers`.
 
+## ✅ SAM'S RATIO + EQUIPMENT RULINGS — 2026-07-28 (the 77 are complete)
+
+### Equipment lattices — every kind now authored
+
+> Barbell, cable and machine: round DOWN to nearest 2.5 kg. Dumbbell: available lattice is 1–10 kg in 1 kg steps, then 2.5 kg steps above 10 (12.5, 15, 17.5 …); round down to nearest available. Kettlebell: 4 kg steps (8, 12, 16, 20, 24 …), round down. Rounding is always DOWN — conservative by construction.
+
+> An athlete's own entered weight is never rounded, snapped, or corrected — their number is their number.
+
+Changes against the unauthored increments: cable 5 → 2.5, machine 5 → 2.5, dumbbell
+flat 2.5 → the 1 kg/2.5 kg lattice, and **nearest → DOWN everywhere**. Kettlebell stays
+4 kg (Sam's first 2 kg line was superseded by his own correction, to match rack
+availability).
+
+### Floor-out four — a typed authority, not a dead ratio
+
+> These prescribe the equipment minimum by default (20 kg barbell curl, 8 kg bottoms-up KB press, etc.).
+
+Implemented as `EQUIPMENT_MINIMUM_PRESCRIPTIONS`, a fourth load authority. They are no
+longer ratios that happen to floor out: a ratio whose value never reaches the athlete
+is a decision-shaped object that decides nothing, which is the defect class this whole
+unit exists to kill.
+
+### Ratio rulings
+
+> Suspicious: Deadlift 0.75 · Leg Press 1.0 · Farmer Carry 0.4 · Suitcase Carry 0.4.
+
+> Plausible (cleaner steps): Back Squat 0.8 · Bench Press 0.8 · Box Squat 0.9 · Bulgarian Split Squats 0.2 · Cable Face Pull 0.2 · Chest Supported Row 0.3 · Chest-Supported DB Row 0.2 · Concentration Curl 0.1 · DB Bench Press 0.3 · DB Shoulder Press 0.2 · Dumbbell Kickback 0.1 · Dumbbell Skull Crusher 0.15 · Face Pull 0.2 · Front Squat 0.5 · Half-Kneeling Single-Arm OHP 0.2 · Hammer Curl 0.15 · Incline Bench 0.7 · Incline DB Bench 0.3 · Lateral Raise 0.1 · Neutral-Grip Pulldown 0.5 · Overhead Press 0.6 · Rear Delt Fly 0.1 · Seated DB Press 0.2 · Single-Arm DB Bench Press 0.3 · Single-Arm DB Row 0.3 · Single-Arm Shrug 0.2 · Single-Leg Squat (to Box) 0.15 · Skull Crushers 0.2 · Woodchop (Standing) 0.15. All unlisted plausible rows: current value confirmed as ruled.
+
+> Box Squat 0.9 keeps the July 25 relationship High Box = 1.2 × Box, so High Box Squat moves to 1.08.
+
+> 'Chest Supported DB Row' / 'Chest-Supported DB Row' are spelling-variant twins — ONE exercise at 0.2.
+
+### Two things worth recording about ingesting these
+
+**The plausible list contains 29 names, not the 30 stated.** Counted twice against the
+sheet. The likely 30th is the twin — `Chest Supported DB Row` and
+`Chest-Supported DB Row` read as two rows in the sheet Sam ruled in, and his separate
+duplicate ruling collapses them to one. Recorded rather than reconciled silently,
+because a miscount is exactly the kind of thing that hides a dropped ruling.
+
+**`Half-Kneeling Single-Arm OHP` is not a key in the map.** The map's key is
+`Half-Kneeling Single-Arm Overhead Press`; OHP is the standard abbreviation and no
+other map entry could be meant. Applied to the full name and flagged here rather than
+guessed silently.
+
+**Every one of the 34 ruled values differs from what shipped** — no ruling was a no-op,
+so none was quietly dropped by matching a value already in place.
+
+**Shipped** as `src/data/equipmentLattice.ts` + `test:load-ratio-rulings`.
+
 ## Small unit — onboarding numeric answers have no authored bounds
 
 **Status: logged 2026-07-28, read-only finding. Needs Sam-authored ranges before build.**

@@ -26,6 +26,7 @@ import { CONDITIONING_META } from '../data/exerciseTags';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
+  resolveLoadAuthority,
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
   isAthleteChosenLoadExercise,
@@ -113,24 +114,28 @@ console.log('\n[2] No-generic-in-product — the generic cue is unreachable for 
 
 console.log('\n[3] Anchor-resolves — every loaded exercise keeps a load profile');
 {
+  // Asked of the AUTHORITY, not of the individual sets.
+  //
+  // This used to enumerate the honest answers by hand — a load-map entry, or
+  // bodyweight, then `athlete_chosen` was bolted on as "a third honest answer".
+  // Sam's 2026-07-28 ruling added a fourth (`equipment_minimum`, for exercises
+  // that prescribe the lightest loadable weight rather than a ratio), and this
+  // assertion failed for four exercises that are correctly and explicitly
+  // handled — the list of answers had drifted from the resolver that owns them.
+  //
+  // `resolveLoadAuthority` IS that list. Asking it means a fifth answer needs no
+  // edit here, and an exercise nothing covers still fails, which is the actual
+  // thing being asserted.
   const unloaded = pool
     .filter((name) => !CONDITIONING_META[name])
-    // Sam rules on the locked list's seven loaded additions line by line; until
-    // he does, their ratio is deliberately absent and `estimateStartingWeight`
-    // falls through to the tag heuristic. The typed `load_ruling_pending`
+    // Sam rules on the locked list's loaded additions line by line; until he
+    // does, their ratio is deliberately absent. The typed `load_ruling_pending`
     // exemption is the single record of that queue — see
     // src/data/selectableExerciseVocabulary.ts.
     .filter((name) => !isExempt(name, 'load'))
-    // Sam, 2026-07-28: a third honest answer. Real external load, but the
-    // athlete chooses it, so there is no profile to publish and it is not
-    // bodyweight either. See ATHLETE_CHOSEN_LOAD_EXERCISES in loadEstimation.
-    .filter((name) => !isAthleteChosenLoadExercise(name))
-    .filter((name) => {
-      const resolved = resolveExerciseName(name);
-      return !EXERCISE_LOAD_MAP[resolved] && !isTrueBodyweightExercise(name);
-    });
-  ok('every loaded exercise resolves a load profile (or is bodyweight)', unloaded.length === 0,
-    `no load profile: ${unloaded.join(', ')}`);
+    .filter((name) => resolveLoadAuthority(name).kind === 'unauthored');
+  ok('every loaded exercise resolves a load authority', unloaded.length === 0,
+    `no authored load handling: ${unloaded.join(', ')}`);
 }
 
 console.log('\n[4] Ownership — the curated cue is the ONLY source of a row\'s coaching text');

@@ -459,3 +459,19 @@ Both directions fail the build (`exerciseLockedListTests` §5,
 - Cue punctuation: the same mechanical terminal-stop pass Sam authorised on
   2026-07-24 is applied to the new cues (zero word changes) and mirrored above,
   so doc↔code equality holds byte for byte.
+
+---
+
+## Superseded by a later ruling
+
+Rows ruled earlier in this document that Sam has since re-ruled. The original rows
+are left exactly as recorded — a ruling document is a historical record, and editing
+one to match today's code destroys the only evidence that the value ever changed.
+Declaring the supersession here is how it becomes visible to the gate, in the same
+shape `CUE_CHANGESET_2026-07-23.md` already uses.
+
+- High Box Squat — re-ruled 2026-07-28. Sam set Box Squat to 0.9 and kept the
+  relationship recorded above (High Box = 1.2 × Box), so High Box Squat becomes
+  0.9 × 1.2 = **1.08**, replacing the `{ squat, 0.90, barbell }` row. The
+  relationship is unchanged; only the Box Squat value it derives from moved. See
+  `docs/PROVENANCE_INVENTORY_2026-07-28.md`.

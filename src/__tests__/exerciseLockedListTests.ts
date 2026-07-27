@@ -198,6 +198,25 @@ interface LoadRuling {
  * Sam's RULED load table. Parsed rather than transcribed, so a ruling recorded
  * in the document but not shipped (or shipped but not recorded) fails the build.
  */
+/**
+ * Rows re-ruled after 2026-07-25, declared by the document itself.
+ *
+ * A ruling document is a historical record. When Sam re-rules a value the
+ * honest move is to declare the supersession, not to edit the original row —
+ * editing it would leave no evidence the value ever changed, which is the
+ * opposite of what a provenance record is for. Same shape as the cue and video
+ * changesets.
+ */
+function parseSupersededRulings(): Set<string> {
+  const section = doc.split('## Superseded by a later ruling')[1] ?? '';
+  const names = new Set<string>();
+  for (const line of section.split('\n')) {
+    const match = line.match(/^- (.+?) — /);
+    if (match) names.add(match[1].trim());
+  }
+  return names;
+}
+
 function parseLoadRulings(): LoadRuling[] {
   const block = doc.split('### RULED — Sam, 2026-07-25, applied')[1]
     ?.split('### RULED — Erg EMOM')[0] ?? '';
@@ -219,6 +238,7 @@ function parseLoadMapCell(cell: string): { anchor: string; ratio: number; equipm
   return { anchor: match[1], ratio: Number(match[2]), equipment: match[3] };
 }
 
+const superseded = parseSupersededRulings();
 const removals = parseRemovals();
 const merges = parseMerges();
 const additions = parseAdditions();
@@ -521,6 +541,11 @@ function main(): void {
     const wrongRatio: string[] = [];
     const wrongMap: string[] = [];
     for (const ruling of loadRulings) {
+      // A re-ruled row stays RULED — it just no longer states the live value.
+      // Excluding it from `loadRulings` entirely would make it read as UNRULED,
+      // which is a worse lie than a stale number. Its current value is enforced
+      // by the ruling that superseded it (test:load-ratio-rulings).
+      if (superseded.has(ruling.exercise)) continue;
       const expectedMap = parseLoadMapCell(ruling.loadMap);
       const shipped = EXERCISE_LOAD_MAP[ruling.exercise];
       if (expectedMap) {

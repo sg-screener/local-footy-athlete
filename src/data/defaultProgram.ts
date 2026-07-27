@@ -25,9 +25,10 @@ import {
   dayOfWeekForISODate,
   todayISOLocal,
 } from '../utils/appDate';
+import { EQUIPMENT, prescribableWeight } from './equipmentLattice';
 import {
   applyLoadEstimates,
-  EXERCISE_LOAD_MAP,
+  equipmentClassFor,
   isTrueBodyweightExercise,
   resolveExerciseName,
   roundToEquipment,
@@ -717,15 +718,6 @@ const REP_ACCESSORY_POOL_SLOTS = new Set<PoolSlotKey>([
   'isolation_lower',
 ]);
 
-const MIN_SUBPHASE_LOAD_BY_EQUIPMENT = {
-  barbell: 20,
-  dumbbell: 5,
-  cable: 5,
-  machine: 10,
-  kettlebell: 8,
-  bodyweight: 0,
-} as const;
-
 function baseSetsFromScheme(scheme: RepScheme): number {
   const match = /^(\d+)x/i.exec(scheme.base);
   const parsed = match ? Number(match[1]) : 3;
@@ -878,13 +870,9 @@ function applySubphaseMainLiftLoadMultiplier(
     const weight = exercise.prescribedWeightKg ?? 0;
     if (multiplier >= 1 || weight <= 0) return exercise;
 
-    const resolvedName = resolveExerciseName(name);
-    const equipment = EXERCISE_LOAD_MAP[resolvedName]?.equipment;
+    const equipment = equipmentClassFor(name);
     const adjustedWeight = equipment
-      ? Math.max(
-          MIN_SUBPHASE_LOAD_BY_EQUIPMENT[equipment],
-          roundToEquipment(weight * multiplier, equipment),
-        )
+      ? prescribableWeight(weight * multiplier, equipment)
       : Math.round((weight * multiplier) / 2.5) * 2.5;
     return { ...exercise, prescribedWeightKg: adjustedWeight };
   });

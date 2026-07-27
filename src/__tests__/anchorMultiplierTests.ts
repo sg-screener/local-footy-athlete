@@ -34,7 +34,12 @@ import {
   BENCH_ANCHOR_MULTIPLIERS,
   SQUAT_ANCHOR_MULTIPLIERS,
 } from '../data/anchorMultipliers';
-import { estimateAnchors, estimateStartingWeight } from '../utils/loadEstimation';
+import {
+  EXERCISE_LOAD_MAP,
+  estimateAnchors,
+  estimateStartingWeight,
+} from '../utils/loadEstimation';
+import { prescribableWeight } from '../data/equipmentLattice';
 import { stripComments } from './support/sourceText';
 import type { OnboardingData } from '../types/domain';
 
@@ -154,9 +159,16 @@ console.log('\n[5] The ruled values reach the card');
   ok('bench "Less than bodyweight" resolves to the ruled 0.75 (80 × 0.75 = 60)',
     anchors?.bench1RM === 60, `got ${anchors?.bench1RM}`);
 
+  // Derived from the SHIPPED ratio and lattice, not from a transcribed figure —
+  // this assertion previously hardcoded Bench Press at 0.82 and broke the moment
+  // Sam ruled it 0.8. What is being tested is that the ruled ANCHOR reaches the
+  // card, not what any one exercise's ratio happens to be today.
   const bench = estimateStartingWeight('Bench Press', athlete);
-  ok('the Bench Press card reflects the ruled anchor (60 × 0.82 → 50kg)',
-    bench === 50, `got ${bench}`);
+  const expected = prescribableWeight(
+    anchors!.bench1RM * EXERCISE_LOAD_MAP['Bench Press'].ratio, 'barbell');
+  ok(`the Bench Press card reflects the ruled anchor (${anchors?.bench1RM} × `
+    + `${EXERCISE_LOAD_MAP['Bench Press'].ratio} → ${expected}kg)`,
+    bench === expected, `got ${bench}, expected ${expected}`);
 }
 
 console.log('\n[6] PROVENANCE — the ladders trace to Sam\'s ruling');

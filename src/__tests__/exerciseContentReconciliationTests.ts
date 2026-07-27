@@ -30,6 +30,7 @@ import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVi
 import { EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
 import {
   EXERCISE_LOAD_MAP,
+  resolveLoadAuthority,
   isTrueBodyweightExercise,
   isAthleteChosenLoadExercise,
   resolveExerciseName,
@@ -151,11 +152,14 @@ console.log('\n[1] Pool → cue / video / load / tags (typed exemptions only)');
   ok('every demoable selectable entry resolves a video',
     selectable.filter((n) => !isExempt(n, 'video') && !lookupExerciseDemo(n).url));
 
+  // Asked of the AUTHORITY rather than enumerated set by set. Each new honest
+  // answer used to need a new clause here — a map entry, then bodyweight, then
+  // `athlete_chosen`, then Sam's 2026-07-28 `equipment_minimum`. Every addition
+  // reached this list only after the build went red for exercises that were
+  // correctly handled. `resolveLoadAuthority` owns the list; this asks it.
   ok('every selectable entry has defined load handling, or a Sam-pending ruling',
     selectable.filter((n) =>
-      !EXERCISE_LOAD_MAP[resolveExerciseName(n)]
-      && !isTrueBodyweightExercise(n)
-      && !isAthleteChosenLoadExercise(n)          // real load, athlete picks it (Sam 2026-07-28)
+      resolveLoadAuthority(n).kind === 'unauthored'
       && !isExempt(n, 'cue')                      // conditioning formats carry no load
       && !isExempt(n, 'load')));                  // Sam's pending line-by-line ruling
 
