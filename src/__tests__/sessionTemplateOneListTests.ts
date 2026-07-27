@@ -30,11 +30,15 @@ import fs from 'fs';
 import path from 'path';
 
 import {
-  SESSION_ROLE_BADGES,
+  SESSION_ROLE_ORDER,
   classifyExerciseRole,
   type SessionRole,
 } from '../utils/sessionRoles';
-import { buildSessionTemplate, type SessionTemplateItem } from '../utils/sessionTemplate';
+import {
+  buildSessionTemplate,
+  sessionListLabels,
+  type SessionTemplateItem,
+} from '../utils/sessionTemplate';
 
 const src = path.resolve(__dirname, '..');
 
@@ -100,13 +104,24 @@ function names(items: SessionTemplateItem[]): string[] {
 
 /* ══ 1. The six badges, and the mapping rule behind each ══ */
 
-console.log('\n[1] Exactly six role badges, with a source-grounded mapping rule');
+console.log('\n[1] Exactly six roles, with a source-grounded mapping rule');
 {
+  // Sam ruled 2026-07-27: the roles are INTERNAL DATA, not athlete-facing text.
+  // They drive ordering, the mobility flow, and future muscle-block logic — the
+  // athlete never reads the word. So this pins the role SET and its D2 order,
+  // not a badge vocabulary. There is no longer a role→label map to assert.
   ok(
-    'the badge set is exactly D13\'s six',
-    JSON.stringify(Object.values(SESSION_ROLE_BADGES)) ===
-      JSON.stringify(['Power', 'Main Lift', 'Accessory', 'Midline', 'Prehab', 'Conditioning']),
-    `got ${JSON.stringify(Object.values(SESSION_ROLE_BADGES))}`,
+    'the role set is exactly D13\'s six, in D2 order',
+    JSON.stringify(SESSION_ROLE_ORDER) ===
+      JSON.stringify([
+        'power',
+        'main_lift',
+        'accessory',
+        'midline',
+        'prehab',
+        'conditioning',
+      ]),
+    `got ${JSON.stringify(SESSION_ROLE_ORDER)}`,
   );
 
   // §3.2: anchor-role pattern-slot entries are the main lift. A SECOND anchor in
@@ -481,19 +496,14 @@ console.log('\n[9] DayWorkoutScreenV2 renders one list from the composition owne
     'the screen consumes the composition owner',
     /buildSessionTemplate|sessionTemplate/.test(screen),
   );
-  // The primer box survives in exactly one place: the recovery-day template,
-  // which by ruling keeps what it always rendered (see
-  // recoverySimpleTemplateTests §3). Everywhere else power is the first badged
-  // list item, so the box must not appear on the badged branch.
-  const badgedBranch = screen.slice(screen.indexOf(') : ('));
   ok(
-    'the Power Primer box is gone from the badged list',
-    !/PowerPrimerSection/.test(badgedBranch),
-    'power is now the first list item, badged Power',
+    'the Power Primer box is gone from the screen entirely',
+    !/PowerPrimerSection/.test(screen),
+    'power is the first list row now, and Sam ruled it off recovery days too',
   );
   ok(
     'power is rendered as a list row instead',
-    /<PowerRow/.test(badgedBranch),
+    /<PowerRow/.test(screen),
   );
   ok(
     'the Trunk / Support box is gone',
@@ -517,9 +527,92 @@ console.log('\n[9] DayWorkoutScreenV2 renders one list from the composition owne
     'team training is no longer mounted from inside the strength branch',
     !/hasTeamTraining \? <TeamTrainingBlock \/> : null/.test(screen),
   );
+  // Sam ruled 2026-07-27: no role TEXT on rows. The D2 ordering already tells
+  // the athlete what matters, so a big "MAIN LIFT" label earns nothing.
   ok(
-    'the role badge component is rendered',
-    /SessionRoleBadge/.test(screen),
+    'no role badge text is rendered on a row',
+    !/SessionRoleBadge/.test(screen),
+  );
+  ok(
+    'the numeric index is back in the row header',
+    /label=\{labels\[/.test(screen),
+  );
+}
+
+/* ══ 10. The numeric index, exactly as it read before ══ */
+
+console.log('\n[10] Rows are numbered 1 / 1a / 2 again (Sam, 2026-07-27)');
+{
+  const workout = workoutOf({
+    exercises: [
+      strengthRow('Back Squat'),
+      strengthRow('Hammer Curl', { supersetGroup: 'A', supersetOrder: 1 }),
+      strengthRow('Lateral Raise', { supersetGroup: 'A', supersetOrder: 2 }),
+      strengthRow('Band Pallof Press'),
+    ],
+  });
+  const items = buildSessionTemplate(workout).items;
+  const labels = sessionListLabels(items);
+
+  ok(
+    'a standalone row, then a superset pair, then the next row reads 1 / 2a / 2b / 3',
+    JSON.stringify(labels) === JSON.stringify(['1', '2a', '2b', '3']),
+    `got ${JSON.stringify(labels)}`,
+  );
+
+  // A superset counts as ONE numbered slot with lettered members — the
+  // behaviour buildStrengthLabels always had, now driven off list order.
+  const paired = sessionListLabels(
+    buildSessionTemplate(
+      workoutOf({
+        exercises: [
+          strengthRow('Back Squat', { supersetGroup: 'B', supersetOrder: 1 }),
+          strengthRow('Dead Bug', { supersetGroup: 'B', supersetOrder: 2 }),
+        ],
+      }),
+    ).items,
+  );
+  ok(
+    'a leading superset takes slot 1, lettered a/b',
+    JSON.stringify(paired) === JSON.stringify(['1a', '1b']),
+    `got ${JSON.stringify(paired)}`,
+  );
+
+  // Things that were never numbered before must not start being numbered now.
+  const mixed = buildSessionTemplate(
+    workoutOf({
+      powerBlock: {
+        id: 'pb1',
+        kind: 'primer',
+        title: 'Broad Jumps',
+        prescription: '3 x 3',
+        options: [],
+        notes: [],
+      },
+      exercises: [strengthRow('Back Squat'), strengthRow('Team Training', { workoutType: 'Team Training' })],
+      recoveryAddons: [
+        {
+          id: 'addon-1',
+          label: 'Midline',
+          durationMinutes: 8,
+          exercises: [{ id: 'a1', name: 'Side Plank', prescription: '2 x 30s' }],
+        },
+      ],
+    }),
+  );
+  const mixedLabels = sessionListLabels(mixed.items);
+  ok(
+    'power, add-on and team-training rows carry no number',
+    mixed.items.every((item, index) =>
+      item.kind === 'exercise' && item.presentation === 'strength'
+        ? mixedLabels[index] !== null
+        : mixedLabels[index] === null),
+    `got ${JSON.stringify(mixedLabels)}`,
+  );
+  ok(
+    'the one numbered row is the strength row, numbered 1',
+    mixedLabels.filter(Boolean).join(',') === '1',
+    `got ${JSON.stringify(mixedLabels)}`,
   );
 }
 

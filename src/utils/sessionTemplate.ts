@@ -304,6 +304,42 @@ function inAuthoredOrder(workout: Partial<Workout>, rows: any[]): any[] {
 }
 
 /**
+ * The numeric index each row shows: "1", "2", "3", with a superset taking ONE
+ * slot and lettering its members "2a" / "2b".
+ *
+ * Sam ruled the index back on 2026-07-27, after the first build replaced it with
+ * a role badge. It reads exactly as it did before — this is
+ * `buildStrengthLabels`' rule, driven off list order rather than off the raw
+ * exercise array, which is the only change the one-list model forces.
+ *
+ * Returns a value parallel to `items`, with `null` for anything that was never
+ * numbered: the power row, add-on rows, conditioning phases and the team-
+ * training banner. Numbering an optional add-on alongside prescribed work would
+ * quietly promote it.
+ */
+export function sessionListLabels(
+  items: SessionTemplateItem[],
+): Array<string | null> {
+  const slotForGroup = new Map<string, number>();
+  let counter = 0;
+
+  return items.map((item) => {
+    if (item.kind !== 'exercise' || item.presentation !== 'strength') return null;
+
+    if (!item.superset) {
+      counter += 1;
+      return String(counter);
+    }
+    const { groupId, index } = item.superset;
+    if (!slotForGroup.has(groupId)) {
+      counter += 1;
+      slotForGroup.set(groupId, counter);
+    }
+    return `${slotForGroup.get(groupId)}${String.fromCharCode(97 + index)}`;
+  });
+}
+
+/**
  * Combined-day conditioning options, resolved exactly as the screen's hook did.
  * Structured `conditioningBlock` first, legacy keyword-tail fallback second.
  */

@@ -4,17 +4,26 @@ import { getExerciseTags } from '../data/exerciseTags';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 
 /**
- * D13 role badges — the one-list session template's only vocabulary.
+ * D13 session roles — INTERNAL data, never words the athlete reads.
  *
  * Spec: `docs/SESSION_TEMPLATE_SPEC_2026-07-25.md` §3.2. Exactly six, matching
- * D13's own list. There is deliberately no "Secondary Lift" badge (§6 item 1):
- * a second anchor-role heavy pattern in the same session reuses **Main Lift**
+ * D13's own list. There is deliberately no "secondary lift" role (§6 item 1):
+ * a second anchor-role heavy pattern in the same session is still `main_lift`
  * and lets list position carry the "secondary" meaning.
  *
- * These are RENDER roles. They do not touch the internal counting fences —
- * power is still not a finisher, midline still earns no conditioning credit.
- * D13 is explicit that this is "a render/composition ruling, not an accounting
- * change", so nothing here feeds `SessionComponentKind`.
+ * ## Why there is no role→label map here
+ *
+ * The first build rendered these as badge text on every row. Sam ruled that out
+ * on 2026-07-27: the D2 ordering already tells the athlete what matters, so a
+ * big "MAIN LIFT" label earns nothing. The role survives because it does real
+ * work — it drives list ordering, mobility-flow selection, and the muscle-block
+ * logic still to come — but it is not vocabulary, and there is no athlete-facing
+ * string to keep in sync.
+ *
+ * These have never touched the internal counting fences either: power is still
+ * not a finisher, midline still earns no conditioning credit. D13 is explicit
+ * that this is "a render/composition ruling, not an accounting change", so
+ * nothing here feeds `SessionComponentKind`.
  */
 export type SessionRole =
   | 'power'
@@ -23,16 +32,6 @@ export type SessionRole =
   | 'midline'
   | 'prehab'
   | 'conditioning';
-
-/** Athlete-facing badge text. Insertion order is also D2 list order. */
-export const SESSION_ROLE_BADGES: Record<SessionRole, string> = {
-  power: 'Power',
-  main_lift: 'Main Lift',
-  accessory: 'Accessory',
-  midline: 'Midline',
-  prehab: 'Prehab',
-  conditioning: 'Conditioning',
-};
 
 /**
  * D2's session order applied to the flat list (§3.1):

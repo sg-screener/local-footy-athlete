@@ -15,10 +15,6 @@ import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
-import { SessionRoleBadge } from '../../components/SessionRoleBadge';
-// Retained for the recovery-day template ONLY — every other day type renders
-// power as the first badged row of the one list (D13 §2 item 1).
-import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import { MobilityPrehabFlowSection } from '../../components/MobilityPrehabFlowSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
@@ -70,9 +66,9 @@ import {
 import { isTeamTrainingItem } from '../../utils/teamTraining';
 import {
   buildSessionTemplate,
+  sessionListLabels,
   type SessionTemplateItem,
 } from '../../utils/sessionTemplate';
-import type { SessionRole } from '../../utils/sessionRoles';
 import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import { stableTestIdToken } from '../../utils/stableTestId';
 import { explorerTestId } from '../../utils/stableTestId';
@@ -1211,14 +1207,12 @@ export default function DayWorkoutScreenV2() {
         {sessionTemplate.mode === 'recovery' ? (
           <>
             {/*
-              "Keeps its own simple template" means exactly what it rendered
-              before, and the primer used to render ABOVE the branch split — so
-              it reached recovery days too. A recovery day carrying a power
-              block is contradictory and the builder normally strips it, but if
-              one is there the athlete was prescribed it, and dropping it
-              silently is worse than showing a box we no longer show elsewhere.
+              No power primer here. It used to reach recovery days only because
+              it rendered ABOVE the old branch split — an accident of layout,
+              not a prescription. Sam ruled 2026-07-27 that power work does not
+              belong on a recovery day, so the legacy behaviour was preserving a
+              bug rather than conserving content.
             */}
-            <PowerPrimerSection block={workout.powerBlock} />
             <RecoveryBlock
               exercises={workout.exercises ?? []}
               expandedCues={expandedCues}
@@ -1509,7 +1503,11 @@ function SessionList({
 }: SessionListProps) {
   if (items.length === 0) return null;
 
-  const renderItem = (item: SessionTemplateItem, key: string) => {
+  // Numbers are a property of the LIST, not of a row — a superset takes one
+  // slot however its members are ordered — so they are computed once, up here.
+  const labels = sessionListLabels(items);
+
+  const renderItem = (item: SessionTemplateItem, key: string, index: number) => {
     if (item.kind === 'power') {
       return <PowerRow key={key} block={item.block} />;
     }
@@ -1535,13 +1533,13 @@ function SessionList({
       );
     }
     if (item.presentation === 'addon') {
-      return <AddonRow key={key} role={item.role} exercise={item.row} />;
+      return <AddonRow key={key} exercise={item.row} />;
     }
     return (
       <StrengthExerciseCard
         key={key}
         exercise={item.row}
-        role={item.role}
+        label={labels[index] ?? ''}
         isGrouped={!!item.superset}
         isLastInGroup={
           !item.superset || item.superset.index === item.superset.size - 1
@@ -1570,7 +1568,7 @@ function SessionList({
     const groupId =
       item.kind === 'exercise' && item.superset ? item.superset.groupId : null;
     if (!groupId) {
-      rendered.push(renderItem(item, `session-item-${i}`));
+      rendered.push(renderItem(item, `session-item-${i}`, i));
       continue;
     }
     const members: SessionTemplateItem[] = [];
@@ -1590,7 +1588,7 @@ function SessionList({
           <Text style={styles.pairTagText}>SUPERSET</Text>
         </View>
         {members.map((member, offset) =>
-          renderItem(member, `session-item-${i + offset}`),
+          renderItem(member, `session-item-${i + offset}`, i + offset),
         )}
       </View>,
     );
@@ -1617,7 +1615,6 @@ function PowerRow({ block }: { block: any }) {
       testID="power-primer-section"
       accessibilityLabel={`${block.title}. ${block.prescription}`}
     >
-      <SessionRoleBadge role="power" />
       <View style={styles.exerciseHeaderRow}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} testID="power-primer-title">
@@ -1663,14 +1660,11 @@ function PowerRow({ block }: { block: any }) {
  * carried is real prescription information, so it moves onto the row as a quiet
  * marker rather than being dropped with the container.
  */
-function AddonRow({ role, exercise }: { role: any; exercise: any }) {
+function AddonRow({ exercise }: { exercise: any }) {
   const token = stableTestIdToken(exercise?.id);
   return (
     <View style={styles.exerciseCard} testID={`workout-exercise-row-${token}`}>
-      <View style={styles.addonBadgeRow}>
-        <SessionRoleBadge role={role} />
-        <Text style={styles.optionalMarker}>Optional</Text>
-      </View>
+      <Text style={styles.optionalMarker}>Optional</Text>
       <View style={styles.exerciseHeaderRow}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} numberOfLines={2}>
@@ -1713,7 +1707,6 @@ function ConditioningChoiceRow({
 
   return (
     <View style={styles.exerciseCard} testID="conditioning-choice-row">
-      <SessionRoleBadge role="conditioning" />
       <Pressable
         onPress={isChoice ? () => setExpanded((prev) => !prev) : undefined}
         accessibilityRole={isChoice ? 'button' : undefined}
@@ -1761,20 +1754,20 @@ function ConditioningChoiceRow({
 
 /**
  * A single exercise row. Renders:
- *   ROLE BADGE
- *   Exercise Name                      [Change] [▶ play]
+ *   [1] Exercise Name                  [Change] [▶ play]
  *   Sets × Reps       Weight
  *                     [-] [value] [+]
  *   (optional rest hint)
  *   (curated coaching cue)
  *
- * The numeric index that used to lead the header row is retired: it marked a
- * SEQUENCE, and D13 replaced sequence with kind. The badge takes that slot's
- * job of classifying the row without competing with its name.
+ * The leading index is the athlete's waypoint through the list — "1", "2", and
+ * "1a"/"1b" for a superset pair. It briefly gave way to a role badge; Sam ruled
+ * the index back on 2026-07-27, because the D2 ordering already says what
+ * matters and a "MAIN LIFT" label earned nothing the position did not.
  */
 interface StrengthExerciseCardProps {
   exercise: any;
-  role: SessionRole;
+  label: string;
   isGrouped: boolean;
   isLastInGroup?: boolean;
   expandedCues: Record<string, boolean>;
@@ -1792,7 +1785,7 @@ interface StrengthExerciseCardProps {
 }
 function StrengthExerciseCard({
   exercise,
-  role,
+  label,
   isGrouped,
   isLastInGroup = true,
   expandedCues,
@@ -1829,7 +1822,7 @@ function StrengthExerciseCard({
       ]}
     >
       <ExerciseHeaderRow
-        role={role}
+        label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
         onChange={
@@ -2062,7 +2055,6 @@ function ConditioningPhaseRow({
       style={styles.exerciseCard}
       testID={`workout-exercise-row-${exerciseToken}`}
     >
-      <SessionRoleBadge role="conditioning" />
       <View style={styles.exerciseHeaderRow}>
         <View style={styles.exerciseNameWrap}>
           <Text style={styles.exerciseName} numberOfLines={2}>
@@ -2164,17 +2156,15 @@ function TeamTrainingBanner() {
  * fill intensifies) so the athlete gets visual confirmation of the tap.
  */
 interface ExerciseHeaderRowProps {
-  /** The D13 role badge. Recovery-type days pass none — they keep the plain template. */
-  role?: SessionRole;
+  /** The row's index — "1", "2", "1a". Empty for rows that were never numbered. */
   label?: string;
   name: string;
   onPlay: () => void;
   onChange?: () => void;
 }
-function ExerciseHeaderRow({ role, label, name, onPlay, onChange }: ExerciseHeaderRowProps) {
+function ExerciseHeaderRow({ label, name, onPlay, onChange }: ExerciseHeaderRowProps) {
   return (
     <>
-      {role ? <SessionRoleBadge role={role} /> : null}
       <View style={styles.exerciseHeaderRow}>
         {label ? (
           <View style={styles.exerciseLabelBadge}>
@@ -3459,17 +3449,16 @@ const styles = StyleSheet.create({
 
   // ── Add-on rows ──
   //
-  // "Optional" rides beside the badge at the same eyebrow scale — it qualifies
-  // the badge ("Prehab, and you may skip it"), so it reads on the badge's line
-  // rather than announcing itself as a second signal.
-  addonBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // With the role badge gone, "Optional" is the row's only eyebrow. It stays at
+  // eyebrow scale rather than growing into the gap: it qualifies the row, it is
+  // not a heading for it.
   optionalMarker: {
     color: '#5A5A5A',
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   // ── In-list conditioning choice ──

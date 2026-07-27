@@ -36,7 +36,6 @@ import {
   componentSkipReasonLabel,
   getSessionComponents,
 } from '../utils/sessionComponents';
-import { SESSION_ROLE_BADGES } from '../utils/sessionRoles';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const src = path.resolve(__dirname, '..');
@@ -62,7 +61,10 @@ function read(relative: string): string {
 
 console.log('\n[1] Athlete-facing copy says midline');
 {
-  ok('the badge itself says Midline', SESSION_ROLE_BADGES.midline === 'Midline');
+  // The role badge TEXT was removed from rows on Sam's 2026-07-27 ruling, so
+  // there is no badge string left to check. "Midline" still reaches the athlete
+  // through the feedback questions, the coach-chat lines, the Add-exercise
+  // sheet and the pool group label — which is what the rest of this asserts.
 
   const supportWorkout: any = {
     id: 'w1',
