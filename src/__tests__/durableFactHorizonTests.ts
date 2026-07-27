@@ -268,7 +268,7 @@ function registerScenarios(): void {
   scenario('t1', 'T1 a severe illness reported Friday reaches next week and the week after', async () => {
     seedSpentWeekFriday();
     await markSpentDaysDone();
-    const result = await commitReadiness('sick_week');
+    const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
       `severe illness was rejected: ${(result as { message?: string }).message}`);
 
@@ -326,7 +326,7 @@ function registerScenarios(): void {
     await markSpentDaysDone();
     const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
 
-    const applied = await commitReadiness('sick_week');
+    const applied = await commitReadiness('illness_severe');
     assert((applied as { ok?: boolean }).ok === true, 'severe illness was rejected');
     const factId = activeFacts().find((fact) => !isInjurySourceFact(fact) &&
       fact.factKind === 'illness')?.factId ?? null;
@@ -360,7 +360,7 @@ function registerScenarios(): void {
   // three already-completed sessions get rewritten to "optional". Marking a
   // session the athlete already did "optional" is meaningless at best and
   // erodes their record at worst (L6: honest actions).
-  for (const kind of ['sick_week', 'cooked_week', 'poor_sleep_week'] as const) {
+  for (const kind of ['illness_severe', 'cooked_week', 'poor_sleep_week'] as const) {
     scenario(`t4-${kind}`, `T4 ${kind} reported Friday leaves the already-Done MON/TUE/THU untouched`, async () => {
       seedSpentWeekFriday();
       await markSpentDaysDone();
@@ -395,7 +395,7 @@ function registerScenarios(): void {
   scenario('a3a-visible', 'A3a a severe illness reported Friday makes NEXT week visibly optional on the program screen', async () => {
     seedSpentWeekFriday();
     await markSpentDaysDone();
-    const result = await commitReadiness('sick_week');
+    const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
       `severe illness was rejected: ${(result as { message?: string }).message}`);
 
@@ -441,7 +441,7 @@ function registerScenarios(): void {
     assert(landingGames.length > 0, 'no game inside the landing week on this seed');
     const before = acceptedWeek(WEEK_1).days;
 
-    const result = await commitReadiness('sick_week');
+    const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
       `severe illness on a game week was rejected: ${(result as { message?: string }).message}`);
 
@@ -469,7 +469,7 @@ function registerScenarios(): void {
   scenario('r2-boundaries', 'R2 an open illness shapes the next block and a phase change, and only clearing ends it', async () => {
     seedSpentWeekFriday();
     await markSpentDaysDone();
-    const result = await commitReadiness('sick_week');
+    const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
       `severe illness was rejected: ${(result as { message?: string }).message}`);
     const factId = activeFacts().map((fact) => temporarySourceFactId(fact))[0];
@@ -541,7 +541,7 @@ function registerScenarios(): void {
     seedSpentWeekFriday();
     await markSpentDaysDone();
     const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
-    const result = await commitReadiness('sick_week');
+    const result = await commitReadiness('illness_severe');
     assert((result as { ok?: boolean }).ok === true,
       `severe illness was rejected: ${(result as { message?: string }).message}`);
     const after = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);

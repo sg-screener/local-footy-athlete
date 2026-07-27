@@ -86,8 +86,9 @@ export type WeekReadinessAction =
   | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
-  | 'sniffle_today'
-  | 'sick_week';
+  | 'illness_mild'
+  | 'illness_moderate'
+  | 'illness_severe';
 
 const targetStatusModifierKind = (
   status: ProgramControlStatusUpdate,
@@ -1398,10 +1399,13 @@ export function useHomeScreen() {
   ) => {
     const todayISO = todayISOLocal();
     // Single owner: every tier maps through the one pure `readinessActionForKind`
-    // function (invariant R16). sick_week → SEVERE illness (derives the
-    // illness_recovery §18 week mode: minimums lifted, remaining work
-    // optional/reduced — no shutdown_week, no recovery-mode writer); sniffle_today
-    // → MINOR illness (record-only + inert, today-scoped soften offer). The
+    // function (invariant R16). The three sick doors write a TIER and nothing
+    // else — illness_mild (record-only + inert, today-scoped soften offer),
+    // illness_moderate (deloads while active, minimums intact) and
+    // illness_severe (deloads AND lifts every minimum, deriving the
+    // illness_recovery §18 week mode — no shutdown_week, no recovery-mode
+    // writer). What a tier DOES is the illness law's answer, resolved
+    // downstream; this layer must never grow a second opinion about it. The
     // day-card door opens this same sheet, so both doors commit identically.
     const result = await executeProgramControlActionDurably(
       readinessActionForKind(kind, { anchorDateISO, todayISO }),

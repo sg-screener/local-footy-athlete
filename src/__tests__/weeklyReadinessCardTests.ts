@@ -112,11 +112,12 @@ type ReadinessOption =
   | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
-  | 'sniffle_today'
-  | 'sick_week';
+  | 'illness_mild'
+  | 'illness_moderate'
+  | 'illness_severe';
 
 const applyReadiness = (kind: ReadinessOption, anchorISO: string, todayISO: string) =>
-  kind === 'sick_week'
+  kind === 'illness_severe'
     ? executeProgramControlAction({
         type: 'set_recovery_mode',
         source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
@@ -211,7 +212,7 @@ console.log('\n── 1. Every wellbeing option uses its existing deterministic 
     } as never)));
 
   resetWorld();
-  const res2 = applyReadiness('sick_week', futureMonday, todayISO);
+  const res2 = applyReadiness('illness_severe', futureMonday, todayISO);
   const recId = recoveryModeModifierIdForDate(futureMonday);
   ok('sick creates the existing recovery-mode modifier (week scope)',
     res2.ok && useCoachUpdatesStore.getState().activeConstraints.some((x) => x.id === recId));
@@ -360,17 +361,19 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     readinessEntryTag.includes('accessibilityLabel={weekReadiness'));
 
   // Every readiness tier still commits (zero capability loss), now reached via the
-  // russian-doll buckets. sniffle_today is now a first-class leaf ("Coming down
-  // with something"). "short_time" is REMOVED from this sheet (returns with the 5.4
-  // busy design) — no dead affordance and no dead prop.
+  // russian-doll buckets. The Sick bucket has THREE leaves after Sam's 2026-07-27
+  // ruling — one per illness tier ("A bit off" / "Properly sick" / "Can't get out
+  // of bed"), superseding the two R16 authored. "short_time" is REMOVED from this
+  // sheet (returns with the 5.4 busy design) — no dead affordance, no dead prop.
   const readinessActionKinds: ReadinessOption[] = [
     'tired_today',
     'poor_sleep_today',
     'poor_sleep_week',
     'cooked_week',
     'sore_today',
-    'sniffle_today',
-    'sick_week',
+    'illness_mild',
+    'illness_moderate',
+    'illness_severe',
   ];
   const readinessOptionSelectors = [
     ...readinessActionKinds.map((kind) => explorerTestId.readinessOption(kind)),
@@ -405,22 +408,34 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('tapping opens the readiness sheet (state wiring present)',
     src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
   // X2 / R16 redesign: exactly three top-level buckets with russian-doll
-  // expansion — "Feeling flat", "Sick", "Something hurts". Sam's Sick ruling:
-  // TWO sub-options only ("Coming down with something" → minor; "Properly sick" →
-  // severe/illness_recovery, its subtitle absorbing bed-ridden). The old flat
-  // 9-list labels and "Short on time" are gone.
+  // expansion — "Feeling flat", "Sick", "Something hurts".
+  //
+  // The Sick bucket's TWO sub-options are SUPERSEDED by Sam's 2026-07-27 ruling
+  // (THE THREE SICK DOORS). R16 was authored before the illness law existed, so
+  // it had no way to express MODERATE: "Properly sick" mapped to severe and its
+  // subtitle absorbed bed-ridden. There are now three leaves, one per tier, and
+  // "Properly sick" has MOVED to moderate — it deloads without lifting a single
+  // minimum. Re-pinned to the law, not weakened: the bucket count is unchanged
+  // and every leaf is still asserted.
   ok('sheet groups readiness under three top-level russian-doll buckets',
     src.includes('Feeling flat') && src.includes('Something hurts') &&
-    src.includes('Coming down with something') && src.includes('Properly sick') &&
+    src.includes('A bit off') && src.includes('Properly sick') &&
+    src.includes("Can't get out of bed") &&
     src.includes('Rough sleep') && src.includes('Bit tired today') &&
     !src.includes('Short on time') && !src.includes('Sick / run down') &&
-    !src.includes('Just a bit tired today'));
+    !src.includes('Just a bit tired today') &&
+    // The superseded label must be GONE, not merely unused.
+    !src.includes('Coming down with something'));
   ok('sheet maps every tier to its deterministic route (zero capability loss)',
     src.includes("onApply('tired_today')") && src.includes("onApply('cooked_week')") &&
     src.includes("onApply('poor_sleep_today')") && src.includes("onApply('poor_sleep_week')") &&
-    src.includes("onApply('sore_today')") && src.includes("onApply('sniffle_today')") &&
-    src.includes("onApply('sick_week')") && src.includes('onPress={onInjury}'));
-  ok('Properly sick discloses the illness_recovery framing (absorbs bed-ridden)',
+    src.includes("onApply('sore_today')") && src.includes("onApply('illness_mild')") &&
+    src.includes("onApply('illness_moderate')") &&
+    src.includes("onApply('illness_severe')") && src.includes('onPress={onInjury}'));
+  // The "nothing required" framing follows the tier that actually lifts the
+  // minimums. It moved with it — leaving it on "Properly sick" would promise an
+  // optional week the moderate tier does not deliver.
+  ok("Can't get out of bed discloses the illness_recovery framing",
     src.includes("Nothing will be required this week"));
 
   // ── A2 (L10 device finding 2026-07-24) ─────────────────────────────────
@@ -514,7 +529,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     /kind === 'cooked_week'/.test(readinessActionsSrc) &&
     /kind === 'poor_sleep_week'/.test(readinessActionsSrc) &&
     /kind === 'sore_today'/.test(readinessActionsSrc) &&
-    /kind === 'sick_week'/.test(readinessActionsSrc) &&
+    /kind === 'illness_severe'/.test(readinessActionsSrc) &&
     /scope: cooked \? 'current_week' : 'today_only'/.test(readinessActionsSrc) &&
     /scope: week \? 'current_week' : 'today_only'/.test(readinessActionsSrc));
   ok('health taps use the durable canonical source-fact boundary',

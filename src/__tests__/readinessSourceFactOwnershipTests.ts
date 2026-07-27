@@ -826,8 +826,8 @@ async function main(): Promise<void> {
       { kind: 'cooked_week', type: 'set_fatigue_status', scope: 'current_week', date: ANCHOR, level: 'cooked' },
       { kind: 'poor_sleep_today', type: 'set_poor_sleep_status', scope: 'today_only', date: TODAY, pattern: 'single_night' },
       { kind: 'poor_sleep_week', type: 'set_poor_sleep_status', scope: 'current_week', date: ANCHOR, pattern: 'repeated' },
-      { kind: 'sniffle_today', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'mild' },
-      { kind: 'sick_week', type: 'set_illness_status', scope: 'current_week', date: ANCHOR, severity: 'severe' },
+      { kind: 'illness_mild', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'mild' },
+      { kind: 'illness_severe', type: 'set_illness_status', scope: 'current_week', date: ANCHOR, severity: 'severe' },
     ] as const;
 
     for (const c of cases) {

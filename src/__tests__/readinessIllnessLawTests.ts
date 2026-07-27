@@ -38,6 +38,7 @@ import {
   createTemporaryIllnessFact,
   normalizeTemporarySourceFacts,
 } from '../rules/temporarySourceFact';
+import { readinessActionForKind } from '../utils/weekReadinessActions';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -227,6 +228,59 @@ ok('the Bible records that this supersedes the R16 two-option ruling',
   /SUPERSEDES the R16 door-routing ruling/.test(bible));
 ok('the Bible records the day-granular owner',
   bible.includes('THE DELOAD/OPTIONAL OWNER (Sam, 2026-07-27)'));
+
+/* ── The doors, wired ── */
+
+console.log('\n[7] THE THREE SICK DOORS — wired to the three tiers');
+
+// One door per tier, and the door vocabulary IS the law's. The kinds used to be
+// `sniffle_today` and `sick_week`, which named a SCOPE — but scope is now
+// derived from the tier (mild is today-scoped, moderate and severe hold until
+// cleared), so those names described something the athlete no longer chooses.
+for (const [kind, tier] of [
+  ['illness_mild', 'mild'],
+  ['illness_moderate', 'moderate'],
+  ['illness_severe', 'severe'],
+] as const) {
+  const action = readinessActionForKind(kind, {
+    anchorDateISO: '2026-07-27',
+    todayISO: '2026-07-27',
+  });
+  ok(`the ${kind} door writes a ${tier} illness fact`,
+    action.type === 'set_illness_status' &&
+      (action.payload as { severity?: string }).severity === tier,
+    `got ${action.type}/${String((action.payload as { severity?: string }).severity)}`);
+}
+
+// MILD is record-only and today-scoped; the deriving tiers hold until cleared.
+ok('the mild door is today-scoped',
+  readinessActionForKind('illness_mild', {
+    anchorDateISO: '2026-07-27', todayISO: '2026-07-27',
+  }).scope === 'today_only');
+
+for (const kind of ['illness_moderate', 'illness_severe'] as const) {
+  ok(`the ${kind} door is week-scoped, not a single day`,
+    readinessActionForKind(kind, {
+      anchorDateISO: '2026-07-27', todayISO: '2026-07-27',
+    }).scope === 'current_week');
+}
+
+/* ── The copy ── */
+
+console.log('\n[8] SAM\'S LABELS — athlete-facing copy, exactly as authored');
+
+const sheet = fs.readFileSync(
+  path.join(repoRoot, 'src/screens/home/HomeScreenV2.tsx'), 'utf8');
+
+for (const label of ['A bit off', 'Properly sick', "Can't get out of bed"]) {
+  ok(`the sheet offers "${label}"`, sheet.includes(`label="${label}"`),
+    'Sam authored this wording; it is not ours to paraphrase');
+}
+
+// The superseded R16 label must be GONE, not merely unused — leaving it in the
+// sheet is how two vocabularies survive a rename.
+ok('the superseded "Coming down with something" label is gone',
+  !sheet.includes('Coming down with something'));
 
 /* ── Result ── */
 

@@ -801,7 +801,7 @@ export default function HomeScreenV2() {
           setReadinessAck(buildReadinessAcknowledgment(result));
           // Opt-in lighter-day / "soften today" offer after a today-scoped report.
           const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' ||
-            kind === 'sore_today' || kind === 'sniffle_today';
+            kind === 'sore_today' || kind === 'illness_mild';
           setLighterDayOffer(result?.ok && todayScoped ? { date: todayISOLocal() } : null);
         }}
         onAcceptLighterDay={async (date) => {
@@ -2237,7 +2237,7 @@ function WeekReadinessSheet({
           />
           <SheetOption
             label="Sick"
-            sub="Coming down with something, or properly sick"
+            sub="A bit off, properly sick, or can't get out of bed"
             testID="readiness-bucket-sick"
             icon={sickIcon('#1EA7FF')}
             onPress={() => setBucket('sick')}
@@ -2309,18 +2309,25 @@ function WeekReadinessSheet({
         <View>
           <Text style={styles.sheetTitle}>Sick — how bad?</Text>
           <SheetOption
-            label="Coming down with something"
+            label="A bit off"
             sub="Log it — I'll offer to soften today if you want"
-            testID={explorerTestId.readinessOption('sniffle_today')}
+            testID={explorerTestId.readinessOption('illness_mild')}
             icon={dropletIcon('#1EA7FF')}
-            onPress={() => onApply('sniffle_today')}
+            onPress={() => onApply('illness_mild')}
           />
           <SheetOption
             label="Properly sick"
+            sub="I'll lighten the work while you're crook — your sessions stay put"
+            testID={explorerTestId.readinessOption('illness_moderate')}
+            icon={dropletIcon('#FFC247')}
+            onPress={() => onApply('illness_moderate')}
+          />
+          <SheetOption
+            label="Can't get out of bed"
             sub="Nothing will be required this week — gentle optional work if you're up to it"
-            testID={explorerTestId.readinessOption('sick_week')}
+            testID={explorerTestId.readinessOption('illness_severe')}
             icon={sickIcon('#FF7A85')}
-            onPress={() => onApply('sick_week')}
+            onPress={() => onApply('illness_severe')}
           />
           <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
         </View>
