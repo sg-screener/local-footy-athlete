@@ -15,9 +15,16 @@
  * separate `powerBlock` — power is never mixed into the conditioning block and
  * never becomes a finisher.
  *
+ * A DELOAD IS NOT A GATE (Sam's deload law, 2026-07-27). This policy used to
+ * take `isDeload` and return null on a deload week — power removed entirely.
+ * The law supersedes that: "Power/speed: KEEP a small sharp dose … a deload is
+ * not a reason to lose sharpness." A deload changes the DOSE, and the dose
+ * transform is `deloadPowerDose`'s job, applied where the block is built. So
+ * the input is gone rather than inverted: there is no deload field left here
+ * to grow a branch on, which is what stops the removal coming back.
+ *
  * SAFETY MODEL (every gate that can say "no"):
  *  - Only strength sessions (must have a strengthPattern).
- *  - Deload week           → no fatiguing power.
  *  - Low readiness         → no power (quality would be poor).
  *  - Game day / G-1 / G+1  → no added power.
  *  - G-2                   → only a tiny neural primer, experienced + high
@@ -76,7 +83,6 @@ export interface PowerPrimerContext {
   /** True when the strength session lands on a team-training day. */
   isTeamDay: boolean;
   readiness: ReadinessLevel;
-  isDeload: boolean;
   isBeginner: boolean;
   /** Experienced enough for a G-2 neural primer (2+ years training age). */
   experienced: boolean;
@@ -134,8 +140,10 @@ export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | nu
   // ── Only suitable strength sessions ──
   if (!ctx.strengthPattern) return null;
 
-  // ── Hard blocks: deload, low readiness ──
-  if (ctx.isDeload) return null;
+  // ── Hard block: low readiness ──
+  // NOT the athlete's readiness declaration — this is the CAPACITY score
+  // computed from onboarding answers (the `readiness` homonym, Sam 2026-07-27).
+  // A deload used to sit beside it and no longer does; see the header.
   if (ctx.readiness === 'low') return null;
 
   // ── Off-season progression ──

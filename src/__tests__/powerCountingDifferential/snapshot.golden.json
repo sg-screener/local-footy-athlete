@@ -6319,6 +6319,7 @@
                 }
               ],
               "components": [
+                "power",
                 "strength",
                 "recovery_addon"
               ],
@@ -6333,7 +6334,32 @@
                 "Tricep Pushdowns",
                 "Back Squat"
               ],
-              "power": null
+              "power": {
+                "kind": "primer",
+                "family": "lower",
+                "title": "Power Primer",
+                "prescription": "2 x 3-5 — full rest, fast & sharp",
+                "placement": "pre_lift",
+                "items": [
+                  {
+                    "exercise": "Lateral Bounds",
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 5,
+                    "equipmentRequired": []
+                  }
+                ],
+                "notes": [
+                  "Do this fresh, early in the session — before the main lifts.",
+                  "Use this as a standalone primer before strength work."
+                ],
+                "fence": {
+                  "hardExposure": false,
+                  "mainStrength": false,
+                  "conditioningCredit": "none",
+                  "isFinisher": false
+                }
+              }
             },
             {
               "dayOfWeek": 2,
@@ -6471,10 +6497,14 @@
             "status": "repaired",
             "powerBudget": 1,
             "powerEligible": true,
-            "achievedPrimerCount": 0,
+            "achievedPrimerCount": 1,
             "removalReason": "field_load_budget_reduction",
-            "powerDaysBefore": [],
-            "powerDaysKept": [],
+            "powerDaysBefore": [
+              1
+            ],
+            "powerDaysKept": [
+              1
+            ],
             "powerDaysStripped": [],
             "visibleCounts": {
               "hardExposures": 4,
@@ -7323,6 +7353,7 @@
                 }
               ],
               "components": [
+                "power",
                 "strength",
                 "recovery_addon"
               ],
@@ -7336,7 +7367,32 @@
                 "Back Squat",
                 "Deadlift"
               ],
-              "power": null
+              "power": {
+                "kind": "contrast",
+                "family": "lower",
+                "title": "Contrast Power",
+                "prescription": "2 x 3-5 — full rest, fast & sharp",
+                "placement": "pre_lift",
+                "items": [
+                  {
+                    "exercise": "Lateral Bounds",
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 5,
+                    "equipmentRequired": []
+                  }
+                ],
+                "notes": [
+                  "Do this fresh, early in the session — before the main lifts.",
+                  "Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                ],
+                "fence": {
+                  "hardExposure": false,
+                  "mainStrength": false,
+                  "conditioningCredit": "none",
+                  "isFinisher": false
+                }
+              }
             },
             {
               "dayOfWeek": 4,
@@ -7391,10 +7447,14 @@
             "status": "repaired",
             "powerBudget": 1,
             "powerEligible": true,
-            "achievedPrimerCount": 0,
+            "achievedPrimerCount": 1,
             "removalReason": "field_load_budget_reduction",
-            "powerDaysBefore": [],
-            "powerDaysKept": [],
+            "powerDaysBefore": [
+              3
+            ],
+            "powerDaysKept": [
+              3
+            ],
             "powerDaysStripped": [],
             "visibleCounts": {
               "hardExposures": 3,

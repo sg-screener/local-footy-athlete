@@ -2494,9 +2494,14 @@ export function buildWorkoutsFromCoach(
               repsMin: planEntry.powerPrimer.repsMin,
               repsMax: planEntry.powerPrimer.repsMax,
             });
-            return shrunk
-              ? { ...planEntry.powerPrimer, ...shrunk, reduced: true }
-              : null;
+            // `reduced` is NOT set here. It means one thing on this spec — a
+            // mild same-region niggle — and the pool reads it as a SLOT rule:
+            // reduced + lower hands the slot to Pogo Hops. Reusing it to mean
+            // "deloaded" would silently swap the athlete's movement on a
+            // deload week, which no law authorises. The deload law's own words
+            // are "same week, same days: the structure does not change, the
+            // work shrinks" — so only the numbers move.
+            return shrunk ? { ...planEntry.powerPrimer, ...shrunk } : null;
           })()
         : planEntry.powerPrimer;
 

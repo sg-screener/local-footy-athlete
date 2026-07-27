@@ -51,7 +51,6 @@ const BASE: PowerPrimerContext = {
   gOffset: -99,
   isTeamDay: false,
   readiness: 'high',
-  isDeload: false,
   isBeginner: false,
   experienced: true,
   injuries: [],
@@ -77,10 +76,24 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   ok('non-strength session gets no power', decidePowerPrimer(ctx({ strengthPattern: undefined })) === null);
 }
 
-// ── 3. Deload + low readiness block power ──
+// ── 3. Low readiness blocks power; a DELOAD DOES NOT ──
+//
+// This assertion is re-pointed, not deleted. It used to read "deload blocks
+// power", which is what the code did and what Sam's deload law (2026-07-27)
+// supersedes: "Power/speed: KEEP a small sharp dose … a deload is not a reason
+// to lose sharpness." The law had reached three sites (the §18 weekly budget,
+// the canonicalisation phase gate, and `deloadPowerDose`) and missed this one —
+// so the shrink existed with nothing to shrink, and a deload week rendered no
+// power at all. The RATCHET is structural: the policy has no deload input left,
+// so the removal cannot be reinstated by flipping a condition.
 {
-  ok('deload blocks power', decidePowerPrimer(ctx({ isDeload: true })) === null);
   ok('low readiness blocks power', decidePowerPrimer(ctx({ readiness: 'low' })) === null);
+  ok(
+    'the policy takes no deload input at all — a deload cannot gate power here',
+    !('isDeload' in BASE) &&
+      !Object.keys(BASE).some((key) => /deload/i.test(key)),
+    Object.keys(BASE).join(', '),
+  );
 }
 
 // ── 4. Game proximity ──
@@ -148,7 +161,6 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
 // ── 8. Power goal nudge only enriches, never creates power where a gate said no ──
 {
   ok('nudge cannot create power on G-1', decidePowerPrimer(ctx({ hasGame: true, gOffset: -1, powerGoalNudge: true })) === null);
-  ok('nudge cannot create power in deload', decidePowerPrimer(ctx({ isDeload: true, powerGoalNudge: true })) === null);
   ok('nudge cannot override injury', decidePowerPrimer(ctx({ injuries: [{ area: 'groin strain', severity: 6 }], powerGoalNudge: true })) === null);
 }
 
@@ -352,11 +364,45 @@ function workoutsFor(
     JSON.stringify(heavyLower));
 }
 
-// Deload week → no powerBlock even for a suitable athlete.
+// Deload week → power SURVIVES, smaller and just as sharp.
+//
+// Sam's deload law (2026-07-27), Bible §14: "Power/speed: KEEP a small sharp
+// dose — few reps, full recovery, stop the moment speed drops. Power is not
+// removed on a deload; a deload is not a reason to lose sharpness." This block
+// used to assert the opposite. Three properties, because "power is present" on
+// its own would pass with an unshrunk dose, and "the dose shrank" on its own
+// would pass with a swapped exercise:
+//
+//   1. the primer is there at all,
+//   2. it carries FEWER SETS than the same athlete's normal week,
+//   3. the reps and the EXERCISE are unchanged — the deload law changes the
+//      work, not the structure, and `reduced` (the niggle flag that hands the
+//      lower slot to Pogo Hops) is deliberately not set by the shrink.
 {
-  const ws = workoutsFor(profile(), 'deload');
-  ok('deload week renders no powerBlock', ws.every((w) => !w.powerBlock),
-    ws.map((w) => `${w.dayOfWeek}:${w.powerBlock ? 'POWER' : '-'}`).join(' | '));
+  const normal = workoutsFor(profile());
+  const deload = workoutsFor(profile(), 'deload');
+  const normalBlocks = normal.filter((w) => w.powerBlock);
+  const deloadBlocks = deload.filter((w) => w.powerBlock);
+
+  ok('deload week still renders power', deloadBlocks.length >= 1,
+    deload.map((w) => `${w.dayOfWeek}:${w.powerBlock ? 'POWER' : '-'}`).join(' | '));
+
+  const normalSets = normalBlocks[0]?.powerBlock?.options[0]?.sets ?? 0;
+  const deloadSets = deloadBlocks[0]?.powerBlock?.options[0]?.sets ?? 0;
+  ok('the deload dose is SMALLER than the normal week\'s', deloadSets < normalSets,
+    `normal=${normalSets} deload=${deloadSets}`);
+  ok('the deload dose keeps at least one working set', deloadSets >= 1, `${deloadSets}`);
+
+  const normalOption = normalBlocks[0]?.powerBlock?.options[0];
+  const deloadOption = deloadBlocks[0]?.powerBlock?.options[0];
+  ok('the deload keeps the same EXERCISE — structure holds, work shrinks',
+    !!normalOption && !!deloadOption && normalOption.name === deloadOption.name,
+    `normal=${normalOption?.name} deload=${deloadOption?.name}`);
+  ok('the deload keeps the rep range — the dose stays sharp',
+    !!normalOption && !!deloadOption &&
+      normalOption.repsMin === deloadOption.repsMin &&
+      normalOption.repsMax === deloadOption.repsMax,
+    `normal=${normalOption?.repsMin}-${normalOption?.repsMax} deload=${deloadOption?.repsMin}-${deloadOption?.repsMax}`);
 }
 
 // The power block is BODYWEIGHT-ONLY and equipment-independent.

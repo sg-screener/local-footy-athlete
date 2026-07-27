@@ -480,10 +480,25 @@ check('3 high TT/game load reduces primer count',
   visibleEvaluation(game).ledger.power.achievedPrimerCount < visibleEvaluation(mid).ledger.power.achievedPrimerCount);
 check('4 low readiness has zero primers', visibleEvaluation(low).ledger.power.achievedPrimerCount === 0);
 check('5 bye recovery has zero primers', visibleEvaluation(byeRecovery).ledger.power.achievedPrimerCount === 0);
-check('6 deload has zero primers', visibleEvaluation(
-  pre,
-  pre.program.microcycles.find((microcycle) => microcycle.weekKind === 'deload')!,
-).ledger.power.achievedPrimerCount === 0);
+// Re-pointed, not deleted. This read "6 deload has zero primers" — true of the
+// code, and exactly what Sam's deload law (2026-07-27) supersedes: "Power is
+// not removed on a deload; a deload is not a reason to lose sharpness." The law
+// had already reached this gateway's own weekly budget selector, which stopped
+// treating a deload as ineligible; what it had not reached was
+// `powerPrimerPolicy`, which returned null on a deload week so no primer was
+// ever stamped for the budget to keep. Zero primers here was that gap showing
+// through, one layer removed from its cause.
+//
+// The other two "zero primers" checks above are NOT deload doors and stand:
+// `low` is the readiness CAPACITY score (the homonym), and a bye recovery week
+// is explicitly not a deload door.
+{
+  const deloadWeek = pre.program.microcycles.find((microcycle) =>
+    microcycle.weekKind === 'deload')!;
+  const deloadPrimers = visibleEvaluation(pre, deloadWeek)
+    .ledger.power.achievedPrimerCount;
+  check('6 deload KEEPS its primers, within budget', deloadPrimers >= 1 && deloadPrimers <= 2);
+}
 {
   const hydrated = clone(mid.program);
   hydrated.microcycles[0].workouts = hydrated.microcycles[0].workouts.map((workout) => ({

@@ -395,7 +395,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
       phase: 'Off-season',
       offseasonSubphase: mid ? 'mid_offseason' : 'late_offseason',
       strengthPattern: 'lower', hasGame: false, gOffset: -7, isTeamDay: false,
-      readiness: 'high', isDeload: false, isBeginner: false, experienced: true,
+      readiness: 'high', isBeginner: false, experienced: true,
       injuries: [], powerGoalNudge: false,
     };
     const block = powerFor(specContext);
@@ -418,7 +418,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
       id, dayOfWeek: 4, name: 'Renamed Session', intensity: 'High', patterns: ['squat', 'hinge'], primary: 'squat',
       powerBlock: powerFor({
         phase: 'In-season', strengthPattern: 'lower_combined', hasGame: true, gOffset: -2,
-        isTeamDay: false, readiness: 'high', isDeload: false, isBeginner: false,
+        isTeamDay: false, readiness: 'high', isBeginner: false,
         experienced: true, injuries: [], powerGoalNudge: false,
       }),
       exercises: [
@@ -447,7 +447,7 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
       : [];
     const proximityContext: Omit<PowerPrimerContext, 'gOffset'> = {
       phase: 'In-season', strengthPattern: 'lower_combined', hasGame: true,
-      isTeamDay: false, readiness: 'high', isDeload: false, isBeginner: false,
+      isTeamDay: false, readiness: 'high', isBeginner: false,
       experienced: true, injuries: [], powerGoalNudge: false,
     };
     const proximityKind = (gOffset: number): HarnessPowerIntent['kind'] =>

@@ -1633,7 +1633,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         gOffset: off,
         isTeamDay: !!alloc.isTeamDay,
         readiness,
-        isDeload: inputs.weekKind === 'deload',
+        // No deload input: Sam's deload law keeps power on a deload week and
+        // shrinks the dose instead. The shrink is `deloadPowerDose`, applied
+        // where the block is built — not a second decision here.
         isBeginner: trainingAgePolicy.level === 'new',
         experienced: powerExperienced,
         injuries: powerInjuries,
