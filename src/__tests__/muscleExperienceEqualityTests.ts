@@ -30,9 +30,10 @@ import {
   EXPERIENCE_CROSSWALK,
   ONBOARDING_EXPERIENCE_ANSWERS,
   visibleGatesForOnboardingAnswer,
+  ladderLevelForOnboardingAnswer,
   muscleMetadataFor,
   type ExperienceGate,
-  type ExperienceLadderLevel,
+  type TrainingAgeLevel,
   type MuscleGroup,
 } from '../data/muscleExperienceMetadata';
 import {
@@ -45,6 +46,7 @@ import {
   type FlowDayType,
 } from '../data/sessionFlowMenus';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import { resolveTrainingAgePolicy, TRAINING_AGE_LEVELS } from '../rules/trainingAgePolicy';
 import { readSheetRecords } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -337,7 +339,7 @@ ok(
 
 /** Sam's authored table, row for row. */
 const AUTHORED_CROSSWALK: ReadonlyArray<
-  readonly [string, ExperienceLadderLevel, readonly ExperienceGate[]]
+  readonly [string, TrainingAgeLevel, readonly ExperienceGate[]]
 > = [
   ['Complete beginner', 'new', ['everyone', 'everyone_regression']],
   ['1-2 years', 'developing', ['everyone', 'one_plus_years']],
@@ -452,6 +454,62 @@ ok(
   EXPERIENCE_GATES.filter(
     (gate) => !EXPERIENCE_CROSSWALK.some((row) => row.visibleGates.includes(gate)),
   ).join(', '),
+);
+
+/* ── One crosswalk, one ladder ── */
+
+console.log('\n[4c] SINGLE OWNER — "No other crosswalk may exist"');
+
+// resolveTrainingAgePolicy has mapped onboarding answers to ladder levels since
+// long before the crosswalk was authored, and it agreed with Sam's table. Two
+// agreeing copies are still two copies: the Bible law forbids the second, so the
+// policy must DERIVE its level rather than restate the mapping.
+for (const answer of ONBOARDING_EXPERIENCE_ANSWERS) {
+  ok(
+    `resolveTrainingAgePolicy('${answer}') derives its level from the crosswalk`,
+    resolveTrainingAgePolicy(answer).level === ladderLevelForOnboardingAnswer(answer),
+    `policy says ${resolveTrainingAgePolicy(answer).level}, crosswalk says ${ladderLevelForOnboardingAnswer(answer)}`,
+  );
+}
+
+// Shipped behaviour that must NOT change: an athlete with no recorded answer is
+// treated as `consistent`. The crosswalk resolver throws on an unmapped answer,
+// so the default has to stay explicit at this boundary.
+ok(
+  'a missing experience level still resolves to consistent',
+  resolveTrainingAgePolicy(null).level === 'consistent' &&
+    resolveTrainingAgePolicy(undefined).level === 'consistent',
+  `null -> ${resolveTrainingAgePolicy(null).level}, undefined -> ${resolveTrainingAgePolicy(undefined).level}`,
+);
+
+ok(
+  'the beginner policy body still rides on the new level',
+  resolveTrainingAgePolicy('Complete beginner').maxCoreSessions === 2 &&
+    resolveTrainingAgePolicy('2-5 years').maxCoreSessions === null,
+);
+
+// Structural: the second crosswalk is GONE, not merely in agreement. A switch on
+// onboarding literals inside the policy is exactly the duplicate representation
+// Section 11 forbids, and an agreeing copy is the kind that rots silently.
+const policySource = fs.readFileSync(
+  path.join(repoRoot, 'src/rules/trainingAgePolicy.ts'),
+  'utf8',
+);
+
+const onboardingLiteralsInPolicy = ONBOARDING_EXPERIENCE_ANSWERS.filter((answer) =>
+  policySource.includes(`'${answer}'`),
+);
+
+ok(
+  'trainingAgePolicy no longer maps onboarding answers itself',
+  onboardingLiteralsInPolicy.length === 0,
+  `still switches on: ${onboardingLiteralsInPolicy.join(', ')}`,
+);
+
+ok(
+  'the ladder has ONE type — the crosswalk reuses TrainingAgeLevel',
+  EXPERIENCE_LADDER.join(',') === TRAINING_AGE_LEVELS.join(','),
+  `crosswalk [${EXPERIENCE_LADDER.join(', ')}] vs policy [${TRAINING_AGE_LEVELS.join(', ')}]`,
 );
 
 /* ── Vocabulary reconciliation ── */

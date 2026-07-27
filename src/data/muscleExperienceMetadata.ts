@@ -29,8 +29,6 @@
  * Read it through `visibleGatesForOnboardingAnswer`. Do not re-derive it.
  */
 
-import type { ExperienceLevel } from '../types/domain';
-
 /* ── Muscle vocabulary ── */
 
 /**
@@ -85,152 +83,33 @@ export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
 
 /* ── Experience ── */
 
-/** A level on the app's single experience ladder. */
-export type ExperienceLadderLevel = 'new' | 'developing' | 'consistent' | 'advanced';
-
 /**
- * The ONE ladder, in order. Bible Section 11: "There is ONE experience ladder
- * for the whole app ... Every gated exercise, template or method declares its
- * minimum on that ladder."
- */
-export const EXPERIENCE_LADDER: readonly ExperienceLadderLevel[] = [
-  'new',
-  'developing',
-  'consistent',
-  'advanced',
-];
-
-/** An authored experience gate, as the sheet expresses it. */
-export type ExperienceGate =
-  | 'everyone'
-  | 'everyone_regression'
-  | 'one_plus_years'
-  | 'two_plus_years'
-  | 'advanced_only';
-
-export const EXPERIENCE_GATES: readonly ExperienceGate[] = [
-  'everyone',
-  'everyone_regression',
-  'one_plus_years',
-  'two_plus_years',
-  'advanced_only',
-];
-
-/** The authored spelling of each gate, from the sheet's own legend row. */
-export const EXPERIENCE_GATE_SOURCE_TEXT: Readonly<Record<ExperienceGate, string>> = {
-  everyone: 'everyone',
-  everyone_regression: 'everyone (regression)',
-  one_plus_years: '1+ years',
-  two_plus_years: '2+ years',
-  advanced_only: 'advanced only',
-};
-
-/**
- * The regression convention, verbatim from Bible Section 11 and the sheet's
- * own legend: an exercise marked "everyone (regression)" is auto-programmed
- * for new-to-training athletes ONLY. Every other athlete reaches it through
- * one of three doors — never by auto-programming.
- */
-export const REGRESSION_CONVENTION = {
-  autoProgrammedFor: ['new'] as readonly ExperienceLadderLevel[],
-  reachableByOthersVia: [
-    'the injury door',
-    'an equipment constraint',
-    'the athlete’s own pick',
-  ] as readonly string[],
-  neverAutoProgrammedForOthers: true,
-} as const;
-
-/* ── The crosswalk (Sam, 2026-07-27) ── */
-
-/**
- * Every onboarding answer the app can produce. Typed against the shipped
- * `ExperienceLevel` union so a new onboarding option cannot appear without the
- * crosswalk gaining a row for it.
- */
-export const ONBOARDING_EXPERIENCE_ANSWERS: readonly ExperienceLevel[] = [
-  'Complete beginner',
-  '1-2 years',
-  '2-5 years',
-  '5+ years',
-];
-
-export interface ExperienceCrosswalkRow {
-  readonly onboardingAnswer: ExperienceLevel;
-  readonly ladderLevel: ExperienceLadderLevel;
-  /** Every authored gate this athlete is auto-programmed exercises from. */
-  readonly visibleGates: readonly ExperienceGate[];
-}
-
-/**
- * THE EXPERIENCE CROSSWALK — Sam's authored law, Bible Section 11.
+ * Experience types and the crosswalk are owned by `rules/experienceCrosswalk`,
+ * which is the single authored bridge between the onboarding answer, the ladder
+ * and these gates (Bible Section 11: "No other crosswalk may exist").
  *
- * Two boundary rulings are part of the law:
- *
- *   1. Regressions are visible to complete beginners ONLY. A "1-2 years"
- *      athlete never sees them. This governs AUTO-PROGRAMMING; the injury
- *      door, an equipment constraint and the athlete's own pick stay open to
- *      everyone, per REGRESSION_CONVENTION.
- *   2. "2+ years" includes the "2-5 years" onboarding answer.
- *
- * Note that `new` does NOT see `1+ years` work: a beginner gets the everyone
- * tier plus regressions, nothing above it. And `advanced` sees every gate
- * EXCEPT regressions — the only level that loses access to a tier by moving up.
+ * Re-exported here so a consumer reading muscle metadata does not need to know
+ * which module owns the gate vocabulary — but there is exactly one definition.
  */
-export const EXPERIENCE_CROSSWALK: readonly ExperienceCrosswalkRow[] = [
-  {
-    onboardingAnswer: 'Complete beginner',
-    ladderLevel: 'new',
-    visibleGates: ['everyone', 'everyone_regression'],
-  },
-  {
-    onboardingAnswer: '1-2 years',
-    ladderLevel: 'developing',
-    visibleGates: ['everyone', 'one_plus_years'],
-  },
-  {
-    onboardingAnswer: '2-5 years',
-    ladderLevel: 'consistent',
-    visibleGates: ['everyone', 'one_plus_years', 'two_plus_years'],
-  },
-  {
-    onboardingAnswer: '5+ years',
-    ladderLevel: 'advanced',
-    visibleGates: ['everyone', 'one_plus_years', 'two_plus_years', 'advanced_only'],
-  },
-];
+export type {
+  ExperienceGate,
+  TrainingAgeLevel,
+  ExperienceCrosswalkRow,
+} from '../rules/experienceCrosswalk';
+export {
+  EXPERIENCE_GATES,
+  EXPERIENCE_GATE_SOURCE_TEXT,
+  EXPERIENCE_CROSSWALK,
+  ONBOARDING_EXPERIENCE_ANSWERS,
+  REGRESSION_CONVENTION,
+  TRAINING_AGE_LEVELS as EXPERIENCE_LADDER,
+  ladderLevelForOnboardingAnswer,
+  visibleGatesForOnboardingAnswer,
+  visibleGatesForLadderLevel,
+  isExerciseAutoProgrammableFor,
+} from '../rules/experienceCrosswalk';
 
-/** The ladder level an onboarding answer maps to. */
-export function ladderLevelForOnboardingAnswer(
-  answer: ExperienceLevel,
-): ExperienceLadderLevel {
-  const row = EXPERIENCE_CROSSWALK.find((candidate) => candidate.onboardingAnswer === answer);
-  if (!row) throw new Error(`experience: no crosswalk row for onboarding answer "${answer}"`);
-  return row.ladderLevel;
-}
-
-/**
- * The authored gates an athlete may be auto-programmed exercises from.
- *
- * The single read point for the crosswalk. Throws rather than defaulting on an
- * unmapped answer: silently falling back to the `everyone` tier would quietly
- * strip an experienced athlete's whole exercise range.
- */
-export function visibleGatesForOnboardingAnswer(
-  answer: ExperienceLevel,
-): readonly ExperienceGate[] {
-  const row = EXPERIENCE_CROSSWALK.find((candidate) => candidate.onboardingAnswer === answer);
-  if (!row) throw new Error(`experience: no crosswalk row for onboarding answer "${answer}"`);
-  return row.visibleGates;
-}
-
-/** Whether an exercise's gate admits this athlete for AUTO-PROGRAMMING. */
-export function isExerciseAutoProgrammableFor(
-  gate: ExperienceGate,
-  answer: ExperienceLevel,
-): boolean {
-  return visibleGatesForOnboardingAnswer(answer).includes(gate);
-}
+import type { ExperienceGate } from '../rules/experienceCrosswalk';
 
 /**
  * Authored spelling variants in the FINAL sheet, recorded rather than silently

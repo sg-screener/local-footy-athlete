@@ -1,6 +1,15 @@
 import type { ExperienceLevel, SeasonPhase } from '../types/domain';
+import { ladderLevelForProfile } from './experienceCrosswalk';
 
-export type TrainingAgeLevel = 'new' | 'developing' | 'consistent' | 'advanced';
+/**
+ * The app's one experience ladder. DEFINED in `experienceCrosswalk`, which owns
+ * the mapping from the onboarding answer, and re-exported here so that every
+ * existing `TrainingAgeLevel` import keeps resolving.
+ */
+export type { TrainingAgeLevel } from './experienceCrosswalk';
+export { TRAINING_AGE_LEVELS, meetsTrainingAgeMinimum } from './experienceCrosswalk';
+
+import type { TrainingAgeLevel } from './experienceCrosswalk';
 
 export type TrainingAgePoolSlot =
   | 'squat'
@@ -102,18 +111,17 @@ const NEW_ATHLETE_POLICY: TrainingAgePolicy = {
   exercisePriority: BEGINNER_EXERCISE_PRIORITY,
 };
 
+/**
+ * The policy body for an athlete at a ladder level.
+ *
+ * The onboarding answer -> ladder mapping is NOT repeated here: it is authored
+ * law owned by `experienceCrosswalk` (Bible Section 11, "No other crosswalk may
+ * exist"). This function only decides which policy body rides on a level, which
+ * is the part that genuinely belongs to the policy.
+ */
 export function resolveTrainingAgePolicy(
   experienceLevel: ExperienceLevel | null | undefined,
 ): TrainingAgePolicy {
-  switch (experienceLevel) {
-    case 'Complete beginner':
-      return NEW_ATHLETE_POLICY;
-    case '1-2 years':
-      return { level: 'developing', ...NORMAL_POLICY };
-    case '5+ years':
-      return { level: 'advanced', ...NORMAL_POLICY };
-    case '2-5 years':
-    default:
-      return { level: 'consistent', ...NORMAL_POLICY };
-  }
+  const level = ladderLevelForProfile(experienceLevel);
+  return level === 'new' ? NEW_ATHLETE_POLICY : { level, ...NORMAL_POLICY };
 }
