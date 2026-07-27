@@ -1,8 +1,28 @@
 /**
- * Final-content ownership for rendered power blocks.
+ * Final-content ownership for power rows.
  *
  * Allocation policy may propose power, but the final workout rows decide
  * whether that proposal is still honest after generation, filtering or edits.
+ *
+ * ## Why this module survived Stage 4 as a RENAME rather than a deletion
+ *
+ * The ownership reassessment listed `powerRowAlignment` for outright
+ * deletion, reasoning that it "exists solely to keep a parallel structure
+ * consistent with the list" — so one list would leave it no job. Half of that
+ * is right: the parallel-structure job is gone, and the module's old NAME was
+ * about a block that no longer exists.
+ *
+ * The other half is not. What it actually enforces is a programming rule, not a
+ * sync: power is removed from a session with no same-family strength content,
+ * and CONTRAST is downgraded to a primer unless a real heavy same-family main
+ * lift survives to pair with. That is Section 4's contrast rule — contrast is a
+ * heavy lift paired with an explosive movement, so without the heavy lift there
+ * is nothing to contrast against. Deleting the file would have deleted the rule
+ * and moved the golden, which is how a "cleanup" quietly changes what an
+ * athlete is prescribed.
+ *
+ * So the block-shaped module dies and the rule moves house, under a name that
+ * says what it now governs.
  */
 
 import type { Workout } from '../types/domain';
@@ -12,11 +32,11 @@ import { getExerciseTags } from '../data/exerciseTags';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 
-export type PowerBlockAlignmentAction = 'unchanged' | 'removed' | 'downgraded';
+export type PowerRowAlignmentAction = 'unchanged' | 'removed' | 'downgraded';
 
-export interface PowerBlockAlignmentResult {
+export interface PowerRowAlignmentResult {
   workout: Workout;
-  action: PowerBlockAlignmentAction;
+  action: PowerRowAlignmentAction;
   reason: string | null;
 }
 
@@ -55,9 +75,9 @@ function rowSignal(row: any): {
  * Remove power from sessions without same-family strength. Contrast is
  * downgraded to a primer unless a real heavy same-family main lift survives.
  */
-export function alignPowerBlockToFinalWorkoutContent(
+export function alignPowerToFinalWorkoutContent(
   workout: Workout,
-): PowerBlockAlignmentResult {
+): PowerRowAlignmentResult {
   const rows = powerRows(workout);
   if (rows.length === 0) return { workout, action: 'unchanged', reason: null };
   const family = rows[0].power?.family;

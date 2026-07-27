@@ -331,48 +331,36 @@ export interface SpeedBlock {
 }
 
 /**
- * Low-dose power / explosive primer block (Bible § Power work).
+ * LEGACY STORED SHAPE — read only, and only until Stage 5 migrates it.
  *
- * This is NOT conditioning and NOT a finisher. It is a small, fast, high-quality
- * block placed EARLY in a strength session (or paired as contrast with the main
- * lift). It carries its own counting fence so it is never counted as a
- * conditioning component or a hard exposure. Rendered as a distinct block — it
- * is intentionally kept OUT of `workout.exercises` so exercise-name classifiers
- * never confuse a jump/throw with a strength or conditioning row.
+ * Power is a ROW now (`role: 'power'`, see `WorkoutExercise.role`). Nothing in
+ * the app writes this field; `sessionRowCountingTests` fails the build if
+ * anything starts.
+ *
+ * It survives on the type for one reason: it WAS persisted. The program store
+ * has no `partialize`, so the whole of `currentProgram` — microcycles,
+ * workouts and their `powerBlock` — was serialised to storage for every athlete
+ * who generated a program before 2026-07-28. Deleting the field outright would
+ * be a tolerant reader by accident (JSON keeps unknown keys, TS types are
+ * erased) rather than by decision, and Stage 5's migration would have to reach
+ * for it through a cast.
+ *
+ * So the rich `PowerBlock` type is retired and this narrow door replaces it:
+ * exactly the fields a migration needs to lift a stored block into a power row,
+ * and nothing else. The counting fence is deliberately NOT here — the fence now
+ * lives in the authored role, read at one choke point
+ * (`src/rules/sessionRowCounting.ts`), and a second copy of it on a legacy
+ * shape would be the parallel representation this unit exists to remove.
  */
-export type PowerFamily = 'lower' | 'upper';
-export type PowerKind = 'primer' | 'contrast';
-
-export interface PowerBlockOption {
-  /** Display name, e.g. "Vertical Jump" or "Explosive Push-up". */
-  name: string;
-  sets: number;
-  repsMin: number;
-  repsMax: number;
-  /** Equipment the option needs; empty = bodyweight. */
-  equipmentRequired: string[];
-}
-
-export interface PowerBlockCountingFence {
-  hardExposure: false;
-  mainStrength: false;
-  conditioningCredit: 'none';
-  isFinisher: false;
-}
-
-export interface PowerBlock {
-  id: string;
-  kind: PowerKind;
-  family: PowerFamily;
-  /** Display title, e.g. "Power Primer" or "Contrast Power". */
-  title: string;
-  /** One-line prescription summary, e.g. "3 x 3 — full rest, fast & sharp". */
-  prescription: string;
-  /** Always fresh / early in the session. */
-  placement: 'pre_lift';
-  options: PowerBlockOption[];
-  notes: string[];
-  counting: PowerBlockCountingFence;
+export interface LegacyStoredPowerBlock {
+  kind: 'primer' | 'contrast';
+  family: 'lower' | 'upper';
+  options: Array<{
+    name: string;
+    sets: number;
+    repsMin: number;
+    repsMax: number;
+  }>;
 }
 
 export type RecoveryAddonKind =
@@ -734,12 +722,12 @@ export interface Workout {
   speedBlock?: SpeedBlock;
 
   /**
-   * Low-dose power/explosive primer (Bible § Power work). Fresh, high-quality,
-   * placed early. Not conditioning, not a finisher, not counted as a hard
-   * exposure. Kept out of `exercises` so classifiers never confuse it with
-   * strength or conditioning rows.
+   * LEGACY STORED SHAPE — read only. Power is a `role: 'power'` row in
+   * `exercises` now; nothing writes this. Present so Stage 5 can migrate
+   * programs persisted before 2026-07-28 without a cast. See
+   * `LegacyStoredPowerBlock`.
    */
-  powerBlock?: PowerBlock;
+  powerBlock?: LegacyStoredPowerBlock;
 
   /**
    * Short display label for coach-added conditioning shown on weekly cards.

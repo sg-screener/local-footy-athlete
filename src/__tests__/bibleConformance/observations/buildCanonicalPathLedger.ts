@@ -1,8 +1,8 @@
-import type { Microcycle, OnboardingData, PowerBlock, TrainingProgram, Workout, WorkoutExercise } from '../../../types/domain';
+import type { Microcycle, OnboardingData, TrainingProgram, Workout, WorkoutExercise } from '../../../types/domain';
 import { getSessionComponentRows, getSessionComponents } from '../../../utils/sessionComponents';
 import { deriveVisibleWorkoutIdentity } from '../../../utils/visibleWorkoutIdentity';
 import { inferModalityFromName } from '../../../utils/coachModalitySwap';
-import { alignPowerBlockToFinalWorkoutContent } from '../../../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../../../rules/powerRowAlignment';
 import { classifyVisibleSession } from '../../../rules/sessionClassificationAdapter';
 import { countWeeklyExposures } from '../../../rules/weeklyExposureCounts';
 import { buildWeekLog } from '../../../utils/weekLogBuilder';
@@ -192,7 +192,7 @@ function power(workout: Workout): HarnessPowerIntent {
   if (!row) return { kind: 'none' };
   const family = row.power!.family;
   if (row.power!.kind === 'primer') return { kind: 'primer', explosiveFamily: family };
-  const aligned = alignPowerBlockToFinalWorkoutContent(workout);
+  const aligned = alignPowerToFinalWorkoutContent(workout);
   return {
     kind: 'contrast', explosiveFamily: family,
     heavyLiftFamily: family,

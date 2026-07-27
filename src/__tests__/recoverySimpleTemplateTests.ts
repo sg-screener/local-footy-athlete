@@ -196,8 +196,8 @@ console.log('\n[4] The power primer is gone from recovery days (Sam, 2026-07-27)
     }),
   );
   ok(
-    'the composition owner emits no power item for a recovery day either',
-    withPower.items.every((item) => item.kind !== 'power'),
+    'a recovery day stays a recovery template — no items, power or otherwise',
+    withPower.items.length === 0,
   );
 }
 

@@ -48,7 +48,7 @@ import {
   hasMeaningfulWorkoutContent,
 } from './workoutContent';
 import { todayISOLocal } from './appDate';
-import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import {
   finaliseWorkoutAfterMutation,
   type WorkoutCanonicalisationContext,
@@ -295,7 +295,7 @@ export function validateWorkoutAgainstActiveConstraints(
       ],
     };
   }
-  const powerAlignment = alignPowerBlockToFinalWorkoutContent(canonical.workout);
+  const powerAlignment = alignPowerToFinalWorkoutContent(canonical.workout);
   let alignedWorkout = powerAlignment.workout;
   let scheduleDurationChanged = false;
   const alignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =

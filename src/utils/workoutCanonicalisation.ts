@@ -30,7 +30,7 @@ import {
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
-import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import {
   withSection18WorkoutEvidence,
@@ -533,7 +533,7 @@ function updatePowerForPhase(args: {
         : row),
     };
   }
-  const aligned = alignPowerBlockToFinalWorkoutContent(workout);
+  const aligned = alignPowerToFinalWorkoutContent(workout);
   if (aligned.action === 'removed') {
     args.actions.push({ kind: 'power_removed', item: blockTitle, reason: aligned.reason! });
   } else if (aligned.action === 'downgraded') {

@@ -23,6 +23,7 @@ import {
 import {
   applyCoachRevisionDateOverrides,
 } from '../utils/coachRevisionOverrideWriter';
+import { powerRows } from '../rules/sessionRowCounting';
 
 const MON = '2026-07-06';
 const TUE = '2026-07-07';
@@ -69,7 +70,6 @@ function ex(name: string, id: string, sets = 3): any {
       description: name,
       exerciseType: 'Compound',
       muscleGroups: [],
-      equipmentRequired: [],
       difficultyLevel: 'Intermediate',
       createdAt: '',
       updatedAt: '',
@@ -168,28 +168,6 @@ function mixedWorkoutWithTypedBlocks(): Workout {
         conditioningCredit: 'none',
         createsHardDay: true,
         sprintCodExposure: true,
-      },
-    },
-    powerBlock: {
-      id: 'power-primer',
-      kind: 'primer',
-      family: 'lower',
-      title: 'Power Primer',
-      prescription: '3 x 3 — full rest, fast & sharp',
-      placement: 'pre_lift',
-      options: [{
-        name: 'Vertical Jump',
-        sets: 3,
-        repsMin: 3,
-        repsMax: 3,
-        equipmentRequired: [],
-      }],
-      notes: ['Do this fresh before the main lifts.'],
-      counting: {
-        hardExposure: false,
-        mainStrength: false,
-        conditioningCredit: 'none',
-        isFinisher: false,
       },
     },
     recoveryAddons: [{
@@ -372,7 +350,7 @@ section('[3] approved whole-session removal writes rest shell that projects as r
   eq('rest shell written', writes[0].workout.name, 'Rest');
   eq('projection matches accepted rest revision', result.applied[0].projectedDay, after);
   ok('rest shell clears speedBlock', !writes[0].workout.speedBlock);
-  ok('rest shell clears powerBlock', !writes[0].workout.powerBlock);
+  ok('rest shell clears power rows', powerRows(writes[0].workout).length === 0);
   ok('rest shell clears recovery add-ons', !writes[0].workout.recoveryAddons?.length);
 }
 
@@ -595,12 +573,19 @@ section('[9] whole-day move writes both days atomically with donor rows');
   eq('source becomes rest', mondayWrite?.workout.workoutType, 'Rest');
   ok('source rest clears typed blocks',
     !mondayWrite?.workout.speedBlock &&
-    !mondayWrite?.workout.powerBlock &&
+    powerRows(mondayWrite?.workout).length === 0 &&
     !mondayWrite?.workout.recoveryAddons?.length);
   ok('destination carries donor rows',
     (tuesdayWrite?.workout.exercises?.length ?? 0) === (mixedWorkout().exercises?.length ?? -1),
     tuesdayWrite?.workout.exercises?.length);
-  ok('destination carries donor powerBlock', !!tuesdayWrite?.workout.powerBlock);
+  // This read `!!tuesdayWrite.workout.powerBlock` — a field the move used to
+  // copy explicitly. Power is a row now and travels with `exercises`, which the
+  // assertion above already proves by count; this one pins that the donor's
+  // actual rows arrived, not merely the same number of them.
+  ok('destination carries the donor\'s own rows',
+    JSON.stringify(tuesdayWrite?.workout.exercises?.map((row) => row.exerciseId)) ===
+      JSON.stringify(mixedWorkout().exercises?.map((row) => row.exerciseId)),
+    JSON.stringify(tuesdayWrite?.workout.exercises?.map((row) => row.exerciseId)));
   eq('destination dayOfWeek follows the date', tuesdayWrite?.workout.dayOfWeek, 2);
 }
 

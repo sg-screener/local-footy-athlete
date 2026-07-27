@@ -82,7 +82,6 @@ function ex(name: string, sets = 3, repsMin = 6, repsMax = 8): WorkoutExercise {
       description: name,
       exerciseType: 'Compound' as any,
       muscleGroups: [],
-      equipmentRequired: [],
       difficultyLevel: 'Intermediate' as any,
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
@@ -549,28 +548,23 @@ section('[4f] remove_exercise preserves remaining typed session content');
 for (const kind of ['power', 'recovery_addon'] as const) {
   const workout = strengthWorkout('Supported Strength', [ex('Back Squat', 4)]);
   if (kind === 'power') {
-    workout.powerBlock = {
-      id: 'power',
-      kind: 'primer',
-      family: 'lower',
-      title: 'Power Primer',
-      prescription: '3 x 3 jumps',
-      placement: 'pre_lift',
-      options: [{
-        name: 'Vertical Jump',
-        sets: 3,
-        repsMin: 3,
-        repsMax: 3,
-        equipmentRequired: [],
-      }],
-      notes: [],
-      counting: {
-        hardExposure: false,
-        mainStrength: false,
-        conditioningCredit: 'none',
-        isFinisher: false,
+
+    // Power is a ROW now — same typed content, new home.
+    workout.exercises = [
+      {
+        id: 'power', workoutId: workout.id, exerciseId: 'ex-vertical-jump',
+        exerciseOrder: 0, prescribedSets: 3, prescribedRepsMin: 3,
+        prescribedRepsMax: 3, restSeconds: 120,
+        role: 'power' as const, power: { family: 'lower' as const, kind: 'primer' as const },
+        exercise: {
+          id: 'ex-vertical-jump', name: 'Vertical Jump', description: 'Vertical Jump',
+          muscleGroups: [], exerciseType: 'Plyometric' as const, equipmentRequired: [],
+          difficultyLevel: 'Intermediate' as const, createdAt: '', updatedAt: '',
+        },
+        createdAt: '', updatedAt: '',
       },
-    };
+      ...workout.exercises,
+    ];
   } else {
     workout.recoveryAddons = [{
       id: 'addon',

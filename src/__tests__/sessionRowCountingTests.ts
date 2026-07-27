@@ -34,11 +34,14 @@ import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 import {
   ROLES_EXEMPT_FROM_COUNTING,
+  SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE,
+  SESSION_ROLE_TO_SECTION18_ROW_ROLE,
   countingRows,
   exerciseBudgetRows,
   participatesInCounting,
 } from '../rules/sessionRowCounting';
-import { SESSION_ROLE_ORDER } from '../utils/sessionRoles';
+import { SESSION_ROLE_ORDER, type SessionRole } from '../utils/sessionRoles';
+import { classifyExerciseRole as progressionClassify } from '../utils/strengthProgressionIntegration';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -283,7 +286,79 @@ console.log('\n[4] STRUCTURAL — the taxonomy has no un-filtered row iteration'
   );
 }
 
-console.log('\n[5] STRUCTURAL — no second strip path survives');
+console.log('\n[5] The role vocabularies map 1:1, in both directions');
+
+// Sam's condition on Stage 4. Three things in this codebase are called a row
+// "role", and deleting around them is exactly when they drift:
+//
+//   `SessionRole`        (6)  what a row IS — authored, ordered by, counted by
+//   `Section18RowRole`   (7)  the same fact in Section 18's spelling
+//   `classifyExerciseRole` in strengthProgressionIntegration — a HOMONYM, not a
+//                             third vocabulary: it answers "may this row
+//                             progress" with primary/secondary/null. Pinned
+//                             below as a homonym so nobody imports the wrong
+//                             one believing it returns a session role.
+//
+// The first two are a genuine second representation and are queued for collapse
+// as their own unit. Until then the crosswalk is the one bridge and these
+// assertions red the suite the moment either side grows a member.
+{
+  const sessionRoles = [...SESSION_ROLE_ORDER];
+  const mapped = Object.keys(SESSION_ROLE_TO_SECTION18_ROW_ROLE) as SessionRole[];
+  ok(
+    'every SessionRole has a Section 18 spelling',
+    sessionRoles.every((role) => mapped.includes(role)) &&
+      mapped.length === sessionRoles.length,
+    `roles=${sessionRoles.join(',')} mapped=${mapped.join(',')}`,
+  );
+
+  const targets = Object.values(SESSION_ROLE_TO_SECTION18_ROW_ROLE);
+  ok(
+    'the mapping is injective — no two roles share a Section 18 spelling',
+    new Set(targets).size === targets.length,
+    targets.join(','),
+  );
+
+  // The reverse direction. Read the union's members out of the source so a new
+  // member cannot be added without this test seeing it.
+  const contractSource = fs.readFileSync(
+    path.join(repoRoot, 'src/rules/weeklyExposureContractV2.ts'),
+    'utf8',
+  );
+  const union = contractSource
+    .slice(contractSource.indexOf('export type Section18RowRole ='))
+    .split(';')[0];
+  const declared = Array.from(union.matchAll(/'([a-z_]+)'/g)).map((match) => match[1]);
+  const covered = [...targets, ...SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE];
+  ok(
+    'every Section18RowRole is either mapped or a declared exception',
+    declared.length > 0 && declared.every((role) => covered.includes(role as never)),
+    `declared=${declared.join(',')} covered=${covered.join(',')}`,
+  );
+  ok(
+    'the only unmapped Section 18 role is the legacy ingress sentinel',
+    JSON.stringify(SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE) === JSON.stringify(['legacy_unknown']),
+    SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE.join(','),
+  );
+
+  // The homonym. `strengthProgressionIntegration.classifyExerciseRole` shares a
+  // NAME with `sessionRoles.classifyExerciseRole` and answers a different
+  // question with a disjoint vocabulary. Asserting disjointness is what makes a
+  // future accidental merge of the two loud.
+  const progressionRoles = ['primary_strength', 'secondary_strength'];
+  ok(
+    "the progression classifier's vocabulary is disjoint from SessionRole",
+    progressionRoles.every((role) => !SESSION_ROLE_ORDER.includes(role as never)) &&
+      progressionRoles.every((role) => !targets.includes(role as never)),
+    progressionRoles.join(','),
+  );
+  ok(
+    'the progression classifier answers eligibility, not identity (null is a valid answer)',
+    progressionClassify('Something The Pools Never Heard Of') === null,
+  );
+}
+
+console.log('\n[6] STRUCTURAL — no second strip path survives');
 
 // The reassessment's other structural gate. Nine production sites removed power
 // by deleting the field: `powerBlock: undefined`, or the spread-and-drop
@@ -312,6 +387,25 @@ console.log('\n[5] STRUCTURAL — no second strip path survives');
     'no production file strips power by deleting the field',
     offenders.length === 0,
     offenders.join(', '),
+  );
+
+  // …and nothing WRITES the legacy field either. `powerBlock` survives on the
+  // type as a read-only door, because the program store has no `partialize` and
+  // therefore serialised it into every program generated before 2026-07-28.
+  // Stage 5 migrates those; until then the field must be inert. A write would
+  // resurrect the representation this unit removed.
+  const writers = productionFiles.filter((file) => {
+    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    // An assignment (`powerBlock:` in an object literal, or `.powerBlock =`),
+    // as opposed to a read (`workout.powerBlock`, `?.powerBlock`).
+    return /(^|[^.?])\bpowerBlock\s*:/m.test(source) || /\.powerBlock\s*=/.test(source);
+  });
+  ok(
+    'nothing writes the legacy powerBlock field — it is a reader-only door',
+    writers.length === 0,
+    writers.join(', '),
   );
 }
 

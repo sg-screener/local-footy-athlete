@@ -13,8 +13,6 @@ import {
   ConditioningBlock,
   IntensityLevel,
   SpeedBlock,
-  PowerBlock,
-  PowerBlockOption,
   WorkoutType,
 } from '../types/domain';
 import {

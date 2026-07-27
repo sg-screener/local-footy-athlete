@@ -7,11 +7,11 @@
  *
  * ── Why this exists ──
  *
- * `buildPowerBlock` hardcodes exercise IDENTITY: lower -> Vertical Jump, or
- * Pogo Hops when reduced; upper -> Explosive Push-up. Adding Sam's four new
- * entries by extending that conditional would deepen exactly the shape the
- * exercise-name literal sweep exists to catch. So identity selection becomes a
- * typed POOL plus a pure selector here in the rules layer, and rendering
+ * The program builder used to hardcode exercise IDENTITY: lower -> Vertical
+ * Jump, or Pogo Hops when reduced; upper -> Explosive Push-up. Adding Sam's four
+ * new entries by extending that conditional would deepen exactly the shape the
+ * exercise-name literal sweep exists to catch. So identity selection is a typed
+ * POOL plus a pure selector here in the rules layer, and the row builder
  * consumes the result.
  *
  * ── Ownership split (unchanged law) ──
@@ -20,7 +20,7 @@
  *                                 (sets / repsMin / repsMax / primer vs
  *                                 contrast / reduced). Untouched by this file.
  *   `selectPowerExercise` (here)  WHICH exercise. Identity only.
- *   `buildPowerBlock`             renders the selection.
+ *   `buildPowerRow`               renders the selection as a row.
  *
  * That split is why no entry below carries sets or reps, and why the selector
  * returns identity with no dose fields: a pool entry that carried a dose would
@@ -35,18 +35,16 @@
  * selector reads the ladder directly rather than adding a third
  * representation. The policy keeps those booleans for its own dose decisions.
  *
- * ── NOT WIRED ──
+ * ── WIRED ──
  *
- * Nothing calls this yet. `buildPowerBlock` still hardcodes identity, and the
- * pool is deliberately NOT one of the four selectability sources, so building
- * it changes no athlete-visible behaviour and makes no name selectable.
+ * `buildPowerRow` (in `defaultProgram.ts`) calls `selectPowerExercise` for every
+ * power row it builds, and the pool is one of the selectability sources, so its
+ * names carry curated cues and demo videos like any other exercise. The
+ * `power_pool_pending` exemption that once waived cue+video+pool for these
+ * names is gone — Sam authored the missing cues.
  *
- * Wiring it is a separate unit because it retires the `power_pool_pending`
- * exemption, which currently waives cue+video+pool for all eight power names.
- * Once retired, the content-completeness gates apply — and `Vertical Jump`,
- * `Explosive Push-up` and `RFE Split Squat Jump` have NO curated cue today.
- * That is also the root cause of `PowerRow` rendering hardcoded `block.notes`
- * instead of curated cues. Those three cues are Sam's to author.
+ * (This header said "NOT WIRED — nothing calls this yet" long after wiring; it
+ * was corrected when power became a row, 2026-07-28.)
  *
  * The athlete override (spec rule 2 / invariant P8) is ruled into execution
  * order step 5, where the per-session controls (+ / - / swap / move) get

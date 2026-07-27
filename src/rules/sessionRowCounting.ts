@@ -8,10 +8,11 @@
  * ## Why one place rather than a guard per probe
  *
  * Power's counting fence — not a hard exposure, not main strength, no
- * conditioning credit, not a finisher — is enforced today BY ABSENCE: power
- * lives in `workout.powerBlock`, so nothing that iterates `workout.exercises`
- * can count it. The `PowerBlockCountingFence` object documents a guarantee the
- * data shape already makes. Move power into the list and the guarantee is gone.
+ * conditioning credit, not a finisher — used to be enforced BY ABSENCE: power
+ * lived in `workout.powerBlock`, so nothing that iterated `workout.exercises`
+ * could count it, and the block's `counting` object merely documented a
+ * guarantee the data shape already made. Power is a row now, so that guarantee
+ * is gone and this module is what replaced it.
  *
  * The obvious repair is a guard at each counter. This repo bans that pattern for
  * good reason: `sessionTaxonomy` has FOUR probes over the row list today, and a
@@ -38,13 +39,16 @@
  * ## Why exemption rather than inclusion
  *
  * The predicate removes rows; it never adds them. A row with no authored role
- * has not been declared exempt, so it counts — which is exactly what happens
- * today. That makes this module incapable of moving a count by omission, which
- * is what lets Stage 2 prove byte-equivalence rather than assert it.
+ * has not been declared exempt, so it counts — which is exactly what happened
+ * before roles existed. That makes this module incapable of moving a count by
+ * omission, which is what let Stage 2 prove byte-equivalence rather than assert
+ * it, and what keeps un-migrated legacy rows counting exactly as they always
+ * did.
  */
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { SessionRole } from '../utils/sessionRoles';
+import type { Section18RowRole } from './weeklyExposureContractV2';
 
 /**
  * Roles whose rows take no part in counting — not in the taxonomy's
@@ -78,6 +82,40 @@ export function countingRows(
 ): readonly WorkoutExercise[] {
   return (workout?.exercises ?? []).filter(participatesInCounting);
 }
+
+/**
+ * THE ROLE CROSSWALK — the single bridge between the app's two row-role
+ * vocabularies.
+ *
+ * `SessionRole` (six) is what a row IS, authored on the row and read for
+ * ordering and counting. `Section18RowRole` (seven) is the same fact in Section
+ * 18's spelling, stamped as row evidence for the weekly evaluator. They map 1:1
+ * with one documented exception, and having two spellings of one fact is a
+ * second representation — queued for collapse as its own unit (Sam, 2026-07-28).
+ *
+ * Until that lands, this is the ONE place the two are related, and
+ * `sessionRowCountingTests` fails if either vocabulary grows a member this map
+ * does not cover. That is the point: the collapse unit will be deleting around
+ * these two, and silent drift while that happens is exactly how a fence goes
+ * missing.
+ *
+ * `legacy_unknown` is the exception and is deliberately absent: it is an INGRESS
+ * SENTINEL for hydrated rows whose evidence predates the classifier, not a kind
+ * of work an author can choose. Nothing may map onto it.
+ */
+export const SESSION_ROLE_TO_SECTION18_ROW_ROLE: Readonly<Record<SessionRole, Section18RowRole>> = {
+  power: 'power',
+  main_lift: 'main_strength',
+  accessory: 'strength_accessory',
+  midline: 'trunk_support',
+  prehab: 'recovery_support',
+  conditioning: 'conditioning',
+};
+
+/** Section 18 row roles with no authored `SessionRole` partner, and why. */
+export const SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE: readonly Section18RowRole[] = [
+  'legacy_unknown',
+];
 
 /**
  * Position among the session's COUNTED work.

@@ -26,7 +26,8 @@ import {
 } from '../utils/coachingEngine';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
-import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
+import { participatesInCounting, powerRows } from '../rules/sessionRowCounting';
 
 let pass = 0;
 let fail = 0;
@@ -164,7 +165,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   ok('nudge cannot override injury', decidePowerPrimer(ctx({ injuries: [{ area: 'groin strain', severity: 6 }], powerGoalNudge: true })) === null);
 }
 
-// ══════════════════ INTEGRATION (rendered powerBlock) ══════════════════
+// ══════════════════ INTEGRATION (rendered power ROW) ══════════════════
 
 const OFF_PROFILE: OnboardingData = {
   seasonPhase: 'Off-season',
@@ -215,27 +216,36 @@ function workoutsFor(
 // Early off-season must stay a true base-rebuild week with no hidden primer.
 {
   const ws = workoutsFor(profile(), undefined, 1);
-  ok('early off-season rendered workouts have no powerBlock', ws.every((w) => !w.powerBlock),
-    ws.map((w) => `${w.dayOfWeek}:${w.powerBlock ? 'POWER' : '-'}`).join(' | '));
+  ok('early off-season rendered workouts have no power row',
+    ws.every((w) => powerRows(w).length === 0),
+    ws.map((w) => `${w.dayOfWeek}:${powerRows(w).length > 0 ? 'POWER' : '-'}`).join(' | '));
 }
 
-// Off-season suitable athlete → at least one strength session carries a powerBlock.
+// Off-season suitable athlete → at least one strength session carries a power row.
 {
   const ws = workoutsFor(profile());
-  const withPower = ws.filter((w) => w.powerBlock);
-  ok('off-season suitable athlete gets a rendered powerBlock', withPower.length >= 1,
-    ws.map((w) => `${w.dayOfWeek}:${w.powerBlock ? w.powerBlock.kind : '-'}`).join(' | '));
+  const withPower = ws.filter((w) => powerRows(w).length > 0);
+  ok('off-season suitable athlete gets a rendered power row', withPower.length >= 1,
+    ws.map((w) => `${w.dayOfWeek}:${powerRows(w)[0]?.power?.kind ?? '-'}`).join(' | '));
 
-  const pb = withPower[0]?.powerBlock;
-  ok('powerBlock is NOT conditioning (credit none)', pb?.counting.conditioningCredit === 'none');
-  ok('powerBlock is NOT a finisher', pb?.counting.isFinisher === false);
-  ok('powerBlock is NOT a hard exposure', pb?.counting.hardExposure === false);
-  ok('powerBlock placed pre-lift', pb?.placement === 'pre_lift');
+  // RE-POINTED to the row era. These four used to read the block's stored
+  // `counting` object — a copy of the fence that could say `false` while the
+  // counters said otherwise. The fence lives in the authored role now, so they
+  // ask the counters directly, which is a stronger question.
+  const row = powerRows(withPower[0])[0];
+  ok('a power row is counted by nothing', !!row && !participatesInCounting(row));
+  ok('a power row carries power Section 18 evidence, never main strength',
+    row?.section18Evidence?.role === 'power', JSON.stringify(row?.section18Evidence));
+  ok('a power row leads the session — pre-lift placement is its position',
+    withPower[0].exercises[0]?.id === row?.id);
 
-  // Power moves must not leak into the exercises list (classifiers read that).
-  const powerNames = /vertical jump|explosive push|pogo|medicine ball|broad jump|box jump/i;
-  const leaked = ws.some((w) => w.exercises.some((ex) => powerNames.test(ex.exercise?.name || '')));
-  ok('power moves never leak into workout.exercises', !leaked);
+  // Power rows DO live in `workout.exercises` now — that is the whole redesign.
+  // What must not happen is a power movement arriving as an ORDINARY row, with
+  // no authored role, where every name probe would count it as strength.
+  const powerNames = /vertical jump|explosive push|pogo|lateral bound|depth jump|kneeling jump|broad jump|box jump/i;
+  const unroled = ws.some((w) => w.exercises.some((ex) =>
+    powerNames.test(ex.exercise?.name || '') && ex.role !== 'power'));
+  ok('no power movement reaches the list without its authored role', !unroled);
 
   const overlay = buildWeekScopedWorkoutOverlay({
     program: {
@@ -246,43 +256,45 @@ function workoutsFor(
     anchorDate: '2026-07-11',
     reason: 'one_off_game',
   });
-  const clonedPower = Object.values(overlay.workoutsByDate)
-    .find((workout) => !!workout?.powerBlock)
-    ?.powerBlock;
-  ok('week rebuild overlay preserves powerBlock title', clonedPower?.title === pb?.title);
-  ok('week rebuild overlay preserves powerBlock prescription', clonedPower?.prescription === pb?.prescription);
-  ok('week rebuild overlay preserves powerBlock exercise options',
-    JSON.stringify(clonedPower?.options) === JSON.stringify(pb?.options));
+  const clonedRow = Object.values(overlay.workoutsByDate)
+    .flatMap((workout) => (workout ? powerRows(workout) : []))[0];
+  ok('week rebuild overlay preserves the power exercise',
+    clonedRow?.exercise?.name === row?.exercise?.name);
+  ok('week rebuild overlay preserves the power dose',
+    clonedRow?.prescribedSets === row?.prescribedSets &&
+    clonedRow?.prescribedRepsMax === row?.prescribedRepsMax);
+  ok('week rebuild overlay preserves the power role and family',
+    clonedRow?.role === 'power' && clonedRow?.power?.family === row?.power?.family);
 }
 
 // Final rows own the visible power identity. Contrast requires a real heavy
 // same-family lift; stale power metadata cannot survive a conditioning shell.
 {
-  const contrastBlock = {
+  const contrastRow = {
     id: 'power-alignment',
-    kind: 'contrast',
-    family: 'lower',
-    title: 'Contrast Power',
-    prescription: '3 x 3 — full rest, fast & sharp',
-    placement: 'pre_lift',
-    options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [] }],
-    notes: ['Contrast: perform sharply straight after your heavy set, then rest fully.'],
-    counting: {
-      hardExposure: false,
-      mainStrength: false,
-      conditioningCredit: 'none',
-      isFinisher: false,
-    },
+    workoutId: 'x',
+    exerciseId: 'ex-vertical-jump',
+    exerciseOrder: 0,
+    prescribedSets: 3,
+    prescribedRepsMin: 3,
+    prescribedRepsMax: 3,
+    restSeconds: 120,
+    notes: 'Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully.',
+    role: 'power',
+    power: { family: 'lower', kind: 'contrast' },
+    exercise: { id: 'ex-vertical-jump', name: 'Vertical Jump' },
   } as const;
 
-  const conditioningOnly = alignPowerBlockToFinalWorkoutContent({
+  const conditioningOnly = alignPowerToFinalWorkoutContent({
     id: 'conditioning-only-power',
     microcycleId: 'mc-1',
     name: 'Bike Tempo',
     dayOfWeek: 'Monday',
     orderIndex: 0,
     workoutType: 'Conditioning',
-    exercises: [{
+    exercises: [
+      { ...contrastRow, workoutId: 'x' },
+      {
       id: 'we-bike',
       workoutId: 'conditioning-only-power',
       exerciseId: 'ex-bike',
@@ -292,20 +304,21 @@ function workoutsFor(
       prescribedRepsMax: 8,
       restSeconds: 120,
     }],
-    powerBlock: contrastBlock,
   } as any);
   ok('conditioning-only final workout cannot carry power',
-    conditioningOnly.action === 'removed' && !conditioningOnly.workout.powerBlock,
+    conditioningOnly.action === 'removed' && powerRows(conditioningOnly.workout).length === 0,
     JSON.stringify(conditioningOnly));
 
-  const lightLower = alignPowerBlockToFinalWorkoutContent({
+  const lightLower = alignPowerToFinalWorkoutContent({
     id: 'light-lower-power',
     microcycleId: 'mc-1',
     name: 'Lower Support',
     dayOfWeek: 'Tuesday',
     orderIndex: 1,
     workoutType: 'Strength',
-    exercises: [{
+    exercises: [
+      { ...contrastRow, workoutId: 'x' },
+      {
       id: 'we-goblet',
       workoutId: 'light-lower-power',
       exerciseId: 'ex-goblet',
@@ -315,15 +328,13 @@ function workoutsFor(
       prescribedRepsMax: 12,
       restSeconds: 90,
     }],
-    powerBlock: contrastBlock,
   } as any);
   ok('power without a heavy same-family lift is labelled primer, not contrast',
     lightLower.action === 'downgraded'
-      && lightLower.workout.powerBlock?.kind === 'primer'
-      && lightLower.workout.powerBlock?.title === 'Power Primer',
+      && powerRows(lightLower.workout)[0]?.power?.kind === 'primer',
     JSON.stringify(lightLower));
 
-  const heavyLower = alignPowerBlockToFinalWorkoutContent({
+  const heavyLower = alignPowerToFinalWorkoutContent({
     id: 'heavy-lower-power',
     microcycleId: 'mc-1',
     name: 'Lower Strength',
@@ -332,6 +343,7 @@ function workoutsFor(
     workoutType: 'Strength',
     hasCombinedConditioning: true,
     exercises: [
+      { ...contrastRow, workoutId: 'x' },
       {
         id: 'we-squat',
         workoutId: 'heavy-lower-power',
@@ -357,10 +369,9 @@ function workoutsFor(
     conditioningBlock: {
       options: [{ title: 'Easy Bike', description: '20 minutes easy', exerciseIds: ['we-bike'] }],
     },
-    powerBlock: contrastBlock,
   } as any);
   ok('mixed S+C with real heavy same-family strength preserves contrast power',
-    heavyLower.action === 'unchanged' && heavyLower.workout.powerBlock?.kind === 'contrast',
+    heavyLower.action === 'unchanged' && powerRows(heavyLower.workout)[0]?.power?.kind === 'contrast',
     JSON.stringify(heavyLower));
 }
 
@@ -381,28 +392,29 @@ function workoutsFor(
 {
   const normal = workoutsFor(profile());
   const deload = workoutsFor(profile(), 'deload');
-  const normalBlocks = normal.filter((w) => w.powerBlock);
-  const deloadBlocks = deload.filter((w) => w.powerBlock);
+  const normalBlocks = normal.filter((w) => powerRows(w).length > 0);
+  const deloadBlocks = deload.filter((w) => powerRows(w).length > 0);
 
   ok('deload week still renders power', deloadBlocks.length >= 1,
-    deload.map((w) => `${w.dayOfWeek}:${w.powerBlock ? 'POWER' : '-'}`).join(' | '));
+    deload.map((w) => `${w.dayOfWeek}:${powerRows(w).length > 0 ? 'POWER' : '-'}`).join(' | '));
 
-  const normalSets = normalBlocks[0]?.powerBlock?.options[0]?.sets ?? 0;
-  const deloadSets = deloadBlocks[0]?.powerBlock?.options[0]?.sets ?? 0;
+  const normalSets = powerRows(normalBlocks[0])[0]?.prescribedSets ?? 0;
+  const deloadSets = powerRows(deloadBlocks[0])[0]?.prescribedSets ?? 0;
   ok('the deload dose is SMALLER than the normal week\'s', deloadSets < normalSets,
     `normal=${normalSets} deload=${deloadSets}`);
   ok('the deload dose keeps at least one working set', deloadSets >= 1, `${deloadSets}`);
 
-  const normalOption = normalBlocks[0]?.powerBlock?.options[0];
-  const deloadOption = deloadBlocks[0]?.powerBlock?.options[0];
+  const normalOption = powerRows(normalBlocks[0])[0];
+  const deloadOption = powerRows(deloadBlocks[0])[0];
   ok('the deload keeps the same EXERCISE — structure holds, work shrinks',
-    !!normalOption && !!deloadOption && normalOption.name === deloadOption.name,
-    `normal=${normalOption?.name} deload=${deloadOption?.name}`);
+    !!normalOption && !!deloadOption &&
+      normalOption.exercise?.name === deloadOption.exercise?.name,
+    `normal=${normalOption?.exercise?.name} deload=${deloadOption?.exercise?.name}`);
   ok('the deload keeps the rep range — the dose stays sharp',
     !!normalOption && !!deloadOption &&
-      normalOption.repsMin === deloadOption.repsMin &&
-      normalOption.repsMax === deloadOption.repsMax,
-    `normal=${normalOption?.repsMin}-${normalOption?.repsMax} deload=${deloadOption?.repsMin}-${deloadOption?.repsMax}`);
+      normalOption.prescribedRepsMin === deloadOption.prescribedRepsMin &&
+      normalOption.prescribedRepsMax === deloadOption.prescribedRepsMax,
+    `normal=${normalOption?.prescribedRepsMin}-${normalOption?.prescribedRepsMax} deload=${deloadOption?.prescribedRepsMin}-${deloadOption?.prescribedRepsMax}`);
 }
 
 // The power block is BODYWEIGHT-ONLY and equipment-independent.
@@ -416,19 +428,19 @@ function workoutsFor(
 {
   const noBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench'] }));
   const withBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench', 'Medicine Ball'] }));
-  const blocks = [...noBall, ...withBall].filter((w) => w.powerBlock);
+  const blocks = [...noBall, ...withBall].flatMap((w) => powerRows(w));
 
   ok('every power option needs no equipment at all',
-    blocks.every((w) => w.powerBlock!.options.every((o) => o.equipmentRequired.length === 0)),
-    blocks.map((w) => w.powerBlock!.options.map((o) => `${o.name}[${o.equipmentRequired.join(',')}]`).join('/')).join(' | '));
+    blocks.every((r) => (r.exercise?.equipmentRequired ?? []).length === 0),
+    blocks.map((r) => `${r.exercise?.name}[${(r.exercise?.equipmentRequired ?? []).join(',')}]`).join(' | '));
 
   ok('no medicine-ball option is offered, with or without a ball',
-    blocks.every((w) => w.powerBlock!.options.every((o) => !/medicine ball/i.test(o.name))));
+    blocks.every((r) => !/medicine ball/i.test(r.exercise?.name ?? '')));
 
   // Equipment-independence, proven by comparison rather than asserted: the same
   // athlete with and without a ball gets byte-identical power options.
   const names = (ws: typeof noBall) =>
-    ws.filter((w) => w.powerBlock).map((w) => w.powerBlock!.options.map((o) => o.name).join('/')).join(' | ');
+    ws.flatMap((w) => powerRows(w)).map((r) => r.exercise?.name ?? '').join(' | ');
   ok('owning a medicine ball changes no power option',
     names(noBall) === names(withBall),
     `noBall="${names(noBall)}"\n      withBall="${names(withBall)}"`);

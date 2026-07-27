@@ -57,7 +57,7 @@ import {
 } from '../store/coachPreferencesStore';
 import { applyModalityPreferenceToWorkout } from './coachModalitySwap';
 import { shouldCollapseWorkoutToRest } from './workoutContent';
-import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 
 /** Map InjuryBucket → ConstraintRegion. Conservative defaults. */
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
@@ -230,7 +230,7 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
   }
 
   if (preprocessedWorkout && day.date >= todayISO) {
-    preprocessedWorkout = alignPowerBlockToFinalWorkoutContent(preprocessedWorkout).workout;
+    preprocessedWorkout = alignPowerToFinalWorkoutContent(preprocessedWorkout).workout;
   }
 
   let visibleDay = preprocessedWorkout
@@ -317,7 +317,7 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
     finalRemoved = [...finalRemoved, ...Array.from(violationNames)];
   }
 
-  workoutNow = alignPowerBlockToFinalWorkoutContent(workoutNow).workout;
+  workoutNow = alignPowerToFinalWorkoutContent(workoutNow).workout;
 
   return {
     day: collapseEmptyVisibleWorkoutShell({

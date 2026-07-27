@@ -1,4 +1,4 @@
-import type { PowerBlock, Workout } from '../types/domain';
+import type { Workout } from '../types/domain';
 import { getSessionComponentRows } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
@@ -57,11 +57,6 @@ export interface SessionSupersetTag {
 }
 
 export type SessionTemplateItem =
-  | {
-      kind: 'power';
-      role: 'power';
-      block: PowerBlock;
-    }
   | {
       kind: 'exercise';
       role: SessionRole;

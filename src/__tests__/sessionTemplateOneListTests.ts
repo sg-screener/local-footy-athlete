@@ -96,7 +96,6 @@ function roles(items: SessionTemplateItem[]): Array<SessionRole | null> {
 function names(items: SessionTemplateItem[]): string[] {
   return items.map((item) => {
     if (item.kind === 'exercise') return item.row?.exercise?.name ?? item.row?.name ?? '?';
-    if (item.kind === 'power') return `power:${item.block.title}`;
     if (item.kind === 'conditioning_choice') return `choice:${item.options.length}`;
     return 'team_training';
   });
@@ -501,9 +500,16 @@ console.log('\n[9] DayWorkoutScreenV2 renders one list from the composition owne
     !/PowerPrimerSection/.test(screen),
     'power is the first list row now, and Sam ruled it off recovery days too',
   );
+  // RE-POINTED. This used to assert `<PowerRow`, an interim component that was
+  // still a block renderer wearing a row's name — it took `block={item.block}`
+  // and printed the block's own title, prescription and notes. Stage 4 retired
+  // it: power now goes through the SAME strength-row path as every other
+  // exercise, which is what "power renders as a normal exercise row" actually
+  // means. The screen having no power-specific renderer at all is the stronger
+  // statement, and the one that stays true.
   ok(
-    'power is rendered as a list row instead',
-    /<PowerRow/.test(screen),
+    'the screen has no power-specific renderer — power uses the ordinary row path',
+    !/PowerRow|powerBlock|item\.kind === 'power'/.test(screen),
   );
   ok(
     'the Trunk / Support box is gone',

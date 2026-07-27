@@ -27,6 +27,7 @@ import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import type { InjuryState } from '../utils/injuryProgression';
 import { buildFatigueConstraint } from '../utils/exposureEngine';
+import { powerRows } from '../rules/sessionRowCounting';
 
 // ─── Harness ───
 let pass = 0;
@@ -594,12 +595,12 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     activeInjury: null,
     todayISO: TODAY_ISO,
   });
-  eq('valid strength-linked powerBlock title survives visible projection',
-    validPowerProjected.day.workout?.powerBlock?.title,
-    'Power Primer');
-  eq('valid strength-linked powerBlock prescription survives visible projection',
-    validPowerProjected.day.workout?.powerBlock?.prescription,
-    '3 x 3 jumps');
+  eq('valid strength-linked power row survives visible projection as a primer',
+    powerRows(validPowerProjected.day.workout!)[0]?.power?.kind,
+    'primer');
+  eq('valid strength-linked power row keeps its dose',
+    powerRows(validPowerProjected.day.workout!)[0]?.prescribedSets,
+    3);
   eq('valid strength-linked powerBlock exercise option survives visible projection',
     validPowerProjected.day.workout?.powerBlock?.options?.[0]?.name,
     'Vertical Jump');

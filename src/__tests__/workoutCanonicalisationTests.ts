@@ -5,7 +5,7 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
-import type { Microcycle, PowerBlock, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
+import type { Microcycle, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
@@ -17,6 +17,7 @@ import {
 } from '../utils/postGenerationConstraintValidation';
 import { getSessionComponentRows, getSessionComponents } from '../utils/sessionComponents';
 import { combinedConditioningCategoryLabel } from '../utils/weeklyPlanDisplay';
+import { powerRows } from '../rules/sessionRowCounting';
 
 let pass = 0;
 let fail = 0;
@@ -86,27 +87,28 @@ function workout(
   };
 }
 
-function power(kind: 'primer' | 'contrast', family: 'lower' | 'upper'): PowerBlock {
+/** A power ROW — power's home since 2026-07-28. */
+function power(kind: 'primer' | 'contrast', family: 'lower' | 'upper'): WorkoutExercise {
+  const name = family === 'lower' ? 'Broad Jump' : 'Explosive Push-Up';
   return {
+    ...row(name, -1),
     id: `power-${kind}-${family}`,
-    kind,
-    family,
-    title: kind === 'contrast' ? 'Contrast Power' : 'Power Primer',
-    prescription: '3 x 3 — full rest, fast & sharp',
-    placement: 'pre_lift',
-    options: [{
-      name: family === 'lower' ? 'Broad Jump' : 'Explosive Push-Up',
-      sets: 3,
-      repsMin: 3,
-      repsMax: 3,
-      equipmentRequired: [],
-    }],
-    notes: kind === 'contrast' ? ['Contrast: pair with the heavy lift.'] : ['Stay sharp.'],
-    counting: {
-      hardExposure: false,
-      mainStrength: false,
-      conditioningCredit: 'none',
-      isFinisher: false,
+    exerciseOrder: 0,
+    prescribedSets: 3,
+    prescribedRepsMin: 3,
+    prescribedRepsMax: 3,
+    prescribedWeightKg: undefined,
+    notes: kind === 'contrast'
+      ? 'Do this fresh, early in the session — before the main lifts. Contrast: pair with the heavy lift.'
+      : 'Do this fresh, early in the session — before the main lifts.',
+    role: 'power',
+    power: { family, kind },
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'power',
+      strengthPattern: null,
+      mainStrengthPattern: null,
+      provenance: 'canonical_row_classifier',
     },
   };
 }
@@ -139,18 +141,19 @@ section('[1] raw conditioning becomes a canonical component');
 
 section('[2] early off-season rejects hard/raw power and downgrades erg intervals');
 {
-  const result = finaliseWorkoutAfterMutation(workout('Full Body', [
+  const result = finaliseWorkoutAfterMutation(workout('Full Body', [power('contrast', 'lower'), 
     row('Romanian Deadlift', 0),
     row('Pull-Ups', 1),
     row('Broad Jump', 2, { pairType: 'contrast', supersetGroup: 'A' }),
     row('Explosive Push-Ups', 3),
     row('Rower Intervals', 4),
-  ], { powerBlock: power('contrast', 'lower') }), EARLY);
+  ]), EARLY);
   const names = result.workout.exercises.map((item) => item.exercise?.name ?? '');
   ok('raw Broad Jump and Explosive Push-Ups are removed',
     !names.some((name) => /broad jump|explosive push/i.test(name)), names);
-  ok('early powerBlock and contrast are removed',
-    !result.workout.powerBlock && result.workout.exercises.every((item) => item.pairType !== 'contrast'));
+  ok('early power row and contrast are removed',
+    powerRows(result.workout).length === 0 &&
+      result.workout.exercises.every((item) => item.pairType !== 'contrast'));
   ok('Rower Intervals becomes easy intervalised RowErg work',
     names.some((name) => /Easy RowErg Aerobic Blocks/i.test(name)) &&
       result.workout.conditioningBlock?.intent === 'aerobic');
@@ -168,27 +171,28 @@ section('[3] typed power remains bounded by subphase and final strength content'
     prescribedWeightKg: 100,
   });
   const mid = finaliseWorkoutAfterMutation(
-    workout('Lower Squat', [heavySquat], { powerBlock: power('contrast', 'lower') }),
+    workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),
     { phase: 'Off-season', offseasonSubphase: 'mid_offseason', readiness: 'high' },
   );
   ok('mid off-season keeps valid power only as primer',
-    mid.workout.powerBlock?.kind === 'primer' && mid.workout.powerBlock.title === 'Power Primer');
+    powerRows(mid.workout)[0]?.power?.kind === 'primer');
 
   const late = finaliseWorkoutAfterMutation(
-    workout('Lower Squat', [heavySquat], { powerBlock: power('contrast', 'lower') }),
+    workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),
     { phase: 'Off-season', offseasonSubphase: 'late_offseason', readiness: 'high' },
   );
   ok('late off-season keeps contrast with heavy same-family main lift',
-    late.workout.powerBlock?.kind === 'contrast');
+    powerRows(late.workout)[0]?.power?.kind === 'contrast');
 
   const removedLift = finaliseWorkoutAfterMutation(
-    workout('Lower Squat', [row('Pallof Press', 0)], { powerBlock: power('contrast', 'lower') }),
+    workout('Lower Squat', [power('contrast', 'lower'), row('Pallof Press', 0)]),
     { phase: 'Off-season', offseasonSubphase: 'late_offseason', readiness: 'high' },
   );
-  ok('removing final same-family lift removes stale contrast power', !removedLift.workout.powerBlock);
+  ok('removing final same-family lift removes stale contrast power',
+    powerRows(removedLift.workout).length === 0);
 
   const gameProtected = finaliseWorkoutAfterMutation(
-    workout('Lower Squat', [heavySquat], { powerBlock: power('primer', 'lower') }),
+    workout('Lower Squat', [power('primer', 'lower'), heavySquat]),
     {
       offseasonSubphase: 'not_off_season',
       phase: 'In-season', readiness: 'high', hasGame: true, gOffset: -1,
@@ -196,7 +200,7 @@ section('[3] typed power remains bounded by subphase and final strength content'
     },
   );
   ok('typed power cannot survive the canonical G-1 safety gate',
-    !gameProtected.workout.powerBlock && gameProtected.actions.some((action) =>
+    powerRows(gameProtected.workout).length === 0 && gameProtected.actions.some((action) =>
       action.reason === 'game_proximity_power_blocked:G-1'));
 }
 
@@ -370,7 +374,7 @@ section('[8] generation, workout write, microcycle write and program write conve
         ? 'conditioning'
         : 'training',
     })),
-    power: value.powerBlock?.kind ?? null,
+    power: powerRows(value)[0]?.power?.kind ?? null,
   });
   eq('direct generation and single edit finalisation agree', shape(single), shape(direct));
   eq('microcycle/rebuild write finalisation agrees', shape(fromMicrocycle), shape(direct));
@@ -481,7 +485,7 @@ section('[11] the off-season subphase is carried, never guessed');
   ok(
     'an Off-season context claiming not_off_season THROWS at the reader',
     threw(() => finaliseWorkoutAfterMutation(
-      workout('Lower Squat', [row('Back Squat', 0)], { powerBlock: power('primer', 'lower') }),
+      workout('Lower Squat', [power('primer', 'lower'), row('Back Squat', 0)]),
       { phase: 'Off-season', offseasonSubphase: 'not_off_season' },
     )),
   );

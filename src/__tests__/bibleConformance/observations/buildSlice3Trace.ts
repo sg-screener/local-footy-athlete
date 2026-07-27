@@ -1,9 +1,9 @@
 import { performance } from 'node:perf_hooks';
-import type { OnboardingData, PowerBlock, Workout, WorkoutExercise } from '../../../types/domain';
+import type { OnboardingData, Workout, WorkoutExercise } from '../../../types/domain';
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
-import { alignPowerBlockToFinalWorkoutContent } from '../../../rules/powerBlockContentAlignment';
+import { alignPowerToFinalWorkoutContent } from '../../../rules/powerRowAlignment';
 import { decidePowerPrimer, type PowerPrimerContext } from '../../../rules/powerPrimerPolicy';
 import { classifyVisibleSession } from '../../../rules/sessionClassificationAdapter';
 import { countWeeklyExposures } from '../../../rules/weeklyExposureCounts';
@@ -249,7 +249,7 @@ function powerLedger(workout: Workout | null): HarnessPowerIntent {
   if (!row) return { kind: 'none' };
   const family = row.power!.family;
   if (row.power!.kind === 'primer') return { kind: 'primer', explosiveFamily: family };
-  const aligned = alignPowerBlockToFinalWorkoutContent(workout!);
+  const aligned = alignPowerToFinalWorkoutContent(workout!);
   return {
     kind: 'contrast',
     explosiveFamily: family,

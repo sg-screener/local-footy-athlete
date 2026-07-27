@@ -100,7 +100,7 @@ function allocationComponents(session: SessionAllocation): HarnessSessionCompone
   if ((session.strengthIntent?.plannedPatterns.length ?? 0) > 0) components.push('strength');
   if (session.hasCombinedConditioning || session.conditioningCategory) components.push('conditioning');
   if (session.isTeamDay) components.push('team_training');
-  if (session.powerBlock) components.push('power');
+  if (session.powerPrimer) components.push('power');
   return COMPONENT_ORDER.filter((component) => components.includes(component));
 }
 
