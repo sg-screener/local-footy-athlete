@@ -43,6 +43,7 @@ import {
   resolveLoadAuthority,
 } from '../utils/loadEstimation';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { PENDING_LISTS } from '../data/provenancePendingLists';
 import { readSheetRecords } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -266,15 +267,38 @@ console.log('\n[7] PROVENANCE — lattices trace to Sam\'s ruling');
     /(?<![\d.])4(?![\d])/.test(latticeAnchor));
 }
 
-console.log('\n[8] Unruled minimums are VISIBLE, not blessed by proximity');
+console.log('\n[8] EVERY equipment kind is ruled, and the empty queue says why');
 {
-  // An unruled number inside an authored file reads as authored. Naming them
-  // is the difference between a known gap and a silent one.
-  console.log(`      (minimums still awaiting a ruling: ${MINIMUMS_PENDING.join(', ') || 'none'})`);
-  ok('every pending minimum is genuinely unruled',
-    MINIMUMS_PENDING.every((k) => !EQUIPMENT[k].minimumRuled));
-  ok('the two Sam named are marked ruled',
-    EQUIPMENT.barbell.minimumRuled && EQUIPMENT.kettlebell.minimumRuled);
+  // Sam closed the table on 2026-07-28: dumbbell 1, cable 2.5, machine 10,
+  // joining barbell 20 and kettlebell 8. Nothing about equipment is inherited.
+  const RULED_MINIMUMS: Array<[keyof typeof EQUIPMENT, number]> = [
+    ['barbell', 20], ['cable', 2.5], ['machine', 10],
+    ['kettlebell', 8], ['dumbbell', 1], ['bodyweight', 0],
+  ];
+  for (const [kind, minimum] of RULED_MINIMUMS) {
+    ok(`${kind} minimum is ${minimum} kg`, EQUIPMENT[kind].minimumKg === minimum,
+      `got ${EQUIPMENT[kind].minimumKg}`);
+  }
+  okEmpty('no equipment kind is left inherited',
+    (Object.keys(EQUIPMENT) as Array<keyof typeof EQUIPMENT>)
+      .filter((k) => !EQUIPMENT[k].minimumRuled));
+
+  // The dumbbell ruling closes a specific gap: the lattice started at 1 kg while
+  // the minimum was 5, so 1-4 kg dumbbells were loadable and never prescribed.
+  ok('the dumbbell minimum now agrees with its lattice start',
+    prescribableWeight(1, 'dumbbell') === 1,
+    `1 kg is loadable but resolves to ${prescribableWeight(1, 'dumbbell')}`);
+
+  // AND THE EMPTY QUEUE MUST SAY WHY IT IS EMPTY. This is the exact defect
+  // LOAD_RULING_PENDING demonstrated — an empty list nobody emptied reads as a
+  // completed review. `ruled_empty` carries attribution; a bare empty array
+  // would not, and the gate treats that difference as the whole point.
+  ok('MINIMUMS_PENDING is empty', MINIMUMS_PENDING.length === 0,
+    MINIMUMS_PENDING.join(', '));
+  ok('the empty queue is a RECORDED ruling, not an unworked list',
+    PENDING_LISTS.equipment_minimums?.status === 'ruled_empty',
+    `PENDING_LISTS.equipment_minimums is `
+    + `"${PENDING_LISTS.equipment_minimums?.status ?? 'absent'}"`);
 }
 
 console.log('\n[9] THE PHASE 2 GATE — workbook and code agree, both directions');

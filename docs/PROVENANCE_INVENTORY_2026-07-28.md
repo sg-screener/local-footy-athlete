@@ -269,6 +269,24 @@ flat 2.5 → the 1 kg/2.5 kg lattice, and **nearest → DOWN everywhere**. Kettl
 4 kg (Sam's first 2 kg line was superseded by his own correction, to match rack
 availability).
 
+### Equipment minimums — the table is now complete
+
+> Dumbbell minimum 1 kg (matches the lattice start — 1–4 kg dumbbells now prescribable). Cable minimum 2.5 kg. Machine minimum 10 kg.
+
+With barbell 20 kg and kettlebell 8 kg already ruled when Sam named them in the
+floor-out ruling, **every equipment kind now has a Sam-authored minimum and lattice**
+in the single `equipmentLattice` owner. Nothing about equipment is inherited any more.
+
+The dumbbell ruling closes the tension flagged when the lattices landed: the ruled
+lattice started at 1 kg while the inherited minimum was 5 kg, so 1–4 kg dumbbells were
+loadable and never prescribed. Minimum and lattice now agree.
+
+`MINIMUMS_PENDING` is consequently empty — and is recorded as `ruled_empty` with
+attribution rather than simply becoming an empty array. An empty list that nobody
+emptied is indistinguishable from a completed review; that is the defect
+`LOAD_RULING_PENDING` demonstrated, and the mechanism built to stop it is now doing
+the job it was built for.
+
 ### Floor-out four — a typed authority, not a dead ratio
 
 > These prescribe the equipment minimum by default (20 kg barbell curl, 8 kg bottoms-up KB press, etc.).

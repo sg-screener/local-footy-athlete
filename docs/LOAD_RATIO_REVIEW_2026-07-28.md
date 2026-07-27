@@ -44,14 +44,16 @@ corrected. Their number is their number.
 | Equipment | Lattice | Rounding | Minimum | Minimum ruled? |
 |---|---|---|---|---|
 | barbell | 2.5 kg steps | DOWN | 20 kg | yes |
-| cable | 2.5 kg steps | DOWN | 5 kg | **no — inherited** |
-| machine | 2.5 kg steps | DOWN | 10 kg | **no — inherited** |
+| cable | 2.5 kg steps | DOWN | 2.5 kg | yes |
+| machine | 2.5 kg steps | DOWN | 10 kg | yes |
 | kettlebell | 4 kg steps (8, 12, 16, 20, 24 …) | DOWN | 8 kg | yes |
-| dumbbell | 1–10 kg by 1, then 2.5 kg steps | DOWN | 5 kg | **no — inherited** |
+| dumbbell | 1–10 kg by 1, then 2.5 kg steps | DOWN | 1 kg | yes |
 
-> **Open for Sam.** Three minimums are inherited rather than ruled. Note the dumbbell
-> tension: the ruled lattice starts at 1 kg but the inherited minimum is 5 kg, so 1–4 kg
-> dumbbells are loadable and never prescribed.
+**Every equipment kind is ruled** — minimum and lattice both, in one owner.
+The dumbbell minimum of 1 kg matches its lattice start: before Sam ruled it the
+minimum was 5 kg while the ladder began at 1, so 1–4 kg dumbbells were loadable
+and never prescribed. Closing that gap changes 17 cards for a 55 kg beginner and
+none for a typical 80 kg athlete — exactly the population it should serve.
 
 ## 3. Equipment-minimum prescriptions — 4
 

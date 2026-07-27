@@ -61,6 +61,20 @@ export const PENDING_LISTS: Record<string, PendingList> = {
   },
 
   /**
+   * Equipment minimums. Sam ruled barbell 20 and kettlebell 8 alongside the
+   * floor-out four, then closed the table with dumbbell 1, cable 2.5 and
+   * machine 10. Every equipment kind now carries a ruled minimum AND a ruled
+   * lattice in one owner, so there is nothing left to park.
+   */
+  equipment_minimums: {
+    status: 'ruled_empty',
+    attribution: {
+      ruledOn: '2026-07-28',
+      where: 'docs/PROVENANCE_INVENTORY_2026-07-28.md',
+    },
+  },
+
+  /**
    * The exercise-name literal lock's `awaiting_sam_ruling` kind. Sam ruled all
    * six cueless names surfaced by the live "Add exercise" table.
    */

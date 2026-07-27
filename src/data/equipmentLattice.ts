@@ -62,29 +62,28 @@ const DUMBBELL_RUNGS: readonly number[] = [
 ];
 
 export const EQUIPMENT: Record<EquipmentKind, EquipmentSpec> = {
-  // minimumRuled: Sam named "20 kg barbell curl" and "8 kg bottoms-up KB press"
-  // when ruling the floor-out four, so those two minimums carry a ruling. The
-  // others are inherited from the unauthored table and are listed in
-  // MINIMUMS_PENDING rather than quietly blessed by sitting in a ruled file.
+  // Every minimum is now Sam-ruled. Barbell 20 and kettlebell 8 came with the
+  // floor-out ruling; dumbbell 1, cable 2.5 and machine 10 closed the table on
+  // 2026-07-28. Nothing here is inherited from the pre-ruling values.
   barbell: { lattice: { kind: 'step', stepKg: 2.5 }, minimumKg: 20, minimumRuled: true },
-  cable: { lattice: { kind: 'step', stepKg: 2.5 }, minimumKg: 5, minimumRuled: false },
-  machine: { lattice: { kind: 'step', stepKg: 2.5 }, minimumKg: 10, minimumRuled: false },
+  cable: { lattice: { kind: 'step', stepKg: 2.5 }, minimumKg: 2.5, minimumRuled: true },
+  machine: { lattice: { kind: 'step', stepKg: 2.5 }, minimumKg: 10, minimumRuled: true },
   kettlebell: { lattice: { kind: 'step', stepKg: 4 }, minimumKg: 8, minimumRuled: true },
-  dumbbell: { lattice: { kind: 'rungs', rungsKg: DUMBBELL_RUNGS }, minimumKg: 5, minimumRuled: false },
+  // 1 kg matches the lattice start. Before Sam ruled it the minimum was 5 while
+  // the lattice began at 1, so 1-4 kg dumbbells were loadable and never
+  // prescribed — a floor that quietly contradicted the ladder above it.
+  dumbbell: { lattice: { kind: 'rungs', rungsKg: DUMBBELL_RUNGS }, minimumKg: 1, minimumRuled: true },
   bodyweight: { lattice: { kind: 'none' }, minimumKg: 0, minimumRuled: true },
 };
 
 /**
- * Minimums Sam has NOT ruled, carried forward from the unauthored table.
+ * Minimums Sam has not ruled. EMPTY as of 2026-07-28 — and empty for a reason
+ * that is recorded rather than assumed.
  *
- * Named out loud because the alternative is worse: an unruled number sitting
- * inside an authored file reads as authored, which is the "absence rendered as
- * approval" defect the provenance lock exists to close. A populated list is an
- * honest report that work remains — see `provenancePendingLists`.
- *
- * Note the dumbbell tension worth Sam's eye: the ruled lattice starts at 1 kg,
- * but the inherited minimum is 5 kg, so 1–4 kg dumbbells are loadable and never
- * prescribed.
+ * `PENDING_LISTS.equipment_minimums` carries the `ruled_empty` state with
+ * attribution. That distinction is the whole point: an empty array nobody
+ * emptied is indistinguishable from a completed review, which is precisely what
+ * `LOAD_RULING_PENDING` looked like while 71 ratios sat unruled behind it.
  */
 export const MINIMUMS_PENDING: readonly EquipmentKind[] =
   (Object.keys(EQUIPMENT) as EquipmentKind[]).filter((k) => !EQUIPMENT[k].minimumRuled);
