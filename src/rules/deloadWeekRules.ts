@@ -14,14 +14,59 @@ export type DeloadConditioningCategory =
   | 'vo2'
   | 'glycolytic';
 
+/**
+ * THE DELOAD LAW — Sam's authored transformation (2026-07-27, Bible §14).
+ *
+ * "Same week, same days — the structure doesn't change, the work shrinks."
+ *
+ * This is the WHAT. It is deliberately separate from the WHEN, because three
+ * doors deload — a scheduled deload week, a low-readiness call (rolling 7
+ * days), and an active moderate-or-severe illness — and Sam's law says no door
+ * invents its own reductions. A door decides IF; this decides WHAT, once.
+ *
+ * Two entries supersede shipped behaviour:
+ *   conditioningWorkMultiplier — conditioning used to be untouched by a deload
+ *     apart from a category downgrade. Halving the work is new law.
+ *   keepPower — power used to be REMOVED outright on deload weeks. Sam keeps a
+ *     small sharp dose: a deload is not a reason to lose sharpness.
+ */
+export const DELOAD_LAW = {
+  /** Main lifts: "half the sets". */
+  mainLiftSetMultiplier: 0.5,
+  /** Never halve a lift out of existence. */
+  minSetsPerExercise: 1,
+  /** "Every set easy — RPE 5-6 ... nowhere near failure." */
+  rpeMin: 5,
+  rpeMax: 6,
+  /** "Accessories: cut to 2-3, or half, whichever is less." */
+  accessoryMaxKept: 3,
+  accessoryKeepMultiplier: 0.5,
+  /** "Conditioning: half the total work." */
+  conditioningWorkMultiplier: 0.5,
+  /** "One quality exposure max, the rest easy aerobic." */
+  maxQualityConditioningExposures: 1,
+  /** "Power/speed: keep a small sharp dose." Not removed. */
+  keepPower: true,
+  /** Few reps, full recovery — the dose stays sharp while it shrinks. */
+  powerSetMultiplier: 0.5,
+  minPowerSets: 1,
+  /**
+   * "Weight stays the same or drops slightly if you're beat up." The default is
+   * HOLD. The drop is CONDITIONAL, so it is not an unconditional multiplier —
+   * which is what the code did before this law.
+   */
+  beatUpLoadMultiplier: 0.9,
+} as const;
+
 export interface DeloadWeekPolicy {
   weekKind: 'deload';
   seasonPhase: 'Off-season' | 'Pre-season';
   intensityMultiplier: number;
-  rpeCap: number;
-  setDrop: number;
-  minSets: number;
-  maxAccessoriesToRemove: number;
+  /**
+   * True when the athlete is beat up, which is the ONLY case Sam's law drops
+   * the weight. Absent/false means hold the weight.
+   */
+  athleteIsBeatUp?: boolean;
 }
 
 export function resolveWeekKind(
@@ -51,10 +96,6 @@ export function resolveDeloadWeekPolicy(
     weekKind: 'deload',
     seasonPhase,
     intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
-    rpeCap: 7,
-    setDrop: 1,
-    minSets: 2,
-    maxAccessoriesToRemove: 2,
   };
 }
 
@@ -103,30 +144,41 @@ function roundLoad(weightKg: number): number {
   return Math.round(weightKg * 2) / 2;
 }
 
-function appendDeloadNote(notes: string | undefined, rpeCap: number): string {
-  const note = `Deload week: keep RPE 6-${rpeCap}; leave reps in reserve.`;
+function appendDeloadNote(notes: string | undefined): string {
+  const note =
+    `Deload: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
+    + 'every rep fast and clean, nowhere near failure.';
   if (!notes) return note;
   if (/Deload week:/i.test(notes)) return notes;
   return `${notes} ${note}`;
 }
 
+/**
+ * Apply the deload law to a session's STRENGTH rows.
+ *
+ * Main lifts halve their sets; accessories are cut to 2-3 or half, whichever is
+ * less; weight is HELD unless the athlete is beat up. Conditioning rows pass
+ * through untouched here — `applyConditioningDeloadToExercises` owns those,
+ * because Sam's conditioning rule is about total WORK rather than sets.
+ */
 export function applyStrengthDeloadToExercises(
   exercises: WorkoutExercise[],
   policy: DeloadWeekPolicy,
 ): WorkoutExercise[] {
-  const strengthIndexes = exercises
+  const accessoryIndexes = exercises
     .map((exercise, index) => ({ exercise, index }))
-    .filter(({ exercise }) => !isConditioningExerciseRow(exercise))
+    .filter(({ exercise }) => !isConditioningExerciseRow(exercise)
+      && isAccessoryStrengthRow(exercise))
     .map(({ index }) => index);
 
-  const accessoryIndexes = strengthIndexes.filter((index) => isAccessoryStrengthRow(exercises[index]));
-  const removableAccessoryIndexes = accessoryIndexes.slice(1);
-  const removeCount = Math.min(
-    policy.maxAccessoriesToRemove,
-    Math.max(0, strengthIndexes.length - 3),
-    removableAccessoryIndexes.length,
+  // "cut to 2-3, or half, whichever is LESS" — the cap and the half compete,
+  // and the smaller number wins. With 8 accessories the cap (3) wins; with 4
+  // the half (2) wins.
+  const keepCount = Math.min(
+    DELOAD_LAW.accessoryMaxKept,
+    Math.floor(accessoryIndexes.length * DELOAD_LAW.accessoryKeepMultiplier),
   );
-  const removeIndexes = new Set(removableAccessoryIndexes.slice(-removeCount));
+  const removeIndexes = new Set(accessoryIndexes.slice(keepCount));
 
   return exercises
     .filter((_, index) => !removeIndexes.has(index))
@@ -135,11 +187,18 @@ export function applyStrengthDeloadToExercises(
         return { ...exercise, exerciseOrder: index + 1 };
       }
 
-      const nextSets = exercise.prescribedSets > policy.minSets
-        ? Math.max(policy.minSets, exercise.prescribedSets - policy.setDrop)
-        : exercise.prescribedSets;
-      const nextWeight = exercise.prescribedWeightKg && exercise.prescribedWeightKg > 0
-        ? roundLoad(exercise.prescribedWeightKg * policy.intensityMultiplier)
+      const nextSets = Math.max(
+        DELOAD_LAW.minSetsPerExercise,
+        Math.round(exercise.prescribedSets * DELOAD_LAW.mainLiftSetMultiplier),
+      );
+
+      // Weight is HELD by default. Sam's law drops it only when the athlete is
+      // beat up, and then only slightly — so this is a conditional, not the
+      // unconditional phase multiplier the code used to apply.
+      const nextWeight = policy.athleteIsBeatUp
+        && exercise.prescribedWeightKg
+        && exercise.prescribedWeightKg > 0
+        ? roundLoad(exercise.prescribedWeightKg * DELOAD_LAW.beatUpLoadMultiplier)
         : exercise.prescribedWeightKg;
 
       return {
@@ -147,7 +206,100 @@ export function applyStrengthDeloadToExercises(
         exerciseOrder: index + 1,
         prescribedSets: nextSets,
         prescribedWeightKg: nextWeight,
-        notes: appendDeloadNote(exercise.notes, policy.rpeCap),
+        notes: appendDeloadNote(exercise.notes),
       };
     });
+}
+
+/** A conditioning row that trains a hard quality rather than easy aerobic work. */
+function isQualityConditioningRow(exercise: WorkoutExercise): boolean {
+  const name = exercise.exercise?.name ?? '';
+  return /\b(vo2|mas|sprint|interval|repeat|hard|tempo|shuttle|fartlek|emom|tabata)\b/i
+    .test(`${name} ${exercise.notes ?? ''}`);
+}
+
+/**
+ * Apply the deload law to a session's CONDITIONING rows.
+ *
+ * NEW LAW (Sam, 2026-07-27): "Conditioning: half the total work. One quality
+ * exposure max, the rest easy aerobic." Before this, a deload left conditioning
+ * volume untouched and only downgraded the category.
+ *
+ * Rows are kept rather than deleted — the structure does not change, the work
+ * shrinks — so a demoted quality row becomes easy aerobic work of half the
+ * duration rather than disappearing from the athlete's week.
+ */
+export function applyConditioningDeloadToExercises(
+  exercises: WorkoutExercise[],
+  _policy: DeloadWeekPolicy,
+): WorkoutExercise[] {
+  let qualityKept = 0;
+
+  return exercises.map((exercise, index) => {
+    if (!isConditioningExerciseRow(exercise)) {
+      return { ...exercise, exerciseOrder: index + 1 };
+    }
+
+    const isQuality = isQualityConditioningRow(exercise);
+    const keepAsQuality = isQuality
+      && qualityKept < DELOAD_LAW.maxQualityConditioningExposures;
+    if (keepAsQuality) qualityKept += 1;
+
+    const durationCarrier = exercise as WorkoutExercise & {
+      prescribedDurationMinutes?: number;
+      deloadQualityExposure?: boolean;
+    };
+    const minutes = durationCarrier.prescribedDurationMinutes;
+    const halved = typeof minutes === 'number' && minutes > 0
+      ? Math.round(minutes * DELOAD_LAW.conditioningWorkMultiplier)
+      : minutes;
+
+    return {
+      ...exercise,
+      exerciseOrder: index + 1,
+      ...(typeof halved === 'number' ? { prescribedDurationMinutes: halved } : {}),
+      deloadQualityExposure: keepAsQuality,
+      notes: appendConditioningDeloadNote(exercise.notes, keepAsQuality),
+    } as WorkoutExercise;
+  });
+}
+
+function appendConditioningDeloadNote(
+  notes: string | undefined,
+  keptAsQuality: boolean,
+): string {
+  const note = keptAsQuality
+    ? 'Deload: this is the week\'s one quality exposure — keep it sharp but short.'
+    : 'Deload: easy aerobic only. Half the usual work.';
+  if (!notes) return note;
+  if (/^Deload:/m.test(notes) || /Deload:/.test(notes)) return notes;
+  return `${notes} ${note}`;
+}
+
+/** A power dose under the deload law: kept, but smaller and still sharp. */
+export interface PowerDose {
+  readonly sets: number;
+  readonly repsMin: number;
+  readonly repsMax: number;
+}
+
+/**
+ * Shrink a power dose for a deload week.
+ *
+ * Sam's law: "Power/speed: keep a small sharp dose — few reps, full recovery,
+ * stop the moment speed drops." Power used to be REMOVED entirely on deload
+ * weeks; returning null here would reinstate exactly that.
+ */
+export function deloadPowerDose(full: PowerDose): PowerDose | null {
+  if (!DELOAD_LAW.keepPower) return null;
+  return {
+    sets: Math.max(
+      DELOAD_LAW.minPowerSets,
+      Math.round(full.sets * DELOAD_LAW.powerSetMultiplier),
+    ),
+    // Reps are already low on power work and the point is SHARPNESS, so the
+    // rep range is preserved rather than cut — it is the volume that drops.
+    repsMin: full.repsMin,
+    repsMax: full.repsMax,
+  };
 }

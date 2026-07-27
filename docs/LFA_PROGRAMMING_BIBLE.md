@@ -3689,10 +3689,17 @@ injury/niggle appears
 conditioning feels brutal repeatedly
 multiple sessions are missed
 game load/team training load is high
-A deload can mean:
-less volume
-lighter loads
-fewer hard sessions
+THE DELOAD LAW (Sam, 2026-07-27) — what a deload DOES. Same week, same days: the structure does not change, the work shrinks.
+
+* Main lifts: HALF the sets. Weight stays the same, or drops slightly if the athlete is beat up. Every set easy — RPE 5-6, every rep fast and clean, nowhere near failure.
+* Accessories: cut to 2-3, or half, whichever is LESS.
+* Power/speed: KEEP a small sharp dose — few reps, full recovery, stop the moment speed drops. Power is not removed on a deload; a deload is not a reason to lose sharpness.
+* Conditioning: HALF the total work. One quality exposure at most, and everything else easy aerobic.
+* The test: every session ends feeling like the athlete had plenty left. Fresher by the end of the week — not detrained, and not sore.
+
+This law describes the TRANSFORMATION, not the trigger. The same transformation is applied by every door that deloads: a scheduled deload week, a low-readiness call (rolling 7 days), and an active moderate-or-severe illness. No door invents its own reductions.
+
+A deload can also mean:
 more recovery
 repeat same week
 remove finishers
@@ -4853,6 +4860,7 @@ Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07
 * Section 17 B, running exposure. Superseded "No more than 4 running exposures per week programmed by the app". Now floor 2 / cap 3 running days, with anchors counting toward the cap and the floor disapplied in early off-season and bye recovery.
 * Section 17 F, strong warning. Superseded "More than 4 running exposures" with "More than 3 running days".
 * Section 18 F, deload rules. Superseded "Pre-season automatically deloads every fourth week" and the automatic fourth-week off-season policy with Sam's 3–4-week cycle law, and made the in-season no-scheduled-deload rule explicit. Source: D16.
+* THE DELOAD LAW (Sam, 2026-07-27). ADDED the authored content of a deload to Section 14's "When to deload", which previously said only "less volume / lighter loads / fewer hard sessions". Main lifts HALF the sets at RPE 5-6 with weight held or dropped slightly; accessories cut to 2-3 or half, whichever is less; power/speed KEPT as a small sharp dose; conditioning HALF the total work with at most one quality exposure. Two parts supersede shipped behaviour: CONDITIONING was previously untouched by a deload except for a category downgrade, and POWER was previously REMOVED entirely on deload weeks — Sam's law keeps it, because a deload is not a reason to lose sharpness. The law states the TRANSFORMATION only; the scheduled-week, readiness and illness doors all apply the same one, so no door invents its own reductions.
 * THE ILLNESS LAW (Sam, 2026-07-27). SUPERSEDES the old "recovery mode only on severe" trigger. Three tiers, all riding the deload law rather than carrying illness-specific dosing: MILD — training unchanged; the illness is logged as a fact that can lower readiness, which may itself trigger the readiness deload. MODERATE (flu-level) — the week is deloaded for as long as the illness fact is ACTIVE, open until cleared per the existing illness horizon, NOT the readiness law's 7-day rolling window; clearing returns to normal through the existing clear behaviour. SEVERE (bed-bound) — deloaded AND every session becomes optional while active. Severity decides exactly TWO things: deload or not, optional or not. No other illness-specific numbers may exist — the dose transformation is the deload law's, shared with readiness, so illness never grows a private set of reductions.
 * Conditioning progression machinery DELETED, not migrated (Sam, 2026-07-27). The old per-tier progression system in `src/utils/conditioningProgressionRules.ts` — `TIER_CAPS` and everything that governs it — is retired outright. Its caps (A 8 reps / 8 intervals / 40 min / 90 s rest, B-high, B-low, C) were never authored: they are invented numbers that quietly decide an athlete's conditioning dose, which is exactly what Section 6's law forbids ("Doses come from the templates sheet. A layer that invents its own conditioning dose is a defect."). The authored templates own conditioning ENTIRELY once Stage B switches selection onto them, so there is nothing for this machinery to progress. It is marked for DELETION inside Stage B's scope rather than carried alongside — keeping it would mean two systems dosing conditioning, and the older one inventing its numbers. No replacement is needed: progression within a quality is a property of the authored template chosen, not of a separate rules layer.
 * Section 18 B, beginner phase line SUPERSEDED (Sam, 2026-07-27). REMOVED "Beginners in mid off-season use 2 strength, 2-3 conditioning and 1 safe sprint exposure with reduced complexity and dose." Beginners follow the universal phase table in EVERY phase. This was the last beginner-specific structural rule anywhere in the Bible, and it is the authority the code's `maxCoreSessions: 2` rested on; both are gone. Section 11's principle now holds without exception: training age changes the dose, the complexity and the progression speed, never the structure of the week. Sam ruled this after a sweep initially misreported the line as absent — the line was real, and he chose to retire it rather than keep a beginner-only structure.

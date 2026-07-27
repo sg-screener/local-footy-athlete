@@ -1,0 +1,266 @@
+/**
+ * THE DELOAD LAW — Sam's authored transformation (2026-07-27).
+ *
+ *   docs/LFA_PROGRAMMING_BIBLE.md §14 "When to deload" + §19
+ *
+ * "Same week, same days — the structure doesn't change, the work shrinks."
+ *
+ *   Main lifts    half the sets; weight same or slightly down; RPE 5-6,
+ *                 fast and clean, nowhere near failure.
+ *   Accessories   cut to 2-3, or half, whichever is LESS.
+ *   Power/speed   keep a small sharp dose — few reps, full recovery.
+ *   Conditioning  half the total work; one quality exposure max; rest easy.
+ *
+ * Two of those supersede shipped behaviour: conditioning was untouched except
+ * for a category downgrade, and power was REMOVED outright on deload weeks.
+ *
+ * This suite pins the TRANSFORMATION. It is deliberately separate from the
+ * trigger, because the readiness (rolling 7 days) and illness (while active)
+ * doors apply the same transformation and must not invent their own.
+ *
+ * Run: npm run test:deload-law
+ */
+
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+process.env.TZ = 'Australia/Melbourne';
+
+import fs from 'fs';
+import path from 'path';
+
+import {
+  DELOAD_LAW,
+  resolveDeloadWeekPolicy,
+  applyStrengthDeloadToExercises,
+  applyConditioningDeloadToExercises,
+  deloadPowerDose,
+  isConditioningExerciseRow,
+} from '../rules/deloadWeekRules';
+import type { WorkoutExercise } from '../types/domain';
+
+const repoRoot = path.resolve(__dirname, '../..');
+
+let passed = 0;
+const failures: string[] = [];
+
+function ok(name: string, condition: unknown, detail?: string): void {
+  if (condition) {
+    passed += 1;
+    console.log(`  PASS ${name}`);
+    return;
+  }
+  failures.push(name);
+  console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
+}
+
+const NOW = new Date('2026-07-27T00:00:00Z').toISOString();
+let seq = 0;
+
+function row(
+  name: string,
+  sets: number,
+  over: Partial<WorkoutExercise> = {},
+): WorkoutExercise {
+  seq += 1;
+  return {
+    id: `ex-${seq}`,
+    workoutId: 'w',
+    exerciseId: `e-${seq}`,
+    exerciseOrder: seq,
+    prescribedSets: sets,
+    prescribedRepsMin: 5,
+    prescribedRepsMax: 8,
+    restSeconds: 90,
+    exercise: {
+      id: `e-${seq}`, name, description: '', muscleGroups: [],
+      exerciseType: 'Compound', equipmentRequired: [],
+      difficultyLevel: 'Intermediate', createdAt: NOW, updatedAt: NOW,
+    },
+    createdAt: NOW, updatedAt: NOW,
+    ...over,
+  } as WorkoutExercise;
+}
+
+const policy = resolveDeloadWeekPolicy('Off-season', 'deload');
+if (!policy) throw new Error('deload policy did not resolve for an off-season deload week');
+
+/* ── The authored numbers ── */
+
+console.log('\n[1] THE LAW — Sam\'s authored values, as data');
+
+ok('main lifts halve their sets', DELOAD_LAW.mainLiftSetMultiplier === 0.5,
+  `got ${DELOAD_LAW.mainLiftSetMultiplier}`);
+ok('every set sits at RPE 5-6',
+  DELOAD_LAW.rpeMin === 5 && DELOAD_LAW.rpeMax === 6,
+  `got ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}`);
+ok('accessories cut to at most 3', DELOAD_LAW.accessoryMaxKept === 3,
+  `got ${DELOAD_LAW.accessoryMaxKept}`);
+ok('accessories also halve — whichever is LESS',
+  DELOAD_LAW.accessoryKeepMultiplier === 0.5);
+ok('conditioning halves its total work',
+  DELOAD_LAW.conditioningWorkMultiplier === 0.5,
+  `got ${DELOAD_LAW.conditioningWorkMultiplier}`);
+ok('at most one quality conditioning exposure survives',
+  DELOAD_LAW.maxQualityConditioningExposures === 1,
+  `got ${DELOAD_LAW.maxQualityConditioningExposures}`);
+ok('power is KEPT, not removed', DELOAD_LAW.keepPower === true);
+
+ok('the law is recorded in the Bible',
+  fs.readFileSync(path.join(repoRoot, 'docs/LFA_PROGRAMMING_BIBLE.md'), 'utf8')
+    .includes('THE DELOAD LAW (Sam, 2026-07-27)'));
+
+/* ── Main lifts ── */
+
+console.log('\n[2] MAIN LIFTS — half the sets, weight held, RPE 5-6');
+
+{
+  const before = [row('Back Squat', 4), row('Bench Press', 4)];
+  const after = applyStrengthDeloadToExercises(before, policy);
+  const squat = after.find((entry) => entry.exercise?.name === 'Back Squat');
+
+  ok('4 sets become 2 — half, not "one fewer"',
+    squat?.prescribedSets === 2, `got ${squat?.prescribedSets}`);
+
+  const odd = applyStrengthDeloadToExercises([row('Back Squat', 3)], policy);
+  ok('3 sets round to 2, never below the 1-set floor',
+    odd[0].prescribedSets === 2, `got ${odd[0].prescribedSets}`);
+
+  const single = applyStrengthDeloadToExercises([row('Back Squat', 1)], policy);
+  ok('a single set stays a set — halving never reaches zero',
+    single[0].prescribedSets === 1, `got ${single[0].prescribedSets}`);
+
+  ok('the deload note carries RPE 5-6, not the old 6-7',
+    /RPE 5-6/.test(squat?.notes ?? ''), squat?.notes ?? '(none)');
+  ok('the note no longer says RPE 6-7', !/RPE 6-7/.test(squat?.notes ?? ''));
+}
+
+{
+  // "Weight stays the same or drops slightly if you're beat up." The default is
+  // HOLD; the drop is conditional, so an unconditional multiplier is wrong.
+  const before = [row('Back Squat', 4, { prescribedWeightKg: 100 })];
+  const held = applyStrengthDeloadToExercises(before, policy);
+  ok('weight is HELD by default on a deload',
+    held[0].prescribedWeightKg === 100, `got ${held[0].prescribedWeightKg}`);
+
+  const beatUp = applyStrengthDeloadToExercises(before, { ...policy, athleteIsBeatUp: true });
+  const dropped = beatUp[0].prescribedWeightKg ?? 0;
+  ok('weight drops only SLIGHTLY when the athlete is beat up',
+    dropped < 100 && dropped >= 85, `got ${dropped}`);
+}
+
+/* ── Accessories ── */
+
+console.log('\n[3] ACCESSORIES — 2-3, or half, whichever is less');
+
+{
+  // 8 accessories: half is 4, the cap is 3 -> 3 wins (whichever is LESS).
+  const many = [
+    row('Back Squat', 4),
+    ...['Bicep Curl', 'Tricep Pushdown', 'Face Pull', 'Lateral Raise',
+        'Leg Extension', 'Calf Raises', 'Hammer Curl', 'Rear Delt Fly']
+      .map((name) => row(name, 3)),
+  ];
+  const after = applyStrengthDeloadToExercises(many, policy);
+  const accessoriesKept = after.filter(
+    (entry) => entry.exercise?.name !== 'Back Squat' && !isConditioningExerciseRow(entry),
+  ).length;
+  ok('8 accessories cut to 3 — the cap beats the half', accessoriesKept === 3,
+    `kept ${accessoriesKept}`);
+}
+
+{
+  // 4 accessories: half is 2, the cap is 3 -> 2 wins (whichever is LESS).
+  const few = [
+    row('Back Squat', 4),
+    ...['Bicep Curl', 'Tricep Pushdown', 'Face Pull', 'Lateral Raise']
+      .map((name) => row(name, 3)),
+  ];
+  const after = applyStrengthDeloadToExercises(few, policy);
+  const accessoriesKept = after.filter(
+    (entry) => entry.exercise?.name !== 'Back Squat' && !isConditioningExerciseRow(entry),
+  ).length;
+  ok('4 accessories cut to 2 — the half beats the cap', accessoriesKept === 2,
+    `kept ${accessoriesKept}`);
+}
+
+{
+  const one = [row('Back Squat', 4), row('Bicep Curl', 3)];
+  const after = applyStrengthDeloadToExercises(one, policy);
+  ok('a main lift is never removed as an accessory',
+    after.some((entry) => entry.exercise?.name === 'Back Squat'));
+}
+
+/* ── Conditioning ── */
+
+console.log('\n[4] CONDITIONING — half the work, one quality exposure max (NEW LAW)');
+
+{
+  const conditioning = [
+    row('4x4 VO2', 4, { prescribedDurationMinutes: 40 } as Partial<WorkoutExercise>),
+    row('Tempo Run', 1, { prescribedDurationMinutes: 30 } as Partial<WorkoutExercise>),
+  ];
+  const after = applyConditioningDeloadToExercises(conditioning, policy);
+  const total = after.reduce(
+    (sum, entry) => sum + ((entry as { prescribedDurationMinutes?: number }).prescribedDurationMinutes ?? 0),
+    0,
+  );
+  ok('total conditioning work halves (was untouched before this law)',
+    total === 35, `got ${total} of an original 70`);
+}
+
+{
+  const threeQuality = [
+    row('4x4 VO2', 4), row('MAS 15:15 Blocks', 4), row('Sprint Intervals', 4),
+  ];
+  const after = applyConditioningDeloadToExercises(threeQuality, policy);
+  const qualityLeft = after.filter(
+    (entry) => (entry as { deloadQualityExposure?: boolean }).deloadQualityExposure,
+  ).length;
+  ok('at most ONE quality exposure survives', qualityLeft <= 1, `got ${qualityLeft}`);
+  ok('the others become easy aerobic rather than disappearing',
+    after.length === threeQuality.length, `${after.length} of ${threeQuality.length} rows`);
+}
+
+/* ── Power ── */
+
+console.log('\n[5] POWER — kept as a small sharp dose, not removed');
+
+{
+  const full = { sets: 4, repsMin: 3, repsMax: 5 };
+  const dose = deloadPowerDose(full);
+  ok('power survives a deload', dose !== null);
+  ok('the dose is SMALLER than the full one', (dose?.sets ?? 99) < full.sets,
+    `${dose?.sets} vs ${full.sets}`);
+  ok('power keeps at least one working set', (dose?.sets ?? 0) >= 1);
+  ok('reps stay few — the dose stays sharp', (dose?.repsMax ?? 99) <= full.repsMax);
+}
+
+/* ── Trigger is separate from transformation ── */
+
+console.log('\n[6] SEPARATION — the law is the transformation, not the trigger');
+
+ok('a scheduled deload resolves in off-season',
+  resolveDeloadWeekPolicy('Off-season', 'deload') !== null);
+ok('a scheduled deload resolves in pre-season',
+  resolveDeloadWeekPolicy('Pre-season', 'deload') !== null);
+ok('no SCHEDULED deload in-season (D16 — games and byes self-regulate)',
+  resolveDeloadWeekPolicy('In-season', 'deload') === null);
+ok('a normal week resolves no deload',
+  resolveDeloadWeekPolicy('Off-season', 'build') === null);
+
+// The readiness and illness doors deload IN-SEASON too, so the transformation
+// must be reachable without the scheduled-week trigger. If this ever fails, those
+// units would be forced to reimplement the law — the exact duplication Sam's
+// "no door invents its own reductions" forbids.
+ok('the law is exported independently of any trigger',
+  typeof DELOAD_LAW === 'object' && DELOAD_LAW !== null);
+
+/* ── Result ── */
+
+console.log(
+  `\nDeload law: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
+);
+if (failures.length > 0) {
+  console.error('\nFAILURES:');
+  for (const failure of failures) console.error(`  - ${failure}`);
+  process.exit(1);
+}

@@ -109,7 +109,9 @@ function deloadNotes(microcycle: Microcycle): string[] {
   return microcycle.workouts
     .flatMap(strengthRows)
     .map((exercise) => exercise.notes ?? '')
-    .filter((note) => /Deload week:/i.test(note));
+    // Sam's deload law (2026-07-27) renamed the note and moved the target from
+    // RPE 6-7 to 5-6 — "every set easy ... nowhere near failure".
+    .filter((note) => /Deload:/i.test(note));
 }
 
 function comparableStrengthPairs(buildWeek: Microcycle, deloadWeek: Microcycle): Array<[Workout, Workout]> {
@@ -201,18 +203,23 @@ function assertCalendarDeload(
         deloadMain.prescribedSets >= 2 && deloadMain.prescribedSets <= buildMain.prescribedSets,
         JSON.stringify({ build: buildMain.prescribedSets, deload: deloadMain.prescribedSets }));
       if ((buildMain.prescribedWeightKg ?? 0) > 0 && (deloadMain.prescribedWeightKg ?? 0) > 0) {
-        ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} main load reduced`,
-          (deloadMain.prescribedWeightKg ?? 0) < (buildMain.prescribedWeightKg ?? 0),
+        // Sam's law: "Weight stays the same, or drops slightly if you're beat
+        // up." HOLD is the default; the drop is conditional, so an
+        // unconditional reduction is no longer correct.
+        ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} main load HELD on deload`,
+          (deloadMain.prescribedWeightKg ?? 0) === (buildMain.prescribedWeightKg ?? 0),
           JSON.stringify({ build: buildMain.prescribedWeightKg, deload: deloadMain.prescribedWeightKg }));
       }
     }
   }
 
-  ok(`${seasonPhase} deload strength sets floor at 2`,
+  // Sam's law halves the sets with a floor of ONE — halving must never remove a
+  // lift, but the old floor of 2 blocked the halving it now mandates.
+  ok(`${seasonPhase} deload strength sets never fall below 1`,
     week4.workouts
       .filter(strengthLike)
       .flatMap(strengthRows)
-      .every((exercise) => exercise.prescribedSets >= 2),
+      .every((exercise) => exercise.prescribedSets >= 1),
     JSON.stringify(week4.workouts.flatMap(strengthRows).map((exercise) => ({
       name: exercise.exercise?.name,
       sets: exercise.prescribedSets,
@@ -291,8 +298,9 @@ assertCalendarDeload('Pre-season', 0.9);
     updatedAt: '',
   } as WorkoutExercise;
   const deloaded = applyStrengthDeloadToExercises([exercise], policy!)[0];
-  ok('double reduction clamp keeps sets at floor',
-    deloaded.prescribedSets === 2,
+  // 2 sets halve to 1, and 1 is the floor — the lift survives the deload.
+  ok('halving clamps at the 1-set floor, never to zero',
+    deloaded.prescribedSets === 1,
     JSON.stringify({ sets: deloaded.prescribedSets }));
 }
 

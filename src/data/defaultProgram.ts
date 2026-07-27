@@ -52,6 +52,10 @@ import {
   type ConditioningVariant,
 } from '../utils/sessionBuilder';
 import { selectPowerExercise } from '../rules/powerExercisePool';
+import {
+  deloadPowerDose,
+  applyConditioningDeloadToExercises,
+} from '../rules/deloadWeekRules';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import {
   ACCESSORY_REP_GUIDELINES,
@@ -2437,6 +2441,17 @@ export function buildWorkoutsFromCoach(
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} aiName="${cw.name}" aiType="${cw.workoutType}" aiTier="${cw.sessionTier}" → canonicalTier="${canonicalTier}" intensity="${canonicalIntensity}" planEntry=${planEntry ? `"${planEntry.tier} / ${planEntry.focus?.substring(0, 40)}"` : 'NONE'}`);
     }
 
+    // ── Conditioning half of the deload law (Sam, 2026-07-27) ──
+    // "Conditioning: half the total work. One quality exposure max, the rest
+    // easy aerobic." NEW LAW: a deload used to leave conditioning volume
+    // untouched, and the strength branch above deliberately skips standalone
+    // Conditioning days — so without this, the half never happened on exactly
+    // the days that are mostly conditioning. Games are left alone: a game is
+    // not ours to shrink.
+    if (deloadPolicy && normalizedWorkoutType !== 'Game') {
+      finalExercises = applyConditioningDeloadToExercises(finalExercises, deloadPolicy);
+    }
+
     let resolvedSpeedBlock: SpeedBlock | undefined;
     if (planEntry?.speedWorkKind === 'true_speed' && planEntry.speedPlacement === 'pre_lift') {
       const dateStr = syntheticDateStr(cw.dayOfWeek);
@@ -2454,12 +2469,28 @@ export function buildWorkoutsFromCoach(
     }
 
     // ── Power primer (Bible § Power work) ──
-    // Rendered as a distinct block, NOT interleaved into exercises. Skipped on
-    // deload weeks even if the engine stamped it, so a deload never carries
-    // fatiguing power.
+    // Rendered as a distinct block, NOT interleaved into exercises.
+    //
+    // Power SURVIVES a deload (Sam's deload law, 2026-07-27): "keep a small
+    // sharp dose — few reps, full recovery, stop the moment speed drops." This
+    // used to skip power entirely on deload weeks, which the law supersedes —
+    // a deload is not a reason to lose sharpness. The dose shrinks instead.
     let resolvedPowerBlock: PowerBlock | undefined;
-    if (planEntry?.powerPrimer && !deloadPolicy) {
-      resolvedPowerBlock = buildPowerBlock(planEntry.powerPrimer, workoutId, {
+    if (planEntry?.powerPrimer) {
+      const powerSpec = deloadPolicy
+        ? (() => {
+            const shrunk = deloadPowerDose({
+              sets: planEntry.powerPrimer.sets,
+              repsMin: planEntry.powerPrimer.repsMin,
+              repsMax: planEntry.powerPrimer.repsMax,
+            });
+            return shrunk
+              ? { ...planEntry.powerPrimer, ...shrunk, reduced: true }
+              : null;
+          })()
+        : planEntry.powerPrimer;
+
+      if (powerSpec) resolvedPowerBlock = buildPowerBlock(powerSpec, workoutId, {
         phase: onboardingData?.seasonPhase,
         experienceLevel: onboardingData?.experienceLevel,
         availableEquipment: onboardingData?.equipment ?? [],
