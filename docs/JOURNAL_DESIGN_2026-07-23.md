@@ -1,5 +1,7 @@
 # Journal — Design Doc (approved by Sam 2026-07-23)
 
+See JOURNAL_DESIGN_ADDENDUM_2026-07-28.md for candidate features recorded for future selection.
+
 Status: **DESIGN APPROVED — builds PRE-LAUNCH (Master Plan Phase 5C, Sam
 2026-07-23).** This doc is the source of truth for the Journal build;
 decisions below were made by Sam in design review and should not be
