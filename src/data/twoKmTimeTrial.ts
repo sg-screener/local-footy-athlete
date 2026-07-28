@@ -29,7 +29,14 @@
  * `twoKm` here and everywhere downstream.
  */
 
-import type { ExperienceLevel } from '../types/domain';
+// The stored shape lives in `types/domain` with the other onboarding answers —
+// `OnboardingData` has to reference it, and the type home is the one place that
+// can hold it without the two files importing each other in a circle.
+import type {
+  ExperienceLevel,
+  TwoKmTimeTrialAnswer,
+  TwoKmTimeTrialSource,
+} from '../types/domain';
 import {
   validateAgainstBound,
   type BoundAttribution,
@@ -118,36 +125,6 @@ export const TWO_KM_TIME_TRIAL_DEFAULTS = {
   '1-2 years': 480,         // 8:00
   'Complete beginner': 525, // 8:45
 } as const satisfies Record<ExperienceLevel, number>;
-
-// ─── The stored answer ───
-
-/** Who produced a recorded time. Every one routes through `recordTwoKmTime`. */
-export type TwoKmTimeTrialSource = 'onboarding' | 'profile_edit' | 'session_log';
-
-/**
- * The athlete's answer to "what's your recent 2km time?".
- *
- * `seconds: null` is a REAL ANSWER — "I haven't tested it" — not an absence.
- * This follows the `SquatStrength` precedent, where "I don't squat / not sure"
- * is a first-class value rather than an empty field, and it matters
- * mechanically: the onboarding step registry decides where an interrupted flow
- * resumes from whether a step is `satisfied`. If skipping wrote nothing, an
- * athlete whose first process died would resume onto a screen they had already
- * dismissed.
- *
- * One shape, not a discriminated union: `strictNullChecks` is off in this repo
- * so a union would not narrow on its discriminant, costing every caller a cast
- * and buying nothing.
- *
- * There is deliberately NO `masKmh` field. See the header.
- */
-export interface TwoKmTimeTrialAnswer {
-  /** Seconds for the 2km, or `null` for "haven't tested". */
-  readonly seconds: number | null;
-  /** ISO date the answer was recorded. */
-  readonly recordedOn: string;
-  readonly source: TwoKmTimeTrialSource;
-}
 
 // ─── Derivation ───
 

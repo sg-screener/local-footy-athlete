@@ -34,14 +34,22 @@ import {
   deriveMas,
   recordTwoKmTime,
   formatTwoKmTime,
-  type TwoKmTimeTrialAnswer,
 } from '../data/twoKmTimeTrial';
 import {
   ONBOARDING_NUMERIC_BOUNDS,
   validateOnboardingMeasurement,
 } from '../data/onboardingNumericBounds';
-import { statesWholeNumber } from './support/sourceText';
-import type { ExperienceLevel } from '../types/domain';
+import {
+  ONBOARDING_STEPS,
+  missingRequiredProfileFields,
+  resolveOnboardingResumeStep,
+} from '../utils/onboardingSteps';
+import { statesWholeNumber, stripComments } from './support/sourceText';
+import type {
+  ExperienceLevel,
+  OnboardingData,
+  TwoKmTimeTrialAnswer,
+} from '../types/domain';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -229,7 +237,7 @@ console.log('\n[8] Defaults are applied AT DERIVATION, never written into storag
 console.log('\n[9] MAS is DERIVED, never stored — the structural guarantee');
 {
   const owner = fs.readFileSync(
-    path.join(repoRoot, 'src/data/twoKmTimeTrial.ts'), 'utf8');
+    path.join(repoRoot, 'src/types/domain.ts'), 'utf8');
 
   // The stored shape carries seconds. If a masKmh field ever appears on the
   // stored answer, the second representation is back and it can drift.
@@ -310,6 +318,136 @@ console.log('\n[12] PROVENANCE — every number traces to Sam\'s ruling');
     ok('the range anchor states the shipped ceiling',
       statesWholeNumber(bound.anchor, bound.max), bound.anchor);
   }
+}
+
+console.log('\n[13] The onboarding step is in the ONE registry, in the ruled position');
+{
+  const names = ONBOARDING_STEPS.map((s) => s.name);
+  ok('TwoKmTimeTrial is a registered step', names.includes('TwoKmTimeTrial'),
+    'the navigator, progress bar, resume point and generation refusal all derive from this list');
+
+  // D14: "sits with the squat/bench strength questions".
+  ok('it sits directly after BenchStrength',
+    names[names.indexOf('BenchStrength') + 1] === 'TwoKmTimeTrial',
+    names.join(' -> '));
+  ok('it sits directly before ConditioningLevel',
+    names[names.indexOf('ConditioningLevel') - 1] === 'TwoKmTimeTrial',
+    names.join(' -> '));
+
+  const step = ONBOARDING_STEPS.find((s) => s.name === 'TwoKmTimeTrial');
+  ok('it collects the time-trial answer',
+    step?.collects.includes('twoKmTimeTrial' as never), step?.collects.join(','));
+
+  // Squat and bench are hidden from complete beginners. The time trial is not:
+  // a beginner is exactly who most needs the ruled default, and they may well
+  // have run a 2km at a club testing day without ever having touched a barbell.
+  ok('it is shown to complete beginners too',
+    step?.visible({ experienceLevel: 'Complete beginner' } as OnboardingData) === true);
+}
+
+console.log('\n[14] SKIPPING IS ANSWERING — an interrupted flow resumes correctly');
+{
+  const step = ONBOARDING_STEPS.find((s) => s.name === 'TwoKmTimeTrial');
+
+  ok('an unanswered step is not satisfied',
+    step?.satisfied({} as OnboardingData) === false);
+
+  const withTime = {
+    twoKmTimeTrial: { seconds: 435, recordedOn: '2026-07-29', source: 'onboarding' },
+  } as unknown as OnboardingData;
+  ok('a recorded time satisfies the step', step?.satisfied(withTime) === true);
+
+  // THE POINT of `seconds: null` being a real answer rather than an absence.
+  const skipped = {
+    twoKmTimeTrial: { seconds: null, recordedOn: '2026-07-29', source: 'onboarding' },
+  } as unknown as OnboardingData;
+  ok('a SKIPPED step is satisfied — "haven\'t tested" is an answer',
+    step?.satisfied(skipped) === true,
+    'otherwise an interrupted flow resumes onto a screen the athlete already dismissed');
+
+  // The end-to-end claim, through the real resume resolver.
+  const base = {
+    firstName: 'Sam', heightCm: 184, weightKg: 84, position: 'Midfielder',
+    motivation: 'Get fitter', seasonPhase: 'Pre-season',
+    teamTrainingDays: ['Monday'], teamTrainingDuration: '60-90 min',
+    teamTrainingIntensity: 'Moderate', trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+    experienceLevel: '2-5 years', squatStrength: 'Around bodyweight',
+    benchStrength: 'Around bodyweight',
+  } as unknown as OnboardingData;
+
+  ok('an athlete who has not reached the step resumes onto it',
+    resolveOnboardingResumeStep(base) === 'TwoKmTimeTrial',
+    resolveOnboardingResumeStep(base));
+
+  ok('an athlete who SKIPPED it resumes past it, not back onto it',
+    resolveOnboardingResumeStep({ ...base, ...skipped } as OnboardingData)
+      === 'ConditioningLevel',
+    resolveOnboardingResumeStep({ ...base, ...skipped } as OnboardingData));
+
+  // A step nobody answered must be named in the generation refusal, so the app
+  // refuses honestly instead of defaulting around a gap.
+  ok('an unanswered time trial is reported as missing',
+    missingRequiredProfileFields(base).includes('twoKmTimeTrial'),
+    missingRequiredProfileFields(base).join(','));
+  ok('a skipped time trial is NOT reported as missing',
+    !missingRequiredProfileFields({ ...base, ...skipped } as OnboardingData)
+      .includes('twoKmTimeTrial'));
+}
+
+console.log('\n[15] The screen refuses through the owner — it does not carry the numbers');
+{
+  const screen = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/onboarding/TwoKmTimeTrialScreen.tsx'), 'utf8'));
+
+  ok('the screen validates through the authored bound',
+    /validateOnboardingMeasurement|validateTwoKmTime/.test(screen),
+    'the screen must not carry its own copy of the ruled numbers');
+
+  ok('the screen commits through the one ingress',
+    /recordTwoKmTime/.test(screen),
+    'a screen that writes the field directly is a second producer with its own rules');
+
+  ok('the screen never clamps a time',
+    !/Math\.(min|max)\s*\(/.test(screen),
+    'clamping substitutes the app\'s number for the athlete\'s');
+
+  // The ruled numbers appear in exactly one place. A screen that restates them
+  // keeps working after the ruling changes, which is the failure to prevent.
+  const boundLines = screen.split('\n')
+    .filter((l) => /min|max|bound|range|300|900|5:00|15:00/i.test(l)).join('\n');
+  ok('the ruled numbers are not duplicated into the screen',
+    !/\b(300|900)\b/.test(boundLines), boundLines.trim());
+
+  ok('the screen offers the skip as an ANSWER, not an escape',
+    /haven't tested|Haven't tested/i.test(screen),
+    'the skip tile wording is part of what makes null a real answer');
+}
+
+console.log('\n[16] The screen is reachable — both routes into it, and out');
+{
+  const nav = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/navigation/OnboardingNavigator.tsx'), 'utf8'));
+  ok('the navigator registers the screen',
+    /name="TwoKmTimeTrial"/.test(nav));
+
+  const bench = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/onboarding/BenchStrengthScreen.tsx'), 'utf8'));
+  ok('BenchStrength routes into it', /navigate\('TwoKmTimeTrial'\)/.test(bench));
+
+  // Squat and bench are skipped for complete beginners, so GymExperience is the
+  // OTHER way in. Missing this leaves beginners routed straight past the screen
+  // their default pace is chosen for.
+  const gym = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/onboarding/GymExperienceScreen.tsx'), 'utf8'));
+  ok('the complete-beginner path routes into it too',
+    /navigate\('TwoKmTimeTrial'\)/.test(gym),
+    'beginners skip squat/bench, so GymExperience is their way in');
+
+  const screen = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/onboarding/TwoKmTimeTrialScreen.tsx'), 'utf8'));
+  ok('it routes on to ConditioningLevel',
+    /navigate\('ConditioningLevel'\)/.test(screen));
 }
 
 const total = passed + failures.length;

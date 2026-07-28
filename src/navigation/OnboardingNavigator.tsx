@@ -21,6 +21,7 @@ import { PreferredTrainingDaysScreen } from '../screens/onboarding/PreferredTrai
 import { GymExperienceScreen } from '../screens/onboarding/GymExperienceScreen';
 import { SquatStrengthScreen } from '../screens/onboarding/SquatStrengthScreen';
 import { BenchStrengthScreen } from '../screens/onboarding/BenchStrengthScreen';
+import { TwoKmTimeTrialScreen } from '../screens/onboarding/TwoKmTimeTrialScreen';
 import { ConditioningLevelScreen } from '../screens/onboarding/ConditioningLevelScreen';
 import { SprintExposureScreen } from '../screens/onboarding/SprintExposureScreen';
 import { RecentTrainingLoadScreen } from '../screens/onboarding/RecentTrainingLoadScreen';
@@ -81,6 +82,7 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="GymExperience" component={GymExperienceScreen} />
       <Stack.Screen name="SquatStrength" component={SquatStrengthScreen} />
       <Stack.Screen name="BenchStrength" component={BenchStrengthScreen} />
+      <Stack.Screen name="TwoKmTimeTrial" component={TwoKmTimeTrialScreen} />
       <Stack.Screen name="ConditioningLevel" component={ConditioningLevelScreen} />
       <Stack.Screen name="SprintExposure" component={SprintExposureScreen} />
       <Stack.Screen name="RecentTrainingLoad" component={RecentTrainingLoadScreen} />

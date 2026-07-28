@@ -60,7 +60,7 @@ export const GymExperienceScreen: React.FC<GymExperienceScreenProps> = ({
     void commitAndAdvance({ experienceLevel: exp }, () => {
       setTimeout(() => {
         if (exp === 'Complete beginner') {
-          navigation.navigate('ConditioningLevel');
+          navigation.navigate('TwoKmTimeTrial');
         } else {
           navigation.navigate('SquatStrength');
         }

@@ -52,6 +52,7 @@ export type OnboardingStackParamList = {
   GymExperience: undefined;
   SquatStrength: undefined;
   BenchStrength: undefined;
+  TwoKmTimeTrial: undefined;
   ConditioningLevel: undefined;
   SprintExposure: undefined;
   RecentTrainingLoad: undefined;

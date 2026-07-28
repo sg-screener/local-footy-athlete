@@ -40,7 +40,7 @@ export const BenchStrengthScreen: React.FC<BenchStrengthScreenProps> = ({
   const handleSelect = useCallback((strength: BenchStrength) => {
     setSelectedStrength(strength);
     void commitAndAdvance({ benchStrength: strength }, () => {
-      setTimeout(() => navigation.navigate('ConditioningLevel'), 250);
+      setTimeout(() => navigation.navigate('TwoKmTimeTrial'), 250);
     });
   }, [navigation, commitAndAdvance]);
 
