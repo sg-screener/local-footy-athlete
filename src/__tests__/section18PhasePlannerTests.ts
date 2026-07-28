@@ -76,6 +76,8 @@ interface PlannerOptions {
   offseasonSubphase?: 'early_offseason' | 'mid_offseason' | 'late_offseason';
   preseasonSubphase?: 'early_preseason' | 'mid_preseason' | 'late_preseason';
   weekKind?: 'build' | 'deload';
+  /** The athlete's bye answer — the only producer of the recovery mode. */
+  byeMode?: 'build' | 'recovery';
 }
 
 interface PlannerSnapshot {
@@ -136,7 +138,7 @@ function snapshot(options: PlannerOptions): PlannerSnapshot {
     offseasonSubphase: options.offseasonSubphase,
     preseasonSubphase: options.preseasonSubphase,
   });
-  const plan = buildCoachingPlan(inputs);
+  const plan = buildCoachingPlan({ ...inputs, byeMode: options.byeMode });
   invariant(plan.weeklyExposureContract, 'planner omitted the allocation contract');
   invariant(plan.weeklyExposureContractV2, 'planner omitted Contract v2');
   const validation = evaluateAllocationExposureContract(plan.weeklyExposureContract, plan.weeklyPlan);
@@ -221,16 +223,21 @@ const byeConstrained = snapshot({
   phase: 'In-season', teamTrainingCount: 0, readiness: 'medium', phaseWeek: 1,
   selectedDays: ['Monday', 'Wednesday'],
 });
-// RE-POINTED (Sam's ruling 4, 2026-07-28; applied 2026-07-29). These three
-// scenarios entered bye RECOVERY by setting `readiness: 'low'` — the trigger the
-// ruling deleted, because switching mode on capacity cuts a strength session
-// with no reduction recorded anywhere. The mode is schedule-triggered now, so
-// the scenarios enter it the way an athlete does: a scheduled deload week.
-// Capacity stays low so these still exercise the recovery shape for a cooked
-// athlete; it simply no longer SELECTS the shape.
-const recovery0 = snapshot({ phase: 'In-season', teamTrainingCount: 0, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
-const recovery1 = snapshot({ phase: 'In-season', teamTrainingCount: 1, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
-const recovery2 = snapshot({ phase: 'In-season', teamTrainingCount: 2, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
+// RE-POINTED TWICE, and the second time is the one that matters. These three
+// scenarios entered bye RECOVERY by setting `readiness: 'low'`, because capacity
+// selected the mode — deleted by the readiness law (2026-07-28), since switching
+// mode on capacity cuts a strength session with no reduction recorded anywhere.
+// They were then pointed at a scheduled deload week, per ruling 4.
+//
+// Sam's bye-mode ruling (2026-07-29) supersedes that: build-vs-recovery is the
+// ATHLETE'S choice, and their answer is the only producer of the recovery mode.
+// So the scenarios now answer the ask, which is exactly how the week will be
+// produced once the buttons work ships. Capacity stays low so these still
+// exercise the recovery shape for a cooked athlete; it simply does not, and
+// cannot, select it.
+const recovery0 = snapshot({ phase: 'In-season', teamTrainingCount: 0, readiness: 'low', phaseWeek: 1, byeMode: 'recovery' });
+const recovery1 = snapshot({ phase: 'In-season', teamTrainingCount: 1, readiness: 'low', phaseWeek: 1, byeMode: 'recovery' });
+const recovery2 = snapshot({ phase: 'In-season', teamTrainingCount: 2, readiness: 'low', phaseWeek: 1, byeMode: 'recovery' });
 const early = snapshot({ phase: 'Off-season', phaseWeek: 1, offseasonSubphase: 'early_offseason' });
 const mid4 = snapshot({
   phase: 'Off-season', phaseWeek: 3, offseasonSubphase: 'mid_offseason',

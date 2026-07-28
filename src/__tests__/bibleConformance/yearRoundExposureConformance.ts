@@ -162,9 +162,17 @@ export function runYearRoundExposureConformance(
     ['in-season bye build', planFor(profile({ seasonPhase: 'In-season' }), {
       hasGame: false, gameDay: undefined, weekNumber: 1, weekInBlock: 1,
     }), 'in_season_bye_build'],
+    // RE-POINTED (Sam's bye-mode ruling, 2026-07-29). This week reached the
+    // recovery mode through low capacity, and then briefly through a scheduled
+    // deload. Neither may select it: the athlete's answer to the bye ask is the
+    // only producer, and an unanswered bye is a build bye. The low-capacity
+    // profile stays so the scenario still covers a cooked athlete in the mode.
     ['in-season bye recovery', planFor(profile({
       seasonPhase: 'In-season', recentTrainingLoad: 'Hardly at all', conditioningLevel: 'Poor',
-    }), { hasGame: false, gameDay: undefined, weekNumber: 4, weekInBlock: 4, weekKind: 'deload' }), 'in_season_bye_recovery'],
+    }), {
+      hasGame: false, gameDay: undefined, weekNumber: 4, weekInBlock: 4,
+      weekKind: 'deload', byeMode: 'recovery',
+    }), 'in_season_bye_recovery'],
     ['early off-season', planFor(profile(), { offseasonSubphase: 'early_offseason', weekNumber: 1, weekInBlock: 1 }), 'early_offseason'],
     ['mid off-season', planFor(profile(), { offseasonSubphase: 'mid_offseason', weekNumber: 2, weekInBlock: 2 }), 'mid_offseason'],
     ['late off-season', planFor(profile({

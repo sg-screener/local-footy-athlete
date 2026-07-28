@@ -173,6 +173,19 @@ export interface CoachingInputs {
   miniCycleNumber?: number;
   weekInBlock?: number;
   weekKind?: WeekKind;
+  /**
+   * The athlete's answer to the bye ask — the ONLY producer of
+   * `in_season_bye_recovery` (Sam, 2026-07-29). A pass-through to the contract
+   * builder: this engine neither derives it nor defaults it, and an absent
+   * answer is a build bye.
+   *
+   * NOTHING SETS THIS YET, deliberately. The ask itself belongs to the
+   * buttons/step-5 work (`docs/ONBOARDING_PHASE_SHAPE_RULINGS_2026-07-28.md`
+   * §1a), which will store the answer as a schedule-class source fact and thread
+   * it here. The field exists so the mode stays reachable and gated by its ruled
+   * owner rather than by whatever happened to be nearby.
+   */
+  byeMode?: 'build' | 'recovery';
   /** Canonical continuous week inside the persisted selected season phase. */
   phaseWeekNumber?: number;
   phaseEntryWeekStartISO?: string;
@@ -935,6 +948,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       inputs.conditioningSubstitutionPolicy?.consideredSubstitutions,
     profileInjuries: inputs.injuries,
     activeInjuries: inputs.generationConstraints?.injuries,
+    byeMode: inputs.byeMode,
     weekModeOverride: inputs.generationConstraints?.weekMode,
   });
   const phasePlannerContractV2 = buildParallelSection18Contract({

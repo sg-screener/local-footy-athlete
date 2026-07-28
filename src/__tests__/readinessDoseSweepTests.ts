@@ -507,15 +507,24 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
   const deload = buildInSeasonExposureContract({ ...byeInput, weekKind: 'deload' });
   const declared = buildInSeasonExposureContract({ ...byeInput, byeMode: 'recovery' });
 
+  // SAM'S BYE-MODE RULING (2026-07-29). A bye is detected from the fixture gap;
+  // build-vs-recovery is the ATHLETE'S choice, carried as a typed schedule-class
+  // fact, and that fact is the ONLY producer of `in_season_bye_recovery`. An
+  // unanswered bye is a build bye. Facts may inform the ask's COPY; none of them
+  // may answer it. So every one of these — capacity, injury, and the scheduled
+  // deload that the superseded ruling 4 named — must leave the mode alone.
   ok('a bye week defaults to the build mode', build.identity.mode === 'in_season_bye_build');
   ok('low capacity does not switch the bye into recovery',
     lowReadiness.identity.mode === 'in_season_bye_build', lowReadiness.identity.mode);
   ok('an injury does not switch the bye into recovery',
     injured.identity.mode === 'in_season_bye_build', injured.identity.mode);
-  ok('a scheduled deload still selects bye recovery',
-    deload.identity.mode === 'in_season_bye_recovery');
-  ok('an explicitly declared recovery bye is still honoured',
+  ok('a scheduled deload does not switch the bye into recovery either',
+    deload.identity.mode === 'in_season_bye_build', deload.identity.mode);
+  ok('the athlete\'s answer is the only thing that selects recovery',
     declared.identity.mode === 'in_season_bye_recovery');
+  ok('the athlete can also answer build explicitly',
+    buildInSeasonExposureContract({ ...byeInput, byeMode: 'build', weekKind: 'deload' })
+      .identity.mode === 'in_season_bye_build');
   ok('low capacity does not cut the bye week\'s strength target',
     lowReadiness.strength.targetCount === build.strength.targetCount,
     { build: build.strength.targetCount, low: lowReadiness.strength.targetCount });

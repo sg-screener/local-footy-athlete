@@ -144,21 +144,28 @@ which is a declared dose site (`utils/conditioningProgressionRules.ts`).
 
 These are decisions nobody has authored. They are listed, not invented.
 
-0. **In-season bye recovery now has no producer.** This is the one that needs a
-   ruling before device acceptance. Ruling 4 says bye recovery is entered by the
-   SCHEDULED deload — but `resolveSeasonPhaseWeekKind` schedules deloads in
-   pre-season (every 4th week) and off-season (after week 4) and **never
-   in-season**. With capacity and injury removed as triggers, and the illness
-   door deliberately changing the dose rather than `weekKind`, nothing in
-   generation can now produce an `in_season_bye_recovery` week. The mode, its
-   contract row (strength 2/2/2, two full-rest days) and its visible shape are
-   all still implemented and still reachable through an explicit `byeMode`, and
-   they are still gated at the contract (`readinessDoseSweepTests` block [5]) and
-   at the planner (`section18PhasePlannerTests` scenarios 12-14, which supply the
-   deload week explicitly). What is missing is the in-season schedule fact that
-   enters it. **Question for Sam: which in-season week is a bye recovery week?**
-   The likely answers are a bye round the club schedules, or an in-season deload
-   in the block plan — both are his to author, not mine to infer.
+0. ~~**In-season bye recovery now has no producer.**~~ **RULED AND APPLIED
+   (Sam, 2026-07-29).** The finding was that ruling 4 named the scheduled deload
+   as the entry condition while `resolveSeasonPhaseWeekKind` schedules deloads in
+   pre-season and off-season and **never in-season** — so the mode had no
+   producer at all. Sam's answer:
+
+   > A bye is detected from the fixture gap (existing law); build-vs-recovery is
+   > the ATHLETE'S choice via an ask — a typed schedule-class fact, the only
+   > producer of `in_season_bye_recovery`. Default is bye_build if unanswered.
+   > Facts may inform the ask's copy, never decide it.
+
+   This **supersedes ruling 4's entry condition**, and the deload trigger went
+   with it — it could not coexist with "default is build if unanswered", since a
+   deload bye nobody answered would have arrived as recovery. `byeMode` is now
+   the sole producer, and it is the answer, not a caller convenience.
+
+   Applied here: the trigger removed, the `weekKind` fallback in `sessionResolver`
+   removed, and one typed pass-through added (`CoachingInputs.byeMode`) so the
+   mode stays reachable and gated by its ruled owner. **Nothing produces it** —
+   the ask belongs to the buttons/step-5 work, spec'd at
+   `docs/ONBOARDING_PHASE_SHAPE_RULINGS_2026-07-28.md` §1a. Until it ships every
+   bye is a build bye.
 
 1. **The low-readiness sprint dose.** The blocks are gone and the Bible floor
    keeps one sprint/high-speed exposure a week for a low-readiness athlete. What

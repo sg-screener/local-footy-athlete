@@ -58,7 +58,12 @@ export interface WeeklyExposureContractInput {
     triggers?: readonly string[];
     injuryKeys?: readonly string[];
   }>;
-  /** Explicit caller decision; omitted lets readiness/injury choose the mode. */
+  /**
+   * The athlete's answer to the bye ask, and the ONLY producer of
+   * `in_season_bye_recovery` (Sam, 2026-07-29). Omitted means unanswered, which
+   * is a BUILD bye — never "let something else decide", which is what this field
+   * used to mean.
+   */
   byeMode?: 'build' | 'recovery';
   /**
    * Derived week mode, minted by the single composition-boundary owner
@@ -429,22 +434,41 @@ function applyCommonSafetyReductions(
 }
 
 /**
- * BYE RECOVERY IS SCHEDULE-TRIGGERED ONLY (Sam, ruling 4, 2026-07-28).
+ * THE BYE MODE IS THE ATHLETE'S ANSWER (Sam, 2026-07-29).
  *
- * Two triggers left this function: the capacity score and an active injury that
- * pauses affected training. The mode carries a strength maximum of 2 against a
- * build week's 3, so each of them cut a session — and cut it in the hardest way
- * to see, because a MODE change records no reduction anywhere. The week simply
- * arrives smaller, with a name that reads like a coaching decision.
+ * > A bye is detected from the fixture gap (existing law); build-vs-recovery is
+ * > the ATHLETE'S choice via an ask — a typed schedule-class fact, the only
+ * > producer of `in_season_bye_recovery`. Default is bye_build if unanswered.
+ * > Facts may inform the ask's copy, never decide it.
  *
- * The scheduled deload is the intended entry condition. Fatigue routes through
- * the deload law, which shrinks the dose while the structure holds; injury
- * routes through its own law family, which removes affected work by name and
- * records what it removed.
+ * Four triggers have left this function across two rulings. Capacity and an
+ * active injury went first (readiness law, 2026-07-28): the mode carries a
+ * strength maximum of 2 against a build week's 3, so each of them cut a session
+ * in the hardest way to see — a MODE change records no reduction anywhere, so
+ * the week simply arrives smaller with a name that reads like a coaching
+ * decision.
+ *
+ * The scheduled deload went with this ruling, superseding ruling 4's "the
+ * scheduled deload is the intended entry condition". It could not be the entry
+ * condition: the phase clock schedules deloads in pre-season and off-season and
+ * NEVER in-season, so under ruling 4 the mode had no producer at all. And it
+ * cannot coexist with "default is build if unanswered" — a deload bye nobody
+ * answered would arrive as recovery.
+ *
+ * WHY AN ASK IS NOT A REGRESSION toward controls. The other phase-shape rulings
+ * replace a control with a derivation from a fact the athlete already gives us
+ * (`ONBOARDING_PHASE_SHAPE_RULINGS_2026-07-28.md`). This one does not contradict
+ * them: the fixture gap still DERIVES the bye. What the schedule cannot answer is
+ * what the athlete wants to do with the free week, because both answers are
+ * legitimate for the same calendar. That question has no fact to derive from, so
+ * it is asked — once, and its answer is stored as a fact like any other.
+ *
+ * `byeMode` is the seam that answer lands on. It has no producer in generation
+ * today, deliberately: the ask belongs to the buttons/step-5 work, and until it
+ * ships every bye is a build bye.
  */
 function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
-  if (input.byeMode) return input.byeMode === 'recovery';
-  return input.weekKind === 'deload';
+  return input.byeMode === 'recovery';
 }
 
 /**

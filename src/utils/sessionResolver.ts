@@ -1487,12 +1487,14 @@ export function resolveWeekWithConditioning(
   const conditioningPlaced: WeekLog['sessions'] = [];
   // The bye mode is the CONTRACT's, not this pass's. Conditioning used to infer
   // "fresh" from readiness and injury and cap the week's tiers on the answer,
-  // which is capacity setting structure (Sam's readiness law, 2026-07-28). The
-  // accepted week already carries the decision; a week with no contract is a
-  // build bye, because only the schedule may say otherwise.
+  // which is capacity setting structure (Sam's readiness law, 2026-07-28).
+  //
+  // There is no `weekKind === 'deload'` fallback here (Sam's bye-mode ruling,
+  // 2026-07-29): the athlete's answer is the only producer of the recovery mode,
+  // and the accepted contract is where that answer has already landed. An
+  // unanswered bye is a build bye.
   const byeMode: WeekLog['byeMode'] =
-    section18Microcycle?.exposureContract?.identity.mode === 'in_season_bye_recovery' ||
-    section18Microcycle?.weekKind === 'deload'
+    section18Microcycle?.exposureContract?.identity.mode === 'in_season_bye_recovery'
       ? 'recovery'
       : 'build';
 
