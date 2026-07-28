@@ -1,316 +1,374 @@
 /**
- * Verify docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx against the code it mirrors.
+ * Verify docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx — Sam's rules-first ruling
+ * package for the injury matrix.
  *
  * WHY THIS IS COMMITTED: it is the seed of the Phase 2 equality gate. The sheet
- * is Sam's ruling surface for the injury matrix; a sheet the gate cannot READ
- * would be decoration, and re-authoring this proof from prose later is a
- * pointless risk. Run it with `npm run verify:injury-matrix-sheet`.
+ * is Sam's ruling surface; a sheet the gate cannot READ would be decoration.
+ * Run it with `npm run verify:injury-matrix-sheet`.
  *
- * ── READ THIS BEFORE "FIXING" A FAILURE ──
+ * ── The centrepiece ──
  *
- * Assertions come in two classes and they fail for opposite reasons:
+ * This does NOT check the sheet against the JSON it was built from — that would
+ * only prove the writer agrees with itself. It parses the RULE GRIDS AND
+ * EXCEPTIONS OUT OF THE WORKBOOK, evaluates Sam's resolution model, and checks
+ * the result reproduces every injury rating authored in `exerciseTags.ts`.
  *
- *   STRUCTURAL — must hold for EVERY version of this sheet, before and after
- *     Sam rules. Tab and column shape, the closed cell vocabulary, no blank rows,
- *     flag-state consistency, merge traceability. A structural failure is a real
- *     defect in the sheet or the generator.
+ * If that holds, the rule table is a faithful compression of Sam's own decisions
+ * rather than a plausible-looking summary of them.
  *
- *   PRE-RULING SNAPSHOT — pins the sheet as GENERATED, with nothing ruled yet:
- *     280 authored / 1,503 unruled / 5 conflicts / 250 flagged, and every
- *     straight-through cell still equal to today's code.
- *     THESE ARE *EXPECTED* TO FAIL THE MOMENT SAM RULES A CELL. That failure is
- *     not a bug — it is the signal to promote this script into the real Phase 2
- *     equality gate (sheet leads, code follows, both directions) and drop the
- *     snapshot pins. Do NOT "fix" them by editing the numbers to match a ruled
- *     sheet; that would silently convert a review artifact into a fake gate.
+ * ── Two classes of assertion, failing for opposite reasons ──
  *
- * This is deliberately NOT wired into `test:bible` for that reason.
+ *   STRUCTURAL — must hold for EVERY version of this sheet, before and after Sam
+ *     rules. Tab shape, header positions, closed vocabularies, nothing pre-filled
+ *     where he must decide.
+ *
+ *   PRE-RULING SNAPSHOT — pins the sheet AS GENERATED, nothing ruled yet: the
+ *     evidence counts, the 18 exceptions, and the fidelity check above.
+ *     THESE ARE *EXPECTED* TO FAIL THE MOMENT SAM RULES. That is not a bug — it
+ *     is the signal to promote this into the real Phase 2 equality gate (sheet
+ *     leads, code follows, both directions) and drop the snapshot pins. Do NOT
+ *     edit the numbers to match a ruled sheet; that silently turns a review
+ *     artifact into a fake gate.
+ *
+ * Deliberately NOT wired into `test:bible` for that reason.
  */
 import fs from 'fs';
 import path from 'path';
 
-import { readXlsx, readSheetRecords } from '../src/__tests__/support/xlsxReader';
+import { readXlsx, readSheetRecords, XlsxSheet } from '../src/__tests__/support/xlsxReader';
 import { EXERCISE_TAGS, InjuryProfile } from '../src/data/exerciseTags';
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const FILE = path.join(REPO_ROOT, 'docs', 'INJURY_MATRIX_REVIEW_2026-07-28.xlsx');
 const TAGS_SOURCE = path.join(REPO_ROOT, 'src', 'data', 'exerciseTags.ts');
+const MUSCLE_SOURCE = path.join(REPO_ROOT, 'src', 'data', 'muscleExperienceMetadata.ts');
 
-/** Sam's final region list, ruled 2026-07-28, in his order and his labels. */
 const REGIONS = ['groin', 'hip', 'quad', 'hamstring', 'knee', 'calf',
   'ankle/foot', 'lowerBack', 'neck', 'shoulder', 'elbow', 'wrist/hand'];
-/** Regions with no predecessor in the old 10-key vocabulary. */
 const NEW_REGIONS = ['hip', 'quad', 'neck'];
-/** New region -> the single old key it came from. groin merges two, handled apart. */
-const FROM_OLD: Record<string, keyof InjuryProfile> = {
-  lowerBack: 'lowerBack', knee: 'knee', hamstring: 'hamstring', calf: 'calf',
-  'ankle/foot': 'ankle', shoulder: 'shoulder', elbow: 'elbow', 'wrist/hand': 'wrist',
+const OLD_TO_NEW: Record<string, string> = {
+  adductor: 'groin', pubalgia: 'groin', lowerBack: 'lowerBack', knee: 'knee',
+  hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot', shoulder: 'shoulder',
+  elbow: 'elbow', wrist: 'wrist/hand',
 };
+const RANK: Record<string, number> = { good: 0, caution: 1, avoid: 2 };
+const strictest = (values: string[]): string =>
+  values.reduce((a, b) => (RANK[b] > RANK[a] ? b : a));
 
 let failures = 0;
 let snapshotFailures = 0;
 function ok(kind: 'structural' | 'snapshot', label: string, condition: boolean, detail = ''): void {
-  if (condition) {
-    console.log(`  ok   [${kind === 'structural' ? 'struct' : 'snapshot'}] ${label}`);
-    return;
-  }
+  const tag = kind === 'structural' ? 'struct' : 'snapshot';
+  if (condition) { console.log(`  ok   [${tag}] ${label}`); return; }
   failures += 1;
   if (kind === 'snapshot') snapshotFailures += 1;
-  console.log(`  FAIL [${kind === 'structural' ? 'struct' : 'snapshot'}] ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(`  FAIL [${tag}] ${label}${detail ? ` — ${detail}` : ''}`);
 }
 
-/**
- * Which injury keys does the SOURCE actually author?
+/* ── Source of truth: what does the CODE actually author? ──
  *
- * Read from the file text, not from EXERCISE_TAGS: by the time `inj()` has run,
- * an omitted key and an authored 'good' are indistinguishable — which is the
- * whole defect this sheet exists to kill. Entries written as `injury: SAFE`
- * author nothing at all.
+ * Read from file text, not from EXERCISE_TAGS. Once `inj()` has run, an omitted
+ * key and an authored 'good' are indistinguishable — which is the entire defect
+ * this sheet exists to kill. Entries written `injury: SAFE` author nothing.
  */
-function authoredKeysByExercise(): Map<string, Set<string>> {
+interface CodeExercise {
+  name: string;
+  movement: string;
+  authored: Record<string, string>;   // region -> rating (12-region vocabulary)
+  conflict: { adductor: string; pubalgia: string } | null;
+  primary: string[];
+}
+
+function readCode(): CodeExercise[] {
   const source = fs.readFileSync(TAGS_SOURCE, 'utf8');
   const body = source.slice(source.indexOf('export const EXERCISE_TAGS'));
-  const out = new Map<string, Set<string>>();
+
+  const muscleSource = fs.readFileSync(MUSCLE_SOURCE, 'utf8');
+  const primaryByName = new Map<string, string[]>();
+  for (const m of muscleSource.matchAll(
+    /exercise:\s*'([^']+)',\s*\n\s*pool:\s*'[^']*',\s*\n\s*primary:\s*\[([^\]]*)\]/g)) {
+    primaryByName.set(m[1], (m[2].match(/'([^']+)'/g) ?? []).map((s) => s.slice(1, -1)));
+  }
+
+  const out: CodeExercise[] = [];
   for (const entry of body.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
-    const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(entry[2]);
-    if (!injury) throw new Error(`no injury profile on "${entry[1]}"`);
-    out.set(entry[1], new Set(
-      injury[1] === 'SAFE'
-        ? []
-        : [...injury[2].matchAll(/(\w+):\s*'(\w+)'/g)].map((m) => m[1]),
-    ));
+    const [, name, block] = entry;
+    const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(block);
+    if (!injury) throw new Error(`no injury profile on "${name}"`);
+    const raw: Record<string, string> = {};
+    if (injury[1] !== 'SAFE') {
+      for (const kv of injury[2].matchAll(/(\w+):\s*'(\w+)'/g)) raw[kv[1]] = kv[2];
+    }
+
+    const authored: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === 'adductor' || key === 'pubalgia') continue;
+      authored[OLD_TO_NEW[key]] = value;
+    }
+    let conflict: CodeExercise['conflict'] = null;
+    const add = raw.adductor;
+    const pub = raw.pubalgia;
+    if (add && pub) {
+      if (add === pub) authored.groin = add;
+      else conflict = { adductor: add, pubalgia: pub };
+    } else if (add) authored.groin = add;
+    else if (pub) authored.groin = pub;
+
+    out.push({
+      name,
+      movement: /movement:\s*'([^']+)'/.exec(block)![1],
+      authored,
+      conflict,
+      primary: primaryByName.get(name) ?? [],
+    });
   }
   return out;
 }
 
-const authoredKeys = authoredKeysByExercise();
+const code = readCode();
+const strengthCode = code.filter((e) => e.movement !== 'conditioning');
 
 /* ── Workbook shape ── */
 
 const sheets = readXlsx(FILE);
 console.log(`tabs: ${sheets.map((s) => s.name).join(' | ')}\n`);
-ok('structural', '5 tabs', sheets.length === 5);
-ok('structural', 'tab names and order', sheets.map((s) => s.name).join(',')
-  === 'README,Injury matrix,Group sign-off,Flag rules,Conflicts & routing');
+const TAB_NAMES = ['README', 'Rules — pattern', 'Rules — muscle', 'Exceptions',
+  'Conditioning', 'Conflicts & routing', 'Reference'];
+ok('structural', '7 tabs in order', sheets.map((s) => s.name).join(',') === TAB_NAMES.join(','),
+  sheets.map((s) => s.name).join(','));
 
 /**
- * THE BLANK-ROW TRAP, and how it must actually be caught.
- *
- * A blank row emits no <row> element at all, and xlsxReader indexes the rows it
- * actually READS. So inserting a blank row above a header shifts every reader
- * index below it — silently, while still passing a naive row count. This ate a
- * sign-off group on the first build of this sheet.
- *
- * CRUCIALLY: you cannot detect it by looking for blank rows. They are invisible
- * from the read side by construction — `sheet.rows` never contains one, so an
- * assertion like "no blank row exists" is VACUOUS and can never fail. (Proven by
- * mutation: inserting a blank row passed such a check.)
- *
- * The only real protection is to pin each header by CONTENT at its expected
- * index. If anything shifts the rows, the header is no longer there and this
- * fails loudly — which is the behaviour the vacuous check only appeared to have.
+ * THE ROW-SHIFT TRAP. A blank row emits no <row> element, and xlsxReader indexes
+ * the rows it actually READS. You cannot detect a blank row from the read side —
+ * `sheet.rows` never contains one, so "assert no blank rows" is VACUOUS and can
+ * never fail (proven by mutation). The real hazard is a generator counting a
+ * blank row and computing a header position in spreadsheet coordinates while the
+ * reader works in emitted-row coordinates. The only real protection is to pin
+ * each header BY CONTENT at its expected reader row.
  */
+function sheetNamed(tab: string): XlsxSheet | undefined {
+  return sheets.find((candidate) => candidate.name === tab);
+}
 function assertHeaderAt(tab: string, index: number, expected: readonly string[]): void {
-  const sheet = sheets.find((candidate) => candidate.name === tab);
+  const sheet = sheetNamed(tab);
   ok('structural', `"${tab}" exists`, sheet !== undefined);
   if (!sheet) return;
   const row = sheet.rows[index - 1] ?? [];
   const actual = expected.map((_, column) => (row[column] ?? '').trim());
-  ok('structural',
-    `"${tab}" header is intact at reader row ${index} (catches a row shift)`,
+  ok('structural', `"${tab}" header intact at reader row ${index} (catches a row shift)`,
     expected.every((cell, column) => actual[column] === cell),
-    `expected [${expected.join(', ')}] got [${actual.join(', ')}]`);
+    `got [${actual.join(', ')}]`);
 }
 
-assertHeaderAt('Group sign-off', 6, [
-  'Group', 'Exercises', 'Unruled cells', 'of which new-region',
-  'Flagged cells', 'Conflicts', 'Flag coverage',
-  'SAM: remaining unruled are…', 'SAM: notes',
-]);
-assertHeaderAt('Conflicts & routing', 5, [
-  'Exercise', 'Group', 'adductor said', 'pubalgia said', 'SAM: groin =', 'SAM: notes',
-]);
-assertHeaderAt('Conflicts & routing', 13, [
-  'Athlete types…', 'Routes to TODAY', 'Status', 'SAM: routes to', 'SAM: notes',
-]);
+assertHeaderAt('Rules — pattern', 5, ['Movement pattern', ...REGIONS, 'SAM: notes']);
+assertHeaderAt('Rules — muscle', 5, ['Primary muscle', ...REGIONS, 'SAM: notes']);
+assertHeaderAt('Exceptions', 6, ['Exercise', 'Region', 'The rules say', 'Authored today',
+  'Direction', 'SAM: rating', 'SAM: notes']);
+assertHeaderAt('Conditioning', 8, ['Exercise', ...REGIONS, 'SAM: notes']);
+assertHeaderAt('Conflicts & routing', 5, ['Exercise', 'Group', 'adductor said',
+  'pubalgia said', 'SAM: groin =', 'SAM: notes']);
+assertHeaderAt('Conflicts & routing', 13, ['Athlete types…', 'Routes to TODAY', 'Status',
+  'SAM: routes to', 'SAM: notes']);
+assertHeaderAt('Reference', 6, ['Group', 'Exercise', 'Pattern', 'Primary muscles', ...REGIONS]);
 
-const matrix = readSheetRecords(FILE, 'Injury matrix');
-ok('structural', '149 matrix records', matrix.length === 149, `got ${matrix.length}`);
-ok('structural', "all 12 regions present, in Sam's order",
-  REGIONS.every((region) => region in matrix[0]),
-  REGIONS.filter((region) => !(region in matrix[0])).join(', '));
-ok('structural', 'the retired keys are gone as columns',
-  !('adductor' in matrix[0]) && !('pubalgia' in matrix[0])
-  && !('ankle' in matrix[0]) && !('wrist' in matrix[0]));
+/* ── Parse the rule grids out of the workbook ── */
 
-const codeNames = Object.keys(EXERCISE_TAGS);
-ok('structural', 'every code exercise appears',
-  codeNames.every((name) => matrix.some((row) => row.Exercise === name)),
-  codeNames.filter((name) => !matrix.some((row) => row.Exercise === name)).join(', '));
-ok('structural', 'the sheet invents no exercise',
-  matrix.every((row) => codeNames.includes(row.Exercise)));
+const RULE_CELL = /^(good|caution|avoid) ·(\d+)\/(\d+)( split)?$|^—( new region)?$/;
 
-/* ── Cell vocabulary and mirroring ── */
+function parseRuleGrid(tab: string, headerRow: number, axisLabel: string) {
+  const records = readSheetRecords(FILE, tab, headerRow);
+  const rules: Record<string, Record<string, string | null>> = {};
+  let evidence = 0;
+  let malformed: string[] = [];
+  for (const record of records) {
+    const key = record[axisLabel];
+    // The declaration line sits under the pattern grid on a titled row.
+    if (!key || key.startsWith('DECLARATION')) continue;
+    rules[key] = {};
+    for (const region of REGIONS) {
+      const cell = (record[region] ?? '').trim();
+      if (!RULE_CELL.test(cell)) { malformed.push(`${tab} ${key}/${region}: "${cell}"`); continue; }
+      if (cell.startsWith('—')) { rules[key][region] = null; continue; }
+      rules[key][region] = cell.split(' ')[0];
+      evidence += 1;
+    }
+  }
+  ok('structural', `"${tab}" rule cells all use the closed vocabulary`, malformed.length === 0,
+    malformed.slice(0, 3).join(' ; '));
+  return { rules, evidence, count: Object.keys(rules).length };
+}
 
-const VOCABULARY = /^(good|caution|avoid|good \(defaulted( — CHECK)?\)|unruled \(new region( — CHECK)?\)|CONFLICT — adductor=\w+ vs pubalgia=\w+)$/;
-ok('structural', 'cell vocabulary is closed',
-  matrix.every((row) => REGIONS.every((region) => VOCABULARY.test(row[region]))),
-  matrix.flatMap((row) => REGIONS.map((region) => row[region]))
-    .filter((value) => !VOCABULARY.test(value)).slice(0, 3).join(' | '));
+const pattern = parseRuleGrid('Rules — pattern', 5, 'Movement pattern');
+const muscle = parseRuleGrid('Rules — muscle', 5, 'Primary muscle');
 
-const mismatches: string[] = [];
-let authoredCells = 0;
-let unruledCells = 0;
-let newCells = 0;
-let conflictCells = 0;
-let checkCells = 0;
+ok('snapshot', '12 movement patterns', pattern.count === 12, `got ${pattern.count}`);
+ok('snapshot', '16 primary muscles', muscle.count === 16, `got ${muscle.count}`);
+ok('snapshot', '59 pattern-axis rules carry evidence', pattern.evidence === 59,
+  `got ${pattern.evidence}`);
+ok('snapshot', '78 muscle-axis rules carry evidence', muscle.evidence === 78,
+  `got ${muscle.evidence}`);
+ok('structural', 'no new region carries a pattern rule',
+  Object.values(pattern.rules).every((byRegion) =>
+    NEW_REGIONS.every((region) => byRegion[region] === null)));
+ok('structural', 'no new region carries a muscle rule',
+  Object.values(muscle.rules).every((byRegion) =>
+    NEW_REGIONS.every((region) => byRegion[region] === null)));
 
-for (const record of matrix) {
-  const tag = EXERCISE_TAGS[record.Exercise];
-  const authored = authoredKeys.get(record.Exercise);
-  if (!authored) { mismatches.push(`${record.Exercise}: not found in source`); continue; }
+/* ── Parse the exceptions ── */
 
+const exceptionRecords = readSheetRecords(FILE, 'Exceptions', 6)
+  .filter((record) => !record.Exercise.startsWith('(spare'));
+const exceptions: Record<string, string> = {};
+for (const record of exceptionRecords) {
+  exceptions[`${record.Exercise}|${record.Region}`] = record['Authored today'];
+}
+ok('snapshot', '18 named exceptions', exceptionRecords.length === 18,
+  `got ${exceptionRecords.length}`);
+ok('structural', 'every exception names a real exercise and a real region',
+  exceptionRecords.every((record) => EXERCISE_TAGS[record.Exercise] !== undefined
+    && REGIONS.includes(record.Region)));
+ok('structural', 'no exception has a pre-filled answer',
+  exceptionRecords.every((record) => (record['SAM: rating'] ?? '') === ''));
+ok('structural', 'spare exception rows exist so Sam never inserts a row',
+  readSheetRecords(FILE, 'Exceptions', 6).some((r) => r.Exercise.startsWith('(spare')));
+
+/* ══ THE CENTREPIECE — do the sheet's OWN rules reproduce the code? ══ */
+
+function evaluate(exercise: CodeExercise, region: string): string | null {
+  const override = exceptions[`${exercise.name}|${region}`];
+  if (override) return override;
+  const candidates: string[] = [];
+  const byPattern = pattern.rules[exercise.movement]?.[region];
+  if (byPattern) candidates.push(byPattern);
+  for (const m of exercise.primary) {
+    const byMuscle = muscle.rules[m]?.[region];
+    if (byMuscle) candidates.push(byMuscle);
+  }
+  return candidates.length > 0 ? strictest(candidates) : null;
+}
+
+const divergences: string[] = [];
+let reproduced = 0;
+for (const exercise of strengthCode) {
   for (const region of REGIONS) {
+    const authored = exercise.authored[region];
+    if (!authored) continue;
+    const derived = evaluate(exercise, region);
+    if (derived === authored) reproduced += 1;
+    else divergences.push(`${exercise.name}.${region}: rules give ${derived ?? '(none)'}, code has ${authored}`);
+  }
+}
+ok('snapshot',
+  `the sheet's own rules reproduce every authored strength rating (${reproduced} cells)`,
+  divergences.length === 0, divergences.slice(0, 5).join(' ; '));
+// 237 strength + 43 conditioning = the 280 ratings authored across the map.
+// Conditioning is excluded here by design: it is ruled by hand, not by rules.
+ok('snapshot', '237 strength ratings reproduced', reproduced === 237, `got ${reproduced}`);
+const conditioningAuthored = code.filter((e) => e.movement === 'conditioning')
+  .reduce((n, e) => n + Object.keys(e.authored).length, 0);
+ok('snapshot', '280 ratings authored map-wide (237 strength + 43 conditioning)',
+  reproduced + conditioningAuthored === 280, `got ${reproduced} + ${conditioningAuthored}`);
+
+/* ── How many of the sheet's rules actually BIND? ──
+ *
+ * Recomputed here from the sheet's own grids rather than trusted from the
+ * builder. The two axes are derived from the same authored cells so they mostly
+ * agree, which leaves most rules redundant: loosening one changes nothing
+ * because the other still returns the same answer. Sam is told this in the
+ * README and it is shown in bold on the grids, so the count is pinned.
+ */
+function bindsAnything(axis: 'pattern' | 'muscle', key: string, region: string): boolean {
+  for (const exercise of strengthCode) {
+    if (axis === 'pattern' && exercise.movement !== key) continue;
+    if (axis === 'muscle' && !exercise.primary.includes(key)) continue;
+    if (exceptions[`${exercise.name}|${region}`]) continue;
+
+    const candidates: string[] = [];
+    const byPattern = pattern.rules[exercise.movement]?.[region];
+    if (byPattern && !(axis === 'pattern' && key === exercise.movement)) candidates.push(byPattern);
+    for (const m of exercise.primary) {
+      const byMuscle = muscle.rules[m]?.[region];
+      if (byMuscle && !(axis === 'muscle' && key === m)) candidates.push(byMuscle);
+    }
+    const without = candidates.length > 0 ? strictest(candidates) : null;
+    if (without !== evaluate(exercise, region)) return true;
+  }
+  return false;
+}
+
+let binding = 0;
+for (const [axis, rules] of [['pattern', pattern.rules], ['muscle', muscle.rules]] as const) {
+  for (const [key, byRegion] of Object.entries(rules)) {
+    for (const [region, value] of Object.entries(byRegion)) {
+      if (value !== null && bindsAnything(axis, key, region)) binding += 1;
+    }
+  }
+}
+ok('snapshot', '31 of the 137 rules currently bind', binding === 31, `got ${binding}`);
+
+/* ── Conditioning is ruled by hand, and must NOT be rule-driven ── */
+
+const conditioningRows = readSheetRecords(FILE, 'Conditioning', 8);
+ok('snapshot', '21 conditioning rows', conditioningRows.length === 21,
+  `got ${conditioningRows.length}`);
+ok('structural', 'no conditioning row is reachable by a pattern rule',
+  pattern.rules.conditioning === undefined);
+const conditioningCode = new Map(code.filter((e) => e.movement === 'conditioning')
+  .map((e) => [e.name, e]));
+const conditioningMismatch = conditioningRows.filter((record) => {
+  const entry = conditioningCode.get(record.Exercise);
+  if (!entry) return true;
+  return REGIONS.some((region) => {
     const cell = record[region];
-    if (cell.includes('CHECK')) checkCells += 1;
+    const authored = entry.authored[region];
+    if (authored) return cell !== authored;
+    return cell !== (NEW_REGIONS.includes(region) ? 'unruled (new region)' : 'unruled');
+  });
+});
+ok('snapshot', 'every conditioning cell mirrors code or is marked unruled',
+  conditioningMismatch.length === 0,
+  conditioningMismatch.map((r) => r.Exercise).slice(0, 3).join(', '));
 
-    if (cell.startsWith('CONFLICT')) { conflictCells += 1; continue; }
-    if (cell.startsWith('unruled (new region')) {
-      newCells += 1;
-      if (!NEW_REGIONS.includes(region)) {
-        mismatches.push(`${record.Exercise}.${region}: new-region cell on an old region`);
-      }
-      continue;
-    }
-    if (cell.startsWith('good (defaulted')) {
-      unruledCells += 1;
-      if (NEW_REGIONS.includes(region)) {
-        mismatches.push(`${record.Exercise}.${region}: new region shown as defaulted`);
-      }
-      continue;
-    }
-
-    authoredCells += 1;
-    if (region === 'groin') continue;            // merged; verified separately
-    const oldKey = FROM_OLD[region];
-    if (!authored.has(oldKey)) {
-      mismatches.push(`${record.Exercise}.${region}: authored in sheet, defaulted in code`);
-    } else if (cell !== tag.injury[oldKey]) {
-      mismatches.push(`${record.Exercise}.${region}: sheet "${cell}" vs code "${tag.injury[oldKey]}"`);
-    }
-  }
-}
-ok('snapshot', 'every straight-through cell mirrors code exactly', mismatches.length === 0,
-  mismatches.slice(0, 5).join(' ; '));
-ok('structural', '149 x 12 = 1788 cells accounted for',
-  authoredCells + unruledCells + newCells + conflictCells === 1788,
-  `${authoredCells}+${unruledCells}+${newCells}+${conflictCells}`);
-ok('snapshot', '280 authored cells', authoredCells === 280, `got ${authoredCells}`);
-ok('snapshot', '1503 unruled cells', unruledCells + newCells === 1503,
-  `got ${unruledCells + newCells}`);
-ok('snapshot', '447 new-region cells', newCells === 447, `got ${newCells}`);
-ok('snapshot', '250 CHECK-flagged cells', checkCells === 250, `got ${checkCells}`);
-
-/* ── The adductor + pubalgia -> groin merge ──
- *
- * Sam's ruling, 2026-07-28: agreeing overlaps and single-label ratings carry over
- * as authored; conflicts are NEVER auto-picked — they go to him showing every
- * prior value. Verified per exercise, not by totals.
- */
-const mergeErrors: string[] = [];
-let agreed = 0;
-let pubalgiaOnly = 0;
-let adductorOnly = 0;
-let conflicted = 0;
-
-for (const record of matrix) {
-  const tag = EXERCISE_TAGS[record.Exercise];
-  const authored = authoredKeys.get(record.Exercise);
-  if (!authored) continue;
-  const adductor = authored.has('adductor') ? tag.injury.adductor : null;
-  const pubalgia = authored.has('pubalgia') ? tag.injury.pubalgia : null;
-  const cell = record.groin;
-
-  if (adductor && pubalgia && adductor !== pubalgia) {
-    conflicted += 1;
-    if (!cell.startsWith('CONFLICT')) {
-      mergeErrors.push(`${record.Exercise}: conflict auto-picked as "${cell}"`);
-    } else if (!cell.includes(`adductor=${adductor}`) || !cell.includes(`pubalgia=${pubalgia}`)) {
-      mergeErrors.push(`${record.Exercise}: conflict cell hides a prior value — "${cell}"`);
-    }
-  } else if (adductor && pubalgia) {
-    agreed += 1;
-    if (cell !== adductor) mergeErrors.push(`${record.Exercise}: agreed ${adductor} became "${cell}"`);
-  } else if (pubalgia) {
-    pubalgiaOnly += 1;
-    if (cell !== pubalgia) mergeErrors.push(`${record.Exercise}: pubalgia-only ${pubalgia} became "${cell}"`);
-  } else if (adductor) {
-    adductorOnly += 1;
-    if (cell !== adductor) mergeErrors.push(`${record.Exercise}: adductor-only ${adductor} became "${cell}"`);
-  } else if (!cell.startsWith('good (defaulted')) {
-    mergeErrors.push(`${record.Exercise}: groin authored from nothing — "${cell}"`);
-  }
-}
-ok('structural', "the merge carried every value per Sam's rule", mergeErrors.length === 0,
-  mergeErrors.slice(0, 5).join(' ; '));
-ok('structural', 'every merged groin cell records which prior label it came from',
-  matrix.every((row) => row.groin.startsWith('good (defaulted')
-    || (row['groin — prior labels'] ?? '') !== '—'));
-ok('snapshot', '16 agreed pairs carried', agreed === 16, `got ${agreed}`);
-ok('snapshot', '13 pubalgia-only carried', pubalgiaOnly === 13, `got ${pubalgiaOnly}`);
-ok('snapshot', '5 adductor-only carried', adductorOnly === 5, `got ${adductorOnly}`);
-ok('snapshot', '5 conflicts left unruled', conflicted === 5, `got ${conflicted}`);
-
-/* ── Flag states stay three-way distinguishable ──
- *
- * flag-clean BY ANALYSIS and flag-clean BY BLINDNESS must never look alike: the
- * conditioning rows have no muscle signal and no pattern rule, so no rule ran on
- * them at all. Reading that as a quiet all-clear is the failure mode.
- */
-const blind = matrix.filter((row) => row.Flags === 'no flag rule — unreviewed by flags');
-const clean = matrix.filter((row) => row.Flags.startsWith('no flag —'));
-const flagged = matrix.filter((row) => row.Flags.startsWith('CHECK:'));
-ok('structural', 'every row carries exactly one flag state',
-  blind.length + clean.length + flagged.length === 149,
-  `${blind.length}+${clean.length}+${flagged.length}`);
-ok('structural', 'CHECK cells and the Flags column agree on every row',
-  matrix.every((row) => REGIONS.some((region) => row[region].includes('CHECK'))
-    === row.Flags.startsWith('CHECK:')));
-ok('structural', 'no unreviewed-by-flags row carries a CHECK cell',
-  blind.every((row) => REGIONS.every((region) => !row[region].includes('CHECK'))));
-ok('snapshot', '21 rows unreviewed-by-flags', blind.length === 21, `got ${blind.length}`);
-ok('structural', 'all unreviewed-by-flags rows are conditioning',
-  blind.every((row) => row.Group === 'CONDITIONING'));
-
-/* ── Group sign-off ── */
-
-const signoff = readSheetRecords(FILE, 'Group sign-off', 6);
-ok('structural', '15 sign-off group rows', signoff.length === 15, `got ${signoff.length}`);
-ok('structural', 'every sign-off decision cell starts empty',
-  signoff.every((row) => (row['SAM: remaining unruled are…'] ?? '') === ''));
-ok('snapshot', 'sign-off unruled counts sum to 1503',
-  signoff.reduce((total, row) => total + Number(row['Unruled cells']), 0) === 1503);
-ok('snapshot', 'sign-off new-region counts sum to 447',
-  signoff.reduce((total, row) => total + Number(row['of which new-region']), 0) === 447);
-ok('snapshot', 'sign-off conflicts sum to 5',
-  signoff.reduce((total, row) => total + Number(row.Conflicts), 0) === 5);
-ok('structural', 'sign-off exercise counts sum to 149',
-  signoff.reduce((total, row) => total + Number(row.Exercises), 0) === 149);
-
-/* ── Conflicts tab ── */
+/* ── Conflicts ── */
 
 const conflictRows = readSheetRecords(FILE, 'Conflicts & routing', 5)
-  .filter((row) => row['adductor said'] === 'caution' || row['adductor said'] === 'avoid');
+  .filter((record) => ['caution', 'avoid', 'good'].includes(record['adductor said']));
 const EXPECTED_CONFLICTS = ['Back Squat', 'Front Squat', 'Bulgarian Split Squats',
   'Walking Lunges', 'Nordic Lower'];
-ok('snapshot', '5 conflict rows listed', conflictRows.length === 5, `got ${conflictRows.length}`);
-ok('snapshot', 'the 5 conflicts are exactly the ones Sam was told about',
-  EXPECTED_CONFLICTS.every((name) => conflictRows.some((row) => row.Exercise === name)),
-  conflictRows.map((row) => row.Exercise).join(', '));
-ok('structural', 'each conflict row shows BOTH prior values',
-  conflictRows.every((row) => row['adductor said'] && row['pubalgia said']));
-ok('structural', 'no conflict row has a pre-filled answer',
-  conflictRows.every((row) => (row['SAM: groin ='] ?? '') === ''));
+ok('snapshot', '5 conflict rows', conflictRows.length === 5, `got ${conflictRows.length}`);
+ok('snapshot', 'the 5 conflicts are exactly the expected ones',
+  EXPECTED_CONFLICTS.every((name) => conflictRows.some((r) => r.Exercise === name)),
+  conflictRows.map((r) => r.Exercise).join(', '));
+ok('structural', 'each conflict shows BOTH prior values, unresolved',
+  conflictRows.every((r) => r['adductor said'] && r['pubalgia said']
+    && (r['SAM: groin ='] ?? '') === ''));
+ok('structural', 'every code conflict reaches the sheet',
+  code.filter((e) => e.conflict).length === conflictRows.length);
+
+/* ── Routing ── */
+
+const routingRows = readSheetRecords(FILE, 'Conflicts & routing', 13)
+  .filter((record) => record['Athlete types…'] && record['Routes to TODAY']);
+ok('snapshot', '11 routing rules to author', routingRows.length === 11,
+  `got ${routingRows.length}`);
+ok('structural', 'no routing rule has a pre-filled answer',
+  routingRows.every((record) => (record['SAM: routes to'] ?? '') === ''));
+
+/* ── The completeness declaration must start unsigned ── */
+
+const patternSheet = sheetNamed('Rules — pattern');
+const declarationRow = patternSheet?.rows.find((row) => (row[0] ?? '').startsWith('DECLARATION'));
+ok('structural', 'the completeness declaration is present', declarationRow !== undefined);
+ok('structural', 'the completeness declaration starts UNSIGNED',
+  declarationRow !== undefined && (declarationRow[1] ?? '').trim() === '');
+
+/* ── Reference tab is derived, never a ruling surface ── */
+
+const referenceRows = readSheetRecords(FILE, 'Reference', 6);
+ok('snapshot', '128 strength rows on the reference tab', referenceRows.length === 128,
+  `got ${referenceRows.length}`);
+ok('structural', 'the reference tab carries no SAM column',
+  Object.keys(referenceRows[0]).every((column) => !column.startsWith('SAM')));
 
 /* ── Result ── */
 
@@ -321,8 +379,8 @@ if (failures === 0) {
 console.log(`\n${failures} FAILURES (${snapshotFailures} of them pre-ruling snapshot pins)`);
 if (snapshotFailures === failures) {
   console.log(
-    'ALL failures are snapshot pins. If Sam has ruled the sheet, this is EXPECTED:\n'
-    + 'promote this script into the Phase 2 equality gate and drop the pins.\n'
+    'ALL failures are snapshot pins. If Sam has ruled the sheet this is EXPECTED:\n'
+    + 'promote this into the Phase 2 equality gate and drop the pins.\n'
     + 'Do NOT edit the numbers to match a ruled sheet.',
   );
 }
