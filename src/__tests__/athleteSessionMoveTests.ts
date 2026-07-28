@@ -265,6 +265,9 @@ function realDoor(change: PlanChange, weekStart: string) {
   });
   assert(afterPreview === before, 'preview mutated accepted state');
   if (!preview.ok) return { preview, commit: null };
+  // An unanswered G-1 ask is not a green light. The real sheet shows the three
+  // routes and commits nothing until the athlete picks one, so neither does this.
+  if (preview.g1Ask) return { preview, commit: null };
   const commit = applyPlanChange({
     change,
     visibleWeek: week,
@@ -707,11 +710,21 @@ run('12 direct/reload moves converge across the production-door phase matrix', (
     assert(source?.workout && target && source.date !== target.date,
       `${scenario.name}: safe source/target pair missing`);
     const sourceIdentity = source.workout.planEntryId ?? source.workout.id;
-    const moved = realDoor({
+    const change: PlanChange = {
       kind: 'move_session',
       fromDate: source.date,
       toDate: target.date,
-    }, weekStart);
+    };
+    let moved = realDoor(change, weekStart);
+    // Some rows of this matrix land on the day before the fixture — the
+    // practice-match week's only free day IS its G-1. That destination now
+    // raises Sam's ask instead of applying anything, so the athlete's answer is
+    // part of the production door and this test has to give one. Convergence is
+    // what is under test, and it must hold for a routed move too.
+    if (moved.preview.g1Ask) {
+      assert(!moved.commit, `${scenario.name}: the ask applied something`);
+      moved = realDoor({ ...change, g1Route: 'deloaded' }, weekStart);
+    }
     assert(moved.preview.ok && moved.commit?.ok,
       `${scenario.name}: ${JSON.stringify(moved)}`);
     const after = accepted(weekStart);
@@ -775,10 +788,10 @@ run('15 newer overlapping athlete intent supersedes stale restoration', () => {
   const moved = workoutOn(FUTURE_WEEK, 3);
   assert(moved, 'first move target missing');
   // Second, overlapping move relocates the SAME session again to another empty
-  // day (Monday, vacated by the first move). Target must be a plain empty day —
-  // Friday is a G-1 Gunshow filler and a move onto it is now (correctly) refused
-  // by the content-conservation gate; the supersede semantics under test are
-  // independent of the destination day.
+  // day (Monday, vacated by the first move). Deliberately a plain empty day:
+  // Friday is G-1, and a move there now goes through the ask-flow, which would
+  // put a route choice in the middle of a test about supersede semantics. Those
+  // semantics are independent of the destination day.
   commitAthleteSessionMoveTransaction({
     sourceDate: dateForDay(FUTURE_WEEK, 3),
     targetDate: dateForDay(FUTURE_WEEK, 1),

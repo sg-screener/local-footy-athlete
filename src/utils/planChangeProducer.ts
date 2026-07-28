@@ -15,7 +15,7 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import { getMondayForDate } from './sessionResolver';
+import { effectiveGameDatesAround, getMondayForDate } from './sessionResolver';
 import { splitSessionName } from './sessionNaming';
 import type { OverrideContext, UserRemovalScope, Workout } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
@@ -65,6 +65,16 @@ import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
+import {
+  G1_MOVE_WARNING,
+  placeSessionForRoute,
+  resolveG1MoveAsk,
+  type G1MoveContext,
+} from '../rules/g1MoveAsk';
+import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { resolveEquipmentCapabilities } from './equipmentAvailability';
+import { DEFAULT_ATHLETE_CONTEXT, type AthleteContext } from './sessionBuilder';
 import { useProfileStore } from '../store/profileStore';
 import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import {
@@ -859,6 +869,13 @@ export interface PlanChangeRiskPreviewResult {
   rejected: Array<{ date: string | null; code: string; reason: string }>;
   proposedWeek: ResolvedDay[];
   assessment: ProgramEditRiskAssessment;
+  /**
+   * Present when the athlete has put a session on the day before a game and has
+   * not yet chosen a route. NOTHING has been applied. The caller must show the
+   * warning and the three routes, then re-issue the change with `g1Route` set —
+   * or, for "keep the Gunshow", issue nothing at all.
+   */
+  g1Ask?: G1MoveContext | null;
   /** Correlation context reused by the real commit door. */
   trace: AthleteActionTraceContext;
 }
@@ -936,10 +953,21 @@ function athleteMoveInput(args: {
   const sourceWorkout = args.visibleWeek.find((day) =>
     day.date === args.change.fromDate)?.workout ?? null;
   if (!sourceWorkout) return null;
+  const route = args.change.g1Route;
+  const placedWorkout = route
+    ? placeSessionForRoute({
+        route,
+        sourceWorkout,
+        targetDate: args.change.toDate,
+        athlete: athleteContextForPlanChange(),
+        profile: useProfileStore.getState().onboardingData,
+      })
+    : null;
   return {
     sourceDate: args.change.fromDate,
     targetDate: args.change.toDate,
-    reason: `${args.source}:move_session:${args.change.fromDate}:${args.change.toDate}`,
+    reason: `${args.source}:move_session:${args.change.fromDate}:${args.change.toDate}`
+      + (route ? `:${route}` : ''),
     source: args.source,
     acceptedSourcePlanEntryId: sourceWorkout.planEntryId ?? null,
     sourceWorkoutId: sourceWorkout.id,
@@ -947,7 +975,73 @@ function athleteMoveInput(args: {
     existingTargetWorkout: args.visibleWeek.find((day) =>
       day.date === args.change.toDate)?.workout ?? null,
     scope: 'whole_session',
+    placedSession: route && placedWorkout
+      ? { route, workout: placedWorkout }
+      : null,
   };
+}
+
+function athleteContextForPlanChange(): AthleteContext {
+  const onboarding = useProfileStore.getState().onboardingData;
+  if (!onboarding) return DEFAULT_ATHLETE_CONTEXT;
+  return {
+    injuries: onboarding.injuries ?? [],
+    equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
+    trainingLocation: onboarding.trainingLocation ?? DEFAULT_ATHLETE_CONTEXT.trainingLocation,
+    onboardingData: onboarding,
+  };
+}
+
+/**
+ * Is this move putting a session on the day before a game, and does that need
+ * the ask?
+ *
+ * Games are read from the resolver's own owner, over marks that already have
+ * the week's CONTRACT FIXTURE folded in — a practice match lives in the
+ * contract's anchors, and asking `markedDays` alone is blind to it. Returns
+ * null when the accepted week cannot be resolved at all; a week with no
+ * contract has no fixture to be one day before, so there is nothing to ask
+ * about.
+ */
+export function g1MoveAskForChange(args: {
+  change: Extract<PlanChange, { kind: 'move_session' }>;
+  visibleWeek: ResolvedDay[];
+}): G1MoveContext | null {
+  const sourceWorkout = args.visibleWeek.find((day) =>
+    day.date === args.change.fromDate)?.workout ?? null;
+  if (!sourceWorkout) return null;
+  const profile = useProfileStore.getState().onboardingData;
+  const state = useProgramStore.getState();
+  const weekStart = getMondayForDate(args.change.toDate);
+  let contract: WeeklyExposureContractV2 | null = null;
+  try {
+    contract = rebaseAcceptedEffectiveWeek({
+      surfaces: state,
+      weekStart,
+      profile,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    }).contract;
+  } catch {
+    return null;
+  }
+  const gameDates = effectiveGameDatesAround({
+    markedDays: fixtureAwareMarkedDaysForWeek({
+      contract,
+      weekStart,
+      profile,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    }),
+    usualGameDay: profile?.usualGameDay,
+    gameDay: profile?.gameDay,
+    seasonPhase: profile?.seasonPhase,
+    centerDate: args.change.toDate,
+  });
+  return resolveG1MoveAsk({
+    sourceDate: args.change.fromDate,
+    targetDate: args.change.toDate,
+    sourceWorkout,
+    gameDates,
+  });
 }
 
 const ATHLETE_REMOVAL_SCOPE: Record<PlanChangeBinScopeId, UserRemovalScope> = {
@@ -1085,12 +1179,21 @@ export function resolveAthleteMutation(args: {
     ) {
       return { ok: false, error: 'protected_anchor_day' };
     }
-    // A resolver-owned game-proximity filler (e.g. G-1 Gunshow) on the
+    // The day before a game is the one destination the athlete may claim from a
+    // filler, and only after being asked. A routeless move onto G-1 answers with
+    // the ask instead of applying anything — which is what makes a silent
+    // substitution unreachable from this door.
+    const g1Ask = g1MoveAskForChange({ change, visibleWeek: args.visibleWeek });
+    if (g1Ask && !change.g1Route) {
+      return { ok: false, error: 'g1_route_required' };
+    }
+    // A resolver-owned game-proximity filler (e.g. G+1 Recovery) on the
     // destination is not a swappable athlete-owned session — it is regenerated
     // every render, so a real session moved onto its day is silently overwritten
     // and the "swapped-back" filler duplicates onto the source day. Refuse rather
-    // than classify it as a swap.
-    if (isResolverOwnedDerivedSession(targetDay.workout)) {
+    // than classify it as a swap. G-1 is exempt: the athlete has now been asked,
+    // and the transaction owner discards the filler rather than relocating it.
+    if (isResolverOwnedDerivedSession(targetDay.workout) && !g1Ask) {
       return { ok: false, error: 'move_destination_resolver_owned' };
     }
     const input = athleteMoveInput({
@@ -1357,6 +1460,26 @@ export function previewPlanChangeRisk(args: {
       const defersToLegacy = resolution.ok === false && (
         (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
         (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error)));
+      // The ask is not a refusal and not a risk finding. Nothing is applied and
+      // nothing is wrong — the athlete simply has not answered yet.
+      if (resolution.ok === false && resolution.error === 'g1_route_required' &&
+        args.change.kind === 'move_session') {
+        const ask = g1MoveAskForChange({
+          change: args.change,
+          visibleWeek: args.visibleWeek,
+        });
+        if (ask) {
+          return finish({
+            ok: true,
+            message: G1_MOVE_WARNING.ask.headline,
+            appliedDates: [],
+            rejected: [],
+            proposedWeek: args.visibleWeek,
+            assessment: emptyAssessment,
+            g1Ask: ask,
+          }, { internalResultCode: resolution.error });
+        }
+      }
       if (resolution.ok === false && !defersToLegacy) {
         const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
         if (blocked) {

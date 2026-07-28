@@ -160,6 +160,18 @@ lines = [
     ('"Structure comes from phase + schedule facts; capacity/readiness affects DOSE only."', None),
     ('So there is NO readiness axis and NO injury axis in this workbook. Injury reaches the', None),
     ('week through its own law family; readiness changes the dose, never the count.', None),
+    ('THE PRACTICE-MATCH RULING (Sam, 2026-07-28)', HEAD),
+    ('"A pre-season practice-match week is structurally an IN-SEASON GAME WEEK - same shape,', None),
+    ('2 team trainings + 1 game - and carries the game week\'s authored numbers, not the', None),
+    ('generic pre-season row."', None),
+    ('So this workbook has NO practice-match row, and does not need one. A pre-season week', None),
+    ('with a fixture reads the in_season_game_week row above; a pre-season week without one', None),
+    ('reads the preseason row. The week keeps its pre-season identity either way - the ruling', None),
+    ('is about the NUMBERS, not about where the week sits in the season.', None),
+    ('What it replaced: the builder took its selected target from the practice-match policy', None),
+    ('and its preferred range from the pre-season row, so one contract declared a target of 3', None),
+    ('beside an aim of 4. Like strongByeBuild, the ruling was a DELETION - the game-week row', None),
+    ('already said it, and the second row was the defect.', None),
     ('THE TABS', HEAD),
     ('  2. Contract V2 first cells  - 3 cells. AUTHOR THESE FIRST (ruling 1).', None),
     ('  3. Base numbers             - 126 cells. 9 modes x 14 slots.', None),
@@ -233,10 +245,18 @@ write_header(ws, 1, ['MODE', 'PHASE', 'DOMAIN', 'SLOT', 'RULED VALUE',
                      'FLAG', 'BIBLE §', 'BIBLE SAYS', 'STATUS', 'NOTE'])
 r = 2
 base_cells = 0
+RULING_NOTE = {
+    'in_season_game_week': ' ALSO GOVERNS the pre-season practice-match week (Sam, 2026-07-28): '
+                           'a fixture week is structurally a game week and carries this row.',
+    'preseason': ' Applies to pre-season weeks WITHOUT a fixture. A pre-season practice-match '
+                 'week takes the in_season_game_week row instead (Sam, 2026-07-28).',
+}
+
 for mode, phase, s, c, sp, fr, hard in MODES:
     for domain, triple in (('strength', s), ('conditioning', c), ('sprintCod', sp), ('fullRest', fr)):
         for slot, value in zip(SLOTS, triple):
             flag, fill, note = classify(mode, domain, slot, value)
+            note = (note or '') + RULING_NOTE.get(mode, '')
             sec, says = bible_for(domain, phase)
             for col, v in enumerate([mode, phase, domain, slot, value, flag, sec, says,
                                      'RULED 2026-07-28', note], start=1):

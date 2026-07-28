@@ -18,6 +18,7 @@ import {
   type Section18ConditioningStress,
   type Section18ContractV2Input,
   type Section18Subphase,
+  isFixtureWeekMode,
   type Section18WeekMode,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
@@ -182,6 +183,12 @@ function rest(dayOfWeek: number): Workout {
   workout.exercises = [];
   return workout;
 }
+
+const ALL_WEEK_MODES: readonly Section18WeekMode[] = [
+  'in_season_game_week', 'practice_match_week', 'in_season_bye_build',
+  'in_season_bye_recovery', 'optional_week', 'early_offseason', 'mid_offseason',
+  'late_offseason', 'early_preseason', 'mid_preseason', 'late_preseason',
+];
 
 function identityFor(mode: Section18WeekMode): {
   phase: OnboardingData['seasonPhase'];
@@ -442,14 +449,23 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     has(witnesses.byeRecoveryOneLift, 'required_minimum_shortfall', 'main_strength'));
 }
 
-// 6. Practice match with 0 TT finishes below S3/C3.
+// 6. Practice match with 0 TT finishes below the authored strength/C3 floors.
+//
+// RE-POINTED (Sam, 2026-07-28). This witness built TWO strength sessions and
+// expected a shortfall, because `practice_match_week` used to require three.
+// The practice-match ruling makes a fixture week structurally an in-season game
+// week, which requires TWO — so two sessions is now a legal week and the
+// witness was testing the old floor. It builds ONE, which is below the floor
+// the ruling actually authored.
+//
+// The conditioning half (6b) is unchanged: a fixture week still requires three.
 {
   const c = contract('practice_match_week', {
     fixtureDay: 6, fixtureParticipation: 'normal_unrestricted', currentProductionClaimsAnchorCredit: true,
     plannerSelected: { mainStrength: 2, coreConditioning: 1, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 2 },
   });
-  witnesses.practiceMatchUnder = evaluate(c, [strength(1, ['push', 'pull']), strength(3, ['hinge', 'push'])]);
-  ok('6a. PM 0TT strength below three is detected',
+  witnesses.practiceMatchUnder = evaluate(c, [strength(1, ['push', 'pull'])]);
+  ok('6a. PM 0TT strength below the authored minimum is detected',
     has(witnesses.practiceMatchUnder, 'required_minimum_shortfall', 'main_strength'));
   ok('6b. PM 0TT conditioning below three is detected',
     has(witnesses.practiceMatchUnder, 'required_minimum_shortfall', 'conditioning'));
@@ -777,6 +793,37 @@ for (const participation of ['did_not_participate', 'unknown'] as const) {
   const row = evaluate(c, []).ledger.anchors.find((entry) => entry.dayOfWeek === 6);
   ok(`a ${participation} anchor is NOT a conditioning exposure`,
     row?.conditioningCredited === false, row);
+}
+
+// ── THE FIXTURE WEEK CARRIES ITS OWN HARD CONDITIONING (Sam, 2026-07-29) ──
+//
+// "In any fixture week — game or practice match — the game itself carries the
+// hard conditioning exposure. The contract never requires a hard app-conditioning
+// session in a game-shaped week; app top-up is moderate or easier."
+//
+// The contract already credits the fixture as ONE conditioning exposure
+// (`appCoreConditioning` subtracts 1 for a fixture week). It did not carry that
+// credit into the INTENSITY policy, so a game week with exactly one team
+// training still demanded a hard app session on top of the game. A pre-season
+// week with one team training and a practice match then became `impossible` at
+// the §18 gateway — the athlete met "We couldn't safely build your week".
+//
+// Swept across every mode and every team-training count, so the demand cannot
+// come back for one arm of a ternary the way it did here.
+for (const mode of ALL_WEEK_MODES) {
+  for (const teamTrainingDays of [[], [2], [2, 4], [1, 3, 5]]) {
+    const c = contract(mode, { teamTrainingDays });
+    const hard = c.conditioning.intensityPolicy.requiredAppHardMinimum;
+    if (isFixtureWeekMode(mode)) {
+      ok(`${mode} with ${teamTrainingDays.length}TT requires no HARD app conditioning`,
+        hard === 0, { mode, teamTrainingDays, hard });
+    } else {
+      // Not the ruling, but the re-check Sam asked for: any non-fixture mode
+      // that grows a hard-app demand should be a deliberate, visible decision.
+      ok(`${mode} with ${teamTrainingDays.length}TT declares no unruled hard demand`,
+        hard === 0, { mode, teamTrainingDays, hard });
+    }
+  }
 }
 
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);

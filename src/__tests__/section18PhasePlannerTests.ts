@@ -25,6 +25,12 @@ const DAYS: OnboardingData['preferredTrainingDays'] = [
 const TEAM_DAYS: OnboardingData['teamTrainingDays'] = ['Tuesday', 'Thursday', 'Wednesday'];
 const CORE_ROLES = new Set(['required_core', 'planner_selected_core', 'core']);
 const HARD_CATEGORIES = new Set(['sprint', 'vo2', 'glycolytic']);
+/**
+ * TRUE medium conditioning — controlled repeat efforts at 6-7/10. Not the old
+ * mislabelled VO2 work. Sam's fixture-week ruling (2026-07-29) makes this the
+ * ceiling for an app top-up in a game or practice-match week.
+ */
+const MODERATE_CATEGORIES = new Set(['tempo']);
 
 let scenarioPass = 0;
 let scenarioFail = 0;
@@ -260,8 +266,17 @@ console.log('\n-- 36 fixed Section 18 phase-planner scenarios --');
 runCase('scenario', '1 game: 2 TT + game adds no app core conditioning', () => {
   invariant(game2.contract.conditioning.targetCount === 3 && game2.appCore.length === 0, 'unexpected game 2TT ledger');
 });
-runCase('scenario', '2 game: 1 TT + game adds one hard G-3-or-earlier app core', () => {
-  invariant(game1.appCore.length === 1 && HARD_CATEGORIES.has(game1.appCore[0].conditioningCategory ?? '') && fixtureOffset(game1.appCore[0]) <= -3, 'incorrect 1TT top-up', game1.appCore);
+// RE-POINTED (Sam, 2026-07-29). This asserted the top-up must be HARD. The
+// fixture-week ruling says the GAME carries the hard conditioning exposure and
+// the app top-up is moderate or easier, so a hard top-up is now the defect this
+// case exists to catch. The contract's medium-hard floor still applies, which
+// makes MODERATE the exact answer: not hard, and not dropped to easy aerobic.
+runCase('scenario', '2 game: 1 TT + game adds one MODERATE G-3-or-earlier app core', () => {
+  const topUp = game1.appCore[0];
+  invariant(game1.appCore.length === 1 &&
+    !HARD_CATEGORIES.has(topUp?.conditioningCategory ?? '') &&
+    MODERATE_CATEGORIES.has(topUp?.conditioningCategory ?? '') &&
+    fixtureOffset(topUp) <= -3, 'incorrect 1TT top-up', game1.appCore);
 });
 runCase('scenario', '3 game: 0 TT + game adds two medium-hard G-3-or-earlier app core', () => {
   invariant(game0.appCore.length === 2 && game0.appCore.every((entry) => entry.conditioningCategory !== 'aerobic_base' && fixtureOffset(entry) <= -3), 'incorrect 0TT top-ups', game0.appCore);
@@ -440,8 +455,16 @@ runCase('property', 'P3 phase defaults remain within Contract v2 maxima', () => 
 runCase('property', 'P4 constrained reductions use approved typed reasons', () => {
   invariant([byeConstrained, mid3, preConstrained].every((value) => value.contract.reductions.some((entry) => entry.reason === 'insufficient_availability' && entry.detail.length > 0)), 'constrained week lacks typed reduction');
 });
-runCase('property', 'P5 required hard conditioning cannot be downgraded', () => {
-  invariant(game1.appCore.every((entry) => entry.section18ConditioningRole === 'required_core' && HARD_CATEGORIES.has(entry.conditioningCategory ?? '')), 'required hard game top-up was downgraded');
+// RE-POINTED (Sam, 2026-07-29) — see scenario 2. The property is unchanged in
+// spirit: the required top-up keeps its authored intensity and is never quietly
+// dropped. What changed is the authored intensity itself, which the fixture-week
+// ruling caps at moderate because the game already supplies the hard exposure.
+runCase('property', 'P5 the required app top-up holds moderate and never hard', () => {
+  invariant(game1.appCore.every((entry) =>
+    entry.section18ConditioningRole === 'required_core' &&
+    !HARD_CATEGORIES.has(entry.conditioningCategory ?? '') &&
+    MODERATE_CATEGORIES.has(entry.conditioningCategory ?? '')),
+  'required game top-up left its authored moderate intensity', game1.appCore);
 });
 runCase('property', 'P6 bye-build app conditioning varies correctly across 0-3 TT', () => {
   invariant([bye0, bye1, bye2, bye3].every((value, tt) => value.appCore.length === 3 - tt), 'bye app formula drifted');
@@ -506,12 +529,20 @@ runCase('mutation', 'M5 count pure TT as strength', () => {
   const pureTeam = pre3.allocations.find((entry) => entry.isTeamDay && !entry.strengthIntent)!;
   invariant(ledgerFromAllocations(pre3.contract, [pureTeam]).achieved.main_strength === 0, 'TT-as-strength mutation survived');
 });
-runCase('mutation', 'M6 convert required hard conditioning to aerobic base', () => {
+// RE-POINTED (Sam, 2026-07-29) — see scenario 2. The mutation still drops the
+// required top-up to easy aerobic; what production must now defend is the
+// MODERATE floor rather than a hard one. Downgrading to aerobic_base is still
+// killed; upgrading to hard is now killed too, which the old form permitted.
+runCase('mutation', 'M6 convert the required moderate top-up to aerobic base', () => {
   const mutant = cloneAllocations(game1.allocations);
   const required = mutant.find((entry) => entry.section18ConditioningRole === 'required_core')!;
   required.conditioningCategory = 'aerobic_base';
-  invariant(!HARD_CATEGORIES.has(required.conditioningCategory), 'hard-to-aerobic mutation was not active');
-  invariant(game1.appCore.every((entry) => HARD_CATEGORIES.has(entry.conditioningCategory ?? '')), 'production invariant failed to kill hard downgrade');
+  invariant(!MODERATE_CATEGORIES.has(required.conditioningCategory),
+    'moderate-to-aerobic mutation was not active');
+  invariant(game1.appCore.every((entry) =>
+    MODERATE_CATEGORIES.has(entry.conditioningCategory ?? '') &&
+    !HARD_CATEGORIES.has(entry.conditioningCategory ?? '')),
+  'production invariant failed to kill the top-up downgrade', game1.appCore);
 });
 runCase('mutation', 'M7 count optional flush as core', () => {
   const mutant = addOptionalFlush(game1, 'Thursday');

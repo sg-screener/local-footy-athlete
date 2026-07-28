@@ -139,7 +139,13 @@ console.log('\n[1] pure training-age policy');
   const beginner = resolveTrainingAgePolicy('Complete beginner');
   const developing = resolveTrainingAgePolicy('1-2 years');
   ok('complete beginner receives the new-athlete policy', beginner.level === 'new');
-  ok('beginner policy caps core sessions', beginner.maxCoreSessions === 2);
+  // RE-POINTED (Sam, 2026-07-28). This asserted `maxCoreSessions === 2` while
+  // `rulesKernelTests` asserts the same field is `null` — two files disagreeing
+  // about one value, with this one red. Section 11 retired the beginner
+  // structural caps on 2026-07-27: training age changes the dose, the
+  // complexity and the progression speed, never the structure of the week.
+  ok('beginner policy sets no structural core-session cap', beginner.maxCoreSessions === null,
+    `got ${beginner.maxCoreSessions}`);
   ok('beginner policy targets controlled RPE 6-7',
     beginner.targetRpeMin === 6 && beginner.targetRpeMax === 7);
   ok('developing athletes keep the normal deterministic dose',
@@ -213,13 +219,50 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season'] as const) {
 }
 
 console.log('\n[4] beginner weekly dose and combined-day guard');
+/*
+ * RE-POINTED (Sam, 2026-07-28). Two assertions here pinned a rule that Section
+ * 11 retired on 2026-07-27:
+ *
+ *   `${phase} beginner plan caps core sessions at 2`      plan.coreSessions <= 2
+ *   `${phase} beginner hard-exposure cap is conservative` plan.hardExposureCap <= 3
+ *
+ * Sam's Section 11 ruling is that training age changes the DOSE, the COMPLEXITY
+ * and the PROGRESSION SPEED — not the structure of the week. `maxCoreSessions`
+ * and `maxHardExposures` were deleted from every training-age policy, and
+ * `rulesKernelTests` gates that they stay `null`. So these two assertions were
+ * asserting the existence of caps another passing gate asserts do not exist,
+ * and they had been RED on main for some time.
+ *
+ * A red test pinning a dead rule teaches the wrong lesson: the next person
+ * reads a failing "beginner cap" and reintroduces the cap. Deleting them
+ * outright would go too far the other way and leave this file silent about
+ * structure, so they are re-pointed at what Section 11 actually claims —
+ * observable in the PLAN, which a policy-object test cannot see.
+ *
+ * Sam ruled the hard-exposure one explicitly. The core-session assertion is the
+ * same defect, on the same law, in the same loop; it is re-pointed with it
+ * rather than left as the one surviving instance of the lesson.
+ */
 for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season'] as const) {
   const data = profile(seasonPhase, 'Complete beginner');
   const plan = buildCoachingPlan(onboardingToCoachingInputs(data));
-  ok(`${seasonPhase} beginner plan caps core sessions at 2`, plan.coreSessions <= 2,
-    `core=${plan.coreSessions}`);
-  ok(`${seasonPhase} beginner hard-exposure cap is conservative`, plan.hardExposureCap <= 3,
-    `cap=${plan.hardExposureCap}`);
+  const experienced = buildCoachingPlan(onboardingToCoachingInputs(
+    profile(seasonPhase, '5+ years')));
+
+  ok(`${seasonPhase} beginner gets the same weekly STRUCTURE as an experienced athlete`,
+    plan.coreSessions === experienced.coreSessions &&
+    plan.optionalSessions === experienced.optionalSessions &&
+    plan.recoverySessions === experienced.recoverySessions &&
+    plan.weeklyPlan.length === experienced.weeklyPlan.length,
+    `beginner core=${plan.coreSessions} opt=${plan.optionalSessions} rec=${plan.recoverySessions} `
+    + `days=${plan.weeklyPlan.length} vs experienced core=${experienced.coreSessions} `
+    + `opt=${experienced.optionalSessions} rec=${experienced.recoverySessions} `
+    + `days=${experienced.weeklyPlan.length}`);
+
+  ok(`${seasonPhase} beginner gets the same hard-day budget as an experienced athlete`,
+    plan.hardExposureCap === experienced.hardExposureCap,
+    `beginner=${plan.hardExposureCap} experienced=${experienced.hardExposureCap}`);
+
   ok(`${seasonPhase} beginner has no hard conditioning attached to strength`,
     plan.weeklyPlan.every((session) =>
       !session.hasCombinedConditioning ||

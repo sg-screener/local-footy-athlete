@@ -88,7 +88,26 @@ console.log('\n[3] Every row is AUTHORED: a ruled value, a flag, and a ruling da
 
 console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships');
 {
-  const source = fs.readFileSync(path.join(repoRoot, SOURCE), 'utf8');
+  const raw = fs.readFileSync(path.join(repoRoot, SOURCE), 'utf8');
+
+  // COMMENTS ARE STRIPPED FIRST, and that is not a tidy-up.
+  //
+  // The parser below walks from `mode:` to `preferredHardDays:` through bounded
+  // gaps. Prose between two domains overruns the gap, the match fails, and the
+  // mode is skipped in SILENCE — the round trip then reports a clean pass over
+  // whatever it happened to match. On 2026-07-28 it was matching THREE of the
+  // seven authored rows: `in_season_bye_build` and `early_offseason` had been
+  // dropped by their own ruling comments, and nothing said so.
+  //
+  // That is the absence-rendered-as-approval defect this sheet exists to
+  // remove, living inside the gate that guards it. The named-set assertion
+  // below is the real fix; stripping comments is what lets the set be complete.
+  const source = raw
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .map((line) => line.replace(/\s\/\/.*$/, ''))
+    .join('\n');
 
   // Pull each mode's four domain triples straight out of the builder.
   const re = /mode:\s*'([a-z_]+)',[\s\S]{0,160}?strength:\s*\{([^}]*)\}[\s\S]{0,60}?conditioning:\s*\{([^}]*)\}[\s\S]{0,60}?sprintCod:\s*\{([^}]*)\}[\s\S]{0,120}?fullRest:\s*\{([^}]*)\}[\s\S]{0,160}?preferredHardDays:\s*(\d+),\s*permittedHardDays:\s*(\d+)/g;
@@ -117,7 +136,18 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
     fromSource.set(`${mode}|hardDays|permitted`, m[7]);
   }
 
-  ok('the source parse found modes', modes > 0, `${modes}`);
+  // NAMED, not counted. `modes > 0` passed while four rows were unparsed.
+  // Every authored row must arrive here by one route or the other: inline, or
+  // as a named constant compared explicitly below.
+  const INLINE_ROWS = ['in_season_bye_build', 'in_season_bye_recovery',
+    'early_offseason', 'mid_offseason', 'late_offseason'];
+  const CONSTANT_ROWS = ['in_season_game_week', 'preseason'];
+  const parsed = [...new Set([...fromSource.keys()].map((k) => k.split('|')[0]))].sort();
+  ok('exactly the expected rows parse inline',
+    JSON.stringify(parsed) === JSON.stringify([...INLINE_ROWS].sort()),
+    `parsed ${parsed.join(', ')} — expected ${[...INLINE_ROWS].sort().join(', ')}`);
+  ok('every authored row is covered by one route or the other',
+    INLINE_ROWS.length + CONSTANT_ROWS.length === 7, `${modes} inline matches`);
 
   const header = base.rows[0];
   const [iMode, iDomain, iSlot, iValue] = ['MODE', 'DOMAIN', 'SLOT', 'RULED VALUE']
@@ -147,6 +177,54 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
   const missing = [...fromSource.keys()].filter((k) => !inSheet.has(k));
   ok('every parsed source value has a row in the sheet', missing.length === 0,
     missing.join(', '));
+
+  // THE SAME HOLE, RE-OPENED AND RE-CLOSED (Sam, 2026-07-28).
+  //
+  // The practice-match ruling collapsed the game week and the pre-season
+  // fixture week onto ONE authored row, `GAME_WEEK_TARGETS`. That is the right
+  // shape and it costs the same thing the pre-season collapse cost: the moment
+  // a row moves behind a spread it leaves the inline parser's reach. So it is
+  // compared explicitly here, exactly as PRE_SEASON_TARGETS is.
+  //
+  // Conditioning is deliberately not in the constant — on a fixture week it is
+  // anchor-derived, and the sheet renders it `max(3,anchors)` under the
+  // `derived_not_literal` flag rather than pretending it is a number.
+  const gameWeek = /const GAME_WEEK_TARGETS = \{([\s\S]*?)\n\} as const;/.exec(source);
+  ok('GAME_WEEK_TARGETS is readable', !!gameWeek);
+  if (gameWeek) {
+    const blob = gameWeek[1];
+    const domainBlob = (d: string): string =>
+      new RegExp(`${d}:\\s*\\{([^}]*)\\}`).exec(blob)?.[1] ?? '';
+    const expected: Record<string, string> = {};
+    for (const domain of ['strength', 'sprintCod', 'fullRest']) {
+      for (const slot of ['required', 'preferredMin', 'preferredMax']) {
+        const v = slotOf(domainBlob(domain), slot);
+        if (v !== null) expected[`${domain}|${slot}`] = v;
+      }
+    }
+    expected['hardDays|preferred'] = /preferredHardDays:\s*(\d+)/.exec(blob)?.[1] ?? '';
+    expected['hardDays|permitted'] = /permittedHardDays:\s*(\d+)/.exec(blob)?.[1] ?? '';
+
+    const sheetGameWeek = new Map(base.rows.slice(1)
+      .filter((r) => r[iMode] === 'in_season_game_week')
+      .map((r) => [`${r[iDomain]}|${r[iSlot]}`, (r[iValue] ?? '').trim()]));
+
+    ok('the game-week row has all 14 slots', sheetGameWeek.size === 14, `${sheetGameWeek.size}`);
+
+    const gwMismatch: string[] = [];
+    for (const [key, value] of Object.entries(expected)) {
+      const sheetValue = sheetGameWeek.get(key);
+      if (sheetValue !== value) gwMismatch.push(`${key}: sheet ${sheetValue} vs code ${value}`);
+    }
+    ok('the authored game-week row equals GAME_WEEK_TARGETS', gwMismatch.length === 0,
+      gwMismatch.join('\n      '));
+
+    // The ruling, asserted as a behaviour of the SOURCE: the pre-season fixture
+    // week must reach this row, not restate it.
+    ok('the pre-season fixture week routes to the one fixture builder',
+      /if \(input\.hasGame && input\.gameDay !== null\) \{\s*return buildFixtureWeekContract\(/
+        .test(source));
+  }
 
   // THE HOLE THIS CLOSES. Collapsing pre-season onto a spread (`...PRE_SEASON_
   // TARGETS`) removed its literals from the inline shape the parser above
@@ -184,6 +262,32 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
     ok('the authored pre-season row equals PRE_SEASON_TARGETS', preMismatch.length === 0,
       preMismatch.join('\n      '));
   }
+}
+
+console.log('\n[4b] The practice-match ruling is attributed on the sheet\'s face');
+{
+  // A ruling that lives only in the code is a ruling Sam cannot audit from the
+  // artifact he was given. The sheet has no practice-match ROW by design, so
+  // the absence has to be explained ON the sheet — otherwise the next reader
+  // sees a missing mode and authors one back.
+  const howTo = sheets.find((s) => s.name === 'How to use')!;
+  const flat = howTo.rows.map((r) => r.join(' ')).join('\n');
+  ok('the sheet states the practice-match ruling',
+    /structurally an IN-SEASON GAME WEEK/i.test(flat));
+  ok('the sheet explains why there is no practice-match row',
+    /NO practice-match row/i.test(flat));
+  ok('the sheet records that identity is unchanged',
+    /keeps its pre-season identity/i.test(flat));
+
+  const header = base.rows[0];
+  const iMode = header.indexOf('MODE');
+  const iNote = header.indexOf('NOTE');
+  const noteFor = (mode: string): string => base.rows.slice(1)
+    .filter((r) => r[iMode] === mode).map((r) => r[iNote] ?? '').join(' ');
+  ok('the game-week row says it also governs the fixture week',
+    /ALSO GOVERNS the pre-season practice-match week/i.test(noteFor('in_season_game_week')));
+  ok('the pre-season row says it excludes fixture weeks',
+    /WITHOUT a fixture/i.test(noteFor('preseason')));
 }
 
 console.log('\n[5] The three Contract V2 cells are present and unauthored');

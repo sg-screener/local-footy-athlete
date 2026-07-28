@@ -7,6 +7,7 @@ import type {
   StrengthIntent,
   StrengthIntentDiagnostic,
 } from '../rules/strengthPatternContributions';
+import type { AthletePlacement } from '../rules/athletePlacement';
 
 // Footy role buckets for athletes. The legacy exact positions remain in the
 // type so old persisted profiles can be read and normalized at the app edge.
@@ -676,6 +677,12 @@ export interface Workout {
   planEntryId?: string;
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
+  /**
+   * "The athlete put this session on this day." Derived from the owning
+   * `UserRemovalConstraint` at the single ingress site and never persisted as a
+   * second truth — see `rules/athletePlacement.ts` before adding a writer.
+   */
+  athletePlacement?: AthletePlacement;
   /** Canonical planned/effective strength contract. Existing typed intent always wins. */
   strengthIntent?: StrengthIntent;
   /** Development/audit proof for planned patterns absent after final filtering. */

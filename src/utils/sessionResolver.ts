@@ -79,6 +79,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
+import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 
@@ -510,12 +511,39 @@ function getEffectiveGameDates(
   centerDate: string,
   windowDays: number = 10,
 ): Set<string> {
-  const markedDays = state.markedDays || {};
+  return effectiveGameDatesAround({
+    markedDays: state.markedDays || {},
+    usualGameDay: state.usualGameDay,
+    gameDay: state.gameDay,
+    seasonPhase: state.seasonPhase,
+    centerDate,
+    windowDays,
+  });
+}
+
+/**
+ * `getEffectiveGameDates` over the minimal slice it actually reads, so callers
+ * outside the resolver (the G-1 ask-flow) can ask the SAME owner "where are the
+ * games?" instead of re-deriving it from a visible week. Re-derivation is how a
+ * second answer to a settled question gets born; there is one answer and this
+ * is it.
+ */
+export function effectiveGameDatesAround(args: {
+  markedDays: Readonly<Record<string, CalendarDayType>>;
+  usualGameDay?: DayOfWeek;
+  gameDay?: GameDay;
+  seasonPhase: SeasonPhase | null | undefined;
+  centerDate: string;
+  windowDays?: number;
+}): Set<string> {
+  const markedDays = args.markedDays || {};
+  const centerDate = args.centerDate;
+  const windowDays = args.windowDays ?? 10;
   const games = new Set<string>();
 
-  const effGameDay = resolveEffectiveGameDay(state.usualGameDay, state.gameDay);
+  const effGameDay = resolveEffectiveGameDay(args.usualGameDay, args.gameDay);
   const virtualDow = effGameDay !== undefined ? DOW_TO_NUM[effGameDay] : undefined;
-  const recurringActive = isVirtualGameEnabled(state) && virtualDow !== undefined;
+  const recurringActive = args.seasonPhase === 'In-season' && virtualDow !== undefined;
 
   // Bounds for one-off scoping (Mon–Sun of centerDate's week).
   const centerMonday = getMondayForDate(centerDate);
@@ -671,6 +699,17 @@ function applyGameProximity(
     }
     // Keep game as-is (shouldn't happen but guard)
     if (templateWorkout?.workoutType === 'Game') {
+      return null;
+    }
+    // SAM'S LAW (2026-07-28): athlete-placed content outranks derived filler.
+    // The athlete deliberately put this session on the day before their game
+    // and was warned about it by the ask-flow before it landed — the Gunshow is
+    // a filler regenerated every render and has no standing to overwrite a
+    // decision. Unconditional by design: the guard below is disabled for
+    // EXPLICIT fixtures, which is exactly how a practice-match week used to eat
+    // an athlete's moved session. Generation still never PLANS hard work here;
+    // this only concerns what the athlete places.
+    if (isAthletePlacedSession(templateWorkout)) {
       return null;
     }
     // GUARD: never replace protected core exposure for virtual/recurring

@@ -1,0 +1,61 @@
+import type { Workout } from '../types/domain';
+
+/**
+ * ATHLETE PLACEMENT — "the athlete put this session on this day."
+ *
+ * Sam's law (2026-07-28): athlete-placed content outranks derived filler. The
+ * defect this exists to close: `applyGameProximity`'s G-1 branch overwrote a
+ * session the athlete had deliberately moved onto the day before a game with
+ * the derived Gunshow, and the move's conservation post-condition then refused
+ * the whole thing. The athlete's choice lost to a filler that is regenerated
+ * every render.
+ *
+ * OWNERSHIP — read this before adding a second writer.
+ *
+ * The stamp is DERIVED, not stored. `UserRemovalConstraint` remains the only
+ * persisted representation of an athlete move; this marker is written onto the
+ * workout at the single site that lands a moved session on its target day
+ * (`applyUserRemovalConstraintsToWeek`) and travels with the composed week from
+ * there. That keeps the count of representations at one. A second writer — an
+ * overlay, a repair, a finaliser — would mean the resolver could be told
+ * "the athlete placed this" by something that is not the athlete, which is
+ * exactly the confusion this marker exists to remove.
+ *
+ * §18 repair relocation does NOT pass through that site and so is never
+ * stamped: automatic heavy relocation onto G-1 stays refused. The ask-flow is
+ * the only door onto G-1. `athleteSessionDeletionTests` regressions 14/15 pin
+ * that boundary.
+ */
+export interface AthletePlacement {
+  /** Always the athlete. A system author has no business writing this marker. */
+  authorship: 'athlete';
+  /** The owning `UserRemovalConstraint` — the stored truth this is derived from. */
+  constraintId: string;
+  /** The day the athlete chose, ISO `YYYY-MM-DD`. */
+  placedDate: string;
+}
+
+/**
+ * Did the athlete deliberately put this session on this day?
+ *
+ * The inverse of `isResolverOwnedDerivedSession`. Where that predicate marks
+ * content the resolver may freely regenerate, this marks content the resolver
+ * must not touch.
+ */
+export function isAthletePlacedSession(
+  workout: Workout | null | undefined,
+): boolean {
+  return workout?.athletePlacement?.authorship === 'athlete';
+}
+
+/** The marker for a session the athlete moved onto `placedDate`. */
+export function athletePlacementFor(args: {
+  constraintId: string;
+  placedDate: string;
+}): AthletePlacement {
+  return {
+    authorship: 'athlete',
+    constraintId: args.constraintId,
+    placedDate: args.placedDate.slice(0, 10),
+  };
+}

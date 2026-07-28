@@ -448,22 +448,73 @@ function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
     (input.activeInjuries ?? []).some((injury) => injury.pauseAffectedTraining);
 }
 
-export function buildInSeasonGameWeekExposureContract(
+/**
+ * THE FIXTURE-WEEK ROW (Sam, 2026-07-28).
+ *
+ * > A pre-season practice-match week is structurally an IN-SEASON GAME WEEK —
+ * > same shape, 2 team trainings + 1 game — and carries the game week's
+ * > authored numbers, not the generic pre-season row.
+ *
+ * So there is ONE authored fixture-week row and two weeks that reference it.
+ * There used to be two rows: `buildPreseasonBase` took its selected target from
+ * the `practice_match_week` policy and its preferred range from the generic
+ * pre-season row, which left a single contract declaring a target of 3 beside
+ * an aim of 4. Batch 0 surfaced it by aiming at the preferred maximum and
+ * watching a pre-season fixture week ask for a fourth strength session the
+ * fixture leaves nowhere safe to place.
+ *
+ * Like `strongByeBuild`, the ruling turned out to be a DELETION. Nothing had to
+ * be authored to express it — the game week's row already said it, and the
+ * second row was the defect.
+ *
+ * Conditioning is deliberately not here: on a fixture week it is anchor-derived
+ * (the game and the team sessions ARE the exposures), so it is a function of
+ * the athlete's schedule rather than a fixed triple. See `fixtureWeekConditioning`.
+ */
+const GAME_WEEK_TARGETS = {
+  strength: { required: 2, preferredMin: 2, preferredMax: 3 },
+  // The game/team anchors satisfy the shared floor without inflating it.
+  sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
+  fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
+  allowCombined: true,
+  preferredHardDays: 4,
+  permittedHardDays: 5,
+} as const;
+
+function fixtureWeekConditioning(
   input: WeeklyExposureContractInput,
-): WeeklyExposureContract {
-  const selected = phaseSelection(input, 'in_season_game_week');
+): { required: number; preferredMin: number; preferredMax: number } {
   const anchorCount = uniqueExposureDays(input.teamTrainingDayNumbers).length + 1;
+  const total = Math.max(3, anchorCount);
+  return { required: total, preferredMin: total, preferredMax: total };
+}
+
+/**
+ * The one builder for a week with a fixture in it, in either phase.
+ *
+ * IDENTITY IS NOT SHAPE. The ruling says a practice-match week has the game
+ * week's NUMBERS; it does not say the week has moved season. A pre-season
+ * fixture week keeps its pre-season phase and subphase, because that is where
+ * it sits in the athlete's year and Section 18 checks the declared subphase
+ * against the season phase.
+ */
+function buildFixtureWeekContract(
+  input: WeeklyExposureContractInput,
+  identity: {
+    mode: WeeklyExposureContractMode;
+    subphase: WeeklyExposureContractSubphase;
+    plannerMode: 'in_season_game_week' | 'practice_match_week';
+  },
+  spacingDetail: string,
+): WeeklyExposureContract {
+  const selected = phaseSelection(input, identity.plannerMode);
   let contract = applyCommonSafetyReductions(createBaseContract(input, {
-    mode: 'in_season_game_week',
-    subphase: 'game_week',
-    strength: { required: 2, preferredMin: 2, preferredMax: 3, selectedTarget: selected.mainStrength },
-    conditioning: { required: Math.max(3, anchorCount), preferredMin: Math.max(3, anchorCount), preferredMax: Math.max(3, anchorCount), selectedTarget: selected.coreConditioning },
-    // The game/team anchors satisfy the shared floor without inflating it.
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
-    fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...GAME_WEEK_TARGETS,
+    mode: identity.mode,
+    subphase: identity.subphase,
+    strength: { ...GAME_WEEK_TARGETS.strength, selectedTarget: selected.mainStrength },
+    conditioning: { ...fixtureWeekConditioning(input), selectedTarget: selected.coreConditioning },
+    sprintCod: { ...GAME_WEEK_TARGETS.sprintCod, selectedTarget: selected.sprintHighSpeed },
   }), input);
   if (input.gameDay !== null) {
     // BIBLE_ANCHOR: game_day_no_programmed_sessions
@@ -479,10 +530,20 @@ export function buildInSeasonGameWeekExposureContract(
       'main_strength',
       Math.min(contract.strength.targetCount, safeStrengthCapacity),
       'spacing_safety_conflict',
-      'Game-day, G-1 and G+1 protection leave fewer safe gym placements in this selected week.',
+      spacingDetail,
     );
   }
   return contract;
+}
+
+export function buildInSeasonGameWeekExposureContract(
+  input: WeeklyExposureContractInput,
+): WeeklyExposureContract {
+  return buildFixtureWeekContract(
+    input,
+    { mode: 'in_season_game_week', subphase: 'game_week', plannerMode: 'in_season_game_week' },
+    'Game-day, G-1 and G+1 protection leave fewer safe gym placements in this selected week.',
+  );
 }
 
 export function buildInSeasonByeBuildExposureContract(
@@ -691,33 +752,28 @@ function buildPreseasonBase(
   input: WeeklyExposureContractInput,
   targets: BaseTargets,
 ): WeeklyExposureContract {
-  const selected = phaseSelection(
-    input,
-    input.hasGame && input.gameDay !== null ? 'practice_match_week' : targets.mode,
-  );
-  let contract = createBaseContract(input, {
+  // RULED (Sam, 2026-07-28): a pre-season practice-match week is STRUCTURALLY AN
+  // IN-SEASON GAME WEEK — same shape, two team trainings and a game — so it
+  // carries the game week's authored numbers, not the generic pre-season row.
+  //
+  // The week keeps its pre-season identity; only the numbers come from the
+  // fixture row. This branch used to build the pre-season row and then reach
+  // into the practice-match policy for the selected target alone, which is how
+  // one contract came to declare two modes' numbers at once.
+  if (input.hasGame && input.gameDay !== null) {
+    return buildFixtureWeekContract(
+      input,
+      { mode: targets.mode, subphase: targets.subphase, plannerMode: 'practice_match_week' },
+      'Practice-match, G-1 and G+1 protection leave fewer safe gym placements in this selected week.',
+    );
+  }
+  const selected = phaseSelection(input, targets.mode);
+  return applyCommonSafetyReductions(createBaseContract(input, {
     ...targets,
     strength: { ...targets.strength, selectedTarget: selected.mainStrength },
     conditioning: { ...targets.conditioning, selectedTarget: selected.coreConditioning },
     sprintCod: { ...targets.sprintCod, selectedTarget: selected.sprintHighSpeed },
-  });
-  contract = applyCommonSafetyReductions(contract, input);
-  if (input.hasGame && input.gameDay !== null) {
-    const safeStrengthCapacity = uniqueExposureDays(input.selectedDayNumbers).filter((day) => {
-      let offset = day - input.gameDay!;
-      if (offset > 0) offset -= 7;
-      if (offset === -6) offset = 1;
-      return offset !== 0 && offset !== -1 && offset !== 1;
-    }).length;
-    contract = reduceAllocationTarget(
-      contract,
-      'main_strength',
-      Math.min(contract.strength.targetCount, safeStrengthCapacity),
-      'spacing_safety_conflict',
-      'Practice-match, G-1 and G+1 protection leave fewer safe gym placements in this selected week.',
-    );
-  }
-  return contract;
+  }), input);
 }
 
 /**
