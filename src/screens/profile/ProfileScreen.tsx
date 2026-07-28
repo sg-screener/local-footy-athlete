@@ -149,6 +149,25 @@ export default function ProfileScreen() {
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
   const [setupSheetVisible, setSetupSheetVisible] = useState(false);
+
+  // ─── TEMPORARY DEVICE DIAGNOSTIC — "Something changed?" dead tap ───
+  // 2026-07-29. The tap does nothing on Sam's device and reproduces nowhere in
+  // code. This splits the two candidate causes on-device:
+  //
+  //   no counters move          → the touch never reaches the control
+  //                               (layout/hit-target — the renderer class)
+  //   counters move, no sheet   → Modal presentation
+  //
+  // `logger.warn`, NOT `logger.debug`: debug/info are gated behind
+  // EXPO_PUBLIC_ENABLE_DEBUG_LOGS, so a debug line would print nothing on a
+  // normal build and be misread as "the touch never arrived".
+  //
+  // The visible counter exists so the split works with no console attached.
+  // REMOVE once the cause is known.
+  const [setupTapDiag, setSetupTapDiag] = useState({ pressIn: 0, press: 0, handlerEnd: 0 });
+  useEffect(() => {
+    logger.warn(`[setup-tap] rendered with sheetVisible=${setupSheetVisible}`);
+  }, [setupSheetVisible]);
   const [setupSheetStep, setSetupSheetStep] = useState<SetupSheetStep>('overview');
   // The 2km time trial (D14). Held as the two boxes the athlete types into,
   // committed as one answer through `recordTwoKmTime`. `null` seconds is the
@@ -323,6 +342,8 @@ export default function ProfileScreen() {
   };
 
   const onProgramSetupChanged = () => {
+    logger.warn('[setup-tap] 2/3 onPress fired — handler entered');
+    setSetupTapDiag((prev) => ({ ...prev, press: prev.press + 1 }));
     const currentName = onboardingData.firstName || '';
     const currentPosition = currentRole(onboardingData);
     const currentExperience = (onboardingData.experienceLevel as ExperienceLevel) || null;
@@ -351,6 +372,8 @@ export default function ProfileScreen() {
     setSetupUpdateError(null);
     setSetupSheetStep('overview');
     setSetupSheetVisible(true);
+    logger.warn('[setup-tap] 3/3 setSetupSheetVisible(true) returned — handler completed');
+    setSetupTapDiag((prev) => ({ ...prev, handlerEnd: prev.handlerEnd + 1 }));
   };
 
   const displayName = onboardingData.firstName || 'Athlete';
@@ -613,6 +636,14 @@ export default function ProfileScreen() {
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>
             Your program setup, coach adjustments and support.
           </Text>
+          {/* TEMPORARY device diagnostic readout — remove with the rest. */}
+          <Text
+            variant="bodySmall"
+            color={colors.accent.lime}
+            testID="profile-setup-tap-diagnostic"
+          >
+            {`tap in ${setupTapDiag.pressIn} · press ${setupTapDiag.press} · handler ${setupTapDiag.handlerEnd} · sheet ${setupSheetVisible ? 'OPEN' : 'closed'}`}
+          </Text>
         </View>
 
         {/* Program setup */}
@@ -638,6 +669,10 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.setupChangeButton}
               activeOpacity={0.7}
+              onPressIn={() => {
+                logger.warn('[setup-tap] 1/3 onPressIn — touch reached the control');
+                setSetupTapDiag((prev) => ({ ...prev, pressIn: prev.pressIn + 1 }));
+              }}
               onPress={onProgramSetupChanged}
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
