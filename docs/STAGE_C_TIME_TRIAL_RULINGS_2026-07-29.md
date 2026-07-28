@@ -130,6 +130,33 @@ On the D15 filter's provenance:
 > Stage B's assembler, not Stage C."
 > — Sam, 2026-07-29
 
+## Ruling 8 — the time-trial session, and its conditioning tier
+
+> "Time-trial session ruled (Sam): it is a TEST, not a dose — lives outside the
+> 55 conditioning rows, no conditioning-sheet entry; D14's 'run 2km, time it' is
+> its complete specification. Athlete-facing name: '2km Time Trial'
+> (literal-locked, enters the master sheet with its cue per the content locks).
+> Cue, Sam-authored verbatim: 'Try to run this at the same pace for the entire
+> 2km'. Result logging flows through recordTwoKmTime(source: 'session_log') as
+> built."
+> — Sam, 2026-07-29
+
+> "Tier confirmed (Sam): 2km Time Trial = B-high, now ruled not derived."
+> — Sam, 2026-07-29
+
+**Anchor sentence:** 2km Time Trial conditioning tier B-high, modality run, impact high.
+
+The triple was first shipped DERIVED from its nearest sibling `6x1km` and
+flagged as such in the boundary report, because the `Erg EMOM` precedent shows
+Sam rules this triple himself. He has now ruled it. The attribution in
+`exerciseTags.ts` changed from derived to ruled — the value did not move.
+
+Why a row on the master exercise sheet but not on the conditioning sheet: every
+conditioning row answers *how much, how hard, how long* — a dose. A time trial
+has no such answer to author, because the prescription IS the measurement. But
+the exercise still has to **exist**, and membership of `CONDITIONING_META` is
+one of the five things that decide whether it does.
+
 ## Ruling 7 — the %MAS range-vs-binary question is Stage B's to seek
 
 > "the range-vs-binary %MAS disagreement is exactly the two-representations

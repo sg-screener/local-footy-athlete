@@ -132,8 +132,9 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   // complete specification and there is no dose to author. It still needs
   // membership HERE: this map is one of the five systems that define "this
   // exercise exists", so without it the session could never be prescribed.
-  // The triple mirrors its nearest sibling `6x1km` — a hard sustained run on
-  // feet. DERIVED from that sibling, not separately ruled.
+  // Sam ruled the tier B-high on 2026-07-29, confirming the triple rather than
+  // leaving it derived — matching how he ruled `Erg EMOM`'s triple above. It
+  // sits with `6x1km` and `1km Repeat Intervals`: a hard sustained run on feet.
   '2km Time Trial':           { tier: 'B-high', modality: 'run',  impact: 'high' },
 
   // ── Tier B-low — Moderate Output ──
