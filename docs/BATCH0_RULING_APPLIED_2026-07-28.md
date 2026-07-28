@@ -6,10 +6,10 @@ columns carried a readiness and an injury axis; both are now removed).
 
 ## Sam's ruling (2026-07-28)
 
-> Structure comes from phase + schedule facts; capacity/readiness affects DOSE only — "dose
-> down, never block" extends to weekly session counts. The contract varies by schedule inputs
-> (available days, team days, game anchors) as Sam-authored columns; readiness and injury never
-> set structure — injury flows through its own law family.
+> Structure comes from phase + schedule facts; capacity/readiness affects DOSE only — "dose down, never block" extends to weekly session counts. The contract varies by schedule inputs (available days, team days, game anchors) as Sam-authored columns; readiness and injury never set structure — injury flows through its own law family.
+
+*(Kept on one line deliberately: `readinessStructureCensusTests` asserts this sentence appears
+verbatim, so the census cannot drift from the ruling it enforces.)*
 
 This extends the existing readiness law rather than introducing a new one. That law already
 held that *"counts are STRUCTURE, and the deload law holds structure constant while the work

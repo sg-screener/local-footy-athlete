@@ -474,10 +474,17 @@ function updatePowerForPhase(args: {
   // gate: "Power is not removed on a deload; a deload is not a reason to lose
   // sharpness." The deload transform shrinks the dose inside the primer instead.
   //
-  // `readiness === 'low'` STAYS and is not the same signal: it is the CAPACITY
-  // score computed from onboarding answers, not the athlete's readiness
-  // declaration. Retiring it here would change what a detrained athlete is
-  // programmed, which this law does not govern.
+  // SUPERSEDED (Sam, 2026-07-28). This used to say the capacity score stayed
+  // because it was not the same signal as the readiness declaration. The ruling
+  // closed that exemption, and it extends the deload-law sentence directly above:
+  // if a deload is not a reason to lose sharpness, neither is low capacity.
+  // Low readiness now gives a SHRUNK SHARP PRIMER via the deload power dose —
+  // never `power_removed`. The detrained-athlete concern is answered by the dose
+  // being smaller, not by the exposure being gone.
+  //
+  // The other triggers here are untouched: `earlyOffseason`, `gameProtected` and
+  // `gMinusTwoBlocked` are phase and schedule facts, which the ruling keeps.
+  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 0.
   if (
     args.context.prohibitPower === true ||
     earlyOffseason ||

@@ -25,7 +25,9 @@
  *
  * SAFETY MODEL (every gate that can say "no"):
  *  - Only strength sessions (must have a strengthPattern).
- *  - Low readiness         → no power (quality would be poor).
+ *  - Low readiness         → SUPERSEDED, still in force pending Batch 0. Ruled
+ *                            2026-07-28 to become a shrunk sharp primer via the
+ *                            deload power dose, never removal.
  *  - Game day / G-1 / G+1  → no added power.
  *  - G-2                   → only a tiny neural primer, experienced + high
  *                            readiness only.
@@ -141,9 +143,13 @@ export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | nu
   if (!ctx.strengthPattern) return null;
 
   // ── Hard block: low readiness ──
-  // NOT the athlete's readiness declaration — this is the CAPACITY score
-  // computed from onboarding answers (the `readiness` homonym, Sam 2026-07-27).
-  // A deload used to sit beside it and no longer does; see the header.
+  // SUPERSEDED (Sam, 2026-07-28). This block used to be justified by the
+  // capacity score being a distinct signal from the readiness declaration. The
+  // ruling closed that exemption: "dose down, never block". A deload already
+  // stopped removing power for exactly this reason (see the header) and this
+  // gate is the same shape one step along — low capacity must yield a SHRUNK
+  // SHARP PRIMER via the deload power dose, not `null`.
+  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 0.
   if (ctx.readiness === 'low') return null;
 
   // ── Off-season progression ──
