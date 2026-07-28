@@ -368,6 +368,16 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
     if (/interval|fartlek|repeat/i.test(n)) out.add('hard_erg');
     if (/long|easy|jog/i.test(n)) out.add('easy_erg');
   }
+  // A time trial is a maximal run, and its name says neither "run" nor anything
+  // else the alternation above matches — `\brun\b` needs the word and `\bkm\b`
+  // never fires on "2km" (no boundary between the digit and the k). Running
+  // detection has ONE home, per sessionTaxonomy's own comment, so it is taught
+  // here rather than special-cased at the counter. Guarded against a machine
+  // time trial, which would be off-feet.
+  if (/time\s*trial/i.test(n) && !/\b(bike|row|rower|ski|erg|assault|swim)\b/i.test(n)) {
+    out.add('running');
+    out.add('high_speed_running');
+  }
   if (/(cut(ting)?|change[-\s]*of[-\s]*direction|cod\b|agility|shuttle|t[-\s]*test|zigzag|side\s*shuffle)/i.test(n)) {
     out.add('change_of_direction');
     out.add('contact_risk');

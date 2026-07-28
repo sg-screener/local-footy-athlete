@@ -1981,6 +1981,15 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     flagged: false,
   },
   {
+    exercise: '2km Time Trial',
+    pool: 'Conditioning',
+    primary: [],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: 'session format, not an individual movement — no meaningful muscle group. A TEST, not a dose (Sam, D14 2026-07-29): it lives outside the 55 conditioning rows and has no conditioning-sheet entry.',
+    flagged: false,
+  },
+  {
     exercise: 'Light Circuits',
     pool: 'Conditioning',
     primary: [],
