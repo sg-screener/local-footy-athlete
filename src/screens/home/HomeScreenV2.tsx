@@ -141,7 +141,6 @@ export default function HomeScreenV2() {
     rebuildErrorCanRetry,
     rebuildMsgIdx,
     rebuildMsgOpacity,
-    handleOpenRebuild,
     handleCancelRebuild,
     handleConfirmRebuild,
     repeatWeekConfirmVisible,
@@ -400,20 +399,13 @@ export default function HomeScreenV2() {
                   </Svg>
                 }
               />
-              <IconButton
-                onPress={handleOpenRebuild}
-                accessibilityLabel="Rebuild this week"
-                testID="program-week-rebuild"
-                tone="accent"
-                icon={
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M23 4v6h-6" />
-                    <Path d="M1 20v-6h6" />
-                    <Path d="M3.51 9a9 9 0 0114.85-3.36L23 10" />
-                    <Path d="M20.49 15A9 9 0 015.64 18.36L1 14" />
-                  </Svg>
-                }
-              />
+              {/* The week-rebuild button lived here and is GONE (Sam, device
+                  pass 2026-07-29). It was dev tooling from early testing that
+                  regenerated the whole week's content and discarded every custom
+                  swap, sitting one tap from the next-week chevron. Athletes must
+                  never have it. The rebuild machinery stays — clearing a coach
+                  note, a phase shift and a fixture change all still rebuild —
+                  but the athlete cannot ask for a rebuild as such. */}
             </View>
           </View>
 

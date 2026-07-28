@@ -12,11 +12,9 @@ import { colors } from '../../theme/colors';
 import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
-import {
-  validateOnboardingMeasurement,
-  type MeasurementValidation,
-} from '../../data/onboardingNumericBounds';
+import { validateOnboardingMeasurement } from '../../data/onboardingNumericBounds';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
+import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -25,12 +23,6 @@ type BodyMeasurementsScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'BodyMeasurements'
 >;
-
-/** The re-ask text for a refused answer, or null when there is nothing to say. */
-function refusalMessage(result: MeasurementValidation | null): string | null {
-  if (result === null || result.ok) return null;
-  return result.message ?? null;
-}
 
 export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   navigation,
@@ -52,27 +44,31 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   // the app's number for the athlete's and carry on as though they had agreed;
   // bodyweight is the first term of the anchor chain, so that number then
   // prescribes every load in the app.
-  const heightIssue = heightCm.trim()
-    ? validateOnboardingMeasurement('heightCm', parseFloat(heightCm))
-    : null;
-  const weightIssue = weightKg.trim()
-    ? validateOnboardingMeasurement('weightKg', parseFloat(weightKg))
-    : null;
+  //
+  // An EMPTY box is `null` — unanswered, which is not the same as refused. The
+  // difference is what keeps Continue disabled for absence while leaving it
+  // pressable for a refusal (see `useRefusalOnContinue`).
+  const validations = {
+    heightCm: heightCm.trim()
+      ? validateOnboardingMeasurement('heightCm', parseFloat(heightCm))
+      : null,
+    weightKg: weightKg.trim()
+      ? validateOnboardingMeasurement('weightKg', parseFloat(weightKg))
+      : null,
+  };
 
-  const heightError = refusalMessage(heightIssue);
-  const weightError = refusalMessage(weightIssue);
-
-  const isValid = Boolean(
-    heightIssue?.ok && weightIssue?.ok,
-  );
+  // WHEN the refusal is spoken is not this screen's decision (Sam, device pass
+  // 2026-07-29). Validating on every keystroke told the athlete that "9" was a
+  // bad weight while they were still typing "90".
+  const { refusals, continueDisabled, onAnswerEdited, attemptContinue } =
+    useRefusalOnContinue(validations);
 
   const handleContinue = () => {
-    if (isValid) {
-      void commitAndAdvance({
-        heightCm: parseFloat(heightCm),
-        weightKg: parseFloat(weightKg),
-      }, () => navigation.navigate('Position'));
-    }
+    if (!attemptContinue()) return;
+    void commitAndAdvance({
+      heightCm: parseFloat(heightCm),
+      weightKg: parseFloat(weightKg),
+    }, () => navigation.navigate('Position'));
   };
 
   return (
@@ -83,7 +79,7 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}
-      continueDisabled={!isValid}
+      continueDisabled={continueDisabled}
     >
       {/* Question Title */}
       <View style={styles.titleSection}>
@@ -131,20 +127,20 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
               placeholder="180"
               placeholderTextColor={colors.text.tertiary}
               value={heightCm}
-              onChangeText={setHeightCm}
+              onChangeText={(text) => { setHeightCm(text); onAnswerEdited(); }}
               onFocus={() => setHeightFocused(true)}
               onBlur={() => setHeightFocused(false)}
               keyboardType="numeric"
             />
             <Text style={styles.inputUnit}>cm</Text>
           </Pressable>
-          {heightError ? (
+          {refusals.heightCm ? (
             <Text
               variant="bodySmall"
               color={colors.status.error}
               style={styles.inputError}
             >
-              {heightError}
+              {refusals.heightCm}
             </Text>
           ) : null}
         </View>
@@ -175,20 +171,20 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
               placeholder="80"
               placeholderTextColor={colors.text.tertiary}
               value={weightKg}
-              onChangeText={setWeightKg}
+              onChangeText={(text) => { setWeightKg(text); onAnswerEdited(); }}
               onFocus={() => setWeightFocused(true)}
               onBlur={() => setWeightFocused(false)}
               keyboardType="numeric"
             />
             <Text style={styles.inputUnit}>kg</Text>
           </Pressable>
-          {weightError ? (
+          {refusals.weightKg ? (
             <Text
               variant="bodySmall"
               color={colors.status.error}
               style={styles.inputError}
             >
-              {weightError}
+              {refusals.weightKg}
             </Text>
           ) : null}
         </View>

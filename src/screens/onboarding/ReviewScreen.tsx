@@ -14,151 +14,21 @@ import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
-import {
-  BenchStrength,
-  ConditioningLevel,
-  DayOfWeek,
-  ExperienceLevel,
-  OnboardingInjury,
-  RecentTrainingLoad,
-  SprintExposure,
-  SquatStrength,
-  TeamTrainingDuration,
-  TeamTrainingIntensity,
-} from '../../types/domain';
-import { roleBucketLabel } from '../../utils/roleBuckets';
+import { OnboardingInjury } from '../../types/domain';
 import {
   assessOnboardingCompleteness,
   onboardingIncompleteMessage,
 } from '../../utils/onboardingCompleteness';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  buildReviewSections,
+  type ReviewRowData,
+} from './reviewRows';
 
 type ReviewScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'Review'
 >;
-
-type ReviewRowData = {
-  label: string;
-  value: string;
-  onEdit: () => void;
-};
-
-const DAY_ORDER: DayOfWeek[] = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
-
-const sortDays = (days: DayOfWeek[]): DayOfWeek[] =>
-  [...days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
-
-const formatDays = (days?: DayOfWeek[]): string | null => {
-  if (!days || days.length === 0) return null;
-  return sortDays(days).join(', ');
-};
-
-const formatTeamDuration = (duration?: TeamTrainingDuration): string | null => {
-  if (!duration) return null;
-  const labels: Record<TeamTrainingDuration, string> = {
-    '60 minutes': '60 min',
-    '90 minutes': '90 min',
-    '2 hours': '2 hrs',
-  };
-  return labels[duration];
-};
-
-const formatTeamIntensity = (intensity?: TeamTrainingIntensity): string | null => {
-  if (!intensity) return null;
-  return intensity === 'Very intense' ? 'Very hard' : intensity;
-};
-
-const formatTeamSessions = (
-  duration?: TeamTrainingDuration,
-  intensity?: TeamTrainingIntensity,
-): string | null => {
-  const parts = [
-    formatTeamDuration(duration),
-    formatTeamIntensity(intensity),
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : null;
-};
-
-const formatExperience = (value?: ExperienceLevel): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<ExperienceLevel, string> = {
-    'Complete beginner': 'New to training',
-    '1-2 years': 'Developing',
-    '2-5 years': 'Consistent',
-    '5+ years': 'Advanced',
-  };
-  return labels[value];
-};
-
-const formatSquatStrength = (value?: SquatStrength): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<SquatStrength, string> = {
-    "I don't squat": "I don't squat / not sure",
-    'Less than bodyweight': 'Less than bodyweight',
-    'Around bodyweight': 'Around bodyweight',
-    '1.5x bodyweight': '1.5x bodyweight'.replace('x', '×'),
-    '2x bodyweight+': '2x bodyweight+'.replace('x', '×'),
-    'Not sure': "I don't squat / not sure",
-  };
-  return labels[value];
-};
-
-const formatBenchStrength = (value?: BenchStrength): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<BenchStrength, string> = {
-    "I don't bench": "I don't bench / not sure",
-    'Less than bodyweight': 'Less than bodyweight',
-    'Around bodyweight': 'Around bodyweight',
-    '1.25x bodyweight': '1.25x bodyweight'.replace('x', '×'),
-    '1.5x bodyweight+': '1.5x bodyweight+'.replace('x', '×'),
-    'Not sure': "I don't bench / not sure",
-  };
-  return labels[value];
-};
-
-const formatConditioning = (value?: ConditioningLevel): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<ConditioningLevel, string> = {
-    Poor: 'Struggle early',
-    Average: 'Fade late',
-    Good: 'Solid',
-    Elite: 'Very fit',
-  };
-  return labels[value];
-};
-
-const formatSprintWork = (value?: SprintExposure): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<SprintExposure, string> = {
-    'No sprint training': 'None',
-    Occasionally: 'Occasional',
-    '2+ times per week': 'Regular',
-  };
-  return labels[value];
-};
-
-const formatRecentTraining = (value?: RecentTrainingLoad): string => {
-  if (!value) return 'Not selected';
-  const labels: Record<RecentTrainingLoad, string> = {
-    'Hardly at all': 'Hardly at all',
-    'A bit': 'A bit',
-    'Pretty consistent': 'Consistent',
-    'Very consistent': 'Very consistent',
-  };
-  return labels[value];
-};
-
-const present = (value: string | null | undefined): string =>
-  value && value.trim().length > 0 ? value : 'Not selected';
 
 export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Review');
@@ -183,127 +53,10 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
     navigation.navigate(screen as any);
   };
 
-  const teamSessions = formatTeamSessions(
-    onboardingData.teamTrainingDuration,
-    onboardingData.teamTrainingIntensity,
-  );
-  const shouldShowTeamSessions =
-    Boolean(teamSessions) ||
-    Boolean(onboardingData.teamTrainingDaysPerWeek) ||
-    Boolean(onboardingData.teamTrainingDays?.length);
-
-  const aboutRows: ReviewRowData[] = [
-    {
-      label: 'Footy role',
-      value: onboardingData.position ? roleBucketLabel(onboardingData.position) : 'Not provided',
-      onEdit: () => handleEdit('Position'),
-    },
-    {
-      label: 'Goals',
-      value: present(onboardingData.motivation || onboardingData.goals?.join(', ')),
-      onEdit: () => handleEdit('Motivation'),
-    },
-  ];
-
-  const bodyRows: ReviewRowData[] = [
-    {
-      label: 'Height',
-      value: onboardingData.heightCm ? `${onboardingData.heightCm} cm` : 'Not provided',
-      onEdit: () => handleEdit('BodyMeasurements'),
-    },
-    {
-      label: 'Weight',
-      value: onboardingData.weightKg ? `${onboardingData.weightKg} kg` : 'Not provided',
-      onEdit: () => handleEdit('BodyMeasurements'),
-    },
-  ];
-
-  const seasonRows: ReviewRowData[] = [
-    {
-      label: 'Season Phase',
-      value: present(onboardingData.seasonPhase),
-      onEdit: () => handleEdit('SeasonPhase'),
-    },
-  ];
-
-  if (onboardingData.gameDay) {
-    seasonRows.push({
-      label: 'Game Day',
-      value: onboardingData.gameDay,
-      onEdit: () => handleEdit('GameDay'),
-    });
-  }
-
-  if (onboardingData.teamTrainingDaysPerWeek || onboardingData.teamTrainingDays?.length) {
-    seasonRows.push({
-      label: 'Team Training',
-      value:
-        formatDays(onboardingData.teamTrainingDays) ||
-        `${onboardingData.teamTrainingDaysPerWeek} days per week`,
-      onEdit: () => handleEdit('TeamTrainingDays'),
-    });
-  }
-
-  if (shouldShowTeamSessions) {
-    seasonRows.push({
-      label: 'Team Sessions',
-      value: teamSessions || 'Not selected',
-      onEdit: () => handleEdit('TeamTrainingDuration'),
-    });
-  }
-
-  const trainingRows: ReviewRowData[] = [
-    {
-      label: 'LFA Days',
-      value: onboardingData.trainingDaysPerWeek
-        ? `${onboardingData.trainingDaysPerWeek} days per week`
-        : 'Not selected',
-      onEdit: () => handleEdit('TrainingCommitment'),
-    },
-  ];
-
-  const lfaDays = formatDays(onboardingData.preferredTrainingDays);
-  if (lfaDays) {
-    trainingRows.push({
-      label: 'LFA Training Days',
-      value: lfaDays,
-      onEdit: () => handleEdit('PreferredTrainingDays'),
-    });
-  }
-
-
-  const physicalRows: ReviewRowData[] = [
-    {
-      label: 'Training Experience',
-      value: formatExperience(onboardingData.experienceLevel),
-      onEdit: () => handleEdit('GymExperience'),
-    },
-    {
-      label: 'Squat Strength',
-      value: formatSquatStrength(onboardingData.squatStrength),
-      onEdit: () => handleEdit('SquatStrength'),
-    },
-    {
-      label: 'Bench Strength',
-      value: formatBenchStrength(onboardingData.benchStrength),
-      onEdit: () => handleEdit('BenchStrength'),
-    },
-    {
-      label: 'Conditioning',
-      value: formatConditioning(onboardingData.conditioningLevel),
-      onEdit: () => handleEdit('ConditioningLevel'),
-    },
-    {
-      label: 'Sprint Work',
-      value: formatSprintWork(onboardingData.sprintExposure),
-      onEdit: () => handleEdit('SprintExposure'),
-    },
-    {
-      label: 'Recent Training',
-      value: formatRecentTraining(onboardingData.recentTrainingLoad),
-      onEdit: () => handleEdit('RecentTrainingLoad'),
-    },
-  ];
+  // Rows are DERIVED from the onboarding step registry, not hand-listed here —
+  // hand-listing is what let the 2km time trial ship without a Review row at all
+  // (Sam, device pass 2026-07-29). See `reviewRows`.
+  const sections = buildReviewSections(onboardingData);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -355,15 +108,20 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
               Everything looks good? Let's generate your program.
             </Text>
 
-            <ReviewSection title="About You" rows={aboutRows} isFirst />
-            <ReviewSection title="Body" rows={bodyRows} />
-            <ReviewSection title="Season" rows={seasonRows} />
-            <ReviewSection title="Training" rows={trainingRows} />
-            <ReviewSection title="Physical" rows={physicalRows} />
-            <HealthSection
-              injuries={onboardingData.injuries}
-              onEdit={() => handleEdit('Injuries')}
-            />
+            {sections.map((section, index) => (
+              <ReviewSection
+                key={section.title}
+                title={section.title}
+                rows={section.rows}
+                isFirst={index === 0}
+                onEdit={handleEdit}
+                // The Health card carries the injury detail beneath its row —
+                // the row says how many, the detail says which.
+                footer={section.title === 'Health' ? (
+                  <InjuryDetail injuries={onboardingData.injuries} />
+                ) : null}
+              />
+            ))}
           </ScrollView>
         </View>
 
@@ -394,11 +152,15 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
 
 interface ReviewSectionProps {
   title: string;
-  rows: ReviewRowData[];
+  rows: readonly ReviewRowData[];
   isFirst?: boolean;
+  onEdit: (screen: keyof OnboardingStackParamList) => void;
+  footer?: React.ReactNode;
 }
 
-const ReviewSection: React.FC<ReviewSectionProps> = ({ title, rows, isFirst }) => (
+const ReviewSection: React.FC<ReviewSectionProps> = ({
+  title, rows, isFirst, onEdit, footer,
+}) => (
   <View style={[styles.section, isFirst && styles.sectionFirst]}>
     <Text variant="h4" color={colors.accent.lime} style={styles.sectionTitle}>
       {title}
@@ -406,15 +168,27 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ title, rows, isFirst }) =
     <View style={[styles.sectionCard, shadows.xs]}>
       {rows.map((row, index) => (
         <React.Fragment key={`${row.label}-${index}`}>
-          <ReviewRow {...row} />
+          <ReviewRow
+            label={row.label}
+            value={row.value}
+            // A row names the step that owns its answer; turning that into
+            // navigation is the only thing this screen knows that the row owner
+            // does not.
+            onEdit={() => onEdit(row.step as keyof OnboardingStackParamList)}
+          />
           {index < rows.length - 1 ? <View style={styles.divider} /> : null}
         </React.Fragment>
       ))}
+      {footer}
     </View>
   </View>
 );
 
-const ReviewRow: React.FC<ReviewRowData> = ({ label, value, onEdit }) => (
+const ReviewRow: React.FC<{
+  label: string;
+  value: string;
+  onEdit: () => void;
+}> = ({ label, value, onEdit }) => (
   <View style={styles.reviewRow}>
     <Text style={styles.rowLabel}>{label}</Text>
     <Text style={styles.rowValue}>{value}</Text>
@@ -428,37 +202,17 @@ const ReviewRow: React.FC<ReviewRowData> = ({ label, value, onEdit }) => (
   </View>
 );
 
-const HealthSection: React.FC<{
-  injuries?: OnboardingInjury[];
-  onEdit: () => void;
-}> = ({ injuries, onEdit }) => {
-  const hasInjuries = Boolean(injuries && injuries.length > 0);
+const InjuryDetail: React.FC<{ injuries?: OnboardingInjury[] }> = ({ injuries }) => {
+  if (!injuries || injuries.length === 0) return null;
   return (
-    <View style={styles.section}>
-      <Text variant="h4" color={colors.accent.lime} style={styles.sectionTitle}>
-        Health
-      </Text>
-      <View style={[styles.sectionCard, shadows.xs]}>
-        <ReviewRow
-          label="Injuries"
-          value={hasInjuries ? `${injuries?.length} reported` : 'No current issues'}
-          onEdit={onEdit}
-        />
-        {hasInjuries ? (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.injuryList}>
-              {injuries?.map((injury, index) => (
-                <InjurySummary
-                  key={`${injury.bodyArea}-${index}`}
-                  injury={injury}
-                />
-              ))}
-            </View>
-          </>
-        ) : null}
+    <>
+      <View style={styles.divider} />
+      <View style={styles.injuryList}>
+        {injuries.map((injury, index) => (
+          <InjurySummary key={`${injury.bodyArea}-${index}`} injury={injury} />
+        ))}
       </View>
-    </View>
+    </>
   );
 };
 

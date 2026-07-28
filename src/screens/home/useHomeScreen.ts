@@ -674,10 +674,16 @@ export function useHomeScreen() {
 
   // ───────── Rebuild handlers ─────────
 
-  const handleOpenRebuild = () => {
-    clearRebuildError();
-    setRebuildModalVisible(true);
-  };
+  // THERE IS NO ATHLETE-FACING REBUILD DOOR (Sam, device pass 2026-07-29).
+  //
+  // `handleOpenRebuild` opened the sheet in its CONFIRM state from a button in
+  // the week top bar — dev tooling from early testing that regenerated the whole
+  // week and discarded every custom swap. It is deleted, not merely unwired: an
+  // exported opener is a door anything can reconnect.
+  //
+  // The handlers below stay because the rebuilds the athlete DOES ask for by
+  // name — clearing a coach note, shifting phase, changing a fixture — still
+  // need somewhere to show progress and to report a failure they can retry.
 
   const handleCancelRebuild = () => {
     if (isRebuilding) return;
@@ -2092,7 +2098,6 @@ export function useHomeScreen() {
     rebuildErrorCanRetry,
     rebuildMsgIdx,
     rebuildMsgOpacity,
-    handleOpenRebuild,
     handleCancelRebuild,
     handleConfirmRebuild,
 
