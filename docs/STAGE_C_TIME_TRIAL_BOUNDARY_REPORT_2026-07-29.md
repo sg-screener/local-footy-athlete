@@ -87,11 +87,11 @@ has no such answer to author, because the prescription IS the measurement.
 gate 136 → 137. They were the only two assertions that broke, which is what
 those pins are for.
 
-**⚑ ONE THING DERIVED, NOT RULED.** The `CONDITIONING_META` triple mirrors its
-nearest sibling `6x1km` — a hard sustained run on feet. `modality: 'run'` and
-`impact: 'high'` are facts; **`tier: 'B-high'` is a judgement I derived from the
-sibling rather than one you ruled.** The `Erg EMOM` precedent shows you normally
-rule this triple yourself. Worth a look.
+**The tier is now RULED, not derived.** It shipped derived from its nearest
+sibling `6x1km` and was flagged here as the one judgement in this unit that was
+not Sam's. Sam confirmed `B-high` on 2026-07-29 (rulings doc, ruling 8). The
+value did not move; the attribution did, in `exerciseTags.ts` and in the
+rulings document. Nothing in this unit is now derived-but-unruled.
 
 ### Two defects the exposure test caught, both mine
 
