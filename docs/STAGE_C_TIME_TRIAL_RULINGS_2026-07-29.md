@@ -19,7 +19,11 @@ failure is the point.
 > plain message, never clamp, never silently accept — same law as bodyweight."
 > — Sam, 2026-07-29
 
-**Anchor sentence:** 2km time trial accepted range 5:00–15:00.
+**Anchor sentence:** 2km time trial accepted range 5:00–15:00, that is 300–900 seconds.
+
+The anchor states the range in both the form the athlete reads and the form the
+code stores, because the citation gate checks the shipped numbers against the
+sentence and the shipped numbers are seconds.
 
 This is the bodyweight law (`docs/PROVENANCE_INVENTORY_2026-07-28.md`) applied
 to pace. A clamp substitutes the app's number for the athlete's and then
