@@ -493,7 +493,10 @@ export function buildInSeasonByeBuildExposureContract(
     mode: 'in_season_bye_build',
     subphase: 'bye_build',
     strength: { required: 2, preferredMin: 3, preferredMax: 4, selectedTarget: selected.mainStrength },
-    conditioning: { required: 3, preferredMin: 3, preferredMax: 3, selectedTarget: selected.coreConditioning },
+    // RULED (Sam, 2026-07-28): required 3, preferred max 4. The fourth is the
+    // optional top of range for ANYONE — "if fresh" was expressly rejected as a
+    // count condition, because that is capacity setting structure.
+    conditioning: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.coreConditioning },
     sprintCod: { required: 1, preferredMin: 1, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
     allowCombined: true,
@@ -626,7 +629,10 @@ export function buildEarlyOffseasonExposureContract(
   const contract = createBaseContract(input, {
     mode: 'early_offseason', subphase: 'early_offseason',
     // Bible first 1-2 weeks: everything is optional. Preferred work remains explicit.
-    strength: { required: 0, preferredMin: 2, preferredMax: 3, selectedTarget: 0 },
+    // RULED (Sam, 2026-07-28): target 3, and every session in this block is
+    // OPTIONAL — required stays 0. Bible Section 1: weeks 1-2 are the optional
+    // block and zero completed sessions is a valid honest week.
+    strength: { required: 0, preferredMin: 3, preferredMax: 3, selectedTarget: 0 },
     conditioning: { required: 0, preferredMin: 1, preferredMax: 2, selectedTarget: 0 },
     sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: 0 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 3 },
@@ -714,18 +720,34 @@ function buildPreseasonBase(
   return contract;
 }
 
+/**
+ * THE ONE PRE-SEASON ROW (Sam, 2026-07-28, Batch 2 Q1).
+ *
+ * The three subphase contracts were numerically IDENTICAL across all fourteen
+ * slots. Sam's ruling: subphase distinctions do DOSE and CONTENT work, not
+ * COUNT work — so there is one authored pre-season contract, and the three
+ * modes reference it rather than restating it.
+ *
+ * The modes survive because the enum needs them elsewhere (identity, subphase
+ * policy, the phase clock). What does not survive is three copies of one
+ * decision: that was three chances to edit one and not the others, with nothing
+ * anywhere noticing the drift.
+ */
+const PRE_SEASON_TARGETS = {
+  strength: { required: 3, preferredMin: 4, preferredMax: 4 },
+  conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
+  sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
+  fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
+  allowCombined: true,
+  preferredHardDays: 4,
+  permittedHardDays: 5,
+} as const;
+
 export function buildEarlyPreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'early_preseason', subphase: 'early_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'early_preseason', subphase: 'early_preseason',
   });
 }
 
@@ -733,14 +755,7 @@ export function buildMidPreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'mid_preseason', subphase: 'mid_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'mid_preseason', subphase: 'mid_preseason',
   });
 }
 
@@ -748,14 +763,7 @@ export function buildLatePreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'late_preseason', subphase: 'late_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'late_preseason', subphase: 'late_preseason',
   });
 }
 

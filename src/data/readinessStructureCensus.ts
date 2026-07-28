@@ -134,15 +134,19 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
   /* ── Structure debt: scheduled for removal ── */
   {
     file: 'rules/weeklyExposureContractV2.ts',
-    edges: 3,
+    edges: 1,
     verdict: 'structure_pending_removal',
-    what: 'The OWNER\'s own readiness axis: `strongByeBuild` forces 4 strength, early '
-      + 'off-season strength resolves high?3:2, early off-season optional high?2:1.',
-    disposition: 'Sam ruled this goes FIRST (ruling 1). Each readiness-conditioned value '
-      + 'becomes a plain Sam-authored cell in the Batch 2 sheet — the axis dies at the '
-      + 'owner rather than being pushed down into it. The team-day and available-day '
-      + 'conjuncts in `strongByeBuild` are schedule facts and SURVIVE as columns.',
-    owningBatch: 'Batch 2 — the week-mode contract sheet (do this one first)',
+    what: '`strongByeBuild` still requires high capacity to target 4 strength in an '
+      + 'in-season bye build week.',
+    disposition: 'RULED by Sam (Batch 2) and HELD, not forgotten. Applying it makes 4 the '
+      + 'planner-SELECTED target, and §18 then rejects any stored week built under the old '
+      + 'target of 3 — program hydration falls back to in-memory defaults and the athlete\'s '
+      + 'persisted week silently empties. Reproduced by `legacy-program-rehydrate`. Needs a '
+      + 'ruling between "4 is a preferred maximum" (matching Sam\'s own phrasing for '
+      + 'bye-build conditioning) and "4 is selected and stored weeks are migrated". Applying '
+      + 'it as-is picks the second and implements it as data loss. The other two V2 cells '
+      + 'shipped; this is the only one held.',
+    owningBatch: 'Batch 2 — awaiting Sam on stored-week migration',
   },
   {
     file: 'utils/coachingEngine.ts',
@@ -226,8 +230,14 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
  * This number may only ever go DOWN, and the gate requires it to equal the
  * current debt — so paying debt down tightens the ratchet rather than leaving
  * slack that a later change could quietly spend.
+ *
+ * 48 -> 46 (2026-07-28): `weeklyExposureContractV2` paid two of its three. The
+ * third is RULED but HELD — see its census entry — because applying it empties
+ * stored weeks on rehydrate. The debt is 46, not 45, and saying so is the point:
+ * a baseline tightened past what was actually fixed would let the held cell
+ * reappear silently later.
  */
-export const STRUCTURE_DEBT_BASELINE = 48;
+export const STRUCTURE_DEBT_BASELINE = 46;
 
 export interface SupersededExemptionClaim {
   /** Path relative to `src/`. */

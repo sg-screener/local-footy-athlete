@@ -51,17 +51,22 @@ def widths(ws, spec):
 # Current shipped values, read from rules/weeklyExposureContractBuilders.ts.
 # mode -> (phase, strength, conditioning, sprintCod, fullRest, hard)
 # each domain triple is (required, preferredMin, preferredMax)
+# RULED IN FULL (Sam, 2026-07-28, Batch 2). These are AUTHORED values, not
+# current-state prefills. Q1 collapsed the three identical pre-season rows into
+# ONE: subphase distinctions do dose and content work, not count work, so
+# `early_preseason` / `mid_preseason` / `late_preseason` all reference this row.
 MODES = [
     ('in_season_game_week',    'In-season',  ('2', '2', '3'), ('max(3,anchors)',) * 3, ('1', '1', '1'), ('1', '1', '2'), ('4', '5')),
-    ('in_season_bye_build',    'In-season',  ('2', '3', '4'), ('3', '3', '3'),         ('1', '1', '1'), ('1', '1', '2'), ('4', '5')),
+    ('in_season_bye_build',    'In-season',  ('2', '3', '4'), ('3', '3', '4'),         ('1', '1', '1'), ('1', '1', '2'), ('4', '5')),
     ('in_season_bye_recovery', 'In-season',  ('2', '2', '2'), ('0', '0', 'teams'),     ('1', '1', '1'), ('2', '2', '3'), ('2', '4')),
-    ('early_offseason',        'Off-season', ('0', '2', '3'), ('0', '1', '2'),         ('0', '0', '0'), ('2', '2', '3'), ('2', '4')),
+    ('early_offseason',        'Off-season', ('0', '3', '3'), ('0', '1', '2'),         ('0', '0', '0'), ('2', '2', '3'), ('2', '4')),
     ('mid_offseason',          'Off-season', ('3', '3', '4'), ('3', '3', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
     ('late_offseason',         'Off-season', ('3', '3', '4'), ('3', '3', '4'),         ('1', '1', '2'), ('1', '1', '2'), ('4', '5')),
-    ('early_preseason',        'Pre-season', ('3', '4', '4'), ('3', '4', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
-    ('mid_preseason',          'Pre-season', ('3', '4', '4'), ('3', '4', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
-    ('late_preseason',         'Pre-season', ('3', '4', '4'), ('3', '4', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
+    ('preseason',              'Pre-season', ('3', '4', '4'), ('3', '4', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
 ]
+
+# The three enum modes that resolve to the single authored pre-season row.
+PRESEASON_MODES = ('early_preseason', 'mid_preseason', 'late_preseason')
 
 SLOTS = ['required', 'preferredMin', 'preferredMax']
 
@@ -93,12 +98,11 @@ def classify(mode, domain, slot, value):
     n = int(value)
 
     if domain == 'hardDays':
-        if slot == 'permitted' and n > 4:
-            return 'bible_conflict', FILL_CONFLICT, (
-                'Bible S2 states a hard-DAY max of 4. This permits 5. Also the unit question: '
-                'the Bible counts DAYS ("6 sessions ... spread over 3-4 days"), the engine '
-                'spends this on SESSIONS. Batch 3 owns the unit; this cell owns the number.')
-        return 'bible_range', FILL_OK, 'Bible S2 states a hard-day max of 4.'
+        return 'bible_anchor', FILL_OK, (
+            'RULED and amended into Bible S2: prefer 4 hard days, permit 5, unit is DAYS. '
+            'Doubling up is ONE hard day and two hard sessions, free against the budget. '
+            'Easy/long-slow never counts. A 6th hard day is refused with plain copy. '
+            'Bye-recovery and early off-season keep the lower 2/4.')
 
     if domain == 'sprintCod':
         if n == 0 and mode != 'early_offseason':
@@ -110,9 +114,10 @@ def classify(mode, domain, slot, value):
 
     if domain == 'fullRest':
         if n > 2:
-            return 'bible_conflict', FILL_CONFLICT, (
-                'Bible S2 says 1-2 days fully off each week. This allows 3.')
-        return 'bible_range', FILL_OK, 'Bible S2: 1-2 days fully off each week.'
+            return 'bible_anchor', FILL_OK, (
+                'RULED and amended into Bible S2: 3 full rest days are permitted in '
+                'bye-recovery weeks and early off-season only. Elsewhere 1-2 stands.')
+        return 'bible_anchor', FILL_OK, 'Bible S2: 1-2 days fully off each week.'
 
     if domain == 'conditioning':
         if mode == 'early_offseason':
@@ -121,10 +126,11 @@ def classify(mode, domain, slot, value):
         if mode == 'in_season_bye_recovery' and n == 0:
             return 'bible_range', FILL_OK, (
                 'Bible S2 allows a bye to be "a really good time to rest and recover".')
-        return 'bible_ambiguous', FILL_AMBIG, (
-            'Two Bible lines give different BASES: S2 says 3-5 conditioning exposures TOTAL '
-            '(team training and games included), S3 says 1-3 EXTRA conditioning. Which base '
-            'this cell counts in is unruled, so neither line can confirm or refute it.')
+        return 'bible_anchor', FILL_OK, (
+            'RULED: conditioning counts TOTAL, team training and games included. Weekly cap '
+            '5 TOTAL, in-season target 3, max 4 RUNNING sessions year-round, a 5th must be '
+            'off-legs. S2 amended to state the basis and S3 annotated so its "extra" figures '
+            'no longer read as a separate budget.')
 
     if domain == 'strength':
         if mode == 'early_offseason' and n == 0:
@@ -223,8 +229,8 @@ for r, values in enumerate(rows, start=1):
 # ═══════════════════════ Tab 3 — Base numbers (126 cells) ═══════════════════════
 ws = wb.create_sheet('Base numbers')
 widths(ws, [24, 13, 15, 15, 15, 20, 12, 62, 16, 70])
-write_header(ws, 1, ['MODE', 'PHASE', 'DOMAIN', 'SLOT', 'CURRENT VALUE',
-                     'FLAG', 'BIBLE §', 'BIBLE SAYS', 'RULED VALUE', 'NOTE'])
+write_header(ws, 1, ['MODE', 'PHASE', 'DOMAIN', 'SLOT', 'RULED VALUE',
+                     'FLAG', 'BIBLE §', 'BIBLE SAYS', 'STATUS', 'NOTE'])
 r = 2
 base_cells = 0
 for mode, phase, s, c, sp, fr, hard in MODES:
@@ -232,7 +238,8 @@ for mode, phase, s, c, sp, fr, hard in MODES:
         for slot, value in zip(SLOTS, triple):
             flag, fill, note = classify(mode, domain, slot, value)
             sec, says = bible_for(domain, phase)
-            for col, v in enumerate([mode, phase, domain, slot, value, flag, sec, says, '', note], start=1):
+            for col, v in enumerate([mode, phase, domain, slot, value, flag, sec, says,
+                                     'RULED 2026-07-28', note], start=1):
                 cell = ws.cell(row=r, column=col, value=v)
                 cell.alignment = WRAP
                 if col == 6:
@@ -244,7 +251,8 @@ for mode, phase, s, c, sp, fr, hard in MODES:
     for slot, value in (('preferred', hard[0]), ('permitted', hard[1])):
         flag, fill, note = classify(mode, 'hardDays', slot, value)
         sec, says = bible_for('hardDays', phase)
-        for col, v in enumerate([mode, phase, 'hardDays', slot, value, flag, sec, says, '', note], start=1):
+        for col, v in enumerate([mode, phase, 'hardDays', slot, value, flag, sec, says,
+                                 'RULED 2026-07-28', note], start=1):
             cell = ws.cell(row=r, column=col, value=v)
             cell.alignment = WRAP
             if col == 6:

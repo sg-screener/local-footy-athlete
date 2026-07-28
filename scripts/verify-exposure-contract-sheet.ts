@@ -56,30 +56,34 @@ console.log('\n[1] The repo\'s own reader can parse it');
 const base = sheets.find((s) => s.name === 'Base numbers')!;
 const schedule = sheets.find((s) => s.name === 'Schedule columns')!;
 
-console.log('\n[2] The cell counts are what Sam was promised');
+console.log('\n[2] The cell counts, after Q1 collapsed the pre-season rows');
 {
-  ok('126 base cells', base.rows.length - 1 === 126, `${base.rows.length - 1}`);
-  ok('63 schedule cells', schedule.rows.length - 1 === 63, `${schedule.rows.length - 1}`);
-  ok('189 authored cells total',
-    (base.rows.length - 1) + (schedule.rows.length - 1) === 189);
+  // 189 was the pre-ruling figure, at nine modes. Sam's Q1 ruled the three
+  // identical pre-season rows into ONE, so the authored sheet is seven modes:
+  // 7 x 14 = 98 base, 7 x 7 = 49 schedule. The shrink IS the ruling landing.
+  ok('98 base cells', base.rows.length - 1 === 98, `${base.rows.length - 1}`);
+  ok('49 schedule cells', schedule.rows.length - 1 === 49, `${schedule.rows.length - 1}`);
+  ok('147 authored cells total',
+    (base.rows.length - 1) + (schedule.rows.length - 1) === 147);
 }
 
-console.log('\n[3] Every row is ruleable: prefilled, flagged, and blank where Sam writes');
+console.log('\n[3] Every row is AUTHORED: a ruled value, a flag, and a ruling date');
 {
   const header = base.rows[0];
-  const iValue = header.indexOf('CURRENT VALUE');
+  const iValue = header.indexOf('RULED VALUE');
   const iFlag = header.indexOf('FLAG');
-  const iRuled = header.indexOf('RULED VALUE');
-  ok('the base tab has the expected columns', iValue > 0 && iFlag > 0 && iRuled > 0);
+  const iStatus = header.indexOf('STATUS');
+  ok('the base tab has the expected columns', iValue > 0 && iFlag > 0 && iStatus > 0);
 
   const missingValue = base.rows.slice(1).filter((r) => !(r[iValue] ?? '').trim()).length;
   const missingFlag = base.rows.slice(1).filter((r) => !(r[iFlag] ?? '').trim()).length;
-  const preFilledRuling = base.rows.slice(1).filter((r) => (r[iRuled] ?? '').trim()).length;
+  const unruled = base.rows.slice(1).filter((r) => !/RULED/.test(r[iStatus] ?? '')).length;
 
-  ok('every base row carries a current value', missingValue === 0, `${missingValue} blank`);
+  ok('every base row carries a ruled value', missingValue === 0, `${missingValue} blank`);
   ok('every base row carries a flag', missingFlag === 0, `${missingFlag} unflagged`);
-  ok('no base row pre-fills the RULED VALUE column', preFilledRuling === 0,
-    'a prefilled ruling column is the sheet answering for Sam');
+  ok('every base row is marked ruled', unruled === 0,
+    `${unruled} rows are not marked ruled — an unruled cell in an AUTHORED sheet is the `
+    + 'absence-rendered-as-approval defect this whole unit exists to remove');
 }
 
 console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships');
@@ -116,7 +120,7 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
   ok('the source parse found modes', modes > 0, `${modes}`);
 
   const header = base.rows[0];
-  const [iMode, iDomain, iSlot, iValue] = ['MODE', 'DOMAIN', 'SLOT', 'CURRENT VALUE']
+  const [iMode, iDomain, iSlot, iValue] = ['MODE', 'DOMAIN', 'SLOT', 'RULED VALUE']
     .map((h) => header.indexOf(h));
 
   // Sheet -> source. `max(3,anchors)` and `teams` are the sheet's readable
@@ -143,6 +147,43 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
   const missing = [...fromSource.keys()].filter((k) => !inSheet.has(k));
   ok('every parsed source value has a row in the sheet', missing.length === 0,
     missing.join(', '));
+
+  // THE HOLE THIS CLOSES. Collapsing pre-season onto a spread (`...PRE_SEASON_
+  // TARGETS`) removed its literals from the inline shape the parser above
+  // matches — so the pre-season row silently stopped being compared at all. The
+  // Q1 fix would have quietly un-gated the very cells it authored. Compared
+  // explicitly against the one authored object instead.
+  const targets = /const PRE_SEASON_TARGETS = \{([\s\S]*?)\n\} as const;/.exec(source);
+  ok('PRE_SEASON_TARGETS is readable', !!targets);
+  if (targets) {
+    const blob = targets[1];
+    const domainBlob = (d: string): string =>
+      new RegExp(`${d}:\\s*\\{([^}]*)\\}`).exec(blob)?.[1] ?? '';
+    const expected: Record<string, string> = {};
+    for (const domain of ['strength', 'conditioning', 'sprintCod', 'fullRest']) {
+      for (const slot of ['required', 'preferredMin', 'preferredMax']) {
+        const v = slotOf(domainBlob(domain), slot);
+        if (v !== null) expected[`${domain}|${slot}`] = v;
+      }
+    }
+    expected['hardDays|preferred'] = /preferredHardDays:\s*(\d+)/.exec(blob)?.[1] ?? '';
+    expected['hardDays|permitted'] = /permittedHardDays:\s*(\d+)/.exec(blob)?.[1] ?? '';
+
+    const sheetPreseason = new Map(base.rows.slice(1)
+      .filter((r) => r[iMode] === 'preseason')
+      .map((r) => [`${r[iDomain]}|${r[iSlot]}`, (r[iValue] ?? '').trim()]));
+
+    ok('the pre-season row has all 14 slots', sheetPreseason.size === 14,
+      `${sheetPreseason.size}`);
+
+    const preMismatch: string[] = [];
+    for (const [key, value] of Object.entries(expected)) {
+      const sheetValue = sheetPreseason.get(key);
+      if (sheetValue !== value) preMismatch.push(`${key}: sheet ${sheetValue} vs code ${value}`);
+    }
+    ok('the authored pre-season row equals PRE_SEASON_TARGETS', preMismatch.length === 0,
+      preMismatch.join('\n      '));
+  }
 }
 
 console.log('\n[5] The three Contract V2 cells are present and unauthored');
@@ -166,14 +207,25 @@ console.log('\n[6] The three-identical-pre-season-rows question is on the sheet\
 
   // The claim itself, checked rather than asserted in prose.
   const header = base.rows[0];
-  const [iMode, iDomain, iSlot, iValue] = ['MODE', 'DOMAIN', 'SLOT', 'CURRENT VALUE']
+  const [iMode, iDomain, iSlot, iValue] = ['MODE', 'DOMAIN', 'SLOT', 'RULED VALUE']
     .map((h) => header.indexOf(h));
-  const preseason = ['early_preseason', 'mid_preseason', 'late_preseason'].map((mode) =>
-    base.rows.slice(1).filter((r) => r[iMode] === mode)
-      .map((r) => `${r[iDomain]}.${r[iSlot]}=${r[iValue]}`).join(','));
-  ok('the three pre-season rows really are identical',
-    preseason[0] === preseason[1] && preseason[1] === preseason[2],
-    'if this fails the Q1 question is wrong and must be rewritten');
+  // Q1 is now RULED, so the assertion inverts: there must be exactly ONE
+  // pre-season row, and the three enum modes must reference it in code rather
+  // than restating it. Three copies of one decision are three chances to edit
+  // one and not the others, which is what this ruling removed.
+  const preseasonRows = new Set(base.rows.slice(1)
+    .filter((r) => /preseason/.test(r[iMode])).map((r) => r[iMode]));
+  ok('there is exactly one authored pre-season row', preseasonRows.size === 1,
+    `found: ${[...preseasonRows].join(', ')}`);
+
+  const builders = fs.readFileSync(path.join(repoRoot, SOURCE), 'utf8');
+  ok('the code has a single pre-season target object',
+    /const PRE_SEASON_TARGETS/.test(builders));
+  for (const mode of ['early_preseason', 'mid_preseason', 'late_preseason']) {
+    const block = new RegExp(`\\.\\.\\.PRE_SEASON_TARGETS, mode: '${mode}'`);
+    ok(`${mode} references the one authored row`, block.test(builders),
+      'a subphase that restates the numbers is a second representation');
+  }
 }
 
 const total = passed + failures.length;

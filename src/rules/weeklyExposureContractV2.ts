@@ -990,11 +990,42 @@ export function resolveSection18PhasePlannerSelection(
   const recoveryMode = input.mode === 'in_season_bye_recovery';
   const optionalWeek = input.mode === 'optional_week';
   const earlyOffseason = input.mode === 'early_offseason';
+  // RULED (Sam, 2026-07-28, Batch 2 — authored FIRST because this is the OWNER).
+  // Two conjuncts died here, for different reasons:
+  //   readiness === 'high'      capacity may not set structure. Deleting it
+  //                             anywhere else while the owner kept its own axis
+  //                             would have MOVED the axis, not removed it.
+  //   teamTrainingCount <= 1    Sam: a bye build week may still carry 2 team
+  //                             days. This was never a rule, just an untested
+  //                             assumption about what a bye looks like.
+  // What remains is a pure SCHEDULE fact: enough days to hold four sessions.
+  // HELD — Sam ruled this cell but applying it breaks stored weeks. Ruled form:
+  //   input.mode === 'in_season_bye_build' && availableDayCount >= 4
+  // (both the `readiness === 'high'` and the `teamTrainingCount <= 1` conjuncts
+  // die — a bye build week may still carry 2 team days.)
+  //
+  // WHY IT IS NOT APPLIED YET. Raising the bye-build strength target from 3 to
+  // 4 makes it the planner-SELECTED target, and §18 then rejects any stored week
+  // that was built under the old target:
+  //   Section 18 final-week rejection (planner_selected_target_miss:main_strength:3)
+  // Program hydration catches that and falls back to in-memory defaults, so an
+  // existing athlete's persisted week silently empties on rehydrate. Reproduced
+  // by `legacy-program-rehydrate` in the slice-4 persistence probe.
+  //
+  // This needs a ruling, not a patch, and there are two clean shapes:
+  //   (a) 4 is a PREFERRED maximum, not a selected target — which matches Sam's
+  //       own phrasing for bye-build CONDITIONING ("the 4th is the optional top
+  //       of range for anyone"), and leaves stored weeks valid; or
+  //   (b) 4 is the selected target and stored weeks are MIGRATED — regenerated
+  //       or re-accepted — rather than rejected on read.
+  // Applying it as-is picks (b) by accident and implements it as data loss.
   const strongByeBuild = input.mode === 'in_season_bye_build' &&
     input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
 
   const unconstrainedStrength = earlyOffseason
-    ? Math.min(policy.strength.max, availableDayCount, input.readiness === 'high' ? 3 : 2)
+    // RULED: early off-season strength target is 3, flat. Every session in the
+    // block is optional, so the target describes what is OFFERED, not owed.
+    ? Math.min(policy.strength.max, availableDayCount, 3)
     : strongByeBuild
       ? 4
       : policy.strength.defaultTarget;
@@ -1032,10 +1063,11 @@ export function resolveSection18PhasePlannerSelection(
           ? 1
           : 0
       : earlyOffseason
-        ? Math.min(
-            input.readiness === 'high' && teamTrainingCount < 3 ? 2 : 1,
-            Math.max(0, availableDayCount - mainStrength),
-          )
+        // RULED (Sam, 2026-07-28): 0 required, 1-2 optional. The
+        // `teamTrainingCount < 3` conjunct died with the readiness one and for a
+        // plainer reason — there are NO team days in early off-season, so it was
+        // a condition that could never be false, dressed as a decision.
+        ? Math.min(2, Math.max(0, availableDayCount - mainStrength))
         : 0;
 
   return {
