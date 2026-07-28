@@ -89,7 +89,16 @@ for (const [, name, blockBody, ] of blocks) {
   });
 }
 
-fs.writeFileSync(process.argv[2], JSON.stringify({ keys: KEYS, records }, null, 2));
+// The authored MuscleGroup vocabulary, so a rule naming a real-but-never-primary
+// muscle can be told apart from a rule naming a typo.
+const vocabularyBlock = /export type MuscleGroup =([\s\S]*?);/.exec(msrc);
+const muscleVocabulary = vocabularyBlock
+  ? [...vocabularyBlock[1].matchAll(/'([^']+)'/g)].map((m) => m[1])
+  : [];
+
+fs.writeFileSync(process.argv[2], JSON.stringify(
+  { keys: KEYS, records, muscleVocabulary }, null, 2));
+console.log(`muscle vocabulary: ${muscleVocabulary.length} groups`);
 console.log(`extracted ${records.length} entries, ${new Set(records.map((r) => r.group)).size} groups`);
 const explicitPairs = records.reduce((n, r) => n + Object.keys(r.explicit).length, 0);
 console.log(`pairs ${records.length * 10}, explicit ${explicitPairs}, defaulted ${records.length * 10 - explicitPairs}`);
