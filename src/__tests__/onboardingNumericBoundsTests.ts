@@ -38,7 +38,7 @@ import {
   validateOnboardingMeasurement,
 } from '../data/onboardingNumericBounds';
 import { estimateStartingWeight } from '../utils/loadEstimation';
-import { stripComments } from './support/sourceText';
+import { stripComments, statesWholeNumber } from './support/sourceText';
 import type { OnboardingData } from '../types/domain';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -185,18 +185,13 @@ console.log('\n[8] PROVENANCE — the ranges trace to Sam\'s ruling');
   // Without this the shipped bound could drift to any value while still citing
   // a real sentence — a citation that no longer supports what it is cited for,
   // which is the failure mode the whole provenance unit exists to close.
-  // Whole-number match, NOT substring. `includes('20')` is satisfied by the
-  // "200" in "30–200 kg", so a floor that drifted 30 -> 20 would still appear
-  // to be supported by its own citation. Caught by mutating this very test.
-  const states = (anchor: string, n: number): boolean =>
-    new RegExp(`(?<![\\d.])${n}(?![\\d.])`).test(anchor);
 
   for (const [field, bound] of Object.entries(ONBOARDING_NUMERIC_BOUNDS)) {
     ok(`${field}: the anchor states the shipped floor (${bound.min})`,
-      states(bound.anchor, bound.min),
+      statesWholeNumber(bound.anchor, bound.min),
       `anchor "${bound.anchor}" does not state ${bound.min} as a whole number`);
     ok(`${field}: the anchor states the shipped ceiling (${bound.max})`,
-      states(bound.anchor, bound.max),
+      statesWholeNumber(bound.anchor, bound.max),
       `anchor "${bound.anchor}" does not state ${bound.max} as a whole number`);
     ok(`${field}: the anchor is present in the ruling document`,
       fs.readFileSync(path.join(repoRoot, bound.attribution.where), 'utf8')

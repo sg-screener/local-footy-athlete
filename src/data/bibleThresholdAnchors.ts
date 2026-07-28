@@ -150,6 +150,30 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
     ],
   },
   {
+    id: 'capacity_rubric_ladders',
+    section: 'Section 9 — Training capacity score',
+    quote: '* Recent training consistency: Very consistent 3, Pretty consistent 2, A bit 1, '
+      + 'Hardly at all 0. \n* Current conditioning level: Elite 3, Good 2, Average 1, Poor 0. ',
+    states: [3, 2, 1, 0],
+    meaning: 'The two equal-weight ladders that score standing capacity. Sam authored this '
+      + 'section in the same sitting he ruled the values, so unusually the Bible text and '
+      + 'the code were written together rather than the code being retro-fitted to a quote.',
+    sites: [
+      { file: 'data/capacityRubric.ts', symbol: 'CONSISTENCY_SCORES' },
+    ],
+  },
+  {
+    id: 'capacity_rubric_bands',
+    section: 'Section 9 — Training capacity score',
+    quote: 'Total runs 0-6. Bands: 0-2 low, 3-4 medium, 5-6 high.',
+    states: [0, 6, 2, 3, 4, 5],
+    meaning: 'The band edges on the 0-6 capacity score. Capacity affects DOSE only — '
+      + 'progression steps, recovery category, RPE ceiling, power dose — never session counts.',
+    sites: [
+      { file: 'data/capacityRubric.ts', symbol: 'CAPACITY_BANDS' },
+    ],
+  },
+  {
     id: 'deload_block_length_weeks',
     section: 'Section 5 — Strength programming rules',
     quote: 'Deload rule: new program every 3-4 weeks.',

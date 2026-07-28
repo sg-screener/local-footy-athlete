@@ -41,7 +41,7 @@ import {
   INJURY_SEVERITY_THRESHOLD_CONSUMERS,
   MERGED_SEVERITY_SCALE_DEFERRALS,
 } from '../data/bibleThresholdAnchors';
-import { stripComments } from './support/sourceText';
+import { stripComments, statesWholeNumber } from './support/sourceText';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const src = path.resolve(__dirname, '..');
@@ -53,16 +53,6 @@ function ok(name: string, condition: unknown, detail?: string): void {
   if (condition) { passed += 1; console.log(`  PASS ${name}`); return; }
   failures.push(name);
   console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
-}
-
-/**
- * Whole-number match, NOT substring. `includes('2')` is satisfied by the "2" in
- * "G-2", so a threshold that drifted 3 -> 2 would still look supported by its
- * own citation. This exact trap was caught by mutating the onboarding-bounds
- * test, and it is the reason that gate uses the same helper.
- */
-function states(quote: string, n: number): boolean {
-  return new RegExp(`(?<![\\d.])${n}(?![\\d.])`).test(quote);
 }
 
 console.log('\n[1] The registry is populated and internally well-formed');
@@ -120,7 +110,7 @@ console.log('\n[3] THE BINDING: the quote states the numbers it is cited for');
 
     for (const n of anchor.states) {
       ok(`${anchor.id}: quote states ${n} as a whole number`,
-        states(anchor.quote, n),
+        statesWholeNumber(anchor.quote, n),
         `quote "${anchor.quote.slice(0, 90)}..." does not state ${n}`);
     }
   }

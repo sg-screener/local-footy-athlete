@@ -599,12 +599,17 @@ function legacyMigrationFallbackProfile(args: {
     preferredTrainingDays: profileDays.length > 0
       ? profileDays
       : persistedDayNames,
-    // Contractless selection above deliberately uses the conservative medium
-    // tier. These values are generation-only defaults that reproduce that
-    // already-owned decision when the independently persisted profile has not
-    // hydrated yet; they are never written back as athlete answers.
-    recentTrainingLoad: args.profile?.recentTrainingLoad ?? 'Pretty consistent',
-    conditioningLevel: args.profile?.conditioningLevel ?? 'Good',
+    // RETIRED (Sam, 2026-07-28). These were `?? 'Pretty consistent'` and
+    // `?? 'Good'` — a missing answer scored 2 + 2 = 4, landing the athlete in
+    // the medium band. The old comment called them "generation-only defaults
+    // ... never written back as athlete answers", and that was true and beside
+    // the point: they were never STORED as answers, they were SCORED as them,
+    // and the athlete received the resulting progression tier.
+    //
+    // Bible Section 9: there is no default and no unknown tier. Passing the
+    // absent value through lets the rubric refuse, which is the whole ruling.
+    recentTrainingLoad: args.profile?.recentTrainingLoad,
+    conditioningLevel: args.profile?.conditioningLevel,
     injuries: args.profile?.injuries ?? [],
   };
 }

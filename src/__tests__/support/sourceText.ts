@@ -33,3 +33,24 @@ export function stripComments(source: string): string {
     .map((line) => line.replace(/\s\/\/.*$/, ''))
     .join('\n');
 }
+
+/**
+ * Does `text` state `n` as a WHOLE number?
+ *
+ * Substring matching is not good enough for citation gates: `includes('2')` is
+ * satisfied by the "2" in "G-2" or the "200" in "30-200 kg", so a threshold that
+ * drifted 3 -> 2 would still look supported by its own quote. That trap was
+ * caught by mutating the onboarding-bounds gate.
+ *
+ * The trailing guard rejects a DECIMAL point only — `6` must not match inside
+ * `6.5` — but must still match a sentence-final `0.`, which is where a ladder
+ * ending in zero naturally lands. An earlier revision rejected any following
+ * period and produced a false negative on the Bible's own capacity ladder.
+ *
+ * Shared rather than copied: three gates were carrying their own regex, and the
+ * subtlety above is exactly the kind that gets fixed in one copy and not the
+ * others.
+ */
+export function statesWholeNumber(text: string, n: number): boolean {
+  return new RegExp(`(?<![\\d.])${n}(?!\\d)(?!\\.\\d)`).test(text);
+}

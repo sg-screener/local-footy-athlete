@@ -2553,6 +2553,16 @@ Simple injury rules
 * Severe back, neck, head, chest, dizziness, numbness/tingling, or cannot-walk issues may mean stop training entirely until checked. 
 * Reintroduce through the tap system, not open-ended AI chat.
 9. Fatigue, sickness and readiness rules
+Training capacity score
+This is the athlete's STANDING capacity, computed once from their onboarding answers. It is not the readiness declaration and it is not a fatigue signal - those are the doors below. Capacity affects DOSE only: progression steps, recovery category, RPE ceiling and power dose. It never sets session counts.
+Two questions, equal weight, scored 0-3 each:
+
+* Recent training consistency: Very consistent 3, Pretty consistent 2, A bit 1, Hardly at all 0. 
+* Current conditioning level: Elite 3, Good 2, Average 1, Poor 0. 
+Total runs 0-6. Bands: 0-2 low, 3-4 medium, 5-6 high.
+"A bit" plus "Average" scores 2, which is low. That is intended - show some training before we build.
+Nothing else scores into capacity. Sprint exposure is a weekly floor (Section 2), not a capacity signal. Season phase already shapes the week through the exposure contracts and game fatigue enters through the readiness facts, so neither is scored again here. Injury acts only through the injury law family and never adjusts this score.
+Both answers are REQUIRED. There is no default and no unknown tier: if a profile arrives without them, refuse and say so rather than scoring a guess. Same law as bodyweight - absence renders as absence, never as an average athlete.
 Tired today
 Rule: If the athlete is tired today, reduce the session slightly rather than deleting everything.
 What to change:

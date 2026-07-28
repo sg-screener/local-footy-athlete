@@ -1,5 +1,5 @@
 import type { OnboardingData, ReadinessLevel } from '../types/domain';
-import { calculateReadiness, onboardingToCoachingInputs } from './coachingEngine';
+import { capacityFor } from '../data/capacityRubric';
 
 export type ReadinessEnergy = 'low' | 'okay' | 'good';
 export type ReadinessSoreness = 'none' | 'mild' | 'moderate' | 'high';
@@ -21,15 +21,31 @@ export interface ReadinessSignal {
   poorSleepPattern?: 'single_night' | 'repeated';
 }
 
+/**
+ * The athlete's standing capacity band.
+ *
+ * REWRITTEN (Sam, 2026-07-28). This used to build the whole `CoachingInputs`
+ * object, call `calculateReadiness`, and wrap it in `catch { return 'medium' }`
+ * — with a second silent `'medium'` when `seasonPhase` was absent. Either one
+ * would have swallowed the rubric's refusal one layer up and handed back a
+ * confident tier, which is exactly the failure the fail-loud ruling exists to
+ * stop.
+ *
+ * It now asks the rubric owner directly. The `seasonPhase` guard went with the
+ * rewrite rather than being preserved: capacity stopped depending on phase when
+ * Sam deleted the in-season -1 modifier, so the guard was gating on a field the
+ * calculation no longer reads.
+ *
+ * Throws `MissingCapacityAnswerError` when either answer is absent. That is the
+ * contract, not an accident — see `data/capacityRubric.ts`.
+ */
 export function deriveProfileReadiness(
   onboardingData: OnboardingData | null | undefined,
 ): ReadinessLevel {
-  if (!onboardingData?.seasonPhase) return 'medium';
-  try {
-    return calculateReadiness(onboardingToCoachingInputs(onboardingData)).level;
-  } catch {
-    return 'medium';
-  }
+  return capacityFor(
+    onboardingData?.recentTrainingLoad,
+    onboardingData?.conditioningLevel,
+  ).level;
 }
 
 function lowerOf(a: ReadinessLevel, b: ReadinessLevel): ReadinessLevel {
