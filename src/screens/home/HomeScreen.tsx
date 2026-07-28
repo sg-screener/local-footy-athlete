@@ -102,7 +102,6 @@ function HomeScreenClassic() {
     rebuildErrorCanRetry,
     rebuildMsgIdx,
     rebuildMsgOpacity,
-    handleOpenRebuild,
     handleCancelRebuild,
     handleConfirmRebuild,
     phaseShiftModalVisible,
@@ -164,19 +163,8 @@ function HomeScreenClassic() {
               </Svg>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleOpenRebuild}
-              style={styles.navArrow}
-              activeOpacity={0.6}
-              accessibilityLabel="Rebuild this week"
-            >
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text.primary} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M23 4v6h-6" />
-                <Path d="M1 20v-6h6" />
-                <Path d="M3.51 9a9 9 0 0114.85-3.36L23 10" />
-                <Path d="M20.49 15A9 9 0 015.64 18.36L1 14" />
-              </Svg>
-            </TouchableOpacity>
+            {/* The week-rebuild button lived here and is GONE (Sam, device pass
+                2026-07-29) — see the note at the same place in HomeScreenV2. */}
           </View>
         </View>
 

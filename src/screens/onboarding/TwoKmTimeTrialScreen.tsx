@@ -14,6 +14,7 @@ import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
+import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { recordTwoKmTime, validateTwoKmTime } from '../../data/twoKmTimeTrial';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
@@ -58,9 +59,14 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
     ? NaN
     : parseInt(minutes, 10) * 60 + (seconds.trim() === '' ? 0 : parseInt(seconds, 10));
 
-  const validation = started ? validateTwoKmTime(totalSeconds) : null;
-  const error = validation && !validation.ok ? validation.message : null;
-  const canContinue = Boolean(validation?.ok);
+  // Two boxes, ONE answer — so one entry, not one per input. A time is not
+  // half-right because the minutes are in range.
+  //
+  // WHEN the refusal is spoken belongs to `useRefusalOnContinue` (Sam, device
+  // pass 2026-07-29): validating on every keystroke told the athlete their time
+  // was out of range while they were still typing the second digit of it.
+  const { refusals, continueDisabled, onAnswerEdited, attemptContinue } =
+    useRefusalOnContinue({ time: started ? validateTwoKmTime(totalSeconds) : null });
 
   const commit = (value: number | null) => {
     const result = recordTwoKmTime(value, 'onboarding', todayISOLocal());
@@ -80,8 +86,8 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
       onBack={() => navigation.goBack()}
       saving={saving}
       saveError={saveError}
-      onContinue={() => commit(totalSeconds)}
-      continueDisabled={!canContinue}
+      onContinue={() => { if (attemptContinue()) commit(totalSeconds); }}
+      continueDisabled={continueDisabled}
     >
       <View style={styles.titleSection}>
         <Text variant="h1" color={colors.text.primary} style={styles.title}>
@@ -120,7 +126,7 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
               placeholder="7"
               placeholderTextColor={colors.text.tertiary}
               value={minutes}
-              onChangeText={setMinutes}
+              onChangeText={(text) => { setMinutes(text); onAnswerEdited(); }}
               onFocus={() => setMinutesFocused(true)}
               onBlur={() => setMinutesFocused(false)}
               keyboardType="numeric"
@@ -147,7 +153,7 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
               placeholder="15"
               placeholderTextColor={colors.text.tertiary}
               value={seconds}
-              onChangeText={setSeconds}
+              onChangeText={(text) => { setSeconds(text); onAnswerEdited(); }}
               onFocus={() => setSecondsFocused(true)}
               onBlur={() => setSecondsFocused(false)}
               keyboardType="numeric"
@@ -158,14 +164,14 @@ export const TwoKmTimeTrialScreen: React.FC<TwoKmTimeTrialScreenProps> = ({
       </View>
 
       {/* The re-ask. One sentence, no suggested value — a suggestion is a clamp
-          wearing a question mark. */}
-      {error ? (
+          wearing a question mark. Spoken on Continue, never mid-keystroke. */}
+      {refusals.time ? (
         <Text
           variant="bodySmall"
           color={colors.status.error}
           style={styles.inputError}
         >
-          {error}
+          {refusals.time}
         </Text>
       ) : null}
 
