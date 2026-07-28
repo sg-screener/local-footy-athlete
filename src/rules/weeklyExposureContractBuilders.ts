@@ -5,6 +5,7 @@ import type {
   WeekKind,
 } from '../types/domain';
 import { resolveWeekIntensityMultiplier } from './deloadWeekRules';
+import { injurySeverityRemovesRiskyWork } from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
@@ -229,8 +230,11 @@ export function resolveRestrictedMainStrengthPatterns(
 ): Set<MainStrengthPattern> {
   const restricted = new Set<MainStrengthPattern>();
   for (const injury of input.activeInjuries ?? []) {
+    // The band edge lives in `injurySeverityBands`, the Bible's owner for it.
+    // This site used to restate it as a bare `< 6` — a second representation of
+    // an already-ruled fact, and the kind that drifts without anyone noticing.
     if (!injury.pauseAffectedTraining &&
-        (injury.effectiveSeverity ?? injury.severity ?? 0) < 6) continue;
+        !injurySeverityRemovesRiskyWork(injury.effectiveSeverity ?? injury.severity ?? 0)) continue;
     const keys = new Set(injury.injuryKeys ?? []);
     if (injury.region === 'upper_body') {
       restricted.add('push');
@@ -272,11 +276,16 @@ function applyCommonSafetyReductions(
     if (offset > 0) offset -= 7;
     return offset === -6 ? 1 : offset;
   };
+  // The excluded offsets are quoted Bible rules, not spacing heuristics — see
+  // src/data/bibleThresholdAnchors.ts.
+  // BIBLE_ANCHOR: g_minus_1_optional_only
+  // BIBLE_ANCHOR: g_plus_1_rest_or_recovery
   const conditioningPlacementDays = nonTeamDays.filter((day) => {
     const offset = gameOffset(day);
     if (offset === null) return true;
     return offset !== -2 && offset !== -1 && offset !== 1;
   });
+  // BIBLE_ANCHOR: g_minus_2_no_heavy_lower_or_speed
   const sprintPlacementDays = nonTeamDays.filter((day) => {
     const offset = gameOffset(day);
     if (offset === null) return true;
@@ -452,6 +461,8 @@ export function buildInSeasonGameWeekExposureContract(
     permittedHardDays: 5,
   }), input);
   if (input.gameDay !== null) {
+    // BIBLE_ANCHOR: game_day_no_programmed_sessions
+    // BIBLE_ANCHOR: g_minus_1_optional_only
     const safeStrengthCapacity = uniqueExposureDays(input.selectedDayNumbers).filter((day) => {
       let offset = day - input.gameDay!;
       if (offset > 0) offset -= 7;

@@ -823,6 +823,7 @@ export function evaluateSection18EffectiveWeek(
     (contract.identity.phaseWeek ?? Infinity) <= 4 &&
     contract.identity.weekKind === 'deload'
   ) {
+    // BIBLE_ANCHOR: offseason_first_four_weeks_no_deload
     addFinding(findings, {
       code: 'illegal_first_offseason_deload',
       severity: 'blocking',

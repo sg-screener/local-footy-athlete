@@ -56,6 +56,7 @@ import {
 import type { StressContext } from '../rules/stressClassification';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
+import { injurySeverityReducesAffectedWork } from '../rules/injurySeverityBands';
 import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
@@ -1834,6 +1835,10 @@ function dayNameToNumber(name: string): number {
  * Calculate G-offset: how many days before game day is this day?
  * Returns negative numbers (e.g. -5 means G−5).
  * If no game day, returns 0 for all days.
+ *
+ * Callers compare the result against -3, which is the Bible's boundary for
+ * additional high stress rather than a tuned number.
+ * BIBLE_ANCHOR: last_high_stress_g3
  */
 function gOffset(dayNum: number, gameDayNum: number | null): number {
   if (gameDayNum === null) return 0;
@@ -2021,7 +2026,12 @@ function buildWeeklyPlan(
     // ─── In-season WITH game: G-relative placement with spacing intelligence ───
     const assigned = new Map<string, SessionAllocation>();
 
-    // Classify available slots
+    // Classify available slots. The G-relative boundaries are Bible citations,
+    // not tuning — see src/data/bibleThresholdAnchors.ts for the quoted rules.
+    // BIBLE_ANCHOR: lower_strength_g3          (midWeek — lower strength stops at G-3)
+    // BIBLE_ANCHOR: g_minus_2_no_heavy_lower_or_speed  (lateWeek)
+    // BIBLE_ANCHOR: g_minus_1_optional_only    (preGame)
+    // BIBLE_ANCHOR: g_plus_1_rest_or_recovery  (postGame)
     const highLoad = daySlots.filter(d => d.offset <= -4 && d.offset >= -5);       // G−5 to G−4
     const midWeek = daySlots.filter(d => d.offset === -3);                         // G−3
     const lateWeek = daySlots.filter(d => d.offset === -2);                        // G−2
@@ -8154,7 +8164,7 @@ function buildAIConstraints(
     phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const lowerLimbGenerationIssue = activeInjuries.some((injury) =>
-    injury.severity >= 4 &&
+    injurySeverityReducesAffectedWork(injury.severity) &&
     (injury.region === 'lower_body' ||
       injury.injuryKeys.some((key) =>
         key === 'hamstring' || key === 'knee' || key === 'calf' ||

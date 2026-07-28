@@ -814,6 +814,9 @@ export function buildSection18ProductionFallbackCandidate(args: {
         .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
         .map((anchor) => anchor.dayOfWeek));
       const fixtureDay = Array.from(fixtureDays)[0];
+      // The 3-day gap below is the Bible's last-additional-high-stress boundary,
+      // not a tuned spacing constant.
+      // BIBLE_ANCHOR: last_high_stress_g3
       const distanceBeforeFixture = (dayOfWeek: number): number =>
         fixtureDay === undefined ? 7 : weekOrder(fixtureDay) - weekOrder(dayOfWeek);
       for (const source of workouts.filter((workout) =>
@@ -1070,6 +1073,8 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       args.microcycle.exposureContract
         ? migrateLegacyWeeklyExposureContractV2(args.microcycle.exposureContract, {
             blockNumber: args.microcycle.miniCycleNumber,
+            // BIBLE_ANCHOR: deload_block_length_weeks — the Bible states 3-4
+            // weeks; this modulo pins the top of that range.
             weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
             globalWeek: args.microcycle.weekNumber,
           })

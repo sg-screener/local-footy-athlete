@@ -156,7 +156,7 @@ export function buildGenerationConstraintContext(args: {
   const readiness = strongestReadinessConstraint(live);
   const activeInjuryKeys = Array.from(new Set(
     injuries
-      .filter((injury) => injury.effectiveSeverity >= 4)
+      .filter((injury) => injurySeverityReducesAffectedWork(injury.effectiveSeverity))
       .flatMap((injury) => injury.injuryKeys),
   ));
 
