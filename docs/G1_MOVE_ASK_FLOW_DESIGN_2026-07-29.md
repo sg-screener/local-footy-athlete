@@ -1,6 +1,6 @@
 # G-1 Move Ask-Flow — athlete-placed content outranks derived filler
 
-**Unit G-1. Ruled by Sam 2026-07-28/29. Status: design signed off, building.**
+**Unit G-1. Ruled by Sam 2026-07-28/29. Status: SHIPPED — `test:bible` EXIT=0.**
 
 Generation never plans hard strength or conditioning on G-1. That law is
 unchanged. This unit is about what happens when the ATHLETE puts a session
@@ -192,7 +192,7 @@ seven-question reassessment is written before any further code.
 - `npm run test:bible` — **EXIT=1, one red, and it is NOT this unit's.** See below.
 - Merge brings `feat/practice-match-g1-hold` (`4a0de0d`) with it.
 
-## 7. BLOCKING: the held commit has a second red gate
+## 7. RESOLVED: the held commit's second red gate
 
 `npm run test:power-counting` fails on the hold branch. Bisected across every
 commit in this unit and the two below it:
@@ -203,10 +203,11 @@ commit in this unit and the two below it:
 | `4a0de0d` practice-match ruling | **FAILS** |
 | `ef85470` … `2f2bc2d` (this unit, 6 commits) | fails, unchanged |
 
-**The held practice-match commit is the cause. None of this unit's commits move
+**The held practice-match commit was the cause. None of this unit's commits moved
 it.** The hold was recorded as blocked on ONE red gate
-(`athleteSessionMoveTests` 12); there were two. This unit fixed the recorded one
-and cannot merge past the unrecorded one.
+(`athleteSessionMoveTests` 12); there were two.
+
+**Sam ruled it on 2026-07-29 and it is fixed** — see §8.
 
 Failing scenario: `preseason-team-and-game` — Pre-season, one team training, a
 Saturday fixture.
@@ -228,11 +229,35 @@ This is not a test artifact. `impossible` is what the athlete would meet as
 *"We couldn't safely build your week from your current settings."* on a
 perfectly ordinary pre-season week with one team training and a practice match.
 
-It is an exposure-contract threshold question for a practice-match week, which
-is Sam's ruling domain and a different unit from this one. Per the standing
-escalation rule this is reported rather than patched: the fix is either the
-conditioning intensity policy for `practice_match_week` (should a practice-match
-week require a hard app exposure at all?) or the anchor accounting that leaves
-the week unable to place one. Both are his call.
+Everything else in `test:bible` was green, before and after this suite.
 
-Everything else in `test:bible` is green, before and after this suite.
+## 8. Sam's fixture-week ruling (2026-07-29)
+
+> "In any fixture week — game or practice match — the game itself carries the
+> hard conditioning exposure. The contract never requires a hard app-conditioning
+> session in a game-shaped week; app top-up is moderate or easier."
+
+Fixed at the contract/anchor-credit level. The COUNT side of that credit already
+existed (`appCoreConditioning` subtracts one for a fixture week); only the
+INTENSITY side was missing, so the row still read
+`requiredAppHardMinimum: tt === 1 ? 1 : 0`.
+
+`isFixtureWeekMode` is now the single owner of "a game and a practice match are
+the same shape". It was spelled out inline at the anchor credit and nowhere
+else — which is precisely why the intensity policy never learned the fact.
+
+**The re-check Sam asked for.** Every week mode swept against every
+team-training count in `section18ContractV2Tests`. The game-week row was the
+only non-zero hard demand, and it fired for one arm of a ternary only. The sweep
+is what stops it returning that way.
+
+**Three authored assertions re-pointed, not deleted** — `section18PhasePlanner`
+scenario 2, property P5, mutation M6 all required the top-up to be HARD. They
+now require MODERATE: not hard per this ruling, not dropped to easy aerobic per
+the contract's surviving medium-hard floor. M6 is strictly stronger than before
+— it now kills an upgrade to hard, which the old form permitted.
+
+The power-counting golden was regenerated: 49 lines, all inside
+`preseason-team-and-game`, and NO conditioning content changed. This fix only
+removed an unsatisfiable demand; the 49 lines are the practice-match ruling's own
+effect on a scenario that used to throw before it could be recorded.
