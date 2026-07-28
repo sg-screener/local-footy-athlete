@@ -40,8 +40,6 @@ type InjuryArea = keyof ExerciseTag['injury'];
 const INJURY_AREA_MAP: Record<string, InjuryArea> = {
   'groin': 'groin',
   'adductors': 'groin',
-  'groin': 'groin',
-  'groin': 'groin',
   'lower back': 'lowerBack',
   'lower_back': 'lowerBack',
   'back': 'lowerBack',

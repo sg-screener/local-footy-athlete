@@ -470,7 +470,6 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
 
   // groin / hip
   groin: 'groin',
-  'groin': 'groin',
   adductors: 'groin',
   hip: 'groin',
   hips: 'groin',
@@ -732,13 +731,8 @@ const BUCKET_EXPOSURE: Readonly<Partial<Record<InjuryBucket, BucketExposureSpec>
     conditioningNote: 'avoid running and plyos - bike or row instead',
   },
   'groin': {
-    removeExposure: 'cutting, sprinting, adductor-heavy work',
-    teamNote: 'no cutting / no sprinting',
-    conditioningNote: 'avoid running and lateral work - bike or row instead',
-  },
-  'groin': {
-    removeExposure: 'cutting, kicking, hinge patterns',
-    teamNote: 'no cutting / no kicking',
+    removeExposure: 'cutting, sprinting, kicking, adductor-heavy work',
+    teamNote: 'no cutting / no sprinting / no kicking',
     conditioningNote: 'avoid running and lateral work - bike or row instead',
   },
   shoulder: {

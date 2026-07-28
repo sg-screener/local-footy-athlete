@@ -139,7 +139,7 @@ function orderConstraintsByHierarchy(constraints: readonly Constraint[]): Constr
 export type ConstraintRegion =
   | 'shoulder'
   | 'elbow'
-  | 'wrist/hand'
+  | 'wrist'
   | 'back'
   | 'hip'
   | 'groin'
@@ -148,7 +148,7 @@ export type ConstraintRegion =
   | 'knee'
   | 'calf'
   | 'achilles'
-  | 'ankle/foot'
+  | 'ankle'
   | 'global';
 
 export interface Constraint {
@@ -478,7 +478,7 @@ function regionToBlockedRegional(
   switch (region) {
     case 'shoulder':
     case 'elbow':
-    case 'wrist/hand': {
+    case 'wrist': {
       const blocked: Exposure[] = [];
       const limited: Exposure[] = [];
       if (tier === 'severe') {
@@ -487,7 +487,7 @@ function regionToBlockedRegional(
           'explosive_push', 'shoulder_isolation', 'heavy_pull',
           'loaded_carry', 'grip_heavy', 'contact_risk',
         );
-        if (region === 'wrist/hand') blocked.push('wrist_loading');
+        if (region === 'wrist') blocked.push('wrist_loading');
         if (region === 'elbow') blocked.push('elbow_loading');
         limited.push('horizontal_pull', 'vertical_pull');
       } else if (tier === 'limiting' || tier === 'moderate') {
@@ -496,7 +496,7 @@ function regionToBlockedRegional(
           'horizontal_press', 'vertical_press', 'shoulder_isolation',
           'heavy_pull', 'grip_heavy', 'loaded_carry',
         );
-        if (region === 'wrist/hand') limited.push('wrist_loading');
+        if (region === 'wrist') limited.push('wrist_loading');
         if (region === 'elbow') limited.push('elbow_loading');
       } else {
         limited.push('overhead_loading', 'explosive_push', 'heavy_pull', 'grip_heavy');
@@ -630,7 +630,7 @@ function regionToBlockedRegional(
       };
     }
 
-    case 'ankle/foot': {
+    case 'ankle': {
       const blocked: Exposure[] = [];
       const limited: Exposure[] = [];
       if (tier === 'severe') {

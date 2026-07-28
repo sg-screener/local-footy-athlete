@@ -577,54 +577,7 @@ const POLICY_TABLE: Record<
 
   'groin': {
     severe: {
-      redPatterns: ['sprint', 'running', 'lunge', 'adductor_groin', 'plyometric'],
-      amberPatterns: ['squat', 'knee_dominant'],
-      greenPatterns: [
-        'horizontal_press', 'vertical_press', 'overhead_loading',
-        'explosive_push', 'shoulder_isolation', 'heavy_pull',
-        'hinge', 'posterior_chain', 'trunk', 'mobility', 'recovery',
-        'bike_erg', 'rower_erg', 'low_load_accessory',
-      ],
-      globalRules: [
-        'No sprinting or cutting',
-        'No adductor-heavy work',
-        'No lateral lunges',
-      ],
-      safeTrainingFocus: ['Upper body', 'Hip-dominant lower if pain-free', 'Bike', 'Trunk'],
-      physioAdvice: PHYSIO_HARD,
-    },
-    moderate: {
-      redPatterns: ['sprint', 'adductor_groin'],
-      amberPatterns: ['lunge', 'plyometric'],
-      greenPatterns: [
-        'horizontal_press', 'vertical_press', 'overhead_loading',
-        'explosive_push', 'shoulder_isolation', 'heavy_pull',
-        'squat', 'hinge', 'knee_dominant', 'posterior_chain',
-        'trunk', 'mobility', 'recovery', 'bike_erg', 'rower_erg',
-        'low_load_accessory',
-      ],
-      globalRules: ['No sprinting / cutting', 'Reduce adductor work'],
-      safeTrainingFocus: ['Upper body', 'Bilateral lower', 'Bike', 'Trunk'],
-      physioAdvice: PHYSIO_SOFT,
-    },
-    minor: {
-      redPatterns: [],
-      amberPatterns: ['sprint', 'adductor_groin'],
-      greenPatterns: [
-        'horizontal_press', 'vertical_press', 'overhead_loading',
-        'explosive_push', 'shoulder_isolation', 'heavy_pull',
-        'squat', 'lunge', 'hinge', 'knee_dominant', 'posterior_chain',
-        'running', 'plyometric', 'trunk', 'mobility', 'recovery',
-        'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
-      ],
-      globalRules: ['Rebuild lateral work gradually'],
-      safeTrainingFocus: ['Most of the program - monitor symptoms'],
-    },
-  },
-
-  'groin': {
-    severe: {
-      redPatterns: ['sprint', 'running', 'lunge', 'plyometric', 'hinge', 'adductor_groin'],
+      redPatterns: ['sprint', 'running', 'lunge', 'hinge', 'plyometric', 'adductor_groin'],
       amberPatterns: ['squat', 'knee_dominant'],
       greenPatterns: [
         'horizontal_press', 'vertical_press', 'overhead_loading',
@@ -632,7 +585,11 @@ const POLICY_TABLE: Record<
         'trunk', 'mobility', 'recovery',
         'bike_erg', 'rower_erg', 'low_load_accessory',
       ],
-      globalRules: ['No cutting / kicking', 'No heavy hinges'],
+      globalRules: [
+        'No cutting / no sprinting / no kicking',
+        'No adductor-heavy work',
+        'No heavy hinges',
+      ],
       safeTrainingFocus: ['Upper body', 'Trunk if pain-free', 'Bike'],
       physioAdvice: PHYSIO_HARD,
     },
@@ -660,11 +617,10 @@ const POLICY_TABLE: Record<
         'running', 'plyometric', 'trunk', 'mobility', 'recovery',
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
-      globalRules: ['Rebuild kicking + cutting gradually'],
+      globalRules: ['Rebuild cutting, sprinting and kicking gradually'],
       safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
-
   elbow: {
     severe: {
       redPatterns: ['horizontal_press', 'vertical_press', 'overhead_loading', 'explosive_push', 'heavy_pull', 'grip_heavy', 'loaded_carry'],

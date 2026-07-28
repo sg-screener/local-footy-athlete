@@ -61,7 +61,6 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   feet: 'ankle/foot',
 
   groin: 'groin',
-  'groin': 'groin',
   adductors: 'groin',
   hip: 'groin',
   hips: 'groin',
@@ -107,12 +106,11 @@ function bodyPartToBucket(raw: string | undefined): InjuryBucket | null {
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
   shoulder: 'shoulder',
   elbow: 'elbow',
-  'wrist/hand': 'wrist/hand',
+  'wrist/hand': 'wrist',
   knee: 'knee',
-  'ankle/foot': 'ankle/foot',
+  'ankle/foot': 'ankle',
   calf: 'calf',
   hamstring: 'hamstring',
-  'groin': 'groin',
   'groin': 'groin',
   lowerBack: 'back',
 };

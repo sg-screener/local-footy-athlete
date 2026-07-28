@@ -79,14 +79,9 @@ const BUCKET_TIER_NOTES: Record<
     light: 'rebuild change-of-direction work gradually',
   },
   'groin': {
-    strict: 'no cutting / no sprinting',
-    relaxed: 'limited cutting; controlled lateral work only',
-    light: 'rebuild lateral work gradually',
-  },
-  'groin': {
-    strict: 'no cutting / no kicking',
-    relaxed: 'limited cutting / kicking - controlled work only',
-    light: 'rebuild kicking + cutting gradually',
+    strict: 'no cutting / no sprinting / no kicking',
+    relaxed: 'limited cutting / sprinting / kicking - controlled work only',
+    light: 'rebuild cutting, sprinting and kicking gradually',
   },
   shoulder: {
     strict: 'no contact drills / no overhead throwing',

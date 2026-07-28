@@ -717,8 +717,7 @@ function isLateWeek(dow: number): boolean {
 type InjuryArea = keyof ExerciseTag['injury'];
 
 const AREA_MAP: Record<string, InjuryArea> = {
-  'groin': 'groin', 'adductors': 'groin', 'groin': 'groin',
-  'groin': 'groin',
+  'groin': 'groin', 'adductors': 'groin',
   'lower back': 'lowerBack', 'lower_back': 'lowerBack', 'back': 'lowerBack',
   'knee': 'knee', 'knees': 'knee',
   'hamstring': 'hamstring', 'hamstrings': 'hamstring',

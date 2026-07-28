@@ -1982,7 +1982,7 @@ function buildWeeklyPlan(
       (injury.region === 'lower_body' ||
         injury.injuryKeys.some((key) =>
           key === 'hamstring' || key === 'knee' || key === 'calf' ||
-          key === 'ankle/foot' || key === 'groin' || key === 'groin',
+          key === 'ankle/foot' || key === 'groin',
         )),
     );
   const activeTriggerText = activeInjuries
@@ -6188,7 +6188,7 @@ function buildWeeklyPlan(
         injury.region === 'lower_body' ||
         injury.injuryKeys.some((key) =>
           key === 'hamstring' || key === 'knee' || key === 'calf' ||
-          key === 'ankle/foot' || key === 'groin' || key === 'groin',
+          key === 'ankle/foot' || key === 'groin',
         );
       const triggerText = `${injury.bodyPart} ${injury.bucket ?? ''} ${injury.triggers.join(' ')}`.toLowerCase();
       const sprintTrigger =
@@ -8158,7 +8158,7 @@ function buildAIConstraints(
     (injury.region === 'lower_body' ||
       injury.injuryKeys.some((key) =>
         key === 'hamstring' || key === 'knee' || key === 'calf' ||
-        key === 'ankle/foot' || key === 'groin' || key === 'groin',
+        key === 'ankle/foot' || key === 'groin',
       )),
   );
   if (inputs.sprintExposure === 'No sprint training') {

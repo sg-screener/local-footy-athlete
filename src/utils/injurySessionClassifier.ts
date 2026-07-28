@@ -261,11 +261,6 @@ const REPLACEMENT_BY_BUCKET: Partial<Record<InjuryBucket, Record<string, Replace
       { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
       { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
     ],
-  },
-  'groin': {
-    'Sprint Intervals': [
-      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
-    ],
     'RDLs': [
       { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
       { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
@@ -380,10 +375,6 @@ const GENERIC_SAFE_BY_BUCKET: Partial<Record<InjuryBucket, ReplacementCandidate[
     { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
   ],
   'ankle/foot': [
-    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
-    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
-  ],
-  'groin': [
     { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
     { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
   ],
@@ -515,8 +506,7 @@ const REBUILD_HINT: Partial<Record<InjuryBucket, string>> = {
   knee: 'hinge-dominant focus, no plyo or heavy knee load',
   calf: 'low-impact: no sprinting or plyos',
   'ankle/foot': 'controlled bilateral work, no cutting',
-  'groin': 'no cutting or adductor-heavy work',
-  'groin': 'no cutting, kicking, or heavy hinges',
+  'groin': 'no cutting / no sprinting / no kicking',
   shoulder: 'lighter pressing, machine / iso alternatives',
   elbow: 'machine / iso upper alternatives',
   'wrist/hand': 'reduced grip load',

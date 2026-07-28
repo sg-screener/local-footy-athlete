@@ -528,7 +528,7 @@ function filterConditioningByInjury(
 /** Map normalised body area to InjuryProfile key. */
 function mapToInjuryKey(area: string): string | null {
   const map: Record<string, string> = {
-    'groin': 'groin', 'groin': 'groin',
+    'groin': 'groin',
     'lowerback': 'lowerBack', 'lower back': 'lowerBack', 'lower_back': 'lowerBack', 'back': 'lowerBack',
     'knee': 'knee', 'hamstring': 'hamstring', 'calf': 'calf', 'ankle/foot': 'ankle/foot',
     'shoulder': 'shoulder', 'elbow': 'elbow', 'wrist/hand': 'wrist/hand',
