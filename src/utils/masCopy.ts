@@ -17,9 +17,10 @@
  *   • 1 min reps          → 100% MAS
  *   • 2 min / 4 min reps  → 100% MAS
  *
- * Athletes who don't know their MAS should be able to supply a recent
- * 2km or 3km time-trial time and the coach will derive their target
- * distance per rep. Keep the fallback note on every MAS description.
+ * The athlete's MAS itself is NOT derived here. It has one owner —
+ * `data/twoKmTimeTrial` — which derives it from their 2km time or, when
+ * they have not tested, from Sam's ruled default for their experience
+ * level. This module owns only the intensity rule and the copy.
  */
 
 /** Percentage of MAS for a given work-interval length (in seconds). */
@@ -61,60 +62,41 @@ export function masIntensityBlock(
 }
 
 // ───────────────────────────────────────────────────────────────────────
-// MAS distance calculator
+// WHAT USED TO BE HERE, AND WHY IT IS GONE (Stage C, 2026-07-29)
 //
-// Used by the in-app coach (and any future UI) to convert a recent
-// time-trial result + work-interval length into a target distance per
-// rep. This is the SAME calculation the AI coach is told to use, so the
-// app never disagrees with itself.
+// This module carried a MAS distance calculator: `masKmhToMs`,
+// `estimateMasFromTimeTrial`, `masDistancePerRep` and a ±tolerance band.
+// It had ZERO consumers — it was written against an athlete MAS that did
+// not exist yet, and nothing ever called it.
 //
-// Formula:
-//   MAS (km/h) ≈ TT_distance_km ÷ TT_time_hours
-//   speed (m/s) = MAS_kmh ÷ 3.6
-//   distance per rep = speed (m/s) × intensity_multiplier × work_seconds
-//   intensity_multiplier = 1.10 for ≤30s reps, 1.00 for >30s reps
+// `estimateMasFromTimeTrial` did the same arithmetic the owner now does,
+// unauthored, justified by a comment that contradicted itself:
+//
+//   "Conservative estimate — actual MAS is typically 1-3% higher than TT
+//    average pace because TTs are run slightly above MAS"
+//
+// If a time trial is run ABOVE MAS then MAS is LOWER than time-trial pace,
+// not higher. It argued for a discount, called that conservative, and
+// applied neither. Sam ruled the multiplier at 1.00 on 2026-07-29 and the
+// derivation moved to its owner, `data/twoKmTimeTrial`, with the ruling
+// attached. Two functions that both claim to know what MAS is are two
+// representations of one fact — and the dead one is the one that drifts
+// without anybody noticing.
+//
+// The distance-per-rep calculator went with it. Its ±3m/±5m tolerance
+// bands were invented by this file and never ruled, and turning a %MAS
+// into a rendered pace is Stage B's consumer layer. Stage B re-authors it
+// against the templates' intensity ranges, which is also where the
+// range-vs-binary question below gets settled.
+//
+// WHAT STAYS HERE: the INTENSITY rule — what percentage of MAS a work
+// interval asks for. That is a different fact from what the athlete's MAS
+// is, two conditioning template rows cite it by name, and it is not the
+// owner's business.
+//
+// OPEN, FOR STAGE B: the fifteen %MAS template rows carry RANGES
+// ('90–100% MAS'), while `masIntensityForWorkSeconds` above is a BINARY
+// (≤30s → 110%, >30s → 100%). For 'Classic 4×4' they disagree. Nothing
+// breaks while both are only rendered as text; the moment MAS is a real
+// number they are two representations of one intensity.
 // ───────────────────────────────────────────────────────────────────────
-
-/** Convert MAS in km/h to m/s. */
-export function masKmhToMs(masKmh: number): number {
-  return masKmh / 3.6;
-}
-
-/**
- * Estimate MAS (km/h) from a time-trial.
- * Conservative estimate — actual MAS is typically 1-3% higher than TT
- * average pace because TTs are run slightly above MAS, but for athlete-
- * facing distance prescription the difference is well within the ±2-3m
- * range we hand out anyway.
- */
-export function estimateMasFromTimeTrial(
-  distanceKm: number,
-  timeSeconds: number,
-): number {
-  if (distanceKm <= 0 || timeSeconds <= 0) return 0;
-  const hours = timeSeconds / 3600;
-  return distanceKm / hours;
-}
-
-/**
- * Target distance per rep for a MAS-based interval session.
- * Returns metres, rounded to the nearest metre.
- *
- * @param masKmh        athlete's MAS in km/h (use estimateMasFromTimeTrial if deriving)
- * @param workSeconds   length of one work interval
- */
-export function masDistancePerRep(masKmh: number, workSeconds: number): number {
-  if (masKmh <= 0 || workSeconds <= 0) return 0;
-  const speedMs = masKmhToMs(masKmh);
-  const intensity = masIntensityForWorkSeconds(workSeconds) / 100;
-  return Math.round(speedMs * intensity * workSeconds);
-}
-
-/**
- * Recommended ±tolerance band (in metres) for athlete self-regulation.
- * 2-3m for short reps, 5m for longer reps where small distance drift
- * matters less.
- */
-export function masDistanceTolerance(workSeconds: number): number {
-  return workSeconds <= 30 ? 3 : 5;
-}

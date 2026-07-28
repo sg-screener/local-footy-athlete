@@ -450,6 +450,54 @@ console.log('\n[16] The screen is reachable — both routes into it, and out');
     /navigate\('ConditioningLevel'\)/.test(screen));
 }
 
+console.log('\n[17] masCopy holds NO second derivation of the athlete\'s pace');
+{
+  // stripComments, because masCopy now NAMES what it retired and quotes the
+  // contradictory sentence verbatim so the next reader knows why it went. A
+  // bare scan reads that explanation as the offence and fails on the module's
+  // own documentation — the exact trap `support/sourceText` was written for.
+  const copy = stripComments(
+    fs.readFileSync(path.join(repoRoot, 'src/utils/masCopy.ts'), 'utf8'));
+
+  // masCopy carried `estimateMasFromTimeTrial` — the same arithmetic, unauthored,
+  // with zero consumers. Two functions that both claim to know what MAS is are
+  // two representations, and the dead one is the one that drifts unnoticed.
+  ok('the duplicate derivation is gone from masCopy',
+    !/function estimateMasFromTimeTrial/.test(copy),
+    'one owner derives MAS: data/twoKmTimeTrial');
+  ok('the duplicate km/h conversion is gone',
+    !/function masKmhToMs/.test(copy));
+
+  // The comment that argued for a discount, called it conservative, and applied
+  // neither. It must not survive the ruling that replaced it.
+  ok('the self-contradictory justification is gone',
+    !/typically 1-3% higher/.test(copy),
+    'the ruling replaced the reasoning, not just the number');
+
+  // masCopy keeps the INTENSITY rule (what % of MAS a work interval asks for).
+  // That is a different fact from what the athlete's MAS is, and templates cite
+  // it by name — retiring it would be a scope change, not a de-duplication.
+  ok('masCopy keeps the intensity rule it owns',
+    /function masIntensityForWorkSeconds/.test(copy));
+}
+
+console.log('\n[18] NAMING — the time trial never shares a token with Team Training');
+{
+  // Sam, 2026-07-29. "TT" means Team Training in twelve rule files. A time
+  // trial abbreviated the same way would be indistinguishable at every call
+  // site, in every log line, and in every future grep.
+  const files = [
+    'src/data/twoKmTimeTrial.ts',
+    'src/screens/onboarding/TwoKmTimeTrialScreen.tsx',
+  ];
+  for (const file of files) {
+    const source = stripComments(fs.readFileSync(path.join(repoRoot, file), 'utf8'));
+    // A bare TT token in code — not "TTimeTrial", not inside a longer word.
+    ok(`${file} uses no bare "TT" token`,
+      !/\bTT\b/.test(source), source.split('\n').filter((l) => /\bTT\b/.test(l)).join(' | '));
+  }
+}
+
 const total = passed + failures.length;
 console.log(`\n2km time trial + MAS: passed=${passed}/${total} failures=${failures.length}`);
 if (failures.length > 0) {
