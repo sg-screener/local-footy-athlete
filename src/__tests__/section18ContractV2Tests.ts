@@ -442,14 +442,23 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     has(witnesses.byeRecoveryOneLift, 'required_minimum_shortfall', 'main_strength'));
 }
 
-// 6. Practice match with 0 TT finishes below S3/C3.
+// 6. Practice match with 0 TT finishes below the authored strength/C3 floors.
+//
+// RE-POINTED (Sam, 2026-07-28). This witness built TWO strength sessions and
+// expected a shortfall, because `practice_match_week` used to require three.
+// The practice-match ruling makes a fixture week structurally an in-season game
+// week, which requires TWO — so two sessions is now a legal week and the
+// witness was testing the old floor. It builds ONE, which is below the floor
+// the ruling actually authored.
+//
+// The conditioning half (6b) is unchanged: a fixture week still requires three.
 {
   const c = contract('practice_match_week', {
     fixtureDay: 6, fixtureParticipation: 'normal_unrestricted', currentProductionClaimsAnchorCredit: true,
     plannerSelected: { mainStrength: 2, coreConditioning: 1, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 2 },
   });
-  witnesses.practiceMatchUnder = evaluate(c, [strength(1, ['push', 'pull']), strength(3, ['hinge', 'push'])]);
-  ok('6a. PM 0TT strength below three is detected',
+  witnesses.practiceMatchUnder = evaluate(c, [strength(1, ['push', 'pull'])]);
+  ok('6a. PM 0TT strength below the authored minimum is detected',
     has(witnesses.practiceMatchUnder, 'required_minimum_shortfall', 'main_strength'));
   ok('6b. PM 0TT conditioning below three is detected',
     has(witnesses.practiceMatchUnder, 'required_minimum_shortfall', 'conditioning'));

@@ -810,6 +810,19 @@ function policyFor(input: Pick<
   // genuine safety prohibition removes it, below.
   switch (input.mode) {
     case 'in_season_game_week':
+    // RULED (Sam, 2026-07-28): a pre-season practice-match week is structurally
+    // an IN-SEASON GAME WEEK and carries its authored numbers. `practice_match_week`
+    // had a policy of its own here — required 3 against this row's 2, its own
+    // preferred range, no full-rest requirement, and a different app-conditioning
+    // minimum. That WAS the second representation, so the ruling deletes it
+    // rather than editing it into agreement: editing two rows into matching
+    // leaves two rows, and the next change moves only one of them.
+    //
+    // The mode survives in the enum because identity still needs it — a
+    // practice-match week is a pre-season week, and Section 18 checks the
+    // declared subphase against the season phase. What does not survive is a
+    // second set of numbers for the same shape.
+    case 'practice_match_week':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
         conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
@@ -916,17 +929,6 @@ function policyFor(input: Pick<
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 2 },
         sprint: { required: 1, preferred: { min: 1, max: 2 }, max: 2 },
-        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
-        rest: { required: 0, preferred: { min: 2, max: 2 } },
-        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
-        balance: true,
-        selectionKind: 'core',
-      };
-    case 'practice_match_week':
-      return {
-        strength: { required: 3, defaultTarget: 3, preferred: { min: 3, max: tt === 0 ? 4 : 3 }, max: tt === 0 ? 4 : 3 },
-        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
-        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
