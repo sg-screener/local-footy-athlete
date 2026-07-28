@@ -24,19 +24,26 @@
   },
 
   "newRegionPatternRules": {
-    "_": "Ruling 2 + amendment. Every pattern x new-region cell not listed here carries NO rule.",
+    "_": "Ruling 2 + amendment + ribs follow-up. Every pattern x new-region cell not listed here carries NO rule. Sam added the pressing patterns to ribs on 2026-07-28: bench compression and overhead work are the mechanism.",
     "quad": ["squat", "lunge", "plyo", "isolation_lower"],
     "hip": ["squat", "hinge", "lunge", "plyo", "isolation_lower"],
     "neck": ["carry", "vertical_push"],
-    "ribs": ["core", "carry", "plyo", "squat", "hinge"]
+    "ribs": ["core", "carry", "plyo", "squat", "hinge", "horizontal_push", "vertical_push"]
   },
 
   "newRegionMuscleRules": {
-    "_": "Ruling 2 + amendment. Muscle-axis rules for the new regions. ribs has NO muscle-axis rules by ruling.",
+    "_": "Ruling 2 + amendment. Muscle-axis rules for the new regions. ribs has NO muscle-axis rules by ruling. The Traps -> neck rule was REMOVED on Sam's follow-up ruling: 'Traps' is never a primary muscle, so the rule was unreachable, and an authored rule nothing can reach is a defect, not a keepsake. Neck cover for Shrugs is now a named exception instead.",
     "quad": ["Quads"],
     "hip": ["Glutes", "Hips", "Outer hip"],
-    "neck": ["Traps"],
+    "neck": [],
     "ribs": []
+  },
+
+  "extraExceptions": {
+    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach.",
+    "Shrugs|neck": "caution",
+    "Chest Supported Row|ribs": "caution",
+    "Chest-Supported DB Row|ribs": "caution"
   },
 
   "conditioning": {
@@ -86,13 +93,13 @@
       "foot / feet": "ankle/foot",
       "glute / glutes": "hip",
       "pubalgia / sports hernia / osteitis pubis": "groin",
-      "rib / ribs": "ribs"
+      "rib / ribs": "ribs",
+      "hip flexor": "hip",
+      "achilles": "calf",
+      "upper back": "shoulder"
     },
     "dual": {
-      "_": "BLOCKED pending Sam's decision — see the stop report.",
-      "hip flexor": ["hip", "quad"],
-      "achilles": ["calf", "ankle/foot"],
-      "upper back": ["shoulder", "neck"]
+      "_": "EMPTY BY RULING. Sam ruled routing SINGLE-TARGET everywhere on 2026-07-28: hip flexor -> hip, achilles -> calf, upper back -> shoulder. Duals are off the table; episode-identity semantics (bucket equality in coachInjuryTargetResolver) stay untouched. Logged as a possible future refinement ONLY if athlete complaints expose coverage gaps."
     }
   },
 

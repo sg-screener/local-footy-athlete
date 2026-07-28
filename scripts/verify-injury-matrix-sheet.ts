@@ -62,55 +62,73 @@ function ok(kind: 'structural' | 'snapshot', label: string, condition: boolean, 
   console.log(`  FAIL [${tag}] ${label}${detail ? ` — ${detail}` : ''}`);
 }
 
-/* ── What the CODE authors today ──
+/* ── What the CODE holds now ──
  *
- * Read from source text, not EXERCISE_TAGS: once `inj()` has run, an omitted key
- * and an authored 'good' are indistinguishable, which is the defect this whole
- * unit exists to kill.
+ * Post-migration every entry writes all 13 regions explicitly, so this is a
+ * straight read: there is no longer an omitted-vs-authored ambiguity to work
+ * around, because `inj()` is gone and a partial profile cannot be written.
+ *
+ * This is the PHASE 2 EQUALITY GATE. The sheet and the code are held equal in
+ * BOTH directions — a cell edited in either without the other fails the build.
  */
-interface CodeExercise {
-  name: string; movement: string; primary: string[];
-  authored: Record<string, string>;
-}
+interface CodeExercise { name: string; movement: string; ratings: Record<string, string>; }
+
 function readCode(): CodeExercise[] {
   const body = fs.readFileSync(TAGS_SOURCE, 'utf8');
   const map = body.slice(body.indexOf('export const EXERCISE_TAGS'));
-  const muscleText = fs.readFileSync(MUSCLE_SOURCE, 'utf8');
-  const primaryByName = new Map<string, string[]>();
-  for (const m of muscleText.matchAll(
-    /exercise:\s*'([^']+)',\s*\n\s*pool:\s*'[^']*',\s*\n\s*primary:\s*\[([^\]]*)\]/g)) {
-    primaryByName.set(m[1], (m[2].match(/'([^']+)'/g) ?? []).map((s) => s.slice(1, -1)));
-  }
   const out: CodeExercise[] = [];
   for (const entry of map.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
     const [, name, block] = entry;
-    const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(block)!;
-    const raw: Record<string, string> = {};
-    if (injury[1] !== 'SAFE') {
-      for (const kv of injury[2].matchAll(/(\w+):\s*'(\w+)'/g)) raw[kv[1]] = kv[2];
-    }
-    const authored: Record<string, string> = {};
-    for (const [key, value] of Object.entries(raw)) {
-      if (key === 'adductor' || key === 'pubalgia') continue;
-      authored[OLD_TO_NEW[key]] = value;
-    }
-    const add = raw.adductor;
-    const pub = raw.pubalgia;
-    if (add && pub) {
-      if (add === pub) authored.groin = add;
-      else authored.groin = ruling.conflictResolutions[name];   // Sam's ruling 1
-    } else if (add) authored.groin = add;
-    else if (pub) authored.groin = pub;
-
-    out.push({
-      name, movement: /movement:\s*'([^']+)'/.exec(block)![1],
-      primary: primaryByName.get(name) ?? [], authored,
-    });
+    const injury = /injury:\s*\{([\s\S]*?)\n {4}\}/.exec(block);
+    if (!injury) throw new Error(`no explicit injury profile on "${name}"`);
+    const ratings: Record<string, string> = {};
+    for (const kv of injury[1].matchAll(/'([^']+)':\s*'(\w+)'/g)) ratings[kv[1]] = kv[2];
+    out.push({ name, movement: /movement:\s*'([^']+)'/.exec(block)![1], ratings });
   }
   return out;
 }
 const code = readCode();
 const byName = new Map(code.map((e) => [e.name, e]));
+
+/**
+ * The PRE-MIGRATION ratings, from the pinned snapshot.
+ *
+ * Two claims can only be checked against this, never against the migrated file —
+ * which contains the result and would agree with itself trivially:
+ *   1. stricter-wins on the conditioning merge, and
+ *   2. Sam's LIFT, NEVER RE-DECIDE law: no authored rating may be lost when a
+ *      thin rule dies under the n>=2 minimum support.
+ */
+function readPreMigrationRatings(): Map<string, Record<string, string>> {
+  const PRE = path.join(REPO_ROOT, 'docs', 'INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts');
+  const text = fs.readFileSync(PRE, 'utf8');
+  const map = text.slice(text.indexOf('export const EXERCISE_TAGS'));
+  const PRE_TO_NEW: Record<string, string> = {
+    adductor: 'groin', pubalgia: 'groin', lowerBack: 'lowerBack', knee: 'knee',
+    hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot', shoulder: 'shoulder',
+    elbow: 'elbow', wrist: 'wrist/hand',
+  };
+  const out = new Map<string, Record<string, string>>();
+  for (const entry of map.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
+    const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(entry[2]);
+    const ratings: Record<string, string> = {};
+    if (injury && injury[1] !== 'SAFE') {
+      for (const kv of injury[2].matchAll(/(\w+):\s*'(\w+)'/g)) {
+        const region = PRE_TO_NEW[kv[1]];
+        if (!region) continue;
+        // adductor + pubalgia both land on groin. Where they DISAGREED, Sam
+        // ruled the value by hand — that is a decision, not a loss, so his
+        // ruling is what must survive. Where they agreed, keep the value.
+        ratings[region] = ratings[region] && RANK[ratings[region]] > RANK[kv[2]]
+          ? ratings[region] : kv[2];
+      }
+    }
+    const ruled = ruling.conflictResolutions[entry[1]];
+    if (ruled) ratings.groin = ruled;
+    out.set(entry[1], ratings);
+  }
+  return out;
+}
 
 /* ── Workbook shape ── */
 
@@ -178,11 +196,11 @@ function parseGrid(tab: string, axisLabel: string) {
 const pattern = parseGrid('Rules — pattern', 'Movement pattern');
 const muscle = parseGrid('Rules — muscle', 'Primary muscle');
 
-ok('snapshot', '157 rules in total',
-  pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence === 157,
+ok('snapshot', '118 rules in total (n>=2 minimum support, both axes)',
+  pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence === 118,
   `got ${pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence}`);
-ok('snapshot', '20 rules authored by Sam for the new regions',
-  pattern.samAuthored + muscle.samAuthored === 20,
+ok('snapshot', '22 rules authored by Sam for the new regions',
+  pattern.samAuthored + muscle.samAuthored === 22,
   `got ${pattern.samAuthored + muscle.samAuthored}`);
 ok('structural', 'every new-region rule is Sam-authored, never evidence-derived',
   [pattern.rules, muscle.rules].every((grid) => Object.values(grid).every((byRegion) =>
@@ -193,8 +211,14 @@ ok('structural', 'every new-region rule is Sam-authored, never evidence-derived'
 const exceptionRows = readSheetRecords(FILE, 'Exceptions', 4);
 const exceptions: Record<string, string> = {};
 for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Region}`] = record.RULED;
-ok('snapshot', '18 exceptions, all standing', exceptionRows.length === 18,
-  `got ${exceptionRows.length}`);
+ok('snapshot', '23 exceptions (incl. singletons lifted when their thin rule died)',
+  exceptionRows.length === 23, `got ${exceptionRows.length}`);
+ok('structural', 'Shrugs carries the neck exception that replaced the inert Traps rule',
+  exceptions['Shrugs|neck'] === 'caution', exceptions['Shrugs|neck'] ?? '(absent)');
+// Bench-compressed PULLS: the pressing rule cannot reach them, so Sam named them.
+ok('structural', 'both chest-supported rows carry the ribs exception',
+  exceptions['Chest Supported Row|ribs'] === 'caution'
+  && exceptions['Chest-Supported DB Row|ribs'] === 'caution');
 ok('structural', 'every exception names a real exercise and region',
   exceptionRows.every((r) => EXERCISE_TAGS[r.Exercise] !== undefined && REGIONS.includes(r.Region)));
 
@@ -205,63 +229,69 @@ ok('structural', 'the declaration is present and recorded as SIGNED',
 ok('structural', 'the ruling file records the declaration as signed',
   ruling.declaration.signed === true);
 
-/* ══ CENTREPIECE — re-derive the matrix from the sheet's own rules ══ */
-
-function evaluate(exercise: CodeExercise, region: string): string {
-  const override = exceptions[`${exercise.name}|${region}`];
-  if (override) return override;
-  const candidates: string[] = [];
-  const byPattern = pattern.rules[exercise.movement]?.[region];
-  if (byPattern) candidates.push(byPattern);
-  for (const m of exercise.primary) {
-    const byMuscle = muscle.rules[m]?.[region];
-    if (byMuscle) candidates.push(byMuscle);
-  }
-  return candidates.length > 0 ? strictest(candidates) : 'good';   // declaration
-}
+/* ══ CENTREPIECE — sheet <-> code equality, BOTH directions ══ */
 
 const finalRows = readSheetRecords(FILE, 'Final matrix', 5);
 ok('snapshot', '149 rows on the final matrix', finalRows.length === 149, `got ${finalRows.length}`);
 
-const strengthRows = finalRows.filter((r) => r.Pattern !== 'conditioning');
-const rederivationErrors: string[] = [];
+ok('structural', 'every exercise in CODE appears in the sheet',
+  code.every((e) => finalRows.some((r) => r.Exercise === e.name)),
+  code.filter((e) => !finalRows.some((r) => r.Exercise === e.name)).map((e) => e.name).join(', '));
+ok('structural', 'every exercise in the SHEET appears in code',
+  finalRows.every((r) => byName.has(r.Exercise)),
+  finalRows.filter((r) => !byName.has(r.Exercise)).map((r) => r.Exercise).join(', '));
+
+const drift: string[] = [];
 const distribution: Record<string, number> = {};
+let cells = 0;
 for (const record of finalRows) {
+  const entry = byName.get(record.Exercise);
+  if (!entry) continue;
   for (const region of REGIONS) {
-    const raw = record[region];
-    const value = raw.replace(/ \((exc|dec)\)$/, '');
-    distribution[value] = (distribution[value] ?? 0) + 1;
-    if (record.Pattern === 'conditioning') continue;   // hand-ruled, checked below
-    const expected = evaluate(byName.get(record.Exercise)!, region);
-    if (value !== expected) {
-      rederivationErrors.push(`${record.Exercise}.${region}: sheet ${value}, rules give ${expected}`);
+    const sheetValue = record[region].replace(/ \((exc|dec)\)$/, '');
+    const codeValue = entry.ratings[region];
+    distribution[sheetValue] = (distribution[sheetValue] ?? 0) + 1;
+    cells += 1;
+    if (codeValue === undefined) { drift.push(`${record.Exercise}.${region}: missing in code`); continue; }
+    if (sheetValue !== codeValue) {
+      drift.push(`${record.Exercise}.${region}: sheet ${sheetValue}, code ${codeValue}`);
     }
   }
 }
-ok('snapshot', "the sheet's own rules re-derive every strength cell",
-  rederivationErrors.length === 0, rederivationErrors.slice(0, 5).join(' ; '));
-ok('snapshot', 'final distribution: 924 caution / 24 avoid / 989 good',
-  distribution.caution === 924 && distribution.avoid === 24 && distribution.good === 989,
+ok('structural', 'sheet and code agree on every cell, both directions',
+  drift.length === 0, drift.slice(0, 5).join(' ; '));
+ok('structural', 'every code entry authors all 13 regions — no omissions possible',
+  code.every((e) => REGIONS.every((r) => e.ratings[r] !== undefined)),
+  code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
+ok('structural', '149 x 13 = 1937 cells compared', cells === 1937, `got ${cells}`);
+ok('snapshot', 'final distribution: 871 caution / 24 avoid / 1042 good',
+  distribution.caution === 871 && distribution.avoid === 24 && distribution.good === 1042,
   JSON.stringify(distribution));
-ok('structural', '149 x 13 = 1937 cells, all authored',
-  Object.values(distribution).reduce((a, b) => a + b, 0) === 1937);
 
-/* ── Nothing the code authored may be silently lost ──
- *
- * Sam ruled the exceptions precisely to preserve judgements the general rules
- * cannot express. If a rating authored in code today does not survive into the
- * final matrix, an exception was dropped.
- */
-const lost: string[] = [];
-for (const record of strengthRows) {
-  const entry = byName.get(record.Exercise)!;
-  for (const [region, authored] of Object.entries(entry.authored)) {
-    const value = record[region].replace(/ \((exc|dec)\)$/, '');
-    if (value !== authored) lost.push(`${record.Exercise}.${region}: code ${authored}, sheet ${value}`);
+// inj() and SAFE must never come back — they are the defect itself.
+const tagsText = fs.readFileSync(TAGS_SOURCE, 'utf8');
+ok('structural', 'the inj() helper is gone and cannot return', !/\binj\(/.test(tagsText));
+ok('structural', 'the SAFE all-good constant is gone', !/\bconst SAFE\b/.test(tagsText));
+ok('structural', 'no retired key survives in exerciseTags',
+  !/'adductor'|'pubalgia'/.test(tagsText));
+
+// LIFT, NEVER RE-DECIDE (Sam, 2026-07-28). When a thin rule dies under the n>=2
+// minimum, the cell that fed it must survive as a named exception carrying its
+// ORIGINAL authored rating — never silently fall through to the declaration.
+const preCheck = readPreMigrationRatings();
+const dropped: string[] = [];
+for (const record of finalRows) {
+  const before = preCheck.get(record.Exercise) ?? {};
+  for (const [region, authored] of Object.entries(before)) {
+    const now = record[region].replace(/ \((exc|dec)\)$/, '');
+    if (now !== authored) dropped.push(`${record.Exercise}.${region}: ${authored} -> ${now}`);
   }
 }
-ok('snapshot', 'every rating the code authors survives into the final matrix',
-  lost.length === 0, lost.slice(0, 5).join(' ; '));
+ok('structural', 'every pre-migration authored rating survives — lift, never re-decide',
+  dropped.length === 0, dropped.slice(0, 5).join(' ; '));
+ok('structural', 'Back Squat shoulder and Front Squat wrist survive as exceptions',
+  exceptions['Back Squat|shoulder'] === 'caution'
+  && exceptions['Front Squat|wrist/hand'] === 'caution');
 
 /* ── Conditioning: hand-ruled, stricter-wins over what code authored ── */
 
@@ -270,8 +300,8 @@ ok('snapshot', '21 conditioning rows', conditioningRows.length === 21,
   `got ${conditioningRows.length}`);
 const loosened: string[] = [];
 for (const record of conditioningRows) {
-  const entry = byName.get(record.Exercise)!;
-  for (const [region, authored] of Object.entries(entry.authored)) {
+  const before = preCheck.get(record.Exercise) ?? {};
+  for (const [region, authored] of Object.entries(before)) {
     if (RANK[record[region]] < RANK[authored]) {
       loosened.push(`${record.Exercise}.${region}: ${authored} -> ${record[region]}`);
     }
@@ -292,18 +322,23 @@ ok('snapshot', 'sprint family carries hamstring/calf avoid above the blanket cau
 
 const singleRoutes = readSheetRecords(FILE, 'Routing', 5)
   .filter((r) => r.Status?.startsWith('ruled'));
-ok('snapshot', '8 single-target routes ruled', singleRoutes.length === 8,
+ok('snapshot', '11 single-target routes ruled', singleRoutes.length === 11,
   `got ${singleRoutes.length}`);
 ok('structural', 'every single route targets one of the 13 regions',
   singleRoutes.every((r) => REGIONS.includes(r['RULED region'])));
 ok('structural', 'ribs routes to ribs, superseding the unroutable line',
   singleRoutes.some((r) => r['Athlete types…'].includes('rib') && r['RULED region'] === 'ribs'));
 
-const dualRoutes = readSheetRecords(FILE, 'Routing', 16).filter((r) => r.Status?.startsWith('BLOCKED'));
-ok('snapshot', '3 dual routes recorded as BLOCKED', dualRoutes.length === 3,
-  `got ${dualRoutes.length}`);
-ok('structural', 'no dual route is presented as implementable',
-  dualRoutes.every((r) => r.Status.includes('single-target')));
+// Sam ruled duals OUT on 2026-07-28. The ruling file must carry none, so that
+// nothing can quietly reintroduce a multi-target route the resolver cannot express.
+ok('structural', 'no dual routes exist — routing is single-target everywhere',
+  Object.keys(ruling.routing.dual).filter((k) => k !== '_').length === 0);
+ok('structural', 'the three former duals are now single targets',
+  ruling.routing.single['hip flexor'] === 'hip'
+  && ruling.routing.single.achilles === 'calf'
+  && ruling.routing.single['upper back'] === 'shoulder');
+ok('structural', 'no Traps rule survives — an unreachable authored rule is a defect',
+  (ruling.newRegionMuscleRules.neck ?? []).length === 0);
 
 /* ── Result ── */
 

@@ -55,16 +55,15 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   calves: 'calf',
   achilles: 'calf',
 
-  ankle: 'ankle',
-  ankles: 'ankle',
-  foot: 'ankle',
-  feet: 'ankle',
+  'ankle/foot': 'ankle/foot',
+  ankles: 'ankle/foot',
+  foot: 'ankle/foot',
+  feet: 'ankle/foot',
 
-  groin: 'adductor',
-  adductor: 'adductor',
-  adductors: 'adductor',
-  hip: 'adductor',
-  hips: 'adductor',
+  groin: 'groin',
+  adductors: 'groin',
+  hip: 'groin',
+  hips: 'groin',
 
   back: 'lowerBack',
   'lower back': 'lowerBack',
@@ -86,8 +85,8 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   forearm: 'elbow',
   forearms: 'elbow',
 
-  wrist: 'wrist',
-  wrists: 'wrist',
+  'wrist/hand': 'wrist/hand',
+  wrists: 'wrist/hand',
 };
 
 /** Lower-cased prefix-match against the body-part dictionary. */
@@ -107,14 +106,17 @@ function bodyPartToBucket(raw: string | undefined): InjuryBucket | null {
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
   shoulder: 'shoulder',
   elbow: 'elbow',
-  wrist: 'wrist',
+  'wrist/hand': 'wrist',
   knee: 'knee',
-  ankle: 'ankle',
+  'ankle/foot': 'ankle',
   calf: 'calf',
   hamstring: 'hamstring',
-  adductor: 'groin',
-  pubalgia: 'groin',
+  'groin': 'groin',
   lowerBack: 'back',
+  hip: 'hip',
+  quad: 'quad',
+  neck: 'neck',
+  ribs: 'ribs',
 };
 
 export function bucketToRegion(bucket: InjuryBucket): ConstraintRegion {

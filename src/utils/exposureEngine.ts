@@ -138,6 +138,8 @@ function orderConstraintsByHierarchy(constraints: readonly Constraint[]): Constr
 
 export type ConstraintRegion =
   | 'shoulder'
+  | 'neck'
+  | 'ribs'
   | 'elbow'
   | 'wrist'
   | 'back'

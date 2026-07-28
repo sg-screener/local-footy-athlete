@@ -200,9 +200,9 @@ function countByTier(weekLog: WeekLog): Record<ConditioningTier, number> {
 // ─── Lower-Limb Injury Detection ───
 
 const LOWER_LIMB_AREAS = [
-  'hamstring', 'hamstrings', 'calf', 'calves', 'ankle', 'ankles',
-  'achilles', 'knee', 'knees', 'adductor', 'adductors', 'groin',
-  'shin', 'shins', 'pubalgia',
+  'hamstring', 'hamstrings', 'calf', 'calves', 'ankle/foot', 'ankles',
+  'achilles', 'knee', 'knees', 'groin', 'adductors', 'groin',
+  'shin', 'shins', 'groin',
 ];
 
 function hasLowerLimbInjury(injuries: Record<string, 'caution' | 'avoid'>): boolean {
@@ -381,10 +381,10 @@ function getEligibleTiers(
 function normaliseArea(area: string): string {
   const a = area.toLowerCase().trim();
   const map: Record<string, string> = {
-    'hamstrings': 'hamstring', 'calves': 'calf', 'ankles': 'ankle',
-    'achilles': 'ankle', 'knees': 'knee', 'adductors': 'adductor',
-    'groin': 'adductor', 'shins': 'ankle',
-    'shoulders': 'shoulder', 'elbows': 'elbow', 'wrists': 'wrist',
+    'hamstrings': 'hamstring', 'calves': 'calf', 'ankles': 'ankle/foot',
+    'achilles': 'ankle/foot', 'knees': 'knee', 'adductors': 'groin',
+    'groin': 'groin', 'shins': 'ankle/foot',
+    'shoulders': 'shoulder', 'elbows': 'elbow', 'wrists': 'wrist/hand',
   };
   return map[a] || a;
 }
@@ -461,37 +461,37 @@ function filterConditioningByInjury(
     }
 
     // ── Ankle ──
-    if (normInjuries['ankle'] === 'avoid') {
+    if (normInjuries['ankle/foot'] === 'avoid') {
       if (meta.tier === 'A') return false;
       if ((meta.tier === 'B-high' || meta.tier === 'B-low') && isRunning) return false;
       // Tier C: only bike allowed
       if (meta.tier === 'C' && isRunning) return false;
       if (meta.tier === 'C' && meta.modality === 'swim') return false; // kick pressure
     }
-    if (normInjuries['ankle'] === 'caution') {
+    if (normInjuries['ankle/foot'] === 'caution') {
       if (meta.tier === 'A') return false;
       // B and C allowed
     }
 
     // ── Adductor ──
-    if (normInjuries['adductor'] === 'avoid') {
+    if (normInjuries['groin'] === 'avoid') {
       if (meta.tier === 'A') return false;
       // B blocked if running (lateral/CoD risk from field running)
       if ((meta.tier === 'B-high' || meta.tier === 'B-low') && isRunning) return false;
     }
-    if (normInjuries['adductor'] === 'caution') {
+    if (normInjuries['groin'] === 'caution') {
       if (meta.tier === 'A') return false;
       // B allowed, no lateral work (running is linear so OK)
     }
 
     // ── Pubalgia ──
-    if (normInjuries['pubalgia'] === 'avoid') {
+    if (normInjuries['groin'] === 'avoid') {
       if (meta.tier === 'A') return false;
       if ((meta.tier === 'B-high' || meta.tier === 'B-low') && isRunning) return false;
       // C: bike/upper only
       if (meta.tier === 'C' && isRunning) return false;
     }
-    if (normInjuries['pubalgia'] === 'caution') {
+    if (normInjuries['groin'] === 'caution') {
       if (meta.tier === 'A') return false;
       // B allowed at low intensity (prescription concern, not filter)
     }
@@ -528,10 +528,10 @@ function filterConditioningByInjury(
 /** Map normalised body area to InjuryProfile key. */
 function mapToInjuryKey(area: string): string | null {
   const map: Record<string, string> = {
-    'adductor': 'adductor', 'pubalgia': 'pubalgia',
+    'groin': 'groin',
     'lowerback': 'lowerBack', 'lower back': 'lowerBack', 'lower_back': 'lowerBack', 'back': 'lowerBack',
-    'knee': 'knee', 'hamstring': 'hamstring', 'calf': 'calf', 'ankle': 'ankle',
-    'shoulder': 'shoulder', 'elbow': 'elbow', 'wrist': 'wrist',
+    'knee': 'knee', 'hamstring': 'hamstring', 'calf': 'calf', 'ankle/foot': 'ankle/foot',
+    'shoulder': 'shoulder', 'elbow': 'elbow', 'wrist/hand': 'wrist/hand',
   };
   return map[area] || null;
 }
@@ -621,7 +621,7 @@ export function resolveConditioning(
 
 /** Check if any running-restricting injury is active. */
 function hasRunningInjury(injuries: Record<string, 'caution' | 'avoid'>): boolean {
-  const runRestricting = ['hamstring', 'hamstrings', 'calf', 'calves', 'ankle', 'ankles', 'achilles', 'pubalgia'];
+  const runRestricting = ['hamstring', 'hamstrings', 'calf', 'calves', 'ankle/foot', 'ankles', 'achilles', 'groin'];
   for (const area of Object.keys(injuries)) {
     if (runRestricting.includes(area.toLowerCase().trim())) return true;
   }

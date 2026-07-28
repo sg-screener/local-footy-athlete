@@ -38,10 +38,8 @@ export interface FilterContext {
 type InjuryArea = keyof ExerciseTag['injury'];
 
 const INJURY_AREA_MAP: Record<string, InjuryArea> = {
-  'adductor': 'adductor',
-  'adductors': 'adductor',
-  'groin': 'adductor',
-  'pubalgia': 'pubalgia',
+  'groin': 'groin',
+  'adductors': 'groin',
   'lower back': 'lowerBack',
   'lower_back': 'lowerBack',
   'back': 'lowerBack',
@@ -51,15 +49,15 @@ const INJURY_AREA_MAP: Record<string, InjuryArea> = {
   'hamstrings': 'hamstring',
   'calf': 'calf',
   'calves': 'calf',
-  'ankle': 'ankle',
-  'ankles': 'ankle',
-  'achilles': 'ankle',
+  'ankle/foot': 'ankle/foot',
+  'ankles': 'ankle/foot',
+  'achilles': 'ankle/foot',
   'shoulder': 'shoulder',
   'shoulders': 'shoulder',
   'elbow': 'elbow',
   'elbows': 'elbow',
-  'wrist': 'wrist',
-  'wrists': 'wrist',
+  'wrist/hand': 'wrist/hand',
+  'wrists': 'wrist/hand',
 };
 
 /** Normalise an injury body area string to our InjuryArea key. */
@@ -168,7 +166,7 @@ function passesInjuryFilter(
       }
 
       // Adductor-specific: exclude lunges and lateral plyos
-      if (area === 'adductor') {
+      if (area === 'groin') {
         if (tags.movement === 'lunge') return false;
         if (tags.movement === 'plyo' && tags.unilateral) return false;
       }
@@ -183,7 +181,7 @@ function passesInjuryFilter(
       // Caution-rated knee exercises kept but deprioritised in scoring
 
       // Calf/ankle: remove plyos
-      if (area === 'calf' || area === 'ankle') {
+      if (area === 'calf' || area === 'ankle/foot') {
         if (tags.movement === 'plyo') return false;
       }
     }

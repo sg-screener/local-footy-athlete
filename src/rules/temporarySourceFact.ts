@@ -203,17 +203,22 @@ function clampReportedLevel(value: unknown): TemporaryAthleteReportedLevel {
     : 'unspecified';
 }
 
+// Sam's 13 authored injury regions (2026-07-28). adductor + pubalgia merged into
+// groin; ankle/wrist widened; hip, quad, neck and ribs added.
 const CANONICAL_BODY_PART_BUCKETS = new Set<NonNullable<InjuryState['bucket']>>([
-  'adductor',
-  'pubalgia',
-  'lowerBack',
-  'knee',
+  'groin',
+  'hip',
+  'quad',
   'hamstring',
+  'knee',
   'calf',
-  'ankle',
+  'ankle/foot',
+  'ribs',
+  'lowerBack',
+  'neck',
   'shoulder',
   'elbow',
-  'wrist',
+  'wrist/hand',
 ]);
 
 function canonicalBodyPartBucket(value: unknown): InjuryState['bucket'] | null {

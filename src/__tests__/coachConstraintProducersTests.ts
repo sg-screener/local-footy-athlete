@@ -142,7 +142,7 @@ section('[6] soreness producer — adductor → adductor bucket');
     NOW,
   );
   ok('not null', !!c);
-  eq('groin → adductor bucket', c?.bucket, 'adductor');
+  eq('groin → adductor bucket', c?.bucket, 'groin');
 }
 
 section('[6b] soreness producer — hip → adductor bucket');
@@ -152,7 +152,7 @@ section('[6b] soreness producer — hip → adductor bucket');
     NOW,
   );
   ok('not null', !!c);
-  eq('hip → adductor bucket', c?.bucket, 'adductor');
+  eq('hip → adductor bucket', c?.bucket, 'groin');
   eq('hip soreness affects current week at severity 6', c?.modifierAffects, ['current_week']);
 }
 
@@ -224,7 +224,7 @@ section('[12] missed-session producer — falls back to "recent" id');
 section('[13] bucketToRegion — covers core mappings');
 {
   eq('hamstring → hamstring', bucketToRegion('hamstring'), 'hamstring');
-  eq('adductor → groin', bucketToRegion('adductor'), 'groin');
+  eq('adductor → groin', bucketToRegion('groin'), 'groin');
   eq('lowerBack → back', bucketToRegion('lowerBack'), 'back');
   eq('shoulder → shoulder', bucketToRegion('shoulder'), 'shoulder');
 }

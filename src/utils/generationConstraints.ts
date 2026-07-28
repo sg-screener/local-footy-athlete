@@ -467,12 +467,12 @@ function injuryKeysFor(bodyPart: string, bucket?: string): InjuryKey[] {
   if (/\bhamstring|hammy\b/.test(text)) keys.push('hamstring');
   if (/\bknee|patella|acl|mcl|meniscus\b/.test(text)) keys.push('knee');
   if (/\bshoulder|rotator|pec\b/.test(text)) keys.push('shoulder');
-  if (/\bankle|foot\b/.test(text)) keys.push('ankle');
+  if (/\bankle|foot\b/.test(text)) keys.push('ankle/foot');
   if (/\bcalf|achilles\b/.test(text)) keys.push('calf');
-  if (/\bgroin|adductor\b/.test(text)) keys.push('adductor', 'pubalgia');
+  if (/\bgroin|adductor\b/.test(text)) keys.push('groin', 'groin');
   if (/\blower back|lowerback|back|lumbar\b/.test(text)) keys.push('lowerBack');
   if (/\belbow\b/.test(text)) keys.push('elbow');
-  if (/\bwrist\b/.test(text)) keys.push('wrist');
+  if (/\bwrist\b/.test(text)) keys.push('wrist/hand');
   return Array.from(new Set(keys));
 }
 

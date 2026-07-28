@@ -393,13 +393,12 @@ function buildAdviceForMissedSession(c: ActiveMissedSessionConstraint): string[]
 const BUCKET_TO_REGION: Record<string, ConstraintRegion> = {
   shoulder: 'shoulder',
   elbow: 'elbow',
-  wrist: 'wrist',
+  'wrist/hand': 'wrist',
   knee: 'knee',
-  ankle: 'ankle',
+  'ankle/foot': 'ankle',
   calf: 'calf',
   hamstring: 'hamstring',
-  adductor: 'groin',
-  pubalgia: 'groin',
+  'groin': 'groin',
   lowerBack: 'back',
 };
 

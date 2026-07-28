@@ -899,16 +899,19 @@ section('14. Athlete overrides (prefs filter / bias)');
   console.warn = (msg: string) => { warnings.push(msg); };
   warnings.length = 0;
   try {
-    // Exclude Back Squat; rely on lowerBack=avoid/caution to drop the rest.
-    // Actually Front Squat & Box Squat are 'caution', not 'avoid' — so
-    // lowerBack alone won't empty the pool. Use pubalgia=avoid instead:
-    //   Back Squat, Front Squat     → pubalgia='avoid'
-    //   Box Squat, High Box Squat   → pubalgia='caution'
-    // So exclude both cautions + activeInjuries=['pubalgia'] → everything drops.
+    // FIXTURE UPDATED for Sam's 13-region rulings (2026-07-28). This previously
+    // leaned on pubalgia='avoid' dropping Back Squat and Front Squat. Sam ruled
+    // all five adductor/pubalgia conflicts to 'caution' precisely so a groin
+    // complaint is graded by severity rather than hard-excluded at the tag, so
+    // 'groin' no longer empties the pool — by ruling, not by regression.
+    // Back Squat lowerBack='avoid' is the only hard exclude left in this pool,
+    // so the mixed breakdown is now 3 excluded + 1 injury-dropped.
+    // The ASSERTION is unchanged: a mixed fallback logs exactly once and reports
+    // an accurate breakdown.
     const mixed: AthletePoolPrefs = {
-      excluded: ['Box Squat', 'High Box Squat'],
+      excluded: ['Front Squat', 'Box Squat', 'High Box Squat'],
       pinned: [],
-      activeInjuries: ['pubalgia'],
+      activeInjuries: ['lowerBack'],
     };
     const mixedPick = selectPoolEntryAvoiding(squatAnchor, ctx, emptyAvoid, mixed);
     assert(mixedPick.name === 'Back Squat',
@@ -917,8 +920,8 @@ section('14. Athlete overrides (prefs filter / bias)');
       `Mixed fallback logs once (got ${warnings.length})`);
     if (warnings.length > 0) {
       const w = warnings[0];
-      assert(w.includes('excluded=2') && w.includes('injury=2'),
-        `Mixed fallback reports excluded=2 injury=2 (got: ${w})`);
+      assert(w.includes('excluded=3') && w.includes('injury=1'),
+        `Mixed fallback reports excluded=3 injury=1 (got: ${w})`);
     }
   } finally {
     console.warn = originalWarn;

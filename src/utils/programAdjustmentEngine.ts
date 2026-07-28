@@ -463,17 +463,16 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   achilles: 'calf',
 
   // ankle / foot
-  ankle: 'ankle',
-  ankles: 'ankle',
-  foot: 'ankle',
-  feet: 'ankle',
+  'ankle/foot': 'ankle/foot',
+  ankles: 'ankle/foot',
+  foot: 'ankle/foot',
+  feet: 'ankle/foot',
 
   // groin / hip
-  groin: 'adductor',
-  adductor: 'adductor',
-  adductors: 'adductor',
-  hip: 'adductor',
-  hips: 'adductor',
+  groin: 'groin',
+  adductors: 'groin',
+  hip: 'groin',
+  hips: 'groin',
 
   // back
   back: 'lowerBack',
@@ -501,18 +500,18 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   forearms: 'elbow',
 
   // wrist
-  wrist: 'wrist',
-  wrists: 'wrist',
+  'wrist/hand': 'wrist/hand',
+  wrists: 'wrist/hand',
 };
 
 const LOWER_BUCKETS = new Set<InjuryBucket>([
   'hamstring',
   'knee',
   'calf',
-  'ankle',
-  'adductor',
+  'ankle/foot',
+  'groin',
 ]);
-const UPPER_BUCKETS = new Set<InjuryBucket>(['shoulder', 'elbow', 'wrist']);
+const UPPER_BUCKETS = new Set<InjuryBucket>(['shoulder', 'elbow', 'wrist/hand']);
 const BACK_BUCKETS = new Set<InjuryBucket>(['lowerBack']);
 
 function classifyRegion(bucket: InjuryBucket): InjuryRegion {
@@ -726,19 +725,14 @@ const BUCKET_EXPOSURE: Readonly<Partial<Record<InjuryBucket, BucketExposureSpec>
     teamNote: 'no sprinting / no plyo work',
     conditioningNote: 'avoid running - bike or row instead',
   },
-  ankle: {
+  'ankle/foot': {
     removeExposure: 'running, plyos, change-of-direction work',
     teamNote: 'no sprinting / no cutting / no plyos',
     conditioningNote: 'avoid running and plyos - bike or row instead',
   },
-  adductor: {
-    removeExposure: 'cutting, sprinting, adductor-heavy work',
-    teamNote: 'no cutting / no sprinting',
-    conditioningNote: 'avoid running and lateral work - bike or row instead',
-  },
-  pubalgia: {
-    removeExposure: 'cutting, kicking, hinge patterns',
-    teamNote: 'no cutting / no kicking',
+  'groin': {
+    removeExposure: 'cutting, sprinting, kicking, adductor-heavy work',
+    teamNote: 'no cutting / no sprinting / no kicking',
     conditioningNote: 'avoid running and lateral work - bike or row instead',
   },
   shoulder: {
@@ -751,7 +745,7 @@ const BUCKET_EXPOSURE: Readonly<Partial<Record<InjuryBucket, BucketExposureSpec>
     teamNote: 'no heavy contact drills',
     conditioningNote: 'no rowing or upper-body conditioning',
   },
-  wrist: {
+  'wrist/hand': {
     removeExposure: 'heavy pressing, loaded pulling, gripping',
     teamNote: 'no contact drills',
     conditioningNote: 'no rowing or upper-body conditioning',
@@ -965,7 +959,7 @@ export function buildInjuryPolicy(
       };
     }
 
-    case 'ankle': {
+    case 'ankle/foot': {
       const forbid = {
         ...EMPTY_FORBID,
         sprinting: true,
@@ -990,24 +984,24 @@ export function buildInjuryPolicy(
       };
     }
 
-    case 'adductor':
-    case 'pubalgia': {
+    case 'groin':
+    case 'groin': {
       const forbid = {
         ...EMPTY_FORBID,
         sprinting: true,
         cutting: true,
-        ...(bucket === 'pubalgia' ? { heavyHinge: true } : {}),
+        ...(bucket === 'groin' ? { heavyHinge: true } : {}),
       };
       return {
         bucket, severity, forbid,
         globalRules: [
           'No sprinting or cutting',
-          bucket === 'pubalgia' ? 'No heavy hinge or kicking work' : 'No adductor-heavy work',
+          bucket === 'groin' ? 'No heavy hinge or kicking work' : 'No adductor-heavy work',
         ],
         replacements: [
           'Bike / rower instead of running and cutting',
           'Bilateral lower work (goblet squat, hip thrust) instead of adductor-heavy work',
-          ...(bucket === 'pubalgia'
+          ...(bucket === 'groin'
             ? ['Light single-leg patterning instead of heavy hinges']
             : []),
         ],
@@ -1043,7 +1037,7 @@ export function buildInjuryPolicy(
     }
 
     case 'elbow':
-    case 'wrist': {
+    case 'wrist/hand': {
       const forbid = {
         ...EMPTY_FORBID,
         heavyPressing: true,
