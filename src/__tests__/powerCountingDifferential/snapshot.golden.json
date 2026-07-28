@@ -2371,7 +2371,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -2379,6 +2379,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2386,23 +2387,27 @@
             {
               "dayOfWeek": 1,
               "name": "Full Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "full_body_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
                 "strength",
                 "support",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
                 "support": 1,
-                "conditioning": 0,
-                "total": 5
+                "conditioning": 1,
+                "total": 6
               },
               "strengthRowNames": [
                 "Trap Bar Deadlift",
@@ -2519,21 +2524,22 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Aerobic Flush",
-              "workoutType": "Conditioning",
+              "name": "Recovery Session",
+              "workoutType": "Recovery",
               "taxonomy": [
                 {
-                  "category": "aerobic_base",
+                  "category": "recovery",
                   "modality": "none"
                 }
               ],
               "components": [
-                "conditioning"
+                "recovery",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 0,
                 "support": 0,
-                "conditioning": 1,
+                "conditioning": 0,
                 "total": 1
               },
               "strengthRowNames": [],
@@ -2558,7 +2564,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -2566,6 +2572,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -2583,7 +2590,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -2591,6 +2598,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2598,23 +2606,27 @@
             {
               "dayOfWeek": 1,
               "name": "Full Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "full_body_strength",
+                  "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
                   "modality": "none"
                 }
               ],
               "components": [
                 "strength",
                 "support",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
                 "support": 1,
-                "conditioning": 0,
-                "total": 5
+                "conditioning": 1,
+                "total": 6
               },
               "strengthRowNames": [
                 "Trap Bar Deadlift",
@@ -2731,21 +2743,22 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Aerobic Flush",
-              "workoutType": "Conditioning",
+              "name": "Recovery Session",
+              "workoutType": "Recovery",
               "taxonomy": [
                 {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
+                  "category": "recovery",
+                  "modality": "none"
                 }
               ],
               "components": [
-                "conditioning"
+                "recovery",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 0,
                 "support": 0,
-                "conditioning": 1,
+                "conditioning": 0,
                 "total": 1
               },
               "strengthRowNames": [],
@@ -2770,7 +2783,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -2778,6 +2791,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }

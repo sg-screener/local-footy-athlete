@@ -13,7 +13,6 @@ export type SprintExposureGateReason =
   | 'preseason_shortfall'
   | 'preseason_target_met'
   | 'preseason_app_topup_already_added'
-  | 'readiness_denied'
   | 'injury_denied'
   | 'inseason_shortfall'
   | 'inseason_target_met'
@@ -28,7 +27,12 @@ export interface SprintExposureGateContext {
   teamTrainingDays?: readonly number[];
   gameOrPracticeMatchDays?: readonly number[];
   plannedOnFeetSprintExposures?: number;
-  readinessAllowsSprint?: boolean;
+  // NO readiness input (Sam's readiness law, 2026-07-28). `readinessAllowsSprint`
+  // was set from `readiness === 'high'`, so anything below high denied the
+  // standalone sprint outright — a BLOCK on the one exposure Bible Section 2
+  // floors year-round at 1 and permits below that only for an explicit typed
+  // authorised reason. Low capacity was never one of those reasons. The field is
+  // deleted rather than defaulted so no caller can reintroduce the block.
   injuryAllowsSprint?: boolean;
   offseasonSubphase?: OffseasonSubphase | null;
   preseasonSubphase?: PreseasonSubphase | null;
@@ -79,9 +83,6 @@ export function evaluateSprintExposureGate(
 
   if (context.injuryAllowsSprint === false) {
     return { ...base, allowStandaloneSprint: false, reason: 'injury_denied' };
-  }
-  if (context.readinessAllowsSprint === false) {
-    return { ...base, allowStandaloneSprint: false, reason: 'readiness_denied' };
   }
   if (context.phase === 'Off-season') {
     if (target === 0) {

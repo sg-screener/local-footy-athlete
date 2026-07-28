@@ -1391,9 +1391,10 @@ function liveWorkoutCanonicalisationContext(
     legacyProgram: state.currentProgram,
   });
   const acceptedContext = state.acceptedMaterialContext;
-  const signal = (acceptedContext?.revision > 0
-    ? acceptedContext.readinessSignalsByDate
-    : useReadinessStore.getState().signalsByDate)?.[date] ?? null;
+  // The readiness SIGNAL used to be read here too, for the canonical context's
+  // `readiness` field. That field is gone (see below), and reading a signal
+  // nothing consumes is how a retired input keeps its wiring warm. The accepted
+  // context is still needed for the marked days.
   const gameDates = new Set(
     datedProgramWorkouts
       .filter(({ workout: candidate }) => classifyVisibleSession(candidate).anchors.game)
@@ -1429,7 +1430,9 @@ function liveWorkoutCanonicalisationContext(
     phase: profile.seasonPhase,
     offseasonSubphase: phaseResolution.offseasonSubphase,
     weekKind: phaseResolution.weekKind,
-    readiness: deriveScheduleReadiness({ onboardingData: profile, signal }),
+    // No readiness: the canonical context does not carry capacity any more
+    // (Sam's readiness law, 2026-07-28). The power dose is decided once, by
+    // `decidePowerPrimer`; the finaliser holds only phase, schedule and safety.
     ...gameProximityContext(date, Array.from(gameDates)),
     profile,
     planIntentValid,

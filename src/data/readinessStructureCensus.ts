@@ -148,86 +148,58 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
     disposition: 'Renders a value; decides nothing.',
   },
 
-  /* ── Structure debt: scheduled for removal ── */
+  /* ── Dose: the sweep's survivors, each with the reason it survived ── */
   {
     file: 'utils/coachingEngine.ts',
-    edges: 18,
-    verdict: 'structure_pending_removal',
-    what: 'Conditioning frequency and its early off-season target, sprint permission '
-      + '(`readiness !== \'high\'` denies a standalone sprint outright), the bye-week '
-      + 'lighter flag, off-feet tempo forcing, and the power/sprint loading gates.',
-    disposition: 'The STRENGTH half is paid: Batch 0 deleted the phase x readiness core '
-      + 'and hard-exposure tables, the three override floors and the optional/recovery '
-      + 'split, and the contract now owns the weekly strength count outright. What is '
-      + 'left is conditioning, sprint and power — which the Batch 0 reassessment listed '
-      + 'under Not Covered ("the same two-authority shape is likely, and was not swept... '
-      + 'that is an assertion to test, not one to assume"). Two of them are BLOCKS, not '
-      + 'doses, so the sprint floor in Bible Section 2 already bears on them.',
-    owningBatch: 'Batch 0 follow-on — the conditioning/sprint/power dose sweep',
-  },
-  {
-    file: 'rules/weeklyExposureContractBuilders.ts',
-    edges: 1,
-    verdict: 'structure_pending_removal',
-    what: '`byeRecoveryMode` selects a whole week mode with different structure '
-      + '(strength 2/2/2 against a build week\'s 2/3/4) on low readiness.',
-    disposition: 'Sam ruled bye_recovery is SCHEDULE-TRIGGERED ONLY (ruling 4): the '
-      + 'scheduled deload is the intended entry condition. Fatigue routes through the '
-      + 'deload law, which shrinks the dose, not through a mode that cuts a session.',
-    owningBatch: 'Batch 2 — the week-mode contract sheet',
-  },
-  {
-    file: 'utils/conditioningRules.ts',
-    edges: 1,
-    verdict: 'structure_pending_removal',
-    what: '`inferFresh` feeds bye build-vs-recovery from readiness AND injury.',
-    disposition: 'Violates both halves of the ruling at once. Dies with the bye-mode '
-      + 'trigger; injury reaches the week through its own law family.',
-    owningBatch: 'Batch 2 — the week-mode contract sheet',
+    edges: 8,
+    verdict: 'dose',
+    what: 'Off-feet modality forcing for aerobic and standalone tempo (x3), intensity '
+      + 'back-off to easy aerobic for tempo and hard conditioning (x3), the '
+      + '`conditioningLoading: \'moderate\'` prompt hint, and the ramp-up note.',
+    disposition: 'Every one of these keeps the session and changes its size, intensity or '
+      + 'modality. The ten structure edges that stood beside them are gone: three sprint '
+      + 'blocks, the early off-season conditioning target and its floor, the combined-day '
+      + 'suppression, the game-week spacing gate, the withheld aerobic component, the '
+      + 'bye-week lighter flag (now read from the contract) and the `do-not-add` sprint '
+      + 'loading.',
   },
   {
     file: 'rules/powerPrimerPolicy.ts',
     edges: 3,
-    verdict: 'structure_pending_removal',
-    what: 'Low readiness returns `null` — no power block at all. Not-high blocks the '
-      + 'G-2 primer and withholds contrast eligibility.',
+    verdict: 'dose',
+    what: 'Low capacity, and anything below high at G-2, shrink the primer via '
+      + '`deloadPowerDose`; contrast eligibility still asks for high capacity.',
     disposition: 'Sam ruled (2): low readiness gives a SHRUNK SHARP PRIMER via the deload '
-      + 'power dose, never `null`. Consistent with the deload law and the cut detrained '
-      + 'gate — the exposure survives at a smaller size.',
-    owningBatch: 'Batch 0 — power dose follow-on',
-  },
-  {
-    file: 'utils/workoutCanonicalisation.ts',
-    edges: 2,
-    verdict: 'structure_pending_removal',
-    what: 'Low readiness emits `power_removed`; not-high blocks the G-2 primer.',
-    disposition: 'The readiness trigger for `power_removed` dies with ruling (2). The '
-      + 'game-proximity and early-off-season triggers are unaffected — they are phase and '
-      + 'schedule facts, which the ruling explicitly keeps.',
-    owningBatch: 'Batch 0 — power dose follow-on',
+      + 'power dose, never `null`. The shrink is applied once, in the wrapper, so the '
+      + 'decision body holds no readiness branch that can return null — the same way the '
+      + 'deload input was retired rather than inverted. Contrast-vs-primer was always '
+      + 'dose: it is the size of a block that exists either way.',
   },
   {
     file: 'rules/offseasonSubphasePolicy.ts',
     edges: 1,
-    verdict: 'structure_pending_removal',
-    what: 'One edge gates a whole low-readiness branch that BLOCKS running and speed '
-      + '(`allowedBySubphase: false`), sets `hardSessionCap: 0` and biases core to reduced.',
-    disposition: 'The blocks and the zero cap die. `strength.targetRpeMax -> 7` and the '
-      + 'off-feet modality bias are dose and MUST BE PRESERVED — removing the branch '
-      + 'wholesale would delete a legitimate dose-down along with the violation.',
-    owningBatch: 'Batch 1 — readiness rubric and its dose consumers',
+    verdict: 'dose',
+    what: 'The low-capacity branch: aerobic-only conditioning categories, off-feet '
+      + 'modality bias, an RPE ceiling of 7, and wider optional support work.',
+    disposition: 'The census warned that removing this branch wholesale would delete a '
+      + 'legitimate dose-down along with the violation, so it was emptied field by field '
+      + 'instead. Gone: `hardSessionCap: 0` (which denied the standalone sprint through '
+      + '`injuryAllowsSprint`), the `blocked_low_readiness` running/speed policies — that '
+      + 'word is retired from both unions — `coreBias: \'reduced\'`, and the combined-day '
+      + 'avoidance that suppressed the conditioning floor.',
   },
   {
     file: 'rules/preseasonSubphasePolicy.ts',
     edges: 1,
-    verdict: 'structure_pending_removal',
-    what: 'Caps strength `coreSessionCap` to 2, conditioning `targetCap` to 1, and sets '
-      + 'sprint `targetExposures` to 0 on low readiness.',
-    disposition: 'The count caps die. The sprint zero dies twice over: Bible Section 2 '
-      + 'sets a year-round floor of 1 sprint/high-speed exposure and requires an explicit '
-      + 'typed authorised reason for any reduction below it — low readiness was never one, '
-      + 'and Sam confirmed the floor stands. `volumeBias` and `hardDose` are dose and stay.',
-    owningBatch: 'Batch 1 — readiness rubric and its dose consumers',
+    verdict: 'dose',
+    what: 'The low-capacity branch: aerobic-first category priority, a reduced hard dose, '
+      + 'and controlled strength volume.',
+    disposition: 'Six structural statements left this branch: `coreSessionCap`, '
+      + '`targetCap`, `minimumAppExposures: 0`, `hardSessionCap: 0`, '
+      + '`speedSprint.targetExposures: 0` and the combined-day avoidance. The sprint zero '
+      + 'died twice over: Bible Section 2 sets a year-round floor of 1 sprint/high-speed '
+      + 'exposure and requires an explicit typed authorised reason below it — low '
+      + 'readiness was never one, and Sam confirmed the floor stands.',
   },
 ];
 
@@ -257,8 +229,34 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
  * over-estimate the overlap — the strength deletion and the readiness edges are
  * largely disjoint sets in this file. Recording the real number rather than the
  * predicted one is the whole point of a ratchet that must EQUAL current debt.
+ *
+ * 27 -> 0 (2026-07-29): the final sweep, edge by edge, in
+ * docs/READINESS_CENSUS_SWEEP_2026-07-29.md. Three files left the census having
+ * no readiness edge at all; four keep theirs as declared DOSE.
+ *
+ * The sweep had to draw the dose/structure line at the consumers rather than by
+ * argument, and three fields this census itself described as blocks turned out
+ * to be modality switches, while one it never mentioned turned out to be the
+ * real block. The rule that fell out:
+ *
+ *   DOSE   — the session still happens; its size, intensity or modality moves.
+ *   STRUCTURE — a session, a required exposure or a count disappears, including
+ *   a cap that removes a Bible-floored exposure, and anything that suppresses a
+ *   floor.
+ *
+ * `hardSessionCap: 0` is the worked example. It filters hard categories out of
+ * the conditioning priority list and the week keeps every session as easy
+ * aerobic — dose, on its face. But the same predicate produces
+ * `injuryAllowsSprint`, so a readiness-set zero denied the standalone sprint
+ * outright. The block was one call away from the field that looked innocent.
+ *
+ * THE CENSUS DOES NOT DIE AT ZERO. Its entry-level rule ("a file with no edges
+ * left must be removed") is about entries, not the census: blocks [2] and [5]
+ * are what stop the NEXT readiness edge arriving unclassified, and they only
+ * work while this list exists. A zero debt is the state it is meant to hold, not
+ * a signal that it is finished.
  */
-export const STRUCTURE_DEBT_BASELINE = 27;
+export const STRUCTURE_DEBT_BASELINE = 0;
 
 export interface SupersededExemptionClaim {
   /** Path relative to `src/`. */

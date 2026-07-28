@@ -221,9 +221,16 @@ const byeConstrained = snapshot({
   phase: 'In-season', teamTrainingCount: 0, readiness: 'medium', phaseWeek: 1,
   selectedDays: ['Monday', 'Wednesday'],
 });
-const recovery0 = snapshot({ phase: 'In-season', teamTrainingCount: 0, readiness: 'low', phaseWeek: 1 });
-const recovery1 = snapshot({ phase: 'In-season', teamTrainingCount: 1, readiness: 'low', phaseWeek: 1 });
-const recovery2 = snapshot({ phase: 'In-season', teamTrainingCount: 2, readiness: 'low', phaseWeek: 1 });
+// RE-POINTED (Sam's ruling 4, 2026-07-28; applied 2026-07-29). These three
+// scenarios entered bye RECOVERY by setting `readiness: 'low'` — the trigger the
+// ruling deleted, because switching mode on capacity cuts a strength session
+// with no reduction recorded anywhere. The mode is schedule-triggered now, so
+// the scenarios enter it the way an athlete does: a scheduled deload week.
+// Capacity stays low so these still exercise the recovery shape for a cooked
+// athlete; it simply no longer SELECTS the shape.
+const recovery0 = snapshot({ phase: 'In-season', teamTrainingCount: 0, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
+const recovery1 = snapshot({ phase: 'In-season', teamTrainingCount: 1, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
+const recovery2 = snapshot({ phase: 'In-season', teamTrainingCount: 2, readiness: 'low', phaseWeek: 1, weekKind: 'deload' });
 const early = snapshot({ phase: 'Off-season', phaseWeek: 1, offseasonSubphase: 'early_offseason' });
 const mid4 = snapshot({
   phase: 'Off-season', phaseWeek: 3, offseasonSubphase: 'mid_offseason',
@@ -326,8 +333,22 @@ runCase('scenario', '11 constrained bye may retain S2 only with typed reason', (
   invariant(byeConstrained.contract.strength.targetCount === 2 && byeConstrained.contract.reductions.some((entry) => entry.domain === 'main_strength' && entry.reason === 'insufficient_availability'), 'constrained bye lacks typed S2 ownership', byeConstrained.contract.reductions);
 });
 
-runCase('scenario', '12 bye recovery 0 TT has exactly two lifts, one light aerobic, no power', () => {
-  invariant(recovery0.mainStrength.length === 2 && recovery0.optionalRecoveryAerobic.length >= 1 && recovery0.optionalRecoveryAerobic.length <= 2 && recovery0.allocations.every((entry) => !entry.powerPrimer), 'incorrect recovery 0TT structure');
+// RE-POINTED (2026-07-29). "no power" was the third statement of a rule two of
+// Sam's rulings have now retired: the deload law (2026-07-27) — "power/speed
+// KEEP a small sharp dose; a deload is not a reason to lose sharpness" — and the
+// readiness law (2026-07-28), which says the same of low capacity. This week is
+// both a deload and a low-capacity week, so it is the exact case both rulings
+// name. The dose is what must be small, and that is now what this pins.
+runCase('scenario', '12 bye recovery 0 TT has two lifts, one light aerobic, and a SHRUNK power dose', () => {
+  const primers = recovery0.allocations.flatMap((entry) => entry.powerPrimer ? [entry.powerPrimer] : []);
+  invariant(
+    recovery0.mainStrength.length === 2
+      && recovery0.optionalRecoveryAerobic.length >= 1 && recovery0.optionalRecoveryAerobic.length <= 2
+      && primers.length > 0
+      && primers.every((primer) => primer.sets <= 2 && primer.kind === 'primer'),
+    'incorrect recovery 0TT structure',
+    { lifts: recovery0.mainStrength.length, aerobic: recovery0.optionalRecoveryAerobic.length, primers },
+  );
 });
 runCase('scenario', '13 bye recovery 1 TT has exactly two lifts and at most one optional aerobic', () => {
   invariant(recovery1.mainStrength.length === 2 && recovery1.optionalRecoveryAerobic.length <= 1, 'incorrect recovery 1TT structure');

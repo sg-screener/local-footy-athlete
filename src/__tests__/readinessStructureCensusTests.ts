@@ -131,12 +131,29 @@ console.log('\n[3] Every entry is typed: verdict, reason, and an owner for the d
     }
   }
 
-  // Both classes must be real. A census that is all-dose would pass every other
-  // assertion while proving nothing.
   ok('the census records at least one surviving dose consumer',
     READINESS_EDGE_CENSUS.some((e) => e.verdict === 'dose'));
-  ok('the census records the structure debt',
-    READINESS_EDGE_CENSUS.some((e) => e.verdict === 'structure_pending_removal'));
+
+  // RE-POINTED at the terminal state (2026-07-29). This used to require at least
+  // one `structure_pending_removal` entry, on the reasoning that a census which
+  // is all-dose would pass every other assertion while proving nothing. That was
+  // right while debt existed and is exactly backwards once it is paid: it would
+  // demand a violation be kept on the books to satisfy a gate.
+  //
+  // What must stay true is that the census can still SAY "structure", so the
+  // next violation has somewhere to be declared rather than being quietly filed
+  // as dose. That is a property of the vocabulary, not of the contents.
+  {
+    const censusSource = fs.readFileSync(
+      path.join(src, 'data/readinessStructureCensus.ts'), 'utf8');
+    ok('the census can still declare a structure violation',
+      /'structure_pending_removal'/.test(censusSource),
+      'the verdict must remain expressible even when nothing carries it');
+    ok('an all-dose census is only honest at a zero baseline',
+      READINESS_EDGE_CENSUS.some((e) => e.verdict === 'structure_pending_removal') ||
+        STRUCTURE_DEBT_BASELINE === 0,
+      `baseline ${STRUCTURE_DEBT_BASELINE} with no structure entry to account for it`);
+  }
 }
 
 console.log('\n[4] THE RATCHET — structure debt may shrink, never grow');

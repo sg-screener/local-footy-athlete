@@ -23,7 +23,7 @@
     "here so a future reader does not mistake a deletion for a fix, and so the",
     "product count dropping 63 -> 38 is attributable rather than mysterious."
   ],
-  "generatedAt": "2026-07-27",
+  "generatedAt": "2026-07-28",
   "scopes": {
     "product": {
       "label": "product src (ships to athletes)",
@@ -81,7 +81,7 @@
     "tests": {
       "label": "test harness (runs untyped via sucrase-node)",
       "config": "tsconfig.tests.json",
-      "total": 382,
+      "total": 378,
       "files": {
         "src/__tests__/acceptedStateTransactionTests.ts": 3,
         "src/__tests__/athleteSessionDeletionTests.ts": 5,
@@ -100,7 +100,7 @@
         "src/__tests__/bibleConformance/observations/buildConditioningEquipmentTrace.ts": 1,
         "src/__tests__/bibleConformance/observations/buildSlice3Trace.ts": 2,
         "src/__tests__/bibleConformance/observations/buildSlice5MutationWitness.ts": 1,
-        "src/__tests__/bibleConformance/observations/buildStrengthTrace.ts": 3,
+        "src/__tests__/bibleConformance/observations/buildStrengthTrace.ts": 2,
         "src/__tests__/bibleConformance/observations/evaluateMetamorphicRelations.ts": 3,
         "src/__tests__/bibleConformance/observations/evaluatePairwiseScenarios.ts": 1,
         "src/__tests__/bibleConformance/registry/mutationCatalogue.ts": 11,
@@ -154,7 +154,7 @@
         "src/__tests__/missedSessionsTests.ts": 9,
         "src/__tests__/offseasonSubphaseConditioningIntegrationTests.ts": 1,
         "src/__tests__/onboardingReliabilityTests.ts": 5,
-        "src/__tests__/postGenerationConstraintValidationTests.ts": 5,
+        "src/__tests__/postGenerationConstraintValidationTests.ts": 3,
         "src/__tests__/programAdjustmentRequestTests.ts": 1,
         "src/__tests__/programBlockRolloverTests.ts": 1,
         "src/__tests__/programControlActionsTests.ts": 3,
@@ -168,7 +168,7 @@
         "src/__tests__/scenarioQA/personas.ts": 4,
         "src/__tests__/scenarioQA/sweep.ts": 1,
         "src/__tests__/section18AcceptedWeekGatewayTests.ts": 3,
-        "src/__tests__/section18ContractV2Tests.ts": 2,
+        "src/__tests__/section18ContractV2Tests.ts": 1,
         "src/__tests__/section18OwnershipInvariantTests.ts": 1,
         "src/__tests__/section18SafetyBoundaryTests.ts": 2,
         "src/__tests__/sessionClassificationAdapterTests.ts": 1,

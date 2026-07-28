@@ -1485,6 +1485,16 @@ export function resolveWeekWithConditioning(
     weekPatternSummary,
   );
   const conditioningPlaced: WeekLog['sessions'] = [];
+  // The bye mode is the CONTRACT's, not this pass's. Conditioning used to infer
+  // "fresh" from readiness and injury and cap the week's tiers on the answer,
+  // which is capacity setting structure (Sam's readiness law, 2026-07-28). The
+  // accepted week already carries the decision; a week with no contract is a
+  // build bye, because only the schedule may say otherwise.
+  const byeMode: WeekLog['byeMode'] =
+    section18Microcycle?.exposureContract?.identity.mode === 'in_season_bye_recovery' ||
+    section18Microcycle?.weekKind === 'deload'
+      ? 'recovery'
+      : 'build';
 
   // ── In-season primary conditioning cap ──
   // For in-season weeks (including bye/freed-game weeks), limit the
@@ -1586,6 +1596,7 @@ export function resolveWeekWithConditioning(
       state.markedDays || {},
       conditioningReadiness,
       conditioningPlaced,
+      byeMode,
     );
 
     // Try conditioning placement

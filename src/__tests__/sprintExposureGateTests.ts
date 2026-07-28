@@ -208,7 +208,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   const gate = evaluateSprintExposureGate({
     phase: 'Pre-season',
     teamTrainingDays: [2, 4],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('pre-season 2 team trainings deny extra sprint', gate.allowStandaloneSprint, false, JSON.stringify(gate));
@@ -219,7 +218,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   const gate = evaluateSprintExposureGate({
     phase: 'Pre-season',
     teamTrainingDays: [2],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('pre-season 1 team training satisfies the sprint floor', gate.allowStandaloneSprint, false, JSON.stringify(gate));
@@ -229,7 +227,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     phase: 'Pre-season',
     teamTrainingDays: [2],
     plannedOnFeetSprintExposures: 1,
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('pre-season does not add a top-up after its anchor already met the floor',
@@ -241,7 +238,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     phase: 'Pre-season',
     teamTrainingDays: [2],
     gameOrPracticeMatchDays: [6],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('practice match/game counts as sprint/COD exposure', gate.anchorSprintCodExposures, 2, JSON.stringify(gate));
@@ -254,7 +250,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     teamTrainingDays: [2],
     gameOrPracticeMatchDays: [6],
     weekKind: 'deload',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('pre-season deload still counts team/game anchors',
@@ -270,7 +265,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
 {
   const gate = evaluateSprintExposureGate({
     phase: 'Pre-season',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('pre-season 0 team/game exposures may allow sprint if healthy', gate.allowStandaloneSprint, true, JSON.stringify(gate));
@@ -295,7 +289,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   const early = evaluateSprintExposureGate({
     phase: 'Off-season',
     offseasonSubphase: 'early_offseason',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('early off-season denies app-added sprint', early.allowStandaloneSprint, false, JSON.stringify(early));
@@ -303,7 +296,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   const mid = evaluateSprintExposureGate({
     phase: 'Off-season',
     offseasonSubphase: 'mid_offseason',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('mid off-season allows one app sprint when the floor is unresolved', mid.allowStandaloneSprint, true, JSON.stringify(mid));
@@ -312,7 +304,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   const late = evaluateSprintExposureGate({
     phase: 'Off-season',
     offseasonSubphase: 'late_offseason',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('late off-season may allow one app-added sprint if healthy', late.allowStandaloneSprint, true, JSON.stringify(late));
@@ -322,7 +313,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     phase: 'Off-season',
     offseasonSubphase: 'late_offseason',
     weekKind: 'deload',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('late off-season deload preserves a reduced-dose app sprint',
@@ -338,7 +328,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     phase: 'Off-season',
     offseasonSubphase: 'late_offseason',
     plannedOnFeetSprintExposures: 1,
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('late off-season allows at most one app-added sprint', afterTopUp.allowStandaloneSprint, false, JSON.stringify(afterTopUp));
@@ -349,7 +338,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     phase: 'In-season',
     teamTrainingDays: [2, 4],
     gameOrPracticeMatchDays: [6],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('in-season 2 team trainings plus game deny extra sprint', gate.allowStandaloneSprint, false, JSON.stringify(gate));
@@ -359,7 +347,6 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
 {
   const gate = evaluateSprintExposureGate({
     phase: 'In-season',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('in-season without a qualifying anchor requires one app sprint',
@@ -370,17 +357,20 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
 {
   const injured = evaluateSprintExposureGate({
     phase: 'Pre-season',
-    readinessAllowsSprint: true,
     injuryAllowsSprint: false,
   });
   eq('unsafe lower-limb injury denies sprint top-up', injured.allowStandaloneSprint, false, JSON.stringify(injured));
 
+  // RE-POINTED (Sam's readiness law, 2026-07-28; applied 2026-07-29). This asked
+  // the gate to deny a sprint for readiness. It has no readiness input any more:
+  // Bible Section 2 floors the weekly sprint/high-speed exposure at 1 year-round
+  // and permits less only for an explicit typed authorised reason, and low
+  // capacity was never one. Injury still denies, one line above.
   const lowReadiness = evaluateSprintExposureGate({
     phase: 'Pre-season',
-    readinessAllowsSprint: false,
     injuryAllowsSprint: true,
   });
-  eq('low readiness denies sprint top-up', lowReadiness.allowStandaloneSprint, false, JSON.stringify(lowReadiness));
+  eq('capacity cannot deny the sprint top-up', lowReadiness.allowStandaloneSprint, true, JSON.stringify(lowReadiness));
 }
 
 console.log('\n-- SP-1. Generation consults the gate --');

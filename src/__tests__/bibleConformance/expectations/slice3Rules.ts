@@ -95,11 +95,22 @@ export const SLICE3_BIBLE_RULES: readonly Slice3Rule[] = [
     expectation: { removed: ['Back Squat'], preserved: ['Bulgarian Split Squat'], unavailable: ['Barbell', 'Rack'] },
   },
   {
+    // RE-POINTED (Sam's readiness law, 2026-07-28; applied 2026-07-29). The
+    // statement said low readiness REMOVES power, which the anchor quote never
+    // said — it says REDUCE. The ruling settles it: capacity affects dose only,
+    // so power survives as a shrunk sharp primer and conditioning drops to easy.
+    //
+    // NOT COVERED by this scenario: the hard-conditioning half. Its fixture
+    // (`mixedLowerWorkout(..., false)`) carries `aerobic_base` conditioning, so
+    // `hardConditioning: 0` was already true before any transformation ran and
+    // was vacuous under the old statement too. The hard -> easy downgrade is
+    // proven at its owner in `readinessDoseSweepTests` block [7].
     id: 'ALL-READINESS-DOWNGRADE-01', category: 'constraint', section: 'Readiness reduction',
     anchorQuote: 'If the athlete is cooked, sick, sore or injured, reduce conditioning first before smashing strength.',
-    statement: 'Low readiness removes hard extras/power first and preserves safe main work with evidence.',
+    statement: 'Low readiness reduces the work rather than removing it: conditioning stays easy, '
+      + 'safe main work is preserved, and the power block survives instead of being deleted.',
     applicableScenarios: ['low-readiness-downgrade'],
-    expectation: { power: 'none', hardConditioning: 0, preserveStrength: true },
+    expectation: { power: 'primer', hardConditioning: 0, preserveStrength: true, powerRemoved: false },
   },
   {
     id: 'ALL-EXPOSURE-STRENGTH-01', category: 'exposure', section: 'Strength exposure accounting',

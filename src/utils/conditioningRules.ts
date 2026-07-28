@@ -86,7 +86,22 @@ export interface WeekLog {
    * Used for return-from-break ramp: week 1 = C only, week 2 = add B, week 3 = A available.
    */
   weeksOffTraining: number;
-  /** Athlete readiness. Used for bye week fresh/fatigued inference. */
+  /**
+   * Which bye the phase contract says this is (`in_season_bye_build` vs
+   * `in_season_bye_recovery`), carried through as the mode itself.
+   *
+   * This replaced a local `inferFresh(injuries, readiness)` (Sam's readiness
+   * law, 2026-07-28). Freshness decided `maxTierA` (1 vs 0) and `maxTierB`
+   * (2 vs 1) — a tier block and a count — from capacity and injury, which the
+   * law reserves for phase and schedule facts. The same authority now answers
+   * here as everywhere else: one bye mode, decided by the contract.
+   */
+  byeMode: 'build' | 'recovery';
+  /**
+   * Athlete readiness. DOSE ONLY: the conditioning PROGRESSION reads it (see
+   * `conditioningProgressionRules`), which is a declared dose consumer. It no
+   * longer decides any tier cap in this file.
+   */
   readiness: 'low' | 'medium' | 'high';
 }
 
@@ -97,23 +112,6 @@ export interface ConditioningResult {
   tier: ConditioningTier;
   /** The conditioning metadata. */
   meta: ConditioningMeta;
-}
-
-// ─── Bye Week Freshness ───
-
-/**
- * Infer whether athlete is "fresh" for bye week logic.
- * Fresh = no active injury at 'avoid' AND readiness medium or high.
- */
-function inferFresh(
-  activeInjuries: Record<string, 'caution' | 'avoid'>,
-  readiness: 'low' | 'medium' | 'high',
-): boolean {
-  if (readiness === 'low') return false;
-  for (const sev of Object.values(activeInjuries)) {
-    if (sev === 'avoid') return false;
-  }
-  return true;
 }
 
 // ─── Weekly Caps by Season Phase ───
@@ -130,10 +128,19 @@ interface WeeklyCaps {
   bLowOnly: boolean;
 }
 
+/**
+ * The week's tier caps. Phase and schedule facts only.
+ *
+ * The `activeInjuries` parameter is GONE (Sam's readiness law, 2026-07-28). It
+ * fed exactly one decision — bye-week freshness — where an `avoid` injury
+ * collapsed the whole week's caps anonymously. Injury still removes the work it
+ * affects, through `filterConditioningByInjury` and the Tier-A lower-limb block,
+ * which name what they removed. An unused parameter is somewhere for the rule to
+ * grow back, so it does not survive as a courtesy.
+ */
 function getWeeklyCaps(
   phase: SeasonPhase,
   weekLog: WeekLog,
-  activeInjuries: Record<string, 'caution' | 'avoid'>,
 ): WeeklyCaps {
   // ── Double game week ──
   // Tier A and B blocked entirely. Tier C allowed on each G+1.
@@ -158,13 +165,15 @@ function getWeeklyCaps(
   switch (phase) {
     case 'In-season': {
       if (weekLog.byeWeek) {
-        const fresh = inferFresh(activeInjuries, weekLog.readiness);
-        if (fresh) {
-          // Bye week fresh: unlock Tier A
-          return { maxTierA: 1, maxTierB: 2, maxTierC: 99, maxTotal: 99, bLowOnly: false };
+        if (weekLog.byeMode === 'recovery') {
+          // Bye RECOVERY (a scheduled deload bye): B-low only, C prioritised.
+          return { maxTierA: 0, maxTierB: 1, maxTierC: 99, maxTotal: 99, bLowOnly: true };
         }
-        // Bye week fatigued/injured: B-low only, C prioritised
-        return { maxTierA: 0, maxTierB: 1, maxTierC: 99, maxTotal: 99, bLowOnly: true };
+        // Bye BUILD: the missing game leaves room for a Tier A exposure.
+        // Injury still removes the work it affects — through `filterConditioningByInjury`
+        // and the tier-A lower-limb block, which name what they removed. It no
+        // longer collapses the whole week's caps from here.
+        return { maxTierA: 1, maxTierB: 2, maxTierC: 99, maxTotal: 99, bLowOnly: false };
       }
       if (weekLog.missedTeamTraining) {
         // Missed team training: unlock extra B session
@@ -318,7 +327,7 @@ function getEligibleTiers(
   weekLog: WeekLog,
   dateTiers: Set<ConditioningTier>,
 ): ConditioningTier[] {
-  const caps = getWeeklyCaps(ctx.seasonPhase, weekLog, ctx.activeInjuries);
+  const caps = getWeeklyCaps(ctx.seasonPhase, weekLog);
   const counts = countByTier(weekLog);
   const totalBCount = counts['B-high'] + counts['B-low'];
 
@@ -670,5 +679,4 @@ export {
   hasLowerLimbInjury,
   hasRunningInjury,
   countByTier,
-  inferFresh,
 };

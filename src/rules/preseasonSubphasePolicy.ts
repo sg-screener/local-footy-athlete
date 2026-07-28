@@ -33,6 +33,28 @@ export interface PreseasonSubphasePolicy {
   readonly reasons: readonly string[];
 }
 
+/**
+ * The low-capacity overlay: DOSE ONLY (Sam's readiness law, 2026-07-28).
+ *
+ * Six of this branch's nine statements were structure and have left it:
+ *
+ *   - `strength.coreSessionCap`, `conditioning.targetCap` — counts. The week's
+ *     exposure counts belong to the phase contract.
+ *   - `conditioning.minimumAppExposures: 0` — a floor readiness can zero is not
+ *     a floor.
+ *   - `conditioning.hardSessionCap: 0` — reads as an intensity cap, but the same
+ *     predicate produces `injuryAllowsSprint` in the engine, so it denied the
+ *     standalone sprint outright.
+ *   - `speedSprint.targetExposures: 0` — Bible Section 2 sets a year-round floor
+ *     of one sprint/high-speed exposure and requires an explicit typed
+ *     authorised reason for any reduction below it. Low readiness was never one,
+ *     and Sam confirmed the floor stands.
+ *   - `sessions.combinedStrengthConditioning: 'avoid'` — suppresses the engine's
+ *     H5a conversion, the safety net that enforces the conditioning floor.
+ *
+ * What remains shrinks work that still happens: an easier category order, a
+ * reduced hard dose, and a controlled strength volume.
+ */
 export function getPreseasonSubphasePolicy(
   subphase: PreseasonSubphase,
   context: PreseasonSubphasePolicyContext = {},
@@ -45,26 +67,18 @@ export function getPreseasonSubphasePolicy(
   return {
     ...base,
     conditioning: {
+      ...base.conditioning,
       categoryPriority: ['aerobic_base'],
-      hardSessionCap: 0,
-      targetCap: Math.min(base.conditioning.targetCap, 1),
-      minimumAppExposures: 0,
       hardDose: 'reduced',
     },
-    speedSprint: {
-      ...base.speedSprint,
-      targetExposures: 0,
-    },
     strength: {
-      coreSessionCap: Math.min(base.strength.coreSessionCap, 2),
+      ...base.strength,
       volumeBias: 'controlled',
-    },
-    sessions: {
-      combinedStrengthConditioning: 'avoid',
     },
     reasons: [
       ...base.reasons,
-      'Low readiness removes app-added hard conditioning and sprint top-ups and caps strength dose.',
+      'Low capacity keeps every exposure and makes it easier: easy aerobic conditioning first, '
+      + 'a reduced hard dose, and controlled strength volume.',
     ],
   };
 }

@@ -547,11 +547,14 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
       },
       ...raw.exercises,
     ];
-    const generated = canonical(raw, { phase: 'Pre-season', readiness: 'low' });
-    const evidence: HarnessTransformEvidence[] = generated.evidence.some((item) => item.domain === 'power')
-      ? [{ domain: 'constraint', action: 'downgrade', code: 'low_readiness_power_blocked', components: ['power'] }]
-      : [];
-    return { raw, generated: generated.workout, effective: generated.workout, week: [{ date, workout: generated.workout }], profile: baseProfile('Pre-season'), date, evidence: [...generated.evidence, ...evidence] };
+    // No `readiness` in the canonical context (Sam's readiness law, 2026-07-28):
+    // the finaliser does not carry capacity any more, and the synthetic
+    // `low_readiness_power_blocked` evidence this scenario used to mint went with
+    // the removal it recorded. What the scenario proves now is the inverse — the
+    // power block SURVIVES a low-capacity week — and the shrink that replaces the
+    // removal is proven at its owner in `readinessDoseSweepTests` block [1].
+    const generated = canonical(raw, { phase: 'Pre-season' });
+    return { raw, generated: generated.workout, effective: generated.workout, week: [{ date, workout: generated.workout }], profile: baseProfile('Pre-season'), date, evidence: generated.evidence };
   }
 
   const multi = multiModalityWorkout();
