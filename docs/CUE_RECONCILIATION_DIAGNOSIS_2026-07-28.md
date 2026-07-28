@@ -132,7 +132,7 @@ that one is fine.
 
 ## For Sam's eye — authorship genuinely unclear
 
-Per the stop rule, these are **not** being blessed as part of Phase 2:
+Per the stop rule, these were **not** blessed:
 
 1. **The 13 `FAMILY_FALLBACKS` pairs.** No document, no commit attribution, no
    sign-off record. They predate the cue pass. One of them (`conditioning`) is
@@ -140,11 +140,87 @@ Per the stop rule, these are **not** being blessed as part of Phase 2:
 
 Nothing else on the list. Every other cue in the app traces to Sam.
 
+### Sam's rulings (2026-07-28) — and what shipped
+
+**Ruling 1 — DELETE the 12 latent pairs.** *"The coverage gate makes them
+unreachable, and fail-loud beats a safety net nobody authored."*
+
+Shipped, and the **table** went with them rather than being shrunk to its one
+live key. A one-key record is a mechanism pretending to still exist, and twelve
+empty slots is an invitation a later unit can accept with no gate noticing.
+`getExerciseCue` now returns a single named constant for conditioning and falls
+through to the suppressed generic — which renders nothing — for everything else.
+The gate bans the identifier `FAMILY_FALLBACKS` from reappearing anywhere in
+`src`, so the mechanism cannot come back by accident.
+
+**Ruling 2 — the live conditioning pair stays UNRULED.** Attributed
+pending-Stage-B; not blessed, not replaced; renders as-is on test devices (no
+live users). Resolution deferred to Stage B, where template `effortCue`s
+supersede it and `Easy Swim` gets a Sam-authored cue.
+
+> **TRIPWIRE:** if the app approaches real athletes before Stage B lands, this
+> line comes back to Sam.
+
+Shipped as `PENDING_CONDITIONING_CUE`, carrying that tripwire in its own
+docstring, and as `PENDING — Stage B` on all 23 of its sheet rows. The gate
+asserts the pair is still *labelled* unruled, so the attribution cannot be
+quietly deleted to make it read as authored.
+
+### The Stage B question, answered
+
+Asked before ruling 2: does modality-level cue text survive template-owned
+rendering, or die? **Not a clean death — so nothing was pinned.**
+
+- *Argues they die:* all 55 conditioning templates carry `effortCue`, "Sam's
+  authored athlete-facing cue for how the effort should feel", verbatim from the
+  templates workbook and equality-gated both directions. It has **no consumer
+  outside its own module** today ("NOT WIRED YET").
+- *Argues they survive:* none of the 8 live names appears in
+  `LEGACY_CONDITIONING_FORMAT_MAP`, the artifact documenting *"how each
+  pre-template format resolves"*. That map holds 15 session **formats** (Classic
+  4x4, Tabata, MetCon, Grind…), not these modality names.
+- *One provably cannot die:* `Easy Swim`. `ConditioningModality` is
+  `run | bike | air_bike | ski | row`. There is no swim.
+
+The inventory set the precedent on the tier-cap table — *"its fate at Stage B is
+genuinely unclear, so it stays in `pending_sam` rather than being pinned on a
+guess."* Same call. The shelf-life note is recorded on the pending entry so Sam
+knows what he is deferring.
+
+### One more thing found while answering it
+
+Of the 23 selectable conditioning rows, **8 render the pending pair and 15
+render no cue text at all** — they fall through to the generic pair, which
+`buildCueText` suppresses. That is not a regression and not fixed here; it is
+recorded on the pending entry because Stage B has to answer for it too.
+
 ## Numbers reconciled against the inventory
 
 The inventory measured 173 code cues with 29 absent from the gate's doc; today
 it is **175** with **31** absent. The difference is the three mobility cues
 added later the same day (`09afe43`). Same finding, moved snapshot.
+
+## What Phase 2 shipped
+
+| | |
+|---|---|
+| Canonical source | `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx` — the muscle/experience sheet renamed, `primaryCue`/`secondaryCue` on the row that already owns each exercise |
+| Rows | 198: **175** authored, **23** `PENDING — Stage B` |
+| Bind | **both directions** — a cue absent from the sheet fails the build |
+| Coverage | derives from `selectableExerciseNames()`, not the two pool registries |
+| Pending set | pinned at exactly 23 |
+| Deleted | the `FAMILY_FALLBACKS` table, banned from `src` by name |
+| Gate | `test:authored-cues` 41/41 → **53/53** |
+
+The 5 orphans are filed as Sam-authored-as-shipped with their attributing commit
+in the sheet's `Notes`, so attribution now lives in the source rather than in a
+commit message someone has to go looking for.
+
+**The gate was mutation-tested**, because a gate that has never failed has not
+been shown to work. Seven mutations, seven catches: rewording a shipped cue;
+shipping a cue absent from the sheet; quietly cueing a `PENDING` row; blanking a
+sheet cell; adding a 24th pending row; reintroducing a fallback table; and
+stripping the "NOT Sam-authored" label off the pending pair.
 
 ## Method
 

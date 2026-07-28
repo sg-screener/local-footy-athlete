@@ -40,7 +40,7 @@ import {
   resolveExerciseName,
 } from '../utils/loadEstimation';
 import { CONDITIONING_META } from '../data/exerciseTags';
-import { readSheetRecords } from './support/xlsxReader';
+import { readSheetRecords, readXlsx } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const src = path.resolve(__dirname, '..');
@@ -205,6 +205,26 @@ function main(): void {
     ok('the video supersessions are declared by the document itself',
       supersededVideos.size === 2,
       `video supersessions=${supersededVideos.size} (expected 2)`);
+
+    /**
+     * The superseded artifacts must keep saying so.
+     *
+     * Both still exist and both still look authoritative — one is titled "Sam's
+     * sign-off pass", the other opens "Source of truth". A reader who finds
+     * either and edits a cue there would be authoring into a document nothing
+     * reads. The markers are the only thing preventing that, so they are gated
+     * rather than trusted.
+     */
+    ok('the changeset declares its cue library superseded',
+      /THE "Final cue library" SECTION BELOW IS SUPERSEDED/.test(cueDoc));
+    ok('the changeset still declares its renames + deletions live',
+      /The rest of this document is LIVE/.test(cueDoc));
+
+    const reviewSheetTitle = readXlsx(path.join(repoRoot, 'docs/CUE_REVIEW_2026-07-23.xlsx'))[0]
+      .rows[0]?.[0] ?? '';
+    ok('the blank review workbook is marked non-canonical',
+      /NON-CANONICAL — HISTORICAL POINTER ONLY/.test(reviewSheetTitle),
+      `A1 reads: ${JSON.stringify(reviewSheetTitle.slice(0, 120))}`);
   }
 
   console.log('\n[2] The cue library IS Sam\'s authored text — BOTH directions');
