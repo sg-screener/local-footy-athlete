@@ -36,7 +36,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { canonicaliseHydratedProgram } from '../store/programStore';
+import { canonicaliseHydratedProgram, useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
+import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { ownSeasonPhase, seasonPhaseSkew } from '../rules/seasonPhaseOwner';
 import {
   decideProfileSetupChange,
@@ -131,6 +134,40 @@ const setupSelection = (over: Partial<Parameters<typeof decideProfileSetupChange
   gameDay: 'Saturday' as never,
   ...over,
 });
+
+function resetStores(): void {
+  useProgramStore.setState({
+    currentProgram: null, currentMicrocycle: null, todayWorkout: null,
+    isGenerating: false, isLoading: false, error: null, blockState: null,
+    acceptedMaterialContext: {
+      markedDays: {}, readinessSignalsByDate: {}, activeConstraints: [],
+      activeInjury: null, revision: 0, lastTransaction: null,
+    },
+    dateOverrides: {}, overrideContexts: {}, weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+    exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
+  } as never);
+}
+
+/** Sam's device: the profile write landed, the rebuild did not. */
+function seedSkewedDevice(): void {
+  resetStores();
+  const preSeasonProgram = generate(profile('Pre-season'));
+  useProfileStore.setState({
+    onboardingData: profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' }),
+  } as never);
+  useProgramStore.getState().setCurrentProgram(preSeasonProgram);
+}
+
+/** The same athlete on a healthy device. */
+function seedUnskewedDevice(): void {
+  resetStores();
+  const stored = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
+  const program = generate(stored);
+  useProfileStore.setState({ onboardingData: stored } as never);
+  useProgramStore.getState().setCurrentProgram(program);
+}
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. Hydration reports the skew and repairs nothing silently
@@ -374,13 +411,111 @@ section('[3] A hydrated In-season week is never a scheduled deload');
     `covered: ${Array.from(new Set(checked)).join(', ')}`);
 }
 
-// ─── Summary ───
-console.log(`\n— Summary —`);
-console.log(`  Pass: ${pass}`);
-console.log(`  Fail: ${fail}`);
-if (fail > 0) {
-  console.log(`\n— Failures —`);
-  for (const f of failures) console.log(`  • ${f}`);
-  process.exit(1);
+// ═════════════════════════════════════════════════════════════════════
+// 4. The repair actually repairs — at the COMMIT, not just the button
+// ═════════════════════════════════════════════════════════════════════
+//
+// Sam's device re-check failed here. The disclosure appeared, the button
+// darkened on press, and nothing happened. Section [2] above passed the whole
+// time because it tested the DECISION and stopped one layer short of the
+// commit — the button was enabled and the transaction still did nothing.
+//
+// Cause: on a skewed device the profile ALREADY holds the athlete's selection
+// (that is what skew means), so a patch setting `seasonPhase` to it produces a
+// byte-identical profile. `commitProfileProgramTransaction` decided "nothing
+// to do" from the PROFILE alone, so a request that is a no-op on the profile
+// but a real change to the PROGRAM was discarded as `no_change`.
+//
+// These assertions are at the commit boundary on purpose. A decision-level
+// test cannot see this defect, and that is exactly how it shipped.
+section('[4] The commit moves the clock, not just the button');
+
+async function skewSection(): Promise<void> {
+  const storedProfile = () => useProfileStore.getState().onboardingData;
+  const liveSkew = () => ownSeasonPhase({
+    program: useProgramStore.getState().currentProgram,
+    profile: storedProfile(),
+  }).skew;
+
+  {
+    // The repair press, exactly as `handleRepairSeasonPhaseSkew` issues it.
+    seedSkewedDevice();
+    const before = liveSkew();
+    ok('the device starts skewed', before !== null);
+    const result = await commitProfileProgramTransaction({
+      change: { kind: 'profile_setup', patch: { seasonPhase: before!.profileSelection } },
+      todayISO: WEEK_START,
+      sourceSurface: 'season_phase_skew_repair',
+    });
+    ok('the repair applies', result.ok === true, result.reason ?? result.message);
+    ok('the repair is a real program change, not a no-op',
+      result.changedProgram === true, `reason=${result.reason}`);
+    ok('the clock now answers to the athlete selection',
+      ownSeasonPhase({
+        program: useProgramStore.getState().currentProgram,
+        profile: storedProfile(),
+      }).phase === 'In-season');
+    ok('the skew is gone, so the disclosure retires itself', liveSkew() === null);
+  }
+
+  {
+    // The setup-sheet Save on the same device. Section [2] proved the button
+    // is live; this proves the press changes something.
+    seedSkewedDevice();
+    const decision = decideProfileSetupChange({
+      stored: storedProfile()!,
+      ownedPhase: 'Pre-season',
+      storedPosition: 'inside_mid' as never,
+      lfaDayCountNeedsSync: false,
+      selection: setupSelection(),
+    });
+    ok('Save is live (decision layer, as before)', decision.canSave);
+    const result = await commitProfileProgramTransaction({
+      change: { kind: 'profile_setup', patch: decision.patch },
+      todayISO: WEEK_START,
+      sourceSurface: 'profile_setup',
+    });
+    ok('and the Save actually commits', result.changedProgram === true,
+      `reason=${result.reason}`);
+    ok('the setup-sheet route clears the skew too', liveSkew() === null);
+  }
+
+  {
+    // The genuine no-op must STILL be a no-op. Widening the gate so the repair
+    // gets through must not turn every unchanged Save into a rebuild.
+    seedUnskewedDevice();
+    ok('the device starts unskewed', liveSkew() === null);
+    const result = await commitProfileProgramTransaction({
+      change: { kind: 'profile_setup', patch: { seasonPhase: 'In-season' } },
+      todayISO: WEEK_START,
+      sourceSurface: 'profile_setup',
+    });
+    ok('an unchanged request on an unskewed device is still no_change',
+      result.ok === true && result.changedProgram === false && result.reason === 'no_change',
+      `${result.reason} changed=${result.changedProgram}`);
+  }
+
+  {
+    const home = read('screens/home/useHomeScreen.ts');
+    // A repair that does nothing must SAY so. The handler branched only on
+    // `!result.ok`, so a `no_change` outcome was swallowed whole — the refusal
+    // table covered the case and the caller never asked it.
+    ok('the repair path reports a no-change outcome, not just a failure',
+      /handleRepairSeasonPhaseSkew[\s\S]{0,1400}changedProgram/.test(home));
+    ok('the repair path classifies through the refusal owner',
+      /handleRepairSeasonPhaseSkew[\s\S]{0,1400}classifyProgramMutationRefusal/.test(home));
+  }
 }
-process.exit(0);
+
+// ─── Summary ───
+skewSection().then(() => {
+  console.log(`\n— Summary —`);
+  console.log(`  Pass: ${pass}`);
+  console.log(`  Fail: ${fail}`);
+  if (fail > 0) {
+    console.log(`\n— Failures —`);
+    for (const f of failures) console.log(`  • ${f}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}).catch((error) => { console.error(error); process.exit(1); });

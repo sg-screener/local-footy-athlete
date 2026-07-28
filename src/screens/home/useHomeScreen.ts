@@ -889,6 +889,17 @@ export function useHomeScreen() {
         const refusal = classifyProgramMutationRefusal({ reason: result.reason });
         logger.error('[PhaseSkew] repair refused:', refusal.diagnostic ?? result.message);
         setSeasonPhaseRepairError(refusal.userMessage);
+        return;
+      }
+      if (!result.changedProgram) {
+        // A repair that changes nothing must SAY so. This branch was missing:
+        // the handler read only `!result.ok`, so a `no_change` outcome was
+        // swallowed whole — the button darkened, nothing happened, and the
+        // disclosure stayed. The refusal table covered `no_change` the whole
+        // time; the caller simply never asked it.
+        const outcome = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[PhaseSkew] repair changed nothing:', outcome.diagnostic ?? result.message);
+        setSeasonPhaseRepairError(outcome.userMessage);
       }
     } catch (err: any) {
       logger.error('[PhaseSkew] repair failed:', err?.diagnostic || err?.message || err);

@@ -28,6 +28,7 @@ import {
   composeAcceptedProfileConstraints,
   isAcceptedProfileConstraint,
 } from '../rules/acceptedProfileProjection';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 
 export type ProfileProgramChange =
   | {
@@ -243,7 +244,36 @@ export async function commitProfileProgramTransaction(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
-  if (semanticFingerprint(nextProfile) === semanticFingerprint(currentProfile)) {
+  // "Nothing to do" means THE ACCEPTED STATE ALREADY SATISFIES THIS REQUEST —
+  // not "the profile object is byte-identical".
+  //
+  // Those are different claims, and treating the profile as a proxy for the
+  // whole accepted state is what made three separate controls dead on a
+  // phase-skewed device. On such a device the profile ALREADY holds the
+  // athlete's selection (that is what skew means), so any request to re-own
+  // the program under it produces an identical profile — and was discarded as
+  // `no_change` while the program stayed built for the phase they left. The
+  // skew-repair button, the Profile setup-sheet Save, and the phase-shift
+  // sheet all short-circuited here.
+  //
+  // The transaction publishes the profile AND the program, so its
+  // already-satisfied test has to span both. Deliberately NOT a `force` flag
+  // or a repair-specific branch: either would let the next caller bypass the
+  // check entirely, and neither states what "no change" actually means.
+  const profileUnchanged =
+    semanticFingerprint(nextProfile) === semanticFingerprint(currentProfile);
+  const requestedPhase = nextProfile.seasonPhase ?? null;
+  const acceptedOwnedPhase = ownSeasonPhase({
+    program: useProgramStore.getState().currentProgram,
+    profile: currentProfile,
+  }).phase;
+  // With no program yet there is nothing to be out of step with, and the
+  // owner falls back to the profile selection — so this reads `true` and a
+  // genuine no-op stays a no-op.
+  const programAlreadyOwnsRequestedPhase =
+    requestedPhase === null || acceptedOwnedPhase === requestedPhase;
+
+  if (profileUnchanged && programAlreadyOwnsRequestedPhase) {
     // `no_change` is an OUTCOME with a reason, not bare success. Returning it
     // reason-less is what let a Save button that did nothing look identical to
     // one that worked — see rules/programMutationRefusal.
