@@ -40,10 +40,11 @@
   },
 
   "extraExceptions": {
-    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach.",
+    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach. Incline Y Raise joins them on Sam's ruling (2026-07-28) — same bench-compression mechanism, and its own cue says 'Chest on the incline'; it is isolation_upper, which no ribs pattern rule reaches.",
     "Shrugs|neck": "caution",
     "Chest Supported Row|ribs": "caution",
-    "Chest-Supported DB Row|ribs": "caution"
+    "Chest-Supported DB Row|ribs": "caution",
+    "Incline Y Raise|ribs": "caution"
   },
 
   "conditioning": {

@@ -211,14 +211,17 @@ ok('structural', 'every new-region rule is Sam-authored, never evidence-derived'
 const exceptionRows = readSheetRecords(FILE, 'Exceptions', 4);
 const exceptions: Record<string, string> = {};
 for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Region}`] = record.RULED;
-ok('snapshot', '23 exceptions (incl. singletons lifted when their thin rule died)',
-  exceptionRows.length === 23, `got ${exceptionRows.length}`);
+ok('snapshot', '24 exceptions (incl. singletons lifted when their thin rule died)',
+  exceptionRows.length === 24, `got ${exceptionRows.length}`);
 ok('structural', 'Shrugs carries the neck exception that replaced the inert Traps rule',
   exceptions['Shrugs|neck'] === 'caution', exceptions['Shrugs|neck'] ?? '(absent)');
 // Bench-compressed PULLS: the pressing rule cannot reach them, so Sam named them.
-ok('structural', 'both chest-supported rows carry the ribs exception',
-  exceptions['Chest Supported Row|ribs'] === 'caution'
-  && exceptions['Chest-Supported DB Row|ribs'] === 'caution');
+// Bench-compressed exercises no ribs PATTERN rule can reach: the two
+// chest-supported rows are pulls, Incline Y Raise is isolation_upper. All three
+// are named because the mechanism is the bench, not the movement pattern.
+ok('structural', 'every bench-compressed exercise carries the ribs exception',
+  ['Chest Supported Row', 'Chest-Supported DB Row', 'Incline Y Raise']
+    .every((name) => exceptions[`${name}|ribs`] === 'caution'));
 ok('structural', 'every exception names a real exercise and region',
   exceptionRows.every((r) => EXERCISE_TAGS[r.Exercise] !== undefined && REGIONS.includes(r.Region)));
 
@@ -264,8 +267,8 @@ ok('structural', 'every code entry authors all 13 regions — no omissions possi
   code.every((e) => REGIONS.every((r) => e.ratings[r] !== undefined)),
   code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
 ok('structural', '149 x 13 = 1937 cells compared', cells === 1937, `got ${cells}`);
-ok('snapshot', 'final distribution: 871 caution / 24 avoid / 1042 good',
-  distribution.caution === 871 && distribution.avoid === 24 && distribution.good === 1042,
+ok('snapshot', 'final distribution: 872 caution / 24 avoid / 1041 good',
+  distribution.caution === 872 && distribution.avoid === 24 && distribution.good === 1041,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
