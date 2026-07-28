@@ -187,15 +187,16 @@ console.log('\n[7] The screens use the owner — no second copy of the timing ru
     const screen = read(relative);
     const name = relative.split('/').pop();
 
-    ok(`${name} reads its refusals from the owner`,
-      /useRefusalOnContinue/.test(screen),
+    ok(`${name} calls the owner`,
+      /useRefusalOnContinue\(/.test(screen),
       'a screen with its own submitted flag is a second copy of the law');
 
-    // The defect in one regex: a screen that renders `validation.message`
-    // directly is rendering it on every keystroke, whatever else it does.
-    ok(`${name} never renders a validation message directly`,
-      !/validation[A-Za-z]*\s*&&\s*![A-Za-z]*validation[A-Za-z]*\.ok/.test(screen)
-      && !/Issue\?\.\s*message/.test(screen),
+    // THE defect, as one invariant: a screen that touches `.message` at all is
+    // deciding for itself when a refusal may be spoken. The owner hands back
+    // text that is already gated, so a compliant screen never needs to look.
+    // (Mutation-tested: reverting the screen to raw validation fails here.)
+    ok(`${name} never reads a refusal message itself`,
+      !/\.message\b/.test(screen),
       'the refusal must come from the owner, which knows whether it may be spoken');
 
     ok(`${name} still validates through the authored bound`,
@@ -203,10 +204,16 @@ console.log('\n[7] The screens use the owner — no second copy of the timing ru
       'the timing change must not move what "acceptable" means');
 
     // Continue gated on validity is exactly the dead-button failure: the refusal
-    // would have no press to be revealed by.
-    ok(`${name} does not gate Continue on the answer being ACCEPTED`,
-      !/continueDisabled=\{!(isValid|canContinue)\}/.test(screen),
-      'Continue is disabled for absence only');
+    // would have no press to be revealed by. Asserted POSITIVELY — the CTA takes
+    // the owner's answer verbatim — because the list of wrong ways to compute it
+    // is open-ended and the right way is one.
+    ok(`${name} takes its Continue gate from the owner`,
+      /continueDisabled=\{continueDisabled\}/.test(screen),
+      'Continue is disabled for absence only, and the owner decides that');
+
+    ok(`${name} withdraws a refusal when the answer is edited`,
+      /onAnswerEdited\(\)/.test(screen),
+      'a half-retyped number is a partial answer again');
   }
 }
 
