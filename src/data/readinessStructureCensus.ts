@@ -151,13 +151,19 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
   /* ── Structure debt: scheduled for removal ── */
   {
     file: 'utils/coachingEngine.ts',
-    edges: 36,
+    edges: 18,
     verdict: 'structure_pending_removal',
-    what: 'Hard-exposure cap, core session counts, three override floors, the optional/'
-      + 'recovery split, the early off-season target, a conditioning-frequency gate.',
-    disposition: 'Almost all sit inside the 48 decisions Batch 0 deletes outright. The '
-      + 'capacity rubric itself stays — it is an INPUT to dose, not a second dose authority.',
-    owningBatch: 'Batch 0 — the weekly-dose ownership deletion',
+    what: 'Conditioning frequency and its early off-season target, sprint permission '
+      + '(`readiness !== \'high\'` denies a standalone sprint outright), the bye-week '
+      + 'lighter flag, off-feet tempo forcing, and the power/sprint loading gates.',
+    disposition: 'The STRENGTH half is paid: Batch 0 deleted the phase x readiness core '
+      + 'and hard-exposure tables, the three override floors and the optional/recovery '
+      + 'split, and the contract now owns the weekly strength count outright. What is '
+      + 'left is conditioning, sprint and power — which the Batch 0 reassessment listed '
+      + 'under Not Covered ("the same two-authority shape is likely, and was not swept... '
+      + 'that is an assertion to test, not one to assume"). Two of them are BLOCKS, not '
+      + 'doses, so the sprint floor in Bible Section 2 already bears on them.',
+    owningBatch: 'Batch 0 follow-on — the conditioning/sprint/power dose sweep',
   },
   {
     file: 'rules/weeklyExposureContractBuilders.ts',
@@ -236,8 +242,23 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
  * went through 46 first, held for a session while Sam ruled how it should land —
  * the ratchet caught the held edge returning after its entry had already been
  * deleted, which is the direction that is easy to get wrong.
+ *
+ * 45 -> 27 (2026-07-28): Batch 0's weekly-dose deletion paid EIGHTEEN of
+ * `coachingEngine`'s thirty-six, not all thirty-six. The unit was scoped and
+ * approved as the STRENGTH dose — the core-session and hard-exposure tables,
+ * the three override floors, the early off-season target and the optional/
+ * recovery split — and that is exactly what it deleted.
+ *
+ * The other eighteen are conditioning, sprint and power. They were counted
+ * against this file because the census classifies at FILE level, which the
+ * reassessment said in its own Not Covered section: "per-edge verdicts inside
+ * coachingEngine.ts... most sit in code Batch 0 deletes, so per-edge work there
+ * would be written against code that is about to disappear." That turned out to
+ * over-estimate the overlap — the strength deletion and the readiness edges are
+ * largely disjoint sets in this file. Recording the real number rather than the
+ * predicted one is the whole point of a ratchet that must EQUAL current debt.
  */
-export const STRUCTURE_DEBT_BASELINE = 45;
+export const STRUCTURE_DEBT_BASELINE = 27;
 
 export interface SupersededExemptionClaim {
   /** Path relative to `src/`. */
