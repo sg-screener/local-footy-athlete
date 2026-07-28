@@ -45,6 +45,7 @@ import {
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
+import type { G1MoveRouteId } from '../rules/g1MoveAsk';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -2128,6 +2129,17 @@ export interface AthleteSessionMoveTransactionInput {
   originalSourceWorkout: Workout;
   existingTargetWorkout: Workout | null;
   scope: 'whole_session';
+  /**
+   * The session that actually LANDS, when it is not the source session verbatim
+   * — the G-1 ask-flow's accessories-only and deloaded routes.
+   *
+   * It must carry the source session's identity (`rules/g1MoveAsk` guarantees
+   * this), so the move stays one atomic transaction and the conservation
+   * post-condition still sees the athlete's session survive. `originalWorkout`
+   * on the constraint is unaffected and remains the FULL accepted session, so
+   * Undo restores exactly what was there before the athlete chose a route.
+   */
+  placedSession?: { route: G1MoveRouteId; workout: Workout } | null;
 }
 
 export interface AthleteMutationTransactionStage {
@@ -2587,7 +2599,11 @@ export function stageAthleteSessionMoveTransaction(
       alreadyApplied: true,
     };
   }
-  const movedWorkout = cloneWorkoutForDate(acceptedSource, targetDate);
+  // The athlete's chosen route decides WHAT lands; the source session decides
+  // WHOSE it is. `placedSession` always carries the source identity, so this
+  // stays one session moving rather than a delete plus an add.
+  const placed = args.placedSession?.workout ?? acceptedSource;
+  const movedWorkout = cloneWorkoutForDate(placed, targetDate);
   // A game-proximity FILLER on the destination is not a swap partner. It is
   // regenerated every render from the fixture, so relocating it to the source
   // day would materialise resolver-owned content as athlete-owned content and

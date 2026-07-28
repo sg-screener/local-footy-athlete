@@ -38,6 +38,7 @@ import {
   rebindDerivedSessionProvenance,
 } from './derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
+import type { CalendarDayType } from '../store/calendarStore';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import {
   currentAthleteActionTrace,

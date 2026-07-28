@@ -1,4 +1,5 @@
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
+import type { G1MoveRouteId } from '../utils/planChangeTypes';
 import {
   applyConditioningDeloadToExercises,
   applyStrengthDeloadToExercises,
@@ -30,14 +31,7 @@ import { buildDerivedSession, type AthleteContext } from '../utils/sessionBuilde
  * Do not edit a string here without Sam's sign-off and the matching doc edit.
  */
 
-/** The routes offered when an athlete puts a session on G-1. */
-export type G1MoveRouteId =
-  /** Keep the derived Gunshow. The move is ABANDONED — no transaction at all. */
-  | 'keep_gunshow'
-  /** Accessories only: pump and prehab, nothing heavy. */
-  | 'accessories_only'
-  /** The same session under the one reduction mechanism, DELOAD_LAW. */
-  | 'deloaded';
+export type { G1MoveRouteId } from '../utils/planChangeTypes';
 
 export interface G1MoveRoute {
   id: G1MoveRouteId;
@@ -271,7 +265,7 @@ function accessoriesOnlySession(args: {
   }
   return {
     ...args.sourceWorkout,
-    intensity: 'Low',
+    intensity: 'Light',
     exercises: kept.map((exercise, index) => ({ ...exercise, exerciseOrder: index + 1 })),
     hasCombinedConditioning: false,
     conditioningBlock: undefined,
@@ -301,7 +295,7 @@ function deloadedSession(args: {
   );
   return {
     ...args.sourceWorkout,
-    intensity: 'Low',
+    intensity: 'Light',
     exercises: applyConditioningDeloadToExercises(strengthApplied, policy),
   };
 }

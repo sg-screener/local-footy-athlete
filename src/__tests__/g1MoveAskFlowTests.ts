@@ -39,12 +39,19 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { commitAthleteSessionMoveTransaction } from '../store/acceptedStateTransaction';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
-import { effectiveGameDatesAround } from '../utils/sessionResolver';
+import { effectiveGameDatesAround, resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import {
+  applyPlanChange,
+  previewPlanChangeRisk,
+} from '../utils/planChangeProducer';
+import type { PlanChange, G1MoveRouteId } from '../utils/planChangeTypes';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import type { AthleteContext } from '../utils/sessionBuilder';
 import {
   G1_MOVE_ROUTES,
+  G1_MOVE_WARNING,
   g1MoveRoute,
   placeSessionForRoute,
   resolveG1MoveAsk,
@@ -116,7 +123,7 @@ function profile(): OnboardingData {
     injuries: [],
     usualGameDay: 'Saturday',
     gameDay: 'Saturday',
-  } as OnboardingData;
+  } as unknown as OnboardingData;
 }
 
 /**
@@ -132,7 +139,7 @@ function practiceMatchAthlete(): OnboardingData {
     seasonPhase: 'Pre-season',
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-  } as OnboardingData;
+  } as unknown as OnboardingData;
 }
 
 function addDaysISO(dateISO: string, days: number): string {
@@ -156,6 +163,7 @@ function seed(
         -(options.phaseEntryOffsetWeeks ?? 0) * 7,
       ),
       originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
     },
   }));
   useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
@@ -178,6 +186,10 @@ function seed(
       activeInjury: null,
       revision: 1,
       lastTransaction: 'g1-ask-flow-test:seed',
+      injuryEpisodes: [],
+      temporarySourceFacts: [],
+      acceptedCompositionBase: null,
+      acceptedProfileSnapshot: null,
     },
     dateOverrides: {},
     overrideContexts: {},
@@ -204,6 +216,10 @@ function accepted(weekStart: string) {
 function workoutOn(weekStart: string, dayOfWeek: number): Workout | null {
   return accepted(weekStart).visibleWorkouts.find((workout) =>
     workout.dayOfWeek === dayOfWeek) ?? null;
+}
+
+function visibleWeek(weekStart: string) {
+  return resolveWeekWithConditioning(weekStart, buildScheduleStateImperative());
 }
 
 function identity(workout: Workout): string {
@@ -518,6 +534,150 @@ run('11 a session the day is already built for lands without an ask', () => {
     sourceDate: weekStart, targetDate: addDaysISO(weekStart, 2), sourceWorkout: source,
     gameDates: gameDatesFor(weekStart, g1),
   }) === null, 'the ask fired on a day that is not the day before a game');
+});
+
+// ── Stage 3: the production door ──────────────────────────────────────────
+
+function previewMove(weekStart: string, from: number, to: number, route?: G1MoveRouteId) {
+  const week = visibleWeek(weekStart);
+  const change: PlanChange = {
+    kind: 'move_session',
+    fromDate: addDaysISO(weekStart, from === 0 ? 6 : from - 1),
+    toDate: addDaysISO(weekStart, to === 0 ? 6 : to - 1),
+    ...(route ? { g1Route: route } : {}),
+  };
+  return {
+    week,
+    change,
+    preview: quiet(() => previewPlanChangeRisk({
+      change,
+      visibleWeek: week,
+      todayISO: CURRENT_WEEK,
+      profile: useProfileStore.getState().onboardingData ?? undefined,
+      activeConstraints: [],
+    })),
+  };
+}
+
+function storeFingerprint(): string {
+  const state = useProgramStore.getState();
+  return JSON.stringify({
+    program: state.currentProgram,
+    overlays: state.weekScopedOverlays,
+    constraints: state.userRemovalConstraints,
+    context: state.acceptedMaterialContext,
+  });
+}
+
+run('12 a routeless move onto G-1 answers with the ask and applies nothing', () => {
+  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
+  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  const before = storeFingerprint();
+
+  const { preview } = previewMove(weekStart, 1, 5);
+
+  assert(preview.g1Ask, 'the production door did not raise the ask for a G-1 move');
+  assert(preview.appliedDates.length === 0,
+    `the ask applied ${preview.appliedDates.join(', ')}`);
+  assert(storeFingerprint() === before, 'raising the ask mutated accepted state');
+  assert(preview.g1Ask.gameDayName === 'Saturday',
+    `the warning names ${preview.g1Ask.gameDayName} as the game day`);
+  assert(preview.g1Ask.g1DayName === 'Friday' &&
+    preview.g1Ask.sourceDayName === 'Monday', 'the ask named the wrong days');
+  assert(preview.message === G1_MOVE_WARNING.ask.headline,
+    'the door did not lead with Sam\'s authored headline');
+});
+
+run('13 a move that is not onto G-1 is untouched by the ask', () => {
+  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
+  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  // Monday → Sunday: an ordinary empty day, nowhere near the fixture.
+  const { preview } = previewMove(weekStart, 1, 0);
+  assert(!preview.g1Ask, 'the ask fired on an ordinary move');
+});
+
+run('14 route (b) through the real door lands accessories on G-1', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const source = workoutOn(weekStart, 1)!;
+  const sourceIdentity = identity(source);
+  const mainLiftIds = source.exercises.filter(isMainStrengthRow)
+    .map((row) => row.exerciseId);
+  assert(mainLiftIds.length > 0, 'seed has no main lifts — test is vacuous');
+
+  const { change, week, preview } = previewMove(weekStart, 1, 5, 'accessories_only');
+  assert(!preview.g1Ask, 'a routed move still raised the ask');
+  assert(preview.ok, `routed preview refused: ${preview.message}`);
+  const commit = quiet(() => applyPlanChange({
+    change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
+    setManualOverride: () => {
+      throw new Error('athlete move must not use the single-date writer');
+    },
+  }));
+  assert(commit.ok, `route (b) commit failed: ${JSON.stringify(commit.rejected)}`);
+
+  const friday = workoutOn(weekStart, 5);
+  assert(friday && identity(friday) === sourceIdentity,
+    `G-1 is owned by ${friday ? identity(friday) : 'REST'}, not the athlete's session`);
+  assert(friday.exercises.every((row) => !mainLiftIds.includes(row.exerciseId)),
+    'a main lift landed on the day before the game');
+  assert(workoutOn(weekStart, 1) === null, 'the source day was not vacated');
+});
+
+run('15 route (c) through the real door lands the DELOAD_LAW dose on G-1', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const source = workoutOn(weekStart, 1)!;
+  const sourceIdentity = identity(source);
+  const setsBefore = new Map(source.exercises.map((row) =>
+    [row.exerciseId, row.prescribedSets]));
+
+  const { change, week, preview } = previewMove(weekStart, 1, 5, 'deloaded');
+  const commit = quiet(() => applyPlanChange({
+    change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
+    setManualOverride: () => { throw new Error('single-date writer'); },
+  }));
+  assert(commit.ok, `route (c) commit failed: ${JSON.stringify(commit.rejected)}`);
+
+  const friday = workoutOn(weekStart, 5);
+  assert(friday && identity(friday) === sourceIdentity, 'route (c) lost the session');
+  const mainAfter = friday.exercises.filter(isMainStrengthRow);
+  assert(mainAfter.length > 0, 'the deload removed every main lift');
+  assert(mainAfter.some((row) => (setsBefore.get(row.exerciseId) ?? 0) > row.prescribedSets),
+    'no main lift lost sets — the deload dose did not reach the placed session');
+});
+
+run('16 route (a) is reachable only by applying nothing at all', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const before = storeFingerprint();
+  // The sheet answers "Keep the Gunshow" by closing, never by issuing a change.
+  // There is deliberately NO g1Route value that commits an abandonment: a route
+  // that committed "nothing" would still be a transaction in the ledger, and an
+  // undo entry for a decision the athlete never made.
+  assert(g1MoveRoute('keep_gunshow').commits === false, 'route (a) commits');
+  assert(storeFingerprint() === before, 'route (a) mutated accepted state');
+});
+
+run('17 committing a routeless G-1 move refuses rather than applying it', () => {
+  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
+  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  const before = storeFingerprint();
+  const { change, week, preview } = previewMove(weekStart, 1, 5);
+  assert(preview.g1Ask, 'the ask was not raised');
+
+  // Defence in depth. The sheet is supposed to hold the change back until the
+  // athlete answers, but a caller that ignores the ask and commits anyway must
+  // not get a silent full-session placement on the day before a game.
+  const commit = quiet(() => applyPlanChange({
+    change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
+    setManualOverride: () => { throw new Error('single-date writer'); },
+  }));
+  assert(!commit.ok, 'a routeless G-1 move committed without the athlete answering');
+  assert(commit.appliedDates.length === 0,
+    `the refused commit still applied ${commit.appliedDates.join(', ')}`);
+  assert(storeFingerprint() === before,
+    'the refused routeless commit mutated accepted state');
 });
 
 console.log(`\nG-1 move ask-flow totals: ${passed} passed, ${failed} failed`);
