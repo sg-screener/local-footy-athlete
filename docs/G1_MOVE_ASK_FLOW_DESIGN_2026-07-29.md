@@ -189,5 +189,50 @@ seven-question reassessment is written before any further code.
 - New suite pinning the ask-flow: menu uniformity, route outcomes, the
   no-transaction property of (a), DELOAD_LAW as the only reduction, the second
   warning on (c), and copy equality against this document.
-- `npm run test:bible` EXIT=0.
+- `npm run test:bible` — **EXIT=1, one red, and it is NOT this unit's.** See below.
 - Merge brings `feat/practice-match-g1-hold` (`4a0de0d`) with it.
+
+## 7. BLOCKING: the held commit has a second red gate
+
+`npm run test:power-counting` fails on the hold branch. Bisected across every
+commit in this unit and the two below it:
+
+| Commit | `test:power-counting` |
+|---|---|
+| `ca2a796` (main) | 13/13 green |
+| `4a0de0d` practice-match ruling | **FAILS** |
+| `ef85470` … `2f2bc2d` (this unit, 6 commits) | fails, unchanged |
+
+**The held practice-match commit is the cause. None of this unit's commits move
+it.** The hold was recorded as blocked on ONE red gate
+(`athleteSessionMoveTests` 12); there were two. This unit fixed the recorded one
+and cannot merge past the unrecorded one.
+
+Failing scenario: `preseason-team-and-game` — Pre-season, one team training, a
+Saturday fixture.
+
+```
+Section18WeekAcceptanceError: Section 18 final-week rejection
+  (conditioning_intensity_mismatch:conditioning:{"mediumHardApp":1,"hardApp":0})
+  authorisedReductions[1].detail:
+    'Weekly selector budget=1; normal anchors=team_training,practice_match'
+```
+
+Under Sam's ruling a Pre-season fixture IS a practice match and its week IS a
+game week. That week's exposure contract then requires a HARD app-conditioning
+exposure, and the week — now game-week-shaped, with G-1 and G+1 protection
+consuming days — can only supply a medium-hard one. The gateway exhausts its
+repairs and returns `status: 'impossible'`.
+
+This is not a test artifact. `impossible` is what the athlete would meet as
+*"We couldn't safely build your week from your current settings."* on a
+perfectly ordinary pre-season week with one team training and a practice match.
+
+It is an exposure-contract threshold question for a practice-match week, which
+is Sam's ruling domain and a different unit from this one. Per the standing
+escalation rule this is reported rather than patched: the fix is either the
+conditioning intensity policy for `practice_match_week` (should a practice-match
+week require a hard app exposure at all?) or the anchor accounting that leaves
+the week unable to place one. Both are his call.
+
+Everything else in `test:bible` is green, before and after this suite.
