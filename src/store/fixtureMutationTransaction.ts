@@ -10,6 +10,7 @@ import {
   canonicalFixtureKind,
   targetWeekFixtures,
 } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import {
   gameChangeActionFromRebuild,
   upsertGameChangeCoachNoteFromDiff,
@@ -131,16 +132,30 @@ function traceTargetDate(input: FixtureMutationTransactionInput): string {
     : todayISOLocal();
 }
 
+/**
+ * The accepted-state phase, read once through the owner. Fixture identity in
+ * this transaction and fixture identity in the visible week are now the same
+ * expression over the same value.
+ */
+function acceptedOwnedPhase(profile: OnboardingData) {
+  return ownSeasonPhase({
+    program: useProgramStore.getState().currentProgram,
+    profile,
+  });
+}
+
 function fixtureFactsForWeeks(args: {
   profile: OnboardingData;
   weekStarts: readonly string[];
 }): Array<{ date: string; kind: FixtureMutationKind }> {
   const markedDays = useProgramStore.getState().acceptedMaterialContext.markedDays;
+  const ownedPhase = acceptedOwnedPhase(args.profile);
   return args.weekStarts.flatMap((weekStart) =>
     targetWeekFixtures({
       profile: args.profile,
       weekStart,
       markedDays,
+      ownedPhase,
     }));
 }
 
@@ -171,10 +186,15 @@ function resolveFixtureMutation(
       ),
     };
   }
-  if (input.fixtureKind !== canonicalFixtureKind(profile)) {
+  // Redundant by construction now that every producer derives `fixtureKind`
+  // from the same owner this reads. Kept as a loud invariant: reaching it
+  // means a command was built outside the owner, which is a defect in the
+  // producer rather than something the athlete can retry their way out of.
+  const ownedPhase = acceptedOwnedPhase(profile);
+  if (input.fixtureKind !== canonicalFixtureKind(ownedPhase)) {
     throw new FixtureMutationValidationError(
       'fixture_kind_phase_mismatch',
-      `Accepted ${profile.seasonPhase} state does not own ${input.fixtureKind} fixtures.`,
+      `Accepted ${ownedPhase.phase ?? 'unset'} state does not own ${input.fixtureKind} fixtures.`,
     );
   }
   const sourceDate = normalizeDate(input.sourceDate, 'sourceDate');

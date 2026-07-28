@@ -40,6 +40,7 @@ import {
 } from '../utils/visibleProgramReadModel';
 import { todayISOLocal } from '../utils/appDate';
 import { deriveProfileReadiness } from '../utils/readiness';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 
 // ─── Internal: Read raw state from both stores ───
@@ -133,8 +134,15 @@ function useScheduleState(): ScheduleState & {
     ? acceptedContext.activeConstraints
     : mirroredCoachActiveConstraints;
 
-  // Season phase from onboarding — null if not yet completed
-  const seasonPhase = useProfileStore((s) => s.onboardingData?.seasonPhase) || null;
+  // Season phase from THE owner (rules/seasonPhaseOwner). This used to read
+  // `onboardingData.seasonPhase` directly while the home chrome read the
+  // program's clock — two answers, and a failed phase-shift rebuild left the
+  // visible week built from one and labelled by the other. The clock owns it;
+  // the profile selection is the input the clock was minted from.
+  const seasonPhase = ownSeasonPhase({
+    program: currentProgram,
+    profile: onboardingData,
+  }).phase;
 
   // Game day fields — feed the resolver's virtual-game logic.
   // `usualGameDay` is the new-style field set by the phase-shift modal.

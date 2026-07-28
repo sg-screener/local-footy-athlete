@@ -17,6 +17,7 @@ import {
 import {
   canonicalFixtureKind,
 } from '../../rules/fixtureConditionedAvailability';
+import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
 import {
   createTemporaryEquipmentFact,
 } from '../../rules/temporarySourceFact';
@@ -582,7 +583,10 @@ async function defaultInvokeCanonicalOwner(
       if (!profile) throw new Error('explorer_fixture_profile_missing');
       const fixtureKind = action.type === 'fixture.add'
         ? action.args.fixtureKind === 'practice-match' ? 'practice_match' : 'game'
-        : canonicalFixtureKind(profile);
+        : canonicalFixtureKind(ownSeasonPhase({
+            program: useProgramStore.getState().currentProgram,
+            profile,
+          }));
       const result = await executeFixtureMutationTransaction({
         action: action.type.split('.')[1] as 'add' | 'move' | 'remove',
         fixtureKind,

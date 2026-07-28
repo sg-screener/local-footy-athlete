@@ -3,6 +3,7 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { canonicalFixtureKind } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import type { FixtureMutationTransactionResult } from '../store/fixtureMutationTransaction';
 import type { FixtureChangeCommand } from '../types/fixtureMutation';
 import {
@@ -97,7 +98,7 @@ function snapshot(args: {
   return {
     expectedAcceptedRevision: args.revision ?? 41,
     profile,
-    fixtureKind: canonicalFixtureKind(profile),
+    fixtureKind: canonicalFixtureKind(ownSeasonPhaseForGeneration(profile)),
     fixtures: args.fixtures ?? [],
   };
 }
@@ -191,9 +192,9 @@ async function main(): Promise<void> {
   });
 
   await run('2 canonical phase kind ignores classifier kind except for conflict', async () => {
-    assert(canonicalFixtureKind({ seasonPhase: 'Pre-season' }) === 'practice_match', 'pre-season kind');
-    assert(canonicalFixtureKind({ seasonPhase: 'In-season' }) === 'game', 'in-season kind');
-    assert(canonicalFixtureKind({ seasonPhase: 'Off-season' }) === 'game', 'off-season kind');
+    assert(canonicalFixtureKind(ownSeasonPhaseForGeneration({ seasonPhase: 'Pre-season' })) === 'practice_match', 'pre-season kind');
+    assert(canonicalFixtureKind(ownSeasonPhaseForGeneration({ seasonPhase: 'In-season' })) === 'game', 'in-season kind');
+    assert(canonicalFixtureKind(ownSeasonPhaseForGeneration({ seasonPhase: 'Off-season' })) === 'game', 'off-season kind');
     const h = harness({ accepted: snapshot({ phase: 'Pre-season' }) });
     const result = await executeCoachFixtureChange(
       intent({ action: 'add', targetDate: SATURDAY, explicitFixtureKind: 'game' }),

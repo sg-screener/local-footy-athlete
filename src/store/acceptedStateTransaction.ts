@@ -57,10 +57,12 @@ import {
   type AcceptedProfileSnapshotV1,
 } from './acceptedStateColdStart';
 import {
+  canonicalFixtureKind,
   resolveFixtureConditionedAvailability,
   targetWeekFixtures,
   type TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import {
   buildFixtureMinimalReplan,
   type FixtureMutationIntent,
@@ -265,7 +267,10 @@ function materialiseFixtureMarksForCandidate(args: {
     const existing = overlays[weekStart];
     const contract = existing?.exposureContractV2 ?? microcycle.exposureContractV2;
     const desiredAnchor = explicitGameDate
-      ? args.profile.seasonPhase === 'Pre-season' ? 'practice_match' : 'game'
+      ? canonicalFixtureKind(ownSeasonPhase({
+          program: args.candidate.currentProgram,
+          profile: args.profile,
+        }))
       : 'bye';
     const fixtureAnchor = contract?.anchors.find((anchor) =>
       anchor.kind === 'game' || anchor.kind === 'practice_match');
@@ -1352,7 +1357,7 @@ function datesInWeek(weekStart: string): string[] {
 function fixtureFromContract(
   contract: WeeklyExposureContractV2 | undefined,
   weekStart: string,
-  profile: OnboardingData,
+  ownedPhase: ReturnType<typeof ownSeasonPhase>,
 ): TargetWeekFixture[] {
   const anchor = contract?.anchors.find((candidate) =>
     candidate.kind === 'game' || candidate.kind === 'practice_match');
@@ -1360,9 +1365,11 @@ function fixtureFromContract(
   return [{
     date: datesInWeek(weekStart).find((date) =>
       new Date(`${date}T12:00:00`).getDay() === anchor.dayOfWeek)!,
-    kind: anchor.kind === 'practice_match' || profile.seasonPhase === 'Pre-season'
+    // An anchor already authored as a practice match stays one; otherwise the
+    // owned phase decides, through the one expression.
+    kind: anchor.kind === 'practice_match'
       ? 'practice_match'
-      : 'game',
+      : canonicalFixtureKind(ownedPhase),
   }];
 }
 
@@ -1412,7 +1419,8 @@ export function buildFixtureProjection(args: {
   // Only identity-matched accepted prescriptions and dependency-owned work
   // are materialised later; unrelated visible-only fill never becomes input.
   const sourceCanonicalWorkouts = acceptedSource.composedWorkouts;
-  const contractFixtures = fixtureFromContract(sourceContract, args.weekStart, args.profile);
+  const ownedPhase = ownSeasonPhase({ program: args.program, profile: args.profile });
+  const contractFixtures = fixtureFromContract(sourceContract, args.weekStart, ownedPhase);
   const visibleFixtureWorkouts = sourceCanonicalWorkouts.filter((workout) =>
     workout.workoutType === 'Game');
   const priorFixtures = contractFixtures.length > 0
@@ -1421,15 +1429,14 @@ export function buildFixtureProjection(args: {
       ? visibleFixtureWorkouts.map((workout) => ({
           date: datesInWeek(args.weekStart).find((date) =>
             new Date(`${date}T12:00:00`).getDay() === workout.dayOfWeek)!,
-          kind: args.profile.seasonPhase === 'Pre-season'
-            ? 'practice_match' as const
-            : 'game' as const,
+          kind: canonicalFixtureKind(ownedPhase),
         }))
       : [];
   const proposedFixtures = targetWeekFixtures({
     profile: args.profile,
     weekStart: args.weekStart,
     markedDays: args.markedDays,
+    ownedPhase,
   });
   const targetGameDay = proposedFixtures[0]
     ? dayNameForDate(proposedFixtures[0].date)
@@ -1449,6 +1456,7 @@ export function buildFixtureProjection(args: {
     priorFixtures,
     proposedFixtures,
     proposedMarkedDays: args.markedDays,
+    ownedPhase,
     byeUsualGameDay: explicitNoGame || proposedFixtures.length === 0,
     activeConstraints: args.activeConstraints,
   });

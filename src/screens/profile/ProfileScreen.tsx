@@ -13,6 +13,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
+import { useProgramStore } from '../../store/programStore';
+import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -132,6 +134,16 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  // The phase this screen shows and compares against is the OWNED one — what
+  // the program is actually built as. Reading `onboardingData.seasonPhase`
+  // here is what made the Save button dead on a skewed device: the sheet
+  // displayed the profile's phase, so re-picking it was "no change", and the
+  // rebuild that would have fixed the skew never ran.
+  const currentProgramForPhase = useProgramStore((s) => s.currentProgram);
+  const ownedSeasonPhase = ownSeasonPhase({
+    program: currentProgramForPhase,
+    profile: onboardingData,
+  });
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
@@ -190,13 +202,13 @@ export default function ProfileScreen() {
     (onboardingData.experienceLevel as ExperienceLevel) || null,
   );
   const [pendingSeasonPhase, setPendingSeasonPhase] = useState<SeasonPhase>(
-    (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase,
+    (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase,
   );
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
   const [draftSeasonPhase, setDraftSeasonPhase] = useState<SeasonPhase>(
-    (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase,
+    (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase,
   );
   const [draftPreferredDays, setDraftPreferredDays] = useState<DayOfWeek[]>([]);
   const [draftTeamDays, setDraftTeamDays] = useState<DayOfWeek[]>([]);
@@ -317,7 +329,7 @@ export default function ProfileScreen() {
     const currentName = onboardingData.firstName || '';
     const currentPosition = currentRole(onboardingData);
     const currentExperience = (onboardingData.experienceLevel as ExperienceLevel) || null;
-    const currentSeasonPhase = (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase;
+    const currentSeasonPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
     const currentPreferredDays = (onboardingData.preferredTrainingDays as DayOfWeek[]) || [];
     const currentTeamDays = (onboardingData.teamTrainingDays as DayOfWeek[]) || [];
     const currentGameDay = dayFromGameFields(onboardingData);
@@ -361,7 +373,7 @@ export default function ProfileScreen() {
   }).map((note) =>
     typeof note.severity === 'number' ? `${note.title} — ${note.severity}/10` : note.title,
   );
-  const currentPhase = (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase;
+  const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
   const pendingIsInSeason = pendingSeasonPhase === 'In-season';
   const pendingGameDayValid = !pendingIsInSeason || Boolean(pendingGameDay);
   const lfaDayCountNeedsSync =

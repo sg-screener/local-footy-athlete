@@ -55,6 +55,7 @@ import {
   resolveSeasonPhaseClock,
   type SeasonPhaseClock,
 } from '../rules/seasonPhaseClock';
+import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -737,10 +738,12 @@ function canonicaliseHydratedMicrocycle(
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
+    // One intensity owner. This used to be a second table that read
+    // `Off-season ? 0.85 : 0.9`, which silently gave a hydrated IN-SEASON
+    // deload a 10% tonnage cut — the owner holds the weight in-season, and
+    // there was no athlete reason behind the drop.
     intensityMultiplier: phaseResolution
-      ? phaseResolution.weekKind === 'deload'
-        ? phaseClock?.selectedPhase === 'Off-season' ? 0.85 : 0.9
-        : 1
+      ? resolveWeekIntensityMultiplier(selectedPhase, phaseResolution.weekKind)
       : microcycle.intensityMultiplier,
     workouts,
     exposureContractV2,

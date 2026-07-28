@@ -76,7 +76,8 @@ import {
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../../rules/durableFactHorizon';
-import { seasonPhaseFromProgram } from '../../rules/seasonPhaseClock';
+import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
+import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -271,15 +272,18 @@ export function useHomeScreen() {
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
-  // Season phase is read from the generated program's clock — the single
-  // source of truth the visible week is built from (seasonPhaseClock.selectedPhase).
-  // Falls back to the profile only when there is no valid clock yet (fresh
-  // account, pre-generation). Reading the profile directly used to drift from
-  // the week after a phase shift rebuilt the program but the profile write
-  // lagged (HOMEV2 row 5.1: card stuck "In-season" over an off-season week).
-  const currentPhase = (seasonPhaseFromProgram(currentProgram)
-    ?? onboardingData.seasonPhase
-    ?? 'Pre-season') as SeasonPhase;
+  // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
+  // that used to sit here claimed the clock was "the single source of truth
+  // the visible week is built from" — and it was not, because `useSchedule`
+  // built that week from `profile.seasonPhase`. Both now read the same owner,
+  // so the claim is true by construction rather than by assertion.
+  //
+  // `ownedPhase.skew` is the typed report of a device that carries the old
+  // disagreement; it drives the repair disclosure below, and it is never
+  // resolved silently in either direction.
+  const ownedPhase = ownSeasonPhase({ program: currentProgram, profile: onboardingData });
+  const currentPhase = (ownedPhase.phase ?? 'Pre-season') as SeasonPhase;
+  const seasonPhaseSkew = ownedPhase.skew;
   // Latched target phase for the shift modal. Set explicitly by the caller
   // of handleOpenPhaseShift so the modal renders from the user's actual
   // selection, never from a derived "next phase". Seeded to NEXT_PHASE so
@@ -983,7 +987,7 @@ export function useHomeScreen() {
         : action === 'remove' ? options.targetDate : undefined;
       const mutation = await executeFixtureMutationTransaction({
         action,
-        fixtureKind: currentPhase === 'Pre-season' ? 'practice_match' : 'game',
+        fixtureKind: canonicalFixtureKind(ownedPhase),
         ...(sourceDate ? { sourceDate } : {}),
         ...(action !== 'remove' ? { targetDate: options.targetDate } : {}),
         expectedAcceptedRevision: acceptedRevision,

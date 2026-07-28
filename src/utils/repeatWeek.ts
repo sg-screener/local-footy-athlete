@@ -42,6 +42,7 @@ import type {
 import {
   resolveProfileTargetWeekAvailability,
 } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   section18PhaseTableSignature,
@@ -288,6 +289,7 @@ function resolveRepeatTargetExposureContracts(args: {
     weekStart: args.targetWeekStart,
     markedDays: args.acceptedMaterialContext.markedDays,
     activeConstraints: args.acceptedMaterialContext.activeConstraints,
+    ownedPhase: ownSeasonPhaseForGeneration(args.profile),
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const inputs = onboardingToCoachingInputs(args.profile, {

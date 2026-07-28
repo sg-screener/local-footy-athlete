@@ -22,6 +22,7 @@ import type {
   Workout,
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
 import {
   canonicaliseAcceptedStateCandidate,
@@ -279,14 +280,17 @@ function resolveAvailability(args: {
     profile: args.athlete,
     weekStart: WEEK_START,
     markedDays: args.prior,
+    ownedPhase: ownSeasonPhaseForGeneration(args.athlete),
   });
   const proposedFixtures = targetWeekFixtures({
     profile: args.athlete,
     weekStart: WEEK_START,
     markedDays: args.proposed,
+    ownedPhase: ownSeasonPhaseForGeneration(args.athlete),
   });
   return resolveFixtureConditionedAvailability({
     profile: args.athlete,
+    ownedPhase: ownSeasonPhaseForGeneration(args.athlete),
     weekStart: WEEK_START,
     priorFixtures,
     proposedFixtures,
@@ -394,6 +398,7 @@ async function main(): Promise<void> {
     const athlete = profile();
     const resolution = resolveFixtureConditionedAvailability({
       profile: athlete,
+      ownedPhase: ownSeasonPhaseForGeneration(athlete),
       weekStart: WEEK_START,
       priorFixtures: [{ date: SATURDAY, kind: 'game' }],
       proposedFixtures: [],
@@ -802,6 +807,7 @@ async function main(): Promise<void> {
       }) === snapshot, `stored preferences mutated for ${tt}TT`);
       const readded = resolveFixtureConditionedAvailability({
         profile: athlete,
+        ownedPhase: ownSeasonPhaseForGeneration(athlete),
         weekStart: WEEK_START,
         priorFixtures: [],
         proposedFixtures: [{ date: SATURDAY, kind: 'game' }],
@@ -829,6 +835,7 @@ async function main(): Promise<void> {
     const athlete = profile();
     const resolution = resolveFixtureConditionedAvailability({
       profile: athlete,
+      ownedPhase: ownSeasonPhaseForGeneration(athlete),
       weekStart: WEEK_START,
       priorFixtures: [{ date: SATURDAY, kind: 'game' }],
       proposedFixtures: [{ date: SUNDAY, kind: 'game' }],
@@ -843,12 +850,14 @@ async function main(): Promise<void> {
     const athlete = profile();
     const open = resolveFixtureConditionedAvailability({
       profile: athlete,
+      ownedPhase: ownSeasonPhaseForGeneration(athlete),
       weekStart: WEEK_START,
       priorFixtures: [{ date: SATURDAY, kind: 'game' }],
       proposedFixtures: [],
     });
     const blocked = resolveFixtureConditionedAvailability({
       profile: athlete,
+      ownedPhase: ownSeasonPhaseForGeneration(athlete),
       weekStart: WEEK_START,
       priorFixtures: [{ date: SATURDAY, kind: 'game' }],
       proposedFixtures: [],

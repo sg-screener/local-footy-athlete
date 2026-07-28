@@ -32,6 +32,7 @@ import {
 } from '../utils/workoutCanonicalisation';
 import { hasPowerRow, powerRows, withoutPowerRows } from './sessionRowCounting';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
+import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import {
   buildDerivedSessionExpiryCandidates,
   createDerivedSessionProvenance,
@@ -235,6 +236,10 @@ export function resolveFinalVisibleSection18Week(args: {
         profile: args.profile,
         weekStart,
         markedDays,
+        // The candidate week under validation was built from this profile;
+        // validating it against the persisted clock would judge a rebuild by
+        // the phase it is replacing.
+        ownedPhase: ownSeasonPhaseForGeneration(args.profile),
       })
     : null;
   const profileAvailableDays = targetWeekAvailability?.effectiveAvailableDayNumbers ?? [];
