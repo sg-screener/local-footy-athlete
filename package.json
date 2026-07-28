@@ -232,7 +232,8 @@
     "test:load-ratio-rulings": "TZ=Australia/Melbourne sucrase-node src/__tests__/loadRatioRulingTests.ts",
     "verify:injury-matrix-sheet": "TZ=Australia/Melbourne sucrase-node scripts/verify-injury-matrix-sheet.ts",
     "test:bible-anchors": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleThresholdAnchorTests.ts",
-    "test:readiness-structure-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessStructureCensusTests.ts"
+    "test:readiness-structure-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessStructureCensusTests.ts",
+    "verify:exposure-contract-sheet": "TZ=Australia/Melbourne sucrase-node scripts/verify-exposure-contract-sheet.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
