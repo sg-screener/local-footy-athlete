@@ -3,6 +3,7 @@
 **Twin of `docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx`.** The workbook is the
 artifact Sam rules on; this is the prose record of what it contains and why.
 
+**Built on Sam's FINAL 12-region list, ruled 2026-07-28.**
 **Status: PHASE 1 — awaiting Sam's ruling. No code changed.**
 
 ---
@@ -10,8 +11,7 @@ artifact Sam rules on; this is the prose record of what it contains and why.
 ## The defect
 
 `EXERCISE_TAGS[name].injury` decides whether an exercise is offered to an athlete
-with an active injury. Each entry carries ten ratings, one per injury region,
-each `'good' | 'caution' | 'avoid'`.
+with an active injury.
 
 ```ts
 const SAFE: InjuryProfile = { adductor: 'good', /* …all ten… */ wrist: 'good' };
@@ -20,185 +20,245 @@ function inj(overrides: Partial<InjuryProfile>): InjuryProfile {
 }
 ```
 
-Any key not written is filled with `'good'`. So a pair nobody ever assessed and a
-pair Sam reviewed and passed as safe are byte-identical once merged. **Absence
-renders as approval** — the same defect class the provenance inventory found
-repo-wide, and the one Sam has already ruled dead (precedent: the deliberate
+Any key not written is filled with `'good'`. A pair nobody assessed and a pair Sam
+reviewed and passed are byte-identical once merged. **Absence renders as
+approval** — the defect class Sam has ruled dead (precedent: the deliberate
 ten-key profile on `Scap Pull Ups`, `exerciseTags.ts:623`).
 
-## A correction to the inventory's count
+## The region vocabulary — Sam's final twelve
 
-The inventory reported **934 of 1,240 pairs** implicit. That denominator covers
-only the 124 entries that call `inj({...})`. It misses **25 entries written as
-`injury: SAFE`** — the bare all-good constant, with no override at all. Those are
-the same defect in its purest form: ten unruled pairs each, and not one of them
-was counted.
+> groin, hip, quad, hamstring, knee, calf, ankle/foot, lowerBack, neck,
+> shoulder, elbow, wrist/hand
 
-|  | Inventory | Actual |
+`ankle/foot` and `wrist/hand` are single combined regions; the slash is part of
+the athlete-facing label. Fingers and hand roll into `wrist/hand`, foot into
+`ankle/foot`. No ribs, no upper back; concussion stays with the illness doors.
+
+### The 10 → 12 migration
+
+| Old key | New region | Note |
 |---|---|---|
-| Entries | 124 | **149** |
-| Pairs | 1,240 | **1,490** |
-| Explicitly authored | 306 | **306** |
-| Never ruled | 934 (75%) | **1,184 (79%)** |
+| `adductor` | `groin` | **merged** |
+| `pubalgia` | `groin` | **merged** |
+| `ankle` | `ankle/foot` | renamed, widened |
+| `wrist` | `wrist/hand` | renamed, widened |
+| `lowerBack`, `knee`, `hamstring`, `calf`, `shoulder`, `elbow` | unchanged | |
+| — | `hip`, `quad`, `neck` | **new — no predecessor** |
 
-The explicit figure matches exactly, which is what confirms the gap is in the
-denominator rather than in the method. The real queue is **250 pairs larger** than
-the inventory stated.
+## The counts
 
-## Scope
+| | |
+|---|---|
+| Exercises × regions | 149 × 12 = **1,788 pairs** |
+| Authored (carried through the migration) | **280** |
+| Never ruled | **1,503 (84%)** |
+| — of which brand-new regions (`hip`/`quad`/`neck`) | **447** |
+| Conflicted — Sam must pick | **5** |
+| Flagged for a closer look | **250**, across 113 exercises |
 
-**In: all 149 `EXERCISE_TAGS` entries** — 128 strength plus 21 conditioning.
-Sam's ruling, 2026-07-28: *"the gate must cover the whole map with no carve-outs."*
+The 280 is lower than the old vocabulary's 306 because the merge collapses two
+columns into one: 60 old `adductor`/`pubalgia` cells become 34 authored `groin`
+cells plus 5 left unruled for Sam.
 
-The conditioning entries are not analogous to mobility. They live in the same
-map and are read through the same consumer — `tags?.injury[bucket]`,
-`tapSwapHierarchy.ts:268`. Same mechanism, same defect.
+### A correction to the provenance inventory
 
-**Out: mobility contraindications.** A genuinely different mechanism —
-`exercisePools` carries an `InjuryTag[]` list with its own vocabulary
-(`hip`, `groin`, `lower_back`), filtered at `sessionBuilder.ts:308`. Already
-Sam-authored, and out by his standing ruling. Untouched here.
+The inventory reported **934 of 1,240** on the old ten. That denominator covered
+only the 124 entries calling `inj({...})` and missed **25 written as
+`injury: SAFE`** — the bare all-good constant, the same defect with no override.
+On the old ten the real figure was **1,184 of 1,490**. Explicit pairs matched
+exactly at 306 both ways, which is what proved the gap was the denominator and
+not the method.
 
-**Vocabulary check — no stop-rule trip.** No exercise in `EXERCISE_TAGS`
-references an injury region outside the ten. `InjuryBucket = InjuryKey`
-(`programAdjustmentEngine.ts:428`), so the consumer vocabulary matches the
-profile exactly. Nothing to widen, and no vocabulary question for Sam.
+---
+
+## The merge carried nothing silently
+
+Sam's ruling: *"the 16 agreeing overlaps and the 13 pubalgia-only ratings carry
+over as authored; the 5 conflicts go on Sam's ruling list… flagged with both
+prior values so he sees what each label used to say. Nothing auto-picked."*
+
+| Case | Count | What happened |
+|---|---|---|
+| `adductor` and `pubalgia` agreed | 16 | carried over as authored |
+| `pubalgia` only | 13 | carried over as authored |
+| `adductor` only | 5 | carried over as authored |
+| **Disagreed** | **5** | **left UNRULED — tab 5, both prior values shown** |
+| | **34 authored + 5 for Sam** | |
+
+The five conflicts are all `pubalgia = avoid` against `adductor = caution`:
+**Back Squat, Front Squat, Bulgarian Split Squats, Walking Lunges, Nordic Lower.**
+Auto-merging would silently pick a winner — taking `caution` under-restricts,
+taking `avoid` over-restricts. Neither is mine to choose.
+
+Tab 2 carries a **`groin — prior labels`** column recording, for every merged
+cell, which old label it came from. Nothing about that column is untraceable.
+
+### `pubalgia` was unreachable — that is why this matters
+
+No free-text input in **either** engine ever resolved to the `pubalgia` bucket.
+Probed directly: `pubalgia` → null, `sports hernia` → null, `osteitis pubis` →
+null. Those 34 ratings — the most heavily authored non-obvious column in the
+matrix, 9 `avoid` and 24 `caution` on the heaviest lower-body lifts — **never
+once fired**, and the bespoke handling downstream (`programAdjustmentEngine.ts:994`,
+*"No heavy hinge or kicking work"*) is unreachable code.
+
+Merging into `groin` is what makes that thinking reachable for the first time.
 
 ---
 
 ## The workbook
 
-Four tabs, in the load-ratio sheet's mould: prose on its own tab, headers on row
-1 of each data tab, readable by the repo's own `xlsxReader`.
-
 | Tab | What it is |
 |---|---|
-| `README` | How to rule, the count correction, what the flags are and are not |
-| `Injury matrix` | 149 rows × 10 injury columns — the ruling surface |
-| `Group sign-off` | 15 rows. The mechanism that promotes untouched defaults |
+| `README` | How to rule, the migration, the count correction, what the flags are not |
+| `Injury matrix` | 149 rows × 12 regions — the ruling surface |
+| `Group sign-off` | 15 rows. Promotes untouched cells, or refuses to |
 | `Flag rules` | The muscle→region and pattern→region table behind every CHECK |
+| `Conflicts & routing` | Part A: the 5 conflicts. Part B: the routing rules |
 
 ### Cell vocabulary
 
 | Shown | Means |
 |---|---|
-| `caution` / `avoid` | authored today — a real decision someone made |
-| `good` | authored today as an explicit safe |
+| `caution` / `avoid` | authored — a real decision someone made |
+| `good` | authored as an explicit safe |
 | `good (defaulted)` | **never ruled.** The helper wrote it, not a person |
 | `good (defaulted — CHECK)` | never ruled, and a flag rule says look harder |
+| `unruled (new region)` | `hip`/`quad`/`neck` — no value has ever existed |
+| `unruled (new region — CHECK)` | same, and flagged |
+| `CONFLICT — adductor=… vs pubalgia=…` | one of the 5 |
 
-Sam rules by overwriting a cell with a bare `good` / `caution` / `avoid`. Ten
-separate `SAM:` columns would make a 24-column sheet nobody could read; at this
-width in-place is the only workable shape, and the `(defaulted)` suffix is what
-lets the Phase 2 ingest tell an untouched cell from a ruled one.
+Sam rules by overwriting a cell with a bare `good` / `caution` / `avoid`.
+
+### `unruled (new region)` is deliberately not `good (defaulted)`
+
+A defaulted cell has been silently acting as `'good'` in the running app. A
+new-region cell has **never existed at all**. They are shaded and worded
+differently so an empty new column is never mistaken for a reviewed-and-safe one
+— which is the same absence-as-approval trap this unit exists to kill, and the
+easiest way to reintroduce it would have been to seed `hip`/`quad`/`neck` from
+their current proxies.
 
 ### Group sign-off is not optional
 
-Correcting cells is only half a ruling. The cells Sam *leaves alone* are still
-sitting on the blank default, and they are not promoted to an authored `'good'`
-on anyone's reading but his. Tab 3 asks, per group, whether the remaining
-defaults are safe.
+A group with no sign-off keeps its unruled cells unruled — including its new
+`hip`/`quad`/`neck` cells — and **Phase 2 fails the build on them rather than
+assume**.
 
-**A group with no sign-off keeps its defaults unruled, and Phase 2 fails the
-build on them rather than assume.** That is the whole point of the unit: never
-again convert silence into approval.
+| # | Group | Exercises | Unruled | of which new | Flagged | Conflicts |
+|---|---|---|---|---|---|---|
+| 1 | LOWER BODY — SQUAT / LUNGE | 16 | 158 | 48 | 45 | 4 |
+| 2 | LOWER BODY — HINGE | 10 | 95 | 30 | 24 | 1 |
+| 3 | LOWER BODY — POWER / PLYO | 10 | 77 | 30 | 26 | 0 |
+| 4 | LOWER BODY — ISOLATION | 14 | 144 | 42 | 43 | 0 |
+| 5 | **CONDITIONING** | 21 | 209 | 63 | **0** | 0 |
+| 6 | CARRIES | 4 | 33 | 12 | 5 | 0 |
+| 7 | CORE / TRUNK | 16 | 170 | 48 | 8 | 0 |
+| 8 | UPPER BODY — VERTICAL PUSH | 7 | 73 | 21 | 12 | 0 |
+| 9 | UPPER BODY — HORIZONTAL PUSH | 11 | 106 | 33 | 13 | 0 |
+| 10 | UPPER BODY — VERTICAL PULL | 6 | 65 | 18 | 11 | 0 |
+| 11 | UPPER BODY — HORIZONTAL PULL | 6 | 65 | 18 | 9 | 0 |
+| 12 | UPPER BODY — POWER / PLYO | 4 | 40 | 12 | 4 | 0 |
+| 13 | SHOULDERS / UPPER BACK | 9 | 100 | 27 | 17 | 0 |
+| 14 | ARMS — BICEPS | 8 | 91 | 24 | 19 | 0 |
+| 15 | ARMS — TRICEPS | 7 | 77 | 21 | 14 | 0 |
+| | **Total** | **149** | **1,503** | **447** | **250** | **5** |
 
 ---
 
 ## The flags
 
-**159 defaulted cells flagged, across 89 exercises.** A flag fires when the
+**250 unruled cells flagged across 113 exercises.** A flag fires when the
 exercise's own **primary** muscles — from `MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`,
-Sam's own authored sheet — or its movement pattern overlap that injury region.
-Secondary muscles deliberately do not fire: they would flag most of the sheet and
-the signal would be worthless.
+Sam's own sheet — or its movement pattern overlap that region. Secondary muscles
+deliberately do not fire.
 
-The flags are **inference, not evidence**. They are mine, not Sam's. An unflagged
-cell is not endorsed; it merely did not trip a rule. Tab 4 lists every rule so a
-rule can be rejected wholesale rather than argued with forty cells at a time.
+The flags are **inference, not evidence**, and they are mine. An unflagged cell is
+not endorsed; it merely did not trip a rule. Tab 4 lists every rule so one can be
+rejected wholesale.
 
-### Per group, in the sitting order
-
-Lower-body loaded patterns lead, per the unit brief. Conditioning sits fifth
-rather than last: running is a loaded lower-body pattern by stakes, and it is the
-one group where the flags give Sam no help at all, so it wants his attention
-while he is fresh.
-
-| # | Group | Exercises | Defaulted | Flagged | Flag coverage |
-|---|---|---|---|---|---|
-| 1 | LOWER BODY — SQUAT / LUNGE | 16 | 120 | 14 | all rows flag-reviewed |
-| 2 | LOWER BODY — HINGE | 10 | 73 | 12 | all rows flag-reviewed |
-| 3 | LOWER BODY — POWER / PLYO | 10 | 52 | 7 | all rows flag-reviewed |
-| 4 | LOWER BODY — ISOLATION | 14 | 113 | 26 | all rows flag-reviewed |
-| 5 | CONDITIONING | 21 | 167 | 0 | **NO FLAG RULE RAN on 21 of 21** |
-| 6 | CARRIES | 4 | 24 | 1 | all rows flag-reviewed |
-| 7 | CORE / TRUNK | 16 | 135 | 8 | all rows flag-reviewed |
-| 8 | UPPER BODY — VERTICAL PUSH | 7 | 59 | 12 | all rows flag-reviewed |
-| 9 | UPPER BODY — HORIZONTAL PUSH | 11 | 83 | 13 | all rows flag-reviewed |
-| 10 | UPPER BODY — VERTICAL PULL | 6 | 53 | 5 | all rows flag-reviewed |
-| 11 | UPPER BODY — HORIZONTAL PULL | 6 | 53 | 9 | all rows flag-reviewed |
-| 12 | UPPER BODY — POWER / PLYO | 4 | 32 | 3 | all rows flag-reviewed |
-| 13 | SHOULDERS / UPPER BACK | 9 | 82 | 17 | all rows flag-reviewed |
-| 14 | ARMS — BICEPS | 8 | 75 | 18 | all rows flag-reviewed |
-| 15 | ARMS — TRICEPS | 7 | 63 | 14 | all rows flag-reviewed |
-| | **Total** | **149** | **1,184** | **159** | |
+`neck` is deliberately conservative: it fires only from a `Traps` primary muscle
+and from loaded carries. Inventing a neck rule for pressing or core would have
+manufactured confidence nobody authored.
 
 ### The 21 rows the flags could not review
 
-Every conditioning row is marked **`no flag rule — unreviewed by flags`**, and
-shaded grey rather than amber, so flag-clean-*by-analysis* and
-flag-clean-*by-blindness* are never confused for one another.
+Every conditioning row is marked **`no flag rule — unreviewed by flags`** and
+shaded grey, so flag-clean-*by-analysis* and flag-clean-*by-blindness* are never
+confused.
 
-The reason is more specific than "missing data", and worth stating precisely:
+- **20 of 21 ARE in the muscle sheet**, with muscle lists Sam authored **empty on
+  purpose** — *"session format, not an individual movement"*.
+- **1 (`MetCon`) is absent** from that sheet entirely.
+- `'conditioning'` has no movement-pattern rule either — deliberately. Inventing
+  one from `CONDITIONING_META`'s modality/impact would be an unauthored rule
+  smuggled in under a flag column.
 
-- **20 of the 21 ARE in the muscle sheet.** Sam authored their muscle lists
-  **empty on purpose** — *"session format, not an individual movement — no
-  meaningful muscle group"* (`Light Circuits`). So the muscle rule has nothing to
-  match on.
-- **1 (`MetCon`) is absent from the muscle sheet** entirely.
-- `'conditioning'` also has no movement-pattern rule, deliberately — inventing
-  one from `CONDITIONING_META`'s modality/impact would be a new rule nobody
-  authored, smuggled in under a flag column.
+**209 unruled pairs, zero automated help, covering sprinting.** They sit fifth in
+the sitting order rather than last.
 
-So both paths produce nothing, by different routes, and neither is evidence of
-safety. **These 21 rows need Sam's eye more than the flagged ones, not less** —
-167 unruled pairs, zero automated help, and they cover sprinting, which is where
-a wrong `'good'` on `hamstring` does the most damage.
+Only **15 rows are flag-clean by analysis** now (down from 39 on the old ten) —
+adding `hip`, `quad` and `neck` gave the rules three more places to fire.
 
-By contrast, **39 strength rows are flag-clean by analysis**: real muscle signal,
-rules ran, nothing overlapped. All 128 strength rows carry real primary-muscle
-data — there are no blind spots on that side of the sheet.
+---
+
+## Routing — tab 5, Part B
+
+Authoring a region is worth nothing if athlete free text cannot reach it. That is
+exactly how `pubalgia` died. Three of Sam's new regions are **silent proxies**
+today, and one of his roll-ups reaches nothing at all:
+
+| Athlete types | Routes to today | Status |
+|---|---|---|
+| `quad` / `quads` | **knee** | proxy — the code labels it one |
+| `hip` / `hips` | **adductor** | proxy |
+| `neck` | **shoulder** | proxy |
+| `hand` / `fingers` / `thumb` | **nothing — null** | hole; Sam's ruling fixes it |
+| `glute` / `glutes` | **hamstring** | proxy; no glute region in the twelve |
+| `upper back` | **lowerBack** | proxy; Sam ruled no upper back |
+| `hip flexor`, `pubalgia`, `ribs` | **nothing — null** | holes |
+
+A quad strain is currently scored against knee ratings. These candidates need
+Sam's ruling or the new columns will be authored and still unreachable.
+
+### And there are two divergent copies of that mapping
+
+`BODY_PART_TO_BUCKET` exists in **both** `programAdjustmentEngine.ts:438` and
+`injuryAdjustmentEngine.ts:110`, and they disagree — the second has no `wrist`,
+no `elbow`, no `neck`. Per CLAUDE.md that is a two-representations problem, so
+Phase 2 should collapse them to one owner rather than edit both in step.
 
 ---
 
 ## Verification
 
 Round-trip proven against the repo's **own** `src/__tests__/support/xlsxReader.ts`
-— the reader the Phase 2 equality suite will use. A sheet the gate cannot read
-would be decoration. **24 assertions, 0 failures**, including:
+— the reader the Phase 2 equality suite will use. **37 assertions, 0 failures**,
+including:
 
-- every one of the 149 code exercises appears, and the sheet invents none
-- **every cell resolves to the exact effective rating in code today** — the
-  sheet is a faithful mirror of the current state, not a re-derivation
-- the counts hold: 306 explicit, 1,184 defaulted, 159 flagged
-- the cell vocabulary is closed to the five permitted strings
-- CHECK cells and the `Flags` column agree on every row
-- all 15 groups reach the sign-off tab, every sign-off cell starts empty, and its
-  counts sum to 149 / 1,184 / 159
+- all 12 regions present in Sam's order; the retired keys gone as columns
+- **every straight-through cell mirrors code exactly**, checked against what the
+  source actually authors rather than against the post-`inj()` value
+- the merge verified per exercise: 16 agreed, 13 pubalgia-only, 5 adductor-only
+  carried; **5 conflicts left unruled with both prior values visible**, and no
+  conflict cell pre-filled
+- the arithmetic closes: 280 + 1,503 + 5 = 1,788
+- 447 new-region cells, none of them on an old region
+- the three flag states stay distinguishable, and no conditioning row carries a CHECK
+- **no data tab contains a blank row anywhere** (see below)
 
-### One trap found while proving it
+### The trap this sheet is built to avoid
 
-The sign-off tab first read back **14 groups instead of 15**. A blank spacer row
-above the header emits no `<row>` element at all, and `xlsxReader` indexes the
-rows it actually reads — so the spreadsheet row number and `readSheetRecords`'
-`headerRow` drifted apart by one, and the gate read the first data row as its
-header. Silently, and while still passing its own row count.
+On the first build the sign-off tab read back **14 groups instead of 15**, while
+still passing its own row count. A blank spacer row emits no `<row>` element, and
+`xlsxReader` indexes the rows it actually reads — so the spreadsheet row number
+and `readSheetRecords`' `headerRow` drifted apart and the gate read a data row as
+its header.
 
-Fixed by removing the spacer so the two can never disagree, plus two standing
-assertions that the header is the 5th row the reader sees and that no blank row
-sits above it. Worth recording because any future sheet with authored preamble
-above a header can hit exactly this, and it fails by quietly losing a row rather
-than by erroring.
+It nearly recurred: the second build's `Conflicts & routing` tab separated Part A
+from Part B with a blank row. Both are now titled separator rows, and a standing
+assertion fails if **any** blank row appears on a data tab at all — a stronger
+invariant than checking above the header, because the tab has two headers.
 
 ---
 
@@ -208,15 +268,17 @@ Not started. Waits on Sam's ruled workbook.
 
 1. **Sheet leads, code follows.** Ingest the rulings; the sheet becomes the source
    of truth, on the muscle/experience and load-ratio precedent.
-2. **Equality in both directions.** A gate holds `EXERCISE_TAGS.injury` equal to
-   the workbook — Sam editing a cell fails the build, and so does a code-only
-   rating that no cell authorises.
-3. **Retire the default.** Every entry authors all ten keys explicitly. The gate
-   fails on any missing key. `inj()` either dies or becomes a validator that
+2. **Equality in both directions.** Sam editing a cell fails the build; so does a
+   code-only rating no cell authorises.
+3. **Migrate the type to the twelve.** `InjuryProfile` gains `hip`, `quad`, `neck`;
+   `adductor`/`pubalgia` collapse to `groin`; `ankle`→`ankleFoot`,
+   `wrist`→`wristHand`, with the slashed athlete-facing labels authored in **one**
+   owner rather than duplicated.
+4. **Collapse the two `BODY_PART_TO_BUCKET` copies to one owner** and author the
+   routing rules from tab 5, so no region is authored-but-unreachable again.
+5. **Retire the default.** Every entry authors all twelve regions explicitly. The
+   gate fails on any missing key. `inj()` either dies or becomes a validator that
    refuses an incomplete profile.
-4. **Close the authoring-template trap permanently.** A new exercise cannot enter
-   the map half-specified, so this defect cannot regrow.
 
-Unruled groups — any Sam does not sign off — do not get promoted. They fail the
-gate until ruled, which is the correct failure direction: *fail loud, and fail
-toward not prescribing.*
+Unruled groups do not get promoted — they fail the gate until ruled, which is the
+correct failure direction: *fail loud, and fail toward not prescribing.*
