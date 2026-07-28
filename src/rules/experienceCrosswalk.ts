@@ -57,7 +57,7 @@ export function meetsTrainingAgeMinimum(
 
 /**
  * An experience gate as Sam authored it in
- * `docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`.
+ * `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`.
  */
 export type ExperienceGate =
   | 'everyone'

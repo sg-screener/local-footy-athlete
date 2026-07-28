@@ -128,7 +128,7 @@ Per rider 2, these are recorded, not put in front of Sam. They seed the Phase 2 
 |---|---|---|---|---|
 | `data/conditioningTemplates.ts` | 115 | `equality_bound` | `docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx` | ✅ both directions, `test:conditioning-templates` |
 | `rules/phaseRepSchemes.ts` | 19 | `bible_anchor` | Bible §5 | ✅ anchors re-read this pass, present and value-bearing |
-| Muscle/experience matrix | — | `equality_bound` | `docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx` | ✅ both directions, `test:muscle-experience` |
+| Muscle/experience matrix | — | `equality_bound` | `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx` | ✅ both directions, `test:muscle-experience` |
 | `data/exerciseCues.ts` (144 of 173) | — | doc-bound | `docs/CUE_CHANGESET_2026-07-23.md` | ⚠️ **one direction only** — see Gap 2 |
 | 6 load ratios | 6 | `ruling_anchor` | `docs/LOAD_RULINGS_...2026-07-25.md` | ✅ table parsed, compared both directions |
 

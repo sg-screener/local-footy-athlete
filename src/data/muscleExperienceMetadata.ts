@@ -1,7 +1,7 @@
 /**
  * Muscle + experience metadata — the D11 muscle-block build data.
  *
- * SOURCE OF TRUTH: `docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`
+ * SOURCE OF TRUTH: `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`
  * (Sam, AUTHORED FINAL, sign-off 2026-07-25). 193 exercises across 24 pools.
  *
  * A typed projection, held to the sheet by `muscleExperienceEqualityTests` in

@@ -5,21 +5,29 @@
  * Cues tell the athlete HOW to perform the movement. Nothing about why it's
  * in the program, what day it is, or what comes next.
  *
- * Fallback: if an exercise has no entry, the system uses the MovementPattern
- * from exerciseTags.ts to select a family-level cue pair.
+ * Fallback: an exercise with no entry renders NO cue. The one exception is
+ * conditioning — see PENDING_CONDITIONING_CUE, which is not authored.
  *
  * PROVENANCE: Authored by Sam, 2026-07-23. Additions require Sam sign-off.
  * COPYEDIT: Sam-authorised mechanical punctuation pass (2026-07-24) — terminal
  * stops + a stray trailing comma fixed on 43 cues, zero word changes. Applied
  * identically to the changeset doc so doc↔code equality holds.
  *
- * EXERCISE_CUES is generated from Sam's authored sheet
- * (docs/CUE_CHANGESET_2026-07-23.md, "Final cue library"). It is not edited by
- * hand: `src/__tests__/authoredCueLibraryTests.ts` parses that document and
- * fails the build on any divergence, so a reworded cue cannot ship.
+ * EXERCISE_CUES is a projection of Sam's authored sheet,
+ * `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx` — the `primaryCue` /
+ * `secondaryCue` columns, on the same row that already owns each exercise's
+ * muscles and experience gate. It is not edited by hand:
+ * `src/__tests__/authoredCueLibraryTests.ts` parses that sheet and binds it to
+ * this file IN BOTH DIRECTIONS, so neither a reworded cue nor an unfiled one
+ * can ship.
+ *
+ * Authored-ness used to be spread across three documents with nothing
+ * reconciling them, and the gate read only one — so 31 cues lived here that it
+ * had never heard of. All were Sam's; none had been filed. The sheet is now the
+ * only door. See docs/CUE_RECONCILIATION_DIAGNOSIS_2026-07-28.md.
  *
  * ADDING CUES:
- *   Add to the changeset document first, with Sam's sign-off, then mirror it
+ *   Add the row to the master sheet first, with Sam's sign-off, then mirror it
  *   here. primaryCue = mechanics, position, range, bracing.
  *   secondaryCue = intent, control, tempo, tension.
  *   3–8 words ideal, 18 words hard cap. No fluff.
@@ -39,9 +47,10 @@ export interface ExerciseCue {
 // Each movement family defines what the primary and secondary cues
 // should focus on, and what language to avoid.
 //
-// These rules are documentation for authors AND the input to the
-// fallback system. The FAMILY_FALLBACKS record below encodes the
-// default cue pair for each family.
+// These rules are documentation for authors. They used to double as the input
+// to a fallback table that supplied a default pair per family; that table is
+// gone (Sam, 2026-07-28) and nothing derives a cue from these rows now. They
+// describe how to WRITE a cue, not what to render when one is missing.
 
 /*
 ┌──────────────────────────┬──────────────────────────────────┬────────────────────────────────┬───────────────────────────────┐
@@ -70,27 +79,40 @@ export interface ExerciseCue {
 └──────────────────────────┴──────────────────────────────────┴────────────────────────────────┴───────────────────────────────┘
 */
 
-// ─── Part 4: Fallback System ───
+// ─── Part 4: The one pending pair ───
 //
-// When an exercise has no entry in EXERCISE_CUES, look up its
-// MovementPattern from EXERCISE_TAGS and return the family fallback.
-// This guarantees every exercise gets a useful cue pair, never
-// "Focus on proper form."
+// There used to be a family-fallback TABLE here: thirteen cue pairs, one per
+// MovementPattern, returned whenever an exercise had no entry of its own.
+//
+// Sam deleted twelve of them on 2026-07-28. They fired for no exercise — every
+// name that could reach them was `conditioning` — and they appeared in no
+// authored document, so they were a safety net nobody had written. Shrinking
+// the table to its one live key would have left twelve empty slots a later unit
+// could refill with no gate noticing, so the table went with them. Fail loud.
+//
+// What survives is one pair, and it is NOT authored.
 
-export const FAMILY_FALLBACKS: Record<MovementPattern, ExerciseCue> = {
-  squat:            { primaryCue: 'Sit into the hips, chest up.',       secondaryCue: 'Control the descent.' },
-  lunge:            { primaryCue: 'Front shin vertical, tall through the midline.', secondaryCue: 'Steady on each rep.' },
-  hinge:            { primaryCue: 'Push hips back, flat back.',         secondaryCue: 'Feel the hamstrings load.' },
-  plyo:             { primaryCue: 'Land soft, absorb with hips.',       secondaryCue: 'Max intent, quality reps.' },
-  horizontal_push:  { primaryCue: 'Set the shoulder blades, then press.', secondaryCue: 'Control down, drive up.' },
-  vertical_push:    { primaryCue: 'Ribs down, press to full lockout.', secondaryCue: 'Press hard, finish strong.' },
-  horizontal_pull:  { primaryCue: 'Pull to the torso, retract scaps.', secondaryCue: 'Squeeze at the top, slow return.' },
-  vertical_pull:    { primaryCue: 'Start from a dead hang, lead with lats.', secondaryCue: 'Control the lowering.' },
-  carry:            { primaryCue: 'Tall posture, shoulders packed.',    secondaryCue: 'Breathe and walk steady.' },
-  core:             { primaryCue: 'Brace through the midline.',        secondaryCue: 'Hold without shifting.' },
-  isolation_upper:  { primaryCue: 'Control the full range.',           secondaryCue: 'Squeeze at peak contraction.' },
-  isolation_lower:  { primaryCue: 'Control the full range.',           secondaryCue: 'Squeeze at peak contraction.' },
-  conditioning:     { primaryCue: 'Hold the prescribed effort.',       secondaryCue: 'Breathe rhythmically.' },
+/**
+ * The conditioning cue that ships today. **UNRULED — NOT Sam-authored.**
+ *
+ * It renders on the selectable conditioning sessions that have no cue of their
+ * own. Sam saw it on 2026-07-28 and deliberately did not rule on it: the 55
+ * authored conditioning templates each carry his own `effortCue`, and Stage B
+ * switches selection onto them, so ruling now would author a cue with a shelf
+ * life. It stays, attributed, until then. `Easy Swim` cannot resolve to a
+ * template (`ConditioningModality` has no swim) and gets a Sam-authored cue at
+ * Stage B.
+ *
+ * TRIPWIRE: if the app approaches real athletes before Stage B lands, this
+ * comes back to Sam. It ships today only because there are no live users.
+ *
+ * Recorded in `docs/CUE_RECONCILIATION_DIAGNOSIS_2026-07-28.md`, and pinned by
+ * `authoredCueLibraryTests` — which asserts the sheet marks all 23 of its
+ * exercises `PENDING — Stage B` rather than letting them read as authored.
+ */
+export const PENDING_CONDITIONING_CUE: ExerciseCue = {
+  primaryCue: 'Hold the prescribed effort.',
+  secondaryCue: 'Breathe rhythmically.',
 };
 
 // ─── Part 2: Lookup Function ───
@@ -101,8 +123,13 @@ export const FAMILY_FALLBACKS: Record<MovementPattern, ExerciseCue> = {
  * Lookup order:
  *   1. Exact name match in EXERCISE_CUES
  *   2. Case-insensitive match in EXERCISE_CUES
- *   3. MovementPattern fallback from FAMILY_FALLBACKS
- *   4. Safe generic fallback (should never reach this)
+ *   3. The pending conditioning pair, for conditioning only
+ *   4. The generic pair — which `buildCueText` suppresses, so it renders
+ *      nothing rather than filler
+ *
+ * Step 3 is deliberately not a table lookup. Every other movement family falls
+ * through to the suppressed generic and renders no cue at all, which is the
+ * loud failure Sam chose over an unauthored default.
  *
  * @param exerciseName - The exercise name as it appears in the workout
  * @param movementPattern - Optional MovementPattern from exerciseTags.ts
@@ -122,9 +149,9 @@ export function getExerciseCue(
     if (key.toLowerCase() === lower) return cue;
   }
 
-  // 3. Family fallback
-  if (movementPattern && FAMILY_FALLBACKS[movementPattern]) {
-    return FAMILY_FALLBACKS[movementPattern];
+  // 3. The one pending pair — conditioning only, and not authored.
+  if (movementPattern === 'conditioning') {
+    return PENDING_CONDITIONING_CUE;
   }
 
   // 4. Safe generic (never "Focus on proper form")

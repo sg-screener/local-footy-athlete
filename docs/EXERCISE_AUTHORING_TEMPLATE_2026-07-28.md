@@ -48,7 +48,7 @@ file effectively creates a second, orphaned "exercise" the system can't reconcil
 
 ## Section B — Required for every exercise (with two narrow exemption paths noted inline)
 
-### B1. Muscle & Experience sheet row — **`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`, sheet "Muscle + Experience v3"**
+### B1. Muscle & Experience sheet row — **`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`, sheet "Exercise Master"**
 
 **This sheet is THE enforced source.** The code file `src/data/muscleExperienceMetadata.ts`
 (`EXERCISE_MUSCLE_METADATA`) is described in its own header as "a typed projection, held to the
@@ -203,7 +203,7 @@ The key must be the exact canonical name from A0 — same string used in `exerci
 
 ## Section D — Exhaustive file/sheet checklist, in the order to author them
 
-1. **`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`** ("Muscle + Experience v3" sheet) — new row.
+1. **`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`** ("Exercise Master" sheet) — new row.
    Do this first; it is the enforced source of truth (B1).
 2. **`src/data/muscleExperienceMetadata.ts`** — matching `EXERCISE_MUSCLE_METADATA` entry, must
    equal the sheet exactly (both directions).
@@ -246,7 +246,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 
 **A0. Canonical name:** ________________________________
 
-**B1. Muscle & Experience sheet row** (`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`)
+**B1. Muscle & Experience sheet row** (`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`)
 - Pool: ________________________________
 - Primary Muscle Group(s): ________________________________
 - Secondary Muscle Group(s) (or `—`): ________________________________
@@ -294,7 +294,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 
 **A0. Canonical name:** ________________________________
 
-**B1. Muscle & Experience sheet row** (`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`)
+**B1. Muscle & Experience sheet row** (`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`)
 - Pool: ________________________________
 - Primary Muscle Group(s): ________________________________
 - Secondary Muscle Group(s) (or `—`): ________________________________
