@@ -79,6 +79,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
+import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 
@@ -671,6 +672,17 @@ function applyGameProximity(
     }
     // Keep game as-is (shouldn't happen but guard)
     if (templateWorkout?.workoutType === 'Game') {
+      return null;
+    }
+    // SAM'S LAW (2026-07-28): athlete-placed content outranks derived filler.
+    // The athlete deliberately put this session on the day before their game
+    // and was warned about it by the ask-flow before it landed — the Gunshow is
+    // a filler regenerated every render and has no standing to overwrite a
+    // decision. Unconditional by design: the guard below is disabled for
+    // EXPLICIT fixtures, which is exactly how a practice-match week used to eat
+    // an athlete's moved session. Generation still never PLANS hard work here;
+    // this only concerns what the athlete places.
+    if (isAthletePlacedSession(templateWorkout)) {
       return null;
     }
     // GUARD: never replace protected core exposure for virtual/recurring

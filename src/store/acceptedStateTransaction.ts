@@ -2588,7 +2588,15 @@ export function stageAthleteSessionMoveTransaction(
     };
   }
   const movedWorkout = cloneWorkoutForDate(acceptedSource, targetDate);
-  const swappedWorkout = acceptedTarget ? cloneWorkoutForDate(acceptedTarget, sourceDate) : null;
+  // A game-proximity FILLER on the destination is not a swap partner. It is
+  // regenerated every render from the fixture, so relocating it to the source
+  // day would materialise resolver-owned content as athlete-owned content and
+  // duplicate it the moment the resolver rebuilt the original. Discard it and
+  // let the source day become rest, exactly as a move onto an empty day does.
+  const acceptedTargetIsSwappable = !isResolverOwnedDerivedSession(acceptedTarget);
+  const swappedWorkout = acceptedTarget && acceptedTargetIsSwappable
+    ? cloneWorkoutForDate(acceptedTarget, sourceDate)
+    : null;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,

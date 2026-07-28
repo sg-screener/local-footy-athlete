@@ -775,10 +775,10 @@ run('15 newer overlapping athlete intent supersedes stale restoration', () => {
   const moved = workoutOn(FUTURE_WEEK, 3);
   assert(moved, 'first move target missing');
   // Second, overlapping move relocates the SAME session again to another empty
-  // day (Monday, vacated by the first move). Target must be a plain empty day —
-  // Friday is a G-1 Gunshow filler and a move onto it is now (correctly) refused
-  // by the content-conservation gate; the supersede semantics under test are
-  // independent of the destination day.
+  // day (Monday, vacated by the first move). Deliberately a plain empty day:
+  // Friday is G-1, and a move there now goes through the ask-flow, which would
+  // put a route choice in the middle of a test about supersede semantics. Those
+  // semantics are independent of the destination day.
   commitAthleteSessionMoveTransaction({
     sourceDate: dateForDay(FUTURE_WEEK, 3),
     targetDate: dateForDay(FUTURE_WEEK, 1),

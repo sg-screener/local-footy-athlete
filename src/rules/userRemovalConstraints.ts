@@ -1,4 +1,5 @@
 import type { UserRemovalConstraint, UserRemovalScope, Workout } from '../types/domain';
+import { athletePlacementFor } from './athletePlacement';
 import { evaluateSection18EffectiveWeek } from './section18EffectiveWeekEvaluator';
 import type {
   Section18AuthorisedReduction,
@@ -58,7 +59,19 @@ export function applyUserRemovalConstraintsToWeek(args: {
     ) {
       const targetDayOfWeek = new Date(`${constraint.moveTargetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== targetDayOfWeek);
-      workouts.push({ ...clone(constraint.movedWorkout), dayOfWeek: targetDayOfWeek });
+      // THE single athlete-content ingress site, and therefore the only writer
+      // of the placement marker. Everything downstream — the §18 gateway, the
+      // resolver, the visible week — learns "the athlete put this here" from
+      // here and nowhere else, so the marker cannot disagree with the
+      // constraint that is its source of truth. See rules/athletePlacement.ts.
+      workouts.push({
+        ...clone(constraint.movedWorkout),
+        dayOfWeek: targetDayOfWeek,
+        athletePlacement: athletePlacementFor({
+          constraintId: constraint.id,
+          placedDate: constraint.moveTargetDate,
+        }),
+      });
     }
   }
   return workouts.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
