@@ -738,10 +738,11 @@ function canonicaliseHydratedMicrocycle(
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
-    // One intensity owner. This used to be a second table that read
-    // `Off-season ? 0.85 : 0.9`, which silently gave a hydrated IN-SEASON
-    // deload a 10% tonnage cut — the owner holds the weight in-season, and
-    // there was no athlete reason behind the drop.
+    // One intensity owner. This used to be a second table reading
+    // `Off-season ? 0.85 : 0.9`. Its in-season branch was DORMANT rather than
+    // harmful — `resolveSeasonPhaseWeekKind` never mints a deload week
+    // in-season, so nothing reached the 0.9 — but a second table free to
+    // drift from the owner is the defect, whether or not it has fired yet.
     intensityMultiplier: phaseResolution
       ? resolveWeekIntensityMultiplier(selectedPhase, phaseResolution.weekKind)
       : microcycle.intensityMultiplier,
