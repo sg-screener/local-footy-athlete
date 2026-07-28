@@ -157,12 +157,12 @@ below are the seeded example.
 >   Conditioning halved.
 
 **Route (b) sub-line when the moved session has NO accessories** — a
-conditioning or sprint session. NOT YET SIGNED: drafted from Sam's
-honest-labelling ruling, awaiting his word. The menu shape and the other five
-strings above are signed.
+conditioning or sprint session. Signed by Sam 2026-07-29 with his rewording:
+"pump" is reserved for Gunshow's own description, so routes (a) and (b) never
+read as the same thing.
 
-> - **Accessories only** — A pump session instead. Your Monday session is
->   dropped, not moved.
+> - **Accessories only** — Light accessory work before the game. Your Monday
+>   session is dropped, not moved.
 
 **Warning 2 — before route (c) applies**
 

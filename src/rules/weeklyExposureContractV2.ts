@@ -45,6 +45,18 @@ export type Section18WeekMode =
  * coverage validation key off this, so DEV-only validation cannot diverge from the mode.
  * See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
  */
+/**
+ * A FIXTURE week: the athlete plays. A game and a practice match are the same
+ * shape (Sam, 2026-07-28) and this is the single place that says so.
+ *
+ * Load-bearing twice, and that is the point — the pair used to be spelled out
+ * inline at the anchor credit and nowhere else, so the intensity policy never
+ * learned the fact. See `requiredAppHardMinimum` below.
+ */
+export function isFixtureWeekMode(mode: Section18WeekMode): boolean {
+  return mode === 'in_season_game_week' || mode === 'practice_match_week';
+}
+
 export function isOptionalOnlyWeekMode(mode: Section18WeekMode): boolean {
   return mode === 'optional_week' ||
     mode === 'in_season_bye_recovery' ||
@@ -825,7 +837,22 @@ function policyFor(input: Pick<
     case 'practice_match_week':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
+        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0,
+          // RULED (Sam, 2026-07-29): in ANY fixture week the GAME carries the
+          // hard conditioning exposure, so the contract never requires a hard
+          // app-conditioning session on top of it — the app top-up is moderate
+          // or easier. This used to read `tt === 1 ? 1 : 0`, which demanded a
+          // hard app session in a game week with exactly one team training.
+          // Combined with the practice-match ruling that made a pre-season
+          // fixture week game-shaped, that week could not be built at all: the
+          // §18 gateway exhausted its repairs and returned `impossible`, which
+          // the athlete met as "We couldn't safely build your week from your
+          // current settings."
+          //
+          // The count side of this credit already existed — `appCoreConditioning`
+          // subtracts 1 for a fixture week. Only the INTENSITY side was missing.
+          requiredAppHardMinimum: 0,
+          permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
@@ -1070,9 +1097,10 @@ export function resolveSection18PhasePlannerSelection(
     optionalMainStrength: earlyOffseason ? mainStrength : illnessOptionalStrength,
     optionalFlush: 0,
     optionalRecoveryAerobic,
-    appCoreConditioning: Math.max(0, coreConditioning - teamTrainingCount - (
-      input.mode === 'in_season_game_week' || input.mode === 'practice_match_week' ? 1 : 0
-    )),
+    // The fixture IS one of the week's conditioning exposures. Same fact the
+    // intensity policy above reads, asked through the same predicate.
+    appCoreConditioning: Math.max(0, coreConditioning - teamTrainingCount -
+      (isFixtureWeekMode(input.mode) ? 1 : 0)),
     requiredAppMediumHardMinimum: policy.conditioning.requiredAppMediumHardMinimum,
     requiredAppHardMinimum: policy.conditioning.requiredAppHardMinimum,
   };

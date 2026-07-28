@@ -6554,12 +6554,12 @@
             "runningExposures": 2,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
-            "recoverySessions": 1,
+            "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
               "lower_strength": 1,
-              "recovery": 1,
+              "rest": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -6697,11 +6697,11 @@
             },
             {
               "dayOfWeek": 5,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Rest",
+              "workoutType": "Rest",
               "taxonomy": [
                 {
-                  "category": "recovery",
+                  "category": "rest",
                   "modality": "none"
                 }
               ],
@@ -6712,7 +6712,7 @@
                 "strength": 0,
                 "support": 0,
                 "conditioning": 0,
-                "total": 1
+                "total": 0
               },
               "strengthRowNames": [],
               "power": null
@@ -6740,13 +6740,13 @@
               "runningExposures": 3,
               "sprintCodExposures": 2,
               "gunshowSessions": 0,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
                 "upper_strength": 2
@@ -6765,13 +6765,14 @@
             "extraConditioningSessions": 1,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "rest": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -6920,31 +6921,24 @@
             },
             {
               "dayOfWeek": 5,
-              "name": "Gunshow",
-              "workoutType": "Strength",
+              "name": "Rest",
+              "workoutType": "Rest",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "rest",
                   "modality": "none"
                 }
               ],
               "components": [
-                "strength",
-                "support",
-                "recovery_addon"
+                "recovery"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 0,
+                "support": 0,
                 "conditioning": 0,
-                "total": 5
+                "total": 0
               },
-              "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
-              ],
+              "strengthRowNames": [],
               "power": null
             }
           ],
@@ -6964,7 +6958,7 @@
             "visibleCounts": {
               "hardExposures": 3,
               "hardDays": 3,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 1,
               "runningExposures": 2,
@@ -6980,7 +6974,7 @@
                 "recovery": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -6996,13 +6990,14 @@
             "extraConditioningSessions": 1,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "rest": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -7122,31 +7117,24 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
-              "workoutType": "Strength",
+              "name": "Rest",
+              "workoutType": "Rest",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "rest",
                   "modality": "none"
                 }
               ],
               "components": [
-                "strength",
-                "support",
-                "recovery_addon"
+                "recovery"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 0,
+                "support": 0,
                 "conditioning": 0,
-                "total": 5
+                "total": 0
               },
-              "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
-              ],
+              "strengthRowNames": [],
               "power": null
             },
             {
@@ -7200,13 +7188,12 @@
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
                 "recovery": 1,
                 "team_training": 1,
@@ -7228,12 +7215,12 @@
             "runningExposures": 1,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
-            "recoverySessions": 1,
+            "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
               "lower_strength": 1,
-              "recovery": 1,
+              "rest": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -7367,23 +7354,22 @@
             },
             {
               "dayOfWeek": 5,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Rest",
+              "workoutType": "Rest",
               "taxonomy": [
                 {
-                  "category": "recovery",
+                  "category": "rest",
                   "modality": "none"
                 }
               ],
               "components": [
-                "recovery",
-                "recovery_addon"
+                "recovery"
               ],
               "countedRows": {
                 "strength": 0,
                 "support": 0,
                 "conditioning": 0,
-                "total": 1
+                "total": 0
               },
               "strengthRowNames": [],
               "power": null
@@ -7411,13 +7397,13 @@
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 0,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
                 "upper_strength": 2
@@ -7458,13 +7444,13 @@
           "runningExposures": 3,
           "sprintCodExposures": 2,
           "gunshowSessions": 0,
-          "recoverySessions": 2,
+          "recoverySessions": 1,
           "teamTrainingSessions": 1,
           "games": 1,
           "byCategory": {
             "game": 1,
             "lower_strength": 1,
-            "recovery": 2,
+            "recovery": 1,
             "team_training": 1,
             "tempo_conditioning": 1,
             "upper_strength": 2

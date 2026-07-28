@@ -123,7 +123,9 @@ export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
       // accessories to keep, so this route is the pump session under its own
       // name. It is NOT an easy version wearing the athlete's session name —
       // that identity swap stays banned.
-      ? `A pump session instead. Your ${context.sourceDayName} session is dropped, not moved.`
+      // "Pump" is reserved for Gunshow's own description (Sam, 2026-07-29) so
+      // route (a) and route (b) can never read as the same thing.
+      ? `Light accessory work before the game. Your ${context.sourceDayName} session is dropped, not moved.`
       : 'Your session with the main lifts stripped out. Pump and prehab, nothing heavy.',
     commits: true,
     requiresSecondWarning: false,
