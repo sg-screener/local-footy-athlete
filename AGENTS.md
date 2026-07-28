@@ -84,6 +84,28 @@ visible program snapshot
 
 over command/resolver/event chains unless there is a clear reason not to.
 
+## De-duplication can silently un-gate the values it tidies
+
+When duplicated values are collapsed behind a single reference — a shared
+constant, a spread, an inherited base — **re-verify that the equality gate still
+sees them**, before assuming the collapse was free.
+
+Gates in this repo frequently parse source for inline literals (`required: 3`,
+`preferredMax: 4`). Moving those literals into one object and spreading it
+(`...PRE_SEASON_TARGETS`) removes them from the shape the parser matches, so the
+gate stops comparing those cells and goes on passing. Nothing fails. The values
+are now less protected than before the tidy-up, and the commit that did it reads
+like an improvement.
+
+This happened on 2026-07-28 collapsing three identical pre-season contracts into
+one: the de-duplication was correct and ruled, and it would have un-gated the
+very cells the same ruling had just authored. The fix is a second assertion that
+compares the shared object directly.
+
+The general shape: **a gate that reads code rather than behaviour is coupled to
+the code's SHAPE, and refactoring changes shape by definition.** After any
+de-duplication, ask what the gate matches on and whether it still matches.
+
 ## Test Standard
 
 - Prefer invariant or scenario tests that prove the capability, not only the
@@ -130,6 +152,17 @@ Practical consequences:
   observe or disturb the stash, and a branch switch between stash and pop lands
   the changes somewhere unintended. Prefer committing to a scratch commit, or
   copying files to the session scratchpad.
+- **`git checkout -- <file>` destroys uncommitted edits, and it is the same
+  class of hazard as stash.** It is the obvious way to undo a mutation during
+  mutation-testing, and it silently takes every unrelated edit in that file with
+  it. This happened twice in one session on 2026-07-28: both times a deliberate
+  one-line mutation was reverted along with an hour of unrelated wiring in the
+  same file, and both times the loss was invisible until a later grep. Two rules
+  follow, and the first is cheap enough that there is no excuse for skipping it:
+  **commit before mutation-testing**, and revert a mutation by copying the file
+  back from the session scratchpad rather than by asking git for it. A file that
+  git does not track yet is worse still — `git checkout` fails on it and leaves
+  the mutation in place, so the "restored" baseline is not restored at all.
 - Before reporting "merged" or "unmerged", ask git rather than recalling:
   `git merge-base --is-ancestor <branch> main` and `git log main..<branch>`.
 - A branch fully contained in `main` should be deleted rather than left as a

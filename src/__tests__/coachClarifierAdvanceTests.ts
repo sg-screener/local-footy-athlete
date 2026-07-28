@@ -36,6 +36,7 @@ import {
 } from '../store/pendingCoachClarifierStore';
 import { buildSmokeCoachBikeFlowProgram } from '../data/smokeCoachBikeFlowProgram';
 import { useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
 
 // ─── Tiny harness ──────────────────────────────────────────────────
@@ -122,6 +123,21 @@ async function sendTurn(id: string, content: string): Promise<Turn> {
 
 function seed() {
   const program = buildSmokeCoachBikeFlowProgram(new Date(`${FIXED_TODAY}T12:00:00`)) as any;
+  // The profile store was never seeded here. It went unnoticed while the two
+  // capacity answers had silent defaults; Sam's 2026-07-28 ruling deleted them
+  // (Bible Section 9: no default, no unknown tier), so an unseeded profile now
+  // makes the coach refuse the turn rather than plan against a guessed tier.
+  useProfileStore.setState({
+    onboardingData: {
+      seasonPhase: 'In-season', trainingDaysPerWeek: 5,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
+      usualGameDay: 'Saturday', trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
+      experienceLevel: '2-5 years', conditioningLevel: 'Good',
+      recentTrainingLoad: 'Very consistent', injuries: [],
+    },
+    isOnboardingComplete: true,
+  } as never);
   useProgramStore.getState().clear();
   useProgramStore.getState().setCurrentProgram(program);
   useProgramStore.getState().setCurrentMicrocycle(program.microcycles[0]);

@@ -276,6 +276,10 @@ function buildLowerGenericSentence(placement: Placement, intensity: string | und
   return 'Lower-body strength work to develop the foundation for on-field power and durability.';
 }
 
+// The `daysToGame <= 3` copy switch in this file and its siblings tracks the
+// Bible's last-additional-high-stress boundary — the copy changes exactly where
+// the programming does, rather than at a separately chosen number.
+// BIBLE_ANCHOR: last_high_stress_g3
 function buildUpperPushSentence(placement: Placement, daysToGame: number | null): string {
   if (daysToGame !== null && daysToGame <= 3) {
     return 'Upper push focus to drive pressing strength without adding lower-body fatigue before the weekend.';

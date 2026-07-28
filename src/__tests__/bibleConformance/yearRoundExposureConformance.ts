@@ -220,15 +220,34 @@ export function runYearRoundExposureConformance(
     advisoryByeContract,
     advisoryBye.weeklyPlan,
   );
+  // RE-POINTED (Sam's Batch 2 ruling (a), 2026-07-28). This used to assert
+  // `strength.targetCount === 4` and `achieved.main_strength === 4` — it
+  // encoded the old `strongByeBuild` override, which raised the planner-SELECTED
+  // target to 4.
+  //
+  // That override is deleted. 4 is the PREFERRED MAXIMUM / planner aim, never a
+  // selected target: raising the selected target made §18 reject stored weeks
+  // built at 3, and hydration answered the rejection by emptying the athlete's
+  // accepted week. The standing law is that a preference shapes future planning
+  // and never invalidates accepted history.
+  //
+  // So the fourth strength exposure is still phase-owned and still reachable —
+  // it lives in `preferred.max`, which is what this now pins. Flagged rather
+  // than quietly relaxed: the numbers moved because the ruling moved them.
   if (
     advisoryByeContract.strength.required !== 2 ||
-    advisoryByeContract.strength.targetCount !== 4 ||
+    advisoryByeContract.strength.targetCount !== 3 ||
     advisoryByeContract.strength.preferred.min !== 3 ||
     advisoryByeContract.strength.preferred.max !== 4 ||
     advisoryByeContract.conditioning.targetCount !== advisoryByeContract.conditioning.required ||
     !advisoryByeValidation.accepted ||
-    advisoryByeValidation.ledger.achieved.main_strength !== 4
-  ) throw new Error('strong low-TT bye did not preserve the phase-owned fourth strength selection');
+    advisoryByeValidation.ledger.achieved.main_strength !== 3
+  ) throw new Error('strong low-TT bye did not preserve the phase-owned fourth strength AIM'
+    + ` | required=${advisoryByeContract.strength.required}`
+    + ` target=${advisoryByeContract.strength.targetCount}`
+    + ` pref=${advisoryByeContract.strength.preferred.min}-${advisoryByeContract.strength.preferred.max}`
+    + ` accepted=${advisoryByeValidation.accepted}`
+    + ` achieved=${advisoryByeValidation.ledger.achieved.main_strength}`);
   properties++;
 
   const selectedMidOff = phasePlans.find(([name]) => name === 'mid off-season')![1];

@@ -5,6 +5,7 @@ import type {
   WeekKind,
 } from '../types/domain';
 import { resolveWeekIntensityMultiplier } from './deloadWeekRules';
+import { injurySeverityRemovesRiskyWork } from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
@@ -229,8 +230,11 @@ export function resolveRestrictedMainStrengthPatterns(
 ): Set<MainStrengthPattern> {
   const restricted = new Set<MainStrengthPattern>();
   for (const injury of input.activeInjuries ?? []) {
+    // The band edge lives in `injurySeverityBands`, the Bible's owner for it.
+    // This site used to restate it as a bare `< 6` — a second representation of
+    // an already-ruled fact, and the kind that drifts without anyone noticing.
     if (!injury.pauseAffectedTraining &&
-        (injury.effectiveSeverity ?? injury.severity ?? 0) < 6) continue;
+        !injurySeverityRemovesRiskyWork(injury.effectiveSeverity ?? injury.severity ?? 0)) continue;
     const keys = new Set(injury.injuryKeys ?? []);
     if (injury.region === 'upper_body') {
       restricted.add('push');
@@ -272,11 +276,16 @@ function applyCommonSafetyReductions(
     if (offset > 0) offset -= 7;
     return offset === -6 ? 1 : offset;
   };
+  // The excluded offsets are quoted Bible rules, not spacing heuristics — see
+  // src/data/bibleThresholdAnchors.ts.
+  // BIBLE_ANCHOR: g_minus_1_optional_only
+  // BIBLE_ANCHOR: g_plus_1_rest_or_recovery
   const conditioningPlacementDays = nonTeamDays.filter((day) => {
     const offset = gameOffset(day);
     if (offset === null) return true;
     return offset !== -2 && offset !== -1 && offset !== 1;
   });
+  // BIBLE_ANCHOR: g_minus_2_no_heavy_lower_or_speed
   const sprintPlacementDays = nonTeamDays.filter((day) => {
     const offset = gameOffset(day);
     if (offset === null) return true;
@@ -427,9 +436,14 @@ function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
   // choice, which is exactly what Sam's law forbids and the hardest kind to see:
   // no reduction is recorded anywhere, the week simply arrives smaller.
   //
-  // The other three triggers stay. A SCHEDULED deload week is the block plan's
-  // own structure; `readiness === 'low'` is the CAPACITY score, a different
-  // signal this law does not govern; and an injury pause is medical.
+  // SUPERSEDED (Sam, 2026-07-28). This used to argue that the capacity score was
+  // "a different signal this law does not govern" and could keep selecting the
+  // mode. The ruling closed that exemption: readiness and injury never set
+  // structure, and this mode carries a strength maximum of 2 against a build
+  // week's 3 — so both remaining triggers cut a session for a reason the law now
+  // forbids. Bye recovery is SCHEDULE-TRIGGERED ONLY; fatigue routes through the
+  // deload law, which shrinks the dose instead.
+  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 2.
   return input.weekKind === 'deload' || input.readiness === 'low' ||
     (input.activeInjuries ?? []).some((injury) => injury.pauseAffectedTraining);
 }
@@ -452,6 +466,8 @@ export function buildInSeasonGameWeekExposureContract(
     permittedHardDays: 5,
   }), input);
   if (input.gameDay !== null) {
+    // BIBLE_ANCHOR: game_day_no_programmed_sessions
+    // BIBLE_ANCHOR: g_minus_1_optional_only
     const safeStrengthCapacity = uniqueExposureDays(input.selectedDayNumbers).filter((day) => {
       let offset = day - input.gameDay!;
       if (offset > 0) offset -= 7;
@@ -477,7 +493,10 @@ export function buildInSeasonByeBuildExposureContract(
     mode: 'in_season_bye_build',
     subphase: 'bye_build',
     strength: { required: 2, preferredMin: 3, preferredMax: 4, selectedTarget: selected.mainStrength },
-    conditioning: { required: 3, preferredMin: 3, preferredMax: 3, selectedTarget: selected.coreConditioning },
+    // RULED (Sam, 2026-07-28): required 3, preferred max 4. The fourth is the
+    // optional top of range for ANYONE — "if fresh" was expressly rejected as a
+    // count condition, because that is capacity setting structure.
+    conditioning: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.coreConditioning },
     sprintCod: { required: 1, preferredMin: 1, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
     allowCombined: true,
@@ -610,7 +629,10 @@ export function buildEarlyOffseasonExposureContract(
   const contract = createBaseContract(input, {
     mode: 'early_offseason', subphase: 'early_offseason',
     // Bible first 1-2 weeks: everything is optional. Preferred work remains explicit.
-    strength: { required: 0, preferredMin: 2, preferredMax: 3, selectedTarget: 0 },
+    // RULED (Sam, 2026-07-28): target 3, and every session in this block is
+    // OPTIONAL — required stays 0. Bible Section 1: weeks 1-2 are the optional
+    // block and zero completed sessions is a valid honest week.
+    strength: { required: 0, preferredMin: 3, preferredMax: 3, selectedTarget: 0 },
     conditioning: { required: 0, preferredMin: 1, preferredMax: 2, selectedTarget: 0 },
     sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: 0 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 3 },
@@ -698,18 +720,34 @@ function buildPreseasonBase(
   return contract;
 }
 
+/**
+ * THE ONE PRE-SEASON ROW (Sam, 2026-07-28, Batch 2 Q1).
+ *
+ * The three subphase contracts were numerically IDENTICAL across all fourteen
+ * slots. Sam's ruling: subphase distinctions do DOSE and CONTENT work, not
+ * COUNT work — so there is one authored pre-season contract, and the three
+ * modes reference it rather than restating it.
+ *
+ * The modes survive because the enum needs them elsewhere (identity, subphase
+ * policy, the phase clock). What does not survive is three copies of one
+ * decision: that was three chances to edit one and not the others, with nothing
+ * anywhere noticing the drift.
+ */
+const PRE_SEASON_TARGETS = {
+  strength: { required: 3, preferredMin: 4, preferredMax: 4 },
+  conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
+  sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
+  fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
+  allowCombined: true,
+  preferredHardDays: 4,
+  permittedHardDays: 5,
+} as const;
+
 export function buildEarlyPreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'early_preseason', subphase: 'early_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'early_preseason', subphase: 'early_preseason',
   });
 }
 
@@ -717,14 +755,7 @@ export function buildMidPreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'mid_preseason', subphase: 'mid_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'mid_preseason', subphase: 'mid_preseason',
   });
 }
 
@@ -732,14 +763,7 @@ export function buildLatePreseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
-    mode: 'late_preseason', subphase: 'late_preseason',
-    strength: { required: 3, preferredMin: 4, preferredMax: 4 },
-    conditioning: { required: 3, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
-    fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: true,
-    preferredHardDays: 4,
-    permittedHardDays: 5,
+    ...PRE_SEASON_TARGETS, mode: 'late_preseason', subphase: 'late_preseason',
   });
 }
 

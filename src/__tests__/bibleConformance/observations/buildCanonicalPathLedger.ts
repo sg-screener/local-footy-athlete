@@ -204,7 +204,14 @@ function power(workout: Workout): HarnessPowerIntent {
 function projectionComponents(workout: Workout): { week: HarnessSessionComponent[]; detail: HarnessSessionComponent[] } {
   const scenario = {
     id: 'strength-plus-trunk-support', description: 'Slice 4 projection observer',
-    referenceDate: '2026-03-23', timezone: 'Australia/Melbourne', profile: {},
+    referenceDate: '2026-03-23', timezone: 'Australia/Melbourne',
+    // The two capacity answers are REQUIRED since Sam's 2026-07-28 ruling —
+    // there is no default and no unknown tier (Bible Section 9). This observer
+    // used to pass `{}` and get scored 4/medium by `?? 'Pretty consistent'` and
+    // `?? 'Good'` in programStore. Nothing else about the fixture changes:
+    // these two fields are supplied and no others, so the projection it
+    // observes is the same one it observed before.
+    profile: { recentTrainingLoad: 'Very consistent', conditioningLevel: 'Good' },
     ruleIds: ['ALL-COMP-PROJECTION-01'], target: { weekInBlock: 1, day: 'Monday' },
     sourceKind: 'direct_accessory_fixture',
   } as ComponentGoldenScenario;

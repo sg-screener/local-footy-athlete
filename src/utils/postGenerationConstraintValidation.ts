@@ -21,6 +21,7 @@ import type {
 } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
+import { canScoreCapacity } from '../data/capacityRubric';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
@@ -528,7 +529,18 @@ function reResolveContractForActiveConstraints(args: {
   gameDay?: number | null;
 }): WeeklyExposureContract {
   const profile = args.profile;
-  if (!profile) return args.contract;
+  // This function REFINES an existing contract using the athlete's capacity. It
+  // has always declined when there is no profile at all — refining against
+  // nothing is not possible, so it hands the contract back untouched.
+  //
+  // A profile that exists but carries neither capacity answer is the same
+  // situation, and is now treated the same way. It is NOT a softening of the
+  // fail-loud ruling: generation still refuses outright, because that is where a
+  // capacity guess would reach the athlete as a prescription. Here the only
+  // alternative to declining would be to score a guess and refine against it —
+  // which is the thing the ruling forbids — or to fail an athlete's manual save
+  // on a legacy profile, which the bodyweight precedent does not do either.
+  if (!profile || !canScoreCapacity(profile)) return args.contract;
   const teamTrainingDayNumbers = args.teamTrainingDayNumbers
     ? Array.from(new Set(args.teamTrainingDayNumbers)).sort((a, b) => a - b)
     : args.contract.anchors.teamTrainingDays;
@@ -580,11 +592,13 @@ function reResolveContractForActiveConstraints(args: {
   const readinessSignal = (acceptedContext?.revision > 0
     ? acceptedContext.readinessSignalsByDate
     : useReadinessStore.getState().signalsByDate)?.[weekStart] ?? null;
-  const readiness = profile.conditioningLevel || profile.recentTrainingLoad
-    ? deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal })
-    : args.contract.strength.targetCount >= args.contract.strength.preferred.max
-      ? 'high'
-      : 'medium';
+  // RETIRED (Sam, 2026-07-28). When both capacity answers were absent this
+  // inferred the athlete's capacity from the SHAPE OF THE WEEK it had just
+  // built — a big strength target meant "high". That runs the structure/dose
+  // ruling backwards: structure would be setting capacity, and the inference is
+  // circular besides, since capacity is meant to be an input to the week rather
+  // than a reading of it. Absent answers now reach the rubric, which refuses.
+  const readiness = deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal });
   const subphase = args.contract.identity.subphase;
   const offseasonSubphase =
     subphase === 'early_offseason' ||
@@ -814,6 +828,9 @@ export function buildSection18ProductionFallbackCandidate(args: {
         .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
         .map((anchor) => anchor.dayOfWeek));
       const fixtureDay = Array.from(fixtureDays)[0];
+      // The 3-day gap below is the Bible's last-additional-high-stress boundary,
+      // not a tuned spacing constant.
+      // BIBLE_ANCHOR: last_high_stress_g3
       const distanceBeforeFixture = (dayOfWeek: number): number =>
         fixtureDay === undefined ? 7 : weekOrder(fixtureDay) - weekOrder(dayOfWeek);
       for (const source of workouts.filter((workout) =>
@@ -1070,6 +1087,8 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       args.microcycle.exposureContract
         ? migrateLegacyWeeklyExposureContractV2(args.microcycle.exposureContract, {
             blockNumber: args.microcycle.miniCycleNumber,
+            // BIBLE_ANCHOR: deload_block_length_weeks — the Bible states 3-4
+            // weeks; this modulo pins the top of that range.
             weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
             globalWeek: args.microcycle.weekNumber,
           })

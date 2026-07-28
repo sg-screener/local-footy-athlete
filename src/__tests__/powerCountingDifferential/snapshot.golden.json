@@ -2376,19 +2376,19 @@
             "hardExposures": 2,
             "hardDays": 2,
             "mainStrengthExposures": 2,
-            "conditioningExposures": 1,
-            "extraConditioningSessions": 1,
+            "conditioningExposures": 2,
+            "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
-              "aerobic_base": 1,
+              "aerobic_base": 2,
               "full_body_strength": 1,
               "gunshow_prehab": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2462,7 +2462,8 @@
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2479,22 +2480,21 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
               "taxonomy": [
                 {
-                  "category": "recovery",
-                  "modality": "none"
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "recovery",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
                 "support": 0,
-                "conditioning": 0,
+                "conditioning": 1,
                 "total": 1
               },
               "strengthRowNames": [],
@@ -2507,7 +2507,7 @@
               "taxonomy": [
                 {
                   "category": "aerobic_base",
-                  "modality": "off_feet"
+                  "modality": "none"
                 }
               ],
               "components": [
@@ -2559,19 +2559,19 @@
               "hardExposures": 2,
               "hardDays": 2,
               "mainStrengthExposures": 2,
-              "conditioningExposures": 1,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 2,
+              "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
-                "aerobic_base": 1,
+                "aerobic_base": 2,
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -2584,19 +2584,19 @@
             "hardExposures": 2,
             "hardDays": 2,
             "mainStrengthExposures": 2,
-            "conditioningExposures": 1,
-            "extraConditioningSessions": 1,
+            "conditioningExposures": 2,
+            "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
-              "aerobic_base": 1,
+              "aerobic_base": 2,
               "full_body_strength": 1,
               "gunshow_prehab": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2670,7 +2670,8 @@
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2687,22 +2688,21 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
               "taxonomy": [
                 {
-                  "category": "recovery",
-                  "modality": "none"
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "recovery",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
                 "support": 0,
-                "conditioning": 0,
+                "conditioning": 1,
                 "total": 1
               },
               "strengthRowNames": [],
@@ -2715,7 +2715,7 @@
               "taxonomy": [
                 {
                   "category": "aerobic_base",
-                  "modality": "off_feet"
+                  "modality": "none"
                 }
               ],
               "components": [
@@ -2767,19 +2767,19 @@
               "hardExposures": 2,
               "hardDays": 2,
               "mainStrengthExposures": 2,
-              "conditioningExposures": 1,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 2,
+              "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
-                "aerobic_base": 1,
+                "aerobic_base": 2,
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }

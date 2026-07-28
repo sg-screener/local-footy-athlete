@@ -65,6 +65,12 @@ const PROFILE: OnboardingData = {
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
   injuries: [],
+  // REQUIRED since Sam's 2026-07-28 capacity ruling (Bible Section 9): there is
+  // no default and no unknown tier, so a profile without both answers is
+  // refused rather than scored. This fixture is about the generation
+  // VOCABULARY, not capacity — any valid pair serves.
+  recentTrainingLoad: 'Pretty consistent',
+  conditioningLevel: 'Good',
 } as unknown as OnboardingData;
 
 const plan = buildCoachingPlan(onboardingToCoachingInputs(PROFILE, {

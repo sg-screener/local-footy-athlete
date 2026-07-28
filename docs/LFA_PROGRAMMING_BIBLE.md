@@ -115,6 +115,7 @@ This is where you define how the week should be built.
 * Team training is treated as: Team training is treated as a real training session, not just skills. It counts as running, sprint exposure, change of direction, contact, and general fatigue. The app should avoid stacking too much hard lower-body or conditioning work on top of hard team training unless the user chooses to override it. Most team sessions will be 90 min long, 7-8km and involve sprinting, repeat sprint efforts, fast running, a lot of walking and jogging and skills work. 
 * Rest days are: Rest days are days with no required S&C work. They are used to freshen up, absorb training, recover from games, or create space around heavy training days. Optional easy recovery is okay which involves a light mobility flow, and potentially a walk or soemthing, but rest days should not secretly become hard training days.
 * How many hard days per week max: 4 = but this could be 4 hard days with doubles of srength + conditioning every day. This would be max in off season and then you could also add an easier aerobic session to the sunday. So really you could have 8-9 indivudally moderate to hard sessions per week in off season. and this would change at different points of the year i.e. in season gme + 2 team training = 3 + 3 hard strength = 6 sessions, even though that may be spread over 3-4 days. 
+* Hard day budget: PREFER 4 hard days, PERMIT 5. The unit is DAYS, not sessions. 5 is permitted when spacing and recovery are managed - compressed schedules, athletes with no weekend availability. Doubling up counts as ONE hard day and two hard sessions: team training plus strength on the same day is deliberately free against the budget, because double ups are good. Easy and long-slow work never counts as a hard day - the day taxonomy grades it. An edit that would create a 6th hard day is refused, with plain-language copy saying why. Bye-recovery weeks and early off-season keep the lower 2 preferred / 4 permitted. 
 * What counts as a hard day: team training, game day, hard conditioning, interval work, strength days that aren't gun shows, accessories, recovery. 
 * Can hard sessions stack? yes - it's fine to put strength and conditioning on the same day. I wouldnt stack lower body strength and upper body strength in the same day, would prefer full body session but the user could override that if their week required it for whatever reason. 
 * Can strength and conditioning be on the same day? yes absolutely and I'd almost prefer it so give them 1-2 days fully off each week. For example, if I had to get 7 hard sessions in one week, Id prefer to do that over 5 days and give them 2 days fully off vs doing 1 hard session per day. 
@@ -123,6 +124,8 @@ This is where you define how the week should be built.
 * How many lower-body exposures per week: ideally 2-3 but in season may only be 1. 
 * How many upper-body exposures per week: 2-3 all year really
 * How many conditioning exposures per week: 3-5 depending on phase of year, that me just be 2x team training and game day in season with optional extra off-leg conditioning, off season may be 5 sessions 
+* Weekly conditioning basis: conditioning counts TOTAL, including team training and games - not app-added sessions only. Weekly cap 5 TOTAL. In-season a target of 3 is enough. Maximum 4 RUNNING sessions year-round, which aligns with the running law of 2 floor / 3 preferred / 4 hard max; a 5th conditioning session must be off-legs - bike, row, ski or swim. Optional conditioning add-ons land on off-leg days. 
+* Full rest days: 1-2 stands everywhere except bye-recovery weeks and early off-season, where 3 full rest days are permitted. 
 * How many sprint/COD exposures per week: the year-round required minimum is 1 genuine sprint/high-speed exposure per week except early off-season. Team training, games and practice matches receive anchor credit; do not add unnecessary app sprint work when those anchors satisfy the floor. A second exposure may occur naturally, while 2-3 remains the usual maximum. Any reduction below the floor requires an explicit typed authorised reason. Deloads should preserve the exposure through reduced volume/dose unless safety or feasibility explicitly reduces it.
 * How many recovery sessions per week: as many as wanted or can fit. I'd say 1-2 
 * Rules around G-2: no heavy lower body work or speed work (TT will often be 2 days before game)
@@ -195,6 +198,7 @@ Then write rules:
 * Max high-stress exposures per week in-season: 2x team training, 1 game, then you can have 2-4 strength days (depending on preference and availability) and an optional conditioning plus gunshow if wanted
 * Max high-stress exposures per week pre-season: 1-3 team training, 1-3 extra conditioning depending on team training, 2-4 strength - again double ups are good - see pre season details for that plus gunshow if wanted
 * Max high-stress exposures per week off-season: up to 4 strengths pluys recovery mobility gunshow if wanted, 3-5 conditioning
+* Conditioning basis note: where this section says "extra conditioning", the weekly conditioning TARGET is still counted TOTAL - team training and games included - per Section 2. The "extra" figures describe what the app adds on top of the anchors, not a separate budget. 
 * How close can high stress be to game day: well there is generally team training on G-2 (thursday for saturday game) so last high stress would be then along with upper body (medium stress really) - so last additional high stress is G-3
 * How close can sprint work be to game day: don't do sprint work in season = get enough at training and during game 
 * How close can lower strength be to game day: g-3 (g-2 if it's low range of motion, low reps, high quality i.e. 2x3 box squats to high box + 2x3 vertical jumps) - low volume, not many exercises 
@@ -2553,6 +2557,16 @@ Simple injury rules
 * Severe back, neck, head, chest, dizziness, numbness/tingling, or cannot-walk issues may mean stop training entirely until checked. 
 * Reintroduce through the tap system, not open-ended AI chat.
 9. Fatigue, sickness and readiness rules
+Training capacity score
+This is the athlete's STANDING capacity, computed once from their onboarding answers. It is not the readiness declaration and it is not a fatigue signal - those are the doors below. Capacity affects DOSE only: progression steps, recovery category, RPE ceiling and power dose. It never sets session counts.
+Two questions, equal weight, scored 0-3 each:
+
+* Recent training consistency: Very consistent 3, Pretty consistent 2, A bit 1, Hardly at all 0. 
+* Current conditioning level: Elite 3, Good 2, Average 1, Poor 0. 
+Total runs 0-6. Bands: 0-2 low, 3-4 medium, 5-6 high.
+"A bit" plus "Average" scores 2, which is low. That is intended - show some training before we build.
+Nothing else scores into capacity. Sprint exposure is a weekly floor (Section 2), not a capacity signal. Season phase already shapes the week through the exposure contracts and game fatigue enters through the readiness facts, so neither is scored again here. Injury acts only through the injury law family and never adjusts this score.
+Both answers are REQUIRED. There is no default and no unknown tier: if a profile arrives without them, refuse and say so rather than scoring a guess. Same law as bodyweight - absence renders as absence, never as an average athlete.
 Tired today
 Rule: If the athlete is tired today, reduce the session slightly rather than deleting everything.
 What to change:

@@ -27,6 +27,7 @@ import {
   registerAthleteActionUIOutcome,
 } from '../../dev/e2e/athleteActionUIObservation';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { classifyBibleInjurySeverity } from '../../rules/injurySeverityBands';
 import {
   buildGuidedInjuryConstraint,
   guidedInjuryBucketForArea,
@@ -317,10 +318,21 @@ function guidedAreaToExerciseArea(area: string): InjuryArea {
   return 'Other';
 }
 
+/**
+ * Map the Bible's four severity bands onto the app's three-value
+ * `InjurySeverity`. The MAPPING is local — the app has always had three names
+ * for four bands — but the BAND EDGES are not: they belong to
+ * `rules/injurySeverityBands.ts`, whose header says consumers "should not own
+ * their own numeric thresholds". This site used to restate them as 8 and 4.
+ */
 function guidedSeverityToExerciseSeverity(result: GuidedInjuryFlowResult): InjurySeverity {
-  if (result.seriousSymptoms || result.severity >= 8) return 'Severe';
-  if (result.severity >= 4) return 'Moderate';
-  return 'Mild';
+  if (result.seriousSymptoms) return 'Severe';
+  switch (classifyBibleInjurySeverity(result.severity).band) {
+    case 'pause_affected_8_10': return 'Severe';
+    case 'restrict_and_refer_6_7':
+    case 'reduce_affected_4_5': return 'Moderate';
+    default: return 'Mild';
+  }
 }
 
 function suggestAddExercise(

@@ -10,6 +10,7 @@ import { rebuildLocalWeek } from '../../../utils/weekRebuild';
 import { rolloverProgramBlock } from '../../../utils/programBlockRollover';
 import { applyAdjustmentEvents, applyMoveSession } from '../../../utils/applyAdjustmentEvents';
 import { useProgramStore } from '../../../store/programStore';
+import { useProfileStore } from '../../../store/profileStore';
 import { useCoachUpdatesStore } from '../../../store/coachUpdatesStore';
 import type {
   ConformancePathId,
@@ -57,6 +58,12 @@ function resetStore(): void {
     weekScopedOverlays: {}, sessionFeedback: {}, weightOverrides: {},
   });
   useCoachUpdatesStore.setState((state) => ({ ...state, activeConstraints: [] }));
+  // The profile store was never seeded here. That went unnoticed while
+  // programStore supplied `?? 'Pretty consistent'` / `?? 'Good'` and the live
+  // write path scored the absent athlete as capacity 4 / medium. Sam's ruling
+  // deleted those defaults (Bible Section 9: no default, no unknown tier), so
+  // the harness now has to state the profile it was always implicitly assuming.
+  useProfileStore.setState({ onboardingData: PATH_PROFILE, isOnboardingComplete: true } as never);
 }
 
 function combinedLower(id = 'path-lower', dayOfWeek = 1, withConditioning = true): Workout {

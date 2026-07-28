@@ -823,7 +823,7 @@ function policyFor(input: Pick<
     case 'in_season_bye_build':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
+        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
@@ -990,14 +990,36 @@ export function resolveSection18PhasePlannerSelection(
   const recoveryMode = input.mode === 'in_season_bye_recovery';
   const optionalWeek = input.mode === 'optional_week';
   const earlyOffseason = input.mode === 'early_offseason';
-  const strongByeBuild = input.mode === 'in_season_bye_build' &&
-    input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
+  // RULED (Sam, 2026-07-28, Batch 2 — authored FIRST because this is the OWNER).
+  // Two conjuncts died here, for different reasons:
+  //   readiness === 'high'      capacity may not set structure. Deleting it
+  //                             anywhere else while the owner kept its own axis
+  //                             would have MOVED the axis, not removed it.
+  //   teamTrainingCount <= 1    Sam: a bye build week may still carry 2 team
+  //                             days. This was never a rule, just an untested
+  //                             assumption about what a bye looks like.
+  // What remains is a pure SCHEDULE fact: enough days to hold four sessions.
+  // RULED (a) (Sam, 2026-07-28): 4 is the PREFERRED MAXIMUM / planner aim for a
+  // bye build week with room for it — never a selected target that §18 rejects
+  // stored weeks against. Freshly planned weeks aim for 4; weeks already
+  // accepted at 3 stay valid, with no migration and no rejection-on-read.
+  //
+  // THE STANDING LAW THIS GENERALISES: a preference changes the shape of FUTURE
+  // planning and never invalidates accepted history.
+  //
+  // So `strongByeBuild` is DELETED rather than rewritten. The aim of 4 already
+  // exists — this mode's policy is
+  //   strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 }
+  // so `preferred.max` is the planner aim and `defaultTarget` is the selected
+  // target §18 validates. The old branch raised the SELECTED target to 4, which
+  // is what made §18 reject a stored week built at 3 and empty it on rehydrate.
+  // Nothing needs to be added to express the ruling; the override was the defect.
 
   const unconstrainedStrength = earlyOffseason
-    ? Math.min(policy.strength.max, availableDayCount, input.readiness === 'high' ? 3 : 2)
-    : strongByeBuild
-      ? 4
-      : policy.strength.defaultTarget;
+    // RULED: early off-season strength target is 3, flat. Every session in the
+    // block is optional, so the target describes what is OFFERED, not owed.
+    ? Math.min(policy.strength.max, availableDayCount, 3)
+    : policy.strength.defaultTarget;
   const strengthCapacity = earlyOffseason
     ? availableDayCount
     : Number.POSITIVE_INFINITY;
@@ -1032,10 +1054,11 @@ export function resolveSection18PhasePlannerSelection(
           ? 1
           : 0
       : earlyOffseason
-        ? Math.min(
-            input.readiness === 'high' && teamTrainingCount < 3 ? 2 : 1,
-            Math.max(0, availableDayCount - mainStrength),
-          )
+        // RULED (Sam, 2026-07-28): 0 required, 1-2 optional. The
+        // `teamTrainingCount < 3` conjunct died with the readiness one and for a
+        // plainer reason — there are NO team days in early off-season, so it was
+        // a condition that could never be false, dressed as a decision.
+        ? Math.min(2, Math.max(0, availableDayCount - mainStrength))
         : 0;
 
   return {

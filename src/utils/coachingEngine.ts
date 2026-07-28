@@ -56,6 +56,12 @@ import {
 import type { StressContext } from '../rules/stressClassification';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
+import { injurySeverityReducesAffectedWork } from '../rules/injurySeverityBands';
+import {
+  capacityFor,
+  CONSISTENCY_SCORES,
+  CONDITIONING_SCORES,
+} from '../data/capacityRubric';
 import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
@@ -777,108 +783,33 @@ function testingEffectReason(
   return null;
 }
 
-// ─── Step 1: Determine Readiness ───
+// ─── Step 1: Determine Capacity (the standing "readiness" score) ───
 
+/**
+ * Score the athlete's STANDING capacity from the two authored ladders.
+ *
+ * The rubric itself lives in `data/capacityRubric.ts`, which cites Bible
+ * Section 9. It used to live here as 18 loose numbers with no source at all —
+ * the largest unsourced cluster in the repo. Sam authored it and deleted three
+ * whole terms in the process (sprint +0.5, in-season -1, and the injury
+ * penalty); see the owner for why each went.
+ *
+ * This function no longer decides anything. It reads two answers, asks the
+ * owner, and reports. That is the point: one representation of the rubric.
+ */
 export function calculateReadiness(inputs: CoachingInputs): {
   level: ReadinessLevel;
   factors: string[];
 } {
-  let score = 0;
-  const factors: string[] = [];
+  // Throws when either answer is missing — Sam's ruling, same law as the
+  // deleted default bodyweight. Callers must not absorb it into a tier.
+  const { score, level } = capacityFor(inputs.recentTrainingLoad, inputs.conditioningLevel);
 
-  // Recent training consistency (0-3 points)
-  switch (inputs.recentTrainingLoad) {
-    case 'Very consistent':
-      score += 3;
-      factors.push('Very consistent recent training (+3)');
-      break;
-    case 'Pretty consistent':
-      score += 2;
-      factors.push('Pretty consistent recent training (+2)');
-      break;
-    case 'A bit':
-      score += 1;
-      factors.push('Some recent training (+1)');
-      break;
-    case 'Hardly at all':
-      score += 0;
-      factors.push('Minimal recent training (+0)');
-      break;
-    default:
-      score += 1;
-      factors.push('Unknown training history, defaulting conservative (+1)');
-  }
-
-  // Current fitness / conditioning level (0-3 points)
-  switch (inputs.conditioningLevel) {
-    case 'Elite':
-      score += 3;
-      factors.push('Elite conditioning (+3)');
-      break;
-    case 'Good':
-      score += 2;
-      factors.push('Good conditioning (+2)');
-      break;
-    case 'Average':
-      score += 1;
-      factors.push('Average conditioning (+1)');
-      break;
-    case 'Poor':
-      score += 0;
-      factors.push('Poor conditioning (+0)');
-      break;
-    default:
-      score += 1;
-      factors.push('Unknown conditioning, defaulting conservative (+1)');
-  }
-
-  // Injury adjustment — injuries MODIFY training, they don't eliminate it.
-  // Mild niggles barely affect readiness. Only severe/constant injuries reduce capacity.
-  // Cap total penalty so multiple mild injuries don't stack to crush the score.
-  if (inputs.injuries.length > 0) {
-    let injuryPenalty = 0;
-    for (const injury of inputs.injuries) {
-      if (injury.severity === 'Severe') {
-        injuryPenalty += 1.5;
-      } else if (injury.severity === 'Moderate') {
-        injuryPenalty += 0.5;
-      } else {
-        // Mild = niggle — negligible impact on readiness
-        injuryPenalty += 0;
-      }
-    }
-    // Cap total injury penalty at 2 — injuries change WHAT you train, not WHETHER you train
-    injuryPenalty = Math.min(injuryPenalty, 2);
-    score -= injuryPenalty;
-    factors.push(`${inputs.injuries.length} injur${inputs.injuries.length === 1 ? 'y' : 'ies'} (-${injuryPenalty}) - training modified, not removed`);
-  } else {
-    factors.push('No injuries (+0)');
-  }
-
-  // Sprint exposure context
-  if (inputs.sprintExposure === 'No sprint training') {
-    // Not a penalty per se, but means we need to be careful adding sprint load
-    factors.push('No current sprint exposure - ramp carefully');
-  } else if (inputs.sprintExposure === '2+ times per week') {
-    score += 0.5;
-    factors.push('Regular sprint exposure (+0.5)');
-  }
-
-  // Season context — in-season adds fatigue from games
-  if (inputs.seasonPhase === 'In-season') {
-    score -= 1;
-    factors.push('In-season fatigue penalty (-1)');
-  }
-
-  // Classify
-  let level: ReadinessLevel;
-  if (score <= 2) {
-    level = 'low';
-  } else if (score <= 4) {
-    level = 'medium';
-  } else {
-    level = 'high';
-  }
+  const factors: string[] = [
+    `Recent training: ${inputs.recentTrainingLoad} (+${CONSISTENCY_SCORES[inputs.recentTrainingLoad!]})`,
+    `Conditioning: ${inputs.conditioningLevel} (+${CONDITIONING_SCORES[inputs.conditioningLevel!]})`,
+    `Capacity ${score}/6 → ${level}`,
+  ];
 
   const activeReadiness = inputs.generationConstraints?.readiness;
   if (activeReadiness) {
@@ -1834,6 +1765,10 @@ function dayNameToNumber(name: string): number {
  * Calculate G-offset: how many days before game day is this day?
  * Returns negative numbers (e.g. -5 means G−5).
  * If no game day, returns 0 for all days.
+ *
+ * Callers compare the result against -3, which is the Bible's boundary for
+ * additional high stress rather than a tuned number.
+ * BIBLE_ANCHOR: last_high_stress_g3
  */
 function gOffset(dayNum: number, gameDayNum: number | null): number {
   if (gameDayNum === null) return 0;
@@ -2021,7 +1956,12 @@ function buildWeeklyPlan(
     // ─── In-season WITH game: G-relative placement with spacing intelligence ───
     const assigned = new Map<string, SessionAllocation>();
 
-    // Classify available slots
+    // Classify available slots. The G-relative boundaries are Bible citations,
+    // not tuning — see src/data/bibleThresholdAnchors.ts for the quoted rules.
+    // BIBLE_ANCHOR: lower_strength_g3          (midWeek — lower strength stops at G-3)
+    // BIBLE_ANCHOR: g_minus_2_no_heavy_lower_or_speed  (lateWeek)
+    // BIBLE_ANCHOR: g_minus_1_optional_only    (preGame)
+    // BIBLE_ANCHOR: g_plus_1_rest_or_recovery  (postGame)
     const highLoad = daySlots.filter(d => d.offset <= -4 && d.offset >= -5);       // G−5 to G−4
     const midWeek = daySlots.filter(d => d.offset === -3);                         // G−3
     const lateWeek = daySlots.filter(d => d.offset === -2);                        // G−2
@@ -8154,7 +8094,7 @@ function buildAIConstraints(
     phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const lowerLimbGenerationIssue = activeInjuries.some((injury) =>
-    injury.severity >= 4 &&
+    injurySeverityReducesAffectedWork(injury.severity) &&
     (injury.region === 'lower_body' ||
       injury.injuryKeys.some((key) =>
         key === 'hamstring' || key === 'knee' || key === 'calf' ||
