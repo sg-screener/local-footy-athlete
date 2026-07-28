@@ -44,6 +44,20 @@ import {
   missingRequiredProfileFields,
   resolveOnboardingResumeStep,
 } from '../utils/onboardingSteps';
+import {
+  TIME_TRIAL_EXERCISE_NAME,
+  buildTimeTrialSession,
+  recordTimeTrialResult,
+  timeTrialWorkout,
+} from '../data/timeTrialSession';
+import { EXERCISE_CUES } from '../data/exerciseCues';
+import { isSelectable } from '../data/selectableExerciseVocabulary';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import {
+  auditWeekAgainstCaps,
+  countWeeklyExposures,
+  type WeekDayInput,
+} from '../rules/weeklyExposureCounts';
 import { statesWholeNumber, stripComments } from './support/sourceText';
 import type {
   ExperienceLevel,
@@ -523,6 +537,104 @@ console.log('\n[19] CHANGE IT LATER — the same ingress, without re-onboarding'
     .filter((l) => /twoKm|timeTrial|TimeTrial/i.test(l)).join('\n');
   ok('the ruled numbers are not duplicated into the profile editor',
     !/\b(300|900)\b/.test(boundLines), boundLines.trim().slice(0, 400));
+}
+
+console.log('\n[20] THE SESSION — a test, not a dose');
+{
+  // Sam, 2026-07-29: "it is a TEST, not a dose — lives outside the 55
+  // conditioning rows, no conditioning-sheet entry; D14's 'run 2km, time it'
+  // is its complete specification."
+  ok('the exercise exists in the vocabulary',
+    isSelectable(TIME_TRIAL_EXERCISE_NAME),
+    'membership of a selectable pool is the only definition of "this exercise exists"');
+
+  ok('it carries Sam\'s authored cue',
+    EXERCISE_CUES[TIME_TRIAL_EXERCISE_NAME]?.primaryCue
+      === 'Try to run this at the same pace for the entire 2km',
+    EXERCISE_CUES[TIME_TRIAL_EXERCISE_NAME]?.primaryCue);
+
+  // The ruling's negative half, gated: it must NOT acquire a dose.
+  ok('it has NO conditioning-templates row',
+    !CONDITIONING_TEMPLATES.some((t) => /time trial/i.test(t.name)),
+    'a dose here would be inventing on a sheet Sam signed at 55 rows');
+
+  const session = buildTimeTrialSession('tt-1');
+  ok('the session prescribes the named exercise',
+    session.some((ex) => ex.exercise?.name === TIME_TRIAL_EXERCISE_NAME),
+    session.map((ex) => ex.exercise?.name).join(', '));
+}
+
+console.log('\n[21] It counts as a RUN — the existing gates need no change');
+{
+  // The claim, through the REAL counter rather than a restated rule. A
+  // hard_conditioning unit on feet is already a running exposure, so the 4-run
+  // cap sees the time trial without the cap owner being touched.
+  const week: WeekDayInput[] = [
+    { date: '2026-08-03', workouts: [timeTrialWorkout('2026-08-03')] },
+  ];
+  const counts = countWeeklyExposures(week, {});
+  ok('a time-trial day counts as one running exposure',
+    counts.runningExposures === 1, `got ${counts.runningExposures}`);
+  ok('it counts as conditioning, not strength',
+    counts.conditioningExposures === 1 && counts.mainStrengthExposures === 0,
+    `cond=${counts.conditioningExposures} strength=${counts.mainStrengthExposures}`);
+
+  // A 2km time trial is a MAXIMAL effort. If it classifies as easy aerobic
+  // work, hard-day spacing and G-1 protection never see it and it can be
+  // stacked beside a game.
+  //
+  // This assertion exists because mutation testing found the gap: reverting
+  // `conditioningCategory` from 'vo2' to the wrong flavour string still passed
+  // every count above, because 'aerobic_base' and 'hard_conditioning' are both
+  // conditioning categories and both count as a run. Only the STRESS differs —
+  // 'high-intensity' fell through to an intensity fallback and produced
+  // aerobic_base/medium, i.e. a max-effort run rated easy.
+  ok('a time trial is a HARD exposure, not easy aerobic work',
+    counts.hardExposures === 1, `hardExposures=${counts.hardExposures}`);
+  ok('and the day is marked hard',
+    counts.hardDays === 1, `hardDays=${counts.hardDays}`);
+  ok('it classifies as hard conditioning specifically',
+    counts.byCategory.hard_conditioning === 1,
+    JSON.stringify(counts.byCategory));
+
+  // Four time trials in a week is over the Bible's hard max. If the classifier
+  // ever stopped seeing this as a run, the cap would silently stop applying.
+  const five = ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07']
+    .map((date) => ({ date, workouts: [timeTrialWorkout(date)] }));
+  const overCounts = countWeeklyExposures(five, {});
+  ok('five of them breach the 4-run cap',
+    overCounts.runningExposures === 5
+      && auditWeekAgainstCaps(overCounts)
+        .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'over'),
+    `running=${overCounts.runningExposures}`);
+}
+
+console.log('\n[22] LOGGING A RESULT — the athlete\'s real run beats their answer');
+{
+  const logged = recordTimeTrialResult(402, '2026-08-03');
+  ok('a logged result is accepted', logged.ok);
+  ok('it is attributed to the session, not to onboarding',
+    logged.answer?.source === 'session_log', logged.answer?.source);
+  ok('it records the date it was run', logged.answer?.recordedOn === '2026-08-03');
+
+  // Same law as weights: real data beats the onboarding estimate. Proven by
+  // derivation, which is the only place the precedence can actually bite.
+  const onboarded: TwoKmTimeTrialAnswer = {
+    seconds: 480, recordedOn: '2026-07-29', source: 'onboarding',
+  };
+  const beforeLog = deriveMas(onboarded, '1-2 years');
+  const afterLog = deriveMas(logged.answer, '1-2 years');
+  ok('logging a faster run moves the derived MAS',
+    afterLog.masKmh > beforeLog.masKmh,
+    `${beforeLog.masKmh} -> ${afterLog.masKmh}`);
+  ok('and it is still tagged measured, not an estimate',
+    afterLog.source === 'measured', afterLog.source);
+
+  // The bound applies here exactly as it does on the screen. A mis-tapped
+  // stopwatch must not silently reprice every %MAS session in the app.
+  const absurd = recordTimeTrialResult(95, '2026-08-03');
+  ok('an impossible logged time is refused, not stored',
+    !absurd.ok && !absurd.answer, String(absurd.answer?.seconds));
 }
 
 const total = passed + failures.length;

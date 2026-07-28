@@ -432,6 +432,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Shoulders packed, walk tall.',
     secondaryCue: 'Breathe and keep moving. Weight shown is per hand.',
   },
+  '2km Time Trial': {
+    primaryCue: 'Try to run this at the same pace for the entire 2km',
+    secondaryCue: '',
+  },
   'Flush Run': {
     primaryCue: 'Easy jog, nothing above zone one or two.',
     secondaryCue: 'Move and loosen up.',

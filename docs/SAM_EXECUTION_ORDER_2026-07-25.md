@@ -63,6 +63,32 @@ findings belong to whoever designs the step-5 controls:
   (`src/rules/powerExercisePool.ts`), so step 5 has a deterministic app
   pick to override and does not need to invent one.
 
+### Bodyweight / height change-it-later door
+
+Ruled into step 5 by Sam (2026-07-29), during Stage C. **Recorded, not built.**
+
+Stage C gave the 2km time trial a first-class post-onboarding edit — the
+athlete can revise or retract it from Profile → Update setup → Edit
+player details, and the revision goes through `recordTwoKmTime`, the same
+ingress and the same refusal as onboarding.
+
+Bodyweight and height have no such door. That is the sharper gap of the
+two, because bodyweight is the FIRST TERM of the anchor chain: every one
+of the 77 load ratios multiplies it, so an athlete who mistyped it at
+onboarding, or who has simply changed, cannot correct the number that
+prices every card in their program without re-onboarding.
+
+Sam's ruling: it is a **first-class edit under the same ingress law as
+the 2km revision** — one ingress, `validateOnboardingMeasurement` against
+the authored bound, re-ask on refusal, never clamp, never silently
+accept. The bound already exists (`ONBOARDING_NUMERIC_BOUNDS`, 30–200 kg
+and 100–230 cm, Sam 2026-07-28); what is missing is the door and a
+writer that routes through the bound rather than around it.
+
+Whoever designs the step-5 controls owns it, alongside the other athlete
+affordances (swap / + / − / move) so it is designed once rather than as a
+measurements-only special.
+
 ### `beginnerDeterministicProgramTests` — wiring + a pre-existing red
 
 Queued for step-5 SCOPE REVIEW (Sam, 2026-07-27), not for silent repair:

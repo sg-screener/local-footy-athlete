@@ -127,6 +127,15 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   // 4x4 VO2 — a hard-intervals format on a low-impact mixed modality).
   'Erg EMOM':                 { tier: 'B-high', modality: 'mixed', impact: 'low' },
 
+  // The 2km time trial (D14). Sam ruled it a TEST, not a dose (2026-07-29) —
+  // it has no conditioning-templates row, because "run 2km, time it" is its
+  // complete specification and there is no dose to author. It still needs
+  // membership HERE: this map is one of the five systems that define "this
+  // exercise exists", so without it the session could never be prescribed.
+  // The triple mirrors its nearest sibling `6x1km` — a hard sustained run on
+  // feet. DERIVED from that sibling, not separately ruled.
+  '2km Time Trial':           { tier: 'B-high', modality: 'run',  impact: 'high' },
+
   // ── Tier B-low — Moderate Output ──
   'Tempo Run':                { tier: 'B-low',  modality: 'run',  impact: 'high' },
   'Long Nasal Run':           { tier: 'B-low',  modality: 'run',  impact: 'high' },

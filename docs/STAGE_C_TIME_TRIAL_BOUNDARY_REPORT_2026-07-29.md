@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-29
 **Branch:** `feat/stage-c-time-trial-mas`
-**Gates:** `npm run test:bible` **EXIT=0** (includes `test:compile`, which PASSED
+**Gates:** `npm run test:bible` **EXIT=0** (re-run after the session landed) (includes `test:compile`, which PASSED
 against baseline — product errors 37, unchanged). New suite `test:time-trial`
 98/98, registered in the bible chain.
 
@@ -20,7 +20,9 @@ against baseline — product errors 37, unchanged). New suite `test:time-trial`
 | Step registration + both entry routes | `onboardingSteps.ts`, `OnboardingNavigator`, `BenchStrengthScreen`, `GymExperienceScreen` |
 | Change-it-later | `ProfileScreen` player-details sheet, step `playerTimeTrial` |
 | Duplicate derivation retired | `src/utils/masCopy.ts` |
-| Sam's seven rulings, verbatim + anchored | `docs/STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md` |
+| The time-trial session + result logging | `src/data/timeTrialSession.ts` |
+| The exercise itself (sheet row, metadata, cue, pool membership) | master sheet, `muscleExperienceMetadata`, `exerciseCues`, `CONDITIONING_META` |
+| Sam's rulings, verbatim + anchored | `docs/STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md` |
 
 Store the time, derive MAS, never store MAS. `deriveMas` returns
 `{ masKmh, source: 'measured' | 'experience_default', seconds }` so a consumer
@@ -61,35 +63,60 @@ with it.
 **Note:** this is the first numeric onboarding answer revisable without
 re-onboarding. Bodyweight and height still have no post-onboarding door.
 
-## 3. STOPPED — the time-trial SESSION needs authored data (§5)
+## 3. THE TIME-TRIAL SESSION — ruled, then built
 
-The session half of Stage C is **not shipped**, and I did not fabricate it. Both
-routes to a renderable 2km time-trial session run through data you have signed:
+**Sam's ruling (2026-07-29):** *"it is a TEST, not a dose — lives outside the 55
+conditioning rows, no conditioning-sheet entry; D14's 'run 2km, time it' is its
+complete specification."* Athlete-facing name **`2km Time Trial`**; cue,
+verbatim: **"Try to run this at the same pace for the entire 2km"**.
 
-1. **The exercise vocabulary is locked and build-failing.** A renderable session
-   needs an exercise row, and `hardcodedExerciseNameLockTests` fails the build on
-   any `name:` literal in an exercise-identity position that is not in the locked
-   vocabulary or carrying a typed exemption. `EXERCISE_MASTER_SHEET_2026-07-28.xlsx`
-   has `Long Run`, `Tempo Run`, `Long Nasal Run`, `Flush Run` — and **no
-   time-trial entry**. Adding one means authoring a name, a cue, muscle metadata
-   and possibly a demo video on your sheet.
+That closes the §3 stop this report originally raised. Every row on the
+conditioning sheet answers *how much, how hard, how long* — a dose. A time trial
+has no such answer to author, because the prescription IS the measurement.
 
-2. **The conditioning templates sheet is signed at 55 rows**, held in lockstep
-   with the xlsx in both directions, and its own residue section says the three
-   framework sessions with no row are *"listed, not invented"*. A 56th row for
-   the time trial would be me inventing on your document.
+**What it still needed, and got:**
 
-Everything else about the session needs **no** new authoring: a
-`hard_conditioning` unit with `running` modality already counts as a running
-exposure in `countWeeklyExposures` with no change to the cap owner, so the 4-run
-cap, team-training-day and off-feet gates all apply the moment the session
-exists.
+| Content lock | What landed |
+|---|---|
+| Master exercise sheet | New row 197, pool `Conditioning`, gate `everyone`, Sam's cue. Round-trip proved: exactly one row added, every other row byte-identical and in order. |
+| `muscleExperienceMetadata` | Matching entry (equality holds in both directions). |
+| `CONDITIONING_META` | `{ tier: 'B-high', modality: 'run', impact: 'high' }` — membership here is what makes the exercise *exist*. |
+| `exerciseCues` | Sam's cue, mirrored from the sheet. |
 
-**What I need from you:** a name for the exercise row (`2km Time Trial`?), its
-cue, and whether it earns a row in the conditioning sheet or sits outside the 55
-as a *test* rather than a dose. My read is the latter — its dose is fully
-specified by D14 (run 2km, time it) and nothing about it is a conditioning
-prescription to be authored — but that is your call, not mine.
+**Two count pins moved with the row** — 198 sheet rows → 199, and the `everyone`
+gate 136 → 137. They were the only two assertions that broke, which is what
+those pins are for.
+
+**⚑ ONE THING DERIVED, NOT RULED.** The `CONDITIONING_META` triple mirrors its
+nearest sibling `6x1km` — a hard sustained run on feet. `modality: 'run'` and
+`impact: 'high'` are facts; **`tier: 'B-high'` is a judgement I derived from the
+sibling rather than one you ruled.** The `Erg EMOM` precedent shows you normally
+rule this triple yourself. Worth a look.
+
+### Two defects the exposure test caught, both mine
+
+1. **The session used `conditioningCategory: 'high-intensity'`** — a *flavour*
+   string, where the field takes the typed energy system. It fell through to an
+   intensity fallback and produced `aerobic_base` at `stress: medium`: a maximal
+   2km run rated as easy aerobic work, invisible to hard-day spacing and G-1
+   protection. `'vo2'` is what D14's "real aerobic-power session" means in that
+   enum.
+2. **`"2km Time Trial"` carries no token the running detector matches.**
+   `\brun\b` needs the word; `\bkm\b` never fires on `"2km"` because there is no
+   word boundary between the digit and the k. Taught to `exposureEngine`, which
+   `sessionTaxonomy` documents as the ONE home for running detection, rather
+   than special-cased at the counter. Guarded against a machine time trial.
+
+**With those fixed, nothing in the exposure counters needed changing.** A
+`hard_conditioning` unit on feet already counts as a running exposure, so the
+4-run cap, team-training-day gates and off-feet placement rules all apply. Five
+time trials in a week breach `maxRunningExposures`, asserted through the real
+`auditWeekAgainstCaps`.
+
+**Logging a result** goes through `recordTwoKmTime(source: 'session_log')`. The
+athlete's real run beats their onboarding answer — same law as weights — and the
+bound applies, so a mis-tapped stopwatch is refused rather than silently
+repricing every %MAS session in the app.
 
 ## 4. STAGE B REQUIREMENTS — recorded, as ruled
 
@@ -117,7 +144,13 @@ prescription to be authored — but that is your call, not mine.
 
 - **No device pass.** Simulator not run. Everything above about what the athlete
   sees is read from the code I wrote, which is an argument, not evidence.
-- **The time-trial session** — see §3. Not built, not stubbed.
+- **Nothing PLACES the time-trial session yet.** It exists, it is prescribable
+  and every gate counts it correctly — but the assembler that decides when an
+  athlete gets one is Stage B (§4.1). Today it can only be reached by code that
+  asks for it, so an athlete will not see one until Stage B lands.
+- **No athlete-facing door for LOGGING a result.** `recordTimeTrialResult` is
+  built and tested; no screen calls it. The session-logging UI is where that
+  door goes, and it was not in this unit's scope.
 - **Coach chat as a producer.** `recordTwoKmTime` accepts `source:
   'profile_edit'` from coach chat and the bound applies, but no coach intent
   parses "my 2km is 7:20" yet. The ingress is ready; the door is not cut.
@@ -155,6 +188,17 @@ prescription to be authored — but that is your call, not mine.
   refuse, and `source` hardcoded to `'measured'`. The transposition mutant is
   the one that matters: every individual value assertion still passed, and only
   the "defaults get slower as experience drops" ladder assertion caught it.
+- **A mutation SURVIVED, and finding it mattered.** Reverting
+  `conditioningCategory` to the wrong flavour string passed every exposure
+  assertion, because both values count as a run and as conditioning — only the
+  stress differed. The mutant shipped a maximal 2km run rated as easy aerobic
+  work. Three assertions now pin the hard classification that the counts could
+  not. Counting assertions do not test a severity.
+- **The xlsx edit was proved by round-trip, not by inspection.** Parse before,
+  parse after, diff the non-blank rows: exactly one added, zero removed, every
+  other row unchanged AND in the same order. There is no xlsx write library
+  here, so the edit is raw XML with row renumbering — the proof is the only
+  thing standing between that and silent corruption of a signed sheet.
 - **Four failures in `onboardingReliabilityTests` were the gate working**, not
   collateral: a profile missing the 2km step is no longer complete. Fixtures
   updated rather than assertions relaxed.

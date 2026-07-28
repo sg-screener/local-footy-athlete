@@ -79,7 +79,7 @@ const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
 
 console.log('\n[1] THE SHEET — still reads as Sam signed it');
 
-ok('the sheet holds 198 exercise rows', sheetRows.length === 198, `found ${sheetRows.length}`);
+ok('the sheet holds 199 exercise rows', sheetRows.length === 199, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -291,8 +291,14 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // Scap Pull Ups closed the same day — the first of these into a PREHAB pool
 // (Shoulder health, beside its Scap Push-Up sibling) rather than Mobility.
 // Also `everyone` and not a regression (135 -> 136). Total 197 -> 198.
+//
+// 2km Time Trial (Stage C / D14, 2026-07-29) is the first CONDITIONING row
+// added since the reconciliation. Sam ruled it a TEST rather than a dose, so it
+// takes no conditioning-templates row — but it still needs its sheet row, since
+// that is the enforced source for the cue and the muscle/experience gate.
+// `everyone` and not a regression (136 -> 137). Total 198 -> 199.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 136,
+  everyone: 137,
   everyone_regression: 11,
   one_plus_years: 32,
   two_plus_years: 17,
