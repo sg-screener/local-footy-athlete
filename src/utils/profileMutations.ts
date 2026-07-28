@@ -55,6 +55,40 @@ export function applyGameDayChange(
   };
 }
 
+/**
+ * The athlete's answer to "what is your usual game day?".
+ *
+ * A discriminated answer rather than `DayOfWeek | null` because those two
+ * shapes used to collapse: `gameDay: undefined` meant BOTH "the athlete says
+ * they have no usual game day" and "nobody asked". The second one silently
+ * wiped a stored anchor, which is how an In-season shift could delete the
+ * fixture the whole week is built around without anyone saying so.
+ */
+export type GameAnchorAnswer =
+  | { kind: 'usual_day'; day: DayOfWeek }
+  | { kind: 'no_usual_day' };
+
+export type PhaseShiftRefusalKind = 'game_anchor_unanswered';
+
+/**
+ * A phase shift that refuses rather than guessing. Carries its own typed
+ * copy and retryability so `classifyProgramMutationRefusal` passes it
+ * through instead of re-deciding it.
+ */
+export class PhaseShiftRefusal extends Error {
+  readonly kind: PhaseShiftRefusalKind;
+  readonly userMessage: string;
+  readonly canRetry = false;
+
+  constructor(kind: PhaseShiftRefusalKind) {
+    super(kind);
+    this.name = 'PhaseShiftRefusal';
+    this.kind = kind;
+    this.userMessage =
+      'Tell us your usual game day first — or say you do not have one — and we will build the week around that answer.';
+  }
+}
+
 export interface PhaseShiftInput {
   /** Target season phase. */
   targetPhase: SeasonPhase;
@@ -70,26 +104,41 @@ export interface PhaseShiftInput {
   preferredTrainingDays?: DayOfWeek[];
   /** Required when targetPhase !== 'Off-season'. Empty array allowed. */
   teamTrainingDays?: DayOfWeek[];
-  /** Only used when targetPhase === 'In-season'. Falsy → no game anchor. */
-  gameDay?: DayOfWeek | null;
+  /**
+   * REQUIRED when targetPhase === 'In-season'. Omitting it is not "no game
+   * day" — it is an unasked question, and the shift refuses.
+   *
+   * Pre-season and Off-season ignore this: neither phase carries a recurring
+   * fixture, so clearing the anchor there is a consequence of the athlete's
+   * explicit phase answer rather than a lost one.
+   */
+  gameAnchor?: GameAnchorAnswer;
 }
 
 /**
  * Apply a phase shift to a profile. Returns the new profile.
  *
- * Rules (mirroring HomeScreen.executePhaseShift):
+ * Rules:
  *   - Off-season: clears team days + game anchors entirely
  *   - Pre-season: keeps team days, clears game anchors (no games in pre-season)
- *   - In-season:  keeps team days, sets game anchors if provided
+ *   - In-season:  keeps team days, and REQUIRES an explicit game-anchor answer
+ *
+ * The In-season requirement is the ownership rule. The anchor is a fact the
+ * athlete owns; this function may act on their answer, and may not invent one
+ * when the answer is missing.
  *
  * Note: this DOES NOT clear calendar overrides (game/rest/noGame marks).
- * That is a calendarStore concern handled separately by the caller — see
- * the clearAllGames() side effect in HomeScreen.executePhaseShift.
+ * Leaving In-season clears them, but that now happens inside the atomic
+ * profile/program transaction — a rolled-back shift must not take the
+ * athlete's calendar with it.
  */
 export function applyPhaseShift(
   profile: OnboardingData,
   input: PhaseShiftInput,
 ): OnboardingData {
+  if (input.targetPhase === 'In-season' && input.gameAnchor === undefined) {
+    throw new PhaseShiftRefusal('game_anchor_unanswered');
+  }
   const updates: Partial<OnboardingData> = {
     seasonPhase: input.targetPhase,
   };
@@ -118,11 +167,13 @@ export function applyPhaseShift(
     updates.teamTrainingDays = teamDays;
     updates.teamTrainingDaysPerWeek = teamDays.length;
 
-    if (input.targetPhase === 'In-season' && input.gameDay) {
-      updates.usualGameDay = input.gameDay;
-      updates.gameDay = mapToLegacyGameDay(input.gameDay);
+    if (input.targetPhase === 'In-season' && input.gameAnchor?.kind === 'usual_day') {
+      updates.usualGameDay = input.gameAnchor.day;
+      updates.gameDay = mapToLegacyGameDay(input.gameAnchor.day);
     } else {
-      // Pre-season, OR In-season without a game anchor → clear games.
+      // Pre-season (no fixtures in that phase), OR In-season where the athlete
+      // answered "no usual game day". The unanswered case never reaches here —
+      // it refused above.
       updates.usualGameDay = undefined;
       updates.gameDay = undefined;
     }

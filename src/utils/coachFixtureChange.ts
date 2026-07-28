@@ -3,6 +3,7 @@ import {
   targetWeekFixtures,
   type TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import {
   executeFixtureMutationTransaction,
   type FixtureMutationTransactionResult,
@@ -89,11 +90,13 @@ export function readAcceptedCoachFixtureSnapshot(
   const profile = accepted.acceptedProfileSnapshot?.onboardingData;
   if (!state.currentProgram || !profile || accepted.revision < 1) return null;
   const weekStarts = snapshotWeekStarts(intent, packet);
+  const ownedPhase = ownSeasonPhase({ program: state.currentProgram, profile });
   const fixtures = weekStarts.flatMap((weekStart) =>
     targetWeekFixtures({
       profile,
       weekStart,
       markedDays: accepted.markedDays,
+      ownedPhase,
     }));
   const uniqueFixtures = Array.from(new Map(fixtures.map((fixture) =>
     [`${fixture.kind}:${fixture.date}`, fixture])).values())
@@ -102,7 +105,7 @@ export function readAcceptedCoachFixtureSnapshot(
     expectedAcceptedRevision: accepted.revision,
     profile,
     fixtures: uniqueFixtures,
-    fixtureKind: canonicalFixtureKind(profile),
+    fixtureKind: canonicalFixtureKind(ownedPhase),
   };
 }
 

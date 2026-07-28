@@ -28,6 +28,7 @@ import {
   composeAcceptedProfileConstraints,
   isAcceptedProfileConstraint,
 } from '../rules/acceptedProfileProjection';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 
 export type ProfileProgramChange =
   | {
@@ -243,11 +244,44 @@ export async function commitProfileProgramTransaction(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
-  if (semanticFingerprint(nextProfile) === semanticFingerprint(currentProfile)) {
+  // "Nothing to do" means THE ACCEPTED STATE ALREADY SATISFIES THIS REQUEST —
+  // not "the profile object is byte-identical".
+  //
+  // Those are different claims, and treating the profile as a proxy for the
+  // whole accepted state is what made three separate controls dead on a
+  // phase-skewed device. On such a device the profile ALREADY holds the
+  // athlete's selection (that is what skew means), so any request to re-own
+  // the program under it produces an identical profile — and was discarded as
+  // `no_change` while the program stayed built for the phase they left. The
+  // skew-repair button, the Profile setup-sheet Save, and the phase-shift
+  // sheet all short-circuited here.
+  //
+  // The transaction publishes the profile AND the program, so its
+  // already-satisfied test has to span both. Deliberately NOT a `force` flag
+  // or a repair-specific branch: either would let the next caller bypass the
+  // check entirely, and neither states what "no change" actually means.
+  const profileUnchanged =
+    semanticFingerprint(nextProfile) === semanticFingerprint(currentProfile);
+  const requestedPhase = nextProfile.seasonPhase ?? null;
+  const acceptedOwnedPhase = ownSeasonPhase({
+    program: useProgramStore.getState().currentProgram,
+    profile: currentProfile,
+  }).phase;
+  // With no program yet there is nothing to be out of step with, and the
+  // owner falls back to the profile selection — so this reads `true` and a
+  // genuine no-op stays a no-op.
+  const programAlreadyOwnsRequestedPhase =
+    requestedPhase === null || acceptedOwnedPhase === requestedPhase;
+
+  if (profileUnchanged && programAlreadyOwnsRequestedPhase) {
+    // `no_change` is an OUTCOME with a reason, not bare success. Returning it
+    // reason-less is what let a Save button that did nothing look identical to
+    // one that worked — see rules/programMutationRefusal.
     return {
       ok: true,
       changedProgram: false,
       message: 'Those profile settings are already active.',
+      reason: 'no_change',
       acceptedRevision: before.revision,
     };
   }
@@ -291,6 +325,21 @@ export async function commitProfileProgramTransaction(
       : []),
     ...Object.keys(base.surfaces.weekScopedOverlays),
   ])).sort();
+  // Leaving In-season retires explicit fixture marks. Virtual games vanish on
+  // their own once the phase moves, but an explicit 'game'/'noGame' mark set
+  // during the in-season run would bleed into the new phase.
+  //
+  // This runs INSIDE the transaction. It used to be a `clearAllGames()` call
+  // fired before the rebuild was even attempted, so a shift that then failed
+  // had already destroyed the athlete's calendar. Deriving it here rather than
+  // asking the caller to remember also means the Profile setup sheet — which
+  // can shift phase too — gets the same behaviour instead of its own.
+  const leavingInSeason = currentProfile.seasonPhase === 'In-season'
+    && nextProfile.seasonPhase !== 'In-season';
+  const nextMarkedDays = leavingInSeason
+    ? Object.fromEntries(Object.entries(before.markedDays)
+      .filter(([, mark]) => mark !== 'game' && mark !== 'noGame'))
+    : before.markedDays;
   const factFingerprint = semanticFingerprint(before.temporarySourceFacts);
   const profileFingerprint = semanticFingerprint(nextProfile);
   let committedBaseFingerprint: string | null = null;
@@ -302,6 +351,7 @@ export async function commitProfileProgramTransaction(
         reason: `profile_program:${input.change.kind}:${input.sourceSurface}`,
         program: base.surfaces,
         profile: nextProfile,
+        markedDays: nextMarkedDays,
         activeConstraints: compatibility.activeConstraints,
         activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,

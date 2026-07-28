@@ -310,6 +310,7 @@ export function gameChangeActionFromRebuild(args: {
   return args.clearOverlayDate ? 'moved' : 'added';
 }
 
-export function fixtureKindForPhase(phase: SeasonPhase): GameChangeFixtureKind {
-  return phase === 'Pre-season' ? 'practice_match' : 'game';
-}
+// `fixtureKindForPhase` lived here — a second, unreferenced copy of the
+// phase→fixture-kind decision. It is deleted rather than delegated: an
+// exported duplicate is a door the next caller walks through.
+// `canonicalFixtureKind` in rules/fixtureConditionedAvailability owns it.

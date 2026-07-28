@@ -31,6 +31,7 @@ import {
   type ExerciseRole,
   feelingToRPE,
 } from './progressionHelpers';
+import { resolveDeloadWeekPolicy } from '../rules/deloadWeekRules';
 
 // ─── Types ───
 
@@ -115,8 +116,16 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
 
   // ── Step 4: Scheduled deload cycle (candidate, not forced) ──
   // Only fires when there is at least 1 supporting fatigue signal.
-  const deloadThreshold = input.seasonPhase === 'In-season' ? 4 : 6;
-  if (input.weeksSinceDeload >= deloadThreshold) {
+  //
+  // This branch used to carry its own in-season threshold (`? 4 : 6`) — a
+  // SECOND scheduled-deload decider that D16's gate never saw. D16 says there
+  // are no scheduled in-season deloads at all; in-season backs off through the
+  // readiness and illness doors, which are steps 2 and 3 above and are
+  // deliberately left ungated. Asking the scheduled door itself is what binds
+  // this branch to the same law as every other scheduled deload.
+  const scheduledDoorOpen = resolveDeloadWeekPolicy(input.seasonPhase, 'deload') !== null;
+  const deloadThreshold = 6;
+  if (scheduledDoorOpen && input.weeksSinceDeload >= deloadThreshold) {
     // Check for at least one fatigue signal
     const hasSignal =
       input.readiness === 'low' ||

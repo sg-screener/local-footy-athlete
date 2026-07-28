@@ -134,6 +134,7 @@ import {
   resolveProfileTargetWeekAvailability,
   type FixtureConditionedAvailability,
 } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
 import type {
   SeasonPhaseClock,
   SeasonPhaseClockResolutionProvenance,
@@ -8159,7 +8160,11 @@ export function onboardingToCoachingInputs(
   );
   const weekStart = `${availabilityDateValue.getFullYear()}-${String(availabilityDateValue.getMonth() + 1).padStart(2, '0')}-${String(availabilityDateValue.getDate()).padStart(2, '0')}`;
   const targetWeekAvailability = options.targetWeekAvailability ??
-    resolveProfileTargetWeekAvailability({ profile: data, weekStart });
+    resolveProfileTargetWeekAvailability({
+      profile: data,
+      weekStart,
+      ownedPhase: ownSeasonPhaseForGeneration(data),
+    });
   const prefDays = targetWeekAvailability.effectiveAvailableDayNames as string[];
   const teamDays = (data.teamTrainingDays || []) as string[];
   const selectedDays: string[] = [...prefDays];

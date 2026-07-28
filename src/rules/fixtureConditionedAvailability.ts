@@ -1,6 +1,7 @@
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
+import type { OwnedSeasonPhase } from './seasonPhaseOwner';
 
 export type FixtureAvailabilityKind = 'game' | 'practice_match';
 
@@ -21,11 +22,19 @@ export interface TargetWeekFixture {
   kind: FixtureAvailabilityKind;
 }
 
-/** One phase-derived fixture identity shared by every fixture producer. */
+/**
+ * THE one phase→fixture-identity expression in the app.
+ *
+ * It takes the OWNED phase, not a profile. Six copies of this ternary used to
+ * exist, each reading whichever of the two season-phase values was in scope,
+ * which is how a practice match could be produced by one layer and refused as
+ * a game by the next. Taking `OwnedSeasonPhase` makes that mismatch a type
+ * error instead of something a later guard has to catch.
+ */
 export function canonicalFixtureKind(
-  profile: Pick<OnboardingData, 'seasonPhase'>,
+  ownedPhase: OwnedSeasonPhase,
 ): FixtureAvailabilityKind {
-  return profile.seasonPhase === 'Pre-season' ? 'practice_match' : 'game';
+  return ownedPhase.phase === 'Pre-season' ? 'practice_match' : 'game';
 }
 
 export interface EffectiveAvailabilityDay {
@@ -63,6 +72,13 @@ export interface ResolveFixtureConditionedAvailabilityInput {
   /** Typed safety/readiness projection supplied by the constraint owner. */
   safetyUnavailableDates?: readonly string[];
   activeConstraints?: readonly ActiveConstraint[];
+  /**
+   * The owned season phase. Required, and deliberately not derivable from
+   * `profile` here — the caller must have gone through `seasonPhaseOwner`, so
+   * this week's fixture identity is the same one the visible week was built
+   * from.
+   */
+  ownedPhase: OwnedSeasonPhase;
 }
 
 const DAY_NAMES: readonly DayOfWeek[] = [
@@ -91,9 +107,13 @@ function isDateInWeek(date: string, weekStart: string): boolean {
   return date >= weekStart && date <= addDays(weekStart, 6);
 }
 
-function recurringFixture(profile: OnboardingData, weekStart: string): TargetWeekFixture[] {
+function recurringFixture(
+  profile: OnboardingData,
+  weekStart: string,
+  ownedPhase: OwnedSeasonPhase,
+): TargetWeekFixture[] {
   const day = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
-  return day ? [{ date: dateForDay(weekStart, day), kind: canonicalFixtureKind(profile) }] : [];
+  return day ? [{ date: dateForDay(weekStart, day), kind: canonicalFixtureKind(ownedPhase) }] : [];
 }
 
 /** Resolve fixture anchors from the accepted target-week calendar view. */
@@ -101,15 +121,16 @@ export function targetWeekFixtures(args: {
   profile: OnboardingData;
   weekStart: string;
   markedDays?: Readonly<Record<string, CalendarDayType>>;
+  ownedPhase: OwnedSeasonPhase;
 }): TargetWeekFixture[] {
   const explicit = Object.entries(args.markedDays ?? {})
     .filter(([date, mark]) => isDateInWeek(date, args.weekStart) && mark === 'game')
-    .map(([date]) => ({ date, kind: canonicalFixtureKind(args.profile) }));
+    .map(([date]) => ({ date, kind: canonicalFixtureKind(args.ownedPhase) }));
   if (explicit.length > 0) return explicit.sort((left, right) => left.date.localeCompare(right.date));
   const explicitBye = Object.entries(args.markedDays ?? {})
     .some(([date, mark]) => isDateInWeek(date, args.weekStart) && mark === 'noGame');
   if (explicitBye) return [];
-  const recurring = recurringFixture(args.profile, args.weekStart);
+  const recurring = recurringFixture(args.profile, args.weekStart, args.ownedPhase);
   return recurring.some((fixture) => args.markedDays?.[fixture.date] === 'rest')
     ? []
     : recurring;
@@ -167,6 +188,7 @@ export function resolveFixtureConditionedAvailability(
       profile: input.profile,
       weekStart,
       markedDays: input.proposedMarkedDays,
+      ownedPhase: input.ownedPhase,
     }),
   );
   const proposedFixtureDates = new Set(proposedFixtures.map((fixture) => fixture.date));
@@ -183,7 +205,7 @@ export function resolveFixtureConditionedAvailability(
     ) {
       releasedFixtures.push({
         date,
-        kind: canonicalFixtureKind(input.profile),
+        kind: canonicalFixtureKind(input.ownedPhase),
         provenance: 'bye_usual_game_day',
       });
     }
@@ -252,6 +274,7 @@ export function resolveProfileTargetWeekAvailability(args: {
   weekStart: string;
   markedDays?: Readonly<Record<string, CalendarDayType>>;
   activeConstraints?: readonly ActiveConstraint[];
+  ownedPhase: OwnedSeasonPhase;
 }): FixtureConditionedAvailability {
   const proposedFixtures = targetWeekFixtures(args);
   const explicitBye = Object.entries(args.markedDays ?? {})
@@ -263,5 +286,6 @@ export function resolveProfileTargetWeekAvailability(args: {
     proposedMarkedDays: args.markedDays,
     byeUsualGameDay: explicitBye,
     activeConstraints: args.activeConstraints,
+    ownedPhase: args.ownedPhase,
   });
 }

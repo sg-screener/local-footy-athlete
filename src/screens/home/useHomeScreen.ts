@@ -3,7 +3,6 @@ import { Animated, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useStaleOverrides } from '../../hooks/useStaleOverrides';
-import { useCalendarStore } from '../../store/calendarStore';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
@@ -76,7 +75,10 @@ import {
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../../rules/durableFactHorizon';
-import { seasonPhaseFromProgram } from '../../rules/seasonPhaseClock';
+import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
+import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability';
+import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -119,8 +121,9 @@ const targetStatusModifierKind = (
  *   (`clearManualOverridesPreservingActiveModifiers` — modifier-owned
  *   overrides and user manual edits survive; stale system artifacts clear).
  * - Phase shift: 3-step flow (confirm → teamDays → gameDay|off-season skip),
- *   side-effectful `clearAllGames()` on leaving In-season, diff-based
- *   `updateOnboardingData()` patch, and rebuild-for-game-change retry loop.
+ *   committed atomically through `commitProfileProgramTransaction` — the
+ *   profile patch, the rebuild and the fixture-mark retirement publish
+ *   together or roll back together.
  * - Game day changes (move/add/remove): in-season structural rebuild with
  *   the stale-game-proximity-override cleanup.
  * - Add-game CTA visibility rule (Off-season never; Pre-season gated on
@@ -239,9 +242,6 @@ export function useHomeScreen() {
   } | null>(null);
   const [repeatWeekRestoreStatus, setRepeatWeekRestoreStatus] = useState<string | null>(null);
 
-  // Calendar store actions
-  const { clearAllGames } = useCalendarStore();
-
   // ── Rebuild state ──
   const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
   const [isRebuilding, setIsRebuilding] = useState(false);
@@ -256,7 +256,6 @@ export function useHomeScreen() {
   // Profile store
   const onboardingData = useProfileStore((s) => s.onboardingData);
   const isOnboardingComplete = useProfileStore((s) => s.isOnboardingComplete);
-  const updateOnboardingData = useProfileStore((s) => s.updateOnboardingData);
 
   // Program store — currentProgram is read up here so the season-phase
   // derivation below can source the phase from its clock (single source of truth).
@@ -271,15 +270,35 @@ export function useHomeScreen() {
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
-  // Season phase is read from the generated program's clock — the single
-  // source of truth the visible week is built from (seasonPhaseClock.selectedPhase).
-  // Falls back to the profile only when there is no valid clock yet (fresh
-  // account, pre-generation). Reading the profile directly used to drift from
-  // the week after a phase shift rebuilt the program but the profile write
-  // lagged (HOMEV2 row 5.1: card stuck "In-season" over an off-season week).
-  const currentPhase = (seasonPhaseFromProgram(currentProgram)
-    ?? onboardingData.seasonPhase
-    ?? 'Pre-season') as SeasonPhase;
+  // The game anchor is an ANSWER, and `null` is one of its values. This flag
+  // separates "the athlete said they have no usual game day" from "nobody has
+  // asked yet" — the two used to be the same empty field, and the second one
+  // silently wiped a stored anchor.
+  const [pendingGameAnchorAnswered, setPendingGameAnchorAnswered] = useState(false);
+
+  /** Naming a day is an answer. */
+  const answerUsualGameDay = (day: DayOfWeek) => {
+    setPendingGameDay(day);
+    setPendingGameAnchorAnswered(true);
+  };
+
+  /** So is saying there is no usual day. */
+  const answerNoUsualGameDay = () => {
+    setPendingGameDay(null);
+    setPendingGameAnchorAnswered(true);
+  };
+  // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
+  // that used to sit here claimed the clock was "the single source of truth
+  // the visible week is built from" — and it was not, because `useSchedule`
+  // built that week from `profile.seasonPhase`. Both now read the same owner,
+  // so the claim is true by construction rather than by assertion.
+  //
+  // `ownedPhase.skew` is the typed report of a device that carries the old
+  // disagreement; it drives the repair disclosure below, and it is never
+  // resolved silently in either direction.
+  const ownedPhase = ownSeasonPhase({ program: currentProgram, profile: onboardingData });
+  const currentPhase = (ownedPhase.phase ?? 'Pre-season') as SeasonPhase;
+  const seasonPhaseSkew = ownedPhase.skew;
   // Latched target phase for the shift modal. Set explicitly by the caller
   // of handleOpenPhaseShift so the modal renders from the user's actual
   // selection, never from a derived "next phase". Seeded to NEXT_PHASE so
@@ -762,13 +781,16 @@ export function useHomeScreen() {
       (onboardingData.preferredTrainingDays as DayOfWeek[]) || [],
     );
     setPendingTeamDays((onboardingData.teamTrainingDays as DayOfWeek[]) || []);
-    setPendingGameDay(
+    const storedGameDay =
       (onboardingData.usualGameDay as DayOfWeek | undefined) ||
-        (typeof onboardingData.gameDay === 'string' &&
-        WEEK_DAYS.includes(onboardingData.gameDay as DayOfWeek)
-          ? (onboardingData.gameDay as DayOfWeek)
-          : null),
-    );
+      (typeof onboardingData.gameDay === 'string' &&
+      WEEK_DAYS.includes(onboardingData.gameDay as DayOfWeek)
+        ? (onboardingData.gameDay as DayOfWeek)
+        : null);
+    setPendingGameDay(storedGameDay ?? null);
+    // A stored anchor IS a prior answer, so re-confirming it is one tap. An
+    // absent one is not an answer of any kind and must be asked for.
+    setPendingGameAnchorAnswered(Boolean(storedGameDay));
     setPhaseShiftModalVisible(true);
   };
 
@@ -818,39 +840,107 @@ export function useHomeScreen() {
     });
   };
 
+  /**
+   * Commit a phase shift ATOMICALLY.
+   *
+   * This used to write `profile.seasonPhase` and then await the rebuild. A
+   * rebuild that failed left the profile in the new phase over a program
+   * still built for the old one — the skew that made the home chrome and the
+   * visible week disagree, and that Sam's own device still carries.
+   *
+   * `commitProfileProgramTransaction` publishes the profile and the rebuilt
+   * program in one accepted-state replacement with a durable read-back, and
+   * rolls the whole thing back if it cannot be verified. There is no window
+   * in which one has moved and the other has not. Leaving In-season retires
+   * explicit fixture marks inside that same transaction.
+   */
+  // ───────── Stored-state repair: season-phase skew ─────────
+  //
+  // Sam's device carries a profile and a clock that disagree, from a phase
+  // shift whose profile write landed before its rebuild failed. Fixing the
+  // write path does nothing for state that is already wrong, and neither
+  // value may be quietly overwritten to match the other: the clock is what
+  // the athlete's visible week is actually built from, and the profile
+  // selection is what they told us they are.
+  //
+  // So the skew is DISCLOSED, and one press reconciles it — by re-running the
+  // athlete's own selection through the same atomic transaction a deliberate
+  // phase shift uses. Nothing is deleted, the rebuild is verified, and a
+  // failure rolls back whole and leaves the disclosure standing.
+  const [seasonPhaseRepairBusy, setSeasonPhaseRepairBusy] = useState(false);
+  const [seasonPhaseRepairError, setSeasonPhaseRepairError] = useState<string | null>(null);
+
+  const handleRepairSeasonPhaseSkew = async () => {
+    if (!seasonPhaseSkew || seasonPhaseRepairBusy) return;
+    setSeasonPhaseRepairBusy(true);
+    setSeasonPhaseRepairError(null);
+    try {
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          // The athlete's selection is the aim. The clock is re-minted from
+          // it by the rebuild inside the transaction.
+          patch: { seasonPhase: seasonPhaseSkew.profileSelection },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'season_phase_skew_repair',
+      });
+      if (!result.ok) {
+        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[PhaseSkew] repair refused:', refusal.diagnostic ?? result.message);
+        setSeasonPhaseRepairError(refusal.userMessage);
+        return;
+      }
+      if (!result.changedProgram) {
+        // A repair that changes nothing must SAY so. This branch was missing:
+        // the handler read only `!result.ok`, so a `no_change` outcome was
+        // swallowed whole — the button darkened, nothing happened, and the
+        // disclosure stayed. The refusal table covered `no_change` the whole
+        // time; the caller simply never asked it.
+        const outcome = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[PhaseSkew] repair changed nothing:', outcome.diagnostic ?? result.message);
+        setSeasonPhaseRepairError(outcome.userMessage);
+      }
+    } catch (err: any) {
+      logger.error('[PhaseSkew] repair failed:', err?.diagnostic || err?.message || err);
+      setSeasonPhaseRepairError(classifyProgramMutationRefusal({ error: err }).userMessage);
+    } finally {
+      setSeasonPhaseRepairBusy(false);
+    }
+  };
+
   const executePhaseShift = async () => {
     setRebuildMsgIdx(0);
     rebuildMsgOpacity.setValue(1);
     setPhaseShiftStep('building');
     setIsRebuilding(true);
     clearRebuildError();
+    // Fall back to the step the user was on so they can act on a refusal.
+    // Off-season's last interactive step is `availability`; Pre-season's is
+    // `teamDays`; In-season's is `gameDay`. Matches the forward-path terminal.
+    const interactiveStep: PhaseShiftStep = targetPhase === 'In-season'
+      ? 'gameDay'
+      : targetPhase === 'Pre-season'
+        ? 'teamDays'
+        : 'availability';
     try {
-      // Compute the next profile via the shared mutation helper so the
-      // QA harness exercises the exact same overlay logic. See
-      // src/utils/profileMutations.ts for the rules.
+      // The pure mutation still owns the overlay rules, so the QA harness
+      // exercises the same logic. It REFUSES an In-season shift with no
+      // game-anchor answer rather than silently clearing the anchor.
       const nextProfile = applyPhaseShift(onboardingData, {
         targetPhase,
         preferredTrainingDays: pendingPreferredDays,
         teamTrainingDays: pendingTeamDays,
-        gameDay: pendingGameDay,
+        gameAnchor: targetPhase === 'In-season' && pendingGameAnchorAnswered
+          ? (pendingGameDay
+            ? { kind: 'usual_day', day: pendingGameDay }
+            : { kind: 'no_usual_day' })
+          : undefined,
       });
-      // Side effect outside the pure mutation: when leaving In-season,
-      // wipe all explicit game / bye markers. Virtual games disappear
-      // automatically once seasonPhase flips, but explicit 'game' marks
-      // set during the in-season run would otherwise survive and bleed
-      // into the new phase. (calendarStore is not part of OnboardingData
-      // so the pure helper can't and shouldn't touch it.)
-      if (currentPhase === 'In-season' && targetPhase !== 'In-season') {
-        clearAllGames();
-      }
-      // Persist the diff to profileStore. We compute the patch by diffing
-      // against the original profile so unchanged fields don't churn.
-      const updates: Partial<typeof onboardingData> = {
+      const patch: Partial<typeof onboardingData> = {
         seasonPhase: nextProfile.seasonPhase,
-        // Persist the re-confirmed availability from the modal's availability
-        // step. `applyPhaseShift` has already set these on `nextProfile` when
-        // `preferredTrainingDays` is provided; we mirror them into the patch
-        // so profileStore reflects the athlete's current schedule.
+        // The availability step re-asks every shift — onboarding data can be
+        // months stale — so the answer is carried into the same patch.
         preferredTrainingDays: nextProfile.preferredTrainingDays,
         trainingDaysPerWeek: nextProfile.trainingDaysPerWeek,
         teamTrainingDays: nextProfile.teamTrainingDays,
@@ -858,35 +948,39 @@ export function useHomeScreen() {
         usualGameDay: nextProfile.usualGameDay,
         gameDay: nextProfile.gameDay,
       };
-      updateOnboardingData(updates);
       if (__DEV__) {
-        logger.debug('[PhaseShift] Rebuilding with:', {
-          seasonPhase: nextProfile.seasonPhase,
-          preferredTrainingDays: nextProfile.preferredTrainingDays,
-          teamTrainingDays: nextProfile.teamTrainingDays,
-          usualGameDay: nextProfile.usualGameDay,
-          gameDay: nextProfile.gameDay,
-        });
+        logger.debug('[PhaseShift] Committing:', patch);
       }
-      await runRebuild(nextProfile);
+      const result = await commitProfileProgramTransaction({
+        change: { kind: 'profile_setup', patch },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'phase_shift',
+      });
+      if (!result.ok) {
+        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[PhaseShift] refused:', refusal.diagnostic ?? result.message);
+        setRebuildError(refusal.userMessage);
+        setRebuildErrorCanRetry(refusal.canRetry);
+        setPhaseShiftStep(interactiveStep);
+        return;
+      }
+      if (!result.changedProgram) {
+        // A shift that changed nothing is an outcome the athlete is told
+        // about, not a silent close that looks like success.
+        const outcome = classifyProgramMutationRefusal({ reason: result.reason });
+        setRebuildError(outcome.userMessage);
+        setRebuildErrorCanRetry(outcome.canRetry);
+        setPhaseShiftStep(interactiveStep);
+        return;
+      }
       setPhaseShiftModalVisible(false);
       setPhaseShiftStep('confirm');
     } catch (err: any) {
       logger.error('[PhaseShift] failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildFailure(err);
-      setRebuildError(userMessage);
-      setRebuildErrorCanRetry(canRetry);
-      // Fall back to the step the user was on so they can retry. Off-season
-      // has no teamDays/gameDay, so the last interactive step is
-      // `availability`; for Pre-season it's `teamDays`; for In-season
-      // `gameDay`. Matches the forward-path terminal step.
-      setPhaseShiftStep(
-        targetPhase === 'In-season'
-          ? 'gameDay'
-          : targetPhase === 'Pre-season'
-          ? 'teamDays'
-          : 'availability',
-      );
+      const refusal = classifyProgramMutationRefusal({ error: err });
+      setRebuildError(refusal.userMessage);
+      setRebuildErrorCanRetry(refusal.canRetry);
+      setPhaseShiftStep(interactiveStep);
     } finally {
       setIsRebuilding(false);
     }
@@ -926,7 +1020,9 @@ export function useHomeScreen() {
       return;
     }
     if (phaseShiftStep === 'gameDay') {
-      if (!pendingGameDay) return; // guarded by button disabled state
+      // Guarded by the button's disabled state; an unanswered anchor would
+      // be refused by `applyPhaseShift` anyway.
+      if (!pendingGameAnchorAnswered) return;
       await executePhaseShift();
     }
   };
@@ -983,7 +1079,7 @@ export function useHomeScreen() {
         : action === 'remove' ? options.targetDate : undefined;
       const mutation = await executeFixtureMutationTransaction({
         action,
-        fixtureKind: currentPhase === 'Pre-season' ? 'practice_match' : 'game',
+        fixtureKind: canonicalFixtureKind(ownedPhase),
         ...(sourceDate ? { sourceDate } : {}),
         ...(action !== 'remove' ? { targetDate: options.targetDate } : {}),
         expectedAcceptedRevision: acceptedRevision,
@@ -2091,6 +2187,12 @@ export function useHomeScreen() {
     handleMoveGameDay,
     handleRemoveGameDay,
 
+    // Season-phase skew disclosure + its one repair path
+    seasonPhaseSkew,
+    seasonPhaseRepairBusy,
+    seasonPhaseRepairError,
+    handleRepairSeasonPhaseSkew,
+
     // Rebuild modal
     rebuildModalVisible,
     isRebuilding,
@@ -2119,13 +2221,15 @@ export function useHomeScreen() {
     pendingPreferredDays,
     pendingTeamDays,
     pendingGameDay,
+    pendingGameAnchorAnswered,
     targetPhase,
     handleOpenPhaseShift,
     handleCancelPhaseShift,
     handlePhaseShiftBack,
     togglePendingPreferredDay,
     togglePendingTeamDay,
-    setPendingGameDay,
+    setPendingGameDay: answerUsualGameDay,
+    answerNoUsualGameDay,
     handleAdvancePhaseShift,
   };
 }

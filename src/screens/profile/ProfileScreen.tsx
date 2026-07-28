@@ -13,6 +13,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
+import { useProgramStore } from '../../store/programStore';
+import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
+import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
+import {
+  decideProfileSetupChange,
+  profileSetupBlockCopy,
+} from '../../rules/profileSetupChange';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -23,7 +30,6 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
-import { mapToLegacyGameDay } from '../../utils/profileMutations';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -87,12 +93,6 @@ function sortDays(days: DayOfWeek[]): DayOfWeek[] {
   return [...days].sort((a, b) => WEEK_DAYS.indexOf(a) - WEEK_DAYS.indexOf(b));
 }
 
-function sameDays(a?: DayOfWeek[], b?: DayOfWeek[]): boolean {
-  const left = sortDays(a ?? []);
-  const right = sortDays(b ?? []);
-  return left.length === right.length && left.every((day, index) => day === right[index]);
-}
-
 function formatDaySummary(days?: DayOfWeek[]): string {
   if (!days || days.length === 0) return 'Not set';
   return sortDays(days).map((day) => DAY_SHORT[day]).join(', ');
@@ -121,17 +121,26 @@ function dayFromGameFields(data: OnboardingData): DayOfWeek | null {
   return null;
 }
 
-function classifySetupUpdateError(err: any): string {
-  if (err && typeof err === 'object' && err.name === 'ProgramGenError') {
-    return err.userMessage || 'Something went wrong. Please try again.';
-  }
-  return 'Something went wrong. Please try again.';
-}
+// `classifySetupUpdateError` lived here and answered every refusal with
+// "Something went wrong. Please try again." — including a phase mismatch,
+// which trying again cannot fix. `classifyProgramMutationRefusal` owns the
+// typed reason, its copy and its retryability for both this screen and the
+// phase-shift sheet.
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  // The phase this screen shows and compares against is the OWNED one — what
+  // the program is actually built as. Reading `onboardingData.seasonPhase`
+  // here is what made the Save button dead on a skewed device: the sheet
+  // displayed the profile's phase, so re-picking it was "no change", and the
+  // rebuild that would have fixed the skew never ran.
+  const currentProgramForPhase = useProgramStore((s) => s.currentProgram);
+  const ownedSeasonPhase = ownSeasonPhase({
+    program: currentProgramForPhase,
+    profile: onboardingData,
+  });
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
@@ -190,13 +199,13 @@ export default function ProfileScreen() {
     (onboardingData.experienceLevel as ExperienceLevel) || null,
   );
   const [pendingSeasonPhase, setPendingSeasonPhase] = useState<SeasonPhase>(
-    (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase,
+    (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase,
   );
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
   const [draftSeasonPhase, setDraftSeasonPhase] = useState<SeasonPhase>(
-    (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase,
+    (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase,
   );
   const [draftPreferredDays, setDraftPreferredDays] = useState<DayOfWeek[]>([]);
   const [draftTeamDays, setDraftTeamDays] = useState<DayOfWeek[]>([]);
@@ -317,7 +326,7 @@ export default function ProfileScreen() {
     const currentName = onboardingData.firstName || '';
     const currentPosition = currentRole(onboardingData);
     const currentExperience = (onboardingData.experienceLevel as ExperienceLevel) || null;
-    const currentSeasonPhase = (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase;
+    const currentSeasonPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
     const currentPreferredDays = (onboardingData.preferredTrainingDays as DayOfWeek[]) || [];
     const currentTeamDays = (onboardingData.teamTrainingDays as DayOfWeek[]) || [];
     const currentGameDay = dayFromGameFields(onboardingData);
@@ -361,35 +370,41 @@ export default function ProfileScreen() {
   }).map((note) =>
     typeof note.severity === 'number' ? `${note.title} — ${note.severity}/10` : note.title,
   );
-  const currentPhase = (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase;
-  const pendingIsInSeason = pendingSeasonPhase === 'In-season';
-  const pendingGameDayValid = !pendingIsInSeason || Boolean(pendingGameDay);
+  const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
   const lfaDayCountNeedsSync =
     programDetailsSaved &&
     (
       onboardingData.trainingDaysUnsure === true ||
       (onboardingData.trainingDaysPerWeek ?? 0) !== pendingPreferredDays.length
     );
-  const storedTwoKmSeconds =
-    (onboardingData.twoKmTimeTrial as TwoKmTimeTrialAnswer)?.seconds ?? null;
-  const playerProgramHasChanges =
-    pendingPosition !== currentRole(onboardingData) ||
-    pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null) ||
-    // Compare the TIME, not the answer object -- re-recording the same time on a
-    // new date is not a change the athlete made to their program.
-    (pendingTwoKm?.seconds ?? null) !== storedTwoKmSeconds;
-  const setupHasChanges =
-    playerProgramHasChanges ||
-    pendingSeasonPhase !== currentPhase ||
-    lfaDayCountNeedsSync ||
-    !sameDays(pendingPreferredDays, onboardingData.preferredTrainingDays as DayOfWeek[] | undefined) ||
-    !sameDays(pendingTeamDays, onboardingData.teamTrainingDays as DayOfWeek[] | undefined) ||
-    (pendingIsInSeason && pendingGameDay !== dayFromGameFields(onboardingData));
-  const canUpdateSetup =
-    pendingPreferredDays.length >= 1 &&
-    pendingGameDayValid &&
-    setupHasChanges &&
-    !isSetupUpdating;
+  // ONE decision behind Save. `setupHasChanges` and `buildSetupPatch` used to
+  // be two separate comparisons over the same fields; when they disagreed the
+  // athlete got a live-looking button that committed nothing. The patch IS
+  // the decision now — see rules/profileSetupChange.
+  const setupDecision = decideProfileSetupChange({
+    stored: onboardingData,
+    ownedPhase: currentPhase,
+    storedPosition: currentRole(onboardingData),
+    lfaDayCountNeedsSync,
+    selection: {
+      name: pendingName,
+      position: pendingPosition,
+      experience: pendingExperience,
+      twoKmSeconds: pendingTwoKm?.seconds ?? null,
+      twoKmAnswer: pendingTwoKm,
+      seasonPhase: pendingSeasonPhase,
+      preferredDays: pendingPreferredDays,
+      teamDays: pendingTeamDays,
+      gameDay: pendingGameDay,
+    },
+  });
+  const setupHasChanges = setupDecision.hasChanges;
+  const canUpdateSetup = setupDecision.canSave && !isSetupUpdating;
+  // A disabled Save always says why. A control that is off for an unstated
+  // reason is the same failure as one that is on and inert.
+  const setupBlockedCopy = setupDecision.blockedBy.length > 0
+    ? profileSetupBlockCopy(setupDecision.blockedBy[0])
+    : null;
 
   const closeSetupSheet = () => {
     if (isSetupUpdating) return;
@@ -535,64 +550,11 @@ export default function ProfileScreen() {
     );
   };
 
-  const buildSetupPatch = (): Partial<OnboardingData> => {
-    const preferredDays = sortDays(pendingPreferredDays);
-    const teamTrainingDays = sortDays(pendingTeamDays);
-    const trimmedName = pendingName.trim();
-    const currentGameDay = dayFromGameFields(onboardingData);
-    const patch: Partial<OnboardingData> = {};
-
-    if (trimmedName && trimmedName !== (onboardingData.firstName || '')) {
-      patch.firstName = trimmedName;
-    }
-    if (pendingPosition && pendingPosition !== currentRole(onboardingData)) {
-      patch.position = pendingPosition;
-    }
-    if (
-      pendingExperience &&
-      pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null)
-    ) {
-      patch.experienceLevel = pendingExperience;
-    }
-
-    if (pendingTwoKm && (pendingTwoKm.seconds ?? null) !== storedTwoKmSeconds) {
-      patch.twoKmTimeTrial = pendingTwoKm;
-    }
-
-    if (pendingSeasonPhase !== currentPhase) {
-      patch.seasonPhase = pendingSeasonPhase;
-    }
-
-    if (
-      lfaDayCountNeedsSync ||
-      !sameDays(preferredDays, onboardingData.preferredTrainingDays as DayOfWeek[] | undefined)
-    ) {
-      patch.preferredTrainingDays = preferredDays;
-      patch.trainingDaysPerWeek = preferredDays.length;
-      patch.trainingDaysUnsure = false;
-    }
-
-    if (!sameDays(teamTrainingDays, onboardingData.teamTrainingDays as DayOfWeek[] | undefined)) {
-      patch.teamTrainingDays = teamTrainingDays;
-      patch.teamTrainingDaysPerWeek = teamTrainingDays.length;
-    }
-
-    if (pendingSeasonPhase === 'In-season') {
-      if (pendingGameDay !== currentGameDay || pendingSeasonPhase !== currentPhase) {
-        patch.usualGameDay = pendingGameDay ?? undefined;
-        patch.gameDay = pendingGameDay ? mapToLegacyGameDay(pendingGameDay) : undefined;
-      }
-    } else if (currentPhase === 'In-season') {
-      patch.usualGameDay = undefined;
-      patch.gameDay = undefined;
-    }
-
-    return patch;
-  };
-
   const executeSetupUpdate = async () => {
     if (!canUpdateSetup && !setupUpdateError) return;
-    const patch = buildSetupPatch();
+    // The very same decision the button read. There is no second comparison
+    // left that could produce an empty patch behind an enabled Save.
+    const patch = setupDecision.patch;
     setSetupUpdateError(null);
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
@@ -607,13 +569,29 @@ export default function ProfileScreen() {
         todayISO: todayISOLocal(),
         sourceSurface: 'profile_setup',
       });
-      if (!result.ok) throw new Error(result.reason ?? 'profile_setup_transaction_failed');
+      if (!result.ok) {
+        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[profile-setup-update] refused', refusal.diagnostic ?? result.message);
+        setSetupUpdateError(refusal.userMessage);
+        setSetupSheetStep('confirm');
+        return;
+      }
+      if (!result.changedProgram) {
+        // A save that changed nothing is reported, not swallowed. Closing the
+        // sheet on a no-change outcome is what made a dead Save button look
+        // exactly like a working one.
+        setSetupUpdateError(
+          classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
+        );
+        setSetupSheetStep('confirm');
+        return;
+      }
       setSetupSheetVisible(false);
       setSetupSheetStep('overview');
       setProgramDetailsSaved(false);
     } catch (err: any) {
       logger.error('[profile-setup-update] rebuild_failed', err?.diagnostic || err?.message || err);
-      setSetupUpdateError(classifySetupUpdateError(err));
+      setSetupUpdateError(classifyProgramMutationRefusal({ error: err }).userMessage);
       setSetupSheetStep('confirm');
     } finally {
       setIsSetupUpdating(false);
@@ -882,6 +860,7 @@ export default function ProfileScreen() {
         teamDays={pendingTeamDays}
         gameDay={pendingGameDay}
         canUpdate={canUpdateSetup}
+        blockedCopy={setupBlockedCopy}
         error={setupUpdateError}
         isUpdating={isSetupUpdating}
         updateMsgIdx={setupUpdateMsgIdx}
@@ -979,6 +958,8 @@ interface SetupUpdateSheetProps {
   teamDays: DayOfWeek[];
   gameDay: DayOfWeek | null;
   canUpdate: boolean;
+  /** Why Save is unavailable, or null when it is available. */
+  blockedCopy: string | null;
   error: string | null;
   isUpdating: boolean;
   updateMsgIdx: number;
@@ -1032,6 +1013,7 @@ function SetupUpdateSheet({
   teamDays,
   gameDay,
   canUpdate,
+  blockedCopy,
   error,
   isUpdating,
   updateMsgIdx,
@@ -1438,8 +1420,13 @@ function SetupUpdateSheet({
         </View>
       </View>
 
-      {!preferredValid ? (
-        <Text style={styles.sheetError}>Pick at least one LFA work day.</Text>
+      {/* A disabled Save states its reason. Before this, the button simply
+          went dead — on a phase-skewed device it went dead on the very
+          selection that would have repaired the skew, and said nothing. */}
+      {!canUpdate && blockedCopy ? (
+        <Text style={styles.sheetError} testID="profile-setup-blocked-reason">
+          {blockedCopy}
+        </Text>
       ) : null}
       <V2Button
         label="Update program"

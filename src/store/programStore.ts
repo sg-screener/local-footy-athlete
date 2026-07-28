@@ -55,6 +55,7 @@ import {
   resolveSeasonPhaseClock,
   type SeasonPhaseClock,
 } from '../rules/seasonPhaseClock';
+import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -737,10 +738,13 @@ function canonicaliseHydratedMicrocycle(
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
+    // One intensity owner. This used to be a second table reading
+    // `Off-season ? 0.85 : 0.9`. Its in-season branch was DORMANT rather than
+    // harmful — `resolveSeasonPhaseWeekKind` never mints a deload week
+    // in-season, so nothing reached the 0.9 — but a second table free to
+    // drift from the owner is the defect, whether or not it has fired yet.
     intensityMultiplier: phaseResolution
-      ? phaseResolution.weekKind === 'deload'
-        ? phaseClock?.selectedPhase === 'Off-season' ? 0.85 : 0.9
-        : 1
+      ? resolveWeekIntensityMultiplier(selectedPhase, phaseResolution.weekKind)
       : microcycle.intensityMultiplier,
     workouts,
     exposureContractV2,

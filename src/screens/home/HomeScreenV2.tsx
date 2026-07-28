@@ -124,6 +124,10 @@ export default function HomeScreenV2() {
     visibleReversibleAdjustments,
     currentProgram,
     sessionFeedback,
+    seasonPhaseSkew,
+    seasonPhaseRepairBusy,
+    seasonPhaseRepairError,
+    handleRepairSeasonPhaseSkew,
     handleClearCoachNote,
     handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
@@ -157,6 +161,7 @@ export default function HomeScreenV2() {
     pendingPreferredDays,
     pendingTeamDays,
     pendingGameDay,
+    pendingGameAnchorAnswered,
     targetPhase,
     handleOpenPhaseShift,
     handleCancelPhaseShift,
@@ -164,6 +169,7 @@ export default function HomeScreenV2() {
     togglePendingPreferredDay,
     togglePendingTeamDay,
     setPendingGameDay,
+    answerNoUsualGameDay,
     handleAdvancePhaseShift,
   } = useHomeScreen();
 
@@ -429,6 +435,39 @@ export default function HomeScreenV2() {
             onRespond={(response) =>
               void handleMissedSessionResponse(missedSessionPrompt, response)}
           />
+        )}
+
+        {/* ── Season-phase skew disclosure ──
+            Stored state that is already wrong. The profile and the program
+            clock disagree, from a phase shift whose profile write landed
+            before its rebuild failed. Neither value is quietly overwritten to
+            match the other — the athlete is told what their week is actually
+            built as, what they told us they are, and offered one press that
+            reconciles it through the same atomic transaction a deliberate
+            phase shift uses. */}
+        {seasonPhaseSkew && (
+          <View style={styles.phaseSkewCard} testID="home-season-phase-skew">
+            <Text style={styles.phaseSkewTitle}>Your program is out of step</Text>
+            <Text style={styles.phaseSkewBody}>
+              This week is still built as {seasonPhaseSkew.ownedPhase}, but you told
+              us you're {seasonPhaseSkew.profileSelection}. Nothing has been changed
+              either way — rebuild when you're ready.
+            </Text>
+            {seasonPhaseRepairError ? (
+              <Text style={styles.phaseSkewError} testID="home-season-phase-skew-error">
+                {seasonPhaseRepairError}
+              </Text>
+            ) : null}
+            <Button
+              label={seasonPhaseRepairBusy
+                ? 'Rebuilding…'
+                : `Rebuild as ${seasonPhaseSkew.profileSelection}`}
+              size="md"
+              disabled={seasonPhaseRepairBusy}
+              onPress={() => void handleRepairSeasonPhaseSkew()}
+              testID="home-season-phase-skew-repair"
+            />
+          </View>
         )}
 
         {/* ── What's shaping this week ──
@@ -929,11 +968,13 @@ export default function HomeScreenV2() {
         pendingPreferredDays={pendingPreferredDays}
         pendingTeamDays={pendingTeamDays}
         pendingGameDay={pendingGameDay}
+        gameAnchorAnswered={pendingGameAnchorAnswered}
         onClose={handleCancelPhaseShift}
         onBack={handlePhaseShiftBack}
         onTogglePendingPreferredDay={togglePendingPreferredDay}
         onTogglePendingTeamDay={togglePendingTeamDay}
         onSetPendingGameDay={setPendingGameDay}
+        onAnswerNoUsualGameDay={answerNoUsualGameDay}
         onAdvance={handleAdvancePhaseShift}
       />
     </SafeAreaView>
@@ -2490,11 +2531,14 @@ interface PhaseShiftSheetProps {
   pendingPreferredDays: DayOfWeek[];
   pendingTeamDays: DayOfWeek[];
   pendingGameDay: DayOfWeek | null;
+  /** False until the athlete names a day or says they have no usual one. */
+  gameAnchorAnswered: boolean;
   onClose: () => void;
   onBack: () => void;
   onTogglePendingPreferredDay: (d: DayOfWeek) => void;
   onTogglePendingTeamDay: (d: DayOfWeek) => void;
   onSetPendingGameDay: (d: DayOfWeek) => void;
+  onAnswerNoUsualGameDay: () => void;
   onAdvance: () => void;
 }
 
@@ -2522,9 +2566,10 @@ function BackChevron({ onPress }: { onPress: () => void }) {
 
 function PhaseShiftSheet({
   visible, step, targetPhase, isRebuilding, error, canRetry, msgIdx, msgOpacity,
-  pendingPreferredDays, pendingTeamDays, pendingGameDay,
+  pendingPreferredDays, pendingTeamDays, pendingGameDay, gameAnchorAnswered,
   onClose, onBack,
-  onTogglePendingPreferredDay, onTogglePendingTeamDay, onSetPendingGameDay, onAdvance,
+  onTogglePendingPreferredDay, onTogglePendingTeamDay, onSetPendingGameDay,
+  onAnswerNoUsualGameDay, onAdvance,
 }: PhaseShiftSheetProps) {
   const building = step === 'building' || isRebuilding;
   // Back is meaningful on every interactive step except the first. Hide on
@@ -2691,12 +2736,31 @@ function PhaseShiftSheet({
               );
             })}
           </View>
+          {/* "No usual game day" is an ANSWER, not the absence of one. Without
+              it the only way past this step was to name a day, so an athlete
+              whose fixtures move week to week was stuck behind a disabled
+              button — and every other caller that left the field empty had
+              its stored anchor silently wiped instead. */}
+          <SelectableTile
+            shape="chip"
+            isSelected={gameAnchorAnswered && pendingGameDay === null}
+            hideCheckmark
+            onPress={onAnswerNoUsualGameDay}
+            style={styles.noGameDayTile}
+          >
+            <Text style={[
+              styles.dayChipText,
+              gameAnchorAnswered && pendingGameDay === null && styles.dayChipTextSelected,
+            ]}>
+              I don't have a usual game day
+            </Text>
+          </SelectableTile>
           {error && <Text style={styles.sheetError}>{error}</Text>}
           {(!error || canRetry) && (
             <Button
               label={error ? 'Try again' : `Shift to ${targetPhase}`}
               size="lg"
-              disabled={!pendingGameDay}
+              disabled={!gameAnchorAnswered}
               onPress={onAdvance}
             />
           )}
@@ -3200,8 +3264,29 @@ const styles = StyleSheet.create({
   dayChip: {
     minWidth: 58, alignItems: 'center',
   },
+  phaseSkewCard: {
+    backgroundColor: '#161616',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#3A3A1A',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  phaseSkewTitle: {
+    color: '#C8FF00', fontSize: 14, fontWeight: '700', marginBottom: spacing.xs,
+  },
+  phaseSkewBody: {
+    color: '#BDBDBD', fontSize: 13, lineHeight: 19, marginBottom: spacing.md,
+  },
+  phaseSkewError: {
+    color: '#FF6B6B', fontSize: 12, marginBottom: spacing.sm,
+  },
   dayChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   dayChipTextSelected: { color: '#C8FF00', fontWeight: '700' },
+  // Full-width so it reads as a peer of the day row rather than an eighth day.
+  noGameDayTile: {
+    alignSelf: 'stretch', alignItems: 'center', marginBottom: spacing.md,
+  },
   helperText: {
     color: '#757575', fontSize: 12, textAlign: 'center', marginBottom: spacing.md,
   },

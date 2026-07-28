@@ -69,7 +69,14 @@ import {
 import { logger } from './logger';
 import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
 import { reversibleAdjustmentId as createReversibleAdjustmentId } from '../rules/reversibleAdjustmentLedger';
-import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
+import {
+  canonicalFixtureKind,
+  resolveProfileTargetWeekAvailability,
+} from '../rules/fixtureConditionedAvailability';
+import {
+  ownSeasonPhase,
+  ownSeasonPhaseForGeneration,
+} from '../rules/seasonPhaseOwner';
 import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
 import {
   athleteActionDiagnosticHash,
@@ -483,9 +490,10 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       const fixtureAction = args.clearOverlayDate
         ? 'move'
         : args.newGameDay ? 'add' : 'remove';
-      const fixtureKind = args.baseProfile.seasonPhase === 'Pre-season'
-        ? 'practice_match'
-        : 'game';
+      const fixtureKind = canonicalFixtureKind(ownSeasonPhase({
+        program: currentProgram,
+        profile: args.baseProfile,
+      }));
       const sourceActionOrIntentId = args.fixtureMutationSource?.commandId ?? [
         fixtureKind,
         fixtureAction,
@@ -559,6 +567,10 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
     weekStart: getMondayForDate(generationDate),
     markedDays: persistedState.acceptedMaterialContext.markedDays,
     activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+    // Generation input, NOT the persisted clock: this is the branch that
+    // rebuilds after a phase shift, and the persisted clock still holds the
+    // phase the athlete is leaving.
+    ownedPhase: ownSeasonPhaseForGeneration(profile),
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
