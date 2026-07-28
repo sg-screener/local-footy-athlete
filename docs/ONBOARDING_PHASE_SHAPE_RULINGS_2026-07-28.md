@@ -62,7 +62,12 @@ and its answer is stored as a fact like any other.
 ### State today
 
 `in_season_bye_recovery` is implemented, gated and reachable only through `byeMode`. Nothing
-in generation sets it, deliberately, so every bye is a build bye until this ships. Its shape
+in generation sets it, deliberately, so every bye is a build bye until this ships.
+
+`CoachingInputs.byeMode` therefore has no producer, and that is **approved as built** (Sam,
+2026-07-29): *"a mode with no end-to-end path is untestable, and the seam is exactly where
+the ask will plug in — one channel, already gated."* It is not dead wiring. Whoever builds
+the ask writes to this field; nobody deletes it for being unused. Its shape
 is covered by `readinessDoseSweepTests` block [5] at the contract and by
 `section18PhasePlannerTests` scenarios 12-14, both of which now answer the ask the way the UI
 will. See `docs/READINESS_CENSUS_SWEEP_2026-07-29.md` §3.0 for how the gap was found.

@@ -179,11 +179,17 @@ export interface CoachingInputs {
    * builder: this engine neither derives it nor defaults it, and an absent
    * answer is a build bye.
    *
-   * NOTHING SETS THIS YET, deliberately. The ask itself belongs to the
-   * buttons/step-5 work (`docs/ONBOARDING_PHASE_SHAPE_RULINGS_2026-07-28.md`
-   * §1a), which will store the answer as a schedule-class source fact and thread
-   * it here. The field exists so the mode stays reachable and gated by its ruled
-   * owner rather than by whatever happened to be nearby.
+   * NOTHING SETS THIS YET, deliberately, and that is APPROVED AS BUILT (Sam,
+   * 2026-07-29) — not an oversight and not dead wiring to tidy away. The ask
+   * belongs to the buttons/step-5 work
+   * (`docs/ONBOARDING_PHASE_SHAPE_RULINGS_2026-07-28.md` §1a), which will store
+   * the answer as a schedule-class source fact and thread it here.
+   *
+   * Sam's reason for keeping the seam ahead of its producer: "a mode with no
+   * end-to-end path is untestable, and the seam is exactly where the ask will
+   * plug in — one channel, already gated." Deleting it would leave
+   * `in_season_bye_recovery` reachable by nothing, which is how a mode quietly
+   * acquires a new trigger from whatever happens to be nearby.
    */
   byeMode?: 'build' | 'recovery';
   /** Canonical continuous week inside the persisted selected season phase. */
