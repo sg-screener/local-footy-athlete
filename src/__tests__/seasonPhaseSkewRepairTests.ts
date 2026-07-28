@@ -43,6 +43,7 @@ import {
   profileSetupBlockCopy,
 } from '../rules/profileSetupChange';
 import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
+import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -313,14 +314,64 @@ section('[3] A hydrated In-season week is never a scheduled deload');
   ok('the week count is unchanged by hydration', before.length === after.length);
 }
 {
-  // The intensity owner, asked directly, at every phase. The duplicate table
-  // in programStore returned 0.9 for an in-season deload; the owner HOLDS.
+  // CORRECTION to how this duplicate was first described. programStore's own
+  // table returned 0.9 for an in-season deload where the owner holds at 1.0 —
+  // but that branch was DORMANT, not active: `resolveSeasonPhaseWeekKind`
+  // never mints a deload week in-season, so nothing could reach the 0.9. The
+  // duplicate was a second table free to drift, in the same class as
+  // progressionRules' in-season threshold, and not a live tonnage loss.
+  //
+  // Pin the dormancy, so a future change that makes an in-season scheduled
+  // deload reachable has to come past this line.
+  const inSeasonDeloadWeeks: number[] = [];
+  for (let week = 1; week <= 60; week += 1) {
+    if (resolveSeasonPhaseWeekKind('In-season', week) === 'deload') inSeasonDeloadWeeks.push(week);
+  }
+  ok('no in-season phase week is ever a SCHEDULED deload',
+    inSeasonDeloadWeeks.length === 0, inSeasonDeloadWeeks.join(','));
+  ok('pre-season still schedules one every fourth week',
+    resolveSeasonPhaseWeekKind('Pre-season', 4) === 'deload');
+
   ok('an in-season deload holds the weight',
     resolveWeekIntensityMultiplier('In-season', 'deload') === 1);
   ok('an in-season build week holds the weight',
     resolveWeekIntensityMultiplier('In-season', 'build') === 1);
   ok('an unset phase is not treated as off-season',
     resolveWeekIntensityMultiplier(null, 'deload') === 1);
+}
+{
+  // Differential over the REACHABLE space: whatever the hydration path puts
+  // on a microcycle must equal what the intensity owner says for that week's
+  // phase and kind. This is the assertion a second table has to survive, and
+  // unlike a source grep it also catches a table that drifts in value.
+  const drifted: string[] = [];
+  const checked: string[] = [];
+  for (const phase of ['Off-season', 'Pre-season', 'In-season'] as const) {
+    const stored = phase === 'In-season'
+      ? profile(phase, { usualGameDay: 'Saturday', gameDay: 'Saturday' })
+      : profile(phase);
+    // Entry weeks reaching phase weeks 1, 4, 8 and 12 relative to WEEK_START,
+    // which covers both deload rules and the build weeks between them.
+    for (const entry of ['2026-07-13', '2026-06-22', '2026-05-25', '2026-04-27']) {
+      const program = generate(stored, entry, WEEK_START);
+      const hydrated = quiet(() => canonicaliseHydratedProgram(program, stored));
+      for (const microcycle of hydrated.microcycles ?? []) {
+        const expected = resolveWeekIntensityMultiplier(phase, microcycle.weekKind);
+        checked.push(`${phase}/${microcycle.weekKind}`);
+        if ((microcycle.intensityMultiplier ?? 1) !== expected) {
+          drifted.push(
+            `${phase} ${microcycle.startDate} ${microcycle.weekKind}: ` +
+            `${microcycle.intensityMultiplier} ≠ ${expected}`,
+          );
+        }
+      }
+    }
+  }
+  ok('hydration agrees with the intensity owner on every reachable week',
+    drifted.length === 0, drifted.join('; '));
+  ok('the differential actually covered a deload week',
+    checked.some((entry) => entry.endsWith('/deload')),
+    `covered: ${Array.from(new Set(checked)).join(', ')}`);
 }
 
 // ─── Summary ───

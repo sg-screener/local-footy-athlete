@@ -30,7 +30,6 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
-import { mapToLegacyGameDay } from '../../utils/profileMutations';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -92,12 +91,6 @@ function formatList(values?: readonly string[]): string | null {
 
 function sortDays(days: DayOfWeek[]): DayOfWeek[] {
   return [...days].sort((a, b) => WEEK_DAYS.indexOf(a) - WEEK_DAYS.indexOf(b));
-}
-
-function sameDays(a?: DayOfWeek[], b?: DayOfWeek[]): boolean {
-  const left = sortDays(a ?? []);
-  const right = sortDays(b ?? []);
-  return left.length === right.length && left.every((day, index) => day === right[index]);
 }
 
 function formatDaySummary(days?: DayOfWeek[]): string {
@@ -378,16 +371,12 @@ export default function ProfileScreen() {
     typeof note.severity === 'number' ? `${note.title} — ${note.severity}/10` : note.title,
   );
   const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
-  const pendingIsInSeason = pendingSeasonPhase === 'In-season';
-  const pendingGameDayValid = !pendingIsInSeason || Boolean(pendingGameDay);
   const lfaDayCountNeedsSync =
     programDetailsSaved &&
     (
       onboardingData.trainingDaysUnsure === true ||
       (onboardingData.trainingDaysPerWeek ?? 0) !== pendingPreferredDays.length
     );
-  const storedTwoKmSeconds =
-    (onboardingData.twoKmTimeTrial as TwoKmTimeTrialAnswer)?.seconds ?? null;
   // ONE decision behind Save. `setupHasChanges` and `buildSetupPatch` used to
   // be two separate comparisons over the same fields; when they disagreed the
   // athlete got a live-looking button that committed nothing. The patch IS
