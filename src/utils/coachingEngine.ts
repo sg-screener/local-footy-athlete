@@ -837,114 +837,41 @@ export function calculateReadiness(inputs: CoachingInputs): {
   return { level, factors };
 }
 
-// ─── Step 2: Count Existing Hard Exposures from Team Environment ───
+/*
+ * ─── Steps 2-4 DELETED (Sam's Batch 0 ruling, 2026-07-28) ───
+ *
+ * `countTeamHardExposures`, `getHardExposureCap` and `getCoreSessionCount` used
+ * to live here: 33 numbers deciding how many hard exposures an athlete could
+ * afford and how many gym sessions their week contained. The week-mode exposure
+ * contract decided the same things from Sam-authored values, and the two were
+ * set from different tables. `coreRange` was then rewritten EIGHT times before
+ * it became `actualCore`, so nobody could answer "why did this athlete get
+ * three strength sessions?" without simulating all eight.
+ *
+ * Sam's ruling: the contract is the SINGLE owner of "how many strength sessions
+ * this week". This engine consumes what the contract declares; it never
+ * re-decides it. Three specific things died with the tables:
+ *
+ *   - the readiness axis. Structure comes from phase + schedule facts;
+ *     capacity affects DOSE only. A phase x readiness count table is the
+ *     capacity score setting structure, twice over.
+ *   - hard EXPOSURES counted as a budget spent on gym SESSIONS. The unit is
+ *     DAYS (Bible Section 2, Sam Batch 2 Q3), and gym work stacked onto an
+ *     already-hard team day is deliberately free against it. That conflation is
+ *     what the three override floors existed to work around.
+ *   - the off-season sprint "+1". A sprint session is not a hard DAY, and
+ *     counting it as one silently charged off-season athletes for a day they
+ *     never spent.
+ *
+ * The behaviour the floors encoded is not lost — it is authored, per week mode,
+ * in the exposure-contract sheet, and the weeks they protected are pinned BY
+ * NAME in `weeklyDoseOwnershipTests` block [4].
+ *
+ * docs/BATCH0_WEEKLY_DOSE_OWNERSHIP_REASSESSMENT_2026-07-28.md
+ * docs/BATCH0_RULING_APPLIED_2026-07-28.md
+ */
 
-export function countTeamHardExposures(inputs: CoachingInputs): {
-  count: number;
-  breakdown: string[];
-} {
-  let count = 0;
-  const breakdown: string[] = [];
-
-  // Game = 1 hard exposure
-  if (inputs.hasGame && inputs.seasonPhase !== 'Off-season') {
-    count += 1;
-    breakdown.push('Game (1)');
-  }
-
-  // Team training — depends on intensity
-  const teamDays = inputs.teamTrainingDaysPerWeek || 0;
-  if (teamDays > 0) {
-    const intensity = inputs.teamTrainingIntensity;
-    if (intensity === 'Very intense' || intensity === 'Hard') {
-      // All team sessions count as hard
-      count += teamDays;
-      breakdown.push(`Team training × ${teamDays} @ ${intensity} (${teamDays})`);
-    } else if (intensity === 'Moderate') {
-      // Only count half (rounded up) as hard
-      const hardTeamDays = Math.ceil(teamDays / 2);
-      count += hardTeamDays;
-      breakdown.push(`Team training × ${teamDays} @ ${intensity} - ${hardTeamDays} counted as hard`);
-    } else {
-      // Light team training = 0 hard exposures
-      breakdown.push(`Team training × ${teamDays} @ Light - not counted as hard`);
-    }
-  }
-
-  // Sprint exposure from other sources
-  if (inputs.sprintExposure === '2+ times per week') {
-    // Don't double-count if sprints happen during team training
-    if (inputs.seasonPhase === 'Off-season') {
-      // Off-season sprints are separate sessions
-      count += 1; // Count 1 (conservative — they said 2+ but we don't stack)
-      breakdown.push('Independent sprint sessions (1)');
-    }
-    // In-season/pre-season sprints are likely part of team training, already counted
-  }
-
-  return { count, breakdown };
-}
-
-// ─── Step 3: Hard Exposure Caps by Season Phase ───
-
-export function getHardExposureCap(
-  phase: SeasonPhase,
-  readiness: ReadinessLevel
-): number {
-  switch (phase) {
-    case 'In-season':
-      // Target 3–4 total hard exposures per week
-      return readiness === 'low' ? 3 : 4;
-
-    case 'Pre-season':
-      // Target 4–5 hard exposures per week
-      if (readiness === 'low') return 4;
-      if (readiness === 'medium') return 4;
-      return 5;
-
-    case 'Off-season':
-      // Target 3–5 depending on readiness
-      if (readiness === 'low') return 3;
-      if (readiness === 'medium') return 4;
-      return 5;
-
-    default:
-      return 4;
-  }
-}
-
-// ─── Step 4: Core Training Dose ───
-
-export function getCoreSessionCount(
-  phase: SeasonPhase,
-  readiness: ReadinessLevel
-): { min: number; max: number } {
-  switch (phase) {
-    case 'In-season':
-      // In-season: 2-3 CORE gym sessions (lower + pull + push = 3 required exposures)
-      // The G−2 push session is CORE but low-fatigue (moderate intensity, low volume)
-      // so it doesn't consume hard budget the way a heavy session does.
-      // 3 CORE is the target when the athlete has 3+ gym days and medium+ readiness.
-      if (readiness === 'low') return { min: 1, max: 2 };
-      if (readiness === 'medium') return { min: 2, max: 3 };
-      return { min: 3, max: 3 };
-
-    case 'Pre-season':
-      if (readiness === 'low') return { min: 2, max: 2 };
-      if (readiness === 'medium') return { min: 3, max: 3 };
-      return { min: 3, max: 4 };
-
-    case 'Off-season':
-      if (readiness === 'low') return { min: 2, max: 3 };
-      if (readiness === 'medium') return { min: 3, max: 4 };
-      return { min: 4, max: 4 };
-
-    default:
-      return { min: 2, max: 3 };
-  }
-}
-
-// ─── Step 5–8: Build the Full Coaching Plan ───
+// ─── Step 2: Build the Full Coaching Plan ───
 
 export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Step 1: Readiness
@@ -1018,188 +945,72 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     legacy: weeklyExposureContract,
   });
 
-  // Step 2: Existing hard exposures from team environment
-  const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
-
-  // Step 3: Hard exposure cap
-  const phaseHardCap = getHardExposureCap(inputs.seasonPhase, readiness);
-  const trainingAgeHardCap = trainingAgePolicy.maxHardExposures?.[inputs.seasonPhase];
-  const hardCap = trainingAgeHardCap === undefined
-    ? phaseHardCap
-    : Math.min(phaseHardCap, trainingAgeHardCap);
+  // Hard days come off the contract, which is the object Section 18 JUDGES the
+  // finished week against (`restStress.permittedHardDayMaximum`). One number
+  // builds the week and decides whether it was legal; before this unit they
+  // were two, and agreed only by luck.
+  //
+  // The unit is DAYS (Bible Section 2): a hard day is a calendar day containing
+  // one or more hard exposures, so the athlete's committed hard days ARE their
+  // anchors — team training and the fixture. Doubling up is one hard day and
+  // two hard sessions, deliberately free against the budget.
+  const hardCap = weeklyExposureContract.hardDays.permittedCount;
+  const existingHard = weeklyExposureContract.anchors.teamTrainingDays.length +
+    weeklyExposureContract.anchors.gameOrPracticeMatchCredit;
   const remainingBudget = Math.max(0, hardCap - existingHard);
+  const hardBreakdown = [
+    ...weeklyExposureContract.anchors.teamTrainingDays.map(
+      (day) => `Team training on ${DAY_NAMES[day]} (1 hard day)`),
+    ...(weeklyExposureContract.anchors.gameOrPracticeMatchCredit > 0
+      ? ['Game or practice match (1 hard day)'] : []),
+  ];
 
-  // Step 4: Core session count
-  let coreRange = getCoreSessionCount(inputs.seasonPhase, readiness);
-  if (offseasonPolicy?.subphase === 'early_offseason') {
-    const earlyCoreTarget = Math.min(
-      inputs.availableDays,
-      readiness === 'low' || inputs.availableDays <= 3 ? 2 : 3,
-    );
-    coreRange = { min: earlyCoreTarget, max: earlyCoreTarget };
-  }
-  // RETIRED (Sam's readiness law, 2026-07-27). These cut the week's core session
-  // COUNT by tier — 0/0, 1-2, 2-3. Counts are STRUCTURE, and the deload law
-  // holds structure constant while the work inside shrinks: "same week, same
-  // days". A deloaded week keeps its sessions and they arrive smaller.
-
-  // The phase contract owns the allocation floor and any safety-reduced cap,
-  // while the existing phase allocator may still use the contract's preferred
-  // range. Required and preferred exposure are deliberately not collapsed
-  // into one exact count (for example, healthy off-season remains 3 required
-  // with a valid fourth preferred strength exposure).
-  // Preferred strength is no longer withheld by readiness — that was a count
-  // reduction too.
-  const maySelectPreferredStrength = true;
-  coreRange = {
-    min: weeklyExposureContract.strength.targetCount,
-    max: maySelectPreferredStrength
-      ? Math.max(
-          weeklyExposureContract.strength.targetCount,
-          Math.min(coreRange.max, weeklyExposureContract.strength.preferred.max),
-        )
-      : weeklyExposureContract.strength.targetCount,
-  };
-
-  // ── H-PRE-8: structure priority (4 strength exposures) ──
-  // Pre-season with ≥2 team days, no game, and at least 5 training days
-  // should target a 4-exposure week (2 lower + 2 upper) instead of the
-  // default 3-exposure 1L+1U+FB shape. This forces an extra dedicated
-  // strength slot over a conditioning/recovery slot when room exists.
-  //   medium readiness: {3,3} → {3,4}  (allow but don't force — engine
-  //     chooses 4 when availableDays accommodates it)
-  //   high readiness:   {3,4} → {4,4}  (force the target shape)
-  //   low readiness:    {2,2} stays — safety rail, FB fallback still applies
-  // When trigger conditions are NOT met, coreRange is unchanged and the
-  // existing H-PRE-6 fallback (1L+1U+FB at core=3) still governs.
-  const shouldTarget4Strength =
-    inputs.seasonPhase === 'Pre-season' &&
-    (inputs.teamTrainingDays || []).length >= 2 &&
-    !inputs.hasGame &&
-    inputs.availableDays >= 5 &&
-    // Readiness no longer withholds the preferred 4th strength session — that
-    // was a COUNT reduction, which the deload law replaces with shrinking work.
-    true;
-  if (shouldTarget4Strength) {
-    if (readiness === 'medium') coreRange = { min: 3, max: 4 };
-    else if (readiness === 'high') coreRange = { min: 4, max: 4 };
-  }
-
-  // ── H-IS-3: in-season 3-exposure priority (Lower + Pull + Push) ──
-  // Healthy in-season athlete with game + ≥2 team days + ≥5 training days should
-  // DEFAULT to core=3 (Lower standalone + Pull on team day + Push at G−2).
-  //
-  // Why the default budget math under-serves this case:
-  //   remainingBudget = hardCap − existingHard = 4 − (game + 2 Hard team days)
-  //                   = 4 − 3 = 1
-  //   heavyCoreCap = 1, moderateCoreBonus = +1 → actualCore = 2
-  //   Result: Lower on Mon, Push at G−2, Pull DROPPED. Tuesday is left as
-  //   bare team training — the structural pull exposure the athlete wants is
-  //   silently omitted.
-  //
-  // The budget is correct in spirit (hard DAYS per week) but conflates two
-  // things: (a) hard standalone gym days that add a new CNS-tax day, and
-  // (b) gym work layered onto an already-hard team day. A moderate pull
-  // stacked onto Tuesday's team session does NOT add a 5th hard day to the
-  // week — it adds ~30 min of pulling to an already-hard day.
-  //
-  // Trigger: in-season + game + ≥2 team days + ≥5 selected days + not-low
-  // readiness + no severe injuries. Forces coreRange={3,3} so actualCore=3
-  // via the max(coreRange.min, coreSessions) floor. Downstream, the 3-core
-  // branch places Lower (heavy), Push G−2 (moderate, no hard budget),
-  // Pull G−4 (piggybacks on existing team-day hard exposure).
-  //
-  // Low readiness and severe-injury athletes still get the 2-core safety
-  // rail — this is a priority rule, not a mandate. Sam's framing: preserve
-  // 3-strength structure by default unless readiness/injury explicitly
-  // forces it down.
-  const hasSevereInjury = (inputs.injuries || []).some(i => i.severity === 'Severe');
-  const shouldTarget3Strength =
-    inputs.seasonPhase === 'In-season' &&
-    inputs.hasGame &&
-    (inputs.teamTrainingDays || []).length >= 2 &&
-    inputs.availableDays >= 5 &&
-    readiness !== 'low' &&
-    !hasSevereInjury &&
-    // Readiness no longer withholds the preferred 4th strength session — that
-    // was a COUNT reduction, which the deload law replaces with shrinking work.
-    true;
-  if (shouldTarget3Strength) {
-    coreRange = { min: 3, max: 3 };
-  }
-
-  // ── B3 (2026-07-08): pre-season GAME-week analogue of H-IS-3 ──
-  // Same hard-DAY accounting philosophy: upper strength stacked onto an
-  // already-hard team training day does not add a new hard day, so a
-  // healthy pre-season athlete with 2 team days + a game should still get
-  // 3 proper strength exposures (Lower standalone + Pull/Push on team
-  // days). Without this floor, remainingBudget = cap − (game + 2 hard TT)
-  // charges the team-day uppers as if they created new hard days and the
-  // week collapses toward 1-2 strength exposures — the S11 failure.
-  // Low readiness / severe injury keeps the smaller default: the higher
-  // dose is only for athletes who can recover from it. max=3 caps volume.
-  const shouldTarget3StrengthPreSeasonGame =
-    inputs.seasonPhase === 'Pre-season' &&
-    inputs.hasGame &&
-    (inputs.teamTrainingDays || []).length >= 2 &&
-    inputs.availableDays >= 5 &&
-    readiness !== 'low' &&
-    !hasSevereInjury &&
-    // Readiness no longer withholds the preferred 4th strength session — that
-    // was a COUNT reduction, which the deload law replaces with shrinking work.
-    true;
-  if (shouldTarget3StrengthPreSeasonGame) {
-    coreRange = { min: 3, max: 3 };
-  }
-
-  if (preseasonPolicy) {
-    // Subphase still owns volume/intensity. The exposure contract owns the
-    // healthy weekly structure, so early/late dose caps cannot silently erase
-    // a required strength contribution.
-    coreRange = weeklyExposureContract
-      ? {
-          min: weeklyExposureContract.strength.targetCount,
-          max: weeklyExposureContract.strength.targetCount,
-        }
-      : {
-          min: Math.min(coreRange.min, preseasonPolicy.strength.coreSessionCap),
-          max: Math.min(coreRange.max, preseasonPolicy.strength.coreSessionCap),
-        };
-  }
-
-  if (trainingAgePolicy.maxCoreSessions !== null) {
-    coreRange = {
-      min: Math.min(coreRange.min, trainingAgePolicy.maxCoreSessions),
-      max: Math.min(coreRange.max, trainingAgePolicy.maxCoreSessions),
-    };
-  }
-
-  // In-season: not all CORE sessions are hard exposures. The G−2 push session is CORE
-  // (non-negotiable for movement balance) but moderate intensity — it doesn't consume
-  // hard budget the way a heavy lower body or pull session does.
-  // So: cap heavy CORE by remaining budget, but allow 1 extra moderate CORE on top.
   const isInSeason = inputs.seasonPhase === 'In-season';
-  const heavyCoreCap = Math.min(coreRange.max, remainingBudget, inputs.availableDays);
-  // In-season with 3+ days and budget for at least 1 heavy session: allow +1 moderate CORE.
-  // The G−2 upper session doesn't consume hard budget. It needs only 1 heavy slot (lower)
-  // to justify it. Works for both:
-  //   - 3-core weeks (push at G−2, moderate)
-  //   - 2-core weeks (balanced upper at G−2, moderate)
-  // Gate uses coreRange.max >= 2 so low-readiness athletes (max=2) still get the balanced upper.
-  const moderateCoreBonus = (isInSeason && inputs.availableDays >= 3 && heavyCoreCap >= 1 && coreRange.max >= 2) ? 1 : 0;
-  const coreSessions = Math.min(heavyCoreCap + moderateCoreBonus, coreRange.max, inputs.availableDays);
-  const actualCore = Math.max(coreRange.min, coreSessions);
+
+  // ─── The weekly strength dose ───
+  //
+  // ONE assignment, from the owner. This used to be an eight-step rewrite of a
+  // mutable `coreRange`: a phase x readiness table, an early-off-season
+  // override, the contract, three hardcoded floors, a subphase cap and a
+  // training-age clamp, in that order — after which a hard-DAY budget was spent
+  // on gym SESSIONS and a `moderateCoreBonus` added one back.
+  //
+  // `targetCount` is the count the contract SELECTED, and the one Section 18
+  // validates the finished week against. It is not `preferred.max`: that is a
+  // preference for the allocator, and a preference changes the shape of future
+  // planning without ever becoming a number the week is judged by (Sam,
+  // 2026-07-28). Building to the preference instead would ask for sessions the
+  // fixture leaves nowhere safe to put — a pre-season practice-match week with
+  // no team days has an authored aim of 4 and exactly 3 spacing-safe days.
+  //
+  // The one week where the target is not the count is the block where NOTHING
+  // is required: early off-season is offered work only, so its target is 0 by
+  // authorship and the offer lives in `preferred.min`. Reading the target alone
+  // there would empty the week — "nothing is required" implemented as "nothing
+  // is offered", which is the failure Sam has already ruled against once.
+  //
+  // Nothing here is bounded by the hard-day budget. Gym work stacked onto an
+  // already-hard team day is one hard day and two hard sessions, deliberately
+  // free against it (Bible Section 2). Charging it as a new hard day is what
+  // collapsed pre-season game weeks toward one or two strength exposures, and
+  // what the three deleted floors were written by hand to work around.
+  //
+  // Every reduction below this number is the CONTRACT's, and every one of those
+  // carries a typed reason in `contract.reductions`. Nothing here may lower it:
+  // there is no reason this layer could attach, because it does not own it.
+  const contractStrength = weeklyExposureContract.strength;
+  const actualCore = Math.max(
+    contractStrength.targetCount,
+    contractStrength.required === 0 ? contractStrength.preferred.min : 0,
+  );
 
   // Step 5: Fill extra days with optional/recovery
   const extraDays = Math.max(0, inputs.availableDays - actualCore);
-  // Optional sessions — even low readiness athletes get at least 1 optional session
-  // if they have extra days. Training stimulus > pure recovery for adaptation.
-  const normalOptionalSessions = offseasonPolicy?.subphase === 'early_offseason'
-    ? Math.min(extraDays, 1)
-    : Math.min(extraDays, readiness === 'low' ? 1 : readiness === 'medium' ? 2 : 2);
-  const optionalSessions = trainingAgePolicy.maxOptionalSessions === null
-    ? normalOptionalSessions
-    : Math.min(normalOptionalSessions, trainingAgePolicy.maxOptionalSessions);
+  // The readiness axis is gone (Sam, 2026-07-28): capacity affects DOSE, not
+  // how many sessions a week contains. It used to hand low-capacity athletes
+  // one optional session instead of two and call the difference recovery —
+  // a count reduction, recorded nowhere.
+  const optionalSessions = Math.min(extraDays, 2);
   const recoverySessions = Math.max(0, extraDays - optionalSessions);
 
   // Build weekly plan
@@ -1211,7 +1022,10 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   logger.debug('[ENGINE-TRACE] availableDays:', inputs.availableDays);
   logger.debug('[ENGINE-TRACE] teamTrainingDays:', inputs.teamTrainingDays);
   logger.debug('[ENGINE-TRACE] readiness:', readiness);
-  logger.debug('[ENGINE-TRACE] coreRange:', JSON.stringify(coreRange), '→ actualCore:', actualCore);
+  logger.debug('[ENGINE-TRACE] contract strength:',
+    `target=${weeklyExposureContract.strength.targetCount}`,
+    `preferred=${weeklyExposureContract.strength.preferred.min}-${weeklyExposureContract.strength.preferred.max}`,
+    '→ actualCore:', actualCore);
   logger.debug('[ENGINE-TRACE] optional:', optionalSessions, 'recovery:', recoverySessions);
   const weeklyPlan = buildWeeklyPlan(
     inputs,

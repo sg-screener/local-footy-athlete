@@ -104,17 +104,30 @@ function generate(profileData: OnboardingData, constraints: any[] = []) {
   return { plan, equipment, microcycles };
 }
 
-function strengthConditioning(workouts: readonly Workout[]): Workout[] {
-  return workouts.filter((workout) => [1, 3, 5].includes(workout.dayOfWeek));
-}
-
 function hasConditioning(workout: Workout): boolean {
   return !!workout.conditioningBlock &&
     getSessionComponentRows(workout).conditioningRows.length > 0;
 }
 
+/**
+ * The phase-selected aerobic exposures, wherever the allocator placed them.
+ *
+ * This used to filter to Monday/Wednesday/Friday — the days `edgeWeek` puts its
+ * authored `Bike Steady Zone 2` rows on — and count only exposures that ended up
+ * riding on a strength session. That was an incidental property of the layout,
+ * not the thing this file tests: the subject is whether a missing-equipment
+ * profile SUBSTITUTES those rows safely, and a substitution is no less correct
+ * for happening on a standalone day.
+ *
+ * Batch 0's weekly-dose deletion freed a recovery slot in early off-season (the
+ * optional 1 -> 2 Sam ruled in Batch 2), and the allocator moved one aerobic
+ * exposure onto it as a standalone flush. Totals did not move — two exposures
+ * before, two after — and the standalone placement AGREES with the early
+ * off-season contract, which sets `allowCombinedStrengthConditioning: false`.
+ * The old window would have failed the more correct week.
+ */
 function conditioningCount(workouts: readonly Workout[]): number {
-  return strengthConditioning(workouts).filter(hasConditioning).length;
+  return workouts.filter(hasConditioning).length;
 }
 
 console.log('conditioningEquipmentConsistencyTests');
@@ -199,9 +212,9 @@ console.log('\n[4] fixed four-week block uses one feasibility owner and honest p
   ok('all subphases persist feasibility diagnostics on planned conditioning',
     result.microcycles.every((microcycle) => microcycle.workouts.every((workout) =>
       !workout.conditioningCategory || !!workout.conditioningFeasibility)));
-  const early = result.microcycles.slice(0, 2).flatMap((microcycle) =>
-    strengthConditioning(microcycle.workouts));
-  const earlyConditioning = early.filter(hasConditioning);
+  const earlyConditioning = result.microcycles.slice(0, 2)
+    .flatMap((microcycle) => microcycle.workouts)
+    .filter(hasConditioning);
   ok('weekly-card items and detail rows both expose phase-selected conditioning once',
     earlyConditioning.length === 4 && earlyConditioning.every((workout) => {
     const weekly = extractVisibleProgramItemsFromWorkout(workout)

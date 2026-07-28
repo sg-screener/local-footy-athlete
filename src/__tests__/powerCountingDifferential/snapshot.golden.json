@@ -17,7 +17,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -25,7 +25,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -65,6 +65,55 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "DB Bench Press",
+                "Bicep Curl (Barbell)"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -90,61 +139,6 @@
                 "Face Pulls",
                 "Nordic Lower"
               ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "DB Bench Press",
-                "Bicep Curl (Barbell)"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
               "power": null
             },
             {
@@ -185,7 +179,8 @@
                 }
               ],
               "components": [
-                "recovery"
+                "recovery",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 0,
@@ -215,7 +210,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -223,7 +218,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -241,7 +236,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -249,7 +244,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -289,6 +284,55 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "Incline DB Bench",
+                "Bicep Curl (Dumbbell)"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -314,61 +358,6 @@
                 "Face Pulls",
                 "Hamstring Curl"
               ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "Incline DB Bench",
-                "Bicep Curl (Dumbbell)"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
               "power": null
             },
             {
@@ -409,7 +398,8 @@
                 }
               ],
               "components": [
-                "recovery"
+                "recovery",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 0,
@@ -439,7 +429,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -447,7 +437,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -2373,22 +2363,22 @@
           "weekNumber": 1,
           "weekKind": "build",
           "counts": {
-            "hardExposures": 2,
-            "hardDays": 2,
-            "mainStrengthExposures": 2,
+            "hardExposures": 3,
+            "hardDays": 3,
+            "mainStrengthExposures": 3,
             "conditioningExposures": 2,
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 1,
+            "recoverySessions": 0,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
               "gunshow_prehab": 1,
-              "recovery": 1,
+              "lower_strength": 1,
               "upper_strength": 1
             }
           },
@@ -2424,31 +2414,24 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
-              "workoutType": "Strength",
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
-                  "modality": "none"
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength",
-                "support",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
-                "conditioning": 0,
-                "total": 5
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
               },
-              "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
-              ],
+              "strengthRowNames": [],
               "power": null
             },
             {
@@ -2480,28 +2463,62 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Aerobic Flush",
-              "workoutType": "Conditioning",
+              "name": "Gunshow",
+              "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
+                  "category": "gunshow_prehab",
+                  "modality": "none"
                 }
               ],
               "components": [
-                "conditioning"
+                "strength",
+                "support",
+                "recovery_addon"
               ],
               "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 1,
-                "total": 1
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
               },
-              "strengthRowNames": [],
+              "strengthRowNames": [
+                "Bicep Curls",
+                "Tricep Pushdowns",
+                "Face Pulls",
+                "Glute Bridge"
+              ],
               "power": null
             },
             {
               "dayOfWeek": 5,
+              "name": "Lower Squat",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "lower_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Goblet Squat",
+                "Step Ups",
+                "Glute Bridge"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 6,
               "name": "Aerobic Flush",
               "workoutType": "Conditioning",
               "taxonomy": [
@@ -2517,29 +2534,6 @@
                 "strength": 0,
                 "support": 0,
                 "conditioning": 1,
-                "total": 1
-              },
-              "strengthRowNames": [],
-              "power": null
-            },
-            {
-              "dayOfWeek": 6,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
                 "total": 1
               },
               "strengthRowNames": [],
@@ -2556,22 +2550,22 @@
             "powerDaysKept": [],
             "powerDaysStripped": [],
             "visibleCounts": {
-              "hardExposures": 2,
-              "hardDays": 2,
-              "mainStrengthExposures": 2,
+              "hardExposures": 3,
+              "hardDays": 3,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 1,
+              "recoverySessions": 0,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
-                "recovery": 1,
+                "lower_strength": 1,
                 "upper_strength": 1
               }
             }
@@ -2581,22 +2575,22 @@
           "weekNumber": 2,
           "weekKind": "build",
           "counts": {
-            "hardExposures": 2,
-            "hardDays": 2,
-            "mainStrengthExposures": 2,
+            "hardExposures": 3,
+            "hardDays": 3,
+            "mainStrengthExposures": 3,
             "conditioningExposures": 2,
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 1,
+            "recoverySessions": 0,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
               "gunshow_prehab": 1,
-              "recovery": 1,
+              "lower_strength": 1,
               "upper_strength": 1
             }
           },
@@ -2632,31 +2626,24 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
-              "workoutType": "Strength",
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
-                  "modality": "none"
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength",
-                "support",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
-                "conditioning": 0,
-                "total": 5
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
               },
-              "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
-              ],
+              "strengthRowNames": [],
               "power": null
             },
             {
@@ -2688,6 +2675,62 @@
             },
             {
               "dayOfWeek": 4,
+              "name": "Gunshow",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "gunshow_prehab",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "support",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
+              },
+              "strengthRowNames": [
+                "Bicep Curls",
+                "Tricep Pushdowns",
+                "Face Pulls",
+                "Glute Bridge"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 5,
+              "name": "Lower Squat",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "lower_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Goblet Squat",
+                "Step Ups",
+                "Glute Bridge"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 6,
               "name": "Aerobic Flush",
               "workoutType": "Conditioning",
               "taxonomy": [
@@ -2707,51 +2750,6 @@
               },
               "strengthRowNames": [],
               "power": null
-            },
-            {
-              "dayOfWeek": 5,
-              "name": "Aerobic Flush",
-              "workoutType": "Conditioning",
-              "taxonomy": [
-                {
-                  "category": "aerobic_base",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "conditioning"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 1,
-                "total": 1
-              },
-              "strengthRowNames": [],
-              "power": null
-            },
-            {
-              "dayOfWeek": 6,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
-              "power": null
             }
           ],
           "section18": {
@@ -2764,22 +2762,22 @@
             "powerDaysKept": [],
             "powerDaysStripped": [],
             "visibleCounts": {
-              "hardExposures": 2,
-              "hardDays": 2,
-              "mainStrengthExposures": 2,
+              "hardExposures": 3,
+              "hardDays": 3,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 1,
+              "recoverySessions": 0,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
-                "recovery": 1,
+                "lower_strength": 1,
                 "upper_strength": 1
               }
             }
@@ -2796,15 +2794,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
-            "recoverySessions": 1,
+            "gunshowSessions": 2,
+            "recoverySessions": 0,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
+              "gunshow_prehab": 2,
               "lower_strength": 2,
-              "recovery": 1,
               "sprint": 1,
               "upper_strength": 2
             }
@@ -2909,25 +2906,31 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Gunshow",
+              "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "recovery",
+                  "category": "gunshow_prehab",
                   "modality": "none"
                 }
               ],
               "components": [
-                "recovery",
+                "strength",
+                "support",
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 0,
-                "support": 0,
+                "strength": 4,
+                "support": 1,
                 "conditioning": 0,
-                "total": 1
+                "total": 5
               },
-              "strengthRowNames": [],
+              "strengthRowNames": [
+                "Bicep Curls",
+                "Tricep Pushdowns",
+                "Face Pulls",
+                "Glute Bridge"
+              ],
               "power": null
             },
             {
@@ -3014,15 +3017,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
-              "recoverySessions": 1,
+              "gunshowSessions": 2,
+              "recoverySessions": 0,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 2,
-                "recovery": 1,
                 "sprint": 1,
                 "upper_strength": 2
               }
@@ -3040,15 +3042,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
-            "recoverySessions": 1,
+            "gunshowSessions": 2,
+            "recoverySessions": 0,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
+              "gunshow_prehab": 2,
               "lower_strength": 2,
-              "recovery": 1,
               "sprint": 1,
               "upper_strength": 2
             }
@@ -3153,25 +3154,31 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
+              "name": "Gunshow",
+              "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "recovery",
+                  "category": "gunshow_prehab",
                   "modality": "none"
                 }
               ],
               "components": [
-                "recovery",
+                "strength",
+                "support",
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 0,
-                "support": 0,
+                "strength": 4,
+                "support": 1,
                 "conditioning": 0,
-                "total": 1
+                "total": 5
               },
-              "strengthRowNames": [],
+              "strengthRowNames": [
+                "Bicep Curls",
+                "Tricep Pushdowns",
+                "Face Pulls",
+                "Glute Bridge"
+              ],
               "power": null
             },
             {
@@ -3258,15 +3265,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
-              "recoverySessions": 1,
+              "gunshowSessions": 2,
+              "recoverySessions": 0,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 2,
-                "recovery": 1,
                 "sprint": 1,
                 "upper_strength": 2
               }
@@ -3289,10 +3295,10 @@
             "mainStrengthExposures": 3,
             "conditioningExposures": 2,
             "extraConditioningSessions": 2,
-            "runningExposures": 0,
+            "runningExposures": 1,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -3300,7 +3306,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -3341,6 +3347,55 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "running"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "Push-ups",
+                "Banded Bicep Curl"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -3369,61 +3424,6 @@
               "power": null
             },
             {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "Push-ups",
-                "Banded Bicep Curl"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
-              "power": null
-            },
-            {
               "dayOfWeek": 5,
               "name": "Lower Squat",
               "workoutType": "Strength",
@@ -3462,7 +3462,8 @@
                 }
               ],
               "components": [
-                "recovery"
+                "recovery",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 0,
@@ -3489,10 +3490,10 @@
               "mainStrengthExposures": 3,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
-              "runningExposures": 0,
+              "runningExposures": 1,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -3500,7 +3501,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -3515,10 +3516,10 @@
             "mainStrengthExposures": 3,
             "conditioningExposures": 2,
             "extraConditioningSessions": 2,
-            "runningExposures": 0,
+            "runningExposures": 1,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -3526,7 +3527,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -3568,6 +3569,55 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "running"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "recovery_addon"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "Dips",
+                "Banded Tricep Pushdown"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -3592,60 +3642,6 @@
                 "Face Pulls",
                 "Tib Raises"
               ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "Dips",
-                "Banded Tricep Pushdown"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
               "power": null
             },
             {
@@ -3715,10 +3711,10 @@
               "mainStrengthExposures": 3,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
-              "runningExposures": 0,
+              "runningExposures": 1,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -3726,7 +3722,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -4405,7 +4401,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -4413,7 +4409,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -4435,7 +4431,8 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 4,
@@ -4453,6 +4450,54 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "DB Bench Press",
+                "Bicep Curl (Barbell)"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -4478,60 +4523,6 @@
                 "Face Pulls",
                 "Nordic Lower"
               ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "DB Bench Press",
-                "Bicep Curl (Barbell)"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
               "power": null
             },
             {
@@ -4603,7 +4594,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -4611,7 +4602,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -4629,7 +4620,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 2,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -4637,7 +4628,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
-              "recovery": 2,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -4659,7 +4650,8 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 4,
@@ -4677,6 +4669,54 @@
             },
             {
               "dayOfWeek": 2,
+              "name": "Aerobic Flush",
+              "workoutType": "Conditioning",
+              "taxonomy": [
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
+                }
+              ],
+              "components": [
+                "conditioning"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 1,
+                "total": 1
+              },
+              "strengthRowNames": [],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Upper Push",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "upper_strength",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength"
+              ],
+              "countedRows": {
+                "strength": 3,
+                "support": 0,
+                "conditioning": 0,
+                "total": 3
+              },
+              "strengthRowNames": [
+                "Overhead Press",
+                "Incline DB Bench",
+                "Bicep Curl (Dumbbell)"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 4,
               "name": "Gunshow",
               "workoutType": "Strength",
               "taxonomy": [
@@ -4702,60 +4742,6 @@
                 "Face Pulls",
                 "Hamstring Curl"
               ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 3,
-              "name": "Upper Push",
-              "workoutType": "Mixed",
-              "taxonomy": [
-                {
-                  "category": "upper_strength",
-                  "modality": "none"
-                },
-                {
-                  "category": "aerobic_base",
-                  "modality": "off_feet"
-                }
-              ],
-              "components": [
-                "strength",
-                "conditioning"
-              ],
-              "countedRows": {
-                "strength": 3,
-                "support": 0,
-                "conditioning": 1,
-                "total": 4
-              },
-              "strengthRowNames": [
-                "Overhead Press",
-                "Incline DB Bench",
-                "Bicep Curl (Dumbbell)"
-              ],
-              "power": null
-            },
-            {
-              "dayOfWeek": 4,
-              "name": "Recovery Session",
-              "workoutType": "Recovery",
-              "taxonomy": [
-                {
-                  "category": "recovery",
-                  "modality": "none"
-                }
-              ],
-              "components": [
-                "recovery",
-                "recovery_addon"
-              ],
-              "countedRows": {
-                "strength": 0,
-                "support": 0,
-                "conditioning": 0,
-                "total": 1
-              },
-              "strengthRowNames": [],
               "power": null
             },
             {
@@ -4827,7 +4813,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 2,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -4835,7 +4821,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
-                "recovery": 2,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
