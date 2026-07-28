@@ -245,20 +245,33 @@ including:
 - the arithmetic closes: 280 + 1,503 + 5 = 1,788
 - 447 new-region cells, none of them on an old region
 - the three flag states stay distinguishable, and no conditioning row carries a CHECK
-- **no data tab contains a blank row anywhere** (see below)
+- **every header is pinned by content at its expected reader row** (see below)
 
-### The trap this sheet is built to avoid
+### The trap this sheet is built to avoid — and a correction
 
 On the first build the sign-off tab read back **14 groups instead of 15**, while
 still passing its own row count. A blank spacer row emits no `<row>` element, and
-`xlsxReader` indexes the rows it actually reads — so the spreadsheet row number
-and `readSheetRecords`' `headerRow` drifted apart and the gate read a data row as
-its header.
+`xlsxReader` indexes the rows it actually reads — so the generator, counting the
+blank, computed the header's position in *spreadsheet* coordinates while the
+reader worked in *emitted-row* coordinates. They differed by one, and the gate
+read a data row as its header.
 
-It nearly recurred: the second build's `Conflicts & routing` tab separated Part A
-from Part B with a blank row. Both are now titled separator rows, and a standing
-assertion fails if **any** blank row appears on a data tab at all — a stronger
-invariant than checking above the header, because the tab has two headers.
+**An earlier version of this document claimed the fix was a standing assertion
+that no data tab contains a blank row. That assertion was vacuous.** Mutation
+testing showed it could never fail: a blank row is invisible from the read side
+by construction, so `sheet.rows` never contains one. The same mutation also
+showed that inserting a blank row into a finished workbook is *harmless* — the
+reader's indices do not move, because the row was never there to begin with.
+
+The hazard is therefore entirely generator-side: an index miscounted in the wrong
+coordinate system. The real protection is to **pin each header by its content at
+its expected reader row**, which fails loudly the moment anything shifts. Proven
+by mutation — inserting a content row above the headers now fails four
+assertions, where the blank-row check had failed none.
+
+Blank rows are still kept off every data tab, and Part A / Part B are separated
+by titled rows rather than gaps. But that is now belt-and-braces to keep the two
+coordinate systems identical, not the thing doing the work.
 
 ---
 
