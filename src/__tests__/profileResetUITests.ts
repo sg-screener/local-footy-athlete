@@ -596,6 +596,105 @@ ok(
 // the Phase 1.6 purge deleted. Assertions about a file that does not exist are
 // removed rather than rewritten against a guess at its replacement.
 
+// ═════════════════════════════════════════════════════════════════════
+// 13. A sheet hosting a flexing body must declare it
+// ═════════════════════════════════════════════════════════════════════
+//
+// Sam's device, 2026-07-29: the setup sheet opened as a sliver — backdrop
+// dimmed, grab handle visible, no content, nothing to dismiss. `KeyboardSafeArea`
+// has a `flex: 1` root, and `flex: 1` means `flexBasis: 0`; a flex-basis-0
+// child inside an AUTO-HEIGHT parent has no definite free space to grow into,
+// so it resolves to zero height. `Sheet` is auto-height by design.
+//
+// This is the "renders but unusable" class. Every element mounted, every
+// testID present, every source contract green — and the screen was unusable.
+// No non-rendering suite can see it, which is why the assertions below check
+// the DECLARATION rather than the pixels: whether a caller told the primitive
+// its body flexes is the one part of this a source gate can honestly hold.
+section('[13] Sheets hosting a flexing body declare it');
+{
+  const sheetSrc = fs.readFileSync(
+    path.resolve(__dirname, '..', 'components', 'ui', 'Sheet.tsx'),
+    'utf8',
+  );
+  ok(
+    'the Sheet primitive offers a flexible-body mode',
+    /flexibleBody\?: boolean/.test(sheetSrc),
+  );
+  ok(
+    // Declaring the prop and defining the style is not wiring them together.
+    // A mutation that deleted exactly this line left every other assertion in
+    // this section green while the sheet collapsed again.
+    'the flexible style is actually applied to the content view',
+    /flexibleBody && styles\.contentFlexible/.test(sheetSrc),
+  );
+  ok(
+    'the flexible mode sets a DEFINITE height, not a cap',
+    /contentFlexible:\s*\{[^}]*height:\s*'92%'/.test(sheetSrc)
+      && !/contentFlexible:\s*\{[^}]*maxHeight/.test(sheetSrc),
+  );
+
+  // Co-occurrence in a FILE is not the defect — nesting inside the sheet is.
+  // A first cut of this gate flagged DayWorkoutScreenV2 and HomeScreenV2,
+  // which each render a Sheet and a flexing body in unrelated places. A gate
+  // with false positives gets silenced by adding the prop where it does
+  // nothing, so this reads only what is actually between <Sheet ...> and
+  // </Sheet>.
+  const stripComments = (text: string) =>
+    text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const sheetBodies = (text: string): string[] => {
+    const bodies: string[] = [];
+    let from = 0;
+    for (;;) {
+      const open = text.indexOf('<Sheet', from);
+      if (open === -1) break;
+      const close = text.indexOf('</Sheet>', open);
+      if (close === -1) break;
+      bodies.push(text.slice(open, close));
+      from = close + 1;
+    }
+    return bodies;
+  };
+  const srcRoot = path.resolve(__dirname, '..');
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+        walk(full);
+      } else if (entry.name.endsWith('.tsx')) files.push(full);
+    }
+  };
+  walk(srcRoot);
+  const offenders: string[] = [];
+  for (const file of files) {
+    if (file.endsWith(path.join('components', 'ui', 'Sheet.tsx'))) continue;
+    const text = stripComments(fs.readFileSync(file, 'utf8'));
+    for (const body of sheetBodies(text)) {
+      const flexes = /<KeyboardSafeArea[\s>]/.test(body) || /<ScrollView[\s>]/.test(body);
+      if (flexes && !/flexibleBody/.test(body)) {
+        offenders.push(path.relative(srcRoot, file));
+      }
+    }
+  }
+  ok(
+    'no Sheet hosts a flexing body without declaring flexibleBody',
+    offenders.length === 0,
+    offenders.join(', '),
+  );
+  ok(
+    'the setup sheet declares it, and only while its body actually flexes',
+    /flexibleBody=\{!building\}/.test(src),
+  );
+  ok(
+    'the dead maxHeight cap is gone from the caller',
+    // Comments stripped: the note explaining the removal quotes the very code
+    // it removed, and a gate that reads prose is not reading the program.
+    !/setupSheetContent:\s*\{\s*maxHeight/.test(stripComments(src)),
+  );
+}
+
 // ─── Summary ───
 console.log(`\n— Summary —`);
 console.log(`  Pass: ${pass}`);

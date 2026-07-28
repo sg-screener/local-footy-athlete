@@ -1493,7 +1493,11 @@ function SetupUpdateSheet({
       visible={visible}
       onClose={onClose}
       dismissable={!building}
-      contentStyle={styles.setupSheetContent}
+      // The body is a KeyboardSafeArea (root `flex: 1`) on every step except
+      // `building`, which renders plain content and can hug it. Without this
+      // the flexing body resolved to zero height and the sheet opened as a
+      // sliver — grab handle, no content, nothing to dismiss.
+      flexibleBody={!building}
       testID="profile-setup-update-sheet"
     >
       {showBack ? (
@@ -1717,9 +1721,11 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 28,
   },
-  setupSheetContent: {
-    maxHeight: '92%',
-  },
+  // `setupSheetContent: { maxHeight: '92%' }` lived here. It read like the
+  // height cap for this sheet and did nothing: a cap on a parent that is still
+  // deriving its height from its children never binds against a flex-basis-0
+  // child. The definite height belongs to the Sheet primitive's `flexibleBody`
+  // mode, where the constraint is stated once for every caller.
   setupSheetScroll: {
     maxHeight: '100%',
   },

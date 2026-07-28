@@ -29,6 +29,27 @@ export interface V2SheetProps {
   dismissable?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   testID?: string;
+  /**
+   * Set when the sheet body FLEXES — a `ScrollView`, or anything built on
+   * `KeyboardSafeArea`, whose root is `flex: 1`.
+   *
+   * The sheet is auto-height by default: it hugs its children, which is right
+   * for the short confirm/step sheets and is why most callers need nothing
+   * here. But `flex: 1` is `flexGrow:1, flexShrink:1, flexBasis:0`, and a
+   * flex-basis-0 child inside an auto-height parent has no definite free space
+   * to grow into — so it resolves to ZERO height. The sheet then renders as a
+   * sliver: backdrop dims, grab handle shows, no content, nothing to dismiss.
+   *
+   * That is exactly what happened to the Profile setup sheet on 2026-07-29
+   * (Sam's device; the code's own "Device-verify the sheet layout" comment had
+   * feared it). It is invisible to every source-level gate and to a
+   * non-rendering test suite — the "renders but unusable" class.
+   *
+   * Setting this gives `content` a DEFINITE height, which is what a flexing
+   * child needs to resolve against. Percentages resolve here because the
+   * overlay is `flex: 1` inside the Modal, so its height is definite.
+   */
+  flexibleBody?: boolean;
 }
 
 export function Sheet({
@@ -38,6 +59,7 @@ export function Sheet({
   dismissable = true,
   contentStyle,
   testID,
+  flexibleBody = false,
 }: V2SheetProps) {
   const handleClose = dismissable ? onClose : undefined;
 
@@ -62,7 +84,11 @@ export function Sheet({
           importantForAccessibility="no"
         />
         <View
-          style={[styles.content, contentStyle]}
+          style={[
+            styles.content,
+            flexibleBody && styles.contentFlexible,
+            contentStyle,
+          ]}
           accessible={false}
           importantForAccessibility="no"
           accessibilityViewIsModal
@@ -88,6 +114,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 40,
     paddingHorizontal: spacing.lg,
+  },
+  /**
+   * A DEFINITE height, not `maxHeight`. `maxHeight` caps a size the parent is
+   * still deriving from its children, so it does nothing for a flex-basis-0
+   * child — the child measures 0 and the cap never binds. Only a definite
+   * height gives the child something to fill.
+   */
+  contentFlexible: {
+    height: '92%',
   },
   handle: {
     width: 40,
