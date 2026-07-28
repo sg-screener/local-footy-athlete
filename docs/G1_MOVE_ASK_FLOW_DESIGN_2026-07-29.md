@@ -156,6 +156,14 @@ below are the seeded example.
 > - **Same session, deloaded** — Half the sets at RPE 5–6, weight stays.
 >   Conditioning halved.
 
+**Route (b) sub-line when the moved session has NO accessories** — a
+conditioning or sprint session. NOT YET SIGNED: drafted from Sam's
+honest-labelling ruling, awaiting his word. The menu shape and the other five
+strings above are signed.
+
+> - **Accessories only** — A pump session instead. Your Monday session is
+>   dropped, not moved.
+
 **Warning 2 — before route (c) applies**
 
 > **This still costs you Saturday.**

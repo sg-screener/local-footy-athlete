@@ -20,6 +20,11 @@ import {
   executeProgramControlActionDurably,
 } from '../../utils/programControlActions';
 import { riskReasons } from '../../utils/planChangeRefusalCopy';
+import {
+  G1_MOVE_ROUTES,
+  G1_MOVE_WARNING,
+  type G1MoveContext,
+} from '../../rules/g1MoveAsk';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 import {
   observeRenderedAthleteActionOutcome,
@@ -74,6 +79,22 @@ type Step =
       // sheet holds no competing constant. See utils/planChangeRefusalCopy.
       kind: 'block_warning';
       reasons: string[];
+      backStep: Step;
+    }
+  | {
+      // Sam's G-1 ask. The athlete has put a session on the day before their
+      // game. Warn once, offer the three ruled routes, apply nothing until they
+      // answer. All copy comes from rules/g1MoveAsk — the sheet holds none.
+      kind: 'g1_ask';
+      change: Extract<PlanChange, { kind: 'move_session' }>;
+      context: G1MoveContext;
+      backStep: Step;
+    }
+  | {
+      // The second, stronger warning. Route (c) alone, whatever was moved.
+      kind: 'g1_deload_confirm';
+      change: Extract<PlanChange, { kind: 'move_session' }>;
+      context: G1MoveContext;
       backStep: Step;
     }
   | { kind: 'pick_destination' }
@@ -300,6 +321,12 @@ export function PlanChangeSheet({
       return;
     }
     const backStep = opts?.backStep ?? { kind: 'edit_session' };
+    // Before any risk framing: the athlete has put a session on the day before
+    // their game and has not been asked yet. Nothing has been applied.
+    if (preview.g1Ask && change.kind === 'move_session') {
+      setStep({ kind: 'g1_ask', change, context: preview.g1Ask, backStep });
+      return;
+    }
     if (preview.assessment.decision === 'block') {
       setStep({
         kind: 'block_warning',
@@ -692,6 +719,64 @@ export function PlanChangeSheet({
             label="OK"
             onPress={() => setStep(step.backStep)}
           />
+        </View>
+      )}
+
+      {step.kind === 'g1_ask' && (
+        <View>
+          <Text style={styles.blockingTitle}>{G1_MOVE_WARNING.ask.headline}</Text>
+          <Text style={styles.confirmText}>
+            {G1_MOVE_WARNING.ask.body(step.context)}
+          </Text>
+          {G1_MOVE_ROUTES.map((route) => (
+            <MenuOption
+              key={route.id}
+              label={route.label(step.context)}
+              sub={route.detail(step.context)}
+              testID={`g1-route-${route.id}`}
+              onPress={() => {
+                // (a) commits nothing. The athlete keeps the Gunshow and their
+                // session stays where it is, so there is no transaction and
+                // nothing to undo — the sheet simply closes.
+                if (!route.commits) {
+                  onClose();
+                  return;
+                }
+                if (route.requiresSecondWarning) {
+                  setStep({
+                    kind: 'g1_deload_confirm',
+                    change: step.change,
+                    context: step.context,
+                    backStep: step,
+                  });
+                  return;
+                }
+                apply(
+                  { ...step.change, g1Route: route.id },
+                  { backStep: step.backStep, closeOnSuccess: true },
+                );
+              }}
+            />
+          ))}
+          <BackRow onPress={() => setStep(step.backStep)} />
+        </View>
+      )}
+
+      {step.kind === 'g1_deload_confirm' && (
+        <View>
+          <Text style={styles.blockingTitle}>
+            {G1_MOVE_WARNING.deloadConfirm.headline(step.context)}
+          </Text>
+          <Text style={styles.confirmText}>{G1_MOVE_WARNING.deloadConfirm.body}</Text>
+          <MenuOption
+            label="Do it anyway"
+            testID="g1-route-deloaded-confirm"
+            onPress={() => apply(
+              { ...step.change, g1Route: 'deloaded' },
+              { backStep: step.backStep, closeOnSuccess: true },
+            )}
+          />
+          <MenuOption label="Back" onPress={() => setStep(step.backStep)} />
         </View>
       )}
 

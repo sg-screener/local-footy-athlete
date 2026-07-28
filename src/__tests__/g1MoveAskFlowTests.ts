@@ -26,6 +26,8 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
@@ -53,6 +55,7 @@ import {
   G1_MOVE_ROUTES,
   G1_MOVE_WARNING,
   g1MoveRoute,
+  type G1MoveContext,
   placeSessionForRoute,
   resolveG1MoveAsk,
 } from '../rules/g1MoveAsk';
@@ -678,6 +681,88 @@ run('17 committing a routeless G-1 move refuses rather than applying it', () => 
     `the refused commit still applied ${commit.appliedDates.join(', ')}`);
   assert(storeFingerprint() === before,
     'the refused routeless commit mutated accepted state');
+});
+
+// ── Copy provenance: code ↔ Sam's signed design document ──────────────────
+
+/**
+ * The seeded example the design document is written in. Sam signed the copy
+ * with these day names in it, so the comparison renders the code's copy for the
+ * same move and asks for character equality.
+ */
+const SIGNED_EXAMPLE: G1MoveContext = {
+  sourceDayName: 'Monday',
+  g1DayName: 'Friday',
+  gameDayName: 'Saturday',
+  accessoriesComeFromPumpSession: false,
+};
+
+run('18 every athlete-facing string is filed in Sam\'s design document', () => {
+  const doc = readFileSync(
+    join(__dirname, '..', '..', 'docs', 'G1_MOVE_ASK_FLOW_DESIGN_2026-07-29.md'),
+    'utf8',
+  );
+  // Blockquoted copy, unwrapped. Markdown hard-wraps, so a line break in the
+  // document must not read as a difference in the copy: blank quote lines end a
+  // paragraph, a leading "- " starts a new item, and everything else continues
+  // the current one. Bold markers come off BEFORE bullet markers — stripping
+  // "- " first eats one asterisk of a leading "**bold**" and silently mangles
+  // every headline, which is what the first run of this test did.
+  const quoted: string[] = [];
+  let current = '';
+  const flush = () => {
+    const line = current.replace(/\s+/g, ' ').trim();
+    if (line) quoted.push(line);
+    current = '';
+  };
+  for (const raw of doc.split('\n')) {
+    if (!raw.startsWith('>')) { flush(); continue; }
+    const source = raw.replace(/^>\s?/, '');
+    // A wholly-bold line is a HEADLINE and stands alone. In the document it sits
+    // directly above its body with no blank line between them; in the code they
+    // are two separate strings, and joining them would compare a sentence the
+    // athlete never sees as one block.
+    if (/^\*\*.+\*\*$/.test(source.trim())) {
+      flush();
+      current = source.replace(/\*\*/g, '');
+      flush();
+      continue;
+    }
+    const line = source.replace(/\*\*/g, '');
+    if (!line.trim()) { flush(); continue; }
+    if (/^[-*]\s/.test(line)) {
+      flush();
+      current = line.replace(/^[-*]\s*/, '');
+      continue;
+    }
+    current = current ? `${current} ${line.trim()}` : line;
+  }
+  flush();
+
+  const pumpExample: G1MoveContext = {
+    ...SIGNED_EXAMPLE, accessoriesComeFromPumpSession: true,
+  };
+  const inCode = [
+    G1_MOVE_WARNING.ask.headline,
+    G1_MOVE_WARNING.ask.body(SIGNED_EXAMPLE),
+    ...G1_MOVE_ROUTES.map((route) =>
+      `${route.label(SIGNED_EXAMPLE)} — ${route.detail(SIGNED_EXAMPLE)}`),
+    `${g1MoveRoute('accessories_only').label(pumpExample)} — `
+      + `${g1MoveRoute('accessories_only').detail(pumpExample)}`,
+    G1_MOVE_WARNING.deloadConfirm.headline(SIGNED_EXAMPLE),
+    G1_MOVE_WARNING.deloadConfirm.body,
+  ].map((line) => line.replace(/\s+/g, ' ').trim());
+
+  // Direction 1: nothing reaches a card that is not in the document.
+  for (const line of inCode) {
+    assert(quoted.includes(line),
+      `UNFILED athlete-facing copy — not in the design document:\n  "${line}"`);
+  }
+  // Direction 2: nothing sits in the document that the code no longer says.
+  for (const line of quoted) {
+    assert(inCode.includes(line),
+      `STALE copy in the design document — the code no longer says:\n  "${line}"`);
+  }
 });
 
 console.log(`\nG-1 move ask-flow totals: ${passed} passed, ${failed} failed`);

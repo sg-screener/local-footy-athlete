@@ -35,7 +35,12 @@ export type { G1MoveRouteId } from '../utils/planChangeTypes';
 
 export interface G1MoveRoute {
   id: G1MoveRouteId;
-  label: string;
+  /**
+   * The option title. A function of the move because Sam's signed copy NAMES
+   * the day — "Keep Friday's Gunshow", not "Keep the Gunshow". A day-blind
+   * label was the first thing the copy-equality test caught.
+   */
+  label: (context: G1MoveContext) => string;
   /**
    * The sub-line under the label. A function of the move, because two of the
    * three routes have to name a real day: (a) tells the athlete their session
@@ -103,7 +108,7 @@ export const G1_MOVE_WARNING = {
 export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
   {
     id: 'keep_gunshow',
-    label: "Keep the Gunshow",
+    label: (context) => `Keep ${context.g1DayName}'s Gunshow`,
     detail: (context) =>
       'Light upper-body pump, what the day before a game is built for. '
       + `Your ${context.sourceDayName} session stays where it is.`,
@@ -112,7 +117,7 @@ export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
   },
   {
     id: 'accessories_only',
-    label: 'Accessories only',
+    label: () => 'Accessories only',
     detail: (context) => context.accessoriesComeFromPumpSession
       // Honest labelling (Sam's ruling): a conditioning session has no
       // accessories to keep, so this route is the pump session under its own
@@ -125,7 +130,7 @@ export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
   },
   {
     id: 'deloaded',
-    label: 'Same session, deloaded',
+    label: () => 'Same session, deloaded',
     detail: () => 'Half the sets at RPE 5–6, weight stays. Conditioning halved.',
     commits: true,
     requiresSecondWarning: true,
