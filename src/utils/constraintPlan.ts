@@ -255,7 +255,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
   switch (region) {
     case 'shoulder':
     case 'elbow':
-    case 'wrist':
+    case 'wrist/hand':
       return [
         'Lower body strength (squat / hinge / lunge)',
         'Midline + anti-rotation',
@@ -299,7 +299,7 @@ function buildSubstituteLabels(c: Constraint): string[] {
         'Midline',
         'Easy bike',
       ];
-    case 'ankle':
+    case 'ankle/foot':
       return [
         'Bilateral lower (no jumping / cutting)',
         'Upper body strength',
@@ -393,13 +393,13 @@ function buildAdviceForMissedSession(c: ActiveMissedSessionConstraint): string[]
 const BUCKET_TO_REGION: Record<string, ConstraintRegion> = {
   shoulder: 'shoulder',
   elbow: 'elbow',
-  wrist: 'wrist',
+  'wrist/hand': 'wrist/hand',
   knee: 'knee',
-  ankle: 'ankle',
+  'ankle/foot': 'ankle/foot',
   calf: 'calf',
   hamstring: 'hamstring',
-  adductor: 'groin',
-  pubalgia: 'groin',
+  'groin': 'groin',
+  'groin': 'groin',
   lowerBack: 'back',
 };
 

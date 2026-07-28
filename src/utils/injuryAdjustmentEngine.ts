@@ -72,8 +72,8 @@ import { todayISOLocal } from './appDate';
  * can read per-exercise risk ratings directly with no extra mapping layer.
  */
 export type InjuryBucket = keyof ExerciseTag['injury'];
-//   = 'adductor' | 'pubalgia' | 'lowerBack' | 'knee' | 'hamstring'
-//     | 'calf' | 'ankle' | 'shoulder' | 'elbow' | 'wrist'
+//   = 'groin' | 'groin' | 'lowerBack' | 'knee' | 'hamstring'
+//     | 'calf' | 'ankle/foot' | 'shoulder' | 'elbow' | 'wrist/hand'
 
 export interface InjuryContext {
   bodyPart: string;              // matched body-part token (canonical, lowercased) OR 'unknown'
@@ -132,17 +132,17 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   achilles: 'calf',
 
   // ─ Ankle / foot ─
-  ankle: 'ankle',
-  ankles: 'ankle',
+  'ankle/foot': 'ankle/foot',
+  ankles: 'ankle/foot',
   // feet strains avoid high-impact loading → ankle is the closest proxy
-  foot: 'ankle',
-  feet: 'ankle',
+  foot: 'ankle/foot',
+  feet: 'ankle/foot',
 
   // ─ Groin / adductor ─
-  groin: 'adductor',
+  groin: 'groin',
   // hip/groin sits closer to adductor restrictions than lower-back loading.
-  hip: 'adductor',
-  hips: 'adductor',
+  hip: 'groin',
+  hips: 'groin',
 
   // ─ Back ─
   back: 'lowerBack',
@@ -171,23 +171,23 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   forearms: 'elbow',
 
   // ─ Wrist ─
-  wrist: 'wrist',
-  wrists: 'wrist',
+  'wrist/hand': 'wrist/hand',
+  wrists: 'wrist/hand',
 };
 
 const LOWER_LIMB_BUCKETS = new Set<InjuryBucket>([
   'hamstring',
   'knee',
   'calf',
-  'ankle',
-  'adductor',
+  'ankle/foot',
+  'groin',
   'lowerBack',
 ]);
 
 const UPPER_LIMB_BUCKETS = new Set<InjuryBucket>([
   'shoulder',
   'elbow',
-  'wrist',
+  'wrist/hand',
 ]);
 
 // ─── Severity parsing ───
@@ -284,9 +284,9 @@ function avoidThisWeekBullets(bucket: InjuryBucket): string {
       return '• Heavy knee-dominant work (deep squat / lunge / jump)\n• Cutting / change-of-direction';
     case 'calf':
       return '• Sprinting, plyos, and bounding\n• Loaded calf raises';
-    case 'ankle':
+    case 'ankle/foot':
       return '• Running, jumping, and cutting\n• Single-leg balance work on the affected side';
-    case 'adductor':
+    case 'groin':
       return '• Cutting / change-of-direction\n• Heavy adductor / wide-stance squat work';
     case 'lowerBack':
       return '• Heavy axial loading (back squat / deadlift)\n• Loaded hinges';
@@ -294,7 +294,7 @@ function avoidThisWeekBullets(bucket: InjuryBucket): string {
       return '• Overhead press / pulling overhead\n• Heavy bench-style pressing on the painful side';
     case 'elbow':
       return '• Heavy chin-ups / curls\n• Loaded triceps extension';
-    case 'wrist':
+    case 'wrist/hand':
       return '• Front-rack / loaded wrist-extension work\n• Push-up variants on a flat hand';
     default:
       return '• Anything that reproduces the pain';

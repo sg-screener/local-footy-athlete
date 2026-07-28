@@ -193,8 +193,10 @@ ok('structural', 'every new-region rule is Sam-authored, never evidence-derived'
 const exceptionRows = readSheetRecords(FILE, 'Exceptions', 4);
 const exceptions: Record<string, string> = {};
 for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Region}`] = record.RULED;
-ok('snapshot', '18 exceptions, all standing', exceptionRows.length === 18,
-  `got ${exceptionRows.length}`);
+ok('snapshot', '19 exceptions (18 reverse-engineered + Shrugs/neck, Sam-authored)',
+  exceptionRows.length === 19, `got ${exceptionRows.length}`);
+ok('structural', 'Shrugs carries the neck exception that replaced the inert Traps rule',
+  exceptions['Shrugs|neck'] === 'caution', exceptions['Shrugs|neck'] ?? '(absent)');
 ok('structural', 'every exception names a real exercise and region',
   exceptionRows.every((r) => EXERCISE_TAGS[r.Exercise] !== undefined && REGIONS.includes(r.Region)));
 
@@ -240,8 +242,8 @@ for (const record of finalRows) {
 }
 ok('snapshot', "the sheet's own rules re-derive every strength cell",
   rederivationErrors.length === 0, rederivationErrors.slice(0, 5).join(' ; '));
-ok('snapshot', 'final distribution: 924 caution / 24 avoid / 989 good',
-  distribution.caution === 924 && distribution.avoid === 24 && distribution.good === 989,
+ok('snapshot', 'final distribution: 925 caution / 24 avoid / 988 good',
+  distribution.caution === 925 && distribution.avoid === 24 && distribution.good === 988,
   JSON.stringify(distribution));
 ok('structural', '149 x 13 = 1937 cells, all authored',
   Object.values(distribution).reduce((a, b) => a + b, 0) === 1937);
@@ -292,18 +294,23 @@ ok('snapshot', 'sprint family carries hamstring/calf avoid above the blanket cau
 
 const singleRoutes = readSheetRecords(FILE, 'Routing', 5)
   .filter((r) => r.Status?.startsWith('ruled'));
-ok('snapshot', '8 single-target routes ruled', singleRoutes.length === 8,
+ok('snapshot', '11 single-target routes ruled', singleRoutes.length === 11,
   `got ${singleRoutes.length}`);
 ok('structural', 'every single route targets one of the 13 regions',
   singleRoutes.every((r) => REGIONS.includes(r['RULED region'])));
 ok('structural', 'ribs routes to ribs, superseding the unroutable line',
   singleRoutes.some((r) => r['Athlete types…'].includes('rib') && r['RULED region'] === 'ribs'));
 
-const dualRoutes = readSheetRecords(FILE, 'Routing', 16).filter((r) => r.Status?.startsWith('BLOCKED'));
-ok('snapshot', '3 dual routes recorded as BLOCKED', dualRoutes.length === 3,
-  `got ${dualRoutes.length}`);
-ok('structural', 'no dual route is presented as implementable',
-  dualRoutes.every((r) => r.Status.includes('single-target')));
+// Sam ruled duals OUT on 2026-07-28. The ruling file must carry none, so that
+// nothing can quietly reintroduce a multi-target route the resolver cannot express.
+ok('structural', 'no dual routes exist — routing is single-target everywhere',
+  Object.keys(ruling.routing.dual).filter((k) => k !== '_').length === 0);
+ok('structural', 'the three former duals are now single targets',
+  ruling.routing.single['hip flexor'] === 'hip'
+  && ruling.routing.single.achilles === 'calf'
+  && ruling.routing.single['upper back'] === 'shoulder');
+ok('structural', 'no Traps rule survives — an unreachable authored rule is a defect',
+  (ruling.newRegionMuscleRules.neck ?? []).length === 0);
 
 /* ── Result ── */
 

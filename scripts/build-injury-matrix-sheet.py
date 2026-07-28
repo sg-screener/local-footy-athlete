@@ -288,23 +288,16 @@ for phrase, target in data['routing']['single'].items():
 
 row_at += 1
 ws.cell(row=row_at, column=1,
-        value='PART B — DUAL-TARGET routes. RULED BY SAM, BLOCKED IN THE MECHANISM.').font = HEAD
+        value='PART B — DUAL-TARGET routes: NONE. Ruled out by Sam, 2026-07-28.').font = HEAD
 row_at += 1
 ws.cell(row=row_at, column=1,
-        value='resolveInjuryBucket returns InjuryBucket | null — ONE bucket. The scalar is '
-              'threaded through coachInjuryTargetResolver, programAdjustmentEngine, '
-              'trainAroundEngine, injuryAdjustmentEngine and guidedInjuryControl. Recorded, '
-              'NOT implemented, per Sam\'s own stop condition.')
-row_at += 1
+        value='Routing is SINGLE-TARGET everywhere: hip flexor -> hip, achilles -> calf, '
+              'upper back -> shoulder. Episode-identity semantics (bucket equality in '
+              'coachInjuryTargetResolver) therefore stay untouched. Logged as a possible '
+              'future refinement ONLY if athlete complaints expose coverage gaps.')
 DUAL_HEADER_ROW = row_at
-write_header(ws, DUAL_HEADER_ROW, ['Athlete types…', 'RULED regions', 'Status'])
-for phrase, targets in data['routing']['dual'].items():
-    if phrase == '_':
-        continue
-    row_at += 1
-    ws.cell(row=row_at, column=1, value=phrase)
-    ws.cell(row=row_at, column=2, value=' + '.join(targets)).fill = FILL_BLOCKED
-    ws.cell(row=row_at, column=3, value='BLOCKED — resolver is single-target')
+if [k for k in data['routing']['dual'] if k != '_']:
+    raise SystemExit('duals are ruled out — the ruling file should carry none')
 for i, w in enumerate([42, 26, 46], start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
 

@@ -528,7 +528,7 @@ const POLICY_TABLE: Record<
   },
 
   // For the rest, mirror the closest-fit pattern. Conservative defaults.
-  ankle: {
+  'ankle/foot': {
     severe: {
       redPatterns: ['sprint', 'running', 'plyometric', 'lunge'],
       amberPatterns: ['squat', 'knee_dominant'],
@@ -575,7 +575,7 @@ const POLICY_TABLE: Record<
     },
   },
 
-  adductor: {
+  'groin': {
     severe: {
       redPatterns: ['sprint', 'running', 'lunge', 'adductor_groin', 'plyometric'],
       amberPatterns: ['squat', 'knee_dominant'],
@@ -622,7 +622,7 @@ const POLICY_TABLE: Record<
     },
   },
 
-  pubalgia: {
+  'groin': {
     severe: {
       redPatterns: ['sprint', 'running', 'lunge', 'plyometric', 'hinge', 'adductor_groin'],
       amberPatterns: ['squat', 'knee_dominant'],
@@ -705,7 +705,7 @@ const POLICY_TABLE: Record<
     },
   },
 
-  wrist: {
+  'wrist/hand': {
     severe: {
       redPatterns: ['horizontal_press', 'vertical_press', 'overhead_loading', 'explosive_push', 'heavy_pull', 'grip_heavy', 'loaded_carry'],
       amberPatterns: [],

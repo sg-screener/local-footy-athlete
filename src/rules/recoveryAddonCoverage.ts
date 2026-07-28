@@ -170,7 +170,7 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     label: 'Adductors/Groin',
     categories: ['groin_adductors', 'mobility'],
     exerciseNames: ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen', 'Adductor Rockback'],
-    exerciseTags: ['adductor', 'groin', 'isometric', 'copenhagen'],
+    exerciseTags: ['groin', 'groin', 'isometric', 'copenhagen'],
     mobilityFocusTags: ['groin_adductors', 'hips'],
     templateIds: ['hips-adductors-groin-reset', 'recovery-day-full-body-flow'],
     defaultRestrictions: ['No aggressive groin stretching or sudden hard Copenhagens.'],
@@ -180,7 +180,7 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     label: 'Calves/Tib/Ankles',
     categories: ['calves', 'lower_prehab', 'mobility'],
     exerciseNames: ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises', 'Calf Stretch'],
-    exerciseTags: ['calf', 'soleus', 'tibialis', 'ankle'],
+    exerciseTags: ['calf', 'soleus', 'tibialis', 'ankle/foot'],
     mobilityFocusTags: ['calves_ankles'],
     templateIds: ['ankles-calves-reset', 'lower-body-reset'],
     defaultRestrictions: ['Keep lower-leg work controlled; no plyometric calf loading in this layer.'],
@@ -502,17 +502,17 @@ function injuryMatchesFocus(
 
   switch (focusArea) {
     case 'adductors_groin':
-      return keys.has('adductor') || keys.has('pubalgia') || hasText(/\b(groin|adductor|pubalgia)\b/);
+      return keys.has('groin') || keys.has('groin') || hasText(/\b(groin|adductor|pubalgia)\b/);
     case 'hamstring_light_prehab':
       return keys.has('hamstring') || hasText(/\b(hamstring|hammy)\b/);
     case 'calves_tib_ankles':
-      return keys.has('calf') || keys.has('ankle') || hasText(/\b(calf|achilles|ankle|shin)\b/);
+      return keys.has('calf') || keys.has('ankle/foot') || hasText(/\b(calf|achilles|ankle|shin)\b/);
     case 'shoulder_scap':
       return keys.has('shoulder') || hasText(/\bshoulder|scap|rotator\b/);
     case 'trunk_core':
       return keys.has('lowerBack') || hasText(/\b(lower back|lumbar|back)\b/);
     case 'carries':
-      return keys.has('lowerBack') || keys.has('shoulder') || keys.has('wrist') || keys.has('elbow') ||
+      return keys.has('lowerBack') || keys.has('shoulder') || keys.has('wrist/hand') || keys.has('elbow') ||
         hasText(/\b(lower back|lumbar|back|shoulder|wrist|grip|elbow)\b/);
     case 'mobility_reset':
       return hasText(/\b(groin|adductor|hamstring|calf|achilles|lower back|lumbar|shoulder)\b/);

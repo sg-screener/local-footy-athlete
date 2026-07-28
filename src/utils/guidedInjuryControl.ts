@@ -104,13 +104,13 @@ export function guidedInjuryBucketForArea(area: string): InjuryBucket | null {
   const key = area.trim().toLowerCase();
   if (/shoulder|neck|chest|rib|pec/.test(key)) return 'shoulder';
   if (/elbow/.test(key)) return 'elbow';
-  if (/wrist|hand/.test(key)) return 'wrist';
-  if (/groin|adductor/.test(key)) return 'adductor';
-  if (/hip/.test(key)) return 'adductor';
+  if (/wrist|hand/.test(key)) return 'wrist/hand';
+  if (/groin|adductor/.test(key)) return 'groin';
+  if (/hip/.test(key)) return 'groin';
   if (/hamstring|hammy/.test(key)) return 'hamstring';
   if (/knee|quad/.test(key)) return 'knee';
   if (/calf|achilles/.test(key)) return 'calf';
-  if (/ankle|foot/.test(key)) return 'ankle';
+  if (/ankle|foot/.test(key)) return 'ankle/foot';
   if (/lower back|upper back|back|midline|abs|side/.test(key)) return 'lowerBack';
   return null;
 }

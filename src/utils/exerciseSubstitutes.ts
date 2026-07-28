@@ -192,7 +192,7 @@ function passesInjurySubFilter(
       }
 
       // Adductor: drop lunges and unilateral plyos.
-      if (area === 'adductor') {
+      if (area === 'groin') {
         if (tag.movement === 'lunge') return false;
         if (tag.movement === 'plyo' && tag.unilateral) return false;
       }
@@ -204,7 +204,7 @@ function passesInjurySubFilter(
       }
 
       // Calf / ankle: drop plyos.
-      if ((area === 'calf' || area === 'ankle') && tag.movement === 'plyo') {
+      if ((area === 'calf' || area === 'ankle/foot') && tag.movement === 'plyo') {
         return false;
       }
     }

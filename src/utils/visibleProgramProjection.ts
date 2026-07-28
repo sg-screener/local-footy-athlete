@@ -63,13 +63,13 @@ import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
   shoulder: 'shoulder',
   elbow: 'elbow',
-  wrist: 'wrist',
+  'wrist/hand': 'wrist/hand',
   knee: 'knee',
-  ankle: 'ankle',
+  'ankle/foot': 'ankle/foot',
   calf: 'calf',
   hamstring: 'hamstring',
-  adductor: 'groin',
-  pubalgia: 'groin',
+  'groin': 'groin',
+  'groin': 'groin',
   lowerBack: 'back',
 };
 

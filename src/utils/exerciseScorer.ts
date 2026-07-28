@@ -717,16 +717,16 @@ function isLateWeek(dow: number): boolean {
 type InjuryArea = keyof ExerciseTag['injury'];
 
 const AREA_MAP: Record<string, InjuryArea> = {
-  'adductor': 'adductor', 'adductors': 'adductor', 'groin': 'adductor',
-  'pubalgia': 'pubalgia',
+  'groin': 'groin', 'adductors': 'groin', 'groin': 'groin',
+  'groin': 'groin',
   'lower back': 'lowerBack', 'lower_back': 'lowerBack', 'back': 'lowerBack',
   'knee': 'knee', 'knees': 'knee',
   'hamstring': 'hamstring', 'hamstrings': 'hamstring',
   'calf': 'calf', 'calves': 'calf',
-  'ankle': 'ankle', 'ankles': 'ankle',
+  'ankle/foot': 'ankle/foot', 'ankles': 'ankle/foot',
   'shoulder': 'shoulder', 'shoulders': 'shoulder',
   'elbow': 'elbow', 'elbows': 'elbow',
-  'wrist': 'wrist', 'wrists': 'wrist',
+  'wrist/hand': 'wrist/hand', 'wrists': 'wrist/hand',
 };
 
 function normaliseArea(raw: string): InjuryArea | null {

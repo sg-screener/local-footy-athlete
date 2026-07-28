@@ -73,17 +73,17 @@ const BUCKET_TIER_NOTES: Record<
     relaxed: 'limited sprinting; light plyos OK',
     light: 'build sprint + plyo volume gradually',
   },
-  ankle: {
+  'ankle/foot': {
     strict: 'no sprinting / no cutting / no plyos',
     relaxed: 'limited cutting / change-of-direction; controlled drills only',
     light: 'rebuild change-of-direction work gradually',
   },
-  adductor: {
+  'groin': {
     strict: 'no cutting / no sprinting',
     relaxed: 'limited cutting; controlled lateral work only',
     light: 'rebuild lateral work gradually',
   },
-  pubalgia: {
+  'groin': {
     strict: 'no cutting / no kicking',
     relaxed: 'limited cutting / kicking - controlled work only',
     light: 'rebuild kicking + cutting gradually',
@@ -98,7 +98,7 @@ const BUCKET_TIER_NOTES: Record<
     relaxed: 'limited heavy upper work',
     light: 'rebuild upper load gradually',
   },
-  wrist: {
+  'wrist/hand': {
     strict: 'no contact drills',
     relaxed: 'limited grip-loaded work',
     light: 'rebuild grip work gradually',
@@ -111,9 +111,9 @@ const BUCKET_TIER_NOTES: Record<
 };
 
 const LOWER_BUCKETS = new Set([
-  'hamstring', 'knee', 'calf', 'ankle', 'adductor', 'pubalgia',
+  'hamstring', 'knee', 'calf', 'ankle/foot', 'groin', 'groin',
 ]);
-const UPPER_BUCKETS = new Set(['shoulder', 'elbow', 'wrist']);
+const UPPER_BUCKETS = new Set(['shoulder', 'elbow', 'wrist/hand']);
 
 function getTierNote(bucket: string | null, tier: RestrictionTier): string | null {
   if (!bucket) return null;
