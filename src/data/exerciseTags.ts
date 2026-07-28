@@ -1463,6 +1463,10 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // injury key out deliberately, so a reviewed-and-safe rating could not be
   // mistaken for one nobody had looked at. Every entry now does the same, and
   // the helper that made omission possible is gone.
+  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every
+  // injury key out deliberately, so a reviewed-and-safe rating could not be
+  // mistaken for one nobody had looked at. Every entry now does the same, and
+  // the helper that made omission possible is gone.
   'Scap Pull Ups': {
     movement: 'vertical_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
@@ -2599,7 +2603,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'knee': 'good',
       'calf': 'good',
       'ankle/foot': 'good',
-      'ribs': 'good',
+      'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
       'shoulder': 'caution',
