@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
 import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
+import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -123,12 +124,11 @@ function dayFromGameFields(data: OnboardingData): DayOfWeek | null {
   return null;
 }
 
-function classifySetupUpdateError(err: any): string {
-  if (err && typeof err === 'object' && err.name === 'ProgramGenError') {
-    return err.userMessage || 'Something went wrong. Please try again.';
-  }
-  return 'Something went wrong. Please try again.';
-}
+// `classifySetupUpdateError` lived here and answered every refusal with
+// "Something went wrong. Please try again." — including a phase mismatch,
+// which trying again cannot fix. `classifyProgramMutationRefusal` owns the
+// typed reason, its copy and its retryability for both this screen and the
+// phase-shift sheet.
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -619,13 +619,29 @@ export default function ProfileScreen() {
         todayISO: todayISOLocal(),
         sourceSurface: 'profile_setup',
       });
-      if (!result.ok) throw new Error(result.reason ?? 'profile_setup_transaction_failed');
+      if (!result.ok) {
+        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[profile-setup-update] refused', refusal.diagnostic ?? result.message);
+        setSetupUpdateError(refusal.userMessage);
+        setSetupSheetStep('confirm');
+        return;
+      }
+      if (!result.changedProgram) {
+        // A save that changed nothing is reported, not swallowed. Closing the
+        // sheet on a no-change outcome is what made a dead Save button look
+        // exactly like a working one.
+        setSetupUpdateError(
+          classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
+        );
+        setSetupSheetStep('confirm');
+        return;
+      }
       setSetupSheetVisible(false);
       setSetupSheetStep('overview');
       setProgramDetailsSaved(false);
     } catch (err: any) {
       logger.error('[profile-setup-update] rebuild_failed', err?.diagnostic || err?.message || err);
-      setSetupUpdateError(classifySetupUpdateError(err));
+      setSetupUpdateError(classifyProgramMutationRefusal({ error: err }).userMessage);
       setSetupSheetStep('confirm');
     } finally {
       setIsSetupUpdating(false);

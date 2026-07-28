@@ -70,7 +70,15 @@ function applyAction(
         targetPhase: action.targetPhase,
         preferredTrainingDays: action.preferredTrainingDays,
         teamTrainingDays: action.teamTrainingDays,
-        gameDay: action.gameDay,
+        // A scenario naming a phase shift has, by construction, answered the
+        // anchor question: `gameDay` present names the day, absent means the
+        // scenario asserts there is no usual one. The unanswered case exists
+        // only in the live flow, where the athlete has yet to be asked.
+        gameAnchor: action.targetPhase === 'In-season'
+          ? (action.gameDay
+            ? { kind: 'usual_day', day: action.gameDay }
+            : { kind: 'no_usual_day' })
+          : undefined,
       });
 
     case 'addGame':

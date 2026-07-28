@@ -244,10 +244,14 @@ export async function commitProfileProgramTransaction(
     };
   }
   if (semanticFingerprint(nextProfile) === semanticFingerprint(currentProfile)) {
+    // `no_change` is an OUTCOME with a reason, not bare success. Returning it
+    // reason-less is what let a Save button that did nothing look identical to
+    // one that worked — see rules/programMutationRefusal.
     return {
       ok: true,
       changedProgram: false,
       message: 'Those profile settings are already active.',
+      reason: 'no_change',
       acceptedRevision: before.revision,
     };
   }
@@ -291,6 +295,21 @@ export async function commitProfileProgramTransaction(
       : []),
     ...Object.keys(base.surfaces.weekScopedOverlays),
   ])).sort();
+  // Leaving In-season retires explicit fixture marks. Virtual games vanish on
+  // their own once the phase moves, but an explicit 'game'/'noGame' mark set
+  // during the in-season run would bleed into the new phase.
+  //
+  // This runs INSIDE the transaction. It used to be a `clearAllGames()` call
+  // fired before the rebuild was even attempted, so a shift that then failed
+  // had already destroyed the athlete's calendar. Deriving it here rather than
+  // asking the caller to remember also means the Profile setup sheet — which
+  // can shift phase too — gets the same behaviour instead of its own.
+  const leavingInSeason = currentProfile.seasonPhase === 'In-season'
+    && nextProfile.seasonPhase !== 'In-season';
+  const nextMarkedDays = leavingInSeason
+    ? Object.fromEntries(Object.entries(before.markedDays)
+      .filter(([, mark]) => mark !== 'game' && mark !== 'noGame'))
+    : before.markedDays;
   const factFingerprint = semanticFingerprint(before.temporarySourceFacts);
   const profileFingerprint = semanticFingerprint(nextProfile);
   let committedBaseFingerprint: string | null = null;
@@ -302,6 +321,7 @@ export async function commitProfileProgramTransaction(
         reason: `profile_program:${input.change.kind}:${input.sourceSurface}`,
         program: base.surfaces,
         profile: nextProfile,
+        markedDays: nextMarkedDays,
         activeConstraints: compatibility.activeConstraints,
         activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,
