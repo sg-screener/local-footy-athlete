@@ -99,6 +99,13 @@ Surviving in `coachingEngine`: the readiness capacity rubric (17, Batch 1 — it
 
 ## 6. Behaviour the floors encoded that the contracts must now express
 
+> **SUPERSEDED (Sam, 2026-07-28).** The table below proposed columns keyed on readiness and
+> injury (`lowReadinessStrengthTarget`, `severeInjuryStrengthTarget`). Sam's final ruling
+> removes both axes: structure comes from phase + schedule facts only, capacity/readiness
+> affects dose, and injury flows through its own law family. See
+> `BATCH0_RULING_APPLIED_2026-07-28.md` for the reshaped column set. The rest of this
+> document stands.
+
 **This is the part that must not be lost.** Each floor exists because a real week came out
 wrong; deleting them without expressing what they knew would reintroduce the bug they
 fixed. Candidate columns for Sam, for the Batch 2 sheet:
