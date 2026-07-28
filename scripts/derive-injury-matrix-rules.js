@@ -120,13 +120,32 @@ function propose(counts, source) {
   };
 }
 
+/**
+ * MINIMUM SUPPORT — Sam's ruling, 2026-07-28: a rule needs at least two authored
+ * cells behind it, on BOTH axes.
+ *
+ * One exercise is not evidence about a category. `Back Squat` authored
+ * shoulder='caution' because the bar sits on the back, and `Front Squat`
+ * authored wrist='caution' because of the front rack. Both are Quads/Glutes
+ * primary, so a single-cell muscle rule generalised those into "any Quads- or
+ * Glutes-primary exercise cautions shoulder and wrist" — which cautioned Hip
+ * Thrusts and Glute Bridge for a shoulder injury. The grid rendered it
+ * "caution ·1/1", so it read as agreement rather than as one data point.
+ *
+ * Nothing authored is lost when a rule dies: the cell that fed it now diverges
+ * from the declaration, so the exception pass below mints a named exception
+ * carrying its ORIGINAL rating. Lift, never re-decide.
+ */
+const MIN_RULE_SUPPORT = 2;
+
 function rulesFrom(tallied, keys) {
   const out = {};
   for (const key of keys) {
     out[key] = {};
     for (const region of REGIONS) {
       const counts = tallied[key] && tallied[key][region];
-      out[key][region] = counts ? propose(counts, 'evidence') : null;
+      const total = counts ? Object.values(counts).reduce((n, c) => n + c, 0) : 0;
+      out[key][region] = counts && total >= MIN_RULE_SUPPORT ? propose(counts, 'evidence') : null;
     }
   }
   return out;

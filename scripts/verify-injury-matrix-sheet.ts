@@ -90,6 +90,46 @@ function readCode(): CodeExercise[] {
 const code = readCode();
 const byName = new Map(code.map((e) => [e.name, e]));
 
+/**
+ * The PRE-MIGRATION ratings, from the pinned snapshot.
+ *
+ * Two claims can only be checked against this, never against the migrated file —
+ * which contains the result and would agree with itself trivially:
+ *   1. stricter-wins on the conditioning merge, and
+ *   2. Sam's LIFT, NEVER RE-DECIDE law: no authored rating may be lost when a
+ *      thin rule dies under the n>=2 minimum support.
+ */
+function readPreMigrationRatings(): Map<string, Record<string, string>> {
+  const PRE = path.join(REPO_ROOT, 'docs', 'INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts');
+  const text = fs.readFileSync(PRE, 'utf8');
+  const map = text.slice(text.indexOf('export const EXERCISE_TAGS'));
+  const PRE_TO_NEW: Record<string, string> = {
+    adductor: 'groin', pubalgia: 'groin', lowerBack: 'lowerBack', knee: 'knee',
+    hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot', shoulder: 'shoulder',
+    elbow: 'elbow', wrist: 'wrist/hand',
+  };
+  const out = new Map<string, Record<string, string>>();
+  for (const entry of map.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
+    const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(entry[2]);
+    const ratings: Record<string, string> = {};
+    if (injury && injury[1] !== 'SAFE') {
+      for (const kv of injury[2].matchAll(/(\w+):\s*'(\w+)'/g)) {
+        const region = PRE_TO_NEW[kv[1]];
+        if (!region) continue;
+        // adductor + pubalgia both land on groin. Where they DISAGREED, Sam
+        // ruled the value by hand — that is a decision, not a loss, so his
+        // ruling is what must survive. Where they agreed, keep the value.
+        ratings[region] = ratings[region] && RANK[ratings[region]] > RANK[kv[2]]
+          ? ratings[region] : kv[2];
+      }
+    }
+    const ruled = ruling.conflictResolutions[entry[1]];
+    if (ruled) ratings.groin = ruled;
+    out.set(entry[1], ratings);
+  }
+  return out;
+}
+
 /* ── Workbook shape ── */
 
 const sheets = readXlsx(FILE);
@@ -156,8 +196,8 @@ function parseGrid(tab: string, axisLabel: string) {
 const pattern = parseGrid('Rules — pattern', 'Movement pattern');
 const muscle = parseGrid('Rules — muscle', 'Primary muscle');
 
-ok('snapshot', '159 rules in total',
-  pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence === 159,
+ok('snapshot', '118 rules in total (n>=2 minimum support, both axes)',
+  pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence === 118,
   `got ${pattern.samAuthored + pattern.evidence + muscle.samAuthored + muscle.evidence}`);
 ok('snapshot', '22 rules authored by Sam for the new regions',
   pattern.samAuthored + muscle.samAuthored === 22,
@@ -171,8 +211,8 @@ ok('structural', 'every new-region rule is Sam-authored, never evidence-derived'
 const exceptionRows = readSheetRecords(FILE, 'Exceptions', 4);
 const exceptions: Record<string, string> = {};
 for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Region}`] = record.RULED;
-ok('snapshot', '21 exceptions (18 reverse-engineered + Shrugs/neck + 2 chest-supported rows)',
-  exceptionRows.length === 21, `got ${exceptionRows.length}`);
+ok('snapshot', '23 exceptions (incl. singletons lifted when their thin rule died)',
+  exceptionRows.length === 23, `got ${exceptionRows.length}`);
 ok('structural', 'Shrugs carries the neck exception that replaced the inert Traps rule',
   exceptions['Shrugs|neck'] === 'caution', exceptions['Shrugs|neck'] ?? '(absent)');
 // Bench-compressed PULLS: the pressing rule cannot reach them, so Sam named them.
@@ -224,8 +264,8 @@ ok('structural', 'every code entry authors all 13 regions — no omissions possi
   code.every((e) => REGIONS.every((r) => e.ratings[r] !== undefined)),
   code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
 ok('structural', '149 x 13 = 1937 cells compared', cells === 1937, `got ${cells}`);
-ok('snapshot', 'final distribution: 947 caution / 24 avoid / 966 good',
-  distribution.caution === 947 && distribution.avoid === 24 && distribution.good === 966,
+ok('snapshot', 'final distribution: 871 caution / 24 avoid / 1042 good',
+  distribution.caution === 871 && distribution.avoid === 24 && distribution.good === 1042,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
@@ -235,38 +275,32 @@ ok('structural', 'the SAFE all-good constant is gone', !/\bconst SAFE\b/.test(ta
 ok('structural', 'no retired key survives in exerciseTags',
   !/'adductor'|'pubalgia'/.test(tagsText));
 
+// LIFT, NEVER RE-DECIDE (Sam, 2026-07-28). When a thin rule dies under the n>=2
+// minimum, the cell that fed it must survive as a named exception carrying its
+// ORIGINAL authored rating — never silently fall through to the declaration.
+const preCheck = readPreMigrationRatings();
+const dropped: string[] = [];
+for (const record of finalRows) {
+  const before = preCheck.get(record.Exercise) ?? {};
+  for (const [region, authored] of Object.entries(before)) {
+    const now = record[region].replace(/ \((exc|dec)\)$/, '');
+    if (now !== authored) dropped.push(`${record.Exercise}.${region}: ${authored} -> ${now}`);
+  }
+}
+ok('structural', 'every pre-migration authored rating survives — lift, never re-decide',
+  dropped.length === 0, dropped.slice(0, 5).join(' ; '));
+ok('structural', 'Back Squat shoulder and Front Squat wrist survive as exceptions',
+  exceptions['Back Squat|shoulder'] === 'caution'
+  && exceptions['Front Squat|wrist/hand'] === 'caution');
+
 /* ── Conditioning: hand-ruled, stricter-wins over what code authored ── */
 
 const conditioningRows = readSheetRecords(FILE, 'Conditioning', 5);
 ok('snapshot', '21 conditioning rows', conditioningRows.length === 21,
   `got ${conditioningRows.length}`);
-// Stricter-wins is a claim about the MIGRATION, so it must be checked against
-// the pre-migration ratings, not against the migrated file — which already
-// contains the result and would agree with itself trivially.
-const PRE = path.join(REPO_ROOT, 'docs', 'INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts');
-const preText = fs.readFileSync(PRE, 'utf8');
-const preMap = preText.slice(preText.indexOf('export const EXERCISE_TAGS'));
-const PRE_TO_NEW: Record<string, string> = {
-  adductor: 'groin', pubalgia: 'groin', lowerBack: 'lowerBack', knee: 'knee',
-  hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot', shoulder: 'shoulder',
-  elbow: 'elbow', wrist: 'wrist/hand',
-};
-const preRatings = new Map<string, Record<string, string>>();
-for (const entry of preMap.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
-  const injury = /injury:\s*(SAFE|inj\(\{([\s\S]*?)\}\))/.exec(entry[2]);
-  const out: Record<string, string> = {};
-  if (injury && injury[1] !== 'SAFE') {
-    for (const kv of injury[2].matchAll(/(\w+):\s*'(\w+)'/g)) {
-      const region = PRE_TO_NEW[kv[1]];
-      if (region) out[region] = out[region] && RANK[out[region]] > RANK[kv[2]] ? out[region] : kv[2];
-    }
-  }
-  preRatings.set(entry[1], out);
-}
-
 const loosened: string[] = [];
 for (const record of conditioningRows) {
-  const before = preRatings.get(record.Exercise) ?? {};
+  const before = preCheck.get(record.Exercise) ?? {};
   for (const [region, authored] of Object.entries(before)) {
     if (RANK[record[region]] < RANK[authored]) {
       loosened.push(`${record.Exercise}.${region}: ${authored} -> ${record[region]}`);
