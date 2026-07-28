@@ -38,6 +38,7 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitAthleteSessionMoveTransaction } from '../store/acceptedStateTransaction';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 
 const CURRENT_WEEK = '2026-07-13';
 
@@ -249,13 +250,19 @@ run('2 the placement stamp is written at the constraint ingress site', () => {
 });
 
 run('3 the derived Gunshow still owns G-1 when the athlete placed nothing', () => {
-  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
-  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
-  // Untouched practice-match week: Friday's canonical Rest stub keeps G-1 empty.
-  // Nothing here may change just because athlete placement is now honoured.
+  // Non-vacuous by construction: this seed's G-1 genuinely HOLDS the derived
+  // Gunshow, so the assertion has something to be wrong about. Honouring
+  // athlete placement must not weaken the rule for days the athlete never
+  // touched — a predicate that answered "athlete-placed" for everything would
+  // leave G-1 carrying whatever the template put there.
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
   const friday = workoutOn(weekStart, 5);
-  assert(!friday || !isAthletePlacedSession(friday),
-    'an untouched week reported athlete-placed content on G-1');
+  assert(friday, 'in-season G-1 is empty — the seed no longer exercises this rule');
+  assert(isResolverOwnedDerivedSession(friday),
+    `G-1 is owned by ${identity(friday)}, not the derived game-proximity filler`);
+  assert(!isAthletePlacedSession(friday),
+    'an untouched derived filler was reported as athlete-placed');
 });
 
 run('4 a virtual-fixture G-1 keeps honouring athlete placement too', () => {
@@ -273,6 +280,27 @@ run('4 a virtual-fixture G-1 keeps honouring athlete placement too', () => {
   const friday = workoutOn(weekStart, 5);
   assert(friday && identity(friday) === sourceIdentity,
     `virtual G-1 is owned by ${friday ? identity(friday) : 'REST'}, not the athlete's ${sourceIdentity}`);
+});
+
+run('5 the displaced G-1 filler is discarded, never materialised on the source day', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const fridayBefore = workoutOn(weekStart, 5);
+  assert(fridayBefore && isResolverOwnedDerivedSession(fridayBefore),
+    'this seed no longer puts a derived filler on G-1');
+  const fillerIdentity = identity(fridayBefore);
+
+  moveOnto(weekStart, 1, 5);
+
+  // The Gunshow is regenerated from the fixture every render. Swapping it back
+  // to Monday would hand the athlete a session the app invented as though they
+  // owned it, and duplicate it the moment the resolver rebuilt Friday.
+  const monday = workoutOn(weekStart, 1);
+  assert(monday === null,
+    `the displaced filler was materialised on the source day as ${monday ? identity(monday) : 'REST'}`);
+  const weekIdentities = accepted(weekStart).visibleWorkouts.map(identity);
+  assert(!weekIdentities.includes(fillerIdentity),
+    `the discarded filler ${fillerIdentity} is still somewhere in the week`);
 });
 
 console.log(`\nG-1 move ask-flow totals: ${passed} passed, ${failed} failed`);
