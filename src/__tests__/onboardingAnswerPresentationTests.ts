@@ -177,39 +177,58 @@ console.log('\n[6] The 2km time rides the same law');
   ok('7:15 carries no refusal', refusalState(good, true).refusals.time === null);
 }
 
-console.log('\n[7] The screens use the owner — no second copy of the timing rule');
+console.log('\n[7] Every screen that refuses a number uses the owner');
 {
+  /**
+   * All THREE producers with a typed-number UI, not just the two onboarding
+   * steps Sam reported. The profile editor asks for the same 2km time through
+   * the same ingress, and it scolded mid-keystroke for the same reason. A law
+   * that holds on the screen where the bug was found and not on its sibling is
+   * a phrase handler with better paperwork.
+   *
+   * `advanceGate` differs per file because the CTAs differ — an onboarding
+   * Continue and a sheet's "Save player details" — but each is asserted
+   * POSITIVELY, taking the owner's answer verbatim. The wrong ways to compute
+   * that gate are open-ended; the right way is one.
+   */
   const screens = [
-    'src/screens/onboarding/BodyMeasurementsScreen.tsx',
-    'src/screens/onboarding/TwoKmTimeTrialScreen.tsx',
+    {
+      file: 'src/screens/onboarding/BodyMeasurementsScreen.tsx',
+      advanceGate: /continueDisabled=\{continueDisabled\}/,
+    },
+    {
+      file: 'src/screens/onboarding/TwoKmTimeTrialScreen.tsx',
+      advanceGate: /continueDisabled=\{continueDisabled\}/,
+    },
+    {
+      file: 'src/screens/profile/ProfileScreen.tsx',
+      advanceGate: /disabled=\{draftTwoKmContinueDisabled\}/,
+    },
   ];
-  for (const relative of screens) {
-    const screen = read(relative);
-    const name = relative.split('/').pop();
+
+  for (const { file, advanceGate } of screens) {
+    const screen = read(file);
+    const name = file.split('/').pop();
 
     ok(`${name} calls the owner`,
       /useRefusalOnContinue\(/.test(screen),
       'a screen with its own submitted flag is a second copy of the law');
 
-    // THE defect, as one invariant: a screen that touches `.message` at all is
-    // deciding for itself when a refusal may be spoken. The owner hands back
-    // text that is already gated, so a compliant screen never needs to look.
-    // (Mutation-tested: reverting the screen to raw validation fails here.)
-    ok(`${name} never reads a refusal message itself`,
-      !/\.message\b/.test(screen),
+    // THE defect, as one invariant: a screen that reads a message off a
+    // validation is deciding for itself when a refusal may be spoken. The owner
+    // hands back text that is already gated, so a compliant screen never looks.
+    // (Mutation-tested: reverting a screen to raw validation fails here.)
+    ok(`${name} never reads a refusal message off a validation`,
+      !/[A-Za-z]*[Vv]alidation[A-Za-z]*\s*\??\s*\.\s*message/.test(screen),
       'the refusal must come from the owner, which knows whether it may be spoken');
 
     ok(`${name} still validates through the authored bound`,
       /validateOnboardingMeasurement|validateTwoKmTime/.test(screen),
       'the timing change must not move what "acceptable" means');
 
-    // Continue gated on validity is exactly the dead-button failure: the refusal
-    // would have no press to be revealed by. Asserted POSITIVELY — the CTA takes
-    // the owner's answer verbatim — because the list of wrong ways to compute it
-    // is open-ended and the right way is one.
-    ok(`${name} takes its Continue gate from the owner`,
-      /continueDisabled=\{continueDisabled\}/.test(screen),
-      'Continue is disabled for absence only, and the owner decides that');
+    ok(`${name} takes its advance gate from the owner`,
+      advanceGate.test(screen),
+      'the CTA is disabled for absence only, and the owner decides that');
 
     ok(`${name} withdraws a refusal when the answer is edited`,
       /onAnswerEdited\(\)/.test(screen),

@@ -48,6 +48,7 @@ import {
   validateTwoKmTime,
 } from '../../data/twoKmTimeTrial';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
+import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 
 type SetupSheetStep =
   | 'overview'
@@ -156,12 +157,24 @@ export default function ProfileScreen() {
       + (draftTwoKmSeconds.trim() === '' ? 0 : parseInt(draftTwoKmSeconds, 10));
   const draftTwoKmStarted =
     draftTwoKmMinutes.trim() !== '' || draftTwoKmSeconds.trim() !== '';
-  const draftTwoKmValidation = draftTwoKmStarted
-    ? validateTwoKmTime(draftTwoKmTotal)
-    : null;
-  const draftTwoKmError = draftTwoKmValidation && !draftTwoKmValidation.ok
-    ? draftTwoKmValidation.message
-    : null;
+
+  // WHEN the refusal is spoken belongs to `useRefusalOnContinue`, the same owner
+  // the onboarding steps use (Sam, device pass 2026-07-29). A stepped sheet is
+  // still no place to scold mid-keystroke: this editor validated on every
+  // keypress too, so retyping a time flashed "That time looks off" at the
+  // athlete on the way to a perfectly good one.
+  //
+  // The advance gate is the step's own CTA — "Save player details" — which is
+  // this sheet's Continue. Disabled for ABSENCE only; a refused time leaves it
+  // pressable, or the press that reveals the refusal could never happen.
+  const {
+    refusals: draftTwoKmRefusals,
+    continueDisabled: draftTwoKmContinueDisabled,
+    onAnswerEdited,
+    attemptContinue: attemptTwoKmSave,
+  } = useRefusalOnContinue({
+    time: draftTwoKmStarted ? validateTwoKmTime(draftTwoKmTotal) : null,
+  });
   const [pendingName, setPendingName] = useState(onboardingData.firstName || '');
   const [pendingPosition, setPendingPosition] = useState<RoleBucket | null>(
     currentRole(onboardingData),
@@ -437,8 +450,14 @@ export default function ProfileScreen() {
     setSetupSheetStep('overview');
   };
 
-  /** Load an existing answer back into the two boxes, or clear them. */
+  /**
+   * Load an existing answer back into the two boxes, or clear them.
+   *
+   * Reseeding REPLACES the answer, so any refusal on screen is about a time that
+   * is no longer there — the same withdrawal an edit gets, for the same reason.
+   */
   function seedTwoKmDrafts(answer: TwoKmTimeTrialAnswer | null) {
+    onAnswerEdited();
     if (!answer || answer.seconds === null) {
       setDraftTwoKmMinutes('');
       setDraftTwoKmSeconds('');
@@ -462,6 +481,18 @@ export default function ProfileScreen() {
     setPendingTwoKm(result.answer);
     setSetupUpdateError(null);
     setSetupSheetStep('overview');
+  };
+
+  /**
+   * The step's CTA. Reveals the refusal and stays on the step when the time is
+   * not acceptable; commits through the one ingress when it is.
+   *
+   * "I haven't tested it" does NOT come through here — `null` is an answer the
+   * bound has nothing to say about, and it commits directly.
+   */
+  const saveTwoKm = () => {
+    if (!attemptTwoKmSave()) return;
+    commitTwoKm(draftTwoKmTotal);
   };
 
   const savePlayerDetails = () => {
@@ -864,11 +895,11 @@ export default function ProfileScreen() {
         onSetDraftSeasonPhase={setDraftSeasonPhase}
         draftTwoKmMinutes={draftTwoKmMinutes}
         draftTwoKmSeconds={draftTwoKmSeconds}
-        draftTwoKmError={draftTwoKmError}
-        draftTwoKmValid={Boolean(draftTwoKmValidation?.ok)}
-        draftTwoKmTotal={draftTwoKmTotal}
-        onSetDraftTwoKmMinutes={setDraftTwoKmMinutes}
-        onSetDraftTwoKmSeconds={setDraftTwoKmSeconds}
+        draftTwoKmRefusal={draftTwoKmRefusals.time}
+        draftTwoKmContinueDisabled={draftTwoKmContinueDisabled}
+        onSetDraftTwoKmMinutes={(text) => { setDraftTwoKmMinutes(text); onAnswerEdited(); }}
+        onSetDraftTwoKmSeconds={(text) => { setDraftTwoKmSeconds(text); onAnswerEdited(); }}
+        onSaveTwoKm={saveTwoKm}
         onCommitTwoKm={commitTwoKm}
         onCancelPlayerDetails={cancelPlayerDetailsEdit}
         onSavePlayerDetails={savePlayerDetails}
@@ -937,9 +968,9 @@ interface SetupUpdateSheetProps {
   draftExperience: ExperienceLevel | null;
   draftTwoKmMinutes: string;
   draftTwoKmSeconds: string;
-  draftTwoKmError: string | null;
-  draftTwoKmValid: boolean;
-  draftTwoKmTotal: number;
+  /** Already gated by `useRefusalOnContinue` — render it or don't, no judgement. */
+  draftTwoKmRefusal: string | null;
+  draftTwoKmContinueDisabled: boolean;
   draftSeasonPhase: SeasonPhase;
   draftPreferredDays: DayOfWeek[];
   draftTeamDays: DayOfWeek[];
@@ -960,6 +991,9 @@ interface SetupUpdateSheetProps {
   onSetDraftExperience: (experience: ExperienceLevel) => void;
   onSetDraftTwoKmMinutes: (value: string) => void;
   onSetDraftTwoKmSeconds: (value: string) => void;
+  /** The step's CTA. Reveals the refusal, or commits — the owner decides which. */
+  onSaveTwoKm: () => void;
+  /** Direct commit for "I haven't tested it", which no bound applies to. */
   onCommitTwoKm: (seconds: number | null) => void;
   onSetDraftSeasonPhase: (phase: SeasonPhase) => void;
   onCancelPlayerDetails: () => void;
@@ -988,9 +1022,8 @@ function SetupUpdateSheet({
   draftExperience,
   draftTwoKmMinutes,
   draftTwoKmSeconds,
-  draftTwoKmError,
-  draftTwoKmValid,
-  draftTwoKmTotal,
+  draftTwoKmRefusal,
+  draftTwoKmContinueDisabled,
   draftSeasonPhase,
   draftPreferredDays,
   draftTeamDays,
@@ -1011,6 +1044,7 @@ function SetupUpdateSheet({
   onSetDraftExperience,
   onSetDraftTwoKmMinutes,
   onSetDraftTwoKmSeconds,
+  onSaveTwoKm,
   onCommitTwoKm,
   onSetDraftSeasonPhase,
   onCancelPlayerDetails,
@@ -1173,14 +1207,16 @@ function SetupUpdateSheet({
           />
         </View>
       </View>
-      {draftTwoKmError ? (
-        <Text style={styles.twoKmError}>{draftTwoKmError}</Text>
+      {/* Spoken on Save, never mid-keystroke — the owner has already decided
+          whether this may be shown at all. */}
+      {draftTwoKmRefusal ? (
+        <Text style={styles.twoKmError}>{draftTwoKmRefusal}</Text>
       ) : null}
       <V2Button
         label="Save player details"
         size="lg"
-        disabled={!draftTwoKmValid}
-        onPress={() => onCommitTwoKm(draftTwoKmTotal)}
+        disabled={draftTwoKmContinueDisabled}
+        onPress={onSaveTwoKm}
       />
       {/* Retracting a time is an answer too -- an athlete who mistyped one
           months ago must be able to say "actually, I haven't tested". */}
