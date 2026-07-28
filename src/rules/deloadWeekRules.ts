@@ -176,7 +176,7 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
     .test(`${name} ${exercise.notes ?? ''}`);
 }
 
-function isMainStrengthRow(exercise: WorkoutExercise): boolean {
+export function isMainStrengthRow(exercise: WorkoutExercise): boolean {
   if (isConditioningExerciseRow(exercise)) return false;
   // The pool registry is keyed by CANONICAL names, and the generator writes
   // display names — "Romanian Deadlift" for the pool's "RDLs". Asking the
@@ -190,7 +190,7 @@ function isMainStrengthRow(exercise: WorkoutExercise): boolean {
   return classifyPoolSlot(resolveExerciseName(exercise.exercise?.name ?? ''))?.role === 'anchor';
 }
 
-function isAccessoryStrengthRow(exercise: WorkoutExercise): boolean {
+export function isAccessoryStrengthRow(exercise: WorkoutExercise): boolean {
   if (isConditioningExerciseRow(exercise)) return false;
   return !isMainStrengthRow(exercise);
 }

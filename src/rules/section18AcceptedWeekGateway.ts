@@ -140,6 +140,43 @@ function athleteContext(profile: OnboardingData | null | undefined): AthleteCont
 }
 
 /**
+ * The week's calendar marks WITH its contract fixture folded in.
+ *
+ * A game or practice match lives in the contract's anchors, not in
+ * `markedDays` — so anything that asks `markedDays` alone "is there a game this
+ * week?" is blind to a practice-match week. That blindness is exactly what let
+ * the G-1 ask miss the case this whole unit exists for.
+ *
+ * Extracted so the gateway and the G-1 ask-flow read ONE answer. An explicit
+ * athlete mark on the fixture day still wins — the anchor only fills a gap.
+ */
+export function fixtureAwareMarkedDaysForWeek(args: {
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  profile?: OnboardingData | null;
+  markedDays?: Readonly<Record<string, CalendarDayType>>;
+}): Record<string, CalendarDayType> {
+  const weekStart = args.weekStart.slice(0, 10);
+  const markedDays: Record<string, CalendarDayType> = { ...(args.markedDays ?? {}) };
+  const fixture = args.contract.anchors.find((anchor) =>
+    anchor.kind === 'game' || anchor.kind === 'practice_match');
+  if (fixture) {
+    const fixtureDate = dateForDay(weekStart, fixture.dayOfWeek);
+    if (!Object.prototype.hasOwnProperty.call(markedDays, fixtureDate)) {
+      markedDays[fixtureDate] = 'game';
+    }
+  }
+  if (!fixture && args.contract.identity.mode.startsWith('in_season_bye')) {
+    const profileGameDay = args.profile?.usualGameDay ?? args.profile?.gameDay;
+    const gameDayIndex = profileGameDay
+      ? DAY_NAMES.indexOf(profileGameDay as typeof DAY_NAMES[number])
+      : -1;
+    if (gameDayIndex >= 0) markedDays[dateForDay(weekStart, gameDayIndex)] = 'noGame';
+  }
+  return markedDays;
+}
+
+/**
  * Resolve exactly what the athlete will see, including fixture replacement,
  * G+1 recovery, G-1 protection, conditioning fill and recovery fill.
  */
@@ -186,22 +223,12 @@ export function resolveFinalVisibleSection18Week(args: {
     createdAt: microcycle.createdAt,
     updatedAt: microcycle.updatedAt,
   };
-  const markedDays: ScheduleState['markedDays'] = {
-    ...(args.scheduleState?.markedDays ?? {}),
-  };
-  const fixture = args.contract.anchors.find((anchor) =>
-    anchor.kind === 'game' || anchor.kind === 'practice_match');
-  if (fixture) {
-    const fixtureDate = dateForDay(weekStart, fixture.dayOfWeek);
-    if (!Object.prototype.hasOwnProperty.call(markedDays, fixtureDate)) {
-      markedDays[fixtureDate] = 'game';
-    }
-  }
-  if (!fixture && args.contract.identity.mode.startsWith('in_season_bye')) {
-    const profileGameDay = args.profile?.usualGameDay ?? args.profile?.gameDay;
-    const gameDayIndex = profileGameDay ? DAY_NAMES.indexOf(profileGameDay as typeof DAY_NAMES[number]) : -1;
-    if (gameDayIndex >= 0) markedDays[dateForDay(weekStart, gameDayIndex)] = 'noGame';
-  }
+  const markedDays = fixtureAwareMarkedDaysForWeek({
+    contract: args.contract,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.scheduleState?.markedDays,
+  });
   const targetWeekAvailability = args.profile
     ? resolveProfileTargetWeekAvailability({
         profile: args.profile,

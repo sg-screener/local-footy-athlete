@@ -511,12 +511,39 @@ function getEffectiveGameDates(
   centerDate: string,
   windowDays: number = 10,
 ): Set<string> {
-  const markedDays = state.markedDays || {};
+  return effectiveGameDatesAround({
+    markedDays: state.markedDays || {},
+    usualGameDay: state.usualGameDay,
+    gameDay: state.gameDay,
+    seasonPhase: state.seasonPhase,
+    centerDate,
+    windowDays,
+  });
+}
+
+/**
+ * `getEffectiveGameDates` over the minimal slice it actually reads, so callers
+ * outside the resolver (the G-1 ask-flow) can ask the SAME owner "where are the
+ * games?" instead of re-deriving it from a visible week. Re-derivation is how a
+ * second answer to a settled question gets born; there is one answer and this
+ * is it.
+ */
+export function effectiveGameDatesAround(args: {
+  markedDays: Readonly<Record<string, CalendarDayType>>;
+  usualGameDay?: DayOfWeek;
+  gameDay?: GameDay;
+  seasonPhase: SeasonPhase | null | undefined;
+  centerDate: string;
+  windowDays?: number;
+}): Set<string> {
+  const markedDays = args.markedDays || {};
+  const centerDate = args.centerDate;
+  const windowDays = args.windowDays ?? 10;
   const games = new Set<string>();
 
-  const effGameDay = resolveEffectiveGameDay(state.usualGameDay, state.gameDay);
+  const effGameDay = resolveEffectiveGameDay(args.usualGameDay, args.gameDay);
   const virtualDow = effGameDay !== undefined ? DOW_TO_NUM[effGameDay] : undefined;
-  const recurringActive = isVirtualGameEnabled(state) && virtualDow !== undefined;
+  const recurringActive = args.seasonPhase === 'In-season' && virtualDow !== undefined;
 
   // Bounds for one-off scoping (Mon–Sun of centerDate's week).
   const centerMonday = getMondayForDate(centerDate);

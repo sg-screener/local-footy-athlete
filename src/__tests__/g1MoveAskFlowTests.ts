@@ -39,6 +39,24 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { commitAthleteSessionMoveTransaction } from '../store/acceptedStateTransaction';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
+import { effectiveGameDatesAround } from '../utils/sessionResolver';
+import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import type { AthleteContext } from '../utils/sessionBuilder';
+import {
+  G1_MOVE_ROUTES,
+  g1MoveRoute,
+  placeSessionForRoute,
+  resolveG1MoveAsk,
+} from '../rules/g1MoveAsk';
+import {
+  applyConditioningDeloadToExercises,
+  applyStrengthDeloadToExercises,
+  isAccessoryStrengthRow,
+  isConditioningExerciseRow,
+  isMainStrengthRow,
+  resolveDoorDeloadPolicy,
+} from '../rules/deloadWeekRules';
 
 const CURRENT_WEEK = '2026-07-13';
 
@@ -301,6 +319,205 @@ run('5 the displaced G-1 filler is discarded, never materialised on the source d
   const weekIdentities = accepted(weekStart).visibleWorkouts.map(identity);
   assert(!weekIdentities.includes(fillerIdentity),
     `the discarded filler ${fillerIdentity} is still somewhere in the week`);
+});
+
+// ── Stage 2: the typed option list and its two transformations ────────────
+
+function athleteContext(): AthleteContext {
+  const onboarding = useProfileStore.getState().onboardingData!;
+  return {
+    injuries: onboarding.injuries ?? [],
+    equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
+    trainingLocation: onboarding.trainingLocation ?? 'Commercial gym',
+    onboardingData: onboarding,
+  };
+}
+
+/**
+ * A REAL conditioning session — the practice-match week's Tuesday Hard
+ * Intervals. Synthesising one by filtering a strength session's rows produced an
+ * empty session and made these assertions vacuous, which is what test 9 caught.
+ */
+function seedConditioningSession(): { weekStart: string; session: Workout } {
+  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
+  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  const session = workoutOn(weekStart, 2);
+  assert(session, 'practice-match Tuesday conditioning session missing');
+  assert(session.exercises.some(isConditioningExerciseRow),
+    `${session.name} carries no conditioning rows — the seed changed`);
+  assert(!session.exercises.some((row) =>
+    !isConditioningExerciseRow(row) && isAccessoryStrengthRow(row)),
+  `${session.name} has accessory rows — it no longer exercises the no-accessories case`);
+  return { weekStart, session };
+}
+
+function gameDatesFor(weekStart: string, centerDate: string): Set<string> {
+  const onboarding = useProfileStore.getState().onboardingData!;
+  return effectiveGameDatesAround({
+    markedDays: fixtureAwareMarkedDaysForWeek({
+      contract: accepted(weekStart).contract,
+      weekStart,
+      profile: onboarding,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    }),
+    usualGameDay: onboarding.usualGameDay,
+    gameDay: onboarding.gameDay,
+    seasonPhase: onboarding.seasonPhase,
+    centerDate,
+  });
+}
+
+run('6 the menu is uniform — three routes, whatever the athlete moved', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const g1 = addDaysISO(weekStart, 4);
+
+  const strength = workoutOn(weekStart, 1);
+  assert(strength, 'strength source missing');
+  const strengthAsk = resolveG1MoveAsk({
+    sourceDate: weekStart, targetDate: g1, sourceWorkout: strength,
+    gameDates: gameDatesFor(weekStart, g1),
+  });
+  assert(strengthAsk, 'no ask raised for a strength session moved onto G-1');
+
+  // A session with no accessory rows at all — the case that used to have
+  // nothing to offer for route (b).
+  const conditioning = seedConditioningSession();
+  const conditioningG1 = addDaysISO(conditioning.weekStart, 4);
+  const conditioningAsk = resolveG1MoveAsk({
+    sourceDate: conditioning.weekStart, targetDate: conditioningG1,
+    sourceWorkout: conditioning.session, gameDates: gameDatesFor(conditioning.weekStart, conditioningG1),
+  });
+  assert(conditioningAsk, 'no ask raised for a conditioning session moved onto G-1');
+
+  assert(G1_MOVE_ROUTES.length === 3,
+    `the menu offers ${G1_MOVE_ROUTES.length} routes, not three`);
+  assert(G1_MOVE_ROUTES.map((route) => route.id).join(',') ===
+    'keep_gunshow,accessories_only,deloaded', 'route order changed');
+  // Uniformity is the ruling: the SAME three ids for both session types.
+  assert(!!strengthAsk && !!conditioningAsk,
+    'the menu shape depended on session type');
+});
+
+run('7 only route (a) commits nothing, only route (c) needs the second warning', () => {
+  assert(g1MoveRoute('keep_gunshow').commits === false,
+    'route (a) commits a transaction — the ruling is that the move is abandoned');
+  assert(g1MoveRoute('accessories_only').commits &&
+    g1MoveRoute('deloaded').commits, 'a committing route stopped committing');
+  const needSecond = G1_MOVE_ROUTES.filter((route) => route.requiresSecondWarning);
+  assert(needSecond.length === 1 && needSecond[0].id === 'deloaded',
+    `second warning is gated on ${needSecond.map((r) => r.id).join(',')}, not deloaded alone`);
+});
+
+run('8 route (b) strips main lifts and conditioning, keeps accessories', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const source = workoutOn(weekStart, 1);
+  assert(source, 'source missing');
+  const mainLifts = source.exercises.filter(isMainStrengthRow);
+  const accessories = source.exercises.filter((row) =>
+    !isConditioningExerciseRow(row) && isAccessoryStrengthRow(row));
+  assert(mainLifts.length > 0 && accessories.length > 0,
+    'seed no longer has both main lifts and accessories — test is vacuous');
+
+  const placed = placeSessionForRoute({
+    route: 'accessories_only', sourceWorkout: source,
+    targetDate: addDaysISO(weekStart, 4),
+    athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
+  });
+  assert(placed, 'route (b) placed nothing');
+  assert(placed.exercises.every((row) => !isMainStrengthRow(row)),
+    'a main lift survived the accessories-only strip');
+  assert(placed.exercises.every((row) => !isConditioningExerciseRow(row)),
+    'conditioning survived the accessories-only strip');
+  assert(placed.exercises.length === accessories.length,
+    `kept ${placed.exercises.length} rows, expected the ${accessories.length} accessories`);
+  assert(identity(placed) === identity(source),
+    'route (b) changed the session identity — the move would read as content loss');
+});
+
+run('9 route (b) on a session with no accessories is the pump session, named honestly', () => {
+  const { weekStart, session: conditioningOnly } = seedConditioningSession();
+
+  const placed = placeSessionForRoute({
+    route: 'accessories_only', sourceWorkout: conditioningOnly,
+    targetDate: addDaysISO(weekStart, 4),
+    athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
+  });
+  assert(placed, 'route (b) placed nothing for a conditioning session');
+  assert(placed.exercises.length > 0, 'route (b) placed an empty session');
+  // Sam's banned class: an easy version wearing the athlete's session name.
+  assert(placed.name !== conditioningOnly.name,
+    `the pump session is wearing the athlete's session name "${placed.name}"`);
+  assert(placed.exercises.every((row) => !isConditioningExerciseRow(row)),
+    'the "pump session" still carries conditioning rows');
+  // And the sub-line must say the original session is dropped, not moved.
+  const context = resolveG1MoveAsk({
+    sourceDate: weekStart, targetDate: addDaysISO(weekStart, 4),
+    sourceWorkout: conditioningOnly, gameDates: gameDatesFor(weekStart, addDaysISO(weekStart, 4)),
+  });
+  assert(context?.accessoriesComeFromPumpSession,
+    'the ask did not notice there were no accessories to keep');
+  assert(/dropped, not moved/.test(g1MoveRoute('accessories_only').detail(context!)),
+    'the honest-labelling sub-line is missing');
+});
+
+run('10 route (c) is DELOAD_LAW and nothing else', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const source = workoutOn(weekStart, 1);
+  assert(source, 'source missing');
+
+  const placed = placeSessionForRoute({
+    route: 'deloaded', sourceWorkout: source,
+    targetDate: addDaysISO(weekStart, 4),
+    athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
+  });
+  assert(placed, 'route (c) placed nothing');
+
+  // The one mechanism, applied through its own owner — same result as calling
+  // DELOAD_LAW's appliers directly. Any private re-implementation drifts here.
+  const policy = resolveDoorDeloadPolicy({
+    door: 'readiness',
+    seasonPhase: useProfileStore.getState().onboardingData?.seasonPhase,
+  })!;
+  const expected = applyConditioningDeloadToExercises(
+    applyStrengthDeloadToExercises(source.exercises, policy),
+    policy,
+  );
+  assert(JSON.stringify(placed.exercises) === JSON.stringify(expected),
+    'route (c) does not equal the DELOAD_LAW appliers — a second reduction exists');
+  assert(identity(placed) === identity(source),
+    'route (c) changed the session identity');
+  // Sam's dose, spot-checked against the law rather than a copied constant.
+  const mainBefore = source.exercises.filter(isMainStrengthRow);
+  const mainAfter = placed.exercises.filter(isMainStrengthRow);
+  assert(mainAfter.length > 0, 'the deload halved the main lifts out of existence');
+  for (const after of mainAfter) {
+    const before = mainBefore.find((row) => row.exerciseId === after.exerciseId);
+    assert(before && after.prescribedSets <= before.prescribedSets,
+      'a main lift gained sets under the deload');
+    assert(before && after.prescribedWeightKg === before.prescribedWeightKg,
+      'the deload moved the weight — Sam\'s law holds it unless the athlete is beat up');
+  }
+});
+
+run('11 a session the day is already built for lands without an ask', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const g1 = addDaysISO(weekStart, 4);
+  const source = workoutOn(weekStart, 1);
+  assert(source, 'source missing');
+  const recovery: Workout = { ...source, sessionTier: 'recovery', workoutType: 'Recovery' };
+  assert(resolveG1MoveAsk({
+    sourceDate: weekStart, targetDate: g1, sourceWorkout: recovery,
+    gameDates: gameDatesFor(weekStart, g1),
+  }) === null, 'a recovery session was made to answer the G-1 ask');
+  // And a move that is not onto G-1 at all raises nothing.
+  assert(resolveG1MoveAsk({
+    sourceDate: weekStart, targetDate: addDaysISO(weekStart, 2), sourceWorkout: source,
+    gameDates: gameDatesFor(weekStart, g1),
+  }) === null, 'the ask fired on a day that is not the day before a game');
 });
 
 console.log(`\nG-1 move ask-flow totals: ${passed} passed, ${failed} failed`);
