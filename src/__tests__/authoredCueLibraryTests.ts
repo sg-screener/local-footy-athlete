@@ -1,12 +1,24 @@
 /**
- * Sam's authored cue + video pass — conformance to the changesets.
+ * Sam's authored cue + video pass — conformance to the authored sources.
  *
- *   docs/CUE_CHANGESET_2026-07-23.md
+ *   docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx   ← THE cue source
+ *   docs/CUE_CHANGESET_2026-07-23.md             (renames + deletions only)
  *   docs/VIDEO_CHANGESET_2026-07-24.md
  *
- * The changeset documents are parsed here and treated as the source of truth,
- * so "apply EXACTLY — no rewording" is machine-checked rather than trusted. If
- * Sam edits a cue in the doc, this suite fails until the library matches.
+ * The sources are parsed here and treated as the source of truth, so "apply
+ * EXACTLY — no rewording" is machine-checked rather than trusted. If Sam edits
+ * a cue in the sheet, this suite fails until the library matches.
+ *
+ * CUES ARE BOUND IN BOTH DIRECTIONS (2026-07-28 reconciliation). Every sheet
+ * cue must ship verbatim AND every shipped cue must be on the sheet. The old
+ * one-directional bind let 31 cues accumulate in code that the gate's document
+ * had never heard of — all authored, but spread across three documents with
+ * nothing reconciling them. A new cue can now only enter through the sheet.
+ *
+ * The cue library no longer lives in `docs/CUE_CHANGESET_2026-07-23.md`. That
+ * document is NOT retired: its Renames and Deletions sections still drive §4's
+ * ban, and rewriting a dated sign-off record would falsify it. Only its "Final
+ * cue library" section is superseded.
  *
  * Run: npm run test:authored-cues
  */
@@ -28,6 +40,7 @@ import {
   resolveExerciseName,
 } from '../utils/loadEstimation';
 import { CONDITIONING_META } from '../data/exerciseTags';
+import { readSheetRecords, readXlsx } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const src = path.resolve(__dirname, '..');
@@ -74,25 +87,39 @@ function parseSuperseded(source: string): Set<string> {
   return names;
 }
 
-const supersededCues = parseSuperseded(cueDoc);
 const supersededVideos = parseSuperseded(videoDoc);
 
-/** `- **Name**: primary | secondary` from the final cue library section. */
-function parseAuthoredCues(): Map<string, { primary: string; secondary: string }> {
-  const section = cueDoc.split('## Final cue library')[1] ?? '';
-  const cues = new Map<string, { primary: string; secondary: string }>();
-  for (const line of section.split('\n')) {
-    const match = line.match(/^- \*\*(.+?)\*\*:\s*(.*)$/);
-    if (!match) continue;
-    const [, name, body] = match;
-    if (supersededCues.has(name)) continue;
-    const pipe = body.lastIndexOf('|');
-    const primary = (pipe >= 0 ? body.slice(0, pipe) : body).trim();
-    const rawSecondary = pipe >= 0 ? body.slice(pipe + 1).trim() : '';
+const MASTER_SHEET = path.join(repoRoot, 'docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx');
+const MASTER_SHEET_TAB = 'Exercise Master';
+/** Five authored preamble rows sit above the header — see the muscle suite. */
+const MASTER_SHEET_HEADER_ROW = 6;
+const masterSheetRows = readSheetRecords(MASTER_SHEET, MASTER_SHEET_TAB, MASTER_SHEET_HEADER_ROW);
+
+/**
+ * Sam's cue columns, read off the master sheet.
+ *
+ * A row reads either an authored pair or the PENDING marker — never blank.
+ * Blank is what "absence rendered as approval" looks like in a spreadsheet, so
+ * §3 rejects it rather than skipping the row.
+ */
+const PENDING_MARKER = 'PENDING — Stage B';
+
+interface SheetCue {
+  readonly primary: string;
+  readonly secondary: string;
+  readonly pending: boolean;
+}
+
+function parseAuthoredCues(): Map<string, SheetCue> {
+  const cues = new Map<string, SheetCue>();
+  for (const row of masterSheetRows) {
+    const name = row.Exercise;
+    if (!name) continue;
+    const primary = row.primaryCue ?? '';
     cues.set(name, {
       primary,
-      // "(none)" is Sam's marker for a blank secondary; render omits it.
-      secondary: rawSecondary === '(none)' ? '' : rawSecondary,
+      secondary: row.secondaryCue ?? '',
+      pending: primary === PENDING_MARKER,
     });
   }
   return cues;
@@ -147,10 +174,23 @@ function allSourceFiles(): string[] {
 }
 
 function main(): void {
-  console.log('\n[1] The changesets parsed cleanly');
+  console.log('\n[1] The authored sources parsed cleanly');
   {
-    ok('cue changeset yielded a full library', authoredCues.size >= 130,
-      `parsed ${authoredCues.size} cues — expected the full authored library`);
+    ok('the master sheet yielded a full library', authoredCues.size >= 190,
+      `parsed ${authoredCues.size} sheet rows — expected the full exercise list`);
+
+    // Blank is not a value. A sheet cell left empty is indistinguishable from
+    // one nobody has looked at, which is the exact defect this unit closes.
+    const blank = [...authoredCues]
+      .filter(([, cue]) => cue.primary.trim() === '')
+      .map(([name]) => name);
+    ok('no sheet row has a blank cue', blank.length === 0, blank.join(', '));
+
+    const pendingWithSecondary = [...authoredCues]
+      .filter(([, cue]) => cue.pending && cue.secondary !== '')
+      .map(([name]) => name);
+    ok('a PENDING row carries no secondary', pendingWithSecondary.length === 0,
+      pendingWithSecondary.join(', '));
     // 36 original picks, + 5 added on 2026-07-24 when applying the changeset
     // exposed four real gaps and Sam added the new Abductor Machine, + 1 for
     // the unified Groin Squeeze = 42 supplied. The locked list then retired the
@@ -162,17 +202,38 @@ function main(): void {
       `parsed ${authoredVideos.size} live video URLs (expected 42), `
         + `${supersededVideos.size} superseded (expected 2)`);
 
-    ok('both supersessions are declared by the documents themselves',
-      supersededCues.size === 4 && supersededVideos.size === 2,
-      `cue supersessions=${supersededCues.size} (expected 4), `
-        + `video supersessions=${supersededVideos.size} (expected 2)`);
+    ok('the video supersessions are declared by the document itself',
+      supersededVideos.size === 2,
+      `video supersessions=${supersededVideos.size} (expected 2)`);
+
+    /**
+     * The superseded artifacts must keep saying so.
+     *
+     * Both still exist and both still look authoritative — one is titled "Sam's
+     * sign-off pass", the other opens "Source of truth". A reader who finds
+     * either and edits a cue there would be authoring into a document nothing
+     * reads. The markers are the only thing preventing that, so they are gated
+     * rather than trusted.
+     */
+    ok('the changeset declares its cue library superseded',
+      /THE "Final cue library" SECTION BELOW IS SUPERSEDED/.test(cueDoc));
+    ok('the changeset still declares its renames + deletions live',
+      /The rest of this document is LIVE/.test(cueDoc));
+
+    const reviewSheetTitle = readXlsx(path.join(repoRoot, 'docs/CUE_REVIEW_2026-07-23.xlsx'))[0]
+      .rows[0]?.[0] ?? '';
+    ok('the blank review workbook is marked non-canonical',
+      /NON-CANONICAL — HISTORICAL POINTER ONLY/.test(reviewSheetTitle),
+      `A1 reads: ${JSON.stringify(reviewSheetTitle.slice(0, 120))}`);
   }
 
-  console.log('\n[2] The cue library IS Sam\'s authored text');
+  console.log('\n[2] The cue library IS Sam\'s authored text — BOTH directions');
   {
+    /* ── sheet → code ── */
     const mismatches: string[] = [];
     const missing: string[] = [];
     for (const [name, authored] of authoredCues) {
+      if (authored.pending) continue;
       const shipped = EXERCISE_CUES[name];
       if (!shipped) {
         missing.push(name);
@@ -180,17 +241,36 @@ function main(): void {
       }
       if (shipped.primaryCue !== authored.primary) {
         mismatches.push(
-          `${name} primary:\n        doc:  ${JSON.stringify(authored.primary)}\n        code: ${JSON.stringify(shipped.primaryCue)}`);
+          `${name} primary:\n        sheet: ${JSON.stringify(authored.primary)}\n        code:  ${JSON.stringify(shipped.primaryCue)}`);
       }
       if (shipped.secondaryCue !== authored.secondary) {
         mismatches.push(
-          `${name} secondary:\n        doc:  ${JSON.stringify(authored.secondary)}\n        code: ${JSON.stringify(shipped.secondaryCue)}`);
+          `${name} secondary:\n        sheet: ${JSON.stringify(authored.secondary)}\n        code:  ${JSON.stringify(shipped.secondaryCue)}`);
       }
     }
     ok('every authored cue is present', missing.length === 0,
       `absent from EXERCISE_CUES: ${missing.join(', ')}`);
     ok('no authored cue was reworded', mismatches.length === 0,
       mismatches.join('\n      '));
+
+    /* ── code → sheet: the direction that was missing ── */
+    //
+    // Without this, a cue can be added straight to the library and no gate
+    // notices — which is how 31 cues came to exist in code that the gate's
+    // document had never heard of. They were all Sam's; they had just never
+    // been filed. The reverse bind makes filing structural: a cue that is not
+    // on the sheet is not a cue.
+    const unfiled = Object.keys(EXERCISE_CUES).filter((name) => !authoredCues.has(name));
+    ok('every shipped cue is on the sheet', unfiled.length === 0,
+      `in EXERCISE_CUES, absent from the master sheet: ${unfiled.join(', ')}`);
+
+    // A PENDING row must NOT have quietly acquired a cue in code: that would be
+    // an unruled cue shipping under the appearance of an authored one.
+    const pendingButCued = [...authoredCues]
+      .filter(([name, cue]) => cue.pending && EXERCISE_CUES[name])
+      .map(([name]) => name);
+    ok('no PENDING row carries a cue in code', pendingButCued.length === 0,
+      pendingButCued.join(', '));
   }
 
   console.log('\n[3] Cue rules');
@@ -209,6 +289,31 @@ function main(): void {
       /Authored by Sam, 2026-07-23\. Additions require Sam sign-off\./.test(cueSource));
     ok('the retired 12-word cap is gone from the header',
       !/12 words hard cap/.test(cueSource));
+    ok('the header names the master sheet as the source',
+      /EXERCISE_MASTER_SHEET_2026-07-28\.xlsx/.test(cueSource));
+
+    /**
+     * The family-fallback TABLE is deleted, not shrunk (Sam, 2026-07-28).
+     *
+     * Twelve of its thirteen pairs fired for no exercise and appeared in no
+     * document — a safety net nobody authored. Shrinking the table to its one
+     * live key would leave twelve empty slots that a later unit could refill
+     * with no gate noticing, which is the shape of the very defect this unit
+     * closes. So the mechanism goes and the surviving pair becomes a single
+     * named constant: there is no longer a table to add an unauthored cue to.
+     */
+    const fallbackOffenders = allSourceFiles()
+      .filter((file) => file !== __filename)
+      .filter((file) => /FAMILY_FALLBACKS/.test(fs.readFileSync(file, 'utf8')))
+      .map((file) => path.relative(src, file));
+    ok('the FAMILY_FALLBACKS table exists nowhere in src', fallbackOffenders.length === 0,
+      fallbackOffenders.join(', '));
+
+    // The one surviving pair is UNRULED and must stay labelled as such. Sam
+    // deferred it to Stage B rather than blessing it; if this assertion is ever
+    // "fixed" by deleting the label, the pair silently becomes authored.
+    ok('the surviving conditioning pair is labelled unruled',
+      /NOT Sam-authored/.test(cueSource) && /PENDING_CONDITIONING_CUE/.test(cueSource));
   }
 
   console.log('\n[4] Deletions and renames are complete across src');
@@ -329,6 +434,35 @@ function main(): void {
     const withoutCue = names.filter((name) => !EXERCISE_CUES[name]);
     ok('every pool exercise has an authored cue', withoutCue.length === 0,
       withoutCue.join(', '));
+
+    /**
+     * Coverage derives from SELECTABILITY, not from the two pool registries.
+     *
+     * `poolExerciseNames()` reads POOL_REGISTRY + STRENGTH_POOLS. Conditioning
+     * modalities reach selectability through a different source entirely, so
+     * the assertion just above could never see them — and eight selectable
+     * conditioning sessions were rendering an unauthored family-fallback cue
+     * with no gate able to notice. Deriving from `selectableExerciseNames()`
+     * closes the hiding place: if an athlete can be given it, it is covered.
+     */
+    const uncovered = selectableExerciseNames().filter(
+      (name) => !EXERCISE_CUES[name] && !authoredCues.get(name)?.pending,
+    );
+    ok('every selectable exercise is authored or explicitly PENDING',
+      uncovered.length === 0,
+      `neither cued nor marked PENDING on the sheet: ${uncovered.join(', ')}`);
+
+    /**
+     * The pending set is PINNED, so a twenty-fourth cannot join it silently.
+     *
+     * Sam's ruling: the conditioning pair stays unruled and attributed until
+     * Stage B, where template `effortCue`s supersede it. That is a deliberate
+     * hole with a known size — an accidental one is what this pin catches.
+     * Growth means someone shipped a selectable exercise without a cue.
+     */
+    const pending = [...authoredCues].filter(([, cue]) => cue.pending).map(([name]) => name);
+    ok('exactly 23 rows are pending Stage B', pending.length === 23,
+      `${pending.length} pending: ${pending.join(', ')}`);
 
     // Zone-1 cyclical recovery is out of the video map by design — they are not
     // movements to demo. Documented in exerciseVideoService's header and in the

@@ -48,7 +48,7 @@ file effectively creates a second, orphaned "exercise" the system can't reconcil
 
 ## Section B — Required for every exercise (with two narrow exemption paths noted inline)
 
-### B1. Muscle & Experience sheet row — **`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`, sheet "Muscle + Experience v3"**
+### B1. Muscle & Experience sheet row — **`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`, sheet "Exercise Master"**
 
 **This sheet is THE enforced source.** The code file `src/data/muscleExperienceMetadata.ts`
 (`EXERCISE_MUSCLE_METADATA`) is described in its own header as "a typed projection, held to the
@@ -64,6 +64,8 @@ to match it exactly, or the equality test fails. Code must not lead the sheet.
 | Secondary Muscle Group(s) | Muscles this exercise trains as a support role | 0+ from the same list; use `—` if genuinely none (the sheet drops `—` on ingress — it is a placeholder, never a real tag) | Same as above. |
 | Experience Level | The minimum training age Sam is comfortable auto-programming this to | Exactly one of: `everyone`, `everyone (regression)`, `1+ years`, `2+ years`, `advanced only` | LOUD (equality test) — and this is the field the training-age gate actually reasons on once Stage B wires it up. **This is Sam's own call, not derivable from the exercise's mechanics — the sheet header states "Changes require Sam."** |
 | Notes | Free text; prefix with ⚑ if the gate above is a genuine judgment call rather than a settled one | any string, or blank | Nothing breaks; it's a human-readability aid only. |
+| primaryCue | The mechanics/position/range/bracing cue | String, **18-word hard cap** (ideal 3-8 words), enforced per field. `PENDING — Stage B` is the only non-cue value allowed | LOUD. Blank fails "no sheet row has a blank cue"; over-length fails the cap; anything not matching code fails both directions. |
+| secondaryCue | The intent/control/tempo/tension cue | Same cap; blank is legitimate (many cues are primary-only), and **must** be blank on a `PENDING` row | LOUD if it disagrees with code, or if a `PENDING` row carries one. |
 
 **Important caveat, stated plainly**: `muscleExperienceMetadata.ts`'s own header says *"NOT WIRED
 YET: nothing selects on this. Stage B consumes it."* Filling this row in is mandatory today only
@@ -157,13 +159,22 @@ exercise never appears to an athlete.
 
 ### B6. Cue — `src/data/exerciseCues.ts`, `EXERCISE_CUES['<name>']`
 
-There is **no live enforced spreadsheet for cues today** (unlike B1) — author these fields
-directly; there is no equality test tying this file to an external sheet.
+**This changed on 2026-07-28.** Cues are now columns on the B1 sheet, and
+`exerciseCues.ts` is a typed projection of it — held in **both directions**, exactly like
+`muscleExperienceMetadata.ts`. Author the cue in the B1 row first; mirror it here second.
+
+A cue that is not on the sheet fails the build, so this file can no longer be the place a
+cue starts. That is the point: authored-ness used to accumulate across three documents
+with nothing reconciling them, and 31 cues ended up here that the gate's document had
+never heard of. See `docs/CUE_RECONCILIATION_DIAGNOSIS_2026-07-28.md`.
 
 | Field | Plain English | Allowed values | What breaks if missing |
 |---|---|---|---|
-| `primaryCue` | The mechanics/position/range/bracing cue | String, **18-word hard cap** (ideal 3-8 words), enforced independently per field (not combined with secondary) | LOUD. `npm run test:authored-cues` fails both "every pool exercise has an authored cue" and the 18-word-cap check if violated. |
+| `primaryCue` | The mechanics/position/range/bracing cue | String, **18-word hard cap** (ideal 3-8 words), enforced independently per field (not combined with secondary) | LOUD. `npm run test:authored-cues` fails the 18-word cap, the coverage check, AND "every shipped cue is on the sheet" if the B1 row disagrees. |
 | `secondaryCue` | The intent/control/tempo/tension cue | String, same 18-word hard cap; **may be an empty string** (some authored entries are), but the field itself must exist | Same test, same failure mode. |
+
+Do **not** add an entry here for an exercise whose B1 row reads `PENDING — Stage B`; the
+gate treats that as an unruled cue shipping under the appearance of an authored one.
 
 Verify with: `npm run test:authored-cues`. The exercise's canonical NAME must also resolve cleanly
 through the token-normalisation system described in A0, or `npm run test:exercise-canonicalisation`
@@ -203,7 +214,7 @@ The key must be the exact canonical name from A0 — same string used in `exerci
 
 ## Section D — Exhaustive file/sheet checklist, in the order to author them
 
-1. **`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`** ("Muscle + Experience v3" sheet) — new row.
+1. **`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`** ("Exercise Master" sheet) — new row.
    Do this first; it is the enforced source of truth (B1).
 2. **`src/data/muscleExperienceMetadata.ts`** — matching `EXERCISE_MUSCLE_METADATA` entry, must
    equal the sheet exactly (both directions).
@@ -246,7 +257,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 
 **A0. Canonical name:** ________________________________
 
-**B1. Muscle & Experience sheet row** (`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`)
+**B1. Muscle & Experience sheet row** (`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`)
 - Pool: ________________________________
 - Primary Muscle Group(s): ________________________________
 - Secondary Muscle Group(s) (or `—`): ________________________________
@@ -294,7 +305,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 
 **A0. Canonical name:** ________________________________
 
-**B1. Muscle & Experience sheet row** (`docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx`)
+**B1. Muscle & Experience sheet row** (`docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`)
 - Pool: ________________________________
 - Primary Muscle Group(s): ________________________________
 - Secondary Muscle Group(s) (or `—`): ________________________________

@@ -3,6 +3,26 @@
 Source of truth: Sam's edited review sheet, parsed verbatim. Apply EXACTLY —
 no rewording. Where secondary is blank, store empty (render omits).
 
+> **THE "Final cue library" SECTION BELOW IS SUPERSEDED (2026-07-28).**
+> The cue source of truth is now `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`,
+> which holds all 175 cues on the row that already owns each exercise. This
+> section is kept as the dated record of what Sam approved on 2026-07-23 and is
+> no longer read by any gate.
+>
+> **The rest of this document is LIVE.** Its *Renames* and *Deletions* sections
+> still drive the "retired names appear nowhere in src" ban in
+> `authoredCueLibraryTests` §4, derived from this document rather than
+> hardcoded. Do not retire it.
+>
+> Two entries here were never the whole truth even on the day: `Pull-Ups` ships
+> this cue *plus* the locked list's CUE EDIT append line, and `Hamstring Curl`
+> was re-authored in that document. See
+> `docs/CUE_RECONCILIATION_DIAGNOSIS_2026-07-28.md`.
+>
+> Note also that the "edited review sheet" this header names,
+> `docs/CUE_REVIEW_2026-07-23.xlsx`, is **blank** in the repo — Sam's edited
+> copy was never committed. That workbook is marked non-canonical.
+
 ## Rule changes
 
 - Cue word cap: 12 → 18 (Sam's authored cues take precedence over the old cap).

@@ -1,7 +1,7 @@
 /**
  * Muscle + experience metadata and the D17 session flow — doc<->code equality.
  *
- *   docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx          (Sam, AUTHORED FINAL)
+ *   docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx          (Sam, AUTHORED FINAL)
  *   docs/PROGRAMMING_DESIGN_SESSION_2026-07-23.md  §D17   (Sam, AUTHORED)
  *
  * Both are sources of truth. This suite parses them directly and holds the
@@ -50,9 +50,9 @@ import { resolveTrainingAgePolicy, TRAINING_AGE_LEVELS } from '../rules/training
 import { readSheetRecords } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
-const SHEET = path.join(repoRoot, 'docs/MUSCLE_EXPERIENCE_FINAL_2026-07-25.xlsx');
+const SHEET = path.join(repoRoot, 'docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx');
 const DESIGN_DOC = path.join(repoRoot, 'docs/PROGRAMMING_DESIGN_SESSION_2026-07-23.md');
-const SHEET_TAB = 'Muscle + Experience v3';
+const SHEET_TAB = 'Exercise Master';
 /**
  * Five authored preamble rows sit above the header: sign-off, vocabulary legend,
  * regression note, terminology, and the change-log row Sam's 2026-07-27
