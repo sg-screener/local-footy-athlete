@@ -40,6 +40,13 @@ import {
   MODERATE_IMPACT_REMOVED_COUNT,
 } from '../rules/sessionImpactBands';
 import { SUBSTITUTE_LOAD_TOLERANCE } from '../rules/substituteLoadTolerance';
+import {
+  CONSECUTIVE_CORE_DAY_RULING,
+  PERMITTED_CONSECUTIVE_CORE_DAYS,
+  PREFERRED_CONSECUTIVE_CORE_DAY_BREAK,
+  exceedsPermittedConsecutiveCoreDays,
+  exceedsPreferredConsecutiveCoreDays,
+} from '../rules/consecutiveCoreDayPolicy';
 
 const src = path.resolve(__dirname, '..');
 let passed = 0;
@@ -195,6 +202,40 @@ console.log('\n[5] Batch 6 — the display numbers have one owner each');
   // (session -> recovery or rebuild), not a label, so it must NOT migrate here.
   ok('the 0.75 program cut point stays out of the label owner',
     !/0\.75/.test(codeOf('rules/sessionImpactBands.ts')));
+}
+
+console.log('\n[6] The consecutive core/team day boundaries — re-ruled with their true meaning');
+{
+  // I first presented this number to Sam as a coach observation streak and he
+  // blessed it on that description. It counts CONSECUTIVE CORE OR TEAM DAYS in
+  // the pre-season placement scorer. The blessing was returned and re-ruled
+  // against what the code does, so what is asserted here is the second ruling.
+  ok('the soft preference boundary is 4', PREFERRED_CONSECUTIVE_CORE_DAY_BREAK === 4,
+    PREFERRED_CONSECUTIVE_CORE_DAY_BREAK);
+  ok('the hard permission is 5', PERMITTED_CONSECUTIVE_CORE_DAYS === 5,
+    PERMITTED_CONSECUTIVE_CORE_DAYS);
+  ok('the preference bites before the permission',
+    PREFERRED_CONSECUTIVE_CORE_DAY_BREAK < PERMITTED_CONSECUTIVE_CORE_DAYS);
+
+  // The two are genuinely different rules, so the predicates must disagree
+  // somewhere. A run of 4 or 5 is preferred-against but permitted; 6 is not.
+  ok('a run of 4 crosses the preference but not the permission',
+    exceedsPreferredConsecutiveCoreDays(4) && !exceedsPermittedConsecutiveCoreDays(4));
+  ok('a run of 5 is still permitted', !exceedsPermittedConsecutiveCoreDays(5));
+  ok('a run of 6 is not permitted', exceedsPermittedConsecutiveCoreDays(6));
+
+  // It is a RULING anchor. Bible Section 2 states the WEEKLY hard-day budget and
+  // says nothing about consecutive days; Sam carried the two numbers across
+  // deliberately, which is a decision rather than a citation. Claiming
+  // BIBLE_ANCHOR here would be the invented provenance this unit removes — the
+  // same mistake the anchor gate caught on the 35-minute threshold.
+  ok('it is declared a ruling anchor, not a Bible anchor',
+    CONSECUTIVE_CORE_DAY_RULING.kind === 'ruling_anchor');
+  ok('it does not claim a Bible anchor marker',
+    !/BIBLE_ANCHOR/.test(codeOf('rules/consecutiveCoreDayPolicy.ts')));
+
+  ok('the scorer holds no consecutive-day literal of its own',
+    !/streak\s*(?:>=|>|<=|<)\s*\d/.test(codeOf('utils/coachingEngine.ts')));
 }
 
 console.log(`\n${failures.length === 0 ? 'PASS' : 'FAIL'} — ${passed} passed, ${failures.length} failed`);
