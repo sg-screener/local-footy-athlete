@@ -79,22 +79,35 @@ console.log('\n[3] late off-season build');
     ['strength_6_8', 6, 8]);
 }
 
-console.log('\n[4] low-readiness tightening');
+// RE-POINTED (Sam's readiness law, 2026-07-28; applied 2026-07-29). Four
+// assertions in this block asserted the SUPERSEDED behaviour: that low readiness
+// zeroes the hard-session cap and writes `blocked_low_readiness` onto running and
+// speed. Capacity affects dose only, so those are now the things that must NOT
+// move — see docs/READINESS_CENSUS_SWEEP_2026-07-29.md.
+console.log('\n[4] low-capacity dosing (structure untouched)');
 {
   const normal = getOffseasonSubphasePolicy('late_offseason');
   const low = getOffseasonSubphasePolicy('late_offseason', { readiness: 'low' });
-  eq('low readiness narrows conditioning to aerobic base', low.conditioning.allowedCategories, ['aerobic_base']);
-  eq('low readiness removes hard conditioning', low.conditioning.hardSessionCap, 0);
-  eq('low readiness blocks running', low.running.policy, 'blocked_low_readiness');
-  eq('low readiness blocks speed', low.speedSprint.policy, 'blocked_low_readiness');
-  eq('low readiness caps RPE at 7', low.strength.targetRpeMax, 7);
-  eq('low readiness increases optional/support bias', low.sessions.optionalSupportBias, 'high');
-  ok('low-readiness derivation does not mutate the base policy',
+  eq('low capacity narrows conditioning to aerobic base', low.conditioning.allowedCategories, ['aerobic_base']);
+  eq('low capacity biases the modality off-feet', low.conditioning.modalityBias, 'off_feet');
+  eq('low capacity caps RPE at 7', low.strength.targetRpeMax, 7);
+  eq('low capacity increases optional/support bias', low.sessions.optionalSupportBias, 'high');
+
+  eq('low capacity does not move the hard-conditioning cap',
+    low.conditioning.hardSessionCap, normal.conditioning.hardSessionCap);
+  eq('low capacity does not block running', low.running.policy, normal.running.policy);
+  eq('low capacity does not block speed', low.speedSprint.policy, normal.speedSprint.policy);
+  eq('low capacity does not reduce the core-session bias',
+    low.sessions.coreBias, normal.sessions.coreBias);
+  eq('low capacity does not avoid combined days',
+    low.sessions.lowAvailabilityCombinedDays, normal.sessions.lowAvailabilityCombinedDays);
+
+  ok('low-capacity derivation does not mutate the base policy',
     normal.conditioning.hardSessionCap === 1 &&
       normal.speedSprint.policy === 'existing_late_offseason_gate',
     normal);
-  ok('low-readiness policy explains the tightening',
-    low.reasons.some((reason) => /Low readiness/.test(reason)),
+  ok('low-capacity policy explains the dosing',
+    low.reasons.some((reason) => /Low capacity/.test(reason)),
     low.reasons);
 }
 

@@ -117,7 +117,6 @@ const EARLY = {
   phase: 'Off-season' as const,
   offseasonSubphase: 'early_offseason' as const,
   weekKind: 'build' as const,
-  readiness: 'high' as const,
 };
 
 section('[1] raw conditioning becomes a canonical component');
@@ -172,21 +171,21 @@ section('[3] typed power remains bounded by subphase and final strength content'
   });
   const mid = finaliseWorkoutAfterMutation(
     workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),
-    { phase: 'Off-season', offseasonSubphase: 'mid_offseason', readiness: 'high' },
+    { phase: 'Off-season', offseasonSubphase: 'mid_offseason' },
   );
   ok('mid off-season keeps valid power only as primer',
     powerRows(mid.workout)[0]?.power?.kind === 'primer');
 
   const late = finaliseWorkoutAfterMutation(
     workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),
-    { phase: 'Off-season', offseasonSubphase: 'late_offseason', readiness: 'high' },
+    { phase: 'Off-season', offseasonSubphase: 'late_offseason' },
   );
   ok('late off-season keeps contrast with heavy same-family main lift',
     powerRows(late.workout)[0]?.power?.kind === 'contrast');
 
   const removedLift = finaliseWorkoutAfterMutation(
     workout('Lower Squat', [power('contrast', 'lower'), row('Pallof Press', 0)]),
-    { phase: 'Off-season', offseasonSubphase: 'late_offseason', readiness: 'high' },
+    { phase: 'Off-season', offseasonSubphase: 'late_offseason' },
   );
   ok('removing final same-family lift removes stale contrast power',
     powerRows(removedLift.workout).length === 0);
@@ -195,7 +194,7 @@ section('[3] typed power remains bounded by subphase and final strength content'
     workout('Lower Squat', [power('primer', 'lower'), heavySquat]),
     {
       offseasonSubphase: 'not_off_season',
-      phase: 'In-season', readiness: 'high', hasGame: true, gOffset: -1,
+      phase: 'In-season', hasGame: true, gOffset: -1,
       profile: { experienceLevel: '5+ years' } as any,
     },
   );

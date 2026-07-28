@@ -8,16 +8,17 @@ export type OffseasonConditioningCategory =
   | 'vo2'
   | 'glycolytic';
 
+// `blocked_low_readiness` is RETIRED from both unions (Sam's readiness law,
+// 2026-07-28). Leaving the word in the vocabulary leaves somewhere for the block
+// to come back to; a subphase policy may only be blocked by its SUBPHASE.
 export type OffseasonRunningPolicy =
   | 'blocked_by_default'
   | 'careful_reentry_if_healthy'
-  | 'gradual_reentry'
-  | 'blocked_low_readiness';
+  | 'gradual_reentry';
 
 export type OffseasonSpeedSprintPolicy =
   | 'blocked_by_default'
-  | 'existing_late_offseason_gate'
-  | 'blocked_low_readiness';
+  | 'existing_late_offseason_gate';
 
 export interface OffseasonSubphasePolicyContext {
   readiness?: ReadinessLevel | null;
@@ -163,6 +164,33 @@ const BASE_POLICIES: Readonly<Record<OffseasonSubphase, OffseasonSubphasePolicy>
   },
 };
 
+/**
+ * The low-capacity overlay: DOSE ONLY (Sam's readiness law, 2026-07-28).
+ *
+ * This branch used to carry five structural statements alongside its dose ones,
+ * and the census warned that deleting the branch wholesale would take a
+ * legitimate dose-down with it. So the branch survives and the structure leaves
+ * it, field by field:
+ *
+ *   - `hardSessionCap: 0` — LEFT. It reads as an intensity cap, and for the
+ *     conditioning priority list it is one (a filtered-out category falls back
+ *     to `aerobic_base`, same session, easier). But the same predicate is the
+ *     producer of `injuryAllowsSprint` in the engine, so a zero cap denied the
+ *     standalone SPRINT — a distinct exposure with a year-round Bible floor of
+ *     one and a typed-reason requirement below it. The aerobic-only category
+ *     list below already delivers the intensity intent without that side door.
+ *   - `running.*: false` / `speedSprint.*: false` — LEFT. Readiness must not
+ *     write "blocked". The off-feet OUTCOME is unchanged: with the policy at
+ *     base, `policyRequiresOffFeetAerobic` still answers off-feet for a
+ *     low-capacity athlete through its own (dose) readiness edge.
+ *   - `coreBias: 'reduced'` — LEFT. A declared core-session count cut.
+ *   - `lowAvailabilityCombinedDays: 'avoid'` — LEFT. It suppresses the engine's
+ *     H5a conversion, which is the safety net that enforces the weekly
+ *     conditioning floor; avoiding combined days there drops exposures.
+ *
+ * What stays is what shrinks work that still happens: an easier category, an
+ * off-feet modality, a lower RPE ceiling, and more optional support.
+ */
 export function getOffseasonSubphasePolicy(
   subphase: OffseasonSubphase,
   context: OffseasonSubphasePolicyContext = {},
@@ -174,32 +202,24 @@ export function getOffseasonSubphasePolicy(
     ...base,
     conditioning: {
       ...base.conditioning,
+      // Intensity, not count: the week keeps the same number of conditioning
+      // sessions and they become easy aerobic.
       allowedCategories: ['aerobic_base'],
       defaultCategory: 'aerobic_base',
-      hardSessionCap: 0,
       modalityBias: 'off_feet',
-    },
-    running: {
-      allowedBySubphase: false,
-      enabledByDefault: false,
-      policy: 'blocked_low_readiness',
-    },
-    speedSprint: {
-      allowedBySubphase: false,
-      policy: 'blocked_low_readiness',
     },
     strength: {
       ...base.strength,
       targetRpeMax: Math.min(base.strength.targetRpeMax, 7),
     },
     sessions: {
-      coreBias: 'reduced',
+      ...base.sessions,
       optionalSupportBias: 'high',
-      lowAvailabilityCombinedDays: 'avoid',
     },
     reasons: [
       ...base.reasons,
-      'Low readiness removes running, speed and hard conditioning while increasing support/recovery bias.',
+      'Low capacity keeps every session and makes them easier: off-feet aerobic conditioning, '
+      + 'a lower strength RPE ceiling, and wider optional support work.',
     ],
   };
 }

@@ -36,6 +36,7 @@ function baseWeekLog(overrides: Partial<WeekLog> = {}): WeekLog {
     missedTeamTraining: false,
     doubleGameWeek: false,
     weeksOffTraining: 0,
+  byeMode: 'build',
     readiness: 'high',
     ...overrides,
   };

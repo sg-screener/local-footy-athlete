@@ -315,11 +315,17 @@ function readinessValid(trace: Slice3ScenarioTrace): InvariantCheckResult {
   const id = 'INV_READINESS_TRANSFORMATION_VALID' as const;
   const applied = applies(trace, 'low-readiness-downgrade');
   const effective = stage(trace, 'resolved_effective');
-  const valid = effective.power.kind === 'none' && effective.conditioning.every((entry) => entry.intensity !== 'hard') &&
-    effective.effectivePatterns.includes('squat') && effective.evidence.some((item) => item.code === 'low_readiness_power_blocked');
+  // RE-POINTED (Sam's readiness law, 2026-07-28; applied 2026-07-29). This
+  // required `power.kind === 'none'` and evidence coded
+  // `low_readiness_power_blocked`. Both are now violations: capacity dose-downs
+  // the primer, it does not delete it, and no code in the repo may record a
+  // readiness power removal. The negative clause is the load-bearing one.
+  const valid = effective.power.kind === 'primer' && effective.conditioning.every((entry) => entry.intensity !== 'hard') &&
+    effective.effectivePatterns.includes('squat') &&
+    !effective.evidence.some((item) => item.code === 'low_readiness_power_blocked');
   return one(id, trace, applied, valid, () => failure({
     trace, invariantId: id, ruleId: 'ALL-READINESS-DOWNGRADE-01', stage: 'resolved_effective',
-    expected: { power: 'none', hardConditioning: 0, preserveStrength: true, evidence: true },
+    expected: { power: 'primer', hardConditioning: 0, preserveStrength: true, powerRemoved: false },
     actual: { power: effective.power, conditioning: effective.conditioning, patterns: effective.effectivePatterns, evidence: effective.evidence },
   }));
 }

@@ -23,14 +23,22 @@
  * the input is gone rather than inverted: there is no deload field left here
  * to grow a branch on, which is what stops the removal coming back.
  *
+ * CAPACITY IS A DOSE, NOT A GATE (Sam's readiness law, 2026-07-28). Low
+ * readiness used to `return null` here — power removed entirely — on the
+ * reasoning that the capacity score was a different signal from the readiness
+ * declaration. The ruling closed that exemption: "capacity/readiness affects
+ * DOSE only". It is the deload sentence one step along, so it takes the deload
+ * answer: the same authored `deloadPowerDose` shrink, applied once, at the end.
+ *
+ * That placement is the point. The decision body below now contains no readiness
+ * branch that can return `null`, so there is no gate left for the removal to
+ * grow back on — exactly how the deload input was retired rather than inverted.
+ *
  * SAFETY MODEL (every gate that can say "no"):
  *  - Only strength sessions (must have a strengthPattern).
- *  - Low readiness         → SUPERSEDED, still in force pending Batch 0. Ruled
- *                            2026-07-28 to become a shrunk sharp primer via the
- *                            deload power dose, never removal.
  *  - Game day / G-1 / G+1  → no added power.
- *  - G-2                   → only a tiny neural primer, experienced + high
- *                            readiness only.
+ *  - G-2                   → only a tiny neural primer, experienced only; below
+ *                            high capacity it shrinks rather than disappears.
  *  - Active relevant injury (≥ moderate) → no power through that region;
  *                            mild niggle → reduced dose only.
  *  - Beginner              → conservative: tiny primer, off/pre-season only,
@@ -46,6 +54,7 @@
  */
 
 import type { SeasonPhase, ReadinessLevel } from '../types/domain';
+import { deloadPowerDose } from './deloadWeekRules';
 import type { OffseasonSubphase } from './offseasonSubphase';
 
 export type PowerFamily = 'lower' | 'upper';
@@ -135,22 +144,52 @@ function spec(
 }
 
 /**
+ * Whether this athlete's capacity shrinks the power dose in this window.
+ *
+ * Two cases, both of which used to remove power outright:
+ *   - low capacity anywhere;
+ *   - anything below high capacity at G-2, where the full dose is already the
+ *     smallest one the policy hands out.
+ *
+ * The G-2 WINDOW itself is a schedule fact and keeps its own gates. Only the
+ * readiness half of that gate became a dose.
+ */
+function capacityShrinksDose(ctx: PowerPrimerContext): boolean {
+  if (ctx.readiness === 'low') return true;
+  return ctx.hasGame && ctx.gOffset === -2 && ctx.readiness !== 'high';
+}
+
+/** Apply the authored deload power shrink to a decided spec. */
+function shrunkSharpPrimer(full: PowerPrimerSpec): PowerPrimerSpec {
+  const dose = deloadPowerDose({
+    sets: full.sets,
+    repsMin: full.repsMin,
+    repsMax: full.repsMax,
+  });
+  // `deloadPowerDose` returns null only if the deload law stops keeping power
+  // at all. If that ever changes, low capacity must not be the path that
+  // discovers it — keep the exposure and let the deload gate say so.
+  if (!dose) return full;
+  return { ...full, ...dose, reason: `${full.reason} — reduced dose for low capacity` };
+}
+
+/**
  * Decide the power primer for a single strength session, or null when no power
  * should be added. Pure and deterministic.
+ *
+ * Capacity is applied HERE and nowhere inside: one place, one transform, no
+ * branch that can turn a shrink back into a removal.
  */
 export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | null {
+  const full = decideFullPowerPrimer(ctx);
+  if (!full) return null;
+  return capacityShrinksDose(ctx) ? shrunkSharpPrimer(full) : full;
+}
+
+/** The power decision at full capacity — phase, schedule, injury and training age. */
+function decideFullPowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | null {
   // ── Only suitable strength sessions ──
   if (!ctx.strengthPattern) return null;
-
-  // ── Hard block: low readiness ──
-  // SUPERSEDED (Sam, 2026-07-28). This block used to be justified by the
-  // capacity score being a distinct signal from the readiness declaration. The
-  // ruling closed that exemption: "dose down, never block". A deload already
-  // stopped removing power for exactly this reason (see the header) and this
-  // gate is the same shape one step along — low capacity must yield a SHRUNK
-  // SHARP PRIMER via the deload power dose, not `null`.
-  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 0.
-  if (ctx.readiness === 'low') return null;
 
   // ── Off-season progression ──
   // Missing subphase is deliberately treated as early off-season. Power is
@@ -173,11 +212,12 @@ export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | nu
     if (g === 1) return null;   // day after game — not fresh
     if (g === -1) return null;  // G-1 — no meaningful power loading
     if (g === -2) {
-      // Tiny neural primer only: experienced, high readiness, no niggle.
-      if (ctx.isBeginner || !ctx.experienced || ctx.readiness !== 'high' || reduced) {
+      // Tiny neural primer only: experienced, no niggle. Capacity below high
+      // shrinks this dose (see `capacityShrinksDose`) rather than removing it.
+      if (ctx.isBeginner || !ctx.experienced || reduced) {
         return null;
       }
-      return spec('primer', family, 2, 3, 3, false, 'G-2 tiny neural primer (experienced, fresh)');
+      return spec('primer', family, 2, 3, 3, false, 'G-2 tiny neural primer (experienced)');
     }
     // g <= -3 (or +>1, which won't occur) → treated as clear of the game.
   }

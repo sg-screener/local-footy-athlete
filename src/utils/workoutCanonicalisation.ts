@@ -9,7 +9,6 @@
 import type {
   ConditioningBlock,
   OnboardingData,
-  ReadinessLevel,
   SeasonPhase,
   WeekKind,
   Workout,
@@ -123,7 +122,12 @@ export interface WorkoutCanonicalisationContext {
    */
   offseasonSubphase: CanonicalContextOffseasonSubphase;
   weekKind?: WeekKind | null;
-  readiness?: ReadinessLevel;
+  // NO `readiness` FIELD (Sam's readiness law, 2026-07-28). Capacity is a dose
+  // and the dose has one owner (`decidePowerPrimer`); a finaliser that re-reads
+  // it either removes work the law protects or compounds a shrink it cannot
+  // detect. Removing the field is what makes that unrepresentable rather than
+  // merely discouraged. `prohibitPower` remains for §18 SAFETY, which is an
+  // injury/eligibility fact, not a capacity one.
   /** True when a real game/practice-match anchor exists in the relevant week. */
   hasGame?: boolean;
   /** Calendar offset from the nearest game (0=game, -1=G-1, +1=G+1). */
@@ -450,8 +454,14 @@ function updatePowerForPhase(args: {
     [0, -1, 1].includes(args.context.gOffset);
   const experiencedForGamePrimer = args.context.profile?.experienceLevel === '2-5 years' ||
     args.context.profile?.experienceLevel === '5+ years';
+  // Capacity left this gate (Sam's readiness law, 2026-07-28). It read
+  // `readiness !== 'high'`, and because the field was optional every context
+  // that did not carry it — most of them — answered "not high" and removed the
+  // G-2 primer outright. The experience requirement is a training-age fact and
+  // stays; the dose belongs to `decidePowerPrimer`, which shrinks the G-2 primer
+  // below high capacity instead of deleting it.
   const gMinusTwoBlocked = args.context.hasGame && args.context.gOffset === -2 &&
-    (args.context.readiness !== 'high' || !experiencedForGamePrimer);
+    !experiencedForGamePrimer;
   // The subphase is READ, never derived. There is no `?? 'early_offseason'`
   // here any more: that default deleted power from late off-season weeks whose
   // builder simply had not carried the resolution. A builder that states
@@ -474,21 +484,26 @@ function updatePowerForPhase(args: {
   // gate: "Power is not removed on a deload; a deload is not a reason to lose
   // sharpness." The deload transform shrinks the dose inside the primer instead.
   //
-  // SUPERSEDED (Sam, 2026-07-28). This used to say the capacity score stayed
-  // because it was not the same signal as the readiness declaration. The ruling
-  // closed that exemption, and it extends the deload-law sentence directly above:
-  // if a deload is not a reason to lose sharpness, neither is low capacity.
-  // Low readiness now gives a SHRUNK SHARP PRIMER via the deload power dose —
-  // never `power_removed`. The detrained-athlete concern is answered by the dose
-  // being smaller, not by the exposure being gone.
+  // CAPACITY LEFT THIS FINALISER ENTIRELY (Sam's readiness law, 2026-07-28).
+  // `readiness === 'low'` removed the block here; the ruling extends the deload
+  // sentence directly above — if a deload is not a reason to lose sharpness,
+  // neither is low capacity.
   //
-  // The other triggers here are untouched: `earlyOffseason`, `gameProtected` and
-  // `gMinusTwoBlocked` are phase and schedule facts, which the ruling keeps.
-  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 0.
+  // It became a DOSE rather than a smaller removal, and the dose has exactly one
+  // owner: `decidePowerPrimer` shrinks the spec once, where the block is
+  // decided. This finaliser deliberately does not shrink, because it cannot tell
+  // an already-shrunk row from a full one — a shrink here would compound on
+  // every re-canonicalisation of the same week. That is the same split the
+  // deload law already uses (`deloadPowerDose` runs where the block is built).
+  //
+  // So the input is GONE rather than inverted: `WorkoutCanonicalisationContext`
+  // no longer carries readiness, and there is no field here for the removal to
+  // grow back on. What remains — `earlyOffseason`, `gameProtected`,
+  // `gMinusTwoBlocked`, §18 safety — are phase, schedule and injury facts, which
+  // the ruling keeps.
   if (
     args.context.prohibitPower === true ||
     earlyOffseason ||
-    args.context.readiness === 'low' ||
     gameProtected ||
     gMinusTwoBlocked
   ) {
@@ -499,9 +514,7 @@ function updatePowerForPhase(args: {
         ? 'early_offseason_power_blocked'
         : args.context.prohibitPower
           ? 'section18_safety_power_blocked'
-        : gameProtected || gMinusTwoBlocked
-            ? `game_proximity_power_blocked:G${args.context.gOffset! >= 0 ? '+' : ''}${args.context.gOffset}`
-          : 'low_readiness_power_blocked',
+          : `game_proximity_power_blocked:G${args.context.gOffset! >= 0 ? '+' : ''}${args.context.gOffset}`,
     });
     return withoutPowerRows(workout);
   }

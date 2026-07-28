@@ -638,31 +638,26 @@ function buildParallelSection18Contract(args: {
     teamTrainingCount: inputs.teamTrainingDays.length,
     weekKind: inputs.weekKind,
   });
-  let selectedCoreConditioning = identity.mode === 'early_offseason'
+  const selectedCoreConditioning = identity.mode === 'early_offseason'
     ? selected.coreConditioning
     : legacy.conditioning.targetCount;
-  if (
-    identity.mode === 'in_season_game_week' && readiness === 'low' &&
-    legacy.anchors.gameDay !== null
-  ) {
-    const teamDays = new Set((inputs.teamTrainingDays ?? []).map(dayNameToNumber));
-    const safeAppCapacity = Array.from(new Set(inputs.selectedDays.map(dayNameToNumber)))
-      .filter((day) => day >= 0 && !teamDays.has(day) &&
-        gOffset(day, legacy.anchors.gameDay) <= -3).length;
-    if (safeAppCapacity < selectedCoreConditioning) {
-      reductions.push({
-        metric: 'conditioning_core_frequency',
-        originalApprovedTarget: selectedCoreConditioning,
-        reducedTarget: safeAppCapacity,
-        reason: 'spacing_safety_conflict',
-        scope: 'week',
-        change: 'frequency',
-        detail: 'Reduced-participation field anchors leave only this many non-TT app slots on G-3 or earlier.',
-        provenance: 'live_typed_reduction',
-      });
-      selectedCoreConditioning = safeAppCapacity;
-    }
-  }
+  // DELETED (Sam's readiness law, 2026-07-29): a game-week `spacing_safety_conflict`
+  // reduction that cut `conditioning_core_frequency` to the number of non-team
+  // app slots at G-3 or earlier.
+  //
+  // It read as a schedule fact and was not one. It only ever ran on
+  // `readiness === 'low'`, and its own detail sentence gave the premise away —
+  // "REDUCED-PARTICIPATION field anchors" — an assumption derived from capacity,
+  // not from the calendar. Ungating it (the first attempt) made it fire on every
+  // game week and immediately produced a conditioning shortfall against the
+  // legacy contract, because it was a SECOND authority reducing a count the
+  // contract already owns: the planner built to the reduced number while
+  // acceptance still judged against the contract's.
+  //
+  // The contract's own spacing reduction covers what is genuinely schedule-owned
+  // (`buildFixtureWeekContract` cuts STRENGTH to the safe placements around G,
+  // G-1 and G+1). Conditioning at G-2/G-1 is not unsafe, it is easy — which is a
+  // dose, and belongs to the eligibility law that already downgrades it.
   const optionalFlushSelected = weeklyPlan.filter((allocation) =>
     allocation.section18ConditioningRole === 'optional_flush').length;
   const optionalRecoveryAerobicSelected = weeklyPlan.filter((allocation) =>
@@ -1227,8 +1222,14 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         // without adding hard work. Conditioning remains easy, off-feet and
         // component-level; lower-availability early weeks retain their existing
         // standalone layout.
+        //
+        // Capacity left this condition (Sam's readiness law, 2026-07-28): it
+        // withheld the component entirely, and an easy off-feet aerobic
+        // component is already the smallest exposure the app prescribes — there
+        // is nothing to dose down TO. How many of these exist is the contract's
+        // `optionalRecoveryAerobic.plannerSelectedCount`, three lines below.
         if (
-          inputs.availableDays >= 6 && readiness !== 'low' &&
+          inputs.availableDays >= 6 &&
           !phaseConditioningBlockedForSafety &&
           index < (phasePlannerContractV2.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0)
         ) {
@@ -1745,19 +1746,24 @@ function buildWeeklyPlan(
   const hasRiskRestrictedInjury = activeInjuries.some((injury) =>
     injury.removeRiskyWork || injury.pauseAffectedTraining,
   );
-  const hasSevereProfileInjury = (inputs.injuries ?? []).some((injury) =>
-    injury.severity === 'Severe',
-  );
-  // The readiness DECLARATION dropped out: it fed the support-slot removal
-  // below, which is a count cut. `readiness === 'low'` stays — that is the
-  // CAPACITY score (the homonym), a genuine statement about what this athlete
-  // can absorb, and it is not what Sam's law governs. Injury stays too.
-  // (The stray `false ||` is a fossil of a retired tier term.)
+  // `hasSevereProfileInjury` went with the bye trigger below — it had no other
+  // reader, and a profile severity band is not a schedule fact.
+  // THE BYE MODE IS THE CONTRACT'S (Sam's readiness law, 2026-07-28).
+  //
+  // This was a SECOND representation of a decision `byeRecoveryMode` already
+  // owns, reached from different facts: the contract asked "is this a scheduled
+  // deload?" while this line asked "is the athlete low or hurt?". A lighter bye
+  // is one strength exposure instead of two, so whenever the two disagreed the
+  // week silently lost a session with no reduction recorded anywhere.
+  //
+  // Both readiness and injury are gone — the law names both ("readiness and
+  // injury never set structure; injury flows through its own law family") — and
+  // what is left reads the answer instead of recomputing it. A week with no
+  // contract falls back to the block plan's own structural statement.
   const lighterByeWeek = weekContext.isByeWeek && (
-    inputs.weekKind === 'deload' ||
-    readiness === 'low' ||
-    hasRiskRestrictedInjury ||
-    hasSevereProfileInjury
+    weeklyExposureContract
+      ? weeklyExposureContract.identity.mode === 'in_season_bye_recovery'
+      : inputs.weekKind === 'deload'
   );
 
   if (false) {
@@ -2500,7 +2506,11 @@ function buildWeeklyPlan(
       }
       condTarget = Math.max(3, Math.min(5, condTarget));
       if (offseasonPolicy?.subphase === 'early_offseason') {
-        condTarget = readiness === 'low' ? 1 : 2;
+        // Capacity left this target (Sam's readiness law, 2026-07-28): it was a
+        // COUNT, and it is the authored non-low value that survives. Early
+        // off-season work is easy and optional either way, so a low-capacity
+        // athlete loses nothing by keeping the second exposure.
+        condTarget = 2;
       }
     }
 
@@ -2512,8 +2522,10 @@ function buildWeeklyPlan(
       ? weeklyExposureContract.conditioning.additionalRequiredCount
       : preseasonPolicy
       ? preseasonPolicy.conditioning.minimumAppExposures
+      // A floor capacity can zero is not a floor (Sam's readiness law,
+      // 2026-07-28). Availability is a schedule fact and still decides it.
       : offseasonPolicy?.subphase === 'early_offseason'
-        ? (readiness === 'low' || inputs.availableDays <= 2 ? 0 : 1)
+        ? (inputs.availableDays <= 2 ? 0 : 1)
         : (isPreSeason && hasTeamDays) ? 1 : 2;
     const condViaStandaloneMax = Math.min(standaloneSlotsAvailable, condTarget);
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
@@ -2523,8 +2535,12 @@ function buildWeeklyPlan(
       : (
           trainingAgePolicy.avoidCombinedStrengthConditioning ||
           preseasonPolicy?.sessions.combinedStrengthConditioning === 'avoid' ||
+          // Capacity left this too (Sam's readiness law, 2026-07-28). Avoiding
+          // combined days suppresses the H5a conversion below, which is the
+          // safety net that enforces MIN_COND_FLOOR — so this read as a layout
+          // preference and behaved as a dropped exposure.
           (offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
-            (inputs.availableDays <= 4 || readiness === 'low'))
+            inputs.availableDays <= 4)
         );
 
     // Finishers are useful add-ons, not hidden second sessions. Keep the
@@ -3052,9 +3068,10 @@ function buildWeeklyPlan(
         teamTrainingDays: Array.from(teamDayNumSet),
         gameOrPracticeMatchDays: isGameWeek && gameDayNum !== null ? [gameDayNum] : [],
         plannedOnFeetSprintExposures,
-        // A deload KEEPS a small sharp speed dose, so it no longer withholds sprint.
-        // `readiness` here is the CAPACITY score, a different signal, and it stays.
-        readinessAllowsSprint: readiness === 'high',
+        // Neither a deload nor low capacity withholds sprint: the deload keeps a
+        // small sharp speed dose, and Bible Section 2 floors the weekly
+        // sprint/high-speed exposure at 1 year-round. The gate takes no
+        // readiness input at all now (Sam's readiness law, 2026-07-28).
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
         offseasonSubphase,
         preseasonSubphase,
@@ -3303,11 +3320,15 @@ function buildWeeklyPlan(
 
       // Standalone sprint sessions (Sprint Rescue's only legal target):
       // deny in off-season (no late-block model yet — do not pretend the
-      // app knows "late off-season"), use the exposure-counted pre-season
-      // gate for team/practice/game coverage, deny below high readiness.
+      // app knows "late off-season"), then use the exposure-counted gate for
+      // team/practice/game coverage.
+      //
+      // `readiness !== 'high'` used to deny here as well (Sam's readiness law,
+      // 2026-07-28). It was the same block as the gate's own readiness input,
+      // one layer up — which is why deleting one without the other would have
+      // left the behaviour untouched and the census at zero.
       if (requestedCategory === 'sprint' && strengthContext === 'standalone') {
         if (inputs.seasonPhase === 'Off-season') return { allow: false, reason: 'sprint_offseason_no_late_flag' };
-        if (readiness !== 'high') return { allow: false, reason: 'sprint_readiness' };
         const gate = sprintExposureGate();
         if (!gate.allowStandaloneSprint) return { allow: false, reason: gate.reason };
         return { allow: true, category: 'sprint', downgraded: false };
@@ -5974,9 +5995,8 @@ function buildWeeklyPlan(
       teamTrainingDays: Array.from(teamDaySetTail),
       gameOrPracticeMatchDays: gameAnchorDayNum !== null ? [gameAnchorDayNum] : [],
       plannedOnFeetSprintExposures: plannedSprintRows,
-      // A deload KEEPS a small sharp speed dose, so it no longer withholds sprint.
-        // `readiness` here is the CAPACITY score, a different signal, and it stays.
-        readinessAllowsSprint: readiness === 'high',
+      // As above: no readiness input. A deload keeps a small sharp speed dose,
+      // and the weekly sprint floor holds at every capacity.
       injuryAllowsSprint: !lowerLimbSprintBlocked,
       offseasonSubphase,
       preseasonSubphase,
@@ -7935,7 +7955,11 @@ function buildAIConstraints(
       )),
   );
   if (inputs.sprintExposure === 'No sprint training') {
-    sprintLoading = readiness === 'low' ? 'do-not-add' : 'conservative';
+    // An athlete who does no sprint training gets a CONSERVATIVE introduction at
+    // every capacity. `do-not-add` on low capacity was a block on a floored
+    // exposure, and 'conservative' is the authored answer for the same athlete
+    // one band up (Sam's readiness law, 2026-07-28).
+    sprintLoading = 'conservative';
   }
   if (inputs.seasonPhase === 'In-season') {
     // In-season: footy training IS the running

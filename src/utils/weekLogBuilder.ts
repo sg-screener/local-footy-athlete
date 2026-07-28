@@ -14,7 +14,8 @@
  *   doubleGameWeek     → 2+ games in markedDays this week
  *   missedTeamTraining → false (needs explicit user input — safe default)
  *   weeksOffTraining   → 0 (needs session history — safe default)
- *   readiness          → passed in, defaults to 'medium'
+ *   byeMode            → passed in from the week's accepted contract identity
+ *   readiness          → passed in, defaults to 'medium' (DOSE only)
  */
 
 import type { ResolvedDay } from './sessionResolver';
@@ -39,12 +40,18 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
  * @param markedDays        - Full calendar marks (game/rest) from calendarStore
  * @param readiness         - Athlete readiness (from onboarding or default)
  * @param conditioningPlaced - Conditioning sessions placed so far this week
+ * @param byeMode           - The week's bye mode from its accepted contract.
+ *                            Defaults to 'build': a bye is a build bye unless
+ *                            the SCHEDULE says otherwise, which is Sam's ruling
+ *                            4. Guessing 'recovery' here would reintroduce the
+ *                            count cut this parameter exists to remove.
  */
 export function buildWeekLog(
   resolvedDays: ResolvedDay[],
   markedDays: Record<string, CalendarDayType>,
   readiness: ReadinessLevel = 'medium',
   conditioningPlaced: WeekLog['sessions'] = [],
+  byeMode: WeekLog['byeMode'] = 'build',
 ): WeekLog {
   // Count game days within this specific week
   const weekDates = new Set(resolvedDays.map(d => d.date));
@@ -81,6 +88,7 @@ export function buildWeekLog(
     missedTeamTraining: false,    // Requires explicit user input — safe default
     doubleGameWeek: gamesThisWeek >= 2,
     weeksOffTraining: 0,          // Requires session history — safe default
+    byeMode,
     readiness,
   };
 }

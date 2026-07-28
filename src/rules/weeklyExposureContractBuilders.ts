@@ -428,24 +428,23 @@ function applyCommonSafetyReductions(
   return contract;
 }
 
+/**
+ * BYE RECOVERY IS SCHEDULE-TRIGGERED ONLY (Sam, ruling 4, 2026-07-28).
+ *
+ * Two triggers left this function: the capacity score and an active injury that
+ * pauses affected training. The mode carries a strength maximum of 2 against a
+ * build week's 3, so each of them cut a session — and cut it in the hardest way
+ * to see, because a MODE change records no reduction anywhere. The week simply
+ * arrives smaller, with a name that reads like a coaching decision.
+ *
+ * The scheduled deload is the intended entry condition. Fatigue routes through
+ * the deload law, which shrinks the dose while the structure holds; injury
+ * routes through its own law family, which removes affected work by name and
+ * records what it removed.
+ */
 function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
   if (input.byeMode) return input.byeMode === 'recovery';
-  // A readiness DECLARATION no longer selects this mode. Bye recovery carries a
-  // strength maximum of 2 against a build week's 3, so switching into it on
-  // `readinessDeloaded` cut a session — a count reduction dressed as a mode
-  // choice, which is exactly what Sam's law forbids and the hardest kind to see:
-  // no reduction is recorded anywhere, the week simply arrives smaller.
-  //
-  // SUPERSEDED (Sam, 2026-07-28). This used to argue that the capacity score was
-  // "a different signal this law does not govern" and could keep selecting the
-  // mode. The ruling closed that exemption: readiness and injury never set
-  // structure, and this mode carries a strength maximum of 2 against a build
-  // week's 3 — so both remaining triggers cut a session for a reason the law now
-  // forbids. Bye recovery is SCHEDULE-TRIGGERED ONLY; fatigue routes through the
-  // deload law, which shrinks the dose instead.
-  // Tracked as debt in `data/readinessStructureCensus.ts`; removed by Batch 2.
-  return input.weekKind === 'deload' || input.readiness === 'low' ||
-    (input.activeInjuries ?? []).some((injury) => injury.pauseAffectedTraining);
+  return input.weekKind === 'deload';
 }
 
 /**

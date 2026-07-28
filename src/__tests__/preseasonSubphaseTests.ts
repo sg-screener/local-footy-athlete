@@ -168,7 +168,6 @@ console.log('\n-- Sprint/COD top-up by pre-season subphase --');
     phase: 'Pre-season',
     preseasonSubphase: 'early_preseason',
     teamTrainingDays: [2],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('early pre-season one team exposure meets progressive sprint target', early.target, 1);
@@ -178,7 +177,6 @@ console.log('\n-- Sprint/COD top-up by pre-season subphase --');
     phase: 'Pre-season',
     preseasonSubphase: 'mid_preseason',
     teamTrainingDays: [2],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('mid pre-season uses the shared one-exposure sprint/COD floor', mid.target, 1);
@@ -188,7 +186,6 @@ console.log('\n-- Sprint/COD top-up by pre-season subphase --');
     phase: 'Pre-season',
     preseasonSubphase: 'late_preseason',
     gameOrPracticeMatchDays: [6],
-    readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
   eq('late practice match blocks extra sprint/COD', lateMatch.allowStandaloneSprint, false);

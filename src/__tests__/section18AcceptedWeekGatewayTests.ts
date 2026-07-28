@@ -467,7 +467,23 @@ const late = program({ phase: 'Off-season', phaseEntry: '2026-06-15' });
 const pre = program({ phase: 'Pre-season', phaseEntry: '2026-06-22' });
 const pre3 = program({ phase: 'Pre-season', phaseEntry: '2026-06-22', teamTrainingCount: 3 });
 const game = program({ phase: 'In-season', game: true, teamTrainingCount: 1 });
-const byeRecovery = program({ phase: 'In-season', low: true });
+// RE-POINTED (Sam's ruling 4 + the readiness law, 2026-07-28; applied
+// 2026-07-29). This was `program({ phase: 'In-season', low: true })` and was
+// called `byeRecovery`, because LOW CAPACITY selected the recovery mode. It no
+// longer does: the mode is schedule-triggered only. The same fixture now
+// generates a bye BUILD week, which is what it is called here.
+//
+// NOT COVERED, AND OPEN FOR SAM. The bye-RECOVERY visible shape is no longer
+// reachable from generation at all. `resolveSeasonPhaseWeekKind` schedules
+// deloads in pre-season (every 4th week) and off-season (after week 4) and NEVER
+// in-season, so with capacity and injury removed as triggers the mode has no
+// producer left in this path; the illness door deliberately changes the dose and
+// not `weekKind`. Ruling needed: which in-season schedule fact enters a bye
+// recovery week? Until it lands, that mode's shape is proven where it can still
+// be produced — `readinessDoseSweepTests` block [5] at the contract, and
+// `section18PhasePlannerTests` scenarios 12-14 with an explicit deload week.
+const inSeasonBye = program({ phase: 'In-season' });
+const byeBuildVisible = () => visibleEvaluation(inSeasonBye);
 const low = program({ phase: 'Off-season', phaseEntry: '2026-06-29', low: true });
 
 check('1 mid off-season S4 final week has only 1-2 primers',
@@ -478,8 +494,24 @@ check('2 pre-season S4 final week has only 1-2 primers',
   visibleEvaluation(pre).ledger.power.achievedPrimerCount <= 2);
 check('3 high TT/game load reduces primer count',
   visibleEvaluation(game).ledger.power.achievedPrimerCount < visibleEvaluation(mid).ledger.power.achievedPrimerCount);
-check('4 low readiness has zero primers', visibleEvaluation(low).ledger.power.achievedPrimerCount === 0);
-check('5 bye recovery has zero primers', visibleEvaluation(byeRecovery).ledger.power.achievedPrimerCount === 0);
+// RE-POINTED (2026-07-29). Both of these read "has zero primers", and the note
+// below explained why they stood while check 6 was corrected: `low` is the
+// CAPACITY score, "a different signal this law does not govern". Sam's readiness
+// law closed that exemption on 2026-07-28. Low capacity now shrinks the power
+// dose through `deloadPowerDose` instead of removing the block, so a week with
+// zero primers is the violation and a week with a small one is the law.
+check('4 low capacity KEEPS its primers, within budget', (() => {
+  const evaluation = visibleEvaluation(low);
+  return evaluation.ledger.power.achievedPrimerCount >= 1 &&
+    evaluation.ledger.power.achievedPrimerCount <=
+      (evaluation.contract.power.plannerSelectedWeeklyBudget ?? 2);
+})(), visibleEvaluation(low).ledger.power);
+check('5 in-season bye build KEEPS its primers, within budget', (() => {
+  const evaluation = byeBuildVisible();
+  return evaluation.ledger.power.achievedPrimerCount >= 1 &&
+    evaluation.ledger.power.achievedPrimerCount <=
+      (evaluation.contract.power.plannerSelectedWeeklyBudget ?? 2);
+})(), byeBuildVisible().ledger.power);
 // Re-pointed, not deleted. This read "6 deload has zero primers" — true of the
 // code, and exactly what Sam's deload law (2026-07-27) supersedes: "Power is
 // not removed on a deload; a deload is not a reason to lose sharpness." The law
@@ -488,10 +520,6 @@ check('5 bye recovery has zero primers', visibleEvaluation(byeRecovery).ledger.p
 // `powerPrimerPolicy`, which returned null on a deload week so no primer was
 // ever stamped for the budget to keep. Zero primers here was that gap showing
 // through, one layer removed from its cause.
-//
-// The other two "zero primers" checks above are NOT deload doors and stand:
-// `low` is the readiness CAPACITY score (the homonym), and a bye recovery week
-// is explicitly not a deload door.
 {
   const deloadWeek = pre.program.microcycles.find((microcycle) =>
     microcycle.weekKind === 'deload')!;
@@ -621,8 +649,14 @@ check('15 G+1 recovery is active recovery, never full rest',
     !evaluation.ledger.restStress.trueFullRestDays.includes(restDay),
     evaluation.ledger.restStress);
 }
-check('17 bye recovery has at least two true full-rest days',
-  visibleEvaluation(byeRecovery).ledger.restStress.trueFullRestDays.length >= 2);
+// Was "17 bye recovery has at least two true full-rest days" against a fixture
+// that is now a bye BUILD week. The rest minimum is contract-stated per mode, so
+// this asks the contract instead of restating one mode's number.
+check('17 an in-season bye meets its contract-stated full-rest minimum', (() => {
+  const evaluation = byeBuildVisible();
+  return evaluation.ledger.restStress.trueFullRestDays.length >=
+    evaluation.contract.restStress.requiredFullRestMinimum;
+})(), byeBuildVisible().ledger.restStress);
 {
   const aerobic = {
     ...hardConditioning(0, 'long-slow-aerobic'),
@@ -829,14 +863,22 @@ console.log('\n-- Cross-path equivalence --');
 }
 
 console.log('\n-- Accepted-week properties --');
-const generated = [mid, late, pre, pre3, game, byeRecovery, low, limitedMid, bodyweightPre];
+const generated = [mid, late, pre, pre3, game, inSeasonBye, low, limitedMid, bodyweightPre];
 check('P1 weekly primers never exceed the selected budget', generated.every((value) => {
   const evaluation = visibleEvaluation(value);
   return evaluation.ledger.power.achievedPrimerCount <=
     (evaluation.contract.power.plannerSelectedWeeklyBudget ?? 2);
 }));
-check('P2 every ineligible state has zero primers', [low, byeRecovery].every((value) =>
-  visibleEvaluation(value).ledger.power.achievedPrimerCount === 0));
+// RE-POINTED (2026-07-29). "Ineligible" was the wrong word for both members of
+// this list: low capacity and a bye recovery week are DOSE states, not gates.
+// What must hold is that neither exceeds the budget the contract selected — the
+// property the removal was hiding behind.
+check('P2 every low-dose state keeps a primer within its selected budget', [
+  visibleEvaluation(low), byeBuildVisible(),
+].every((evaluation) =>
+  evaluation.ledger.power.achievedPrimerCount >= 1 &&
+  evaluation.ledger.power.achievedPrimerCount <=
+    (evaluation.contract.power.plannerSelectedWeeklyBudget ?? 2)));
 check('P3 safe substitutes are selected before frequency reduction',
   firstWeek(limitedMid).exposureContractV2?.equipment.appConditioningFeasible === true &&
   !firstWeek(limitedMid).exposureContractV2?.authorisedReductions.some((entry) =>
@@ -860,11 +902,9 @@ check('P5 active recovery never becomes full rest', generated.every((value) => {
   const ledger = visibleEvaluation(value).ledger.restStress;
   return ledger.activeRecoveryDays.every((day) => !ledger.trueFullRestDays.includes(day));
 }));
-check('P6 visible minimum rest is enforced', [game, byeRecovery].every((value) => {
-  const evaluation = visibleEvaluation(value);
-  return evaluation.ledger.restStress.trueFullRestDays.length >=
-    evaluation.contract.restStress.requiredFullRestMinimum;
-}));
+check('P6 visible minimum rest is enforced', [visibleEvaluation(game), byeBuildVisible()].every(
+  (evaluation) => evaluation.ledger.restStress.trueFullRestDays.length >=
+    evaluation.contract.restStress.requiredFullRestMinimum));
 check('P7 app programming never exceeds the mode-specific permitted hard-day maximum', generated.every((value) =>
   !visibleEvaluation(value).blockingViolations.some((finding) => finding.code === 'hard_day_breach')));
 check('P8 every stored materially changed week passed the gateway',
@@ -1163,14 +1203,22 @@ normalAnchorCredited = normalEvaluation.ledger.anchors.length > 0 &&
   normalEvaluation.ledger.conditioning.anchorCoreCount === normalEvaluation.ledger.anchors.length;
 check('44 normal unrestricted anchors retain approved credit', normalAnchorCredited, normalEvaluation.ledger);
 
-const byeRecoveryEvaluation = visibleEvaluation(byeRecovery);
-byeRecoveryPreserved = byeRecoveryEvaluation.ledger.mainStrength.achievedCount === 2 &&
-  byeRecoveryEvaluation.ledger.conditioning.optionalRecoveryAerobicCount >= 1 &&
-  byeRecoveryEvaluation.ledger.conditioning.optionalRecoveryAerobicCount <= 2 &&
-  byeRecoveryEvaluation.ledger.restStress.trueFullRestDays.length >= 2 &&
-  byeRecoveryEvaluation.ledger.power.achievedPrimerCount === 0;
-check('45 bye-recovery 0TT retains selected recovery aerobic and two true rests',
-  byeRecoveryPreserved, byeRecoveryEvaluation.ledger);
+// RE-POINTED (2026-07-29). This asserted the bye-RECOVERY 0TT shape (two lifts,
+// 1-2 recovery aerobics, two true rests, zero primers) against a fixture that
+// low capacity used to route into that mode. It is a bye BUILD week now, so the
+// property it can still prove is the one it was really written for: a repair
+// pass that satisfies the rest minimum must not delete the week's SELECTED
+// optional work to do it. See the NOT COVERED note above for the recovery
+// shape's own coverage.
+const byeBuildEvaluation = byeBuildVisible();
+byeRecoveryPreserved = byeBuildEvaluation.ledger.restStress.trueFullRestDays.length >=
+    byeBuildEvaluation.contract.restStress.requiredFullRestMinimum &&
+  byeBuildEvaluation.ledger.conditioning.coreCount >=
+    byeBuildEvaluation.contract.conditioning.core.requiredMinimum &&
+  byeBuildEvaluation.ledger.mainStrength.achievedCount >=
+    byeBuildEvaluation.contract.mainStrength.exposure.requiredMinimum;
+check('45 an in-season bye keeps its selected work while meeting the rest minimum',
+  byeRecoveryPreserved, byeBuildEvaluation.ledger);
 
 const severeUpper = program({
   phase: 'Off-season',
