@@ -854,6 +854,50 @@ export function useHomeScreen() {
    * in which one has moved and the other has not. Leaving In-season retires
    * explicit fixture marks inside that same transaction.
    */
+  // ───────── Stored-state repair: season-phase skew ─────────
+  //
+  // Sam's device carries a profile and a clock that disagree, from a phase
+  // shift whose profile write landed before its rebuild failed. Fixing the
+  // write path does nothing for state that is already wrong, and neither
+  // value may be quietly overwritten to match the other: the clock is what
+  // the athlete's visible week is actually built from, and the profile
+  // selection is what they told us they are.
+  //
+  // So the skew is DISCLOSED, and one press reconciles it — by re-running the
+  // athlete's own selection through the same atomic transaction a deliberate
+  // phase shift uses. Nothing is deleted, the rebuild is verified, and a
+  // failure rolls back whole and leaves the disclosure standing.
+  const [seasonPhaseRepairBusy, setSeasonPhaseRepairBusy] = useState(false);
+  const [seasonPhaseRepairError, setSeasonPhaseRepairError] = useState<string | null>(null);
+
+  const handleRepairSeasonPhaseSkew = async () => {
+    if (!seasonPhaseSkew || seasonPhaseRepairBusy) return;
+    setSeasonPhaseRepairBusy(true);
+    setSeasonPhaseRepairError(null);
+    try {
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          // The athlete's selection is the aim. The clock is re-minted from
+          // it by the rebuild inside the transaction.
+          patch: { seasonPhase: seasonPhaseSkew.profileSelection },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'season_phase_skew_repair',
+      });
+      if (!result.ok) {
+        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
+        logger.error('[PhaseSkew] repair refused:', refusal.diagnostic ?? result.message);
+        setSeasonPhaseRepairError(refusal.userMessage);
+      }
+    } catch (err: any) {
+      logger.error('[PhaseSkew] repair failed:', err?.diagnostic || err?.message || err);
+      setSeasonPhaseRepairError(classifyProgramMutationRefusal({ error: err }).userMessage);
+    } finally {
+      setSeasonPhaseRepairBusy(false);
+    }
+  };
+
   const executePhaseShift = async () => {
     setRebuildMsgIdx(0);
     rebuildMsgOpacity.setValue(1);
@@ -2131,6 +2175,12 @@ export function useHomeScreen() {
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
+
+    // Season-phase skew disclosure + its one repair path
+    seasonPhaseSkew,
+    seasonPhaseRepairBusy,
+    seasonPhaseRepairError,
+    handleRepairSeasonPhaseSkew,
 
     // Rebuild modal
     rebuildModalVisible,

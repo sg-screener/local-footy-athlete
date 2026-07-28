@@ -67,14 +67,11 @@ const EQUIPMENT_SHEET_PATH = path.resolve(
   'EquipmentLimitationSheet.tsx',
 );
 const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
-const EQUIPMENT_SETTINGS_PATH = path.resolve(
-  __dirname,
-  '..',
-  'screens',
-  'profile',
-  'EquipmentSettingsScreen.tsx',
-);
-const equipmentSettings = fs.readFileSync(EQUIPMENT_SETTINGS_PATH, 'utf8');
+// EquipmentSettingsScreen.tsx was deleted by the Phase 1.6 purge (2df5165).
+// This suite went on reading it at module scope, so it has thrown ENOENT on
+// load ever since — asserting NOTHING, and unnoticed because it was never in
+// `test:bible`. It is wired into the bible gate now; a suite nothing runs is
+// worse than no suite, because it reads as coverage.
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. The actual file rendered by the Profile tab contains the MVP sections
@@ -220,87 +217,41 @@ ok(
   'usual game day row is shown only in-season',
   /currentPhase === 'In-season' \? \([\s\S]*label="Usual game day"/.test(src),
 );
+// The six assertions that used to sit here spelled out, in regex, the exact
+// shape of a `buildSetupPatch` closure inside ProfileScreen. That closure is
+// gone: the patch and the enable/disable decision were two comparisons over
+// the same fields, and when they disagreed the athlete got a Save button that
+// looked live and committed nothing.
+//
+// One owner answers both now — `rules/profileSetupChange` — and it is tested
+// BEHAVIOURALLY in seasonPhaseSkewRepairTests, which drives the decision the
+// press reads and asserts on its output rather than on its source text. What
+// remains here is the wiring a source assertion can honestly speak to: that
+// the screen reads that owner and commits through the atomic transaction.
 ok(
-  'player details stage into the accepted profile transaction',
-  /setPendingName\(trimmedName\)/.test(src)
-    && /patch\.firstName = trimmedName/.test(src)
-    && !/updateOnboardingData\(\{ firstName: trimmedName \}\)/.test(src),
+  'the setup sheet reads the one setup-change decision',
+  /decideProfileSetupChange\(/.test(src),
 );
 ok(
-  'position or training experience changes count as setup changes',
-  /const playerProgramHasChanges =[\s\S]*pendingPosition !==[\s\S]*pendingExperience !==/.test(src)
-    && /const setupHasChanges =\s*playerProgramHasChanges/.test(src),
+  'no rival patch builder survives inside the screen',
+  !/const buildSetupPatch = /.test(src),
 );
 ok(
-  'season phase and staged setup fields count as rebuild changes',
-  /pendingSeasonPhase !== currentPhase/.test(src)
-    && /lfaDayCountNeedsSync/.test(src)
-    && /!sameDays\(pendingPreferredDays/.test(src)
-    && /!sameDays\(pendingTeamDays/.test(src)
-    && /pendingIsInSeason && pendingGameDay !== dayFromGameFields/.test(src),
+  'the commit uses the same decision the button read',
+  /const patch = setupDecision\.patch/.test(src),
 );
 ok(
-  'program details save does not rebuild immediately',
-  /const saveProgramDetails = \(\) => \{[\s\S]*setPendingSeasonPhase\(draftSeasonPhase\)[\s\S]*setSetupSheetStep\('overview'\)[\s\S]*\};/.test(src)
-    && !/saveProgramDetails[\s\S]{0,500}generateProgramFromProfile/.test(src),
+  'the season phase compared against is the OWNED one, not the stored one',
+  /ownSeasonPhase\(/.test(src) && !/const currentPhase = \(onboardingData\.seasonPhase/.test(src),
 );
 ok(
-  'setup rebuild loading matches phase-shift loading style',
-  /SetupUpdateBuildingState/.test(src)
-    && /Updating your program\.\.\./.test(src)
-    && /This can take up to 1 minute/.test(src)
-    && /PROFILE_SETUP_UPDATE_MESSAGES/.test(src)
-    && /Animated\.timing\(setupUpdateMsgOpacity/.test(src)
-    && /REBUILD_MSG_INTERVAL_MS/.test(src)
-    && /setupBuildingMsg/.test(src),
+  'a blocked Save states its reason',
+  /profileSetupBlockCopy/.test(src) && /testID="profile-setup-blocked-reason"/.test(src),
 );
 ok(
-  'setup rebuild status messages are short and height-stable',
-  /Rebuilding your week\.\.\./.test(src)
-    && /Updating training days\.\.\./.test(src)
-    && /Checking team anchors\.\.\./.test(src)
-    && /Applying setup changes\.\.\./.test(src)
-    && /setupBuildingMsgSlot/.test(src)
-    && /height: 20/.test(src)
-    && /numberOfLines=\{1\}/.test(src)
-    && !/Adjusting sessions around your training days/.test(src),
-);
-ok(
-  'old plain setup rebuild loading copy removed',
-  !/Rebuilding your week around the updated setup\./.test(src),
-);
-ok(
-  'setup confirmation warns about program rebuild and coach edits',
-  /Update your program\?/.test(src)
-    && /Your program will rebuild around your updated setup\./.test(src)
-    && /Setup changes saved/.test(src)
-    && /Team and game days preserved where possible/.test(src)
-    && /Custom coach edits may be replaced/.test(src),
-);
-ok(
-  'setup update commits profile and program through one transaction',
-  /commitProfileProgramTransaction\(\{[\s\S]*kind: 'profile_setup'[\s\S]*patch[\s\S]*sourceSurface: 'profile_setup'/.test(src)
-    && !/updateOnboardingData\(patch\)/.test(src)
-    && !/setCurrentProgram\(program\)/.test(src),
-);
-ok(
-  'setup rebuild patch carries player detail fields',
-  /patch\.firstName = trimmedName/.test(src)
-    && /patch\.position = pendingPosition/.test(src)
-    && /patch\.experienceLevel = pendingExperience/.test(src),
-);
-ok(
-  'in-season game day patch preserves legacy and new game day fields',
-  /patch\.usualGameDay = pendingGameDay \?\? undefined/.test(src)
-    && /patch\.gameDay = pendingGameDay \? mapToLegacyGameDay\(pendingGameDay\) : undefined/.test(src),
-);
-ok(
-  'program setup patch carries season phase and explicit LFA day count',
-  /patch\.seasonPhase = pendingSeasonPhase/.test(src)
-    && /lfaDayCountNeedsSync/.test(src)
-    && /patch\.preferredTrainingDays = preferredDays/.test(src)
-    && /patch\.trainingDaysPerWeek = preferredDays\.length/.test(src)
-    && /patch\.trainingDaysUnsure = false/.test(src),
+  'refusals are classified by the typed refusal owner',
+  /classifyProgramMutationRefusal/.test(src)
+    && !/function classifySetupUpdateError/.test(src),
 );
 
 // ═════════════════════════════════════════════════════════════════════
@@ -641,26 +592,9 @@ ok(
     && /onPress=\{\(\) => onApply\(preset\.id\)\}/.test(equipmentSheet),
 );
 
-section('[12] Baseline equipment settings save is rebuild-aware');
-ok(
-  'EquipmentSettingsScreen uses the atomic profile/program transaction',
-  /commitProfileProgramTransaction/.test(equipmentSettings)
-    && /kind: 'baseline_equipment'/.test(equipmentSettings),
-);
-ok(
-  'EquipmentSettingsScreen delegates accepted-base rebuild and verification',
-  /todayISO[\s\S]*sourceSurface: 'equipment_settings'/.test(equipmentSettings)
-    && /if \(!result\.ok\) throw/.test(equipmentSettings),
-);
-ok(
-  'EquipmentSettingsScreen does not use chat or active equipment constraints',
-  !/upsertActiveEquipmentConstraint|setActiveConstraints|selectActiveCoachNotes|generateProgramFromProfile/.test(equipmentSettings),
-);
-ok(
-  'EquipmentSettingsScreen uses simple save confirmation copy',
-  /Equipment updated[\s\S]*Equipment saved/.test(equipmentSettings)
-    && /Equipment updated\. Your program was refreshed\.|result\.message/.test(equipmentSettings),
-);
+// Section [12] asserted the behaviour of EquipmentSettingsScreen.tsx, which
+// the Phase 1.6 purge deleted. Assertions about a file that does not exist are
+// removed rather than rewritten against a guess at its replacement.
 
 // ─── Summary ───
 console.log(`\n— Summary —`);

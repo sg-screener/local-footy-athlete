@@ -16,6 +16,10 @@ import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
 import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
 import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
+import {
+  decideProfileSetupChange,
+  profileSetupBlockCopy,
+} from '../../rules/profileSetupChange';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -384,24 +388,34 @@ export default function ProfileScreen() {
     );
   const storedTwoKmSeconds =
     (onboardingData.twoKmTimeTrial as TwoKmTimeTrialAnswer)?.seconds ?? null;
-  const playerProgramHasChanges =
-    pendingPosition !== currentRole(onboardingData) ||
-    pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null) ||
-    // Compare the TIME, not the answer object -- re-recording the same time on a
-    // new date is not a change the athlete made to their program.
-    (pendingTwoKm?.seconds ?? null) !== storedTwoKmSeconds;
-  const setupHasChanges =
-    playerProgramHasChanges ||
-    pendingSeasonPhase !== currentPhase ||
-    lfaDayCountNeedsSync ||
-    !sameDays(pendingPreferredDays, onboardingData.preferredTrainingDays as DayOfWeek[] | undefined) ||
-    !sameDays(pendingTeamDays, onboardingData.teamTrainingDays as DayOfWeek[] | undefined) ||
-    (pendingIsInSeason && pendingGameDay !== dayFromGameFields(onboardingData));
-  const canUpdateSetup =
-    pendingPreferredDays.length >= 1 &&
-    pendingGameDayValid &&
-    setupHasChanges &&
-    !isSetupUpdating;
+  // ONE decision behind Save. `setupHasChanges` and `buildSetupPatch` used to
+  // be two separate comparisons over the same fields; when they disagreed the
+  // athlete got a live-looking button that committed nothing. The patch IS
+  // the decision now — see rules/profileSetupChange.
+  const setupDecision = decideProfileSetupChange({
+    stored: onboardingData,
+    ownedPhase: currentPhase,
+    storedPosition: currentRole(onboardingData),
+    lfaDayCountNeedsSync,
+    selection: {
+      name: pendingName,
+      position: pendingPosition,
+      experience: pendingExperience,
+      twoKmSeconds: pendingTwoKm?.seconds ?? null,
+      twoKmAnswer: pendingTwoKm,
+      seasonPhase: pendingSeasonPhase,
+      preferredDays: pendingPreferredDays,
+      teamDays: pendingTeamDays,
+      gameDay: pendingGameDay,
+    },
+  });
+  const setupHasChanges = setupDecision.hasChanges;
+  const canUpdateSetup = setupDecision.canSave && !isSetupUpdating;
+  // A disabled Save always says why. A control that is off for an unstated
+  // reason is the same failure as one that is on and inert.
+  const setupBlockedCopy = setupDecision.blockedBy.length > 0
+    ? profileSetupBlockCopy(setupDecision.blockedBy[0])
+    : null;
 
   const closeSetupSheet = () => {
     if (isSetupUpdating) return;
@@ -547,64 +561,11 @@ export default function ProfileScreen() {
     );
   };
 
-  const buildSetupPatch = (): Partial<OnboardingData> => {
-    const preferredDays = sortDays(pendingPreferredDays);
-    const teamTrainingDays = sortDays(pendingTeamDays);
-    const trimmedName = pendingName.trim();
-    const currentGameDay = dayFromGameFields(onboardingData);
-    const patch: Partial<OnboardingData> = {};
-
-    if (trimmedName && trimmedName !== (onboardingData.firstName || '')) {
-      patch.firstName = trimmedName;
-    }
-    if (pendingPosition && pendingPosition !== currentRole(onboardingData)) {
-      patch.position = pendingPosition;
-    }
-    if (
-      pendingExperience &&
-      pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null)
-    ) {
-      patch.experienceLevel = pendingExperience;
-    }
-
-    if (pendingTwoKm && (pendingTwoKm.seconds ?? null) !== storedTwoKmSeconds) {
-      patch.twoKmTimeTrial = pendingTwoKm;
-    }
-
-    if (pendingSeasonPhase !== currentPhase) {
-      patch.seasonPhase = pendingSeasonPhase;
-    }
-
-    if (
-      lfaDayCountNeedsSync ||
-      !sameDays(preferredDays, onboardingData.preferredTrainingDays as DayOfWeek[] | undefined)
-    ) {
-      patch.preferredTrainingDays = preferredDays;
-      patch.trainingDaysPerWeek = preferredDays.length;
-      patch.trainingDaysUnsure = false;
-    }
-
-    if (!sameDays(teamTrainingDays, onboardingData.teamTrainingDays as DayOfWeek[] | undefined)) {
-      patch.teamTrainingDays = teamTrainingDays;
-      patch.teamTrainingDaysPerWeek = teamTrainingDays.length;
-    }
-
-    if (pendingSeasonPhase === 'In-season') {
-      if (pendingGameDay !== currentGameDay || pendingSeasonPhase !== currentPhase) {
-        patch.usualGameDay = pendingGameDay ?? undefined;
-        patch.gameDay = pendingGameDay ? mapToLegacyGameDay(pendingGameDay) : undefined;
-      }
-    } else if (currentPhase === 'In-season') {
-      patch.usualGameDay = undefined;
-      patch.gameDay = undefined;
-    }
-
-    return patch;
-  };
-
   const executeSetupUpdate = async () => {
     if (!canUpdateSetup && !setupUpdateError) return;
-    const patch = buildSetupPatch();
+    // The very same decision the button read. There is no second comparison
+    // left that could produce an empty patch behind an enabled Save.
+    const patch = setupDecision.patch;
     setSetupUpdateError(null);
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
@@ -910,6 +871,7 @@ export default function ProfileScreen() {
         teamDays={pendingTeamDays}
         gameDay={pendingGameDay}
         canUpdate={canUpdateSetup}
+        blockedCopy={setupBlockedCopy}
         error={setupUpdateError}
         isUpdating={isSetupUpdating}
         updateMsgIdx={setupUpdateMsgIdx}
@@ -1007,6 +969,8 @@ interface SetupUpdateSheetProps {
   teamDays: DayOfWeek[];
   gameDay: DayOfWeek | null;
   canUpdate: boolean;
+  /** Why Save is unavailable, or null when it is available. */
+  blockedCopy: string | null;
   error: string | null;
   isUpdating: boolean;
   updateMsgIdx: number;
@@ -1060,6 +1024,7 @@ function SetupUpdateSheet({
   teamDays,
   gameDay,
   canUpdate,
+  blockedCopy,
   error,
   isUpdating,
   updateMsgIdx,
@@ -1466,8 +1431,13 @@ function SetupUpdateSheet({
         </View>
       </View>
 
-      {!preferredValid ? (
-        <Text style={styles.sheetError}>Pick at least one LFA work day.</Text>
+      {/* A disabled Save states its reason. Before this, the button simply
+          went dead — on a phase-skewed device it went dead on the very
+          selection that would have repaired the skew, and said nothing. */}
+      {!canUpdate && blockedCopy ? (
+        <Text style={styles.sheetError} testID="profile-setup-blocked-reason">
+          {blockedCopy}
+        </Text>
       ) : null}
       <V2Button
         label="Update program"

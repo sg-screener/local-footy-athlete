@@ -124,6 +124,10 @@ export default function HomeScreenV2() {
     visibleReversibleAdjustments,
     currentProgram,
     sessionFeedback,
+    seasonPhaseSkew,
+    seasonPhaseRepairBusy,
+    seasonPhaseRepairError,
+    handleRepairSeasonPhaseSkew,
     handleClearCoachNote,
     handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
@@ -431,6 +435,39 @@ export default function HomeScreenV2() {
             onRespond={(response) =>
               void handleMissedSessionResponse(missedSessionPrompt, response)}
           />
+        )}
+
+        {/* ── Season-phase skew disclosure ──
+            Stored state that is already wrong. The profile and the program
+            clock disagree, from a phase shift whose profile write landed
+            before its rebuild failed. Neither value is quietly overwritten to
+            match the other — the athlete is told what their week is actually
+            built as, what they told us they are, and offered one press that
+            reconciles it through the same atomic transaction a deliberate
+            phase shift uses. */}
+        {seasonPhaseSkew && (
+          <View style={styles.phaseSkewCard} testID="home-season-phase-skew">
+            <Text style={styles.phaseSkewTitle}>Your program is out of step</Text>
+            <Text style={styles.phaseSkewBody}>
+              This week is still built as {seasonPhaseSkew.ownedPhase}, but you told
+              us you're {seasonPhaseSkew.profileSelection}. Nothing has been changed
+              either way — rebuild when you're ready.
+            </Text>
+            {seasonPhaseRepairError ? (
+              <Text style={styles.phaseSkewError} testID="home-season-phase-skew-error">
+                {seasonPhaseRepairError}
+              </Text>
+            ) : null}
+            <Button
+              label={seasonPhaseRepairBusy
+                ? 'Rebuilding…'
+                : `Rebuild as ${seasonPhaseSkew.profileSelection}`}
+              size="md"
+              disabled={seasonPhaseRepairBusy}
+              onPress={() => void handleRepairSeasonPhaseSkew()}
+              testID="home-season-phase-skew-repair"
+            />
+          </View>
         )}
 
         {/* ── What's shaping this week ──
@@ -3226,6 +3263,23 @@ const styles = StyleSheet.create({
   // seven day chips line up on a single row.
   dayChip: {
     minWidth: 58, alignItems: 'center',
+  },
+  phaseSkewCard: {
+    backgroundColor: '#161616',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#3A3A1A',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  phaseSkewTitle: {
+    color: '#C8FF00', fontSize: 14, fontWeight: '700', marginBottom: spacing.xs,
+  },
+  phaseSkewBody: {
+    color: '#BDBDBD', fontSize: 13, lineHeight: 19, marginBottom: spacing.md,
+  },
+  phaseSkewError: {
+    color: '#FF6B6B', fontSize: 12, marginBottom: spacing.sm,
   },
   dayChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   dayChipTextSelected: { color: '#C8FF00', fontWeight: '700' },
