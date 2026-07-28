@@ -498,6 +498,33 @@ console.log('\n[18] NAMING — the time trial never shares a token with Team Tra
   }
 }
 
+console.log('\n[19] CHANGE IT LATER — the same ingress, without re-onboarding');
+{
+  const profile = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/profile/ProfileScreen.tsx'), 'utf8'));
+
+  ok('the profile editor has a time-trial step',
+    /playerTimeTrial/.test(profile),
+    'the athlete must be able to update their time without re-onboarding');
+
+  // The whole point of one ingress: the update path and the onboarding path
+  // cannot come to disagree about what is acceptable, because they are the
+  // same call.
+  ok('the profile editor commits through the one ingress',
+    /recordTwoKmTime/.test(profile),
+    'a second writer is a second set of rules');
+  ok('the profile editor validates through the authored bound',
+    /validateTwoKmTime/.test(profile));
+  ok('the profile editor records itself as the producer',
+    /'profile_edit'/.test(profile),
+    'provenance survives the edit — the app knows where the number came from');
+
+  const boundLines = profile.split('\n')
+    .filter((l) => /twoKm|timeTrial|TimeTrial/i.test(l)).join('\n');
+  ok('the ruled numbers are not duplicated into the profile editor',
+    !/\b(300|900)\b/.test(boundLines), boundLines.trim().slice(0, 400));
+}
+
 const total = passed + failures.length;
 console.log(`\n2km time trial + MAS: passed=${passed}/${total} failures=${failures.length}`);
 if (failures.length > 0) {
