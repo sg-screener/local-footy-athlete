@@ -579,6 +579,24 @@ console.log('\n[21] It counts as a RUN — the existing gates need no change');
     counts.conditioningExposures === 1 && counts.mainStrengthExposures === 0,
     `cond=${counts.conditioningExposures} strength=${counts.mainStrengthExposures}`);
 
+  // A 2km time trial is a MAXIMAL effort. If it classifies as easy aerobic
+  // work, hard-day spacing and G-1 protection never see it and it can be
+  // stacked beside a game.
+  //
+  // This assertion exists because mutation testing found the gap: reverting
+  // `conditioningCategory` from 'vo2' to the wrong flavour string still passed
+  // every count above, because 'aerobic_base' and 'hard_conditioning' are both
+  // conditioning categories and both count as a run. Only the STRESS differs —
+  // 'high-intensity' fell through to an intensity fallback and produced
+  // aerobic_base/medium, i.e. a max-effort run rated easy.
+  ok('a time trial is a HARD exposure, not easy aerobic work',
+    counts.hardExposures === 1, `hardExposures=${counts.hardExposures}`);
+  ok('and the day is marked hard',
+    counts.hardDays === 1, `hardDays=${counts.hardDays}`);
+  ok('it classifies as hard conditioning specifically',
+    counts.byCategory.hard_conditioning === 1,
+    JSON.stringify(counts.byCategory));
+
   // Four time trials in a week is over the Bible's hard max. If the classifier
   // ever stopped seeing this as a run, the cap would silently stop applying.
   const five = ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07']
