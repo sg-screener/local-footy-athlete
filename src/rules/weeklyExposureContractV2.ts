@@ -823,7 +823,7 @@ function policyFor(input: Pick<
     case 'in_season_bye_build':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
+        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
@@ -999,36 +999,27 @@ export function resolveSection18PhasePlannerSelection(
   //                             days. This was never a rule, just an untested
   //                             assumption about what a bye looks like.
   // What remains is a pure SCHEDULE fact: enough days to hold four sessions.
-  // HELD — Sam ruled this cell but applying it breaks stored weeks. Ruled form:
-  //   input.mode === 'in_season_bye_build' && availableDayCount >= 4
-  // (both the `readiness === 'high'` and the `teamTrainingCount <= 1` conjuncts
-  // die — a bye build week may still carry 2 team days.)
+  // RULED (a) (Sam, 2026-07-28): 4 is the PREFERRED MAXIMUM / planner aim for a
+  // bye build week with room for it — never a selected target that §18 rejects
+  // stored weeks against. Freshly planned weeks aim for 4; weeks already
+  // accepted at 3 stay valid, with no migration and no rejection-on-read.
   //
-  // WHY IT IS NOT APPLIED YET. Raising the bye-build strength target from 3 to
-  // 4 makes it the planner-SELECTED target, and §18 then rejects any stored week
-  // that was built under the old target:
-  //   Section 18 final-week rejection (planner_selected_target_miss:main_strength:3)
-  // Program hydration catches that and falls back to in-memory defaults, so an
-  // existing athlete's persisted week silently empties on rehydrate. Reproduced
-  // by `legacy-program-rehydrate` in the slice-4 persistence probe.
+  // THE STANDING LAW THIS GENERALISES: a preference changes the shape of FUTURE
+  // planning and never invalidates accepted history.
   //
-  // This needs a ruling, not a patch, and there are two clean shapes:
-  //   (a) 4 is a PREFERRED maximum, not a selected target — which matches Sam's
-  //       own phrasing for bye-build CONDITIONING ("the 4th is the optional top
-  //       of range for anyone"), and leaves stored weeks valid; or
-  //   (b) 4 is the selected target and stored weeks are MIGRATED — regenerated
-  //       or re-accepted — rather than rejected on read.
-  // Applying it as-is picks (b) by accident and implements it as data loss.
-  const strongByeBuild = input.mode === 'in_season_bye_build' &&
-    input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
+  // So `strongByeBuild` is DELETED rather than rewritten. The aim of 4 already
+  // exists — this mode's policy is
+  //   strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 }
+  // so `preferred.max` is the planner aim and `defaultTarget` is the selected
+  // target §18 validates. The old branch raised the SELECTED target to 4, which
+  // is what made §18 reject a stored week built at 3 and empty it on rehydrate.
+  // Nothing needs to be added to express the ruling; the override was the defect.
 
   const unconstrainedStrength = earlyOffseason
     // RULED: early off-season strength target is 3, flat. Every session in the
     // block is optional, so the target describes what is OFFERED, not owed.
     ? Math.min(policy.strength.max, availableDayCount, 3)
-    : strongByeBuild
-      ? 4
-      : policy.strength.defaultTarget;
+    : policy.strength.defaultTarget;
   const strengthCapacity = earlyOffseason
     ? availableDayCount
     : Number.POSITIVE_INFINITY;

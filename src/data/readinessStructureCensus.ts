@@ -29,6 +29,23 @@
  * deleted — a list that keeps naming problems it has already fixed rots into
  * the `LOAD_RULING_PENDING` shape from the other side, where the contents stop
  * describing reality but still read as a considered position.
+ *
+ * PREFERENCE VS HISTORY (Sam, 2026-07-28). Paying the last contract-V2 edge
+ * produced a law worth stating on its own, because it decides HOW several of
+ * the remaining edges should land rather than merely whether they go:
+ *
+ *   A preference changes the shape of FUTURE planning. It never invalidates
+ *   accepted history.
+ *
+ * The edge that taught it raised a bye-build strength target from 3 to 4. Doing
+ * that as a planner-SELECTED target made §18 reject every stored week built at
+ * 3, and program hydration answered the rejection by falling back to in-memory
+ * defaults — an athlete's accepted week silently emptied on read. As a
+ * preferred MAXIMUM the same intent costs nothing: new weeks aim higher, and
+ * weeks already accepted stay exactly as the athlete accepted them.
+ *
+ * When a remaining edge is removed by RAISING something, check which of the two
+ * it raises. The distinction is invisible in the number and total in the effect.
  */
 
 export const READINESS_STRUCTURE_LAW = {
@@ -133,22 +150,6 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
 
   /* ── Structure debt: scheduled for removal ── */
   {
-    file: 'rules/weeklyExposureContractV2.ts',
-    edges: 1,
-    verdict: 'structure_pending_removal',
-    what: '`strongByeBuild` still requires high capacity to target 4 strength in an '
-      + 'in-season bye build week.',
-    disposition: 'RULED by Sam (Batch 2) and HELD, not forgotten. Applying it makes 4 the '
-      + 'planner-SELECTED target, and §18 then rejects any stored week built under the old '
-      + 'target of 3 — program hydration falls back to in-memory defaults and the athlete\'s '
-      + 'persisted week silently empties. Reproduced by `legacy-program-rehydrate`. Needs a '
-      + 'ruling between "4 is a preferred maximum" (matching Sam\'s own phrasing for '
-      + 'bye-build conditioning) and "4 is selected and stored weeks are migrated". Applying '
-      + 'it as-is picks the second and implements it as data loss. The other two V2 cells '
-      + 'shipped; this is the only one held.',
-    owningBatch: 'Batch 2 — awaiting Sam on stored-week migration',
-  },
-  {
     file: 'utils/coachingEngine.ts',
     edges: 36,
     verdict: 'structure_pending_removal',
@@ -231,13 +232,12 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
  * current debt — so paying debt down tightens the ratchet rather than leaving
  * slack that a later change could quietly spend.
  *
- * 48 -> 46 (2026-07-28): `weeklyExposureContractV2` paid two of its three. The
- * third is RULED but HELD — see its census entry — because applying it empties
- * stored weeks on rehydrate. The debt is 46, not 45, and saying so is the point:
- * a baseline tightened past what was actually fixed would let the held cell
- * reappear silently later.
+ * 48 -> 45 (2026-07-28): `weeklyExposureContractV2` paid all three. The third
+ * went through 46 first, held for a session while Sam ruled how it should land —
+ * the ratchet caught the held edge returning after its entry had already been
+ * deleted, which is the direction that is easy to get wrong.
  */
-export const STRUCTURE_DEBT_BASELINE = 46;
+export const STRUCTURE_DEBT_BASELINE = 45;
 
 export interface SupersededExemptionClaim {
   /** Path relative to `src/`. */

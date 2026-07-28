@@ -286,8 +286,26 @@ runCase('scenario', '8 bye build 2 TT selects S3 and one app core', () => {
 runCase('scenario', '9 bye build 3 TT selects S3 and no app core', () => {
   invariant(bye3.ledger.achieved.main_strength === 3 && bye3.appCore.length === 0 && bye3.ledger.achieved.conditioning === 3, 'incorrect bye 3TT ledger');
 });
-runCase('scenario', '10 strong low-TT bye may select S4', () => {
-  invariant(byeStrong.contract.strength.targetCount === 4 && byeStrong.ledger.achieved.main_strength === 4, 'strong bye did not select four');
+// RE-POINTED (Sam's Batch 2 ruling (a), 2026-07-28). This asserted that a
+// strong bye SELECTS four — the old `strongByeBuild` override, which raised the
+// planner-selected target. That override is deleted: 4 is the preferred maximum
+// and planner AIM, never a selected target, because raising the selection made
+// §18 reject weeks already accepted at 3 and hydration emptied them.
+// The fourth exposure is still phase-owned and still offered; it lives in
+// `preferred.max`. The scenario name changed with it — "may select" was the
+// claim being corrected, so leaving it would misdescribe what is pinned.
+runCase('scenario', '10 strong low-TT bye AIMS at S4 without selecting it', () => {
+  invariant(
+    byeStrong.contract.strength.preferred.max === 4
+      && byeStrong.contract.strength.targetCount === 3
+      && byeStrong.ledger.achieved.main_strength === 3,
+    'strong bye lost the phase-owned fourth strength aim',
+    {
+      preferredMax: byeStrong.contract.strength.preferred.max,
+      targetCount: byeStrong.contract.strength.targetCount,
+      achieved: byeStrong.ledger.achieved.main_strength,
+    },
+  );
 });
 runCase('scenario', '11 constrained bye may retain S2 only with typed reason', () => {
   invariant(byeConstrained.contract.strength.targetCount === 2 && byeConstrained.contract.reductions.some((entry) => entry.domain === 'main_strength' && entry.reason === 'insufficient_availability'), 'constrained bye lacks typed S2 ownership', byeConstrained.contract.reductions);
