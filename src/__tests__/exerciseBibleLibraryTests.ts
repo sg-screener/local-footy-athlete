@@ -121,7 +121,7 @@ for (const name of ['Vertical Jump', 'Box Jumps', 'Broad Jumps', 'RFE Split Squa
     `${name} carries lower-limb cautions`,
     tags?.injury.knee !== 'good' &&
       tags?.injury.calf !== 'good' &&
-      tags?.injury.ankle !== 'good' &&
+      tags?.injury['ankle/foot'] !== 'good' &&
       tags?.injury.hamstring !== 'good',
   );
 }
@@ -133,7 +133,7 @@ for (const name of ['Explosive Push-up', 'Speed Bench']) {
     `${name} carries upper-limb cautions`,
     tags?.injury.shoulder !== 'good' &&
       tags?.injury.elbow !== 'good' &&
-      tags?.injury.wrist !== 'good',
+      tags?.injury['wrist/hand'] !== 'good',
   );
 }
 
@@ -147,7 +147,7 @@ ok(
   'Copenhagen variants are groin/pubalgia-cautioned',
   ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen'].every((name) => {
     const tags = EXERCISE_TAGS[name];
-    return tags?.injury.adductor === 'caution' && tags?.injury.pubalgia === 'caution';
+    return tags?.injury['groin'] === 'caution' && tags?.injury['groin'] === 'caution';
   }),
 );
 

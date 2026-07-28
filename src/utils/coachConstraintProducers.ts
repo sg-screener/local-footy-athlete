@@ -113,6 +113,10 @@ const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
   hamstring: 'hamstring',
   'groin': 'groin',
   lowerBack: 'back',
+  hip: 'hip',
+  quad: 'quad',
+  neck: 'neck',
+  ribs: 'ribs',
 };
 
 export function bucketToRegion(bucket: InjuryBucket): ConstraintRegion {

@@ -22,7 +22,13 @@ const fs = require('fs');
 
 const KEYS = ['adductor', 'pubalgia', 'lowerBack', 'knee', 'hamstring', 'calf', 'ankle', 'shoulder', 'elbow', 'wrist'];
 
-const src = fs.readFileSync('src/data/exerciseTags.ts', 'utf8');
+// Ratings come from a PINNED PRE-MIGRATION SNAPSHOT, not the live file.
+// The rules were reverse-engineered from the ratings as they stood BEFORE the
+// migration wrote all 13 regions explicitly. Re-deriving them from the migrated
+// file would be circular — every cell is authored now, so "evidence" would just
+// be the rules' own output fed back in. The snapshot is the provenance.
+const RATINGS_SOURCE = process.argv[3] || 'docs/INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts';
+const src = fs.readFileSync(RATINGS_SOURCE, 'utf8');
 const mapStart = src.indexOf('export const EXERCISE_TAGS');
 const body = src.slice(mapStart);
 

@@ -40,16 +40,16 @@ function section(label: string) {
 }
 
 const INJURY_KEYS: Array<keyof InjuryProfile> = [
-  'adductor',
-  'pubalgia',
+  'groin',
+  'groin',
   'lowerBack',
   'knee',
   'hamstring',
   'calf',
-  'ankle',
+  'ankle/foot',
   'shoulder',
   'elbow',
-  'wrist',
+  'wrist/hand',
 ];
 
 const REQUESTED_CONTENT: Array<{ label: string; canonical: string }> = [
@@ -113,7 +113,7 @@ for (const item of REQUESTED_CONTENT) {
 section('[3] injury profile rules match recovery add-on content');
 for (const name of ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen', 'Adductor Rockback']) {
   const injury = EXERCISE_TAGS[name]?.injury;
-  ok(`${name} respects groin/adductor`, injury?.adductor === 'caution' && injury?.pubalgia === 'caution');
+  ok(`${name} respects groin`, injury?.['groin'] === 'caution');
 }
 
 ok('Nordic Lower avoids active hamstring issues', EXERCISE_TAGS['Nordic Lower']?.injury.hamstring === 'avoid');
@@ -125,13 +125,13 @@ for (const name of ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Overhead Ca
     injury?.lowerBack === 'caution' &&
       injury?.shoulder === 'caution' &&
       injury?.elbow === 'caution' &&
-      injury?.wrist === 'caution',
+      injury?.['wrist/hand'] === 'caution',
   );
 }
 
 for (const name of ['Calf Raises', 'Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises', 'Tib Raises']) {
   const injury = EXERCISE_TAGS[name]?.injury;
-  ok(`${name} respects calf/Achilles`, injury?.calf === 'caution' && injury?.ankle === 'caution');
+  ok(`${name} respects calf/Achilles`, injury?.calf === 'caution' && injury?.['ankle/foot'] === 'caution');
 }
 
 for (const name of ['Face Pull', 'Cable Face Pull', 'Banded External Rotation', 'Scap Push-Up', 'Bottoms-Up KB Press']) {

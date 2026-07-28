@@ -575,6 +575,207 @@ const POLICY_TABLE: Record<
     },
   },
 
+  // ── Sam's authored policies for the four regions added in the 13-region
+  // migration (2026-07-28). Drafted from his matrix rules and the existing
+  // blocks' shape, then ruled by him conversationally. ribs carries his pressing
+  // extension: bench compression and overhead work are the mechanism.
+  'hip': {
+    severe: {
+      redPatterns: ['sprint', 'running', 'lunge', 'squat', 'hinge', 'plyometric'],
+      amberPatterns: ['knee_dominant', 'posterior_chain'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'trunk', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg', 'rower_erg',
+      ],
+      globalRules: [
+        'No sprinting or running',
+        'No squatting, lunging or hinging under load',
+        'No plyos or jumping',
+      ],
+      safeTrainingFocus: ['Upper body', 'Trunk', 'Bike if pain-free'],
+      physioAdvice: PHYSIO_HARD,
+    },
+    moderate: {
+      redPatterns: ['sprint', 'plyometric'],
+      amberPatterns: ['squat', 'lunge', 'hinge', 'running'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'knee_dominant', 'posterior_chain', 'trunk', 'mobility',
+        'recovery', 'low_load_accessory', 'bike_erg', 'rower_erg',
+      ],
+      globalRules: ['No sprinting', 'No plyos or jumping', 'Reduce squat / lunge / hinge load'],
+      safeTrainingFocus: ['Upper body', 'Light bilateral lower', 'Trunk', 'Bike'],
+      physioAdvice: PHYSIO_SOFT,
+    },
+    minor: {
+      redPatterns: [],
+      amberPatterns: ['sprint', 'plyometric', 'hinge'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'squat', 'lunge', 'knee_dominant', 'posterior_chain', 'running',
+        'trunk', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg', 'rower_erg', 'ski_erg',
+      ],
+      globalRules: ['Rebuild sprinting and hinging gradually'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
+    },
+  },
+  'quad': {
+    severe: {
+      redPatterns: ['plyometric', 'sprint', 'running', 'squat', 'lunge', 'knee_dominant'],
+      amberPatterns: ['hinge', 'posterior_chain'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'trunk', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg', 'rower_erg',
+      ],
+      globalRules: [
+        'No plyos or jumping',
+        'No sprinting or running',
+        'No squatting or lunging',
+        'No loaded knee-extension work',
+      ],
+      safeTrainingFocus: ['Upper body', 'Trunk', 'Hinge work if pain-free', 'Bike if pain-free'],
+      physioAdvice: PHYSIO_HARD,
+    },
+    moderate: {
+      redPatterns: ['plyometric', 'sprint'],
+      amberPatterns: ['squat', 'lunge', 'knee_dominant', 'running'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'hinge', 'posterior_chain', 'trunk', 'mobility', 'recovery',
+        'low_load_accessory', 'bike_erg', 'rower_erg',
+      ],
+      globalRules: ['No plyos or jumping', 'No sprinting', 'Reduce squat / lunge depth and load'],
+      safeTrainingFocus: ['Upper body', 'Hinge work', 'Trunk', 'Bike'],
+      physioAdvice: PHYSIO_SOFT,
+    },
+    minor: {
+      redPatterns: [],
+      amberPatterns: ['plyometric', 'sprint', 'knee_dominant'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'squat', 'lunge', 'hinge', 'posterior_chain', 'running',
+        'trunk', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg', 'rower_erg', 'ski_erg',
+      ],
+      globalRules: ['Rebuild jumping and sprinting gradually'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
+    },
+  },
+  'neck': {
+    severe: {
+      redPatterns: ['loaded_carry', 'vertical_press', 'overhead_loading'],
+      amberPatterns: ['heavy_pull', 'grip_heavy', 'explosive_push'],
+      greenPatterns: [
+        'squat', 'lunge', 'hinge', 'knee_dominant', 'posterior_chain',
+        'horizontal_press', 'shoulder_isolation', 'trunk', 'mobility',
+        'recovery', 'low_load_accessory', 'bike_erg', 'rower_erg',
+      ],
+      globalRules: [
+        'No loaded carries',
+        'No overhead or vertical pressing',
+        'No heavy pulling that loads the traps',
+      ],
+      safeTrainingFocus: [
+        'Lower body', 'Trunk', 'Bike', 'Light horizontal pressing if pain-free',
+      ],
+      physioAdvice: PHYSIO_HARD,
+    },
+    moderate: {
+      redPatterns: ['loaded_carry', 'overhead_loading'],
+      amberPatterns: ['vertical_press', 'heavy_pull', 'grip_heavy'],
+      greenPatterns: [
+        'squat', 'lunge', 'hinge', 'knee_dominant', 'posterior_chain',
+        'horizontal_press', 'shoulder_isolation', 'explosive_push',
+        'trunk', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg', 'rower_erg',
+      ],
+      globalRules: [
+        'No loaded carries',
+        'No overhead loading',
+        'Reduce vertical pressing and heavy pulls',
+      ],
+      safeTrainingFocus: ['Lower body', 'Trunk', 'Bike', 'Horizontal pressing'],
+      physioAdvice: PHYSIO_SOFT,
+    },
+    minor: {
+      redPatterns: [],
+      amberPatterns: ['loaded_carry', 'overhead_loading'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'explosive_push',
+        'shoulder_isolation', 'heavy_pull', 'squat', 'lunge', 'hinge',
+        'knee_dominant', 'posterior_chain', 'running', 'sprint',
+        'plyometric', 'trunk', 'mobility', 'recovery',
+        'low_load_accessory', 'bike_erg', 'rower_erg', 'ski_erg',
+      ],
+      globalRules: ['Rebuild carries and overhead work gradually'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
+    },
+  },
+  'ribs': {
+    severe: {
+      redPatterns: [
+        'trunk', 'loaded_carry', 'plyometric', 'squat', 'hinge',
+        'sprint', 'running', 'horizontal_press', 'vertical_press',
+        'overhead_loading',
+      ],
+      amberPatterns: ['lunge', 'knee_dominant', 'rower_erg'],
+      greenPatterns: [
+        'shoulder_isolation', 'heavy_pull', 'posterior_chain',
+        'mobility', 'recovery', 'low_load_accessory', 'bike_erg',
+      ],
+      globalRules: [
+        'No direct trunk or bracing work',
+        'No loaded carries',
+        'No pressing - bench compression and overhead both load the ribs',
+        'No heavy squatting or hinging',
+        'No sprinting, running or plyos',
+      ],
+      safeTrainingFocus: ['Bike', 'Mobility', 'Low-load accessories'],
+      physioAdvice: PHYSIO_HARD,
+    },
+    moderate: {
+      redPatterns: ['trunk', 'plyometric', 'loaded_carry'],
+      amberPatterns: [
+        'squat', 'hinge', 'sprint', 'running', 'rower_erg',
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+      ],
+      greenPatterns: [
+        'shoulder_isolation', 'heavy_pull', 'lunge', 'knee_dominant',
+        'posterior_chain', 'mobility', 'recovery', 'low_load_accessory',
+        'bike_erg',
+      ],
+      globalRules: [
+        'No direct trunk work',
+        'No plyos or loaded carries',
+        'Reduce pressing volume - bench compression loads the ribs',
+        'Reduce bracing load in squat and hinge',
+      ],
+      safeTrainingFocus: ['Light upper body', 'Light lower body', 'Bike', 'Mobility'],
+      physioAdvice: PHYSIO_SOFT,
+    },
+    minor: {
+      redPatterns: [],
+      amberPatterns: ['trunk', 'plyometric', 'loaded_carry'],
+      greenPatterns: [
+        'horizontal_press', 'vertical_press', 'overhead_loading',
+        'explosive_push', 'shoulder_isolation', 'heavy_pull',
+        'squat', 'lunge', 'hinge', 'knee_dominant', 'posterior_chain',
+        'running', 'sprint', 'mobility', 'recovery',
+        'low_load_accessory', 'bike_erg', 'rower_erg', 'ski_erg',
+      ],
+      globalRules: ['Rebuild bracing and trunk work gradually'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
+    },
+  },
   'groin': {
     severe: {
       redPatterns: ['sprint', 'running', 'lunge', 'hinge', 'plyometric', 'adductor_groin'],

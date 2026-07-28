@@ -24,11 +24,11 @@
   },
 
   "newRegionPatternRules": {
-    "_": "Ruling 2 + amendment. Every pattern x new-region cell not listed here carries NO rule.",
+    "_": "Ruling 2 + amendment + ribs follow-up. Every pattern x new-region cell not listed here carries NO rule. Sam added the pressing patterns to ribs on 2026-07-28: bench compression and overhead work are the mechanism.",
     "quad": ["squat", "lunge", "plyo", "isolation_lower"],
     "hip": ["squat", "hinge", "lunge", "plyo", "isolation_lower"],
     "neck": ["carry", "vertical_push"],
-    "ribs": ["core", "carry", "plyo", "squat", "hinge"]
+    "ribs": ["core", "carry", "plyo", "squat", "hinge", "horizontal_push", "vertical_push"]
   },
 
   "newRegionMuscleRules": {
@@ -40,8 +40,10 @@
   },
 
   "extraExceptions": {
-    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration.",
-    "Shrugs|neck": "caution"
+    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach.",
+    "Shrugs|neck": "caution",
+    "Chest Supported Row|ribs": "caution",
+    "Chest-Supported DB Row|ribs": "caution"
   },
 
   "conditioning": {

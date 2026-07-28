@@ -140,7 +140,7 @@ section('[7] injury cautions downgrade affected focus areas');
 {
   const groin = recommendRecoveryAddonCoverage({
     phase: 'Pre-season',
-    activeInjuries: [{ bodyPart: 'groin', severity: 5, injuryKeys: ['adductor'] }],
+    activeInjuries: [{ bodyPart: 'groin', severity: 5, injuryKeys: ['groin'] }],
   });
   const adductors = byFocus(groin, 'adductors_groin');
   eq('groin issue reduces adductor status', adductors.status, 'reduced');

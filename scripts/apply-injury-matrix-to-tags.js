@@ -38,7 +38,7 @@ let rewritten = 0;
 const missing = [];
 
 body = body.replace(
-  /^( {2}'([^']+)':\s*\{[\s\S]*?)(\n {4}injury:\s*(?:SAFE|inj\(\{[\s\S]*?\}\)),)/gm,
+  /^( {2}'([^']+)':\s*\{[\s\S]*?)(\n {4}injury:\s*(?:SAFE|inj\(\{[\s\S]*?\}\)|\{[\s\S]*?\n {4}\}),)/gm,
   (whole, prefix, name, injuryClause) => {
     const row = finalByName.get(name);
     if (!row) { missing.push(name); return whole; }
@@ -69,13 +69,13 @@ source = source.replace(
 // helper there is no way to author a partial profile, so a new exercise cannot
 // enter the map half-specified. Done as two narrow deletions, each asserted, so a
 // silent no-op cannot leave the trap in place.
-function deleteBlock(text, pattern, label) {
+function deleteBlock(text, pattern, label, optional = false) {
   const next = text.replace(pattern, '');
-  if (next === text) throw new Error(`could not remove ${label} — pattern did not match`);
+  if (next === text && !optional) throw new Error(`could not remove ${label} — pattern did not match`);
   return next;
 }
-source = deleteBlock(source, /\n?\/\*\*[^*]*Default injury profile[\s\S]*?\*\/\nconst SAFE: InjuryProfile = \{[\s\S]*?\n\};\n/, 'the SAFE constant');
-source = deleteBlock(source, /\n?\/\*\*[^*]*Helper to override[\s\S]*?\*\/\nfunction inj\([\s\S]*?\n\}\n/, 'the inj() helper');
+source = deleteBlock(source, /\n?\/\*\*[^*]*Default injury profile[\s\S]*?\*\/\nconst SAFE: InjuryProfile = \{[\s\S]*?\n\};\n/, 'the SAFE constant', true);
+source = deleteBlock(source, /\n?\/\*\*[^*]*Helper to override[\s\S]*?\*\/\nfunction inj\([\s\S]*?\n\}\n/, 'the inj() helper', true);
 
 // The Scap Pull Ups note was the precedent that started this unit: the one entry
 // that wrote every key out deliberately, so a reviewed-safe rating could not be
@@ -85,6 +85,7 @@ source = deleteBlock(
   source,
   / {2}\/\/ Sam, 2026-07-28\. All TEN injury keys[\s\S]*?blank-means-good trap\.\n/,
   'the stale Scap Pull Ups note',
+  true,
 );
 source = source.replace(
   /( {2}'Scap Pull Ups': \{)/,

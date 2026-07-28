@@ -904,11 +904,11 @@ section('14. Athlete overrides (prefs filter / bias)');
     // lowerBack alone won't empty the pool. Use pubalgia=avoid instead:
     //   Back Squat, Front Squat     → pubalgia='avoid'
     //   Box Squat, High Box Squat   → pubalgia='caution'
-    // So exclude both cautions + activeInjuries=['pubalgia'] → everything drops.
+    // So exclude both cautions + activeInjuries=['groin'] → everything drops.
     const mixed: AthletePoolPrefs = {
       excluded: ['Box Squat', 'High Box Squat'],
       pinned: [],
-      activeInjuries: ['pubalgia'],
+      activeInjuries: ['groin'],
     };
     const mixedPick = selectPoolEntryAvoiding(squatAnchor, ctx, emptyAvoid, mixed);
     assert(mixedPick.name === 'Back Squat',
