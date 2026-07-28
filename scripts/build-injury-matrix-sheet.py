@@ -1,29 +1,20 @@
 #!/usr/bin/env python3
 """
-Build docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx — Sam's one-sitting ruling
-package for the injury matrix, RULES-FIRST.
+Build docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx — now the AUTHORED FINAL for the
+injury matrix, generated from Sam's ruling set.
 
-Step 3 of 3. Run from the repo root:
-
-    node    scripts/extract-injury-matrix.js       /tmp/matrix.json
-    node    scripts/derive-injury-matrix-rules.js  /tmp/matrix.json /tmp/rules.json
-    python3 scripts/build-injury-matrix-sheet.py   /tmp/rules.json \
+    node    scripts/extract-injury-matrix.js      /tmp/matrix.json
+    node    scripts/derive-injury-matrix-rules.js /tmp/matrix.json \
+            docs/INJURY_MATRIX_RULINGS_2026-07-28.json /tmp/rules.json
+    python3 scripts/build-injury-matrix-sheet.py  /tmp/rules.json \
             docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx
     npm run verify:injury-matrix-sheet
 
-── Sheet conventions, and one hard rule ──
-
-Prose on its own tab; headers on a pinned row of every data tab; openpyxl emits
-inline strings, which is what the repo's own xlsxReader models.
-
-NO BLANK ROWS ON ANY DATA TAB. Not because a blank row corrupts the file — a
-blank row emits no <row> element, so a reader never sees one at all. The hazard
-is entirely on THIS side: if the generator counts a blank row when computing a
-header's position, it is working in spreadsheet coordinates while the reader
-works in emitted-row coordinates, and the two silently differ by one. That is
-what made readSheetRecords treat a data row as a header and quietly lose a
-sign-off group on an earlier build. Keeping every tab free of blank rows keeps
-the two coordinate systems identical. Separate sections with TITLED rows.
+NO BLANK ROWS ON ANY DATA TAB. Not because a blank row corrupts the file — it
+emits no <row> element, so a reader never sees one. The hazard is generator-side:
+counting a blank row puts this script in spreadsheet coordinates while the reader
+is in emitted-row coordinates, and the two silently differ by one. That is what
+lost a sign-off group on an earlier build. Separate sections with TITLED rows.
 """
 import json
 import sys
@@ -40,19 +31,17 @@ NEW_REGIONS = data['NEW_REGIONS']
 PATTERNS = data['PATTERNS']
 MUSCLES = data['MUSCLES']
 summary = data['summary']
-
-NO_EVIDENCE = '—'
-NO_EVIDENCE_NEW = '— new region'
+declaration = data['declaration']
 
 HEAD = Font(bold=True)
 TITLE = Font(bold=True, size=13)
 WRAP = Alignment(wrap_text=True, vertical='top')
-FILL_UNANIMOUS = PatternFill('solid', fgColor='E2EFDA')   # green — one value, no argument
-FILL_SPLIT = PatternFill('solid', fgColor='FFF2CC')       # amber — split, see exceptions
-FILL_BLANK = PatternFill('solid', fgColor='F2F2F2')       # grey — author fresh
-FILL_NEW = PatternFill('solid', fgColor='DEEBF7')         # blue — new region
-FILL_CONFLICT = PatternFill('solid', fgColor='FF9999')    # red — Sam must pick
-FILL_AUTHORED = PatternFill('solid', fgColor='E2EFDA')
+FILL_EVIDENCE = PatternFill('solid', fgColor='E2EFDA')   # green — reverse-engineered
+FILL_SAM = PatternFill('solid', fgColor='DEEBF7')        # blue  — Sam authored it
+FILL_NONE = PatternFill('solid', fgColor='F2F2F2')       # grey  — no rule
+FILL_EXCEPTION = PatternFill('solid', fgColor='FFF2CC')  # amber — exception
+FILL_AVOID = PatternFill('solid', fgColor='FF9999')      # red   — avoid
+FILL_BLOCKED = PatternFill('solid', fgColor='FFC000')    # orange— blocked
 
 wb = Workbook()
 
@@ -64,124 +53,116 @@ def write_header(ws, row, columns):
         cell.alignment = WRAP
 
 
-def rule_cell(rule, region):
-    """Cell text for one rule-grid cell, carrying its evidence inline."""
-    if rule is None:
-        return NO_EVIDENCE_NEW if region in NEW_REGIONS else NO_EVIDENCE
-    if rule['unanimous']:
-        return f"{rule['value']} ·{rule['support']}/{rule['total']}"
-    return f"{rule['value']} ·{rule['support']}/{rule['total']} split"
-
-
-# ═══════════════════════════ Tab 1 — README ═══════════════════════════
+# ═══════════════════════ Tab 1 — Architecture & Rules ═══════════════════════
 ws = wb.active
-ws.title = 'README'
-readme = [
-    ('INJURY MATRIX — RULE TABLE, for Sam to correct and sign', TITLE),
-    ('One sitting. Everything that needs your ruling is in this workbook.', None),
+ws.title = 'Architecture & Rules'
+dist = summary['distribution']
+lines = [
+    ('INJURY MATRIX — AUTHORED FINAL (Sam, 2026-07-28)', TITLE),
+    ('SOURCE OF TRUTH for injury-based exercise gating. Changes require Sam.', None),
     ('', None),
-    ('Why this is a rule table and not 1,788 cells', HEAD),
-    ('EXERCISE_TAGS.injury decides whether an exercise is offered to an athlete with', None),
-    ('an active injury. 149 exercises x 12 regions is 1,788 individual ratings, and', None),
-    ('nobody should rule those one at a time.', None),
+    ('STATUS: every rule in this workbook is RULED. It is generated from', HEAD),
+    ('docs/INJURY_MATRIX_RULINGS_2026-07-28.json, which is the transcript of Sam\'s', None),
+    ('ruling set. Nothing here is hand-edited; regenerate rather than patch.', None),
     ('', None),
-    (f'So the rules come first. {summary["patternEvidence"]} pattern-axis and '
-     f'{summary["muscleEvidence"]} muscle-axis cells are', None),
-    ('pre-filled from the ratings you have ALREADY authored, with the evidence shown', None),
-    (f'in the cell. {summary["exceptions"]} exercises break their rule and are named on tab 4.', None),
+    ('THE DECLARATION — signed by Sam, 2026-07-28', HEAD),
+    (f'  "{declaration["text"]}"', None),
     ('', None),
-    ('THE RULES REPRODUCE YOUR AUTHORED DATA EXACTLY. Rules plus those', HEAD),
-    (f'{summary["exceptions"]} exceptions regenerate all {summary["authoredCells"]} '
-     'ratings authored today with zero', None),
-    ('divergences — checked every time this workbook is built, and the build FAILS if', None),
-    ('it stops being true. This is a faithful compression of your own decisions, not', None),
-    ('a summary that approximates them.', None),
+    ('That signature is what makes an unmatched cell mean something. Before it, an', None),
+    ('unmatched cell was UNRULED and had to fail the build. The old inj() default', None),
+    ('made absence look like approval; now every \'good\' traces to either a rule, an', None),
+    ('exception, or this declaration.', None),
     ('', None),
-    ('How resolution works — your ruling, 2026-07-28', HEAD),
-    ('  Rules live on EITHER axis: movement pattern (tab 2) or primary muscle (tab 3).', None),
-    ('  The STRICTEST matching rule wins.       avoid > caution > good', None),
-    ('  Named exercise exceptions (tab 4) beat all rules.', None),
+    ('RESOLUTION MODEL', HEAD),
+    ('  Rules live on EITHER axis — movement pattern or primary muscle.', None),
+    ('  The STRICTEST matching rule wins.        avoid > caution > good', None),
+    ('  Named exercise exceptions beat all rules.', None),
     ('  There is no precedence ordering to author.', None),
     ('', None),
-    ('That works because "strictest" does not care what order the axes are applied', None),
-    ('in. A squat that is also quad-dominant simply takes the stricter of the two.', None),
+    ('A lattice join plus an override. "Strictest" is associative and commutative,', None),
+    ('so the axes cannot disagree about who goes first — which is exactly why no', None),
+    ('ordering needs authoring.', None),
     ('', None),
-    ('Reading a rule cell', HEAD),
-    ('  caution ·7/7        7 exercises authored this, all agreed. Strong.', None),
-    ('  caution ·5/6 split  5 of 6 agreed; the odd one out is named on tab 4.', None),
-    ('  —                   no evidence. Author fresh, or leave blank for "no rule".', None),
-    ('  — new region        hip / quad / neck. No evidence CAN exist — they are new.', None),
+    ('THE THIRTEEN REGIONS', HEAD),
+    ('  ' + ', '.join(REGIONS), None),
     ('', None),
-    ('  BOLD                this rule currently BINDS. Colour = evidence, weight = effect.', None),
+    ('  ankle/foot and wrist/hand are single combined regions; the slash is part of', None),
+    ('  the athlete-facing label. No upper back; concussion stays with the illness', None),
+    ('  doors. ribs was added by amendment on 2026-07-28, superseding both the', None),
+    ('  earlier twelve and the "ribs stay unroutable" line.', None),
     ('', None),
-    (f'ONLY {summary["bindingRules"]} OF THE {summary["patternEvidence"] + summary["muscleEvidence"]} '
-     f'PRE-FILLED RULES CURRENTLY BIND. The other', HEAD),
-    (f'{summary["redundantRules"]} are redundant today: the two axes were derived from the same', None),
-    ('ratings, so they mostly agree, and removing one still leaves the other', None),
-    ('returning the same answer.', None),
+    (f'  NEW, with no predecessor: {", ".join(NEW_REGIONS)} — no evidence could exist', None),
+    ('  for these, so every rule on them is Sam\'s directly.', None),
     ('', None),
-    ('This matters when you edit. LOOSENING a non-bold rule will appear to do', None),
-    ('nothing — the other axis still binds. TIGHTENING any rule always has effect,', None),
-    ('because strictest wins. So redundancy is asymmetric, not harmless, and it is', None),
-    ('not a fault to fix: two agreeing axes are belt-and-braces. Tab 7 shows what the', None),
-    ('rules actually produce, so you can always check where an edit landed.', None),
+    ('THE NUMBERS', HEAD),
+    (f'  {summary["exercises"]} exercises x {summary["regions"]} regions = {summary["cells"]} cells', None),
+    (f'  caution {dist.get("caution", 0)} | avoid {dist.get("avoid", 0)} | good {dist.get("good", 0)}', None),
     ('', None),
-    ('Overwrite a cell with a bare good / caution / avoid. The ·n/n suffix is', None),
-    ('provenance and is stripped on the way in — do not tidy it away by hand.', None),
+    (f'  Rules: {summary["ruleCells"]} ({summary["samRuleCells"]} authored by Sam for the new regions)', None),
+    (f'  Exceptions: {summary["exceptions"]} ({summary["exceptionsStricter"]} stricter, '
+     f'{summary["exceptionsLooser"]} looser)', None),
+    (f'  adductor/pubalgia conflicts Sam resolved by hand: {summary["conflictsResolved"]}', None),
     ('', None),
-    ('THE ONE THING THAT IS NOT A CELL', HEAD),
-    ('If no rule matches an exercise/region and no exception names it, what is it?', None),
-    ('The safe reading is \'good\' — but that is exactly the blank-means-safe default', None),
-    ('this whole unit exists to kill, so it is not assumed. Tab 2 carries a single', None),
-    ('declaration line for you to sign. Unsigned, those cells stay UNRULED and Phase 2', None),
-    ('fails the build on them rather than guess.', None),
+    ('  Where each final cell comes from:', None),
+] + [(f'    {source}: {count}', None) for source, count in sorted(
+        summary['sourceCounts'].items(), key=lambda kv: -kv[1])] + [
     ('', None),
-    ('What is in this workbook', HEAD),
-    ('  Tab 2  Rules — movement pattern      12 patterns x 12 regions', None),
-    ('  Tab 3  Rules — primary muscle        16 muscles x 12 regions', None),
-    (f'  Tab 4  Exceptions                    {summary["exceptions"]} named, plus blanks for more', None),
-    ('  Tab 5  Conditioning — by hand        21 rows. Rules do not reach these.', None),
-    ('  Tab 6  Conflicts & routing           5 groin conflicts + 11 routing rules', None),
-    ('  Tab 7  Reference — every exercise    what the rules currently produce. Read-only.', None),
+    (f'ONLY {summary["bindingRules"]} OF THE {summary["ruleCells"]} RULES CURRENTLY BIND.', HEAD),
+    (f'The other {summary["redundantRules"]} are redundant: both axes were derived from the same', None),
+    ('ratings, so they agree, and removing one leaves the other returning the same', None),
+    ('answer. Not a fault — two agreeing axes are belt-and-braces — but asymmetric:', None),
+    ('LOOSENING a non-binding rule appears to do nothing, while TIGHTENING any rule', None),
+    ('always has effect. Binding rules are shown in BOLD on tabs 2 and 3.', None),
     ('', None),
-    ('Why conditioning is ruled by hand', HEAD),
-    ('Your ruling: no new tier/impact taxonomy gets invented for this. The 21', None),
-    ('conditioning entries have no movement-pattern rule, and you authored their', None),
-    ('muscle lists EMPTY on purpose ("session format, not an individual movement"),', None),
-    ('so BOTH axes are blind to them. Neither axis can carry a rule, so they are ruled', None),
-    ('directly on tab 5.', None),
+    ('CONDITIONING — ruled by hand, no new taxonomy', HEAD),
+    ('Both rule axes are structurally blind to the 21 conditioning rows: no', None),
+    ('movement-pattern rule, and their muscle lists are authored EMPTY on purpose', None),
+    ('("session format, not an individual movement"). So Sam ruled them directly.', None),
     ('', None),
-    ('FOLLOW-UP, logged not done: conditioning ratings should eventually key to your', None),
-    ('authored quality grid rather than being per-exercise, once Stage B\'s templates', None),
-    ('land. That is a separate unit with its own sitting — not smuggled in here.', None),
+    ("Sam's authored principle, recorded verbatim for the future quality-grid unit:", None),
+    (f'  "{data["principle"]}"', None),
     ('', None),
-    ('The 10 -> 12 migration, and what it cost', HEAD),
-    ('  adductor + pubalgia -> groin        MERGED, your ruling', None),
-    ('  ankle -> ankle/foot, wrist -> wrist/hand   renamed and widened', None),
-    ('  hip, quad, neck                     NEW. No predecessor, no evidence.', None),
+    ('STRICTER-WINS applies: the existing sprint hamstring/calf avoids stand above', None),
+    ('the blanket cautions. Easy Bike stays good deliberately — it is the escape', None),
+    ('hatch.', None),
     ('', None),
-    ('16 exercises had adductor and pubalgia agreeing, 13 had pubalgia only and 5 had', None),
-    ('adductor only — all 34 carried over as authored. The 5 that DISAGREE are on tab 6', None),
-    ('with both prior values, unruled. Nothing was auto-picked.', None),
+    ('FOLLOW-UP, logged not done: conditioning ratings should key to Sam\'s authored', None),
+    ('quality grid rather than being per-exercise, once Stage B templates land.', None),
+    ('Separate unit, separate sitting.', None),
     ('', None),
-    ('Worth knowing: pubalgia was UNREACHABLE. No free-text input in either engine', None),
-    ('ever resolved to it — not "pubalgia", not "sports hernia", not "osteitis pubis".', None),
-    ('Those 34 ratings never once fired. That is also why tab 6 Part B matters: a', None),
-    ('region nobody can reach is a region that does not exist.', None),
-    ('', None),
-    ('Out of scope: mobility contraindications (different mechanism, already yours),', None),
-    ('and any code change — code follows the signed sheet, held equal both directions.', None),
+    ('TWO THINGS THAT ARE RULED BUT NOT YET LIVE', HEAD),
+    ('  1. Three DUAL routes (hip flexor -> hip+quad, achilles -> calf+ankle/foot,', None),
+    ('     upper back -> shoulder+neck) are BLOCKED. The resolver is single-target', None),
+    ('     in the mechanism. Recorded on tab 6, not implemented, per Sam\'s own stop', None),
+    ('     condition.', None),
 ]
-for index, (text, font) in enumerate(readme, start=1):
+if summary['inertRules']:
+    lines += [
+        ('  2. The Traps -> neck muscle rule is INERT. "Traps" is in the authored', None),
+        ('     muscle vocabulary but is never a PRIMARY muscle on any strength', None),
+        ('     exercise, so the rule can never fire. Shrugs — the most neck-loading', None),
+        ('     lift in the pool — has primary "Upper back" and pattern', None),
+        ('     isolation_upper, so it matches no neck rule and lands on good via the', None),
+        ('     declaration. Recorded, flagged, and awaiting Sam. This is the same', None),
+        ('     failure mode as pubalgia: authored, and unreachable.', None),
+    ]
+for index, (text, font) in enumerate(lines, start=1):
     cell = ws.cell(row=index, column=1, value=text or None)
     if font:
         cell.font = font
 ws.column_dimensions['A'].width = 92
 
+
 # ═══════════════════ Tabs 2 & 3 — the rule grids ═══════════════════
 
-DECLARATION = ('DECLARATION — sign here: an exercise/region with NO matching rule and no '
-               'exception is  ->')
+def rule_text(rule):
+    if rule is None:
+        return '—'
+    if rule.get('source') == 'sam':
+        return f"{rule['value']} ·Sam"
+    return f"{rule['value']} ·{rule['support']}/{rule['total']}" + (
+        '' if rule['unanimous'] else ' split')
+
 
 def build_rule_tab(title, axis_label, keys, rules, preamble):
     ws = wb.create_sheet(title)
@@ -190,75 +171,62 @@ def build_rule_tab(title, axis_label, keys, rules, preamble):
         if index == 1:
             cell.font = HEAD
     header_row = len(preamble) + 1
-    write_header(ws, header_row, [axis_label] + REGIONS + ['SAM: notes'])
-
+    write_header(ws, header_row, [axis_label] + REGIONS + ['binds'])
     row_at = header_row
     for key in keys:
         row_at += 1
         ws.cell(row=row_at, column=1, value=key)
+        binds_total = 0
         for offset, region in enumerate(REGIONS):
             rule = rules[key][region]
-            cell = ws.cell(row=row_at, column=2 + offset, value=rule_cell(rule, region))
+            cell = ws.cell(row=row_at, column=2 + offset, value=rule_text(rule))
             if rule is None:
-                cell.fill = FILL_NEW if region in NEW_REGIONS else FILL_BLANK
-            elif rule['unanimous']:
-                cell.fill = FILL_UNANIMOUS
+                cell.fill = FILL_NONE
+            elif rule.get('source') == 'sam':
+                cell.fill = FILL_SAM
             else:
-                cell.fill = FILL_SPLIT
-            # BOLD = this rule currently BINDS. Colour carries evidence quality,
-            # weight carries whether the rule decides anything. A non-bold rule
-            # can be loosened with no visible effect, because the other axis
-            # already returns the same answer — see the README.
+                cell.fill = FILL_EVIDENCE
             if rule is not None and rule.get('binds'):
-                cell.font = HEAD
-    return ws, header_row, row_at
+                cell.font = HEAD          # BOLD = this rule decides something
+                binds_total += rule['binds']
+        ws.cell(row=row_at, column=2 + len(REGIONS), value=binds_total)
+    for i, w in enumerate([22] + [15] * len(REGIONS) + [8], start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.freeze_panes = f'B{header_row + 1}'
+    return header_row, row_at
 
 
-ws, PATTERN_HEADER_ROW, last = build_rule_tab(
+PATTERN_HEADER_ROW, last = build_rule_tab(
     'Rules — pattern', 'Movement pattern', PATTERNS, data['patternRules'],
-    [
-        'RULES ON THE MOVEMENT-PATTERN AXIS. Overwrite any cell with good / caution / avoid.',
-        'Strictest matching rule wins across BOTH axes; tab 4 exceptions beat every rule.',
-        'A blank cell means this pattern contributes no rule for that region — that is a',
-        'legitimate answer, not an omission.',
-    ])
-# The declaration goes on a TITLED row directly under the grid — never a blank row.
-ws.cell(row=last + 1, column=1, value=DECLARATION).font = HEAD
-ws.cell(row=last + 1, column=2, value=None).fill = FILL_CONFLICT
-PATTERN_DECLARATION_ROW = last + 1
-for i, w in enumerate([22] + [17] * len(REGIONS) + [40], start=1):
-    ws.column_dimensions[get_column_letter(i)].width = w
-ws.freeze_panes = 'B%d' % (PATTERN_HEADER_ROW + 1)
+    ['RULES ON THE MOVEMENT-PATTERN AXIS — RULED. Strictest wins across both axes.',
+     '·n/n = reverse-engineered from ratings already authored, with its support.',
+     '·Sam = authored directly by Sam (the new regions, where no evidence could exist).',
+     'BOLD = this rule currently binds. "binds" counts the cells it decides.'])
+ws = wb['Rules — pattern']
+ws.cell(row=last + 1, column=1,
+        value=f'DECLARATION (signed {declaration["by"]}, {declaration["date"]}): '
+              f'{declaration["text"]}').font = HEAD
+DECLARATION_ROW = last + 1
 
-ws, MUSCLE_HEADER_ROW, last = build_rule_tab(
+MUSCLE_HEADER_ROW, _ = build_rule_tab(
     'Rules — muscle', 'Primary muscle', MUSCLES, data['muscleRules'],
-    [
-        'RULES ON THE PRIMARY-MUSCLE AXIS. Same vocabulary, same resolution.',
-        'These use YOUR authored primary muscles from MUSCLE_EXPERIENCE_FINAL_2026-07-25.',
-        'Secondary muscles carry no rules — they would touch most of the sheet and the',
-        'signal would be worthless.',
-    ])
-for i, w in enumerate([22] + [17] * len(REGIONS) + [40], start=1):
-    ws.column_dimensions[get_column_letter(i)].width = w
-ws.freeze_panes = 'B%d' % (MUSCLE_HEADER_ROW + 1)
+    ['RULES ON THE PRIMARY-MUSCLE AXIS — RULED. Same vocabulary, same resolution.',
+     'Uses Sam\'s authored primary muscles. Secondary muscles carry no rules.',
+     'NOTE: a rule naming a muscle that is never PRIMARY anywhere cannot fire —',
+     'see the Traps/neck note on tab 1. Inert rules are reported, never dropped.'])
 
 # ═══════════════════════ Tab 4 — Exceptions ═══════════════════════
 ws = wb.create_sheet('Exceptions')
-EXC_PREAMBLE = [
-    'NAMED EXERCISE EXCEPTIONS. These beat every rule on tabs 2 and 3.',
-    'Each one is an exercise whose authored rating today DISAGREES with what the rules',
-    'would produce. They are not errors — they are where you already made a judgement the',
-    'general rule cannot express. Confirm, change, or delete each.',
-    'Deleting an exception means that exercise falls back to its rules.',
-]
-for index, line in enumerate(EXC_PREAMBLE, start=1):
+EXC = ['NAMED EXERCISE EXCEPTIONS — RULED. These beat every rule.',
+       'All 18 stand as authored (Sam, 2026-07-28). None dissolved into the new rules.',
+       'Each is where Sam already made a judgement no general rule can express.']
+for index, line in enumerate(EXC, start=1):
     cell = ws.cell(row=index, column=1, value=line)
     if index == 1:
         cell.font = HEAD
-EXCEPTION_HEADER_ROW = len(EXC_PREAMBLE) + 1
+EXCEPTION_HEADER_ROW = len(EXC) + 1
 write_header(ws, EXCEPTION_HEADER_ROW,
-             ['Exercise', 'Region', 'The rules say', 'Authored today', 'Direction',
-              'SAM: rating', 'SAM: notes'])
+             ['Exercise', 'Region', 'The rules say', 'RULED', 'Direction'])
 row_at = EXCEPTION_HEADER_ROW
 for exception in data['exceptions']:
     row_at += 1
@@ -267,159 +235,112 @@ for exception in data['exceptions']:
              exception['authored'], exception['direction']], start=1):
         cell = ws.cell(row=row_at, column=column, value=value)
         if column == 4:
-            cell.fill = FILL_AUTHORED
-# Blank-but-titled rows for Sam to add exceptions, so he never has to insert rows
-# (inserting a row above a header is the one edit that shifts the reader's index).
-for spare in range(6):
-    row_at += 1
-    ws.cell(row=row_at, column=1, value=f'(spare {spare + 1} — add an exception here)')
-for i, w in enumerate([30, 13, 18, 16, 12, 14, 44], start=1):
+            cell.fill = FILL_AVOID if value == 'avoid' else FILL_EXCEPTION
+for i, w in enumerate([30, 13, 18, 12, 12], start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
 
-# ═══════════════════ Tab 5 — Conditioning, by hand ═══════════════════
+# ═══════════════════════ Tab 5 — Conditioning ═══════════════════════
 ws = wb.create_sheet('Conditioning')
-COND_PREAMBLE = [
-    'THE 21 CONDITIONING ROWS — ruled BY HAND, per your ruling. No new taxonomy.',
-    'Both rule axes are blind here: conditioning has no movement-pattern rule, and you',
-    'authored these muscle lists EMPTY on purpose ("session format, not an individual',
-    'movement"). So no rule reaches them and no flag ever fired on them either.',
-    'These cover sprinting. A wrong \'good\' on hamstring does the most damage here.',
-    'FOLLOW-UP (logged, not done): these should eventually key to your authored quality',
-    'grid rather than being per-exercise, once Stage B templates land. Separate unit.',
-]
-for index, line in enumerate(COND_PREAMBLE, start=1):
+COND = ['CONDITIONING — RULED BY HAND (Sam, 2026-07-28). No new taxonomy.',
+        f'Principle: "{data["principle"]}"',
+        'Stricter-wins: the existing sprint hamstring/calf avoids stand above the',
+        'blanket cautions. Easy Bike stays good deliberately — it is the escape hatch.']
+for index, line in enumerate(COND, start=1):
     cell = ws.cell(row=index, column=1, value=line)
-    if index in (1, 5):
+    if index == 1:
         cell.font = HEAD
-CONDITIONING_HEADER_ROW = len(COND_PREAMBLE) + 1
-write_header(ws, CONDITIONING_HEADER_ROW, ['Exercise'] + REGIONS + ['SAM: notes'])
+CONDITIONING_HEADER_ROW = len(COND) + 1
+write_header(ws, CONDITIONING_HEADER_ROW, ['Exercise', 'Family'] + REGIONS)
 row_at = CONDITIONING_HEADER_ROW
 for row in data['conditioning']:
     row_at += 1
     ws.cell(row=row_at, column=1, value=row['name'])
+    ws.cell(row=row_at, column=2, value=row['family'])
     for offset, region in enumerate(REGIONS):
-        authored = row['authored'].get(region)
-        if authored:
-            text, fill = authored, FILL_AUTHORED
-        elif region in NEW_REGIONS:
-            text, fill = 'unruled (new region)', FILL_NEW
-        else:
-            text, fill = 'unruled', FILL_BLANK
-        ws.cell(row=row_at, column=2 + offset, value=text).fill = fill
-for i, w in enumerate([34] + [19] * len(REGIONS) + [34], start=1):
+        value = row['final'][region]
+        cell = ws.cell(row=row_at, column=3 + offset, value=value)
+        cell.fill = (FILL_AVOID if value == 'avoid'
+                     else FILL_EVIDENCE if value == 'caution' else FILL_NONE)
+for i, w in enumerate([34, 12] + [13] * len(REGIONS), start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
-ws.freeze_panes = 'B%d' % (CONDITIONING_HEADER_ROW + 1)
+ws.freeze_panes = f'C{CONDITIONING_HEADER_ROW + 1}'
 
-# ═══════════════════ Tab 6 — Conflicts & routing ═══════════════════
-ws = wb.create_sheet('Conflicts & routing')
-PART_A = [
-    'TWO things need ruling here. Nothing on this tab was auto-decided.',
-    'PART A — the 5 groin conflicts. adductor and pubalgia disagreed, so the merge left',
-    'the cell UNRULED rather than pick a winner. Taking caution under-restricts; taking',
-    'avoid over-restricts. Both prior values are shown. Write one.',
-]
-for index, line in enumerate(PART_A, start=1):
+# ═══════════════════════ Tab 6 — Routing ═══════════════════════
+ws = wb.create_sheet('Routing')
+ROUTE = ['ROUTING — free text an athlete types must reach a region. RULED.',
+         'A region nobody can reach is a region that does not exist: that is exactly',
+         'what happened to pubalgia, authored on 34 exercises and never once fired.',
+         'PART A — single-target routes. Ruled and implementable.']
+for index, line in enumerate(ROUTE, start=1):
     cell = ws.cell(row=index, column=1, value=line)
-    if index == 1:
+    if index in (1, 4):
         cell.font = HEAD
-CONFLICT_HEADER_ROW = len(PART_A) + 1
-write_header(ws, CONFLICT_HEADER_ROW,
-             ['Exercise', 'Group', 'adductor said', 'pubalgia said', 'SAM: groin =', 'SAM: notes'])
-row_at = CONFLICT_HEADER_ROW
-for row in data['rows']:
-    if not row['conflict']:
+ROUTING_HEADER_ROW = len(ROUTE) + 1
+write_header(ws, ROUTING_HEADER_ROW, ['Athlete types…', 'RULED region', 'Status'])
+row_at = ROUTING_HEADER_ROW
+for phrase, target in data['routing']['single'].items():
+    if phrase == '_':
         continue
     row_at += 1
-    for column, value in enumerate(
-            [row['name'], row['group'], row['conflict']['adductor'], row['conflict']['pubalgia']],
-            start=1):
-        cell = ws.cell(row=row_at, column=column, value=value)
-        if column in (3, 4):
-            cell.fill = FILL_CONFLICT
+    ws.cell(row=row_at, column=1, value=phrase)
+    ws.cell(row=row_at, column=2, value=target).fill = FILL_EVIDENCE
+    ws.cell(row=row_at, column=3, value='ruled — single target, implementable')
 
-# PART B — separated by TITLED rows, never blank ones.
 row_at += 1
 ws.cell(row=row_at, column=1,
-        value='PART B — ROUTING. Free text an athlete types must reach a region.').font = HEAD
+        value='PART B — DUAL-TARGET routes. RULED BY SAM, BLOCKED IN THE MECHANISM.').font = HEAD
 row_at += 1
 ws.cell(row=row_at, column=1,
-        value='Three of your new regions are silent PROXIES today and several inputs reach '
-              'NOTHING. Author these or the new columns are unreachable — which is exactly '
-              'how pubalgia died.')
+        value='resolveInjuryBucket returns InjuryBucket | null — ONE bucket. The scalar is '
+              'threaded through coachInjuryTargetResolver, programAdjustmentEngine, '
+              'trainAroundEngine, injuryAdjustmentEngine and guidedInjuryControl. Recorded, '
+              'NOT implemented, per Sam\'s own stop condition.')
 row_at += 1
-ROUTING_HEADER_ROW = row_at
-write_header(ws, ROUTING_HEADER_ROW,
-             ['Athlete types…', 'Routes to TODAY', 'Status', 'SAM: routes to', 'SAM: notes'])
-ROUTING = [
-    ('quad / quads / quadriceps', 'knee', 'PROXY — the code labels it one. quad is now a real region.'),
-    ('hip / hips', 'adductor', 'PROXY. hip is now a real region.'),
-    ('neck', 'shoulder', 'PROXY. neck is now a real region.'),
-    ('hand / hands / fingers / thumb', 'NOTHING — resolves to null', 'HOLE. Your ruling rolls these into wrist/hand.'),
-    ('foot / feet', 'ankle', 'Already correct — your ankle/foot ruling blesses it.'),
-    ('glute / glutes', 'hamstring', 'PROXY. No glute region in your twelve — hip or hamstring?'),
-    ('upper back', 'lowerBack', 'PROXY. You ruled NO upper back — is lowerBack where it lands?'),
-    ('achilles', 'calf', 'Proxy, anatomically reasonable. Confirm, or move to ankle/foot.'),
-    ('pubalgia / sports hernia / osteitis pubis', 'NOTHING — resolves to null', 'HOLE. Should these now reach groin?'),
-    ('hip flexor', 'NOTHING — resolves to null', 'HOLE. hip, quad, or groin?'),
-    ('rib / ribs', 'NOTHING — resolves to null', 'You ruled no ribs. Confirm these stay unroutable.'),
-]
-for athlete, today, status in ROUTING:
+DUAL_HEADER_ROW = row_at
+write_header(ws, DUAL_HEADER_ROW, ['Athlete types…', 'RULED regions', 'Status'])
+for phrase, targets in data['routing']['dual'].items():
+    if phrase == '_':
+        continue
     row_at += 1
-    for column, value in enumerate([athlete, today, status], start=1):
-        cell = ws.cell(row=row_at, column=column, value=value)
-        if column == 2 and 'NOTHING' in str(value):
-            cell.fill = FILL_CONFLICT
-for i, w in enumerate([40, 26, 60, 22, 32], start=1):
+    ws.cell(row=row_at, column=1, value=phrase)
+    ws.cell(row=row_at, column=2, value=' + '.join(targets)).fill = FILL_BLOCKED
+    ws.cell(row=row_at, column=3, value='BLOCKED — resolver is single-target')
+for i, w in enumerate([42, 26, 46], start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
 
-# ═══════════ Tab 7 — Reference: what the rules produce ═══════════
-ws = wb.create_sheet('Reference')
-REF_PREAMBLE = [
-    'REFERENCE — READ-ONLY. Do not rule here; rule on tabs 2-6.',
-    'This is what the rule table currently produces for every strength exercise, so you',
-    'can sanity-check a rule by seeing where it lands. Cells marked (exc) come from a',
-    'tab 4 exception; (conflict) is waiting on tab 6; blank means no rule matches and',
-    'the tab 2 declaration decides it.',
-]
-for index, line in enumerate(REF_PREAMBLE, start=1):
+# ═══════════════════════ Tab 7 — Final matrix ═══════════════════════
+ws = wb.create_sheet('Final matrix')
+FINAL = ['THE DERIVED MATRIX — every exercise x every region, fully authored.',
+         'Generated from the rules, exceptions, conditioning rulings and the signed',
+         'declaration. Not a ruling surface: change the rules, not these cells.',
+         '(exc) = a named exception decided it. (dec) = the declaration decided it.']
+for index, line in enumerate(FINAL, start=1):
     cell = ws.cell(row=index, column=1, value=line)
     if index == 1:
         cell.font = HEAD
-REFERENCE_HEADER_ROW = len(REF_PREAMBLE) + 1
-write_header(ws, REFERENCE_HEADER_ROW,
-             ['Group', 'Exercise', 'Pattern', 'Primary muscles'] + REGIONS)
-exception_keys = {(e['exercise'], e['region']) for e in data['exceptions']}
-row_at = REFERENCE_HEADER_ROW
-for row in data['strength']:
+FINAL_HEADER_ROW = len(FINAL) + 1
+write_header(ws, FINAL_HEADER_ROW, ['Group', 'Exercise', 'Pattern'] + REGIONS)
+row_at = FINAL_HEADER_ROW
+for row in data['strength'] + data['conditioning']:
     row_at += 1
-    for column, value in enumerate(
-            [row['group'], row['name'], row['movement'],
-             ', '.join(row['primary']) if row['primary'] else '—'], start=1):
+    for column, value in enumerate([row['group'], row['name'], row['movement']], start=1):
         ws.cell(row=row_at, column=column, value=value)
     for offset, region in enumerate(REGIONS):
-        if row['conflict'] and region == 'groin':
-            text, fill = '(conflict — tab 6)', FILL_CONFLICT
-        else:
-            derived = row['derived'][region]
-            if derived is None:
-                text, fill = '(no rule)', FILL_BLANK
-            elif (row['name'], region) in exception_keys:
-                text, fill = f'{derived} (exc)', FILL_SPLIT
-            else:
-                text, fill = derived, FILL_UNANIMOUS
-        ws.cell(row=row_at, column=5 + offset, value=text).fill = fill
-for i, w in enumerate([46, 30, 17, 28] + [17] * len(REGIONS), start=1):
+        value = row['final'][region]
+        source = row['finalSource'][region]
+        suffix = ' (exc)' if source == 'exception' else ' (dec)' if source == 'declaration' else ''
+        cell = ws.cell(row=row_at, column=4 + offset, value=f'{value}{suffix}')
+        cell.fill = (FILL_AVOID if value == 'avoid'
+                     else FILL_EXCEPTION if source == 'exception'
+                     else FILL_EVIDENCE if value == 'caution' else FILL_NONE)
+for i, w in enumerate([46, 30, 17] + [15] * len(REGIONS), start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
-ws.freeze_panes = 'C%d' % (REFERENCE_HEADER_ROW + 1)
+ws.freeze_panes = f'C{FINAL_HEADER_ROW + 1}'
 
 wb.save(OUT_XLSX)
 
 print(f'tabs {len(wb.sheetnames)}: {", ".join(wb.sheetnames)}')
-print(f'pattern rules {summary["patternEvidence"]}/{summary["patternGridCells"]} | '
-      f'muscle rules {summary["muscleEvidence"]}/{summary["muscleGridCells"]} | '
-      f'exceptions {summary["exceptions"]} | conditioning {summary["conditioning"]} | '
-      f'conflicts {summary["conflicts"]}')
 print(f'header rows — pattern {PATTERN_HEADER_ROW}, muscle {MUSCLE_HEADER_ROW}, '
       f'exceptions {EXCEPTION_HEADER_ROW}, conditioning {CONDITIONING_HEADER_ROW}, '
-      f'conflicts {CONFLICT_HEADER_ROW}, routing {ROUTING_HEADER_ROW}, '
-      f'reference {REFERENCE_HEADER_ROW}, declaration {PATTERN_DECLARATION_ROW}')
+      f'routing {ROUTING_HEADER_ROW}, dual {DUAL_HEADER_ROW}, final {FINAL_HEADER_ROW}, '
+      f'declaration {DECLARATION_ROW}')

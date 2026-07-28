@@ -1,0 +1,103 @@
+{
+  "_": "Sam's injury-matrix ruling set, 2026-07-28. Collected conversationally and transcribed here by one writer (Claude). This file is the AUTHORED SOURCE: the workbook and the derived matrix are generated from it, never hand-edited. Amended same day to add 'ribs' as a 13th region, superseding the earlier twelve and the 'ribs stay unroutable' line.",
+
+  "regions": [
+    "groin", "hip", "quad", "hamstring", "knee", "calf", "ankle/foot",
+    "ribs", "lowerBack", "neck", "shoulder", "elbow", "wrist/hand"
+  ],
+  "newRegions": ["hip", "quad", "neck", "ribs"],
+
+  "declaration": {
+    "signed": true,
+    "by": "Sam",
+    "date": "2026-07-28",
+    "text": "Any exercise/region cell with no matching rule and no exception = good. From here, 'good' is always authored, never assumed."
+  },
+
+  "conflictResolutions": {
+    "_": "Ruling 1. All five adductor/pubalgia conflicts resolve to caution. Sam's reasoning on record: caution's severity behaviour (untouched 1-3, reduced 4-5, removed 6+) matches how he would coach it, and the old pubalgia 'avoid' thinking survives in the stricter plyo exceptions, which stand.",
+    "Back Squat": "caution",
+    "Front Squat": "caution",
+    "Bulgarian Split Squats": "caution",
+    "Walking Lunges": "caution",
+    "Nordic Lower": "caution"
+  },
+
+  "newRegionPatternRules": {
+    "_": "Ruling 2 + amendment. Every pattern x new-region cell not listed here carries NO rule.",
+    "quad": ["squat", "lunge", "plyo", "isolation_lower"],
+    "hip": ["squat", "hinge", "lunge", "plyo", "isolation_lower"],
+    "neck": ["carry", "vertical_push"],
+    "ribs": ["core", "carry", "plyo", "squat", "hinge"]
+  },
+
+  "newRegionMuscleRules": {
+    "_": "Ruling 2 + amendment. Muscle-axis rules for the new regions. ribs has NO muscle-axis rules by ruling.",
+    "quad": ["Quads"],
+    "hip": ["Glutes", "Hips", "Outer hip"],
+    "neck": ["Traps"],
+    "ribs": []
+  },
+
+  "conditioning": {
+    "_": "Ruling 3 + amendment. Ruled BY HAND, no new taxonomy. STRICTER-WINS: existing avoids (sprint hamstring/calf) stand above these blanket cautions. Sam's authored principle, recorded verbatim for the future quality-grid unit: 'caution any region the modality's equipment or movement meaningfully uses; severity does the rest.'",
+    "principle": "caution any region the modality's equipment or movement meaningfully uses; severity does the rest.",
+    "lowerBodyRegions": ["groin", "hip", "quad", "hamstring", "knee", "calf", "ankle/foot"],
+    "families": {
+      "sprint": {
+        "members": ["Sprint Intervals", "Hill Sprints", "Quality Sprints", "MAS Training"],
+        "caution": ["__LOWER_BODY__", "shoulder", "ribs"],
+        "note": "lower body per Sam's enumeration (groin, hip, quad, knee, ankle/foot) plus hamstring/calf where existing avoid dominates; shoulder for arm drive; ribs per the amendment."
+      },
+      "run": {
+        "members": ["Long Run", "6x1km", "Tempo Run", "Flush Run"],
+        "caution": ["__LOWER_BODY__", "ribs"]
+      },
+      "row": {
+        "members": ["Hard Row Intervals", "Row Intervals", "Easy Row"],
+        "caution": ["shoulder", "wrist/hand"],
+        "note": "existing lowerBack stands"
+      },
+      "ski": {
+        "members": ["Hard SkiErg Intervals", "SkiErg Intervals", "Easy Ski"],
+        "caution": ["lowerBack", "wrist/hand"],
+        "note": "existing shoulder stands"
+      },
+      "bike": {
+        "members": ["Hard Assault Bike Intervals", "Air Bike Sprints", "Assault Bike Intervals"],
+        "caution": ["shoulder"],
+        "note": "existing knee stands; NO wrist/hand on bikes"
+      },
+      "untouched": {
+        "members": ["Easy Bike", "MetCon", "Light Circuits", "Easy Swim"],
+        "caution": [],
+        "note": "Easy Bike stays unruled-to-good deliberately — it is the escape hatch. MetCon, Light Circuits, Easy Swim: existing cells stand, rest good."
+      }
+    }
+  },
+
+  "routing": {
+    "_": "Ruling 4 + amendment. Free text -> region. Entries with two targets are BLOCKED: the resolver is single-target in the mechanism, so they are recorded as ruled but NOT implemented, per Sam's own stop condition.",
+    "single": {
+      "quad / quads / quadriceps": "quad",
+      "hip / hips": "hip",
+      "neck": "neck",
+      "hand / hands / fingers / thumb": "wrist/hand",
+      "foot / feet": "ankle/foot",
+      "glute / glutes": "hip",
+      "pubalgia / sports hernia / osteitis pubis": "groin",
+      "rib / ribs": "ribs"
+    },
+    "dual": {
+      "_": "BLOCKED pending Sam's decision — see the stop report.",
+      "hip flexor": ["hip", "quad"],
+      "achilles": ["calf", "ankle/foot"],
+      "upper back": ["shoulder", "neck"]
+    }
+  },
+
+  "exceptions": {
+    "_": "Ruling 5. All 18 stand as authored. Any that now agree with the new rules dissolve into them automatically.",
+    "allStand": true
+  }
+}
