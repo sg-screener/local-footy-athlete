@@ -698,10 +698,20 @@ const SIGNED_EXAMPLE: G1MoveContext = {
 };
 
 run('18 every athlete-facing string is filed in Sam\'s design document', () => {
-  const doc = readFileSync(
+  const whole = readFileSync(
     join(__dirname, '..', '..', 'docs', 'G1_MOVE_ASK_FLOW_DESIGN_2026-07-29.md'),
     'utf8',
   );
+  // SCOPED to the copy section. The first version read every blockquote in the
+  // file, so the moment the document quoted anything else — Sam's fixture-week
+  // ruling, in section 8 — his words were compared against athlete-facing copy
+  // and the gate went red for no product reason. The copy section is the
+  // contract; the rest of the document is prose about it.
+  const COPY_HEADING = '## 4. Warning copy';
+  const start = whole.indexOf(COPY_HEADING);
+  assert(start >= 0, `the copy section "${COPY_HEADING}" is gone from the design document`);
+  const after = whole.indexOf('\n## ', start + COPY_HEADING.length);
+  const doc = whole.slice(start, after < 0 ? undefined : after);
   // Blockquoted copy, unwrapped. Markdown hard-wraps, so a line break in the
   // document must not read as a difference in the copy: blank quote lines end a
   // paragraph, a leading "- " starts a new item, and everything else continues
