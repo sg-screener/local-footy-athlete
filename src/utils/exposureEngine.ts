@@ -46,6 +46,7 @@ import {
   compareHierarchyTiers,
   type ProgrammingHierarchyTier,
 } from '../rules/conflictResolutionHierarchy';
+import { classifySessionImpact } from '../rules/sessionImpactBands';
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -1174,11 +1175,15 @@ export function classifySessionAgainstConstraints(
   }
 
   const totalScored = decisions.length;
-  let impact: SessionImpact = 'none';
-  if (removedNames.length === 0 && limitedNames.length === 0) impact = 'none';
-  else if (totalScored > 0 && removedNames.length / totalScored >= 0.5) impact = 'high';
-  else if (removedNames.length >= 2) impact = 'moderate';
-  else impact = 'low';
+  // One owner for the impact labels (Sam, 2026-07-28, Batch 6). The same >= 0.5
+  // and >= 2 also lived in `trainAroundEngine`; two copies of a display rule
+  // agree until one is tuned, and then the same change reads "high" down one
+  // path and "moderate" down the other.
+  const impact: SessionImpact = classifySessionImpact({
+    removedCount: removedNames.length,
+    limitedCount: limitedNames.length,
+    totalScored,
+  });
 
   let action: SessionAction = 'unchanged';
   if (impact === 'none') action = 'unchanged';

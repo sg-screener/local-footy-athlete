@@ -1,5 +1,6 @@
 import type { OnboardingData, ReadinessLevel } from '../types/domain';
 import { capacityFor } from '../data/capacityRubric';
+import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export type ReadinessEnergy = 'low' | 'okay' | 'good';
 export type ReadinessSoreness = 'none' | 'mild' | 'moderate' | 'high';
@@ -124,6 +125,6 @@ export function getReadinessQuickOption(
   if (signal.energy === 'good' && signal.soreness === 'none' && !signal.flatToday) return 'good';
   if (signal.flatToday || signal.energy === 'low') return 'flat';
   if (signal.soreness === 'moderate' || signal.soreness === 'high') return 'sore';
-  if (typeof signal.timeAvailableMinutes === 'number' && signal.timeAvailableMinutes < 35) return 'short_time';
+  if (isShortOnTime(signal.timeAvailableMinutes)) return 'short_time';
   return null;
 }

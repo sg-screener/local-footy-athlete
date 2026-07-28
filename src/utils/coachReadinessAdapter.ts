@@ -4,6 +4,7 @@ import {
   buildReadinessSignalPatch,
   type ReadinessSignal,
 } from './readiness';
+import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export interface PendingReadinessClarifier {
   kind: 'soreness_body_part';
@@ -146,7 +147,11 @@ export function routeCoachReadinessMessage(input: {
         : 'fatigue_needs_program_scope',
     };
   }
-  if ((minutes != null && minutes < 45) || (TIME_RE.test(message) && minutes == null)) {
+  // RULED (Sam, 2026-07-28): one owner for "short on time", and the coach
+  // path's 45 conforms to it. Two numbers meant the same athlete on the same
+  // day was short on time through the coach and not short on time through the
+  // readiness door.
+  if (isShortOnTime(minutes) || (TIME_RE.test(message) && minutes == null)) {
     return {
       kind: 'apply_signal',
       signal: {

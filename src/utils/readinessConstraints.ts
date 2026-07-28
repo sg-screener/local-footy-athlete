@@ -7,6 +7,7 @@ import type {
 import type { ReadinessSignal } from './readiness';
 import { resolveInjuryBucket } from './programAdjustmentEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
+import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export const READINESS_CONSTRAINT_PREFIX = 'readiness:';
 
@@ -151,7 +152,7 @@ export function buildReadinessActiveConstraints(
     }
   }
 
-  if (typeof signal.timeAvailableMinutes === 'number' && signal.timeAvailableMinutes < 35) {
+  if (isShortOnTime(signal.timeAvailableMinutes)) {
     // TIME IS A SESSION FACT, NOT A READINESS STATE (Sam, 2026-07-27).
     //
     // "Short on time" used to ride the readiness ladder: it produced an untyped
@@ -173,7 +174,17 @@ export function buildReadinessActiveConstraints(
     const shortTime: ActiveScheduleConstraint = {
       ...baseFields(signal, 'short-time', 'Short time'),
       type: 'schedule',
-      severity: signal.timeAvailableMinutes < 20 ? 7 : 5,
+      // THE MINUTES->SEVERITY CONVERSION IS DEAD (Sam, 2026-07-28, Batch 4).
+      //
+      // This read `minutes < 20 ? 7 : 5` — a calendar fact scored onto the
+      // injury/fatigue ladder, where 7 means "limiting" and carries program
+      // consequences a busy Tuesday must never carry. The comment above already
+      // said time is a session fact and not a readiness state; the severity
+      // field was the last place it still behaved like one.
+      //
+      // The cap now carries the MINUTES, which is the whole fact. Severity is
+      // the floor of the shared scale: recorded, never scoring the athlete.
+      severity: 1,
       scheduleKind: 'time_cap',
       maxSessionMinutes: signal.timeAvailableMinutes,
       timeCapDates: [signal.date.slice(0, 10)],
