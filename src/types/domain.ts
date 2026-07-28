@@ -18,6 +18,34 @@ export type Position = RoleBucket | LegacyPosition;
 // Experience level types
 export type ExperienceLevel = 'Complete beginner' | '1-2 years' | '2-5 years' | '5+ years';
 
+/** Who produced a recorded 2km time. Every one routes through `recordTwoKmTime`. */
+export type TwoKmTimeTrialSource = 'onboarding' | 'profile_edit' | 'session_log';
+
+/**
+ * The athlete's answer to "what's your recent 2km time?" (D14).
+ *
+ * `seconds: null` is a REAL ANSWER — "I haven't tested it" — not an absence.
+ * This follows the `SquatStrength` precedent, where "I don't squat / not sure"
+ * is a first-class value rather than an empty field, and it matters
+ * mechanically: the onboarding step registry resumes an interrupted flow from
+ * the first unsatisfied step, so a skip that wrote nothing would send the
+ * athlete back to a screen they had already dismissed.
+ *
+ * One shape, not a discriminated union — `strictNullChecks` is off in this repo,
+ * so a union would not narrow on its discriminant.
+ *
+ * There is deliberately NO `masKmh` field. MAS is derived from `seconds` on
+ * demand (`data/twoKmTimeTrial`), never stored beside it: a stored MAS is a
+ * second representation of the same fact, and second representations drift.
+ */
+export interface TwoKmTimeTrialAnswer {
+  /** Seconds for the 2km, or `null` for "haven't tested". */
+  readonly seconds: number | null;
+  /** ISO date the answer was recorded. */
+  readonly recordedOn: string;
+  readonly source: TwoKmTimeTrialSource;
+}
+
 // Subscription status types
 export type SubscriptionStatus = 'free' | 'trial' | 'active' | 'cancelled' | 'expired';
 
@@ -117,6 +145,14 @@ export interface OnboardingData {
   experienceLevel?: ExperienceLevel;
   squatStrength?: SquatStrength;
   benchStrength?: BenchStrength;
+  /**
+   * The athlete's 2km time trial (D14). `seconds: null` is a real answer —
+   * "haven't tested" — not an absence, so a skip is distinguishable from a
+   * step never reached.
+   *
+   * MAS is DERIVED from this, never stored beside it. See `data/twoKmTimeTrial`.
+   */
+  twoKmTimeTrial?: TwoKmTimeTrialAnswer;
   conditioningLevel?: ConditioningLevel;
   sprintExposure?: SprintExposure;
   recentTrainingLoad?: RecentTrainingLoad;

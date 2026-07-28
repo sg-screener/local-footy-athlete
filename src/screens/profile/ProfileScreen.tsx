@@ -40,8 +40,13 @@ import {
   normalizeRoleBucket,
   roleBucketLabel,
 } from '../../utils/roleBuckets';
-import type { DayOfWeek, ExperienceLevel, OnboardingData, RoleBucket, SeasonPhase } from '../../types/domain';
+import type { DayOfWeek, ExperienceLevel, OnboardingData, RoleBucket, SeasonPhase, TwoKmTimeTrialAnswer } from '../../types/domain';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import {
+  formatTwoKmTime,
+  recordTwoKmTime,
+  validateTwoKmTime,
+} from '../../data/twoKmTimeTrial';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 
 type SetupSheetStep =
@@ -49,6 +54,7 @@ type SetupSheetStep =
   | 'playerName'
   | 'playerPosition'
   | 'playerExperience'
+  | 'playerTimeTrial'
   | 'programPhase'
   | 'programLfaDays'
   | 'programTeamDays'
@@ -134,6 +140,28 @@ export default function ProfileScreen() {
   const [isDevResetting, setIsDevResetting] = useState(false);
   const [setupSheetVisible, setSetupSheetVisible] = useState(false);
   const [setupSheetStep, setSetupSheetStep] = useState<SetupSheetStep>('overview');
+  // The 2km time trial (D14). Held as the two boxes the athlete types into,
+  // committed as one answer through `recordTwoKmTime`. `null` seconds is the
+  // real answer "haven't tested", so an athlete can also RETRACT a time here.
+  const [draftTwoKmMinutes, setDraftTwoKmMinutes] = useState('');
+  const [draftTwoKmSeconds, setDraftTwoKmSeconds] = useState('');
+  const [pendingTwoKm, setPendingTwoKm] =
+    useState<TwoKmTimeTrialAnswer | null>(null);
+
+  // A blank seconds box means ":00". A blank MINUTES box is not a time at all,
+  // and NaN is refused by the bound rather than coerced to something plausible.
+  const draftTwoKmTotal = draftTwoKmMinutes.trim() === ''
+    ? NaN
+    : parseInt(draftTwoKmMinutes, 10) * 60
+      + (draftTwoKmSeconds.trim() === '' ? 0 : parseInt(draftTwoKmSeconds, 10));
+  const draftTwoKmStarted =
+    draftTwoKmMinutes.trim() !== '' || draftTwoKmSeconds.trim() !== '';
+  const draftTwoKmValidation = draftTwoKmStarted
+    ? validateTwoKmTime(draftTwoKmTotal)
+    : null;
+  const draftTwoKmError = draftTwoKmValidation && !draftTwoKmValidation.ok
+    ? draftTwoKmValidation.message
+    : null;
   const [pendingName, setPendingName] = useState(onboardingData.firstName || '');
   const [pendingPosition, setPendingPosition] = useState<RoleBucket | null>(
     currentRole(onboardingData),
@@ -258,6 +286,7 @@ export default function ProfileScreen() {
     setDraftName(pendingName);
     setDraftPosition(pendingPosition);
     setDraftExperience(pendingExperience);
+    seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
     setSetupSheetStep('playerName');
   };
@@ -285,6 +314,9 @@ export default function ProfileScreen() {
     setDraftName(currentName);
     setDraftPosition(currentPosition);
     setDraftExperience(currentExperience);
+    const currentTwoKm = (onboardingData.twoKmTimeTrial as TwoKmTimeTrialAnswer) || null;
+    setPendingTwoKm(currentTwoKm);
+    seedTwoKmDrafts(currentTwoKm);
     setPendingSeasonPhase(currentSeasonPhase);
     setPendingPreferredDays(currentPreferredDays);
     setPendingTeamDays(currentTeamDays);
@@ -325,9 +357,14 @@ export default function ProfileScreen() {
       onboardingData.trainingDaysUnsure === true ||
       (onboardingData.trainingDaysPerWeek ?? 0) !== pendingPreferredDays.length
     );
+  const storedTwoKmSeconds =
+    (onboardingData.twoKmTimeTrial as TwoKmTimeTrialAnswer)?.seconds ?? null;
   const playerProgramHasChanges =
     pendingPosition !== currentRole(onboardingData) ||
-    pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null);
+    pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null) ||
+    // Compare the TIME, not the answer object -- re-recording the same time on a
+    // new date is not a change the athlete made to their program.
+    (pendingTwoKm?.seconds ?? null) !== storedTwoKmSeconds;
   const setupHasChanges =
     playerProgramHasChanges ||
     pendingSeasonPhase !== currentPhase ||
@@ -351,6 +388,10 @@ export default function ProfileScreen() {
   const goBackInSetupSheet = () => {
     if (isSetupUpdating) return;
     setSetupUpdateError(null);
+    if (setupSheetStep === 'playerTimeTrial') {
+      setSetupSheetStep('playerExperience');
+      return;
+    }
     if (setupSheetStep === 'playerExperience') {
       setSetupSheetStep('playerPosition');
       return;
@@ -382,6 +423,7 @@ export default function ProfileScreen() {
     setDraftName(pendingName);
     setDraftPosition(pendingPosition);
     setDraftExperience(pendingExperience);
+    seedTwoKmDrafts(pendingTwoKm);
     setSetupUpdateError(null);
     setSetupSheetStep('overview');
   };
@@ -395,6 +437,33 @@ export default function ProfileScreen() {
     setSetupSheetStep('overview');
   };
 
+  /** Load an existing answer back into the two boxes, or clear them. */
+  function seedTwoKmDrafts(answer: TwoKmTimeTrialAnswer | null) {
+    if (!answer || answer.seconds === null) {
+      setDraftTwoKmMinutes('');
+      setDraftTwoKmSeconds('');
+      return;
+    }
+    setDraftTwoKmMinutes(String(Math.floor(answer.seconds / 60)));
+    setDraftTwoKmSeconds(String(answer.seconds % 60).padStart(2, '0'));
+  }
+
+  /**
+   * Commit a 2km time from the profile editor.
+   *
+   * Through `recordTwoKmTime`, exactly as onboarding does. That is the whole
+   * reason the ingress exists: the update path and the onboarding path cannot
+   * come to disagree about what is acceptable, because they are one call. The
+   * bound refuses both with the same sentence, and neither ever clamps.
+   */
+  const commitTwoKm = (seconds: number | null) => {
+    const result = recordTwoKmTime(seconds, 'profile_edit', todayISOLocal());
+    if (!result.ok) return;
+    setPendingTwoKm(result.answer);
+    setSetupUpdateError(null);
+    setSetupSheetStep('overview');
+  };
+
   const savePlayerDetails = () => {
     const trimmedName = draftName.trim();
     if (!trimmedName || !draftPosition || !draftExperience) return;
@@ -404,7 +473,7 @@ export default function ProfileScreen() {
     setPendingExperience(draftExperience);
 
     setSetupUpdateError(null);
-    setSetupSheetStep('overview');
+    setSetupSheetStep('playerTimeTrial');
   };
 
   const saveProgramDetails = () => {
@@ -453,6 +522,10 @@ export default function ProfileScreen() {
       pendingExperience !== ((onboardingData.experienceLevel as ExperienceLevel) || null)
     ) {
       patch.experienceLevel = pendingExperience;
+    }
+
+    if (pendingTwoKm && (pendingTwoKm.seconds ?? null) !== storedTwoKmSeconds) {
+      patch.twoKmTimeTrial = pendingTwoKm;
     }
 
     if (pendingSeasonPhase !== currentPhase) {
@@ -789,6 +862,14 @@ export default function ProfileScreen() {
         onSetDraftPosition={setDraftPosition}
         onSetDraftExperience={setDraftExperience}
         onSetDraftSeasonPhase={setDraftSeasonPhase}
+        draftTwoKmMinutes={draftTwoKmMinutes}
+        draftTwoKmSeconds={draftTwoKmSeconds}
+        draftTwoKmError={draftTwoKmError}
+        draftTwoKmValid={Boolean(draftTwoKmValidation?.ok)}
+        draftTwoKmTotal={draftTwoKmTotal}
+        onSetDraftTwoKmMinutes={setDraftTwoKmMinutes}
+        onSetDraftTwoKmSeconds={setDraftTwoKmSeconds}
+        onCommitTwoKm={commitTwoKm}
         onCancelPlayerDetails={cancelPlayerDetailsEdit}
         onSavePlayerDetails={savePlayerDetails}
         onToggleDraftPreferredDay={toggleDraftPreferredDay}
@@ -854,6 +935,11 @@ interface SetupUpdateSheetProps {
   draftName: string;
   draftPosition: RoleBucket | null;
   draftExperience: ExperienceLevel | null;
+  draftTwoKmMinutes: string;
+  draftTwoKmSeconds: string;
+  draftTwoKmError: string | null;
+  draftTwoKmValid: boolean;
+  draftTwoKmTotal: number;
   draftSeasonPhase: SeasonPhase;
   draftPreferredDays: DayOfWeek[];
   draftTeamDays: DayOfWeek[];
@@ -872,6 +958,9 @@ interface SetupUpdateSheetProps {
   onSetDraftName: (name: string) => void;
   onSetDraftPosition: (position: RoleBucket) => void;
   onSetDraftExperience: (experience: ExperienceLevel) => void;
+  onSetDraftTwoKmMinutes: (value: string) => void;
+  onSetDraftTwoKmSeconds: (value: string) => void;
+  onCommitTwoKm: (seconds: number | null) => void;
   onSetDraftSeasonPhase: (phase: SeasonPhase) => void;
   onCancelPlayerDetails: () => void;
   onSavePlayerDetails: () => void;
@@ -897,6 +986,11 @@ function SetupUpdateSheet({
   draftName,
   draftPosition,
   draftExperience,
+  draftTwoKmMinutes,
+  draftTwoKmSeconds,
+  draftTwoKmError,
+  draftTwoKmValid,
+  draftTwoKmTotal,
   draftSeasonPhase,
   draftPreferredDays,
   draftTeamDays,
@@ -915,6 +1009,9 @@ function SetupUpdateSheet({
   onSetDraftName,
   onSetDraftPosition,
   onSetDraftExperience,
+  onSetDraftTwoKmMinutes,
+  onSetDraftTwoKmSeconds,
+  onCommitTwoKm,
   onSetDraftSeasonPhase,
   onCancelPlayerDetails,
   onSavePlayerDetails,
@@ -1030,10 +1127,69 @@ function SetupUpdateSheet({
         })}
       </View>
       <V2Button
-        label="Save player details"
+        label="Continue"
         size="lg"
         disabled={!draftName.trim() || !draftPosition || !draftExperience}
         onPress={onSavePlayerDetails}
+      />
+      <V2Button
+        label="Cancel"
+        variant="secondary"
+        size="md"
+        onPress={onCancelPlayerDetails}
+        style={styles.sheetSecondaryButton}
+      />
+    </>
+  ) : step === 'playerTimeTrial' ? (
+    /* The 2km time trial (D14) -- the change-it-later door. Same two boxes as
+       onboarding, same ingress, same refusal sentence. The ruled numbers are
+       not restated here: whatever `validateTwoKmTime` says is what shows. */
+    <>
+      <Text style={styles.sheetTitle}>What’s your recent 2km time?</Text>
+      <Text style={styles.sheetHint}>
+        Sets your running paces. Leave it blank if you haven’t tested.
+      </Text>
+      <View style={styles.twoKmRow}>
+        <View style={styles.twoKmField}>
+          <Text style={styles.twoKmLabel}>Minutes</Text>
+          <AppTextInput
+            style={styles.twoKmInput}
+            placeholder="7"
+            placeholderTextColor={colors.text.tertiary}
+            value={draftTwoKmMinutes}
+            onChangeText={onSetDraftTwoKmMinutes}
+            keyboardType="numeric"
+          />
+        </View>
+        <View style={styles.twoKmField}>
+          <Text style={styles.twoKmLabel}>Seconds</Text>
+          <AppTextInput
+            style={styles.twoKmInput}
+            placeholder="15"
+            placeholderTextColor={colors.text.tertiary}
+            value={draftTwoKmSeconds}
+            onChangeText={onSetDraftTwoKmSeconds}
+            keyboardType="numeric"
+          />
+        </View>
+      </View>
+      {draftTwoKmError ? (
+        <Text style={styles.twoKmError}>{draftTwoKmError}</Text>
+      ) : null}
+      <V2Button
+        label="Save player details"
+        size="lg"
+        disabled={!draftTwoKmValid}
+        onPress={() => onCommitTwoKm(draftTwoKmTotal)}
+      />
+      {/* Retracting a time is an answer too -- an athlete who mistyped one
+          months ago must be able to say "actually, I haven't tested". */}
+      <V2Button
+        label="I haven’t tested it"
+        variant="secondary"
+        size="md"
+        onPress={() => onCommitTwoKm(null)}
+        style={styles.sheetSecondaryButton}
       />
       <V2Button
         label="Cancel"
@@ -1582,6 +1738,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 62,
+  },
+  sheetHint: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  twoKmRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: spacing.md,
+  },
+  twoKmField: {
+    flex: 1,
+    minWidth: 0,
+  },
+  twoKmLabel: {
+    color: colors.text.secondary,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  twoKmInput: {
+    minHeight: 56,
+    backgroundColor: colors.surface.secondary,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.surface.tertiary,
+    paddingHorizontal: 14,
+    color: colors.text.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  twoKmError: {
+    color: colors.status.error,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing.md,
   },
   playerExperienceStack: {
     gap: 12,

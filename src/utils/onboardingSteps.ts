@@ -30,6 +30,7 @@ export type OnboardingStepName =
   | 'GymExperience'
   | 'SquatStrength'
   | 'BenchStrength'
+  | 'TwoKmTimeTrial'
   | 'ConditioningLevel'
   | 'SprintExposure'
   | 'RecentTrainingLoad'
@@ -156,6 +157,20 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['benchStrength'],
     visible: notBeginner,
     satisfied: (data) => filled(data.benchStrength),
+  },
+  {
+    name: 'TwoKmTimeTrial',
+    answerLabel: 'your 2km time',
+    collects: ['twoKmTimeTrial'],
+    // Squat and bench are hidden from complete beginners; the time trial is
+    // not. A beginner is exactly who most needs the ruled default pace, and
+    // plenty have run a club 2km without ever having touched a barbell.
+    visible: always,
+    // Answering "haven't tested" writes `seconds: null`, which is an ANSWER.
+    // The step is satisfied by the field being present at all — if a skip were
+    // treated as unanswered, an interrupted flow would resume onto a screen the
+    // athlete had already dismissed, forever.
+    satisfied: (data) => data.twoKmTimeTrial !== undefined && data.twoKmTimeTrial !== null,
   },
   {
     name: 'ConditioningLevel',

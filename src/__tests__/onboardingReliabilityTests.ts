@@ -225,6 +225,9 @@ const COMPLETE_IN_SEASON_PROFILE: OnboardingData = {
   experienceLevel: 'Intermediate',
   squatStrength: 'Bodyweight x1',
   benchStrength: 'Bodyweight x1',
+  // D14. `seconds` carries a real time here; the skip case (`seconds: null`)
+  // is covered in twoKmTimeTrialTests, which owns that distinction.
+  twoKmTimeTrial: { seconds: 435, recordedOn: '2026-07-29', source: 'onboarding' },
   conditioningLevel: 'Average',
   sprintExposure: 'Sometimes',
   recentTrainingLoad: 'Pretty consistent',
@@ -275,6 +278,9 @@ async function main(): Promise<void> {
       ['GymExperience', { experienceLevel: 'Intermediate' } as Partial<OnboardingData>],
       ['SquatStrength', { squatStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
       ['BenchStrength', { benchStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
+      ['TwoKmTimeTrial', {
+        twoKmTimeTrial: { seconds: 435, recordedOn: '2026-07-29', source: 'onboarding' },
+      } as Partial<OnboardingData>],
       ['ConditioningLevel', { conditioningLevel: 'Average' } as Partial<OnboardingData>],
       ['SprintExposure', { sprintExposure: 'Sometimes' } as Partial<OnboardingData>],
       ['RecentTrainingLoad', { recentTrainingLoad: 'Pretty consistent' } as Partial<OnboardingData>],

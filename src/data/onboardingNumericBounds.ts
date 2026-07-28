@@ -26,27 +26,19 @@
  * numbers — so the code and the ruling cannot drift apart in either direction.
  */
 
-/** Where a ruling lives, so a citation can be checked rather than trusted. */
-export interface BoundAttribution {
-  /** ISO date of the ruling. */
-  readonly ruledOn: string;
-  /** Repo-relative path to the document recording it. Must exist. */
-  readonly where: string;
-}
+import {
+  validateAgainstBound,
+  type BoundAttribution,
+  type MeasurementValidation,
+  type NumericBound,
+} from './numericBound';
+import { TWO_KM_SECONDS_BOUND } from './twoKmTimeTrial';
 
-export interface NumericBound {
-  /** Inclusive floor. */
-  readonly min: number;
-  /** Inclusive ceiling. */
-  readonly max: number;
-  /** Unit as the athlete sees it, used to build the re-ask message. */
-  readonly unit: string;
-  /** Plain noun for the re-ask message — never the field name. */
-  readonly noun: string;
-  /** Verbatim sentence from the ruling. Must contain the numbers it justifies. */
-  readonly anchor: string;
-  readonly attribution: BoundAttribution;
-}
+// The mechanism moved to `numericBound` when the 2km time trial joined this
+// registry: the 2km owner holds every 2km number Sam ruled, and the two files
+// cannot import each other in a circle. Re-exported so existing importers of
+// these types keep working and there is still one name for each.
+export type { BoundAttribution, MeasurementValidation, NumericBound };
 
 const RULING: BoundAttribution = {
   ruledOn: '2026-07-28',
@@ -72,24 +64,21 @@ export const ONBOARDING_NUMERIC_BOUNDS = {
     anchor: 'Height accepted range 100–230 cm.',
     attribution: RULING,
   },
+  // Owned by `twoKmTimeTrial`, listed here. The 2km range is one of several
+  // numbers Sam ruled together (range, skip defaults, MAS multiplier) and they
+  // belong to one another; splitting the range off into this file would put
+  // half a ruling in each of two places.
+  twoKmSeconds: TWO_KM_SECONDS_BOUND,
 } as const satisfies Record<string, NumericBound>;
 
 export type OnboardingMeasurementField = keyof typeof ONBOARDING_NUMERIC_BOUNDS;
 
 /**
- * Deliberately a single shape rather than a discriminated union: this repo does
- * not enable `strict`, so `strictNullChecks` is off and TypeScript will not
- * narrow `{ ok: true } | { ok: false; message: string }` on the discriminant.
- * A union that does not narrow buys nothing and costs every caller a cast.
- * `message` is present exactly when `ok` is false.
- */
-export interface MeasurementValidation {
-  readonly ok: boolean;
-  readonly message?: string;
-}
-
-/**
  * Accept a measurement, or refuse it with something the athlete can act on.
+ *
+ * The refusal itself is built by `validateAgainstBound` — one implementation,
+ * so bodyweight, height and the 2km time cannot come to disagree about what a
+ * refusal sounds like. This function is the field-name lookup in front of it.
  *
  * Refusal never carries a suggested value. Offering one is a clamp wearing a
  * question mark — the athlete taps accept and the app's number becomes theirs.
@@ -98,17 +87,5 @@ export function validateOnboardingMeasurement(
   field: OnboardingMeasurementField,
   value: number,
 ): MeasurementValidation {
-  const bound = ONBOARDING_NUMERIC_BOUNDS[field];
-
-  if (!Number.isFinite(value)) {
-    return { ok: false, message: `Enter your ${bound.noun} in ${bound.unit}.` };
-  }
-  if (value < bound.min || value > bound.max) {
-    return {
-      ok: false,
-      message: `That ${bound.noun} looks off. Enter a ${bound.noun} between `
-        + `${bound.min} and ${bound.max} ${bound.unit}.`,
-    };
-  }
-  return { ok: true };
+  return validateAgainstBound(ONBOARDING_NUMERIC_BOUNDS[field], value);
 }
