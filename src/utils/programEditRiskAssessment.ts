@@ -19,6 +19,7 @@ import {
   getProgrammingRiskRank,
   type ProgrammingHierarchyTier,
 } from '../rules/conflictResolutionHierarchy';
+import { severityPausesTraining } from '../rules/injurySeverityBands';
 
 export type ProgramEditRiskDecision = 'allow' | 'confirm' | 'block';
 export type ProgramEditRiskLevel = FindingSeverity;
@@ -345,7 +346,7 @@ function activeConstraintHardStops(
     if (constraint.type !== 'injury') continue;
     const hardStop =
       constraint.seriousSymptoms === true ||
-      constraint.severity >= 8 ||
+      severityPausesTraining(constraint.severity) ||
       constraint.adjustmentLevel === 'training_paused';
     if (!hardStop) continue;
     findings.push({

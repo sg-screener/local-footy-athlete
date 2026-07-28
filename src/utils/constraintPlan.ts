@@ -54,6 +54,7 @@ import {
   injurySeverityReducesAffectedWork,
   injurySeverityRemovesRiskyWork,
 } from '../rules/injurySeverityBands';
+import { severityIsLimiting } from '../rules/injurySeverityBands';
 
 // ─── ConstraintPlan type ────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ function buildAvoidLabels(c: Constraint): string[] {
   const exposures = new Set<Exposure>(c.blockedExposures);
   const includeLimited = c.type === 'injury'
     ? injurySeverityRemovesRiskyWork(severity)
-    : severity >= 7;
+    : severityIsLimiting(severity);
   if (includeLimited) {
     for (const e of c.limitedExposures) exposures.add(e);
   }
@@ -373,7 +374,7 @@ function buildAdviceForFatigue(c: ActiveFatigueConstraint): string[] {
 
 function buildAdviceForSoreness(c: ActiveSorenessConstraint): string[] {
   const out: string[] = [];
-  if (c.severity >= 7) out.push(PHYSIO_SOFT);
+  if (severityIsLimiting(c.severity)) out.push(PHYSIO_SOFT);
   for (const a of c.advice ?? []) {
     if (!out.includes(a)) out.push(a);
   }

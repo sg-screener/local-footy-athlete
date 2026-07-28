@@ -74,6 +74,11 @@ import {
   resolveExerciseName,
   type EquipmentClass,
 } from './loadEstimation';
+import {
+  isMeaningfullyHeavier,
+  isMeaningfullyLighter,
+  loadRatioDiffersMeaningfully,
+} from '../rules/substituteLoadTolerance';
 
 // ─── Types ───
 
@@ -229,8 +234,8 @@ function computeDiffAxes(
 ): DiffAxis[] {
   const axes: DiffAxis[] = [];
 
-  // load — meaningful gap is ≥ 0.20 of slot reference
-  if (Math.abs(candidate.loadRatio - original.loadRatio) >= 0.2) {
+  // BIBLE_ANCHOR-adjacent ruling anchor: substitute_load_tolerance (Sam 2026-07-28).
+  if (loadRatioDiffersMeaningfully(candidate.loadRatio, original.loadRatio)) {
     axes.push('load');
   }
 
@@ -473,8 +478,7 @@ function computeReason(
   }
 
   // Lighter load (legitimate downgrade option).
-  const loadDelta = original.loadRatio - candidate.loadRatio;
-  if (loadDelta >= 0.2) return 'lighter load';
+  if (isMeaningfullyLighter(original.loadRatio, candidate.loadRatio)) return 'lighter load';
 
   // Bilateral → unilateral structural change.
   if (
@@ -487,7 +491,7 @@ function computeReason(
   }
 
   // Heavier alternative — sometimes useful, label it honestly.
-  if (loadDelta <= -0.2) return 'heavier load';
+  if (isMeaningfullyHeavier(original.loadRatio, candidate.loadRatio)) return 'heavier load';
 
   // Equipment swap as last resort (weakest reason).
   if (

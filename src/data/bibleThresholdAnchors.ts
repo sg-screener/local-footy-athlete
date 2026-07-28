@@ -100,6 +100,19 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
     ],
   },
   {
+    id: 'injury_severity_bands',
+    section: 'Section 17.G — Injury severity',
+    quote: '1-3 / 10: keep most training, avoid exact painful range/trigger.',
+    states: [1, 3],
+    meaning: 'The 1-10 severity scale and its four bands. RULED (Sam, 2026-07-28, '
+      + 'Batch 4) to serve FATIGUE as well as injury: one scale, one set of band '
+      + 'edges, so a fatigue cut point may only sit where an injury cut point sits.',
+    sites: [
+      { file: 'rules/injurySeverityBands.ts', symbol: 'BIBLE_INJURY_SEVERITY_BANDS' },
+      { file: 'utils/activeProgramModifiers.ts', symbol: 'severityIsLimiting' },
+    ],
+  },
+  {
     id: 'g_minus_1_optional_only',
     section: 'Section 2 — Weekly structure rules',
     quote: 'Rules around G-1: same as above, no heavy lfiting of any sort, no conditioning, '
@@ -209,6 +222,14 @@ export const INJURY_SEVERITY_THRESHOLD_CONSUMERS: readonly string[] = [
   'screens/home/DayWorkoutScreenV2.tsx',
   'utils/generationConstraints.ts',
   'utils/coachingEngine.ts',
+  // Moved off MERGED_SEVERITY_SCALE_DEFERRALS by Batch 4 (Sam, 2026-07-28): one
+  // 1-10 scale serves injury and fatigue, so a fatigue threshold is no longer a
+  // different kind of number and these files read the band owner like any other.
+  'utils/activeProgramModifiers.ts',
+  'rules/temporarySourceFact.ts',
+  'utils/constraintPlan.ts',
+  'utils/programEditRiskAssessment.ts',
+  'utils/tapSwapHierarchy.ts',
 ];
 
 export interface MergedSeverityScaleDeferral {
@@ -234,29 +255,22 @@ export interface MergedSeverityScaleDeferral {
  * review. The gate asserts every matching site is in one list or the other.
  */
 export const MERGED_SEVERITY_SCALE_DEFERRALS: readonly MergedSeverityScaleDeferral[] = [
-  {
-    file: 'utils/activeProgramModifiers.ts',
-    reason: 'Thresholds on the merged constraint severity, not on an injury record.',
-    owningBatch: 'Batch 4 — fatigue and time-cap bands',
-  },
-  {
-    file: 'rules/temporarySourceFact.ts',
-    reason: 'Fatigue-scale bands; the "cooked" cut point is a Batch 4 ruling.',
-    owningBatch: 'Batch 4 — fatigue and time-cap bands',
-  },
-  {
-    file: 'utils/constraintPlan.ts',
-    reason: 'Thresholds on the merged constraint severity, not on an injury record.',
-    owningBatch: 'Batch 4 — fatigue and time-cap bands',
-  },
-  {
-    file: 'utils/programEditRiskAssessment.ts',
-    reason: 'Thresholds on the merged constraint severity, not on an injury record.',
-    owningBatch: 'Batch 4 — fatigue and time-cap bands',
-  },
-  {
-    file: 'utils/tapSwapHierarchy.ts',
-    reason: 'Thresholds on the merged constraint severity, not on an injury record.',
-    owningBatch: 'Batch 4 — fatigue and time-cap bands',
-  },
+  // PAID IN FULL by Batch 4 (Sam, 2026-07-28).
+  //
+  // All five files sat here because `ActiveConstraint.severity` carries an
+  // injury severity and a fatigue severity on ONE 1-10 field, so a threshold on
+  // it was neither cleanly injury nor cleanly fatigue and could not be collapsed
+  // onto the injury owner without first deciding whether the two scales are the
+  // same thing. Nobody had decided it, so the deferral was honest.
+  //
+  // Sam decided it: ONE 1-10 scale serves both, bands 1-3 / 4-5 / 6-7 / 8-10.
+  // The question the deferral was waiting on is answered, so all five moved to
+  // INJURY_SEVERITY_THRESHOLD_CONSUMERS and this list is empty.
+  //
+  // The list stays as a TYPE with an empty body rather than being deleted: the
+  // next merged-scale threshold needs somewhere to be declared, and the gate
+  // over it now asserts emptiness, so an entry reappearing is loud rather than
+  // silent. An empty list is only dangerous when nothing asserts why it is
+  // empty — that is the `LOAD_RULING_PENDING` defect, and the assertion in
+  // `bibleThresholdAnchorTests` block [7] is what keeps this one different.
 ];

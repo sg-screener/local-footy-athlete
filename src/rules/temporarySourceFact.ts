@@ -25,6 +25,11 @@ import {
   factHorizonCoversDate,
   factHorizonHasElapsed,
 } from './durableFactHorizon';
+import {
+  severityHasModerateEffect,
+  severityIsLimiting,
+  severityIsRecordOnly,
+} from './injurySeverityBands';
 
 export const TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION = 1 as const;
 
@@ -655,7 +660,7 @@ function globalConstraint(
   // still reflects the fact. Severe tiers (≥4) keep their auto-protect behaviour.
   // Product decision (Sam, 2026-07-22); see
   // docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
-  if (severity < 4) return null;
+  if (severityIsRecordOnly(severity)) return null;
   const dateScoped = facts.every((fact) => fact.scope.kind === 'date') &&
     new Set(facts.map((fact) => fact.effectiveFrom)).size === 1;
   const poorSleep = strongest.factKind === 'poor_sleep' ? strongest : null;
@@ -678,12 +683,12 @@ function globalConstraint(
     ...(dateScoped ? { appliesToDate: strongest.effectiveFrom } : {}),
     ...(strongest.scope.kind === 'week' ? { weekStartISO: strongest.scope.weekStart } : {}),
     modifierAffects: [dateScoped ? 'current_day' : 'current_week'],
-    rules: severity >= 7
+    rules: severityIsLimiting(severity)
       ? ['max-effort + heavy strength', 'sprinting / plyos', 'extra hard conditioning']
-      : severity >= 5
+      : severityHasModerateEffect(severity)
         ? ['max-effort lifts', 'hard conditioning + sprints']
         : ['finishers / hard extras'],
-    safeFocus: severity >= 5
+    safeFocus: severityHasModerateEffect(severity)
       ? ['Controlled strength dose', 'Easy aerobic conditioning', 'Recovery + mobility']
       : ['Main work if moving well', 'Easy aerobic conditioning', 'Light technique work'],
     advice: [],
@@ -745,7 +750,7 @@ function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): 
       ...(dateScoped ? { appliesToDate: strongest.effectiveFrom } : {}),
       ...(strongest.scope.kind === 'week' ? { weekStartISO: strongest.scope.weekStart } : {}),
       modifierAffects: [dateScoped ? 'current_day' : 'current_week'],
-      rules: severity >= 7 ? [`avoid hard ${bodyPart} loading`] : [`keep ${bodyPart} work pain-free`],
+      rules: severityIsLimiting(severity) ? [`avoid hard ${bodyPart} loading`] : [`keep ${bodyPart} work pain-free`],
       safeFocus: ['Pain-free strength', 'Easy aerobic conditioning', 'Mobility / recovery'],
       advice: [],
     };
@@ -1476,7 +1481,7 @@ export function migrateLegacyTemporarySourceFacts(args: {
             observedDate: date,
             scope,
             athleteReportedLevel: constraint.severity,
-            reportKind: constraint.severity >= 7 ? 'cooked' : 'fatigue',
+            reportKind: severityIsLimiting(constraint.severity) ? 'cooked' : 'fatigue',
             sourceActor: 'system',
             sourceSurface,
             now: constraint.lastUpdatedAt,

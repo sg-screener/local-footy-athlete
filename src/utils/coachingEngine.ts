@@ -138,6 +138,10 @@ import type {
   SeasonPhaseClock,
   SeasonPhaseClockResolutionProvenance,
 } from '../rules/seasonPhaseClock';
+import {
+  exceedsPermittedConsecutiveCoreDays,
+  exceedsPreferredConsecutiveCoreDays,
+} from '../rules/consecutiveCoreDayPolicy';
 
 // ─── Input Types ───
 
@@ -3703,9 +3707,23 @@ function buildWeeklyPlan(
       // H-PRE-5 is stress-aware (B2): only HIGH-stress candidates extend or
       // are blocked by the consecutive run; placed sessions count via their
       // recorded stressLevel (legacy fallback: core tier).
+      // CONSECUTIVE CORE/TEAM DAYS (Sam, 2026-07-28, re-ruled — see
+      // `rules/consecutiveCoreDayPolicy.ts`). 4 is the SOFT preference boundary
+      // and 5 is the hard permission.
+      //
+      // The soft half is what `violatesHard` returning true actually does here:
+      // the caller `continue`s to the next candidate for this slot, so a run of
+      // 4 makes the scorer PREFER another placement rather than forbidding the
+      // week outright. That is the behaviour Sam described, and it is why the
+      // preferred boundary stays inside this function.
+      //
+      // The hard half was missing. `contractOwnsCandidate` skipped the run check
+      // completely, on the assumption that a contract-required session outranks
+      // spacing — so a required session could run the athlete to six or seven
+      // straight hard days with nothing to stop it. A required session may take
+      // a day; it may not take a sixth straight hard one.
       if (
         isPreSeason &&
-        !contractOwnsCandidate &&
         candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high'
       ) {
         let streak = 1; // the candidate day itself
@@ -3726,7 +3744,8 @@ function buildWeeklyPlan(
           if (teamDayNumSet.has(d)) streak++;
           else break;
         }
-        if (streak >= 4) return true;
+        if (exceedsPermittedConsecutiveCoreDays(streak)) return true;
+        if (!contractOwnsCandidate && exceedsPreferredConsecutiveCoreDays(streak)) return true;
       }
 
       // H3: Dedicated lower exposure separated by ≥1 calendar day

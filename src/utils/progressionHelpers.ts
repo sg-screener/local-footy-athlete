@@ -82,6 +82,11 @@ export function deriveCompletionQuality(
 
   const completionRate = completedCount / prescribedSets;
 
+  // RULED (Sam, 2026-07-28, Batch 6): completion labels blessed at <0.5 failed
+  // and <1 partial. The WORDING is revisited in the Journal work — "failed" is a
+  // hard word for a session an athlete half-finished — but the numbers stand and
+  // this file is their one owner.
+  // docs/BATCH4_BATCH6_RULINGS_2026-07-28.md
   if (completionRate < 0.5) return 'failed';
 
   // Check if load was reduced below target

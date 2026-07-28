@@ -31,6 +31,7 @@ import {
   compareSafeTrainingFallbackTiers,
   type SafeTrainingFallbackTier,
 } from '../rules/conflictResolutionHierarchy';
+import { severityHasModerateEffect, severityIsLimiting } from '../rules/injurySeverityBands';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -102,7 +103,7 @@ function activeConstraint(constraint: ActiveConstraint): boolean {
 }
 
 function injuryLevel(severity: number): 'caution' | 'avoid' {
-  return severity >= 4 ? 'avoid' : 'caution';
+  return severityHasModerateEffect(severity) ? 'avoid' : 'caution';
 }
 
 function lowerReadiness(
@@ -161,7 +162,7 @@ export function resolveTapSwapEnvironment(args: {
     signal: args.readinessSignal,
   });
   const fatigueConstraint = constraints.find((constraint) =>
-    constraint.type === 'fatigue' && constraint.severity >= 6);
+    constraint.type === 'fatigue' && severityIsLimiting(constraint.severity));
   if (fatigueConstraint) readiness = lowerReadiness(readiness, 'low');
 
   return {

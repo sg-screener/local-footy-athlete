@@ -26,6 +26,7 @@ import {
   classifyBibleInjurySeverity,
   injurySeverityRecommendsPhysio,
 } from '../rules/injurySeverityBands';
+import { classifySessionImpact } from '../rules/sessionImpactBands';
 
 // ─── Type system ─────────────────────────────────────────────────────
 
@@ -1041,11 +1042,12 @@ export function applyTrainAroundPolicy(
 
   const totalBefore = (workout.exercises ?? []).length;
   const removedCount = removed.length;
-  let impact: SessionImpact = 'none';
-  if (removedCount === 0) impact = 'none';
-  else if (removedCount / Math.max(1, totalBefore) >= 0.5) impact = 'high';
-  else if (removedCount >= 2) impact = 'moderate';
-  else impact = 'low';
+  // One owner for the impact labels (Sam, 2026-07-28, Batch 6). This used to
+  // carry its own copy of >= 0.5 and >= 2, on a second path to the same screen.
+  const impact: SessionImpact = classifySessionImpact({
+    removedCount,
+    totalScored: Math.max(1, totalBefore),
+  });
 
   // Attach coachNotes summarising what was removed and why.
   let coachNotes = workout.coachNotes ? [...workout.coachNotes] : [];

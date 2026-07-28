@@ -96,3 +96,61 @@ export function injurySeverityPausesAffectedTraining(severity: number): boolean 
 export function injurySeverityRecommendsPhysio(severity: number): boolean {
   return classifyBibleInjurySeverity(severity).recommendPhysio;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ONE SCALE, RULED DELIBERATELY (Sam, 2026-07-28, Batch 4)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * > ONE 1-10 severity scale serves injury and fatigue, ruled deliberately.
+ * > Bands are the Bible's: 1-3 / 4-5 / 6-7 / 8-10. All fatigue cut points align
+ * > to band edges: record-only <4, moderate effects >=4, strong/limiting
+ * > effects >=6 (every stray >=7 moves to >=6), pause >=8.
+ *
+ * WHY THIS RULING MATTERED. The fatigue path was already using 4, 6, 7 and 8 —
+ * the injury bands' own edges — by inheritance rather than by decision, plus a
+ * scattering of `>= 7` cut points that belonged to no band at all. Nobody had
+ * ruled that "7/10 sore" and "7/10 cooked" mean the same severity, so the code
+ * asserted it eleven times without anyone having said it once. Sam has now said
+ * it, so the numbers below are the SAME numbers and there is one place to
+ * change them.
+ *
+ * The aliases exist because the readers are not talking about injuries. A
+ * fatigue site calling `injurySeverityRemovesRiskyWork` reads as a mistake and
+ * invites someone to "fix" it by writing a local literal — which is how the
+ * eleven got there. Same predicate, honest name.
+ *
+ * BIBLE_ANCHOR: injury_severity_bands
+ */
+export const SHARED_SEVERITY_SCALE_RULING = {
+  ruledOn: '2026-07-28',
+  where: 'docs/BATCH4_BATCH6_RULINGS_2026-07-28.md',
+  bands: '1-3 / 4-5 / 6-7 / 8-10',
+} as const;
+
+/**
+ * Below the moderate band: the fact is RECORDED and nothing in the program
+ * moves. "Tired today", a single poor night, a 2/10 niggle.
+ */
+export function severityIsRecordOnly(severity: number): boolean {
+  return !injurySeverityReducesAffectedWork(severity);
+}
+
+/** 4+: the affected work is reduced — load, volume, range or speed. */
+export function severityHasModerateEffect(severity: number): boolean {
+  return injurySeverityReducesAffectedWork(severity);
+}
+
+/**
+ * 6+: the strong/limiting band. Every stray `>= 7` in the fatigue path moved
+ * here, because 7 was never a band edge — it is the INTERIOR of 6-7, so a cut
+ * point there split a band the Bible draws whole.
+ */
+export function severityIsLimiting(severity: number): boolean {
+  return injurySeverityRemovesRiskyWork(severity);
+}
+
+/** 8+: the pause band. */
+export function severityPausesTraining(severity: number): boolean {
+  return injurySeverityPausesAffectedTraining(severity);
+}

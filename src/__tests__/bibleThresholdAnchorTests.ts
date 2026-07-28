@@ -215,7 +215,17 @@ console.log('\n[7] What is NOT fixed says so, and says which batch owns it');
   // RECORDED, because a file quietly missing from the enforced list is
   // indistinguishable from a file that was checked and found clean. That is the
   // LOAD_RULING_PENDING defect, and it is the one this unit keeps re-finding.
-  ok('the deferred list is populated', MERGED_SEVERITY_SCALE_DEFERRALS.length > 0);
+  // PAID (Sam, 2026-07-28, Batch 4). This asserted the list was POPULATED,
+  // which was right while the merge was undecided and is wrong now: the ruling
+  // that one 1-10 scale serves injury and fatigue answered the question all
+  // five entries were waiting on, so the honest state is empty.
+  //
+  // Emptiness is asserted rather than the entry merely being deleted, because an
+  // empty list with nothing asserting WHY is the `LOAD_RULING_PENDING` defect —
+  // an unfilled park reading as a completed review. A new merged-scale
+  // threshold must be declared here, and this line makes that loud.
+  ok('the merged-scale debt is paid', MERGED_SEVERITY_SCALE_DEFERRALS.length === 0,
+    MERGED_SEVERITY_SCALE_DEFERRALS.map((d) => d.file).join(', '));
 
   const enforced = new Set(INJURY_SEVERITY_THRESHOLD_CONSUMERS);
   for (const deferral of MERGED_SEVERITY_SCALE_DEFERRALS) {

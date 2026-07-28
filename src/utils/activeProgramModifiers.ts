@@ -37,6 +37,12 @@ import type {
 } from '../types/domain';
 import type { InjuryState } from './injuryProgression';
 import type { ReadinessSignal } from './readiness';
+import {
+  severityHasModerateEffect,
+  severityIsLimiting,
+  severityIsRecordOnly,
+  severityPausesTraining,
+} from '../rules/injurySeverityBands';
 
 export type ActiveProgramModifierType =
   | 'injury'
@@ -145,8 +151,10 @@ function displayBodyPart(c: ActiveInjuryConstraint | ActiveSorenessConstraint): 
 }
 
 function severityLabel(severity: number): string {
-  if (severity >= 7) return 'High';
-  if (severity >= 4) return 'Moderate';
+  // BIBLE_ANCHOR: injury_severity_bands — one scale, Sam 2026-07-28.
+  // `>= 7` split the 6-7 band; the limiting edge is 6.
+  if (severityIsLimiting(severity)) return 'High';
+  if (severityHasModerateEffect(severity)) return 'Moderate';
   return 'Mild';
 }
 
@@ -328,7 +336,7 @@ function deterministicInjuryBody(
   const bucket = String(c.bucket || c.bodyPart || '').toLowerCase();
   const bodyPart = capitaliseWords(displayBodyPart(c));
   const effects: string[] = [];
-  const paused = c.adjustmentLevel === 'training_paused' || c.seriousSymptoms === true || c.severity >= 8;
+  const paused = c.adjustmentLevel === 'training_paused' || c.seriousSymptoms === true || severityPausesTraining(c.severity);
 
   if (paused && (summary.hasRemoved || summary.hasRecoveryChange)) {
     effects.push('affected training was paused or reduced');
@@ -431,8 +439,8 @@ export function readinessBodyLead(
     : undefined;
   if (poorSleepPattern === 'repeated') return 'Repeated poor sleep adjustment active.';
   if (poorSleepPattern === 'single_night') return 'Poor sleep adjustment active today.';
-  const isCooked = c.type === 'fatigue' && (c.severity >= 7 || /cooked|load reduced/i.test(title));
-  const isFlat = c.type === 'fatigue' && (c.severity <= 3 || /flat|feeling flat/i.test(title));
+  const isCooked = c.type === 'fatigue' && (severityIsLimiting(c.severity) || /cooked|load reduced/i.test(title));
+  const isFlat = c.type === 'fatigue' && (severityIsRecordOnly(c.severity) || /flat|feeling flat/i.test(title));
   if (isCooked) return "You said you're cooked.";
   if (isFlat) return "You said you're flat today.";
   return 'Readiness adjustment active.';
