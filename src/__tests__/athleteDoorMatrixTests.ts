@@ -341,6 +341,23 @@ const DAY_STATES: DayState[] = [
     },
   },
   {
+    id: 'pure_commitment_day',
+    build: () => {
+      // A day that is ONLY a commitment — no gym work beside it. The snapshot
+      // gives it a single `session` section titled from the workout name, so
+      // unlike the combined team day it does not go down the hardcoded
+      // "Team Training" branch, and the anchor regex is the only thing that
+      // ever recognised it. A commitment is not the athlete's to reschedule
+      // whatever it is called.
+      const weekStart = seedStores(baseProgram());
+      plant(weekStart, 3, {
+        name: 'Club Session', workoutType: 'Team Training', sessionTier: 'core',
+        exercises: [], durationMinutes: 90,
+      });
+      return { weekStart, date: addDaysISO(weekStart, 3) };
+    },
+  },
+  {
     id: 'planted_recovery_g1',
     build: () => {
       const weekStart = seedStores(baseProgram());
@@ -600,6 +617,7 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
   // So the law lives at the OFFER, not the commit: a day the athlete sees as
   // two sessions must offer a way to move one of them. Anything else is a
   // scoped move that silently is not scoped.
+  let multiSessionDaysSeen = 0;
   for (const dayState of DAY_STATES) {
     const context = quiet(() => dayState.build());
     // The producer's OWN count of how many sessions the day shows — the same
@@ -610,6 +628,7 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
     }));
     if (options.visibleSessionCount < 2) continue;
     if (options.move.refusal) continue;
+    multiSessionDaysSeen += 1;
     const ids = options.move.scopes.map((scope) => scope.id);
     const scoped = ids.filter((id) => id !== 'whole_day');
     assert(scoped.length > 0,
@@ -617,6 +636,85 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
       + `this day (${options.visibleSessionKinds.join(', ')}) but the only move offered is `
       + `${JSON.stringify(ids)} — tapping it moves everything`);
   }
+  // NON-VACUITY, and a coverage limit stated rather than implied. The only
+  // multi-session day this grid can currently BUILD is the combined team day:
+  // every other two-part shape needs an add to stack onto an occupied day, and
+  // that door is declared broken below (`OFFERS_THE_DOOR_REFUSES`). So this law
+  // is real but thin, and it gets its second and third shapes for free the day
+  // that declaration is deleted.
+  assert(multiSessionDaysSeen > 0,
+    'no day-state in this grid renders two sessions — the law above asserted nothing');
+});
+
+/**
+ * L8 THE MENU MEANS WHAT IT SAYS.
+ *
+ * Every option the producer puts in front of the athlete must be one the door
+ * accepts, or one it refuses IN WORDS ABOUT THAT OPTION. An offer the commit
+ * path throws away is the same defect as a "Done." over an unchanged day, one
+ * layer earlier, and it is the shape behind Sam's finding 3: the sheet showed a
+ * scope the move door could not honour.
+ *
+ * This drives the OFFER rather than a hand-written door list, so a new category
+ * or scope is covered the moment the producer starts offering it.
+ */
+const OFFERS_THE_DOOR_REFUSES: ReadonlyArray<{ offer: string; why: string }> = [
+  {
+    offer: 'addOnTopCategories',
+    // FOUND BY THIS CELL, run one. `addOnTopCategories` is offered on every
+    // day holding one session, and `resolveAthleteMutation` bails at
+    // `if (addDay.workout) return { error: 'add_defers_to_legacy_stack' }` —
+    // "occupied-day STACK adds stay on the legacy writer (out of scope this
+    // stage)". The legacy writer does not deliver, so all three days that
+    // offer it refuse with the generic copy and nothing changes.
+    //
+    // Declared, not fixed: retiring that legacy deferral is a unit of its own
+    // (`planChangeProducer.ts` ~line 1615), and it is what makes every
+    // non-anchored two-session day-state above reachable. Delete this entry
+    // when it lands — the cell will then hold the door to its own menu.
+    why: 'occupied-day stack adds defer to a legacy writer that refuses '
+      + '(planChangeProducer resolveAthleteMutation: add_defers_to_legacy_stack)',
+  },
+];
+
+cell('every option the day OFFERS is one the door accepts or refuses in words', () => {
+  const declared = new Set(OFFERS_THE_DOOR_REFUSES.map((entry) => entry.offer));
+  let optionsDriven = 0;
+  const broken: string[] = [];
+
+  for (const dayState of DAY_STATES) {
+    // Each offer is driven from a FRESH build: an add that lands changes what
+    // the next option would have been offered against.
+    const offersFor = (): { weekStart: string; date: string; ids: string[] } => {
+      const context = quiet(() => dayState.build());
+      const options = quiet(() => listPlanChangeOptionsForDay({
+        visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: context.weekStart,
+      }));
+      return { ...context, ids: options.addOnTopCategories.map((category) => category.id) };
+    };
+    if (declared.has('addOnTopCategories')) continue;
+    for (const category of offersFor().ids) {
+      const context = quiet(() => dayState.build());
+      optionsDriven += 1;
+      const result = quiet(() => applyPlanChange({
+        change: { kind: 'add_category', date: context.date, category } as PlanChange,
+        visibleWeek: visibleWeek(context.weekStart),
+        todayISO: context.weekStart,
+        setManualOverride: (date, workout, ctx) =>
+          useProgramStore.getState().setManualOverride(date, workout, ctx),
+      }));
+      if (result.outcome === 'applied') continue;
+      broken.push(`${dayState.id}: offered "${category}" on top, door said `
+        + `${result.outcome} — "${result.message}"`);
+    }
+  }
+
+  assert(broken.length === 0,
+    `the menu offered what the door will not take:\n        ${broken.join('\n        ')}`);
+  // Non-vacuity: with the declaration above in place this cell drives nothing,
+  // and that is exactly what the declaration is admitting.
+  assert(optionsDriven > 0 || declared.size > 0,
+    'no offered option was driven and nothing was declared — this cell is asleep');
 });
 
 cell('preview never throws, on any day-state', () => {

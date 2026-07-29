@@ -498,14 +498,41 @@ function moveOptionsForDay(args: {
           ? left.date.localeCompare(right.date)
           : left.occupiedBy === null ? -1 : 1);
 
-  const anchored = hasProtectedAnchors(args.snapshot);
+  // THE OFFER IS DERIVED FROM THE SAME DECOMPOSITION THE DAY IS COUNTED BY.
+  //
+  // Sam's finding 3: a day the app renders as two sessions offered only
+  // `whole_day`, the sheet auto-skipped the scope picker because there was
+  // nothing to pick, and "move the gym session" moved the whole day —
+  // commitment included.
+  //
+  // The cause was two counts of one day. `visibleSessionCount` counts every
+  // section kind; the scope list was built from a map that only knows the three
+  // MOVABLE kinds, so a `session` commitment was counted as a session and then
+  // silently dropped from the offer. Reading both from `visibleSessionKinds`
+  // means the offer can never name fewer parts than the athlete can see.
+  //
+  // WHY NOT LEAN ON THE ANCHOR. A team night already removed `whole_day` via
+  // `hasProtectedAnchors` — but that predicate ends in a regex over the
+  // rendered title (`/\bteam training\b/`). A commitment section titled
+  // anything else is not an anchor, and the day fell straight through to
+  // `['whole_day']`. Immovability is a fact about the SHAPE of the day, not
+  // about what its rows are called, so it is decided here from the kind and the
+  // anchor is left to mean what it means.
+  const visibleKinds = visibleSessionKindsForSnapshot(args.snapshot);
   const componentScopes = MOVABLE_COMPONENT_SCOPES.filter((scope) =>
-    args.snapshot.workout!.sections.some((section) =>
-      section.kind === MOVE_SCOPE_SECTION_KIND[scope]));
+    visibleKinds.includes(MOVE_SCOPE_SECTION_KIND[scope]));
+  // Content the athlete cannot reschedule: a commitment is a fixed appointment,
+  // binnable for one date (`binScopesForSnapshot` offers exactly that) but not
+  // movable to another day. Its presence is what makes a whole-day move wrong —
+  // that move would take the commitment with it.
+  const carriesImmovableContent = visibleKinds.some(
+    (kind) => !MOVABLE_SECTION_KINDS.includes(kind));
+  const dragsSomethingItShouldNot = carriesImmovableContent ||
+    hasProtectedAnchors(args.snapshot);
   // A single-component day has nothing to scope: moving "just the gym session"
   // off a day that is only a gym session IS the whole-day move, and offering
   // both would be two names for one action.
-  const offered: PlanChangeMoveScopeId[] = anchored
+  const offered: PlanChangeMoveScopeId[] = dragsSomethingItShouldNot
     ? componentScopes
     : componentScopes.length > 1
       ? ['whole_day', ...componentScopes]
@@ -531,6 +558,15 @@ const MOVE_SCOPE_SECTION_KIND: Record<
   conditioning: 'conditioning',
   recovery: 'recovery',
 };
+
+/**
+ * The section kinds a move may take off a day on their own. Exhaustive against
+ * `CoachRevisionSectionKind` by construction — the fourth kind, `session`, is
+ * absent because a commitment cannot be rescheduled by the athlete, and a kind
+ * added later is absent until someone decides which it is.
+ */
+const MOVABLE_SECTION_KINDS: readonly CoachRevisionSectionKind[] =
+  Object.values(MOVE_SCOPE_SECTION_KIND);
 
 // ── Bin scopes ──
 // Which parts of a day can be binned individually. Derived from the day

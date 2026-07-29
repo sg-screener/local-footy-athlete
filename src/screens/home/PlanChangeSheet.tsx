@@ -442,7 +442,15 @@ export function PlanChangeSheet({
       });
       return;
     }
-    if (move.scopes.length === 1) {
+    // Skipping the scope step is only safe when there is genuinely nothing to
+    // disambiguate — ONE offered scope AND one visible session. Sam's finding
+    // 3: on a day the app renders as two sessions the sheet skipped straight
+    // to destinations because a single scope came back, so "move the gym
+    // session" silently meant "move everything on this day". The producer no
+    // longer offers a bare whole_day on a multi-session day; this is the
+    // second half of the same law, and it holds even if a future offer
+    // narrows to one scope for a reason this screen cannot see.
+    if (move.scopes.length === 1 && options!.visibleSessionCount <= 1) {
       setStep({ kind: 'pick_destination', scope: move.scopes[0].id });
       return;
     }

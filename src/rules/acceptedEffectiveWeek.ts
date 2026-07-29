@@ -16,6 +16,7 @@ import {
   type Section18EffectiveWeekEvaluation,
 } from './section18EffectiveWeekEvaluator';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import { athletePlacementForDateOverride } from './athletePlacement';
 
 export type AcceptedWeekSurfaceOwner = 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
 
@@ -125,8 +126,32 @@ export function rebaseAcceptedEffectiveWeek(args: {
           : { date, dayOfWeek, owner: 'empty', workout: null });
   }
 
+  // OWNERSHIP TRAVELS WITH THE CONTENT, or the derivers downstream cannot ask.
+  //
+  // `dates` above knows exactly which days the athlete owns — `owner` is
+  // computed one loop up. Flattening to a bare workout list used to throw that
+  // away, and `resolveFinalVisibleSection18Week` then resolved with
+  // `manualOverrides: {}` (rightly — the content is already composed), leaving
+  // an athlete-owned day indistinguishable from a template day. The G+1
+  // recovery deriver regenerated over it while the screen, which answers
+  // ownership its own way, went on showing the athlete's session.
+  //
+  // `date_override` is an athlete-owned surface; `week_overlay` is not — a
+  // scoped-regen overlay is authored by a source fact, not by the athlete — and
+  // `base_microcycle` is the derived plan itself. An existing stamp always
+  // wins: a session that arrived here carrying its constraint provenance keeps
+  // it rather than being relabelled by the surface it happens to sit on.
   const composedWorkouts = applyUserRemovalConstraintsToWeek({
-    workouts: dates.flatMap((entry) => entry.workout ? [entry.workout] : []),
+    workouts: dates.flatMap((entry) => {
+      if (!entry.workout) return [];
+      if (entry.owner !== 'date_override' || entry.workout.athletePlacement) {
+        return [entry.workout];
+      }
+      return [{
+        ...entry.workout,
+        athletePlacement: athletePlacementForDateOverride({ placedDate: entry.date }),
+      }];
+    }),
     weekStart,
     constraints: args.surfaces.userRemovalConstraints,
   });

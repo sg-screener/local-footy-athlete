@@ -12,14 +12,34 @@ import type { Workout } from '../types/domain';
  *
  * OWNERSHIP — read this before adding a second writer.
  *
- * The stamp is DERIVED, not stored. `UserRemovalConstraint` remains the only
- * persisted representation of an athlete mutation; this marker is written onto
- * the workout inside `applyUserRemovalConstraintsToWeek` — the single site that
- * lands athlete-decided content on a day — and travels with the composed week
- * from there. That keeps the count of representations at one. A second writer —
- * an overlay, a repair, a finaliser — would mean the resolver could be told
- * "the athlete placed this" by something that is not the athlete, which is
- * exactly the confusion this marker exists to remove.
+ * The stamp is DERIVED, not stored, and it is derived from the athlete-owned
+ * SURFACES — of which there are exactly two, both persisted:
+ *
+ *   `removal_constraint` — a `UserRemovalConstraint`. Stamped inside
+ *      `applyUserRemovalConstraintsToWeek`, the site that lands constraint-
+ *      decided content on a day.
+ *   `date_override` — an entry in `dateOverrides`, the persisted record of a
+ *      human edit to one date. Stamped inside `rebaseAcceptedEffectiveWeek`,
+ *      the site that composes the accepted week and the only place that knows
+ *      which dates that surface owns.
+ *
+ * That is two derivation sites because there are two surfaces, and it is still
+ * ONE predicate: `resolverMayDisplace` below, which every deriver asks and
+ * nothing else. A third writer — an overlay, a repair, a finaliser — would mean
+ * the resolver could be told "the athlete placed this" by something that is not
+ * the athlete, which is exactly the confusion this marker exists to remove.
+ *
+ * THE SECOND SURFACE WAS MISSING, AND IT COST AN L4 VIOLATION (matrix catch #3,
+ * `add_strength × derived_recovery_g_plus_1`). An add through the tap door
+ * writes a date override and no constraint. The composed accepted week
+ * therefore carried it unstamped, `resolveFinalVisibleSection18Week` resolves
+ * with `manualOverrides: {}` — correctly, the content is already composed — and
+ * the G+1 recovery deriver regenerated over it. The screen kept the session
+ * because the live resolver answers ownership a different way (the
+ * `source === 'manual'` short-circuit), so the athlete SAW "Lower Squat" while
+ * the accepted week held "Recovery Session". Two mechanisms for one fact is
+ * what produced the divergence; the stamp is the portable one, so it is the
+ * one that survived.
  *
  * EVERY DOOR, NOT JUST MOVE (Sam, 2026-07-30, ruling #4). The stamp originally
  * covered only the move's `movedWorkout`. Swap, add and component-bin land their
@@ -37,11 +57,20 @@ import type { Workout } from '../types/domain';
 export interface AthletePlacement {
   /** Always the athlete. A system author has no business writing this marker. */
   authorship: 'athlete';
-  /** The owning `UserRemovalConstraint` — the stored truth this is derived from. */
-  constraintId: string;
+  /** Which athlete-owned surface this stamp was derived from. */
+  surface: AthletePlacementSurface;
+  /**
+   * The owning `UserRemovalConstraint` — the stored truth this is derived from.
+   * Null on the `date_override` surface, whose stored truth is the override
+   * entry itself and is keyed by date, not by id.
+   */
+  constraintId: string | null;
   /** The day the athlete chose, ISO `YYYY-MM-DD`. */
   placedDate: string;
 }
+
+/** The persisted surfaces that mean "the athlete decided this day". */
+export type AthletePlacementSurface = 'removal_constraint' | 'date_override';
 
 /**
  * Did the athlete deliberately put this session on this day?
@@ -83,7 +112,28 @@ export function athletePlacementFor(args: {
 }): AthletePlacement {
   return {
     authorship: 'athlete',
+    surface: 'removal_constraint',
     constraintId: args.constraintId,
+    placedDate: args.placedDate.slice(0, 10),
+  };
+}
+
+/**
+ * The marker for a session the athlete owns because a date override says so.
+ *
+ * The override IS the stored truth here — `dateOverrides[date]` is the
+ * persisted record of the human edit — so there is no id to carry, only the
+ * date it is keyed by. Written at exactly one site
+ * (`rebaseAcceptedEffectiveWeek`); see the ownership note at the top of this
+ * file before adding a second.
+ */
+export function athletePlacementForDateOverride(args: {
+  placedDate: string;
+}): AthletePlacement {
+  return {
+    authorship: 'athlete',
+    surface: 'date_override',
+    constraintId: null,
     placedDate: args.placedDate.slice(0, 10),
   };
 }

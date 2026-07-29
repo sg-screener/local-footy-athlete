@@ -52,6 +52,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { G1_LANDING_WARNING } from '../rules/g1LandingAsk';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -626,6 +627,115 @@ run('a real commit still passes visible verification', () => {
   });
   assert(result.ok && result.outcome === 'applied',
     `a genuine swap was refused by visible verification: "${result.message}"`);
+});
+
+// ── The date override is an athlete-owned surface, at BOTH boundaries ─────
+//
+// MATRIX CATCH #3 (`add_strength × derived_recovery_g_plus_1`). The athlete
+// added a gym session to the day after a game. The week they SEE holds "Lower
+// Squat"; the week that was ACCEPTED holds "Recovery Session". Same tap, two
+// answers, and the accepted one is what every later transaction rebases on.
+//
+// The cause is one dropped fact, not a missing guard. There are TWO athlete-
+// owned surfaces — removal constraints and date overrides — and the placement
+// stamp was derived from only the first. `rebaseAcceptedEffectiveWeek` knows
+// perfectly well which days the athlete owns (it computes `owner` per date),
+// then flattens the dates to a bare workout list and throws that owner away.
+// Downstream, `resolveFinalVisibleSection18Week` resolves with
+// `manualOverrides: {}` — correct, the content is already composed — so an
+// athlete-owned day is indistinguishable from a template day and the G+1
+// recovery deriver regenerates over it. The visible resolver kept the session
+// only because it answers ownership a DIFFERENT way: the `source === 'manual'`
+// short-circuit.
+//
+// These assert the law, not the Sunday: EVERY day the athlete can land content
+// on, at both boundaries.
+
+function acceptedWorkoutOn(weekStart: string, date: string): Workout | null {
+  const state = useProgramStore.getState();
+  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+  const accepted = quiet(() => rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart,
+    profile: useProfileStore.getState().onboardingData,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  }));
+  return accepted.visibleWorkouts.find((workout) => workout.dayOfWeek === dayOfWeek) ?? null;
+}
+
+run('an added session reads the same in the accepted week as on the screen, every day', () => {
+  // The day after a game is where this first showed, because that is where a
+  // deriver has something to say. Sweeping all seven proves the fix is the
+  // ownership boundary and not a Sunday special case.
+  const landed: string[] = [];
+  let gPlusOneLanded = false;
+  for (let offset = 0; offset < 7; offset++) {
+    for (const category of ['strength_full', 'conditioning_hard'] as const) {
+      const weekStart = seed();
+      const date = addDaysISO(weekStart, offset);
+      const result = commit(weekStart, {
+        kind: 'add_category', date, category, g1Route: 'deloaded',
+      });
+      // A day that already holds this kind refuses, and that refusal is its own
+      // law elsewhere. Only landed content can diverge between the two weeks.
+      if (result.outcome !== 'applied') continue;
+      landed.push(`${date}/${category}`);
+      if (offset === 6) gPlusOneLanded = true;
+
+      const visible = visibleWeek(weekStart).find((day) => day.date === date)?.workout?.name ?? null;
+      const accepted = acceptedWorkoutOn(weekStart, date)?.name ?? null;
+      assert(visible !== null,
+        `${date}/${category}: an applied add left the visible day empty`);
+      assert(accepted !== null,
+        `${date}/${category}: an applied add is absent from the accepted week entirely`);
+      assert(accepted === visible || visible.includes(accepted) || accepted.includes(visible),
+        `${date}/${category}: the week the athlete SEES disagrees with what was `
+        + `accepted — visible "${visible}", accepted "${accepted}"`);
+    }
+  }
+  // Non-vacuity: an assertion that never ran is not a passing assertion, and
+  // the day after a game is the one with a deriver waiting for it.
+  // A settled in-season week is nearly full — Mon strength, Tue/Thu team
+  // nights, Fri Gunshow, Sat game — so only Wednesday (free, both categories)
+  // and the G+1 Sunday accept new work. Three is the whole reachable space
+  // here, and the matrix sweeps the wide grid; what this bar prevents is the
+  // sweep silently landing NOTHING and reporting green.
+  assert(landed.length >= 3,
+    `only ${landed.length} of 14 adds landed (${landed.join(', ')}) — `
+    + 'the sweep is not exercising the boundary');
+  assert(gPlusOneLanded,
+    'nothing landed on the day after the game — the cell this test exists for did not run');
+});
+
+run('a day the athlete owns by date override carries the stamp into the accepted week', () => {
+  // The mechanism behind the law above, asserted directly so a future change
+  // that keeps the names agreeing by some other means still has to say what
+  // owns the day. `resolverMayDisplace` is the ONE predicate; a composed week
+  // that cannot answer it has lost the fact, whatever it happens to render.
+  const weekStart = seed();
+  const sunday = addDaysISO(weekStart, 6);
+  const result = commit(weekStart, { kind: 'add_category', date: sunday, category: 'strength_full' });
+  assert(result.outcome === 'applied', `the G+1 add was refused: "${result.message}"`);
+  assert(Object.prototype.hasOwnProperty.call(useProgramStore.getState().dateOverrides, sunday),
+    'the add did not write a date override — this test is aimed at the wrong surface');
+
+  const accepted = acceptedWorkoutOn(weekStart, sunday);
+  assert(accepted, 'the athlete-owned day vanished from the accepted week');
+  assert(isAthletePlacedSession(accepted),
+    `the athlete's own content reached the accepted week unstamped — a deriver `
+    + `will overwrite it (accepted holds "${accepted.name}")`);
+});
+
+run('a template day the athlete never touched is NOT stamped', () => {
+  // The other direction, and the one that keeps the stamp meaningful: if
+  // composing the accepted week stamped everything, `resolverMayDisplace`
+  // would answer "no" for the whole week and the derivers would go quiet.
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const accepted = acceptedWorkoutOn(weekStart, monday);
+  assert(accepted, 'the seeded Monday session is missing from the accepted week');
+  assert(!isAthletePlacedSession(accepted),
+    `derived/template content was stamped as athlete-placed: "${accepted.name}"`);
 });
 
 console.log(`\nAthlete placement ownership totals: ${passed} passed, ${failed} failed`);
