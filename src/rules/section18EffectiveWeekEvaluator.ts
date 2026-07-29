@@ -657,12 +657,36 @@ function evaluateNumeric(args: {
   // already did), and delivered work never buys a fresh full allowance on top
   // of itself. With no governed boundary the split is all-prescribed and this
   // is exactly the old whole-week check.
+  //
+  // THE ATHLETE'S OWN EXPOSURE IS THE OTHER PART THE APP DOES NOT CONTROL.
+  // Team training and games are facts about the athlete's week, not choices the
+  // app made, and it can no more un-prescribe them than it can un-prescribe
+  // history. This rule is already authored two hundred lines up, on the sprint
+  // prohibition: "the athlete's own team-training and game exposure is theirs
+  // ... neither is something the app can un-prescribe"
+  // (SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24 §2 Q6). That check
+  // obeys it by reading `split.appPrescribed`; this one did not, and read
+  // `split.prescribed`.
+  //
+  // The cost was a dead app on an ordinary profile: early off-season authors a
+  // sprint maximum of ZERO, an athlete who attends team training is credited
+  // sprint for it, and generation refused its own output before the first
+  // screen. Same athlete with no team days generated fine — which is the
+  // signature of a limit being charged for something the athlete, not the app,
+  // decided.
+  //
+  // The maximum still binds the TOTAL week, exactly as the paragraph above
+  // says. What changes is that the allowance is what remains after everything
+  // the app cannot touch, and the breach is judged on what the app actually
+  // prescribed.
   const delivered = args.split?.delivered ?? 0;
   const prescribed = args.split ? args.split.prescribed : args.actual;
+  const appPrescribed = args.split ? args.split.appPrescribed : args.actual;
+  const athleteOwnedExposure = Math.max(0, prescribed - appPrescribed);
   const prescribedAllowance = args.maximum === null
     ? null
-    : Math.max(0, args.maximum - delivered);
-  if (prescribedAllowance !== null && prescribed > prescribedAllowance) {
+    : Math.max(0, args.maximum - delivered - athleteOwnedExposure);
+  if (prescribedAllowance !== null && appPrescribed > prescribedAllowance) {
     addFinding(args.findings, {
       code: 'maximum_breach',
       severity: 'blocking',
@@ -670,7 +694,7 @@ function evaluateNumeric(args: {
       expected: args.maximum,
       actual: args.actual,
       detail: delivered > 0
-        ? `${args.label} exceeds the Section 18 permitted maximum: ${delivered} already delivered leaves room for ${prescribedAllowance}, and ${prescribed} more ${prescribed === 1 ? 'is' : 'are'} prescribed.`
+        ? `${args.label} exceeds the Section 18 permitted maximum: ${delivered} already delivered leaves room for ${prescribedAllowance}, and ${appPrescribed} more ${appPrescribed === 1 ? 'is' : 'are'} prescribed.`
         : `${args.label} exceeds the Section 18 permitted maximum.`,
       evidence: args.evidence ?? [],
     });
@@ -953,19 +977,33 @@ export function evaluateSection18EffectiveWeek(
       `${dateForDay(input.weekStart, credit.dayOfWeek)}:${credit.source}:${credit.role}:${credit.stress}`),
   });
 
-  const totalConditioningForOptionalMaximum = ledger.conditioning.coreCount +
+  // SELECTED means selected BY THE APP — the same rule as the maximum above,
+  // and this check's own sentence has always said so ("Selected optional
+  // conditioning exceeds the phase maximum"). It counted `coreCount`, which
+  // includes the conditioning credit the athlete earns by turning up to team
+  // training, so a maximum authored over the app's own selection was charged
+  // for the athlete's club commitments.
+  //
+  // Sam's authored table settles it. Early off-season permits core
+  // `{min:1,max:2}` plus optional flush `{min:1,max:2}` under a maximum of 3 —
+  // ranges that cannot all be satisfied at once if the maximum bounded a total
+  // including anchors, and that read perfectly as a bound on what the app may
+  // choose. The same table sets the early-off-season sprint maximum to ZERO,
+  // which would make every athlete who attends team training illegal on the
+  // other reading.
+  const appSelectedConditioningForOptionalMaximum = ledger.conditioning.appCoreCount +
     ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount +
       ledger.conditioning.optionalNonCoreCount +
     ledger.conditioning.legacyUnknownCount;
   if (
     contract.conditioning.core.plannerSelectionKind === 'optional' &&
     contract.conditioning.core.permittedMaximum !== null &&
-    totalConditioningForOptionalMaximum > contract.conditioning.core.permittedMaximum
+    appSelectedConditioningForOptionalMaximum > contract.conditioning.core.permittedMaximum
   ) {
     addFinding(findings, {
       code: 'maximum_breach', severity: 'blocking', domain: 'conditioning',
       expected: contract.conditioning.core.permittedMaximum,
-      actual: totalConditioningForOptionalMaximum,
+      actual: appSelectedConditioningForOptionalMaximum,
       detail: 'Selected optional conditioning exceeds the phase maximum.',
       evidence: [`core=${ledger.conditioning.coreCount}`, `optional=${ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount + ledger.conditioning.optionalNonCoreCount}`, `legacyUnknown=${ledger.conditioning.legacyUnknownCount}`],
     });

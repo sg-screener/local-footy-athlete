@@ -518,28 +518,18 @@ console.log(`\n-- Athlete action-sequence walker (${EXTENDED ? 'EXTENDED' : 'bou
   + `${WALK_COUNT} walks × ${WALK_LENGTH} actions) --`);
 
 /**
- * DECLARED RED CELLS — named, reproduced, and NOT folded quietly into this
- * unit (Sam's seed-7 ruling, 2026-07-29). A walk that trips one of these is
- * recorded and skipped; anything else is a failure. Delete an entry when its
- * unit lands and the cell asserts immediately.
+ * DECLARED RED CELLS — none.
+ *
+ * The machinery is kept because the ruling that produced it stands: a defect
+ * carved out of a unit is NAMED, reproduced and skipped, never absorbed
+ * quietly. It is currently empty because the one entry it held —
+ * `off_season_generation_breaches_maximums` — was fixed in the same session it
+ * was declared, so its seeds now assert like any other and STAY in the suite.
+ *
+ * An entry here is a promise, not a parking space: it carries the minimal
+ * reproduction and it deletes when its unit lands.
  */
-const DECLARED_RED: ReadonlyArray<{ id: string; matches: RegExp; why: string }> = [
-  {
-    id: 'off_season_generation_breaches_maximums',
-    matches: /maximum_breach:(conditioning|sprint_high_speed)/,
-    // Reproduced in TWO actions — answer onboarding (Off-season), generate.
-    // Independent of calendar marks: Off-season generation alone produces a
-    // week breaching its own conditioning and sprint maximums. Pre-season and
-    // In-season generate cleanly from the same team-day shapes, so this is
-    // generation-side contract authoring, not a door.
-    //
-    // Sam ruled it expected and correct that the ownership collapse SURFACES
-    // this as an honest red instead of a blank screen, and that it is its own
-    // red cell under the same rules rather than absorbed here.
-    why: 'Off-season generation breaches conditioning/sprint maximums — its own '
-      + 'generation-side unit (Sam, 2026-07-29)',
-  },
-];
+const DECLARED_RED: ReadonlyArray<{ id: string; matches: RegExp; why: string }> = [];
 
 function declaredRedFor(detail: string): string | null {
   return DECLARED_RED.find((entry) => entry.matches.test(detail))?.id ?? null;
