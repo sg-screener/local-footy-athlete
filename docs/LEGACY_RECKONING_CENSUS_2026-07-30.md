@@ -352,17 +352,23 @@ only ratchet in this repo that has already been paid to zero.
 `src/data/legacyReckoningCensus.ts` + `src/__tests__/legacyReckoningCensusTests.ts`,
 wired into `test:bible`.
 
-Each unit above becomes an entry declaring **the detector that counts it** and
-**the count it currently has**:
+Every unit above is an entry. A detector-backed one declares **the detector that
+counts it** and **the count it is holding the line at**; a `tracked_only` one
+declares **why no detector can hold it**:
 
 ```ts
 { id: 'LR-1',
-  law: ['L-A2', 'L-A1', 'L-D1'],
-  detector: 'rawProgramWriteCallers',
-  declared: 18,                       // call sites today
+  laws: ['L-A2', 'L-A1', 'L-A8', 'L-D1'],
   blastRadius: 'accepted_content',
-  founding: 'programStore.ts:1629 — "Raw storage primitive"' }
+  founding: 'programStore.ts:1629 describes itself as a "Raw storage primitive"…',
+  status: 'scheduled',
+  sequence: LR1_LR2_SEQUENCE,   // byte-identical to LR-2's; the gate pins it
+  detector: 'rawProgramWriteRefs',
+  declared: 27 }
 ```
+
+The gate refuses an entry that names a law outside the law book, a
+detector-backed entry with no count, and a `tracked_only` entry with no reason.
 
 ## The detectors
 
@@ -471,10 +477,52 @@ readiness census took a year of accumulated edges to zero over one unit only
 because the ruling that classified them came first — **the ratchet holds the
 line; the rulings pay the debt.**
 
+## What the gates say
+
+- `npm run test:legacy-census` — **289/289, EXIT=0**, wired into `test:bible`.
+- `npm run test:compile` — **PASSED**, no file regressed against the baseline
+  (467 errors, unchanged).
+- `test:bible` was **not** run end-to-end: the working tree carries a concurrent
+  session's uncommitted changes to six files, so a red would be unattributable.
+  See NOT-COVERED.
+
+### Mutation-tested — six mutations, six caught
+
+A gate nobody tried to defeat is a gate of unknown strength. Each mutation was
+applied to a committed tree and reverted from the session scratchpad, never by
+`git checkout` (AGENTS.md).
+
+| # | Mutation | Caught by |
+|---|---|---|
+| 1 | New `.setManualOverride` reference in an unrelated file | direction 1 + completeness (27→28) |
+| 2 | New persisted store the registry has never heard of | direction 1 + completeness (11→12) |
+| 3 | **Raise `declared` AND `LEGACY_DEBT_BASELINE` together to absorb mutation 1** | **direction 4** — the circular escape, blocked |
+| 4 | LR-2's sequencing string drifted away from LR-1's | block [8] |
+| 5 | LR-6 downgraded from `stop` to `scheduled` | block [8] |
+| 6 | Debt paid down, baseline left high (re-spendable slack) | direction 3 |
+
+Mutation 3 is the one that mattered. It is the move a newcomer would actually
+make — declare the new violation rather than fix it — and it is the move the
+readiness census's three directions permit. Direction 4 is why this census does
+not.
+
 ---
 
 # NOT COVERED (Process Law L2)
 
+- **The ratchet holds four units of twenty-four.** LR-5 through LR-24 minus
+  LR-3 and LR-4 are recorded, ranked and unenforced. Nothing stops LR-6's eight
+  representations becoming nine, or a fourth visible-week projection appearing.
+  Each says why in the census file; none of those reasons is "it does not
+  matter".
+- **`mirrorDecisionReads` is a floor.** Two-step reads through a local are
+  invisible to it. 74 is what one idiom sees, not what exists.
+- **The baseline was measured against a shared working tree.** The concurrent
+  session's uncommitted edits were checked and touch none of the four counted
+  idioms (verified, not assumed) — but if that session lands a file carrying
+  one, `test:bible` goes red for them, and the census file is where the message
+  points. That is the ratchet working; it is still worth knowing before it
+  happens.
 - **No device pass, no Maestro run.** Every finding is a static source trace.
   Per L4 the device is arbiter, and per L10 nothing here is "done" — these are
   candidate units, not verified defects.
