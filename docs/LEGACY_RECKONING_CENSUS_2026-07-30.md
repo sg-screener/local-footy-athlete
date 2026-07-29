@@ -119,8 +119,12 @@ part is solid. What is **not** covered is who may write them.
 | `coachMemoryStore` | 05-04 | ❌ | ❌ | coach notes |
 | `uiStore` / `authStore` | 05-04 | ❌ | ❌ | negligible |
 
-**Ten of twelve have no write owner and nine have no tape.** Every one of them is
-the profile store's shape as it was on 2026-07-28 — the day before the fix.
+**Eleven of twelve have no single write owner and nine have no tape.** (The table
+above marks `programStore` ⚠️ rather than ❌ because its *accepted* state is
+owned; the gate counts it as unowned, because ownership means one door **and**
+typed refusals **and** the writer on the tape, and `setManualOverride` has none
+of the three. That is what LR-1 exists for.) Every one of them is the profile
+store's shape as it was on 2026-07-28 — the day before the fix.
 
 Two hand-maintained registries must agree about this set and nothing checks that
 they do: `appHydrationGate.PERSISTED_STORE_HYDRATION_REGISTRY` (12 entries) and
@@ -310,19 +314,37 @@ scheduling: *(i)* store ownership — LR-1, LR-2, LR-11, LR-17, LR-18, LR-23, LR
 LR-3, LR-7, LR-9, LR-13, LR-19, LR-20; *(iv)* honesty — LR-5, LR-8, LR-10, LR-16;
 *(v)* gates — LR-14, LR-21, LR-22.
 
-**Recommended order.** LR-1 and LR-2 first, together: they are the profile-wipe
-class on the stores that still have it, they are the only units whose failure
-mode is *lost athlete answers*, and LR-24 (the tape) rides in with them, which is
-what makes everything after them diagnosable. Then LR-6's reassessment — because
-it is a **stop**, not a build, and every coach unit queued behind it is blocked
-by CLAUDE.md until it is written and approved. LR-14 can run in parallel with any
-of them; it needs no design.
+## Sam's sequencing ruling (2026-07-30)
+
+Census approved. The ranked list stands as ordered above, with four decisions
+fixed:
+
+1. **LR-1 + LR-2 run together as the next major unit** — after the current G-1
+   branch merges, and before Stage B. The stores get one door and the full tape
+   before the engine builds on them. LR-24 rides in with them: a tape over a
+   store with no write owner records writes it cannot attribute.
+2. **LR-14 runs in parallel.** No design needed.
+3. **LR-6 is a standing STOP.** No coach-pipeline work of any kind — no new
+   resolver, guard, fallback, compatibility branch, phrase handler or finaliser
+   patch — before its reassessment is written and approved. CLAUDE.md's seven
+   questions are the form it takes.
+4. **Everything else holds its census rank**, and the ratchet keeps the surface
+   from growing meanwhile.
+
+Flags accepted on the record: **these are candidate units pending device
+confirmation, and the census pays nothing by itself.**
+
+The gate pins (1) and (3) directly — LR-1 and LR-2 must carry a byte-identical
+sequencing string so the ruling cannot drift apart in a later edit, and LR-6's
+status must remain `stop`.
 
 ---
 
 # PART 4 — THE RATCHET
 
-Proposed, not built. In the `readinessStructureCensus.ts` mould, which is the
+**Built and green, 2026-07-30** — `src/data/legacyReckoningCensus.ts` +
+`src/__tests__/legacyReckoningCensusTests.ts`, wired into `test:bible` as
+`test:legacy-census`. In the `readinessStructureCensus.ts` mould, which is the
 only ratchet in this repo that has already been paid to zero.
 
 ## Shape
@@ -349,17 +371,63 @@ change in what it counts fails loudly instead of re-baselining (this is
 `readinessStructureCensusTests` block [7], and it is the part that stops the
 census lying to itself):
 
-| Detector | Counts |
-|---|---|
-| `rawProgramWriteCallers` | `.setManualOverride(` outside `programStore.ts` and the transaction owners |
-| `unownedPersistedStores` | `persist(...)` stores in `src/store` absent from a `STORE_WRITE_OWNER_REGISTRY` |
-| `untapedStoreWrites` | store actions that mutate persisted state without an `emitAthleteActionEvent` |
-| `mirrorDecisionReaders` | `onboardingData` reads outside `profileStore`, `liveAthleteContext`, the accepted projection |
-| `legacyOverrideWriterCallers` | `applyCoachRevisionDateOverrides` call sites |
-| `coachRequestRepresentations` | declared request/intent/command/draft types in `src/utils/coach*` |
-| `rawErrorToAthlete` | `error.message` reaching a copy or `Alert` site |
-| `vocabularyLiteralsOutsideLock` | exercise-name literals under `supabase/functions/` |
-| `silentSuites` | `test:*` scripts producing no pass/fail marker |
+Nine were proposed. **Four shipped**, and the five that did not are the more
+useful result — each was dropped for a reason now recorded in the census file
+itself, on the unit it would have held:
+
+| Detector | Counts | Measured |
+|---|---|---|
+| `rawProgramWriteRefs` | `.setManualOverride` property accesses outside the defining store | **27** across 13 files |
+| `unownedPersistedStores` | `persist(...)` stores in `src/store` whose registry entry has `owner: null` — **and a store the registry has never heard of counts as unowned by default** | **11** of 12 |
+| `legacyOverrideWriterRefs` | `applyCoachRevisionDateOverrides(` calls, excluding the definition | **4** across 2 files |
+| `mirrorDecisionReads` | single-expression live-profile reads outside the store, `liveAthleteContext` and the accepted projection | **74** across 34 files |
+
+**Total declared debt: 116.**
+
+Dropped, with the reason recorded on the unit:
+
+- `untapedStoreWrites` — collapsed into `unownedPersistedStores`; the registry
+  records `taped` per store, and a separate count would double-count LR-2.
+- `coachRequestRepresentations` (LR-6) — counting exported type names counts
+  vocabulary, not representations, and goes green on a rename.
+- `rawErrorToAthlete` (LR-16) — the idiom is byte-identical whether it reaches
+  an `Alert` or a log line. It would count 24 sites and demand the 20 correct
+  ones be "fixed", which is how a gate teaches people to switch it off.
+- `vocabularyLiteralsOutsideLock` (LR-15) — the surface is under `supabase/`,
+  outside the `src/` tree every detector here walks. Extending the existing name
+  lock to that root **is** the unit.
+- `silentSuites` (LR-14) — a suite that reports nothing is found by running it.
+  The static precursor predicted only 3 of the 9 and belongs to LR-14 as a
+  recurring check, not here as a count.
+
+Three further units (LR-11 add-optional, LR-17 dev seams, LR-24 tape
+completion) are deliberately **not** given detectors because their call sites are
+already inside `rawProgramWriteRefs`. A second count of the same reference would
+corrupt the baseline.
+
+**Four of twenty-four units are ratcheted.** That number is honest rather than
+aspirational, and it is meant to rise by finding a detector for an existing
+unit — never by admitting a new one.
+
+### A declared hole
+
+`mirrorDecisionReads` sees a single-expression read only. A two-step read
+(`const p = useProfileStore.getState();` then `p.onboardingData`) is invisible to
+it, so **74 is a floor, not a total**. This is pinned as an explicit assertion in
+block [7] so it is a known hole rather than a silent one. Widening it into a
+parser is not the fix; migrating the readers is.
+
+Two exemption decisions worth recording, because both could have been taken the
+convenient way:
+
+- `acceptedStateTransaction.ts` carries 13 of the 74 and was **not** exempted.
+  Only two of them are snapshot reconciliation; the other eleven read the live
+  profile as decision input, which is the defect. Exempting the file would have
+  dropped the count to 61 and hidden them.
+- `rawProgramWriteRefs` exempts only `programStore.ts` — the file that *defines*
+  the primitive. `coachRevisionOverrideWriter.ts`'s three references stay
+  counted even though LR-3 retires that whole writer, because two units reducing
+  the same number is the ratchet working, not a double-count.
 
 ## The three directions, plus the fourth
 
@@ -371,12 +439,18 @@ because its subject is *pre-law surface* rather than *classified edges*:
 2. **Total debt may never exceed `LEGACY_DEBT_BASELINE`.** It only shrinks.
 3. **`LEGACY_DEBT_BASELINE` must equal the current total**, so paying debt
    tightens the ratchet instead of leaving re-spendable slack.
-4. **New code cannot join the list.** This falls out of (2) and (3) rather than
-   needing its own mechanism, and that is the point: a new violation raises
-   `actual` above `declared`, the only remedy in the file is to raise the
-   baseline, and (2) forbids raising it. **The build stays red until the
-   violation is fixed, not until it is declared.** That asymmetry — old surface
-   may be declared, new surface may only be fixed — is the whole ratchet.
+4. **`LEGACY_DEBT_BASELINE` may never exceed `LEGACY_DEBT_FOUNDING_BASELINE`** —
+   the number frozen the day the census landed (116). **This is the direction
+   that stops new code joining the list, and the readiness census does not have
+   it.** Directions 2 and 3 are circular on their own: both compare the total
+   against `LEGACY_DEBT_BASELINE`, so a newcomer can raise a declared count and
+   the baseline together and stay green. Against a frozen founding constant that
+   move is red and stays red.
+
+   **Old surface may be declared; new surface may only be fixed.**
+
+   Raising the founding number is a ruling, not an edit — and it requires naming
+   the sweep that missed the surface.
 
 ## Two properties carried over deliberately
 
