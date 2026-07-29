@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { logCoachBuildFingerprint } from './src/utils/coachBuildInfo';
+import { hydrateAthleteActionLog } from './src/utils/athleteActionLog';
 
 let DevE2EStatusMarkers: React.ComponentType | null = null;
 let prepareDevE2EAppLaunch: (() => Promise<boolean>) | null = null;
@@ -45,6 +46,14 @@ const queryClient = new QueryClient({
 });
 
 logCoachBuildFingerprint('app_launch');
+
+// Read the previous run's action log back before anything can be added to it,
+// so a relaunch is a GAP in the sequence rather than a reset of it — the
+// sequence that leads to a report usually crosses one. Module scope, on every
+// build, deliberately: this is the instrument that has to be alive where the
+// defects are (AGENTS.md). Never awaited — nothing the athlete sees depends on
+// it, and a slow read must not hold the first frame.
+void hydrateAthleteActionLog();
 
 export default function App() {
   const [DevRootNavigator, setDevRootNavigator] =

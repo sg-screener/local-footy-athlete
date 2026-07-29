@@ -1,6 +1,7 @@
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { recentProfileMirrorRefusals } from '../rules/profileMirrorNarrowing';
+import { athleteActionLogEntries, type AthleteActionLogEntry } from '../utils/athleteActionLog';
 
 /**
  * DEV-ONLY: the athlete's stored state, as bytes, for a one-tap share.
@@ -50,6 +51,13 @@ export interface StoredStateExport {
     weekScopedOverlayWeeks: string[];
   };
   profileMirrorRefusals: unknown;
+  /**
+   * What the athlete DID, in order (MASTER_PLAN 5D.3). The rest of this export
+   * is the state a sequence of actions left behind; this is the sequence.
+   * Reading one without the other is what turned the last G-1 diagnosis into
+   * four reconstructions.
+   */
+  athleteActionLog: AthleteActionLogEntry[];
 }
 
 export function captureStoredStateExport(): StoredStateExport {
@@ -80,6 +88,7 @@ export function captureStoredStateExport(): StoredStateExport {
       weekScopedOverlayWeeks: Object.keys(program.weekScopedOverlays ?? {}).sort(),
     },
     profileMirrorRefusals: recentProfileMirrorRefusals(),
+    athleteActionLog: athleteActionLogEntries(),
   };
 }
 
@@ -102,5 +111,6 @@ export function storedStateExportHeadline(): string {
   return `answers ${snapshot.profileStore.onboardingAnswerCount}`
     + ` · snapshot ${snapshot.programStore.acceptedProfileSnapshotAnswerCount ?? 'none'}`
     + ` · revision ${snapshot.programStore.acceptedRevision}`
-    + ` · mirror refusals ${(snapshot.profileMirrorRefusals as unknown[]).length}`;
+    + ` · mirror refusals ${(snapshot.profileMirrorRefusals as unknown[]).length}`
+    + ` · actions ${snapshot.athleteActionLog.length}`;
 }

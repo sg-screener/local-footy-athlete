@@ -12,6 +12,7 @@ import {
   claimRegisteredDevE2EScenarioAction,
   registerClaimedDevE2EScenarioActionTrace,
 } from './devE2EScenarioActionBridge';
+import { recordAthleteActionLogEntry } from './athleteActionLog';
 
 export type AthleteActionSource = 'tap' | 'coach' | 'system';
 
@@ -331,7 +332,7 @@ export function emitAthleteActionEvent(
   event: AthleteActionEventName,
   fields: Record<string, unknown> = {},
 ): AthleteActionDiagnosticEvent | null {
-  if (!trace || !athleteActionDiagnosticsEnabled()) return null;
+  if (!trace) return null;
   const diagnostic: AthleteActionDiagnosticEvent = {
     event,
     traceId: trace.traceId,
@@ -356,6 +357,14 @@ export function emitAthleteActionEvent(
     ...(trace.controlId !== undefined ? { controlId: trace.controlId } : {}),
     ...safeFields(fields),
   };
+  // THE ACTION LOG IS NOT A DEV DIAGNOSTIC (Sam, 2026-07-30). It records here,
+  // BEFORE the enabled check, because everything below this line is switched
+  // off on the build the defects live on — which is the entire reason four
+  // reconstructions of one device were needed to answer "what did you tap?".
+  // The event is already redacted at this point; the log is a reader of this
+  // shape, never a second author of it. See utils/athleteActionLog.
+  recordAthleteActionLogEntry(diagnostic);
+  if (!athleteActionDiagnosticsEnabled()) return null;
   retainedEvents.push(diagnostic);
   if (retainedEvents.length > MAX_RETAINED_EVENTS) {
     retainedEvents.splice(0, retainedEvents.length - MAX_RETAINED_EVENTS);
