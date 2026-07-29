@@ -1,8 +1,7 @@
 import type { Workout } from '../types/domain';
 import type { PlanChange } from './planChangeTypes';
 import { g1LandingRoute, placeSessionForRoute } from '../rules/g1LandingAsk';
-import { resolveEquipmentCapabilities } from './equipmentAvailability';
-import { DEFAULT_ATHLETE_CONTEXT, type AthleteContext } from './sessionBuilder';
+import { liveAthleteContext } from './liveAthleteContext';
 import { useProfileStore } from '../store/profileStore';
 
 /**
@@ -46,18 +45,7 @@ export function g1RouteTemplateTransform(
     route,
     landingWorkout: template,
     targetDate,
-    athlete: athleteContextForRoute(),
+    athlete: liveAthleteContext(),
     profile: useProfileStore.getState().onboardingData,
   }) ?? template;
-}
-
-function athleteContextForRoute(): AthleteContext {
-  const onboarding = useProfileStore.getState().onboardingData;
-  if (!onboarding) return DEFAULT_ATHLETE_CONTEXT;
-  return {
-    injuries: onboarding.injuries ?? [],
-    equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
-    trainingLocation: onboarding.trainingLocation ?? DEFAULT_ATHLETE_CONTEXT.trainingLocation,
-    onboardingData: onboarding,
-  };
 }

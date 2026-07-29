@@ -89,9 +89,9 @@ type Step =
       // game. Warn once, offer the three ruled routes, apply nothing until they
       // answer. All copy comes from rules/g1LandingAsk — the sheet holds none.
       //
-      // The change is any door that can land content, not Move alone: a swap
-      // onto the same day is the same question, and while this step could only
-      // hold a move it was never shown for one.
+      // The change is any door that can land content, not Move alone. A swap
+      // onto the same day asks the same question, and while this step was typed
+      // to a move it could never be shown for one.
       kind: 'g1_ask';
       change: G1RoutedChange;
       context: G1LandingAskContext;

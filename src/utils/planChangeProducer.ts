@@ -55,6 +55,7 @@ import {
   type CanonicalPlanChangeCandidateResult,
 } from './canonicalPlanChangeCandidateMaterializer';
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
+import { liveAthleteContext } from './liveAthleteContext';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import {
   canonicalContextSubphase,
@@ -94,8 +95,6 @@ import {
 } from '../rules/g1LandingAsk';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
-import { resolveEquipmentCapabilities } from './equipmentAvailability';
-import { DEFAULT_ATHLETE_CONTEXT, type AthleteContext } from './sessionBuilder';
 import { useProfileStore } from '../store/profileStore';
 import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import {
@@ -1148,7 +1147,7 @@ function athleteMoveInput(args: {
         route,
         landingWorkout: sourceWorkout,
         targetDate: args.change.toDate,
-        athlete: athleteContextForPlanChange(),
+        athlete: liveAthleteContext(),
         profile: useProfileStore.getState().onboardingData,
       })
     : null;
@@ -1186,17 +1185,6 @@ function athleteMoveInput(args: {
     placedSession: route && placedWorkout
       ? { route, workout: placedWorkout }
       : null,
-  };
-}
-
-function athleteContextForPlanChange(): AthleteContext {
-  const onboarding = useProfileStore.getState().onboardingData;
-  if (!onboarding) return DEFAULT_ATHLETE_CONTEXT;
-  return {
-    injuries: onboarding.injuries ?? [],
-    equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
-    trainingLocation: onboarding.trainingLocation ?? DEFAULT_ATHLETE_CONTEXT.trainingLocation,
-    onboardingData: onboarding,
   };
 }
 
@@ -1327,7 +1315,7 @@ function routeYieldsContent(
     route,
     landingWorkout,
     targetDate,
-    athlete: athleteContextForPlanChange(),
+    athlete: liveAthleteContext(),
     profile: useProfileStore.getState().onboardingData,
   });
 }
