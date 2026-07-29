@@ -517,10 +517,43 @@ const WALK_LENGTH = EXTENDED ? 60 : 25;
 console.log(`\n-- Athlete action-sequence walker (${EXTENDED ? 'EXTENDED' : 'bounded'}: `
   + `${WALK_COUNT} walks × ${WALK_LENGTH} actions) --`);
 
+/**
+ * DECLARED RED CELLS — named, reproduced, and NOT folded quietly into this
+ * unit (Sam's seed-7 ruling, 2026-07-29). A walk that trips one of these is
+ * recorded and skipped; anything else is a failure. Delete an entry when its
+ * unit lands and the cell asserts immediately.
+ */
+const DECLARED_RED: ReadonlyArray<{ id: string; matches: RegExp; why: string }> = [
+  {
+    id: 'off_season_generation_breaches_maximums',
+    matches: /maximum_breach:(conditioning|sprint_high_speed)/,
+    // Reproduced in TWO actions — answer onboarding (Off-season), generate.
+    // Independent of calendar marks: Off-season generation alone produces a
+    // week breaching its own conditioning and sprint maximums. Pre-season and
+    // In-season generate cleanly from the same team-day shapes, so this is
+    // generation-side contract authoring, not a door.
+    //
+    // Sam ruled it expected and correct that the ownership collapse SURFACES
+    // this as an honest red instead of a blank screen, and that it is its own
+    // red cell under the same rules rather than absorbed here.
+    why: 'Off-season generation breaches conditioning/sprint maximums — its own '
+      + 'generation-side unit (Sam, 2026-07-29)',
+  },
+];
+
+function declaredRedFor(detail: string): string | null {
+  return DECLARED_RED.find((entry) => entry.matches.test(detail))?.id ?? null;
+}
+
 run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold all seven laws`, () => {
   const violations: string[] = [];
+  const declaredHits = new Set<string>();
   for (let seed = 1; seed <= WALK_COUNT; seed++) {
     const violation = walk({ host, seed, length: WALK_LENGTH });
+    if (violation && declaredRedFor(violation.detail)) {
+      declaredHits.add(declaredRedFor(violation.detail)!);
+      continue;
+    }
     if (violation) {
       violations.push(
         `\n    SEED ${seed} — ${violation.law}\n    ${violation.detail}\n`
@@ -532,6 +565,9 @@ run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold all seven laws`, () => {
   }
   assert(violations.length === 0,
     `the walker found law violations:\n${violations.join('\n')}`);
+  for (const id of declaredHits) {
+    console.log(`      (declared red cell reached and skipped: ${id})`);
+  }
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {
@@ -571,9 +607,20 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
     history.push({ kind: 'mark_calendar', date, mark: mark as 'game' | 'rest' });
   }
   for (const action of history) {
-    try { performAction(action); } catch (error) {
-      assert(false, `the vocabulary could not perform ${action.kind}: `
-        + `${error instanceof Error ? error.message : String(error)}`);
+    try {
+      performAction(action);
+    } catch (error) {
+      // TWO DIFFERENT FAILURES WEAR THIS SHAPE, and they mean opposite things.
+      //
+      // If the vocabulary has no action for something a real athlete does, the
+      // HARNESS is incomplete — Sam's stated purpose for this assertion. If the
+      // vocabulary has the action, attempts it, and the APP throws, the harness
+      // is right and the product is broken. Reporting the second as the first
+      // would send someone to fix a walker that is working.
+      const message = error instanceof Error ? error.message : String(error);
+      assert(false,
+        `the app THREW performing ${action.kind} — the vocabulary is complete and `
+        + `this is a product defect, not a missing action: ${message}`);
     }
   }
 
