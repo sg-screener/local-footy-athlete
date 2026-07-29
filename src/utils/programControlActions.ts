@@ -1492,6 +1492,29 @@ async function executeProgramControlActionDurablyWithinTrace(
     didApply: (result) => result.ok && result.changedProgram,
   });
   if (transaction.ok) return transaction.value;
+  // THE DURABLE TWIN ROUTES THE CORE'S ANSWER. IT DOES NOT TRANSLATE IT.
+  //
+  // This is the wrapper defect one layer up, on the ONLY path the sheet awaits.
+  // `executePlanChangeAction` was taught to route the producer's
+  // `g1_route_required` sentinel to the ask-flow, and the synchronous executor
+  // duly answers `needsGuidedFollowUp: true` / `guided_follow_up_sheet`. Then
+  // this ran that executor inside `runCoachMutationTransaction`, whose
+  // `didApply` is `ok && changedProgram` — which an ask satisfies neither of, by
+  // construction, because an ask deliberately publishes nothing. The transaction
+  // reported "not applied", correctly, and everything the core had said was
+  // thrown away and replaced with "That change didn't go through — nothing on
+  // your plan changed. Try again, or ask your coach." A question, again, as a
+  // bug report.
+  //
+  // A core result that is ALREADY `ok: false` has answered for itself: the
+  // transaction's "not applied" is a restatement of that answer, not new
+  // information about it. So it is returned in the core's own words.
+  // `athleteSafeRefusal` still owns the case it was written for — the core
+  // claimed success and the transaction could not keep it (rollback, semantic
+  // verification), which is the only situation where this layer knows something
+  // the core does not.
+  const core = transaction.value;
+  if (core && !core.ok) return core;
   return {
     ok: false,
     changedProgram: false,

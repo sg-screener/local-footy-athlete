@@ -48,6 +48,10 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import {
+  executeProgramControlAction,
+  programControlActionForPlanChange,
+} from '../utils/programControlActions';
+import {
   walk, describeHistory, makeRng,
   type WalkerAction, type WalkerHost, type WalkerStepResult,
 } from './support/athleteActionWalker';
@@ -152,6 +156,17 @@ let weekStart = INSTALL_DAY;
 let onboarded = false;
 let generated = false;
 let lastChange: PlanChange | null = null;
+/**
+ * How each plan change actually reached the app, counted.
+ *
+ * The non-vacuity test below proves the walker PROPOSES a move; these prove it
+ * ROUTED like the screen. Without them a refactor that made
+ * `programControlActionForPlanChange` return null for everything would send the
+ * whole vocabulary back down to `applyPlanChange` — the exact layer that was
+ * green while Sam's phone was red — and every law would still pass.
+ */
+let wrapperRoutedChanges = 0;
+let directRoutedChanges = 0;
 
 function freshInstall(): void {
   todayISO = INSTALL_DAY;
@@ -246,14 +261,48 @@ function performAction(action: WalkerAction): WalkerStepResult {
     }
     case 'plan_change': {
       lastChange = action.change;
-      const result = quiet(() => applyPlanChange({
-        change: action.change,
+      // THE DOOR THE SCREEN USES, NOT THE ONE UNDERNEATH IT.
+      //
+      // This entered at `applyPlanChange` — the layer BELOW the sheet's
+      // dispatch — which is exactly why the walker, the matrix and the device
+      // replay were all green on 2026-07-29 while three of Sam's five taps
+      // failed on his phone. `PlanChangeSheet` sends a MOVE or a BIN through the
+      // program-control wrapper and everything else straight to the producer,
+      // and that split was the failing coordinate nothing enumerated.
+      //
+      // `programControlActionForPlanChange` IS that dispatch, owned in one place
+      // and called by both the sheet and this host — a harness that mirrors a
+      // screen drifts from it, one that CALLS it cannot. Null means "the wrapper
+      // does not own this kind", which is the sheet's own condition for going
+      // direct.
+      const screenAction = programControlActionForPlanChange(action.change);
+      if (!screenAction) {
+        directRoutedChanges += 1;
+        const direct = quiet(() => applyPlanChange({
+          change: action.change,
+          visibleWeek: visibleWeek(),
+          todayISO,
+          setManualOverride: (date, workout, context) =>
+            useProgramStore.getState().setManualOverride(date, workout, context),
+        }));
+        return { ...base, outcome: direct.outcome, message: direct.message };
+      }
+      wrapperRoutedChanges += 1;
+      const result = quiet(() => executeProgramControlAction(screenAction, {
         visibleWeek: visibleWeek(),
         todayISO,
         setManualOverride: (date, workout, context) =>
           useProgramStore.getState().setManualOverride(date, workout, context),
       }));
-      return { ...base, outcome: result.outcome, message: result.message };
+      // The wrapper answers in its own vocabulary. A landing ask is a QUESTION,
+      // not a refusal, and must not be reported to the laws as one — that
+      // conflation is the defect the wrapper reassessment named.
+      return {
+        ...base,
+        outcome: result.outcome
+          ?? (result.ok ? 'applied' : result.needsGuidedFollowUp ? 'needs_input' : 'refused'),
+        message: result.message ?? null,
+      };
     }
     case 'mark_calendar': {
       const calendar = useCalendarStore.getState();
@@ -579,6 +628,20 @@ run('the walker actually explores — its vocabulary is not stuck on one action'
   const missing = required.filter((kind) => !seen.has(kind));
   assert(missing.length === 0,
     `the walker never proposed: ${missing.join(', ')} — reached ${JSON.stringify([...seen])}`);
+
+  // AND IT ROUTED LIKE THE SCREEN. Proposing a move is not the same as sending
+  // it where the sheet sends one. Every suite in this repo was green on
+  // 2026-07-29 while three of Sam's five taps failed, because all of them
+  // entered at `applyPlanChange` and the sheet does not — it dispatches moves
+  // and bins through the program-control wrapper. Both counts must be non-zero,
+  // or the vocabulary has quietly collapsed back onto one door.
+  assert(wrapperRoutedChanges > 0,
+    'no plan change reached the program-control wrapper — the walker is entering '
+    + 'below the layer the sheet uses, which is how it stayed green while the '
+    + 'screen was red');
+  assert(directRoutedChanges > 0,
+    'every plan change went through the wrapper — the sheet sends adds and swaps '
+    + 'straight to the producer, so a harness where nothing does is not the sheet');
 });
 
 // ── Conformance: can the vocabulary REACH Sam's device? ───────────────────
