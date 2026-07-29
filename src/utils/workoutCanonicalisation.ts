@@ -430,6 +430,25 @@ function canonicalStrengthName(
   return isTeamDay ? `Team Training + ${label}` : label;
 }
 
+/**
+ * The final content owns the name — but on a COMBINED day it owns only its own
+ * half of it.
+ *
+ * "Recovery Session + Full Body Strength" carries a container the strength
+ * label knows nothing about, and rewriting the whole name from the strength
+ * patterns deleted it: the card named the session the athlete added and not the
+ * one it was added to. The strength half is still verified against the final
+ * patterns, so a name whose strength half has gone stale is still corrected;
+ * only a container that is still on the day survives.
+ */
+function nameWithContainerPreserved(
+  currentName: string,
+  canonical: string | null,
+): string | null {
+  if (!canonical) return null;
+  return currentName.endsWith(` + ${canonical}`) ? currentName : canonical;
+}
+
 function domainPatterns(rows: readonly ClassifiedRow[]): MainStrengthPattern[] {
   return Array.from(new Set(
     rows.flatMap(({ classification }) =>
@@ -870,9 +889,12 @@ export function finaliseWorkoutAfterMutation(
   const canonicalName = isAnchor || isRecovery
     ? workout.name
     : hasStrength
-      ? canonicalStrengthName(
-          finalStrengthIntent?.effectivePatterns ?? finalStrengthPatterns,
-          anchorClassification.anchors.teamTraining,
+      ? nameWithContainerPreserved(
+          workout.name,
+          canonicalStrengthName(
+            finalStrengthIntent?.effectivePatterns ?? finalStrengthPatterns,
+            anchorClassification.anchors.teamTraining,
+          ),
         ) ?? workout.name
       : workout.name;
   if (canonicalName !== workout.name) {

@@ -117,6 +117,22 @@ function combinedWorkoutType(args: {
   return args.base.workoutType;
 }
 
+/**
+ * The day's own name and the added session's, joined once. A name that already
+ * contains the other is left alone rather than repeating it — re-adding to an
+ * already-combined day must not produce "A + B + B".
+ */
+function joinStackedNames(base: string, added: string): string {
+  const trimmedBase = base.trim();
+  const trimmedAdded = added.trim();
+  if (!trimmedBase) return trimmedAdded;
+  if (!trimmedAdded) return trimmedBase;
+  if (trimmedBase === trimmedAdded) return trimmedBase;
+  const parts = trimmedBase.split(' + ').map((part) => part.trim());
+  if (parts.includes(trimmedAdded)) return trimmedBase;
+  return `${trimmedBase} + ${trimmedAdded}`;
+}
+
 function stackTemplate(args: {
   base: Workout;
   template: Workout;
@@ -136,11 +152,13 @@ function stackTemplate(args: {
     : baseHasStrength
     ? args.base
     : null;
+  // THE TITLE NAMES BOTH (Sam, 2026-07-30). A stack is two things on one day,
+  // and naming one of them is how an added optional session made the recovery
+  // it sat on top of disappear from the card. The team anchor has always used
+  // this join; nothing about it was specific to team training.
   const name = args.preservesTeamTraining
     ? `Team Training + ${args.template.name}`
-    : templateHasStrength && !baseHasStrength
-    ? args.template.name
-    : args.base.name;
+    : joinStackedNames(args.base.name, args.template.name);
 
   return {
     ...args.base,

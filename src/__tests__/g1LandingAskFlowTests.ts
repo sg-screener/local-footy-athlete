@@ -985,6 +985,36 @@ run('26 a route that would leave the day empty is refused, not published', () =>
     'the day changed despite the refusal');
 });
 
+run('27 the card names BOTH what the day held and what the athlete added', () => {
+  // Sam's device confirm (2026-07-30): the title on the day he added an
+  // optional session to his G-1 recovery read "Full Body Strength" — the
+  // recovery had not gone anywhere, it had just stopped being named. By the
+  // time this renders the ask has already gated the change, so the honest
+  // title is the one that names what the athlete chose ALONGSIDE what was
+  // there. Same join the team-combo days have always used.
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const held = plantOnFriday(weekStart, {
+    name: 'Recovery Session', workoutType: 'Recovery', sessionTier: 'recovery',
+  });
+  const friday = addDaysISO(weekStart, 4);
+
+  const result = commitChange(weekStart, {
+    kind: 'add_category', date: friday, category: 'strength_full',
+    g1Route: 'accessories_only',
+  });
+  assert(result.ok, `routed add refused: ${result.message}`);
+
+  const title = visibleWeek(weekStart)
+    .find((day) => day.date === friday)?.workout?.name ?? '';
+  assert(title.includes(held.name),
+    `the title "${title}" no longer names the ${held.name} that is still on the day`);
+  assert(title.replace(held.name, '').trim().length > 0,
+    `the title "${title}" names only what was already there, not what was added`);
+  assert(title.startsWith(`${held.name} + `),
+    `the title "${title}" does not use the team-combo join`);
+});
+
 // ── Copy provenance: code ↔ Sam's signed design document ──────────────────
 
 /**
