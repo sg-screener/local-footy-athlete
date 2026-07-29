@@ -1,0 +1,221 @@
+/**
+ * THE UPGRADE PATH: hydrating a PREVIOUS-BUILD store in today's build.
+ *
+ * Sam's 2026-07-29 wipe (`device-export-2026-07-29-hydration-failure.json`):
+ * hydration read v43 intact, the gateway re-evaluated a stored week, the
+ * transaction refused with `accepted_state_ledger_mismatch` and rolled back —
+ * and then a second hydrate cycle started from an empty baseline and PERSISTED
+ * it over the refused data. Profile and calendar marks survived; the program did
+ * not.
+ *
+ * THE FIXTURE IS ACTED, NOT AUTHORED. `previousBuildStore-1e9c822.json` is the
+ * payload zustand's persist middleware wrote when the REAL pre-canonical build
+ * was driven through its own doors in a worktree. Its provenance block names the
+ * commit, every action, and the store state each action left. A hand-written
+ * "old store" would be the seed the fixture laws forbid, and a red cell standing
+ * on one would prove nothing about his wipe.
+ *
+ * WHY 1e9c822 AND NOT THE BRANCH POINT. `previousBuildStore-49c8579.json` — also
+ * acted, also committed — classifies `accepted_canonical`, and that ingress
+ * early-returns without ever calling `commitAcceptedStateTransaction`. Only a
+ * `legacy_precanonical` / `migration_required` envelope reaches the boundary that
+ * refused on his phone.
+ *
+ * STATUS, STATED SO GREEN CANNOT BE MISREAD: this suite PASSES today. It proves
+ * the upgrade path — a genuine previous-build store classifies as a legacy
+ * ingress, reaches `commitAcceptedStateTransaction`, and hydrates without losing
+ * the athlete's program. It does NOT yet reproduce Sam's refusal: his
+ * 2026-08-03 week breached a CURRENT rule (`maximum_breach:conditioning`,
+ * expected 3 actual 4 — an old-build week under new counting) after 43
+ * revisions of edits, and this acted sequence (onboard, generate, marks) builds
+ * weeks that re-evaluate cleanly. Cell 3 is therefore a GUARD against the wipe,
+ * not a PROOF that it is fixed — the wipe is still unreproduced and unfixed.
+ *
+ * What is missing is content, not ingress: the acted old-build sequence needs
+ * edits that make a week today's evaluator scores differently, which means
+ * working out 1e9c822's own plan-change door API.
+ *
+ * Run: npm run test:hydration-upgrade-path
+ */
+
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+process.env.TZ = 'Australia/Melbourne';
+
+/**
+ * The durable store, and the ONLY one. Every read and write in this suite goes
+ * through this map, so "what is on disk" is answerable at any instant — which is
+ * the entire question the wipe poses.
+ */
+const durable = new Map<string, string>();
+(globalThis as unknown as { window: unknown }).window = {
+  localStorage: {
+    getItem: (key: string) => durable.get(key) ?? null,
+    setItem: (key: string, value: string) => { durable.set(key, value); },
+    removeItem: (key: string) => { durable.delete(key); },
+    clear: () => durable.clear(),
+  },
+};
+(global as unknown as { fetch: () => never }).fetch = () => {
+  throw new Error('NETWORK DISABLED — the upgrade path runs entirely on-device');
+};
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { classifyProgramHydrationIngress } from '../store/programHydrationIngress';
+import { useProgramStore } from '../store/programStore';
+
+let passed = 0;
+let failed = 0;
+const failures: string[] = [];
+
+function assert(condition: unknown, detail: string): asserts condition {
+  if (!condition) throw new Error(detail);
+}
+
+async function run(name: string, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
+    passed += 1;
+    console.log(`  PASS ${name}`);
+  } catch (error) {
+    failed += 1;
+    failures.push(name);
+    console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+const FIXTURE = path.join(__dirname, 'fixtures', 'previousBuildStore-1e9c822.json');
+
+interface CapturedStore {
+  __provenance: { capturedFromCommit: string; actions: string[]; newBuildClassification: string };
+  envelopes: Record<string, string | null>;
+}
+
+function loadFixture(): CapturedStore {
+  return JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as CapturedStore;
+}
+
+/** Put the previous build's store on disk, exactly as it wrote it. */
+function seedDurableFromPreviousBuild(): CapturedStore {
+  const fixture = loadFixture();
+  durable.clear();
+  for (const [key, value] of Object.entries(fixture.envelopes)) {
+    if (typeof value === 'string') durable.set(key, value);
+  }
+  return fixture;
+}
+
+function programEnvelope(): { raw: string | null; state: Record<string, unknown> | null } {
+  const raw = durable.get('program-store') ?? null;
+  if (!raw) return { raw: null, state: null };
+  const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
+  return { raw, state: parsed.state ?? null };
+}
+
+function envelopeCarriesProgram(): boolean {
+  const { state } = programEnvelope();
+  const program = state?.currentProgram as { microcycles?: unknown[] } | null | undefined;
+  return !!program && (program.microcycles ?? []).length > 0;
+}
+
+async function hydrate(): Promise<{ threw: Error | null }> {
+  try {
+    await useProgramStore.persist.rehydrate();
+    return { threw: null };
+  } catch (error) {
+    return { threw: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
+async function main(): Promise<void> {
+  console.log('\n-- Hydration upgrade path --');
+
+  await run('the acted previous-build store reaches the accepted-state transaction', async () => {
+    // Non-vacuity for everything below. If this payload classified
+    // `accepted_canonical`, hydration would early-return and the two laws after
+    // this one would pass without exercising the boundary that refused on his
+    // phone. That is exactly what the 49c8579 fixture does, and why it is not
+    // the one used here.
+    const fixture = seedDurableFromPreviousBuild();
+    const { state } = programEnvelope();
+    assert(state, 'the fixture carries no program-store envelope');
+    const classification = classifyProgramHydrationIngress(state, 0);
+    assert(classification.kind === 'migration_required' ||
+      classification.kind === 'legacy_precanonical',
+      `the acted previous-build store classifies ${classification.kind} — only a `
+      + 'legacy ingress reaches `commitAcceptedStateTransaction`, so this suite '
+      + 'would be asserting laws about a path it never enters');
+    assert(fixture.__provenance.capturedFromCommit === '1e9c822',
+      'the fixture is not the pre-canonical capture');
+    assert(envelopeCarriesProgram(),
+      'the previous-build envelope carries no program — nothing to lose, so '
+      + 'nothing to protect');
+  });
+
+  await run('hydrating a previous-build store does not refuse it', async () => {
+    // FINDING 3 — ONE TRANSACTION, TWO MODES.
+    //
+    // `assertAcceptedVisibleLedgerEquivalence` throws on any blocking violation
+    // when `operation === 'restoration'`, and `commitAcceptedStateTransaction`
+    // DEFAULTS to `restoration` while the hydration call passes none. Meanwhile
+    // the same transaction's staging path runs the §18 gateway, which
+    // accept-and-reduces unconditionally. So one half reduces the week and the
+    // other half refuses the reduction.
+    //
+    // Sam's ruling: old-build state under new rules is a LEGACY SHAPE wanting a
+    // read-ingress lift BEFORE the strict boundary — not a re-gating that
+    // shrinks, and not a strict check that strands.
+    seedDurableFromPreviousBuild();
+    const { threw } = await hydrate();
+    assert(!threw,
+      'hydrating an acted previous-build store REFUSED it: '
+      + `${threw?.name} — ${threw?.message}. A previous build's own output is a `
+      + 'legacy shape to lift, not a corrupt snapshot to reject.');
+    const state = useProgramStore.getState();
+    assert(state.currentProgram,
+      'hydration completed and left no program in the store');
+  });
+
+  await run('a refusal never persists the state it refused into', async () => {
+    // FINDING 4 — THE WIPE ITSELF, and the law Sam named for this unit.
+    //
+    // The refused payload must be quarantined UNTOUCHED and the bare fallback
+    // must be unpersistable while a refused payload exists. Asserted against the
+    // durable envelope rather than the live store, because the wipe is a
+    // PERSISTENCE event: his in-memory rollback was clean and the damage landed
+    // 13.4 seconds later, when the boot gate timed out and the retry published
+    // an empty baseline over the top.
+    //
+    // The second hydrate is the retry: `appHydrationGate.retryAppHydration()`
+    // calls `persist.rehydrate()`, which is what the boot error screen's Try
+    // Again does. Whatever the first cycle decided, the athlete's program must
+    // still be on disk afterwards.
+    seedDurableFromPreviousBuild();
+    const before = programEnvelope().raw;
+    assert(before && envelopeCarriesProgram(), 'seeding did not put a program on disk');
+
+    await hydrate();
+    assert(envelopeCarriesProgram(),
+      'the FIRST hydration cycle removed the athlete\'s program from disk');
+
+    // The retry, exactly as the boot error screen performs it.
+    await hydrate();
+    assert(envelopeCarriesProgram(),
+      'THE WIPE: after a hydration refusal and the boot screen\'s retry, the '
+      + 'persisted program is gone. A refusal must never persist the state it '
+      + 'refused into — the refused payload is quarantined, and a bare fallback '
+      + 'is unpersistable while a quarantined payload exists.');
+  });
+
+  console.log('\n  NOTE: green here is the upgrade path working, NOT the '
+    + '2026-07-29 wipe fixed.\n        This fixture reaches the transaction but '
+    + 'does not make it refuse, so the\n        quarantine law is guarded, not '
+    + 'proven. See docs/HYDRATION_WIPE_DIAGNOSIS_2026-07-30.md.');
+  console.log(`\nHydration upgrade path totals: ${passed} passed, ${failed} failed`);
+  if (failed > 0) {
+    console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
+    process.exit(1);
+  }
+}
+
+void main();
