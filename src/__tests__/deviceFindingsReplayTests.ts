@@ -273,8 +273,34 @@ function reachHisSecondPassWorld(): void {
   // the ask MUST render.
 }
 
-run('the G-1 ask reaches the screen instead of becoming a failure', () => {
+/**
+ * The Thursday he moved FROM had a session on it, and this world has to reach
+ * that by acting before it can replay the move.
+ *
+ * His export records `override:set:2026-08-06` as the last transaction of the
+ * pass — revision 43, a session's worth of edits — so on his phone 08-06 was
+ * occupied. A generated week does not put one there. The first version of this
+ * test tapped the move straight onto the empty day, the producer answered
+ * `no_session` ("There's nothing on this day to move"), and the G-1 ask it was
+ * written to assert could not arise at all: it was asserting the routing of a
+ * sentinel the world never produced. Green would have meant nothing and red
+ * meant nothing either, which is the fixture-fidelity law (AGENTS.md) in its
+ * exact words — an input that cannot exhibit the defect proves nothing.
+ *
+ * The add is a real door, in the tape's own shape.
+ */
+function reachHisOccupiedThursday(): void {
   reachHisSecondPassWorld();
+  const added = tap({
+    kind: 'add_category', date: '2026-08-06', category: 'strength_full',
+  } as PlanChange);
+  assert(added.outcome === 'applied',
+    `could not reach his occupied Thursday by acting: the add was ${added.outcome}`
+    + ` — "${added.message}"`);
+}
+
+run('the G-1 ask reaches the screen instead of becoming a failure', () => {
+  reachHisOccupiedThursday();
   const result = tapThroughTheScreen({
     kind: 'move_session', fromDate: '2026-08-06', toDate: '2026-08-07',
   } as PlanChange) as { ok?: boolean; needsGuidedFollowUp?: boolean; message?: string };
