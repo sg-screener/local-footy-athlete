@@ -61,6 +61,13 @@ export type AthleteActionEventName =
   | 'athlete_ui_outcome_shown'
   | 'ui_outcome_mapped'
   | 'hydrated_state_checked'
+  // The onboarding store, added 2026-07-30 after Sam's third lost onboarding.
+  // The log covered the stores where the LAST class of defect lived; this is
+  // the store where this one does. Answers are never recorded — only which
+  // fields were written and how many the profile held afterwards.
+  | 'onboarding_step_committed'
+  | 'onboarding_completion_result'
+  | 'profile_mirror_publication_refused'
   | 'diagnostic_snapshot';
 
 export type AthleteActionFailureCategory =

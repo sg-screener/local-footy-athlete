@@ -70,6 +70,42 @@ export function profileMirrorPublicationRefusal(args: {
   };
 }
 
+/**
+ * MAY AN ACCEPTED PROFILE SNAPSHOT BE MINTED AT ALL?
+ *
+ * The other end of the same law. Narrowing stops a corrupt snapshot from
+ * eating answers; this stops the corrupt snapshot existing.
+ *
+ * An accepted profile records an acceptance THE ATHLETE MADE. Before onboarding
+ * closes there is no such acceptance, so a snapshot captured then is not a
+ * stale record — it is a fabricated one, and because ordinary transactions only
+ * refresh the snapshot when the profile they carry differs, a fabricated one
+ * freezes and is republished forever.
+ *
+ * Sam's device, third onboarding lost (export 4, 2026-07-29): hydration minted
+ * `sourceRevision: 1` from a profile byte-identical to the store's in-memory
+ * default, with `isOnboardingComplete: false`, while a four-microcycle program
+ * built from those two answers sat beside it. The guard that existed skipped
+ * acceptance only when there was NO program; his device had one.
+ *
+ * Completion — not answer count — is the condition, deliberately. "Enough
+ * answers to look complete" is a heuristic about identity, and this file is
+ * where that class of mistake gets made. `isOnboardingComplete` is the
+ * athlete's own act.
+ */
+export interface AcceptedProfileSnapshotMintRefusal {
+  reason: 'onboarding_not_complete';
+  at: string;
+}
+
+export function acceptedProfileSnapshotMintRefusal(args: {
+  isOnboardingComplete: boolean;
+  onboardingData: OnboardingData | null | undefined;
+}): AcceptedProfileSnapshotMintRefusal | null {
+  if (args.isOnboardingComplete) return null;
+  return { reason: 'onboarding_not_complete', at: new Date().toISOString() };
+}
+
 /* ══ Disclosure ══
  *
  * A refusal that nobody can see is the same silence this rule exists to break.

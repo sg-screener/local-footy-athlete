@@ -39,10 +39,12 @@ import { join } from 'path';
 import type { OnboardingData } from '../types/domain';
 import { useProfileStore } from '../store/profileStore';
 import {
+  acceptedProfileSnapshotMintRefusal,
   profileMirrorPublicationRefusal,
   recentProfileMirrorRefusals,
   clearProfileMirrorRefusals,
 } from '../rules/profileMirrorNarrowing';
+import { publishAcceptedProfileCompatibilityMirror } from '../store/profileStore';
 import {
   IMPOVERISHED_SNAPSHOT,
   fullyAnsweredProfile,
@@ -70,6 +72,9 @@ function run(name: string, body: () => void): void {
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
 }
+
+/** The profile Sam actually answered — every question, as onboarding leaves it. */
+const COMPLETE_PROFILE: OnboardingData = fullyAnsweredProfile();
 
 console.log('\n-- Profile mirror narrowing --');
 
@@ -256,18 +261,117 @@ run("the fixture's snapshot is byte-identical to the store's initial profile", (
     `equipment drifted:\n  store  =${JSON.stringify(equipment)}\n  fixture=${JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment)}`);
 });
 
-run('the fabrication guard closes only the NO-PROGRAM case', () => {
-  // Half B of Option 3 shipped, and is narrower than the class it was named
-  // for. It skips the hydration acceptance only when there is no program AND
-  // revision is 0. Sam's device HAD a program, so the guard did not fire and a
-  // snapshot was minted from the default profile — `sourceRevision: 1`, exactly
-  // as his export shows. Recorded here as the founding evidence for the
-  // stored-state writers audit (MASTER_PLAN 5D.1) rather than widened
-  // unruled: hydration acceptance is load-bearing for §18 ownership and the
-  // reassessment itself said it needs its own invariant review.
+// ── The fabrication, both ends (Sam's device, third onboarding lost) ──────
+//
+// Export 4 settled the mechanism. The live profile was BYTE-IDENTICAL to the
+// store's `initialOnboardingData` — 2 keys, `trainingLocation` + `equipment` —
+// and so was the accepted snapshot, minted at `sourceRevision: 1`. The last
+// line of his action log is `hydration_accepted_canonical_projection`: the
+// hydration branch that calls `publishAcceptedProfileCompatibilityMirror`
+// DIRECTLY, which sets the in-progress flag and therefore deliberately bypasses
+// the subscriber the narrowing law lived in. That is why his export shows an
+// empty refusal log next to a wiped profile: the guarded path never ran.
+//
+// Two ends, one law. Do not mint an acceptance nobody made, and do not publish
+// one over answers that outrank it.
+
+run('a snapshot is never minted from a profile that has not completed onboarding', () => {
+  // Sam's device HAD a program (4 microcycles), so the old guard — no program
+  // AND revision 0 — did not fire, and hydration minted an accepted profile
+  // from the default. An accepted profile records an acceptance the athlete
+  // made; there is no such thing before onboarding closes.
+  assert(acceptedProfileSnapshotMintRefusal({
+    isOnboardingComplete: false,
+    onboardingData: IMPOVERISHED_SNAPSHOT as OnboardingData,
+  }), 'hydration would still mint an accepted profile mid-onboarding');
+  assert(acceptedProfileSnapshotMintRefusal({
+    isOnboardingComplete: false,
+    onboardingData: COMPLETE_PROFILE,
+  }), 'a complete-looking profile mid-onboarding is still not an acceptance');
+  // Non-vacuity: the ordinary case must still mint, or nothing has an accepted
+  // profile and every downstream owner loses its input.
+  assert(acceptedProfileSnapshotMintRefusal({
+    isOnboardingComplete: true,
+    onboardingData: COMPLETE_PROFILE,
+  }) === null, 'a completed onboarding can no longer record its accepted profile');
+});
+
+run('the hydration mint site asks the rule', () => {
   const programStore = readFileSync(join(__dirname, '..', 'store', 'programStore.ts'), 'utf8');
-  assert(/if \(!hydrated\.currentProgram && acceptedBefore\.revision === 0\)/.test(programStore),
-    'the fabrication guard changed shape — re-check whether it now covers a device WITH a program');
+  assert(programStore.includes('acceptedProfileSnapshotMintRefusal'),
+    'the hydration acceptance no longer consults the mint rule — a snapshot can '
+    + 'be fabricated from an unscoreable profile again');
+});
+
+run('publishing narrows at the FUNCTION, so no caller can bypass it', () => {
+  // The exact call the hydration branch makes, with the exact payload from
+  // Sam's device. Before this law lived in the publication itself, this call
+  // replaced 23 answers with 2 and recorded nothing.
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  clearProfileMirrorRefusals();
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+
+  publishAcceptedProfileCompatibilityMirror(IMPOVERISHED_SNAPSHOT as OnboardingData);
+
+  const after = useProfileStore.getState().onboardingData!;
+  const answerCount = Object.keys(after).filter((key) =>
+    (after as Record<string, unknown>)[key] !== undefined).length;
+  assert(answerCount > 2,
+    `a direct publication wiped the profile to ${answerCount} answers — the `
+    + 'narrowing law is still only in the subscriber');
+  assert(after.seasonPhase === COMPLETE_PROFILE.seasonPhase,
+    'the direct publication dropped seasonPhase, the answer generation refuses without');
+  assert(recentProfileMirrorRefusals().length === 1,
+    'the refused publication was silent — his export showed an empty refusal log '
+    + 'next to a wiped profile for exactly this reason');
+});
+
+run('the athlete removing an answer on purpose is not a wipe', () => {
+  // Leaving In-season clears the game day. That is an answer disappearing, by
+  // the athlete's own act, inside the transaction that made it — and a guard
+  // that cannot tell it from a stale snapshot being replayed would strand every
+  // profile edit that removes something. `phaseShiftAtomicityTests` is where
+  // that showed up; this is where the distinction is stated.
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  clearProfileMirrorRefusals();
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  const cleared = { ...COMPLETE_PROFILE } as Record<string, unknown>;
+  delete cleared.gameDay;
+  delete cleared.usualGameDay;
+
+  publishAcceptedProfileCompatibilityMirror(cleared as OnboardingData, {
+    origin: 'accepted_transaction',
+  });
+
+  assert(useProfileStore.getState().onboardingData!.gameDay === undefined,
+    'the athlete cleared their game day and the mirror put it back');
+  assert(recentProfileMirrorRefusals().length === 0,
+    "the athlete's own edit was recorded as a corrupt-snapshot refusal");
+
+  // And the same payload, replayed as a stored snapshot, is still refused —
+  // otherwise the origin is a way to opt out of the law rather than a
+  // statement about which of two things is happening.
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  publishAcceptedProfileCompatibilityMirror(cleared as OnboardingData);
+  assert(useProfileStore.getState().onboardingData!.gameDay === COMPLETE_PROFILE.gameDay,
+    'a stored snapshot replayed the same drop and it was allowed through');
+  assert(recentProfileMirrorRefusals().length === 1,
+    'the projection was neither applied nor recorded');
+});
+
+run('a publication that does not widen the gap still lands', () => {
+  // Non-vacuity for the guard above: the mirror is not disabled, it is bounded.
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  clearProfileMirrorRefusals();
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  const changed = { ...COMPLETE_PROFILE, seasonPhase: 'Off-season' } as OnboardingData;
+
+  publishAcceptedProfileCompatibilityMirror(changed);
+
+  assert(useProfileStore.getState().onboardingData!.seasonPhase === 'Off-season',
+    'an equally-complete publication was refused — the mirror stopped working');
+  assert(recentProfileMirrorRefusals().length === 0,
+    'a legitimate publication was recorded as a refusal');
 });
 
 // ── The instrument has to exist where the defect does ───────────────────

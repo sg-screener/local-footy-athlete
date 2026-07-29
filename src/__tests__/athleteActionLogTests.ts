@@ -61,6 +61,9 @@ import { captureStoredStateExport } from '../dev/devStoredStateExport';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyPlanChange } from '../utils/planChangeProducer';
+import { commitOnboardingStep } from '../utils/onboardingStepCommit';
+import { publishAcceptedProfileCompatibilityMirror } from '../store/profileStore';
+import { clearProfileMirrorRefusals } from '../rules/profileMirrorNarrowing';
 
 const CURRENT_WEEK = '2026-07-13';
 
@@ -284,6 +287,61 @@ await run('athlete content never reaches the log', async () => {
   }
   assert(serialised.includes('applied'),
     'the redaction also removed the outcome — the log would be useless');
+});
+
+await run('every onboarding answer is on the tape', async () => {
+  // THE INSTRUMENTATION RULE, APPLIED TO THE INSTRUMENT'S OWN GAP (Sam,
+  // export 4). His log held five entries, all of them this launch's hydration,
+  // and NOTHING from the onboarding that lost 21 answers — because the
+  // onboarding write door never emitted. The log covered the stores where the
+  // last defect lived, not the store where this one does.
+  releaseBuild();
+  await clearAthleteActionLog();
+  useProfileStore.setState({ onboardingData: {} as OnboardingData, isOnboardingComplete: false });
+
+  await commitOnboardingStep({ seasonPhase: 'In-season' } as never);
+  await commitOnboardingStep({ position: 'inside_mid' } as never);
+
+  const commits = athleteActionLogEntries()
+    .filter((entry) => entry.event === 'onboarding_step_committed');
+  assert(commits.length === 2,
+    `the log recorded ${commits.length} onboarding commits, not 2`);
+  // The two numbers that would have shown the wipe the moment it happened:
+  // which answer was written, and how many the profile held afterwards.
+  assert(commits.some((entry) => Array.isArray(entry.fields) &&
+    (entry.fields as string[]).includes('seasonPhase')),
+  `the commit did not record WHICH answer: ${JSON.stringify(commits[0])}`);
+  assert(commits[1]!.answerCountAfter === 2,
+    `the commit did not record the profile size after it: ${
+      JSON.stringify(commits[1]!.answerCountAfter)}`);
+  // Never the answer itself: the log leaves the device.
+  const serialised = JSON.stringify(commits);
+  assert(!serialised.includes('inside_mid') && !serialised.includes('In-season'),
+    `an onboarding ANSWER reached the log: ${serialised}`);
+});
+
+await run('a mirror refusal survives the relaunch that hides it', async () => {
+  // His export showed an empty refusal log beside a wiped profile. Part of that
+  // was the unguarded publication path; the rest is that the refusal record is
+  // in memory only, and he relaunched before exporting. A diagnostic that dies
+  // with the process cannot describe a bug that spans one.
+  releaseBuild();
+  await clearAthleteActionLog();
+  clearProfileMirrorRefusals();
+  useProfileStore.setState({
+    onboardingData: { seasonPhase: 'In-season', position: 'inside_mid' } as OnboardingData,
+    isOnboardingComplete: true,
+  });
+
+  publishAcceptedProfileCompatibilityMirror({ seasonPhase: 'In-season' } as OnboardingData);
+
+  const refusals = athleteActionLogEntries()
+    .filter((entry) => entry.event === 'profile_mirror_publication_refused');
+  assert(refusals.length === 1,
+    `the refusal is still memory-only: ${refusals.length} in the log`);
+  assert(Array.isArray(refusals[0]!.droppedAnswers) &&
+    (refusals[0]!.droppedAnswers as string[]).includes('position'),
+  `the logged refusal does not name what it saved: ${JSON.stringify(refusals[0])}`);
 });
 
 await run('the export is reachable without completing onboarding', async () => {

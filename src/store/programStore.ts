@@ -61,6 +61,7 @@ import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
+import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
   athleteActionDiagnosticHash,
   clearProgramHydrationTrace,
@@ -2187,6 +2188,32 @@ export const useProgramStore = create<ProgramState>()(
               acceptedBefore.acceptedCompositionBase?.updatedAt ??
               acceptedBefore.acceptedCompositionBase?.capturedAt ??
               new Date(0).toISOString();
+            // NEVER MINT AN ACCEPTANCE NOBODY MADE (Sam, export 4, 2026-07-29).
+            //
+            // This is where his device's `sourceRevision: 1` snapshot came
+            // from: hydration ran mid-onboarding, minted an accepted profile
+            // from the store's 2-key DEFAULT, and every later hydration
+            // republished it over whatever he had answered since. Three
+            // onboardings.
+            //
+            // The guard above it — no program AND revision 0 — did not fire,
+            // because generation had already built him a program from those
+            // two answers. Program presence was never the question:
+            // `isOnboardingComplete` is, because that is the athlete's own act
+            // of acceptance. See rules/profileMirrorNarrowing.
+            const mintRefusal = acceptedProfileSnapshotMintRefusal({
+              isOnboardingComplete: !!(persistedProfile.isOnboardingComplete ??
+                require('./profileStore').useProfileStore.getState().isOnboardingComplete),
+              onboardingData: profileForAcceptance,
+            });
+            if (mintRefusal && !acceptedBefore.acceptedProfileSnapshot) {
+              emitAthleteActionEvent(trace, 'athlete_action_completed', {
+                outcome: 'accepted',
+                internalResultCode: 'hydration_snapshot_mint_refused',
+                mintRefusalReason: mintRefusal.reason,
+              });
+              return;
+            }
             let acceptedProfileSnapshot: AcceptedProfileSnapshotV1 =
               acceptedBefore.acceptedProfileSnapshot ?? {
                 protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,

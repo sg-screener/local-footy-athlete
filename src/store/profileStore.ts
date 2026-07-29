@@ -6,6 +6,10 @@ import {
   profileMirrorPublicationRefusal,
   recordProfileMirrorRefusal,
 } from '../rules/profileMirrorNarrowing';
+import {
+  beginAthleteActionTrace,
+  emitAthleteActionEvent,
+} from '../utils/athleteActionDiagnostics';
 import { logger } from '../utils/logger';
 import { canScoreCapacity } from '../data/capacityRubric';
 import {
@@ -88,22 +92,52 @@ export const useProfileStore = create<ProfileState>()(
        */
       completeOnboarding: () => {
         const profile = get().onboardingData;
+        // The guard's verdict goes on the tape either way. When Sam's refused,
+        // the screenshot said "one more answer needed" and listed sixteen — and
+        // nothing recorded that the profile it judged held two keys, so the
+        // question "was the guard wrong, or was the profile already gone?" took
+        // a whole round trip to answer. COUNTS AND LABELS, never answers.
+        const record = (outcome: 'accepted' | 'refused', missingAnswers: string[]) => {
+          emitAthleteActionEvent(beginAthleteActionTrace({
+            source: 'tap',
+            actionType: 'program_change',
+            route: 'completeOnboarding',
+          }, undefined, { forceRoot: true }), 'onboarding_completion_result', {
+            outcome,
+            missingAnswerCount: missingAnswers.length,
+            answeredFieldCount: Object.keys(profile ?? {}).filter((key) => {
+              const value = (profile as Record<string, unknown>)[key];
+              if (value === undefined || value === null) return false;
+              if (typeof value === 'string') return value.trim().length > 0;
+              if (Array.isArray(value)) return value.length > 0;
+              return true;
+            }).length,
+          });
+        };
         const completeness = assessOnboardingCompleteness(profile);
         if (!completeness.complete) {
+          const missingAnswers = completeness.missingSteps.map((step) => step.answerLabel);
+          record('refused', missingAnswers);
           return {
             ok: false,
-            missingAnswers: completeness.missingSteps.map((step) => step.answerLabel),
+            missingAnswers,
             message: onboardingIncompleteMessage(completeness),
           };
         }
         if (!canScoreCapacity(profile)) {
+          const missingAnswers = [
+            'your conditioning',
+            'how much you have been training lately',
+          ];
+          record('refused', missingAnswers);
           return {
             ok: false,
-            missingAnswers: ['your conditioning', 'how much you have been training lately'],
+            missingAnswers,
             message: "I still need your conditioning and recent training before I can build your program.",
           };
         }
         set({ isOnboardingComplete: true });
+        record('accepted', []);
         return { ok: true, missingAnswers: [], message: '' };
       },
 
@@ -157,10 +191,59 @@ function canonicalAcceptedProfile(): OnboardingData | null {
   }
 }
 
-/** ProgramStore's accepted profile is authoritative; ProfileStore is a read mirror. */
+/**
+ * ProgramStore's accepted profile is authoritative; ProfileStore is a read
+ * mirror — but the mirror may only NARROW toward it, never widen a gap.
+ *
+ * THE LAW LIVES HERE, not in the subscriber below (Sam's device, export 4,
+ * 2026-07-29). It was written into the subscribe fence, and hydration does not
+ * go through the subscribe fence: `hydration_accepted_canonical_projection`
+ * calls this function directly, which sets the in-progress flag and therefore
+ * bypasses the very guard by design. His export showed the result exactly —
+ * a profile wiped to the store's 2-key default next to an EMPTY refusal log,
+ * because the guarded path never ran.
+ *
+ * A guard that only one of two callers passes through is not a guard. Every
+ * publication is checked at the one place publication happens.
+ *
+ * TWO KINDS OF PUBLICATION, and only one of them can un-answer a question:
+ *
+ *   - `accepted_transaction` — the athlete just changed their profile and this
+ *     IS the change. Leaving In-season clears the game day; that is an answer
+ *     being removed on purpose, by them, and refusing it would strand the
+ *     transaction that made it.
+ *   - `stored_snapshot_projection` — a snapshot recorded earlier is being
+ *     replayed over whatever is live now. It is a RECORD, it can be stale or
+ *     fabricated, and it never outranks a live answer.
+ *
+ * The caller says which; the default is the guarded reading, so a new caller
+ * that says nothing is treated as a projection rather than trusted.
+ */
 export function publishAcceptedProfileCompatibilityMirror(
   onboardingData: OnboardingData,
+  options: { origin?: 'accepted_transaction' | 'stored_snapshot_projection' } = {},
 ): void {
+  const refusal = options.origin === 'accepted_transaction'
+    ? null
+    : profileMirrorPublicationRefusal({
+      live: useProfileStore.getState().onboardingData,
+      canonical: onboardingData,
+    });
+  if (refusal) {
+    recordProfileMirrorRefusal(refusal);
+    // Also onto the durable tape. The in-memory record dies with the process,
+    // and Sam relaunched before exporting — an empty refusal log next to a
+    // wiped profile is exactly what that looks like.
+    emitAthleteActionEvent(beginAthleteActionTrace({
+      source: 'system',
+      actionType: 'program_change',
+      route: 'publishAcceptedProfileCompatibilityMirror',
+    }, undefined, { forceRoot: true }), 'profile_mirror_publication_refused', {
+      internalResultCode: refusal.reason,
+      droppedAnswers: refusal.droppedAnswers,
+    });
+    return;
+  }
   acceptedProfileMirrorPublicationInProgress = true;
   try {
     useProfileStore.setState({

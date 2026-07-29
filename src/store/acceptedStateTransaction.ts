@@ -692,8 +692,12 @@ export function commitAcceptedStateTransaction(
     });
   }
   if (staged.context.acceptedProfileSnapshot) {
+    // The athlete's own change, being published as it is accepted — including
+    // an answer they deliberately removed (leaving In-season clears the game
+    // day). This is the new truth, not a replay of an old one.
     publishAcceptedProfileCompatibilityMirror(
       staged.context.acceptedProfileSnapshot.onboardingData,
+      { origin: 'accepted_transaction' },
     );
   }
   const afterStateHash = athleteActionDiagnosticHash({
