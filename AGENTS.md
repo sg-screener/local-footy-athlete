@@ -137,6 +137,71 @@ Before adding a diagnostic, answer two questions:
 The same rule applies to fixtures: a fixture whose input cannot exhibit the
 defect proves nothing, however many assertions it carries.
 
+## PROCESS LAW — L11 and L12
+
+Process Law L1–L10 lives in `docs/MASTER_PLAN_2026-07-23.md` PART 1 and is
+unchanged. L11 and L12 are recorded HERE because they bind every session that
+touches this repo, including the review and orchestration seat (Cowork) — which
+never touches git and would otherwise never read the master plan. **A reviewer is
+bound by these exactly as an implementer is.**
+
+### L11 — The matrix before the phone
+
+**Sam's device is the LAST instrument, never the first.**
+
+No athlete-facing change is accepted on targeted tests alone. The
+**athlete-action matrix** — every door × every day-state × every route, driven
+through real transactions, with law assertions per cell — must be green before
+Sam is asked to touch his phone.
+
+**The stop-rule: the moment two defects differ only by their combination
+coordinates, ALL fix work stops until the matrix covers that space.** Proposing
+another single fix in that condition is a violation of this law, whoever
+proposes it. It does not matter that the next fix is correct; a correct fix
+chosen by the same method that missed the last one is the failure repeating, and
+the cost is another device round trip Sam pays for.
+
+*Founding case:* `docs/LOCKED_DAY_DIAGNOSIS_2026-07-30.md` found two defects on
+one day — a deletion door writing a schedule fact, and route (b) placing the
+landing session at full size. They differ only by which door and which route,
+i.e. by coordinates in a space nothing enumerated. The profile-wipe saga is the
+same shape at five device round trips
+(`docs/LOST_ONBOARDING_DIAGNOSIS_2026-07-30.md`), and the G-1 add-optional
+investigation took four seed reconstructions before anyone asked what was
+actually tapped.
+
+*Status when this law was written (2026-07-30), so it is not mistaken for
+satisfied:* the machinery exists — `src/dev/e2e/explorerCapabilityMatrix.ts`
+declares the dimensions (season phase × fixture state × source-fact
+combination), with a pairwise generator, scenario runner and oracle evaluator
+beside it, and 18 of its 19 suites pass. **None of them is in `test:bible`.** A
+harness that is green and ungated is not a matrix that is green — it is a
+diagnostic nobody runs before the build, which is the failure named two sections
+above in its mirror image. Gating it, and completing the door × day-state ×
+route coverage, is the work L11 requires.
+
+L10 and L11 are complementary, not in tension. L10 says Sam's phone is what makes
+a thing DONE. L11 says his phone is not what makes it TESTED — and asking him to
+find what a matrix should have found spends the one instrument that cannot be
+automated.
+
+### L12 — Verification strategy is reviewed like code
+
+**Every boundary report must state what would catch the NEXT defect of this
+class, not just this one.** A report that names the fix and its regression test
+but says nothing about the class is incomplete, and is to be sent back the same
+way an unreviewed diff is.
+
+**A reviewer who accepts fix-by-fix verification during a combination-shaped
+failure pattern is failing the same way the fix is.** Verification strategy is
+not the implementer's private business subject to the reviewer's approval of the
+outcome; it is part of the work under review. "The tests pass" is an
+observation, not a verification strategy.
+
+This pairs with the mandatory NOT-COVERED section (L2): NOT-COVERED says what was
+not looked at, L12 says what the looking would have to change to catch the next
+one.
+
 ## Test Standard
 
 - Prefer invariant or scenario tests that prove the capability, not only the

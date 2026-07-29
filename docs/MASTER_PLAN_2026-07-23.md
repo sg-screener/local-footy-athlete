@@ -63,6 +63,20 @@ report lists exactly what Sam should check and how; Sam's confirmation
 closes the item. Terminals report "gates green, awaiting Sam device
 acceptance" — never "done" — for athlete-facing work.
 
+**L11 — The matrix before the phone.** **L12 — Verification strategy is
+reviewed like code.** Both live in `AGENTS.md` under "PROCESS LAW — L11 and
+L12", because they bind the review/orchestration seat (Cowork) as well as
+implementing sessions, and that seat reads `AGENTS.md` rather than this
+document. They are Process Law with the same force as L1–L10; the list does not
+stop at L10.
+
+In short: L11 makes Sam's device the LAST instrument (the athlete-action matrix
+— every door × every day-state × every route — must be green first, and all fix
+work stops the moment two defects differ only by their combination coordinates).
+L12 requires every boundary report to say what would catch the NEXT defect of
+its class, and makes accepting fix-by-fix verification a reviewer's failure, not
+just an implementer's.
+
 ---
 
 # PART 2 — THE ROAD (dependency order)
