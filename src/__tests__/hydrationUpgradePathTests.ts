@@ -31,9 +31,21 @@
  * weeks that re-evaluate cleanly. Cell 3 is therefore a GUARD against the wipe,
  * not a PROOF that it is fixed — the wipe is still unreproduced and unfixed.
  *
- * What is missing is content, not ingress: the acted old-build sequence needs
- * edits that make a week today's evaluator scores differently, which means
- * working out 1e9c822's own plan-change door API.
+ * SAM'S RULING, 2026-07-30 — THE ARCHAEOLOGY STOPS HERE. Reproducing his exact
+ * refusal would mean working out 1e9c822's plan-change door to act edits that
+ * today's evaluator scores differently. That work is not being done, and the
+ * reason is that it protects nobody: the entire population of pre-release stores
+ * is Sam's own test device, which is being deleted and re-onboarded. These cells
+ * stay as a GUARD, both acted fixtures stay as the record of how a previous-build
+ * store behaves, and the wipe LAW is proven instead by injecting a refusal at the
+ * acceptance boundary — see `hydrationRefusalQuarantineTests`. That injection is
+ * not an authored seed: his tape documents the refusal happening in reality, and
+ * a law about what must happen AFTER any refusal is rightly proven
+ * cause-independently.
+ *
+ * STANDING LAW GOING FORWARD (same ruling): at every release, capture that
+ * release's acted store, and this cell runs HEAD against the PREVIOUS RELEASE's
+ * payload. No pre-release archaeology, ever again.
  *
  * Run: npm run test:hydration-upgrade-path
  */

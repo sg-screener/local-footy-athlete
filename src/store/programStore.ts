@@ -14,6 +14,12 @@ import {
 } from '../types/domain';
 import { logger } from '../utils/logger';
 import {
+  decideQuarantinedWrite,
+  quarantineRefusedPayload,
+  registerQuarantineBoundary,
+  releaseQuarantine,
+} from './refusedPayloadQuarantine';
+import {
   addDaysISO,
   deriveStoredBlockStateFromProgram,
   getBlockNumberForDate,
@@ -242,6 +248,26 @@ async function persistCanonicalHydratedEnvelopeReadback(): Promise<void> {
   }
 }
 
+/**
+ * THE PROGRAM STORE'S WRITER BOUNDARY, declared once.
+ *
+ * `carriesMaterial` is the store's own answer to "does this payload carry the
+ * athlete's state?" — a program with at least one microcycle. An unreadable
+ * envelope answers no: bytes we cannot parse are not bytes we can prove hold
+ * anything.
+ */
+registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
+  carriesMaterial: (envelope) => {
+    try {
+      const state = (JSON.parse(envelope) as { state?: Record<string, unknown> }).state ?? {};
+      const program = state.currentProgram as { microcycles?: unknown[] } | null | undefined;
+      return !!program && (program.microcycles ?? []).length > 0;
+    } catch {
+      return false;
+    }
+  },
+});
+
 const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     const trace = programHydrationTrace();
@@ -270,6 +296,34 @@ const programStateStorage = {
     if (activeProgramPersistenceStage) {
       return;
     }
+    // A REFUSAL MUST NEVER PERSIST THE STATE IT REFUSED INTO (Sam, 2026-07-30).
+    //
+    // This is the single writer boundary for this store, which is why the law
+    // lives here rather than at any of the callers: the wipe was not caused by a
+    // bad caller, it was caused by there being nothing between a bare fallback
+    // and the disk. While a refused payload is held, a payload carrying no
+    // program does not travel. A payload that DOES carry one is always allowed
+    // through and releases the hold — that write is the lift succeeding, and a
+    // quarantine that blocked the repair would strand the athlete as surely as
+    // the wipe destroyed him.
+    const decision = decideQuarantinedWrite(name, value);
+    if (!decision.allowed) {
+      emitAthleteActionEvent(currentAthleteActionTrace(), 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: decision.reason,
+        rejectingBoundary: 'programStateStorage.setItem.quarantine',
+        failureCategory: 'persistence_failure',
+        previousStateRestored: true,
+      });
+      logger.error(
+        '[programStore] refused to persist over a quarantined payload.',
+        { store: name, reason: decision.reason },
+      );
+      return;
+    }
+    releaseQuarantine(name);
     // Capture the explicit token synchronously at this async boundary. The
     // local variable preserves correlation through the awaited write; FIFO
     // ordering is never used as an authority.
@@ -2316,6 +2370,26 @@ export const useProgramStore = create<ProgramState>()(
             await runWithAthleteActionTrace(trace, async () => {
               require('./acceptedStateTransaction').commitAcceptedStateTransaction({
                 reason: 'program:hydration_acceptance',
+                // HYDRATION WEARS ONE DECLARED MODE (Sam, 2026-07-30).
+                //
+                // This field was absent, so the mode arrived by DEFAULT —
+                // `proposal.operation ?? 'restoration'` — and the type's own
+                // comment warns that is how a call site inherits a mode by
+                // accident. It is stated here because hydration is a
+                // restoration by nature: it replays state that was accepted
+                // once, so a week it cannot reproduce means the stored snapshot
+                // needs LIFTING, not reducing. Publishing a reduced version of
+                // a snapshot we do not understand would merge a defect into
+                // accepted state, which is the wipe's shape wearing a success.
+                //
+                // NOT YET WHOLE: the staging path below still runs the §18
+                // gateway's accept-and-reduce unconditionally, so one
+                // transaction can still reduce a week and then refuse the
+                // reduction. Declaring the mode removes the accident; making
+                // the two halves agree needs the read-ingress lift, which is
+                // its own unit. See
+                // docs/HYDRATION_WIPE_DIAGNOSIS_2026-07-30.md.
+                operation: 'restoration',
                 trace,
                 profile: profileForAcceptance,
                 acceptedProfileSnapshot,
@@ -2379,6 +2453,27 @@ export const useProgramStore = create<ProgramState>()(
             const rejectionCode = hydrationError instanceof Error
               ? hydrationError.name
               : 'program_hydration_acceptance_failed';
+            // HOLD WHAT WAS REFUSED, before anything else can reach the disk.
+            //
+            // The rollback above restores memory correctly and always did; the
+            // 2026-07-29 wipe happened fourteen seconds LATER, when the boot
+            // gate timed out, the athlete tapped Try Again, and a second cycle
+            // published an empty baseline over the only copy of his program.
+            // What is quarantined is therefore the DISK copy, read here rather
+            // than serialised from memory: the disk copy is the one a later
+            // writer can destroy, and it is the one he actually still has.
+            //
+            // Best-effort by design. If the read fails we are already in a
+            // storage failure and there is nothing to protect; swallowing that
+            // must not replace the real rejection the athlete is owed.
+            try {
+              quarantineRefusedPayload(
+                PROGRAM_STORE_PERSISTENCE_KEY,
+                await readDurableProgramStoreEnvelope(),
+              );
+            } catch {
+              // fall through to the rejection below
+            }
             emitAthleteActionEvent(trace, 'athlete_action_failed', {
               outcome: 'failed',
               internalResultCode: 'program_hydration_acceptance_failed',

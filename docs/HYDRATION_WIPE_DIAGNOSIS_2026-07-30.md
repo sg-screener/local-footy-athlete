@@ -160,3 +160,59 @@ old build was already failing his week at the calendar door.
 
 Red cell, both fixes, walker upgrade-path action, L12 per-store audit. Nothing in
 this addendum is a fix and `test:bible` is untouched by it.
+
+---
+
+## Resolution, 2026-07-30 — Sam's ruling, and what shipped
+
+**The archaeology stopped by ruling.** Reproducing the exact CAUSE would mean
+acting a pre-release build's edits into a week today's evaluator scores
+differently. Not done, and it protects nobody: the whole population of
+pre-release stores is Sam's test device, which is being deleted and re-onboarded.
+
+### Shipped
+
+**The wipe law, proven and gated.** `test:hydration-refusal-quarantine`. The
+refusal is INJECTED at the acceptance boundary — the approved failure-state
+sweep. That is not an authored seed: the tape documents the refusal happening in
+reality at this exact boundary, and a law about what must happen after **any**
+refusal is rightly proven cause-independently, which also covers causes nobody
+has thought of. The payload underneath is the acted `previousBuildStore-1e9c822`.
+
+It went RED on today's code first: **4 microcycles → 0**, the wipe reproduced.
+`store/refusedPayloadQuarantine.ts` holds the refused DISK copy (not the
+in-memory one — memory rolled back correctly and always did; the disk copy is
+what a later writer destroys), and `programStateStorage.setItem` — the store's
+single writer boundary — refuses a payload carrying no program while a
+quarantined one is held. A material payload always passes and releases the hold,
+because a quarantine that blocked the lift would strand the athlete as surely as
+the wipe destroyed him. In memory only: a fresh install has no quarantine by
+construction. Both halves mutation-killed.
+
+**L12, answered per-store.** `test:stored-state-writer-audit` reads the boot
+registry — the same list `appHydrationGate` gates on — and requires every
+persisted store to be protected or a DECLARED DEBT. Eleven stores are still
+wipeable and are named. The list is a ratchet: entries may leave, none may join
+without an explicit edit. A new persisted store cannot escape the audit by not
+being remembered.
+
+**Hydration's mode is declared.** `operation: 'restoration'` is now stated at the
+call rather than inherited from `?? 'restoration'`. NOT WHOLE: staging still runs
+the §18 gateway's accept-and-reduce unconditionally, so one transaction can still
+reduce a week and then refuse the reduction. Declaring removes the accident;
+making the halves agree needs the read-ingress lift — see NOT-COVERED.
+
+### The boot race — investigated, not reproducible on HEAD
+
+Populated store losing to a later empty hydration, observed while capturing at
+1e9c822. Probed on current code in two orderings — act-then-hydrate, and the
+faithful read-empty → act → late-merge — and the program survived both. Recorded
+as an old-build artifact, not a live defect. Two orderings is not a proof of
+absence.
+
+### Standing law (Sam, 2026-07-30)
+
+At every release, capture that release's acted store; the upgrade cell runs HEAD
+against the PREVIOUS RELEASE's payload. No pre-release archaeology, ever again.
+Recorded in `hydrationUpgradePathTests`' header, where the guard-not-proof note
+lives.
