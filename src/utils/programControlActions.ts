@@ -10,10 +10,12 @@ import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain'
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import {
   applyPlanChange,
+  planChangeResultIsLandingAsk,
   type PlanChangeOutcome,
   previewPlanChangeRisk,
   type PlanChange,
   type PlanChangeBinScopeId,
+  type PlanChangeMoveScopeId,
   type PlanChangeCategoryId,
 } from './planChangeProducer';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
@@ -158,7 +160,17 @@ interface ExercisePrescriptionPayload {
 export type ProgramControlAction =
   | ProgramControlActionBase<'swap_session', SessionCategoryPayload>
   | ProgramControlActionBase<'add_to_day', SessionCategoryPayload>
-  | ProgramControlActionBase<'move_session', { fromDate: string; toDate: string }>
+  // `scope` is the COMPONENT the athlete chose to move ("just the gym
+  // session"), and it had nowhere to live here. The sheet offers the choice,
+  // this payload could not express it, and `planChangeForAction` therefore
+  // built a whole-day move — which is what travelled. Note this is a different
+  // axis from `ProgramControlActionBase.scope` ('today_only'), which is about
+  // recurrence; two different meanings of the word, one of which was missing.
+  | ProgramControlActionBase<'move_session', {
+      fromDate: string;
+      toDate: string;
+      scope?: PlanChangeMoveScopeId;
+    }>
   | ProgramControlActionBase<'bin_session', { date: string; scope?: PlanChangeBinScopeId }>
   | ProgramControlActionBase<'swap_exercise', {
       date: string;
@@ -448,10 +460,71 @@ function planChangeForAction(action: ProgramControlAction): PlanChange | null {
     }
   }
   if (action.type === 'move_session') {
-    return { kind: 'move_session', fromDate: action.payload.fromDate, toDate: action.payload.toDate };
+    return {
+      kind: 'move_session',
+      fromDate: action.payload.fromDate,
+      toDate: action.payload.toDate,
+      ...(action.payload.scope ? { scope: action.payload.scope } : {}),
+    };
   }
   if (action.type === 'bin_session') {
     return { kind: 'remove_session', date: action.payload.date, scope: action.payload.scope };
+  }
+  return null;
+}
+
+/**
+ * THE SCREEN'S DOOR, AS ONE OWNER.
+ *
+ * `PlanChangeSheet.commitPlanChange` decides which change kinds go through the
+ * program-control wrapper (move and bin) and which go straight to the producer,
+ * and it builds the wrapper payload. That decision and that payload ARE the
+ * screen's behaviour, so they live here rather than inside a component — the
+ * sheet calls this, and so does the harness that has to enter the same door.
+ *
+ * Written because the alternative was proven bad within one commit: the device
+ * replay suite hand-copied the sheet's payload in order to reproduce a defect,
+ * and the moment the sheet was fixed the copy still carried the bug. A harness
+ * that mirrors a screen drifts from it; a harness that CALLS it cannot.
+ *
+ * Returns null when the change is not one the wrapper owns — the caller then
+ * goes straight to `applyPlanChange`, exactly as the sheet always has.
+ */
+export function programControlActionForPlanChange(
+  change: PlanChange,
+): ProgramControlAction | null {
+  const source = {
+    screen: 'program_tab' as const,
+    surface: 'plan_change_sheet' as const,
+    initiatedBy: 'tap' as const,
+  };
+  const shared = {
+    source,
+    scope: 'today_only' as const,
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: true,
+  };
+  if (change.kind === 'move_session') {
+    return {
+      ...shared,
+      type: 'move_session',
+      payload: {
+        fromDate: change.fromDate,
+        toDate: change.toDate,
+        // The component the athlete picked. It used to stop at this boundary:
+        // the sheet offered "just the gym session", the payload could not say
+        // so, and the whole day moved.
+        ...(change.scope ? { scope: change.scope } : {}),
+      },
+    } as ProgramControlAction;
+  }
+  if (change.kind === 'remove_session') {
+    return {
+      ...shared,
+      type: 'bin_session',
+      payload: { date: change.date, scope: change.scope },
+    } as ProgramControlAction;
   }
   return null;
 }
@@ -493,6 +566,21 @@ function executePlanChangeAction(
     setManualOverride: context.setManualOverride ?? defaultSetManualOverride,
     trace: risk.trace,
   });
+  // THE WRAPPER ROUTES THE PRODUCER'S ANSWER. IT DOES NOT INTERPRET IT.
+  //
+  // This mapped every non-ok producer result to a bare `ok: false`, and the
+  // outer layer then computed
+  // `program_control_<type>_${needsGuidedFollowUp ? 'needs_input' : 'rejected'}`
+  // — so a QUESTION arrived at the athlete as `..._rejected` with
+  // `failureCategory: technical_failure`, and the G-1 ask never rendered. The
+  // vocabulary for the right answer already existed here and was simply never
+  // set on this path.
+  //
+  // The owner decides what its own answer means: `planChangeResultIsLandingAsk`
+  // is asked, never a code string matched. Nothing else about the result is
+  // reinterpreted — the producer's own sentence is passed through as it always
+  // was.
+  const isAsk = planChangeResultIsLandingAsk(result);
   return {
     ok: result.ok,
     outcome: result.outcome,
@@ -500,7 +588,8 @@ function executePlanChangeAction(
     requiresRebuild: false,
     message: result.message,
     fallbackToCoach: false,
-    route: route.route,
+    ...(isAsk ? { needsGuidedFollowUp: true } : {}),
+    route: isAsk ? 'guided_follow_up_sheet' : route.route,
   };
 }
 

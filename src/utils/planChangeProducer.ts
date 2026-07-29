@@ -1586,11 +1586,19 @@ export function resolveAthleteMutation(args: {
       .some((anchor) => anchor.kind === 'game')) {
       return { ok: false, error: 'protected_game_day' };
     }
-    // Scoped destinations are free days only (see moveOptionsForDay): trading a
-    // component against another day's whole session has no defined meaning.
-    if (moveScope !== 'whole_day' && targetDay.workout) {
-      return { ok: false, error: 'scoped_move_destination_occupied' };
-    }
+    // A SCOPED MOVE MAY LAND ON AN OCCUPIED DAY — this refusal was the other
+    // half of the doubling law, left behind.
+    //
+    // Last unit the free-days-only filter came off the OFFER
+    // (`moveOptionsForDay`) so the picker would stop saying "there's nowhere to
+    // move this" about moves the ruling permits. This check stayed, so the menu
+    // advertised occupied destinations and the door refused them — an
+    // offer/commit disagreement, visible on Sam's tape at 10:28:57 as
+    // `scoped_move_destination_occupied`, one build after the offer changed.
+    //
+    // Absorption defines the meaning the old comment said was missing: the
+    // arriving component stacks beside what is already there, exactly as a
+    // whole-day move onto a team night does. Game day is still locked above.
     // A resolver-owned game-proximity filler (e.g. G+1 Recovery) on the
     // destination is not a swappable athlete-owned session — it is regenerated
     // every render, so a real session moved onto its day is silently overwritten
@@ -2872,6 +2880,31 @@ function athleteDeletionDoneMessage(
     return `${removed} Conditioning work was added to ${day}.${residual}`;
   }
   return `${removed} Required work was added to ${day}.${residual}`;
+}
+
+/**
+ * IS THIS RESULT A QUESTION RATHER THAN A REFUSAL?
+ *
+ * `g1_route_required` is a SENTINEL. It means "this landing needs the athlete's
+ * answer", and the ask-flow is the only door onto the day before a game. It has
+ * to travel as `outcome: 'refused'` because nothing was applied — but a caller
+ * that reads that as a rejection tells the athlete their edit failed, when the
+ * app was in the middle of asking them a question.
+ *
+ * That is exactly what happened on Sam's device: the producer answered
+ * `g1_route_required`, `executeProgramControlAction` reported
+ * `program_control_move_session_rejected` with `failureCategory:
+ * technical_failure`, and the ask never rendered. Three taps, three identical
+ * wrong answers.
+ *
+ * So the OWNER answers the question instead of every caller re-deriving it from
+ * a code string. A caller routes on this; it never translates the code.
+ */
+export function planChangeResultIsLandingAsk(
+  result: Pick<PlanChangeApplyResult, 'outcome' | 'rejected'>,
+): boolean {
+  return result.outcome !== 'applied' &&
+    (result.rejected ?? []).some((entry) => entry.code === 'g1_route_required');
 }
 
 function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {

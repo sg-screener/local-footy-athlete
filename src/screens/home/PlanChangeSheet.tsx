@@ -21,6 +21,7 @@ import {
 import { isG1RoutedChange, type G1RoutedChange } from '../../utils/planChangeTypes';
 import {
   executeProgramControlActionDurably,
+  programControlActionForPlanChange,
 } from '../../utils/programControlActions';
 import { riskReasons } from '../../utils/planChangeRefusalCopy';
 import {
@@ -234,34 +235,20 @@ export function PlanChangeSheet({
     },
     trace?: AthleteActionTraceContext,
   ) => {
-    const result = change.kind === 'move_session'
-      ? await executeProgramControlActionDurably({
-          type: 'move_session',
-          source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-          scope: 'today_only',
-          payload: { fromDate: change.fromDate, toDate: change.toDate },
-          requiresRebuild: false,
-          createsActiveModifier: false,
-          oneOffOnly: true,
-        }, { visibleWeek: weekDays, todayISO })
-      : change.kind === 'remove_session'
-        ? await executeProgramControlActionDurably({
-            type: 'bin_session',
-            source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-            scope: 'today_only',
-            payload: { date: change.date, scope: change.scope },
-            requiresRebuild: false,
-            createsActiveModifier: false,
-            oneOffOnly: true,
-          }, { visibleWeek: weekDays, todayISO })
-        : applyPlanChange({
-            change,
-            visibleWeek: weekDays,
-            todayISO,
-            setManualOverride: (overrideDate, workout, context) =>
-              useProgramStore.getState().setManualOverride(overrideDate, workout, context),
-            trace,
-          });
+    // The screen's door is one owner (`programControlActionForPlanChange`), so
+    // the harness that has to enter it enters the same one instead of copying
+    // this dispatch and drifting from it.
+    const screenAction = programControlActionForPlanChange(change);
+    const result = screenAction
+      ? await executeProgramControlActionDurably(screenAction, { visibleWeek: weekDays, todayISO })
+      : applyPlanChange({
+          change,
+          visibleWeek: weekDays,
+          todayISO,
+          setManualOverride: (overrideDate, workout, context) =>
+            useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+          trace,
+        });
     const canonicalResult = selectedWorkout && (
       change.kind === 'move_session' || change.kind === 'remove_session'
     ) ? {
