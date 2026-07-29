@@ -793,6 +793,30 @@ function assessContract(
   return contract;
 }
 
+/**
+ * THE ACHIEVED COUNTS ARE DERIVED AT READ — Sam's ruling, 2026-07-29.
+ *
+ * `achievedCount` and its sibling tallies (`achievedMeaningfulMainLifts`,
+ * `achievedPrimerCount`, the rest/stress counts, the conditioning credits) are
+ * DERIVATIONS of a week, not facts about it. Storing them on the contract gave
+ * one derivable fact three homes — the microcycle's contract, the week
+ * overlay's contract, and `exposureContractsByWeek` — and a week that changed
+ * through a door which refreshed only one of them left the other two stale.
+ * NORTH_STAR.md names that class verbatim: stored outputs going stale beside
+ * live inputs.
+ *
+ * The contained fix would have been a fourth writer syncing the three, which is
+ * the banned patch shape. This is the collapse instead: ask, and the count is
+ * computed from the week you are asking about.
+ *
+ * SCOPE. Counts only. The contract's AUTHORED TARGETS — `requiredMinimum`,
+ * `plannerSelectedTarget`, the ceilings — are Sam-authored inputs and stay
+ * stored; they are what the derivation is judged against.
+ */
+export function deriveAchievedCounts(input: Section18EffectiveWeekInput): WeeklyExposureContractV2 {
+  return evaluateSection18EffectiveWeek(input).contract;
+}
+
 export function evaluateSection18EffectiveWeek(
   input: Section18EffectiveWeekInput,
 ): Section18EffectiveWeekEvaluation {

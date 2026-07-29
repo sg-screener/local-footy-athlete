@@ -307,10 +307,12 @@ it can be sized.
 | **LR-23** | **Coach clarifier and context stores are in-memory.** A clarifier spent across a relaunch, and coach context rebuilt from nothing, are both silent. | `pendingCoachClarifierStore`, `coachContextStateStore` have no `persist(...)` | L-B3, L-C1 | **S** — diagnosis |
 | **LR-24** | **Action-log coverage completion** (*= 5D.3 remainder*). The tape covers the transaction owners and the profile store. It does not cover the ten unowned stores (LR-2) or the raw program-write primitive (LR-1) — it lands with them, not before. | §2.1 tape column | L-D1, L-D2 | folded into LR-1/LR-2 |
 | **LR-25** | **Snapshot-based undo is the mirror-wipe shape.** `displacedOriginalState` stores a derived output and republishes it later, which is the class that wiped the profile. Convergent form: **undo = remove the decision from the ledger and re-derive.** That deletes the corrupt-snapshot class entirely, and with it the reason the accepted-state boundary needs a `restoration` operation kind at all. | Sam's forward-only ruling, 2026-07-29 — regression 23 corrupts a stored snapshot to `requiredMinimum: 99` and the boundary must refuse it, because nobody ever stated that number | L-A2, north star | **L** — queued, NOT built |
+| **LR-26** | **One week's contract has THREE homes.** `microcycle.exposureContractV2`, `weekScopedOverlays[week].exposureContractV2` and `exposureContractsByWeek[week]` are three stores of one week's contract, and a door that refreshed one left the others stale. The derived COUNTS were collapsed by Sam's derive-at-read ruling (2026-07-29) and no longer go stale; what remains is the AUTHORED targets, which are inputs and legitimately stored — but stored three times. Collapse to one home. **No sync job and no fourth writer, under any version.** | Walker seed 1: move a session off a day, add one back, mark a game — the move refreshed the overlay's contract, the add wrote only a date override | L-A1, L-A2, north star | **M** — queued, NOT built |
 
-**25 units — at the ~25 stop-rule, no truncation applied.** They do, however,
+**26 units — the ~25 stop-rule is now exceeded by one; LR-25 and LR-26 are
+the same family (stored derivations) and schedule together.** They do, however,
 consolidate naturally into **five families**, which is the better unit of
-scheduling: *(i)* store ownership — LR-1, LR-2, LR-11, LR-17, LR-18, LR-23, LR-24, LR-25;
+scheduling: *(i)* store ownership — LR-1, LR-2, LR-11, LR-17, LR-18, LR-23, LR-24, LR-25, LR-26;
 *(ii)* the coach pipeline — LR-6, LR-12, LR-15; *(iii)* projection and placement —
 LR-3, LR-7, LR-9, LR-13, LR-19, LR-20; *(iv)* honesty — LR-5, LR-8, LR-10, LR-16;
 *(v)* gates — LR-14, LR-21, LR-22.

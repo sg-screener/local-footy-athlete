@@ -323,27 +323,34 @@ function materialiseFixtureMarksForCandidate(args: {
   return changed ? { ...args.candidate, weekScopedOverlays: overlays } : args.candidate;
 }
 
-function acceptedLedgerSignature(contract: WeeklyExposureContractV2): string {
-  return JSON.stringify({
-    strength: contract.mainStrength.exposure.achievedCount,
-    patterns: contract.strengthPatterns.achievedMeaningfulMainLifts,
-    conditioningCore: contract.conditioning.core.achievedCount,
-    conditioningOptionalFlush: contract.conditioning.optionalFlush.achievedCount,
-    conditioningOptionalRecovery: contract.conditioning.optionalRecoveryAerobic.achievedCount,
-    conditioningOptionalOther: contract.conditioning.optionalNonCoreAchievedCount,
-    conditioningLegacyUnknown: contract.conditioning.legacyUnknownAchievedCount,
-    conditioningStress: contract.conditioning.achievedByStress,
-    conditioningAnchors: contract.conditioning.anchorCredit,
-    conditioningApp: contract.conditioning.appAuthoredCoreCredit,
-    sprint: contract.sprintHighSpeed.exposure.achievedCount,
-    sprintSources: contract.sprintHighSpeed.achievedSources,
-    power: contract.power.achievedPrimerCount,
-    rest: contract.restStress.achievedTrueFullRestCount,
-    activeRecovery: contract.restStress.achievedActiveRecoveryCount,
-    moderateDays: contract.restStress.achievedModerateDayCount,
-    hardDays: contract.restStress.achievedHardDayCount,
-  });
-}
+/**
+ * THE STALE-LEDGER COMPARISON, DELETED — Sam's derive-at-read ruling
+ * (2026-07-29). It is recorded here rather than quietly removed, because
+ * deleting an invariant deserves an argument.
+ *
+ * `acceptedLedgerSignature` compared the contract's STORED achieved counts
+ * against the counts recomputed from the week that actually renders. It was a
+ * real invariant while the counts were stored: it caught a week whose stored
+ * tallies had gone stale beside the live week, which is exactly what the walker
+ * reached in five actions (move a session off Thursday, add one back, mark a
+ * game — the move refreshed the overlay's contract, the add wrote only a date
+ * override, and the two disagreed at the next transaction).
+ *
+ * With `deriveAchievedCounts` as the one owner, both sides of that comparison
+ * are the same derivation of the same week. There is no stored copy left to go
+ * stale, so the comparison has no subject. This is the north star's promise
+ * landing rather than an assertion being weakened: the divergence is now
+ * UNREPRESENTABLE instead of tested-for.
+ *
+ * What still protects the behaviour the docstring cared about — "a later
+ * visible precedence layer changing exposure, power, rest or stress" — is
+ * behaviour-level and stronger: L4 (visible = accepted) and L4b (screen =
+ * domain) in the athlete-door matrix and the action walker, asserted after
+ * every action rather than against a stamped copy.
+ *
+ * The blocking-violation path below is untouched and is still the boundary
+ * that matters: forward decisions accept-and-disclose, restorations refuse.
+ */
 
 /**
  * Re-resolve a staged persisted week and prove that its observable ledger is
@@ -461,27 +468,6 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         );
       }
       recordAcceptedWeekShortfall(weekStart, evaluation.blockingViolations);
-    }
-    if (acceptedLedgerSignature(contract) !== acceptedLedgerSignature(evaluation.contract)) {
-      emitAthleteActionEvent(args.trace, 'visible_projection_result', {
-        acceptedStateVersion: context.revision,
-        weekId: weekStart,
-        visibleStateHash: athleteActionDiagnosticHash(rebased.visibleWorkouts.map((workout) => ({
-          dayOfWeek: workout.dayOfWeek,
-          identity: workout.planEntryId ?? workout.id,
-        }))),
-        visibleEqualsAcceptedState: false,
-        rejectionCodes: ['accepted_state_ledger_mismatch'],
-        rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
-        failureCategory: 'projection_mismatch',
-      });
-      throw new AcceptedStateLedgerMismatchError(
-        weekStart,
-        `persisted and visible ledgers differ: ${JSON.stringify({
-          persisted: JSON.parse(acceptedLedgerSignature(contract)),
-          visible: JSON.parse(acceptedLedgerSignature(evaluation.contract)),
-        })}`,
-      );
     }
     emitAthleteActionEvent(args.trace, 'visible_projection_result', {
       acceptedStateVersion: context.revision,
