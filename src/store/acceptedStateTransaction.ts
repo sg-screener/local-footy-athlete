@@ -96,6 +96,7 @@ import {
 } from '../rules/reversibleAdjustmentLedger';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
+import { collapseWorkoutToRest } from '../utils/workoutContent';
 import type { Section18FindingDomain } from '../rules/section18EffectiveWeekEvaluator';
 import {
   shortfallsFromFindings,
@@ -2585,6 +2586,13 @@ function stageAthleteMutationConstraint(args: {
       ? args.constraint.remainingWorkout
       : state.todayWorkout;
   const proposal: AcceptedStateTransactionProposal = {
+    // Every mutation staged here is an athlete DECISION — a removal, a move or
+    // an addition they performed. Forward, and therefore accept-and-reduce:
+    // their edit stands and the shortfall is disclosed. Without this the
+    // proposal inherited the strict default, which is exactly what it should do
+    // when a path says nothing — and is how the newly-retired legacy stack-add
+    // deferral surfaced the moment it started using this owner.
+    operation: 'forward_decision',
     reason: args.reason,
     program: {
       dateOverrides,
@@ -3038,11 +3046,32 @@ export function stageAthleteSessionAdditionTransaction(
   const accepted = rebaseAcceptedEffectiveWeek({
     surfaces: state, weekStart: mondayForDate(date), profile, markedDays: prior.markedDays,
   });
-  const restPlaceholder = accepted.composedWorkouts.find(
+  const composedPlaceholder = accepted.composedWorkouts.find(
     (workout) => workout.dayOfWeek === dayOfWeek) ?? null;
-  if (!restPlaceholder?.id) {
-    throw new Error('Athlete addition requires a base day placeholder to pin against');
-  }
+  // A DAY THE ACCEPTED WEEK LEAVES EMPTY IS STILL A DAY THE ATHLETE CAN FILL.
+  //
+  // This threw, and the throw became "I couldn't safely make that change" on a
+  // day the sheet had just offered to add to. The day after a game is the case:
+  // the athlete sees a Recovery Session, but that session is resolver-owned
+  // derived filler, so the COMPOSED week has nothing on that date to pin
+  // against. The generator never allocated the day; the recovery is rebuilt
+  // every render.
+  //
+  // Adding there is therefore an empty-day add against accepted state, and the
+  // right thing to pin is the emptiness itself: a canonical rest stub for that
+  // date, deterministic in id so the pin is stable across renders and the undo
+  // restores the day to empty — at which point the derived recovery reappears on
+  // its own, because deriving it is what the resolver does. It is the same
+  // canonical-rest-stub shape `applyUserRemovalConstraintsToWeek` already uses
+  // to own a day the athlete emptied.
+  const restPlaceholder: Workout = composedPlaceholder?.id
+    ? composedPlaceholder
+    : {
+        ...collapseWorkoutToRest(cloneWorkoutForDate(args.addedWorkout, date)),
+        id: `accepted-empty-day:${date}`,
+        planEntryId: undefined,
+        dayOfWeek,
+      };
   const addedWorkout = cloneWorkoutForDate(args.addedWorkout, date);
   const id = userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder });
   const existing = state.userRemovalConstraints.find((constraint) =>

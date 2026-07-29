@@ -707,17 +707,32 @@ run('an added session reads the same in the accepted week as on the screen, ever
     'nothing landed on the day after the game — the cell this test exists for did not run');
 });
 
-run('a day the athlete owns by date override carries the stamp into the accepted week', () => {
+run('a day the athlete owns carries the stamp into the accepted week', () => {
   // The mechanism behind the law above, asserted directly so a future change
   // that keeps the names agreeing by some other means still has to say what
   // owns the day. `resolverMayDisplace` is the ONE predicate; a composed week
   // that cannot answer it has lost the fact, whatever it happens to render.
+  //
+  // RE-POINTED, and the reason is a convergence rather than a regression. This
+  // used to require a DATE OVERRIDE, because an add onto an occupied day
+  // deferred to the legacy writer and that writer's surface was the override.
+  // Retiring the deferral put the add back through the constraint ingress every
+  // other athlete door uses, so the same tap now writes a removal constraint
+  // instead. Both are athlete-owned surfaces and both derive the same stamp —
+  // which is the point of the stamp — so the assertion names the LAW (the
+  // athlete owns this day, and the accepted week knows it) and checks that one
+  // of the two surfaces actually carries it, rather than pinning the one that
+  // happened to be in use.
   const weekStart = seed();
   const sunday = addDaysISO(weekStart, 6);
   const result = commit(weekStart, { kind: 'add_category', date: sunday, category: 'strength_full' });
   assert(result.outcome === 'applied', `the G+1 add was refused: "${result.message}"`);
-  assert(Object.prototype.hasOwnProperty.call(useProgramStore.getState().dateOverrides, sunday),
-    'the add did not write a date override — this test is aimed at the wrong surface');
+  const state = useProgramStore.getState();
+  const ownedByOverride = Object.prototype.hasOwnProperty.call(state.dateOverrides, sunday);
+  const ownedByConstraint = state.userRemovalConstraints.some((constraint) =>
+    constraint.status === 'active' && constraint.targetDate === sunday);
+  assert(ownedByOverride || ownedByConstraint,
+    'the add landed on neither athlete-owned surface — this test is aimed at nothing');
 
   const accepted = acceptedWorkoutOn(weekStart, sunday);
   assert(accepted, 'the athlete-owned day vanished from the accepted week');

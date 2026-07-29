@@ -804,22 +804,13 @@ cell(`[${activeWorld.id}] a day carrying a commitment never offers to move the W
  * or scope is covered the moment the producer starts offering it.
  */
 const OFFERS_THE_DOOR_REFUSES: ReadonlyArray<{ offer: string; why: string }> = [
-  {
-    offer: 'addOnTopCategories',
-    // FOUND BY THIS CELL, run one. `addOnTopCategories` is offered on every
-    // day holding one session, and `resolveAthleteMutation` bails at
-    // `if (addDay.workout) return { error: 'add_defers_to_legacy_stack' }` —
-    // "occupied-day STACK adds stay on the legacy writer (out of scope this
-    // stage)". The legacy writer does not deliver, so all three days that
-    // offer it refuse with the generic copy and nothing changes.
-    //
-    // Declared, not fixed: retiring that legacy deferral is a unit of its own
-    // (`planChangeProducer.ts` ~line 1615), and it is what makes every
-    // non-anchored two-session day-state above reachable. Delete this entry
-    // when it lands — the cell will then hold the door to its own menu.
-    why: 'occupied-day stack adds defer to a legacy writer that refuses '
-      + '(planChangeProducer resolveAthleteMutation: add_defers_to_legacy_stack)',
-  },
+  // EMPTY, and it earned that. The one entry it held was
+  // `addOnTopCategories` — offered on every day already holding a session and
+  // refused on all of them, because `resolveAthleteMutation` bailed with
+  // `add_defers_to_legacy_stack` in front of a stacking materialiser that had
+  // been able to do the job all along. Two of Sam's five device findings were
+  // that deferral. It is retired, so this law now holds the door to its own
+  // menu instead of recording that it does not.
 ];
 
 cell(`[${activeWorld.id}] every option the day OFFERS is one the door accepts or refuses in words`, () => {
@@ -849,8 +840,15 @@ cell(`[${activeWorld.id}] every option the day OFFERS is one the door accepts or
           useProgramStore.getState().setManualOverride(date, workout, ctx),
       }));
       if (result.outcome === 'applied') continue;
+      // The G-1 ask is not a refusal — it is the funnel working. The athlete is
+      // asked before content lands the day before a game, and answering is a
+      // separate tap. Driving the routed form is `add_*:<route>` in the door
+      // table above; here the ask counts as the menu meaning what it says.
+      if (result.rejected?.some((entry) => entry.code === 'g1_route_required')) continue;
       broken.push(`${dayState.id}: offered "${category}" on top, door said `
-        + `${result.outcome} — "${result.message}"`);
+        + `${result.outcome} — "${result.message}" `
+        + `codes=${JSON.stringify((result.rejected ?? []).map((entry) => entry.code))} `
+        + `why=${JSON.stringify((result.rejected ?? []).map((entry) => entry.reason?.slice(0, 120)))}`);
     }
   }
 

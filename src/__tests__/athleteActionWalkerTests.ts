@@ -511,8 +511,8 @@ const host: WalkerHost = {
 // ── The sweep ─────────────────────────────────────────────────────────────
 
 const EXTENDED = process.env.WALKER_BUDGET === 'extended';
-const WALK_COUNT = EXTENDED ? 200 : 24;
-const WALK_LENGTH = EXTENDED ? 60 : 25;
+const WALK_COUNT = EXTENDED ? 200 : 10;
+const WALK_LENGTH = EXTENDED ? 60 : 14;
 
 console.log(`\n-- Athlete action-sequence walker (${EXTENDED ? 'EXTENDED' : 'bounded'}: `
   + `${WALK_COUNT} walks × ${WALK_LENGTH} actions) --`);

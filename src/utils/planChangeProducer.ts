@@ -492,7 +492,24 @@ function moveOptionsForDay(args: {
         date: candidate.date,
         occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
       }))
-      .filter((destination) => scope === 'whole_day' || destination.occupiedBy === null)
+      // A SCOPED MOVE MAY LAND ON AN OCCUPIED DAY — Sam's doubling law
+      // (2026-07-30, ruling 3), which this filter predated and quietly
+      // contradicted. Moving a session onto a team night is LEGAL and lands as a
+      // combined day, "the exact shape generation produces"; the move ABSORBS,
+      // the anchor stays put, and nothing travels back to the source.
+      //
+      // Restricting scoped moves to free days was written when trading one
+      // component of a combined day against another day's whole session had no
+      // defined meaning. Absorption defines it. Until now the two halves of one
+      // ruling disagreed: the whole-day picker offered team nights and the
+      // scoped picker did not.
+      //
+      // On Sam's week that was the whole of finding (2)/(3). His Wednesday is
+      // Team Training + Upper Pull, so the only movable part is the gym session;
+      // no day in his week is free; every scoped destination was filtered away
+      // and the door answered "there's nowhere to move this" about a move his
+      // own ruling permits. Game day stays excluded — that is upstream, in
+      // `candidates`, and is the one destination still locked.
       .sort((left, right) =>
         (left.occupiedBy === null) === (right.occupiedBy === null)
           ? left.date.localeCompare(right.date)
@@ -1648,8 +1665,28 @@ export function resolveAthleteMutation(args: {
       .some((anchor) => anchor.kind === 'game')) {
       return { ok: false, error: 'protected_game_day' };
     }
-    // Occupied-day STACK adds stay on the legacy writer (out of scope this stage).
-    if (addDay.workout) return { ok: false, error: 'add_defers_to_legacy_stack' };
+    // OCCUPIED-DAY STACK ADDS COME HOME — the legacy deferral is retired.
+    //
+    // This line said "out of scope this stage" and deferred to a legacy writer
+    // that does not deliver, so every day already holding a session offered
+    // `addOnTopCategories` in the sheet and then refused the tap with the
+    // generic "that change didn't go through". The athlete-door matrix declared
+    // it (`OFFERS_THE_DOOR_REFUSES`) and it is TWO of Sam's five device
+    // findings: adding strength to his G+1 Recovery Sunday, and adding
+    // conditioning to an occupied day.
+    //
+    // Nothing needed building. `canonicalPlanChangeCandidateMaterializer`
+    // already stacks an `add_template` onto an occupied day — `if (!source)
+    // return template; return stackTemplate({ base: source, template, ... })` —
+    // and `resolveTemplatePlanChange` already converts `add_category` into
+    // exactly that kind. The capability was written, reachable and untested
+    // because this early return stood in front of it.
+    //
+    // The semantics are Sam's doubling law at the add door: what is there stays,
+    // the new session stacks beside it, and the day becomes the combined shape
+    // generation already produces. Game day is still locked above; a day emptied
+    // by an active whole-day removal still defers below, because a re-add is a
+    // restoration and not a net-new add.
     // A day emptied by an active whole-DAY removal is a re-add (restoration
     // path), not a net-new add — defer so this primitive never fights it. Only a
     // real removal leaves the day empty with remainingWorkout null; add/swap pins
