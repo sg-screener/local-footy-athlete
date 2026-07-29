@@ -46,6 +46,7 @@ import {
 } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import type { G1LandingRouteId } from '../rules/g1LandingAsk';
+import { staleAcceptedSnapshotRepair } from '../rules/profileMirrorNarrowing';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -455,7 +456,48 @@ export function stageAcceptedStateTransaction(
     const profileChanged = JSON.stringify(
       context.acceptedProfileSnapshot.onboardingData,
     ) !== JSON.stringify(profile);
-    if (proposal.acceptedProfileSnapshot !== undefined ||
+    // A RECORD POORER THAN THE PROFILE REPAIRS ITSELF (Sam, export 6).
+    //
+    // The condition below asks for `proposal.profile`, and no ordinary
+    // transaction carries one — so a snapshot that had gone wrong could never
+    // be corrected, while being republished over the live profile by every
+    // transaction that ran. Four refused attempts in one second on his device,
+    // with the record still reading 2 answers at revision 13.
+    //
+    // Refusing the publication stopped the damage. This ends the cause: when
+    // the record is missing answers the athlete has, the record is what is
+    // wrong, and it is re-minted from the live profile at the revision it is
+    // corrected at. Deliberately NOT from `profile` — that resolves to the
+    // snapshot itself once a revision exists, which would re-mint the corruption.
+    //
+    // ONLY FOR A TRANSACTION WITH NO OPINION ABOUT THE PROFILE. A transaction
+    // that CARRIES one is making a profile decision — leaving In-season clears
+    // the game day — and "repairing" that back from the live mirror would undo
+    // the athlete's own change. `phaseShiftAtomicityTests` catches it.
+    const transactionOwnsTheProfile = proposal.profile !== undefined ||
+      proposal.acceptedProfileSnapshot !== undefined;
+    const liveProfileNow = useProfileStore.getState().onboardingData;
+    const staleRecord = transactionOwnsTheProfile ? null : staleAcceptedSnapshotRepair({
+      live: liveProfileNow,
+      snapshot: context.acceptedProfileSnapshot.onboardingData,
+    });
+    if (staleRecord) {
+      context = normalizeAcceptedMaterialContext({
+        ...context,
+        acceptedProfileSnapshot: {
+          ...context.acceptedProfileSnapshot,
+          updatedAt: appDateNow().toISOString(),
+          sourceRevision: context.revision,
+          onboardingData: liveProfileNow,
+        },
+      });
+      emitAthleteActionEvent(proposal.trace ?? currentAthleteActionTrace(),
+        'profile_snapshot_repaired', {
+          internalResultCode: staleRecord.reason,
+          missingAnswerCount: staleRecord.missingAnswers.length,
+          repairedAtRevision: context.revision,
+        });
+    } else if (proposal.acceptedProfileSnapshot !== undefined ||
       (proposal.profile !== undefined && profileChanged)) {
       context = normalizeAcceptedMaterialContext({
         ...context,

@@ -106,6 +106,45 @@ export function acceptedProfileSnapshotMintRefusal(args: {
   return { reason: 'onboarding_not_complete', at: new Date().toISOString() };
 }
 
+/**
+ * IS THE STORED SNAPSHOT POORER THAN THE LIVE PROFILE?
+ *
+ * The third face of the same law, and the one that repairs rather than
+ * refuses. Refusing a corrupt record's publication stops the damage; it leaves
+ * the wrong record on disk, still trying on every transaction.
+ *
+ * Sam's export 6: four `profile_write` attempts by `accepted_transaction` in
+ * one second, every one refused, with the snapshot still reading 2 answers at
+ * revision 13. It was frozen because the refresh in
+ * `stageAcceptedStateTransaction` asks `proposal.profile !== undefined`, and no
+ * ordinary transaction — a move, a generation, a set_today_workout — carries a
+ * profile. So it could never correct itself while being republished forever.
+ *
+ * When the live profile and the record disagree in THIS direction, the record
+ * is what is wrong. Same asymmetry as everywhere else in this file: the
+ * athlete's answers are the truth, the snapshot is a note about them.
+ */
+export interface StaleAcceptedSnapshotRepair {
+  reason: 'snapshot_poorer_than_live_profile';
+  /** Answers the record is missing. Dev-facing, never shown. */
+  missingAnswers: string[];
+}
+
+export function staleAcceptedSnapshotRepair(args: {
+  live: OnboardingData | null | undefined;
+  snapshot: OnboardingData | null | undefined;
+}): StaleAcceptedSnapshotRepair | null {
+  const refusal = profileMirrorPublicationRefusal({
+    live: args.live,
+    canonical: args.snapshot,
+  });
+  if (!refusal) return null;
+  return {
+    reason: 'snapshot_poorer_than_live_profile',
+    missingAnswers: refusal.droppedAnswers,
+  };
+}
+
 /* ══ Disclosure ══
  *
  * A refusal that nobody can see is the same silence this rule exists to break.

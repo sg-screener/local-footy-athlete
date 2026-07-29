@@ -206,3 +206,72 @@ about one caller and became the shape of the store:
   than the one that has failed four times.
 
 Either way the next export answers it. No further reconstruction.
+
+---
+
+# Closed — export 6 named the writer
+
+```
+05:13:21  profile_write  writer=accepted_transaction  REFUSED  22 -> 22   (×4)
+05:13:23  onboarding_completion_result  ACCEPTED   answers 23
+```
+
+**The villain: `commitAcceptedStateTransaction`'s compatibility-mirror
+publication, pushing the frozen accepted snapshot over the live profile.** Four
+attempts in two seconds — one per ordinary transaction running around
+completion — every one refused by the write owner, and onboarding then closed
+with all 23 answers intact.
+
+It took five device round trips because every layer was individually defensible.
+The publication is correct in principle: the accepted profile IS authoritative.
+What made it lethal was that the record it published had been fabricated at
+revision 1 from the store's default, and could never afterwards be corrected.
+
+## Why the record could never fix itself
+
+`stageAcceptedStateTransaction` refreshes the snapshot only when
+
+```ts
+proposal.acceptedProfileSnapshot !== undefined ||
+  (proposal.profile !== undefined && profileChanged)
+```
+
+and **no ordinary transaction carries a profile** — not a move, not a
+generation, not `set_today_workout`. So the snapshot froze on first mint, while
+`acceptedProfileForContext` handed that same frozen copy to everything
+downstream and the publication pushed it at the live profile on every commit.
+A corrupt record, republished forever, unable to be repaired by any of the
+traffic that kept republishing it.
+
+That is the answer to "were the four refused writes the snapshot trying to
+propagate itself?" — **yes, literally**. Four transactions, four attempts to
+overwrite the profile with the 2-key record, in one second.
+
+## The residue, closed
+
+`staleAcceptedSnapshotRepair`: when the stored snapshot is missing answers the
+live profile has, the RECORD is what is wrong, and it is re-minted from the live
+profile at the revision it is corrected at — emitting `profile_snapshot_repaired`
+with the count it recovered. Sam's device repairs itself on his next ordinary
+transaction; the snapshot stops reading 2 at revision 13 and starts matching the
+acceptance.
+
+Scoped to transactions with **no opinion about the profile**. One that carries a
+profile is making a decision — leaving In-season clears the game day — and
+"repairing" that back from the mirror would undo the athlete's own change.
+`phaseShiftAtomicityTests` caught exactly that and is why the scope is there.
+
+## The shape of the whole thing, for next time
+
+Five faces of one law, each found only after the one before it was fixed:
+
+1. The mirror publishes a whole object → it can un-answer questions.
+2. The narrowing law was in the subscriber → the direct caller bypassed it.
+3. The snapshot was minted before any acceptance existed → fabricated at
+   revision 1 from the default.
+4. Anything could write the profile → the writer was unnameable for four rounds.
+5. The record could not be corrected by the traffic that kept publishing it →
+   it stayed wrong after it stopped being harmful.
+
+Every one of them was invisible until the tape covered the store it lived in.
+That is the instrumentation rule paying for itself.

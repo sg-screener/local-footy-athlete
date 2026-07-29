@@ -41,6 +41,7 @@ import { useProfileStore } from '../store/profileStore';
 import {
   acceptedProfileSnapshotMintRefusal,
   profileMirrorPublicationRefusal,
+  staleAcceptedSnapshotRepair,
   recentProfileMirrorRefusals,
   clearProfileMirrorRefusals,
 } from '../rules/profileMirrorNarrowing';
@@ -51,10 +52,9 @@ import {
   endProfileResetAction,
   publishAcceptedProfileCompatibilityMirror,
 } from '../store/profileStore';
-import {
-  athleteActionLogEntries,
-  clearAthleteActionLog,
-} from '../utils/athleteActionLog';
+import { athleteActionLogEntries } from '../utils/athleteActionLog';
+import { useProgramStore } from '../store/programStore';
+import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import {
   IMPOVERISHED_SNAPSHOT,
   fullyAnsweredProfile,
@@ -67,16 +67,9 @@ let passed = 0;
 let failed = 0;
 const failures: string[] = [];
 
-function run(name: string, body: () => void | Promise<void>): void {
+function run(name: string, body: () => void): void {
   try {
-    const result = body();
-    if (result && typeof (result as Promise<void>).then === 'function') {
-      void (result as Promise<void>).catch((error) => {
-        failed += 1;
-        failures.push(name);
-        console.error(`  FAIL ${name}`, error instanceof Error ? error.message : error);
-      });
-    }
+    body();
     passed += 1;
     console.log(`  PASS ${name}`);
   } catch (error) {
@@ -491,16 +484,19 @@ run('a stale reset id cannot wipe a profile answered after it', () => {
   assert(liveAnswerCount() > 2, `the stale reset wiped ${liveAnswerCount()}`);
 });
 
-run('every profile write is on the tape, refused or not', async () => {
-  await clearAthleteActionLog();
+run('every profile write is on the tape, refused or not', () => {
   seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
   useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  // Indexed from here rather than clearing: the tape is durable and shared, and
+  // a test that wipes it hides whatever ran before it.
+  const from = athleteActionLogEntries().length;
 
   applyProfileOnboardingWrite({ next: INITIAL_ONBOARDING_DATA, writer: 'compatibility_mirror' });
   const id = beginProfileResetAction('test');
   applyProfileOnboardingWrite({ next: INITIAL_ONBOARDING_DATA, writer: 'reset', resetActionId: id });
+  endProfileResetAction(id);
 
-  const writes = athleteActionLogEntries()
+  const writes = athleteActionLogEntries().slice(from)
     .filter((entry) => entry.event === 'profile_write');
   assert(writes.length === 2,
     `the tape saw ${writes.length} of 2 profile writes`);
@@ -549,6 +545,65 @@ run('no writer can reach the profile around the owner', () => {
     assert(!/useProfileStore\.setState\(/.test(source),
       `${file} writes the profile store directly — it must go through the owner`);
   }
+});
+
+// ── The residue: a corrupt record repairs itself (export 6) ──────────────
+//
+// The tape named the villain. Four `profile_write` attempts by writer
+// `accepted_transaction` at 05:13:21, every one refused, then completion
+// accepted with 23 answers. The publication in `commitAcceptedStateTransaction`
+// was pushing the FROZEN 2-key snapshot over the live profile on every
+// ordinary transaction — a move, a generation, a set_today_workout.
+//
+// It is frozen because the refresh asks `proposal.profile !== undefined`, and
+// no ordinary transaction carries a profile. So the record could never correct
+// itself while being republished forever. Refusing the publication stopped the
+// damage; it left the wrong record on disk, still trying.
+//
+// The law says the athlete's live answers outrank the stored snapshot. When
+// they disagree in that direction the SNAPSHOT is what is wrong, so it is the
+// snapshot that gets corrected.
+
+run('the rule spots a snapshot that is poorer than the live profile', () => {
+  assert(staleAcceptedSnapshotRepair({
+    live: COMPLETE_PROFILE,
+    snapshot: INITIAL_ONBOARDING_DATA,
+  }), 'a 2-key snapshot beside a fully answered profile was called healthy');
+  // Non-vacuity in both directions: an equal snapshot needs no repair, and
+  // neither does one that merely holds DIFFERENT values.
+  assert(staleAcceptedSnapshotRepair({
+    live: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE,
+  }) === null, 'an identical snapshot was called stale');
+  assert(staleAcceptedSnapshotRepair({
+    live: COMPLETE_PROFILE,
+    snapshot: { ...COMPLETE_PROFILE, position: 'winger' } as unknown as OnboardingData,
+  }) === null, 'a value change was mistaken for a poorer record');
+});
+
+run('an ordinary transaction re-mints a snapshot poorer than the profile', () => {
+  // Exactly Sam's device: rich live profile, impoverished accepted snapshot,
+  // and a transaction that carries no profile of its own — which is every
+  // ordinary one.
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: IMPOVERISHED_SNAPSHOT });
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  const before = useProgramStore.getState().acceptedMaterialContext;
+  assert(Object.keys(before.acceptedProfileSnapshot!.onboardingData).length < 5,
+    'the fixture no longer starts from an impoverished snapshot');
+
+  commitAcceptedStateTransaction({
+    reason: 'test:ordinary_transaction_with_no_profile',
+    source: 'tap',
+  } as never);
+
+  const after = useProgramStore.getState().acceptedMaterialContext;
+  const snapshotAnswers = Object.keys(after.acceptedProfileSnapshot!.onboardingData).length;
+  assert(snapshotAnswers > 20,
+    `the record still carries ${snapshotAnswers} answers — it can no longer `
+    + 'overwrite the profile, but it is still wrong, and still trying');
+  assert(after.acceptedProfileSnapshot!.sourceRevision === after.revision,
+    'the re-minted snapshot did not take the revision it was minted at');
+  assert(liveAnswerCount() > 20,
+    `the repair cost the live profile: ${liveAnswerCount()} answers`);
 });
 
 console.log(`\nProfile mirror narrowing totals: ${passed} passed, ${failed} failed`);

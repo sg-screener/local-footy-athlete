@@ -70,6 +70,7 @@ export type AthleteActionEventName =
   | 'profile_mirror_publication_refused'
   | 'profile_write'
   | 'profile_rehydrated'
+  | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';
 
 export type AthleteActionFailureCategory =
