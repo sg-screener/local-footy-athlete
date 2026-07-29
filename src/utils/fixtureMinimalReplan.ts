@@ -9,7 +9,6 @@ import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
   runSection18AcceptedWeekGateway,
-  requireSection18AcceptedWeek,
   type Section18AcceptedWeekGatewayResult,
 } from '../rules/section18AcceptedWeekGateway';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -1404,7 +1403,15 @@ export function buildFixtureMinimalReplan(
     );
   }
 
-  const fallbackGateway = requireSection18AcceptedWeek({
+  // THE COLLAPSE (Sam, 2026-07-29, ruling 1). This used to be
+  // `requireSection18AcceptedWeek`, which throws — and the throw escaped the
+  // transaction owner and reached the tap door as a dead screen. The gateway
+  // already returns a typed result carrying `status: 'impossible'`, and this
+  // function already returns it as `gateway`, so the rejection has had a
+  // typed channel all along. Letting it flow is the whole fix: the OWNER
+  // decides what a rejected week means, instead of five callers each
+  // catching an exception and inventing their own answer.
+  const fallbackGateway = runSection18AcceptedWeekGateway({
     contract,
     workouts: source,
     weekStart: args.weekStart,

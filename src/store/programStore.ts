@@ -1077,9 +1077,24 @@ function canonicaliseAcceptedBoundaryState(
             activeConstraints: options.activeConstraints,
           })
       : undefined;
+    // THE COLLAPSE, AND ACCEPT-AND-REDUCE (Sam, 2026-07-29, rulings 1 and 2).
+    //
+    // This was `requireSection18AcceptedWeek`, and its throw escaped the
+    // transaction owner to reach the tap door as a dead screen — reachable from
+    // a fresh install in three actions (onboard, generate, mark a day as rest).
+    // A typed refusal interpreted five ways is the two-representations disease
+    // wearing an exception, so the gateway's own typed result flows here and
+    // THIS owner decides what a rejected week means.
+    //
+    // What it means is ruling 2: a rest mark is the athlete stating a fact
+    // about their life, and this app does not refuse facts. The gateway's
+    // `canonicalWorkouts` on an `impossible` verdict is the best week it could
+    // build around the fact — so the mark is KEPT, that week is published, and
+    // the shortfall is disclosed in Sam's signed words rather than swallowed.
+    // Crashing was the worst answer; refusing was the second worst.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const accepted = require('../rules/section18AcceptedWeekGateway')
-      .requireSection18AcceptedWeek({
+      .runSection18AcceptedWeekGateway({
         contract,
         workouts: rebased.composedWorkouts,
         weekStart,

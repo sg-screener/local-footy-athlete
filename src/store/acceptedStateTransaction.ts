@@ -96,6 +96,11 @@ import {
 } from '../rules/reversibleAdjustmentLedger';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
+import type { Section18FindingDomain } from '../rules/section18EffectiveWeekEvaluator';
+import {
+  shortfallsFromFindings,
+  renderSection18ShortfallDisclosure,
+} from '../rules/section18ShortfallDisclosure';
 import {
   athleteActionDiagnosticHash,
   athleteActionDiagnosticsEnabled,
@@ -323,6 +328,41 @@ function acceptedLedgerSignature(contract: WeeklyExposureContractV2): string {
  * exactly the ledger stamped by the accepted gateway. This forbids a later
  * visible precedence layer from changing exposure, power, rest or stress.
  */
+/**
+ * The shortfall the athlete is told about, derived and handed to the
+ * disclosure owner. DERIVED, never stored: it is a fact about the week that
+ * falls out of the contract and the week itself, so persisting it would be a
+ * stored copy of a derivation — the north star's presumed-wrong shape, and the
+ * exact class that produced the profile-mirror wipe.
+ *
+ * The last shortfall observed is kept in module scope purely so the door that
+ * is mid-transaction can render it; it is recomputed on every evaluation and
+ * never read back as truth.
+ */
+let lastAcceptedWeekShortfall: {
+  weekStart: string;
+  shortfalls: ReturnType<typeof shortfallsFromFindings>;
+} | null = null;
+
+function recordAcceptedWeekShortfall(
+  weekStart: string,
+  blockingViolations: readonly { domain: Section18FindingDomain; expected: unknown; actual: unknown }[],
+): void {
+  lastAcceptedWeekShortfall = {
+    weekStart,
+    shortfalls: shortfallsFromFindings({ date: weekStart, findings: blockingViolations }),
+  };
+}
+
+/** What the door should tell the athlete, or null when the week is whole. */
+export function takeAcceptedWeekShortfallDisclosure(weekStart?: string): string | null {
+  const recorded = lastAcceptedWeekShortfall;
+  lastAcceptedWeekShortfall = null;
+  if (!recorded) return null;
+  if (weekStart && recorded.weekStart !== weekStart.slice(0, 10)) return null;
+  return renderSection18ShortfallDisclosure(recorded.shortfalls);
+}
+
 export function assertAcceptedVisibleLedgerEquivalence(args: {
   surfaces: AcceptedProgramSurfaces;
   context: AcceptedMaterialContext;
@@ -361,16 +401,25 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
           dayOfWeek: workout.dayOfWeek,
           identity: workout.planEntryId ?? workout.id,
         }))),
-        visibleEqualsAcceptedState: false,
+        visibleEqualsAcceptedState: true,
         rejectionCodes: evaluation.blockingViolations.map((finding) => finding.code),
         rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
-        failureCategory: 'projection_mismatch',
+        failureCategory: 'accepted_with_shortfall',
       });
-      throw new AcceptedStateLedgerMismatchError(
-        weekStart,
-        `re-evaluation produced blockers ${evaluation.blockingViolations
-          .map((finding: { code: string }) => finding.code).join(',')}`,
-      );
+      // ACCEPT-AND-REDUCE (Sam, 2026-07-29, ruling 2). This used to throw.
+      //
+      // A blocking violation here does NOT mean the two representations
+      // disagree — it means the week the athlete now has cannot meet its
+      // contract, which is the honest consequence of a fact they stated. The
+      // athlete's calendar wins and the program adapts: the fact is kept, the
+      // best week around it is published, and the shortfall is disclosed in
+      // Sam's signed words (`rules/section18ShortfallDisclosure`).
+      //
+      // This assertion keeps the job it is named for and only that job — the
+      // check immediately below, where the PERSISTED and VISIBLE ledgers
+      // genuinely differ. That is two representations of one week disagreeing,
+      // it is always a defect, and it still throws.
+      recordAcceptedWeekShortfall(weekStart, evaluation.blockingViolations);
     }
     if (acceptedLedgerSignature(contract) !== acceptedLedgerSignature(evaluation.contract)) {
       emitAthleteActionEvent(args.trace, 'visible_projection_result', {

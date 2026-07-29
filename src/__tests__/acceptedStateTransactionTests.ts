@@ -50,6 +50,7 @@ import {
   commitAcceptedStateTransaction,
   commitReadinessSignalTransaction,
   getAcceptedMaterialContext,
+  takeAcceptedWeekShortfallDisclosure,
 } from '../store/acceptedStateTransaction';
 import {
   createTemporaryFatigueFact,
@@ -337,20 +338,29 @@ function ledgerSignature(contract: ReturnType<typeof acceptedWeek>['contract']):
 }
 
 function withGatewayFailure(body: () => void): boolean {
-  // Every accepted path reaches this dynamically-loaded final gateway.
+  // BOTH gateway entry points, since Sam's ownership collapse (2026-07-29).
+  // `requireSection18AcceptedWeek` is no longer "the final gateway every
+  // accepted path reaches" — the transaction owner now calls the non-throwing
+  // `runSection18AcceptedWeekGateway` so a rejected week is a typed RESULT it
+  // can accept-and-reduce rather than an exception thrown past it. An injection
+  // that only stubs the throwing wrapper stops reaching the owner's path, and
+  // this regression then reports that the failure "did not reach" a gateway it
+  // simply no longer goes through. The injection follows the owner.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const original = gateway.requireSection18AcceptedWeek;
-  gateway.requireSection18AcceptedWeek = () => {
-    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
-  };
+  const originalRequire = gateway.requireSection18AcceptedWeek;
+  const originalRun = gateway.runSection18AcceptedWeekGateway;
+  const inject = () => { throw new Error('INJECTED_ACCEPTANCE_FAILURE'); };
+  gateway.requireSection18AcceptedWeek = inject;
+  gateway.runSection18AcceptedWeekGateway = inject;
   try {
     body();
     return false;
   } catch (error) {
     return String(error).includes('INJECTED_ACCEPTANCE_FAILURE');
   } finally {
-    gateway.requireSection18AcceptedWeek = original;
+    gateway.requireSection18AcceptedWeek = originalRequire;
+    gateway.runSection18AcceptedWeekGateway = originalRun;
   }
 }
 
@@ -446,9 +456,30 @@ run('regression', '3 adding a rest mark cannot silently remove required core wor
   } else {
     const after = acceptedWeek(WEEK_START);
     assert(getAcceptedMaterialContext().markedDays[date] === 'rest', 'rest mark did not commit');
-    assert(after.evaluation.ledger.conditioning.coreCount >= after.contract.conditioning.core.requiredMinimum,
-      'required core work was silently lost');
-    assert(after.evaluation.blockingViolations.length === 0, 'rest-marked week has blockers');
+    // RE-POINTED at the new owner, not weakened — Sam's accept-and-reduce
+    // ruling (2026-07-29). The word this regression has always turned on is
+    // SILENTLY. It used to enforce silence by forbidding the loss outright,
+    // which under the ruling is the second-worst answer: a rest mark is the
+    // athlete stating a fact about their life, and the app does not refuse
+    // facts. So the mark commits, and what must hold is that the athlete is
+    // TOLD.
+    //
+    // Either the week still meets its contract, or it does not and the
+    // shortfall is disclosed in Sam's signed words. What is still forbidden,
+    // and is the whole point of the regression, is losing the work with
+    // nothing said.
+    const disclosure = takeAcceptedWeekShortfallDisclosure(WEEK_START);
+    const wholeWeek =
+      after.evaluation.ledger.conditioning.coreCount >= after.contract.conditioning.core.requiredMinimum &&
+      after.evaluation.blockingViolations.length === 0;
+    assert(wholeWeek || disclosure,
+      'required core work was SILENTLY lost — the week is short and nothing was disclosed');
+    if (disclosure) {
+      assert(/means you'll miss/.test(disclosure),
+        `the shortfall disclosure is not Sam's signed sentence: "${disclosure}"`);
+      assert(!/exposure/i.test(disclosure),
+        `"exposure" reached the athlete: "${disclosure}"`);
+    }
   }
 });
 
