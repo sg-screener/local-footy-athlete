@@ -61,6 +61,7 @@ export type {
 } from './planChangeTypes';
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
+import { classifyProgramMutationRefusal } from '../rules/programMutationRefusal';
 import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -852,8 +853,22 @@ export function buildPlanChangeProposal(
 // option IS the confirmation, so requireConfirmationForAdds is satisfied
 // exactly the way the chat door's stored-"yes" is.
 
+/**
+ * What actually happened, as three distinct answers rather than one boolean.
+ *
+ * Sam's ruling #6 (2026-07-30): a stage that applied NOTHING must not be
+ * reportable as "Done." `ok` alone could not express that — an
+ * `already_applied` short-circuit returned a success-shaped result and the
+ * sheet printed "Done. Full Body Strength is now on <date>" over a day that
+ * held something else. `no_change` is an OUTCOME with a reason, and the same
+ * distinction `rules/programMutationRefusal` already draws for settings.
+ */
+export type PlanChangeOutcome = 'applied' | 'no_change' | 'refused';
+
 export interface PlanChangeApplyResult {
+  /** True only for `applied`. Retained so existing callers keep their meaning. */
   ok: boolean;
+  outcome: PlanChangeOutcome;
   message: string;
   appliedDates: string[];
   rejected: Array<{ date: string | null; code: string; reason: string }>;
@@ -1783,6 +1798,56 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
   });
 }
 
+/**
+ * The session the ACCEPTED state actually holds on `date`, read back after a
+ * commit.
+ *
+ * Sam's ruling #6 (2026-07-30): the confirmation is a projection of the accepted
+ * RESULT, never of the request. Naming `pickedTitle` — what the athlete tapped —
+ * is what let the sheet say "Done. Lower Body Strength is now on <date>" when
+ * the transaction had short-circuited and the day held a Gunshow.
+ */
+function acceptedSessionNameOn(date: string): string | null {
+  const state = useProgramStore.getState();
+  const profile = useProfileStore.getState().onboardingData;
+  try {
+    const week = rebaseAcceptedEffectiveWeek({
+      surfaces: state,
+      weekStart: getMondayForDate(date),
+      profile,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    });
+    const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+    return week.visibleWorkouts.find((workout) => workout.dayOfWeek === dayOfWeek)?.name ?? null;
+  } catch {
+    // The read-back is a copy input, not a safety gate. If the accepted week
+    // cannot be rebased the caller still reports honestly, just less specifically.
+    return null;
+  }
+}
+
+/** A stage that published nothing. Not a success, not a failure — ruling #6. */
+function noChangeResult(
+  noChange: { reason: string },
+): PlanChangeApplyResult {
+  return {
+    ok: false,
+    outcome: 'no_change',
+    message: classifyProgramMutationRefusal({ reason: noChange.reason }).userMessage,
+    appliedDates: [],
+    rejected: [],
+  };
+}
+
+/** The `noChange` a commit reports, when it reports one. */
+function publicationNoChange(transaction: unknown): { reason: string } | null {
+  if (!transaction || typeof transaction !== 'object') return null;
+  const noChange = (transaction as { noChange?: unknown }).noChange;
+  if (!noChange || typeof noChange !== 'object') return null;
+  const reason = (noChange as { reason?: unknown }).reason;
+  return typeof reason === 'string' ? { reason } : null;
+}
+
 function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApplyResult {
   // Commit through the same typed owner used by preview. This is intentionally
   // before proposal/template policy construction and before the legacy
@@ -1809,6 +1874,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
         return {
           ok: false,
+          outcome: 'refused',
           message: blocked
             ? blocked.findings[0]?.message ?? "That change can't be applied here."
             : `That change isn't possible here (${resolution.error}).`,
@@ -1820,13 +1886,17 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       if (args.change.kind !== 'move_session') {
         throw new Error('Athlete move resolution did not match its typed intent');
       }
+      let moveNoChange: { reason: string } | null = null;
       try {
-        (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
-          resolution.input,
+        moveNoChange = publicationNoChange(
+          (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
+            resolution.input,
+          ),
         );
       } catch (error) {
         return {
           ok: false,
+          outcome: 'refused',
           message: "I couldn't safely make that change, so the plan is untouched.",
           appliedDates: [],
           rejected: [{
@@ -1836,8 +1906,10 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (moveNoChange) return noChangeResult(moveNoChange);
       return {
         ok: true,
+        outcome: 'applied',
         message: moveDoneMessage(args.change, resolution.swapped),
         appliedDates: resolution.appliedDates,
         rejected: [],
@@ -1847,9 +1919,11 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       // new session as remainingWorkout), so it inherits Bin's authorised-
       // reduction + disclosure ownership.
       let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
+      let swapNoChange: { reason: string } | null = null;
       try {
         const transaction = (args.commitAthleteRemoval ??
           commitAthleteSessionDeletionTransaction)(resolution.input);
+        swapNoChange = publicationNoChange(transaction);
         if (transaction && typeof transaction === 'object' &&
           'deletionOutcome' in transaction) {
           publishedOutcome = (transaction as {
@@ -1859,6 +1933,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       } catch (error) {
         return {
           ok: false,
+          outcome: 'refused',
           message: "I couldn't safely make that change, so the plan is untouched.",
           appliedDates: [],
           rejected: [{
@@ -1868,10 +1943,16 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (swapNoChange) return noChangeResult(swapNoChange);
       return {
         ok: true,
+        outcome: 'applied',
         message: athleteSwapDoneMessage(
-          resolution.input.date, resolution.pickedTitle, publishedOutcome),
+          resolution.input.date,
+          // Ruling #6: name what LANDED. `pickedTitle` is the request and is
+          // kept only as the fallback when the accepted week cannot be read.
+          acceptedSessionNameOn(resolution.input.date) ?? resolution.pickedTitle,
+          publishedOutcome),
         appliedDates: resolution.appliedDates,
         rejected: [],
       };
@@ -1880,9 +1961,11 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       // §18 is repaired cross-day (never rejected for an off-target condition),
       // and any repaired day is disclosed in the confirmation.
       let additionOutcome: AthleteAdditionPublishedOutcome | null = null;
+      let addNoChange: { reason: string } | null = null;
       try {
         const transaction = (args.commitAthleteAddition ??
           commitAthleteSessionAdditionTransaction)(resolution.input);
+        addNoChange = publicationNoChange(transaction);
         if (transaction && typeof transaction === 'object' &&
           'additionOutcome' in transaction) {
           additionOutcome = (transaction as {
@@ -1892,6 +1975,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       } catch (error) {
         return {
           ok: false,
+          outcome: 'refused',
           message: "I couldn't safely make that change, so the plan is untouched.",
           appliedDates: [],
           rejected: [{
@@ -1901,10 +1985,14 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (addNoChange) return noChangeResult(addNoChange);
       return {
         ok: true,
+        outcome: 'applied',
         message: athleteAdditionDoneMessage(
-          resolution.input.date, resolution.pickedTitle, additionOutcome),
+          resolution.input.date,
+          acceptedSessionNameOn(resolution.input.date) ?? resolution.pickedTitle,
+          additionOutcome),
         appliedDates: resolution.appliedDates,
         rejected: [],
       };
@@ -1913,11 +2001,13 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         throw new Error('Athlete deletion resolution did not match its typed intent');
       }
       let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
+      let removalNoChange: { reason: string } | null = null;
       try {
         const transaction = (args.commitAthleteRemoval ??
           commitAthleteSessionDeletionTransaction)(
             resolution.input,
           );
+        removalNoChange = publicationNoChange(transaction);
         if (transaction && typeof transaction === 'object' &&
           'deletionOutcome' in transaction) {
           publishedOutcome = (transaction as {
@@ -1927,6 +2017,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       } catch (error) {
         return {
           ok: false,
+          outcome: 'refused',
           message: "I couldn't safely make that change, so the plan is untouched.",
           appliedDates: [],
           rejected: [{
@@ -1936,8 +2027,10 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (removalNoChange) return noChangeResult(removalNoChange);
       return {
         ok: true,
+        outcome: 'applied',
         message: publishedOutcome
           ? athleteDeletionDoneMessage(args.change, publishedOutcome)
           : planChangeDoneMessage(args.change, null),
@@ -1954,6 +2047,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
   if ('error' in proposal) {
     return {
       ok: false,
+      outcome: 'refused',
       message: `That change isn't possible here (${proposal.error}).`,
       appliedDates: [],
       rejected: [],
@@ -1975,6 +2069,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
   if (apply.applied.length === 0 || apply.rejected.length > 0) {
     return {
       ok: false,
+      outcome: 'refused',
       message: "I couldn't safely make that change, so the plan is untouched.",
       appliedDates: apply.applied.map((write) => write.date),
       rejected: rejectedForResult(apply.rejected),
@@ -1999,6 +2094,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
 
   return {
     ok: true,
+
+    outcome: 'applied',
     message,
     appliedDates: apply.applied.map((write) => write.date),
     rejected: [],

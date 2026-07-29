@@ -2098,7 +2098,7 @@ export interface AthleteDeletionPublishedOutcome {
 }
 
 export interface AthleteSessionDeletionTransactionResult
-  extends AcceptedStateTransactionResult {
+  extends AcceptedStateTransactionResult, AthleteMutationPublication {
   deletionOutcome: AthleteDeletionPublishedOutcome;
 }
 
@@ -2123,7 +2123,7 @@ export interface AthleteAdditionPublishedOutcome {
 }
 
 export interface AthleteSessionAdditionTransactionResult
-  extends AcceptedStateTransactionResult {
+  extends AcceptedStateTransactionResult, AthleteMutationPublication {
   additionOutcome: AthleteAdditionPublishedOutcome;
 }
 
@@ -2157,6 +2157,32 @@ export interface AthleteMutationTransactionStage {
   affectedWeekStarts: string[];
   outcome: RollingHorizonFixtureRepairResult['outcome'] | 'already_applied';
   alreadyApplied: boolean;
+  /** Set exactly when `alreadyApplied` — see AthleteMutationNoChange. */
+  noChange?: AthleteMutationNoChange | null;
+}
+
+/**
+ * A stage that published NOTHING, and why.
+ *
+ * Sam's ruling #6 (2026-07-30). The `already_applied` short-circuits below
+ * return before any proposal is built, so the commit functions returned
+ * normally and every caller read that as success — the device symptom was
+ * "Done. Lower Body Strength is now on <date>" printed over a day holding a
+ * Gunshow, with the stored constraint naming a third session. Nothing published
+ * is an OUTCOME with a reason; it travels on the result so no caller has to
+ * infer it from the absence of a throw. The reason code is the one
+ * `rules/programMutationRefusal` maps to athlete-facing copy.
+ */
+export interface AthleteMutationNoChange {
+  reason: 'athlete_mutation_already_applied';
+  /** The constraint that already owns this date. */
+  constraintId: string;
+  date: string;
+}
+
+/** Every athlete-mutation commit answers "did anything publish?" the same way. */
+export interface AthleteMutationPublication {
+  noChange: AthleteMutationNoChange | null;
 }
 
 function workoutIdentity(workout: Workout | null | undefined): string | null {
@@ -2506,6 +2532,11 @@ export function stageAthleteSessionDeletionTransaction(
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: date,
+      },
     };
   }
   // A swap rides this deletion with a non-null remainingWorkout (the new
@@ -2605,6 +2636,11 @@ export function stageAthleteSessionMoveTransaction(
       affectedWeekStarts: Array.from(new Set([mondayForDate(sourceDate), mondayForDate(targetDate)])).sort(),
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: sourceDate,
+      },
     };
   }
   // The athlete's chosen route decides WHAT lands; the source session decides
@@ -2693,6 +2729,7 @@ export function commitAthleteSessionDeletionTransaction(
     : staged.result;
   return {
     ...published,
+    noChange: staged.noChange ?? null,
     deletionOutcome: deriveAthleteDeletionPublishedOutcome({
       input: args,
       before,
@@ -2763,11 +2800,11 @@ function detectAthleteMoveContentLoss(args: {
 
 export function commitAthleteSessionMoveTransaction(
   args: AthleteSessionMoveTransactionInput,
-): AcceptedStateTransactionResult {
+): AcceptedStateTransactionResult & AthleteMutationPublication {
   const priorState = { ...useProgramStore.getState() };
   const profile = useProfileStore.getState().onboardingData;
   const staged = stageAthleteSessionMoveTransaction(args, { purpose: 'commit' });
-  if (!staged.proposal) return staged.result;
+  if (!staged.proposal) return { ...staged.result, noChange: staged.noChange ?? null };
   const published = commitAcceptedStateTransaction(staged.proposal);
   // Conservation post-condition (defense-in-depth behind the producer's
   // not-swappable guard): a relocation must never silently destroy an athlete-
@@ -2789,7 +2826,7 @@ export function commitAthleteSessionMoveTransaction(
       throw error;
     }
   }
-  return published;
+  return { ...published, noChange: null };
 }
 
 /**
@@ -2841,6 +2878,11 @@ export function stageAthleteSessionAdditionTransaction(
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: date,
+      },
     };
   }
   const constraint: UserRemovalConstraint = {
@@ -2904,6 +2946,7 @@ export function commitAthleteSessionAdditionTransaction(
     .sort();
   return {
     ...published,
+    noChange: staged.noChange ?? null,
     additionOutcome: {
       kind: repairedDates.length > 0 ? 'added_with_repair' : 'added',
       targetDate: date,

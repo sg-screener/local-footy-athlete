@@ -441,23 +441,47 @@ run('days the athlete never touched are never stamped', () => {
 
 // ── Ruling (6): a stage that applied nothing never reports "Done" ─────────
 
-run('a repeated identical swap reports no-change, not success', () => {
+/**
+ * The reachable `already_applied` path is a DOUBLE TAP.
+ *
+ * The sheet holds `weekDays` from its last render, so a second tap before the
+ * store round-trips re-issues the change against the same snapshot — the same
+ * `originalWorkout`, therefore the same constraint id, therefore the transaction
+ * short-circuit. (Re-reading the week between attempts does NOT reproduce it:
+ * the day now holds the swapped-in session, so the second request has a
+ * different identity and genuinely applies. That is why this test freezes the
+ * snapshot rather than calling `commit` twice.)
+ */
+run('a double-tapped swap reports no-change, not a second success', () => {
   const weekStart = seed();
   markExplicitFixture(weekStart);
   const friday = addDaysISO(weekStart, 4);
-  const first = commit(weekStart, {
+  const snapshot = visibleWeek(weekStart);
+  const change: PlanChange = {
     kind: 'swap_category', date: friday, category: 'conditioning_light',
-  });
-  assert(first.ok, `first swap refused: ${first.message}`);
+  };
+  const tap = () => quiet(() => applyPlanChange({
+    change,
+    visibleWeek: snapshot,
+    todayISO: weekStart,
+    setManualOverride: (date, workout, context) =>
+      useProgramStore.getState().setManualOverride(date, workout, context),
+  }));
+
+  const first = tap();
+  assert(first.ok && first.outcome === 'applied',
+    `first tap did not apply: ${first.outcome} / ${first.message}`);
   const landed = visibleFriday(weekStart)?.workout?.name ?? null;
 
-  const second = commit(weekStart, {
-    kind: 'swap_category', date: friday, category: 'conditioning_light',
-  });
+  const second = tap();
+  assert(second.outcome === 'no_change',
+    `a second tap that published nothing reported "${second.outcome}": "${second.message}"`);
   assert(!/^Done\./.test(second.message),
     `a swap that applied nothing still reported success: "${second.message}"`);
+  assert(second.message.length > 0 && !/_/.test(second.message),
+    `no-change reached the athlete as a raw code: "${second.message}"`);
   assert(visibleFriday(weekStart)?.workout?.name === landed,
-    'the repeated swap changed the day it claimed not to change');
+    'the double tap changed the day it reported no change to');
 });
 
 run('a DIFFERENT swap on an already-swapped day never claims a session it did not place', () => {

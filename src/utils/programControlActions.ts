@@ -10,6 +10,7 @@ import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain'
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import {
   applyPlanChange,
+  type PlanChangeOutcome,
   previewPlanChangeRisk,
   type PlanChange,
   type PlanChangeBinScopeId,
@@ -277,6 +278,12 @@ export interface ProgramControlActionResult {
   fallbackReason?: string;
   needsGuidedFollowUp?: boolean;
   route: ProgramControlRoute;
+  /**
+   * Present when this action ran a plan change. Carries the producer's typed
+   * three-way answer (ruling #6) so a stage that published nothing is not
+   * flattened into `ok: false` and rendered as an error by the surface.
+   */
+  outcome?: PlanChangeOutcome;
   /** Development-only explicit token correlation for the render observer. */
   traceId?: string;
 }
@@ -488,6 +495,7 @@ function executePlanChangeAction(
   });
   return {
     ok: result.ok,
+    outcome: result.outcome,
     changedProgram: result.ok && result.appliedDates.length > 0,
     requiresRebuild: false,
     message: result.message,
@@ -661,6 +669,7 @@ function executeProgramControlActionWithinTrace(
         if (!planResult.ok) {
           return {
             ok: false,
+            outcome: planResult.outcome,
             changedProgram: false,
             requiresRebuild: false,
             message: planResult.message,

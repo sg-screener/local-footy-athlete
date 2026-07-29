@@ -15,6 +15,7 @@ import {
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
+  type PlanChangeOutcome,
 } from '../../utils/planChangeProducer';
 import {
   executeProgramControlActionDurably,
@@ -103,6 +104,8 @@ type Step =
   | {
       kind: 'result';
       ok: boolean;
+      /** Ruling #6: nothing published is its own answer, not a failure. */
+      outcome?: PlanChangeOutcome;
       message: string;
       traceId?: string;
       observationId?: string;
@@ -294,6 +297,7 @@ export function PlanChangeSheet({
     setStep({
       kind: 'result',
       ok: result.ok,
+      outcome: result.outcome,
       message: result.message,
       traceId: result.traceId,
       observationId,
@@ -859,7 +863,11 @@ export function PlanChangeSheet({
             <ExplorerRenderWitness testID={step.resultTestID} />
           ) : null}
           <Text
-            style={step.ok ? styles.resultOk : styles.resultBad}
+            style={step.ok
+              ? styles.resultOk
+              : step.outcome === 'no_change'
+                ? styles.resultNeutral
+                : styles.resultBad}
             testID="plan-change-result-message"
             accessibilityRole="text"
           >
@@ -987,6 +995,15 @@ const styles = StyleSheet.create({
   resultBad: {
     fontSize: 15,
     color: '#F44336',
+    lineHeight: 21,
+    marginBottom: 16,
+  },
+  /** Nothing applied, nothing wrong (ruling #6) — neither the success green
+   *  nor the failure red would be honest about that. */
+  resultNeutral: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    opacity: 0.85,
     lineHeight: 21,
     marginBottom: 16,
   },
