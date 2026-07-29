@@ -158,6 +158,9 @@ export function g1LandingRoutesFor(
   return context.keptSessionName
     ? G1_LANDING_ROUTES
     : [G1_LANDING_ROUTES[0]!, GUNSHOW_ROUTE, ...G1_LANDING_ROUTES.slice(1)];
+  // NB: every id returned here must resolve through `g1LandingRoute`, which is
+  // what `ALL_G1_LANDING_ROUTES` guarantees. A route the sheet can show and the
+  // producer cannot look up is a crash on selection — it was, on Sam's phone.
 }
 
 const GUNSHOW_ROUTE: G1LandingRoute = {
@@ -217,9 +220,26 @@ export const G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
   },
 ];
 
+/**
+ * EVERY route, not just the ones on the default menu.
+ *
+ * The Gunshow route lives outside `G1_LANDING_ROUTES` because it is offered
+ * only on an empty G-1 — and this lookup only knew the default list, so the
+ * moment Sam picked it the app THREW: "Unknown G-1 move route:
+ * take_the_gunshow". A menu the sheet can render and this function cannot
+ * resolve is two lists disagreeing about what exists.
+ *
+ * `ALL_G1_LANDING_ROUTES` is now the single membership answer, and
+ * `g1LandingRoutesFor` decides only which of them a given day OFFERS.
+ */
+export const ALL_G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
+  GUNSHOW_ROUTE,
+  ...G1_LANDING_ROUTES,
+];
+
 export function g1LandingRoute(id: G1LandingRouteId): G1LandingRoute {
-  const route = G1_LANDING_ROUTES.find((candidate) => candidate.id === id);
-  if (!route) throw new Error(`Unknown G-1 move route: ${id}`);
+  const route = ALL_G1_LANDING_ROUTES.find((candidate) => candidate.id === id);
+  if (!route) throw new Error(`Unknown G-1 landing route: ${id}`);
   return route;
 }
 

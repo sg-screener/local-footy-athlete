@@ -81,6 +81,7 @@ export type {
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import { classifyProgramMutationRefusal } from '../rules/programMutationRefusal';
+import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import {
   reduceAcceptedSessionForAthleteRemoval,
   splitAcceptedSessionForAthleteMove,
@@ -1687,6 +1688,20 @@ export function resolveAthleteMutation(args: {
   };
 }
 
+/**
+ * The athlete-facing sentence for a refusal the domain has no framed copy for.
+ *
+ * NEVER THE CODE ITSELF (Sam's honest-outcome law; the door matrix asserts it on
+ * every cell). `section18_week_rejected` and `day_already_has_strength` are the
+ * vocabulary of the rules layer, and they were reaching the athlete inside
+ * "That change isn't possible here (…)". The code still travels — on the
+ * rejection entry and the tape, where diagnosis reads it — just not in the
+ * sentence.
+ */
+function refusalSentenceFor(code: string): string {
+  return athleteSafeRefusal(code);
+}
+
 function blockedAssessmentForBuildError(
   change: PlanChange,
   error: string,
@@ -1855,7 +1870,7 @@ export function previewPlanChangeRisk(args: {
         }
         return finish({
           ok: false,
-          message: `That change isn't possible here (${resolution.error}).`,
+          message: refusalSentenceFor(resolution.error),
           appliedDates: [],
           rejected: [],
           proposedWeek: args.visibleWeek,
@@ -1942,7 +1957,7 @@ export function previewPlanChangeRisk(args: {
       }
       return finish({
         ok: false,
-        message: `That change isn't possible here (${proposal.error}).`,
+        message: refusalSentenceFor(proposal.error),
         appliedDates: [],
         rejected: [],
         proposedWeek: args.visibleWeek,
@@ -2161,6 +2176,28 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
  * is what let the sheet say "Done. Lower Body Strength is now on <date>" when
  * the transaction had short-circuited and the day held a Gunshow.
  */
+/**
+ * The name the ATHLETE will read on that day, for copy that claims a session.
+ *
+ * The accepted week and the rendered week can name the same day differently —
+ * canonicalisation renames from final content, and the resolver composes. The
+ * add door reported "Done. Full Body Strength added" over a day the athlete saw
+ * as "Lower Squat"; both were true of different projections, and only one of
+ * them is on the screen. The door matrix caught it on the G+1 recovery day.
+ *
+ * Falls back to the accepted name, then to the request, so the sentence never
+ * gets less honest than it was.
+ */
+function visibleSessionNameOn(date: string): string | null {
+  try {
+    const week = resolveWeekWithConditioning(
+      getMondayForDate(date), buildScheduleStateImperative());
+    return week.find((day) => day.date === date)?.workout?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function acceptedSessionNameOn(date: string): string | null {
   const state = useProgramStore.getState();
   const profile = useProfileStore.getState().onboardingData;
@@ -2335,7 +2372,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           outcome: 'refused',
           message: blocked
             ? blocked.findings[0]?.message ?? "That change can't be applied here."
-            : `That change isn't possible here (${resolution.error}).`,
+            : refusalSentenceFor(resolution.error),
           appliedDates: [],
           rejected: [],
         };
@@ -2428,9 +2465,11 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         outcome: 'applied',
         message: athleteSwapDoneMessage(
           resolution.input.date,
-          // Ruling #6: name what LANDED. `pickedTitle` is the request and is
-          // kept only as the fallback when the accepted week cannot be read.
-          acceptedSessionNameOn(resolution.input.date) ?? resolution.pickedTitle,
+          // Ruling #6: name what LANDED — and what landed is what the athlete
+          // SEES, which the accepted projection can name differently.
+          visibleSessionNameOn(resolution.input.date)
+            ?? acceptedSessionNameOn(resolution.input.date)
+            ?? resolution.pickedTitle,
           publishedOutcome),
         appliedDates: resolution.appliedDates,
         rejected: [],
@@ -2483,7 +2522,9 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         outcome: 'applied',
         message: athleteAdditionDoneMessage(
           resolution.input.date,
-          acceptedSessionNameOn(resolution.input.date) ?? resolution.pickedTitle,
+          visibleSessionNameOn(resolution.input.date)
+            ?? acceptedSessionNameOn(resolution.input.date)
+            ?? resolution.pickedTitle,
           additionOutcome),
         appliedDates: resolution.appliedDates,
         rejected: [],
@@ -2551,7 +2592,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     return {
       ok: false,
       outcome: 'refused',
-      message: `That change isn't possible here (${proposal.error}).`,
+      message: refusalSentenceFor(proposal.error),
       appliedDates: [],
       rejected: [],
     };
@@ -2593,7 +2634,15 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
       : null;
 
-  const message = planChangeDoneMessage(args.change, pickedTitle);
+  // NAME WHAT THE ATHLETE SEES, not what was requested. `pickedTitle` is the
+  // registry label for the thing they picked; on a stacked day the day ends up
+  // named for its combination, and the door matrix caught this branch claiming
+  // "Full Body Strength added" over a day reading "Lower Squat".
+  const landedOn = 'date' in args.change ? args.change.date : null;
+  const message = planChangeDoneMessage(
+    args.change,
+    (landedOn ? visibleSessionNameOn(landedOn) : null) ?? pickedTitle,
+  );
 
   return {
     ok: true,

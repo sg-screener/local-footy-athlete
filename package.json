@@ -254,7 +254,8 @@
     "test:g1-landing-ask-flow": "TZ=Australia/Melbourne sucrase-node src/__tests__/g1LandingAskFlowTests.ts",
     "test:action-log": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionLogTests.ts",
     "test:deletion-calendar-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/deletionCalendarOwnershipTests.ts",
-    "test:legacy-census": "TZ=Australia/Melbourne sucrase-node src/__tests__/legacyReckoningCensusTests.ts"
+    "test:legacy-census": "TZ=Australia/Melbourne sucrase-node src/__tests__/legacyReckoningCensusTests.ts",
+    "test:athlete-door-matrix": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteDoorMatrixTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
