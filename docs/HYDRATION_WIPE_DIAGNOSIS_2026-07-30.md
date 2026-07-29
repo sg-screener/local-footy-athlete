@@ -112,3 +112,51 @@ step, not a fix.
 
 `test:bible` is EXIT=0 and untouched by this unit; the wipe is not gated, and
 nothing here should be read as saying it is.
+
+---
+
+## Addendum, 2026-07-30 — the approved worktree path, run
+
+Sam approved producing the previous-build envelope **by acting through the old
+code**. Done, and the result changes the plan.
+
+**The method works.** `git worktree add --detach <path> 49c8579` (no branch
+switch in the shared checkout), `node_modules` symlinked, the old build driven
+through its own real doors — profile, `generateProgramLocally` +
+`setCurrentProgram`, calendar, `applyPlanChange`,
+`executeProgramControlActionDurably` — and the bytes read back from the same
+storage the persist middleware wrote. 588KB, acted, not authored. It is committed
+as `src/__tests__/fixtures/previousBuildStore-49c8579.json` with its provenance.
+
+**But the branch point is NOT OLD ENOUGH.** Today's classifier calls that payload
+`accepted_canonical` / `current_accepted_protocols_verified`, so hydration takes
+the early-return branch (`programStore.ts:2202`) and never reaches
+`commitAcceptedStateTransaction`. The reason is specific and checkable: 49c8579
+already writes `acceptedCompositionBase` (protocolVersion 1), `native_v1` source
+facts, and schedule constraints carrying `temporarySourceFactIds` — so every
+clause of `hasAcceptedCanonicalEvidence` passes and `hasKnownLegacySignatures`
+finds nothing. **`src/store/programHydrationIngress.ts` is byte-identical between
+49c8579 and HEAD**, so this is not a classifier change; it is what the old build
+wrote.
+
+Sam's device envelope was therefore written by a build OLDER than the branch
+point — consistent with revision 43 accumulated across many builds.
+
+**Next base identified, not yet captured:** `1e9c822`, the parent of `2b06be5`
+("feat: add canonical injury episode ownership") — the last commit before the
+accepted-composition-base and source-fact protocols existed. A worktree there was
+created and run; its persist path goes straight at AsyncStorage with no node
+fallback (needs the `window.localStorage` shim, unlike 49c8579), and
+`generateProgramLocally` has a different options shape at that commit, so the
+capture produced an envelope with no program (612 bytes). **Working out that
+build's own call conventions is the remaining step**, and it is mechanical.
+
+**Recorded because it is evidence, not noise:** the 49c8579 build REFUSED two of
+Sam's four calendar marks (`section18_week_rejected` on both rest marks) and threw
+`Section18SafetyContradictionError` on a game mark, for his exact profile. The
+old build was already failing his week at the calendar door.
+
+### Still NOT done
+
+Red cell, both fixes, walker upgrade-path action, L12 per-store audit. Nothing in
+this addendum is a fix and `test:bible` is untouched by it.
