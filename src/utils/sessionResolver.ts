@@ -110,8 +110,17 @@ export interface ScheduleState {
    * 'Varies' is excluded).
    */
   gameDay?: GameDay;
-  /** Athlete readiness for conditioning caps. Defaults to 'medium'. */
-  readiness: ReadinessLevel;
+  /**
+   * Athlete capacity band for conditioning caps.
+   *
+   * `null` means the profile CANNOT be scored — not 'medium'. The consumers
+   * below read `state.readiness || 'medium'`, which is the pre-existing shape
+   * and is only reachable for a profile that HAS a program; generation refuses
+   * an unscoreable profile, so an unscoreable athlete has no week for these
+   * caps to modulate. Do not turn the null into a tier here (Sam, 2026-07-30):
+   * that is the silent default the rubric's fail-loud exists to kill.
+   */
+  readiness: ReadinessLevel | null;
   /** Session feedback keyed by ISO date. Used to feed feeling/patterns into progression. */
   sessionFeedback?: Record<string, SessionFeedback>;
   /** Logged strength history, newest first, when already available to the caller. */

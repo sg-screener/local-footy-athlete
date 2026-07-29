@@ -1,5 +1,5 @@
 import type { OnboardingData, ReadinessLevel } from '../types/domain';
-import { capacityFor } from '../data/capacityRubric';
+import { MissingCapacityAnswerError, capacityFor } from '../data/capacityRubric';
 import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
 export type ReadinessEnergy = 'low' | 'okay' | 'good';
@@ -47,6 +47,35 @@ export function deriveProfileReadiness(
     onboardingData?.recentTrainingLoad,
     onboardingData?.conditioningLevel,
   ).level;
+}
+
+/**
+ * The band, or `null` when this profile cannot be scored.
+ *
+ * THE SEAM, not a softening (Sam's ruling, 2026-07-30). `deriveProfileReadiness`
+ * above still throws and is what PRESCRIBERS call — generation must not build a
+ * program on a guess, and that refusal is unchanged.
+ *
+ * This is for READERS. `useSchedule` called the throwing accessor from a hook
+ * body, so an athlete whose profile could not be scored crashed the app during
+ * render on launch. Rendering is not prescribing: the week can be shown, and
+ * the athlete told what is missing, without anyone inventing a capacity tier.
+ *
+ * `null` is the whole point and must stay null all the way down. It means "no
+ * band" — not 'medium', not 'low'. Returning a tier here would be the silent
+ * default the rubric's fail-loud exists to kill, reintroduced one layer out and
+ * harder to see. Consumers that need a band to prescribe must refuse; consumers
+ * that only modulate something already built do nothing.
+ */
+export function profileCapacityBandOrNull(
+  onboardingData: OnboardingData | null | undefined,
+): ReadinessLevel | null {
+  try {
+    return deriveProfileReadiness(onboardingData);
+  } catch (error) {
+    if (error instanceof MissingCapacityAnswerError) return null;
+    throw error;
+  }
 }
 
 function lowerOf(a: ReadinessLevel, b: ReadinessLevel): ReadinessLevel {

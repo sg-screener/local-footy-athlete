@@ -39,7 +39,7 @@ import {
   getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
 import { todayISOLocal } from '../utils/appDate';
-import { deriveProfileReadiness } from '../utils/readiness';
+import { profileCapacityBandOrNull } from '../utils/readiness';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 
@@ -176,7 +176,12 @@ function useScheduleState(): ScheduleState & {
   const readinessActiveConstraints = acceptedContext.revision > 0
     ? []
     : buildReadinessActiveConstraints(todayReadinessSignal);
-  const readiness = deriveProfileReadiness(onboardingData);
+  // RENDER MUST NOT THROW (Sam, 2026-07-30). This is a read, not a prescription,
+  // so it asks for the band OR NULL. `deriveProfileReadiness` still throws and
+  // is still what generation calls — an unscoreable profile is refused a
+  // program, it is not refused a screen. `null` travels as null; see
+  // rules note in utils/readiness.ts.
+  const readiness = profileCapacityBandOrNull(onboardingData);
 
   return {
     currentProgram,
