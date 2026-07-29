@@ -415,6 +415,31 @@ run('the sheet has no path that renders a destination list without its refusal',
     'the sheet never mentions the typed move refusal, so it cannot render one');
 });
 
+run('the sheet never commits a move scope the athlete was never shown', () => {
+  // SAM'S FINDING 3, second half. The producer no longer offers a bare
+  // `whole_day` on a multi-session day, but the sheet's own shortcut could
+  // reintroduce the same outcome: one offered scope skipped straight to
+  // destinations, so "move the gym session" committed a whole-day move the
+  // athlete never saw named.
+  //
+  // A source contract, not a render one: there is no mounted-render path in
+  // this repo, and this is control flow rather than layout — which is the
+  // half of a screen source reading CAN hold honestly.
+  const sheet = readFileSync(
+    join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
+    'utf8',
+  );
+  const start = sheet.indexOf('const startMove');
+  const end = sheet.indexOf('const startBin');
+  assert(start > 0 && end > start, 'startMove no longer exists in the sheet');
+  const startMove = sheet.slice(start, end);
+  assert(/scopes\.length === 1/.test(startMove),
+    'the move entry point no longer decides anything about a single scope');
+  assert(/scopes\.length === 1\s*&&[^)]*visibleSessionCount/.test(startMove),
+    'the scope step is skipped on a single offered scope ALONE — on a day the app '
+    + 'renders as two sessions that commits a move the athlete was never shown');
+});
+
 console.log(`\nMove scoping totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);

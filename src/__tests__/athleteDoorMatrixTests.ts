@@ -343,18 +343,23 @@ const DAY_STATES: DayState[] = [
   {
     id: 'pure_commitment_day',
     build: () => {
-      // A day that is ONLY a commitment — no gym work beside it. The snapshot
-      // gives it a single `session` section titled from the workout name, so
-      // unlike the combined team day it does not go down the hardcoded
-      // "Team Training" branch, and the anchor regex is the only thing that
-      // ever recognised it. A commitment is not the athlete's to reschedule
-      // whatever it is called.
+      // A day that is ONLY a commitment — no gym work beside it, and NOT
+      // declared as team training. A workout with no items at all yields a
+      // single `session`-domain item titled from the workout name
+      // (`visibleProgramReadModel`), so the section reads "Club Session" and
+      // the anchor's `/\bteam training\b/` never matches. That is the whole
+      // point of this state: it is a commitment the title heuristic cannot
+      // see, and a commitment is not the athlete's to reschedule whatever it
+      // happens to be called.
+      // Wednesday, which the seeded week leaves free — so this is a
+      // commitment standing on its own, not a rewrite of the team night.
       const weekStart = seedStores(baseProgram());
       plant(weekStart, 3, {
-        name: 'Club Session', workoutType: 'Team Training', sessionTier: 'core',
-        exercises: [], durationMinutes: 90,
+        name: 'Club Session', workoutType: 'Technical', sessionTier: 'core',
+        exercises: [], durationMinutes: 90, conditioningBlock: undefined,
+        speedBlock: undefined, hasCombinedConditioning: false,
       });
-      return { weekStart, date: addDaysISO(weekStart, 3) };
+      return { weekStart, date: addDaysISO(weekStart, 2) };
     },
   },
   {
@@ -644,6 +649,39 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
   // that declaration is deleted.
   assert(multiSessionDaysSeen > 0,
     'no day-state in this grid renders two sessions — the law above asserted nothing');
+});
+
+cell('a day carrying a commitment never offers to move the WHOLE day', () => {
+  // The other half of Sam's finding 3, and the half the day-shape law above
+  // cannot see — a pure commitment day counts as ONE session, so it never
+  // reaches that cell, and a whole-day move there reschedules an appointment
+  // the athlete does not control.
+  //
+  // This is the assertion that makes the fix load-bearing: mutation-testing
+  // `carriesImmovableContent` away left the whole grid green, because the only
+  // commitment day it could build was the combined team night, whose
+  // `whole_day` was already removed by the anchor. The anchor ends in
+  // `/\bteam training\b/` over a rendered title, so a commitment called
+  // anything else — `pure_commitment_day` below is called "Club Session" —
+  // fell straight through to offering the whole day.
+  let commitmentDaysSeen = 0;
+  for (const dayState of DAY_STATES) {
+    const context = quiet(() => dayState.build());
+    const options = quiet(() => listPlanChangeOptionsForDay({
+      visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: context.weekStart,
+    }));
+    if (!options.visibleSessionKinds.includes('session')) continue;
+    commitmentDaysSeen += 1;
+    if (options.move.refusal) continue;
+    const ids = options.move.scopes.map((scope) => scope.id);
+    assert(!ids.includes('whole_day'),
+      `${dayState.id}: the day carries a commitment `
+      + `(${options.visibleSessionKinds.join(', ')}) and still offers `
+      + `${JSON.stringify(ids)} — a whole-day move takes the commitment with it`);
+  }
+  assert(commitmentDaysSeen >= 2,
+    `only ${commitmentDaysSeen} day-state carries a commitment — this law needs both `
+    + 'the combined team night AND a commitment the anchor regex does not recognise');
 });
 
 /**
