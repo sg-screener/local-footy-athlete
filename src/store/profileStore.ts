@@ -66,13 +66,16 @@ export const useProfileStore = create<ProfileState>()(
       isLoading: false,
       error: null,
 
-      updateOnboardingData: (data) =>
-        set((state) => ({
-          onboardingData: normalizeOnboardingRole({
-            ...state.onboardingData,
-            ...data,
-          }),
-        })),
+      // Through the owner like every other writer: the door records the
+      // INTENT (`onboarding_step_committed`), the owner records the WRITE.
+      // Sam's tape had the first and not the second, so a write that no door
+      // issued was invisible by construction.
+      updateOnboardingData: (data) => {
+        applyProfileOnboardingWrite({
+          next: { ...get().onboardingData, ...data } as OnboardingData,
+          writer: 'onboarding_step',
+        });
+      },
 
       /**
        * Close onboarding — but only over a profile the app can actually build on.
@@ -143,10 +146,17 @@ export const useProfileStore = create<ProfileState>()(
 
 
       resetOnboarding: () => {
-        set({
-          onboardingData: initialOnboardingData,
-          isOnboardingComplete: false,
-        });
+        const resetActionId = beginProfileResetAction('reset_onboarding');
+        try {
+          applyProfileOnboardingWrite({
+            next: initialOnboardingData,
+            writer: 'reset',
+            resetActionId,
+            isOnboardingComplete: false,
+          });
+        } finally {
+          endProfileResetAction(resetActionId);
+        }
       },
 
       setLoading: (loading) => set({ isLoading: loading }),
@@ -154,12 +164,20 @@ export const useProfileStore = create<ProfileState>()(
       setError: (error) => set({ error }),
 
       clear: () => {
-        set({
-          onboardingData: initialOnboardingData,
-          isOnboardingComplete: false,
-          isLoading: false,
-          error: null,
-        });
+        // A reset is the one write that may erase answers, and it says so.
+        // Synchronous, and on the tape either way — see applyProfileOnboardingWrite.
+        const resetActionId = beginProfileResetAction('profile_store_clear');
+        try {
+          applyProfileOnboardingWrite({
+            next: initialOnboardingData,
+            writer: 'reset',
+            resetActionId,
+            isOnboardingComplete: false,
+          });
+        } finally {
+          endProfileResetAction(resetActionId);
+        }
+        set({ isLoading: false, error: null });
       },
     }),
     {
@@ -167,18 +185,171 @@ export const useProfileStore = create<ProfileState>()(
       storage: createJSONStorage(() => asyncStorageCompat),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<ProfileState> | undefined;
+        const merged = normalizeOnboardingRole({
+          ...currentState.onboardingData,
+          ...(persisted?.onboardingData ?? {}),
+        });
+        // THE ONE WRITER THAT CANNOT GO THROUGH THE OWNER — zustand calls this
+        // itself, and it returns state rather than setting it. It merges, so it
+        // cannot produce the wipe; but a LATE rehydration inside a suspicious
+        // window is exactly the kind of thing four reconstructions could not
+        // rule in or out, so it goes on the tape with its three counts.
+        try {
+          emitAthleteActionEvent(beginAthleteActionTrace({
+            source: 'system',
+            actionType: 'hydration',
+            route: 'profile_store_rehydrate',
+          }, undefined, { forceRoot: true }), 'profile_rehydrated', {
+            persistedAnswerCount: Object.keys(persisted?.onboardingData ?? {}).length,
+            liveAnswerCount: Object.keys(currentState.onboardingData ?? {}).length,
+            mergedAnswerCount: Object.keys(merged ?? {}).length,
+            persistedOnboardingComplete: !!persisted?.isOnboardingComplete,
+          });
+        } catch {
+          // Rehydration must not fail because a diagnostic did.
+        }
         return {
           ...currentState,
           ...persisted,
-          onboardingData: normalizeOnboardingRole({
-            ...currentState.onboardingData,
-            ...(persisted?.onboardingData ?? {}),
-          }),
+          onboardingData: merged,
         };
       },
     },
   ),
 );
+
+/* ══ THE PROFILE WRITE OWNER ══
+ *
+ * Export 5, and the reason this exists at all. The tape recorded all 22 of
+ * Sam's answers going in, one step at a time, 04:54:05 to 04:54:53. At 04:55:24
+ * the completion guard judged a profile of TWO. Thirty-one seconds, no log
+ * entry, no mirror refusal, and the surviving bytes were exactly
+ * `initialOnboardingData`.
+ *
+ * Four attempts to name that writer by reading code have failed. So the law
+ * stops being a rule about one caller and becomes the shape of the store:
+ *
+ *   1. ONE DOOR. Every write of `onboardingData` goes through here.
+ *   2. THE DEFAULT IS NOT A VALUE. Writing the built-in default over a profile
+ *      that has real answers is refused, unless the write carries a reset
+ *      action that is IN FLIGHT — because that is the only time erasing
+ *      answers is what the athlete asked for.
+ *   3. AN IN-FLIGHT RESET, NOT A RESET THAT HAPPENED. A stale id — a deferred
+ *      write belonging to a reset that finished before the athlete started
+ *      answering — is refused. That is the suspected shape of Sam's loss, and
+ *      it is refused whether or not it turns out to be the culprit.
+ *   4. EVERYTHING IS ON THE TAPE. Applied or refused, every write names its
+ *      writer and the answer counts either side of it. A writer the tape
+ *      cannot see is a build failure — `profileMirrorNarrowingTests` fails on
+ *      any assignment to `onboardingData` outside this function.
+ *
+ * Counts and field names only, never answers: the tape leaves the device.
+ */
+
+export type ProfileWriterId =
+  | 'onboarding_step'
+  | 'reset'
+  | 'compatibility_mirror'
+  | 'accepted_transaction'
+  | 'coach_rollback_restore';
+
+export interface ProfileWriteOutcome {
+  ok: boolean;
+  reason?: 'default_over_answered_profile' | 'reset_action_not_in_flight';
+}
+
+/** The store's built-in default, exported so writers can be compared against it. */
+export const INITIAL_ONBOARDING_DATA: OnboardingData = initialOnboardingData;
+
+const resetActionsInFlight = new Set<string>();
+let nextResetActionId = 1;
+
+/**
+ * Open a reset. The id is only good while the reset is running, which is what
+ * makes a deferred write belonging to a finished reset refusable.
+ */
+export function beginProfileResetAction(source: string): string {
+  const id = `profile-reset:${source}:${nextResetActionId++}`;
+  resetActionsInFlight.add(id);
+  return id;
+}
+
+export function endProfileResetAction(id: string): void {
+  resetActionsInFlight.delete(id);
+}
+
+function answeredCount(profile: OnboardingData | null | undefined): number {
+  if (!profile) return 0;
+  const data = profile as Record<string, unknown>;
+  return Object.keys(data).filter((key) => {
+    const value = data[key];
+    if (value === undefined || value === null) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  }).length;
+}
+
+function isTheBuiltInDefault(profile: OnboardingData): boolean {
+  return JSON.stringify(profile) === JSON.stringify(initialOnboardingData);
+}
+
+export function applyProfileOnboardingWrite(args: {
+  next: OnboardingData;
+  writer: ProfileWriterId;
+  resetActionId?: string;
+  isOnboardingComplete?: boolean;
+  /** Suppresses the mirror fence for writes that ARE the accepted truth. */
+  silenceMirrorFence?: boolean;
+}): ProfileWriteOutcome {
+  const before = useProfileStore.getState().onboardingData;
+  const answerCountBefore = answeredCount(before);
+  const record = (outcome: 'applied' | 'refused', reason?: string) => {
+    emitAthleteActionEvent(beginAthleteActionTrace({
+      source: args.writer === 'onboarding_step' ? 'tap' : 'system',
+      actionType: 'program_change',
+      route: 'applyProfileOnboardingWrite',
+    }, undefined, { forceRoot: true }), 'profile_write', {
+      writer: args.writer,
+      outcome,
+      answerCountBefore,
+      answerCountAfter: answeredCount(useProfileStore.getState().onboardingData),
+      ...(reason ? { internalResultCode: reason } : {}),
+      ...(args.resetActionId ? { resetActionId: args.resetActionId } : {}),
+    });
+  };
+
+  if (isTheBuiltInDefault(args.next) && answerCountBefore > answeredCount(initialOnboardingData)) {
+    if (!args.resetActionId) {
+      record('refused', 'default_over_answered_profile');
+      return { ok: false, reason: 'default_over_answered_profile' };
+    }
+    if (!resetActionsInFlight.has(args.resetActionId)) {
+      record('refused', 'reset_action_not_in_flight');
+      return { ok: false, reason: 'reset_action_not_in_flight' };
+    }
+  }
+
+  // A reset that leaves onboarding marked complete is not a reset. Stated on
+  // the writer rather than trusted to every caller.
+  const isOnboardingComplete = args.writer === 'reset'
+    ? false
+    : args.isOnboardingComplete;
+  const silence = args.silenceMirrorFence ?? args.writer !== 'onboarding_step';
+  if (silence) acceptedProfileMirrorPublicationInProgress = true;
+  try {
+    useProfileStore.setState({
+      onboardingData: normalizeOnboardingRole(args.next),
+      ...(isOnboardingComplete === undefined
+        ? {}
+        : { isOnboardingComplete }),
+    });
+  } finally {
+    if (silence) acceptedProfileMirrorPublicationInProgress = false;
+  }
+  record('applied');
+  return { ok: true };
+}
 
 function canonicalAcceptedProfile(): OnboardingData | null {
   try {
@@ -244,14 +415,12 @@ export function publishAcceptedProfileCompatibilityMirror(
     });
     return;
   }
-  acceptedProfileMirrorPublicationInProgress = true;
-  try {
-    useProfileStore.setState({
-      onboardingData: normalizeOnboardingRole(onboardingData),
-    });
-  } finally {
-    acceptedProfileMirrorPublicationInProgress = false;
-  }
+  applyProfileOnboardingWrite({
+    next: onboardingData,
+    writer: options.origin === 'accepted_transaction'
+      ? 'accepted_transaction'
+      : 'compatibility_mirror',
+  });
 }
 
 /** Restore the complete downstream profile mirror without triggering upstream fencing. */
@@ -259,15 +428,11 @@ export function restoreAcceptedProfileCompatibilityMirror(snapshot: {
   onboardingData: OnboardingData;
   isOnboardingComplete: boolean;
 }): void {
-  acceptedProfileMirrorPublicationInProgress = true;
-  try {
-    useProfileStore.setState({
-      onboardingData: normalizeOnboardingRole(snapshot.onboardingData),
-      isOnboardingComplete: snapshot.isOnboardingComplete,
-    });
-  } finally {
-    acceptedProfileMirrorPublicationInProgress = false;
-  }
+  applyProfileOnboardingWrite({
+    next: snapshot.onboardingData,
+    writer: 'coach_rollback_restore',
+    isOnboardingComplete: snapshot.isOnboardingComplete,
+  });
 }
 
 useProfileStore.subscribe((state) => {
@@ -311,12 +476,5 @@ useProfileStore.subscribe((state) => {
     });
     return;
   }
-  acceptedProfileMirrorPublicationInProgress = true;
-  try {
-    useProfileStore.setState({
-      onboardingData: normalizeOnboardingRole(canonical),
-    });
-  } finally {
-    acceptedProfileMirrorPublicationInProgress = false;
-  }
+  applyProfileOnboardingWrite({ next: canonical, writer: 'compatibility_mirror' });
 });

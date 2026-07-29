@@ -68,6 +68,8 @@ export type AthleteActionEventName =
   | 'onboarding_step_committed'
   | 'onboarding_completion_result'
   | 'profile_mirror_publication_refused'
+  | 'profile_write'
+  | 'profile_rehydrated'
   | 'diagnostic_snapshot';
 
 export type AthleteActionFailureCategory =

@@ -138,3 +138,71 @@ leaves the device.
 **Re-run:** full reset, onboarding, then export whether it succeeds or refuses.
 The export button is on both the refusal screen and Welcome, so a refusal no
 longer traps its own evidence.
+
+---
+
+# Addendum — export 5, and the writer nobody can name
+
+**The tape is decisive about the window and silent about the writer.** That is
+what this round's fix is shaped around.
+
+## The 31 seconds
+
+```
+04:54:05.356  program_store_hydration   hydration_accepted_canonical_projection
+04:54:10.355  onboarding_step_committed firstName                        2 -> 3
+   ... 17 more, one per step, every one clean ...
+04:54:53.107  onboarding_step_committed injuries                        22 -> 22
+                       ← 31 SECONDS, NOT ONE ENTRY →
+04:55:24.709  onboarding_completion_result   judged=2  missing=15  REFUSED
+```
+
+Twenty-two answers went in, one step at a time, each one durable. Thirty-one
+seconds later the completion guard read a profile of **two**, and the surviving
+bytes were exactly `initialOnboardingData`. No `profile_mirror_publication_refused`,
+no mirror refusal in the record, no commit. **A writer nothing could see.**
+
+The guard was right every time. It has always been right. It was reading a
+profile something else had already emptied.
+
+## Why the fix is a shape and not a patch
+
+Four attempts to name that writer by reading code have failed — this is the
+fifth device round trip on the same defect. So the law stopped being a rule
+about one caller and became the shape of the store:
+
+1. **One door.** Every write of `onboardingData` goes through
+   `applyProfileOnboardingWrite`. `profileMirrorNarrowingTests` fails the build
+   on a second `useProfileStore.setState` anywhere in the file, on any store
+   action that assigns the profile, and on a direct write from `resetCoach`,
+   `programStore`, `acceptedStateTransaction` or `coachMutationTransaction`.
+   Mutation-tested: adding one writer turns the suite red.
+2. **The default is not a value.** Writing the built-in default over a profile
+   with real answers is REFUSED — unless the write carries a reset action that
+   is IN FLIGHT, because that is the only moment erasing answers is what the
+   athlete asked for.
+3. **In-flight, not "a reset happened".** A stale id — a deferred write
+   belonging to a reset that finished before the athlete started answering — is
+   refused as `reset_action_not_in_flight`. That is precisely the suspected
+   shape of this loss, and it is now refused whether or not it turns out to be
+   the culprit.
+4. **Everything is on the tape.** Applied or refused, every write names its
+   writer and the counts either side of it. The full reset brackets itself with
+   `full_reset_started` / `full_reset_complete`, so the next export carries the
+   one datum every reconstruction lacked: *when the reset actually ran*, against
+   when the answers went in. Even zustand's rehydration — the one writer that
+   cannot go through the owner, because the middleware calls it and it returns
+   state rather than setting it — now emits `profile_rehydrated` with its three
+   counts.
+
+## What the next run proves
+
+- **The answers survive.** Then the writer was one of the paths now refused, and
+  the refusal names it: `default_over_answered_profile` or
+  `reset_action_not_in_flight`, with `writer:` on the entry.
+- **The answers vanish anyway.** Then it is not a profile-store write at all,
+  and the tape's `profile_write` sequence plus `profile_rehydrated` counts
+  bound it to something outside this store — which is a much smaller search
+  than the one that has failed four times.
+
+Either way the next export answers it. No further reconstruction.

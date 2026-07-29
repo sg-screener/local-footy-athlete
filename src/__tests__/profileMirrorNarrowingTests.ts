@@ -44,7 +44,17 @@ import {
   recentProfileMirrorRefusals,
   clearProfileMirrorRefusals,
 } from '../rules/profileMirrorNarrowing';
-import { publishAcceptedProfileCompatibilityMirror } from '../store/profileStore';
+import {
+  INITIAL_ONBOARDING_DATA,
+  applyProfileOnboardingWrite,
+  beginProfileResetAction,
+  endProfileResetAction,
+  publishAcceptedProfileCompatibilityMirror,
+} from '../store/profileStore';
+import {
+  athleteActionLogEntries,
+  clearAthleteActionLog,
+} from '../utils/athleteActionLog';
 import {
   IMPOVERISHED_SNAPSHOT,
   fullyAnsweredProfile,
@@ -57,9 +67,16 @@ let passed = 0;
 let failed = 0;
 const failures: string[] = [];
 
-function run(name: string, body: () => void): void {
+function run(name: string, body: () => void | Promise<void>): void {
   try {
-    body();
+    const result = body();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      void (result as Promise<void>).catch((error) => {
+        failed += 1;
+        failures.push(name);
+        console.error(`  FAIL ${name}`, error instanceof Error ? error.message : error);
+      });
+    }
     passed += 1;
     console.log(`  PASS ${name}`);
   } catch (error) {
@@ -75,6 +92,16 @@ function assert(condition: unknown, detail: string): asserts condition {
 
 /** The profile Sam actually answered — every question, as onboarding leaves it. */
 const COMPLETE_PROFILE: OnboardingData = fullyAnsweredProfile();
+
+function liveAnswerCountFrom(profile: OnboardingData): number {
+  return Object.keys(profile).filter((key) => {
+    const value = (profile as Record<string, unknown>)[key];
+    if (value === undefined || value === null) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  }).length;
+}
 
 console.log('\n-- Profile mirror narrowing --');
 
@@ -394,6 +421,134 @@ run('the stored-state export is reachable on a Release build', () => {
     'the export moved back inside the __DEV__-only developer tools section');
   assert(profileScreen.indexOf('testID="profile-stored-state-readout"') > 0,
     'the inline counts readout is gone — the numbers must be legible without sharing');
+});
+
+// ── ONE WRITER, AND THE TAPE SEES ALL OF IT (5D.1, arrived early) ────────
+//
+// Export 5 is the reason this exists. The tape recorded all 22 answers going
+// in, one step at a time, 04:54:05 to 04:54:53 — and at 04:55:24 the completion
+// guard judged a profile of TWO. Thirty-one seconds, no log entry, no mirror
+// refusal. A writer nothing could see replaced the profile with
+// `initialOnboardingData`.
+//
+// Naming that writer by reading code has now failed four times. So the law is
+// the instrument: every write of the profile goes through one owner, the owner
+// refuses the shape of the defect, and the owner puts every write on the tape.
+// Whatever the writer is, the next run either fails to wipe or is named.
+
+run('writing the DEFAULT over a real profile is refused', () => {
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+
+  const outcome = applyProfileOnboardingWrite({
+    next: INITIAL_ONBOARDING_DATA,
+    writer: 'compatibility_mirror',
+  });
+
+  assert(outcome.ok === false, 'the default was written straight over 22 answers');
+  assert(outcome.reason === 'default_over_answered_profile',
+    `refused for the wrong reason: ${outcome.reason}`);
+  assert(liveAnswerCount() > 2,
+    `the profile is down to ${liveAnswerCount()} answers despite the refusal`);
+});
+
+run('a reset writes the default, because that is what a reset IS', () => {
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+
+  const outcome = applyProfileOnboardingWrite({
+    next: INITIAL_ONBOARDING_DATA,
+    writer: 'reset',
+    resetActionId: beginProfileResetAction('test'),
+  });
+
+  assert(outcome.ok, `the reset was refused: ${outcome.reason}`);
+  assert(liveAnswerCount() === 2,
+    `the reset left ${liveAnswerCount()} answers behind`);
+  assert(useProfileStore.getState().isOnboardingComplete === false,
+    'the reset left onboarding marked complete');
+});
+
+run('a stale reset id cannot wipe a profile answered after it', () => {
+  // The suspected shape: a reset that fires, and something belonging to it
+  // landing much later, over answers given in between. An id minted before
+  // those answers is not a licence to erase them.
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+  const stale = beginProfileResetAction('test');
+  endProfileResetAction(stale);
+
+  const outcome = applyProfileOnboardingWrite({
+    next: INITIAL_ONBOARDING_DATA,
+    writer: 'reset',
+    resetActionId: stale,
+  });
+
+  assert(outcome.ok === false,
+    'a finished reset action still authorised a wipe — the deferred-write case');
+  assert(outcome.reason === 'reset_action_not_in_flight',
+    `refused for the wrong reason: ${outcome.reason}`);
+  assert(liveAnswerCount() > 2, `the stale reset wiped ${liveAnswerCount()}`);
+});
+
+run('every profile write is on the tape, refused or not', async () => {
+  await clearAthleteActionLog();
+  seedArmedMirrorDevice({ profile: COMPLETE_PROFILE, snapshot: COMPLETE_PROFILE });
+  useProfileStore.setState({ onboardingData: COMPLETE_PROFILE, isOnboardingComplete: true });
+
+  applyProfileOnboardingWrite({ next: INITIAL_ONBOARDING_DATA, writer: 'compatibility_mirror' });
+  const id = beginProfileResetAction('test');
+  applyProfileOnboardingWrite({ next: INITIAL_ONBOARDING_DATA, writer: 'reset', resetActionId: id });
+
+  const writes = athleteActionLogEntries()
+    .filter((entry) => entry.event === 'profile_write');
+  assert(writes.length === 2,
+    `the tape saw ${writes.length} of 2 profile writes`);
+  assert(writes[0]!.outcome === 'refused' && writes[0]!.writer === 'compatibility_mirror',
+    `the refused write is not named on the tape: ${JSON.stringify(writes[0])}`);
+  assert(writes[1]!.outcome === 'applied' && writes[1]!.writer === 'reset',
+    `the applied write is not named on the tape: ${JSON.stringify(writes[1])}`);
+  assert(writes[0]!.answerCountBefore === liveAnswerCountFrom(COMPLETE_PROFILE),
+    'the tape does not record how big the profile was before the write');
+  const serialised = JSON.stringify(writes);
+  assert(!serialised.includes('inside_mid') && !serialised.includes('In-season'),
+    `an answer VALUE reached the tape: ${serialised}`);
+});
+
+run('no writer can reach the profile around the owner', () => {
+  // A writer the tape cannot see is a build failure (Sam, 2026-07-30). The
+  // whole defect class is a store anything can assign to, so the check is that
+  // the ONLY setState in the file is the owner's, and that no zustand action
+  // assigns the profile behind its back.
+  const profileStore = readFileSync(
+    join(__dirname, '..', 'store', 'profileStore.ts'), 'utf8');
+  const ownerStart = profileStore.indexOf('export function applyProfileOnboardingWrite');
+  assert(ownerStart > 0, 'the profile write owner is gone');
+
+  const setStateCalls = profileStore.split('useProfileStore.setState(').length - 1;
+  assert(setStateCalls === 1,
+    `${setStateCalls} direct setState calls in profileStore — exactly one, the `
+    + "owner's, may exist");
+  // The owner's body ends at the first line-start closing brace after it.
+  const ownerEnd = profileStore.indexOf('\n}\n', ownerStart);
+  const setStateAt = profileStore.indexOf('useProfileStore.setState(');
+  assert(setStateAt > ownerStart && setStateAt < ownerEnd,
+    `the one setState (offset ${setStateAt}) is outside the write owner `
+    + `(${ownerStart}..${ownerEnd})`);
+
+  // zustand's own `set` may still carry loading/error/completion flags; what it
+  // may never carry is the profile itself.
+  for (const match of profileStore.matchAll(/set\(\{[^}]*\}/g)) {
+    assert(!match[0].includes('onboardingData'),
+      `a store action assigns the profile directly: ${match[0].slice(0, 80)}`);
+  }
+
+  for (const file of ['../utils/resetCoach.ts', '../store/programStore.ts',
+    '../store/acceptedStateTransaction.ts', '../store/coachMutationTransaction.ts']) {
+    const source = readFileSync(join(__dirname, file), 'utf8');
+    assert(!/useProfileStore\.setState\(/.test(source),
+      `${file} writes the profile store directly — it must go through the owner`);
+  }
 });
 
 console.log(`\nProfile mirror narrowing totals: ${passed} passed, ${failed} failed`);
