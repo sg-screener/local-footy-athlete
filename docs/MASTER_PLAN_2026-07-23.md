@@ -250,6 +250,32 @@ owns.
       emits this vocabulary. The gaps are that it is disabled on production
       builds, in-memory only, unbounded, and absent from the export.
 
+- 5D.4 **DELOAD_LAW ROW CLASSIFICATION READS THE AUTHORED STRUCTURE**
+      (Sam-approved 2026-07-30). `isConditioningExerciseRow` decides whether a
+      row is conditioning from its NAME, by regex. The workout it belongs to
+      already carries the authored answer — `conditioningBlock.options[]
+      .exerciseIds` names those exact rows — and the classifier does not read
+      it. The unit is for the classification to consult that structure, with the
+      name heuristic left only where no structure exists. **The regex is not to
+      be widened**; adding the missing words is what makes the next unmatched
+      name a silent defect rather than a loud one.
+      *Founding case:* the registry's own single-row conditioning templates —
+      "Flush Out - 2min On / 1min Off" and "3 x 8min zone 2 Rower", where
+      "Rower" does not match `\brow\b`. Both are classified as strength
+      accessories, and the accessory trim (`floor(1 × 0.5) = 0`) deletes the
+      only row, so the G-1 ask's route (c) would have published an empty day
+      under a "Done."
+      *Contained, not patched, in the G-1 landing unit:* a route is a smaller
+      session, never no session — `placeSessionForRoute` returns null for an
+      empty result and the landing funnel refuses in words already shipped.
+      `g1LandingAskFlowTests` 26 asserts the classifier still empties that
+      template, so it **goes red the moment this unit lands**. That is the
+      signal to delete the containment, not a regression.
+      *Class:* another **name-decides-identity** instance (Sam, 2026-07-30) —
+      see PART 3. The same shape as intensity feeding identity and position
+      feeding identity: a derived or incidental property standing in for
+      authored truth.
+
 ## Phase 6 — full verification under the new law
 - 6.1 Extend SUPPORTED_ATHLETE_ACTIONS.md to the whole-app surface (X3):
       first-run, generation, season transitions, session lifecycle.
@@ -281,6 +307,23 @@ owns.
 
 # PART 3 — STANDING ANSWERS (so nothing regresses to folklore)
 
+- **A derived property never decides identity** (Sam's standing class). Whether
+  a thing IS something is answered by the authored truth, never by a number that
+  says how hard it is, a slot that says where it sits, or a string that says
+  what it is called. Known instances, all the same defect in different clothes:
+  - INTENSITY feeds identity — a deload's halved sets demoted a hinge lift to an
+    accessory and the session left the week's count. Ruled and closed:
+    `docs/READINESS_FAMILY_BOUNDARY_2026-07-27.md` ("intensity and prescribed
+    volume must never feed identity"), one defect at five sites.
+  - POSITION feeds identity — row order standing in for role. Queued from the
+    power-row redesign.
+  - NAME feeds identity (2026-07-30) — `isConditioningExerciseRow` deciding
+    conditioning from a regex over the exercise name while the workout's own
+    `conditioningBlock` names the rows outright. Queued as 5D.4.
+  The fix is always the same shape: read the authored structure. **Widening the
+  heuristic is not the fix** — it buys back the current case and hides the next
+  one, because a heuristic that nearly always works is the hardest kind to catch
+  being wrong.
 - Gunshow: intentional brand voice, stays (2026-07-23).
 - Feedback form: message + required email only; no star rating.
 - Bed-ridden: illness_recovery week — minimums lifted, sessions optional +

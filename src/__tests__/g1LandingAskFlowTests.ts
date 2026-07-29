@@ -955,6 +955,11 @@ run('26 a route that would leave the day empty is refused, not published', () =>
   // trim deletes the only row. Until that classifier reads the structure the
   // workout already carries, the route has to refuse rather than land a day
   // that renders as rest under a "Done."
+  //
+  // THIS TEST IS MEANT TO DIE. Sam queued the classifier fix as MASTER_PLAN
+  // 5D.4 (name-decides-identity). The vacuity guard below fails the moment that
+  // lands, which is the signal to delete this test AND the containment in
+  // `placeSessionForRoute` — not to re-point the assertion at something else.
   const light = resolveTemplatePlanChange({
     change: { kind: 'swap_category', date: friday, category: 'conditioning_light' },
     visibleWeek: visibleWeek(weekStart),

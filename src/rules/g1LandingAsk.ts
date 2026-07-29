@@ -293,10 +293,13 @@ export function placeSessionForRoute(args: {
   // match. Those rows are then classified as strength accessories, and the
   // accessory trim deletes the only row in the session. The workout ITSELF
   // knows better — `conditioningBlock.options[].exerciseIds` names those exact
-  // rows — so the fix is for the classification to read the structure the
-  // workout already carries rather than to widen a regex. That belongs to
-  // DELOAD_LAW's own unit and is written up for Sam; this boundary is what
-  // stops the wrong answer reaching a day in the meantime.
+  // rows.
+  //
+  // Sam ruled this a NAME-DECIDES-IDENTITY instance and queued the fix as
+  // MASTER_PLAN 5D.4: the classification reads the authored structure, and the
+  // regex is NOT widened. This boundary holds until then, and
+  // `g1LandingAskFlowTests` 26 goes red when 5D.4 lands — that is the signal to
+  // delete these three lines, not a regression.
   return placed.exercises.length > 0 ? placed : null;
 }
 
