@@ -25,7 +25,6 @@ import {
   weeklyPlanTitle,
 } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
-import { capacityAnswerGapMessage } from '../../utils/capacityAnswerGap';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -125,8 +124,6 @@ export default function HomeScreenV2() {
     visibleReversibleAdjustments,
     currentProgram,
     sessionFeedback,
-    capacityGap,
-    handleRepairCapacityGap,
     seasonPhaseSkew,
     seasonPhaseRepairBusy,
     seasonPhaseRepairError,
@@ -438,28 +435,6 @@ export default function HomeScreenV2() {
             onRespond={(response) =>
               void handleMissedSessionResponse(missedSessionPrompt, response)}
           />
-        )}
-
-        {/* ── Capacity answers we cannot read ──
-            Stored state that is already wrong, disclosed rather than absorbed.
-            Until 2026-07-30 this exact profile threw MissingCapacityAnswerError
-            during RENDER and the app never reached this screen at all. The
-            rubric still refuses to score — that refusal is the law — but a
-            refusal belongs at the scoring boundary, and here it is a sentence
-            and a question, not a crash. */}
-        {capacityGap && (
-          <View style={styles.phaseSkewCard} testID="home-capacity-answer-gap">
-            <Text style={styles.phaseSkewTitle}>We're missing an answer</Text>
-            <Text style={styles.phaseSkewBody}>
-              {capacityAnswerGapMessage(capacityGap)}
-            </Text>
-            <Button
-              label="Answer now"
-              size="md"
-              onPress={handleRepairCapacityGap}
-              testID="home-capacity-answer-gap-repair"
-            />
-          </View>
         )}
 
         {/* ── Season-phase skew disclosure ──

@@ -255,15 +255,31 @@ run('the repair routes to the training-load step when that is the gap', () => {
 
 // ── The surface renders it, like the season-phase skew ───────────────────
 
-run('HomeScreenV2 discloses the gap and offers the repair', () => {
+/**
+ * REVERTED (Sam, 2026-07-30). This used to assert that HomeScreenV2 rendered a
+ * capacity-gap card with a repair action. The repair reopened onboarding, and
+ * completing onboarding a SECOND time armed the profile compatibility mirror
+ * against a stale accepted snapshot — which replaced the athlete's whole
+ * profile with it, costing `seasonPhase` and every other answer on Sam's
+ * device. A card whose action can cost answers is worse than no card.
+ *
+ * The assertion is INVERTED rather than deleted: until repair is non-destructive
+ * by construction, no surface may offer one, and that boundary should fail
+ * loudly if someone re-adds the card before the mirror is fixed.
+ */
+run('no surface offers a capacity repair while repair can still cost answers', () => {
   const home = readFileSync(
     join(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'),
     'utf8',
   );
-  assert(/home-capacity-answer-gap/.test(home),
-    'HomeScreenV2 has no capacity-gap disclosure');
-  assert(/home-capacity-answer-gap-repair/.test(home),
-    'the capacity-gap disclosure offers no repair action');
+  assert(!/home-capacity-answer-gap/.test(home),
+    'HomeScreenV2 offers a capacity repair again — the mirror fix must land first');
+  const profileStore = readFileSync(
+    join(__dirname, '..', 'store', 'profileStore.ts'),
+    'utf8',
+  );
+  assert(!/reopenOnboardingForRepair/.test(profileStore),
+    'the onboarding-reopen action is back before repair is non-destructive');
 });
 
 console.log(`\nCapacity render safety totals: ${passed} passed, ${failed} failed`);

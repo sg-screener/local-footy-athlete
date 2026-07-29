@@ -15,21 +15,19 @@ import {
  * hook body, so an unscoreable profile crashed the app during render on launch
  * — no disclosure, no repair, nothing the athlete could act on.
  *
- * This is the season-phase skew pattern applied to the same class of problem:
- * stored state that is already wrong, disclosed honestly, with one action that
- * fixes it. Nothing is guessed on the athlete's behalf and nothing is
- * overwritten to make the error go away.
+ * NO SURFACE CONSUMES THIS YET, deliberately (Sam, 2026-07-30). The first
+ * version shipped a Home card whose repair reopened onboarding, and completing
+ * onboarding a SECOND time armed the profile compatibility mirror against a
+ * stale accepted snapshot, which replaced the athlete's whole profile with it.
+ * On Sam's device that cost `seasonPhase` and every other answer. The action was
+ * reverted the same day; this module is retained because it is the pure part —
+ * "can this profile be scored, and which questions are missing, in the athlete's
+ * own words" — and it is what the repair invariant will ask once repair is
+ * non-destructive by construction.
  *
- * WHY THE REPAIR IS THE ONBOARDING RESUME. `OnboardingNavigator` already opens
- * at `resolveOnboardingResumeStep`, which is the first step whose own
- * `satisfied` predicate is false — so an athlete missing exactly one capacity
- * answer is asked exactly that question and continues from there. No second
- * route, no new screen, and no separate idea of "which question is missing"
- * that could drift from the step registry. The gap and the navigator read the
- * SAME owner, which `capacityRenderSafetyTests` pins in both directions.
- *
- * Nothing is lost by routing there: generation refuses for an unscoreable
- * profile, so an athlete in this state has no program the resume could discard.
+ * `resumeStep` reads `resolveOnboardingResumeStep` rather than deciding for
+ * itself, so whatever eventually routes the athlete cannot drift from the
+ * navigator that opens the screen.
  */
 export interface CapacityAnswerGap {
   /** Athlete-facing labels of the missing answers, from the step registry. */

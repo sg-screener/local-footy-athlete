@@ -5,7 +5,6 @@ import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useStaleOverrides } from '../../hooks/useStaleOverrides';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
-import { capacityAnswerGap } from '../../utils/capacityAnswerGap';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -300,17 +299,6 @@ export function useHomeScreen() {
   const ownedPhase = ownSeasonPhase({ program: currentProgram, profile: onboardingData });
   const currentPhase = (ownedPhase.phase ?? 'Pre-season') as SeasonPhase;
   const seasonPhaseSkew = ownedPhase.skew;
-  // Stored state that is already wrong, same family as the skew above: a
-  // profile whose capacity answers the rubric cannot read. Until 2026-07-30
-  // this crashed RENDER rather than disclosing anything — see
-  // utils/capacityAnswerGap.ts. Nothing is guessed and nothing is overwritten;
-  // the athlete is told, and offered the question.
-  const capacityGap = capacityAnswerGap(onboardingData);
-  const handleRepairCapacityGap = useCallback(() => {
-    // The onboarding navigator opens at the first unanswered step by itself, so
-    // the repair is simply to reopen it. It asks only what is missing.
-    useProfileStore.getState().reopenOnboardingForRepair();
-  }, []);
   // Latched target phase for the shift modal. Set explicitly by the caller
   // of handleOpenPhaseShift so the modal renders from the user's actual
   // selection, never from a derived "next phase". Seeded to NEXT_PHASE so
@@ -2198,10 +2186,6 @@ export function useHomeScreen() {
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
-
-    // Capacity answers the rubric cannot read + its one repair path
-    capacityGap,
-    handleRepairCapacityGap,
 
     // Season-phase skew disclosure + its one repair path
     seasonPhaseSkew,

@@ -11,7 +11,6 @@ interface ProfileState {
   error: string | null;
   updateOnboardingData: (data: Partial<OnboardingData>) => void;
   completeOnboarding: () => void;
-  reopenOnboardingForRepair: () => void;
   resetOnboarding: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -54,17 +53,6 @@ export const useProfileStore = create<ProfileState>()(
         set({ isOnboardingComplete: true });
       },
 
-      /**
-       * Reopen onboarding so the athlete can answer a question the app cannot
-       * work without (Sam's ruling, 2026-07-30 — capacity render safety).
-       *
-       * Deliberately NOT a reset: `onboardingData` is untouched, so
-       * `OnboardingNavigator` resumes at the first unanswered step and asks only
-       * that. Nothing already answered is discarded and nothing is re-typed.
-       */
-      reopenOnboardingForRepair: () => {
-        set({ isOnboardingComplete: false });
-      },
 
       resetOnboarding: () => {
         set({
