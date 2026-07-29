@@ -286,6 +286,37 @@ await run('athlete content never reaches the log', async () => {
     'the redaction also removed the outcome — the log would be useless');
 });
 
+await run('the export is reachable without completing onboarding', async () => {
+  // Sam, locked out 2026-07-30: the completion guard refused, "Finish that
+  // step" dropped him to the first onboarding screen, and the only export
+  // affordance lived behind a Profile tab that requires finishing the very
+  // onboarding that was refusing. The log is worthless if it cannot leave the
+  // device, and it cannot leave the device from a screen the athlete is
+  // locked out of.
+  //
+  // A source pin, deliberately: a mounted-render test is not reachable in this
+  // repo, and the ONLY thing that would catch this affordance being tidied
+  // away is a check that it is still there.
+  const { readFileSync } = require('fs') as typeof import('fs');
+  const { join } = require('path') as typeof import('path');
+  const screens = [
+    ['CompleteScreen.tsx', 'the completion refusal screen'],
+    ['WelcomeScreen.tsx', 'the first onboarding screen'],
+  ] as const;
+  for (const [file, description] of screens) {
+    const source = readFileSync(
+      join(__dirname, '..', 'screens', 'onboarding', file), 'utf8');
+    assert(source.includes('<StoredStateExportButton'),
+      `${description} (${file}) no longer offers the stored-state export — an `
+      + 'athlete stuck there cannot send the evidence');
+    // Never behind a build flag: this is the screen the defect strands them on.
+    const rendered = source.slice(source.indexOf('<StoredStateExportButton') - 200,
+      source.indexOf('<StoredStateExportButton'));
+    assert(!/__DEV__\s*&&\s*$/.test(rendered.trimEnd()),
+      `${description} gates the export on __DEV__ — dark on the build that has the bug`);
+  }
+});
+
 await run('clearing the log clears the disk too', async () => {
   releaseBuild();
   emitAthleteActionEvent(trace(), 'athlete_action_completed', {});
