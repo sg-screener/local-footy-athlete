@@ -2809,9 +2809,26 @@ export function stageAthleteSessionMoveTransaction(
   // The athlete's chosen route decides WHAT lands; the source session decides
   // WHOSE it is. `placedSession` always carries the source identity, so this
   // stays one session moving rather than a delete plus an add.
-  const placed = args.componentSplit?.movedWorkout
-    ?? args.placedSession?.workout
-    ?? acceptedSource;
+  //
+  // AN ABSORBING PLACEMENT IS ALREADY BOTH HALVES, so it outranks the component.
+  // This ordering was written when a scoped move's destination was a free day by
+  // construction — the same stale assumption the swap branch below still states
+  // in words — so putting the moved component first was safe. Under Sam's
+  // doubling law a scoped move may land on a team night, where
+  // `stackSessionOntoTeamAnchor` has already combined the anchor WITH the moved
+  // component. Taking `componentSplit.movedWorkout` there threw the anchor away,
+  // and the conservation post-condition caught it exactly as it should:
+  // `athlete_move_content_not_conserved`, "Move would silently destroy session".
+  // The athlete was refused a destination his own menu had just offered him.
+  //
+  // `placedSessionAbsorbsTarget` is the existing typed statement of "this
+  // placement contains the destination too", so it is asked rather than
+  // re-derived.
+  const placed = (args.placedSessionAbsorbsTarget && args.placedSession?.workout)
+    ? args.placedSession.workout
+    : args.componentSplit?.movedWorkout
+      ?? args.placedSession?.workout
+      ?? acceptedSource;
   const movedWorkout = cloneWorkoutForDate(placed, targetDate);
   // A game-proximity FILLER on the destination is not a swap partner. It is
   // regenerated every render from the fixture, so relocating it to the source

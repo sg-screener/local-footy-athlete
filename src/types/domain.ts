@@ -711,6 +711,19 @@ export interface Workout {
 
   /** Stable deterministic allocation identity used during generated-week normalisation. */
   planEntryId?: string;
+  /**
+   * "This day is anchored by team training."
+   *
+   * The generator has always written it (`coachingEngine` widens `Workout` with
+   * an ad-hoc `& { isTeamDay?: boolean }` to do so) and `isTeamTrainingSession`
+   * has always read it, but it was never declared here — so four call sites read
+   * it through `as any` and no composition site could be type-checked against
+   * it. It is declared now because the anchor is a fact about the DAY and has to
+   * travel deliberately: splitting a combined day used to hand it to both halves
+   * by inheritance, which sent the team night away with the gym session. See
+   * `splitAcceptedSessionForAthleteMove`.
+   */
+  isTeamDay?: boolean;
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
   /**

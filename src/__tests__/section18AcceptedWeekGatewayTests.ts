@@ -393,6 +393,44 @@ function installOverrideDependency(value: ReturnType<typeof program>): { extraDa
   return { extraDate };
 }
 
+/** Workout id the overlay dependency installs; nothing else in the week uses it. */
+const OVERLAY_DEPENDENCY_WORKOUT_ID = 'overlay-fourth-core-workout';
+
+/**
+ * Is the removed overlay's CONTENT actually gone from the accepted week?
+ *
+ * This replaces `Object.keys(weekScopedOverlays).length === 0` in scenarios 35
+ * and 36. That count was a proxy for "the overlay is gone", and it stopped being
+ * one on 2026-07-30, when a §18 repair of a BASE-OWNED week moved out of
+ * `dateOverrides` — the athlete's decision surface — and into an overlay of its
+ * own (see docs/DERIVED_OVERRIDE_MATERIALISATION_REASSESSMENT_2026-07-30.md).
+ * Both scenarios remove an overlay from a week that then genuinely needs
+ * repairing, so a `accepted_week_repair` overlay is minted immediately
+ * afterwards and the count is 1 again. The removal still happened; the count no
+ * longer says so.
+ *
+ * DELIBERATELY STRONGER, not weaker. The count only ever implied the removed
+ * content was gone. This asks the accepted week directly, so an implementation
+ * that emptied the map while leaving the fourth core conditioning session in the
+ * week now fails where the count passed. `liveWeekAccepted` beside it is
+ * untouched and is what kills M12 — bypassing the whole-week repair still leaves
+ * blocking violations and still fails.
+ */
+function overlayDependencyGone(value: ReturnType<typeof program>): boolean {
+  const state = useProgramStore.getState();
+  const accepted = rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart: firstWeek(value).startDate.slice(0, 10),
+    profile: value.profile,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  });
+  const carries = (workouts: readonly Workout[]) =>
+    workouts.some((workout) => workout.id === OVERLAY_DEPENDENCY_WORKOUT_ID);
+  return !carries(accepted.composedWorkouts) && !carries(accepted.visibleWorkouts) &&
+    !Object.values(state.weekScopedOverlays).some((overlay) =>
+      overlay.id === 'overlay-fourth-core');
+}
+
 function installOverlayDependency(value: ReturnType<typeof program>): { weekStart: string } {
   resetLiveStores(value);
   const base = firstWeek(value);
@@ -407,7 +445,7 @@ function installOverlayDependency(value: ReturnType<typeof program>): { weekStar
     reason: 'repeat_week',
     exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
     exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
-    workoutsByDate: { [extraDate]: additionalCoreConditioning(source, 3, 'overlay-fourth-core-workout') },
+    workoutsByDate: { [extraDate]: additionalCoreConditioning(source, 3, OVERLAY_DEPENDENCY_WORKOUT_ID) },
     createdAt: NOW,
     updatedAt: NOW,
   });
@@ -984,14 +1022,13 @@ let hydrationParticipationStable = false;
 {
   const { weekStart } = installOverlayDependency(mid);
   useProgramStore.getState().removeWeekScopedOverlay(weekStart);
-  overlayRemovalAtomic = !useProgramStore.getState().weekScopedOverlays[weekStart] && liveWeekAccepted(mid);
+  overlayRemovalAtomic = overlayDependencyGone(mid) && liveWeekAccepted(mid);
   check('35 removing an overlay repairs the whole week before publication', overlayRemovalAtomic);
 }
 {
   installOverlayDependency(mid);
   useProgramStore.getState().clearWeekScopedOverlays();
-  overlayClearAtomic = Object.keys(useProgramStore.getState().weekScopedOverlays).length === 0 &&
-    liveWeekAccepted(mid);
+  overlayClearAtomic = overlayDependencyGone(mid) && liveWeekAccepted(mid);
   check('36 clearing all overlays is atomic', overlayClearAtomic);
 }
 {
