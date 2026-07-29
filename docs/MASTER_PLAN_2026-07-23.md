@@ -235,6 +235,21 @@ owns.
       to disclose it. The disclosure-plus-repair card exists because that state
       was reachable and silent.
 
+- 5D.3 **ON-DEVICE ACTION LOG** (Sam-approved 2026-07-30). Every mutating
+      athlete action recorded as a typed event — timestamp, screen, door,
+      arguments, resulting transaction id — in a rolling buffer (~200),
+      included in Export stored state, zero network. Diagnosis reads the log
+      instead of interviewing the athlete. It is also the post-launch support
+      tool.
+      *Founding case:* the G-1 add-optional investigation took FOUR seed
+      reconstructions and ended on the question "what did you actually tap?".
+      The answer — "Want to change something → Add optional session → Strength →
+      Full Body" — explained every byte instantly, and a twenty-line log would
+      have supplied it in one read.
+      *Mostly wiring, not building:* `utils/athleteActionDiagnostics.ts` already
+      emits this vocabulary. The gaps are that it is disabled on production
+      builds, in-memory only, unbounded, and absent from the export.
+
 ## Phase 6 — full verification under the new law
 - 6.1 Extend SUPPORTED_ATHLETE_ACTIONS.md to the whole-app surface (X3):
       first-run, generation, season transitions, session lifecycle.
