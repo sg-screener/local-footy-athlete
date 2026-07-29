@@ -405,9 +405,11 @@ line; the rulings pay the debt.**
   Per L4 the device is arbiter, and per L10 nothing here is "done" — these are
   candidate units, not verified defects.
 - **No gate was executed.** `test:bible` was not run: the working tree carries a
-  concurrent session's uncommitted changes to `acceptedStateTransaction.ts` and
-  `userRemovalConstraints.ts`, so any result would describe neither `main` nor
-  this branch. All gate names and pass/fail states are read from
+  concurrent session's uncommitted changes throughout this census (the specific
+  files moved while it was being written — `acceptedStateTransaction.ts` and
+  `userRemovalConstraints.ts` at the start, `athleteActionLog.ts` and
+  `coachRevisionPolicy.ts` by the end), so any result would describe neither
+  `main` nor this branch. All gate names and pass/fail states are read from
   `package.json`, the 2026-07-29 rot sweep, and prior unit reports.
 - **The in-flight lane was not read for correctness.** LR-10 is listed from its
   diagnosis document, not from the uncommitted diff.
