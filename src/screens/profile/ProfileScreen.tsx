@@ -663,6 +663,39 @@ export default function ProfileScreen() {
           >
             {`tap in ${setupTapDiag.pressIn} · press ${setupTapDiag.press} · handler ${setupTapDiag.handlerEnd} · sheet ${setupSheetVisible ? 'OPEN' : 'closed'}`}
           </Text>
+          {/* ─── TEMPORARY, DELIBERATELY VISIBLE IN RELEASE ───
+              2026-07-30. The developer-tools section is `__DEV__`-only, so on
+              Sam's Release build the export was unreachable — his Profile goes
+              Legal → Danger Zone and the section is not there at all. Requiring
+              Metro or a debug build to read a wiped profile defeats the point:
+              the wipe is on the RELEASE device, and that is the state we need.
+              Same treatment as the tap counters above — explicitly visible,
+              never `__DEV__`-gated, and removed with them.
+
+              The counts render INLINE so the key question is answered without
+              sharing anything: `answers` is the live profile, `snapshot` is the
+              accepted profile snapshot. A healthy device shows both in the high
+              twenties. `answers 2` is the wipe; if `snapshot` is still healthy
+              while `answers` is not, the real profile survives in the snapshot
+              and recovery is a read, not a re-onboard. */}
+          <Text
+            variant="bodySmall"
+            color={colors.accent.lime}
+            testID="profile-stored-state-readout"
+          >
+            {storedStateExportHeadline()}
+          </Text>
+          <TouchableOpacity
+            onPress={onDevExportStoredState}
+            testID="profile-export-stored-state"
+            accessibilityRole="button"
+            accessibilityLabel="Export stored state"
+            style={styles.storedStateExportButton}
+          >
+            <Text variant="body" color={colors.surface.primary} style={{ fontWeight: '700' }}>
+              Export stored state
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Program setup */}
@@ -798,20 +831,6 @@ export default function ProfileScreen() {
                 </Text>
                 <Text variant="caption" color={colors.text.tertiary}>
                   Clears test-session state and reloads a clean generated program.
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.resetRow}
-                activeOpacity={0.7}
-                onPress={onDevExportStoredState}
-                testID="profile-dev-export-stored-state"
-                accessibilityLabel="Export stored state"
-              >
-                <Text variant="body" color={colors.text.primary} style={{ fontWeight: '700' }}>
-                  Export stored state
-                </Text>
-                <Text variant="caption" color={colors.text.tertiary}>
-                  Shares profile + program JSON so a bug can be seeded from real bytes.
                 </Text>
               </TouchableOpacity>
             </Card>
@@ -1654,6 +1673,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     fontWeight: '800',
     marginBottom: spacing.xs,
+  },
+  /** TEMPORARY — remove with the stored-state export. */
+  storedStateExportButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: '#C8FF00',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   headerSubtitle: {
     lineHeight: 20,

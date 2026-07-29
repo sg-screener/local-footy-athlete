@@ -14,8 +14,15 @@ import { recentProfileMirrorRefusals } from '../rules/profileMirrorNarrowing';
  *
  * TEMPORARY by intent. It exists to answer the snapshot-provenance question and
  * to seed the harness fixture from reality rather than from my best guess; it
- * should be deleted once both are done. `__DEV__` gating lives at the call
- * site (the DEVELOPER TOOLS section, which is already `__DEV__`-only).
+ * should be deleted once both are done.
+ *
+ * DELIBERATELY REACHABLE IN RELEASE (Sam, 2026-07-30). It first shipped inside
+ * the `__DEV__`-only developer-tools section, which does not render on a Release
+ * build — so on the one device that actually carries the wiped profile, the
+ * instrument for reading it was invisible. Requiring Metro or a debug build to
+ * inspect a Release-only state is the same mistake as testing the mirror with
+ * fixtures that leave it inert: the diagnostic has to exist where the defect
+ * does. Its call site sits beside the tap counters and is removed with them.
  *
  * WHAT IT DELIBERATELY DOES NOT DO: interpret. It dumps the two stores and the
  * mirror's refusal log verbatim. A summariser here would be one more layer
@@ -81,10 +88,19 @@ export function serialiseStoredStateExport(): string {
   return JSON.stringify(captureStoredStateExport(), null, 2);
 }
 
-/** One-line headline so the share sheet preview is already informative. */
+/**
+ * One line, readable on the device without sharing anything.
+ *
+ * These three numbers answer the question on their own. A healthy device shows
+ * `answers` and `snapshot` both in the high twenties. `answers 2` is the wipe.
+ * `answers 2` with a healthy `snapshot` means the real profile survived in the
+ * accepted snapshot and recovery is a read rather than a re-onboard — which is
+ * the difference between a five-minute fix and doing onboarding again.
+ */
 export function storedStateExportHeadline(): string {
   const snapshot = captureStoredStateExport();
-  return `LFA stored state — ${snapshot.profileStore.onboardingAnswerCount} answers, `
-    + `snapshot ${snapshot.programStore.acceptedProfileSnapshotAnswerCount ?? 'none'}, `
-    + `revision ${snapshot.programStore.acceptedRevision}`;
+  return `answers ${snapshot.profileStore.onboardingAnswerCount}`
+    + ` · snapshot ${snapshot.programStore.acceptedProfileSnapshotAnswerCount ?? 'none'}`
+    + ` · revision ${snapshot.programStore.acceptedRevision}`
+    + ` · mirror refusals ${(snapshot.profileMirrorRefusals as unknown[]).length}`;
 }

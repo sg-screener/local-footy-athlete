@@ -34,6 +34,8 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import type { OnboardingData } from '../types/domain';
 import { useProfileStore } from '../store/profileStore';
 import {
@@ -229,6 +231,28 @@ run('THE WHOLE LOOP: gap -> answer -> gap gone -> profile survives completion', 
     'the answer the athlete just gave did not survive completion');
   assert(liveProfile().seasonPhase === 'In-season',
     'seasonPhase was replaced away across the loop — the reported symptom');
+});
+
+// ── The instrument has to exist where the defect does ───────────────────
+
+run('the stored-state export is reachable on a Release build', () => {
+  const profileScreen = readFileSync(
+    join(__dirname, '..', 'screens', 'profile', 'ProfileScreen.tsx'),
+    'utf8',
+  );
+  // Quoted match, not a substring: `indexOf('profile-export-stored-state')`
+  // also matches `profile-export-stored-state-ANYTHING`, so it survived a
+  // mutation that renamed the control out from under it.
+  const exportIdx = profileScreen.indexOf('testID="profile-export-stored-state"');
+  assert(exportIdx > 0, 'the stored-state export button is gone from ProfileScreen');
+  // It first shipped inside the `__DEV__`-only developer-tools section, so on
+  // the one device carrying the wiped profile it was invisible. The readout and
+  // the button must sit in the unconditional header, beside the tap counters.
+  const devToolsIdx = profileScreen.indexOf('profile-developer-tools-section');
+  assert(devToolsIdx === -1 || exportIdx < devToolsIdx,
+    'the export moved back inside the __DEV__-only developer tools section');
+  assert(profileScreen.indexOf('testID="profile-stored-state-readout"') > 0,
+    'the inline counts readout is gone — the numbers must be legible without sharing');
 });
 
 console.log(`\nProfile mirror narrowing totals: ${passed} passed, ${failed} failed`);
