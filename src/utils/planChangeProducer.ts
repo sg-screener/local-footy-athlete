@@ -15,7 +15,13 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import { effectiveGameDatesAround, getMondayForDate } from './sessionResolver';
+import {
+  effectiveGameDatesAround,
+  getMondayForDate,
+  resolveWeekWithConditioning,
+} from './sessionResolver';
+import { buildScheduleStateImperative } from './coachWeekDiff';
+import { verifyVisibleDatesChanged } from './coachVisibleDomainVerifier';
 import { splitSessionName } from './sessionNaming';
 import type { OverrideContext, UserRemovalScope, Workout } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
@@ -1826,6 +1832,81 @@ function acceptedSessionNameOn(date: string): string | null {
   }
 }
 
+/**
+ * Run a typed athlete commit as a VERIFIED transaction (Sam's ruling #7).
+ *
+ * The tap door had no visible verification at all. `assertAcceptedVisibleLedgerEquivalence`
+ * looks like it, and is not: its "visible" side is the accepted-week projection,
+ * which never runs game proximity against live schedule state, so it structurally
+ * cannot see a later precedence layer re-deriving over a committed change. And
+ * it compares ledger COUNTS, not identity. The sheet's own render observer is
+ * dev-only telemetry that returns silently on a mismatch.
+ *
+ * So this asks the coach door's question with the coach door's consequences:
+ * commit, re-resolve the week the ATHLETE sees, and if the days the mutation
+ * claimed did not move, restore the exact prior surfaces and report a refusal.
+ * Rolling back is what makes "so the plan is untouched" true rather than a
+ * second lie — the same post-condition shape `commitAthleteSessionMoveTransaction`
+ * already uses for content conservation.
+ */
+interface VisibleVerificationFailure {
+  unchangedDates: string[];
+  missingDates: string[];
+}
+
+function commitVerifiedAgainstVisibleWeek<T>(args: {
+  before: readonly ResolvedDay[];
+  dates: readonly string[];
+  commit: () => T;
+}): { ok: true; value: T; failure: null }
+  | { ok: false; value: null; failure: VisibleVerificationFailure } {
+  const priorState = { ...useProgramStore.getState() };
+  const value = args.commit();
+  // A stage that published nothing has its own answer (ruling #6) and is not
+  // the case this post-condition is about.
+  if (publicationNoChange(value)) return { ok: true, value, failure: null };
+  const verification = verifyVisibleDatesChanged({
+    before: args.before,
+    after: liveVisibleWeekFor(args.dates),
+    dates: args.dates,
+  });
+  if (verification.ok) return { ok: true, value, failure: null };
+  useProgramStore.setState(priorState);
+  return {
+    ok: false,
+    value: null,
+    failure: {
+      unchangedDates: verification.unchangedDates,
+      missingDates: verification.missingDates,
+    },
+  };
+}
+
+/** The week the athlete would see right now, covering every claimed date. */
+function liveVisibleWeekFor(dates: readonly string[]): ResolvedDay[] {
+  const weekStarts = Array.from(new Set(dates.map((date) => getMondayForDate(date))));
+  const state = buildScheduleStateImperative();
+  return weekStarts.flatMap((weekStart) => resolveWeekWithConditioning(weekStart, state));
+}
+
+function visibleVerificationFailedResult(
+  failure: VisibleVerificationFailure,
+): PlanChangeApplyResult {
+  return {
+    ok: false,
+    outcome: 'refused',
+    message: "I couldn't safely make that change, so the plan is untouched.",
+    appliedDates: [],
+    rejected: [{
+      date: failure.unchangedDates[0] ?? failure.missingDates[0] ?? null,
+      code: 'visible_change_unverified',
+      reason: `The committed change did not reach the visible week (unchanged: ${
+        failure.unchangedDates.join(', ') || 'none'}; missing: ${
+        failure.missingDates.join(', ') || 'none'}).`,
+    }],
+  };
+}
+
 /** A stage that published nothing. Not a success, not a failure — ruling #6. */
 function noChangeResult(
   noChange: { reason: string },
@@ -1887,12 +1968,17 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         throw new Error('Athlete move resolution did not match its typed intent');
       }
       let moveNoChange: { reason: string } | null = null;
+      let moveUnverified: VisibleVerificationFailure | null = null;
       try {
-        moveNoChange = publicationNoChange(
-          (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
+        const verified = commitVerifiedAgainstVisibleWeek({
+          before: args.visibleWeek,
+          dates: resolution.appliedDates,
+          commit: () => (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
             resolution.input,
           ),
-        );
+        });
+        if (verified.ok) moveNoChange = publicationNoChange(verified.value);
+        else moveUnverified = verified.failure;
       } catch (error) {
         return {
           ok: false,
@@ -1906,6 +1992,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (moveUnverified) return visibleVerificationFailedResult(moveUnverified);
       if (moveNoChange) return noChangeResult(moveNoChange);
       return {
         ok: true,
@@ -1920,15 +2007,25 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       // reduction + disclosure ownership.
       let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
       let swapNoChange: { reason: string } | null = null;
+      let swapUnverified: VisibleVerificationFailure | null = null;
       try {
-        const transaction = (args.commitAthleteRemoval ??
-          commitAthleteSessionDeletionTransaction)(resolution.input);
-        swapNoChange = publicationNoChange(transaction);
-        if (transaction && typeof transaction === 'object' &&
-          'deletionOutcome' in transaction) {
-          publishedOutcome = (transaction as {
-            deletionOutcome: AthleteDeletionPublishedOutcome;
-          }).deletionOutcome;
+        const verified = commitVerifiedAgainstVisibleWeek({
+          before: args.visibleWeek,
+          dates: resolution.appliedDates,
+          commit: () => (args.commitAthleteRemoval ??
+            commitAthleteSessionDeletionTransaction)(resolution.input),
+        });
+        if (!verified.ok) {
+          swapUnverified = verified.failure;
+        } else {
+          const transaction = verified.value;
+          swapNoChange = publicationNoChange(transaction);
+          if (transaction && typeof transaction === 'object' &&
+            'deletionOutcome' in transaction) {
+            publishedOutcome = (transaction as {
+              deletionOutcome: AthleteDeletionPublishedOutcome;
+            }).deletionOutcome;
+          }
         }
       } catch (error) {
         return {
@@ -1943,6 +2040,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (swapUnverified) return visibleVerificationFailedResult(swapUnverified);
       if (swapNoChange) return noChangeResult(swapNoChange);
       return {
         ok: true,
@@ -1962,15 +2060,25 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       // and any repaired day is disclosed in the confirmation.
       let additionOutcome: AthleteAdditionPublishedOutcome | null = null;
       let addNoChange: { reason: string } | null = null;
+      let addUnverified: VisibleVerificationFailure | null = null;
       try {
-        const transaction = (args.commitAthleteAddition ??
-          commitAthleteSessionAdditionTransaction)(resolution.input);
-        addNoChange = publicationNoChange(transaction);
-        if (transaction && typeof transaction === 'object' &&
-          'additionOutcome' in transaction) {
-          additionOutcome = (transaction as {
-            additionOutcome: AthleteAdditionPublishedOutcome;
-          }).additionOutcome;
+        const verified = commitVerifiedAgainstVisibleWeek({
+          before: args.visibleWeek,
+          dates: resolution.appliedDates,
+          commit: () => (args.commitAthleteAddition ??
+            commitAthleteSessionAdditionTransaction)(resolution.input),
+        });
+        if (!verified.ok) {
+          addUnverified = verified.failure;
+        } else {
+          const transaction = verified.value;
+          addNoChange = publicationNoChange(transaction);
+          if (transaction && typeof transaction === 'object' &&
+            'additionOutcome' in transaction) {
+            additionOutcome = (transaction as {
+              additionOutcome: AthleteAdditionPublishedOutcome;
+            }).additionOutcome;
+          }
         }
       } catch (error) {
         return {
@@ -1985,6 +2093,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (addUnverified) return visibleVerificationFailedResult(addUnverified);
       if (addNoChange) return noChangeResult(addNoChange);
       return {
         ok: true,
@@ -2002,17 +2111,25 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       }
       let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
       let removalNoChange: { reason: string } | null = null;
+      let removalUnverified: VisibleVerificationFailure | null = null;
       try {
-        const transaction = (args.commitAthleteRemoval ??
-          commitAthleteSessionDeletionTransaction)(
-            resolution.input,
-          );
-        removalNoChange = publicationNoChange(transaction);
-        if (transaction && typeof transaction === 'object' &&
-          'deletionOutcome' in transaction) {
-          publishedOutcome = (transaction as {
-            deletionOutcome: AthleteDeletionPublishedOutcome;
-          }).deletionOutcome;
+        const verified = commitVerifiedAgainstVisibleWeek({
+          before: args.visibleWeek,
+          dates: resolution.appliedDates,
+          commit: () => (args.commitAthleteRemoval ??
+            commitAthleteSessionDeletionTransaction)(resolution.input),
+        });
+        if (!verified.ok) {
+          removalUnverified = verified.failure;
+        } else {
+          const transaction = verified.value;
+          removalNoChange = publicationNoChange(transaction);
+          if (transaction && typeof transaction === 'object' &&
+            'deletionOutcome' in transaction) {
+            publishedOutcome = (transaction as {
+              deletionOutcome: AthleteDeletionPublishedOutcome;
+            }).deletionOutcome;
+          }
         }
       } catch (error) {
         return {
@@ -2027,6 +2144,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           }],
         };
       }
+      if (removalUnverified) return visibleVerificationFailedResult(removalUnverified);
       if (removalNoChange) return noChangeResult(removalNoChange);
       return {
         ok: true,

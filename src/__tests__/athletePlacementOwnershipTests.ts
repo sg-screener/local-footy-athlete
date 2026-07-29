@@ -504,6 +504,59 @@ run('a DIFFERENT swap on an already-swapped day never claims a session it did no
   }
 });
 
+// ── Ruling (7): the tap door verifies against the week the athlete SEES ───
+
+run('a commit that does not reach the visible week is refused and rolled back', () => {
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const wednesday = addDaysISO(weekStart, 2);
+  const before = visibleWeek(weekStart);
+  const mondayBefore = before.find((day) => day.date === monday)?.workout?.name ?? null;
+  assert(mondayBefore, 'seeded Monday session missing');
+
+  // Stands in for the device failure: a commit that changes accepted state
+  // WITHOUT the claimed day moving in the resolved week. The stray write on an
+  // unrelated date is what proves the rollback restored surfaces rather than
+  // merely reporting a refusal.
+  const result = quiet(() => applyPlanChange({
+    change: { kind: 'swap_category', date: monday, category: 'conditioning_light' },
+    visibleWeek: before,
+    todayISO: weekStart,
+    setManualOverride: (date, workout, context) =>
+      useProgramStore.getState().setManualOverride(date, workout, context),
+    commitAthleteRemoval: () => {
+      useProgramStore.getState().setManualOverride(
+        wednesday,
+        { ...(before.find((day) => day.date === monday)!.workout!) },
+      );
+      return {};
+    },
+  }));
+
+  assert(result.ok === false && result.outcome === 'refused',
+    `an unverified commit reported ${result.outcome}: "${result.message}"`);
+  assert(!/^Done\./.test(result.message),
+    `an unverified commit still reported success: "${result.message}"`);
+  assert(result.rejected.some((entry) => entry.code === 'visible_change_unverified'),
+    `refusal carried no verification code: ${JSON.stringify(result.rejected)}`);
+  assert(!useProgramStore.getState().dateOverrides[wednesday],
+    'the unverified commit was not rolled back — its stray write survived');
+  assert(visibleWeek(weekStart).find((day) => day.date === monday)?.workout?.name === mondayBefore,
+    'the target day changed despite the refusal');
+});
+
+run('a real commit still passes visible verification', () => {
+  // Non-vacuity for the guard above: the same door, unmocked, must not start
+  // refusing changes that genuinely land.
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const result = commit(weekStart, {
+    kind: 'swap_category', date: monday, category: 'conditioning_light',
+  });
+  assert(result.ok && result.outcome === 'applied',
+    `a genuine swap was refused by visible verification: "${result.message}"`);
+});
+
 console.log(`\nAthlete placement ownership totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
