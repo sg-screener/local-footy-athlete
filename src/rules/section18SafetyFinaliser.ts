@@ -293,6 +293,26 @@ export function finaliseSection18SafetyWorkout(args: {
   return conformWorkout(args);
 }
 
+/**
+ * The power-primer budget the week is actually allowed, derived from the
+ * contract rather than read off one field.
+ *
+ * `plannerSelectedWeeklyBudget` is what the planner chose; an authorised
+ * reduction (deload policy, practice-match load, illness) may lower it, and the
+ * evaluator judges the week against the REDUCED number. Taking the lowest of
+ * them is what makes the content and the verdict agree by construction, rather
+ * than agreeing only until an anchor changes.
+ */
+function authorisedPowerPrimerBudget(contract: WeeklyExposureContractV2): number | null {
+  const selected = contract.power.plannerSelectedWeeklyBudget;
+  const reduced = contract.authorisedReductions
+    .filter((entry) => entry.metric === 'power_primer_budget')
+    .map((entry) => entry.reducedTarget);
+  const candidates = [selected, ...reduced].filter(
+    (value): value is number => typeof value === 'number');
+  return candidates.length > 0 ? Math.min(...candidates) : null;
+}
+
 function mainStrengthSession(workout: Workout): boolean {
   const rows = workout.exercises ?? [];
   if (rows.some((row) => row.section18Evidence?.role === 'main_strength')) return true;
@@ -492,6 +512,31 @@ export function finaliseSection18SafetyWeek(args: {
     coreConditioningSession,
     stripConditioning,
     'conditioning_frequency_capped',
+  );
+
+  // THE POWER BUDGET IS A CEILING LIKE THE OTHERS, and until now it was the
+  // only one nothing enforced — it was CHECKED and thrown on instead.
+  //
+  // Sam's device shape found it: a Pre-season deload week whose power budget was
+  // derived when the week had two anchors (team training twice). Marking a
+  // second game adds a practice-match anchor, the budget correctly re-derives
+  // DOWN — three anchors carry more load, so fewer primers are allowed — and
+  // the week still held the primer the old budget had permitted. The evaluator
+  // then raised `reduction_contradiction` ("final week exceeds its authorised
+  // deload_policy reduction"), the safety finaliser treats a deload-owned
+  // contradiction as a safety contradiction, and it threw past the door: two
+  // games on the calendar and the app is dead.
+  //
+  // Conditioning, sprint and main-strength frequency are all CONFORMED to their
+  // ceilings a few lines from here. Power was the outlier, and the asymmetry is
+  // the whole defect: content derived to match its budget cannot contradict it.
+  // Nothing is guarded and nothing is clamped at the boundary — the week is
+  // simply built to the number the contract authorises.
+  capSessions(
+    authorisedPowerPrimerBudget(args.contract),
+    hasPowerRow,
+    withoutPowerRows,
+    'power_removed',
   );
 
   const anchorSprintCredit = args.contract.anchors.filter((anchor) =>
