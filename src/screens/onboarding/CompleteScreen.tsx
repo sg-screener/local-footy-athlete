@@ -410,7 +410,18 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
 
   const handleStartTraining = () => {
     try {
-      completeOnboarding();
+      // Completion is an outcome with a reason now (Sam's ruling #3): it refuses
+      // rather than closing over a profile the app cannot build on. The screen
+      // routes that refusal to the step that owns the answer, exactly as the
+      // pre-generation completeness check above already does.
+      const outcome = completeOnboarding();
+      if (outcome.ok === false) {
+        const assessment = assessOnboardingCompleteness(onboardingData);
+        if (assessment.firstIncompleteStep) setIncompleteStep(assessment.firstIncompleteStep);
+        setErrorMessage(outcome.message);
+        setPhase('error');
+        return;
+      }
     } catch (error) {
       const pipelineError = toOnboardingPipelineError(
         error,

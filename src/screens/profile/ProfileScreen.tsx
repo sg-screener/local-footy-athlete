@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -30,6 +31,10 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
+import {
+  serialiseStoredStateExport,
+  storedStateExportHeadline,
+} from '../../dev/devStoredStateExport';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -293,6 +298,20 @@ export default function ProfileScreen() {
         },
       ],
     );
+  };
+
+  // Sam's one-tap instrument (2026-07-30). The profile-mirror wipe had to be
+  // diagnosed against a reconstruction of his device because nobody could read
+  // the real bytes. This shares them verbatim — no summary, no interpretation.
+  const onDevExportStoredState = async () => {
+    try {
+      await Share.share({
+        title: storedStateExportHeadline(),
+        message: serialiseStoredStateExport(),
+      });
+    } catch {
+      // A dismissed share sheet is not a failure worth reporting.
+    }
   };
 
   const onDevPostOnboardingReset = async () => {
@@ -779,6 +798,20 @@ export default function ProfileScreen() {
                 </Text>
                 <Text variant="caption" color={colors.text.tertiary}>
                   Clears test-session state and reloads a clean generated program.
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.resetRow}
+                activeOpacity={0.7}
+                onPress={onDevExportStoredState}
+                testID="profile-dev-export-stored-state"
+                accessibilityLabel="Export stored state"
+              >
+                <Text variant="body" color={colors.text.primary} style={{ fontWeight: '700' }}>
+                  Export stored state
+                </Text>
+                <Text variant="caption" color={colors.text.tertiary}>
+                  Shares profile + program JSON so a bug can be seeded from real bytes.
                 </Text>
               </TouchableOpacity>
             </Card>

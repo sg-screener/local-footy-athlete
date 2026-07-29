@@ -203,6 +203,38 @@ Per JOURNAL_DESIGN_2026-07-23.md, with Sam's structural clarification:
 - 5C.5 All record-only/projection per the design doc (never a mutation
   door, all on-device, no privacy change). Sam device acceptance per L10.
 
+## Phase 5D — stored-state integrity (Sam-approved 2026-07-30)
+
+Both units run BEFORE Phase 6's full verification pass. Each was triggered by a
+shipped defect that every gate was green through, and both are about the same
+thing: state that is already wrong, written or left behind by something nobody
+owns.
+
+- 5D.1 **STORED-STATE WRITERS AUDIT.** Enumerate every code path that can write
+      or replace stored athlete data — compatibility mirrors, migrations,
+      hydration repairs, sync, any store `setState` that replaces rather than
+      merges. Each writer must PROVE two things: it only ever narrows toward the
+      accepted truth, and it can never delete an answer the athlete gave. A
+      writer with no owner, or one that cannot prove both, is retired rather
+      than guarded.
+      *Founding case:* the profile compatibility mirror replacing
+      `onboardingData` whole with a stale accepted snapshot — on a real device
+      that took 28 answers to 2, `seasonPhase` among them, and left generation
+      refusing an answer the athlete had given months earlier. Pre-existing on
+      main, reproducible with one ordinary profile edit, invisible to every
+      suite because every fixture left the mirror inert. Law and first fix:
+      `rules/profileMirrorNarrowing.ts`.
+
+- 5D.2 **FAILURE-STATE SWEEP.** Fault-inject every transaction — kill it
+      mid-flight — and assert the surviving state is whole and honest: rebuilds,
+      phase shifts, fixture changes, onboarding completion, athlete
+      move/swap/add/bin. "Honest" means the athlete is told what happened and
+      no surface reports a success the state does not carry.
+      *Founding case:* the season-phase skew — a phase shift whose profile write
+      landed and whose rebuild failed, leaving the two disagreeing with nothing
+      to disclose it. The disclosure-plus-repair card exists because that state
+      was reachable and silent.
+
 ## Phase 6 — full verification under the new law
 - 6.1 Extend SUPPORTED_ATHLETE_ACTIONS.md to the whole-app surface (X3):
       first-run, generation, season transitions, session lifecycle.
