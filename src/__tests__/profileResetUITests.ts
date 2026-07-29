@@ -130,7 +130,7 @@ ok(
 );
 ok(
   'Setup sheet keeps coach fallback for complex setup changes',
-  /Need to explain something\? Message the coach/.test(src)
+  /Need to explain something\? Ask Coach/.test(src)
     && /prefill:\s*'I need to update something about my setup\.'/.test(src),
 );
 ok(

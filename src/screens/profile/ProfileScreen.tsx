@@ -1534,7 +1534,7 @@ function SetupUpdateSheet({
         onPress={onMessageCoach}
       >
         <Text style={styles.sheetCoachFallbackText}>
-          Need to explain something? Message the coach
+          Need to explain something? Ask Coach
         </Text>
       </TouchableOpacity>
     </>

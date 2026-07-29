@@ -537,8 +537,8 @@ export function PlanChangeSheet({
             onPress={() => startMove()}
           />
           <MenuOption
-            label="Bin this session"
-            sub="Remove it - the day becomes rest"
+            label="Remove this session"
+            sub="Remove it — anything else on the day stays."
             testID={selectedWorkout
               ? explorerTestId.sessionDeleteIngress(selectedWorkout.id)
               : undefined}
@@ -912,7 +912,7 @@ export function PlanChangeSheet({
               : `Are you sure? This bins ${step.label} - the rest of the day stays.`}
           </Text>
           <MenuOption
-            label="Yes, bin it"
+            label="Yes, remove it"
             testID={selectedWorkout
               ? explorerTestId.sessionDeleteScope(selectedWorkout.id, `confirm-${step.scope}`)
               : undefined}

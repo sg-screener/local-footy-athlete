@@ -23,7 +23,7 @@ interface StaleOverrideBannerProps {
   warning: StaleOverrideWarning;
   /** Compact mode for inline use in day rows */
   compact?: boolean;
-  /** Called only when user explicitly taps "Message the coach" from the review sheet. */
+  /** Called only when user explicitly taps "Ask Coach" from the review sheet. */
   onReview?: (prefill: string) => void;
 }
 
@@ -139,7 +139,7 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
           style={styles.sheetButton}
         />
         <Button
-          label="Message the coach"
+          label="Ask Coach"
           variant="ghost"
           glow={false}
           onPress={handleMessageCoach}
@@ -156,7 +156,7 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
         <Text style={styles.sheetBody}>
           This one needs more context before we can change your program safely.
         </Text>
-        <Button label="Message the coach" glow={false} onPress={handleMessageCoach} />
+        <Button label="Ask Coach" glow={false} onPress={handleMessageCoach} />
         <Button
           label="Cancel"
           variant="ghost"

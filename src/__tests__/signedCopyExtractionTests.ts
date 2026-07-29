@@ -80,6 +80,24 @@ const SURFACE_DIRS = [
 ];
 
 /**
+ * OFF THE SHEET — verified unreachable by an athlete, not merely labelled dev.
+ *
+ * Sam asked for `ScheduleDebugPanel` to be checked rather than assumed: "dev-only
+ * = off the sheet, reachable = vocabulary violation to fix. Record which."
+ *
+ * VERDICT: dev-only, off the sheet. It is DOUBLE-gated by `__DEV__` — once at the
+ * require site (`HomeScreen.tsx:40`, so the module is not even bundled in a
+ * production build) and again at the render site (`:936`). Its 13 strings are
+ * therefore not athlete-visible and are excluded, which is why the ceiling drops
+ * from 200 to 187 rather than being relaxed.
+ *
+ * The check is repeated as an assertion below, not just recorded here: if either
+ * gate is ever removed those 13 strings become athlete-visible vocabulary and must
+ * come back onto the sheet.
+ */
+const OFF_SHEET_DEV_ONLY = ['components/dev/'];
+
+/**
  * Fields whose value lands in front of the athlete.
  *
  * `sub`, `label`, `title`, `message`, `headline`, `body`, `placeholder`, `hint`
@@ -131,6 +149,7 @@ function extract(): ExtractedString[] {
   );
   for (const file of walkFiles('')) {
     if (!SURFACE_DIRS.some((dir) => file.startsWith(dir))) continue;
+    if (OFF_SHEET_DEV_ONLY.some((dir) => file.startsWith(dir))) continue;
     const source = fs.readFileSync(path.join(SRC, file), 'utf8');
     const lines = source.split('\n');
     lines.forEach((line, index) => {
@@ -161,11 +180,22 @@ function extract(): ExtractedString[] {
  * number is the unit's visible progress; raising it requires a deliberate edit
  * somebody has to justify.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 200;
+const ATHLETE_VISIBLE_GAP_CEILING = 187;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
 const extracted = extract();
+
+run('the dev panel excluded from the sheet is genuinely unreachable', () => {
+  // Sam's instruction: verify, do not assume. Both gates must hold, or those 13
+  // strings are athlete vocabulary and the exclusion above is a lie.
+  const host = fs.readFileSync(path.join(SRC, 'screens/home/HomeScreen.tsx'), 'utf8');
+  assert(/const ScheduleDebugPanel = __DEV__/.test(host),
+    'ScheduleDebugPanel is no longer __DEV__-gated at its require site — it now '
+    + 'ships, so its strings are athlete-visible and belong on the sheet');
+  assert(/\{__DEV__ && ScheduleDebugPanel &&/.test(host),
+    'ScheduleDebugPanel is no longer __DEV__-gated at its render site');
+});
 
 run('the extraction finds athlete-visible prose', () => {
   // Non-vacuity. A broken regex would report a beautifully clean app.

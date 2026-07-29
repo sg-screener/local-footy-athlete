@@ -135,7 +135,7 @@ export interface HomeQuickAction {
   label: string;
   /**
    * Legacy context string used only after the athlete explicitly chooses
-   * "Message the coach" from a guided fallback sheet.
+   * "Ask Coach" from a guided fallback sheet.
    */
   prefill: string;
 }

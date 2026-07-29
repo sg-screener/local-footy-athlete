@@ -175,10 +175,10 @@ statement of the north star — store only decisions, derive everything else. A
 seed stores a derived output; a walker stores the decisions and derives the
 state, which is why only one of them can be wrong about what it represents.
 
-## PROCESS LAW — L11 and L12
+## PROCESS LAW — L11, L12 and L13
 
 Process Law L1–L10 lives in `docs/MASTER_PLAN_2026-07-23.md` PART 1 and is
-unchanged. L11 and L12 are recorded HERE because they bind every session that
+unchanged. L11, L12 and L13 are recorded HERE because they bind every session that
 touches this repo, including the review and orchestration seat (Cowork) — which
 never touches git and would otherwise never read the master plan. **A reviewer is
 bound by these exactly as an implementer is.**
@@ -239,6 +239,36 @@ observation, not a verification strategy.
 This pairs with the mandatory NOT-COVERED section (L2): NOT-COVERED says what was
 not looked at, L12 says what the looking would have to change to catch the next
 one.
+
+### L13 — The walker reaches ACCUMULATED state
+
+**Sam ratified, 2026-07-30.** A harness that only reaches freshly-acted worlds
+tests a life nobody lives. The walker must reach **accumulated** state — long
+athlete lives, many edits deep, weeks of time advancing — and athlete-facing
+suites must assert over those states, not only over three-actions-from-install.
+
+**A defect class that only exists in well-worn state is in scope by law.**
+
+*Why it is law:* it had already cost three units in three different layers.
+The hydration wipe could not be reproduced because Sam's week breached a current
+rule only after 43 revisions of edits. Surface-agreement cells 1 and 4 both pass
+in a freshly-acted world, because there the G+1 Sunday resolves a real session and
+the surfaces agree — so the two defects he photographed most directly were the
+ones the harness could not reach. And the G-1 ask cell tapped a move off an empty
+Thursday, which one added session fixed: the same lesson at depth one.
+
+**What it forbids.** Loosening an assertion so that it reds in a shallow world.
+Cells go red by the walker walking FURTHER, never by asking less. And "passes in a
+freshly-acted world" stops counting as evidence of absence — a pass at depth 3 says
+nothing about depth 43, so **a report must state the depth it reached.**
+
+**What it requires.** The walker's budget gains a DEPTH dimension beside its
+width. Because depth is expensive — every walk generates a program — the shallow
+and deep tiers must be DECLARED separately: a shallow gate that looks like the deep
+one is the exact failure this law exists to prevent.
+
+L11 says the matrix comes before the phone. L13 says the matrix must be deep enough
+to contain the defect.
 
 ## Test Standard
 

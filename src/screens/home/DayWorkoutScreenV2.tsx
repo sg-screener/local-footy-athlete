@@ -633,7 +633,7 @@ export default function DayWorkoutScreenV2() {
       const suggestion = suggestAddExercise(kind, editableExercises);
       if (!suggestion) {
         showExerciseEditFallback(
-          'Message the coach',
+          'Ask Coach',
           'I need a bit more detail before changing this safely.',
           `Add one ${kind.toLowerCase()} exercise or small block to ${workoutLabel} on ${dateLabel}.`,
         );
@@ -2697,7 +2697,7 @@ function ExerciseEditSheet({
             />
             <ExerciseSheetOption
               label="Future weeks too"
-              sub="Save a smarter ongoing adjustment"
+              sub="Save this as an ongoing adjustment"
               testID={step.action === 'remove'
                 ? explorerTestId.componentDeleteScope(
                     sessionId,
@@ -2755,7 +2755,7 @@ function ExerciseEditSheet({
           <>
             <Text style={styles.exerciseEditBody}>{step.message}</Text>
             <Button
-              label="Message the coach"
+              label="Ask Coach"
               variant="primary"
               size="md"
               onPress={() => onAskCoachTeam(step.prefill)}

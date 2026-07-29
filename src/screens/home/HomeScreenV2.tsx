@@ -1771,7 +1771,7 @@ function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string 
   if (note.reversibleAdjustmentId) {
     return {
       title: 'Restore the previous fixture?',
-      body: 'This restores the exact displaced sessions and repairs the affected fixture horizon.',
+      body: 'This puts the moved sessions back and sorts the week around your game.',
     };
   }
   if (note.type === 'injury') {
@@ -1795,7 +1795,7 @@ function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string 
   }
   return {
     title: 'Clear this adjustment?',
-    body: "We'll remove this active adjustment from future program decisions.",
+    body: "We'll stop factoring this in and get your week back to normal.",
   };
 }
 

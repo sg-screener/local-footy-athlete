@@ -66,7 +66,7 @@ export function HomeQuickActionSheet({
         This one needs more context before we can change your program safely.
       </Text>
       <Button
-        label="Message the coach"
+        label="Ask Coach"
         size="lg"
         glow={false}
         onPress={openCoachByChoice}
@@ -137,7 +137,7 @@ export function HomeQuickActionSheet({
           onPress={openDayControls}
         />
         <QuickOption
-          label="Message the coach"
+          label="Ask Coach"
           sub="Use this only if the menu does not cover it"
           onPress={openCoachByChoice}
         />
@@ -164,7 +164,7 @@ export function HomeQuickActionSheet({
           onPress={onClose}
         />
         <QuickOption
-          label="Message the coach"
+          label="Ask Coach"
           sub="Use this only if the menu does not cover it"
           onPress={openCoachByChoice}
         />
@@ -196,7 +196,7 @@ export function HomeQuickActionSheet({
         onPress={openDayControls}
       />
       <QuickOption
-        label="Message the coach"
+        label="Ask Coach"
         sub="Use this only if the menu does not cover it"
         onPress={openCoachByChoice}
       />
