@@ -13,13 +13,21 @@ import type { Workout } from '../types/domain';
  * OWNERSHIP — read this before adding a second writer.
  *
  * The stamp is DERIVED, not stored. `UserRemovalConstraint` remains the only
- * persisted representation of an athlete move; this marker is written onto the
- * workout at the single site that lands a moved session on its target day
- * (`applyUserRemovalConstraintsToWeek`) and travels with the composed week from
- * there. That keeps the count of representations at one. A second writer — an
- * overlay, a repair, a finaliser — would mean the resolver could be told
+ * persisted representation of an athlete mutation; this marker is written onto
+ * the workout inside `applyUserRemovalConstraintsToWeek` — the single site that
+ * lands athlete-decided content on a day — and travels with the composed week
+ * from there. That keeps the count of representations at one. A second writer —
+ * an overlay, a repair, a finaliser — would mean the resolver could be told
  * "the athlete placed this" by something that is not the athlete, which is
  * exactly the confusion this marker exists to remove.
+ *
+ * EVERY DOOR, NOT JUST MOVE (Sam, 2026-07-30, ruling #4). The stamp originally
+ * covered only the move's `movedWorkout`. Swap, add and component-bin land their
+ * content on the sibling `remainingWorkout` push a few lines earlier, so they
+ * arrived unstamped and the derived G-1 Gunshow regenerated over them while the
+ * sheet reported "Done." One defect, one site, four doors: the ingress stamps
+ * unconditionally, because which door built the constraint is not information
+ * about who owns the day.
  *
  * §18 repair relocation does NOT pass through that site and so is never
  * stamped: automatic heavy relocation onto G-1 stays refused. The ask-flow is

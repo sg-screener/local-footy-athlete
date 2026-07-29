@@ -701,38 +701,43 @@ function applyGameProximity(
     if (templateWorkout?.workoutType === 'Game') {
       return null;
     }
-    // SAM'S LAW (2026-07-28): athlete-placed content outranks derived filler.
-    // The athlete deliberately put this session on the day before their game
-    // and was warned about it by the ask-flow before it landed — the Gunshow is
-    // a filler regenerated every render and has no standing to overwrite a
-    // decision. Unconditional by design: the guard below is disabled for
-    // EXPLICIT fixtures, which is exactly how a practice-match week used to eat
-    // an athlete's moved session. Generation still never PLANS hard work here;
-    // this only concerns what the athlete places.
+    // ── WHO OWNS THE DAY BEFORE A FIXTURE ────────────────────────────────
+    //
+    // SAM'S LAW (2026-07-28), extended by his rulings of 2026-07-30 (#4, #5):
+    // athlete-placed content outranks derived filler, and the G-1 ask-flow is
+    // the ONLY door onto this day. So there is exactly one question here, and
+    // the placement stamp answers it: did the athlete put this here?
+    //
+    // Two things used to answer it alongside the stamp, and both have been
+    // retired because neither is information about ownership:
+    //
+    //   * `!explicitGameDates.has(nextDate)` — the STORAGE FORM of the fixture.
+    //     An identical week behaved one way on a usual Saturday and another on
+    //     an explicit practice match, so whether a committed swap survived
+    //     depended on how the fixture happened to be recorded (ruling #5).
+    //   * `isProtectedCoreExposure(templateWorkout)` — the session's NAME and
+    //     TIER. That is `applyGameProximity` re-deciding ownership from a
+    //     heuristic, which ruling #4 forbids: it consults the stamp, it does
+    //     not re-decide. It also silently made G-1 non-light whenever
+    //     generation happened to plan a core exposure there, which is the
+    //     opposite of the Bible rule it was written next to.
+    //
+    // Required exposure displaced from G-1 is not lost — §18 owns the week's
+    // counts and relocates it, which is the pipeline doing its job rather than
+    // a render-time heuristic pre-empting it.
     if (isAthletePlacedSession(templateWorkout)) {
       return null;
     }
-    // GUARD: never replace protected core exposure for virtual/recurring
-    // proximity. Explicit one-off games can move across week boundaries, and
-    // the Bible says G-1 must be light, so they may displace the core session.
-    if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(nextDate)) {
-      if (IS_DEV) {
-        logger.debug(
-          `[resolver] BLOCKED G-1 Gunshow replacing protected core "${templateWorkout!.name}" on ${date}`
-        );
-      }
-    } else {
-      // Everything else → Gunshow (derivedType key remains 'arms_pump')
-      return {
-        ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
-        derivedSessionProvenance: [fixtureDependency({
-          origin: 'fixture_proximity',
-          fixtureDate: nextDate,
-          relation: 'g_minus_1',
-          creditMetric: 'safe_session_content',
-        })],
-      };
-    }
+    // Everything the athlete did not place → Gunshow (derivedType 'arms_pump')
+    return {
+      ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
+      derivedSessionProvenance: [fixtureDependency({
+        origin: 'fixture_proximity',
+        fixtureDate: nextDate,
+        relation: 'g_minus_1',
+        creditMetric: 'safe_session_content',
+      })],
+    };
   }
 
   if (!templateWorkout) return null;

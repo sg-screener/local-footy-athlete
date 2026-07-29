@@ -47,7 +47,22 @@ export function applyUserRemovalConstraintsToWeek(args: {
       const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
       if (constraint.remainingWorkout) {
-        workouts.push({ ...clone(constraint.remainingWorkout), dayOfWeek });
+        // Sam's ruling (2026-07-30, #4): ownership is stamped here for EVERY
+        // athlete door, not just Move. A swap's replacement, an add's new
+        // session and a component-bin's remainder all arrive as
+        // `remainingWorkout`, and all three are content the athlete decided
+        // belongs on this day. Stamping only the Move branch below is what let
+        // the derived G-1 Gunshow regenerate over a committed swap while the
+        // sheet reported "Done." — the door, not the athlete, decided who owned
+        // the day. See rules/athletePlacement.ts.
+        workouts.push({
+          ...clone(constraint.remainingWorkout),
+          dayOfWeek,
+          athletePlacement: athletePlacementFor({
+            constraintId: constraint.id,
+            placedDate: constraint.targetDate,
+          }),
+        });
       }
     }
     if (
@@ -59,11 +74,9 @@ export function applyUserRemovalConstraintsToWeek(args: {
     ) {
       const targetDayOfWeek = new Date(`${constraint.moveTargetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== targetDayOfWeek);
-      // THE single athlete-content ingress site, and therefore the only writer
-      // of the placement marker. Everything downstream — the §18 gateway, the
-      // resolver, the visible week — learns "the athlete put this here" from
-      // here and nowhere else, so the marker cannot disagree with the
-      // constraint that is its source of truth. See rules/athletePlacement.ts.
+      // The move's destination half. Both pushes in this function — and no site
+      // outside it — write the placement marker, so the marker cannot disagree
+      // with the constraint that is its source of truth.
       workouts.push({
         ...clone(constraint.movedWorkout),
         dayOfWeek: targetDayOfWeek,
