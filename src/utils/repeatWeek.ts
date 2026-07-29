@@ -825,6 +825,8 @@ function publishStagedRepeatWeek(args: {
     throw new Error('repeat_week_expected_revision_conflict_before_publish');
   }
   assertAcceptedVisibleLedgerEquivalence({
+    // The athlete asked to repeat the week: a decision they stated.
+    operation: 'forward_decision',
     surfaces: args.stage.accepted.program,
     context: args.stage.accepted.context,
     weekStarts: [args.stage.result.targetWeekStart],

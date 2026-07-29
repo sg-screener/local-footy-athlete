@@ -126,8 +126,30 @@ export type AcceptedProgramSurfaces = Pick<
   | 'exposureContractsByWeek'
 >;
 
+/**
+ * WHAT KIND OF THING THIS TRANSACTION IS — Sam's forward-only ruling
+ * (2026-07-29). Accept-and-reduce serves FACTS AND DECISIONS THE ATHLETE
+ * STATED. A restoration replays state that was already accepted, and a stored
+ * snapshot that cannot reproduce a valid week is a DEFECT, not a fact — nobody
+ * ever stated `requiredMinimum: 99`. `LOST_ONBOARDING_DIAGNOSIS` already ruled
+ * this class: refuse and report a corrupt snapshot, never merge it.
+ *
+ * A typed kind and not a boolean, and never a reason-string inspection. This
+ * repo has been bitten three times by unions discriminated on booleans, and
+ * `preserveExactAcceptedWorkouts` is a storage-shape flag that happens to
+ * correlate with restoration today — correlation is not the distinction.
+ *
+ * ABSENT MEANS `restoration`, i.e. STRICT. The permissive path is opted into,
+ * so a caller added later that says nothing gets a refusal rather than silently
+ * publishing an unmeetable week. Same reasoning as the profile mirror's
+ * publication origin, where the gated reading is the default.
+ */
+export type AcceptedStateOperationKind = 'forward_decision' | 'restoration';
+
 export interface AcceptedStateTransactionProposal {
   reason: string;
+  /** See `AcceptedStateOperationKind`. Absent = `restoration` (strict). */
+  operation?: AcceptedStateOperationKind;
   /** One explicit date owner for transactions that began before async work. */
   todayISO?: string;
   /** Development-only correlation context; never persisted. */
@@ -369,6 +391,12 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
   weekStarts: readonly string[];
   profile?: OnboardingData | null;
   trace?: AthleteActionTraceContext;
+  /**
+   * Required, deliberately. Every publication boundary states what it is
+   * publishing; there is no default here so a new call site cannot inherit
+   * accept-and-reduce by accident.
+   */
+  operation: AcceptedStateOperationKind;
 }): void {
   const surfaces = normalizeAcceptedProgramSurfaces(args.surfaces);
   const context = normalizeAcceptedMaterialContext(args.context);
@@ -406,7 +434,7 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
         failureCategory: 'accepted_with_shortfall',
       });
-      // ACCEPT-AND-REDUCE (Sam, 2026-07-29, ruling 2). This used to throw.
+      // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). This used to throw.
       //
       // A blocking violation here does NOT mean the two representations
       // disagree — it means the week the athlete now has cannot meet its
@@ -419,6 +447,19 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
       // check immediately below, where the PERSISTED and VISIBLE ledgers
       // genuinely differ. That is two representations of one week disagreeing,
       // it is always a defect, and it still throws.
+      //
+      // A RESTORATION gets the old behaviour and must: it is replaying state
+      // that was accepted once, so a week it cannot reproduce means the stored
+      // snapshot is corrupt. Publishing a reduced version of a corrupt snapshot
+      // would merge a defect into accepted state, which is the mirror-wipe
+      // shape this repo has already paid for once.
+      if (args.operation === 'restoration') {
+        throw new AcceptedStateLedgerMismatchError(
+          weekStart,
+          `re-evaluation produced blockers ${evaluation.blockingViolations
+            .map((finding: { code: string }) => finding.code).join(',')}`,
+        );
+      }
       recordAcceptedWeekShortfall(weekStart, evaluation.blockingViolations);
     }
     if (acceptedLedgerSignature(contract) !== acceptedLedgerSignature(evaluation.contract)) {
@@ -601,6 +642,7 @@ export function stageAcceptedStateTransaction(
       context,
       weekStarts: proposal.validateWeekStarts ?? [],
       profile,
+      operation: proposal.operation ?? 'restoration',
       trace: proposal.trace,
     });
     return { program: candidate, context };
@@ -708,6 +750,7 @@ export function commitAcceptedStateTransaction(
   }
   try {
     assertAcceptedVisibleLedgerEquivalence({
+      operation: proposal.operation ?? 'restoration',
       surfaces: staged.program,
       context: staged.context,
       weekStarts: Array.from(equivalenceWeeks),
@@ -2095,6 +2138,10 @@ export function commitCalendarStateTransaction(args: {
     }
   }
   return commitAcceptedStateTransaction({
+    // A calendar mark IS the athlete stating a fact about their life — the
+    // founding case for accept-and-reduce. The mark is kept and the shortfall
+    // disclosed; it is never refused back at them.
+    operation: 'forward_decision',
     reason: args.reason,
     todayISO: args.todayISO,
     program: { ...(args.program ?? {}), weekScopedOverlays: overlays },
@@ -2588,6 +2635,8 @@ function stageAthleteMutationConstraint(args: {
   });
   const result = creation.result;
   assertAcceptedVisibleLedgerEquivalence({
+    // The athlete binned a session: a decision they stated.
+    operation: 'forward_decision',
     surfaces: result.program,
     context: result.context,
     weekStarts: affectedWeekStarts,

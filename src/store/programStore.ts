@@ -1680,6 +1680,8 @@ export const useProgramStore = create<ProgramState>()(
         }
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // An athlete placing content on a day is a decision they stated.
+          operation: 'forward_decision',
           reason: `override:set:${date}`,
           program: {
             dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },

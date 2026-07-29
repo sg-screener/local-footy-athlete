@@ -697,6 +697,7 @@ run('regression', '18 Repeat Week publishes overlay and accepted target once', (
   assert(useProgramStore.getState().weekScopedOverlays[result.targetWeekStart]?.reason === 'repeat_week',
     'accepted repeat overlay missing');
   assertAcceptedVisibleLedgerEquivalence({
+    operation: 'forward_decision',
     surfaces: useProgramStore.getState(),
     context: getAcceptedMaterialContext(),
     weekStarts: [result.targetWeekStart],
@@ -860,6 +861,7 @@ run('regression', '25 re-evaluated visible week matches the gateway ledger exact
   assert(ledgerSignature(week.contract) === ledgerSignature(week.evaluation.contract),
     're-evaluated visible ledger is not exact');
   assertAcceptedVisibleLedgerEquivalence({
+    operation: 'forward_decision',
     surfaces: useProgramStore.getState(),
     context: getAcceptedMaterialContext(),
     weekStarts: [WEEK_START],
@@ -887,6 +889,7 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
       continue;
     }
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });
@@ -908,6 +911,7 @@ run('property', 'no structural readiness change can bypass the gateway', async (
       });
     }
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });
@@ -959,6 +963,7 @@ run('property', 'visible projection is ledger-equivalent to gateway acceptance',
     const value = profile(phase);
     seed(value);
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });

@@ -986,6 +986,10 @@ export function stageClearReversibleAdjustment(
     };
     const accepted = stageAcceptedStateTransaction(proposal);
     assertAcceptedVisibleLedgerEquivalence({
+      // Undo replays a stored snapshot. If it cannot reproduce a valid week the
+      // snapshot is corrupt, and a corrupt snapshot is refused and reported —
+      // never reduced into accepted state. (Sam, forward-only, 2026-07-29.)
+      operation: 'restoration',
       surfaces: accepted.program,
       context: accepted.context,
       weekStarts: adjustment.rollingDependencyWeeks,

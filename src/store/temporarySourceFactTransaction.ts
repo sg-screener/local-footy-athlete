@@ -266,6 +266,8 @@ function validateEffectiveComposition(args: {
     validateWeekStarts: args.weekStarts,
   });
   assertAcceptedVisibleLedgerEquivalence({
+    // The athlete declared a life-fact (illness, readiness). Forward.
+    operation: 'forward_decision',
     surfaces: normalizeAcceptedProgramSurfaces(projected),
     context: args.context,
     weekStarts: args.weekStarts,
