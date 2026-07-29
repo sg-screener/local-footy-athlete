@@ -233,6 +233,43 @@ run('THE WHOLE LOOP: gap -> answer -> gap gone -> profile survives completion', 
     'seasonPhase was replaced away across the loop — the reported symptom');
 });
 
+// ── Provenance: where the impoverished snapshot came from ───────────────
+
+run("the fixture's snapshot is byte-identical to the store's initial profile", () => {
+  // THE PROVENANCE PROOF, from Sam's real export of 2026-07-29. His
+  // `acceptedProfileSnapshot` is not a degraded record of answers he gave — it
+  // is `initialOnboardingData` verbatim, so it was minted from the in-memory
+  // default at a hydration acceptance, never from him. That is the fabrication
+  // mechanism PROFILE_MIRROR_OWNERSHIP_REASSESSMENT named.
+  //
+  // Pinned in both directions so the fixture cannot quietly become a fiction:
+  // if `initialOnboardingData` changes, this fails rather than leaving a
+  // "real device" fixture that no longer matches any real device.
+  const store = readFileSync(join(__dirname, '..', 'store', 'profileStore.ts'), 'utf8');
+  const block = /const initialOnboardingData: OnboardingData = \{([\s\S]*?)\n\};/.exec(store);
+  assert(block, 'initialOnboardingData is gone or reshaped');
+  const location = /trainingLocation: '([^']+)'/.exec(block[1]);
+  const equipment = Array.from(block[1].matchAll(/'([a-z_]+)'/g)).map((m) => m[1]);
+  assert(location && location[1] === IMPOVERISHED_SNAPSHOT.trainingLocation,
+    `trainingLocation drifted: store=${location?.[1]} fixture=${IMPOVERISHED_SNAPSHOT.trainingLocation}`);
+  assert(JSON.stringify(equipment) === JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment),
+    `equipment drifted:\n  store  =${JSON.stringify(equipment)}\n  fixture=${JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment)}`);
+});
+
+run('the fabrication guard closes only the NO-PROGRAM case', () => {
+  // Half B of Option 3 shipped, and is narrower than the class it was named
+  // for. It skips the hydration acceptance only when there is no program AND
+  // revision is 0. Sam's device HAD a program, so the guard did not fire and a
+  // snapshot was minted from the default profile — `sourceRevision: 1`, exactly
+  // as his export shows. Recorded here as the founding evidence for the
+  // stored-state writers audit (MASTER_PLAN 5D.1) rather than widened
+  // unruled: hydration acceptance is load-bearing for §18 ownership and the
+  // reassessment itself said it needs its own invariant review.
+  const programStore = readFileSync(join(__dirname, '..', 'store', 'programStore.ts'), 'utf8');
+  assert(/if \(!hydrated\.currentProgram && acceptedBefore\.revision === 0\)/.test(programStore),
+    'the fabrication guard changed shape — re-check whether it now covers a device WITH a program');
+});
+
 // ── The instrument has to exist where the defect does ───────────────────
 
 run('the stored-state export is reachable on a Release build', () => {

@@ -137,11 +137,45 @@ export function seedArmedMirrorDevice(options: {
   return { program, profile };
 }
 
-/** The snapshot Sam's device was carrying: almost nothing. */
+/**
+ * THE SNAPSHOT SAM'S DEVICE WAS ACTUALLY CARRYING, from his export of
+ * 2026-07-29 (`acceptedProfileSnapshot`, `sourceRevision: 1`, captured
+ * 2026-07-28T23:59:37Z, while the accepted context had since reached revision
+ * 13 without ever refreshing it).
+ *
+ * These are the real bytes, not a reconstruction — and they carry no personal
+ * data precisely BECAUSE of the defect: the object is byte-identical to
+ * `profileStore`'s `initialOnboardingData`. That identity is the provenance
+ * proof. The snapshot was not built from anything Sam ever answered; it was
+ * built from the in-memory default, at a hydration where the persisted profile
+ * blob was not readable and a program WAS present.
+ *
+ * `profileMirrorProvenanceTests` pins the identity, so if `initialOnboardingData`
+ * changes and this fixture stops matching it, the drift is visible rather than
+ * quietly making the fixture a fiction again.
+ */
 export const IMPOVERISHED_SNAPSHOT: Partial<OnboardingData> = {
   trainingLocation: 'Commercial gym',
-  equipment: ['barbell'],
+  equipment: [
+    'barbell',
+    'dumbbells',
+    'squat_rack',
+    'pullup_bar',
+    'cable_machine',
+    'hamstring_curl',
+    'knee_extension',
+    'bands',
+  ],
 } as Partial<OnboardingData>;
+
+/** The accepted-context metadata his export carried, for shape-faithful seeds. */
+export const SAMS_DEVICE_ACCEPTED_CONTEXT = {
+  snapshotSourceRevision: 1,
+  snapshotCapturedAt: '2026-07-28T23:59:37.203Z',
+  /** Twelve further acceptances never refreshed the snapshot. */
+  revisionAtExport: 13,
+  liveAnswerCountAtExport: 2,
+} as const;
 
 export function liveProfile(): OnboardingData {
   return useProfileStore.getState().onboardingData;
