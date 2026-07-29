@@ -72,8 +72,34 @@ import {
 } from '../utils/planChangeProducer';
 import type { PlanChange, PlanChangeMoveScopeId } from '../utils/planChangeTypes';
 import { getSessionComponents } from '../utils/sessionComponents';
+import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 
-const CURRENT_WEEK = '2026-07-13';
+/**
+ * TWO WORLDS, AND WHY THE SECOND ONE EXISTS.
+ *
+ * This grid was green while Sam's device re-test went 1 of 5. Under L11 that
+ * makes the MATRIX the first defect, not any of the four doors — a harness
+ * whose athlete is not the athlete proves things about nobody.
+ *
+ * `synthetic` is the constructed in-season athlete this file was written
+ * against. `sam_export_8` is Sam, transcribed from his device
+ * (`support/samDeviceExport8Fixture.ts`, which records exactly which of his
+ * bytes are verbatim and which are rebuilt). Every day-state, every door and
+ * every law below runs over BOTH. Keeping the synthetic world is deliberate:
+ * a grid that only knows one real athlete is one device export away from being
+ * wrong again, and the two worlds disagreeing is itself a finding.
+ */
+interface MatrixWorld {
+  id: string;
+  profile: () => OnboardingData;
+  markedDays: Readonly<Record<string, string>>;
+  /** The week the doors are aimed at, and the "today" the producer is given. */
+  weekStart: string;
+  todayISO: string;
+  seasonPhase: string;
+}
+
+const SYNTHETIC_WEEK = '2026-07-13';
 
 let passed = 0;
 let failed = 0;
@@ -107,7 +133,7 @@ function quiet<T>(body: () => T): T {
   }
 }
 
-function profile(): OnboardingData {
+function syntheticProfile(): OnboardingData {
   return {
     seasonPhase: 'In-season', position: 'inside_mid',
     motivation: 'Build strength and football fitness', trainingDaysPerWeek: 5,
@@ -123,6 +149,23 @@ function profile(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
+const WORLDS: readonly MatrixWorld[] = [
+  {
+    id: 'synthetic',
+    profile: syntheticProfile,
+    markedDays: {},
+    // The SECOND microcycle is a settled week; the first is the part-week the
+    // generator starts from.
+    weekStart: addDaysISO(SYNTHETIC_WEEK, 7),
+    todayISO: addDaysISO(SYNTHETIC_WEEK, 7),
+    seasonPhase: 'In-season',
+  },
+];
+
+/** The world the current cell is running in. Set by the grid loop. */
+let world: MatrixWorld = WORLDS[0];
+function profile(): OnboardingData { return world.profile(); }
+
 function addDaysISO(date: string, days: number): string {
   const parsed = new Date(`${date}T12:00:00`);
   parsed.setDate(parsed.getDate() + days);
@@ -135,23 +178,27 @@ function addDaysISO(date: string, days: number): string {
  * next one, which is exactly the kind of order-dependence that makes a matrix
  * lie about which cell failed.
  */
-let cachedProgram: TrainingProgram | null = null;
+const cachedProgramByWorld = new Map<string, TrainingProgram>();
 function baseProgram(): TrainingProgram {
-  if (!cachedProgram) {
-    cachedProgram = quiet(() => generateProgramLocally(profile(), {
-      todayISO: CURRENT_WEEK, previousProgram: null,
+  let cached = cachedProgramByWorld.get(world.id);
+  if (!cached) {
+    const generationToday = world.id === 'synthetic' ? SYNTHETIC_WEEK : world.weekStart;
+    cached = quiet(() => generateProgramLocally(profile(), {
+      todayISO: generationToday, previousProgram: null,
       seasonPhaseClock: {
-        protocolVersion: 1, selectedPhase: 'In-season',
-        phaseEntryWeekStartISO: CURRENT_WEEK,
+        protocolVersion: 1, selectedPhase: world.seasonPhase as never,
+        phaseEntryWeekStartISO: generationToday,
         originProvenance: 'explicit_user_phase_change',
         persistenceProvenance: 'preserved_persisted_state',
       },
     }));
+    cachedProgramByWorld.set(world.id, cached);
   }
-  return JSON.parse(JSON.stringify(cachedProgram)) as TrainingProgram;
+  return JSON.parse(JSON.stringify(cached)) as TrainingProgram;
 }
 
-function seedStores(program: TrainingProgram, markedDays: Record<string, string> = {}): string {
+function seedStores(program: TrainingProgram, extraMarkedDays: Record<string, string> = {}): string {
+  const markedDays = { ...world.markedDays, ...extraMarkedDays };
   useProfileStore.setState({ onboardingData: profile(), isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
@@ -159,11 +206,14 @@ function seedStores(program: TrainingProgram, markedDays: Record<string, string>
   useCoachMutationHistoryStore.setState({ entries: [] } as never);
   useProgramStore.setState({
     currentProgram: program,
-    currentMicrocycle: program.microcycles[1] ?? program.microcycles[0] ?? null,
+    currentMicrocycle: program.microcycles.find(
+      (microcycle) => microcycle.startDate.slice(0, 10) === world.weekStart)
+      ?? program.microcycles[1] ?? program.microcycles[0] ?? null,
     todayWorkout: null, isGenerating: false, isLoading: false, error: null, blockState: null,
     acceptedMaterialContext: {
       markedDays, readinessSignalsByDate: {}, activeConstraints: [], activeInjury: null,
-      revision: 1, lastTransaction: 'matrix:seed', injuryEpisodes: [], temporarySourceFacts: [],
+      revision: 1,
+      lastTransaction: 'matrix:seed', injuryEpisodes: [], temporarySourceFacts: [],
       acceptedCompositionBase: null, acceptedProfileSnapshot: null,
     },
     dateOverrides: {}, overrideContexts: {}, weekScopedOverlays: {},
@@ -171,11 +221,43 @@ function seedStores(program: TrainingProgram, markedDays: Record<string, string>
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
-  return program.microcycles[1]!.startDate.slice(0, 10);
+  return world.weekStart;
 }
 
 function visibleWeek(weekStart: string): ResolvedDay[] {
   return quiet(() => resolveWeekWithConditioning(weekStart, buildScheduleStateImperative()));
+}
+
+/**
+ * WHAT SAM ACTUALLY SEES.
+ *
+ * `resolveWeekWithConditioning` is the DOMAIN's week. His screen renders
+ * `buildProgramTabProjectedWeek`, which calls that resolver and then runs every
+ * day through `projectVisibleDay` — and the plan-change sheet's own comment
+ * says its offer is "bit-identical to what it offers on the Program tab",
+ * because both go through this one entry point.
+ *
+ * The matrix stopped at the resolver, which is a boundary the athlete never
+ * sees. That made it the THIRD verifier to stop there, and it is why a grid
+ * asserting `visible = accepted` could stay green while Sam's screen showed a
+ * day the transaction never accepted.
+ *
+ * The projections are NOT collapsed here (LR-13) — see the report. One named
+ * entry point is enough to make the assertion honest, and running both
+ * boundaries side by side is what will produce the evidence LR-13 currently
+ * lacks: a case where they disagree.
+ */
+function projectedWeek(weekStart: string): ResolvedDay[] {
+  return quiet(() => buildProgramTabProjectedWeek({
+    mondayISO: weekStart,
+    todayISO: world.todayISO,
+    state: buildScheduleStateImperative(),
+    overrideContexts: useProgramStore.getState().overrideContexts ?? {},
+  }));
+}
+
+function projectedDayOn(weekStart: string, date: string): ResolvedDay | undefined {
+  return projectedWeek(weekStart).find((day) => day.date === date);
 }
 
 function dayOn(weekStart: string, date: string): ResolvedDay | undefined {
@@ -333,7 +415,7 @@ const DAY_STATES: DayState[] = [
       quiet(() => applyPlanChange({
         change: { kind: 'add_category', date: wednesday, category: 'conditioning_hard' },
         visibleWeek: visibleWeek(weekStart),
-        todayISO: weekStart,
+        todayISO: world.todayISO,
         setManualOverride: (date, workout, ctx) =>
           useProgramStore.getState().setManualOverride(date, workout, ctx),
       }));
@@ -444,7 +526,7 @@ function doorsFor(routeless: boolean): Door[] {
     // day "move the strength" IS the whole-day move — the producer says so.
     change: ({ weekStart, date }) => {
       const move = quiet(() => listPlanChangeOptionsForDay({
-        visibleWeek: visibleWeek(weekStart), date, todayISO: weekStart,
+        visibleWeek: visibleWeek(weekStart), date, todayISO: world.todayISO,
       })).move;
       if (move.refusal || !move.scopes.some((scope) => scope.id === 'strength')) return null;
       return {
@@ -517,9 +599,30 @@ function assertLaws(args: {
     }
   }
 
+  // L4b THE SCREEN AGREES WITH THE DOMAIN.
+  //
+  // Sam's tap 1: the domain accepted a strength session onto the day after his
+  // game, and his screen rendered "Recovery + Recovery". Everything above this
+  // line reads the resolver, which is not a surface anybody looks at. This
+  // reads what `useResolvedWeekForDate` hands the day card and the sheet.
+  const projected = projectedDayOn(weekStart, date);
+  const projectedName = projected?.workout?.name ?? 'REST';
+  const resolvedName = afterDay?.workout?.name ?? 'REST';
+  assert(projectedName === resolvedName,
+    `${label}: the SCREEN and the domain disagree about this day — `
+    + `the resolver says "${resolvedName}", the projection the athlete actually `
+    + `sees says "${projectedName}"`);
+  // The same day rendered as the same session twice is the shape he reported,
+  // and it survives a name comparison because both halves carry one name.
+  const projectedSections = (projected?.workout as { sections?: { kind: string; title: string }[] } | undefined)
+    ?.sections ?? [];
+  const sectionTitles = projectedSections.map((section) => `${section.kind}:${section.title}`);
+  assert(new Set(sectionTitles).size === sectionTitles.length,
+    `${label}: the screen renders the same section twice — ${JSON.stringify(sectionTitles)}`);
+
   // L5 THE DAY STAYS USABLE.
   const options = quiet(() => listPlanChangeOptionsForDay({
-    visibleWeek: visibleWeek(weekStart), date, todayISO: weekStart,
+    visibleWeek: visibleWeek(weekStart), date, todayISO: world.todayISO,
   }));
   const usable = options.categories.length > 0 || options.addOnTopCategories.length > 0 ||
     options.canRemove || !options.move.refusal || !!options.locked;
@@ -546,6 +649,8 @@ function assertLaws(args: {
 console.log('\n-- Athlete door matrix --');
 
 let cells = 0;
+for (const activeWorld of WORLDS) {
+world = activeWorld;
 for (const dayState of DAY_STATES) {
   const routeless = !/g1|gunshow/.test(dayState.id);
   for (const door of doorsFor(routeless)) {
@@ -554,7 +659,7 @@ for (const dayState of DAY_STATES) {
     if (!change) continue;
     cells += 1;
 
-    const label = `${door.id} × ${dayState.id}`;
+    const label = `[${world.id}] ${door.id} × ${dayState.id}`;
     const beforeDay = dayOn(context.weekStart, context.date);
     const before = {
       week: weekFingerprint(context.weekStart),
@@ -569,7 +674,7 @@ for (const dayState of DAY_STATES) {
         result = quiet(() => applyPlanChange({
           change,
           visibleWeek: visibleWeek(context.weekStart),
-          todayISO: context.weekStart,
+          todayISO: world.todayISO,
           setManualOverride: (date, workout, ctx) =>
             useProgramStore.getState().setManualOverride(date, workout, ctx),
         }));
@@ -589,7 +694,7 @@ for (const dayState of DAY_STATES) {
         result = quiet(() => applyPlanChange({
           change,
           visibleWeek: visibleWeek(context.weekStart),
-          todayISO: context.weekStart,
+          todayISO: world.todayISO,
           setManualOverride: (date, workout, ctx) =>
             useProgramStore.getState().setManualOverride(date, workout, ctx),
         }));
@@ -610,9 +715,11 @@ for (const dayState of DAY_STATES) {
   }
 }
 
+}
 // ── The preview door answers the same way ────────────────────────────────
 
-cell('a day with two sessions offers a way to move ONE of them', () => {
+for (const activeWorld of WORLDS) { world = activeWorld;
+cell(`[${activeWorld.id}] a day with two sessions offers a way to move ONE of them`, () => {
   // SAM'S FINDING 3, and the reason the first version of this matrix could not
   // see it. His scoped move took both halves — and the sheet was innocent: it
   // passes the scope it was given, and auto-skips the scope picker when the
@@ -629,7 +736,7 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
     // number the add door uses to decide whether the day is full. If the app
     // says two, the athlete sees two.
     const options = quiet(() => listPlanChangeOptionsForDay({
-      visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: context.weekStart,
+      visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: world.todayISO,
     }));
     if (options.visibleSessionCount < 2) continue;
     if (options.move.refusal) continue;
@@ -651,7 +758,7 @@ cell('a day with two sessions offers a way to move ONE of them', () => {
     'no day-state in this grid renders two sessions — the law above asserted nothing');
 });
 
-cell('a day carrying a commitment never offers to move the WHOLE day', () => {
+cell(`[${activeWorld.id}] a day carrying a commitment never offers to move the WHOLE day`, () => {
   // The other half of Sam's finding 3, and the half the day-shape law above
   // cannot see — a pure commitment day counts as ONE session, so it never
   // reaches that cell, and a whole-day move there reschedules an appointment
@@ -668,7 +775,7 @@ cell('a day carrying a commitment never offers to move the WHOLE day', () => {
   for (const dayState of DAY_STATES) {
     const context = quiet(() => dayState.build());
     const options = quiet(() => listPlanChangeOptionsForDay({
-      visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: context.weekStart,
+      visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: world.todayISO,
     }));
     if (!options.visibleSessionKinds.includes('session')) continue;
     commitmentDaysSeen += 1;
@@ -715,7 +822,7 @@ const OFFERS_THE_DOOR_REFUSES: ReadonlyArray<{ offer: string; why: string }> = [
   },
 ];
 
-cell('every option the day OFFERS is one the door accepts or refuses in words', () => {
+cell(`[${activeWorld.id}] every option the day OFFERS is one the door accepts or refuses in words`, () => {
   const declared = new Set(OFFERS_THE_DOOR_REFUSES.map((entry) => entry.offer));
   let optionsDriven = 0;
   const broken: string[] = [];
@@ -726,7 +833,7 @@ cell('every option the day OFFERS is one the door accepts or refuses in words', 
     const offersFor = (): { weekStart: string; date: string; ids: string[] } => {
       const context = quiet(() => dayState.build());
       const options = quiet(() => listPlanChangeOptionsForDay({
-        visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: context.weekStart,
+        visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: world.todayISO,
       }));
       return { ...context, ids: options.addOnTopCategories.map((category) => category.id) };
     };
@@ -737,7 +844,7 @@ cell('every option the day OFFERS is one the door accepts or refuses in words', 
       const result = quiet(() => applyPlanChange({
         change: { kind: 'add_category', date: context.date, category } as PlanChange,
         visibleWeek: visibleWeek(context.weekStart),
-        todayISO: context.weekStart,
+        todayISO: world.todayISO,
         setManualOverride: (date, workout, ctx) =>
           useProgramStore.getState().setManualOverride(date, workout, ctx),
       }));
@@ -755,7 +862,7 @@ cell('every option the day OFFERS is one the door accepts or refuses in words', 
     'no offered option was driven and nothing was declared — this cell is asleep');
 });
 
-cell('preview never throws, on any day-state', () => {
+cell(`[${activeWorld.id}] preview never throws, on any day-state`, () => {
   for (const dayState of DAY_STATES) {
     const context = quiet(() => dayState.build());
     for (const category of ['conditioning_hard', 'strength_full'] as const) {
@@ -763,7 +870,7 @@ cell('preview never throws, on any day-state', () => {
         quiet(() => previewPlanChangeRisk({
           change: { kind: 'add_category', date: context.date, category },
           visibleWeek: visibleWeek(context.weekStart),
-          todayISO: context.weekStart,
+          todayISO: world.todayISO,
           profile: useProfileStore.getState().onboardingData ?? undefined,
           activeConstraints: [],
         }));
@@ -775,7 +882,7 @@ cell('preview never throws, on any day-state', () => {
   }
 });
 
-cell('athlete-placed content survives the resolver on every day-state', () => {
+cell(`[${activeWorld.id}] athlete-placed content survives the resolver on every day-state`, () => {
   // The law the whole G-1 unit exists for, swept across the grid rather than
   // asserted on the one day a device report happened to name.
   for (const dayState of DAY_STATES) {
@@ -787,7 +894,7 @@ cell('athlete-placed content survives the resolver on every day-state', () => {
         g1Route: 'deloaded',
       },
       visibleWeek: visibleWeek(context.weekStart),
-      todayISO: context.weekStart,
+      todayISO: world.todayISO,
       setManualOverride: (date, workout, ctx) =>
         useProgramStore.getState().setManualOverride(date, workout, ctx),
     }));
@@ -800,7 +907,8 @@ cell('athlete-placed content survives the resolver on every day-state', () => {
   }
 });
 
-console.log(`\nAthlete door matrix: ${cells} cells × 2 attempts`);
+}
+console.log(`\nAthlete door matrix: ${cells} cells × 2 attempts over ${WORLDS.length} worlds`);
 console.log(`Athlete door matrix totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`\nRED CELLS:\n  ${failures.join('\n  ')}`);

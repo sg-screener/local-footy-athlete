@@ -2449,7 +2449,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       return {
         ok: true,
         outcome: 'applied',
-        message: moveDoneMessage(args.change, resolution.swapped),
+        message: moveDoneMessage(args.change),
         appliedDates: resolution.appliedDates,
         rejected: [],
       };
@@ -2863,10 +2863,27 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
   }
 }
 
-/** Swap-aware done message needs to know whether the destination was
- *  occupied when the change was built. */
-function moveDoneMessage(change: Extract<PlanChange, { kind: 'move_session' }>, swapped: boolean): string {
-  return swapped
-    ? `Done. ${change.fromDate} and ${change.toDate} swapped sessions.`
-    : `Done. Session moved to ${change.toDate}.`;
+/**
+ * THE CONFIRMATION NARRATES THE ACTION THAT WAS TAKEN.
+ *
+ * This sentence used to branch on `swapped`, which means nothing more than
+ * "the destination day was occupied", and told the athlete that two days
+ * "swapped sessions". Under Sam's doubling law (2026-07-30, ruling 3) a move
+ * onto an occupied day ABSORBS — the arriving session stacks beside what is
+ * already there and NOTHING TRAVELS BACK to the source day. So the swap
+ * sentence described behaviour the app had stopped performing: the athlete was
+ * told their Wednesday now held Thursday's session, and it did not.
+ *
+ * The branch is deleted rather than reworded. A move is a move at both
+ * destinations, the plain sentence is true in both cases, and inventing a
+ * second sentence for a distinction that no longer exists is how the first one
+ * survived its own ruling. What else ends up on the day is the disclosure
+ * clause's business, and that is already appended by the repair-disclosure law.
+ *
+ * The walker found this from a fresh install in three actions — onboard,
+ * generate, move onto an occupied day — and it is the same class as the device
+ * report that an ADD of conditioning was confirmed with "moved Upper Pull".
+ */
+function moveDoneMessage(change: Extract<PlanChange, { kind: 'move_session' }>): string {
+  return `Done. Session moved to ${change.toDate}.`;
 }

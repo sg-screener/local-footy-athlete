@@ -137,6 +137,44 @@ Before adding a diagnostic, answer two questions:
 The same rule applies to fixtures: a fixture whose input cannot exhibit the
 defect proves nothing, however many assertions it carries.
 
+## Hand-built state fixtures are deprecated for athlete-facing suites
+
+**Sam's ruling, 2026-07-30: a seed library is SAMPLING, not coverage.**
+
+Seeding a harness from a device export — or from a hand-written store snapshot —
+proves things about one state and quietly implies things about the space around
+it. The space is where the defects live. Worse, a seed cannot be checked: it
+asserts a state nobody arrived at by acting, so nothing catches it when the
+state it claims to represent is not reachable at all.
+
+That failure is not hypothetical. Seeding the athlete-door matrix from
+`device-export-8.json` produced a week scoring squat 0 / hinge 0 / push 2 /
+pull 1, which §18 cannot repair and which threw straight through the tap door.
+Sam's device was demonstrably NOT in that state — it held a materialised
+overlay for the very week the seed could not rebuild, because the export
+carries overlay KEYS and not overlay CONTENT. **A seed that cannot restore what
+it claims to restore manufactures defects, and a manufactured defect costs a
+device round trip — the exact cost the matrix exists to avoid.**
+
+The replacement, for anything asserting athlete-facing behaviour:
+
+- **Reach state by ACTING.** Start from a fresh install and perform real
+  athlete actions through the real doors — onboarding, generation, every door,
+  life-facts, calendar marks, and the passage of time. `athleteActionWalker`
+  is the engine; `athleteActionWalkerTests` is the wiring.
+- **A state you cannot reach by acting is a state no athlete can be in.** If a
+  state an athlete CAN be in is unreachable, the ACTION VOCABULARY is
+  incomplete, and that is a defect in the harness.
+- **A device export's only legitimate role is a CONFORMANCE TARGET** — proof
+  that the vocabulary can reach a shape a real phone was in. Never a seed.
+
+This is the fixture-fidelity law ("a fixture whose input cannot exhibit the
+defect proves nothing") carried one step further: a fixture whose input could
+never have existed proves something false. It is also the verification-layer
+statement of the north star — store only decisions, derive everything else. A
+seed stores a derived output; a walker stores the decisions and derives the
+state, which is why only one of them can be wrong about what it represents.
+
 ## PROCESS LAW — L11 and L12
 
 Process Law L1–L10 lives in `docs/MASTER_PLAN_2026-07-23.md` PART 1 and is

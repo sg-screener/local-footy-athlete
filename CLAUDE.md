@@ -1,5 +1,11 @@
 # Claude Instructions
 
+Read `docs/NORTH_STAR.md` FIRST — it defines what this app IS and the
+convergence rule every unit answers to: **store only decisions, derive
+everything else.** New stored state that is not an input (a decision, a fact,
+an answer, a result) is presumed wrong. Every boundary report states whether
+the unit moved toward or away from the north star.
+
 Read and follow `AGENTS.md` before changing this repo.
 
 The short version: for coach chat bugs, do not add phrase-by-phrase special
