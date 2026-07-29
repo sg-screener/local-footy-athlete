@@ -60,9 +60,11 @@ import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGat
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import type { AthleteContext } from '../utils/sessionBuilder';
 import {
+  G1_LANDING_BACK_ROW,
   G1_LANDING_ROUTES,
   G1_LANDING_WARNING,
   g1LandingRoute,
+  g1LandingRoutesFor,
   type G1LandingAskContext,
   placeSessionForRoute,
   resolveG1LandingAsk,
@@ -835,24 +837,58 @@ run('22 recovery and rest still land on G-1 without a word, whatever the door', 
   assert(swap.preview.ok, `the wordless recovery swap was refused: ${swap.preview.message}`);
 });
 
-run('23 route (b) through the SWAP door keeps main lifts off the day before the game', () => {
+run('23 route (b) refuses honestly rather than landing the session unchanged', () => {
+  // SAM'S RULING 4 (2026-07-30). Over a registry strength template, route (b)
+  // strips nothing: every row classifies as an accessory because
+  // `isMainStrengthRow` asks the pool registry for an anchor role and template
+  // rows are not pool slots. The athlete asked for the light version and was
+  // handed the whole session — his finding, twice, in two different shapes.
+  //
+  // Until 5D.4's classifier can tell the rows apart, the route refuses. It is
+  // NOT allowed to no-op, and this test dies with the containment.
   const program = seed(profile());
   const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
   const friday = addDaysISO(weekStart, 4);
+  const before = visibleWeek(weekStart).find((day) => day.date === friday)?.workout?.name;
+
+  const template = resolveTemplatePlanChange({
+    change: { kind: 'swap_category', date: friday, category: 'strength_full' },
+    visibleWeek: visibleWeek(weekStart),
+  })!;
+  const built = buildCoachRevisionTemplateWorkout(template.templateId, friday)!;
+  assert(built.exercises.every((row) => !isMainStrengthRow(row)),
+    'the registry template now has a main lift — 5D.4 may have landed, in which '
+    + 'case this containment and this test should both be deleted');
 
   const result = commitChange(weekStart, {
     kind: 'swap_category', date: friday, category: 'strength_full',
     g1Route: 'accessories_only',
   });
-  assert(result.ok, `routed swap refused: ${result.message}`);
+  assert(!result.ok, 'route (b) landed the session unchanged and called it accessories');
+  assert(!/_/.test(result.message),
+    `the refusal reached the athlete as a raw code: "${result.message}"`);
+  assert(visibleWeek(weekStart).find((day) => day.date === friday)?.workout?.name === before,
+    'the refused route changed the day anyway');
+});
 
-  const landed = visibleWeek(weekStart)
-    .find((day) => day.date === friday)?.workout ?? null;
-  assert(landed, 'G-1 is empty after the routed swap');
-  assert(landed.exercises.length > 0, 'the routed swap landed an empty session');
-  assert(landed.exercises.every((row) => !isMainStrengthRow(row)),
-    `a main lift landed on the day before the game: ${landed.exercises
-      .filter(isMainStrengthRow).map((row) => row.exerciseId).join(', ')}`);
+run('23b route (b) still strips a real session that HAS main lifts', () => {
+  // Non-vacuity for the refusal above: the route is contained, not broken. A
+  // generated session's rows are pool slots, so the classifier can tell them
+  // apart and route (b) does exactly what it says.
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const source = workoutOn(weekStart, 1)!;
+  assert(source.exercises.some(isMainStrengthRow),
+    'the seeded Monday session has no main lifts — this test would be vacuous');
+
+  const placed = placeSessionForRoute({
+    route: 'accessories_only', landingWorkout: source,
+    targetDate: addDaysISO(weekStart, 4),
+    athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
+  });
+  assert(placed, 'route (b) refused a session it can genuinely strip');
+  assert(placed.exercises.every((row) => !isMainStrengthRow(row)),
+    'a main lift survived the accessories-only strip');
 });
 
 run('24 route (c) through the ADD door lands the DELOAD_LAW dose, not the full session', () => {
@@ -1006,7 +1042,7 @@ run('27 the card names BOTH what the day held and what the athlete added', () =>
 
   const result = commitChange(weekStart, {
     kind: 'add_category', date: friday, category: 'strength_full',
-    g1Route: 'accessories_only',
+    g1Route: 'deloaded',
   });
   assert(result.ok, `routed add refused: ${result.message}`);
 
@@ -1043,7 +1079,7 @@ run('28 a routed landing on an EMPTY G-1 lands, instead of being refused', () =>
 
   const added = commitChange(weekStart, {
     kind: 'add_category', date: friday, category: 'strength_full',
-    g1Route: 'accessories_only',
+    g1Route: 'deloaded',
   });
   assert(added.ok,
     `the day the athlete emptied is locked against them: "${added.message}" `
@@ -1149,7 +1185,10 @@ run('18 every athlete-facing string is filed in Sam\'s design document', () => {
     ...COPY_CONTEXTS.flatMap((context) => [
       G1_LANDING_WARNING.ask.body(context),
       G1_LANDING_WARNING.deloadConfirm.headline(context),
-      ...G1_LANDING_ROUTES.map((route) =>
+      G1_LANDING_BACK_ROW.label(context),
+      // The menu the athlete actually sees for THIS context, so the fourth
+      // route's strings are filed exactly where they are offered.
+      ...g1LandingRoutesFor(context).map((route) =>
         `${route.label(context)} — ${route.detail(context)}`),
     ]),
   ].map((line) => line.replace(/\s+/g, ' ').trim())));

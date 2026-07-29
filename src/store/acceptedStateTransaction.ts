@@ -2193,7 +2193,13 @@ export interface AthleteSessionMoveTransactionInput {
    * on the constraint is unaffected and remains the FULL accepted session, so
    * Undo restores exactly what was there before the athlete chose a route.
    */
-  placedSession?: { route: G1LandingRouteId; workout: Workout } | null;
+  placedSession?: { route?: G1LandingRouteId; workout: Workout } | null;
+  /**
+   * The placed session ALREADY CONTAINS the destination's content — a move onto
+   * a team night, which lands as a combined day (Sam's doubling law). There is
+   * nothing to swap back, and swapping would take the anchor off the day.
+   */
+  placedSessionAbsorbsTarget?: boolean;
   /**
    * A SESSION-scoped move off a combined day (Sam, 2026-07-30): the gym session
    * leaves, team training stays anchored. Both halves arrive together from one
@@ -2635,8 +2641,18 @@ export function stageAthleteSessionDeletionTransaction(
     wholeDayRestOwned: constraint.wholeDayRestOwned,
     provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
   });
+  // A DELETION DOOR NEVER WRITES A CALENDAR MARK (Sam, 2026-07-30).
+  //
+  // This wrote `markedDays[date] = 'rest'` whenever a whole-session bin emptied
+  // a day. "There is no session here today" and "this is a rest day" are
+  // different claims: the first is what the athlete said, the second is a
+  // standing instruction to the planner of the same class as a game mark — and
+  // nothing on the athlete's path took it back.
+  //
+  // The emptiness is still OWNED; it is owned the way placed content is, by the
+  // constraint and its stamp (see rules/userRemovalConstraints). The calendar is
+  // left to the calendar's own doors.
   const markedDays = { ...prior.markedDays };
-  if (wholeDayRest) markedDays[date] = 'rest';
   return stageAthleteMutationConstraint({
     reason: args.reason,
     source: args.source,
@@ -2718,7 +2734,7 @@ export function stageAthleteSessionMoveTransaction(
     ? (args.componentSplit.remainingWorkout
         ? cloneWorkoutForDate(args.componentSplit.remainingWorkout, sourceDate)
         : null)
-    : acceptedTarget && acceptedTargetIsSwappable
+    : acceptedTarget && acceptedTargetIsSwappable && !args.placedSessionAbsorbsTarget
       ? cloneWorkoutForDate(acceptedTarget, sourceDate)
       : null;
   const constraint: UserRemovalConstraint = {
@@ -2880,10 +2896,20 @@ export function commitAthleteSessionMoveTransaction(
     const violation = detectAthleteMoveContentLoss({
       // A scoped move conserves the two HALVES of the split, not the combined
       // day identity — that identity no longer names anything after the split.
-      moved: args.componentSplit?.movedWorkout ?? args.originalSourceWorkout,
-      displaced: args.componentSplit
-        ? args.componentSplit.remainingWorkout
-        : args.existingTargetWorkout,
+      //
+      // An ABSORBING move is the mirror image: the source session and the team
+      // night become one combined day, so it is the COMBINED identity that must
+      // survive and the source identity that stops naming anything. Nothing was
+      // displaced — the anchor never left — so there is no second survivor to
+      // require. Sam's doubling law, and the same reasoning as the split above.
+      moved: args.placedSessionAbsorbsTarget
+        ? args.placedSession?.workout ?? args.originalSourceWorkout
+        : args.componentSplit?.movedWorkout ?? args.originalSourceWorkout,
+      displaced: args.placedSessionAbsorbsTarget
+        ? null
+        : args.componentSplit
+          ? args.componentSplit.remainingWorkout
+          : args.existingTargetWorkout,
       weekStarts: staged.affectedWeekStarts,
       profile,
     });

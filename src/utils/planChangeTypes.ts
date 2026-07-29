@@ -6,6 +6,11 @@
  * Behaviour and copy live in `rules/g1LandingAsk.ts`.
  */
 export type G1LandingRouteId =
+  /**
+   * Take the session the day was BUILT for. Offered only when G-1 is empty —
+   * on an occupied day route (a) already keeps what is there (Sam, 2026-07-30).
+   */
+  | 'take_the_gunshow'
   /** Keep the derived Gunshow. The move is ABANDONED — no transaction at all. */
   | 'keep_the_day'
   /** Accessories only: pump and prehab, nothing heavy. */

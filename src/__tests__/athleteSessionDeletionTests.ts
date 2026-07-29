@@ -40,6 +40,7 @@ import {
   applyUserRemovalConstraintsToWeek,
   userRemovalConstraintId,
 } from '../rules/userRemovalConstraints';
+import { isAthletePlacedSession } from '../rules/athletePlacement';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
@@ -602,8 +603,16 @@ run('regression', '5 whole-session deletion on a stacked day leaves Rest', () =>
   const date = dateForDay(WEEK, stacked.dayOfWeek);
   deleteWorkout({ date, workout: stacked });
   assert(!byDay().has(stacked.dayOfWeek), 'whole stacked day survived');
-  assert(useProgramStore.getState().acceptedMaterialContext.markedDays[date] === 'rest',
-    'whole deletion did not own Rest');
+  // RE-POINTED, not deleted (Sam, 2026-07-30): a deletion door never writes a
+  // calendar mark. The day is still owned as Rest — by the constraint and the
+  // placement stamp, which is what the resolver reads — and the athlete's
+  // calendar stays theirs. Asserting the mark was asserting the mechanism.
+  assert(useProgramStore.getState().acceptedMaterialContext.markedDays[date] === undefined,
+    'the deletion wrote a calendar mark');
+  const owned = useProgramStore.getState().userRemovalConstraints
+    .find((constraint) => constraint.targetDate === date && constraint.status === 'active');
+  assert(owned?.wholeDayRestOwned === true,
+    'whole deletion did not own Rest through its constraint');
 });
 
 run('regression', '6 phase matrix keeps deletion authoritative and Bible-valid', () => {
@@ -1184,7 +1193,12 @@ run('property', 'workout names and stale workoutType are not removal identity', 
     ? { ...workout, name: 'Renamed by rebuild', workoutType: 'Strength' as const }
     : workout);
   const visible = applyUserRemovalConstraintsToWeek({ workouts: mutated, weekStart: WEEK, constraints: [constraint] });
-  assert(!visible.some((workout) => workout.dayOfWeek === 0), 'copy fields defeated target ownership');
+  // The day may now carry the athlete-owned REST stub that replaced the
+  // calendar mark. What must not survive is the SESSION.
+  const survivingSession = visible.find((workout) =>
+    workout.dayOfWeek === 0 && workout.workoutType !== 'Rest');
+  assert(!survivingSession,
+    `copy fields defeated target ownership: "${survivingSession?.name ?? ''}"`);
 });
 
 run('property', 'equivalent work may relocate but never to prohibited target', () => {
@@ -1410,10 +1424,17 @@ run('mutation', 'ignoring persisted removal resurrects target and is detected', 
     wholeDayRestOwned: true, createdAt: '2026-07-15T00:00:00.000Z',
     restoredAt: null, restorationReason: null,
   };
-  const ignored = accepted().composedWorkouts.some((workout) => workout.dayOfWeek === 0);
+  const hasSession = (workouts: readonly Workout[]): boolean =>
+    workouts.some((workout) => workout.dayOfWeek === 0 && workout.workoutType !== 'Rest');
+  const ignored = hasSession(accepted().composedWorkouts);
   const enforced = applyUserRemovalConstraintsToWeek({ workouts: accepted().composedWorkouts, weekStart: WEEK, constraints: [constraint] });
-  assert(ignored && !enforced.some((workout) => workout.dayOfWeek === 0),
+  assert(ignored && !hasSession(enforced),
     'mutation witness did not distinguish ignored ownership');
+  // And the emptiness is OWNED rather than merely absent — that stamp is what
+  // keeps the derived filler off the day now that no calendar mark does.
+  const restStub = enforced.find((workout) => workout.dayOfWeek === 0);
+  assert(restStub && isAthletePlacedSession(restStub),
+    'the emptied day carries no athlete-placement stamp — a deriver will refill it');
 });
 
 run('mutation', 'component scope cannot mutate into whole-day Rest ownership', () => {

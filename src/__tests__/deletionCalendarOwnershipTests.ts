@@ -13,15 +13,15 @@
  * `markedDays: { "2026-07-31": "rest" }` — a calendar fact he never wrote, put
  * there by a deletion, locking the day against himself.
  *
- * WHAT THIS SUITE COVERS TODAY: that a binned day stays empty, stays editable,
- * and leaves the athlete's own marks alone. Sam's step 4 — the day that refused
- * every later add — is the third test, and its cause turned out NOT to be the
- * mark at all (see the addendum in docs/LOCKED_DAY_DIAGNOSIS_2026-07-30.md).
+ * The bin still empties the day, still owns the emptiness, and still restores on
+ * undo. What it stops doing is speaking for the calendar. The emptiness is owned
+ * the way placed content is — a stamped rest stub the derivers already know to
+ * leave alone — so the day stays empty without a standing instruction to the
+ * planner that nothing the athlete can reach could take back.
  *
- * WHAT IT DOES NOT COVER YET: the ruled removal of the mark itself. Attempted
- * and reverted in the same session — the mark is load-bearing for the planner's
- * rest input and for tap/coach convergence, and taking it out is its own unit
- * with its own evidence. The ruling stands; the spec is in that document.
+ * It needed Sam's relocation-disclosure ruling first: without it, removing the
+ * mark made the tap door apply while the coach door refused over the rebalance.
+ * Disclosure, not refusal — see coachCommandExecutor's remove_session verifier.
  *
  * Run: npm run test:deletion-calendar-ownership
  */
@@ -164,6 +164,22 @@ function dayOn(weekStart: string, date: string) {
 }
 
 console.log('\n-- Deletion calendar ownership --');
+
+run('binning a session writes no calendar mark', () => {
+  const weekStart = seed();
+  const friday = addDaysISO(weekStart, 4);
+  assert(dayOn(weekStart, friday)?.workout, 'the seed no longer has a session on G-1');
+  assert(Object.keys(marks()).length === 0, 'the seed already carries marks');
+
+  const result = commit(weekStart, { kind: 'remove_session', date: friday });
+  assert(result.ok, `the bin failed: ${result.message}`);
+
+  assert(marks()[friday] === undefined,
+    `binning wrote a calendar mark: ${JSON.stringify(marks())}. "No session here `
+    + 'today" is not "this is a rest day".');
+  assert(Object.keys(marks()).length === 0,
+    `the bin wrote calendar facts: ${JSON.stringify(marks())}`);
+});
 
 run('the day is still empty afterwards — the bin still bins', () => {
   // Non-vacuity: the fix removes a calendar claim, not the deletion itself.

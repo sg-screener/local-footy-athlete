@@ -46,6 +46,43 @@ export function applyUserRemovalConstraintsToWeek(args: {
     if (constraint.targetDate >= start && constraint.targetDate <= endISO) {
       const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
+      if (!constraint.remainingWorkout && constraint.wholeDayRestOwned) {
+        // THE ATHLETE EMPTIED THIS DAY, AND THAT IS A DECISION TOO.
+        //
+        // Binning used to write `markedDays[date] = 'rest'`, and the day stayed
+        // empty because a CALENDAR mark outranks every deriver. Sam ruled that
+        // out — a deletion door does not speak for the calendar — and removing
+        // the mark alone put the derived G-1 Gunshow straight back onto the day
+        // the athlete had just cleared.
+        //
+        // So the emptiness is owned exactly as placed content is: a canonical
+        // rest stub carrying the placement stamp. `resolverMayDisplace` reads
+        // it, every deriver already asks that question, and the day renders
+        // empty as before — without a standing instruction to the planner that
+        // nothing the athlete can reach could take back.
+        workouts.push({
+          ...clone(constraint.originalWorkout),
+          id: `athlete-rest:${constraint.id}`,
+          planEntryId: undefined,
+          dayOfWeek,
+          name: 'Rest',
+          description: '',
+          durationMinutes: 0,
+          intensity: 'Low',
+          workoutType: 'Rest',
+          sessionTier: 'recovery',
+          exercises: [],
+          conditioningBlock: undefined,
+          speedBlock: undefined,
+          strengthIntent: undefined,
+          strengthPatternContributions: undefined,
+          hasCombinedConditioning: false,
+          athletePlacement: athletePlacementFor({
+            constraintId: constraint.id,
+            placedDate: constraint.targetDate,
+          }),
+        } as unknown as Workout);
+      }
       if (constraint.remainingWorkout) {
         // Sam's ruling (2026-07-30, #4): ownership is stamped here for EVERY
         // athlete door, not just Move. A swap's replacement, an add's new

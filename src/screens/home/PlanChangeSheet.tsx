@@ -24,8 +24,9 @@ import {
 } from '../../utils/programControlActions';
 import { riskReasons } from '../../utils/planChangeRefusalCopy';
 import {
-  G1_LANDING_ROUTES,
+  G1_LANDING_BACK_ROW,
   G1_LANDING_WARNING,
+  g1LandingRoutesFor,
   type G1LandingAskContext,
 } from '../../rules/g1LandingAsk';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
@@ -761,7 +762,7 @@ export function PlanChangeSheet({
           <Text style={styles.confirmText}>
             {G1_LANDING_WARNING.ask.body(step.context)}
           </Text>
-          {G1_LANDING_ROUTES.map((route) => (
+          {g1LandingRoutesFor(step.context).map((route) => (
             <MenuOption
               key={route.id}
               label={route.label(step.context)}
@@ -791,7 +792,14 @@ export function PlanChangeSheet({
               }}
             />
           ))}
-          <BackRow onPress={() => setStep(step.backStep)} />
+          {/* Sam signed this label (2026-07-30): the back row says what it
+              DOES. "Back" on a warning reads as "cancel", and what it actually
+              does is leave the day the way the day was built. */}
+          <MenuOption
+            label={G1_LANDING_BACK_ROW.label(step.context)}
+            testID="g1-route-back"
+            onPress={() => setStep(step.backStep)}
+          />
         </View>
       )}
 

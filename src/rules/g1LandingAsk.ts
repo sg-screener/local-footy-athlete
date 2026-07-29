@@ -144,6 +144,41 @@ function sourceStaysClause(context: G1LandingAskContext): string {
     : '';
 }
 
+/**
+ * Sam's fourth route, signed 2026-07-30. An athlete adding work the day before
+ * a game should be offered the session that day was built for — the menu had
+ * three ways to place THEIR choice and never offered the day's own.
+ *
+ * Only on an EMPTY G-1: when the day already holds something, route (a) keeps
+ * it, and offering both would be two names for one outcome.
+ */
+export function g1LandingRoutesFor(
+  context: G1LandingAskContext,
+): readonly G1LandingRoute[] {
+  return context.keptSessionName
+    ? G1_LANDING_ROUTES
+    : [G1_LANDING_ROUTES[0]!, GUNSHOW_ROUTE, ...G1_LANDING_ROUTES.slice(1)];
+}
+
+const GUNSHOW_ROUTE: G1LandingRoute = {
+  id: 'take_the_gunshow',
+  label: (context) => `Keep ${context.g1DayName}'s Gunshow`,
+  detail: () =>
+    'light upper-body pump, what the day before a game is built for.',
+  commits: true,
+  requiresSecondWarning: false,
+};
+
+/**
+ * The back affordance, signed by Sam 2026-07-30. Labelled for what it does: on
+ * a warning screen "Back" reads as "cancel", and what leaving actually does is
+ * leave the day the way the day was built.
+ */
+export const G1_LANDING_BACK_ROW = {
+  label: (context: G1LandingAskContext): string =>
+    `Go back — leave ${context.g1DayName} free`,
+} as const;
+
 export const G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
   {
     id: 'keep_the_day',
@@ -247,6 +282,12 @@ export function isAlreadyLightForG1(workout: Workout | null | undefined): boolea
   return false;
 }
 
+/** Row identity for "did this route change anything?" — names and doses. */
+function rowIdentities(workout: Workout): string[] {
+  return workout.exercises.map((row) =>
+    `${row.exercise?.name ?? row.exerciseId}:${row.prescribedSets}`);
+}
+
 function accessoryRows(workout: Workout): WorkoutExercise[] {
   return workout.exercises.filter((exercise) =>
     !isConditioningExerciseRow(exercise) && isAccessoryStrengthRow(exercise));
@@ -280,9 +321,54 @@ export function placeSessionForRoute(args: {
   profile: OnboardingData | null | undefined;
 }): Workout | null {
   if (args.route === 'keep_the_day') return null;
+  if (args.route === 'take_the_gunshow') {
+    // The day's own session, in the athlete's slot. Same identity rule as every
+    // other committing route: their session moved, carrying what they chose.
+    const pump = buildDerivedSession(
+      'arms_pump', args.targetDate, args.landingWorkout.microcycleId,
+      'Pre-game day', args.athlete,
+    );
+    return {
+      ...args.landingWorkout,
+      name: pump.name,
+      description: pump.description,
+      durationMinutes: pump.durationMinutes,
+      intensity: pump.intensity,
+      workoutType: pump.workoutType,
+      sessionTier: pump.sessionTier,
+      exercises: pump.exercises.map((exercise, index) => ({
+        ...exercise,
+        workoutId: args.landingWorkout.id,
+        exerciseOrder: index + 1,
+      })),
+      strengthIntent: undefined,
+      strengthPatternContributions: undefined,
+      hasCombinedConditioning: false,
+      conditioningBlock: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+    };
+  }
   const placed = args.route === 'accessories_only'
     ? accessoriesOnlySession(args)
     : deloadedSession(args);
+  // A ROUTE THAT CHANGES NOTHING IS NOT AN ANSWER (Sam, 2026-07-30, ruling 4).
+  //
+  // "Accessories only" over a registry strength template lands the template
+  // unchanged, because every one of its rows classifies as an accessory:
+  // `isMainStrengthRow` asks the pool registry for an anchor role and template
+  // rows are not pool slots. So the athlete asks for the light version and is
+  // handed the whole session — which is what Sam reported, twice, in two
+  // different shapes.
+  //
+  // That is 5D.4's classifier (the template's own structure is the authored
+  // truth, not a name lookup). Until it lands, the route refuses rather than
+  // pretending: same containment as the empty-result case below, and it
+  // disappears the moment the classifier can tell the rows apart.
+  if (args.route === 'accessories_only' &&
+    JSON.stringify(rowIdentities(placed)) === JSON.stringify(rowIdentities(args.landingWorkout))) {
+    return null;
+  }
   // A ROUTE IS A SMALLER SESSION, NEVER NO SESSION. Returning an empty workout
   // here would publish a day that renders as rest while the sheet said "Done",
   // and the athlete would have picked a route in order to be given nothing.

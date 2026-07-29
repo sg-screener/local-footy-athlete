@@ -51,10 +51,12 @@ import {
 } from './coachRevisionOverrideWriter';
 import {
   materializeCanonicalPlanChangeCandidate,
+  stackSessionOntoTeamAnchor,
   type CanonicalPlanChangeCandidateInput,
   type CanonicalPlanChangeCandidateResult,
 } from './canonicalPlanChangeCandidateMaterializer';
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
+import { getTeamTrainingWorkoutState } from './teamTraining';
 import { liveAthleteContext } from './liveAthleteContext';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import {
@@ -476,10 +478,13 @@ function moveOptionsForDay(args: {
   });
   if (!args.snapshot.workout) return refuse('no_session');
 
+  // A team night IS a destination (Sam's doubling law, 2026-07-30): the session
+  // lands beside the anchor as a combined day. Only game day is excluded.
   const candidates = args.visibleWeek.filter((candidate) =>
     candidate.date !== args.date &&
     isWithinEditHorizon(candidate.date, args.todayISO) &&
-    !hasProtectedAnchors(snapshotProjectedDay(candidate)));
+    !protectedAnchorsForDaySnapshot(snapshotProjectedDay(candidate))
+      .some((anchor) => anchor.kind === 'game'));
   const destinationsFor = (scope: PlanChangeMoveScopeId): PlanChangeMoveDestination[] =>
     candidates
       .map((candidate) => ({
@@ -1168,6 +1173,18 @@ function athleteMoveInput(args: {
       remainingWorkout: split.remainingWorkout,
     };
   }
+  // A team night absorbs the arriving session rather than trading places with
+  // it (Sam's doubling law). The anchor stays; the day becomes combined.
+  const targetWorkout = args.visibleWeek.find((day) =>
+    day.date === args.change.toDate)?.workout ?? null;
+  const targetHoldsTeamAnchor = !!targetWorkout &&
+    getTeamTrainingWorkoutState(targetWorkout).hasTeamTraining;
+  const combinedOntoAnchor = targetHoldsTeamAnchor && targetWorkout
+    ? stackSessionOntoTeamAnchor({
+      anchorDay: targetWorkout,
+      addition: placedWorkout ?? componentSplit?.movedWorkout ?? sourceWorkout,
+    })
+    : null;
   return {
     sourceDate: args.change.fromDate,
     targetDate: args.change.toDate,
@@ -1182,9 +1199,12 @@ function athleteMoveInput(args: {
       day.date === args.change.toDate)?.workout ?? null,
     scope: 'whole_session',
     componentSplit,
-    placedSession: route && placedWorkout
-      ? { route, workout: placedWorkout }
-      : null,
+    placedSession: combinedOntoAnchor
+      ? { ...(route ? { route } : {}), workout: combinedOntoAnchor }
+      : route && placedWorkout
+        ? { route, workout: placedWorkout }
+        : null,
+    placedSessionAbsorbsTarget: !!combinedOntoAnchor,
   };
 }
 
@@ -1490,15 +1510,27 @@ export function resolveAthleteMutation(args: {
     // A protected anchor on the SOURCE day blocks a whole-day move, because the
     // anchor would travel with it. It says nothing about the gym session beside
     // it — that is the session-scoped move (Sam, 2026-07-30), and refusing it
-    // here is what produced the empty picker. A destination anchor still blocks
-    // everything: nothing may land on a team night or a game day.
+    // here is what produced the empty picker.
+    //
+    // THE DESTINATION IS DIFFERENT, AND THE OLD RULE HERE WAS THE DEFECT.
+    // "Nothing may land on a team night" was never a law — Sam's doubling law
+    // (2026-07-30) says a session moved onto a team night lands as a COMBINED
+    // day, which is the exact shape generation itself produces ("Team Training
+    // + Upper Push"): one hard day, two sessions. His re-test hit the old rule
+    // as a generic "nothing on your plan changed, try again" — advice that
+    // could not work, over a move that should simply have happened.
+    //
+    // Game day stays locked, and every other refusal on such a move belongs to
+    // a law that actually bites — the hard-day budget, the G-1 ask — each with
+    // its own honest sentence.
     const moveScope = change.scope ?? 'whole_day';
-    if (
-      (moveScope === 'whole_day' &&
-        protectedAnchorsForDaySnapshot(snapshotProjectedDay(sourceDay)).length > 0) ||
-      protectedAnchorsForDaySnapshot(snapshotProjectedDay(targetDay)).length > 0
-    ) {
+    if (moveScope === 'whole_day' &&
+      protectedAnchorsForDaySnapshot(snapshotProjectedDay(sourceDay)).length > 0) {
       return { ok: false, error: 'protected_anchor_day' };
+    }
+    if (protectedAnchorsForDaySnapshot(snapshotProjectedDay(targetDay))
+      .some((anchor) => anchor.kind === 'game')) {
+      return { ok: false, error: 'protected_game_day' };
     }
     // Scoped destinations are free days only (see moveOptionsForDay): trading a
     // component against another day's whole session has no defined meaning.

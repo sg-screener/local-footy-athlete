@@ -102,6 +102,26 @@ function teamTrainingAnchorContainer(source: Workout): Workout {
   } as Workout;
 }
 
+/**
+ * Stack a session onto a day that carries a team-training anchor, keeping the
+ * anchor where it is.
+ *
+ * Sam's doubling law (2026-07-30): a session moved onto a team night lands as a
+ * COMBINED day — the same shape generation produces, and the same shape a swap
+ * already builds when it replaces the gym half of a team day. The move door had
+ * no way to say that, so it replaced the day and took the anchor with it.
+ */
+export function stackSessionOntoTeamAnchor(args: {
+  anchorDay: Workout;
+  addition: Workout;
+}): Workout {
+  return stackTemplate({
+    base: teamTrainingAnchorContainer(args.anchorDay),
+    template: args.addition,
+    preservesTeamTraining: true,
+  });
+}
+
 function combinedWorkoutType(args: {
   base: Workout;
   template: Workout;

@@ -193,3 +193,57 @@ divergence between the two doors — and the locked day is already fixed above.
   is told "nothing on your plan changed. Try again", which is advice that cannot
   work. Needs one signed string naming the real reason, plus the picker
   excluding anchor destinations.
+
+
+---
+
+# Closed — Sam's five rulings, 2026-07-30
+
+**(1) Relocation is disclosed, not refused.** The coach door required that no
+other day move and rolled the whole removal back when one did — while the tap
+door applied the same transaction. A removal that authorises equivalent-exposure
+relocation is SUPPOSED to move other days; the bin door has disclosed that in
+words since the repair-disclosure law. Refusing over disclosed rebalancing was
+the defect. The verification that remains is the one that matters — the TARGET
+changed — and every other day that moved is named in the reply, in the bin
+door's own sentence. Disclosed set equals moved set.
+
+**The mark removal then shipped.** It had been reverted for exactly the
+divergence ruling (1) closes. A deletion door now writes no calendar mark, and
+the emptiness is owned the way placed content is: a canonical rest stub carrying
+the placement stamp, which every deriver already asks about. Three assertions in
+`athleteSessionDeletionTests` pinned the MARK as the ownership mechanism and were
+re-pointed at the new owner rather than deleted.
+
+**(2) The fourth route, signed.** On an empty G-1 the menu now offers the day's
+own session — *"Keep Friday's Gunshow — light upper-body pump, what the day
+before a game is built for."* — and the back row says what it does: *"Go back —
+leave Friday free."* Both filed in the design document and pinned both
+directions by the copy gate. Offered ONLY on an empty day: where the day holds
+something, route (a) already keeps it, and two names for one outcome is worse
+than one.
+
+**(3) The doubling law — the move refusal REVERSED, not reworded.** Moving a
+session onto a team-training day is legal and lands as a COMBINED day, the exact
+shape generation produces. The commit door refusing it was the defect, and the
+picker was right to offer those days. Game day stays locked. Three things had to
+change together: the destination check now blocks only game anchors, the picker
+offers team nights, and the move ABSORBS — the anchor stays put, the arriving
+session stacks beside it, and nothing travels back to the source day. The
+conservation post-condition follows the combined identity, the mirror image of
+how a scoped move conserves its two halves.
+
+I had proposed a string for the old refusal. It is not shipped: the refusal it
+would have explained should never happen.
+
+**(4) Route (b) refuses rather than no-ops.** Over a registry strength template
+it stripped nothing — every row classifies as an accessory because
+`isMainStrengthRow` asks the pool registry for an anchor role and template rows
+are not pool slots. The athlete asked for the light version and got the whole
+session. Same classifier as **5D.4**, same root. Until it lands the route
+refuses honestly; `g1LandingAskFlowTests` 23 asserts the template still has no
+main lift, so it goes red when 5D.4 fixes the classifier — the signal to delete
+the containment. 23b proves the route still works on a real session, which has
+pool anchors.
+
+**(5) The ring-buffer priority fix** shipped as approved.

@@ -202,6 +202,20 @@ off another day.
 >   session is dropped, not moved.
 > - **Accessories only** — Light accessory work before the game.
 
+**Route offered only on an EMPTY G-1 — the day's own session (Sam, 2026-07-30).**
+An athlete adding work the day before a game should be offered the session that
+day was built for; the menu had three ways to place *their* choice and never
+offered the day's own. Not shown on an occupied day, where route (a) already
+keeps what is there.
+
+> - **Keep Friday's Gunshow** — light upper-body pump, what the day before a
+>   game is built for.
+
+**The back row.** On a warning screen "Back" reads as "cancel"; what leaving
+actually does is leave the day the way the day was built.
+
+> - **Go back — leave Friday free**
+
 **Warning 2 — before route (c) applies**
 
 > **This still costs you Saturday.**

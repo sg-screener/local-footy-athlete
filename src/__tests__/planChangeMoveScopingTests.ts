@@ -230,6 +230,73 @@ run('the gym session on a combined day IS movable, and team training is not', ()
     'team training was offered as movable; it is an anchor');
 });
 
+// ── Sam's doubling law (2026-07-30): a team night is a legal destination ──
+//
+// His re-test, step 6: moving a session onto Thursday failed with a generic
+// "nothing on your plan changed. Try again" — advice that could never work,
+// because the commit door refused every anchored destination outright.
+//
+// The ruling REVERSES that. Moving a session onto a team-training day is legal
+// and lands as a COMBINED day — the exact shape generation itself produces
+// ("Team Training + Upper Push"): one hard day, two sessions, per the doubling
+// law. Refusals stay only where a real law bites — hard-day budget, the G-1
+// ask, game day locked — each with its own honest copy, never a blanket "not
+// onto team training".
+
+run('a team night is offered as a move destination', () => {
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const { date: teamDay } = combinedDay(weekStart);
+  const move = optionsFor(weekStart, monday).move;
+  assert(!move.refusal, `a plain day refused all moves: ${move.refusal?.message ?? ''}`);
+
+  const offered = move.scopes.flatMap((scope) =>
+    scope.destinations.map((destination) => destination.date));
+  assert(offered.includes(teamDay),
+    `the team night ${teamDay} is not offered as a destination: ${JSON.stringify(offered)}`);
+});
+
+run('game day is still never a destination', () => {
+  // Non-vacuity, and the boundary of the ruling: the doubling law is about
+  // training days. Game day stays locked.
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const saturday = addDaysISO(weekStart, 5);
+  const move = optionsFor(weekStart, monday).move;
+  const offered = move.scopes.flatMap((scope) =>
+    scope.destinations.map((destination) => destination.date));
+  assert(!offered.includes(saturday),
+    'game day was offered as a move destination');
+});
+
+run('moving onto a team night lands a combined day, keeping the anchor', () => {
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const { date: teamDay } = combinedDay(weekStart);
+  const source = visibleWeek(weekStart).find((day) => day.date === monday)?.workout;
+  assert(source, 'seed no longer has a Monday session to move');
+
+  const result = quiet(() => applyPlanChange({
+    change: { kind: 'move_session', fromDate: monday, toDate: teamDay },
+    visibleWeek: visibleWeek(weekStart),
+    todayISO: weekStart,
+    setManualOverride: (date, workout, context) =>
+      useProgramStore.getState().setManualOverride(date, workout, context),
+  }));
+  assert(result.ok,
+    `the doubling law's own shape was refused: "${result.message}" `
+    + `${JSON.stringify(result.rejected)}`);
+
+  const landed = visibleWeek(weekStart).find((day) => day.date === teamDay)?.workout;
+  assert(landed, 'the team night is empty after the move');
+  assert(/team training/i.test(landed.name),
+    `the move took the team anchor off the day: "${landed.name}"`);
+  assert(landed.name.length > 'Team Training'.length,
+    `the day names only the anchor, not the session that landed: "${landed.name}"`);
+  assert(!visibleWeek(weekStart).find((day) => day.date === monday)?.workout,
+    'the source day was not vacated');
+});
+
 run('a plain day still offers the whole-day move it always did', () => {
   const weekStart = seed();
   const monday = addDaysISO(weekStart, 0);
