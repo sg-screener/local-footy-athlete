@@ -56,6 +56,26 @@ export function isAthletePlacedSession(
   return workout?.athletePlacement?.authorship === 'athlete';
 }
 
+/**
+ * May the resolver replace what is on this day with content of its own?
+ *
+ * THE ONE PREDICATE. The resolver builds derived sessions at six sites, and
+ * for a long time exactly one of them — the G-1 branch — knew about the stamp,
+ * because that is where the device found the defect. The other five each had
+ * their own opinion about what may be replaced (a name-and-tier heuristic, a
+ * source check, or nothing at all), so the same athlete-placed session survived
+ * Friday and was silently eaten on Sunday.
+ *
+ * Every deriver now asks this and nothing else. `resolverDisplacementSweepTests`
+ * is the table: one row per site, both directions, and a new site fails the
+ * suite until it has answered the question too.
+ */
+export function resolverMayDisplace(
+  workout: Workout | null | undefined,
+): boolean {
+  return !isAthletePlacedSession(workout);
+}
+
 /** The marker for a session the athlete moved onto `placedDate`. */
 export function athletePlacementFor(args: {
   constraintId: string;

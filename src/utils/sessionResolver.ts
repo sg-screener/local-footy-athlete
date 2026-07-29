@@ -79,7 +79,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
-import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 
@@ -364,6 +364,19 @@ export function canReplaceSession(
   date: string,
 ): boolean {
   if (!workout) return true;
+
+  // The athlete's own placement outranks every replacement this guard governs,
+  // and it is asked FIRST because it does not depend on which pass happened to
+  // put the session on the day — a placed session can render from any source.
+  if (!resolverMayDisplace(workout)) {
+    if (IS_DEV) {
+      logger.debug(
+        `[resolver] BLOCKED replacement of athlete-placed "${workout.name}" on ${date}`
+        + ` — context: ${context}`
+      );
+    }
+    return false;
+  }
 
   // Only protect template (engine-planned) and manual (coach-authored) sessions
   if (source !== 'template' && source !== 'manual') return true;
@@ -666,7 +679,13 @@ function applyGameProximity(
       // GUARD: never replace protected core exposure for virtual/recurring
       // proximity. Explicit calendar game/practice-match marks are different:
       // Bible G+1 wins, so the core session is dropped rather than made up.
-      if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate)) {
+      //
+      // AND never replace what the athlete put here. Sam's law is not about
+      // which side of the fixture the day falls on — the day after a game was
+      // eating athlete-placed sessions for exactly as long as the day before
+      // was, it just had no device report against it.
+      if (!resolverMayDisplace(templateWorkout) ||
+        (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate))) {
         if (IS_DEV) {
           logger.debug(
             `[resolver] BLOCKED G+1 recovery replacing protected core "${templateWorkout!.name}" on ${date}`
@@ -734,7 +753,7 @@ function applyGameProximity(
     // Required exposure displaced from G-1 is not lost — §18 owns the week's
     // counts and relocates it, which is the pipeline doing its job rather than
     // a render-time heuristic pre-empting it.
-    if (isAthletePlacedSession(templateWorkout)) {
+    if (!resolverMayDisplace(templateWorkout)) {
       return null;
     }
     // Everything the athlete did not place → Gunshow (derivedType 'arms_pump')
@@ -1026,8 +1045,13 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // AI-generated recovery workouts lack structured prescription fields (prescriptionType,
   // perSide, restSeconds). Replace them with deterministic pool-built sessions so every
   // recovery exercise has proper sets/duration/reps for the structured renderer.
+  // A recovery session the ATHLETE placed is not an AI-generated one missing
+  // its prescription fields — it is the session they chose, and rebuilding it
+  // from the pool replaces their content with the app's while keeping the
+  // shape close enough that nobody notices.
   if (
     templateWorkout &&
+    resolverMayDisplace(templateWorkout) &&
     (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery')
   ) {
     return buildDay(

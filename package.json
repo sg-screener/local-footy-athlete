@@ -250,7 +250,8 @@
     "test:g1-move-ask-flow": "TZ=Australia/Melbourne sucrase-node src/__tests__/g1MoveAskFlowTests.ts",
     "test:phase-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseOwnershipTests.ts",
     "test:phase-shift-atomicity": "TZ=Australia/Melbourne sucrase-node src/__tests__/phaseShiftAtomicityTests.ts",
-    "test:phase-skew-repair": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseSkewRepairTests.ts"
+    "test:phase-skew-repair": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseSkewRepairTests.ts",
+    "test:displacement-sweep": "TZ=Australia/Melbourne sucrase-node src/__tests__/resolverDisplacementSweepTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
