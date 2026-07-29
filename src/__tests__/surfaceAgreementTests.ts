@@ -93,6 +93,7 @@ import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { composeDayDetail } from '../utils/dayDetailComposition';
+import { projectParts } from '../rules/projectVisibleWeek';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -229,6 +230,19 @@ function detailStory(workout: Workout | null | undefined): {
   return { title: workout?.name ?? null, parts };
 }
 
+/**
+ * The CANONICAL parts, from `project()` — the one projection.
+ *
+ * `projectParts` rather than `project` because these laws are structural and must
+ * not wait on Sam's copy rulings; it is the same derivation with the copy lookup
+ * not yet applied, not a second one.
+ */
+function canonicalPartKinds(week: string, date: string): string[] {
+  const projected = projectParts({ week: projectedWeek(week), weekStart: week });
+  const day = projected.days.find((candidate) => candidate.date === date);
+  return (day?.parts ?? []).map((part) => part.kind);
+}
+
 /** L-P1 + L-P3 for one day, against the canonical projection. */
 function assertSurfacesAgree(date: string, context: string): void {
   const week = mondayFor(date);
@@ -252,10 +266,9 @@ function assertSurfacesAgree(date: string, context: string): void {
     + 'a surface that shows a different list has composed its own.');
 
   // THE THIRD SURFACE — the detail screen's own composition, now callable.
+  // Compared against `project()`'s part kinds, which is the one canonical answer.
   const detail = detailStory(canonical.workout);
-  const canonicalKinds = canonicalParts
-    .filter((part) => part !== 'recovery_addon')
-    .sort();
+  const canonicalKinds = Array.from(new Set(canonicalPartKinds(week, date))).sort();
   const detailKinds = Array.from(new Set(detail.parts)).sort();
   assert(JSON.stringify(detailKinds) === JSON.stringify(canonicalKinds),
     `${context} — L-P3: the DETAIL screen and the projection disagree about what is `
