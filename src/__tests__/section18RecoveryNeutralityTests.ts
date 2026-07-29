@@ -136,7 +136,7 @@ function evaluate(workouts: readonly Workout[], contract: unknown) {
  */
 function loadFingerprint(workouts: readonly Workout[], contract: unknown): string {
   const evaluation = evaluate(workouts, contract);
-  const ledger = evaluation.ledger as Record<string, unknown>;
+  const ledger = evaluation.ledger as unknown as Record<string, unknown>;
   return JSON.stringify({
     mainStrength: ledger.mainStrength,
     strengthPatterns: ledger.strengthPatterns,
@@ -153,7 +153,7 @@ function loadFingerprint(workouts: readonly Workout[], contract: unknown): strin
 
 /** The rest interaction, pinned exactly as it behaves today. */
 function restFingerprint(workouts: readonly Workout[], contract: unknown): string {
-  const ledger = evaluate(workouts, contract).ledger as Record<string, unknown>;
+  const ledger = evaluate(workouts, contract).ledger as unknown as Record<string, unknown>;
   return JSON.stringify((ledger.restStress as Record<string, unknown>));
 }
 
