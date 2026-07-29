@@ -1,5 +1,5 @@
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
-import type { G1MoveRouteId } from '../utils/planChangeTypes';
+import type { G1LandingRouteId } from '../utils/planChangeTypes';
 import {
   applyConditioningDeloadToExercises,
   applyStrengthDeloadToExercises,
@@ -10,7 +10,7 @@ import {
 import { buildDerivedSession, type AthleteContext } from '../utils/sessionBuilder';
 
 /**
- * THE G-1 MOVE ASK — Sam's ruling, 2026-07-28/29.
+ * THE G-1 LANDING ASK — Sam's ruling, 2026-07-28/29, generalised 2026-07-30.
  * Design: docs/G1_MOVE_ASK_FLOW_DESIGN_2026-07-29.md
  *
  * Generation never plans hard strength or conditioning on the day before a game.
@@ -19,49 +19,78 @@ import { buildDerivedSession, type AthleteContext } from '../utils/sessionBuilde
  * relocate it. It warns once, offers three routes, and whichever the athlete
  * picks lands on the day they chose.
  *
+ * IT IS THE DESTINATION THAT ASKS, NOT THE DOOR. This began as the MOVE ask,
+ * and a swap onto the same day therefore reported "Done." and changed nothing —
+ * the ask never ran, so the routeless full session went in and the resolver ate
+ * it. What raises the ask is the day being G-1 and the content landing on it
+ * being something that day is not built for. Which door the athlete used is not
+ * information about that. Move, Swap and Add now funnel through
+ * `resolveG1LandingAsk` once, in `resolveAthleteMutation`.
+ *
  * WHY A TYPED LIST rather than three branches: a fourth route — a pre-game
  * PRIMER, short sharp activation over Sam's authored power pool — is ruled in
  * principle and parked pending his authored prescription. Adding it must be one
- * entry in `G1_MOVE_ROUTES` plus one case in `placeSessionForRoute`, not a
+ * entry in `G1_LANDING_ROUTES` plus one case in `placeSessionForRoute`, not a
  * fourth branch threaded through the producer and the sheet.
  *
  * COPY PROVENANCE: every athlete-facing string here was authored and signed off
- * by Sam on 2026-07-29. `g1MoveAskCopyTests` binds them to the design document
+ * by Sam on 2026-07-29. `g1LandingAskFlowTests` binds them to the design document
  * in both directions, so neither a reworded warning nor an unfiled one ships.
  * Do not edit a string here without Sam's sign-off and the matching doc edit.
  */
 
-export type { G1MoveRouteId } from '../utils/planChangeTypes';
+export type { G1LandingRouteId } from '../utils/planChangeTypes';
 
-export interface G1MoveRoute {
-  id: G1MoveRouteId;
+export interface G1LandingRoute {
+  id: G1LandingRouteId;
   /**
-   * The option title. A function of the move because Sam's signed copy NAMES
-   * the day — "Keep Friday's Gunshow", not "Keep the Gunshow". A day-blind
-   * label was the first thing the copy-equality test caught.
+   * The option title. A function of the context because Sam's signed copy NAMES
+   * the day and what is on it — "Keep Friday's Gunshow", not "Keep the
+   * Gunshow". A day-blind label was the first thing the copy-equality test
+   * caught; a CONTENT-blind one was the second, once swap and add started
+   * raising the ask over days that hold a recovery session or nothing at all.
    */
-  label: (context: G1MoveContext) => string;
+  label: (context: G1LandingAskContext) => string;
   /**
-   * The sub-line under the label. A function of the move, because two of the
+   * The sub-line under the label. A function of the context, because two of the
    * three routes have to name a real day: (a) tells the athlete their session
    * stays put, and it is not honest to say that without saying where.
    */
-  detail: (context: G1MoveContext) => string;
+  detail: (context: G1LandingAskContext) => string;
   /** Does picking this route commit a transaction? Only (a) does not. */
   commits: boolean;
   /** Does this route need the second, stronger warning first? */
   requiresSecondWarning: boolean;
 }
 
-export interface G1MoveContext {
-  /** The day the athlete is moving the session FROM, e.g. "Monday". */
-  sourceDayName: string;
-  /** The G-1 day the session is being moved TO, e.g. "Friday". */
+export interface G1LandingAskContext {
+  /**
+   * The day the athlete is moving the session FROM, e.g. "Monday", or NULL for
+   * a door that has no source day. A swap and an add take content from the
+   * registry, not from another day, so Sam's "Your Monday session stays where
+   * it is" clause has nothing to name and does not render. Dropping the clause
+   * keeps the rest of his signed sentence exactly as signed; inventing a
+   * replacement for it would not.
+   */
+  sourceDayName: string | null;
+  /** The G-1 day the session is being placed ON, e.g. "Friday". */
   g1DayName: string;
   /** The fixture day the warning is about, e.g. "Saturday". */
   gameDayName: string;
   /**
-   * True when the moved session has no accessory work to keep, so route (b)
+   * What G-1 holds today, and therefore what route (a) keeps by doing nothing —
+   * "Gunshow" for the ordinary in-season week, a recovery session's name when
+   * the day holds one, NULL when the day is empty.
+   *
+   * Route (a)'s label was the literal string "Keep Friday's Gunshow" while only
+   * Move could raise the ask, because a move onto G-1 always landed on the
+   * derived Gunshow. Once swap and add ask too, that label is a lie on any day
+   * that holds something else. Sam signed the PATTERN on 2026-07-30 rather than
+   * the four strings: name what the day would keep, or say the day is left free.
+   */
+  keptSessionName: string | null;
+  /**
+   * True when the landing session has no accessory work to keep, so route (b)
    * yields the derived pump session rather than a stripped-down version of
    * their own session. This changes only the sub-line, never the menu shape.
    */
@@ -83,14 +112,14 @@ export function dayNameForDate(dateISO: string): string {
  * blunter than the first — a deloaded session is still a session the day before
  * a game, and the athlete has already chosen to ignore one warning to get here.
  */
-export const G1_MOVE_WARNING = {
+export const G1_LANDING_WARNING = {
   ask: {
     headline: 'Big session the day before your game.',
-    body: (context: G1MoveContext): string =>
+    body: (context: G1LandingAskContext): string =>
       `Train hard ${context.g1DayName} and you'll feel it ${context.gameDayName}. Pick one:`,
   },
   deloadConfirm: {
-    headline: (context: G1MoveContext): string =>
+    headline: (context: G1LandingAskContext): string =>
       `This still costs you ${context.gameDayName}.`,
     body:
       'Half the sets is easier, not light. The day before a game is built for a '
@@ -105,13 +134,25 @@ export const G1_MOVE_WARNING = {
  * and when it varies the sub-line says so rather than dressing the pump session
  * up as theirs.
  */
-export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
+/**
+ * "Your Monday session stays where it is." — Sam's clause, and the ONE place
+ * the source day is spoken about. It renders only when there is a source day.
+ */
+function sourceStaysClause(context: G1LandingAskContext): string {
+  return context.sourceDayName
+    ? ` Your ${context.sourceDayName} session stays where it is.`
+    : '';
+}
+
+export const G1_LANDING_ROUTES: readonly G1LandingRoute[] = [
   {
-    id: 'keep_gunshow',
-    label: (context) => `Keep ${context.g1DayName}'s Gunshow`,
-    detail: (context) =>
-      'Light upper-body pump, what the day before a game is built for. '
-      + `Your ${context.sourceDayName} session stays where it is.`,
+    id: 'keep_the_day',
+    label: (context) => context.keptSessionName
+      ? `Keep ${context.g1DayName}'s ${context.keptSessionName}`
+      : `Leave ${context.g1DayName} free`,
+    detail: (context) => (context.keptSessionName
+      ? 'what the day before a game is built for.'
+      : 'rest before the game.') + sourceStaysClause(context),
     commits: false,
     requiresSecondWarning: false,
   },
@@ -125,7 +166,9 @@ export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
       // that identity swap stays banned.
       // "Pump" is reserved for Gunshow's own description (Sam, 2026-07-29) so
       // route (a) and route (b) can never read as the same thing.
-      ? `Light accessory work before the game. Your ${context.sourceDayName} session is dropped, not moved.`
+      ? 'Light accessory work before the game.' + (context.sourceDayName
+          ? ` Your ${context.sourceDayName} session is dropped, not moved.`
+          : '')
       : 'Your session with the main lifts stripped out. Pump and prehab, nothing heavy.',
     commits: true,
     requiresSecondWarning: false,
@@ -139,8 +182,8 @@ export const G1_MOVE_ROUTES: readonly G1MoveRoute[] = [
   },
 ];
 
-export function g1MoveRoute(id: G1MoveRouteId): G1MoveRoute {
-  const route = G1_MOVE_ROUTES.find((candidate) => candidate.id === id);
+export function g1LandingRoute(id: G1LandingRouteId): G1LandingRoute {
+  const route = G1_LANDING_ROUTES.find((candidate) => candidate.id === id);
   if (!route) throw new Error(`Unknown G-1 move route: ${id}`);
   return route;
 }
@@ -148,6 +191,18 @@ export function g1MoveRoute(id: G1MoveRouteId): G1MoveRoute {
 /**
  * Is the athlete putting this session on the day before a fixture, and is it the
  * kind of session that needs the ask?
+ *
+ * THE FUNNEL. Every athlete door that can land content on a day calls this, and
+ * only this, through one site in `resolveAthleteMutation`. The arguments are
+ * deliberately about the DAY and the CONTENT, never about the door:
+ *
+ *   - `landingWorkout` is what would end up on G-1: the moved session for Move,
+ *     the registry template for Swap and Add.
+ *   - `existingWorkout` is what is on the day now, which is what route (a)
+ *     keeps by applying nothing. Null means the day is empty.
+ *   - `sourceDate` exists only for Move. Its absence is not a missing field —
+ *     it is the fact that a swap and an add take nothing off another day, and
+ *     the copy renders accordingly.
  *
  * "Needs the ask" is the same question the resolver's G-1 branch already
  * answers when it decides whether to displace: recovery work and empty rest
@@ -159,21 +214,23 @@ export function g1MoveRoute(id: G1MoveRouteId): G1MoveRoute {
  * of where the games are, explicit and virtual alike. It is passed in rather
  * than re-derived so there is exactly one answer to that question.
  */
-export function resolveG1MoveAsk(args: {
-  sourceDate: string;
+export function resolveG1LandingAsk(args: {
   targetDate: string;
-  sourceWorkout: Workout;
+  landingWorkout: Workout;
+  existingWorkout: Workout | null;
   gameDates: ReadonlySet<string>;
-}): G1MoveContext | null {
+  sourceDate?: string | null;
+}): G1LandingAskContext | null {
   const targetDate = args.targetDate.slice(0, 10);
   const dayAfterTarget = shiftISO(targetDate, 1);
   if (!args.gameDates.has(dayAfterTarget)) return null;
-  if (isAlreadyLightForG1(args.sourceWorkout)) return null;
+  if (isAlreadyLightForG1(args.landingWorkout)) return null;
   return {
-    sourceDayName: dayNameForDate(args.sourceDate),
+    sourceDayName: args.sourceDate ? dayNameForDate(args.sourceDate) : null,
     g1DayName: dayNameForDate(targetDate),
     gameDayName: dayNameForDate(dayAfterTarget),
-    accessoriesComeFromPumpSession: accessoryRows(args.sourceWorkout).length === 0,
+    keptSessionName: args.existingWorkout?.name ?? null,
+    accessoriesComeFromPumpSession: accessoryRows(args.landingWorkout).length === 0,
   };
 }
 
@@ -202,7 +259,9 @@ function shiftISO(dateISO: string, days: number): string {
 }
 
 /**
- * The session that actually lands on G-1 for a committing route.
+ * The session that actually lands on G-1 for a committing route. The input is
+ * the LANDING content — the moved session for Move, the registry template for
+ * Swap and Add — because the transformation is the same either way.
  *
  * IDENTITY IS PRESERVED. All three routes place the athlete's own session SLOT
  * — same `planEntryId`, same stable id — carrying the content they chose. That
@@ -211,18 +270,34 @@ function shiftISO(dateISO: string, days: number): string {
  * it did. What changed is what is inside it, which is exactly what the athlete
  * was asked and answered.
  *
- * Returns null for `keep_gunshow`, which commits nothing.
+ * Returns null for `keep_the_day`, which commits nothing.
  */
 export function placeSessionForRoute(args: {
-  route: G1MoveRouteId;
-  sourceWorkout: Workout;
+  route: G1LandingRouteId;
+  landingWorkout: Workout;
   targetDate: string;
   athlete: AthleteContext;
   profile: OnboardingData | null | undefined;
 }): Workout | null {
-  if (args.route === 'keep_gunshow') return null;
-  if (args.route === 'accessories_only') return accessoriesOnlySession(args);
-  return deloadedSession(args);
+  if (args.route === 'keep_the_day') return null;
+  const placed = args.route === 'accessories_only'
+    ? accessoriesOnlySession(args)
+    : deloadedSession(args);
+  // A ROUTE IS A SMALLER SESSION, NEVER NO SESSION. Returning an empty workout
+  // here would publish a day that renders as rest while the sheet said "Done",
+  // and the athlete would have picked a route in order to be given nothing.
+  //
+  // It is reachable: DELOAD_LAW's row-level `isConditioningExerciseRow` is a
+  // NAME regex, and the registry's own conditioning templates are named "Flush
+  // Out - 2min On / 1min Off" and "3 x 8min zone 2 Rower", which it does not
+  // match. Those rows are then classified as strength accessories, and the
+  // accessory trim deletes the only row in the session. The workout ITSELF
+  // knows better — `conditioningBlock.options[].exerciseIds` names those exact
+  // rows — so the fix is for the classification to read the structure the
+  // workout already carries rather than to widen a regex. That belongs to
+  // DELOAD_LAW's own unit and is written up for Sam; this boundary is what
+  // stops the wrong answer reaching a day in the meantime.
+  return placed.exercises.length > 0 ? placed : null;
 }
 
 /**
@@ -235,21 +310,21 @@ export function placeSessionForRoute(args: {
  * thing, never an easy version wearing their session's name.
  */
 function accessoriesOnlySession(args: {
-  sourceWorkout: Workout;
+  landingWorkout: Workout;
   targetDate: string;
   athlete: AthleteContext;
 }): Workout {
-  const kept = accessoryRows(args.sourceWorkout);
+  const kept = accessoryRows(args.landingWorkout);
   if (kept.length === 0) {
     const pump = buildDerivedSession(
       'arms_pump',
       args.targetDate,
-      args.sourceWorkout.microcycleId,
+      args.landingWorkout.microcycleId,
       'Pre-game day',
       args.athlete,
     );
     return {
-      ...args.sourceWorkout,
+      ...args.landingWorkout,
       name: pump.name,
       description: pump.description,
       durationMinutes: pump.durationMinutes,
@@ -258,7 +333,7 @@ function accessoriesOnlySession(args: {
       sessionTier: pump.sessionTier,
       exercises: pump.exercises.map((exercise, index) => ({
         ...exercise,
-        workoutId: args.sourceWorkout.id,
+        workoutId: args.landingWorkout.id,
         exerciseOrder: index + 1,
       })),
       // The moved session's strength contract does not survive its own removal.
@@ -271,7 +346,7 @@ function accessoriesOnlySession(args: {
     };
   }
   return {
-    ...args.sourceWorkout,
+    ...args.landingWorkout,
     intensity: 'Light',
     exercises: kept.map((exercise, index) => ({ ...exercise, exerciseOrder: index + 1 })),
     hasCombinedConditioning: false,
@@ -289,7 +364,7 @@ function accessoriesOnlySession(args: {
  * job and this must never grow a second opinion about it.
  */
 function deloadedSession(args: {
-  sourceWorkout: Workout;
+  landingWorkout: Workout;
   profile: OnboardingData | null | undefined;
 }): Workout {
   const policy = resolveDoorDeloadPolicy({
@@ -297,11 +372,11 @@ function deloadedSession(args: {
     seasonPhase: args.profile?.seasonPhase,
   })!;
   const strengthApplied = applyStrengthDeloadToExercises(
-    args.sourceWorkout.exercises,
+    args.landingWorkout.exercises,
     policy,
   );
   return {
-    ...args.sourceWorkout,
+    ...args.landingWorkout,
     intensity: 'Light',
     exercises: applyConditioningDeloadToExercises(strengthApplied, policy),
   };

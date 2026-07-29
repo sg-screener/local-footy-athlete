@@ -17,7 +17,7 @@
  *
  * WHY THIS SUITE ASSERTS THROUGH THE LIVE RESOLVER.
  *
- * `g1MoveAskFlowTests` asserts through `rebaseAcceptedEffectiveWeek` — the
+ * `g1LandingAskFlowTests` asserts through `rebaseAcceptedEffectiveWeek` — the
  * accepted-week projection. That projection does NOT run `applyGameProximity`
  * against live schedule state, so it cannot see the layer that ate the swap.
  * Every survival assertion here therefore reads `resolveWeekWithConditioning`,
@@ -52,6 +52,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { G1_LANDING_WARNING } from '../rules/g1LandingAsk';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -321,8 +322,23 @@ console.log('\n-- Athlete placement ownership --');
 
 // ── Ruling (4): every athlete door stamps at the one ingress ──────────────
 
+/**
+ * INVERTED, 2026-07-30. These six read "content the athlete put on G-1 survives
+ * the resolver", and they still do — but only AFTER the athlete has answered.
+ *
+ * The first version let a routeless swap and a routeless add land a full
+ * session on the day before a game and then checked that it survived. It did
+ * survive: the stamp worked. What it also did was put hard work on G-1 without
+ * a word, which is the thing Sam's ask exists to stop, and the suite was
+ * pinning it as correct behaviour. Each door now proves both halves:
+ *
+ *   ROUTELESS  → refused, in the ask's own words, with nothing applied.
+ *   ROUTED     → the athlete's content survives the live resolver.
+ *
+ * The routed half is the original assertion, unchanged in what it proves.
+ */
 for (const fixture of FIXTURE_KINDS) {
-  run(`SWAP onto G-1 survives the resolver (${fixture.name})`, () => {
+  run(`SWAP onto G-1 is refused until the athlete answers (${fixture.name})`, () => {
     const weekStart = seed();
     if (fixture.explicit) markExplicitFixture(weekStart);
     const friday = addDaysISO(weekStart, 4);
@@ -330,25 +346,43 @@ for (const fixture of FIXTURE_KINDS) {
     assert(before?.workout && isResolverOwnedDerivedSession(before.workout),
       `this seed no longer puts a derived filler on G-1: ${describe(before)}`);
 
+    const result = commit(weekStart, {
+      kind: 'swap_category', date: friday, category: 'conditioning_hard',
+    });
+    assert(!result.ok, `a routeless swap onto G-1 applied: "${result.message}"`);
+    assert(result.appliedDates.length === 0,
+      `the refused swap applied ${result.appliedDates.join(', ')}`);
+    assert(result.message.startsWith(G1_LANDING_WARNING.ask.headline),
+      `the refusal did not lead with the ask: "${result.message}"`);
+    assert(visibleFriday(weekStart)?.workout?.name === before.workout.name,
+      `G-1 changed despite the refusal: ${describe(visibleFriday(weekStart))}`);
+  });
+
+  run(`SWAP onto G-1 survives the resolver once routed (${fixture.name})`, () => {
+    const weekStart = seed();
+    if (fixture.explicit) markExplicitFixture(weekStart);
+    const friday = addDaysISO(weekStart, 4);
+
     // Conditioning, deliberately: it is NOT a protected core exposure, so only
     // the placement stamp can keep it. A strength swap would also be saved by
     // the protected-core guard and the assertion could pass for the wrong reason.
     const result = commit(weekStart, {
-      kind: 'swap_category', date: friday, category: 'conditioning_light',
+      kind: 'swap_category', date: friday, category: 'conditioning_hard',
+      g1Route: 'deloaded',
     });
     assert(result.ok, `swap refused: ${result.message}`);
 
     const after = visibleFriday(weekStart);
-    assert(after?.workout, `G-1 is empty after the swap: ${describe(after)}`);
+    assert(after?.workout, `G-1 is empty after the swap: ${describe(after)} / ${result.message}`);
     assert(!isResolverOwnedDerivedSession(after.workout),
       `the derived filler regenerated over the athlete's swap: ${describe(after)}`);
     assert(isAthletePlacedSession(after.workout),
       `the swapped session reached the visible week unstamped: ${describe(after)}`);
-    assert(/flush|aerobic|bike|row|ski|conditioning/i.test(after.workout.name),
+    assert(/flush|aerobic|bike|row|ski|conditioning|interval|sprint/i.test(after.workout.name),
       `G-1 holds ${describe(after)}, not the conditioning the athlete picked`);
   });
 
-  run(`ADD onto an empty G-1 survives the resolver (${fixture.name})`, () => {
+  run(`ADD onto an empty G-1 is refused until the athlete answers (${fixture.name})`, () => {
     const weekStart = seed();
     restStubOnFriday(weekStart);
     if (fixture.explicit) markExplicitFixture(weekStart);
@@ -357,9 +391,26 @@ for (const fixture of FIXTURE_KINDS) {
       `the rest stub did not leave G-1 empty: ${describe(visibleFriday(weekStart))}`);
 
     const result = commit(weekStart, {
-      kind: 'add_category', date: friday, category: 'conditioning_light',
+      kind: 'add_category', date: friday, category: 'conditioning_hard',
     });
-    assert(result.ok, `add refused: ${result.message}`);
+    assert(!result.ok, `a routeless add onto G-1 applied: "${result.message}"`);
+    assert(result.message.startsWith(G1_LANDING_WARNING.ask.headline),
+      `the refusal did not lead with the ask: "${result.message}"`);
+    assert(!visibleFriday(weekStart)?.workout,
+      `G-1 gained ${describe(visibleFriday(weekStart))} despite the refusal`);
+  });
+
+  run(`ADD onto an empty G-1 survives the resolver once routed (${fixture.name})`, () => {
+    const weekStart = seed();
+    restStubOnFriday(weekStart);
+    if (fixture.explicit) markExplicitFixture(weekStart);
+    const friday = addDaysISO(weekStart, 4);
+
+    const result = commit(weekStart, {
+      kind: 'add_category', date: friday, category: 'conditioning_hard',
+      g1Route: 'deloaded',
+    });
+    assert(result.ok, `add refused: ${result.message} ${JSON.stringify(result.rejected)}`);
 
     const after = visibleFriday(weekStart);
     assert(after?.workout, `G-1 is empty after the add: ${describe(after)}`);
@@ -369,7 +420,26 @@ for (const fixture of FIXTURE_KINDS) {
       `the added session reached the visible week unstamped: ${describe(after)}`);
   });
 
-  run(`MOVE onto G-1 survives the resolver (${fixture.name})`, () => {
+  run(`MOVE onto G-1 is refused until the athlete answers (${fixture.name})`, () => {
+    const weekStart = seed();
+    if (fixture.explicit) markExplicitFixture(weekStart);
+    const monday = addDaysISO(weekStart, 0);
+    const friday = addDaysISO(weekStart, 4);
+    const mondayBefore = visibleWeek(weekStart)
+      .find((day) => day.date === monday)?.workout?.name;
+    assert(mondayBefore, 'seeded Monday session missing');
+
+    const result = commit(weekStart, {
+      kind: 'move_session', fromDate: monday, toDate: friday,
+    });
+    assert(!result.ok, `a routeless move onto G-1 applied: "${result.message}"`);
+    assert(result.message.startsWith(G1_LANDING_WARNING.ask.headline),
+      `the refusal did not lead with the ask: "${result.message}"`);
+    assert(visibleWeek(weekStart).find((day) => day.date === monday)?.workout?.name
+      === mondayBefore, 'the source day moved despite the refusal');
+  });
+
+  run(`MOVE onto G-1 survives the resolver once routed (${fixture.name})`, () => {
     const weekStart = seed();
     if (fixture.explicit) markExplicitFixture(weekStart);
     const monday = addDaysISO(weekStart, 0);
@@ -457,8 +527,12 @@ run('a double-tapped swap reports no-change, not a second success', () => {
   markExplicitFixture(weekStart);
   const friday = addDaysISO(weekStart, 4);
   const snapshot = visibleWeek(weekStart);
+  // Routed, because the day is G-1: the ask is answered once and the SECOND
+  // tap is what this test is about. A routeless first tap is now refused, which
+  // is a different (and separately pinned) behaviour.
   const change: PlanChange = {
-    kind: 'swap_category', date: friday, category: 'conditioning_light',
+    kind: 'swap_category', date: friday, category: 'conditioning_hard',
+    g1Route: 'deloaded',
   };
   const tap = () => quiet(() => applyPlanChange({
     change,

@@ -18,15 +18,16 @@ import {
   type PlanChangeMoveScopeId,
   type PlanChangeOutcome,
 } from '../../utils/planChangeProducer';
+import { isG1RoutedChange, type G1RoutedChange } from '../../utils/planChangeTypes';
 import {
   executeProgramControlActionDurably,
 } from '../../utils/programControlActions';
 import { riskReasons } from '../../utils/planChangeRefusalCopy';
 import {
-  G1_MOVE_ROUTES,
-  G1_MOVE_WARNING,
-  type G1MoveContext,
-} from '../../rules/g1MoveAsk';
+  G1_LANDING_ROUTES,
+  G1_LANDING_WARNING,
+  type G1LandingAskContext,
+} from '../../rules/g1LandingAsk';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 import {
   observeRenderedAthleteActionOutcome,
@@ -86,17 +87,21 @@ type Step =
   | {
       // Sam's G-1 ask. The athlete has put a session on the day before their
       // game. Warn once, offer the three ruled routes, apply nothing until they
-      // answer. All copy comes from rules/g1MoveAsk — the sheet holds none.
+      // answer. All copy comes from rules/g1LandingAsk — the sheet holds none.
+      //
+      // The change is any door that can land content, not Move alone: a swap
+      // onto the same day is the same question, and while this step could only
+      // hold a move it was never shown for one.
       kind: 'g1_ask';
-      change: Extract<PlanChange, { kind: 'move_session' }>;
-      context: G1MoveContext;
+      change: G1RoutedChange;
+      context: G1LandingAskContext;
       backStep: Step;
     }
   | {
-      // The second, stronger warning. Route (c) alone, whatever was moved.
+      // The second, stronger warning. Route (c) alone, whatever was landed.
       kind: 'g1_deload_confirm';
-      change: Extract<PlanChange, { kind: 'move_session' }>;
-      context: G1MoveContext;
+      change: G1RoutedChange;
+      context: G1LandingAskContext;
       backStep: Step;
     }
   | { kind: 'pick_move_scope' }
@@ -329,7 +334,7 @@ export function PlanChangeSheet({
     const backStep = opts?.backStep ?? { kind: 'edit_session' };
     // Before any risk framing: the athlete has put a session on the day before
     // their game and has not been asked yet. Nothing has been applied.
-    if (preview.g1Ask && change.kind === 'move_session') {
+    if (preview.g1Ask && isG1RoutedChange(change)) {
       setStep({ kind: 'g1_ask', change, context: preview.g1Ask, backStep });
       return;
     }
@@ -752,20 +757,20 @@ export function PlanChangeSheet({
 
       {step.kind === 'g1_ask' && (
         <View>
-          <Text style={styles.blockingTitle}>{G1_MOVE_WARNING.ask.headline}</Text>
+          <Text style={styles.blockingTitle}>{G1_LANDING_WARNING.ask.headline}</Text>
           <Text style={styles.confirmText}>
-            {G1_MOVE_WARNING.ask.body(step.context)}
+            {G1_LANDING_WARNING.ask.body(step.context)}
           </Text>
-          {G1_MOVE_ROUTES.map((route) => (
+          {G1_LANDING_ROUTES.map((route) => (
             <MenuOption
               key={route.id}
               label={route.label(step.context)}
               sub={route.detail(step.context)}
               testID={`g1-route-${route.id}`}
               onPress={() => {
-                // (a) commits nothing. The athlete keeps the Gunshow and their
-                // session stays where it is, so there is no transaction and
-                // nothing to undo — the sheet simply closes.
+                // (a) commits nothing. The day keeps what it already holds and
+                // any source session stays where it is, so there is no
+                // transaction and nothing to undo — the sheet simply closes.
                 if (!route.commits) {
                   onClose();
                   return;
@@ -793,9 +798,9 @@ export function PlanChangeSheet({
       {step.kind === 'g1_deload_confirm' && (
         <View>
           <Text style={styles.blockingTitle}>
-            {G1_MOVE_WARNING.deloadConfirm.headline(step.context)}
+            {G1_LANDING_WARNING.deloadConfirm.headline(step.context)}
           </Text>
-          <Text style={styles.confirmText}>{G1_MOVE_WARNING.deloadConfirm.body}</Text>
+          <Text style={styles.confirmText}>{G1_LANDING_WARNING.deloadConfirm.body}</Text>
           <MenuOption
             label="Do it anyway"
             testID="g1-route-deloaded-confirm"

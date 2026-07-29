@@ -1,5 +1,5 @@
 /**
- * G-1 MOVE ASK-FLOW — athlete-placed content outranks derived filler.
+ * G-1 LANDING ASK-FLOW — athlete-placed content outranks derived filler.
  *
  * Sam's ruling (2026-07-28/29), design: docs/G1_MOVE_ASK_FLOW_DESIGN_2026-07-29.md
  *
@@ -8,7 +8,13 @@
  * Gunshow never silently eats it, and the athlete is offered exactly three
  * routes through the accepted-state transaction owner.
  *
- * Run: npm run test:g1-move-ask-flow
+ * ONE FUNNEL, EVERY DOOR (Sam, 2026-07-30). The ask began as a property of the
+ * Move door, and a swap onto the same day therefore reported "Done." and
+ * changed nothing. It is a property of the DESTINATION and of the content
+ * landing on it, so Move, Swap and Add all pass through `resolveG1LandingAsk`
+ * once, in `resolveAthleteMutation`. Stage 4 is that boundary.
+ *
+ * Run: npm run test:g1-landing-ask-flow
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
@@ -46,19 +52,21 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import {
   applyPlanChange,
   previewPlanChangeRisk,
+  resolveTemplatePlanChange,
 } from '../utils/planChangeProducer';
-import type { PlanChange, G1MoveRouteId } from '../utils/planChangeTypes';
+import { buildCoachRevisionTemplateWorkout } from '../utils/coachRevisionTemplates';
+import type { PlanChange, G1LandingRouteId } from '../utils/planChangeTypes';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import type { AthleteContext } from '../utils/sessionBuilder';
 import {
-  G1_MOVE_ROUTES,
-  G1_MOVE_WARNING,
-  g1MoveRoute,
-  type G1MoveContext,
+  G1_LANDING_ROUTES,
+  G1_LANDING_WARNING,
+  g1LandingRoute,
+  type G1LandingAskContext,
   placeSessionForRoute,
-  resolveG1MoveAsk,
-} from '../rules/g1MoveAsk';
+  resolveG1LandingAsk,
+} from '../rules/g1LandingAsk';
 import {
   applyConditioningDeloadToExercises,
   applyStrengthDeloadToExercises,
@@ -249,7 +257,7 @@ function moveOnto(
   });
 }
 
-console.log('\n-- G-1 move ask-flow --');
+console.log('\n-- G-1 landing ask-flow --');
 
 // ── Stage 1: the ownership condition ──────────────────────────────────────
 
@@ -393,8 +401,8 @@ run('6 the menu is uniform — three routes, whatever the athlete moved', () => 
 
   const strength = workoutOn(weekStart, 1);
   assert(strength, 'strength source missing');
-  const strengthAsk = resolveG1MoveAsk({
-    sourceDate: weekStart, targetDate: g1, sourceWorkout: strength,
+  const strengthAsk = resolveG1LandingAsk({
+    sourceDate: weekStart, targetDate: g1, landingWorkout: strength, existingWorkout: null,
     gameDates: gameDatesFor(weekStart, g1),
   });
   assert(strengthAsk, 'no ask raised for a strength session moved onto G-1');
@@ -403,27 +411,27 @@ run('6 the menu is uniform — three routes, whatever the athlete moved', () => 
   // nothing to offer for route (b).
   const conditioning = seedConditioningSession();
   const conditioningG1 = addDaysISO(conditioning.weekStart, 4);
-  const conditioningAsk = resolveG1MoveAsk({
+  const conditioningAsk = resolveG1LandingAsk({
     sourceDate: conditioning.weekStart, targetDate: conditioningG1,
-    sourceWorkout: conditioning.session, gameDates: gameDatesFor(conditioning.weekStart, conditioningG1),
+    landingWorkout: conditioning.session, existingWorkout: null, gameDates: gameDatesFor(conditioning.weekStart, conditioningG1),
   });
   assert(conditioningAsk, 'no ask raised for a conditioning session moved onto G-1');
 
-  assert(G1_MOVE_ROUTES.length === 3,
-    `the menu offers ${G1_MOVE_ROUTES.length} routes, not three`);
-  assert(G1_MOVE_ROUTES.map((route) => route.id).join(',') ===
-    'keep_gunshow,accessories_only,deloaded', 'route order changed');
+  assert(G1_LANDING_ROUTES.length === 3,
+    `the menu offers ${G1_LANDING_ROUTES.length} routes, not three`);
+  assert(G1_LANDING_ROUTES.map((route) => route.id).join(',') ===
+    'keep_the_day,accessories_only,deloaded', 'route order changed');
   // Uniformity is the ruling: the SAME three ids for both session types.
   assert(!!strengthAsk && !!conditioningAsk,
     'the menu shape depended on session type');
 });
 
 run('7 only route (a) commits nothing, only route (c) needs the second warning', () => {
-  assert(g1MoveRoute('keep_gunshow').commits === false,
+  assert(g1LandingRoute('keep_the_day').commits === false,
     'route (a) commits a transaction — the ruling is that the move is abandoned');
-  assert(g1MoveRoute('accessories_only').commits &&
-    g1MoveRoute('deloaded').commits, 'a committing route stopped committing');
-  const needSecond = G1_MOVE_ROUTES.filter((route) => route.requiresSecondWarning);
+  assert(g1LandingRoute('accessories_only').commits &&
+    g1LandingRoute('deloaded').commits, 'a committing route stopped committing');
+  const needSecond = G1_LANDING_ROUTES.filter((route) => route.requiresSecondWarning);
   assert(needSecond.length === 1 && needSecond[0].id === 'deloaded',
     `second warning is gated on ${needSecond.map((r) => r.id).join(',')}, not deloaded alone`);
 });
@@ -440,7 +448,7 @@ run('8 route (b) strips main lifts and conditioning, keeps accessories', () => {
     'seed no longer has both main lifts and accessories — test is vacuous');
 
   const placed = placeSessionForRoute({
-    route: 'accessories_only', sourceWorkout: source,
+    route: 'accessories_only', landingWorkout: source,
     targetDate: addDaysISO(weekStart, 4),
     athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
   });
@@ -459,7 +467,7 @@ run('9 route (b) on a session with no accessories is the pump session, named hon
   const { weekStart, session: conditioningOnly } = seedConditioningSession();
 
   const placed = placeSessionForRoute({
-    route: 'accessories_only', sourceWorkout: conditioningOnly,
+    route: 'accessories_only', landingWorkout: conditioningOnly,
     targetDate: addDaysISO(weekStart, 4),
     athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
   });
@@ -471,13 +479,13 @@ run('9 route (b) on a session with no accessories is the pump session, named hon
   assert(placed.exercises.every((row) => !isConditioningExerciseRow(row)),
     'the "pump session" still carries conditioning rows');
   // And the sub-line must say the original session is dropped, not moved.
-  const context = resolveG1MoveAsk({
+  const context = resolveG1LandingAsk({
     sourceDate: weekStart, targetDate: addDaysISO(weekStart, 4),
-    sourceWorkout: conditioningOnly, gameDates: gameDatesFor(weekStart, addDaysISO(weekStart, 4)),
+    landingWorkout: conditioningOnly, existingWorkout: null, gameDates: gameDatesFor(weekStart, addDaysISO(weekStart, 4)),
   });
   assert(context?.accessoriesComeFromPumpSession,
     'the ask did not notice there were no accessories to keep');
-  assert(/dropped, not moved/.test(g1MoveRoute('accessories_only').detail(context!)),
+  assert(/dropped, not moved/.test(g1LandingRoute('accessories_only').detail(context!)),
     'the honest-labelling sub-line is missing');
 });
 
@@ -488,7 +496,7 @@ run('10 route (c) is DELOAD_LAW and nothing else', () => {
   assert(source, 'source missing');
 
   const placed = placeSessionForRoute({
-    route: 'deloaded', sourceWorkout: source,
+    route: 'deloaded', landingWorkout: source,
     targetDate: addDaysISO(weekStart, 4),
     athlete: athleteContext(), profile: useProfileStore.getState().onboardingData,
   });
@@ -528,20 +536,20 @@ run('11 a session the day is already built for lands without an ask', () => {
   const source = workoutOn(weekStart, 1);
   assert(source, 'source missing');
   const recovery: Workout = { ...source, sessionTier: 'recovery', workoutType: 'Recovery' };
-  assert(resolveG1MoveAsk({
-    sourceDate: weekStart, targetDate: g1, sourceWorkout: recovery,
+  assert(resolveG1LandingAsk({
+    sourceDate: weekStart, targetDate: g1, landingWorkout: recovery, existingWorkout: null,
     gameDates: gameDatesFor(weekStart, g1),
   }) === null, 'a recovery session was made to answer the G-1 ask');
   // And a move that is not onto G-1 at all raises nothing.
-  assert(resolveG1MoveAsk({
-    sourceDate: weekStart, targetDate: addDaysISO(weekStart, 2), sourceWorkout: source,
+  assert(resolveG1LandingAsk({
+    sourceDate: weekStart, targetDate: addDaysISO(weekStart, 2), landingWorkout: source, existingWorkout: null,
     gameDates: gameDatesFor(weekStart, g1),
   }) === null, 'the ask fired on a day that is not the day before a game');
 });
 
 // ── Stage 3: the production door ──────────────────────────────────────────
 
-function previewMove(weekStart: string, from: number, to: number, route?: G1MoveRouteId) {
+function previewMove(weekStart: string, from: number, to: number, route?: G1LandingRouteId) {
   const week = visibleWeek(weekStart);
   const change: PlanChange = {
     kind: 'move_session',
@@ -587,7 +595,7 @@ run('12 a routeless move onto G-1 answers with the ask and applies nothing', () 
     `the warning names ${preview.g1Ask.gameDayName} as the game day`);
   assert(preview.g1Ask.g1DayName === 'Friday' &&
     preview.g1Ask.sourceDayName === 'Monday', 'the ask named the wrong days');
-  assert(preview.message === G1_MOVE_WARNING.ask.headline,
+  assert(preview.message === G1_LANDING_WARNING.ask.headline,
     'the door did not lead with Sam\'s authored headline');
 });
 
@@ -658,7 +666,7 @@ run('16 route (a) is reachable only by applying nothing at all', () => {
   // There is deliberately NO g1Route value that commits an abandonment: a route
   // that committed "nothing" would still be a transaction in the ledger, and an
   // undo entry for a decision the athlete never made.
-  assert(g1MoveRoute('keep_gunshow').commits === false, 'route (a) commits');
+  assert(g1LandingRoute('keep_the_day').commits === false, 'route (a) commits');
   assert(storeFingerprint() === before, 'route (a) mutated accepted state');
 });
 
@@ -683,19 +691,335 @@ run('17 committing a routeless G-1 move refuses rather than applying it', () => 
     'the refused routeless commit mutated accepted state');
 });
 
+// ── Stage 4: one funnel, every door ───────────────────────────────────────
+
+/**
+ * The device finding this stage exists for: a SWAP onto G-1 reported "Done."
+ * and changed nothing, because only Move ever asked. The ask is a property of
+ * the DESTINATION and the content landing on it, not of the door the athlete
+ * happened to use, so it now funnels through one call in `resolveAthleteMutation`.
+ */
+function plantOnFriday(weekStart: string, patch: Partial<Workout>): Workout {
+  const state = useProgramStore.getState() as unknown as {
+    currentProgram: TrainingProgram;
+    currentMicrocycle: TrainingProgram['microcycles'][number] | null;
+  };
+  const monday = state.currentProgram.microcycles
+    .find((microcycle) => microcycle.startDate.slice(0, 10) === weekStart)
+    ?.workouts.find((workout) => workout.dayOfWeek === 1);
+  assert(monday, 'seed no longer has a Monday session to clone');
+  const planted = {
+    ...JSON.parse(JSON.stringify(monday)) as Workout,
+    id: `${monday.id}:planted-friday`,
+    planEntryId: undefined,
+    dayOfWeek: 5,
+    ...patch,
+  } as Workout;
+  const apply = <T extends { startDate: string; workouts: Workout[] }>(
+    microcycle: T | null,
+  ): T | null =>
+    microcycle && microcycle.startDate.slice(0, 10) === weekStart
+      ? {
+          ...microcycle,
+          workouts: microcycle.workouts
+            .filter((workout) => workout.dayOfWeek !== 5)
+            .concat([planted]),
+        }
+      : microcycle;
+  useProgramStore.setState({
+    currentProgram: {
+      ...state.currentProgram,
+      microcycles: state.currentProgram.microcycles.map(
+        (microcycle) => apply(microcycle as never) as never),
+    },
+    currentMicrocycle: apply(state.currentMicrocycle as never) as never,
+  } as never);
+  return planted;
+}
+
+function previewChange(weekStart: string, change: PlanChange) {
+  const week = visibleWeek(weekStart);
+  return {
+    week,
+    change,
+    preview: quiet(() => previewPlanChangeRisk({
+      change,
+      visibleWeek: week,
+      todayISO: CURRENT_WEEK,
+      profile: useProfileStore.getState().onboardingData ?? undefined,
+      activeConstraints: [],
+    })),
+  };
+}
+
+function commitChange(weekStart: string, change: PlanChange) {
+  const week = visibleWeek(weekStart);
+  return quiet(() => applyPlanChange({
+    change,
+    visibleWeek: week,
+    todayISO: CURRENT_WEEK,
+    setManualOverride: (date, workout, context) =>
+      useProgramStore.getState().setManualOverride(date, workout, context),
+  }));
+}
+
+run('19 a routeless SWAP onto G-1 answers with the ask and applies nothing', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+  const before = storeFingerprint();
+
+  const { preview } = previewChange(weekStart, {
+    kind: 'swap_category', date: friday, category: 'conditioning_hard',
+  });
+
+  assert(preview.g1Ask, 'a swap onto G-1 did not raise the ask');
+  assert(preview.appliedDates.length === 0,
+    `the ask applied ${preview.appliedDates.join(', ')}`);
+  assert(storeFingerprint() === before, 'raising the ask mutated accepted state');
+  // A swap has no source day, and the copy must not invent one.
+  assert(preview.g1Ask.sourceDayName === null,
+    `the swap ask named "${preview.g1Ask.sourceDayName}" as a source day`);
+  assert(preview.g1Ask.keptSessionName === 'Gunshow',
+    `route (a) would keep "${preview.g1Ask.keptSessionName}", not the day's Gunshow`);
+});
+
+run('20 a routeless ADD onto G-1 answers with the ask and applies nothing', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  // Sam's device case: G-1 holds a recovery session and the athlete adds an
+  // optional strength session on top of it.
+  const recovery = plantOnFriday(weekStart, {
+    name: 'Recovery Session', workoutType: 'Recovery', sessionTier: 'recovery',
+  });
+  const friday = addDaysISO(weekStart, 4);
+  const before = storeFingerprint();
+
+  const { preview } = previewChange(weekStart, {
+    kind: 'add_category', date: friday, category: 'strength_full',
+  });
+
+  assert(preview.g1Ask, 'an add onto G-1 did not raise the ask');
+  assert(preview.appliedDates.length === 0,
+    `the ask applied ${preview.appliedDates.join(', ')}`);
+  assert(storeFingerprint() === before, 'raising the ask mutated accepted state');
+  assert(preview.g1Ask.keptSessionName === recovery.name,
+    `route (a) would keep "${preview.g1Ask.keptSessionName}", not the day's ${recovery.name}`);
+});
+
+run('21 an EMPTY G-1 raises the ask with nothing to keep', () => {
+  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
+  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+  assert(!visibleWeek(weekStart).find((day) => day.date === friday)?.workout,
+    'this seed no longer leaves G-1 empty');
+
+  const { preview } = previewChange(weekStart, {
+    kind: 'add_category', date: friday, category: 'conditioning_hard',
+  });
+  assert(preview.g1Ask, 'an add onto an empty G-1 did not raise the ask');
+  assert(preview.g1Ask.keptSessionName === null,
+    `the ask claims G-1 holds "${preview.g1Ask.keptSessionName}" on an empty day`);
+});
+
+run('22 recovery and rest still land on G-1 without a word, whatever the door', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+
+  const swap = previewChange(weekStart, {
+    kind: 'swap_category', date: friday, category: 'recovery',
+  });
+  assert(!swap.preview.g1Ask,
+    'swapping in a recovery session made the athlete answer the ask');
+  assert(swap.preview.ok, `the wordless recovery swap was refused: ${swap.preview.message}`);
+});
+
+run('23 route (b) through the SWAP door keeps main lifts off the day before the game', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+
+  const result = commitChange(weekStart, {
+    kind: 'swap_category', date: friday, category: 'strength_full',
+    g1Route: 'accessories_only',
+  });
+  assert(result.ok, `routed swap refused: ${result.message}`);
+
+  const landed = visibleWeek(weekStart)
+    .find((day) => day.date === friday)?.workout ?? null;
+  assert(landed, 'G-1 is empty after the routed swap');
+  assert(landed.exercises.length > 0, 'the routed swap landed an empty session');
+  assert(landed.exercises.every((row) => !isMainStrengthRow(row)),
+    `a main lift landed on the day before the game: ${landed.exercises
+      .filter(isMainStrengthRow).map((row) => row.exerciseId).join(', ')}`);
+});
+
+run('24 route (c) through the ADD door lands the DELOAD_LAW dose, not the full session', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  plantOnFriday(weekStart, {
+    name: 'Recovery Session', workoutType: 'Recovery', sessionTier: 'recovery',
+  });
+  const friday = addDaysISO(weekStart, 4);
+
+  // The control is the registry template the add resolves to, put through
+  // DELOAD_LAW's own appliers. That is what "the landing content at DELOAD_LAW
+  // dose" MEANS, and comparing against it is what would catch a second, private
+  // reduction growing on the add path.
+  const change: PlanChange = {
+    kind: 'add_category', date: friday, category: 'strength_full',
+    g1Route: 'deloaded',
+  };
+  const template = resolveTemplatePlanChange({
+    change, visibleWeek: visibleWeek(weekStart),
+  });
+  assert(template, 'no registry template resolves for a full-body strength add');
+  const built = buildCoachRevisionTemplateWorkout(template.templateId, friday);
+  assert(built, 'the resolved template no longer builds');
+  const deloadPolicy = resolveDoorDeloadPolicy({
+    door: 'readiness',
+    seasonPhase: useProfileStore.getState().onboardingData?.seasonPhase,
+  })!;
+  const expected = applyConditioningDeloadToExercises(
+    applyStrengthDeloadToExercises(built.exercises, deloadPolicy),
+    deloadPolicy,
+  );
+  const rowName = (row: { exercise?: { name?: string }; exerciseId: string }) =>
+    row.exercise?.name ?? row.exerciseId;
+  assert(JSON.stringify(expected.map(rowName)) !== JSON.stringify(built.exercises.map(rowName)) ||
+    expected.some((row, index) => row.prescribedSets !== built.exercises[index]!.prescribedSets),
+  'DELOAD_LAW changes nothing about this template — the assertion would be vacuous');
+
+  const result = commitChange(weekStart, change);
+  assert(result.ok, `routed add refused: ${result.message} ${JSON.stringify(result.rejected)}`);
+
+  // Read the week the ATHLETE SEES, not the accepted projection: the
+  // occupied-day add is written by the legacy override path, and the accepted
+  // projection does not carry it. The athlete's screen does.
+  const landed = visibleWeek(weekStart)
+    .find((day) => day.date === friday)?.workout ?? null;
+  assert(landed, 'G-1 is empty after the routed add');
+  const landedByName = new Map(landed.exercises.map((row) => [rowName(row), row]));
+  for (const row of expected) {
+    const on = landedByName.get(rowName(row));
+    assert(on, `the deloaded dose lost "${rowName(row)}" on the way to the day`);
+    assert(on.prescribedSets === row.prescribedSets,
+      `"${rowName(row)}" landed at ${on.prescribedSets} sets, not DELOAD_LAW's ${row.prescribedSets}`);
+  }
+  // And what the deload took OFF the template did not land either.
+  const dropped = built.exercises
+    .map(rowName)
+    .filter((name) => !expected.some((row) => rowName(row) === name));
+  for (const name of dropped) {
+    assert(!landedByName.has(name),
+      `"${name}" was deloaded out of the session and landed on G-1 anyway`);
+  }
+});
+
+run('25 committing a routeless landing refuses with the ask, whatever the door', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+
+  for (const change of [
+    { kind: 'swap_category', date: friday, category: 'conditioning_hard' },
+    { kind: 'add_category', date: friday, category: 'conditioning_hard' },
+  ] as PlanChange[]) {
+    const fresh = seed(profile());
+    const week = fresh.microcycles[1]!.startDate.slice(0, 10);
+    const before = storeFingerprint();
+    const result = commitChange(week, change);
+    assert(!result.ok, `a routeless ${change.kind} onto G-1 committed without an answer`);
+    assert(result.appliedDates.length === 0,
+      `the refused ${change.kind} still applied ${result.appliedDates.join(', ')}`);
+    assert(storeFingerprint() === before,
+      `the refused ${change.kind} mutated accepted state`);
+    assert(result.message.startsWith(G1_LANDING_WARNING.ask.headline),
+      `the refusal did not lead with the ask: "${result.message}"`);
+    assert(!/_/.test(result.message),
+      `the refusal reached the athlete as a raw code: "${result.message}"`);
+  }
+});
+
+run('26 a route that would leave the day empty is refused, not published', () => {
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+  const before = visibleWeek(weekStart).find((day) => day.date === friday)?.workout?.name;
+  const fingerprint = storeFingerprint();
+
+  // The reachable case, and it is a real one: DELOAD_LAW's row classifier is a
+  // NAME regex, so the registry's single-row conditioning templates ("Flush Out
+  // - 2min On / 1min Off") are taken for strength accessories and the accessory
+  // trim deletes the only row. Until that classifier reads the structure the
+  // workout already carries, the route has to refuse rather than land a day
+  // that renders as rest under a "Done."
+  const light = resolveTemplatePlanChange({
+    change: { kind: 'swap_category', date: friday, category: 'conditioning_light' },
+    visibleWeek: visibleWeek(weekStart),
+  });
+  assert(light, 'no template resolves for a light conditioning swap');
+  const built = buildCoachRevisionTemplateWorkout(light.templateId, friday)!;
+  const policy = resolveDoorDeloadPolicy({
+    door: 'readiness',
+    seasonPhase: useProfileStore.getState().onboardingData?.seasonPhase,
+  })!;
+  const deloadedRows = applyConditioningDeloadToExercises(
+    applyStrengthDeloadToExercises(built.exercises, policy), policy);
+  assert(deloadedRows.length === 0,
+    `"${built.name}" survives its deload with ${deloadedRows.length} row(s) — this test `
+    + 'no longer covers the empty-route case, and the classifier may have been fixed');
+
+  const result = commitChange(weekStart, {
+    kind: 'swap_category', date: friday, category: 'conditioning_light',
+    g1Route: 'deloaded',
+  });
+  assert(!result.ok, `an empty route was published: "${result.message}"`);
+  assert(!/^Done\./.test(result.message),
+    `an empty route reported success: "${result.message}"`);
+  assert(!/_/.test(result.message),
+    `the refusal reached the athlete as a raw code: "${result.message}"`);
+  assert(storeFingerprint() === fingerprint, 'the refused route mutated accepted state');
+  assert(visibleWeek(weekStart).find((day) => day.date === friday)?.workout?.name === before,
+    'the day changed despite the refusal');
+});
+
 // ── Copy provenance: code ↔ Sam's signed design document ──────────────────
 
 /**
- * The seeded example the design document is written in. Sam signed the copy
- * with these day names in it, so the comparison renders the code's copy for the
- * same move and asks for character equality.
+ * The four shapes the ask can take, and every one of them renders copy the
+ * athlete reads. Sam signed the PATTERN on 2026-07-30 rather than four fixed
+ * strings: route (a) names what the day would keep, and the source-day clause
+ * renders only when there is a source day — a swap and an add have none.
+ *
+ * `A` is the original signed example (a Move onto the derived Gunshow) and its
+ * rendering is unchanged, which is the point of pinning all four together.
  */
-const SIGNED_EXAMPLE: G1MoveContext = {
+const SIGNED_EXAMPLE: G1LandingAskContext = {
   sourceDayName: 'Monday',
   g1DayName: 'Friday',
   gameDayName: 'Saturday',
+  keptSessionName: 'Gunshow',
   accessoriesComeFromPumpSession: false,
 };
+
+const COPY_CONTEXTS: G1LandingAskContext[] = [
+  SIGNED_EXAMPLE,
+  // A swap onto the ordinary in-season G-1: the Gunshow is still what the day
+  // would keep, but there is no source day to name.
+  { ...SIGNED_EXAMPLE, sourceDayName: null },
+  // A G-1 that holds a recovery session, reached by each kind of door.
+  { ...SIGNED_EXAMPLE, keptSessionName: 'Recovery Session' },
+  { ...SIGNED_EXAMPLE, sourceDayName: null, keptSessionName: 'Recovery Session' },
+  // Move onto an empty G-1: nothing to keep, but the source day still stays put.
+  { ...SIGNED_EXAMPLE, keptSessionName: null },
+  // Add onto an empty G-1: nothing to keep and no source day.
+  { ...SIGNED_EXAMPLE, sourceDayName: null, keptSessionName: null },
+  // The no-accessories variant of each, which changes route (b)'s sub-line.
+  { ...SIGNED_EXAMPLE, accessoriesComeFromPumpSession: true },
+  { ...SIGNED_EXAMPLE, sourceDayName: null, accessoriesComeFromPumpSession: true },
+];
 
 run('18 every athlete-facing string is filed in Sam\'s design document', () => {
   const whole = readFileSync(
@@ -749,19 +1073,19 @@ run('18 every athlete-facing string is filed in Sam\'s design document', () => {
   }
   flush();
 
-  const pumpExample: G1MoveContext = {
-    ...SIGNED_EXAMPLE, accessoriesComeFromPumpSession: true,
-  };
-  const inCode = [
-    G1_MOVE_WARNING.ask.headline,
-    G1_MOVE_WARNING.ask.body(SIGNED_EXAMPLE),
-    ...G1_MOVE_ROUTES.map((route) =>
-      `${route.label(SIGNED_EXAMPLE)} — ${route.detail(SIGNED_EXAMPLE)}`),
-    `${g1MoveRoute('accessories_only').label(pumpExample)} — `
-      + `${g1MoveRoute('accessories_only').detail(pumpExample)}`,
-    G1_MOVE_WARNING.deloadConfirm.headline(SIGNED_EXAMPLE),
-    G1_MOVE_WARNING.deloadConfirm.body,
-  ].map((line) => line.replace(/\s+/g, ' ').trim());
+  // Every rendering the athlete can meet, from every context shape. A pattern
+  // signed once still has to produce filed strings for each shape it covers —
+  // otherwise "Sam signed the pattern" becomes a licence for unread copy.
+  const inCode = Array.from(new Set([
+    G1_LANDING_WARNING.ask.headline,
+    G1_LANDING_WARNING.deloadConfirm.body,
+    ...COPY_CONTEXTS.flatMap((context) => [
+      G1_LANDING_WARNING.ask.body(context),
+      G1_LANDING_WARNING.deloadConfirm.headline(context),
+      ...G1_LANDING_ROUTES.map((route) =>
+        `${route.label(context)} — ${route.detail(context)}`),
+    ]),
+  ].map((line) => line.replace(/\s+/g, ' ').trim())));
 
   // Direction 1: nothing reaches a card that is not in the document.
   for (const line of inCode) {
@@ -775,7 +1099,7 @@ run('18 every athlete-facing string is filed in Sam\'s design document', () => {
   }
 });
 
-console.log(`\nG-1 move ask-flow totals: ${passed} passed, ${failed} failed`);
+console.log(`\nG-1 landing ask-flow totals: ${passed} passed, ${failed} failed`);
 if (failures.length > 0) {
   console.error('Failing:', failures.join(', '));
   process.exit(1);

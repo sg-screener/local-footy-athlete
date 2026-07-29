@@ -185,7 +185,7 @@ function seed(): string {
  * `applyUserRemovalConstraintsToWeek` does: the day's own content is removed
  * and the new session takes its place, stamped or not.
  *
- * The stamp's ingress is pinned elsewhere (`g1MoveAskFlowTests` 2,
+ * The stamp's ingress is pinned elsewhere (`g1LandingAskFlowTests` 2,
  * `athletePlacementOwnershipTests`). What THIS suite is about is what every
  * deriver does with a stamp once it is there, so the plant is direct.
  */

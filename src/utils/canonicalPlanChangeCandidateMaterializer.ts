@@ -20,6 +20,15 @@ export interface CanonicalPlanChangeCandidateInput {
    * pure finaliseWorkoutAfterMutation boundary with an explicit context.
    */
   canonicalizeWorkout: (date: string, workout: Workout) => Workout;
+  /**
+   * Transform the registry template BEFORE it is stacked or swapped in.
+   *
+   * The G-1 landing ask is the only caller: when the athlete has answered
+   * "accessories only" or "deloaded", it is the content they are ADDING that
+   * changes, never the session already on the day. Transforming the stacked
+   * result instead would strip or deload rows the athlete never touched.
+   */
+  transformTemplate?: (template: Workout) => Workout;
 }
 
 export type CanonicalPlanChangeCandidateResult =
@@ -171,15 +180,17 @@ function stackTemplate(args: {
 function rawCandidate(
   change: TemplatePlanChange,
   source: Workout | null,
+  transformTemplate?: (template: Workout) => Workout,
 ): CanonicalPlanChangeCandidateResult | Workout {
-  const template = buildCoachRevisionTemplateWorkout(change.templateId, change.date);
-  if (!template) {
+  const built = buildCoachRevisionTemplateWorkout(change.templateId, change.date);
+  if (!built) {
     return {
       ok: false,
       code: 'unknown_template',
       reason: `Unknown plan-change template ${change.templateId}.`,
     };
   }
+  const template = transformTemplate ? transformTemplate(built) : built;
   if (source && visibleDayLooksLikeGame({ workout: source })) {
     return {
       ok: false,
@@ -220,7 +231,11 @@ function rawCandidate(
 export function materializeCanonicalPlanChangeCandidate(
   input: CanonicalPlanChangeCandidateInput,
 ): CanonicalPlanChangeCandidateResult {
-  const raw = rawCandidate(input.change, input.currentDay.workout ?? null);
+  const raw = rawCandidate(
+    input.change,
+    input.currentDay.workout ?? null,
+    input.transformTemplate,
+  );
   if ('ok' in raw && raw.ok === false) return raw;
 
   const rawWorkout: Workout = {

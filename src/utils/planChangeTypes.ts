@@ -3,11 +3,11 @@
  * Declared HERE, in the dependency-free type module, so `PlanChange` does not
  * have to import the rules module that owns the behaviour — that cycle made
  * TypeScript give up narrowing `PlanChange` at two call sites.
- * Behaviour and copy live in `rules/g1MoveAsk.ts`.
+ * Behaviour and copy live in `rules/g1LandingAsk.ts`.
  */
-export type G1MoveRouteId =
+export type G1LandingRouteId =
   /** Keep the derived Gunshow. The move is ABANDONED — no transaction at all. */
-  | 'keep_gunshow'
+  | 'keep_the_day'
   /** Accessories only: pump and prehab, nothing heavy. */
   | 'accessories_only'
   /** The same session under the one reduction mechanism, DELOAD_LAW. */
@@ -42,13 +42,30 @@ export type PlanChangeBinScopeId =
   | 'recovery'
   | 'team';
 
+/**
+ * The route the athlete picked when the day they are putting content on is the
+ * day before a game. ABSENT means they have not been asked yet, and the producer
+ * answers with the ask instead of applying anything — that is what makes a
+ * silent substitution unreachable. See rules/g1LandingAsk.ts.
+ *
+ * Carried by EVERY door that can land content on a day, not by Move alone. The
+ * ask is a property of the destination and of what lands on it; a swap that
+ * could not carry an answer was a swap that never got asked, and on Sam's
+ * device it reported "Done." over a day that had not changed.
+ */
+export interface G1RoutedPlanChange {
+  g1Route?: G1LandingRouteId;
+}
+
 export type PlanChange =
   | { kind: 'remove_session'; date: string; scope?: PlanChangeBinScopeId }
-  | { kind: 'swap_template'; date: string; templateId: string }
-  | { kind: 'add_template'; date: string; templateId: string }
-  | { kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
-  | { kind: 'add_category'; date: string; category: PlanChangeCategoryId }
-  | {
+  | ({ kind: 'swap_template'; date: string; templateId: string } & G1RoutedPlanChange)
+  | ({ kind: 'add_template'; date: string; templateId: string } & G1RoutedPlanChange)
+  | ({ kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
+      & G1RoutedPlanChange)
+  | ({ kind: 'add_category'; date: string; category: PlanChangeCategoryId }
+      & G1RoutedPlanChange)
+  | ({
       kind: 'move_session';
       fromDate: string;
       toDate: string;
@@ -57,14 +74,7 @@ export type PlanChange =
        * what every caller meant before session-scoped Move existed.
        */
       scope?: PlanChangeMoveScopeId;
-      /**
-       * The route the athlete picked when the destination is the day before a
-       * game. ABSENT means the athlete has not been asked yet, and the producer
-       * answers with the ask instead of applying anything — that is what makes
-       * a silent substitution unreachable. See rules/g1MoveAsk.ts.
-       */
-      g1Route?: G1MoveRouteId;
-    }
+    } & G1RoutedPlanChange)
   | { kind: 'shutdown_week'; date: string }
   | { kind: 'clear_days'; dates: string[] };
 
@@ -72,3 +82,19 @@ export type TemplatePlanChange = Extract<
   PlanChange,
   { kind: 'swap_template' | 'add_template' }
 >;
+
+/**
+ * The changes that put content ON a day, and can therefore carry the athlete's
+ * answer to the G-1 ask. Bin and the week-level changes take content away, so
+ * there is nothing to ask them about.
+ */
+export type G1RoutedChange = Extract<
+  PlanChange,
+  { kind: 'move_session' | 'swap_category' | 'swap_template' | 'add_category' | 'add_template' }
+>;
+
+export function isG1RoutedChange(change: PlanChange): change is G1RoutedChange {
+  return change.kind === 'move_session' ||
+    change.kind === 'swap_category' || change.kind === 'swap_template' ||
+    change.kind === 'add_category' || change.kind === 'add_template';
+}

@@ -139,30 +139,68 @@ constraint's `originalWorkout` stays the FULL accepted source session, so Undo
 restores exactly what was there. Disclosure and the reversible-adjustment ledger
 are unchanged.
 
-## 4. Warning copy — authored, signed by Sam 2026-07-29
+## 4. Warning copy — authored, signed by Sam 2026-07-29 and 2026-07-30
 
 Day names resolve from the actual fixture and source day; `Friday` / `Monday`
 below are the seeded example.
+
+**Sam signed the PATTERN, not four fixed strings (2026-07-30).** Once Swap and
+Add raise the ask too, route (a) can be offered over a day that holds the
+derived Gunshow, a recovery session, or nothing at all, and a swap has no source
+day to name. His ruling:
+
+```
+Option 1 — name what the day holds, and Sam signs the pattern rather than each
+string: occupied G-1 -> "Keep Friday's {session name} — what the day before a
+game is built for. Your {source} stays where it is." (source clause only when
+there is a source). Empty G-1 (rest stub) -> "Leave Friday free — rest before
+the game." Day names always dynamic. Same voice as the signed originals;
+anything that can't be expressed by the pattern comes back for signing.
+
+Option 1 — drop the clause when there's no source; the remaining copy stands
+as signed.
+```
+
+A blockquote is how this section files ATHLETE-FACING copy, and the equality
+gate reads every one of them. Sam's ruling is quoted in a fenced block for that
+reason: it is prose about the copy, not copy.
+
+Every rendering the pattern produces is filed below and pinned in both
+directions by `g1LandingAskFlowTests` 18.
 
 **Warning 1 — the ask**
 
 > **Big session the day before your game.**
 > Train hard Friday and you'll feel it Saturday. Pick one:
 >
-> - **Keep Friday's Gunshow** — Light upper-body pump, what the day before a
->   game is built for. Your Monday session stays where it is.
+> - **Keep Friday's Gunshow** — what the day before a game is built for. Your
+>   Monday session stays where it is.
 > - **Accessories only** — Your session with the main lifts stripped out. Pump
 >   and prehab, nothing heavy.
 > - **Same session, deloaded** — Half the sets at RPE 5–6, weight stays.
 >   Conditioning halved.
 
-**Route (b) sub-line when the moved session has NO accessories** — a
+**Route (a) over the other three shapes G-1 can be in.** The day's own content
+is named, or the day is offered free; the source clause renders only for a Move.
+
+> - **Keep Friday's Gunshow** — what the day before a game is built for.
+> - **Keep Friday's Recovery Session** — what the day before a game is built
+>   for. Your Monday session stays where it is.
+> - **Keep Friday's Recovery Session** — what the day before a game is built
+>   for.
+> - **Leave Friday free** — rest before the game. Your Monday session stays
+>   where it is.
+> - **Leave Friday free** — rest before the game.
+
+**Route (b) sub-line when the landing session has NO accessories** — a
 conditioning or sprint session. Signed by Sam 2026-07-29 with his rewording:
 "pump" is reserved for Gunshow's own description, so routes (a) and (b) never
-read as the same thing.
+read as the same thing. The second form is a Swap or an Add, which took nothing
+off another day.
 
 > - **Accessories only** — Light accessory work before the game. Your Monday
 >   session is dropped, not moved.
+> - **Accessories only** — Light accessory work before the game.
 
 **Warning 2 — before route (c) applies**
 
@@ -171,8 +209,8 @@ read as the same thing.
 > and nothing else. Go ahead only if this session matters more than the game.
 
 No unauthored copy reaches a card. The option (b) sub-line for a
-conditioning/sprint move names the pump session honestly rather than reusing the
-athlete's session name.
+conditioning/sprint landing names the pump session honestly rather than reusing
+the athlete's session name.
 
 ## 5. Escalation boundary
 

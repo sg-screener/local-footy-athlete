@@ -45,7 +45,7 @@ import {
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
-import type { G1MoveRouteId } from '../rules/g1MoveAsk';
+import type { G1LandingRouteId } from '../rules/g1LandingAsk';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -2141,13 +2141,13 @@ export interface AthleteSessionMoveTransactionInput {
    * The session that actually LANDS, when it is not the source session verbatim
    * — the G-1 ask-flow's accessories-only and deloaded routes.
    *
-   * It must carry the source session's identity (`rules/g1MoveAsk` guarantees
+   * It must carry the source session's identity (`rules/g1LandingAsk` guarantees
    * this), so the move stays one atomic transaction and the conservation
    * post-condition still sees the athlete's session survive. `originalWorkout`
    * on the constraint is unaffected and remains the FULL accepted session, so
    * Undo restores exactly what was there before the athlete chose a route.
    */
-  placedSession?: { route: G1MoveRouteId; workout: Workout } | null;
+  placedSession?: { route: G1LandingRouteId; workout: Workout } | null;
   /**
    * A SESSION-scoped move off a combined day (Sam, 2026-07-30): the gym session
    * leaves, team training stays anchored. Both halves arrive together from one

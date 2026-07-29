@@ -35,6 +35,7 @@ import {
   type CoachVisibleWorkoutSnapshot,
 } from './coachRevisionProposal';
 import {
+  buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
   visibleDayLooksLikeGame,
   type CoachRevisionTemplateDefinition,
@@ -48,13 +49,20 @@ import {
   applyCoachRevisionDateOverrides,
   type CoachRevisionOverrideRejection,
 } from './coachRevisionOverrideWriter';
-import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+import {
+  materializeCanonicalPlanChangeCandidate,
+  type CanonicalPlanChangeCandidateInput,
+  type CanonicalPlanChangeCandidateResult,
+} from './canonicalPlanChangeCandidateMaterializer';
+import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
 } from './workoutCanonicalisation';
+import { isG1RoutedChange } from './planChangeTypes';
 import type {
+  G1LandingRouteId,
   PlanChange,
   PlanChangeBinScopeId,
   PlanChangeCategoryId,
@@ -78,11 +86,12 @@ import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import {
-  G1_MOVE_WARNING,
+  G1_LANDING_WARNING,
+  g1LandingRoute,
   placeSessionForRoute,
-  resolveG1MoveAsk,
-  type G1MoveContext,
-} from '../rules/g1MoveAsk';
+  resolveG1LandingAsk,
+  type G1LandingAskContext,
+} from '../rules/g1LandingAsk';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
@@ -636,9 +645,13 @@ export function resolveTemplatePlanChange(args: {
     visibleWeek: args.visibleWeek,
   });
   if (!picked) return null;
+  // The G-1 answer travels with the change through the category → template
+  // conversion. Dropping it here is invisible: the concrete change materialises
+  // perfectly, just without the route the athlete was asked for.
+  const g1Route = args.change.g1Route;
   return args.change.kind === 'swap_category'
-    ? { kind: 'swap_template', date: args.change.date, templateId: picked.templateId }
-    : { kind: 'add_template', date: args.change.date, templateId: picked.templateId };
+    ? { kind: 'swap_template', date: args.change.date, templateId: picked.templateId, g1Route }
+    : { kind: 'add_template', date: args.change.date, templateId: picked.templateId, g1Route };
 }
 
 // ── Advisory warnings ──
@@ -845,7 +858,7 @@ export function buildPlanChangeProposal(
       if (!before?.workout) return { error: 'nothing_to_swap' };
       if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
       const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
-      const materialized = materializeCanonicalPlanChangeCandidate({
+      const materialized = materializeAthleteCandidate({
         change,
         currentDay,
         todayISO: ctx.todayISO ?? change.date,
@@ -893,7 +906,7 @@ export function buildPlanChangeProposal(
           return { error: 'day_already_has_conditioning' };
         }
         const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
-        const materialized = materializeCanonicalPlanChangeCandidate({
+        const materialized = materializeAthleteCandidate({
           change,
           currentDay,
           todayISO: ctx.todayISO ?? change.date,
@@ -911,7 +924,7 @@ export function buildPlanChangeProposal(
       }
 
       const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
-      const materialized = materializeCanonicalPlanChangeCandidate({
+      const materialized = materializeAthleteCandidate({
         change,
         currentDay,
         todayISO: ctx.todayISO ?? change.date,
@@ -1043,7 +1056,7 @@ export interface PlanChangeRiskPreviewResult {
    * warning and the three routes, then re-issue the change with `g1Route` set —
    * or, for "keep the Gunshow", issue nothing at all.
    */
-  g1Ask?: G1MoveContext | null;
+  g1Ask?: G1LandingAskContext | null;
   /** Correlation context reused by the real commit door. */
   trace: AthleteActionTraceContext;
 }
@@ -1051,9 +1064,17 @@ export interface PlanChangeRiskPreviewResult {
 function validationPolicyForPlanChange(
   visibleWeek: ResolvedDay[],
   todayISO: string,
+  change?: PlanChange,
 ) {
   return {
-    ...coachRevisionValidationPolicyForWeek(visibleWeek, todayISO),
+    // The athlete's answered G-1 route is part of what the app is authorised to
+    // materialise. Without it, "deloaded" would be refused as unknown content —
+    // the app asking a question and then rejecting the answer.
+    ...coachRevisionValidationPolicyForWeek(
+      visibleWeek,
+      todayISO,
+      change && 'g1Route' in change ? change.g1Route : undefined,
+    ),
     requireConfirmationForAdds: false,
   };
 }
@@ -1125,7 +1146,7 @@ function athleteMoveInput(args: {
   const placedWorkout = route
     ? placeSessionForRoute({
         route,
-        sourceWorkout,
+        landingWorkout: sourceWorkout,
         targetDate: args.change.toDate,
         athlete: athleteContextForPlanChange(),
         profile: useProfileStore.getState().onboardingData,
@@ -1180,8 +1201,49 @@ function athleteContextForPlanChange(): AthleteContext {
 }
 
 /**
- * Is this move putting a session on the day before a game, and does that need
+ * What would land on the day, whichever door the athlete used.
+ *
+ * Move brings a session off another day. Swap and Add bring a registry
+ * template. The G-1 ask is about the CONTENT that ends up on the day, so this
+ * is the one place that question is answered, and the answer feeds both the ask
+ * and — through `placeSessionForRoute` — the route the athlete picks.
+ */
+function landingWorkoutForChange(args: {
+  change: AthleteOwnedPlanChange;
+  visibleWeek: ResolvedDay[];
+}): Workout | null {
+  // Bound to a local before narrowing: a union narrowed on `args.change` loses
+  // the narrowing inside a callback, which is how this reads `fromDate` off a
+  // change that may not have one.
+  const change = args.change;
+  if (change.kind === 'move_session') {
+    return args.visibleWeek.find((day) =>
+      day.date === change.fromDate)?.workout ?? null;
+  }
+  if (change.kind === 'remove_session') return null;
+  const template = resolveTemplatePlanChange({
+    change,
+    visibleWeek: args.visibleWeek,
+  });
+  if (!template) return null;
+  return buildCoachRevisionTemplateWorkout(template.templateId, template.date);
+}
+
+/** The day a change puts content ON. Move names it differently; nothing else does. */
+function landingDateForChange(change: AthleteOwnedPlanChange): string | null {
+  if (change.kind === 'move_session') return change.toDate;
+  if (change.kind === 'remove_session') return null;
+  return change.date;
+}
+
+/**
+ * Is this change putting a session on the day before a game, and does that need
  * the ask?
+ *
+ * ONE CALL SITE (`resolveAthleteMutation`). It used to be Move's alone, which
+ * is precisely why a swap onto G-1 reported "Done." and changed nothing: the
+ * only layer that knew about the day never ran, so the full session went in and
+ * the resolver regenerated over it.
  *
  * Games are read from the resolver's own owner, over marks that already have
  * the week's CONTRACT FIXTURE folded in — a practice match lives in the
@@ -1190,16 +1252,17 @@ function athleteContextForPlanChange(): AthleteContext {
  * contract has no fixture to be one day before, so there is nothing to ask
  * about.
  */
-export function g1MoveAskForChange(args: {
-  change: Extract<PlanChange, { kind: 'move_session' }>;
+export function g1LandingAskForChange(args: {
+  change: AthleteOwnedPlanChange;
   visibleWeek: ResolvedDay[];
-}): G1MoveContext | null {
-  const sourceWorkout = args.visibleWeek.find((day) =>
-    day.date === args.change.fromDate)?.workout ?? null;
-  if (!sourceWorkout) return null;
+}): G1LandingAskContext | null {
+  const targetDate = landingDateForChange(args.change);
+  if (!targetDate) return null;
+  const landingWorkout = landingWorkoutForChange(args);
+  if (!landingWorkout) return null;
   const profile = useProfileStore.getState().onboardingData;
   const state = useProgramStore.getState();
-  const weekStart = getMondayForDate(args.change.toDate);
+  const weekStart = getMondayForDate(targetDate);
   let contract: WeeklyExposureContractV2 | null = null;
   try {
     contract = rebaseAcceptedEffectiveWeek({
@@ -1221,13 +1284,51 @@ export function g1MoveAskForChange(args: {
     usualGameDay: profile?.usualGameDay,
     gameDay: profile?.gameDay,
     seasonPhase: profile?.seasonPhase,
-    centerDate: args.change.toDate,
+    centerDate: targetDate,
   });
-  return resolveG1MoveAsk({
-    sourceDate: args.change.fromDate,
-    targetDate: args.change.toDate,
-    sourceWorkout,
+  return resolveG1LandingAsk({
+    targetDate,
+    landingWorkout,
+    existingWorkout: args.visibleWeek.find((day) =>
+      day.date === targetDate)?.workout ?? null,
     gameDates,
+    sourceDate: args.change.kind === 'move_session' ? args.change.fromDate : null,
+  });
+}
+
+/**
+ * Has the athlete answered the ask with a route that actually applies something?
+ *
+ * Route (a) commits nothing by design — the sheet answers it by closing, and
+ * there is deliberately no value that commits an abandonment. A change that
+ * carries it anyway has nothing to apply, so it is treated as unanswered rather
+ * than quietly landing the full session.
+ */
+function committingG1Route(change: AthleteOwnedPlanChange): G1LandingRouteId | null {
+  const route = 'g1Route' in change ? change.g1Route : undefined;
+  return route && g1LandingRoute(route).commits ? route : null;
+}
+
+/**
+ * Would this route actually put something on the day?
+ *
+ * Asked of the same landing content the ask was raised about, through the same
+ * transformation the doors apply, so this cannot drift from what would land.
+ */
+function routeYieldsContent(
+  change: AthleteOwnedPlanChange,
+  route: G1LandingRouteId,
+  visibleWeek: ResolvedDay[],
+): boolean {
+  const landingWorkout = landingWorkoutForChange({ change, visibleWeek });
+  const targetDate = landingDateForChange(change);
+  if (!landingWorkout || !targetDate) return false;
+  return !!placeSessionForRoute({
+    route,
+    landingWorkout,
+    targetDate,
+    athlete: athleteContextForPlanChange(),
+    profile: useProfileStore.getState().onboardingData,
   });
 }
 
@@ -1305,6 +1406,23 @@ const ADD_DEFERS_TO_LEGACY = new Set<string>([
 ]);
 
 /**
+ * Every candidate this module materialises, with the athlete's G-1 answer
+ * applied to the landing template.
+ *
+ * The producer never calls `materializeCanonicalPlanChangeCandidate` directly:
+ * a call site that forgot the transform would ask the athlete which route they
+ * wanted and then land the untransformed session anyway.
+ */
+function materializeAthleteCandidate(
+  input: Omit<CanonicalPlanChangeCandidateInput, 'transformTemplate'>,
+): CanonicalPlanChangeCandidateResult {
+  return materializeCanonicalPlanChangeCandidate({
+    ...input,
+    transformTemplate: g1RouteTemplateTransform(input.change),
+  });
+}
+
+/**
  * Materialise the new session a swap places on the day. Uses the pure
  * finaliseWorkoutAfterMutation boundary — NOT validateLiveWorkoutWrite — so the
  * whole-week §18 gate never runs here; the accepted-state transaction owns
@@ -1316,7 +1434,7 @@ function materializeAthleteSwapSession(args: {
   todayISO: string;
 }): { ok: true; workout: Workout; title: string | null } | { ok: false; error: string } {
   const phase = useProfileStore.getState().onboardingData?.seasonPhase ?? undefined;
-  const materialized = materializeCanonicalPlanChangeCandidate({
+  const materialized = materializeAthleteCandidate({
     change: args.change,
     currentDay: args.currentDay,
     todayISO: args.todayISO,
@@ -1353,6 +1471,27 @@ export function resolveAthleteMutation(args: {
   source: 'tap' | 'coach';
 }): AthleteMutationResolution {
   const change = args.change;
+  // ── The day before a game, once, for every door ──────────────────────────
+  //
+  // The athlete may claim G-1 from its filler, and only after being asked. A
+  // routeless landing answers with the ask instead of applying anything —
+  // which is what makes a silent substitution unreachable from ANY door.
+  //
+  // This sits above every branch on purpose. Under it are refusals that hand
+  // work to the legacy writer (`add_defers_to_legacy_stack` is the occupied-day
+  // stack — exactly the add Sam hit on G-1), and a gate below them would let
+  // that path apply a full session on the day before a game without a word.
+  const g1Ask = g1LandingAskForChange({ change, visibleWeek: args.visibleWeek });
+  const g1Route = committingG1Route(change);
+  if (g1Ask && !g1Route) {
+    return { ok: false, error: 'g1_route_required' };
+  }
+  // A route that would leave nothing on the day is not one of the three
+  // answers — it is a bin, and the athlete has a bin. Refused here, before any
+  // door applies anything, so no path can publish an empty "Done".
+  if (g1Ask && g1Route && !routeYieldsContent(change, g1Route, args.visibleWeek)) {
+    return { ok: false, error: 'g1_route_yields_nothing' };
+  }
   if (change.kind === 'move_session') {
     const sourceDay = args.visibleWeek.find((day) =>
       day.date === change.fromDate);
@@ -1377,14 +1516,6 @@ export function resolveAthleteMutation(args: {
     // component against another day's whole session has no defined meaning.
     if (moveScope !== 'whole_day' && targetDay.workout) {
       return { ok: false, error: 'scoped_move_destination_occupied' };
-    }
-    // The day before a game is the one destination the athlete may claim from a
-    // filler, and only after being asked. A routeless move onto G-1 answers with
-    // the ask instead of applying anything — which is what makes a silent
-    // substitution unreachable from this door.
-    const g1Ask = g1MoveAskForChange({ change, visibleWeek: args.visibleWeek });
-    if (g1Ask && !change.g1Route) {
-      return { ok: false, error: 'g1_route_required' };
     }
     // A resolver-owned game-proximity filler (e.g. G+1 Recovery) on the
     // destination is not a swappable athlete-owned session — it is regenerated
@@ -1541,7 +1672,8 @@ function blockedAssessmentForBuildError(
   error: string,
 ): ProgramEditRiskAssessment | null {
   if (error !== 'protected_anchor_day' && error !== 'protected_game_day' &&
-    error !== 'move_destination_resolver_owned') return null;
+    error !== 'move_destination_resolver_owned' &&
+    error !== 'g1_route_yields_nothing') return null;
   const date =
     'date' in change
       ? change.date
@@ -1556,11 +1688,19 @@ function blockedAssessmentForBuildError(
     ? "It's game day — sessions can't be changed or added here."
     : error === 'move_destination_resolver_owned'
     ? "That day is kept light around your game, so a session can't be moved onto it. The plan is untouched."
+    // A route that would leave the day empty is refused in the words already
+    // used for a change that cannot be made safely. No new copy is invented for
+    // a case that exists because a classifier is wrong; see the note in
+    // rules/g1LandingAsk.placeSessionForRoute.
+    : error === 'g1_route_yields_nothing'
+    ? "I couldn't safely make that change, so the plan is untouched."
     : 'This would remove or replace a protected game/team anchor, so it cannot be applied from this edit flow.';
   const ruleId = error === 'protected_game_day'
     ? 'game_day_locked'
     : error === 'move_destination_resolver_owned'
     ? 'game_proximity_day_locked'
+    : error === 'g1_route_yields_nothing'
+    ? 'g1_route_yields_nothing'
     : 'protected_anchor_edit_blocked';
   return {
     decision: 'block',
@@ -1660,17 +1800,19 @@ export function previewPlanChangeRisk(args: {
         (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
         (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error)));
       // The ask is not a refusal and not a risk finding. Nothing is applied and
-      // nothing is wrong — the athlete simply has not answered yet.
+      // nothing is wrong — the athlete simply has not answered yet. It is
+      // checked before `defersToLegacy` because an occupied-day add defers, and
+      // the legacy writer would apply it without ever raising the ask.
       if (resolution.ok === false && resolution.error === 'g1_route_required' &&
-        args.change.kind === 'move_session') {
-        const ask = g1MoveAskForChange({
+        isG1RoutedChange(args.change)) {
+        const ask = g1LandingAskForChange({
           change: args.change,
           visibleWeek: args.visibleWeek,
         });
         if (ask) {
           return finish({
             ok: true,
-            message: G1_MOVE_WARNING.ask.headline,
+            message: G1_LANDING_WARNING.ask.headline,
             appliedDates: [],
             rejected: [],
             proposedWeek: args.visibleWeek,
@@ -1796,7 +1938,7 @@ export function previewPlanChangeRisk(args: {
       }),
       visibleWeek: args.visibleWeek,
       todayISO: args.todayISO,
-      validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
+      validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO, args.change),
     });
     if (preview.applied.length === 0 || preview.rejected.length > 0) {
       return finish({
@@ -2147,6 +2289,25 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
         (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error));
       if (!defersToLegacy) {
+        // Defence in depth for the ask. The sheet holds the change back until
+        // the athlete answers; a caller that commits anyway is refused in the
+        // domain's own words rather than getting a silent full-session landing
+        // on the day before a game.
+        if (resolution.error === 'g1_route_required') {
+          return {
+            ok: false,
+            outcome: 'refused',
+            message: `${G1_LANDING_WARNING.ask.headline} The plan is untouched.`,
+            appliedDates: [],
+            rejected: [{
+              date: isG1RoutedChange(args.change)
+                ? landingDateForChange(args.change)
+                : null,
+              code: resolution.error,
+              reason: 'The athlete has not chosen a route for the day before their game.',
+            }],
+          };
+        }
         // Game day is locked — surface the plain-language block, never a raw code.
         const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
         return {
@@ -2384,7 +2545,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     }),
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
-    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
+    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO, args.change),
     setManualOverride: args.setManualOverride,
   });
 
