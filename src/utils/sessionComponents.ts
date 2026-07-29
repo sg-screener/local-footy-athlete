@@ -105,6 +105,77 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
   };
 }
 
+export type AthleteSessionComponentSplitResult =
+  | { ok: true; movedWorkout: Workout; remainingWorkout: Workout | null }
+  | { ok: false; code: 'nothing_to_move' | 'scope_not_on_day' | 'scope_is_whole_day' };
+
+/**
+ * Split a day into the component that LEAVES and the day that STAYS.
+ *
+ * Sam's ruling (2026-07-30): a session-scoped Move on a combined day — take the
+ * gym session, leave team training anchored — "same scoping Bin has". Bin's
+ * half of that already exists above; this returns BOTH halves from ONE snapshot
+ * so the day that stays and the session that leaves cannot disagree about which
+ * rows went where. Splitting them across two calls is how a move silently
+ * duplicates or drops content.
+ *
+ * IDENTITY. The remainder keeps the source identity — the day continues to
+ * exist — and the departing component takes a deterministic `:<kind>-component`
+ * suffix. That is the convention the §18 relocation path already mints (see
+ * `componentIdentity` in acceptedStateTransaction), so the move's conservation
+ * post-condition can find both halves rather than reading the split as a loss.
+ */
+export function splitAcceptedSessionForAthleteMove(args: {
+  day: ResolvedDay;
+  scope: UserRemovalScope;
+}): AthleteSessionComponentSplitResult {
+  const source = args.day.workout;
+  if (!source) return { ok: false, code: 'nothing_to_move' };
+  if (args.scope === 'whole_session') return { ok: false, code: 'scope_is_whole_day' };
+
+  const snapshot = snapshotProjectedDay(args.day);
+  if (!snapshot.workout) return { ok: false, code: 'nothing_to_move' };
+  const movedKind = REMOVAL_SECTION_KIND[args.scope];
+  const movedSections = movedKind
+    ? snapshot.workout.sections.filter((section) => section.kind === movedKind)
+    : [];
+  if (!movedKind || movedSections.length === 0) {
+    return { ok: false, code: 'scope_not_on_day' };
+  }
+
+  const remainder = reduceAcceptedSessionForAthleteRemoval({ day: args.day, scope: args.scope });
+  if (remainder.ok === false) return { ok: false, code: remainder.code === 'nothing_to_remove' ? 'nothing_to_move' : 'scope_not_on_day' };
+
+  const sourceIdentity = source.planEntryId ?? source.id;
+  // Same naming rule as the reduction above, applied to the other half. On a
+  // combined day the STRENGTH section's own title is the composite day name
+  // ("Team Training + Upper Push"), so taking it verbatim would carry the
+  // anchor's name onto the destination — the day would read as though team
+  // training had moved. `splitSessionName` is the existing owner of that split.
+  const movedTitle = movedKind === 'strength'
+    ? splitSessionName(snapshot.workout.title).title ||
+      movedSections[0].title ||
+      snapshot.workout.title
+    : movedSections[0].title || snapshot.workout.title;
+  const moved = materializeAcceptedVisibleSections({
+    source,
+    title: movedTitle,
+    workoutType: source.workoutType,
+    durationMinutes: snapshot.workout.durationMinutes,
+    intensity: snapshot.workout.intensity,
+    sections: movedSections,
+  });
+  return {
+    ok: true,
+    movedWorkout: {
+      ...moved,
+      id: `${sourceIdentity}:${movedKind}-component`,
+      planEntryId: `${sourceIdentity}:${movedKind}-component`,
+    },
+    remainingWorkout: remainder.remainingWorkout,
+  };
+}
+
 function materializeAcceptedVisibleSections(args: {
   source: Workout;
   title: string;

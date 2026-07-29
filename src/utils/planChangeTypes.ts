@@ -22,6 +22,19 @@ export type PlanChangeCategoryId =
   | 'strength_full'
   | 'accessories';
 
+/**
+ * What a Move takes off the day (Sam, 2026-07-30 — session-scoped Move).
+ *
+ * Deliberately Bin's scope vocabulary MINUS `team`: team training is a
+ * protected anchor and never travels. `whole_day` is offered only on days that
+ * carry no anchor, because on a combined day it would take the anchor with it.
+ */
+export type PlanChangeMoveScopeId =
+  | 'whole_day'
+  | 'strength'
+  | 'conditioning'
+  | 'recovery';
+
 export type PlanChangeBinScopeId =
   | 'whole_day'
   | 'strength'
@@ -39,6 +52,11 @@ export type PlanChange =
       kind: 'move_session';
       fromDate: string;
       toDate: string;
+      /**
+       * Which part of the source day moves. Absent means `whole_day`, which is
+       * what every caller meant before session-scoped Move existed.
+       */
+      scope?: PlanChangeMoveScopeId;
       /**
        * The route the athlete picked when the destination is the day before a
        * game. ABSENT means the athlete has not been asked yet, and the producer

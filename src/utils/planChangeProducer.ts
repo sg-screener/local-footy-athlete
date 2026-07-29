@@ -58,17 +58,22 @@ import type {
   PlanChange,
   PlanChangeBinScopeId,
   PlanChangeCategoryId,
+  PlanChangeMoveScopeId,
   TemplatePlanChange,
 } from './planChangeTypes';
 export type {
   PlanChange,
   PlanChangeBinScopeId,
   PlanChangeCategoryId,
+  PlanChangeMoveScopeId,
 } from './planChangeTypes';
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import { classifyProgramMutationRefusal } from '../rules/programMutationRefusal';
-import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
+import {
+  reduceAcceptedSessionForAthleteRemoval,
+  splitAcceptedSessionForAthleteMove,
+} from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
@@ -249,6 +254,77 @@ export interface PlanChangeMoveDestination {
   occupiedBy: string | null;
 }
 
+/**
+ * Why a day offers no move. Sam's ruling (2026-07-30), direction (b): the
+ * refusal travels WITH the list so the surface can never render emptiness as
+ * though it were an answer.
+ */
+export type PlanChangeMoveRefusalReason =
+  /** Nothing on the day to move. */
+  | 'no_session'
+  /** Everything on the day is a protected anchor, so nothing may leave it. */
+  | 'anchored_day'
+  /** There is movable content, but nowhere in view it could legally go. */
+  | 'no_destination';
+
+export interface PlanChangeMoveRefusal {
+  reason: PlanChangeMoveRefusalReason;
+  /** Athlete-facing. Never a reason code — the sheet renders this verbatim. */
+  message: string;
+}
+
+/** One movable part of the day, with the destinations legal FOR THAT PART. */
+export interface PlanChangeMoveScope {
+  id: PlanChangeMoveScopeId;
+  label: string;
+  sub: string;
+  /** Non-empty by construction — a scope with nowhere to go is never offered. */
+  destinations: PlanChangeMoveDestination[];
+}
+
+/**
+ * The whole answer to "can this day move, and where to?".
+ *
+ * The device dead end was a picker rendering `[]`, which is indistinguishable
+ * from "not computed yet" and says nothing to the athlete. So emptiness is not
+ * representable on its own here: `scopes` is empty IF AND ONLY IF `refusal` is
+ * set, and `planChangeMoveOptionsAreConsistent` pins that both ways. A surface
+ * that reads `scopes` and finds nothing has the sentence sitting next to it.
+ *
+ * Deliberately NOT a discriminated union on a boolean. Both fields are always
+ * present, so no caller has to narrow to read either — narrowing a boolean
+ * discriminant behaves differently across this repo's compile scopes, and a
+ * refusal that a surface silently cannot see is the bug this type exists to
+ * prevent.
+ */
+export interface PlanChangeMoveOptions {
+  /** Movable parts with their destinations. Empty iff `refusal` is set. */
+  scopes: PlanChangeMoveScope[];
+  /** Why nothing can move. Non-null iff `scopes` is empty. */
+  refusal: PlanChangeMoveRefusal | null;
+}
+
+/** The invariant above, as a predicate the suites assert in both directions. */
+export function planChangeMoveOptionsAreConsistent(move: PlanChangeMoveOptions): boolean {
+  return (move.scopes.length === 0) === (move.refusal !== null) &&
+    move.scopes.every((scope) => scope.destinations.length > 0);
+}
+
+const MOVE_REFUSAL_COPY: Record<PlanChangeMoveRefusalReason, string> = {
+  no_session: "There's nothing on this day to move.",
+  anchored_day:
+    "Team training is fixed to this day, so it can't be moved from here. You can still swap or bin the gym work on it.",
+  no_destination:
+    "There's nowhere to move this in the weeks you can edit — every other day is a game, team training, or already full.",
+};
+
+const MOVE_SCOPE_COPY: Record<PlanChangeMoveScopeId, { label: string; sub: string }> = {
+  whole_day: { label: 'Move the whole session', sub: 'Pick another day for it' },
+  strength: { label: 'Just the gym session', sub: 'Team training stays on this day' },
+  conditioning: { label: 'Just the conditioning', sub: 'The rest of the day stays' },
+  recovery: { label: 'Just the recovery work', sub: 'The rest of the day stays' },
+};
+
 export interface PlanChangeDayOptions {
   date: string;
   /** Why the menu is empty, when it is. */
@@ -259,9 +335,10 @@ export interface PlanChangeDayOptions {
   templates: CoachRevisionTemplateDefinition[];
   /** Sheet-v2 categories legal for this date (derived from `templates`). */
   categories: PlanChangeCategoryOption[];
-  /** Legal move destinations inside the horizon: every non-game day, rest
-   *  days FIRST (they're the cheapest move), then occupied days (swap). */
-  moveDestinations: PlanChangeMoveDestination[];
+  /** Movable parts of the day with their legal destinations, or the typed
+   *  refusal explaining why nothing can move. Replaces the bare
+   *  `moveDestinations` array, whose emptiness the sheet rendered as a dead end. */
+  move: PlanChangeMoveOptions;
   /** Bin scopes: parts of the day binnable individually. Single-part days
    *  offer only whole_day; multi-session days list each part, whole last. */
   binScopes: PlanChangeBinScope[];
@@ -291,7 +368,10 @@ export function listPlanChangeOptionsForDay(args: {
     canRemove: false,
     templates: [],
     categories: [],
-    moveDestinations: [],
+    move: {
+      scopes: [],
+      refusal: { reason: 'no_session', message: MOVE_REFUSAL_COPY.no_session },
+    },
     binScopes: [],
     addOnTopCategories: [],
     visibleSessionCount: 0,
@@ -320,25 +400,13 @@ export function listPlanChangeOptionsForDay(args: {
     .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
   const hasSession = snap.workout !== null;
-  const sourceHasProtectedAnchors = hasProtectedAnchors(snap);
-  // Every non-anchor day in horizon is a destination. Rest days come first
-  // (a plain move); occupied days follow (an atomic two-day swap).
-  const moveDestinations: PlanChangeMoveDestination[] =
-    hasSession && !sourceHasProtectedAnchors
-    ? args.visibleWeek
-        .filter((candidate) =>
-          candidate.date !== args.date &&
-          isWithinEditHorizon(candidate.date, args.todayISO) &&
-          !hasProtectedAnchors(snapshotProjectedDay(candidate)))
-        .map((candidate) => ({
-          date: candidate.date,
-          occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
-        }))
-        .sort((a, b) =>
-          (a.occupiedBy === null) === (b.occupiedBy === null)
-            ? a.date.localeCompare(b.date)
-            : a.occupiedBy === null ? -1 : 1)
-    : [];
+  const move = moveOptionsForDay({
+    day,
+    snapshot: snap,
+    visibleWeek: args.visibleWeek,
+    date: args.date,
+    todayISO: args.todayISO,
+  });
 
   // Add-on-top: strength and conditioning can stack until the day has two
   // visible parts. Duplicate strength+strength or conditioning+conditioning
@@ -357,7 +425,7 @@ export function listPlanChangeOptionsForDay(args: {
     canRemove: hasSession,
     templates,
     categories,
-    moveDestinations,
+    move,
     binScopes: hasSession ? binScopesForSnapshot(snap) : [],
     addOnTopCategories: canAddOnTop
       ? categories.filter((category) => {
@@ -370,6 +438,85 @@ export function listPlanChangeOptionsForDay(args: {
     visibleSessionKinds,
   };
 }
+
+/**
+ * Movable parts of a day and where each may go.
+ *
+ * The rule that produced the device dead end was one line: a source day
+ * carrying ANY protected anchor returned `[]` for the whole list. A combined
+ * day (Team Training + Upper Push) is anchored, so moving the gym session off
+ * it was silently impossible. The anchor is a fact about TEAM TRAINING, not
+ * about the gym work sitting next to it, so it now removes only `whole_day`
+ * and the other components are offered on their own.
+ *
+ * Destinations are evaluated per scope (Sam's ruling): a whole-day move keeps
+ * the historical rest-first-then-swap list, while a SCOPED move offers free
+ * days only. Trading one component of a combined day against another day's
+ * whole session has no defined meaning, and inventing one here is how the
+ * original defect was written.
+ */
+function moveOptionsForDay(args: {
+  day: ResolvedDay;
+  snapshot: CoachVisibleDaySnapshot;
+  visibleWeek: ResolvedDay[];
+  date: string;
+  todayISO: string;
+}): PlanChangeMoveOptions {
+  const refuse = (reason: PlanChangeMoveRefusalReason): PlanChangeMoveOptions => ({
+    scopes: [],
+    refusal: { reason, message: MOVE_REFUSAL_COPY[reason] },
+  });
+  if (!args.snapshot.workout) return refuse('no_session');
+
+  const candidates = args.visibleWeek.filter((candidate) =>
+    candidate.date !== args.date &&
+    isWithinEditHorizon(candidate.date, args.todayISO) &&
+    !hasProtectedAnchors(snapshotProjectedDay(candidate)));
+  const destinationsFor = (scope: PlanChangeMoveScopeId): PlanChangeMoveDestination[] =>
+    candidates
+      .map((candidate) => ({
+        date: candidate.date,
+        occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
+      }))
+      .filter((destination) => scope === 'whole_day' || destination.occupiedBy === null)
+      .sort((left, right) =>
+        (left.occupiedBy === null) === (right.occupiedBy === null)
+          ? left.date.localeCompare(right.date)
+          : left.occupiedBy === null ? -1 : 1);
+
+  const anchored = hasProtectedAnchors(args.snapshot);
+  const componentScopes = MOVABLE_COMPONENT_SCOPES.filter((scope) =>
+    args.snapshot.workout!.sections.some((section) =>
+      section.kind === MOVE_SCOPE_SECTION_KIND[scope]));
+  // A single-component day has nothing to scope: moving "just the gym session"
+  // off a day that is only a gym session IS the whole-day move, and offering
+  // both would be two names for one action.
+  const offered: PlanChangeMoveScopeId[] = anchored
+    ? componentScopes
+    : componentScopes.length > 1
+      ? ['whole_day', ...componentScopes]
+      : ['whole_day'];
+  if (offered.length === 0) return refuse('anchored_day');
+
+  const scopes = offered
+    .map((id) => ({ id, ...MOVE_SCOPE_COPY[id], destinations: destinationsFor(id) }))
+    .filter((scope) => scope.destinations.length > 0);
+  if (scopes.length === 0) return refuse('no_destination');
+  return { scopes, refusal: null };
+}
+
+/** Component scopes a Move may take off a day, in the order the sheet shows. */
+const MOVABLE_COMPONENT_SCOPES: readonly Exclude<PlanChangeMoveScopeId, 'whole_day'>[] =
+  ['strength', 'conditioning', 'recovery'] as const;
+
+const MOVE_SCOPE_SECTION_KIND: Record<
+  Exclude<PlanChangeMoveScopeId, 'whole_day'>,
+  CoachRevisionSectionKind
+> = {
+  strength: 'strength',
+  conditioning: 'conditioning',
+  recovery: 'recovery',
+};
 
 // ── Bin scopes ──
 // Which parts of a day can be binned individually. Derived from the day
@@ -984,10 +1131,28 @@ function athleteMoveInput(args: {
         profile: useProfileStore.getState().onboardingData,
       })
     : null;
+  // Session-scoped move: the day splits into what leaves and what stays, from
+  // ONE snapshot, so the two halves cannot disagree about which rows went where.
+  const scope = args.change.scope ?? 'whole_day';
+  let componentSplit: { movedWorkout: Workout; remainingWorkout: Workout | null } | null = null;
+  if (scope !== 'whole_day') {
+    const sourceDay = args.visibleWeek.find((day) => day.date === args.change.fromDate);
+    if (!sourceDay) return null;
+    const split = splitAcceptedSessionForAthleteMove({
+      day: sourceDay,
+      scope: ATHLETE_REMOVAL_SCOPE[scope],
+    });
+    if (split.ok === false) return null;
+    componentSplit = {
+      movedWorkout: split.movedWorkout,
+      remainingWorkout: split.remainingWorkout,
+    };
+  }
   return {
     sourceDate: args.change.fromDate,
     targetDate: args.change.toDate,
     reason: `${args.source}:move_session:${args.change.fromDate}:${args.change.toDate}`
+      + (scope === 'whole_day' ? '' : `:${scope}`)
       + (route ? `:${route}` : ''),
     source: args.source,
     acceptedSourcePlanEntryId: sourceWorkout.planEntryId ?? null,
@@ -996,6 +1161,7 @@ function athleteMoveInput(args: {
     existingTargetWorkout: args.visibleWeek.find((day) =>
       day.date === args.change.toDate)?.workout ?? null,
     scope: 'whole_session',
+    componentSplit,
     placedSession: route && placedWorkout
       ? { route, workout: placedWorkout }
       : null,
@@ -1194,11 +1360,23 @@ export function resolveAthleteMutation(args: {
       day.date === change.toDate);
     if (!sourceDay?.workout) return { ok: false, error: 'nothing_to_move' };
     if (!targetDay) return { ok: false, error: 'not_visible' };
+    // A protected anchor on the SOURCE day blocks a whole-day move, because the
+    // anchor would travel with it. It says nothing about the gym session beside
+    // it — that is the session-scoped move (Sam, 2026-07-30), and refusing it
+    // here is what produced the empty picker. A destination anchor still blocks
+    // everything: nothing may land on a team night or a game day.
+    const moveScope = change.scope ?? 'whole_day';
     if (
-      protectedAnchorsForDaySnapshot(snapshotProjectedDay(sourceDay)).length > 0 ||
+      (moveScope === 'whole_day' &&
+        protectedAnchorsForDaySnapshot(snapshotProjectedDay(sourceDay)).length > 0) ||
       protectedAnchorsForDaySnapshot(snapshotProjectedDay(targetDay)).length > 0
     ) {
       return { ok: false, error: 'protected_anchor_day' };
+    }
+    // Scoped destinations are free days only (see moveOptionsForDay): trading a
+    // component against another day's whole session has no defined meaning.
+    if (moveScope !== 'whole_day' && targetDay.workout) {
+      return { ok: false, error: 'scoped_move_destination_occupied' };
     }
     // The day before a game is the one destination the athlete may claim from a
     // filler, and only after being asked. A routeless move onto G-1 answers with
@@ -1676,6 +1854,14 @@ export interface ApplyPlanChangeInput {
   commitAthleteMove?: (input: AthleteSessionMoveTransactionInput) => unknown;
   /** Test/host seam; production defaults to the accepted-state addition transaction. */
   commitAthleteAddition?: (input: AthleteSessionAdditionTransactionInput) => unknown;
+  /**
+   * Test seam for the visible post-condition: supplies the week the producer
+   * reads back AFTER committing. Production omits it and the live resolver is
+   * used. This exists so the post-condition can be exercised against a REAL
+   * transaction — simulating the resolver re-deriving over a committed change,
+   * which is the device failure — rather than against a stubbed commit.
+   */
+  readVisibleWeekAfterCommit?: (dates: readonly string[]) => ResolvedDay[];
   trace?: AthleteActionTraceContext;
   route?: string;
 }
@@ -1858,16 +2044,26 @@ function commitVerifiedAgainstVisibleWeek<T>(args: {
   before: readonly ResolvedDay[];
   dates: readonly string[];
   commit: () => T;
+  /**
+   * The host replaced publication with its own function, so the post-condition
+   * is theirs too. Verifying a caller's stub against the live store compares
+   * two unrelated things and would "pass" or "fail" for reasons that have
+   * nothing to do with the stub. No production caller supplies these seams.
+   */
+  hostOwnsCommit: boolean;
+  /** Test seam: where the AFTER week is read from. Defaults to the live one. */
+  readVisibleWeek?: (dates: readonly string[]) => ResolvedDay[];
 }): { ok: true; value: T; failure: null }
   | { ok: false; value: null; failure: VisibleVerificationFailure } {
   const priorState = { ...useProgramStore.getState() };
   const value = args.commit();
+  if (args.hostOwnsCommit) return { ok: true, value, failure: null };
   // A stage that published nothing has its own answer (ruling #6) and is not
   // the case this post-condition is about.
   if (publicationNoChange(value)) return { ok: true, value, failure: null };
   const verification = verifyVisibleDatesChanged({
     before: args.before,
-    after: liveVisibleWeekFor(args.dates),
+    after: (args.readVisibleWeek ?? liveVisibleWeekFor)(args.dates),
     dates: args.dates,
   });
   if (verification.ok) return { ok: true, value, failure: null };
@@ -1976,6 +2172,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           commit: () => (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
             resolution.input,
           ),
+          hostOwnsCommit: !!args.commitAthleteMove,
+          readVisibleWeek: args.readVisibleWeekAfterCommit,
         });
         if (verified.ok) moveNoChange = publicationNoChange(verified.value);
         else moveUnverified = verified.failure;
@@ -2014,6 +2212,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           dates: resolution.appliedDates,
           commit: () => (args.commitAthleteRemoval ??
             commitAthleteSessionDeletionTransaction)(resolution.input),
+          hostOwnsCommit: !!args.commitAthleteRemoval,
+          readVisibleWeek: args.readVisibleWeekAfterCommit,
         });
         if (!verified.ok) {
           swapUnverified = verified.failure;
@@ -2067,6 +2267,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           dates: resolution.appliedDates,
           commit: () => (args.commitAthleteAddition ??
             commitAthleteSessionAdditionTransaction)(resolution.input),
+          hostOwnsCommit: !!args.commitAthleteAddition,
+          readVisibleWeek: args.readVisibleWeekAfterCommit,
         });
         if (!verified.ok) {
           addUnverified = verified.failure;
@@ -2118,6 +2320,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           dates: resolution.appliedDates,
           commit: () => (args.commitAthleteRemoval ??
             commitAthleteSessionDeletionTransaction)(resolution.input),
+          hostOwnsCommit: !!args.commitAthleteRemoval,
+          readVisibleWeek: args.readVisibleWeekAfterCommit,
         });
         if (!verified.ok) {
           removalUnverified = verified.failure;

@@ -509,28 +509,25 @@ run('a DIFFERENT swap on an already-swapped day never claims a session it did no
 run('a commit that does not reach the visible week is refused and rolled back', () => {
   const weekStart = seed();
   const monday = addDaysISO(weekStart, 0);
-  const wednesday = addDaysISO(weekStart, 2);
   const before = visibleWeek(weekStart);
   const mondayBefore = before.find((day) => day.date === monday)?.workout?.name ?? null;
   assert(mondayBefore, 'seeded Monday session missing');
 
-  // Stands in for the device failure: a commit that changes accepted state
-  // WITHOUT the claimed day moving in the resolved week. The stray write on an
-  // unrelated date is what proves the rollback restored surfaces rather than
-  // merely reporting a refusal.
+  // The device failure, reproduced against the REAL transaction: the swap
+  // commits into accepted state, and the week the athlete SEES does not move
+  // because a later layer re-derived over it. `readVisibleWeekAfterCommit`
+  // stands in for that layer by handing back the pre-commit week.
+  //
+  // Deliberately not a stubbed commit: a caller-supplied commit seam means the
+  // host owns publication and its post-condition, so stubbing the commit would
+  // switch the very check under test off.
   const result = quiet(() => applyPlanChange({
     change: { kind: 'swap_category', date: monday, category: 'conditioning_light' },
     visibleWeek: before,
     todayISO: weekStart,
     setManualOverride: (date, workout, context) =>
       useProgramStore.getState().setManualOverride(date, workout, context),
-    commitAthleteRemoval: () => {
-      useProgramStore.getState().setManualOverride(
-        wednesday,
-        { ...(before.find((day) => day.date === monday)!.workout!) },
-      );
-      return {};
-    },
+    readVisibleWeekAfterCommit: () => before,
   }));
 
   assert(result.ok === false && result.outcome === 'refused',
@@ -539,8 +536,8 @@ run('a commit that does not reach the visible week is refused and rolled back', 
     `an unverified commit still reported success: "${result.message}"`);
   assert(result.rejected.some((entry) => entry.code === 'visible_change_unverified'),
     `refusal carried no verification code: ${JSON.stringify(result.rejected)}`);
-  assert(!useProgramStore.getState().dateOverrides[wednesday],
-    'the unverified commit was not rolled back — its stray write survived');
+  assert(useProgramStore.getState().userRemovalConstraints.length === 0,
+    'the unverified commit was not rolled back — its constraint survived');
   assert(visibleWeek(weekStart).find((day) => day.date === monday)?.workout?.name === mondayBefore,
     'the target day changed despite the refusal');
 });

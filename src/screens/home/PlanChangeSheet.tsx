@@ -15,6 +15,7 @@ import {
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
+  type PlanChangeMoveScopeId,
   type PlanChangeOutcome,
 } from '../../utils/planChangeProducer';
 import {
@@ -98,7 +99,8 @@ type Step =
       context: G1MoveContext;
       backStep: Step;
     }
-  | { kind: 'pick_destination' }
+  | { kind: 'pick_move_scope' }
+  | { kind: 'pick_destination'; scope: PlanChangeMoveScopeId }
   | { kind: 'pick_bin_scope' }
   | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
   | {
@@ -419,6 +421,28 @@ export function PlanChangeSheet({
     applyCategory(mode, category, returnTo);
   };
 
+  // Move entry point. The producer answers with either usable scopes or a
+  // typed refusal, and BOTH are rendered — the device dead end was this tap
+  // leading to a "Move to:" heading with nothing under it and no explanation.
+  // A single scope with one obvious meaning skips straight to the destinations.
+  const startMove = () => {
+    const move = options?.move;
+    if (!move) return;
+    if (move.refusal) {
+      setStep({
+        kind: 'block_warning',
+        reasons: [move.refusal.message],
+        backStep: { kind: 'edit_session' },
+      });
+      return;
+    }
+    if (move.scopes.length === 1) {
+      setStep({ kind: 'pick_destination', scope: move.scopes[0].id });
+      return;
+    }
+    setStep({ kind: 'pick_move_scope' });
+  };
+
   // Bin entry point: multi-session days pick WHICH part first; single-part
   // days go straight to the are-you-sure.
   const startBin = () => {
@@ -509,7 +533,7 @@ export function PlanChangeSheet({
             testID={selectedWorkout
               ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
               : undefined}
-            onPress={() => setStep({ kind: 'pick_destination' })}
+            onPress={() => startMove()}
           />
           <MenuOption
             label="Bin this session"
@@ -784,24 +808,64 @@ export function PlanChangeSheet({
         </View>
       )}
 
-      {options && step.kind === 'pick_destination' && (
+      {options && !options.move.refusal && step.kind === 'pick_move_scope' && (
         <View>
-          <Text style={styles.sectionLabel}>Move to:</Text>
-          {options.moveDestinations.map((destination) => (
+          <Text style={styles.sectionLabel}>Move what?</Text>
+          {options.move.scopes.map((scope) => (
             <MenuOption
-              key={destination.date}
-              label={weekdayLabel(destination.date)}
-              sub={destination.occupiedBy
-                ? `Swap with ${destination.occupiedBy}`
-                : 'Currently a rest day'}
-              testID={explorerTestId.sessionMoveDestination(destination.date)}
-              onPress={() =>
-                apply({ kind: 'move_session', fromDate: date, toDate: destination.date })}
+              key={scope.id}
+              label={scope.label}
+              sub={scope.sub}
+              testID={`plan-change-move-scope-${scope.id}`}
+              onPress={() => setStep({ kind: 'pick_destination', scope: scope.id })}
             />
           ))}
           <BackRow onPress={() => setStep({ kind: 'edit_session' })} />
         </View>
       )}
+
+      {options && !options.move.refusal && step.kind === 'pick_destination' && (() => {
+        const scope = options.move.scopes.find((entry) => entry.id === step.scope);
+        // Unreachable by construction — the producer never offers a scope with
+        // an empty destination list, and startMove only routes here for a scope
+        // it just read. Rendered rather than returning null so a future change
+        // that breaks that invariant is visible instead of silent.
+        if (!scope) {
+          return (
+            <View>
+              <Text style={styles.blockingTitle}>
+                {"That move isn't available any more — reopen the day and try again."}
+              </Text>
+              <MenuOption label="OK" onPress={() => setStep({ kind: 'edit_session' })} />
+            </View>
+          );
+        }
+        return (
+          <View>
+            <Text style={styles.sectionLabel}>Move to:</Text>
+            {scope.destinations.map((destination) => (
+              <MenuOption
+                key={destination.date}
+                label={weekdayLabel(destination.date)}
+                sub={destination.occupiedBy
+                  ? `Swap with ${destination.occupiedBy}`
+                  : 'Currently a rest day'}
+                testID={explorerTestId.sessionMoveDestination(destination.date)}
+                onPress={() => apply({
+                  kind: 'move_session',
+                  fromDate: date,
+                  toDate: destination.date,
+                  ...(scope.id === 'whole_day' ? {} : { scope: scope.id }),
+                })}
+              />
+            ))}
+            <BackRow onPress={() => setStep(
+              options.move.scopes.length > 1
+                ? { kind: 'pick_move_scope' }
+                : { kind: 'edit_session' })} />
+          </View>
+        );
+      })()}
 
       {/* Multi-session days: pick WHICH part to bin before the
           are-you-sure. Options come from the producer (single owner of

@@ -2148,6 +2148,15 @@ export interface AthleteSessionMoveTransactionInput {
    * Undo restores exactly what was there before the athlete chose a route.
    */
   placedSession?: { route: G1MoveRouteId; workout: Workout } | null;
+  /**
+   * A SESSION-scoped move off a combined day (Sam, 2026-07-30): the gym session
+   * leaves, team training stays anchored. Both halves arrive together from one
+   * `splitAcceptedSessionForAthleteMove` call so the day that stays and the
+   * session that leaves cannot disagree about which rows went where.
+   *
+   * Absent = the whole-day move every caller meant before scoping existed.
+   */
+  componentSplit?: { movedWorkout: Workout; remainingWorkout: Workout | null } | null;
 }
 
 export interface AthleteMutationTransactionStage {
@@ -2646,7 +2655,9 @@ export function stageAthleteSessionMoveTransaction(
   // The athlete's chosen route decides WHAT lands; the source session decides
   // WHOSE it is. `placedSession` always carries the source identity, so this
   // stays one session moving rather than a delete plus an add.
-  const placed = args.placedSession?.workout ?? acceptedSource;
+  const placed = args.componentSplit?.movedWorkout
+    ?? args.placedSession?.workout
+    ?? acceptedSource;
   const movedWorkout = cloneWorkoutForDate(placed, targetDate);
   // A game-proximity FILLER on the destination is not a swap partner. It is
   // regenerated every render from the fixture, so relocating it to the source
@@ -2654,9 +2665,16 @@ export function stageAthleteSessionMoveTransaction(
   // duplicate it the moment the resolver rebuilt the original. Discard it and
   // let the source day become rest, exactly as a move onto an empty day does.
   const acceptedTargetIsSwappable = !isResolverOwnedDerivedSession(acceptedTarget);
-  const swappedWorkout = acceptedTarget && acceptedTargetIsSwappable
-    ? cloneWorkoutForDate(acceptedTarget, sourceDate)
-    : null;
+  // A scoped move leaves the REMAINDER of the source day behind rather than a
+  // swapped-back partner: the destination is a free day by construction, so
+  // there is nothing to swap and the day it left is not emptied.
+  const swappedWorkout = args.componentSplit
+    ? (args.componentSplit.remainingWorkout
+        ? cloneWorkoutForDate(args.componentSplit.remainingWorkout, sourceDate)
+        : null)
+    : acceptedTarget && acceptedTargetIsSwappable
+      ? cloneWorkoutForDate(acceptedTarget, sourceDate)
+      : null;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,
@@ -2814,8 +2832,12 @@ export function commitAthleteSessionMoveTransaction(
   // (Coach door, hydration) that bypass the producer gate.
   if (profile) {
     const violation = detectAthleteMoveContentLoss({
-      moved: args.originalSourceWorkout,
-      displaced: args.existingTargetWorkout,
+      // A scoped move conserves the two HALVES of the split, not the combined
+      // day identity — that identity no longer names anything after the split.
+      moved: args.componentSplit?.movedWorkout ?? args.originalSourceWorkout,
+      displaced: args.componentSplit
+        ? args.componentSplit.remainingWorkout
+        : args.existingTargetWorkout,
       weekStarts: staged.affectedWeekStarts,
       profile,
     });

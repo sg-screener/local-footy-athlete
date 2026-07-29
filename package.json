@@ -243,6 +243,7 @@
     "test:weekly-dose-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklyDoseOwnershipTests.ts",
     "test:severity-scale": "TZ=Australia/Melbourne sucrase-node src/__tests__/severityScaleOwnershipTests.ts",
     "test:practice-match-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/practiceMatchWeekShapeTests.ts",
+    "test:move-scoping": "TZ=Australia/Melbourne sucrase-node src/__tests__/planChangeMoveScopingTests.ts",
     "test:placement-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/athletePlacementOwnershipTests.ts",
     "test:g1-move-ask-flow": "TZ=Australia/Melbourne sucrase-node src/__tests__/g1MoveAskFlowTests.ts",
     "test:phase-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseOwnershipTests.ts",
