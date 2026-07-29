@@ -102,6 +102,68 @@ function persistSoon(): void {
 }
 
 /**
+ * Events that describe WHAT THE ATHLETE DID and what the app answered. These
+ * survive; everything else is evicted first.
+ *
+ * Export 6 is why. Sam's six-step re-test produced 200 entries — and 182 of
+ * them were one move's §18 repair search (`accepted_week_gateway_result` 76,
+ * `repair_candidate_selected` 65, `repair_candidates_generated` 28,
+ * `repair_candidate_rejected` 13). That single transaction's internals evicted
+ * the first five steps of the session, including both findings he most wanted
+ * read. A ring that one action can flood cannot describe a session, which is
+ * the only thing this log is for.
+ *
+ * The engine chatter is still recorded — it is genuinely useful when the
+ * question is "why did the repair pick that day" — it just loses its place in
+ * the queue to the athlete's own actions.
+ */
+const DECISION_EVENTS: ReadonlySet<string> = new Set([
+  'athlete_action_requested',
+  'athlete_mutation_received',
+  'athlete_action_route_selected',
+  'mutation_preview_result',
+  'mutation_constraint_created',
+  'mutation_transaction_staged',
+  'transaction_verification_result',
+  'accepted_state_publication_result',
+  'transaction_publish_result',
+  'persistence_result',
+  'athlete_action_completed',
+  'athlete_action_failed',
+  'athlete_ui_outcome_shown',
+  'ui_outcome_mapped',
+  'onboarding_step_committed',
+  'onboarding_completion_result',
+  'profile_write',
+  'profile_rehydrated',
+  'profile_mirror_publication_refused',
+  'profile_snapshot_repaired',
+  'hydrated_state_checked',
+]);
+
+function isDecision(entry: AthleteActionLogEntry): boolean {
+  return DECISION_EVENTS.has(entry.event);
+}
+
+/**
+ * Trim to the cap, dropping the oldest ENGINE entries before any athlete
+ * decision. Only when the ring is all decisions does the oldest decision go.
+ */
+function trimToCap(): void {
+  if (entries.length <= ATHLETE_ACTION_LOG_MAX_ENTRIES) return;
+  let over = entries.length - ATHLETE_ACTION_LOG_MAX_ENTRIES;
+  const kept: AthleteActionLogEntry[] = [];
+  for (const entry of entries) {
+    if (over > 0 && !isDecision(entry)) {
+      over -= 1;
+      continue;
+    }
+    kept.push(entry);
+  }
+  entries = over > 0 ? kept.slice(over) : kept;
+}
+
+/**
  * Append one already-built, already-redacted event.
  *
  * Called from `emitAthleteActionEvent` BEFORE its enabled check — that call
@@ -119,9 +181,7 @@ export function recordAthleteActionLogEntry(event: {
 }): void {
   const { timestamp, ...rest } = event;
   entries.push({ at: timestamp, ...rest } as AthleteActionLogEntry);
-  if (entries.length > ATHLETE_ACTION_LOG_MAX_ENTRIES) {
-    entries.splice(0, entries.length - ATHLETE_ACTION_LOG_MAX_ENTRIES);
-  }
+  trimToCap();
   persistSoon();
 }
 
@@ -151,9 +211,7 @@ export async function hydrateAthleteActionLog(): Promise<void> {
     const parsed = JSON.parse(raw) as PersistedAthleteActionLog;
     if (!Array.isArray(parsed?.entries)) return;
     entries = [...parsed.entries, ...entries];
-    if (entries.length > ATHLETE_ACTION_LOG_MAX_ENTRIES) {
-      entries.splice(0, entries.length - ATHLETE_ACTION_LOG_MAX_ENTRIES);
-    }
+    trimToCap();
   } catch {
     // Unreadable bytes are dropped rather than crashing startup. The log is
     // never load-bearing for anything the athlete sees.

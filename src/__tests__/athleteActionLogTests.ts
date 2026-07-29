@@ -206,6 +206,32 @@ await run(`keeps the most recent ${ATHLETE_ACTION_LOG_MAX_ENTRIES} and drops the
     'the oldest event survived the trim');
 });
 
+await run('one action\'s engine chatter cannot evict the athlete\'s own steps', async () => {
+  // Export 6: a six-step re-test came back with 200 entries, 182 of them ONE
+  // move's repair search. The first five steps — including both findings Sam
+  // most wanted read — had been evicted by a single transaction's internals.
+  releaseBuild();
+  await clearAthleteActionLog();
+  const context = trace();
+  emitAthleteActionEvent(context, 'athlete_mutation_received', { step: 'first-tap' });
+  for (let index = 0; index < ATHLETE_ACTION_LOG_MAX_ENTRIES * 2; index += 1) {
+    emitAthleteActionEvent(context, 'repair_candidate_selected', { sequence: index });
+  }
+  emitAthleteActionEvent(context, 'athlete_action_completed', { step: 'last-tap' });
+
+  const entries = athleteActionLogEntries();
+  assert(entries.length <= ATHLETE_ACTION_LOG_MAX_ENTRIES,
+    `the ring grew past its cap: ${entries.length}`);
+  assert(entries.some((entry) => entry.step === 'first-tap'),
+    'the repair search evicted the tap that started the session — the exact '
+    + 'failure that cost two findings on export 6');
+  assert(entries.some((entry) => entry.step === 'last-tap'),
+    'the newest decision is missing');
+  // The chatter is kept, just second in line.
+  assert(entries.some((entry) => entry.event === 'repair_candidate_selected'),
+    'engine entries were dropped entirely — they are useful, just not first');
+});
+
 // ── Gap 2: survives a relaunch ────────────────────────────────────────────
 
 await run('what was recorded is on disk, not only in memory', async () => {

@@ -114,3 +114,82 @@ The route copy pattern extends accordingly (a fourth option on empty days, plus
 the labelled back row), and **Sam signs the new strings** before they ship —
 the copy-equality gate in `g1LandingAskFlowTests` 18 fails until the design
 document carries them, which is the mechanism that enforces it.
+
+---
+
+# Addendum — the re-test (export 6), and a corrected root cause
+
+Six steps, taps on the tape. Four findings, and **one of them corrects this
+document's own diagnosis.**
+
+## The tape could not answer, and that is finding zero
+
+200 entries, of which **182 were a single move's §18 repair search**
+(`accepted_week_gateway_result` 76, `repair_candidate_selected` 65,
+`repair_candidates_generated` 28, `repair_candidate_rejected` 13). One
+transaction's internals evicted the first five steps of the session, including
+both findings Sam most wanted read. The log spanned 38 seconds of a several-
+minute script.
+
+Fixed: the ring now evicts ENGINE entries before athlete decisions, and only
+drops a decision when the ring is all decisions. The chatter is still recorded;
+it just loses its place in the queue to the athlete's own actions.
+
+## Finding 4 — the locked day: THIS DOCUMENT HAD THE WRONG CAUSE
+
+Reproduced on the current branch, and the surprise is in the first two lines:
+
+```
+bin on G-1        → ok,  markedDays { "2026-07-24": "rest" }
+add on that day   → ok,  session lands
+add + a G-1 route → REFUSED: unknown_section_id
+```
+
+**The rest mark is not what locked the day.** An add over the mark succeeds. What
+refused was `unknown_section_id`, and that is a hole in this unit's own fix:
+added content is authorised by byte-exact signature match, and `d0437ce` taught
+the policy to authorise ROUTED templates — inside a loop over days that begins
+`if (!day.workout) continue;`. An empty day authorised the plain template and
+nothing else. So Sam answered the ask and the app refused its own offer.
+
+A day with nothing on it is exactly the day an add is for. Fixed; pinned by
+`g1LandingAskFlowTests` 28, which reproduces his sequence exactly.
+
+## The mark itself — ruling stands, unit is bigger than it looked
+
+Sam's law is unchanged and correct: a deletion door does not write calendar
+marks. It was attempted in this session and **reverted**, because removing it
+alone is not a contained change:
+
+- The mark is the planner's rest input. `buildWeekLog` reads `markedDays`, so
+  removing it changes conditioning placement on OTHER days.
+- Owning the emptiness with a stamped rest stub (the placement-law shape, which
+  does work — the resolver keeps the day empty) still moved a neighbouring day,
+  and `athleteSessionDeletionTests` regression 9 went red: the TAP door applied
+  and the COACH door refused, because the coach verifier treats any other-day
+  change as a verification failure while the same deletion authorises
+  equivalent-exposure relocation.
+- Three further assertions in that suite pin the mark as the ownership
+  mechanism and need re-pointing at the new owner, not deleting.
+
+That is a unit with a ruling of its own to ask for: **when a deletion authorises
+relocation, may the coach door report success while another day rebalances?**
+Until that is answered, half-removing the mark would trade a locked day for a
+divergence between the two doors — and the locked day is already fixed above.
+
+## Findings still open, with what they need
+
+- **(2) Route (b) is a no-op on the registry strength templates.** Reproduced:
+  `accessories_only` over `strength_full` lands all five rows unchanged, because
+  every row classifies as an accessory — `isMainStrengthRow` asks
+  `classifyPoolSlot(...)?.role === 'anchor'` and template rows are not pool
+  anchors. Same classifier as **5D.4**, same shape: a lookup standing in for
+  authored truth. The athlete asks for accessories-only and gets the whole
+  session. Belongs to 5D.4; not patched here.
+- **(2) No Gunshow in the option list on an empty G-1** — ruled in, needs Sam's
+  signature on two new strings before it can ship.
+- **(6) The move refusal.** The destination picker offers a day the commit door
+  then refuses (`protected_anchor_day` — a team-training day), and the athlete
+  is told "nothing on your plan changed. Try again", which is advice that cannot
+  work. Needs one signed string naming the real reason, plus the picker
+  excluding anchor destinations.

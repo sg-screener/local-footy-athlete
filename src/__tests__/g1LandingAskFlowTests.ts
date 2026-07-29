@@ -1020,6 +1020,38 @@ run('27 the card names BOTH what the day held and what the athlete added', () =>
     `the title "${title}" does not use the team-combo join`);
 });
 
+run('28 a routed landing on an EMPTY G-1 lands, instead of being refused', () => {
+  // SAM'S RE-TEST, STEP 4. He binned the session on his G-1 Friday and the day
+  // was dead from then on: every add came back "I couldn't safely make that
+  // change". The tape gave the code — `unknown_section_id`.
+  //
+  // It is a hole in this unit's own fix. Added content is authorised by
+  // byte-exact signature match, and `d0437ce` taught the policy to authorise
+  // ROUTED templates too — inside a loop over days that begins
+  // `if (!day.workout) continue;`. An empty day therefore authorised the plain
+  // template and nothing else, so the athlete answered the ask and the answer
+  // came back unrecognised. A day with nothing on it is exactly the day an
+  // add is FOR.
+  const program = seed(profile());
+  const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
+  const friday = addDaysISO(weekStart, 4);
+
+  const binned = commitChange(weekStart, { kind: 'remove_session', date: friday });
+  assert(binned.ok, `the bin failed: ${binned.message}`);
+  assert(!visibleWeek(weekStart).find((day) => day.date === friday)?.workout,
+    'the bin did not leave G-1 empty — this test no longer covers the empty case');
+
+  const added = commitChange(weekStart, {
+    kind: 'add_category', date: friday, category: 'strength_full',
+    g1Route: 'accessories_only',
+  });
+  assert(added.ok,
+    `the day the athlete emptied is locked against them: "${added.message}" `
+    + `${JSON.stringify(added.rejected)}`);
+  assert(visibleWeek(weekStart).find((day) => day.date === friday)?.workout,
+    'the add reported success over a day that stayed empty');
+});
+
 // ── Copy provenance: code ↔ Sam's signed design document ──────────────────
 
 /**

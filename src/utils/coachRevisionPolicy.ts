@@ -12,6 +12,7 @@
  * two-representations disease the revision pipeline was built to kill.
  */
 
+import type { Workout } from '../types/domain';
 import { getMondayForDate } from './sessionResolver';
 import type { ResolvedDay } from './sessionResolver';
 import {
@@ -38,9 +39,11 @@ function canonicalTemplateSectionSignature(
   templateId: string,
   date: string,
   todayISO: string,
+  transformTemplate?: (template: Workout) => Workout,
 ): string | null {
-  const workout = buildCoachRevisionTemplateWorkout(templateId, date);
-  if (!workout) return null;
+  const built = buildCoachRevisionTemplateWorkout(templateId, date);
+  if (!built) return null;
+  const workout = transformTemplate ? transformTemplate(built) : built;
   let canonical;
   try {
     canonical = validateLiveWorkoutWrite(date, workout);
@@ -111,12 +114,26 @@ export function coachRevisionValidationPolicyForWeek(
     // Canonicalisation can be date/phase dependent, so compute every visible
     // date even for otherwise-static template builders.
     for (const date of weekDates) {
-      const signature = canonicalTemplateSectionSignature(
-        template.templateId,
-        date,
-        todayISO,
-      );
-      if (signature) standard.push(signature);
+      // Plain, and — when the athlete has answered the G-1 ask — the same
+      // template as their answer transforms it.
+      //
+      // THE EMPTY-DAY CASE IS WHY THIS IS HERE AND NOT ONLY IN THE LOOP BELOW.
+      // That loop begins `if (!day.workout) continue;`, so a day with nothing
+      // on it authorised the plain template and nothing else. Sam binned his
+      // G-1 session, answered the ask on the next add, and the answer came back
+      // `unknown_section_id` — the app refusing content it had just offered
+      // him. A day with nothing on it is exactly the day an add is for.
+      for (const route of g1Route ? [undefined, g1Route] : [undefined]) {
+        const signature = canonicalTemplateSectionSignature(
+          template.templateId,
+          date,
+          todayISO,
+          g1RouteTemplateTransform({
+            kind: 'add_template', date, templateId: template.templateId, g1Route: route,
+          }),
+        );
+        if (signature) standard.push(signature);
+      }
     }
   }
   // A template stacked onto an accepted container can legitimately acquire a
