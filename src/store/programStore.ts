@@ -28,7 +28,7 @@ import type {
   FeedbackSoreness,
   SessionOutcomeTransactionReceipt,
 } from '../types/sessionOutcome';
-import { dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
+import { appDateNow, dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   buildSection18WeeklyExposureContractV2,
@@ -1116,7 +1116,38 @@ function canonicaliseAcceptedBoundaryState(
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
     );
-    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : null;
+    // A DERIVED REPAIR NEVER LANDS ON THE ATHLETE'S SURFACE (Sam, 2026-07-30).
+    //
+    // The gateway's repair used to go into `dateOverrides` whenever the week had
+    // no overlay to hold it. `dateOverrides` is the athlete's DECISION surface —
+    // `rebaseAcceptedEffectiveWeek` says so in its own comment and treats
+    // `date_override` as athlete-owned — so that filed derived content under his
+    // signature, and one rest mark materialised five overrides, one of them on
+    // the rest day itself.
+    //
+    // What made it visible is that the two resolvers order the same two inputs
+    // oppositely: `_resolveDateRaw` puts a manual override at Priority 1 ABOVE
+    // the calendar mark, while `rebaseAcceptedEffectiveWeek` composes the
+    // override and applies the marks LAST. So the screen prescribed Lower Squat
+    // on the day he had marked as rest while the accepted week correctly held
+    // nothing, three actions from a fresh install. It also cost two device
+    // findings: the move door's target-identity check compares accepted against
+    // visible and was refusing, correctly, about a day that disagreed with
+    // itself.
+    //
+    // The overlay already means "derived content for this week, authored by a
+    // fact, not by the athlete", which is exactly what a gateway repair is. So a
+    // base-owned week MINTS one rather than borrowing the athlete's. This is a
+    // deletion of a second home for one kind of content, not a new branch: after
+    // it, a repair has one surface and `dateOverrides` means one thing.
+    //
+    // The first branch is untouched and is the one case where writing there is
+    // right — an override the athlete DID author is his, and the repair updates
+    // it in place. A fix that simply deleted the write would pass the ownership
+    // assertions and lose every edit in the app; `derivedRepairOwnershipTests`
+    // holds that cell open.
+    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : {};
+    let repairedBaseOwnedWeek = false;
     for (let offset = 0; offset < 7; offset++) {
       const date = addDaysISO(weekStart, offset);
       const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
@@ -1126,21 +1157,29 @@ function canonicaliseAcceptedBoundaryState(
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
         if (after) dateOverrides[date] = after;
         else delete dateOverrides[date];
-      } else if (overlayWorkouts) {
+      } else {
         overlayWorkouts[date] = after;
-      } else if (after) {
-        dateOverrides = { ...(dateOverrides ?? {}), [date]: after };
+        if (!overlay) repairedBaseOwnedWeek = true;
       }
     }
-    if (overlay && overlayWorkouts && weekScopedOverlays) {
+    if (weekScopedOverlays && (overlay || repairedBaseOwnedWeek)) {
+      const now = appDateNow().toISOString();
       weekScopedOverlays[weekStart] = {
-        ...overlay,
+        ...(overlay ?? {
+          id: `accepted-week-repair:${weekStart}`,
+          weekStart,
+          weekEnd: addDaysISO(weekStart, 6),
+          anchorDate: null,
+          reason: 'accepted_week_repair' as const,
+          createdAt: now,
+        }),
         workoutsByDate: overlayWorkouts,
         exposureContractV2: accepted.contract,
+        updatedAt: now,
       };
     } else {
-      // The accepted contract is the persisted ledger for a base-owned week.
-      // Repairs may live in explicit date overrides, but the corresponding
+      // The accepted contract is the persisted ledger for a base-owned week that
+      // needed no repair. Nothing changed, so no overlay is minted, but the
       // achieved/reduction ledger must not remain stranded in the transient
       // gateway result.
       if (currentProgram && baseMicrocycle) {

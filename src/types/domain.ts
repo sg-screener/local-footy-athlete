@@ -874,7 +874,17 @@ export interface WeekScopedWorkoutOverlay {
   weekStart: string;
   weekEnd: string;
   anchorDate: string | null;
-  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week' | 'readiness_reduction';
+  /**
+   * `accepted_week_repair` is the §18 accepted-week gateway's own repair of a
+   * BASE-OWNED week. It used to be written into `dateOverrides` for want of an
+   * overlay to hold it, which filed derived content under the athlete's
+   * signature and — because a date override outranks a calendar mark on the
+   * screen and is outranked by it in the accepted week — rendered a session on
+   * days the athlete had marked as rest. See
+   * docs/DERIVED_OVERRIDE_MATERIALISATION_REASSESSMENT_2026-07-30.md.
+   */
+  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week' | 'readiness_reduction'
+    | 'accepted_week_repair';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
   /** Parallel Section 18 policy contract for observational evaluation. */

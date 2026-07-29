@@ -5,7 +5,7 @@ import {
   type CoachRevisionSectionKind,
   type CoachVisibleSectionSnapshot,
 } from './coachRevisionProposal';
-import { splitSessionName } from './sessionNaming';
+import { resolveSessionDisplayName, splitSessionName } from './sessionNaming';
 import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
@@ -147,28 +147,47 @@ export function splitAcceptedSessionForAthleteMove(args: {
   if (remainder.ok === false) return { ok: false, code: remainder.code === 'nothing_to_remove' ? 'nothing_to_move' : 'scope_not_on_day' };
 
   const sourceIdentity = source.planEntryId ?? source.id;
-  // Same naming rule as the reduction above, applied to the other half. On a
-  // combined day the STRENGTH section's own title is the composite day name
-  // ("Team Training + Upper Push"), so taking it verbatim would carry the
-  // anchor's name onto the destination — the day would read as though team
-  // training had moved. `splitSessionName` is the existing owner of that split.
-  const movedTitle = movedKind === 'strength'
-    ? splitSessionName(snapshot.workout.title).title ||
-      movedSections[0].title ||
-      snapshot.workout.title
-    : movedSections[0].title || snapshot.workout.title;
   const moved = materializeAcceptedVisibleSections({
     source,
-    title: movedTitle,
+    title: movedSections[0].title || snapshot.workout.title,
     workoutType: source.workoutType,
     durationMinutes: snapshot.workout.durationMinutes,
     intensity: snapshot.workout.intensity,
     sections: movedSections,
   });
+  // WHAT LEAVES IS NAMED FROM ITSELF, NOT FROM THE DAY IT LEFT.
+  //
+  // This used to string-split the composite day name with `splitSessionName`,
+  // on the reasoning that "Team Training + Upper Push" yields "Upper Push". It
+  // does — but only when the other half is a canonical strength label. When the
+  // strength arrived by a later ADD, the day is still called "Team Training +
+  // Easy Zone 2 Ski Erg", neither half is a strength label, and the splitter
+  // falls back to the LEFT one. So the gym session moved to its destination
+  // called "Team Training", was then classified team-only by its own name (its
+  // eight rows swallowed as team-training items), and stacking that onto a real
+  // team night was refused — the athlete was told his plan could not safely
+  // change, about a destination his own menu had just offered him.
+  //
+  // A parse of a name is not evidence about content. `resolveSessionDisplayName`
+  // is the naming owner and derives from typed intent and the actual rows, which
+  // is what `fixtureMinimalReplan` already does when it splits a strength
+  // component off a day. The composed half is named after it is composed, so the
+  // name describes what is really in it.
+  const movedWorkout = movedKind === 'strength'
+    ? {
+        ...moved,
+        name: resolveSessionDisplayName({
+          strengthIntent: moved.strengthIntent,
+          exercises: moved.exercises,
+          isTeamDay: false,
+          tier: 'core',
+        }) || moved.name,
+      }
+    : moved;
   return {
     ok: true,
     movedWorkout: {
-      ...moved,
+      ...movedWorkout,
       id: `${sourceIdentity}:${movedKind}-component`,
       planEntryId: `${sourceIdentity}:${movedKind}-component`,
     },
@@ -237,6 +256,23 @@ function materializeAcceptedVisibleSections(args: {
   return cloneWorkout(args.source, {
     name: title,
     workoutType: workoutType as Workout['workoutType'],
+    // THE ANCHOR IS A FACT ABOUT THE DAY, NOT ABOUT A COMPONENT.
+    //
+    // `isTeamDay` is what `isTeamTrainingSession` reads, and `cloneWorkout`
+    // inherits every field this call does not override — so BOTH halves of a
+    // split came out flagged as team days. The consequences were mirror images
+    // of each other and both wrong: the half that LEFT was classified team-only
+    // (its eight gym rows swallowed as team-training items, renamed "Team
+    // Training"), and the half that STAYED was renamed off the anchor, so the
+    // athlete's combined Monday reported as conditioning alone and the team
+    // night appeared to have travelled with the gym session.
+    //
+    // `hasSession` is exactly the question "did the team section stay with this
+    // half?" — team training snapshots as section kind `session`
+    // (REMOVAL_SECTION_KIND maps `team_component` -> `session`). So the anchor
+    // travels with the section that represents it and with nothing else. A Bin
+    // of the team component drops it; a Bin of anything else keeps it.
+    isTeamDay: hasSession,
     durationMinutes: args.durationMinutes ?? args.source.durationMinutes,
     intensity: (args.intensity ?? args.source.intensity) as Workout['intensity'],
     description: onlyConditioning
