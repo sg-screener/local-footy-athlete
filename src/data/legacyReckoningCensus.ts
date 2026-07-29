@@ -285,7 +285,16 @@ export type LegacyUnitStatus =
   /** Being built right now, elsewhere — listed so it is not double-scheduled. */
   | 'in_flight'
   /** Blocks other work until a reassessment is written and approved. */
-  | 'stop';
+  | 'stop'
+  /**
+   * Paid off. The entry STAYS, holding its detector at zero forever.
+   *
+   * A classification census deletes a solved entry so the list cannot read as
+   * approval. A retirement census must not: deleting the entry deletes the
+   * detector, and the surface it retired can then come back unobserved. What is
+   * left of a paid unit is the ban that keeps it paid.
+   */
+  | 'retired';
 
 export interface LegacyUnit {
   readonly id: string;
@@ -303,6 +312,17 @@ export interface LegacyUnit {
   readonly detector: LegacyDetectorId | null;
   /** Required when `detector` is set. */
   readonly declared?: number;
+  /**
+   * What this unit measured on census day, 2026-07-30. Required when `detector`
+   * is set, and it NEVER rises.
+   *
+   * The per-unit ceiling exists because a single global one is not enough: debt
+   * paid on one unit would otherwise fund a new violation on another, and the
+   * whole suite would stay green while admitting surface that did not exist when
+   * the census landed. That was demonstrated, not theorised — see direction 4a.
+   * Slack retires where it was earned.
+   */
+  readonly foundingCount?: number;
   /** Required when `detector` is `null`. */
   readonly whyNotDetectable?: string;
 }
@@ -333,6 +353,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     sequence: LR1_LR2_SEQUENCE,
     detector: 'rawProgramWriteRefs',
     declared: 27,
+    foundingCount: 27,
   },
   {
     id: 'LR-2',
@@ -350,6 +371,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
     declared: 11,
+    foundingCount: 11,
   },
   {
     id: 'LR-3',
@@ -365,6 +387,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     detector: 'legacyOverrideWriterRefs',
     declared: 4,
+    foundingCount: 4,
   },
   {
     id: 'LR-4',
@@ -381,6 +404,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     detector: 'mirrorDecisionReads',
     declared: 74,
+    foundingCount: 74,
   },
   {
     id: 'LR-5',
@@ -719,14 +743,46 @@ export const LEGACY_DEBT_BASELINE = 116;
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
  *
- * This is the constant that makes the ratchet non-circular. Directions 2 and 3
- * both compare the total against LEGACY_DEBT_BASELINE, so raising both together
- * would keep the gate green — which is exactly how a newcomer would declare a
- * fresh violation into the census instead of fixing it. Against this number
- * that move is red, and stays red.
+ * This is what makes the ratchet non-circular. Directions 2 and 3 both compare
+ * the total against LEGACY_DEBT_BASELINE, so raising both together would keep
+ * the gate green — exactly how a newcomer declares a fresh violation into a
+ * census instead of fixing it. Against this number that move is red.
+ *
+ * It must equal the sum of the per-unit `foundingCount`s, so it cannot be
+ * edited on its own to create headroom nothing accounts for.
  *
  * Raising it is a RULING, not an edit. If a genuine pre-law surface was missed
  * by the founding sweep, say so in the census document, get it ruled, and raise
- * both numbers together — with the sweep that missed it named.
+ * the unit's founding count and this total together — with the sweep that
+ * missed it named.
  */
 export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
+
+/**
+ * The census was founded with 24 units. DIRECTION 4c.
+ *
+ * Per-unit ceilings stop debt migrating between existing units; this stops a
+ * newcomer manufacturing headroom by adding a twenty-fifth. The census may
+ * SHRINK as units are paid off and deleted — that is required, so it can die —
+ * but it may not grow without a ruling.
+ */
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 24;
+
+/**
+ * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.
+ *
+ * No constant in a file makes an edit impossible; every number here is editable.
+ * What the three clauses do is remove every route that looks like ordinary
+ * bookkeeping and leave only routes that read as a lie in a diff: lowering a
+ * `foundingCount` (which records a measurement), raising a constant whose name
+ * carries its founding date, or adding a twenty-fifth unit to a list that says
+ * it was founded with twenty-four.
+ *
+ * The genuinely stronger form is to compare against the value committed in git
+ * rather than the value in the file — history is the one input an editor cannot
+ * set. That was considered and not built: it would make the gate depend on git
+ * being present and on a non-shallow clone, which is a real cost for a tripwire
+ * that is already loud. If the raise-both move is ever actually attempted, that
+ * is the escalation.
+ */
+export const DIRECTION_4_IS_A_TRIPWIRE_NOT_A_PROOF = true;

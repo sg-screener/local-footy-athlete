@@ -445,18 +445,69 @@ because its subject is *pre-law surface* rather than *classified edges*:
 2. **Total debt may never exceed `LEGACY_DEBT_BASELINE`.** It only shrinks.
 3. **`LEGACY_DEBT_BASELINE` must equal the current total**, so paying debt
    tightens the ratchet instead of leaving re-spendable slack.
-4. **`LEGACY_DEBT_BASELINE` may never exceed `LEGACY_DEBT_FOUNDING_BASELINE`** —
-   the number frozen the day the census landed (116). **This is the direction
-   that stops new code joining the list, and the readiness census does not have
-   it.** Directions 2 and 3 are circular on their own: both compare the total
-   against `LEGACY_DEBT_BASELINE`, so a newcomer can raise a declared count and
-   the baseline together and stay green. Against a frozen founding constant that
-   move is red and stays red.
+4. **Nothing may create headroom.** Directions 2 and 3 are circular on their
+   own — both compare the total against `LEGACY_DEBT_BASELINE`, so a newcomer
+   can raise a declared count and the baseline together and stay green. Three
+   clauses close every route:
+
+   - **4** — `LEGACY_DEBT_BASELINE ≤ LEGACY_DEBT_FOUNDING_BASELINE` (116, frozen
+     the day the census landed).
+   - **4a** — per unit, `declared ≤ foundingCount`. **A global ceiling alone is
+     not enough**, and this was demonstrated rather than argued: one unit of
+     LR-2 debt was genuinely paid (giving `uiStore` an owner) and the freed unit
+     spent on brand-new LR-1 surface. The suite passed **289/289 while admitting
+     a violation that did not exist when the census landed**. Paid debt must
+     retire, not become a budget. **Slack retires where it was earned.**
+   - **4b** — `LEGACY_DEBT_FOUNDING_BASELINE` must equal the sum of the per-unit
+     founding counts, so the ceiling cannot be edited on its own.
+   - **4c** — the census holds no more than `LEGACY_CENSUS_FOUNDING_UNIT_COUNT`
+     (24) units, so headroom cannot be manufactured by adding a twenty-fifth.
 
    **Old surface may be declared; new surface may only be fixed.**
 
-   Raising the founding number is a ruling, not an edit — and it requires naming
-   the sweep that missed the surface.
+### What direction 4 is not
+
+**No constant in a file makes an edit impossible.** Every number here is
+editable, and it would be dishonest to claim otherwise in a document about gates
+that lie. What the four clauses do is remove every route that looks like
+ordinary bookkeeping and leave only routes that read as a lie in a diff:
+lowering a `foundingCount` (which records a measurement), raising a constant
+whose name carries its founding date, or adding a twenty-fifth unit to a list
+that says it was founded with twenty-four.
+
+The genuinely stronger form is to compare against the value **committed in git**
+rather than the value in the file — history is the one input an editor cannot
+set. That was considered and not built: it would make the gate depend on git
+being present and on a non-shallow clone, a real cost for a tripwire that is
+already loud. If the raise-both move is ever actually attempted, that is the
+escalation.
+
+### Backported to the readiness census (2026-07-30)
+
+The same hole was in `readinessStructureCensus.ts`, so
+`STRUCTURE_DEBT_FOUNDING_CEILING` was added there and **frozen at zero**. Its
+debt was paid to zero on 2026-07-29, so unlike this census it grandfathers
+nothing: there is no headroom to declare into, and **every future
+readiness→structure edge must be fixed rather than filed**. Mutation-tested by
+reclassifying a `dose` entry as `structure_pending_removal` and raising the
+baseline to match — caught. `test:readiness-structure-law` 86/86.
+
+### A detector-backed unit does not die at zero — it becomes a ban
+
+The readiness census deletes an entry when its count reaches zero, because a
+list that keeps naming solved problems reads as approval. That is right for a
+*classification* census and **wrong for a retirement one**, which this is.
+
+Found by testing the shrink path: deleting a paid-off unit orphaned its detector
+and turned the gate red, which would have forced people to keep dead entries
+alive — the exact rot the census warns about, built into its own gate. Worse,
+deleting the entry deletes the detector, so the retired surface could come back
+unobserved.
+
+So a paid unit is marked `retired`, keeps its entry, and holds its detector at
+**zero forever**. Verified both ways: LR-3 retired to zero stays green, and the
+same surface reappearing goes red. `tracked_only` units still die the ordinary
+way — nothing counts them, so nothing is lost by deleting them.
 
 ## Two properties carried over deliberately
 
@@ -486,7 +537,7 @@ line; the rulings pay the debt.**
   session's uncommitted changes to six files, so a red would be unattributable.
   See NOT-COVERED.
 
-### Mutation-tested — six mutations, six caught
+### Mutation-tested — eleven mutations, eleven caught
 
 A gate nobody tried to defeat is a gate of unknown strength. Each mutation was
 applied to a committed tree and reverted from the session scratchpad, never by
@@ -500,11 +551,18 @@ applied to a committed tree and reverted from the session scratchpad, never by
 | 4 | LR-2's sequencing string drifted away from LR-1's | block [8] |
 | 5 | LR-6 downgraded from `stop` to `scheduled` | block [8] |
 | 6 | Debt paid down, baseline left high (re-spendable slack) | direction 3 |
+| 7 | **Pay 1 unit of LR-2, spend it on new LR-1 surface** — *passed 289/289 before the fix* | **direction 4a**, added because of it |
+| 8 | Manufacture headroom by adding a 25th unit | direction 4c |
+| 9 | Edit the founding ceiling without a per-unit account | direction 4b |
+| 10 | A retired surface returns (`applyCoachRevisionDateOverrides` reappears) | block [3] retirement clause |
+| 11 | *(readiness census)* Reclassify a `dose` entry as structure and raise the baseline | `STRUCTURE_DEBT_FOUNDING_CEILING` |
 
-Mutation 3 is the one that mattered. It is the move a newcomer would actually
-make — declare the new violation rather than fix it — and it is the move the
-readiness census's three directions permit. Direction 4 is why this census does
-not.
+Mutation 3 is the move a newcomer would actually make — declare the new
+violation rather than fix it. **Mutation 7 is the one that found a real defect
+in this design**: a single global ceiling let debt paid on one unit fund a new
+violation on another, and the whole suite stayed green while doing it. That is
+what per-unit founding counts exist for, and it is why the backport to the
+readiness census carries the corrected shape rather than the shipped one.
 
 ---
 

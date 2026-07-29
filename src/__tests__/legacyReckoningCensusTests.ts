@@ -49,6 +49,7 @@ import {
   LEGACY_UNIT_CENSUS,
   LEGACY_DEBT_BASELINE,
   LEGACY_DEBT_FOUNDING_BASELINE,
+  LEGACY_CENSUS_FOUNDING_UNIT_COUNT,
   LEGACY_LAW_IDS,
   DETECTORS,
   detectorScopeExempts,
@@ -141,7 +142,7 @@ console.log('\n[2] Every unit is typed: id, laws, blast radius, founding evidenc
       'a unit with no founding evidence is a suspicion, not a census entry');
     ok(`${unit.id}: is sized`, ['S', 'M', 'L', 'XL'].includes(unit.size), unit.size);
     ok(`${unit.id}: has a status`,
-      ['scheduled', 'in_flight', 'stop'].includes(unit.status), unit.status);
+      ['scheduled', 'in_flight', 'stop', 'retired'].includes(unit.status), unit.status);
     ok(`${unit.id}: is in a tier`, [1, 2, 3].includes(unit.tier), String(unit.tier));
   }
 
@@ -163,9 +164,31 @@ console.log('\n[3] DIRECTION 1 — every detector-backed unit declares its actua
       `declared ${unit.declared}, found ${actual} — fix the violation or, if it is `
       + 'genuinely pre-existing surface that moved, reclassify it. Do not retune the number.');
 
-    ok(`${unit.id}: still has something to count`, actual > 0,
-      'the detector reached zero — delete this entry and lower the baseline; '
-      + 'a census that outlives its problem reads as approval');
+    // A DETECTOR-BACKED UNIT DOES NOT DIE AT ZERO — IT BECOMES A BAN.
+    //
+    // The readiness census deletes an entry when its count reaches zero, because
+    // a list that keeps naming solved problems reads as approval. That is right
+    // for a classification census and wrong for a RETIREMENT one: deleting the
+    // entry deletes the detector, and nothing then stops the retired surface
+    // coming back. Found by testing the shrink path — the gate went red when a
+    // paid-off unit was deleted, which would have forced people to keep dead
+    // entries alive. So paid units are marked `retired` and the detector is held
+    // at zero forever.
+    //
+    // `tracked_only` units still die the ordinary way: they are deleted when
+    // their work lands, because nothing counts them.
+    if (unit.status === 'retired') {
+      ok(`${unit.id}: retired — the surface stays gone (${actual})`, actual === 0,
+        'a retired legacy surface came back. This is not new debt to declare; the unit '
+        + 'was paid off and the ban is what remains of it.');
+      ok(`${unit.id}: retired units declare zero`, unit.declared === 0,
+        'a retired unit holds the line at zero, not at what it used to be');
+    } else {
+      ok(`${unit.id}: still has something to count`, actual > 0,
+        'the detector reached zero — mark this unit `retired` with `declared: 0` and '
+        + 'lower both baselines. Do NOT delete it: deleting the entry deletes the '
+        + 'detector, and the surface can then return unobserved.');
+    }
   }
 }
 
@@ -188,12 +211,50 @@ console.log('\n[4] THE RATCHET — four directions');
 
   // Direction 4 — new code cannot join the list. Without this, 2 and 3 are
   // circular: raise `declared` and the baseline together and the gate stays
-  // green. The founding number is the non-circular ceiling.
+  // green. The founding numbers are the non-circular ceiling.
   ok(`the baseline (${LEGACY_DEBT_BASELINE}) never exceeds the founding baseline `
     + `(${LEGACY_DEBT_FOUNDING_BASELINE})`,
     LEGACY_DEBT_BASELINE <= LEGACY_DEBT_FOUNDING_BASELINE,
     'raising the founding baseline admits new surface to the census. Old surface may '
     + 'be declared; new surface may only be fixed. This needs a ruling, not an edit.');
+
+  // 4a — THE SLACK IS BOUND TO ITS OWN UNIT.
+  //
+  // A single global ceiling is not enough, and this was demonstrated rather than
+  // reasoned: on 2026-07-30 one unit of LR-2 debt was genuinely paid (uiStore
+  // given an owner) and the freed unit was spent on brand-new LR-1 surface. The
+  // suite passed 289/289 while admitting a violation that did not exist when the
+  // census landed. Paid debt must retire, not become a budget.
+  for (const unit of LEGACY_UNIT_CENSUS) {
+    if (unit.detector === null) continue;
+    ok(`${unit.id}: declares a founding count`, typeof unit.foundingCount === 'number',
+      'a detector-backed unit must record what it measured on census day');
+    if (typeof unit.foundingCount !== 'number') continue;
+
+    ok(`${unit.id}: declared (${unit.declared}) never exceeds its founding count `
+      + `(${unit.foundingCount})`,
+      (unit.declared ?? 0) <= unit.foundingCount,
+      'this unit grew. Debt paid on ANOTHER unit cannot fund it — slack retires where '
+      + 'it was earned.');
+  }
+
+  // 4b — the global ceiling is the sum of the per-unit ones, so it cannot be
+  // edited on its own to create headroom nothing accounts for.
+  const founding = LEGACY_UNIT_CENSUS
+    .filter((u) => u.detector !== null)
+    .reduce((n, u) => n + (u.foundingCount ?? 0), 0);
+  ok(`the founding baseline (${LEGACY_DEBT_FOUNDING_BASELINE}) is the sum of the `
+    + `per-unit founding counts (${founding})`,
+    LEGACY_DEBT_FOUNDING_BASELINE === founding,
+    'the ceiling must be accounted for unit by unit, not asserted as a total');
+
+  // 4c — a new unit is the last way to manufacture headroom. The census may
+  // shrink as units are paid and deleted; it may not grow without a ruling.
+  ok(`the census holds no more units than it was founded with `
+    + `(${LEGACY_UNIT_CENSUS.length} of ${LEGACY_CENSUS_FOUNDING_UNIT_COUNT})`,
+    LEGACY_UNIT_CENSUS.length <= LEGACY_CENSUS_FOUNDING_UNIT_COUNT,
+    'a unit was added. If a genuine pre-law surface was missed by the founding sweep, '
+    + 'name the sweep that missed it and get it ruled — do not file it in quietly.');
 }
 
 console.log('\n[5] COMPLETENESS — no detector hit is outside a declared unit');
