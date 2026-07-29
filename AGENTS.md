@@ -106,6 +106,37 @@ The general shape: **a gate that reads code rather than behaviour is coupled to
 the code's SHAPE, and refactoring changes shape by definition.** After any
 de-duplication, ask what the gate matches on and whether it still matches.
 
+## Instrumentation must be alive where the defects are
+
+**A diagnostic that is off on the build the defect lives on is a green gate that
+lies.** If you add logging, an export, a trace, or a fixture to investigate
+something the repo owner is seeing on his phone, it has to run on HIS build —
+not only under `__DEV__`, not only in a test process, not only behind a dev
+menu.
+
+This went wrong three times in one session (2026-07-29), each time costing a
+device round-trip:
+
+- a profile-mirror **fixture** that exercised an inert mirror, so the suite
+  passed against a mirror that could never have failed;
+- a stored-state **export** gated on `__DEV__`, invisible on the Release build
+  it was written to diagnose;
+- an athlete-action **trace** gated the same way, dark on the only device whose
+  behaviour was in question.
+
+Each looked like instrumentation and reported like instrumentation. None of them
+could observe the case they were built for.
+
+Before adding a diagnostic, answer two questions:
+
+1. **Which build will this run on?** If the answer is not "the one the defect is
+   on", it is not instrumentation yet.
+2. **What would it print if the defect were present?** If you cannot say, it is
+   not evidence, and a passing run of it is not a result.
+
+The same rule applies to fixtures: a fixture whose input cannot exhibit the
+defect proves nothing, however many assertions it carries.
+
 ## Test Standard
 
 - Prefer invariant or scenario tests that prove the capability, not only the
