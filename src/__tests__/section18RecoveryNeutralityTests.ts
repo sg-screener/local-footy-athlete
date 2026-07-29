@@ -223,20 +223,53 @@ run('removing recovery moves no LOAD number either', () => {
     'recovery neutrality is not symmetric — removing recovery moved a load number');
 });
 
-run('the rest interaction is pinned as-is while Sam rules it', () => {
-  // NOT an assertion that today's behaviour is right. A pin, so the promotion
-  // cannot change it silently while the question is open — which is precisely what
-  // the de-dup-un-gates hazard would otherwise do.
-  const plain = restFingerprint(base, contract);
-  const withOne = restFingerprint([...base, recoverySession(0)], contract);
-  assert(plain !== withOne,
-    'recovery no longer affects rest-day classification. That may well be the right '
-    + 'answer under ruling 3 — but it is a RULING, and this pin exists so the change '
-    + 'is made deliberately rather than as a side effect of the promotion. Update '
-    + 'this cell together with Sam\'s decision.');
-  const restStress = JSON.parse(withOne) as { activeRecoveryDays: number[] };
-  assert(restStress.activeRecoveryDays.includes(0),
-    'a recovery session no longer produces an active-recovery day');
+run('BLOCKED — recovery never breaks rest (ruling 1 vs a prior fix)', () => {
+  // SAM RULED IT, I IMPLEMENTED IT, AND IT COLLIDED WITH A DOCUMENTED PRIOR FIX.
+  // Reverted pending his call. `section18ContractV2Tests` fails three cells the
+  // moment recovery counts toward full rest:
+  //   8a. active recovery is excluded from true rest
+  //   8b. legacy recovery-as-rest miscount is detected
+  //   P5  recovery days can never become full-rest days   <- a PROPERTY
+  // and that suite's own comment at :487 reads "8. Recovery workouts WERE reported
+  // as full rest" — past tense, i.e. a defect somebody deliberately closed.
+  //
+  // Reversing a property test against a documented fix, on my reading of a chat
+  // message, is the move this repo's laws exist to stop. So the production change
+  // is out and this cell asserts TODAY's behaviour with the conflict named, rather
+  // than asserting the ruling and going red, or asserting the ruling and flipping
+  // three gates to make it green.
+  //
+  // TO CLOSE: Sam decides whether the prior fix was about a different concern —
+  // most likely a week LOOKING compliant on rest because recovery inflated the
+  // count — in which case the two can coexist by separating "the athlete rested"
+  // from "the contract's rest target was met". See
+  // docs/RECOVERY_DAY_PROVENANCE_TRACE_2026-07-30.md.
+  const plainToday = JSON.parse(restFingerprint(base, contract)) as { trueFullRestDays: number[] };
+  const withOneToday = JSON.parse(restFingerprint([...base, recoverySession(0)], contract)) as {
+    trueFullRestDays: number[]; activeRecoveryDays: number[];
+  };
+  assert(JSON.stringify(withOneToday.trueFullRestDays) !== JSON.stringify(plainToday.trueFullRestDays),
+    'recovery now counts toward full rest. If that is the resolution Sam chose, '
+    + 'update this cell AND section18ContractV2Tests 8a/8b/P5 together, citing his '
+    + 'ruling — never one without the others.');
+  assert(withOneToday.activeRecoveryDays.includes(0),
+    'the recovery session is no longer reported as active recovery');
+});
+
+run('RECORDED, pending ruling — what recovery does to the full-rest finding', () => {
+  // The failure the baseline caught: at three, the week missed its full-rest target
+  // and raised `default_target_miss:full_rest`. Under the ruling it must not.
+  const evaluation = evaluate(
+    [...base, recoverySession(0), recoverySession(3), recoverySession(6)],
+    contract,
+  );
+  const restFindings = evaluation.findings.filter((f) => f.domain === 'full_rest');
+  // Recorded, not asserted, while the conflict above is open. Today's answer is
+  // that recovery DOES raise this finding; that is the exact cost of the conflict
+  // and it is what Sam is ruling on.
+  console.log(`      today: full_rest findings with 3 recovery sessions = `
+    + `${JSON.stringify(restFindings.map((f) => f.code))}`);
+  assert(true, 'recorded');
 });
 
 run('non-recovery work still counts', () => {
