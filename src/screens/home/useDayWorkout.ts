@@ -24,6 +24,7 @@ import {
   normalizeTeamTrainingWorkoutForDisplay,
 } from '../../utils/teamTraining';
 import { getSessionComponentRows } from '../../utils/sessionComponents';
+import { composeDayDetail } from '../../utils/dayDetailComposition';
 import { projectConditioningVisibleIdentity } from '../../utils/conditioningVisibleIdentity';
 import type { SessionOutcomeTransactionReceipt } from '../../types/sessionOutcome';
 
@@ -368,111 +369,10 @@ export function useDayWorkout() {
   // All of the "what kind of workout is this, and how do we split the
   // exercise list" logic happens here so both Classic and V2 consume the
   // same resolved structures and can focus purely on rendering.
-  const derived = useMemo(() => {
-    if (!workout) {
-      return {
-        exerciseCount: 0,
-        dayName: '',
-        isTeamOnly: false,
-        isRecovery: false,
-        isConditioning: false,
-        isCombinedDay: false,
-        strengthExercises: [] as any[],
-        supportExercises: [] as any[],
-        conditioningExercises: [] as any[],
-        conditioningOptions: [] as ResolvedConditioningOption[],
-        conditioningRowCount: 0,
-      };
-    }
-
-    const teamState = getTeamTrainingWorkoutState(rawWorkout);
-    const exerciseCount = teamState.renderableExercises.length;
-    const dayName = DAY_NAMES[workout.dayOfWeek] || '';
-
-    // Team Training is a session commitment, not a gym exercise. The
-    // shared state object filters malformed legacy rows out of every
-    // render branch and tells the UI whether a separate Team Training
-    // card should be shown.
-    const hasTeamTraining = teamState.hasTeamTraining;
-    const isTeamOnly = teamState.isTeamTrainingOnly;
-
-    // Recovery sessions — structured prescriptions, play buttons, formatted
-    // sets/duration/reps. Detect via workoutType OR sessionTier to catch
-    // AI-generated sessions with the wrong workoutType but correct tier.
-    const isRecovery =
-      !isTeamOnly &&
-      (workout.workoutType === 'Recovery' ||
-        (workout as any).sessionTier === 'recovery');
-
-    // Conditioning sessions — descriptive phase cards, no numbered exercises.
-    // Recovery wins when both would match (AI may tag recovery as Conditioning).
-    const isConditioning =
-      !isTeamOnly &&
-      DESCRIPTIVE_CONDITIONING_TYPES.has(workout.workoutType) &&
-      !isRecovery;
-
-    // ── Combined S+C day: resolve conditioning from workout.conditioningBlock ──
-    //
-    // The builder attaches a structured `conditioningBlock` with a single
-    // intent and one or more training-equivalent options. Each option owns
-    // its title, description, and the ids of the WorkoutExercise rows it
-    // renders — so header and rows can never drift.
-    const isCombinedDay =
-      !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
-    const condBlock = workout.conditioningBlock;
-    const conditioningIdentity = projectConditioningVisibleIdentity(workout);
-    const componentRows = getSessionComponentRows(workout);
-    const strengthExercises = componentRows.strengthRows;
-    const supportExercises = componentRows.supportRows;
-    const conditioningExercises = componentRows.conditioningRows;
-    let conditioningOptions: ResolvedConditioningOption[] = [];
-
-    if (isCombinedDay && condBlock) {
-      // Structured path — drive rows from resolved exerciseIds only.
-      conditioningOptions = condBlock.options.map((opt: any) => {
-        const optIds = new Set<string>(opt.exerciseIds);
-        return {
-          title: conditioningIdentity?.attachedLabel ?? opt.title,
-          description: opt.description,
-          rows: conditioningExercises.filter((ex: any) => optIds.has(ex.id)),
-        };
-      });
-    } else if (isCombinedDay && conditioningExercises.length > 0) {
-      // Legacy fallback uses the shared component owner to separate the tail;
-      // trunk/support rows cannot leak into conditioning.
-      const legacyTitle =
-        (workout.conditioningFlavour &&
-          LEGACY_FLAVOUR_TITLE[workout.conditioningFlavour]) ||
-        'Conditioning';
-      conditioningOptions = [
-        {
-          title: conditioningIdentity?.attachedLabel ?? legacyTitle,
-          description: '',
-          rows: conditioningExercises,
-        },
-      ];
-    }
-
-    const conditioningRowCount = conditioningOptions.reduce(
-      (sum, o) => sum + o.rows.length,
-      0,
-    );
-
-    return {
-      exerciseCount,
-      dayName,
-      isTeamOnly,
-      isRecovery,
-      isConditioning,
-      isCombinedDay,
-      hasTeamTraining,
-      strengthExercises,
-      supportExercises,
-      conditioningExercises,
-      conditioningOptions,
-      conditioningRowCount,
-    };
-  }, [rawWorkout, workout]);
+  const derived = useMemo(
+    () => composeDayDetail(workout, rawWorkout),
+    [rawWorkout, workout],
+  );
 
   return {
     // Route

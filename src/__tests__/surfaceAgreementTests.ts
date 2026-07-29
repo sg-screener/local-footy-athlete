@@ -92,6 +92,7 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { getSessionComponents } from '../utils/sessionComponents';
+import { composeDayDetail } from '../utils/dayDetailComposition';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -208,6 +209,26 @@ function tap(change: PlanChange) {
   }));
 }
 
+/**
+ * THE DETAIL SURFACE'S OWN STORY — now reachable.
+ *
+ * `composeDayDetail` is `useDayWorkout`'s composition, extracted verbatim. This is
+ * the third story Sam photographed, and until the extraction it could not be
+ * compared to anything from a harness.
+ */
+function detailStory(workout: Workout | null | undefined): {
+  title: string | null; parts: string[];
+} {
+  const composed = composeDayDetail(workout ?? null, workout ?? null);
+  const parts: string[] = [];
+  if (composed.strengthExercises.length > 0) parts.push('strength');
+  if (composed.supportExercises.length > 0) parts.push('support');
+  if (composed.conditioningRowCount > 0) parts.push('conditioning');
+  if (composed.isRecovery) parts.push('recovery');
+  if (composed.hasTeamTraining) parts.push('team_training');
+  return { title: workout?.name ?? null, parts };
+}
+
 /** L-P1 + L-P3 for one day, against the canonical projection. */
 function assertSurfacesAgree(date: string, context: string): void {
   const week = mondayFor(date);
@@ -229,6 +250,18 @@ function assertSurfacesAgree(date: string, context: string): void {
     `${context} — L-P3: parts differ on ${date}. card ${JSON.stringify(cardParts)} / `
     + `projection ${JSON.stringify(canonicalParts)}. \`parts\` is the only plural; `
     + 'a surface that shows a different list has composed its own.');
+
+  // THE THIRD SURFACE — the detail screen's own composition, now callable.
+  const detail = detailStory(canonical.workout);
+  const canonicalKinds = canonicalParts
+    .filter((part) => part !== 'recovery_addon')
+    .sort();
+  const detailKinds = Array.from(new Set(detail.parts)).sort();
+  assert(JSON.stringify(detailKinds) === JSON.stringify(canonicalKinds),
+    `${context} — L-P3: the DETAIL screen and the projection disagree about what is `
+    + `on ${date}. detail ${JSON.stringify(detailKinds)} / projection `
+    + `${JSON.stringify(canonicalKinds)}. This is the third story: the detail `
+    + 'composes its own account at render.');
 }
 
 console.log('\n-- Surface agreement (L-P1/L-P3) — STAGE 3 REDS, ungated by design --');
