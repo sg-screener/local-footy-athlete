@@ -26,6 +26,26 @@ import {
  */
 export const MOBILITY_DOOR_MIN_MOVEMENTS = 5;
 export const MOBILITY_DOOR_MAX_MOVEMENTS = 8;
+
+/**
+ * The one sentence the Mobility door says about a flow.
+ *
+ * A NAMED TEMPLATE, not an inline template literal, so the copy gate can find
+ * the exact words Sam is being asked to sign. Both blanks are `derived_number`
+ * — the duration and the movement count come from his own authored flow — which
+ * is the only kind of blank the batch-2 template-blank law permits: no free text
+ * can reach either.
+ *
+ * PROPOSED, NOT SIGNED. See artifacts/COPY_SHEET_RULINGS_2026-07-30.md batch 5c.
+ */
+const MOBILITY_DESCRIPTION_TEMPLATE =
+  '{minutes}min mobility flow - {count} movements, easy ranges only.';
+
+function mobilityDescription(minutes: number, count: number): string {
+  return MOBILITY_DESCRIPTION_TEMPLATE
+    .replace('{minutes}', String(minutes))
+    .replace('{count}', String(count));
+}
 import {
   createStrengthIntent,
   type StrengthIntent,
@@ -155,7 +175,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     .map((flow): CoachRevisionTemplateDefinition => ({
       templateId: `mobility_${flow.id.replace(/-/g, '_')}`,
       label: flow.name,
-      description: `${flow.durationMinutes}min mobility flow - ${flow.movements.length} movements, easy ranges only.`,
+      description: mobilityDescription(flow.durationMinutes, flow.movements.length),
       category: 'mobility',
       byeOnly: false,
       durationMinutes: flow.durationMinutes,

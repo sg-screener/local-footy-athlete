@@ -68,9 +68,37 @@ function replacements(): { old: string; next: string }[] {
   return out;
 }
 
+/**
+ * Files that can put words in front of an athlete.
+ *
+ * IT USED TO BE THREE SCREEN DIRECTORIES, and that was a hole big enough to
+ * drive a door through: `CATEGORY_COPY` — the label and subtitle of every entry
+ * in the plan-change sheet, which is as athlete-visible as copy gets — has
+ * always lived in `utils/planChangeProducer.ts` and this gate has never once
+ * read it. Found on 2026-07-30 when the charter's Mobility door proposed two new
+ * strings and the "is it in the app?" cell said no, because it was not looking
+ * where the app keeps them.
+ *
+ * A screen is not where copy is AUTHORED; it is where copy is RENDERED. The
+ * producer and the authored data sets are where it comes from, so they are named
+ * here individually — a directory sweep over `utils` and `data` would pull in
+ * thousands of lines of engine prose and make the RETIRED direction fire on
+ * comments.
+ */
+const AUTHORING_MODULES = [
+  'utils/planChangeProducer.ts',
+  'utils/coachRevisionTemplates.ts',
+  'data/strengthSessionVariants.ts',
+  'data/mobilityFlowTemplates.ts',
+];
+
 function surfaceSources(): { file: string; text: string }[] {
   const dirs = ['screens/home', 'screens/coach', 'components'];
   const out: { file: string; text: string }[] = [];
+  for (const rel of AUTHORING_MODULES) {
+    const full = path.join(ROOT, 'src', rel);
+    if (fs.existsSync(full)) out.push({ file: rel, text: fs.readFileSync(full, 'utf8') });
+  }
   const walk = (dir: string) => {
     const full = path.join(ROOT, 'src', dir);
     if (!fs.existsSync(full)) return;
@@ -144,6 +172,85 @@ run('the template-blank law has no engine-internal filler', () => {
     + 'engine value fails the build rather than falling back.');
 });
 
+// ──────────────────────────────────────────────────────────────────────────
+// BATCH 5 — PROPOSED, NOT SIGNED. Bound anyway, both directions.
+//
+// "Nothing athlete-visible ships unsigned" cannot be true mid-flight: the
+// charter unit needed a Mobility door and three picker descriptions before Sam
+// had ruled their wording, and shipping nothing would have meant shipping no
+// door. So the transitional rule is the honest one — a string may ship PROPOSED,
+// and it may never ship UNLISTED.
+//
+// Both directions, because one is worthless. Direction one catches a proposal
+// nobody implemented; direction two catches the thing that actually happens —
+// somebody adds a seventh category and never tells Sam, and the sheet grows its
+// own vocabulary, which is "the defect wearing a process" from this file's own
+// header.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Every string quoted in the PROPOSED batch, with its 5x sub-heading. */
+function proposedStrings(): { batch: string; text: string }[] {
+  const raw = fs.readFileSync(RULINGS, 'utf8');
+  const start = raw.indexOf('## Batch 5 — PROPOSED');
+  if (start < 0) return [];
+  const out: { batch: string; text: string }[] = [];
+  let batch = '5';
+  for (const line of raw.slice(start).split('\n')) {
+    const heading = /^### (5[a-z])\./.exec(line);
+    if (heading) batch = heading[1];
+    if (!line.trimStart().startsWith('|')) continue;
+    for (const match of line.matchAll(/"([^"]+)"/g)) out.push({ batch, text: match[1] });
+  }
+  return out;
+}
+
+const PROPOSED = proposedStrings();
+
+run('the proposed batch is not empty', () => {
+  // NON-VACUITY. Both cells below pass trivially on an empty list, and an empty
+  // list is exactly what a bad parse produces.
+  assert(PROPOSED.length >= 6,
+    `only ${PROPOSED.length} proposed strings parsed from the rulings file — the `
+    + 'parse is broken, and a broken parse makes the two cells below vacuous');
+});
+
+run('every PROPOSED string is actually in the app', () => {
+  const missing = PROPOSED
+    .filter((entry) => !SOURCES.some((source) => source.text.includes(entry.text)))
+    .map((entry) => `${entry.batch}: "${entry.text}"`);
+  assert(missing.length === 0,
+    `proposed to Sam and not in the app:\n        ${missing.join('\n        ')}\n      `
+    + 'A proposal for wording nothing uses wastes a ruling.');
+});
+
+run('every athlete-visible string in the NEW surfaces is proposed', () => {
+  // THE DIRECTION THAT MATTERS. Enumerated from the code, so a new category or a
+  // new strength variant cannot ship without appearing in the file Sam reads.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { STRENGTH_SESSION_VARIANTS } = require('../data/strengthSessionVariants');
+  const proposedOrPreexisting = new Set(PROPOSED.map((entry) => entry.text));
+  const PRE_EXISTING = new Set<string>([
+    // Shipping before the charter unit: the four original picker descriptions
+    // and every canonical strength label. Batch 4 signed the sheet "as
+    // extracted", which is what covers them.
+    'Squat and hinge strength - legs and glutes.',
+    'Compound push, pull, squat and carry.',
+    'Pressing strength - chest, shoulders and triceps.',
+    'Pulling strength - back and biceps.',
+    ...STRENGTH_SESSION_VARIANTS.map((variant: { label: string }) => variant.label),
+  ]);
+  const unproposed: string[] = [];
+  for (const variant of STRENGTH_SESSION_VARIANTS as { id: string; description: string }[]) {
+    if (proposedOrPreexisting.has(variant.description)) continue;
+    if (PRE_EXISTING.has(variant.description)) continue;
+    unproposed.push(`strength variant ${variant.id}: "${variant.description}"`);
+  }
+  assert(unproposed.length === 0,
+    `athlete-visible wording nobody asked Sam about:\n        ${unproposed.join('\n        ')}\n      `
+    + 'Add it to the PROPOSED batch in artifacts/COPY_SHEET_RULINGS_2026-07-30.md.');
+});
+
 console.log(`\nCopy rulings binding totals: ${passed} passed, ${failed} failed`);
+console.log(`  proposed strings bound: ${PROPOSED.length}`);
 console.log(`  replacement rulings bound: ${RULED.length}`);
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }
