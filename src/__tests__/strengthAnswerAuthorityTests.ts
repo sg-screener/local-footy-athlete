@@ -36,9 +36,16 @@
  * where the old gap-lean was strongest (phase scale 1.0).
  */
 
-import type { BenchStrength, OnboardingData, SquatStrength } from '../types/domain';
+import type {
+  BenchStrength,
+  OnboardingData,
+  RecoveryAddonBlock,
+  SquatStrength,
+  Workout,
+} from '../types/domain';
 import { computeTestingBias } from '../rules/testingBias';
 import { buildCoachingPlan, onboardingToCoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 import { estimateAnchors } from '../utils/loadEstimation';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -101,12 +108,52 @@ function planFor(data: OnboardingData): CoachingPlan {
   return buildCoachingPlan(onboardingToCoachingInputs(data, { availabilityDateISO: TODAY }));
 }
 
+function stubWorkout(dayOfWeek: number, name: string, workoutType: Workout['workoutType']): Workout {
+  return {
+    id: `strength-authority-${dayOfWeek}`,
+    microcycleId: 'strength-authority-week',
+    dayOfWeek,
+    name,
+    description: name,
+    durationMinutes: 55,
+    intensity: workoutType === 'Recovery' ? 'Light' : 'Moderate',
+    workoutType,
+    sessionTier: workoutType === 'Recovery' ? 'recovery' : 'core',
+    exercises: [],
+    createdAt: `${TODAY}T00:00:00.000Z`,
+    updatedAt: `${TODAY}T00:00:00.000Z`,
+  } as Workout;
+}
+
+const ADDON_WEEK: readonly Workout[] = [
+  stubWorkout(1, 'Lower Strength', 'Strength'),
+  stubWorkout(2, 'Upper Strength', 'Strength'),
+  stubWorkout(3, 'Recovery', 'Recovery'),
+  stubWorkout(4, 'Full Body Strength', 'Strength'),
+  stubWorkout(5, 'Easy Aerobic', 'Conditioning'),
+];
+
 /**
- * The whole visible skeleton of the week, not a summary of it. A signature that dropped
- * `focus` would miss "squat emphasis" vs "hinge emphasis" — the exact distinction the
- * deleted mechanism used to move.
+ * THE SIGNATURE COVERS TWO SURFACES, AND THE SECOND ONE IS NOT OPTIONAL.
+ *
+ * The first draft of this gate signed only the weekly skeleton, and MUTATION TESTING
+ * KILLED IT: a reintroduced squat-keyed lean that wrote `recoveryAddonFocusPreference`
+ * passed all 22 assertions. The reason is worth keeping in the file, because it is the
+ * whole lesson — the deleted mechanism's PRIMARY expression was recovery add-on focus
+ * (`addFocuses(['trunk_core', 'adductors_groin', 'calves_tib_ankles',
+ * 'hamstring_light_prehab'], …)`), and a gate against a deleted mechanism that does not
+ * watch the surface that mechanism used is watching the wrong thing.
+ *
+ * So the signature is skeleton + attached recovery add-ons. Anything the strength answers
+ * could move, in either place, diverges it.
  */
-function weekSignature(plan: CoachingPlan): string {
+function weekSignature(data: OnboardingData): string {
+  const plan = planFor(data);
+  const withAddons = attachRecoveryAddonsToWeek({
+    workouts: [...ADDON_WEEK],
+    profile: data,
+    weekKind: 'build',
+  });
   return JSON.stringify({
     coreSessions: plan.coreSessions,
     week: plan.weeklyPlan.map((session) => ({
@@ -118,6 +165,10 @@ function weekSignature(plan: CoachingPlan): string {
       speedWorkKind: session.speedWorkKind,
       stressLevel: session.stressLevel,
     })),
+    addons: withAddons.map((item) => ({
+      name: item.name,
+      focus: (item.recoveryAddons ?? []).map((addon: RecoveryAddonBlock) => addon.focusArea),
+    })),
   });
 }
 
@@ -126,24 +177,24 @@ console.log('\nStrength-answer authority — Sam 2026-07-30');
 console.log('\n[1] THE SWEEP — no (squat × bench) pair changes the week, in any phase');
 {
   for (const phase of ['Off-season', 'Pre-season', 'In-season'] as const) {
-    const reference = weekSignature(planFor({
+    const reference = weekSignature({
       ...BASE_PROFILE,
       seasonPhase: phase,
       usualGameDay: phase === 'In-season' ? 'Saturday' : undefined,
       squatStrength: 'Around bodyweight',
       benchStrength: 'Around bodyweight',
-    } as OnboardingData));
+    } as OnboardingData);
 
     const divergent: string[] = [];
     for (const squatStrength of SQUAT_ANSWERS) {
       for (const benchStrength of BENCH_ANSWERS) {
-        const signature = weekSignature(planFor({
+        const signature = weekSignature({
           ...BASE_PROFILE,
           seasonPhase: phase,
           usualGameDay: phase === 'In-season' ? 'Saturday' : undefined,
           squatStrength,
           benchStrength,
-        } as OnboardingData));
+        } as OnboardingData);
         if (signature !== reference) divergent.push(`${squatStrength} / ${benchStrength}`);
       }
     }
@@ -154,12 +205,12 @@ console.log('\n[1] THE SWEEP — no (squat × bench) pair changes the week, in a
 
   // The mechanism's own extreme: maximum gap in each direction. Named separately so a
   // failure says WHICH shape came back rather than only "some pair diverged".
-  const weakLower = weekSignature(planFor({
+  const weakLower = weekSignature({
     ...BASE_PROFILE, squatStrength: "I don't squat", benchStrength: '1.5x bodyweight+',
-  } as OnboardingData));
-  const weakUpper = weekSignature(planFor({
+  } as OnboardingData);
+  const weakUpper = weekSignature({
     ...BASE_PROFILE, squatStrength: '2x bodyweight+', benchStrength: "I don't bench",
-  } as OnboardingData));
+  } as OnboardingData);
   ok('the maximum gap in each direction produces the same week as the other',
     weakLower === weakUpper,
     { weakLower: weakLower.slice(0, 300), weakUpper: weakUpper.slice(0, 300) });
@@ -170,17 +221,17 @@ console.log('\n[2] UNTESTED IS NEVER WEAK');
   // Sam: "I don't squat" / "I don't bench" = UNTESTED, never "weak". After the deletion
   // this holds structurally — there is no band to read as low — and that is the point:
   // the property is now unrepresentable rather than merely absent.
-  const untested = weekSignature(planFor({
+  const untested = weekSignature({
     ...BASE_PROFILE, squatStrength: "I don't squat", benchStrength: "I don't bench",
-  } as OnboardingData));
-  const strongest = weekSignature(planFor({
+  } as OnboardingData);
+  const strongest = weekSignature({
     ...BASE_PROFILE, squatStrength: '2x bodyweight+', benchStrength: '1.5x bodyweight+',
-  } as OnboardingData));
-  const weakest = weekSignature(planFor({
+  } as OnboardingData);
+  const weakest = weekSignature({
     ...BASE_PROFILE,
     squatStrength: 'Less than bodyweight',
     benchStrength: 'Less than bodyweight',
-  } as OnboardingData));
+  } as OnboardingData);
   ok('"I don\'t squat/bench" plans the same week as the strongest athlete',
     untested === strongest, { untested: untested.slice(0, 300) });
   ok('"I don\'t squat/bench" plans the same week as the weakest answered athlete',
