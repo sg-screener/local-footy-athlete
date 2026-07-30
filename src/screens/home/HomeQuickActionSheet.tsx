@@ -6,9 +6,8 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type { HomeQuickAction } from './homeScreenConstants';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
-import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
+import { EquipmentLimitationSheet, type EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import type { GuidedInjuryFlowResult } from '../../utils/guidedInjuryControl';
-import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 
 interface HomeQuickActionSheetProps {
   visible: boolean;
@@ -17,7 +16,7 @@ interface HomeQuickActionSheetProps {
   onOpenDayControls: () => void;
   onOpenProgramSetup: () => void;
   onApplyBusyWeekReduction: () => void;
-  onApplyEquipmentPreset: (presetId: TemporaryEquipmentPresetId) => void | Promise<void>;
+  onApplyEquipmentDecision: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   onApplyGuidedInjury: (result: GuidedInjuryFlowResult) => void | Promise<void>;
   onMessageCoach: (prefill: string) => void;
 }
@@ -29,7 +28,7 @@ export function HomeQuickActionSheet({
   onOpenDayControls,
   onOpenProgramSetup,
   onApplyBusyWeekReduction,
-  onApplyEquipmentPreset,
+  onApplyEquipmentDecision,
   onApplyGuidedInjury,
   onMessageCoach,
 }: HomeQuickActionSheetProps) {
@@ -101,8 +100,8 @@ export function HomeQuickActionSheet({
       <EquipmentLimitationSheet
         visible={visible}
         onClose={onClose}
-        onApply={async (presetId) => {
-          await onApplyEquipmentPreset(presetId);
+        onApply={async (decision) => {
+          await onApplyEquipmentDecision(decision);
           onClose();
         }}
       />

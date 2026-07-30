@@ -103,7 +103,7 @@ export default function HomeScreenV2() {
     handleFinishTeamSession,
     handleMessageCoach,
     handleApplyGuidedInjury,
-    handleApplyEquipmentPreset,
+    handleApplyEquipmentDecision,
     handleApplyBusyWeekReduce,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
@@ -891,8 +891,8 @@ export default function HomeScreenV2() {
         activeFactId={activeEquipmentFact?.factId}
         targetFactId={equipmentFacts.find((fact) => fact.status !== 'active')?.factId}
         onClose={() => setEquipmentVisible(false)}
-        onApply={async (presetId) => {
-          await handleApplyEquipmentPreset(presetId, weekAnchorISO);
+        onApply={async (decision) => {
+          await handleApplyEquipmentDecision(decision, weekAnchorISO);
           setEquipmentVisible(false);
         }}
       />

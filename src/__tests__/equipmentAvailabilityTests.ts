@@ -17,10 +17,9 @@ import type { OnboardingData } from '../types/domain';
 import {
   EQUIPMENT_CHECKLIST_OPTION_TAGS,
   FULL_GYM_EQUIPMENT,
-  TEMPORARY_EQUIPMENT_PRESETS,
   buildBaselineEquipmentSavePlan,
   buildActiveEquipmentConstraint,
-  buildTemporaryEquipmentConstraint,
+  temporaryEquipmentConstraintIdForDate,
   equipmentTagsToSubstituteEquipmentClasses,
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
@@ -247,10 +246,17 @@ section('5. Equipment constraints apply to availability');
   assert(!resolvedWithout.includes('machine'), 'mode=without subtracts unavailable machine');
   assert(resolvedWithout.includes('dumbbells'), 'mode=without keeps unrelated baseline equipment');
 
-  const noCardio = buildTemporaryEquipmentConstraint({
-    presetId: 'no_erg_cardio',
-    date: '2026-04-23',
-    todayISO: '2026-04-23T09:00:00.000Z',
+  // The retired no-cardio preset, expressed as the own-kit decision builds it.
+  const noCardio = buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate('2026-04-23'),
+    mode: 'without',
+    tags: ['bike_or_treadmill'],
+    source: 'tap',
+    startDate: '2026-04-23',
+    nowISO: '2026-04-23T09:00:00.000Z',
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: 'Missing this week',
   });
   const constrainedCapabilities = resolveEquipmentCapabilities(profile, [noCardio], '2026-04-23');
   assert(
@@ -259,46 +265,14 @@ section('5. Equipment constraints apply to availability');
   );
   const restoredCapabilities = resolveEquipmentCapabilities(profile, [], '2026-04-23');
   assert(
-    sameSet(restoredCapabilities.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
+    sameSet(restoredCapabilities.conditioningModalities, ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill']),
     'clearing temporary no-cardio constraint restores baseline modalities',
   );
 }
 
-section('5b. Temporary equipment preset mapping');
-{
-  const date = '2026-04-22';
-  const expected = {
-    bodyweight_only: { mode: 'only', tags: ['bodyweight'] },
-    dumbbells_only: { mode: 'only', tags: ['bodyweight', 'dumbbells'] },
-    home_hotel_gym: { mode: 'only', tags: ['bodyweight', 'dumbbells', 'bands'] },
-    no_barbell_rack: { mode: 'without', tags: ['barbell'] },
-    no_machines_cables: { mode: 'without', tags: ['machine', 'cables'] },
-    no_erg_cardio: { mode: 'without', tags: ['bike_or_treadmill'] },
-  } as const;
-  for (const [presetId, expectation] of Object.entries(expected)) {
-    const constraint = buildTemporaryEquipmentConstraint({
-      presetId: presetId as keyof typeof expected,
-      date,
-      todayISO: `${date}T09:00:00.000Z`,
-    });
-    assert(
-      constraint.mode === expectation.mode,
-      `${presetId} uses mode ${expectation.mode}`,
-    );
-    assert(
-      sameSet(constraint.tags as readonly string[], expectation.tags),
-      `${presetId} uses canonical tags ${expectation.tags.join(', ')}`,
-    );
-    assert(
-      constraint.expiresAt === '2026-04-26',
-      `${presetId} expires at selected week end`,
-    );
-  }
-  assert(
-    TEMPORARY_EQUIPMENT_PRESETS.some((preset) => preset.id === 'back_to_normal' && preset.clearsActiveEquipment),
-    'Back to normal preset clears active equipment constraints',
-  );
-}
+// Section 5b (temporary equipment preset mapping) is DELETED with the presets
+// (Sam's ruling 5, 2026-07-31): the this-week flow is expressed against the
+// athlete's own kit; there is no preset table left to map.
 
 section('6. Equipment constraint expiry lifecycle');
 {

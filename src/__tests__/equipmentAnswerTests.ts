@@ -27,7 +27,8 @@ import type { EquipmentAnswer, OnboardingData } from '../types/domain';
 import {
   equipmentAnswered,
   resolveEquipmentCapabilities,
-  buildTemporaryEquipmentConstraint,
+  buildActiveEquipmentConstraint,
+  temporaryEquipmentConstraintIdForDate,
 } from '../utils/equipmentAvailability';
 
 let passed = 0; const failures: string[] = [];
@@ -151,10 +152,19 @@ console.log('\n[6] THIS-WEEK — temporary facts still constrain the answered ki
     tags: { barbell: 'have', dumbbells: 'have' },
     modalities: { row: 'have' },
   });
-  const constraint = buildTemporaryEquipmentConstraint({
-    presetId: 'no_barbell_rack',
-    date: DATE,
-    todayISO: `${DATE}T09:00:00.000Z`,
+  // Built the way the retired preset used to: a this-week 'without' over the
+  // athlete's own barbell. The presets are gone (ruling 5); the constraint
+  // shape they produced is unchanged.
+  const constraint = buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate(DATE),
+    mode: 'without',
+    tags: ['barbell'],
+    source: 'tap',
+    startDate: DATE,
+    nowISO: `${DATE}T09:00:00.000Z`,
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: 'Missing this week',
   });
   const resolved = resolveEquipmentCapabilities(profile, [constraint], DATE);
   ok('a without-constraint removes the tag from an answered kit',

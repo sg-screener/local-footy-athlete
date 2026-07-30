@@ -437,7 +437,16 @@ async function main(): Promise<void> {
     ...actionBase,
     type: 'set_equipment_modifier',
     payload: {
-      presetId: 'bodyweight_only',
+      // Presets retired (ruling 5, 2026-07-31): the same restriction as an
+      // own-kit decision — everything the fixture athlete owns is missing.
+      decision: {
+        kind: 'missing_this_week',
+        tags: [
+          'barbell', 'dumbbells', 'cables', 'machine', 'bands', 'bench',
+          'pullup_bar', 'kettlebell', 'foam_roller', 'plyo_box', 'bike_or_treadmill',
+        ],
+        conditioningModalities: ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'],
+      },
       date,
       todayISO: date,
     },
@@ -450,8 +459,9 @@ async function main(): Promise<void> {
     accepted.temporarySourceFacts.some((fact) =>
       !('episodeId' in fact) &&
       fact.factKind === 'equipment' &&
-      fact.mode === 'only' &&
-      semanticFingerprint(fact.equipmentTags) === semanticFingerprint(['bodyweight'])));
+      fact.mode === 'without' &&
+      fact.equipmentTags.includes('barbell') &&
+      fact.equipmentTags.includes('bike_or_treadmill')));
   const generated = generateProgramLocally(profile(), {
     todayISO: date,
     blockNumber: 1,

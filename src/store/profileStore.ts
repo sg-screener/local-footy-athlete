@@ -268,6 +268,27 @@ export function savedEquipmentAnswer(): OnboardingData['equipmentAnswer'] {
   return useProfileStore.getState().onboardingData?.equipmentAnswer;
 }
 
+/**
+ * The athlete's OWN kit, resolved — what the temporary "missing equipment this
+ * week" flow offers to mark missing (Sam's ruling 5, 2026-07-31: the flow is
+ * expressed against the athlete's kit, never a preset menu). Baseline only —
+ * deliberately ignores active temporary constraints, or an item already
+ * missing this week would vanish from the sheet that manages it.
+ */
+export function ownedEquipmentKit(): {
+  tags: import('../data/exercisePools').EquipmentTag[];
+  conditioningModalities: import('../types/domain').ConditioningEquipmentModality[];
+} {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { resolveEquipmentCapabilities } = require('../utils/equipmentAvailability');
+  const resolved = resolveEquipmentCapabilities(useProfileStore.getState().onboardingData, null);
+  return {
+    tags: resolved.tags.filter(
+      (tag: string) => tag !== 'bodyweight' && tag !== 'bike_or_treadmill'),
+    conditioningModalities: resolved.conditioningModalities,
+  };
+}
+
 const resetActionsInFlight = new Set<string>();
 let nextResetActionId = 1;
 

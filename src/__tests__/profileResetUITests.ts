@@ -585,11 +585,14 @@ ok(
   /testID=\{activeEquipmentFact[\s\S]*explorerTestId\.equipmentUpdate\(activeEquipmentFact\.factId\)[\s\S]*explorerTestId\.equipmentOption\('open'\)[\s\S]*Missing equipment\?/.test(homeV2),
 );
 ok(
-  'temporary equipment sheet is local and preset-driven',
+  // Sam's ruling 5 (2026-07-31): the presets are retired — the sheet lists the
+  // athlete's OWN kit and the decision is which items are missing this week.
+  'temporary equipment sheet is local and own-kit-driven',
   /testID="home-equipment-limitation-sheet"/.test(equipmentSheet)
-    && /const presets = activeFactId[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet)
-    && /presets\.map\(\(preset\)/.test(equipmentSheet)
-    && /onPress=\{\(\) => onApply\(preset\.id\)\}/.test(equipmentSheet),
+    && /ownedEquipmentKit\(\)/.test(equipmentSheet)
+    && /kind: 'missing_this_week'/.test(equipmentSheet)
+    && /kind: 'available_again'/.test(equipmentSheet)
+    && !/TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet),
 );
 
 // Section [12] asserted the behaviour of EquipmentSettingsScreen.tsx, which

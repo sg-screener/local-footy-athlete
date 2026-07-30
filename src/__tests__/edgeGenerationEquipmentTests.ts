@@ -20,7 +20,8 @@ import {
   buildProgramGenerationEdgePayload,
 } from '../services/api/generateProgram';
 import {
-  buildTemporaryEquipmentConstraint,
+  buildActiveEquipmentConstraint,
+  temporaryEquipmentConstraintIdForDate,
   equipmentRequirementsAreAvailable,
   resolveEquipmentAvailability,
 } from '../utils/equipmentAvailability';
@@ -72,10 +73,16 @@ section('[1] client edge payload carries canonical resolved tags');
 
 section('[2] temporary no-barbell constraint is resolved before the edge call');
 {
-  const noBarbell = buildTemporaryEquipmentConstraint({
-    presetId: 'no_barbell_rack',
-    date: DATE,
-    todayISO: DATE,
+  const noBarbell = buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate(DATE),
+    mode: 'without',
+    tags: ['barbell'],
+    source: 'tap',
+    startDate: DATE,
+    nowISO: DATE,
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: 'Missing this week',
   });
   const tags = resolveEquipmentAvailability(FULL_GYM, [noBarbell], DATE);
   const payload = buildProgramGenerationEdgePayload({

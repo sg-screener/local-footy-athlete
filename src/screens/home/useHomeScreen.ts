@@ -30,7 +30,7 @@ import {
 } from '../../utils/programControlActions';
 import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import { athleteSafeRefusal } from '../../utils/planChangeRefusalCopy';
-import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
+import type { EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
@@ -1428,8 +1428,8 @@ export function useHomeScreen() {
     }
   }, [handleProgramControlResult]);
 
-  const handleApplyEquipmentPreset = useCallback(async (
-    presetId: TemporaryEquipmentPresetId,
+  const handleApplyEquipmentDecision = useCallback(async (
+    decision: EquipmentLimitationDecision,
     anchorDateISO?: string,
   ) => {
     const todayISO = todayISOLocal();
@@ -1445,19 +1445,19 @@ export function useHomeScreen() {
       },
       scope: 'current_week',
       payload: {
-        presetId,
+        decision,
         date: anchorDateISO ?? weekDays[0]?.date ?? todayISO,
         todayISO,
       },
       requiresRebuild: false,
-      createsActiveModifier: presetId !== 'back_to_normal',
+      createsActiveModifier: decision.kind === 'missing_this_week',
       oneOffOnly: false,
     }, { todayISO });
     registerSourceFactRenderObservation({
       result,
       domain: 'equipment',
-      expectedStatus: presetId === 'back_to_normal' ? 'resolved' : 'active',
-      factId: presetId === 'back_to_normal' ? activeFactId : undefined,
+      expectedStatus: decision.kind === 'available_again' ? 'resolved' : 'active',
+      factId: decision.kind === 'available_again' ? activeFactId : undefined,
     });
     await handleProgramControlResult(result);
     return result;
@@ -2146,7 +2146,7 @@ export function useHomeScreen() {
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
-    handleApplyEquipmentPreset,
+    handleApplyEquipmentDecision,
 
     // Busy / away + missed sessions (vocab groups 5 + 2)
     handleApplyBusyWeekReduce,

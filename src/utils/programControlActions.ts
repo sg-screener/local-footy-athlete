@@ -35,10 +35,8 @@ import {
   withActiveProgramModifierContext,
   type TapRecoveryModifierScope,
 } from './tapProgramModifiers';
-import {
-  temporaryEquipmentPresetById,
-  type TemporaryEquipmentPresetId,
-} from './equipmentAvailability';
+import type { EquipmentTag } from '../data/exercisePools';
+import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
@@ -221,7 +219,18 @@ export type ProgramControlAction =
       episodeId?: string;
     }>
   | ProgramControlActionBase<'set_equipment_modifier', {
-      presetId: TemporaryEquipmentPresetId;
+      /**
+       * The athlete's decision, expressed against their OWN kit (Sam's ruling
+       * 5, 2026-07-31): which of their items are missing this week, or that
+       * everything is available again. The seven unsigned presets are retired.
+       */
+      decision:
+        | {
+            kind: 'missing_this_week';
+            tags: readonly EquipmentTag[];
+            conditioningModalities: readonly ConditioningEquipmentModality[];
+          }
+        | { kind: 'available_again' };
       date: string;
       todayISO?: string;
     }>
@@ -1178,8 +1187,8 @@ async function executeProgramControlActionDurablyWithinTrace(
     const date = action.payload.date.slice(0, 10);
     const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
     const sourceSurface = action.source.surface ?? action.source.screen;
-    const preset = temporaryEquipmentPresetById(action.payload.presetId);
-    if (preset.clearsActiveEquipment) {
+    const decision = action.payload.decision;
+    if (decision.kind === 'available_again') {
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       const facts = accepted.temporarySourceFacts
         .filter((fact) => isTemporaryEquipmentFact(fact) && fact.status === 'active');
@@ -1238,11 +1247,14 @@ async function executeProgramControlActionDurablyWithinTrace(
         route: routeProgramControlAction(action).route,
       };
     }
+    // The decision is 'without' by construction: the athlete marked which of
+    // their OWN items are missing. There is no preset menu to translate.
     const fact = createTemporaryEquipmentFact({
       observedDate: date,
       scope: temporaryFactScope({ kind: 'week', date }),
-      mode: preset.mode!,
-      equipmentTags: preset.tags,
+      mode: 'without',
+      equipmentTags: decision.tags,
+      conditioningModalities: decision.conditioningModalities,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface,
     });
