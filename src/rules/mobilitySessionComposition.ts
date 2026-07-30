@@ -19,15 +19,14 @@
  *
  *   AUTHORED (Sam's, already)  the twenty exercises, their names, their doses,
  *                              their equipment and their contraindications.
- *   PROPOSED (needs signing)   which of the four regions each exercise belongs
- *                              to, and the 6-movement target inside his 5-8
- *                              window.
+ *   SIGNED 2026-07-30          which of the four regions each exercise belongs
+ *                              to (20/20, as presented), and the 6-movement
+ *                              target inside his 5-8 window.
  *
- * The region table below is the ONLY invention in this file, it is marked as
- * such, it is enumerated in the authoring sheet, and
- * `mobilityCompositionTests` fails if it drifts from the pool. It is exactly the
- * shape of thing that produced the flow bundles, so it is being handled the
- * opposite way: proposed in a sheet, signed before it is trusted.
+ * The region table below was the only invention in this file. It was written
+ * down, sent as `docs/OPTIONAL_PLACEMENT_SHEET_2026-07-30.md` §3, and signed as
+ * presented — which is the opposite of how the flow bundles it replaced arrived.
+ * `mobilityAccessoryDoorTests` C6 keeps it equal to the pool in both directions.
  */
 
 import { MOBILITY_POOL, type PoolExercise } from '../data/exercisePools';
@@ -43,20 +42,20 @@ export const MOBILITY_REGIONS = ['lower', 'hips', 'midline', 'upper'] as const;
 export type MobilityRegion = (typeof MOBILITY_REGIONS)[number];
 
 /**
- * PROPOSED, NOT SIGNED — one region per mobility exercise.
+ * SIGNED 2026-07-30, 20/20 as presented — one region per mobility exercise.
  *
  * Keyed by pool id, so a renamed exercise is a compile-time miss rather than a
- * silent unmapped movement, and `mobilityCompositionTests` asserts the table and
- * the pool are equal in BOTH directions: a new exercise with no region fails,
+ * silent unmapped movement, and `mobilityAccessoryDoorTests` C6 asserts the table
+ * and the pool are equal in BOTH directions: a new exercise with no region fails,
  * and a region for an exercise that no longer exists fails.
  *
  * Each assignment follows the movement's own target, and where Sam's authored
- * `contraindications` name a body area they are the strongest evidence available
- * — `couch-stretch` carries `['knee','hip']` and stretches a hip flexor, so it
- * is hips. Nothing here is derived automatically, because a derivation would
- * hide the fact that this is a judgement he has not made yet.
+ * `contraindications` name a body area they were the strongest evidence
+ * available — `couch-stretch` carries `['knee','hip']` and stretches a hip
+ * flexor, so it is hips. Nothing was derived automatically, because a derivation
+ * would have hidden that this was a judgement he had not yet made. He has now.
  *
- * See `docs/OPTIONAL_PLACEMENT_SHEET_2026-07-30.md` §3.
+ * Signed: `docs/OPTIONAL_PLACEMENT_RULINGS_2026-07-30.md` §3.
  */
 export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
   // ── lower (knee, ankle, calf, hamstring) ──
@@ -86,9 +85,9 @@ export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
 };
 
 /**
- * PROPOSED — how many movements a composed session aims for.
+ * SIGNED 2026-07-30 — how many movements a composed session aims for.
  *
- * Sam ruled the window (5-8) and not the number. Six is the middle of it. The
+ * He ruled the window (5-8) first and the number second. Six is the middle. The
  * session SHRINKS below six when equipment or injury filtering leaves a region
  * short, and never pads to reach it: that is his gunshow ruling, and it does not
  * stop at gunshows.

@@ -296,8 +296,9 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       count: 20,
       sessionVariants: null,
     },
-    ruling: 'LFA_PROGRAMMING_BIBLE :122; Sam 2026-07-30 — 5-8 exercises, warm-up '
-      + 'doses, full-body spread, athlete-add only, never hard, never breaks rest.',
+    ruling: 'LFA_PROGRAMMING_BIBLE :122; Sam 2026-07-30 — 5-8 movements at authored '
+      + 'warm-up doses, spread across lower/hips/midline/upper (region table and '
+      + '6-movement target SIGNED), composed from the pool, never hard, never breaks rest.',
   },
 
   /**
