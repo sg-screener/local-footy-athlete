@@ -123,7 +123,6 @@ function profile(): OnboardingData {
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
     teamTrainingDuration: '60-90 minutes',
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
     experienceLevel: 'Advanced',
@@ -356,7 +355,6 @@ function athleteContext(): AthleteContext {
   return {
     injuries: onboarding.injuries ?? [],
     equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
-    trainingLocation: onboarding.trainingLocation ?? 'Commercial gym',
     onboardingData: onboarding,
   };
 }

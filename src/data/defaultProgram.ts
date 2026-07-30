@@ -2288,7 +2288,6 @@ export function buildWorkoutsFromCoach(
         {
           injuries: onboardingData?.injuries ?? [],
           equipmentTags: [...availableEquipment],
-          trainingLocation: onboardingData?.trainingLocation || 'Commercial gym',
           ...(onboardingData ? { onboardingData } : {}),
         },
       );
@@ -2660,7 +2659,6 @@ export const DEFAULT_PROFILE: UserProfile = {
   hasBarbell: true,
   hasDumbbells: true,
   hasFullGym: true,
-  trainingLocation: 'Commercial gym',
   daysPerWeek: 6,
   injuryHistory: [],
   primaryGoals: ['Build Strength', 'Improve Performance'],

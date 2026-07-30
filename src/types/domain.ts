@@ -575,8 +575,9 @@ export interface UserProfile {
   hasDumbbells: boolean;
   hasFullGym: boolean;
 
-  // Training preferences
-  trainingLocation: TrainingLocation;
+  // Training preferences. Location is optional and coach-context only
+  // (Sam's audit ruling 3, 2026-07-31): nothing programs off it.
+  trainingLocation?: TrainingLocation;
   daysPerWeek: number;
 
   // Health and history

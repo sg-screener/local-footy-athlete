@@ -83,6 +83,16 @@ export const ONBOARDING_FIELD_DECLARATIONS: readonly OnboardingFieldDeclaration[
       + 'COACH-CONTEXT-ONLY, declared.',
   },
   {
+    field: 'trainingLocation',
+    role: 'coach_context_only',
+    ruling: 'Sam, 2026-07-31, audit ruling 3: "Where do you train?" seeds the equipment '
+      + 'checklist as a visible starting point; THE STORED ANSWER IS THE FINAL TICKED '
+      + 'LIST — an athlete decision, never an inference. Location is a UI seed only; it '
+      + 'is stored as context, and nothing downstream may read it directly. The old '
+      + 'location-inference constants died with ruling 4; this declaration is what keeps '
+      + 'a new one from growing back.',
+  },
+  {
     field: 'teamTrainingDuration',
     role: 'retired_no_longer_asked',
     ruling: 'Sam, 2026-07-30, signing the team-night size sheet: "teamTrainingDuration '

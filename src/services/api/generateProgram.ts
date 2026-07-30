@@ -651,7 +651,6 @@ export function buildGeneratedMicrocycles(args: {
       athlete: {
         injuries: profile.injuries ?? [],
         equipmentTags: [...equipment.tags],
-        trainingLocation: profile.trainingLocation || 'Commercial gym',
         onboardingData: profile,
       },
       microcycleId,
@@ -898,7 +897,6 @@ export function generateProgramLocally(
     athleteContext: {
       injuries: baseProfile.injuries || [],
       equipmentTags: [...resolvedEquipmentTags],
-      trainingLocation: baseProfile.trainingLocation || 'Commercial gym',
       onboardingData: baseProfile,
     },
     seasonPhase: generationProfile.seasonPhase || null,

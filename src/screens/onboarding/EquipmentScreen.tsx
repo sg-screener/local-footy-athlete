@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
@@ -13,7 +13,6 @@ import { headingXL } from '../../components/onboarding/onboardingStyles';
 import type {
   ConditioningEquipmentModality,
   EquipmentAnswer,
-  EquipmentPossession,
 } from '../../types/domain';
 import {
   CONDITIONING_MODALITY_LABELS,
@@ -22,36 +21,52 @@ import {
   derivedEquipmentChecklistTags,
   type AskableEquipmentTag,
 } from '../../rules/equipmentVocabulary';
+import {
+  EQUIPMENT_LOCATION_PRESETS,
+  equipmentLocationPreset,
+  type EquipmentLocationChoice,
+} from '../../rules/equipmentLocationPresets';
 import { todayISOLocal } from '../../utils/appDate';
 
 type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Equipment'>;
 
 /**
- * THE EQUIPMENT DOOR — the onboarding step AND the answer's edit surface.
+ * THE EQUIPMENT DOOR — Sam's audit ruling 3 (2026-07-31), verbatim intent:
+ * "Where do you train?" first; the choice PRE-TICKS the checklist as a visible
+ * starting point; the athlete unticks what their place doesn't have and ticks
+ * what it does. THE STORED ANSWER IS THE FINAL TICKED LIST — an athlete
+ * decision, never an inference. The location choice is stored as coach context
+ * only; nothing downstream reads it.
  *
- * The checklist's content is DERIVED from the exercise library (Sam's ruling 1,
- * 2026-07-31): `derivedEquipmentChecklistTags` / `derivedConditioningModalityQuestions`
- * are the items, and `test:equipment-vocabulary` holds them equal to what the
- * library can require. Nothing here lists equipment by hand.
- *
- * Each item cycles: unmarked ("not today") → HAVE → NEVER → unmarked. The two
- * marked states carry different silences (ownership sheet §2.2): NEVER is a
- * standing "stop offering this", HAVE is the athlete's kit. Continuing with
- * nothing marked is a real answer — bodyweight-only programming, never a refusal.
+ * The checklist's CONTENT is derived from the exercise library
+ * (`rules/equipmentVocabulary`); the presets are seeds over that derived list
+ * (`rules/equipmentLocationPresets`). Ticks only at onboarding: an untick is
+ * simply HAVE = no. Permanent NEVER exclusions live on the profile equipment
+ * surface. Continuing with nothing ticked is a real answer — bodyweight-only
+ * programming, never a refusal.
  */
 export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) => {
-  // Seeded once on mount from the store's own named door — see
-  // `savedEquipmentAnswer` for why this is not a live selector.
+  // Seeded once on mount from the store's own named door.
   const existing = savedEquipmentAnswer();
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Equipment');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const [tags, setTags] = useState<Partial<Record<AskableEquipmentTag, EquipmentPossession>>>(
-    () => ({ ...(existing?.tags as Partial<Record<AskableEquipmentTag, EquipmentPossession>>) }),
-  );
-  const [modalities, setModalities] = useState<
-    Partial<Record<ConditioningEquipmentModality, EquipmentPossession>>
-  >(() => ({ ...existing?.modalities }));
+  const [location, setLocation] = useState<EquipmentLocationChoice | null>(null);
+  const [tickedTags, setTickedTags] = useState<ReadonlySet<AskableEquipmentTag>>(() =>
+    new Set(
+      Object.entries(existing?.tags ?? {})
+        .filter(([, possession]) => possession === 'have')
+        .map(([tag]) => tag as AskableEquipmentTag),
+    ));
+  const [tickedModalities, setTickedModalities] = useState<ReadonlySet<ConditioningEquipmentModality>>(() =>
+    new Set(
+      Object.entries(existing?.modalities ?? {})
+        .filter(([, possession]) => possession === 'have')
+        .map(([modality]) => modality as ConditioningEquipmentModality),
+    ));
+  // Editing an already-given answer skips the location question — the ticks on
+  // screen ARE the athlete's saved decision, and re-seeding would overwrite it.
+  const [showChecklist, setShowChecklist] = useState<boolean>(!!existing);
 
   const askableTags = useMemo(
     () => derivedEquipmentChecklistTags() as AskableEquipmentTag[],
@@ -59,50 +74,109 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
   );
   const askableModalities = useMemo(() => derivedConditioningModalityQuestions(), []);
 
-  const cycle = (current: EquipmentPossession | undefined): EquipmentPossession | undefined =>
-    current === undefined ? 'have' : current === 'have' ? 'never' : undefined;
+  const chooseLocation = useCallback((choice: EquipmentLocationChoice) => {
+    const preset = equipmentLocationPreset(choice);
+    setLocation(choice);
+    setTickedTags(new Set(preset.preTickedTags));
+    setTickedModalities(new Set(preset.preTickedModalities));
+    setShowChecklist(true);
+  }, []);
+
+  const toggleTag = useCallback((tag: AskableEquipmentTag) => {
+    setTickedTags((previous) => {
+      const next = new Set(previous);
+      if (next.has(tag)) next.delete(tag); else next.add(tag);
+      return next;
+    });
+  }, []);
+  const toggleModality = useCallback((modality: ConditioningEquipmentModality) => {
+    setTickedModalities((previous) => {
+      const next = new Set(previous);
+      if (next.has(modality)) next.delete(modality); else next.add(modality);
+      return next;
+    });
+  }, []);
 
   const handleContinue = useCallback(() => {
-    const answer: EquipmentAnswer = {
-      tags,
-      modalities,
-      answeredOn: todayISOLocal(),
-    };
-    void commitAndAdvance({ equipmentAnswer: answer }, () =>
-      navigation.navigate('GymExperience'));
-  }, [tags, modalities, commitAndAdvance, navigation]);
+    // The FINAL TICKED LIST is the stored decision. NEVER marks made earlier on
+    // the profile surface survive an onboarding-side re-tick edit only if the
+    // athlete did not tick that item; a tick is the newer decision and wins.
+    const tags: Record<string, EquipmentAnswer['tags'][AskableEquipmentTag]> = {};
+    for (const tag of askableTags) {
+      if (tickedTags.has(tag)) tags[tag] = 'have';
+      else if (existing?.tags[tag] === 'never') tags[tag] = 'never';
+    }
+    const modalities: Record<string, EquipmentAnswer['modalities'][ConditioningEquipmentModality]> = {};
+    for (const modality of askableModalities) {
+      if (tickedModalities.has(modality)) modalities[modality] = 'have';
+      else if (existing?.modalities[modality] === 'never') modalities[modality] = 'never';
+    }
+    const answer: EquipmentAnswer = { tags, modalities, answeredOn: todayISOLocal() };
+    void commitAndAdvance(
+      {
+        equipmentAnswer: answer,
+        // Context only (coach flavour) — declared coach_context_only; nothing
+        // downstream reads it (Sam's ruling 3).
+        ...(location ? { trainingLocation: equipmentLocationPreset(location).storesLocation } : {}),
+      },
+      () => navigation.navigate('GymExperience'),
+    );
+  }, [askableTags, askableModalities, tickedTags, tickedModalities, existing, location,
+    commitAndAdvance, navigation]);
 
-  const renderItem = (
+  if (!showChecklist) {
+    return (
+      <OnboardingLayout
+        stepLabel={stepLabel}
+        progressPercent={progressPercent}
+        onBack={() => navigation.goBack()}
+        saving={saving}
+        saveError={saveError}
+        onContinue={() => {}}
+        hideFooter
+      >
+        <View style={styles.section}>
+          <Text variant="h1" color={colors.text.primary} style={styles.title}>
+            Where do you train?
+          </Text>
+          <Text variant="body" color={colors.text.secondary} style={styles.subtitle}>
+            We'll start the equipment list from your answer — you'll fine-tune it next.
+          </Text>
+          <View style={styles.tiles}>
+            {EQUIPMENT_LOCATION_PRESETS.map((preset) => (
+              <SelectableTile
+                key={preset.id}
+                isSelected={location === preset.id}
+                onPress={() => chooseLocation(preset.id)}
+                style={styles.tile}
+              >
+                <Text variant="bodyEmphasis" color={colors.text.primary}>
+                  {preset.label}
+                </Text>
+              </SelectableTile>
+            ))}
+          </View>
+        </View>
+      </OnboardingLayout>
+    );
+  }
+
+  const renderTick = (
     key: string,
     label: string,
-    possession: EquipmentPossession | undefined,
+    ticked: boolean,
     onPress: () => void,
   ) => (
-    <SelectableTile
-      key={key}
-      isSelected={possession === 'have'}
-      onPress={onPress}
-      style={styles.tile}
-    >
+    <SelectableTile key={key} isSelected={ticked} onPress={onPress} style={styles.tile}>
       <View style={styles.tileRow}>
         <Text
           variant="bodyEmphasis"
-          color={
-            possession === 'have'
-              ? colors.text.primary
-              : possession === 'never'
-                ? colors.text.tertiary
-                : colors.text.secondary
-          }
-          style={possession === 'never' ? styles.neverLabel : undefined}
+          color={ticked ? colors.text.primary : colors.text.secondary}
         >
           {label}
         </Text>
-        <Text
-          variant="caption"
-          color={possession === 'have' ? colors.text.secondary : colors.text.tertiary}
-        >
-          {possession === 'have' ? 'Have it' : possession === 'never' ? 'Never' : ''}
+        <Text variant="caption" color={ticked ? colors.text.secondary : colors.text.tertiary}>
+          {ticked ? 'Have it' : ''}
         </Text>
       </View>
     </SelectableTile>
@@ -112,7 +186,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
-      onBack={() => navigation.goBack()}
+      onBack={() => (existing ? navigation.goBack() : setShowChecklist(false))}
       saving={saving}
       saveError={saveError}
       onContinue={handleContinue}
@@ -123,8 +197,8 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
           What can you train with?
         </Text>
         <Text variant="body" color={colors.text.secondary} style={styles.subtitle}>
-          Tap once for what you have. Tap again for gear you'll never use — we'll stop
-          offering it. Leave the rest blank.
+          We've ticked the usual kit{location ? ` for a ${equipmentLocationPreset(location).label.toLowerCase()}` : ''}.
+          Untick anything your place doesn't have, and tick anything extra it does.
         </Text>
 
         <Text variant="bodyEmphasis" color={colors.text.primary} style={styles.groupHeading}>
@@ -132,9 +206,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
         </Text>
         <View style={styles.tiles}>
           {askableTags.map((tag) =>
-            renderItem(tag, EQUIPMENT_TAG_LABELS[tag], tags[tag], () =>
-              setTags((previous) => ({ ...previous, [tag]: cycle(previous[tag]) }))),
-          )}
+            renderTick(tag, EQUIPMENT_TAG_LABELS[tag], tickedTags.has(tag), () => toggleTag(tag)))}
         </View>
 
         <Text variant="bodyEmphasis" color={colors.text.primary} style={styles.groupHeading}>
@@ -142,16 +214,23 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
         </Text>
         <View style={styles.tiles}>
           {askableModalities.map((modality) =>
-            renderItem(modality, CONDITIONING_MODALITY_LABELS[modality], modalities[modality], () =>
-              setModalities((previous) => ({
-                ...previous,
-                [modality]: cycle(previous[modality]),
-              }))),
-          )}
+            renderTick(
+              modality,
+              CONDITIONING_MODALITY_LABELS[modality],
+              tickedModalities.has(modality),
+              () => toggleModality(modality),
+            ))}
         </View>
 
-        <Text variant="caption" color={colors.text.tertiary} style={styles.noneNote}>
-          Nothing here? Continue anyway — you'll get a bodyweight program.
+        {!existing ? (
+          <Pressable onPress={() => setShowChecklist(false)} accessibilityRole="button">
+            <Text variant="caption" color={colors.text.tertiary} style={styles.footNote}>
+              Train somewhere else? Go back and change where you train.
+            </Text>
+          </Pressable>
+        ) : null}
+        <Text variant="caption" color={colors.text.tertiary} style={styles.footNote}>
+          Nothing ticked? Continue anyway — you'll get a bodyweight program.
         </Text>
       </View>
     </OnboardingLayout>
@@ -188,10 +267,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingRight: 24,
   },
-  neverLabel: {
-    textDecorationLine: 'line-through',
-  },
-  noneNote: {
-    marginTop: 4,
+  footNote: {
+    marginTop: 6,
   },
 });

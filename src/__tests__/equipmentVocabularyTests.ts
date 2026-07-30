@@ -157,7 +157,7 @@ for (const [tag, classification] of Object.entries(TAG_CLASSIFICATION)) {
 console.log('\n— pinned justifications for the two exclusions —');
 
 const bodyweightOnly = resolveEquipmentCapabilities(
-  { equipment: ['Bodyweight Only'], trainingLocation: 'Home gym', equipmentSelectionCompleteness: 'complete' },
+  { equipment: ['Bodyweight Only'], equipmentSelectionCompleteness: 'complete' },
   null,
   '2026-07-31',
 );
@@ -168,12 +168,12 @@ ok(
 );
 
 const withBike = resolveEquipmentCapabilities(
-  { equipment: ['Dumbbells Only', 'Bike'], trainingLocation: 'Home gym', equipmentSelectionCompleteness: 'complete' },
+  { equipment: ['Dumbbells Only', 'Bike'], equipmentSelectionCompleteness: 'complete' },
   null,
   '2026-07-31',
 );
 const withoutMachines = resolveEquipmentCapabilities(
-  { equipment: ['Dumbbells Only'], trainingLocation: 'Home gym', equipmentSelectionCompleteness: 'complete' },
+  { equipment: ['Dumbbells Only'], equipmentSelectionCompleteness: 'complete' },
   null,
   '2026-07-31',
 );
@@ -235,6 +235,28 @@ ok(
   unrecognisedNotes.length === 0,
   unrecognisedNotes,
 );
+
+console.log('\n— location presets are seeds INSIDE the vocabulary (audit ruling 3) —');
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { EQUIPMENT_LOCATION_PRESETS } =
+    require('../rules/equipmentLocationPresets') as typeof import('../rules/equipmentLocationPresets');
+  ok('there are exactly the three ruled location choices',
+    EQUIPMENT_LOCATION_PRESETS.length === 3 &&
+      JSON.stringify(EQUIPMENT_LOCATION_PRESETS.map((preset) => preset.id)) ===
+        JSON.stringify(['commercial_gym', 'club_gym', 'home_gym']));
+  for (const preset of EQUIPMENT_LOCATION_PRESETS) {
+    ok(`preset '${preset.id}' pre-ticks only askable tags`,
+      preset.preTickedTags.every((tag) => checklist.includes(tag)),
+      preset.preTickedTags.filter((tag) => !checklist.includes(tag)));
+    ok(`preset '${preset.id}' pre-ticks only askable modalities`,
+      preset.preTickedModalities.every((modality) => modalityQuestions.includes(modality)),
+      preset.preTickedModalities.filter((m) => !modalityQuestions.includes(m)));
+  }
+  ok('the commercial preset ticks the whole vocabulary (Sam: commercial = all)',
+    EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.length === checklist.length &&
+      EQUIPMENT_LOCATION_PRESETS[0].preTickedModalities.length === modalityQuestions.length);
+}
 
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) process.exit(1);

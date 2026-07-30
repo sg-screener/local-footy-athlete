@@ -73,7 +73,6 @@ export function useAthleteContext(): AthleteContext {
   return {
     injuries: onboardingData.injuries || [],
     equipmentTags: resolveEquipmentAvailability(onboardingData, activeConstraints, todayISO),
-    trainingLocation,
     onboardingData,
   };
 }

@@ -258,11 +258,9 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
  * a mobility draw must not see equipment the athlete never declared.
  */
 function athleteContextFor(profile: OnboardingData): AthleteContext {
-  const trainingLocation = profile.trainingLocation || 'Commercial gym';
   return {
     injuries: profile.injuries ?? [],
     equipmentTags: resolveEquipmentAvailability(profile),
-    trainingLocation,
     onboardingData: profile,
   };
 }
@@ -723,7 +721,6 @@ const SWEEP_ATHLETE: AthleteContext = {
   // Every tag in the vocabulary — the sweep must see every movement the
   // builder CAN emit, and the retired location rows were narrower than this.
   equipmentTags: [...FULL_GYM_EQUIPMENT],
-  trainingLocation: 'Commercial gym',
 };
 
 export function recoveryAddonExerciseVocabulary(): string[] {

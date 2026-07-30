@@ -25,7 +25,7 @@ import { todayISOLocal } from './appDate';
 export type EquipmentAvailabilityProfile =
   Pick<
     OnboardingData,
-    'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness' | 'equipmentAnswer'
+    'equipment' | 'equipmentSelectionCompleteness' | 'equipmentAnswer'
   > | null | undefined;
 
 export type TemporaryEquipmentPresetId =

@@ -82,7 +82,6 @@ section('1. Current checklist option mapping');
       `mapping exists for current option "${option}"`,
     );
     const resolved = resolveEquipmentAvailability({
-      trainingLocation: 'Commercial gym',
       equipment: [option],
     });
     assert(
@@ -95,7 +94,6 @@ section('1. Current checklist option mapping');
 section('2. Fallback and bodyweight invariants');
 {
   const outdoor = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: [],
   });
   // Ruling 4 (2026-07-31): the location union is DELETED. An empty or absent
@@ -106,13 +104,11 @@ section('2. Fallback and bodyweight invariants');
   assert(!outdoor.includes('barbell'), 'Outdoor fallback does not invent barbell');
 
   const absent = resolveEquipmentAvailability({
-    trainingLocation: 'Home gym',
   });
   assert(absent.includes('bodyweight'), 'bodyweight is included when checklist is absent');
   assert(!absent.includes('kettlebell'), 'absent checklist no longer inherits Home gym inference');
 
   const legacy = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: ['barbell', 'dumbbells', 'cable_machine', 'hamstring_curl', 'bands'],
   });
   assert(legacy.includes('barbell'), 'legacy barbell checklist value maps to barbell');
@@ -122,7 +118,6 @@ section('2. Fallback and bodyweight invariants');
   assert(legacy.includes('bands'), 'legacy bands checklist value maps to bands');
 
   const legacyCommercial = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   });
   assert(
@@ -132,7 +127,6 @@ section('2. Fallback and bodyweight invariants');
   );
 
   const completeNoCardio = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['Dumbbells Only'],
     equipmentSelectionCompleteness: 'complete',
   });
@@ -143,7 +137,6 @@ section('2. Fallback and bodyweight invariants');
   );
 
   const rowOnly = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['RowErg'],
     equipmentSelectionCompleteness: 'complete',
   });
@@ -156,14 +149,12 @@ section('2. Fallback and bodyweight invariants');
 section('3. Full gym and substitution class bridge');
 {
   const full = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: ['Full Gym'],
   });
   assert(sameSet(full, FULL_GYM_EQUIPMENT), 'Full Gym maps to the broad gym equipment superset');
 
   const classes = equipmentTagsToSubstituteEquipmentClasses(
     resolveEquipmentAvailability({
-      trainingLocation: 'Commercial gym',
       equipment: ['Dumbbells Only'],
     }),
   );
@@ -184,7 +175,6 @@ section('4. Generation diagnostics serialize resolved equipment');
     seasonPhase: 'Off-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    trainingLocation: 'Commercial gym',
     equipment: ['Dumbbells Only'],
     experienceLevel: '2-5 years',
     squatStrength: 'Around bodyweight',
@@ -222,7 +212,6 @@ section('4. Generation diagnostics serialize resolved equipment');
 section('5. Equipment constraints apply to availability');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   const onlyDb: ActiveEquipmentConstraint = buildActiveEquipmentConstraint({
@@ -314,7 +303,6 @@ section('5b. Temporary equipment preset mapping');
 section('6. Equipment constraint expiry lifecycle');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   const weekOnly = buildActiveEquipmentConstraint({
@@ -378,7 +366,6 @@ section('6. Equipment constraint expiry lifecycle');
 section('7. Store lifecycle and modifier metadata');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   useProgramStore.setState({
@@ -455,7 +442,6 @@ section('8. Baseline equipment save/rebuild behaviour');
 {
   const date = '2026-04-22';
   const baseline: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   let updatedEquipment: string[] | undefined;

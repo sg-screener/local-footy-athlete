@@ -126,7 +126,6 @@ function athleteWith(
   return {
     injuries,
     equipmentTags: [...EQUIPMENT_ENVELOPES[location]] as AthleteContext['equipmentTags'],
-    trainingLocation: location as string,
   };
 }
 

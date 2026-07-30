@@ -65,8 +65,10 @@ export interface AthleteContext {
   injuries: OnboardingInjury[];
   /** Equipment tags the athlete has access to. */
   equipmentTags: EquipmentTag[];
-  /** Training location for equipment inference. */
-  trainingLocation: string;
+  // The training-location field is REMOVED (Sam's audit ruling 3, 2026-07-31): the
+  // location is a UI seed for the equipment step and coach context, and
+  // nothing downstream may read it. Equipment inference died with ruling 4;
+  // this field was its last shadow — carried everywhere, consumed nowhere.
   /** Full onboarding data — used for load estimation (strength levels, bodyweight). */
   onboardingData?: import('../types/domain').OnboardingData;
 }
@@ -75,7 +77,6 @@ export interface AthleteContext {
 export const DEFAULT_ATHLETE_CONTEXT: AthleteContext = {
   injuries: [],
   equipmentTags: ['bodyweight', 'dumbbells', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'machine'],
-  trainingLocation: 'Commercial gym',
 };
 
 // ─── Derived Session Types ───
@@ -296,7 +297,7 @@ function injuriesToTags(injuries: OnboardingInjury[]): Set<InjuryTag> {
 // ─── Equipment Inference ───
 
 // LOCATION_EQUIPMENT and inferEquipment are DELETED (Sam's ruling 4,
-// 2026-07-31). The four rows were unsigned, keyed on a `trainingLocation` no
+// 2026-07-31). The four rows were unsigned, keyed on a location field no
 // screen ever collected, and live for 100% of athletes — every kit in the app
 // was this constant. Equipment now comes from the athlete's own answer via
 // `resolveEquipmentCapabilities`; nothing infers a kit from a location.

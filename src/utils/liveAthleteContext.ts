@@ -18,7 +18,6 @@ export function liveAthleteContext(): AthleteContext {
   return {
     injuries: onboarding.injuries ?? [],
     equipmentTags: resolveEquipmentCapabilities(onboarding).tags,
-    trainingLocation: onboarding.trainingLocation ?? DEFAULT_ATHLETE_CONTEXT.trainingLocation,
     onboardingData: onboarding,
   };
 }
