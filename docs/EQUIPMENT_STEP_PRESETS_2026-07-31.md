@@ -1,4 +1,10 @@
-# Equipment step — preset tick-lists and step copy, for signing
+# Equipment step — preset tick-lists and step copy — SIGNED
+
+**SIGNED by Sam, 2026-07-31, with ONE amendment: club gym adds pull-up bar** (final club
+preset: barbell & rack, dumbbells, bands, bench, pull-up bar, plyo box, bike erg).
+Commercial and Home signed as drafted; all §2 copy signed as drafted including the
+bodyweight footnote; §3 recorded decisions confirmed. The signed lists are equality-pinned
+in `test:equipment-vocabulary`; the club row in §1 below is amended to match.
 
 **Per Sam's audit ruling 3 (2026-07-31):** the step asks "Where do you train?" first;
 the choice pre-ticks the checklist as a visible starting point; the athlete unticks what
@@ -25,7 +31,7 @@ plus the box you added in ruling 1).
 | Weight machines | ✓ | — | — |
 | Resistance bands | ✓ | ✓ | ✓ |
 | Bench | ✓ | ✓ | — |
-| Pull-up bar | ✓ | — | — |
+| Pull-up bar | ✓ | ✓ | — |
 | Kettlebell | ✓ | — | — |
 | Foam roller | ✓ | — | ✓ |
 | Plyo box | ✓ | ✓ | — |

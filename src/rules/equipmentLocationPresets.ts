@@ -16,12 +16,11 @@
  * only what they leave ticked is stored. A preset the athlete never saw can
  * never reach a program.
  *
- * PROPOSED, UNSIGNED: the three tick-lists below are drafts for Sam's signing
- * (his sketch: commercial = all; club = e.g. barbell, rack, dumbbells, bike;
- * home = more basic). They ride to him with the step's copy —
- * `docs/EQUIPMENT_STEP_PRESETS_2026-07-31.md`. Presets are signed defaults,
- * not rules; changing them changes what is pre-ticked, never what an athlete
- * who edited their ticks has stored.
+ * SIGNED — Sam, 2026-07-31, with one amendment (club gym adds pull-up bar).
+ * The sheet is `docs/EQUIPMENT_STEP_PRESETS_2026-07-31.md`. Presets are signed
+ * defaults, not rules; changing them changes what is pre-ticked, never what an
+ * athlete who edited their ticks has stored — and a change here is a change to
+ * Sam's signature, so it goes back through him.
  */
 
 import type { EquipmentTag } from '../data/exercisePools';
@@ -59,9 +58,8 @@ export const EQUIPMENT_LOCATION_PRESETS: readonly EquipmentLocationPreset[] = [
     id: 'club_gym',
     label: 'Club gym',
     storesLocation: 'Club gym',
-    // Sam's sketch: "e.g. barbell, rack, dumbbells, bike". Drafted out to the
-    // usual club-room kit for his signing.
-    preTickedTags: ['barbell', 'dumbbells', 'bench', 'bands', 'plyo_box'],
+    // Signed 2026-07-31 with Sam's amendment: pull-up bar joins the draft.
+    preTickedTags: ['barbell', 'dumbbells', 'bands', 'bench', 'pullup_bar', 'plyo_box'],
     preTickedModalities: ['bike_erg'],
   },
   {

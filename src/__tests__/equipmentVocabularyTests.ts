@@ -256,6 +256,22 @@ console.log('\n— location presets are seeds INSIDE the vocabulary (audit rulin
   ok('the commercial preset ticks the whole vocabulary (Sam: commercial = all)',
     EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.length === checklist.length &&
       EQUIPMENT_LOCATION_PRESETS[0].preTickedModalities.length === modalityQuestions.length);
+
+  // SIGNED CONTENT PINS — Sam, 2026-07-31, one amendment (club adds pull-up
+  // bar). These are equality pins, not subset checks: the lists carry his
+  // signature, and a drift here is a change to it.
+  const club = EQUIPMENT_LOCATION_PRESETS.find((preset) => preset.id === 'club_gym');
+  ok('the SIGNED club preset is exactly barbell, dumbbells, bands, bench, pull-up bar, plyo box + bike erg',
+    JSON.stringify([...(club?.preTickedTags ?? [])].sort()) ===
+      JSON.stringify(['bands', 'barbell', 'bench', 'dumbbells', 'plyo_box', 'pullup_bar']) &&
+      JSON.stringify(club?.preTickedModalities) === JSON.stringify(['bike_erg']),
+    club);
+  const home = EQUIPMENT_LOCATION_PRESETS.find((preset) => preset.id === 'home_gym');
+  ok('the SIGNED home preset is exactly dumbbells, bands, foam roller and no machines',
+    JSON.stringify([...(home?.preTickedTags ?? [])].sort()) ===
+      JSON.stringify(['bands', 'dumbbells', 'foam_roller']) &&
+      home?.preTickedModalities.length === 0,
+    home);
 }
 
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);
