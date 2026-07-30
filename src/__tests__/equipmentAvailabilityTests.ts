@@ -17,13 +17,11 @@ import type { OnboardingData } from '../types/domain';
 import {
   EQUIPMENT_CHECKLIST_OPTION_TAGS,
   FULL_GYM_EQUIPMENT,
-  buildBaselineEquipmentSavePlan,
   buildActiveEquipmentConstraint,
   temporaryEquipmentConstraintIdForDate,
   equipmentTagsToSubstituteEquipmentClasses,
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
-  saveBaselineEquipmentSelection,
 } from '../utils/equipmentAvailability';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
 import { useCoachUpdatesStore, type ActiveEquipmentConstraint } from '../store/coachUpdatesStore';
@@ -412,103 +410,11 @@ section('7. Store lifecycle and modifier metadata');
   );
 }
 
-section('8. Baseline equipment save/rebuild behaviour');
-{
-  const date = '2026-04-22';
-  const baseline: OnboardingData = {
-    equipment: ['Full Gym'],
-  };
-  let updatedEquipment: string[] | undefined;
-  let refreshedProfile: OnboardingData | undefined;
-  const changed = saveBaselineEquipmentSelection({
-    profile: baseline,
-    selectedEquipment: ['Dumbbells Only'],
-    dateISO: date,
-    updateOnboardingData: (data) => {
-      updatedEquipment = data.equipment;
-    },
-    refreshProgram: (nextProfile) => {
-      refreshedProfile = nextProfile;
-    },
-  });
-  assert(changed.profileUpdated === true, 'changing baseline equipment updates profile/onboarding equipment');
-  assert(changed.rebuildRequired === true, 'changed resolved baseline equipment requires rebuild');
-  assert(changed.refreshed === true, 'changed resolved baseline equipment triggers refresh callback');
-  assert(sameSet(updatedEquipment ?? [], ['Dumbbells Only']), 'profile save writes selected equipment checklist');
-  assert(sameSet(refreshedProfile?.equipment ?? [], ['Dumbbells Only']), 'refresh receives patched profile');
-
-  let unchangedRefreshCalled = false;
-  const unchanged = saveBaselineEquipmentSelection({
-    profile: { trainingLocation: 'Commercial gym', equipment: ['dumbbells'] },
-    selectedEquipment: ['Dumbbells Only'],
-    dateISO: date,
-    updateOnboardingData: () => undefined,
-    refreshProgram: () => {
-      unchangedRefreshCalled = true;
-    },
-  });
-  assert(unchanged.rebuildRequired === true, 'modern exhaustive save replaces ambiguous legacy positive baseline');
-  assert(unchangedRefreshCalled === true, 'legacy-to-modern capability change refreshes program');
-  assert(unchanged.message === 'Equipment updated. Your program was refreshed.', 'legacy-to-modern save reports refresh');
-  assert(
-    unchanged.nextProfile.equipmentSelectionCompleteness === 'complete',
-    'modern equipment save records authoritative completeness',
-  );
-
-  const plan = buildBaselineEquipmentSavePlan(baseline, ['Bodyweight Only'], date);
-  assert(plan.rebuildRequired === true, 'baseline bodyweight change is meaningful');
-  assert(
-    selectActiveCoachNotes({
-      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-      onboardingData: plan.nextProfile,
-      todayISO: date,
-    }).length === 0,
-    'baseline equipment change does not create persistent Coach Note',
-  );
-  assert(
-    useCoachUpdatesStore.getState().activeConstraints.every((constraint) => constraint.type !== 'equipment'),
-    'baseline equipment change does not create active equipment constraint',
-  );
-
-  const temporaryFact = createTemporaryEquipmentFact({
-    factId: 'equipment-baseline-save-survival',
-    observedDate: date,
-    scope: temporaryFactScope({ kind: 'week', date }),
-    mode: 'only',
-    equipmentTags: ['bodyweight'],
-    sourceSurface: 'test',
-  });
-  await transactTemporarySourceFact({
-    operation: 'create',
-    fact: temporaryFact,
-    todayISO: date,
-  });
-  const savedWithTemporary = saveBaselineEquipmentSelection({
-    profile: baseline,
-    selectedEquipment: ['Full Gym'],
-    dateISO: date,
-    updateOnboardingData: () => undefined,
-    refreshProgram: () => undefined,
-  });
-  assert(
-    useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
-      .some((candidate) =>
-        temporarySourceFactId(candidate) === temporaryFact.factId &&
-        candidate.status === 'active'),
-    'active temporary equipment fact survives baseline save planning',
-  );
-  assert(
-    sameSet(
-      resolveEquipmentAvailability(
-        savedWithTemporary.nextProfile,
-        useCoachUpdatesStore.getState().activeConstraints,
-        date,
-      ),
-      ['bodyweight'],
-    ),
-    'resolved availability after baseline save still applies live temporary constraint',
-  );
-}
+// Section 8 (baseline equipment save/rebuild) is DELETED with its subject:
+// saveBaselineEquipmentSelection wrote the legacy shape and had no product
+// caller (ownership sheet §1.4). The profile surface commits the canonical
+// `equipment_answer` change through commitProfileProgramTransaction, which is
+// asserted where that transaction's tests live.
 
 console.log(`\n[equipmentAvailability] ${pass} passed, ${fail} failed`);
 if (fail > 0) {

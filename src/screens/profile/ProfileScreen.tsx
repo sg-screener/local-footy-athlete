@@ -61,6 +61,8 @@ import {
 } from '../../data/twoKmTimeTrial';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
+import { EquipmentEditorSheet } from './EquipmentEditorSheet';
+import { formatEquipmentAnswerSummary } from '../../rules/equipmentVocabulary';
 
 type SetupSheetStep =
   | 'overview'
@@ -155,6 +157,9 @@ export default function ProfileScreen() {
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
   const [setupSheetVisible, setSetupSheetVisible] = useState(false);
+  const [equipmentEditorVisible, setEquipmentEditorVisible] = useState(false);
+  const [equipmentSaving, setEquipmentSaving] = useState(false);
+  const [equipmentSaveError, setEquipmentSaveError] = useState<string | null>(null);
 
   // ─── TEMPORARY DEVICE DIAGNOSTIC — "Something changed?" dead tap ───
   // 2026-07-29. The tap does nothing on Sam's device and reproduces nowhere in
@@ -723,6 +728,19 @@ export default function ProfileScreen() {
             ) : null}
             {gameDay ? <ProfileRow label="Game Day" value={gameDay} /> : null}
             {mainFocus ? <ProfileRow label="Main goal / focus" value={mainFocus} /> : null}
+            <ProfileRow
+              label="Equipment"
+              value={formatEquipmentAnswerSummary(onboardingData)}
+            />
+            <TouchableOpacity
+              style={styles.setupChangeButton}
+              activeOpacity={0.7}
+              onPress={() => { setEquipmentSaveError(null); setEquipmentEditorVisible(true); }}
+              testID="profile-equipment-edit"
+              accessibilityLabel="Edit equipment"
+            >
+              <Text style={styles.setupChangeText}>Edit equipment</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.setupChangeButton}
               activeOpacity={0.7}
@@ -987,6 +1005,36 @@ export default function ProfileScreen() {
           setSetupSheetStep('confirm');
         }}
         onConfirmUpdate={executeSetupUpdate}
+      />
+      <EquipmentEditorSheet
+        visible={equipmentEditorVisible}
+        saving={equipmentSaving}
+        errorMessage={equipmentSaveError}
+        onClose={() => setEquipmentEditorVisible(false)}
+        onSave={async (answer) => {
+          // The same owned transaction every profile edit commits through:
+          // apply, rebuild, verify, or roll back together.
+          setEquipmentSaving(true);
+          setEquipmentSaveError(null);
+          try {
+            const result = await commitProfileProgramTransaction({
+              change: { kind: 'equipment_answer', answer },
+              todayISO: todayISOLocal(),
+              sourceSurface: 'profile_equipment_editor',
+            });
+            if (!result.ok) {
+              setEquipmentSaveError(
+                classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
+              );
+              return;
+            }
+            setEquipmentEditorVisible(false);
+          } catch (err: any) {
+            setEquipmentSaveError(classifyProgramMutationRefusal({ error: err }).userMessage);
+          } finally {
+            setEquipmentSaving(false);
+          }
+        }}
       />
     </SafeAreaView>
   );

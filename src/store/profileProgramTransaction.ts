@@ -32,8 +32,18 @@ import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 
 export type ProfileProgramChange =
   | {
+      /**
+       * LEGACY SHAPE — the coach chat's producer still speaks it (LR-6 is a
+       * standing STOP on that pipeline). Reads lift 'complete' selections as
+       * answers; every NEW surface commits `equipment_answer` instead.
+       */
       kind: 'baseline_equipment';
       equipment: string[];
+    }
+  | {
+      /** The canonical equipment write (L15): the typed athlete decision. */
+      kind: 'equipment_answer';
+      answer: NonNullable<OnboardingData['equipmentAnswer']>;
     }
   | {
       kind: 'preferred_training_weekdays';
@@ -110,6 +120,12 @@ function applyProfileChange(
       ...profile,
       equipment: [...change.equipment],
       equipmentSelectionCompleteness: 'complete',
+    };
+  }
+  if (change.kind === 'equipment_answer') {
+    return {
+      ...profile,
+      equipmentAnswer: change.answer,
     };
   }
   if (change.kind === 'preferred_training_weekdays') {

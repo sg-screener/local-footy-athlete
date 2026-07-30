@@ -286,7 +286,14 @@ console.log('\n[8] THE DELETIONS — nothing infers a kit, and generation refuse
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require('path') as typeof import('path');
   const src = path.resolve(__dirname, '..');
-  const banned = ['LOCATION_EQUIPMENT', 'LOCATION_CONDITIONING_MODALITIES', 'inferEquipment('];
+  const banned = [
+    'LOCATION_EQUIPMENT', 'LOCATION_CONDITIONING_MODALITIES', 'inferEquipment(',
+    // The legacy baseline save door (L15 retirement, 2026-07-31): it wrote the
+    // retired `equipment` + completeness shape and had no product caller.
+    'saveBaselineEquipmentSelection', 'buildBaselineEquipmentSavePlan',
+    // The seven unsigned temporary presets (ruling 5).
+    'TEMPORARY_EQUIPMENT_PRESETS',
+  ];
   const offenders: string[] = [];
   const walkDir = (dir: string): void => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -308,6 +315,36 @@ console.log('\n[8] THE DELETIONS — nothing infers a kit, and generation refuse
   walkDir(src);
   ok('the deleted location-inference identifiers appear nowhere in product code',
     offenders.length === 0, offenders);
+}
+
+console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owned transaction');
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs') as typeof import('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path') as typeof import('path');
+  const src = path.resolve(__dirname, '..');
+  const read = (rel: string): string => fs.readFileSync(path.join(src, rel), 'utf8');
+
+  const transaction = read('store/profileProgramTransaction.ts');
+  ok('the transaction owns an equipment_answer change kind',
+    /kind: 'equipment_answer';/.test(transaction) &&
+      /change\.kind === 'equipment_answer'/.test(transaction));
+
+  const profileScreen = read('screens/profile/ProfileScreen.tsx');
+  ok('the profile surface commits equipment_answer through the owned transaction',
+    /kind: 'equipment_answer'/.test(profileScreen) &&
+      /commitProfileProgramTransaction/.test(profileScreen));
+  ok('the profile surface never writes the legacy baseline shape',
+    !/baseline_equipment/.test(profileScreen));
+
+  const editor = read('screens/profile/EquipmentEditorSheet.tsx');
+  ok('NEVER lives on the profile editor (the tri-state cycle), not onboarding',
+    /'never'/.test(editor) &&
+      !/'never'/.test(read('screens/onboarding/EquipmentScreen.tsx').replace(
+        // The onboarding screen PRESERVES an existing never on save; it never
+        // creates one. Strip the preservation branch before asserting.
+        /existing\?\.\w+\[\w+\] === 'never'\) \w+\[\w+\] = 'never';/g, '')));
 }
 
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);

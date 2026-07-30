@@ -326,5 +326,40 @@ export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipment
   treadmill: 'Treadmill',
 };
 
+/**
+ * The answer as one line, in the same labels every surface uses — the Review
+ * row and the profile row render THIS, so no two surfaces can describe one
+ * answer differently. HAVE items are listed; a NEVER-only or empty answer
+ * reads "Bodyweight only", which is exactly what generation does with it; a
+ * legacy explicitly-complete selection shows its own options so an answered
+ * athlete's row is never blank.
+ */
+export function formatEquipmentAnswerSummary(data: {
+  equipmentAnswer?: {
+    tags: Readonly<Partial<Record<string, string>>>;
+    modalities: Readonly<Partial<Record<string, string>>>;
+  };
+  equipment?: string[];
+  equipmentSelectionCompleteness?: string;
+}): string {
+  const answer = data.equipmentAnswer;
+  if (answer) {
+    const haveTags = (Object.keys(EQUIPMENT_TAG_LABELS) as AskableEquipmentTag[])
+      .filter((tag) => answer.tags[tag] === 'have')
+      .map((tag) => EQUIPMENT_TAG_LABELS[tag]);
+    const haveModalities = (
+      Object.keys(CONDITIONING_MODALITY_LABELS) as ConditioningEquipmentModality[]
+    )
+      .filter((modality) => answer.modalities[modality] === 'have')
+      .map((modality) => CONDITIONING_MODALITY_LABELS[modality]);
+    const parts = [...haveTags, ...haveModalities];
+    return parts.length > 0 ? parts.join(', ') : 'Bodyweight only';
+  }
+  if (data.equipmentSelectionCompleteness === 'complete' && (data.equipment ?? []).length > 0) {
+    return (data.equipment ?? []).join(', ');
+  }
+  return 'Not selected';
+}
+
 /** Referenced so the rendering rules stay an import-checked source. */
 export const MODALITY_RULE_COUNT = MODALITY_RENDERING_RULES.length;
