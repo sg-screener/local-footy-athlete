@@ -275,6 +275,16 @@ async function main(): Promise<void> {
       ['PreferredTrainingDays', {
         preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
       } as Partial<OnboardingData>],
+      // The required equipment step (2026-07-31): location seeds the ticks,
+      // the final ticked list is the stored decision.
+      ['Equipment', {
+        trainingLocation: 'Commercial gym',
+        equipmentAnswer: {
+          tags: { barbell: 'have', dumbbells: 'have', bench: 'have' },
+          modalities: { bike_erg: 'have' },
+          answeredOn: '2026-07-29',
+        },
+      } as Partial<OnboardingData>],
       ['GymExperience', { experienceLevel: 'Intermediate' } as Partial<OnboardingData>],
       ['SquatStrength', { squatStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
       ['BenchStrength', { benchStrength: 'Bodyweight x1' } as Partial<OnboardingData>],
