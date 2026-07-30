@@ -220,8 +220,7 @@ console.log('\n[7] exact four-week off-season visible regression');
 const profile: OnboardingData = {
   firstName: 'ConditioningIdentityAudit',
   position: 'inside_mid',
-  motivation: 'Build strength and fitness',
-  goals: ['Build Strength', 'Improve Fitness'],
+  goals: ['stronger_and_fitter', 'build_muscle'],
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 6,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],

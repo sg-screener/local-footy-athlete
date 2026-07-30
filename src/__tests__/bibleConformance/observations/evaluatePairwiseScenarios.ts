@@ -33,8 +33,9 @@ function profileFor(scenario: PairwiseScenario): OnboardingData {
   return {
     firstName: 'Pairwise', ageRange: '26-30',
     position: scenario.role === 'inside' ? 'inside_mid' : 'outside_runner',
-    motivation: scenario.goal === 'strength' ? 'Build Strength' : 'Improve Speed, Improve Fitness',
-    goals: scenario.goal === 'strength' ? ['Build Strength'] : ['Improve Speed', 'Improve Fitness'],
+    goals: scenario.goal === 'strength'
+      ? ['build_muscle'] as const
+      : ['stronger_and_fitter'] as const,
     experienceLevel: scenario.experience === 'beginner' ? 'Complete beginner' : '2-5 years',
     squatStrength: scenario.experience === 'beginner' ? "I don't squat" : '1.5x bodyweight',
     benchStrength: scenario.experience === 'beginner' ? "I don't bench" : 'Around bodyweight',

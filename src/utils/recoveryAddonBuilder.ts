@@ -32,6 +32,7 @@ import {
   computeTestingBias,
 } from '../rules/testingBias';
 import { computeProgrammingBias } from '../rules/programmingBias';
+import { motivationBiasTokens, resolveMotivation } from '../rules/motivationGoals';
 import { attachRecoveryAddonEffectEvidence } from './deterministicCoachNoteFactory';
 import { enforceCuratedAddonCueContract } from '../rules/curatedCueContract';
 
@@ -191,7 +192,8 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
   });
   const roleGoalBias = computeProgrammingBias({
     role: args.profile.position,
-    goals: args.profile.motivation ? args.profile.motivation.split(', ') : [],
+    // The second copy of the split, deleted. Same owner as `coachingEngine` now.
+    goals: motivationBiasTokens(resolveMotivation(args.profile)),
     phase,
     isBeginner,
   });

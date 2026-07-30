@@ -1,4 +1,5 @@
 import type { OnboardingData } from '../types/domain';
+import { resolveMotivation } from '../rules/motivationGoals';
 
 /**
  * THE onboarding step registry.
@@ -89,9 +90,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     name: 'Motivation',
     answerLabel: 'what you want out of training',
-    collects: ['motivation'],
+    // `goals` is what the door writes now (Sam, 2026-07-30). It was `motivation`, and
+    // leaving it there would have been a silent onboarding lock: the screen stopped
+    // writing that field, so `satisfied` could never become true and
+    // `resolveOnboardingResumeStep` would have returned the athlete to this screen
+    // forever, however many times they answered it.
+    collects: ['goals'],
     visible: always,
-    satisfied: (data) => filled(data.motivation),
+    // Answering only "Other" is a real answer — free text with no authored goal beside
+    // it — so satisfaction asks the resolver, not either field on its own.
+    satisfied: (data) => {
+      const resolved = resolveMotivation(data);
+      return resolved.goals.length > 0 || !!resolved.other;
+    },
   },
   {
     name: 'SeasonPhase',

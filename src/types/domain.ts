@@ -86,6 +86,21 @@ export type RecentTrainingLoad = 'Hardly at all' | 'A bit' | 'Pretty consistent'
 
 export type BiggestLimitation = 'Strength' | 'Speed' | 'Endurance' | 'Size' | 'Injury history' | 'Mobility' | 'Power & explosiveness';
 
+/**
+ * The authored goal set (Sam, 2026-07-30 — "the goal OPTION list pinned as an authored
+ * set, gated both directions"). The labels, the option order and the both-directions gate
+ * live in `rules/motivationGoals.ts`; only the union lives here, so `OnboardingData` can
+ * name it without importing a rule module.
+ */
+export type MotivationGoal =
+  | 'make_senior_team'
+  | 'dominate_level'
+  | 'fresh_on_game_day'
+  | 'stay_injury_free'
+  | 'stronger_and_fitter'
+  | 'build_muscle'
+  | 'stay_consistent';
+
 export type InjurySeverity = 'Mild' | 'Moderate' | 'Severe';
 
 export type InjuryTiming = 'Running' | 'Lifting' | 'Both' | 'Constant';
@@ -119,7 +134,16 @@ export interface OnboardingData {
   firstName?: string;
   ageRange?: AgeRange;
   position?: Position;
+  /**
+   * RETIRED FOR WRITING (L15, Sam's ruling 2026-07-30). The joined display sentence.
+   *
+   * `goals` + `motivationOther` are the stored decision now; this string is READ-INGRESS
+   * ONLY, lifted by `rules/motivationGoals.ts` for profiles written before them. Nothing
+   * writes it again — `motivationGoalsTests` fails the build if anything does.
+   */
   motivation?: string;
+  /** The athlete's own words from the "Other" tile, kept apart from the authored set. */
+  motivationOther?: string;
   heightCm?: number;
   weightKg?: number;
   seasonPhase?: SeasonPhase;
@@ -157,7 +181,14 @@ export interface OnboardingData {
   sprintExposure?: SprintExposure;
   recentTrainingLoad?: RecentTrainingLoad;
   injuries?: OnboardingInjury[];
-  goals?: string[];
+  /**
+   * THE ATHLETE'S CHOSEN GOALS — the stored decision (Sam, 2026-07-30).
+   *
+   * Was `string[]` and had NO WRITER at all: three surfaces read it, nothing ever filled
+   * it, and the real answer lived in the `motivation` sentence beside it. It is now the
+   * typed owner, written by the Motivation door, with the display string derived.
+   */
+  goals?: MotivationGoal[];
   biggestLimitation?: BiggestLimitation;
   biggestFrustration?: string;
   successVision?: string;

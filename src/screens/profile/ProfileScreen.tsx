@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motivationGoalLabel, resolveMotivation } from '../../rules/motivationGoals';
 import {
   ActivityIndicator,
   Animated,
@@ -401,7 +402,11 @@ export default function ProfileScreen() {
   const daysPerWeek = onboardingData.trainingDaysPerWeek;
   const teamDays = onboardingData.teamTrainingDays || [];
   const gameDay = onboardingData.gameDay || onboardingData.usualGameDay || '';
-  const mainFocus = onboardingData.biggestLimitation || onboardingData.goals?.[0] || '';
+  const mainFocus = onboardingData.biggestLimitation
+    || (resolveMotivation(onboardingData).goals[0]
+      ? motivationGoalLabel(resolveMotivation(onboardingData).goals[0])
+      : '')
+    || '';
   const activeIssues = selectActiveCoachNotes({
     activeConstraints,
     activeInjury,

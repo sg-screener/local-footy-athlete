@@ -13,24 +13,33 @@ import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
+import {
+  MAX_MOTIVATION_GOALS,
+  MOTIVATION_GOAL_OPTIONS,
+  type MotivationGoal,
+} from '../../rules/motivationGoals';
 
 type MotivationScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'Motivation'
 >;
 
-const MAX_SELECTIONS = 3;
+/**
+ * THE OPTION LIST IS IMPORTED, NOT DECLARED (Sam, 2026-07-30).
+ *
+ * This screen used to own its own array of `{ id, label }` with ids like `'senior-team'`
+ * that existed nowhere else in the app — the labels were joined into one string and two
+ * modules split them back apart to guess at goals. Now the authored set is the single
+ * owner, and `motivationGoalsTests` fails the build if this file grows its own option
+ * literals again.
+ *
+ * "Other" is deliberately NOT in the authored set: it is not a goal, it is a free-text
+ * escape hatch, and keeping it out is what stops an athlete's prose being stored as if it
+ * were one of Sam's seven.
+ */
+const OTHER_ID = 'other' as const;
 
-const MOTIVATION_OPTIONS = [
-  { id: 'senior-team', label: 'Make the senior team' },
-  { id: 'dominate', label: 'Dominate your level' },
-  { id: 'fresh', label: 'Feel fresh on game day' },
-  { id: 'injury-free', label: 'Stay injury-free' },
-  { id: 'stronger-fitter', label: 'Get stronger & fitter' },
-  { id: 'muscle', label: 'Build muscle' },
-  { id: 'consistent', label: 'Stay consistent' },
-  { id: 'other', label: 'Other' },
-];
+type SelectableId = MotivationGoal | typeof OTHER_ID;
 
 /**
  * Multi-select up to 3. Uses the shared <SelectableTile /> primitive for
@@ -41,20 +50,20 @@ const MOTIVATION_OPTIONS = [
 export const MotivationScreen: React.FC<MotivationScreenProps> = ({
   navigation,
 }) => {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<SelectableId[]>([]);
   const [otherText, setOtherText] = useState('');
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Motivation');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const isAtMax = selected.length >= MAX_SELECTIONS;
-  const hasOther = selected.includes('other');
+  const isAtMax = selected.length >= MAX_MOTIVATION_GOALS;
+  const hasOther = selected.includes(OTHER_ID);
 
-  const toggleOption = (id: string) => {
+  const toggleOption = (id: SelectableId) => {
     setSelected((prev) => {
       if (prev.includes(id)) {
         return prev.filter((s) => s !== id);
       }
-      if (prev.length >= MAX_SELECTIONS) return prev;
+      if (prev.length >= MAX_MOTIVATION_GOALS) return prev;
       return [...prev, id];
     });
   };
@@ -66,12 +75,16 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
   const handleContinue = () => {
     if (!canContinue) return;
 
-    const labels = selected.map((id) => {
-      if (id === 'other') return otherText.trim();
-      return MOTIVATION_OPTIONS.find((o) => o.id === id)?.label || id;
-    });
+    // THE DECISION IS WHAT PERSISTS. The joined sentence this screen used to write is now
+    // derived wherever it is shown (`motivationDisplay`), so a comma in `otherText` can
+    // never again be re-read as an extra goal.
+    const goals = selected.filter((id): id is MotivationGoal => id !== OTHER_ID);
+    const other = hasOther ? otherText.trim() : undefined;
 
-    void commitAndAdvance({ motivation: labels.join(', ') }, () => navigation.navigate('SeasonPhase'));
+    void commitAndAdvance(
+      { goals, motivationOther: other },
+      () => navigation.navigate('SeasonPhase'),
+    );
   };
 
   return (
@@ -107,13 +120,13 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
               isAtMax && styles.counterTextMax,
             ]}
           >
-            {selected.length}/{MAX_SELECTIONS} selected
+            {selected.length}/{MAX_MOTIVATION_GOALS} selected
           </Text>
         </View>
       </View>
 
       <View style={styles.cardsContainer}>
-        {MOTIVATION_OPTIONS.map((option) => {
+        {[...MOTIVATION_GOAL_OPTIONS, { id: OTHER_ID, label: 'Other' }].map((option) => {
           const isSelected = selected.includes(option.id);
           const isDimmed = isAtMax && !isSelected;
 

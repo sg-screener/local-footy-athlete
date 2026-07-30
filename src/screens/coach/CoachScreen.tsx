@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motivationBiasTokens, motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
 import {
   TextInput,
   View,
@@ -1888,7 +1889,9 @@ export default function CoachScreen() {
             athleteProfile: {
               ageRange: onboardingData.ageRange,
               position: onboardingData.position,
-              motivation: onboardingData.motivation,
+              // Derived, never the stored sentence — the coach sees exactly what Review
+              // shows the athlete.
+              motivation: motivationDisplay(resolveMotivation(onboardingData)),
               heightCm: onboardingData.heightCm,
               weightKg: onboardingData.weightKg,
               seasonPhase: onboardingData.seasonPhase,
@@ -1913,7 +1916,7 @@ export default function CoachScreen() {
               sprintExposure: onboardingData.sprintExposure,
               recentTrainingLoad: onboardingData.recentTrainingLoad,
               injuries: onboardingData.injuries,
-              goals: onboardingData.goals,
+              goals: motivationBiasTokens(resolveMotivation(onboardingData)),
               biggestLimitation: onboardingData.biggestLimitation,
               biggestFrustration: onboardingData.biggestFrustration,
               successVision: onboardingData.successVision,

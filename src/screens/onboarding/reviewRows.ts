@@ -45,6 +45,7 @@ import type {
 } from '../../types/domain';
 import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
+import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
 import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
@@ -230,7 +231,10 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     section: 'About You',
     label: 'Goals',
     step: 'Motivation',
-    value: (data) => present(data.motivation || data.goals?.join(', ')),
+    // DERIVED AT RENDER, per Sam's ruling. Was `data.motivation || goals.join(', ')` —
+    // two shapes racing, with the stored sentence winning. `resolveMotivation` prefers the
+    // typed decision and lifts a legacy sentence when that is all a profile has.
+    value: (data) => present(motivationDisplay(resolveMotivation(data))),
   },
   {
     section: 'Body',

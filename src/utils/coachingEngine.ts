@@ -83,6 +83,7 @@ import {
   composeProgrammingBias,
   type ComposedProgrammingBias,
 } from '../rules/testingBias';
+import { motivationBiasTokens, resolveMotivation } from '../rules/motivationGoals';
 import {
   decidePowerPrimer,
   type PowerPrimerSpec,
@@ -8378,7 +8379,10 @@ export function onboardingToCoachingInputs(
     experienceLevel: data.experienceLevel,
     biggestLimitation: data.biggestLimitation,
     injuries: data.injuries || [],
-    goals: data.motivation ? data.motivation.split(', ') : [],
+    // ONE PARSING RULE, OWNED ELSEWHERE. This was `data.motivation.split(', ')`, one of
+    // two copies of that rule; `resolveMotivation` lifts legacy sentences and reads typed
+    // goals, so neither copy can drift from the other any more.
+    goals: motivationBiasTokens(resolveMotivation(data)),
     role: data.position,
     // hasGame means "a specific game is scheduled this week" — it must NOT be
     // a proxy for "phase has team-level context". Previously this was
