@@ -39,7 +39,6 @@ import type {
   RecentTrainingLoad,
   SprintExposure,
   SquatStrength,
-  TeamTrainingDuration,
   TeamTrainingIntensity,
   TwoKmTimeTrialAnswer,
 } from '../../types/domain';
@@ -102,28 +101,21 @@ const formatDays = (days?: DayOfWeek[]): string | null => {
   return sortDays(days).join(', ');
 };
 
-const formatTeamDuration = (duration?: TeamTrainingDuration): string | null => {
-  if (!duration) return null;
-  const labels: Record<TeamTrainingDuration, string> = {
-    '60 minutes': '60 min',
-    '90 minutes': '90 min',
-    '2 hours': '2 hrs',
-  };
-  return labels[duration];
-};
-
 const formatTeamIntensity = (intensity?: TeamTrainingIntensity): string | null => {
   if (!intensity) return null;
   return intensity === 'Very intense' ? 'Very hard' : intensity;
 };
 
-const formatTeamSessions = (data: OnboardingData): string | null => {
-  const parts = [
-    formatTeamDuration(data.teamTrainingDuration as TeamTrainingDuration | undefined),
-    formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined),
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : null;
-};
+/**
+ * Duration is no longer ASKED (Sam, 2026-07-30), so it is no longer shown back.
+ *
+ * Review's contract is that every row routes to a step the athlete can edit; a duration
+ * row would route to a screen that no longer collects it — an "Edit" that changes nothing.
+ * Athletes who answered it before the ruling keep the stored value; they simply are not
+ * shown a question the app has stopped asking.
+ */
+const formatTeamSessions = (data: OnboardingData): string | null =>
+  formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined);
 
 const formatExperience = (value?: ExperienceLevel): string => {
   if (!value) return 'Not selected';

@@ -1462,6 +1462,16 @@ export interface SessionFeedback {
   difficulty?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;
+  /**
+   * "How was training?" — Light / Normal / Hard, asked ONLY on a team-training day.
+   *
+   * Sam's signed mechanism, 2026-07-30. This is the ANSWER; the team-night size is a
+   * rolling read over the last three of them (`rules/teamNightSize.ts`) and is never
+   * stored. It rides `SessionFeedback` because the app already records a completed
+   * session per date through a transaction with a receipt — which is what made the
+   * smallest mechanism small.
+   */
+  teamNightSize?: import('../rules/teamNightSize').TeamNightSize;
   /** Optional reason when an athlete completed only part of the session. */
   partialReason?: FeedbackPartialReason;
   /** Required reason when an athlete skips the session from the feedback form. */

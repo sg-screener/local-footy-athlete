@@ -34,6 +34,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 import fs from 'fs';
+import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import path from 'path';
 
 import {
@@ -201,13 +202,43 @@ console.log('\n[4] The estimate-seed role means what it says');
 {
   const seeds = ONBOARDING_FIELD_DECLARATIONS.filter(
     (entry) => entry.role === 'coach_context_and_estimate_seed');
-  ok('the team-night answers are the seeds Sam named',
-    seeds.map((entry) => entry.field).sort().join(',')
-      === 'teamTrainingDuration,teamTrainingIntensity', seeds.map((e) => e.field));
+  // BOTH team-night answers LEFT this role on 2026-07-31, in opposite directions, and the
+  // role is empty as a result. Duration was RETIRED (Sam: it stops being asked); intensity
+  // GRADUATED (its mechanism shipped, so it has a real consumer and needs no declaration).
+  //
+  // Asserted as empty rather than deleted, because empty is the meaningful state: no
+  // answer is currently waiting on a promised mechanism. A future seed re-populates it and
+  // the per-entry checks below start applying again on their own.
+  ok('no answer is currently waiting on a promised mechanism',
+    seeds.length === 0, seeds.map((e) => e.field));
   for (const seed of seeds) {
     const declaration = onboardingFieldDeclaration(seed.field);
     ok(`${seed.field}: the ruling says it is a starting assumption`,
       /starting assumption|seed/i.test(declaration?.ruling ?? ''));
+  }
+}
+
+console.log('\n[5] A retired answer is retired ON THE RECORD, never merely forgotten');
+{
+  const retired = ONBOARDING_FIELD_DECLARATIONS.filter(
+    (entry) => entry.role === 'retired_no_longer_asked');
+  ok('teamTrainingDuration is the retired answer', 
+    retired.map((entry) => entry.field).join(',') === 'teamTrainingDuration',
+    retired.map((e) => e.field));
+
+  for (const entry of retired) {
+    ok(`${entry.field}: names the ruling that retired it`,
+      /stops being asked|stop asking|no longer asked/i.test(entry.ruling), entry.ruling);
+
+    // THE DIRECTION THAT MATTERS: retired means NO STEP COLLECTS IT. Without this, the
+    // declaration is a comment — the field could go on being asked while a rule file
+    // claims it was retired, which is the exact "influences nothing has no
+    // representation" problem inverted.
+    const collectors = ONBOARDING_STEPS
+      .filter((step) => (step.collects as readonly string[]).includes(entry.field))
+      .map((step) => step.name);
+    ok(`${entry.field}: no onboarding step collects it any more`,
+      collectors.length === 0, collectors);
   }
 }
 

@@ -35,7 +35,17 @@ export type OnboardingFieldRole =
    * declared this way is not finished — it is waiting on a mechanism, and the sheet that
    * proposes that mechanism is named below.
    */
-  | 'coach_context_and_estimate_seed';
+  | 'coach_context_and_estimate_seed'
+  /**
+   * NO LONGER ASKED. The field survives on `OnboardingData` so profiles that already
+   * answered it keep their answer, but no door writes it and no rule reads it.
+   *
+   * This role exists so "retired" is distinguishable from "forgotten". A field that
+   * quietly stops being collected looks exactly like a field that was never collected —
+   * the same indistinguishability this whole module was built to end — and the gate below
+   * requires a retired field to name the ruling that retired it.
+   */
+  | 'retired_no_longer_asked';
 
 export interface OnboardingFieldDeclaration {
   readonly field: string;
@@ -74,23 +84,29 @@ export const ONBOARDING_FIELD_DECLARATIONS: readonly OnboardingFieldDeclaration[
   },
   {
     field: 'teamTrainingDuration',
-    role: 'coach_context_and_estimate_seed',
-    ruling: 'Sam, 2026-07-30: the onboarding teamTrainingDuration and '
-      + 'teamTrainingIntensity answers are a STARTING ASSUMPTION ONLY. Season reality '
-      + 'varies — some team nights hard, some lighter — so a static onboarding answer can '
-      + 'never own team-night size. Onboarding seeds the initial assumption and remains '
-      + 'coach context; actual logged sessions become the truth.',
+    role: 'retired_no_longer_asked',
+    ruling: 'Sam, 2026-07-30, signing the team-night size sheet: "teamTrainingDuration '
+      + 'STOPS BEING ASKED at onboarding." It had no programming consumer — the influence '
+      + 'map found it reached the Review row and the coach prompt and nothing else — and '
+      + 'once team-night SIZE is measured from logged nights there is no mechanism left '
+      + 'for it to seed. The field stays readable for profiles that already answered it; '
+      + 'the question is gone.',
     supersededBy: 'docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md',
   },
-  {
-    field: 'teamTrainingIntensity',
-    role: 'coach_context_and_estimate_seed',
-    ruling: 'Sam, 2026-07-30: a STARTING ASSUMPTION ONLY, the same ruling as '
-      + 'teamTrainingDuration — onboarding seeds the team-night assumption and logged '
-      + 'sessions become the truth. It also STOPPED deciding hard-day status on the same '
-      + 'day: a team night is a hard day unconditionally (Bible :119).',
-    supersededBy: 'docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md',
-  },
+  // `teamTrainingIntensity` GRADUATED OUT OF THIS LIST on 2026-07-31, and the gate is what
+  // pushed it out.
+  //
+  // It was declared `coach_context_and_estimate_seed` — "coach context today, and the seed
+  // for a value that MEASUREMENT will own" — with this file's own comment saying such a
+  // field "is not finished; it is waiting on a mechanism". The mechanism shipped: the
+  // team-night question, and `rules/teamNightSize.ts` reading this answer as the seed the
+  // rolling read falls back to. So it now HAS a programming consumer, which is exactly
+  // what a declaration here promises it does not have, and `onboardingFieldInfluenceTests`
+  // failed the moment the consumer existed.
+  //
+  // That failure is the mechanism working. A field whose successor arrives should LEAVE
+  // this list, and the only honest way out is having a consumer — which §3 (CODE →
+  // DECLARED) then accepts without a declaration at all.
 ];
 
 const BY_FIELD: ReadonlyMap<string, OnboardingFieldDeclaration> =

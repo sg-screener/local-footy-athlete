@@ -1,5 +1,34 @@
 # The three unauthored translations — for Sam's signing
 
+---
+
+## ✅ ALL THREE RULED — 2026-07-31
+
+| § | Sam's ruling | Outcome |
+|---|---|---|
+| **§1 strength bands** | **The gap-lean is KILLED.** "Unlikely someone is super strong upper and super weak lower"; "we shouldn't bias lower over upper." DELETED, not tuned. "I don't squat" = UNTESTED, never weak. The sprint lean STAYS. | **SHIPPED.** Nine files; no replacement mechanism. `test:strength-answer-authority` |
+| **§2 `LOCATION_EQUIPMENT`** | **Survey before ruling** — and the survey overturned this sheet's premise | **`docs/EQUIPMENT_OWNERSHIP_SHEET_2026-07-31.md`.** Not signed, not amended: retirement recommended |
+| **§3 `motivation` split** | **Typed `goals` SIGNED**, with the read-ingress lift and the option list pinned both directions | **SHIPPED.** `test:motivation-goals` |
+
+**§1's questions became moot rather than answered, which was the point.** Ladder
+comparability, the two-band threshold and the magnitudes all evaporate with the mechanism;
+there is no arithmetic left to calibrate. The one question that survived — *is there a
+legitimate upper/lower asymmetry at all?* — Sam answered himself: **yes, in-season game
+proximity, and it is the Bible's already.** Five lines cited and pinned by content
+(`:78`, `:145`, `:337`, `:378`, `:803`). It is a PLACEMENT rule keyed on the calendar, not
+a lean keyed on an athlete property, so no mechanism was built — per his instruction to
+return it as a question if no line existed. A line existed.
+
+**§2 IS THE CORRECTION THIS SHEET NEEDS.** §2.2 below says the location table *"is only
+reached when the athlete has NOT given [an equipment answer]"*. **That is false.** No
+onboarding step has ever collected equipment, no screen writes `trainingLocation`, and the
+table fires for 100% of athletes — *in addition to* the stored checklist, not instead of
+it. Every athlete resolves to the full commercial-gym kit including a ski erg. See the
+equipment sheet for the receipts; read it instead of §2.
+
+---
+
+
 **Sam's instruction, 2026-07-30:** extract the remaining §4 translations from the
 onboarding influence map as signing sheets, same drill — the `testingBias` squat/bench/
 sprint bands, `LOCATION_EQUIPMENT`, and the `motivation` comma-split (propose typed

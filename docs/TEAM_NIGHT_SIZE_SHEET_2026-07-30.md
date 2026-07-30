@@ -1,5 +1,42 @@
 # Team-night size — SURVEY, and the smallest mechanism, for Sam's signing
 
+---
+
+## ✅ SIGNED AND SHIPPED — 2026-07-31
+
+**Sam signed the whole sheet.** The mechanism is built; this document is now the record of
+what was asked and what he answered, not a proposal.
+
+| §2.4 question | Sam's ruling | Where it lives |
+|---|---|---|
+| How many nights, how weighted? | **The last 3**, rolling | `TEAM_NIGHT_WINDOW`, `rules/teamNightSize.ts` |
+| What if they never answer? | **The seed persists, never decays** | `deriveTeamNightSize`, source `onboarding_seed` |
+| Next day or next week? | **Next WEEK, never next day** — the readiness door owns today | the `weekStartISO` filter |
+| §4.4 — does duration stay asked? | **NO. It stops being asked.** | removed from `ONBOARDING_STEPS` + its screen |
+| The wording | **Signed as proposed** | `signedCopy`: `team_night_size_question` + 3 answers |
+
+**One thing in the mechanism is still [MINE] and is flagged in the code:** Sam ruled the
+WINDOW ("the last 3") but not the FUNCTION that turns three answers into one size. It uses
+the ordinal mean, rounded — equal weight, and the only total combination (a majority vote
+has no winner for {light, normal, hard}). Two hard nights and a light read as *normal*;
+two hard and a normal read as *hard*. If he wants recency-weighting, `deriveTeamNightSize`
+is the only thing that changes.
+
+**NOT BUILT, deliberately: nothing consumes the derived size yet.** §2.3 lists what size
+*may* influence (gym work stacked on a team night, conditioning credit, the day-before
+warning) — each of those is a separate ruling, and building one now would be inventing a
+mechanism Sam has not signed. The measurement exists and is correct; what it changes is
+his next call. This is the estimate→measured pattern arriving in the right order: the
+truth is collected before anything is allowed to act on it.
+
+**Also recorded:** `teamTrainingIntensity` GRADUATED out of
+`ONBOARDING_FIELD_DECLARATIONS`. It was declared "coach context + estimate seed, waiting on
+a mechanism"; the mechanism shipped, so it has a real programming consumer and the
+declaration gate correctly refused to keep calling it decorative.
+
+---
+
+
 **Sam's ruling, 2026-07-30 (2+3):**
 
 > The onboarding `teamTrainingDuration` and `teamTrainingIntensity` answers are a

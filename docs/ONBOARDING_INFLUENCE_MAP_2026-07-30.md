@@ -22,6 +22,34 @@ authority**. Both are named plainly below rather than left to be inferred from s
 
 ---
 
+## §0a — SECOND CORRECTION, 2026-07-31: the equipment rows are wrong
+
+**§2.4 below says `trainingLocation` decides "which equipment tags are assumed" and marks
+`equipment` **[RULED]**. Both readings mislead, and the survey Sam commissioned found why:**
+
+- **no onboarding step collects `equipment`, and none ever has;**
+- **no step collects `trainingLocation` either, and no screen in the app writes it** — it
+  is a hardcoded `'Commercial gym'` for every athlete;
+- so `LOCATION_EQUIPMENT` is **not a fallback for a missing answer. It is the live path for
+  every athlete**, and it unions its tags on top of a hardcoded checklist rather than
+  standing in for one.
+
+The **[RULED]** mark belonged to the equipment *lattice* — the tag vocabulary and its
+provenance lock, which are genuinely Sam's. I let it imply that how an athlete's tags get
+CHOSEN was ruled. Nothing about that is ruled, and there are **four** unsigned tables
+there, not the one §4 lists — the two that decide most (`initialOnboardingData`'s checklist
+and `LOCATION_CONDITIONING_MODALITIES`) appear in neither this map nor the translations
+sheet.
+
+Receipts, and the fix as a sheet: `docs/EQUIPMENT_OWNERSHIP_SHEET_2026-07-31.md`.
+
+**The lesson generalises §0's.** There, checking the Bible was not checking the authored
+record. Here, checking that a FIELD is ruled was not checking that its WRITER exists — a
+field can be perfectly authored and still be filled by a constant nobody chose. **Ask who
+writes it, not only who blessed it.**
+
+---
+
 ## §0 — CORRECTION: the load ratios are RULED, not [MINE]
 
 **Sam asked which it was — a second estimator, or mislabelled signed work. It is
