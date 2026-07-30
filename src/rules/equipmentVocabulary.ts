@@ -82,8 +82,10 @@ const LIBRARY_MODALITY_TO_EQUIPMENT: Readonly<
   Record<string, ConditioningEquipmentModality | null>
 > = {
   run: null,
-  bike: 'bike',
-  air_bike: 'bike',
+  // A generic 'bike' row demands the bike-erg question; native air-bike rows
+  // demand air_bike. The two are separate questions (ruling 2, 2026-07-31).
+  bike: 'bike_erg',
+  air_bike: 'air_bike',
   ski: 'ski',
   row: 'row',
   swim: null,
@@ -110,16 +112,21 @@ function modalitiesFromNotes(notes: string): ConditioningEquipmentModality[] {
   const out = new Set<ConditioningEquipmentModality>();
   // "All 5 modalities" is Sam's authored shorthand for run / bike / air bike /
   // ski / row — every machine modality plus running.
-  if (/all 5 modalities/.test(lower)) return ['bike', 'row', 'ski'];
+  if (/all 5 modalities/.test(lower)) return ['bike_erg', 'air_bike', 'row', 'ski'];
   const excluded = /ski\s*\/\s*row excluded|no ski\s*\/\s*row|ski\/row excluded/.test(lower);
-  if (/\bair bike\b|\bbike\b/.test(lower) && !/bike excluded/.test(lower)) out.add('bike');
+  if (/\bair bike\b/.test(lower)) out.add('air_bike');
+  if (/\bbike\b(?! excluded)/.test(lower) && !/bike excluded/.test(lower) &&
+      lower.replace(/air bike/g, '').includes('bike')) {
+    out.add('bike_erg');
+  }
   if (/\brow\b/.test(lower) && !excluded && !/row excluded/.test(lower)) out.add('row');
   if (/\bski\b/.test(lower) && !excluded && !/ski excluded/.test(lower)) out.add('ski');
   if (/\btreadmill\b/.test(lower)) out.add('treadmill');
   if (/erg only|erg-only/.test(lower)) {
     out.add('row');
     out.add('ski');
-    out.add('bike');
+    out.add('bike_erg');
+    out.add('air_bike');
   }
   return [...out];
 }
@@ -256,17 +263,14 @@ export function templateModalitiesFromNotes(notes: string): ConditioningEquipmen
  * EXACTLY this list: a new entry is a red gate (a new exercise nobody can be
  * asked about), and an entry Sam resolves must leave here in the same change.
  *
- * Depth Jumps: requires 'Box'; `hasEquipment` in `powerExercisePool` checks
- * ownership against resolved tags, which can never contain 'box' — so the row
- * is UNSELECTABLE for every athlete today. Sheet question for Sam:
- * `docs/EQUIPMENT_VOCABULARY_AUDIT_2026-07-31.md` §3.
+ * EMPTY, and ruled empty: Sam's audit ruling 1 (2026-07-31) made the box the
+ * 10th equipment question, Depth Jumps' 'Box' requirement maps to `plyo_box`,
+ * and the exercise is selectable again. The gate holds this at empty.
  */
 export const UNMAPPABLE_REQUIREMENTS_PENDING_RULING: readonly {
   readonly exercise: string;
   readonly requirement: string;
-}[] = [
-  { exercise: 'Depth Jumps', requirement: 'Box' },
-];
+}[] = [];
 
 /**
  * THE ONBOARDING CHECKLIST CONTENT, derived. Ruling 1, 2026-07-31: what the
@@ -311,10 +315,12 @@ export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>>
   pullup_bar: 'Pull-up bar',
   kettlebell: 'Kettlebell',
   foam_roller: 'Foam roller',
+  plyo_box: 'Plyo box',
 };
 
 export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipmentModality, string>> = {
-  bike: 'Bike or bike erg',
+  bike_erg: 'Bike or bike erg',
+  air_bike: 'Air bike / assault bike',
   row: 'Row erg',
   ski: 'Ski erg',
   treadmill: 'Treadmill',

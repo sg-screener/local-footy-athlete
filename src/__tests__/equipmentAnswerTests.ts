@@ -55,7 +55,7 @@ console.log('\n[1] THE ANSWERED PATH — the athlete\'s kit, nothing else');
 {
   const profile = answered({
     tags: { barbell: 'have', dumbbells: 'have', bench: 'have', machine: 'never' },
-    modalities: { bike: 'have', ski: 'never' },
+    modalities: { bike_erg: 'have', ski: 'never' },
   });
   const resolved = resolveEquipmentCapabilities(profile, null, DATE);
   ok('tags are bodyweight + HAVE tags + the derived coarse tag, exactly',
@@ -63,7 +63,7 @@ console.log('\n[1] THE ANSWERED PATH — the athlete\'s kit, nothing else');
       JSON.stringify(['barbell', 'bench', 'bike_or_treadmill', 'bodyweight', 'dumbbells'].sort()),
     resolved.tags);
   ok('modalities are the HAVE modalities, exactly',
-    JSON.stringify(resolved.conditioningModalities) === JSON.stringify(['bike']),
+    JSON.stringify(resolved.conditioningModalities) === JSON.stringify(['bike_erg']),
     resolved.conditioningModalities);
   ok('the answered path reports itself', resolved.source === 'athlete_answer');
   ok('an answered profile is complete by construction',

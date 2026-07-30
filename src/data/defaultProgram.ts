@@ -1634,7 +1634,7 @@ export function buildWorkoutsFromCoach(
       ? effectiveAthletePrefs.availableEquipment.includes('bike_or_treadmill')
         ? profileEquipment.conditioningModalities.length > 0
           ? profileEquipment.conditioningModalities
-          : ['bike', 'row', 'ski', 'treadmill']
+          : (['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'] as import('../types/domain').ConditioningEquipmentModality[])
         : []
       : profileEquipment.conditioningModalities
   );

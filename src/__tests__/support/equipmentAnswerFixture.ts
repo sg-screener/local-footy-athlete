@@ -18,9 +18,9 @@ export function fullKitEquipmentAnswer(answeredOn = '2026-07-01'): EquipmentAnsw
     tags: {
       barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
       bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
-      foam_roller: 'have',
+      foam_roller: 'have', plyo_box: 'have',
     },
-    modalities: { bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+    modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
     answeredOn,
   };
 }

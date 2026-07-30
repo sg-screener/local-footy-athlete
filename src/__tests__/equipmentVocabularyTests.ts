@@ -72,6 +72,8 @@ const TAG_CLASSIFICATION: Record<EquipmentTag, 'asked' | 'always_available' | 'd
   pullup_bar: 'asked',
   kettlebell: 'asked',
   machine: 'asked',
+  // Sam's audit ruling 1, 2026-07-31: the 10th question.
+  plyo_box: 'asked',
 };
 
 console.log('\n— library -> checklist (nothing authored can require an unaskable tag) —');
@@ -106,9 +108,9 @@ ok(
   vocabulary.unclassifiedStrengthNames,
 );
 
-// The consequence of the one pinned unmappable row, held true so the audit
-// sheet's claim cannot rot: Depth Jumps is unselectable even with a FULL gym.
-// Sam's §3 ruling on the sheet flips this pin in the same change that pays it.
+// THE PIN, FLIPPED BY RULING. Sam's audit ruling 1 (2026-07-31) made the box
+// the 10th question; 'Box' maps to `plyo_box`, and Depth Jumps is alive again
+// for an athlete who has one — and stays dead for an athlete who does not.
 const offSeasonAdvancedFullGym = eligiblePowerExercises({
   family: 'lower',
   phase: 'Off-season',
@@ -118,9 +120,22 @@ const offSeasonAdvancedFullGym = eligiblePowerExercises({
   availableEquipment: [...FULL_GYM_EQUIPMENT],
 });
 ok(
-  "pinned consequence: Depth Jumps ('Box') is unselectable even with a full gym",
-  !offSeasonAdvancedFullGym.some((entry) => entry.name === 'Depth Jumps'),
+  'Depth Jumps is selectable again for a full gym WITH a box (ruling 1)',
+  offSeasonAdvancedFullGym.some((entry) => entry.name === 'Depth Jumps'),
   offSeasonAdvancedFullGym.map((entry) => entry.name),
+);
+const offSeasonAdvancedNoBox = eligiblePowerExercises({
+  family: 'lower',
+  phase: 'Off-season',
+  trainingAge: 'advanced',
+  reduced: false,
+  blockId: 'audit-pin',
+  availableEquipment: FULL_GYM_EQUIPMENT.filter((tag) => tag !== 'plyo_box'),
+});
+ok(
+  'and still unselectable without one — the requirement is real, not decorative',
+  !offSeasonAdvancedNoBox.some((entry) => entry.name === 'Depth Jumps'),
+  offSeasonAdvancedNoBox.map((entry) => entry.name),
 );
 
 console.log('\n— checklist -> library (no dead questions) —');
@@ -164,7 +179,7 @@ const withoutMachines = resolveEquipmentCapabilities(
 );
 ok(
   "exclusion justification: 'bike_or_treadmill' derives from modality answers (present with a bike)",
-  withBike.tags.includes('bike_or_treadmill') && withBike.conditioningModalities.includes('bike'),
+  withBike.tags.includes('bike_or_treadmill') && withBike.conditioningModalities.includes('bike_erg'),
   withBike,
 );
 ok(
@@ -177,7 +192,7 @@ console.log('\n— conditioning modalities —');
 
 const modalityQuestions = derivedConditioningModalityQuestions();
 const ALL_EQUIPMENT_MODALITIES: readonly ConditioningEquipmentModality[] =
-  ['bike', 'row', 'ski', 'treadmill'];
+  ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'];
 
 ok(
   'every equipment modality in the domain vocabulary is demanded (no dead modality question)',
@@ -190,7 +205,7 @@ ok(
   modalityQuestions,
 );
 
-for (const modality of ['bike', 'row', 'ski'] as const) {
+for (const modality of ['bike_erg', 'air_bike', 'row', 'ski'] as const) {
   const demand = vocabulary.requiredModalities.find((entry) => entry.modality === modality);
   ok(
     `'${modality}' is demanded by AUTHORED content, not only rules`,

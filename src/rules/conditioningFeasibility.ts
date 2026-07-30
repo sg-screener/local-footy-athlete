@@ -93,11 +93,15 @@ function allowedErgs(
 ): AllowedErgModality[] {
   const available = new Set(equipmentModalities);
   const upperRestricted = upperLimbRestriction(profile, constraints);
+  // The session-side 'bike' family renders on EITHER bike machine; the
+  // athlete's answer distinguishes them (ruling 2, 2026-07-31) so that
+  // native-air-bike rows can require air_bike specifically at selection.
+  const anyBike = available.has('bike_erg') || available.has('air_bike');
   const out: AllowedErgModality[] = [];
-  if (available.has('bike')) out.push('bike');
+  if (anyBike) out.push('bike');
   if (available.has('row') && !upperRestricted) out.push('row');
   if (available.has('ski') && !upperRestricted) out.push('ski');
-  if (available.has('bike') && !upperRestricted && (available.has('row') || available.has('ski'))) {
+  if (anyBike && !upperRestricted && (available.has('row') || available.has('ski'))) {
     out.push('mixed');
   }
   return out;

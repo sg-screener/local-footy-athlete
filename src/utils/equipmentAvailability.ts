@@ -58,6 +58,7 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'pullup_bar',
   'kettlebell',
   'machine',
+  'plyo_box',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -193,7 +194,7 @@ const LEGACY_POSITIVE_KEYS = new Set([
 ]);
 
 const ALL_CONDITIONING_MODALITIES: readonly ConditioningEquipmentModality[] = [
-  'bike', 'row', 'ski', 'treadmill',
+  'bike_erg', 'air_bike', 'row', 'ski', 'treadmill',
 ];
 
 // LOCATION_CONDITIONING_MODALITIES is DELETED (Sam's ruling 4, 2026-07-31).
@@ -241,7 +242,11 @@ function conditioningModalitiesForOption(raw: string): readonly ConditioningEqui
   if (/^(full_gym|gym|fullgym|cardio_equipment)$/.test(normalized)) {
     return ALL_CONDITIONING_MODALITIES;
   }
-  if (/^(bike|stationary_bike|assault_bike|air_bike|bikeerg|bike_erg)$/.test(normalized)) return ['bike'];
+  // Legacy checklist options predate the bike split (ruling 2, 2026-07-31):
+  // an assault/air-bike option lifts to air_bike, every other bike wording to
+  // bike_erg — the lift keeps what was said, it does not grant the sibling.
+  if (/^(assault_bike|air_bike|airbike)$/.test(normalized)) return ['air_bike'];
+  if (/^(bike|stationary_bike|bikeerg|bike_erg)$/.test(normalized)) return ['bike_erg'];
   if (/^(rowerg|row_erg|rower|rowing_erg)$/.test(normalized)) return ['row'];
   if (/^(skierg|ski_erg)$/.test(normalized)) return ['ski'];
   if (/^(treadmill)$/.test(normalized)) return ['treadmill'];
@@ -299,6 +304,9 @@ export function equipmentTagsForRequirement(
     return ['bike_or_treadmill'];
   }
   if (/^(foam_roller)$/.test(normalized)) return ['foam_roller'];
+  // Sam's audit ruling 1, 2026-07-31: the box is askable, so the requirement
+  // maps instead of being unanswerable.
+  if (/^(box|plyo_box|plyometric_box)$/.test(normalized)) return ['plyo_box'];
   if (/^(bodyweight|none|no_equipment)$/.test(normalized)) return ['bodyweight'];
 
   const mapped = tagsForChecklistOption(value);

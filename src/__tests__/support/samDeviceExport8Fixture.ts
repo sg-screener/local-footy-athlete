@@ -98,7 +98,7 @@ export function samExport8EquipmentAnswerThroughTheDoor(): NonNullable<Onboardin
       barbell: 'have', dumbbells: 'have', pullup_bar: 'have',
       cables: 'have', machine: 'have', bands: 'have', bench: 'have',
     },
-    modalities: { bike: 'have', row: 'have', treadmill: 'have', ski: 'never' },
+    modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', treadmill: 'have', ski: 'never' },
     answeredOn: '2026-07-31',
   };
 }

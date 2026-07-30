@@ -55,8 +55,14 @@ export type TrainingLocation = 'Commercial gym' | 'Home gym' | 'Club gym' | 'Out
 /** Whether profile equipment is an exhaustive user declaration or legacy positive-only data. */
 export type EquipmentSelectionCompleteness = 'complete' | 'legacy_incomplete';
 
-/** Canonical conditioning-machine capabilities; treadmill is deliberately not off-feet. */
-export type ConditioningEquipmentModality = 'bike' | 'row' | 'ski' | 'treadmill';
+/**
+ * Canonical conditioning-machine capabilities; treadmill is deliberately not
+ * off-feet. `bike_erg` and `air_bike` are SEPARATE questions (Sam's audit
+ * ruling 2, 2026-07-31: "different for sure") — the library's native-air-bike
+ * rows and the flywheel rule can only be respected if the athlete's answer can
+ * tell the two apart. A session that just needs "a bike" renders on either.
+ */
+export type ConditioningEquipmentModality = 'bike_erg' | 'air_bike' | 'row' | 'ski' | 'treadmill';
 
 /**
  * One athlete decision about one piece of equipment. The two values carry

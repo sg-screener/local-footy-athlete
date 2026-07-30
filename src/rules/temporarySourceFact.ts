@@ -265,7 +265,8 @@ const DAY_NAMES = new Set<DayOfWeek>([
 ]);
 
 const CONDITIONING_MODALITIES = new Set<ConditioningEquipmentModality>([
-  'bike',
+  'bike_erg',
+  'air_bike',
   'row',
   'ski',
   'treadmill',
