@@ -44,6 +44,7 @@ import {
 } from '../rules/optionalTopUp';
 import { buildDerivedSession, type AthleteContext } from './sessionBuilder';
 import { isoDateForWeekday } from './appDate';
+import type { WeakPointFocus } from '../rules/weakPointFocus';
 
 /**
  * The words a placed session carries as its reason — they land in its description.
@@ -77,6 +78,8 @@ export interface ApplyOptionalTopUpsArgs {
    * a top-up on a pinned past day would be the app editing a day that has been.
    */
   readonly candidateDays: readonly number[];
+  /** The athlete's stated weakness as a `:105` focus, or null. Leans the needs only. */
+  readonly weakPointFocus?: WeakPointFocus | null;
 }
 
 export interface OptionalTopUpResult {
@@ -97,6 +100,7 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
     seasonPhase: args.seasonPhase,
     candidateDays: args.candidateDays,
     gameDayOfWeek: args.gameDayOfWeek,
+    weakPointFocus: args.weakPointFocus ?? null,
   });
   if (placements.length === 0) {
     return { workouts: [...args.workouts], placements: [] };

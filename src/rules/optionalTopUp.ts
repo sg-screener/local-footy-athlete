@@ -28,6 +28,11 @@ import type { Workout } from '../types/domain';
 import type { SeasonPhase } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import {
+  WEAK_POINT_ACCESSORY_REGION_THRESHOLD,
+  weakPointLeansOptionalTopUps,
+  type WeakPointFocus,
+} from './weakPointFocus';
+import {
   CALVES_POOL,
   GROIN_ADDUCTORS_POOL,
   HAMSTRING_LIGHT_POOL,
@@ -141,6 +146,18 @@ export interface OptionalTopUpInput {
   readonly candidateDays: readonly number[];
   /** The game's day-of-week, or null. */
   readonly gameDayOfWeek: number | null;
+  /**
+   * The athlete's stated weakness, as a `:105` focus (Sam's ruling 3, 2026-07-30).
+   *
+   *   "YES — mobility/injury-history weakness leans the OPTIONAL top-ups (N2 firms to 2,
+   *    placed early; N1 threshold moves to <4 of 6). Optional tier only; required work
+   *    untouched — consistent with A."
+   *
+   * OPTIONAL TIER ONLY is what keeps this inside reading A. These are the only two needs
+   * that exist, both place optional work, and the phase tables are untouched — so a
+   * weakness changes what fills the week and never what it requires.
+   */
+  readonly weakPointFocus?: WeakPointFocus | null;
 }
 
 /**
@@ -181,6 +198,12 @@ function dayIsAvailable(day: number, input: OptionalTopUpInput): boolean {
  */
 function preferredDays(input: OptionalTopUpInput): number[] {
   const preferred: number[] = [];
+  // PLACED EARLY for a mobility / injury-history weakness (Sam's ruling 3). Monday and
+  // Tuesday come first, ahead of the G-3 / Wednesday preference, so the work the athlete
+  // says they need most is not the thing that falls off the end of a busy week.
+  if (weakPointLeansOptionalTopUps(input.weakPointFocus ?? null)) {
+    preferred.push(1, 2);
+  }
   if (input.gameDayOfWeek !== null) {
     preferred.push((input.gameDayOfWeek + 4) % 7);
   }
@@ -227,7 +250,16 @@ export function computeOptionalTopUps(
 
   // N1 — accessory region coverage. At most ONE, and it does not aim to reach
   // six: one session is what fills the lack.
-  if (accessoryRegionsCovered(input.workouts).size < ACCESSORY_REGION_THRESHOLD) {
+  //
+  // THE THRESHOLD MOVES FOR A MOBILITY / INJURY-HISTORY WEAKNESS: below FOUR of the six
+  // rather than below three, so the need fires more readily for the athlete who said
+  // this is their weak point. Sam's ruling 3. Nothing else about N1 changes — still at
+  // most one session, still optional.
+  const leansTopUps = weakPointLeansOptionalTopUps(input.weakPointFocus ?? null);
+  const accessoryThreshold = leansTopUps
+    ? WEAK_POINT_ACCESSORY_REGION_THRESHOLD
+    : ACCESSORY_REGION_THRESHOLD;
+  if (accessoryRegionsCovered(input.workouts).size < accessoryThreshold) {
     take('accessories', 'accessory_coverage');
   }
 

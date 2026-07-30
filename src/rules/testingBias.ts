@@ -18,6 +18,8 @@ import type {
   SquatStrength,
 } from '../types/domain';
 import type { RecoveryAddonFocusArea } from './recoveryAddonCoverage';
+// BIBLE_ANCHOR: weak_point_off_season_focus
+import { WEAK_POINT_LEAN, weakPointFocusFor } from './weakPointFocus';
 import type {
   BiasConditioningCategory,
   ProgrammingBias,
@@ -139,32 +141,39 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
     notes.push('Testing gap: no current sprint exposure — small speed lean');
   }
 
-  switch (inputs.biggestLimitation) {
-    case 'Endurance':
-      aerobic += 1;
-      notes.push('Limitation: endurance');
-      break;
-    case 'Speed':
-      speed += 1;
-      notes.push('Limitation: speed');
-      break;
-    case 'Strength':
-      accessory += 0.5;
-      notes.push('Limitation: general strength — small support lean');
-      break;
-    case 'Injury history':
+  // ── THE STATED WEAKNESS, BOUND TO `:105` (Sam's ruling, 2026-07-30) ──
+  //
+  // READING A: a stated weakness changes WHAT FILLS the week, never its counts or
+  // distributions. This is the whole of the weak-point mechanism, and its DIRECTION is
+  // now `rules/weakPointFocus.ts` rather than a switch here — because the direction is
+  // the part Sam signs and `:105` is the line it answers to. `weakPointFocusTests` binds
+  // the two so neither can drift.
+  //
+  // IT WAS A SWITCH OVER FIVE OF SEVEN ANSWERS. `Size` and `Power & explosiveness` fell
+  // to `default: break` and leaned nothing — Size is half of `:105`'s own "strength and
+  // size" category, so its silence was a gap and not a decision. It leans now.
+  // `Power & explosiveness` still leans nothing, but for a stated reason: Sam deferred
+  // it, the authored record holds no prior ruling, and the map declares it `unresolved`
+  // rather than guessing it into speed.
+  const weakPointFocus = weakPointFocusFor(inputs.biggestLimitation);
+  if (weakPointFocus) {
+    const lean = WEAK_POINT_LEAN[weakPointFocus];
+    if (lean.aerobic) aerobic += 1;
+    if (lean.speed) speed += 1;
+    if (lean.accessory) accessory += 0.5;
+    if (lean.recovery) {
       recovery += 1;
       accessory += 0.25;
-      robustnessSignal = true;
-      notes.push('Limitation: injury history — robustness/prehab lean');
-      break;
-    case 'Mobility':
-      recovery += 0.5;
-      mobilitySignal = true;
-      notes.push('Limitation: mobility — recovery add-on lean');
-      break;
-    default:
-      break;
+    }
+    if (weakPointFocus === 'mobility_and_injury_prevention') {
+      // Both halves of `:105`'s first category, kept distinguishable: an injury history
+      // is a robustness signal and a mobility answer is a mobility one. The bias
+      // consumers read these separately, so collapsing them would lose real information
+      // the mapping does not intend to lose.
+      if (inputs.biggestLimitation === 'Injury history') robustnessSignal = true;
+      if (inputs.biggestLimitation === 'Mobility') mobilitySignal = true;
+    }
+    notes.push(`Limitation: ${inputs.biggestLimitation} → :105 focus "${weakPointFocus}"`);
   }
 
   if ((inputs.injuries ?? []).length > 0) {

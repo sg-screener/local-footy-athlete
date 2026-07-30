@@ -56,6 +56,7 @@ import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposur
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
+import { weakPointFocusFor } from '../../rules/weakPointFocus';
 import {
   rebindDerivedSessionProvenance,
   stampPlannerDerivedSessionProvenance,
@@ -630,6 +631,9 @@ export function buildGeneratedMicrocycles(args: {
       // Only days the athlete said they train, and never a day already governed as
       // history: a top-up on a pinned past day would be the app editing a day that
       // has already been.
+      // Reading A, at the only place it touches placement: a mobility or injury-history
+      // weakness leans the OPTIONAL needs (Sam's ruling 3). Required work is untouched.
+      weakPointFocus: weakPointFocusFor(profile.biggestLimitation),
       candidateDays: topUpCandidateDays({
         profile,
         weekStart: blockState.weekStart,

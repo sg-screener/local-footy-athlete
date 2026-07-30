@@ -546,6 +546,33 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'units before anything about it can be counted honestly.',
   },
   {
+    id: 'LR-27',
+    title: 'One body-part vocabulary, every door',
+    tier: 2,
+    laws: ['L-A1', 'L-B3'],
+    blastRadius: 'visible_week',
+    founding: 'docs/INJURY_OTHER_PATH_TRACE_2026-07-30.md: three phrase maps answer one '
+      + 'question with different coverage. `guidedInjuryControl.guidedInjuryBucketForArea` '
+      + '(11 patterns) does not know `shin`; `sessionBuilder.INJURY_BODY_AREA_MAP` (~30 '
+      + 'keys) does; `programAdjustmentEngine.BODY_PART_TO_BUCKET` says in its own comment '
+      + 'that it mirrors a fourth map in `injuryAdjustmentEngine`. Same word, same '
+      + 'athlete, different answers depending on which door they used.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The subject is DISAGREEMENT between maps, not a shape in any one '
+      + 'of them. Each map is individually plausible; the defect is only visible by '
+      + 'asking all of them the same word, which is the unit itself.',
+    // ADDED BY RULING, which is the only way this list may grow — and the founding count
+    // below rises by exactly one in the same commit, with the ruling cited, so the
+    // headroom is attributable rather than manufactured.
+    //
+    // Sam, 2026-07-30, ruling on the injury "Other" path: "Option 2 (collapse the two
+    // phrase maps to ONE owner so every door speaks one body-part vocabulary) is QUEUED
+    // on the census as its own unit — the convergent fix, 'shin' must mean the same thing
+    // at every door." The trace then found a THIRD map, and a fourth named by comment.
+  },
+  {
     id: 'LR-13',
     title: 'The visible week has one projection',
     tier: 2,
@@ -759,14 +786,21 @@ export const LEGACY_DEBT_BASELINE = 116;
 export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
 
 /**
- * The census was founded with 24 units. DIRECTION 4c.
+ * The census was founded with 24 units, and holds 25 by RULING. DIRECTION 4c.
  *
  * Per-unit ceilings stop debt migrating between existing units; this stops a
- * newcomer manufacturing headroom by adding a twenty-fifth. The census may
- * SHRINK as units are paid off and deleted — that is required, so it can die —
- * but it may not grow without a ruling.
+ * newcomer manufacturing headroom by adding one more. The census may SHRINK as units
+ * are paid off and deleted — that is required, so it can die — but it may not grow
+ * without a ruling.
+ *
+ * 24 -> 25 on 2026-07-30, and the ruling is quoted on the LR-27 entry above: Sam queued
+ * the body-part vocabulary collapse as its own census unit while ruling the injury
+ * "Other" path. The gate's own instruction is what this follows — "name the sweep that
+ * missed it and get it ruled, do not file it in quietly" — and the sweep that missed it
+ * is the founding sweep, which counted stores and writers rather than asking two phrase
+ * maps the same word.
  */
-export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 24;
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 25;
 
 /**
  * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.

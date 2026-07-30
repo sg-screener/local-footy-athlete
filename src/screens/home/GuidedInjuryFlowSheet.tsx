@@ -11,6 +11,9 @@ import {
   GUIDED_INJURY_TRIGGER_OPTIONS,
   type GuidedInjuryFlowResult,
   type GuidedInjuryRegion,
+  GUIDED_INJURY_AREA_HINT,
+  GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL,
+  guidedInjuryAreaIsProgrammable,
 } from '../../utils/guidedInjuryControl';
 import { explorerTestId } from '../../utils/stableTestId';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
@@ -80,6 +83,8 @@ export function GuidedInjuryFlowSheet({
   const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
   const [area, setArea] = useState('');
   const [customArea, setCustomArea] = useState('');
+  /** Sam's refusal, shown when the typed area is one the app cannot program around. */
+  const [areaRefusal, setAreaRefusal] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState(GUIDED_INJURY_SEVERITY_OPTIONS[1]);
   const [triggers, setTriggers] = useState<string[]>([]);
 
@@ -168,6 +173,12 @@ export function GuidedInjuryFlowSheet({
       return (
         <>
           <Text style={styles.title}>Where is the issue?</Text>
+          {/*
+            SAM'S WORDS, from the 2026-07-30 ruling. The "Other upper body" and "Other
+            lower body" rows are gone because they resolved to no bucket, so the athlete
+            whose area is not listed needs telling what to do instead.
+          */}
+          <Text style={styles.body}>{GUIDED_INJURY_AREA_HINT}</Text>
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
             <FlowOption
               key={option}
@@ -191,7 +202,12 @@ export function GuidedInjuryFlowSheet({
           <Text style={styles.title}>What area is it?</Text>
           <AppTextInput
             value={customArea}
-            onChangeText={setCustomArea}
+            onChangeText={(next: string) => {
+              setCustomArea(next);
+              // The refusal clears as soon as they change the answer — a refusal that
+              // outlives the answer it refused reads as a broken field.
+              if (areaRefusal) setAreaRefusal(null);
+            }}
             placeholder="e.g. calf, wrist, elbow"
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={styles.input}
@@ -199,12 +215,30 @@ export function GuidedInjuryFlowSheet({
             testID="injury-area-custom-input"
             accessibilityLabel="injury-area-custom-input"
           />
+          {areaRefusal ? (
+            <Text style={styles.safetyNote} testID="injury-area-custom-refusal">
+              {areaRefusal}
+            </Text>
+          ) : null}
           <Button
             label="Continue"
             testID="injury-area-custom-continue"
             glow={false}
             disabled={customArea.trim().length === 0}
-            onPress={() => setStep('severity')}
+            onPress={() => {
+              // HONESTLY REFUSED AT THE POINT OF ANSWERING (Sam's ruling, 2026-07-30).
+              //
+              // The app used to accept anything here, store it, change the week's dose
+              // through the severity answer, and filter no movement — so it looked like
+              // it had listened. It had, about the dose. It was still programming the
+              // movement that hurt.
+              if (!guidedInjuryAreaIsProgrammable(customArea)) {
+                setAreaRefusal(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL);
+                return;
+              }
+              setAreaRefusal(null);
+              setStep('severity');
+            }}
           />
           <BackButton onPress={back} />
         </>

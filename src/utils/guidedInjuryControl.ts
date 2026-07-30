@@ -34,11 +34,70 @@ export const GUIDED_INJURY_REGION_OPTIONS: Array<{ id: GuidedInjuryRegion; label
   { id: 'other', label: 'Other' },
 ];
 
+/**
+ * EVERY ROW RESOLVES TO A BUCKET (Sam's ruling, 2026-07-30, option 1).
+ *
+ * "Other upper body" and "Other lower body" are GONE. They matched no pattern in
+ * `guidedInjuryBucketForArea`, so tapping either produced a stored injury with a null
+ * bucket — one that changed the week's DOSE through its severity and filtered no
+ * movement at all. An athlete could reach that state without typing a word, through a
+ * ruled menu, which is why this is a totality rule and not a free-text rule.
+ *
+ * "Other midline" STAYS because it resolves (`/midline/` → lowerBack). Sam named the
+ * upper and lower rows specifically, and a row that works is not a row to delete.
+ *
+ * The athlete whose area is genuinely none of these now picks the CLOSEST one — the
+ * sheet says so in Sam's own words — or asks the coach. `guidedInjuryMenuTotality`
+ * below is the gate, and it holds in both directions.
+ */
 export const GUIDED_INJURY_AREA_OPTIONS: Record<Exclude<GuidedInjuryRegion, 'other'>, string[]> = {
-  upper_body: ['Neck', 'Shoulder', 'Elbow', 'Wrist / hand', 'Chest / ribs', 'Other upper body'],
-  lower_body: ['Hip / groin', 'Hamstring', 'Quad', 'Knee', 'Calf / Achilles', 'Ankle / foot', 'Other lower body'],
+  upper_body: ['Neck', 'Shoulder', 'Elbow', 'Wrist / hand', 'Chest / ribs'],
+  lower_body: ['Hip / groin', 'Hamstring', 'Quad', 'Knee', 'Calf / Achilles', 'Ankle / foot'],
   back_midline: ['Lower back', 'Upper back', 'Abs / side', 'Neck', 'Other midline'],
 };
+
+/**
+ * The refusal, at the point of answering (Sam's ruling, option 3).
+ *
+ * SAM-AUTHORED, quoted from the ruling. A free-text area the app cannot program around
+ * is refused HERE rather than stored and pretended about: a stored answer that filters
+ * nothing was the worst of the three outcomes on the table, and it is the one the app
+ * used to produce.
+ */
+export const GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL =
+  "I can't program around that one — pick the closest area or ask the coach";
+
+/** Sam's instruction on the area step, quoted from the same ruling. */
+export const GUIDED_INJURY_AREA_HINT = 'Pick the closest area';
+
+/**
+ * Can the app actually program around this answer?
+ *
+ * The single predicate both the sheet and the constraint builder ask, so the door and
+ * the writer cannot disagree about what is answerable.
+ */
+export function guidedInjuryAreaIsProgrammable(area: string): boolean {
+  return guidedInjuryBucketForArea(area) !== null;
+}
+
+/**
+ * THE TOTALITY GATE'S SUBJECT, exported so the assertion reads the real menu.
+ *
+ * Both directions, because one alone is satisfiable by the wrong menu:
+ *   forward  every offered row resolves to a bucket — no row can store nothing
+ *   reverse  every bucket the exercise tags can filter on is REACHABLE from some row —
+ *            a bucket no row reaches is a filter the athlete can never trigger
+ */
+export function guidedInjuryMenuTotality(): {
+  rows: string[]; unresolved: string[]; reachableBuckets: InjuryBucket[];
+} {
+  const rows = Object.values(GUIDED_INJURY_AREA_OPTIONS).flat();
+  const unresolved = rows.filter((row) => !guidedInjuryAreaIsProgrammable(row));
+  const reachableBuckets = Array.from(new Set(
+    rows.map((row) => guidedInjuryBucketForArea(row)).filter((b): b is InjuryBucket => !!b),
+  ));
+  return { rows, unresolved, reachableBuckets };
+}
 
 export const GUIDED_INJURY_TRIGGER_OPTIONS = [
   'Sprinting',
@@ -201,7 +260,21 @@ export function buildGuidedInjuryConstraint(
 ): ActiveInjuryConstraint {
   const now = new Date().toISOString();
   const bucket = guidedInjuryBucketForArea(result.area);
-  const key = bucket ?? normaliseKey(result.area);
+  // UNREPRESENTABLE, not merely refused upstream (Sam's ruling, 2026-07-30).
+  //
+  // The sheet refuses an unprogrammable area at the point of answering, and this is the
+  // second half of the same boundary: a null bucket cannot become a stored constraint
+  // through this builder at all. Without it, the refusal would be a UI convention that
+  // the next caller of this function could quietly bypass — and the state it produced
+  // (stored, dose-changing, filtering nothing) is the one Sam called the worst outcome.
+  if (!bucket) {
+    throw new Error(
+      `Guided injury area "${result.area}" resolves to no injury bucket, so no exercise `
+      + 'filter could act on it. The area step must refuse it instead: see '
+      + 'GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL.',
+    );
+  }
+  const key = bucket;
   const bandFromSeverity = guidedSeverityBandForSeverity(result.severity);
   const adjustmentFromSeverity = guidedAdjustmentForSeverity(result.severity);
   const trainingPaused = injurySeverityPausesAffectedTraining(result.severity) || result.seriousSymptoms;

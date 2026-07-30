@@ -294,6 +294,29 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
       { file: 'rules/sessionTypeCharter.ts', symbol: 'SESSION_TYPE_CHARTER' },
     ],
   },
+  {
+    id: 'weak_point_off_season_focus',
+    section: 'Section 1 — Season phase rules (off-season)',
+    quote: 'Weak point work: KEY thing in off season is working on weakness - may be '
+      + 'mobility and injury prevention, or strength and size, or conditioning, or speed. '
+      + 'What the user said is their weakness is the focus here. If they don\'t really say '
+      + 'they have a weakness then strength and size should be prioritised early, then '
+      + 'building work capacity, then increasing speed and intensity as we get closer to '
+      + 'pre season.',
+    statesNoNumbers: 'Categorical: the line names four weakness CATEGORIES and a default '
+      + 'ORDER over the off-season. It states no dose, count or threshold — which is the '
+      + 'whole of Sam\'s reading A, that a weakness changes what fills the week and never '
+      + 'how much of it.',
+    states: [],
+    meaning: 'The athlete\'s stated weakness biases exercise and template SELECTION in the '
+      + 'off-season, through the four categories the line names. With no stated weakness the '
+      + 'default order applies — strength and size early, then work capacity, then speed and '
+      + 'intensity toward pre-season — which is the shape of the off-season subphase tables.',
+    sites: [
+      { file: 'rules/weakPointFocus.ts', symbol: 'WEAK_POINT_FOCUS_BY_ANSWER' },
+      { file: 'rules/testingBias.ts', symbol: 'computeTestingBias' },
+    ],
+  },
 ];
 
 /* ══ Injury severity: one owner for the band edges ══ */
