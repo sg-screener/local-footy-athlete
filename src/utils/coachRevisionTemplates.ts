@@ -11,6 +11,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import {
   createStrengthIntent,
   type StrengthIntent,
@@ -130,59 +131,33 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: false,
     durationMinutes: 30,
   },
-  // ── Strength: engine-generated with the weekly-programming principles ──
-  {
-    templateId: 'strength_upper_push',
-    label: 'Upper Push',
-    description: 'Pressing strength - chest, shoulders and triceps.',
+  // ── Strength: ALL SEVEN, derived from the authored set ──
+  //
+  // Four were hand-written here and three of the seven had no entry at all, so
+  // the athlete's Lower Body door could only ever hand back combined
+  // squat+hinge. `data/strengthSessionVariants.ts` is the one authored set now
+  // (Sam's charter, 2026-07-30) and these are derived from it, so a variant the
+  // generator can build is a variant a door can reach — by construction, not by
+  // somebody remembering to add it in both places.
+  ...STRENGTH_SESSION_VARIANTS.map((variant): CoachRevisionTemplateDefinition => ({
+    templateId: variant.templateId,
+    label: variant.label,
+    description: variant.description,
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
     dynamic: true,
-    engineName: 'Upper Push',
+    // The engine's intent builder takes the athlete-facing label; it always did
+    // (`engineName: 'Upper Push'`). The one exception was `strength_full_body`,
+    // whose engineName was 'Full Body' while its label was 'Full Body Strength'
+    // — a second name for one session, and exactly what this set removes.
+    engineName: variant.label,
     strengthIntent: createStrengthIntent({
-      archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push'],
+      archetype: variant.archetype,
+      primaryPattern: variant.primaryPattern,
+      plannedPatterns: [...variant.plannedPatterns],
     }),
-  },
-  {
-    templateId: 'strength_upper_pull',
-    label: 'Upper Pull',
-    description: 'Pulling strength - back and biceps.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Upper Pull',
-    strengthIntent: createStrengthIntent({
-      archetype: 'upper', primaryPattern: 'pull', plannedPatterns: ['pull'],
-    }),
-  },
-  {
-    templateId: 'strength_lower',
-    label: 'Lower Body Strength',
-    description: 'Squat and hinge strength - legs and glutes.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Lower Body Strength',
-    strengthIntent: createStrengthIntent({
-      archetype: 'lower', primaryPattern: 'squat', plannedPatterns: ['squat', 'hinge'],
-    }),
-  },
-  {
-    templateId: 'strength_full_body',
-    label: 'Full Body Strength',
-    description: 'Compound push, pull, squat and carry.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Full Body',
-    strengthIntent: createStrengthIntent({
-      archetype: 'full_body', primaryPattern: 'squat', plannedPatterns: ['squat', 'push', 'pull'],
-    }),
-  },
+  })),
   // ── Accessories: pump + prehab derived sessions ──
   {
     templateId: 'accessories_pump',

@@ -97,6 +97,7 @@ import {
   type G1LandingAskContext,
 } from '../rules/g1LandingAsk';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
+import { strengthVariantByTemplateId } from '../data/strengthSessionVariants';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { useProfileStore } from '../store/profileStore';
 import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
@@ -171,10 +172,16 @@ const CATEGORY_TEMPLATE_MATCH: Record<
   conditioning_light: (t) => t.category === 'flush',
   conditioning_hard: (t) => t.category === 'work_capacity',
   recovery: (t) => t.category === 'recovery',
-  strength_upper: (t) =>
-    t.templateId === 'strength_upper_push' || t.templateId === 'strength_upper_pull',
-  strength_lower: (t) => t.templateId === 'strength_lower',
-  strength_full: (t) => t.templateId === 'strength_full_body',
+  // THE THREE DOORS ARE A PARTITION OF THE SEVEN (Sam's charter, 2026-07-30).
+  //
+  // These were three hand-maintained templateId lists, and they were WRONG the
+  // moment the seventh variant existed: Lower Body offered ONE template where
+  // the generator builds three lower sessions, so Lower Squat and Lower Hinge
+  // were unreachable through any door. Derived from the authored set, a new
+  // variant reaches its door with no edit here at all.
+  strength_upper: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_upper',
+  strength_lower: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_lower',
+  strength_full: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_full',
   accessories: (t) => t.category === 'accessories',
 };
 

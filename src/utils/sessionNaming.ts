@@ -39,6 +39,7 @@ import {
   shouldUseLegacyStrengthInference,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
+import { strengthVariantForPatterns } from '../data/strengthSessionVariants';
 
 export type MovementPattern = 'squat' | 'hinge' | 'push' | 'pull';
 
@@ -254,29 +255,23 @@ function movementPatternsFromVisibleContent(input: SessionNameInput): MovementPa
  * Map an unordered set of movement patterns to the canonical athlete-facing
  * strength label. Returns null when no strength patterns are present.
  */
+/**
+ * IT NO LONGER KNOWS THE SEVEN — IT ASKS.
+ *
+ * This function held the mapping, and the coach revision registry held a
+ * FOUR-entry list of the same sessions, and neither could see the other: the
+ * athlete's Lower Body door could only hand back combined squat+hinge, while
+ * Lower Squat and Lower Hinge — which the generator places every week and which
+ * this function has always had names for — were unreachable through any door.
+ * Two representations of one decision, which `docs/NORTH_STAR.md` presumes wrong.
+ *
+ * `data/strengthSessionVariants.ts` is the authored set now and this is a lookup
+ * into it, so a card's name and a picker's name cannot drift.
+ */
 export function canonicalStrengthLabel(
   patterns: MovementPattern[],
 ): string | null {
-  const set = new Set(patterns);
-  const hasSquat = set.has('squat');
-  const hasHinge = set.has('hinge');
-  const hasPush = set.has('push');
-  const hasPull = set.has('pull');
-  const hasLower = hasSquat || hasHinge;
-  const hasUpper = hasPush || hasPull;
-
-  if (hasLower && hasUpper) return 'Full Body Strength';
-  if (hasLower) {
-    if (hasSquat && hasHinge) return 'Lower Body Strength';
-    if (hasSquat) return 'Lower Squat';
-    return 'Lower Hinge';
-  }
-  if (hasUpper) {
-    if (hasPush && hasPull) return 'Upper Body Strength';
-    if (hasPush) return 'Upper Push';
-    return 'Upper Pull';
-  }
-  return null;
+  return strengthVariantForPatterns(patterns)?.label ?? null;
 }
 
 /** Canonical team-session name (team day with no strength load). */

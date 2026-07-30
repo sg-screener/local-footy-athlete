@@ -248,9 +248,9 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
     counting: { countsTowardLoad: true, canBeHardDay: true, required: true },
     composition: {
       kind: 'authored',
-      source: 'data/exercisePoolsStrength.ts STRENGTH_POOLS (slot keys), selected '
-        + 'through rules/strengthPatternContributions.ts strengthIntent and gated '
-        + 'by the locked-list and cue gates',
+      source: 'data/strengthSessionVariants.ts STRENGTH_SESSION_VARIANTS (the seven '
+        + 'sessions), drawing on data/exercisePoolsStrength.ts STRENGTH_POOLS and '
+        + 'gated by the locked-list and cue gates',
       count: 10,
       sessionVariants: 7,
     },
@@ -461,14 +461,6 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
 
   // ── Strength and conditioning: authored, placed, counted — and still owed ──
   {
-    type: 'strength',
-    question: 'composition',
-    deviation: 'the registry offers four strength templates where Sam ruled seven '
-      + 'variants — every exercise in them is authored, which is exactly why no '
-      + 'exercise-level gate can see the gap',
-    paidBy: 'stage 3 — seven strength variants',
-  },
-  {
     type: 'conditioning',
     question: 'composition',
     deviation: 'the athlete\'s conditioning doors build from eight registry '
@@ -481,7 +473,7 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
 export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   rest: 0,
   recovery: 1,
-  strength: 1,
+  strength: 0,
   conditioning: 1,
   mobility: 4,
   prehab: 2,
