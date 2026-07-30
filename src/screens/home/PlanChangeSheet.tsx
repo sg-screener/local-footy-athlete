@@ -365,7 +365,7 @@ export function PlanChangeSheet({
     if (category.startsWith('conditioning_')) {
       return { kind: 'pick_conditioning', mode, returnTo };
     }
-    if (category.startsWith('strength_') || category === 'accessories') {
+    if (category.startsWith('strength_') || category === 'gunshow' || category === 'prehab') {
       return { kind: 'pick_strength', mode, returnTo };
     }
     return pickerBackStep(mode, returnTo);
@@ -632,7 +632,7 @@ export function PlanChangeSheet({
             />
           )}
           {stepCategories.some((c) =>
-            c.id.startsWith('strength_') || c.id === 'accessories') && (
+            c.id.startsWith('strength_') || c.id === 'gunshow' || c.id === 'prehab') && (
             <MenuOption
               label="Strength"
               sub="Upper, lower, full body or accessories"
@@ -687,7 +687,7 @@ export function PlanChangeSheet({
           {(step.mode === 'add' && options.hasSession
             ? options.addOnTopCategories
             : options.categories)
-            .filter((c) => c.id.startsWith('strength_') || c.id === 'accessories')
+            .filter((c) => c.id.startsWith('strength_') || c.id === 'gunshow' || c.id === 'prehab')
             .map((c) => (
               <MenuOption
                 key={c.id}

@@ -264,7 +264,7 @@ export interface SessionAllocation {
    * are deleted rather than marked — the need-based top-up pass owns their
    * placement now, and it composes through the same builders.
    */
-  composedOptionalKind?: 'gunshow' | 'accessories';
+  composedOptionalKind?: 'gunshow' | 'prehab';
   /** When true, this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;
   /** Finisher vs proper conditioning component for attached S+C work. */
@@ -6428,6 +6428,19 @@ function buildWeeklyPlan(
     //
     //   THE FALLBACK ORDER IS RULED: attach the missing work to an existing day
     //   first; take a free day standalone second; displace only after that.
+    //
+    //   AND THERE IS A THIRD STEP THAT IS LAW WITH NO CODE. Sam ruled a
+    //   visibly-optional standalone as the last resort when neither attach nor a free
+    //   day is available — and ruled that it is RECORDED, NOT BUILT: "a path nothing
+    //   can reach is a fixture with no subject. If the deep walker or a real week ever
+    //   reds with both attach and standalone failing, step 3 gets built against that
+    //   real case, red-first."
+    //
+    //   So its absence here is deliberate and has a trigger. What happens instead when
+    //   every candidate is exhausted is the other half of his ruling: the shortfall is
+    //   REPORTED rather than silently absorbed, because a week that gets this far is
+    //   evidence of an allocator bug and the report is what makes it visible.
+    //   `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
     const DISPLACEABLE_TIERS: readonly SessionTier[] = ['optional', 'recovery'];
     const mayDisplace = (session: SessionAllocation): boolean =>
       DISPLACEABLE_TIERS.includes(session.tier);
@@ -7950,7 +7963,7 @@ function enforceAdjacentRegionLimit(
           result[idx] = {
             ...result[idx],
             focus: 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
-            composedOptionalKind: 'accessories',
+            composedOptionalKind: 'prehab',
             isHardExposure: false,
             // Accessories ≠ strength exposure — drop any pattern the session
             // previously carried so invariants don't over-count.

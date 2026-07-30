@@ -176,8 +176,11 @@ console.log('\n[2] The Explosive Push-up trap — role filters before any name p
     classifyDaySessions(workout).map((unit) => unit.category).join(', ');
 
   ok(
-    'the baseline is gunshow_prehab, not strength',
-    categories(base) === 'gunshow_prehab',
+    // `gunshow` since Sam's split of 2026-07-30 — this fixture is a Gunshow by name
+    // and by content (curls, pushdowns), so it lands on the arms type rather than on
+    // the shared category that could not tell the two apart.
+    'the baseline is gunshow, not strength',
+    categories(base) === 'gunshow',
     categories(base),
   );
   ok(

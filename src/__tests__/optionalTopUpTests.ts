@@ -527,7 +527,7 @@ run('R8. a neutralised adjacency day composes Accessories from the six pools', (
     focus: 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
     dayOfWeek: 'Wednesday',
     isHardExposure: false,
-    composedOptionalKind: 'accessories',
+    composedOptionalKind: 'prehab',
   });
   assert(built, 'the neutralised allocation built nothing');
   const names = (built.exercises ?? []).map((row) =>
@@ -555,7 +555,7 @@ run('COHERENCE. a day PROMOTED to required strength never composes prehab over i
     isHardExposure: true,
     strengthPattern: 'lower_combined',
     // Deliberately stale — this is what a mutator that forgot to clear it leaves.
-    composedOptionalKind: 'accessories',
+    composedOptionalKind: 'prehab',
   });
   assert(promoted, 'the promoted allocation built nothing');
   const names = (promoted.exercises ?? []).map((row) =>

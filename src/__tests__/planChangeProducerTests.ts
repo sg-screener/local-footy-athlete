@@ -862,7 +862,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const week = bothWeeks();
 
   const ALL_CATEGORIES = [
-    'accessories', 'conditioning_hard', 'conditioning_light', 'recovery',
+    'gunshow', 'prehab', 'conditioning_hard', 'conditioning_light', 'recovery',
     'strength_full', 'strength_lower', 'strength_upper',
   ];
   const bye = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
@@ -1218,7 +1218,7 @@ withAcceptedStores(() => {
   ok('[13] conditioning day offers add-on-top strength',
     conditioningOptions.addOnTopCategories.length > 0 &&
       conditioningOptions.addOnTopCategories.every((c) =>
-        c.id.startsWith('strength_') || c.id === 'accessories'),
+        c.id.startsWith('strength_') || c.id === 'gunshow' || c.id === 'prehab'),
     conditioningOptions.addOnTopCategories);
   eq('[13] conditioning day reports one visible session',
     conditioningOptions.visibleSessionKinds, ['conditioning']);
@@ -1297,7 +1297,7 @@ withAcceptedStores(() => {
   // All strength buckets + accessories are offered.
   const options = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
   ok('[14] strength buckets offered',
-    ['strength_upper', 'strength_lower', 'strength_full', 'accessories'].every((id) =>
+    ['strength_upper', 'strength_lower', 'strength_full', 'gunshow', 'prehab'].every((id) =>
       options.categories.some((c) => c.id === id)),
     options.categories.map((c) => c.id));
 
@@ -1311,8 +1311,8 @@ withAcceptedStores(() => {
     upperPick?.templateId, 'strength_upper_pull');
 
   // Deterministic engine build: same date + context → same session.
-  const pickA = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
-  const pickB = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
+  const pickA = pickTemplateForCategory({ category: 'prehab', date: SAT, visibleWeek: week });
+  const pickB = pickTemplateForCategory({ category: 'prehab', date: SAT, visibleWeek: week });
   eq('[14] accessory pick deterministic', pickA?.templateId, pickB?.templateId);
 
   // Swap THU's Upper Push for a lower-body engine session, end to end. The swap
@@ -1347,7 +1347,7 @@ withAcceptedStores(() => {
   // Accessories end to end on a rest day (add).
   const accWrites: Array<{ date: string; workout: Workout | null }> = [];
   const accResult = applyPlanChange({
-    change: { kind: 'add_category', date: SAT, category: 'accessories' },
+    change: { kind: 'add_category', date: SAT, category: 'prehab' },
     visibleWeek: week,
     todayISO: TODAY,
     setManualOverride: (date, workout) => accWrites.push({ date, workout }),

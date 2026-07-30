@@ -45,7 +45,12 @@ export type SessionCategory =
   | 'upper_strength'
   | 'full_body_strength'
   // Low-fatigue accessory work (does NOT count as a main strength session)
-  | 'gunshow_prehab'
+  // SPLIT (Sam, 2026-07-30): one category covered two of his seven session types,
+  // so neither could answer "who may place it" on its own. A Gunshow is the signed
+  // arms session; Prehab is the signed six-pool accessories session. They are
+  // different sessions with different pools and different doors.
+  | 'gunshow'
+  | 'prehab'
   // Recovery / rest
   | 'recovery'
   | 'rest'
@@ -88,6 +93,16 @@ export const CONDITIONING_CATEGORIES: ReadonlySet<SessionCategory> = new Set([
 // ─── Internal detection helpers ──────────────────────────────────────
 
 const GUNSHOW_RX = /gunshow|gun show|prehab|accessor|arm pump|pump session/i;
+/**
+ * WHICH of the two the name is, once the name is known to be one of them.
+ *
+ * `GUNSHOW_RX` above answers "is this an arms-or-accessories session at all" and is
+ * unchanged, so nothing about the strength-inference guards moves. This only decides
+ * which of Sam's two types it is, and it decides it on the ARMS words: a session named
+ * Gunshow or arm pump is the arms session, and everything else that matched — prehab,
+ * accessories, trunk — is Prehab.
+ */
+const ARMS_NAME_RX = /gunshow|gun show|arm pump|pump session|\barms\b/i;
 const ACCESSORY_SUPPORT_NAME_RX = /gunshow|gun show|prehab|accessor|arm pump|pump session|trunk|hypertrophy/i;
 const RECOVERY_RX = /\brecovery\b|mobility|foam roll|stretch|breathing/i;
 
@@ -403,7 +418,12 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   //    the substring 'accessor' was reclassifying real lower days as
   //    gunshow, hiding both the strength unit and the combined finisher). ──
   if (!isStrengthSession && !isTeamDay && nameLooksGunshow) {
-    units.push({ category: 'gunshow_prehab', modality: 'none', reason: `name matches gunshow/prehab (${workout.name})` });
+    const armsSession = ARMS_NAME_RX.test(workoutName);
+    units.push({
+      category: armsSession ? 'gunshow' : 'prehab',
+      modality: 'none',
+      reason: `name matches ${armsSession ? 'gunshow' : 'prehab'} (${workout.name})`,
+    });
     // No early return: a gunshow day may still carry a combined easy
     // conditioning finisher (Bible pairing: gunshow + easy flush).
   }

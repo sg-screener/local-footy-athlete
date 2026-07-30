@@ -42,7 +42,14 @@ export const PLAN_CHANGE_CATEGORY_IDS = [
   'strength_upper',
   'strength_lower',
   'strength_full',
-  'accessories',
+  // SPLIT (Sam, 2026-07-30): 'accessories' was ONE door for TWO of Sam's seven
+  // session types, and the charter recorded both of their placement answers as
+  // unattributable because of it — a single door cannot say who may place a Gunshow
+  // as distinct from who may place Prehab. They are different sessions from different
+  // signed pools: Gunshow is 2 biceps + 2 triceps + 2 pump delts (Bible 20.3), Prehab
+  // draws the six prehab pools.
+  'gunshow',
+  'prehab',
 ] as const;
 
 export type PlanChangeCategoryId = (typeof PLAN_CHANGE_CATEGORY_IDS)[number];

@@ -136,11 +136,14 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
 }
 {
   const u = classifyDaySessions(mkWorkout({ name: 'Gunshow', description: 'Biceps, triceps, delts pump' }));
-  ok('Gunshow → [gunshow_prehab] (NOT main strength)', cats(u) === 'gunshow_prehab', cats(u));
+  // SPLIT (Sam, 2026-07-30): Gunshow and Prehab are two of his seven types, so the
+  // taxonomy names them separately. A Gunshow lands on `gunshow`, not on a shared
+  // category that could not say which session it was.
+  ok('Gunshow → [gunshow] (NOT main strength)', cats(u) === 'gunshow', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({ name: 'Prehab & Accessories', description: 'Shoulder health + calves' }));
-  ok('Prehab & Accessories → [gunshow_prehab]', cats(u) === 'gunshow_prehab', cats(u));
+  ok('Prehab & Accessories → [prehab]', cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -148,16 +151,16 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
     description: 'Curls, pushdowns, face pulls, calves, Pallof press',
     exercises: [mkEx('Bicep Curl'), mkEx('Tricep Pushdown'), mkEx('Face Pull')],
   }));
-  ok('upper hypertrophy/trunk accessories → [gunshow_prehab], not upper_strength',
-    cats(u) === 'gunshow_prehab', cats(u));
+  ok('upper hypertrophy/trunk accessories → [prehab], not upper_strength',
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
     name: 'Upper body accessory',
     description: 'Small-muscle pump and trunk only',
   }));
-  ok('vague upper body accessory text without main-lift proof → gunshow_prehab',
-    cats(u) === 'gunshow_prehab', cats(u));
+  ok('vague upper body accessory text without main-lift proof → prehab',
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -187,7 +190,7 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
     description: 'Face pulls, rear delt fly, calf raises, hamstring bridge',
   }));
   ok('gunshow-named session with pattern words in description stays gunshow',
-    cats(u) === 'gunshow_prehab', cats(u));
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -327,7 +330,7 @@ ok('tempo for poor conditioning → high',
   classifySessionStress(unit('tempo_conditioning', 'running'), null, { conditioningLevel: 'Poor' }) === 'high');
 ok('aerobic flush → low',
   classifySessionStress(unit('aerobic_base', 'off_feet'), mkWorkout({ name: 'Bike Flush', intensity: 'Light' })) === 'low');
-ok('gunshow → low', classifySessionStress(unit('gunshow_prehab')) === 'low');
+ok('gunshow → low', classifySessionStress(unit('prehab')) === 'low');
 ok('recovery → low', classifySessionStress(unit('recovery')) === 'low');
 
 // ═════════════════════════════════════════════════════════════════════

@@ -196,9 +196,21 @@ for (const test of [
 }
 
 console.log('\n[3] support and recovery components stay outside main credits');
-for (const name of ['Gunshow', 'Prehab & Accessories', 'Upper body accessory pump']) {
+// SPLIT (Sam, 2026-07-30). Each name lands on ITS type — the point of the split is
+// that a placed accessory session can now say which of Sam's two it is. The property
+// asserted below is unchanged: neither takes main strength, conditioning or a hard day.
+for (const [name, expected] of [
+  ['Gunshow', 'gunshow'],
+  ['Prehab & Accessories', 'prehab'],
+  // "accessory" is the decisive word, so this legacy-style name reads as Prehab. The
+  // ARMS words (gunshow, arm pump, pump session) are what make a session the arms one;
+  // "pump" alone is ambiguous and is not enough. Either answer would satisfy what this
+  // fixture exists to prove — that neither type takes main-strength credit — so the
+  // choice is made on the name and stated rather than left to whichever regex ran first.
+  ['Upper body accessory pump', 'prehab'],
+] as const) {
   const result = classifyVisibleSession(workout(name, { intensity: 'Light' }));
-  ok(`${name} stays gunshow/prehab`, category(result, 'gunshow_prehab'), result.categories);
+  ok(`${name} stays ${expected}`, category(result, expected), result.categories);
   eq(`${name} has no main strength/conditioning/hard-day credit`, {
     mainStrength: result.contributions.mainStrength,
     conditioning: result.contributions.conditioning,

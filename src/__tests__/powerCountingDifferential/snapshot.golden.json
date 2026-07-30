@@ -16,15 +16,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -70,7 +70,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -213,15 +213,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -239,15 +239,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -293,7 +293,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -436,15 +436,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -462,14 +462,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -544,7 +544,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -731,14 +731,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -758,14 +758,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -840,7 +840,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -1027,14 +1027,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -1083,14 +1083,14 @@
           "extraConditioningSessions": 3,
           "runningExposures": 1,
           "sprintCodExposures": 1,
-          "gunshowSessions": 1,
+          "gunshowSessions": 0,
           "recoverySessions": 1,
           "teamTrainingSessions": 0,
           "games": 0,
           "byCategory": {
             "aerobic_base": 2,
-            "gunshow_prehab": 1,
             "lower_strength": 2,
+            "prehab": 1,
             "recovery": 1,
             "sprint": 1,
             "tempo_conditioning": 1,
@@ -1114,14 +1114,14 @@
             "extraConditioningSessions": 4,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -1196,7 +1196,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -1388,14 +1388,14 @@
               "extraConditioningSessions": 4,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -1415,14 +1415,14 @@
             "extraConditioningSessions": 4,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -1497,7 +1497,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -1689,14 +1689,14 @@
               "extraConditioningSessions": 4,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -1716,14 +1716,14 @@
             "extraConditioningSessions": 2,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -1797,7 +1797,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -1970,14 +1970,14 @@
               "extraConditioningSessions": 2,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -1997,14 +1997,14 @@
             "extraConditioningSessions": 4,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -2079,7 +2079,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -2271,14 +2271,14 @@
               "extraConditioningSessions": 4,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -2327,14 +2327,14 @@
           "extraConditioningSessions": 4,
           "runningExposures": 1,
           "sprintCodExposures": 1,
-          "gunshowSessions": 1,
+          "gunshowSessions": 0,
           "recoverySessions": 1,
           "teamTrainingSessions": 0,
           "games": 0,
           "byCategory": {
             "aerobic_base": 3,
-            "gunshow_prehab": 1,
             "lower_strength": 2,
+            "prehab": 1,
             "recovery": 1,
             "sprint": 1,
             "tempo_conditioning": 1,
@@ -2358,15 +2358,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -2412,7 +2412,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -2555,15 +2555,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -2581,15 +2581,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -2635,7 +2635,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -2778,15 +2778,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -2804,14 +2804,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "upper_strength": 2
@@ -2863,7 +2863,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -3022,14 +3022,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "upper_strength": 2
@@ -3048,14 +3048,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 3,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "upper_strength": 2
@@ -3107,7 +3107,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -3266,14 +3266,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 3,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "upper_strength": 2
@@ -3299,15 +3299,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -3354,7 +3354,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -3498,15 +3498,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -3524,15 +3524,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -3579,7 +3579,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -3723,15 +3723,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -3749,14 +3749,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -3831,7 +3831,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -4018,14 +4018,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -4362,14 +4362,14 @@
           "extraConditioningSessions": 3,
           "runningExposures": 1,
           "sprintCodExposures": 1,
-          "gunshowSessions": 1,
+          "gunshowSessions": 0,
           "recoverySessions": 1,
           "teamTrainingSessions": 0,
           "games": 0,
           "byCategory": {
             "aerobic_base": 2,
-            "gunshow_prehab": 1,
             "lower_strength": 2,
+            "prehab": 1,
             "recovery": 1,
             "sprint": 1,
             "tempo_conditioning": 1,
@@ -4393,15 +4393,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -4447,7 +4447,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -4589,15 +4589,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -4615,15 +4615,15 @@
             "extraConditioningSessions": 2,
             "runningExposures": 0,
             "sprintCodExposures": 0,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 2,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
               "full_body_strength": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "recovery": 2,
               "upper_strength": 1
             }
@@ -4669,7 +4669,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -4811,15 +4811,15 @@
               "extraConditioningSessions": 2,
               "runningExposures": 0,
               "sprintCodExposures": 0,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 2,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
                 "full_body_strength": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "recovery": 2,
                 "upper_strength": 1
               }
@@ -4837,14 +4837,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -4919,7 +4919,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -5105,14 +5105,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -5132,14 +5132,14 @@
             "extraConditioningSessions": 3,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "recovery": 1,
               "sprint": 1,
               "tempo_conditioning": 1,
@@ -5214,7 +5214,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -5400,14 +5400,14 @@
               "extraConditioningSessions": 3,
               "runningExposures": 1,
               "sprintCodExposures": 1,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "sprint": 1,
                 "tempo_conditioning": 1,
@@ -5456,14 +5456,14 @@
           "extraConditioningSessions": 3,
           "runningExposures": 1,
           "sprintCodExposures": 1,
-          "gunshowSessions": 1,
+          "gunshowSessions": 0,
           "recoverySessions": 1,
           "teamTrainingSessions": 0,
           "games": 0,
           "byCategory": {
             "aerobic_base": 2,
-            "gunshow_prehab": 1,
             "lower_strength": 2,
+            "prehab": 1,
             "recovery": 1,
             "sprint": 1,
             "tempo_conditioning": 1,
@@ -5487,14 +5487,14 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -5589,7 +5589,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -5722,14 +5722,14 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -5747,14 +5747,14 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -5849,7 +5849,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -5982,14 +5982,14 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -6007,14 +6007,14 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -6109,7 +6109,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -6242,14 +6242,14 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -6267,14 +6267,14 @@
             "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 1,
-              "gunshow_prehab": 1,
               "lower_strength": 2,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -6365,7 +6365,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -6488,14 +6488,14 @@
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 0,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 1,
-                "gunshow_prehab": 1,
                 "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -6538,14 +6538,14 @@
           "extraConditioningSessions": 2,
           "runningExposures": 2,
           "sprintCodExposures": 2,
-          "gunshowSessions": 1,
+          "gunshowSessions": 0,
           "recoverySessions": 0,
           "teamTrainingSessions": 2,
           "games": 0,
           "byCategory": {
             "aerobic_base": 2,
-            "gunshow_prehab": 1,
             "lower_strength": 2,
+            "prehab": 1,
             "team_training": 2,
             "upper_strength": 2
           }
@@ -6736,7 +6736,7 @@
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow": 1,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
@@ -6756,13 +6756,13 @@
             "extraConditioningSessions": 1,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -6887,7 +6887,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -6931,14 +6931,15 @@
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
                 "upper_strength": 2
@@ -6957,13 +6958,13 @@
             "extraConditioningSessions": 1,
             "runningExposures": 1,
             "sprintCodExposures": 1,
-            "gunshowSessions": 1,
+            "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
               "upper_strength": 2
@@ -7088,7 +7089,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -7132,14 +7133,15 @@
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
                 "upper_strength": 2
@@ -7324,7 +7326,7 @@
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow": 1,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
@@ -7371,7 +7373,7 @@
           "games": 1,
           "byCategory": {
             "game": 1,
-            "gunshow_prehab": 1,
+            "gunshow": 1,
             "lower_strength": 1,
             "team_training": 1,
             "tempo_conditioning": 1,
@@ -7395,13 +7397,14 @@
             "extraConditioningSessions": 0,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -7472,7 +7475,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -7531,7 +7534,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "gunshow",
                   "modality": "none"
                 }
               ],
@@ -7572,14 +7575,15 @@
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -7597,13 +7601,14 @@
             "extraConditioningSessions": 0,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -7674,7 +7679,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -7733,7 +7738,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "gunshow",
                   "modality": "none"
                 }
               ],
@@ -7774,14 +7779,15 @@
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -7799,13 +7805,14 @@
             "extraConditioningSessions": 0,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -7876,7 +7883,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -7935,7 +7942,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "gunshow",
                   "modality": "none"
                 }
               ],
@@ -7975,14 +7982,15 @@
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }
@@ -8000,13 +8008,14 @@
             "extraConditioningSessions": 0,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 2,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
-              "gunshow_prehab": 2,
+              "gunshow": 1,
               "lower_strength": 1,
+              "prehab": 1,
               "team_training": 2,
               "upper_strength": 2
             }
@@ -8077,7 +8086,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -8136,7 +8145,7 @@
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "gunshow_prehab",
+                  "category": "gunshow",
                   "modality": "none"
                 }
               ],
@@ -8177,14 +8186,15 @@
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 2,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 2,
+                "gunshow": 1,
                 "lower_strength": 1,
+                "prehab": 1,
                 "team_training": 2,
                 "upper_strength": 2
               }

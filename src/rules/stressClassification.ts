@@ -84,7 +84,8 @@ export function classifySessionStress(
     }
 
     // ── Always low ──
-    case 'gunshow_prehab':
+    case 'gunshow':
+    case 'prehab':
     case 'recovery':
     case 'rest':
       return 'low';

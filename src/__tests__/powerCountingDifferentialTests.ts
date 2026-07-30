@@ -293,8 +293,8 @@ const baseUnits = classifyDaySessions(withoutPower).map((unit) => unit.category)
 const powerUnits = classifyDaySessions(withPowerRow).map((unit) => unit.category);
 
 ok(
-  'the trap baseline classifies as gunshow_prehab, not strength',
-  baseUnits.includes('gunshow_prehab') &&
+  'the trap baseline classifies as gunshow, not strength',
+  baseUnits.includes('gunshow') &&
     !baseUnits.some((category) => category.endsWith('_strength')),
   baseUnits.join(', '),
 );

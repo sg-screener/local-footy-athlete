@@ -218,8 +218,18 @@ function weekFingerprint(): string {
 
 // ── The doors ─────────────────────────────────────────────────────────────
 
+// THE VOCABULARY GAINS A DOOR, it does not rename one. Sam split 'accessories' into
+// 'gunshow' and 'prehab' on 2026-07-30, and the walker's job is to be able to reach
+// every state an athlete can reach — so it now walks BOTH doors. Leaving one out would
+// make a reachable state unreachable, which AGENTS.md names as a defect in the harness
+// rather than a gap in the app.
+//
+// It found the split's one real miss on its first run after the change: with
+// 'accessories' still in this list, `add accessories` threw "undefined is not a
+// function" inside the door, because the id no longer resolves to a category. A door
+// that throws is L1, and a stale vocabulary is how a harness manufactures one.
 const CATEGORIES = ['conditioning_light', 'conditioning_hard', 'strength_upper',
-  'strength_lower', 'strength_full', 'accessories', 'recovery'] as const;
+  'strength_lower', 'strength_full', 'gunshow', 'prehab', 'recovery'] as const;
 const G1_ROUTES = [undefined, 'keep_the_day', 'take_the_gunshow',
   'accessories_only', 'deloaded'] as const;
 

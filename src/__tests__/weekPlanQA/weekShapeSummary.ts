@@ -72,7 +72,8 @@ function categoryLabel(unit: Pick<ClassifiedUnit, 'category'>, phase?: SeasonPha
     case 'lower_strength': return 'lower strength';
     case 'upper_strength': return 'upper strength';
     case 'full_body_strength': return 'full body strength';
-    case 'gunshow_prehab': return 'gunshow/prehab';
+    case 'gunshow': return 'gunshow';
+    case 'prehab': return 'prehab';
     case 'recovery': return 'recovery';
     case 'rest': return 'rest';
     case 'aerobic_base': return 'easy conditioning';
@@ -154,7 +155,7 @@ function isLightDay(day: ClassifiedDay | undefined): boolean {
     unit.stress === 'low' ||
     unit.category === 'rest' ||
     unit.category === 'recovery' ||
-    unit.category === 'gunshow_prehab'
+    unit.category === 'gunshow' || unit.category === 'prehab'
   );
 }
 

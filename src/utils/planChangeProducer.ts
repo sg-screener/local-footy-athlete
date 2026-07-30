@@ -183,7 +183,10 @@ const CATEGORY_TEMPLATE_MATCH: Record<
   strength_upper: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_upper',
   strength_lower: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_lower',
   strength_full: (t) => strengthVariantByTemplateId(t.templateId)?.door === 'strength_full',
-  accessories: (t) => t.category === 'accessories',
+  // Each door matches its OWN derived session, so a door cannot offer the other's
+  // session. `derivedType` is the typed fact the registry already carries.
+  gunshow: (t) => t.category === 'accessories' && t.derivedType === 'arms_pump',
+  prehab: (t) => t.category === 'accessories' && t.derivedType === 'prehab_accessories',
 };
 
 const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
@@ -218,9 +221,22 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
     label: 'Full body',
     sub: 'Compound push, pull, squat and carry',
   },
-  accessories: {
-    label: 'Accessories',
-    sub: 'Gunshow or prehab - small muscles, big payoff',
+  // PROPOSED, NOT YET SIGNED — both go to Sam with the copy batch
+  // (artifacts/COPY_SHEET_RULINGS_2026-07-30.md). They replace one row that read
+  // "Accessories / Gunshow or prehab - small muscles, big payoff", which was the copy
+  // admitting the door was two doors: a sub-label naming two things with "or" is a
+  // menu that has not decided what it offers.
+  //
+  // "Gunshow" is Sam's own word and is already the session's athlete-facing name, so
+  // the label is his; the sub describes the signed structure without quoting counts,
+  // because a session that shrinks under thin equipment must not promise six.
+  gunshow: {
+    label: 'Gunshow',
+    sub: 'Arms and delts - light pump work',
+  },
+  prehab: {
+    label: 'Prehab',
+    sub: 'Groin, calves, midline, shoulders - the armour work',
   },
 };
 
@@ -252,7 +268,7 @@ function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSession
   // `mobility` member and does not need one — `kind` exists so the ledger can
   // ask what counts, and the two answer that question identically.
   if (category === 'recovery' || category === 'mobility') return 'recovery';
-  if (category.startsWith('strength_') || category === 'accessories') return 'strength';
+  if (category.startsWith('strength_') || category === 'gunshow' || category === 'prehab') return 'strength';
   return 'conditioning';
 }
 

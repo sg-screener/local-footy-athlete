@@ -259,19 +259,34 @@ conditioning exposure short — which is the cost the condition exists to preven
   `prescribedSessions` alone may differ. The two shapes previously pinned as
   known defects are packaging, and the pinned list is deleted rather than grown.
 
-### Step 3 is reported, not placed
+### Step 3 — RECORDED AS LAW, NOT BUILT (Sam's ruling, 2026-07-30)
 
-The visibly-optional last resort is **not implemented as a placement**. When every
-candidate is exhausted the shortfall is reported and logged rather than materialised
-as a second session on an occupied day.
+> **Option (b).** The visibly-optional last resort is RECORDED AS LAW, NOT BUILT. No
+> placement path, no fixture — a path nothing can reach is a fixture with no subject.
+> **If the deep walker or a real week ever reds with both attach and standalone
+> failing, step 3 gets built against that real case, red-first.** Recorded here so it
+> cannot be read as missing.
 
-That is a deliberate scope decision and it is owed back to Sam. His own words are the
-reason: a week that reaches step 3 is evidence of an allocator bug, and no scenario in
-the matrix reaches it. Building a placement path that nothing can reach would be a
-fixture with no subject — the failure this repo has already paid for in the other
-direction — and it would be the one path no test could hold. What exists instead is
-the half his ruling also asked for: the allocator says which requirement it could not
-place.
+So the fallback order is law in all three of its steps, and the third has no code:
+
+1. **ATTACH** the missing work to an existing day. *Built.*
+2. **STANDALONE** on an empty day. *Built.*
+3. **VISIBLY OPTIONAL** standalone when there is no room for either. **Law. Not built,
+   deliberately, and this is where the trigger for building it is written down:** a red
+   from the deep walker or a real week in which steps 1 and 2 both fail. That case gets
+   the cell first and the code second.
+
+What exists instead of a placement path is the other half of the ruling — the allocator
+reports which requirement it could not place, rather than silently doing less. A week
+that reaches step 3 is evidence of an allocator bug, and the report is what makes the
+bug visible.
+
+**Why this is not a shortfall.** An unreachable code path is untestable by definition,
+and this repo has already paid for both directions of that: a fixture whose input
+cannot exhibit the defect proves nothing, and a diagnostic that is dark on the build
+the defect lives on is a green gate that lies. Step 3 would have been the one path in
+the repair layer with no cell behind it. It is better as a sentence with a trigger than
+as code nothing runs.
 
 ### What the ruling exposed on its way in
 

@@ -328,7 +328,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
   prehab: {
     id: 'prehab',
     placedBy: ['generator', 'athlete'],
-    chosenBy: { categories: ['accessories'], otherDoor: null },
+    chosenBy: { categories: ['prehab'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
@@ -357,7 +357,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
   gunshow: {
     id: 'gunshow',
     placedBy: ['generator', 'athlete'],
-    chosenBy: { categories: ['accessories'], otherDoor: null },
+    chosenBy: { categories: ['gunshow'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
@@ -424,26 +424,25 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
     paidBy: 'stage 4 — the Mobility door',
   },
 
-  // ── Prehab: authored vocabulary, unattributable placement ──
-  {
-    type: 'prehab',
-    question: 'placement',
-    deviation: 'unattributable, and worse than the survey read it — the classifier '
-      + 'carries one `gunshow` contribution with no `prehab` counterpart, AND the '
-      + 'session the Accessories door actually builds never reaches the '
-      + '`gunshow_prehab` category at all: it classifies as `lower_strength`',
-    paidBy: 'stage 4 — the Accessories door',
-  },
-
-  // ── Gunshow: the app draws a name Sam did not sign ──
-  {
-    type: 'gunshow',
-    question: 'placement',
-    deviation: 'unattributable — `gunshow_prehab` is ONE SessionCategory covering '
-      + 'both types, there is no `tier: gunshow` anywhere, and the session the '
-      + 'Accessories door builds classifies as `upper_strength` instead',
-    paidBy: 'stage 4 — the Accessories door',
-  },
+  // ── Prehab and Gunshow: PAID 2026-07-30, both halves ──
+  //
+  // Their placement debts are gone rather than reworded, and the ceilings below drop
+  // with them in the same commit (ratchet direction 4). Both said the same thing —
+  // "unattributable" — for the same reason, and it took two fixes:
+  //
+  //   ONE CATEGORY FOR TWO TYPES. `gunshow_prehab` was a single `SessionCategory`, so
+  //   a placed accessory session could not be attributed to either type. Sam ruled the
+  //   split (door, taxonomy and contribution), so each placement now names one type
+  //   and the classifier carries a `prehab` counterpart to its `gunshow`.
+  //
+  //   AND THE SESSION CLASSIFIED AS STRENGTH ANYWAY. The prehab debt recorded the
+  //   worse half: the session the door actually builds "never reaches the
+  //   `gunshow_prehab` category at all: it classifies as `lower_strength`", because the
+  //   groin pool holds a Cossack Squat and the exercise tagger read a squat. Fixed by
+  //   making the classifier read the typed row role instead of inferring one.
+  //
+  // `sessionTypeCharterTests` E4 now asserts the split from the other side, so the
+  // collapse cannot return quietly.
 
   // ── Strength and conditioning: authored, placed, counted — and still owed ──
   {
@@ -462,8 +461,11 @@ export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   strength: 0,
   conditioning: 1,
   mobility: 1,
-  prehab: 1,
-  gunshow: 1,
+  // Both 1 -> 0 on 2026-07-30 with the prehab/gunshow split. Lowered in the same
+  // commit that paid the debt, which is the whole of ratchet direction 4: a ceiling
+  // left at 1 over a paid debt is slack a future regression could hide in.
+  prehab: 0,
+  gunshow: 0,
 };
 
 /** Debt entries for one type. */

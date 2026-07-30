@@ -679,17 +679,48 @@ function charterTypesOf(workout: Workout): {
     categories.has('hard_conditioning') || categories.has('sprint')
   ) types.push('conditioning');
   if (categories.has('rest')) types.push('rest');
+  // ATTRIBUTABLE SINCE THE SPLIT (Sam, 2026-07-30). The survey's finding 6 was that
+  // ONE category covered two of Sam's types, so a placed accessory session could not
+  // be attributed to prehab or to gunshow and BOTH owed placement debt. The taxonomy
+  // now names them separately, so each placement attributes to exactly one type and
+  // `ambiguous` has no producer left.
+  if (categories.has('gunshow')) types.push('gunshow');
+  if (categories.has('prehab')) types.push('prehab');
   const anchor = categories.has('game') || categories.has('team_training');
-  // The survey's finding 6, in code: ONE category covers two of Sam's types, so
-  // a placed accessory session cannot be attributed to prehab or to gunshow.
-  const ambiguous = categories.has('gunshow_prehab');
-  return { types, anchor, ambiguous, named: types.length > 0 || anchor || ambiguous };
+  return { types, anchor, ambiguous: false, named: types.length > 0 || anchor };
 }
+
+/**
+ * A SECOND PLACEMENT SAMPLE, because one could not see the G-1 Gunshow.
+ *
+ * The program above is a PRE-SEASON no-game program, and the authored Gunshow is an
+ * IN-SEASON, fixture-relative placement (Bible `:153`, G-1). So the charter's claim
+ * "the generator places gunshow" had no subject in this observation and read as
+ * unearned — the same shape as the assertion this suite removed once before for having
+ * no reachable subject. The answer is to make the observation able to see it rather
+ * than to excuse the claim: placement is now observed over BOTH programs.
+ */
+const inSeasonProgram = quiet(() => generateProgramLocally({
+  ...samExport8Profile(),
+  seasonPhase: 'In-season',
+  usualGameDay: 'Saturday',
+  gameDay: 'Saturday',
+} as never, {
+  todayISO: '2026-07-13',
+  previousProgram: null,
+  seasonPhaseClock: {
+    protocolVersion: 1,
+    selectedPhase: 'In-season',
+    phaseEntryWeekStartISO: '2026-07-13',
+    originProvenance: 'explicit_user_phase_change',
+    persistenceProvenance: 'preserved_persisted_state',
+  },
+})) as TrainingProgram;
 
 const placedTypes = new Set<SessionTypeId>();
 let ambiguousPlacements = 0;
 const unclassifiable: string[] = [];
-for (const microcycle of program.microcycles) {
+for (const microcycle of [...program.microcycles, ...inSeasonProgram.microcycles]) {
   for (const workout of microcycle.workouts ?? []) {
     const seen = charterTypesOf(workout as Workout);
     if (seen.ambiguous) ambiguousPlacements += 1;
@@ -709,20 +740,25 @@ for (const microcycle of program.microcycles) {
 }
 
 /**
- * Prehab and Gunshow are ONE classification, and that is a fact about the code,
- * not about this sample.
+ * Prehab and Gunshow are TWO classifications, and that is a fact about the code
+ * rather than about this sample.
  *
- * Read from a produced classification's own shape — it carries a `gunshow`
- * contribution and no `prehab` counterpart — so it stays true on a program that
- * happens to contain no accessory session at all. Keying it on "did we see one"
- * would have reported the collapse as REPAIRED by a week that simply had none.
+ * Read from a produced classification's own shape — it must carry BOTH a `gunshow`
+ * and a `prehab` contribution — so it stays true on a program that happens to contain
+ * no accessory session at all. Keying it on "did we see one" would let a week with
+ * none report the split as done.
+ *
+ * It was `ACCESSORY_TYPES_SPLIT` and asserted the opposite. The split is Sam's
+ * ruling of 2026-07-30 and it is what paid both placement debts, so the constant is
+ * inverted rather than deleted: the direction that must not silently return is the
+ * collapse.
  */
-const ACCESSORY_TYPES_COLLAPSED = (() => {
+const ACCESSORY_TYPES_SPLIT = (() => {
   const sample = program.microcycles[0]?.workouts?.[0];
-  if (!sample) return true;
-  const contributions = quiet(() => classifyVisibleSession(sample as Workout)).contributions;
-  const keys = Object.keys(contributions);
-  return keys.includes('gunshow') && !keys.includes('prehab');
+  if (!sample) return false;
+  const keys = Object.keys(
+    quiet(() => classifyVisibleSession(sample as Workout)).contributions);
+  return keys.includes('gunshow') && keys.includes('prehab');
 })();
 
 run('E0. the placement sample is real', () => {
@@ -763,14 +799,20 @@ run('E3. every session the generator places has a charter type', () => {
     + 'Sam\'s seven is a type nobody ruled.');
 });
 
-run('E4. the prehab/gunshow collapse is visible, not silent', () => {
-  // Recorded as an assertion so it cannot quietly resolve or quietly worsen: while
-  // `gunshow_prehab` is one category, both types owe placement debt.
-  if (ambiguousPlacements === 0) return;
+run('E4. prehab and gunshow are SEPARATE classifications', () => {
+  // THE DEBT THIS PAID. Both types recorded their placement answer as unattributable
+  // for one reason: a single `gunshow_prehab` category could not say which of them a
+  // placed session was. Sam split the door and the taxonomy on 2026-07-30, so each
+  // placement attributes to exactly one type — and neither may declare placement debt
+  // any more, which direction 3 of the ratchet enforces from the other side.
+  assert(ACCESSORY_TYPES_SPLIT,
+    'the classifier carries a `gunshow` contribution with no `prehab` counterpart. The '
+    + 'collapse is back, and with it the unattributable placement it caused.');
+  assert(ambiguousPlacements === 0,
+    `${ambiguousPlacements} placed sessions are still classified ambiguously`);
   for (const type of ['prehab', 'gunshow'] as const) {
-    assert(charterDebtCovers(type, 'placement'),
-      `the generator placed ${ambiguousPlacements} sessions classified only as `
-      + `"gunshow_prehab", so "${type}" placement is unattributable and must be declared debt`);
+    assert(!charterDebtCovers(type, 'placement'),
+      `"${type}" still declares placement debt, but the split that caused it is paid`);
   }
 });
 
@@ -799,9 +841,13 @@ function deviates(type: SessionTypeId, question: CharterQuestion): boolean {
         seen.required !== row.counting.required;
     }
     case 'placement': {
-      // Structural, not sampled: while ONE category covers both, neither type's
-      // placement can be attributed however many programs are generated.
-      if (type === 'prehab' || type === 'gunshow') return ACCESSORY_TYPES_COLLAPSED;
+      // THE ACCESSORY SPECIAL CASE IS GONE. It read "while ONE category covers both,
+      // neither type's placement can be attributed however many programs are
+      // generated" and returned `true` unconditionally. The split made that false, so
+      // both types fall through to the ordinary observation below — and E4 asserts the
+      // split itself, so a return to one category fails there rather than silently
+      // re-enabling a special case here.
+      if (!ACCESSORY_TYPES_SPLIT && (type === 'prehab' || type === 'gunshow')) return true;
       // Mobility has no door and no builder, so nothing can place it at all.
       if (type === 'mobility') return true;
       const claimsGenerator = row.placedBy.includes('generator');
