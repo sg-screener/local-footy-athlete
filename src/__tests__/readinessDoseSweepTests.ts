@@ -160,7 +160,26 @@ function structureOf(plan: CoachingPlan): Record<string, number | string> {
     coreSessions: plan.coreSessions,
     optionalSessions: plan.optionalSessions,
     recoverySessions: plan.recoverySessions,
-    sessions: plan.weeklyPlan.length,
+    // WHAT THE APP PRESCRIBES, not how many days it materialised.
+    //
+    // This was `plan.weeklyPlan.length`, and it was a structural fact only
+    // because the generator filled EVERY available day — it put a recovery
+    // session on anything it had nothing else for, so the raw length was
+    // essentially "available days" and moved with nothing. Sam's charter
+    // (2026-07-30) deleted those placements, so the raw length now measures
+    // whether the app chose to leave a day free, which is a residue and not a
+    // structure.
+    //
+    // The law it serves — capacity never changes the shape of the week — is
+    // unchanged and still asserted over every other key here: the core, optional
+    // and recovery BUDGETS, the strength, conditioning and sprint counts, and
+    // all four contract targets. Those are what "shape" means, and they must
+    // stay byte-identical across capacity. This key now counts allocations
+    // carrying actual prescribed work, which is the thing the raw length was
+    // standing in for.
+    prescribedSessions: plan.weeklyPlan.filter((a) =>
+      a.strengthPattern !== undefined || a.conditioningCategory !== undefined ||
+      a.hasCombinedConditioning === true || a.speedWorkKind !== undefined).length,
     strengthSessions: plan.weeklyPlan.filter((a) => a.strengthPattern !== undefined).length,
     conditioningSessions: conditioning.length,
     sprintSessions: plan.weeklyPlan.filter((a) =>
@@ -581,8 +600,41 @@ console.log('\n[6] The same week at low capacity has the same structure');
       }
     }
   }
-  ok(`no week shape changes structure with capacity (${weekShapes().length} shapes)`,
-    differences.length === 0, differences.slice(0, 25));
+  /**
+   * TWO SHAPES BREAK THE LAW, AND THEY BROKE IT BEFORE THIS METRIC COULD SEE IT.
+   *
+   * With the old `sessions: plan.weeklyPlan.length` metric these two passed,
+   * because the generator filled every available day with a recovery session and
+   * the raw length was the same either way. The strict metric above — what the
+   * app actually PRESCRIBES — shows what the filler was covering: in a
+   * mid-pre-season game week at low capacity, the tempo conditioning rides on a
+   * strength day at medium capacity and takes its own day at low. Same strength
+   * count, same conditioning count, different week.
+   *
+   * VERIFIED PRE-EXISTING, not introduced: the identical two differences appear
+   * when this metric is run against the pre-charter `coachingEngine` and
+   * `section18EffectiveWeekEvaluator` (checked 2026-07-30, before committing).
+   * That is the AGENTS.md un-gating hazard in its mirror image — a filler making
+   * a gate vacuous rather than a refactor doing it.
+   *
+   * PINNED EXACTLY, both directions, so it cannot grow and cannot be quietly
+   * fixed without this list shrinking with it. A third shape fails; fixing
+   * either of these two fails. It is a red-on-change record of an open defect,
+   * NOT permission for capacity to reshape a week.
+   */
+  const KNOWN_CAPACITY_SHAPE_DIFFERENCES = [
+    'Pre-season/mid_preseason/team=1/days=5/game @low: prescribedSessions 3 -> 4',
+    'Pre-season/mid_preseason/team=1/days=6/game @low: prescribedSessions 3 -> 4',
+  ];
+  const unexpected = differences.filter((entry) =>
+    !KNOWN_CAPACITY_SHAPE_DIFFERENCES.includes(entry));
+  const repaired = KNOWN_CAPACITY_SHAPE_DIFFERENCES.filter((entry) =>
+    !differences.includes(entry));
+  ok(`no NEW week shape changes structure with capacity (${weekShapes().length} shapes)`,
+    unexpected.length === 0, unexpected.slice(0, 25));
+  ok('the two known capacity-shape defects are still exactly two',
+    repaired.length === 0,
+    { repaired, note: 'if these are fixed, delete them from the list in the same commit' });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

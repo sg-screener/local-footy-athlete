@@ -982,7 +982,21 @@ run('regression', '15 exact Upper Pull component deletion preserves Team Trainin
   assert(prescriptionSignature(byDay().get(4)) === prescriptionSignature(pushBefore),
     `Thursday Upper Push identity/prescription changed ` +
     `${prescriptionSignature(pushBefore)} -> ${prescriptionSignature(byDay().get(4))}`);
-  assert(!byDay().has(5), 'optional Friday work was not displaced before CORE work');
+  // REWRITTEN, AND THE CHANGE IS THE POINT (Sam's Rest law, 2026-07-30).
+  //
+  // This asserted that Friday was EMPTIED — that the repair deleted the
+  // athlete's optional Gunshow to manufacture a rest day. Under the Rest law it
+  // never has to: a day carrying only optional work already counts as rest, so
+  // the athlete keeps what they chose and the week still meets its minimum.
+  // The old assertion was pinning the app taking something from the athlete.
+  const friday = byDay().get(5);
+  assert(friday && (friday as { sessionTier?: string }).sessionTier === 'optional',
+    `the athlete's optional Friday work was deleted to manufacture rest: ${friday?.name ?? 'gone'}`);
+  assert(after.evaluation.ledger.restStress.trueFullRestDays.includes(5),
+    'Friday carries only optional work and is not counted as rest');
+  assert(after.evaluation.ledger.restStress.trueFullRestDays.length >=
+    after.contract.restStress.requiredFullRestMinimum,
+    'the week no longer meets its full-rest minimum');
   assert(after.evaluation.ledger.mainStrength.achievedCount ===
     before.evaluation.ledger.mainStrength.achievedCount, 'pull relocation reduced strength');
   assert(after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull === 1,
@@ -991,11 +1005,12 @@ run('regression', '15 exact Upper Pull component deletion preserves Team Trainin
     entry.reason === 'explicit_user_override'), 'pull relocation created a reduction');
   assert(useProgramStore.getState().acceptedMaterialContext.markedDays['2026-07-14'] !== 'rest',
     'component deletion widened to whole-day Rest');
-  // Binning Tuesday's pull relocates it to Wednesday AND empties Friday's
-  // optional session (a real repair side effect — bug 3). Disclosed-repair
-  // (invariant #4) requires the confirmation to name every touched day.
-  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday. ' +
-    'I also rebalanced Friday to keep your week balanced.',
+  // DISCLOSED-REPAIR (invariant #4) still holds, and now discloses less because
+  // less is done: the confirmation names every day the repair TOUCHED, and Friday
+  // is no longer one of them. A sentence that still said "I also rebalanced
+  // Friday" would be a signed sentence that lies — the thing Sam's copy ruling
+  // forbids by name.
+  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday.',
     `message=${result.message}`);
   assert(visibleWeek().find((day) => day.date === '2026-07-15')?.workout?.planEntryId ===
     relocated.planEntryId, 'weekly card and accepted pull differ');

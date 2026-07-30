@@ -151,7 +151,19 @@ export interface Section18EffectiveWeekLedger {
     split: Section18ExposureSplit;
   };
   restStress: {
+    /**
+     * THE REST QUOTA — days on which nothing was REQUIRED of the athlete.
+     *
+     * Sam's Rest law, 2026-07-30. It is NOT "days with nothing on them": an
+     * athlete who adds a recovery flow, a mobility flow, prehab or a gunshow to
+     * their Sunday has still rested, and every consumer that asks "did the week
+     * meet its rest target" is asking THIS question. Days that carry optional
+     * work are named separately by `activeRecoveryDays`, so "you rested, and you
+     * also rolled" is still sayable — it is one day appearing in both lists, not
+     * a contradiction.
+     */
     trueFullRestDays: number[];
+    /** Rest days the athlete put optional work on. Overlaps `trueFullRestDays`. */
     activeRecoveryDays: number[];
     moderateDays: number[];
     hardDays: number[];
@@ -289,6 +301,8 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   const sprintSources: Section18SprintCreditSource[] = [];
   const mainDays: number[] = [];
   const activeRecoveryDays: number[] = [];
+  /** Days carrying work the plan REQUIRED. The Rest law's only input. */
+  const requiredWorkDays: number[] = [];
   const moderateDays: number[] = [];
   const hardDays: number[] = [];
   const anchorHardDays: number[] = [];
@@ -492,9 +506,39 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       !dayMain && !dayCoreConditioning && !daySprint && !dayPower) {
       activeRecoveryDays.push(day);
     }
+
+    // ── THE REST LAW (Sam, 2026-07-30) ──
+    //
+    //   "The quota counts days with no REQUIRED work. Athlete-added optional
+    //    sessions never break rest."
+    //
+    // This is the line that used to read `!activeDays.has(day)` — "nobody put
+    // anything here" — and it is why an athlete who chose to foam-roll on their
+    // Sunday lost their rest day and the week then reported a shortfall it had
+    // created itself. Rest stops being a RESIDUE and becomes an answer to a
+    // question: was anything REQUIRED of the athlete today?
+    //
+    // Required is a property of a session's ROLE in the week, not of its type
+    // alone: core conditioning is required, an optional flush the athlete added
+    // is not. `dayHard` is in the list as a belt — it cannot fire for any of the
+    // four types Sam's law protects, because recovery, mobility, prehab and
+    // gunshow are never hard by his ruling 2, and "you did a hard session and it
+    // was a rest day" should not be sayable by any route.
+    //
+    // WHY THIS DOES NOT REOPEN THE DEFECT `section18ContractV2Tests` 8a/8b/P5
+    // closed. That defect was the APP crediting itself a rest day it had filled
+    // with its own recovery session — a contract-satisfaction claim. It becomes
+    // UNREPRESENTABLE in the same commit that deletes the generator's recovery
+    // placement: the only optional work in a week is the athlete's, and the
+    // athlete's own choice was never what the old assertion was protecting
+    // against. See docs/SESSION_TYPE_CHARTER_2026-07-30.md.
+    const anchorOnDay = input.contract.anchors.some((anchor) => anchor.dayOfWeek === day);
+    if (dayMain || dayCoreConditioning || daySprint || dayPower || anchorOnDay || dayHard) {
+      requiredWorkDays.push(day);
+    }
   }
 
-  const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !activeDays.has(day));
+  const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !requiredWorkDays.includes(day));
 
   const splitDays = (
     days: readonly number[],
@@ -1211,16 +1255,29 @@ export function evaluateSection18EffectiveWeek(
       evidence: [],
     });
   }
+  // THE RECOVERY HALF OF THIS FINDING IS RETIRED (Sam's Rest law, 2026-07-30).
+  //
+  // It used to fire whenever the week carried active recovery and fell short on
+  // rest, on the reading that "visible recovery/flush/accessory work is active
+  // and cannot be credited as full rest". Under the Rest law that is precisely
+  // backwards for the athlete's own optional work: a day of foam rolling they
+  // chose is still their rest day, and raising a BLOCKING finding against them
+  // for choosing it is the app punishing an athlete for a decision the Bible
+  // explicitly grants (":122 — you can always add a recovery or mobility flow to
+  // any day as optional").
+  //
+  // What survives is the half that was never about the ruling: a LEGACY reported
+  // count that disagrees with the ledger is still a miscount, and still blocking.
   if (
-    (input.legacyReportedFullRestCount !== undefined && input.legacyReportedFullRestCount !== null &&
-      input.legacyReportedFullRestCount !== trueRest) ||
-    (ledger.restStress.activeRecoveryDays.length > 0 && trueRest < contract.restStress.requiredFullRestMinimum)
+    input.legacyReportedFullRestCount !== undefined &&
+    input.legacyReportedFullRestCount !== null &&
+    input.legacyReportedFullRestCount !== trueRest
   ) {
     addFinding(findings, {
       code: 'full_rest_miscount', severity: 'blocking', domain: 'full_rest',
       expected: trueRest,
-      actual: input.legacyReportedFullRestCount ?? 'active recovery cannot be full rest',
-      detail: 'Visible recovery/flush/accessory work is active and cannot be credited as full rest.',
+      actual: input.legacyReportedFullRestCount,
+      detail: 'A legacy full-rest count disagrees with the Section 18 ledger.',
       evidence: ledger.restStress.activeRecoveryDays.map((day) => dateForDay(input.weekStart, day)),
     });
   }

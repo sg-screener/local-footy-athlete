@@ -58,9 +58,29 @@ function mutate(
     case 'lower_pattern_disappears':
       witness.actualPatterns = witness.actualPatterns.filter((pattern) => pattern !== 'hinge');
       break;
-    case 'edge_fallback_conditioning_mismatch':
-      (witness.fallbackComponentShape as Array<{ conditioning: boolean }>)[4].conditioning = false;
+    case 'edge_fallback_conditioning_mismatch': {
+      // THE LAST COMPONENT, not index 4.
+      //
+      // The index was a constant, and constants in a mutation are a bet on the
+      // week's SIZE. That bet came due on 2026-07-30: the charter deleted the
+      // generator's uninvited recovery placements, the pre-season week came out
+      // with fewer allocations, and `[4]` threw `Cannot set properties of
+      // undefined` — a mutation probe crashing rather than proving anything.
+      //
+      // Any component's flipped `conditioning` breaks the edge/fallback equality
+      // this mutation targets equally well, so the mutation is not weakened —
+      // and the emptiness check keeps it from going VACUOUS if the shape ever
+      // collapses, which is the failure mode a softer fix would have introduced.
+      const shape = witness.fallbackComponentShape as Array<{ conditioning: boolean }>;
+      if (!Array.isArray(shape) || shape.length === 0) {
+        throw new Error(
+          'edge_fallback_conditioning_mismatch has no component to mutate — the '
+          + 'pre-season fallback week is empty, so this mutation would prove nothing',
+        );
+      }
+      shape[shape.length - 1].conditioning = !shape[shape.length - 1].conditioning;
       break;
+    }
     case 'valid_conditioning_pair_ignored':
       witness.safeConditioningPairUsed = false;
       break;

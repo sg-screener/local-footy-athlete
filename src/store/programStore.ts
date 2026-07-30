@@ -51,6 +51,10 @@ import {
   migrateStoredPowerBlock,
   migrateStoredPowerBlocks,
 } from '../rules/legacyPowerBlockMigration';
+import {
+  isGeneratorPlacedRecovery,
+  liftGeneratorRecoveryToRest,
+} from '../rules/generatorRecoveryRestLift';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
   finaliseSection18SafetyWeek,
@@ -1354,18 +1358,28 @@ function migrateHydratedStatePowerBlocks(
       ...next.currentProgram,
       microcycles: (next.currentProgram.microcycles ?? []).map((microcycle) => ({
         ...microcycle,
-        workouts: migrateStoredPowerBlocks(microcycle.workouts ?? []),
+        // TWO LIFTS, ONE INGRESS. The recovery lift runs on the PLAN only —
+        // `dateOverrides` and `weekScopedOverlays` below are athlete-owned
+        // surfaces and are deliberately not visited. See
+        // `rules/generatorRecoveryRestLift.ts`.
+        workouts: liftGeneratorRecoveryToRest(
+          migrateStoredPowerBlocks(microcycle.workouts ?? []),
+        ),
       })),
     };
   }
   if (next.currentMicrocycle) {
     next.currentMicrocycle = {
       ...next.currentMicrocycle,
-      workouts: migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
+      workouts: liftGeneratorRecoveryToRest(
+        migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
+      ),
     };
   }
   if (next.todayWorkout) {
-    next.todayWorkout = migrateStoredPowerBlock(next.todayWorkout);
+    next.todayWorkout = isGeneratorPlacedRecovery(next.todayWorkout)
+      ? null
+      : migrateStoredPowerBlock(next.todayWorkout);
   }
   if (next.dateOverrides) {
     next.dateOverrides = Object.fromEntries(

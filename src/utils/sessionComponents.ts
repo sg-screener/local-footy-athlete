@@ -154,6 +154,9 @@ export function splitAcceptedSessionForAthleteMove(args: {
     durationMinutes: snapshot.workout.durationMinutes,
     intensity: snapshot.workout.intensity,
     sections: movedSections,
+    // The day keeps its recovery add-on; only the recovery component itself
+    // takes one away. See `keepRecoveryAddons`.
+    keepRecoveryAddons: movedKind === 'recovery',
   });
   // WHAT LEAVES IS NAMED FROM ITSELF, NOT FROM THE DAY IT LEFT.
   //
@@ -202,6 +205,26 @@ function materializeAcceptedVisibleSections(args: {
   durationMinutes?: number;
   intensity?: string;
   sections: CoachVisibleSectionSnapshot[];
+  /**
+   * Does the day's recovery ADD-ON belong to this half?
+   *
+   * THE ADD-ON IS A FACT ABOUT THE DAY, NOT ABOUT A COMPONENT — the same shape
+   * as `isTeamDay` above, and it went wrong the same way. `recoveryAddons` is a
+   * top-level field, so it was carried by whichever half happened to satisfy
+   * `hasRecovery`; on a day of strength + conditioning + team training NEITHER
+   * half does, and moving the gym session silently deleted the athlete's
+   * mobility work. `deviceFindingsReplayTests` caught it as a scoped move
+   * taking `recovery_addon` with it.
+   *
+   * It was invisible until Sam's charter (2026-07-30) stopped the generator
+   * filling spare days: the add-on used to land on the standalone recovery
+   * session the app placed, so a strength day rarely carried one.
+   *
+   * Default `true` keeps every existing caller's behaviour for the half that
+   * STAYS; the half that LEAVES passes false unless it is the recovery
+   * component itself.
+   */
+  keepRecoveryAddons?: boolean;
 }): Workout {
   const strength = args.sections.find((section) => section.kind === 'strength');
   const conditioning = args.sections.find((section) => section.kind === 'conditioning');
@@ -307,7 +330,9 @@ function materializeAcceptedVisibleSections(args: {
     strengthPatternContributions: hasStrength
       ? args.source.strengthPatternContributions
       : undefined,
-    recoveryAddons: hasRecovery ? args.source.recoveryAddons : undefined,
+    recoveryAddons: (args.keepRecoveryAddons ?? true) || hasRecovery
+      ? args.source.recoveryAddons
+      : undefined,
     coachAddedConditioningLabel: onlyConditioning
       ? title
       : nextConditioningBlock

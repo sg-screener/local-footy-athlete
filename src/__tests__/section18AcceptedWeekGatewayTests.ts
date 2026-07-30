@@ -52,6 +52,7 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { buildCoachRevisionTemplateWorkout } from '../utils/coachRevisionTemplates';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
@@ -644,9 +645,22 @@ check('9 bodyweight/no-cardio pre-season retains C3-4 safely',
 const gameEvaluation = visibleEvaluation(game);
 check('14 final visible game week has at least one true full-rest day',
   gameEvaluation.ledger.restStress.trueFullRestDays.length >= 1);
-check('15 G+1 recovery is active recovery, never full rest',
-  gameEvaluation.ledger.restStress.activeRecoveryDays.includes(0) &&
-  !gameEvaluation.ledger.restStress.trueFullRestDays.includes(0));
+// REWRITTEN TO SAM'S CHARTER (2026-07-30), and the subject changed under it.
+//
+// It asserted that a G+1 recovery day could never be full rest. There is no G+1
+// recovery day any more: the Bible's anchor is `g_plus_1_rest_or_recovery`, a
+// DISJUNCTION the app was resolving on the athlete's behalf — the generator
+// pushed a recovery session there, and when that was deleted the RESOLVER
+// derived one from nothing instead. An empty G+1 is now REST, and the recovery
+// door is the athlete's to open.
+//
+// Not a weaker cell: it is the same day, asserted as the ruling says it should
+// be, and it fails if anything starts filling G+1 again.
+check('15 an empty G+1 is REST — nothing is placed on it uninvited',
+  gameEvaluation.ledger.restStress.trueFullRestDays.includes(0) &&
+  !gameEvaluation.ledger.restStress.hardDays.includes(0) &&
+  !gameEvaluation.ledger.mainStrength.sessionDays.includes(0),
+  gameEvaluation.ledger.restStress);
 {
   const restDay = gameEvaluation.ledger.restStress.trueFullRestDays[0];
   const source = firstWeek(game).workouts.find((workout) =>
@@ -682,9 +696,12 @@ check('15 G+1 recovery is active recovery, never full rest',
     contract: firstWeek(game).exposureContractV2!, workouts: [...visible, accessory],
     weekStart: WEEK_START,
   });
-  check('16 gunshow/accessory work is not full rest',
+  // Same rewrite, same reason: accessory work is never REQUIRED work, so it
+  // cannot break a rest day. Sam's ruling 2 already said it counts toward
+  // nothing; the rest quota now agrees with the ledger instead of contradicting it.
+  check('16 gunshow/accessory work is named, and still leaves the day rest',
     evaluation.ledger.restStress.activeRecoveryDays.includes(restDay) &&
-    !evaluation.ledger.restStress.trueFullRestDays.includes(restDay),
+    evaluation.ledger.restStress.trueFullRestDays.includes(restDay),
     evaluation.ledger.restStress);
 }
 // Was "17 bye recovery has at least two true full-rest days" against a fixture
@@ -728,10 +745,22 @@ check('17 an in-season bye meets its contract-stated full-rest minimum', (() => 
     blockers: result.evaluation.blockingViolations,
   });
 }
-check('20 optional work is removed before required work when repairing rest',
-  firstWeek(game).workouts.some((workout) => workout.workoutType === 'Rest') &&
+// REWRITTEN, AND STRICTLY STRONGER. It used to require the week to contain a
+// Rest stub — proof the gateway had DELETED an optional session to manufacture a
+// rest day. Under Sam's Rest law it never has to: a day carrying only optional
+// work is already a rest day, so the repair that removed the athlete's own
+// rolling to make the count work has nothing left to do. `repairOptionalRestCandidates`
+// is now inert by construction rather than by being called less often.
+//
+// What the cell protected — required work is never sacrificed to rest — is kept
+// and tightened: the targets must still be met, and now nothing may have been
+// removed to meet them.
+check('20 rest is satisfied without removing ANY work, required or optional',
+  gameEvaluation.ledger.restStress.trueFullRestDays.length >=
+    (firstWeek(game).exposureContractV2?.restStress.requiredFullRestMinimum ?? 0) &&
   gameEvaluation.ledger.mainStrength.achievedCount === firstWeek(game).exposureContractV2?.mainStrength.exposure.plannerSelectedTarget &&
-  gameEvaluation.ledger.conditioning.coreCount === firstWeek(game).exposureContractV2?.conditioning.core.plannerSelectedTarget);
+  gameEvaluation.ledger.conditioning.coreCount === firstWeek(game).exposureContractV2?.conditioning.core.plannerSelectedTarget,
+  gameEvaluation.ledger.restStress);
 
 check('21 generation cannot store a blocking final-visible violation',
   visibleEvaluation(pre).blockingViolations.length === 0);
@@ -796,11 +825,19 @@ check('21 generation cannot store a blocking final-visible violation',
   hydrationRepairObserved = hydrationRepairObserved &&
     canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2;
   const restDay = gameEvaluation.ledger.restStress.trueFullRestDays[0];
-  const activeRecovery = resolveFinalVisibleSection18Week({
-    contract: firstWeek(game).exposureContractV2!, workouts: firstWeek(game).workouts,
-    weekStart: WEEK_START, profile: game.profile,
-  }).find((workout) => workout.dayOfWeek === 0)!;
   const restDate = dateForDay(restDay);
+  // THE ATHLETE'S OWN RECOVERY, built by the door they would have used.
+  //
+  // It used to be lifted off G+1 of the generated week — a session the APP had
+  // placed. That was always the wrong subject for a cell about not taking the
+  // athlete's things, and once G+1 became rest there was nothing there to lift,
+  // so the setup crashed on `clone(undefined)`. `recovery_flow` is what the
+  // recovery door actually writes, which is what an override on this surface
+  // would actually contain.
+  const activeRecovery = {
+    ...buildCoachRevisionTemplateWorkout('recovery_flow', restDate)!,
+    dayOfWeek: restDay,
+  };
   const hydratedState = canonicaliseHydratedState({
     currentProgram: clone(game.program),
     dateOverrides: {
@@ -809,11 +846,26 @@ check('21 generation cannot store a blocking final-visible violation',
       },
     },
   }, { ingressKind: 'migration_required' });
+  // THE OVERRIDE IS THE ATHLETE'S, AND HYDRATION MUST NOT TAKE IT.
+  //
+  // This cell used to require hydration to REWRITE a recovery session sitting in
+  // `dateOverrides` into a Rest stub — the app deleting the athlete's own chosen
+  // session to make its rest count work. `dateOverrides` is an athlete-owned
+  // surface, and Sam's ruling (2026-07-30) is that athlete-added optional
+  // sessions never break rest, so there is nothing to repair and nothing that may
+  // be taken. The read-ingress lift deliberately never visits this surface
+  // (`rules/generatorRecoveryRestLift.ts`).
+  //
+  // The cell keeps its real subject — hydration DOES repair before persistence —
+  // through the powerBlock migration, which is a lift of a retired format (L15)
+  // rather than a deletion of an athlete decision.
   const repairedOverride = hydratedState.dateOverrides?.[restDate];
-  hydrationRepairObserved = hydrationRepairObserved && repairedOverride?.workoutType === 'Rest';
-  check('27 hydration repairs migrated base and effective override weeks before persistence',
+  const overrideSurvived = !!repairedOverride && repairedOverride.workoutType !== 'Rest';
+  hydrationRepairObserved = hydrationRepairObserved && overrideSurvived;
+  check('27 hydration lifts retired formats before persistence, and takes nothing of the athlete\'s',
     canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2 &&
-    repairedOverride?.workoutType === 'Rest');
+    overrideSurvived,
+    { repairedOverride: repairedOverride?.workoutType });
 }
 {
   // RE-PINNED to a genuine §18 SAFETY prohibition (Sam, 2026-07-27).
@@ -936,9 +988,19 @@ check('P4 optional work cannot satisfy core intensity', (() => {
     evaluation.ledger.conditioning.optionalFlushCount === 1 &&
     evaluation.blockingViolations.some((finding) => finding.code === 'optional_work_replacing_required_work');
 })());
-check('P5 active recovery never becomes full rest', generated.every((value) => {
-  const ledger = visibleEvaluation(value).ledger.restStress;
-  return ledger.activeRecoveryDays.every((day) => !ledger.trueFullRestDays.includes(day));
+// THE PROPERTY, INVERTED WITH THE RULING and kept non-vacuous. The old form
+// asserted the two lists were disjoint. They now overlap on purpose — a day the
+// athlete rolled on is both rested and active — so the property that carries the
+// law is that no day with REQUIRED work ever appears in the rest quota.
+check('P5 the rest quota never contains a day with required work', generated.every((value) => {
+  const ledger = visibleEvaluation(value).ledger;
+  // Deliberately NOT "and never a moderate day". A day carrying only
+  // medium-stress OPTIONAL work is moderate AND rested, and that is the law
+  // rather than a hole in it — `moderateDays` is a stress observation, not a
+  // statement about what the plan required. Hard days and main-strength days are.
+  return ledger.restStress.trueFullRestDays.every((day) =>
+    !ledger.restStress.hardDays.includes(day) &&
+    !ledger.mainStrength.sessionDays.includes(day));
 }));
 check('P6 visible minimum rest is enforced', [visibleEvaluation(game), byeBuildVisible()].every(
   (evaluation) => evaluation.ledger.restStress.trueFullRestDays.length >=
@@ -972,7 +1034,10 @@ console.log('\n-- Mutation witnesses --');
 const mutationChecks: Array<[string, boolean]> = [
   ['M1 restoring per-lift primers is killed', visibleEvaluation(mid).ledger.power.achievedPrimerCount <= 2],
   ['M2 skipping substitute attempts is killed', firstWeek(limitedMid).exposureContractV2?.equipment.substitutionStatus === 'substituted'],
-  ['M3 treating recovery as rest is killed', !gameEvaluation.ledger.restStress.trueFullRestDays.includes(0)],
+  // INVERTED with the ruling. The mutant this must kill is a build that went back
+  // to charging the athlete a rest day for their own recovery session.
+  ['M3 charging the athlete a rest day for their own recovery is killed',
+    gameEvaluation.ledger.restStress.trueFullRestDays.includes(0)],
   ['M4 observing raw instead of visible week is killed', firstWeek(game).exposureContractV2?.restStress.achievedTrueFullRestCount === gameEvaluation.ledger.restStress.trueFullRestDays.length],
   ['M5 rejecting a complete phase-permitted five-hard-day week is killed', fiveHardAccepted],
   ['M6 bypassing Repeat Week gateway is killed', repeatWriteAccepted],

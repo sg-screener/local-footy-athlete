@@ -87,6 +87,7 @@ import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
+import { isGeneratorPlacedRecovery } from '../rules/generatorRecoveryRestLift';
 import { samExport8Profile } from './support/samDeviceExport8Fixture';
 
 let passed = 0; let failed = 0; const failures: string[] = [];
@@ -223,53 +224,65 @@ run('removing recovery moves no LOAD number either', () => {
     'recovery neutrality is not symmetric — removing recovery moved a load number');
 });
 
-run('BLOCKED — recovery never breaks rest (ruling 1 vs a prior fix)', () => {
-  // SAM RULED IT, I IMPLEMENTED IT, AND IT COLLIDED WITH A DOCUMENTED PRIOR FIX.
-  // Reverted pending his call. `section18ContractV2Tests` fails three cells the
-  // moment recovery counts toward full rest:
-  //   8a. active recovery is excluded from true rest
-  //   8b. legacy recovery-as-rest miscount is detected
-  //   P5  recovery days can never become full-rest days   <- a PROPERTY
-  // and that suite's own comment at :487 reads "8. Recovery workouts WERE reported
-  // as full rest" — past tense, i.e. a defect somebody deliberately closed.
+run('RULED AND LANDED — recovery never breaks rest', () => {
+  // THE BLOCKED CELL, UNBLOCKED. It used to assert TODAY's behaviour with the
+  // conflict named: Sam had ruled that a day of foam rolling is still a rest
+  // day, and asserting it failed `section18ContractV2Tests` 8a/8b/P5 — a
+  // documented prior fix. Reversing a property test on my reading of a chat
+  // message was the move the repo's laws exist to stop, so it was reverted and
+  // escalated.
   //
-  // Reversing a property test against a documented fix, on my reading of a chat
-  // message, is the move this repo's laws exist to stop. So the production change
-  // is out and this cell asserts TODAY's behaviour with the conflict named, rather
-  // than asserting the ruling and going red, or asserting the ruling and flipping
-  // three gates to make it green.
-  //
-  // TO CLOSE: Sam decides whether the prior fix was about a different concern —
-  // most likely a week LOOKING compliant on rest because recovery inflated the
-  // count — in which case the two can coexist by separating "the athlete rested"
-  // from "the contract's rest target was met". See
-  // docs/RECOVERY_DAY_PROVENANCE_TRACE_2026-07-30.md.
-  const plainToday = JSON.parse(restFingerprint(base, contract)) as { trueFullRestDays: number[] };
-  const withOneToday = JSON.parse(restFingerprint([...base, recoverySession(0)], contract)) as {
+  // HIS RESOLUTION, and why both were right. The prior fix was about a
+  // contract-satisfaction claim — a week LOOKING compliant on rest because
+  // recovery inflated the count — and the recovery inflating it was the APP'S
+  // OWN, from nine generator sites citing no authored source. His ruling is
+  // about the athlete. Both hold once the generator stops placing recovery at
+  // all, because then the only recovery in a week is the athlete's and there is
+  // no inflation left to catch. The two changes landed in ONE commit, and
+  // 8a/8b/P5 were rewritten in it.
+  const plain = JSON.parse(restFingerprint(base, contract)) as { trueFullRestDays: number[] };
+  const withOne = JSON.parse(restFingerprint([...base, recoverySession(0)], contract)) as {
     trueFullRestDays: number[]; activeRecoveryDays: number[];
   };
-  assert(JSON.stringify(withOneToday.trueFullRestDays) !== JSON.stringify(plainToday.trueFullRestDays),
-    'recovery now counts toward full rest. If that is the resolution Sam chose, '
-    + 'update this cell AND section18ContractV2Tests 8a/8b/P5 together, citing his '
-    + 'ruling — never one without the others.');
-  assert(withOneToday.activeRecoveryDays.includes(0),
-    'the recovery session is no longer reported as active recovery');
+  assert(JSON.stringify(withOne.trueFullRestDays) === JSON.stringify(plain.trueFullRestDays),
+    'adding a recovery session changed the rest quota. Sam ruled it never does: the '
+    + `quota counts days with no REQUIRED work.\n      without ${JSON.stringify(plain.trueFullRestDays)}`
+    + `\n      with    ${JSON.stringify(withOne.trueFullRestDays)}`);
+  assert(withOne.activeRecoveryDays.includes(0),
+    'the recovery session is no longer NAMED as active recovery. It still rested and '
+    + 'it still rolled — the day belongs in both lists, and losing the second one '
+    + 'would trade a wrong answer for a missing one');
 });
 
-run('RECORDED, pending ruling — what recovery does to the full-rest finding', () => {
-  // The failure the baseline caught: at three, the week missed its full-rest target
-  // and raised `default_target_miss:full_rest`. Under the ruling it must not.
+run('and three recovery sessions raise no full-rest finding', () => {
+  // The exact failure the pre-ruling baseline recorded: at three, the week missed
+  // its full-rest target and raised `default_target_miss:full_rest`. Under the
+  // ruling it must not — the athlete chose all three, and being told the week is
+  // non-compliant for it is the app punishing a decision the Bible grants.
   const evaluation = evaluate(
     [...base, recoverySession(0), recoverySession(3), recoverySession(6)],
     contract,
   );
   const restFindings = evaluation.findings.filter((f) => f.domain === 'full_rest');
-  // Recorded, not asserted, while the conflict above is open. Today's answer is
-  // that recovery DOES raise this finding; that is the exact cost of the conflict
-  // and it is what Sam is ruling on.
-  console.log(`      today: full_rest findings with 3 recovery sessions = `
-    + `${JSON.stringify(restFindings.map((f) => f.code))}`);
-  assert(true, 'recorded');
+  assert(restFindings.length === 0,
+    `three athlete-added recovery sessions raised ${JSON.stringify(restFindings.map((f) => f.code))}. `
+    + 'Athlete-added optional sessions never break rest (Sam, 2026-07-30).');
+});
+
+run('THE UPSTREAM HALF — the generator places no recovery at all', () => {
+  // "The generator never places optional work uninvited", asserted by RUNNING the
+  // generator rather than by reading it. This is the half that makes the rewrite
+  // of 8a/8b/P5 a strengthening: without it, the rest law alone would let the app
+  // go back to filling days with its own recovery and crediting itself rest for
+  // them, which is the defect that suite was closing.
+  const placed = program.microcycles.flatMap((microcycle) =>
+    (microcycle.workouts ?? []).filter((workout) => isGeneratorPlacedRecovery(workout)));
+  assert(placed.length === 0,
+    `the generator placed ${placed.length} recovery sessions: `
+    + `${placed.map((w) => `${w.name}@${w.dayOfWeek}`).slice(0, 6).join(', ')}. `
+    + 'Recovery is the athlete\'s to choose (Sam, 2026-07-30) — and while the '
+    + 'generator can place it, the rest law above lets the app credit itself rest '
+    + 'for days it filled itself.');
 });
 
 run('non-recovery work still counts', () => {

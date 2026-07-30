@@ -178,10 +178,32 @@ function fixtureOffset(entry: SessionAllocation): number {
   return offset === -6 ? 1 : offset;
 }
 
+/**
+ * Put an optional flush on a day — ADDING the day when the week has none.
+ *
+ * It used to require an existing allocation to overwrite, which worked only
+ * because the generator filled every spare day with a recovery session. Sam's
+ * charter (2026-07-30) deleted those placements, Thursday became genuine rest,
+ * and the witness could no longer be built.
+ *
+ * Adding the allocation is not a workaround for that — it is the more faithful
+ * fixture. "The athlete adds an optional flush to a rest day" is exactly the
+ * case the charter makes possible and the invariant is about: it must not become
+ * a fifth CORE conditioning exposure however it got there.
+ */
 function addOptionalFlush(source: PlannerSnapshot, day: string): SessionAllocation[] {
   const allocations = cloneAllocations(source.allocations);
-  const entry = allocations.find((candidate) => candidate.dayOfWeek === day);
-  invariant(entry, `missing ${day} slot for optional flush witness`);
+  let entry = allocations.find((candidate) => candidate.dayOfWeek === day);
+  if (!entry) {
+    entry = {
+      tier: 'optional',
+      focus: 'Optional flush',
+      dayOfWeek: day,
+      isHardExposure: false,
+      stressLevel: 'low',
+    } as SessionAllocation;
+    allocations.push(entry);
+  }
   entry.conditioningCategory = 'aerobic_base';
   entry.conditioningFlavour = 'aerobic';
   entry.section18ConditioningRole = 'optional_flush';

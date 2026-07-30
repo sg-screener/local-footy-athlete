@@ -46,6 +46,20 @@
  * Direction 3 is the one that is usually missing, and direction 4 is the one my
  * own notes record as the reason a ratchet fails: a global budget lets one unit
  * spend another unit's savings.
+ *
+ * WHAT THE GATE CANNOT SEE YET, stated so nobody reads a green run as more than
+ * it is. Placement is observed over the GENERATOR's output — the microcycles a
+ * generated program contains. It does not observe the RESOLVER, and the resolver
+ * is a second placer: `applyGameProximity` still replaces a planned G+1 session
+ * with a derived recovery session when one is there to replace. Stage 2 removed
+ * its ability to conjure one onto an EMPTY G+1 (that variant made the deletion
+ * door lie — see `sessionResolver.ts`), and the displacement variant is
+ * deliberately left, because replacing planned work the day after a game is a
+ * different and heavier question than filling a blank day. It is scoped to
+ * stage 4 with the recovery door, and it is prose rather than a `CHARTER_DEBT`
+ * entry ONLY because this gate has no observation that would make such an entry
+ * checkable — declaring debt the gate cannot verify would be the stale-debt
+ * failure with extra steps.
  */
 
 import type { PlanChangeCategoryId } from '../utils/planChangeTypes';
@@ -367,30 +381,8 @@ export interface CharterDebtEntry {
  */
 export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
   // ── Rest: a residue until stage 2 gives it an owner ──
-  {
-    type: 'rest',
-    question: 'placement',
-    deviation: 'rest is a RESIDUE — a day is rest iff nothing was placed on it, so '
-      + 'no owner places it and the generator emits no rest session for the gate '
-      + 'to observe',
-    paidBy: 'stage 2 — Rest as a real decision',
-  },
 
   // ── Recovery: the survey's finding 4, and the whole of stage 2 ──
-  {
-    type: 'recovery',
-    question: 'placement',
-    deviation: 'the generator places recovery at eight `tier: recovery` sites in '
-      + 'coachingEngine.ts, none of which cites an authored source',
-    paidBy: 'stage 2 — the recovery deletion',
-  },
-  {
-    type: 'recovery',
-    question: 'counting',
-    deviation: 'a day carrying only recovery is excluded from the rest quota, so '
-      + 'athlete-added recovery breaks the athlete\'s own rest day',
-    paidBy: 'stage 2 — Rest as a real decision',
-  },
   {
     type: 'recovery',
     question: 'composition',
@@ -460,12 +452,6 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
   },
   {
     type: 'gunshow',
-    question: 'counting',
-    deviation: 'a day carrying only a gunshow is excluded from the rest quota',
-    paidBy: 'stage 2 — Rest as a real decision',
-  },
-  {
-    type: 'gunshow',
     question: 'composition',
     deviation: 'the built session draws "Face Pull" from UPPER_BACK_PUMP_POOL — a '
       + 'seventeenth name outside the sixteen Sam signed, and a CROSS-FAMILY draw '
@@ -493,13 +479,13 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
 ];
 
 export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
-  rest: 1,
-  recovery: 3,
+  rest: 0,
+  recovery: 1,
   strength: 1,
   conditioning: 1,
   mobility: 4,
   prehab: 2,
-  gunshow: 3,
+  gunshow: 2,
 };
 
 /** Debt entries for one type. */

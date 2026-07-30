@@ -672,10 +672,30 @@ function applyGameProximity(
     },
   });
 
-  // G+1: day after a game → recovery (even if no template workout)
+  // G+1: the day after a game.
+  //
+  // AN EMPTY G+1 IS REST, NOT RECOVERY (Sam's charter, 2026-07-30). This branch
+  // used to read "even if no template workout" and materialise a recovery
+  // session onto a day nothing was planned for. The Bible's anchor is
+  // `g_plus_1_rest_or_recovery` — a DISJUNCTION the app was resolving on the
+  // athlete's behalf, which is the whole finding of the session-type survey.
+  //
+  // AND IT MADE THE DELETION DOOR LIE. Once the generator stopped filling spare
+  // days (the nine deleted recovery sites), G+1 had no template, so this derived
+  // one from nothing — and an athlete tapping Remove on that session got
+  // `visible_change_unverified`, because there was no stored thing to remove and
+  // the day re-derived identically. `athleteSessionDeletionTests` regression 6
+  // caught it on the Sunday-fixture scenario. A day whose content exists only as
+  // a derivation cannot be edited by a door that edits stored decisions.
+  //
+  // What is NOT changed here: when a real planned session sits on G+1, the
+  // proximity rule still applies. Replacing planned work with recovery is a
+  // second, heavier question — it protects the athlete from training the day
+  // after a game — and it is declared charter debt rather than settled in
+  // passing. See `rules/sessionTypeCharter.ts`, recovery/placement.
   const previousDate = shiftDate(date, -1);
-  if (gameDates.has(previousDate)) {
-    if (!templateWorkout || (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game')) {
+  if (gameDates.has(previousDate) && templateWorkout) {
+    if (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game') {
       // GUARD: never replace protected core exposure for virtual/recurring
       // proximity. Explicit calendar game/practice-match marks are different:
       // Bible G+1 wins, so the core session is dropped rather than made up.

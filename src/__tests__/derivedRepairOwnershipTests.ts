@@ -216,6 +216,21 @@ run('the screen honours the rest mark the accepted week honours', () => {
  * writer that surface actually has, and it is what the sheet hands every
  * producer as `setManualOverride`.
  */
+/**
+ * A date in the visible week that actually carries a session.
+ *
+ * These cells named `2026-07-30`, which held one only because the generator
+ * filled every spare day. Sam's charter (2026-07-30) stopped it filling days it
+ * has nothing to prescribe for, so the literal became an empty Thursday and the
+ * suite failed on its own fixture rather than on the law. The law is about who
+ * OWNS an override, and any day with a session can carry it.
+ */
+function aDayWithASession(): string {
+  const day = visibleWeek().find((entry) => !!entry.workout);
+  assert(day, 'the generated week has no session at all to re-author');
+  return day.date;
+}
+
 function authorAnOverride(date: string): Workout {
   // The day's OWN session, re-authored under the athlete's name. Renaming what
   // is already there keeps every §18 count identical, so the suite asserts
@@ -239,12 +254,13 @@ run('an override the athlete DID author still outranks the derived plan', () => 
   // simply stopped writing to `dateOverrides` would pass the two tests above and
   // break every athlete edit in the app, so the surface is proved still to work.
   freshInstallAndGenerate();
-  const authored = authorAnOverride('2026-07-30');
+  const target = aDayWithASession();
+  const authored = authorAnOverride(target);
 
-  assert(overrideDates().includes('2026-07-30'),
+  assert(overrideDates().includes(target),
     'the athlete authored a session and no athlete-owned override records it — '
     + 'the decision surface has to keep working for decisions');
-  const shown = visibleWeek().find((day) => day.date === '2026-07-30');
+  const shown = visibleWeek().find((day) => day.date === target);
   assert(workoutIdentity(shown?.workout) === workoutIdentity(authored),
     "the athlete's own override is not what the screen shows — authored "
     + `"${workoutIdentity(authored)}", screen "${workoutIdentity(shown?.workout)}"`);
@@ -260,12 +276,13 @@ run('a rest mark on a week the athlete has already edited keeps his edit', () =>
   // case where writing to that surface is correct, and this is the cell that
   // separates "the repair moved" from "the write was deleted".
   freshInstallAndGenerate();
-  authorAnOverride('2026-07-30');
+  const target = aDayWithASession();
+  authorAnOverride(target);
   const authored = overrideDates();
 
   quiet(() => useCalendarStore.getState().setRestDay('2026-07-28'));
 
-  assert(overrideDates().includes('2026-07-30'),
+  assert(overrideDates().includes(target),
     "a later calendar mark discarded the athlete's own override — "
     + `${JSON.stringify(authored)} became ${JSON.stringify(overrideDates())}`);
   assert(overrideDates().every((date) => authored.includes(date)),

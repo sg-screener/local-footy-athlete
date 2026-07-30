@@ -309,10 +309,16 @@ run('a plain day still offers the whole-day move it always did', () => {
 
 run('a rest day refuses in plain language rather than offering an empty picker', () => {
   const weekStart = seed();
-  const wednesday = addDaysISO(weekStart, 2);
-  assert(!visibleWeek(weekStart).find((day) => day.date === wednesday)?.workout,
-    'this seed no longer has an empty Wednesday');
-  const move = optionsFor(weekStart, wednesday).move;
+  // THE CELL IS ABOUT A REST DAY, NOT ABOUT WEDNESDAY.
+  //
+  // It named Wednesday, which was empty only because the §18 gateway used to
+  // DELETE the generator's optional accessory work there to manufacture a rest
+  // day. Sam's Rest law (2026-07-30) stops that, so Wednesday now carries the
+  // athlete's accessory session and the cell was asserting a fixture accident.
+  // Finding the rest day keeps the subject and survives the week's shape moving.
+  const restDay = visibleWeek(weekStart).find((day) => !day.workout);
+  assert(restDay, 'this seed has no rest day at all, so the refusal cannot be observed');
+  const move = optionsFor(weekStart, restDay.date).move;
   assert(move.refusal, 'a rest day offered a move');
   assert(move.refusal.reason === 'no_session',
     `rest day refused with "${move.refusal.reason}"`);

@@ -484,7 +484,36 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     has(witnesses.equipmentDeletion, 'equipment_substitution_missing'));
 }
 
-// 8. Recovery workouts were reported as full rest.
+// 8. THE REST LAW (Sam, 2026-07-30) — replacing "recovery is excluded from rest".
+//
+// WHAT 8a/8b/P5 USED TO ASSERT, and why the replacement is STRONGER rather than
+// looser. They pinned a real defect: a week LOOKING compliant on rest because
+// recovery inflated the achieved count. But the recovery inflating it was the
+// APP'S OWN — nine placement sites in `coachingEngine.ts` that cited no authored
+// source — and the assertion could not tell the app's recovery from the
+// athlete's. So it also fired on an athlete who chose to foam-roll on their
+// Sunday, and raised a BLOCKING finding against them for accepting an offer the
+// Bible makes explicitly (":122 — you can always add a recovery or mobility flow
+// to any day as optional").
+//
+// Sam's ruling resolves it upstream instead of downstream:
+//
+//   THE GENERATOR NEVER PLACES OPTIONAL WORK UNINVITED.
+//   THE REST QUOTA COUNTS DAYS WITH NO REQUIRED WORK.
+//
+// Under those two together the old defect is UNREPRESENTABLE, not detected: the
+// only recovery in a week is the athlete's, so there is no app-inflated rest
+// count left to catch. That is why these cells now assert the law rather than
+// the symptom — a detector for a condition that cannot arise is a cell that can
+// only ever fire on the athlete.
+//
+// THE UPSTREAM HALF IS ASSERTED WHERE THE GENERATOR IS. This suite builds
+// synthetic witnesses and never runs generation, so "the generator places no
+// recovery" is proven by `section18RecoveryNeutralityTests` (which generates a
+// real program and asserts zero generator-placed recovery) and by
+// `sessionTypeCharterTests` group E. Both are in `test:bible`. Neither of the
+// two halves is worth anything alone, and this comment exists so nobody removes
+// one without the other.
 {
   const c = contract('in_season_bye_recovery', {
     plannerSelected: { mainStrength: 2, coreConditioning: 0, optionalFlush: 0, sprintHighSpeed: 0, powerPrimers: 0 },
@@ -493,11 +522,20 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     strength(1, ['squat', 'push']), strength(4, ['hinge', 'pull']),
     recovery(2), recovery(3), recovery(5), recovery(6), rest(0),
   ], 5);
-  ok('8a. active recovery is excluded from true rest',
-    witnesses.recoveryRest.ledger.restStress.trueFullRestDays.length === 1 &&
+  ok('8a. a day of recovery is still a REST day',
+    witnesses.recoveryRest.ledger.restStress.trueFullRestDays.length === 5 &&
     witnesses.recoveryRest.ledger.restStress.activeRecoveryDays.length === 4,
     witnesses.recoveryRest.ledger.restStress);
-  ok('8b. legacy recovery-as-rest miscount is detected', has(witnesses.recoveryRest, 'full_rest_miscount'));
+  ok('8b. and the athlete is not blocked for choosing it',
+    !has(witnesses.recoveryRest, 'full_rest_miscount') &&
+    !has(witnesses.recoveryRest, 'required_minimum_shortfall', 'full_rest'),
+    witnesses.recoveryRest.findings);
+  // NON-VACUITY. Both cells above would pass on a build that had stopped
+  // measuring rest at all, so the two strength days must still take theirs.
+  ok('8c. REQUIRED work still breaks rest',
+    !witnesses.recoveryRest.ledger.restStress.trueFullRestDays.includes(1) &&
+    !witnesses.recoveryRest.ledger.restStress.trueFullRestDays.includes(4),
+    witnesses.recoveryRest.ledger.restStress.trueFullRestDays);
 }
 
 // 9. Modified TT receives automatic sprint claim.
@@ -604,9 +642,14 @@ property('P1 achieved above a permitted maximum is always detected',
 }
 property('P4 optional work cannot satisfy a core requirement',
   witnesses.flushAsCore.ledger.conditioning.coreCount === 2 && has(witnesses.flushAsCore, 'optional_work_replacing_required_work'));
-property('P5 recovery days can never become full-rest days',
+property('P5 the rest quota counts days with no REQUIRED work, and only that',
+  // The property form of Sam's Rest law. Four recovery days are STILL named as
+  // active recovery — the information is not lost, the day simply appears in
+  // both lists — and the two strength days are the only ones the quota refuses.
   witnesses.recoveryRest.ledger.restStress.activeRecoveryDays.length === 4 &&
-  witnesses.recoveryRest.ledger.restStress.trueFullRestDays.length === 1);
+  witnesses.recoveryRest.ledger.restStress.trueFullRestDays.length === 5 &&
+  witnesses.recoveryRest.ledger.restStress.trueFullRestDays.every((day) =>
+    day !== 1 && day !== 4));
 property('P6 prohibited patterns cannot be silently accepted',
   has(witnesses.prohibitedPattern, 'prohibited_pattern_breach'));
 property('P7 unknown/modified participation cannot receive sprint credit',
@@ -670,9 +713,13 @@ let mutationCount = 0;
 }
 {
   mutationCount += 1;
+  // INVERTED with the ruling. The mutant is now a build that went back to
+  // excluding recovery from rest; the invariant it must fail is the Rest law.
   const mutant = cloneObservation(witnesses.recoveryRest);
-  mutant.ledger.restStress.trueFullRestDays.push(...mutant.ledger.restStress.activeRecoveryDays);
-  killed('count recovery as full rest', mutant.ledger.restStress.trueFullRestDays.length === 1);
+  mutant.ledger.restStress.trueFullRestDays = mutant.ledger.restStress.trueFullRestDays
+    .filter((day) => !mutant.ledger.restStress.activeRecoveryDays.includes(day));
+  killed('exclude athlete recovery from rest',
+    mutant.ledger.restStress.trueFullRestDays.length === 5);
 }
 {
   mutationCount += 1;

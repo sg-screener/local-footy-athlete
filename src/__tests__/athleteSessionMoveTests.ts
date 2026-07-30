@@ -280,10 +280,42 @@ function realDoor(change: PlanChange, weekStart: string) {
   return { preview, commit };
 }
 
+
+/**
+ * Clear a day the GENERATOR filled with optional work, through the real door.
+ *
+ * Every cell that moves a session onto Wednesday needs Wednesday to start as
+ * rest. It used to, for a reason Sam's Rest law (2026-07-30) has now removed:
+ * the generator placed optional accessory work there (Bible G-3), and the §18
+ * gateway then DELETED that work to manufacture a rest day. A day carrying only
+ * optional work already counts as rest, so the gateway no longer strips it and
+ * the destination arrives occupied.
+ *
+ * The fixture reaches an empty Wednesday BY ACTING — the athlete removes the
+ * session — rather than by asking for a profile that happens to produce one.
+ * That is AGENTS.md's rule for athlete-facing suites, and it keeps every other
+ * scenario in this file on the same generated week as before.
+ */
+function clearGeneratedOptionalDay(weekStart: string, dayOfWeek: number): void {
+  if (!workoutOn(weekStart, dayOfWeek)) return;
+  applyPlanChange({
+    change: { kind: 'remove_session', date: dateForDay(weekStart, dayOfWeek) },
+    visibleWeek: visibleWeek(weekStart),
+    todayISO: CURRENT_WEEK,
+    setManualOverride: () => {
+      throw new Error('clearing a day must not use the single-date writer');
+    },
+  });
+  if (workoutOn(weekStart, dayOfWeek)) {
+    throw new Error(`could not clear ${weekStart}+${dayOfWeek} through the real door`);
+  }
+}
+
 console.log('\n-- Athlete session move transaction --');
 
 run('1 future Monday strength moves to Wednesday Rest through preview → commit', () => {
   seed();
+  clearGeneratedOptionalDay(FUTURE_WEEK, 3);
   assert(workoutOn(FUTURE_WEEK, 1), 'future Monday source missing');
   assert(!workoutOn(FUTURE_WEEK, 3), 'future Wednesday must start as Rest');
   const original = clone(workoutOn(FUTURE_WEEK, 1)!);
@@ -335,6 +367,7 @@ run('1 future Monday strength moves to Wednesday Rest through preview → commit
 
 run('2 current-week Monday move uses the identical transaction', () => {
   seed();
+  clearGeneratedOptionalDay(CURRENT_WEEK, 3);
   assert(!workoutOn(CURRENT_WEEK, 3), 'current Wednesday must start as Rest');
   const result = realDoor({
     kind: 'move_session',
@@ -378,6 +411,9 @@ run('3 occupied compatible destination swaps atomically', () => {
 
 run('4 persisted move constraint owns both dates through hydration', () => {
   seed();
+  // The move target must start as rest; the generator's optional G-3 work
+  // is no longer stripped by the gateway (Sam's Rest law). Removed by acting.
+  clearGeneratedOptionalDay(FUTURE_WEEK, 3);
   const input = moveInput(FUTURE_WEEK);
   commitAthleteSessionMoveTransaction(input);
   const constraint = useProgramStore.getState().userRemovalConstraints.find((candidate) =>
@@ -572,6 +608,9 @@ run('9 move staging closes persisted rolling-horizon dependencies', () => {
 run('10 reload, rebuild, Repeat Week and rollover retain move ownership', () => {
   const athlete = profile();
   seed(athlete);
+  // The move target must start as rest; the generator's optional G-3 work
+  // is no longer stripped by the gateway (Sam's Rest law). Removed by acting.
+  clearGeneratedOptionalDay(FUTURE_WEEK, 3);
   const input = moveInput(FUTURE_WEEK);
   commitAthleteSessionMoveTransaction(input);
   const persisted = clone(useProgramStore.getState());
@@ -611,6 +650,12 @@ run('10 reload, rebuild, Repeat Week and rollover retain move ownership', () => 
 
 run('11 a later readiness transaction or rollback retains move ownership and placement', () => {
   seed();
+  // The move target must start as rest; the generator's optional G-3 work
+  // is no longer stripped by the gateway (Sam's Rest law). Removed by acting.
+  clearGeneratedOptionalDay(FUTURE_WEEK, 3);
+  // The move target must start as rest; the generator's optional G-3 work
+  // is no longer stripped by the gateway (Sam's Rest law). Removed by acting.
+  clearGeneratedOptionalDay(FUTURE_WEEK, 3);
   const input = moveInput(FUTURE_WEEK);
   commitAthleteSessionMoveTransaction(input);
   try {

@@ -671,6 +671,16 @@ for (const microcycle of program.microcycles) {
     for (const type of seen.types) placedTypes.add(type);
     if (!seen.named) unclassifiable.push(workout.name ?? '(unnamed)');
   }
+  // REST IS PLACED BY ABSENCE, and that is the ruled shape rather than a gap.
+  //
+  // A stored rest session would be a stored DERIVED OUTPUT, which
+  // docs/NORTH_STAR.md presumes wrong — so the generator expresses "nothing is
+  // required of you today" by requiring nothing, and the Rest law's quota reads
+  // it. The observation has to match: a generated week that leaves a day free
+  // IS the generator placing rest, and looking for a rest WORKOUT would report
+  // a correctly-converged design as a defect.
+  const occupied = new Set((microcycle.workouts ?? []).map((workout) => workout.dayOfWeek));
+  if ([0, 1, 2, 3, 4, 5, 6].some((day) => !occupied.has(day))) placedTypes.add('rest');
 }
 
 /**

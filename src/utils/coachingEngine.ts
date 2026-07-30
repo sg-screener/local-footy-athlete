@@ -1787,15 +1787,9 @@ function buildWeeklyPlan(
       : inputs.weekKind === 'deload'
   );
 
-  if (false) {
-    return daySlots.map((slot) => ({
-      tier: 'recovery',
-      focus: 'Recovery only - full pause until symptoms settle',
-      dayOfWeek: slot.dayName,
-      isHardExposure: false,
-      stressLevel: 'low',
-    }));
-  }
+  // A `if (false)` block returning a week of recovery sessions stood here. It was
+  // already unreachable; the charter deletes it rather than leaving a recovery
+  // placement one edit away from being live again.
 
   if (hasGameThisWeek) {
     // ─── In-season WITH game: G-relative placement with spacing intelligence ───
@@ -1976,32 +1970,45 @@ function buildWeeklyPlan(
 
     for (const slot of remainingDays) {
       if (slot.offset === 1 || slot.offset <= -6) {
-        // Post-game → always recovery
-        plan.push({ tier: 'recovery', focus: 'Post-game recovery - flush, mobility, stretching', dayOfWeek: slot.dayName, isHardExposure: false });
+        // Post-game → REST. The Bible's anchor is `g_plus_1_rest_or_recovery`,
+        // and the app used to resolve that disjunction on the athlete's behalf
+        // by pushing a recovery session. It is the athlete's choice: the day is
+        // left free and the recovery door is theirs to open. Unless the club
+        // owns the day — see `TEAM_DAY_PLACEHOLDER_FOCUS`.
+        if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
         recCount++;
       } else if (slot.offset === -1) {
         // G−1 → optional arms/pump only
         plan.push({ tier: 'optional', focus: 'Optional arms/pump - biceps, triceps, lateral raises only', dayOfWeek: slot.dayName, isHardExposure: false });
         optCount++;
       } else if (slot.offset === -3) {
-        // G−3 → optional light work or recovery (NEVER CORE)
-        plan.push({
-          tier: optCount < optional ? 'optional' : 'recovery',
-          focus: optCount < optional
-            ? 'Light accessories - trunk, calves, groin, shoulder prehab, mobility'
-            : 'Mobility, foam rolling, light movement',
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-        });
-        if (optCount < optional) optCount++; else recCount++;
+        // G−3 → optional light work, or REST (NEVER CORE). The optional half is
+        // Bible-invited accessory work and stays; the recovery half was the app
+        // filling a day nothing asked it to fill, and is gone.
+        if (optCount < optional) {
+          plan.push({
+            tier: 'optional',
+            focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility',
+            dayOfWeek: slot.dayName,
+            isHardExposure: false,
+          });
+          optCount++;
+        } else {
+          if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
+          recCount++;
+        }
       } else {
         // Other unassigned days
         if (optCount < optional) {
           plan.push({ tier: 'optional', focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility', dayOfWeek: slot.dayName, isHardExposure: false });
           optCount++;
         } else if (recCount < recovery) {
-          plan.push({ tier: 'recovery', focus: 'Mobility, foam rolling, light movement', dayOfWeek: slot.dayName, isHardExposure: false });
+          // REST. The budget is still spent so the week's shape is unchanged;
+          // only the placement is gone.
+          if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
           recCount++;
+        } else if (slot.isTeamDay) {
+          plan.push(teamDayPlaceholderAllocation(slot.dayName));
         }
       }
     }
@@ -2173,13 +2180,8 @@ function buildWeeklyPlan(
         continue;
       }
       if (slot.dayName === 'Sunday') {
-        plan.push({
-          tier: 'recovery',
-          focus: 'Full rest or light walk',
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          stressLevel: 'low',
-        });
+        // REST. Its own focus said "Full rest or light walk" while it pushed a
+        // recovery session — the day is now what the words said it was.
       } else if (supportSlotsRemaining > 0) {
         plan.push({
           tier: 'optional',
@@ -2191,17 +2193,9 @@ function buildWeeklyPlan(
           stressLevel: 'low',
         });
         supportSlotsRemaining--;
-      } else {
-        plan.push({
-          tier: 'recovery',
-          focus: lighterByeWeek
-            ? 'Recovery and mobility (lighter bye week)'
-            : 'Mobility, foam rolling, light movement',
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          stressLevel: 'low',
-        });
       }
+      // Every other bye-week day is REST. It used to be a recovery session with
+      // no authored source behind it.
     }
 
   } else {
@@ -5091,13 +5085,10 @@ function buildWeeklyPlan(
           slotPos: pos,
         });
         if (!condDecision.place) {
-          plan.push({
-            tier: 'recovery',
-            focus: 'Mobility, foam rolling, light movement',
-            dayOfWeek: slot.dayName,
-            isHardExposure: false,
-            stressLevel: 'low',
-          });
+          // The scorer declined to place conditioning here, so the day is REST.
+          // It used to become a recovery session — the decline turned into a
+          // placement, which is the shape the charter forbids.
+          if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
           st.recCount++;
           updateStressStreak('low', isConsecutiveDay);
           st.prevSlotDayNum = pos;
@@ -5164,15 +5155,14 @@ function buildWeeklyPlan(
         updateStressStreak(accessoryStress, isConsecutiveDay);
 
       } else {
-        // REC or fallback
+        // REC or fallback → the day is REST. The scorer's REC choice still
+        // happens and is still budgeted exactly as before; what changed is that
+        // choosing it now LEAVES THE DAY FREE instead of materialising a
+        // recovery session the athlete never asked for. Keeping the counting
+        // identical is deliberate: the same days come out light, so this is a
+        // deletion of a placement and not a re-planning of the week.
         const recoveryStress = candidateStress('REC', pos, slot.isTeamDay);
-        plan.push({
-          tier: 'recovery',
-          focus: buildFocus('REC'),
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          stressLevel: recoveryStress,
-        });
+        if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
         st.recCount++;
         updateStressStreak(recoveryStress, isConsecutiveDay);
       }
@@ -5935,7 +5925,7 @@ function buildWeeklyPlan(
       const isG1 = hasGameThisWeek && offset === -1;
       if (focusLc.startsWith('low-fatigue accessories')
         || focusLc.startsWith('mobility, foam rolling')
-        || focusLc.startsWith('full rest')) {
+        || focusLc.startsWith(TEAM_DAY_PLACEHOLDER_FOCUS.toLowerCase())) {
         s.focus = isG1
           ? 'Team training - captain\u2019s run (walkthrough, low-load)'
           : 'Team training - field session (sprint + skills + contact)';
@@ -6358,6 +6348,43 @@ function buildWeeklyPlan(
       }
     }
 
+    // ── A FREE DAY IS REPAIR CAPACITY (Sam's charter, 2026-07-30) ──
+    //
+    // Every shortfall repair below reaches its day through an EXISTING
+    // allocation it can overwrite — `tier === 'recovery' || 'optional'`. That
+    // was invisible while the generator filled every spare day with a recovery
+    // session: the repair always had raw material because the app had always
+    // put something there.
+    //
+    // Deleting those placements starved it, and the failure was silent in the
+    // worst way — an `in_season_bye_recovery` week came out with ONE main
+    // strength exposure where the contract required two, because the day that
+    // used to carry the second one now carried nothing and the repair could not
+    // see a day it could not overwrite.
+    //
+    // The premise was backwards. An EMPTY day is MORE available than a recovery
+    // day, not less. So free days enter the candidate pool as blank placeholders
+    // and any that no repair claims are dropped again below — the week gains a
+    // session only where a contract requirement actually needed one.
+    const repairPlaceholders = new Set<SessionAllocation>();
+    {
+      const occupiedDays = new Set(adjusted.map((session) => session.dayOfWeek));
+      for (const slot of daySlots) {
+        if (occupiedDays.has(slot.dayName)) continue;
+        const placeholder: SessionAllocation = {
+          tier: 'optional',
+          focus: '',
+          dayOfWeek: slot.dayName,
+          isHardExposure: false,
+          stressLevel: 'low',
+        };
+        repairPlaceholders.add(placeholder);
+        adjusted.push(placeholder);
+      }
+      adjusted.sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
+      validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+    }
+
     let strengthShortfall = Math.max(
       0,
       weeklyExposureContract.strength.targetCount - validation.ledger.achieved.main_strength,
@@ -6466,6 +6493,30 @@ function buildWeeklyPlan(
         strengthShortfall--;
       }
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+    }
+
+    // THE PLACEHOLDERS LEAVE HERE, before any other shortfall repair sees them.
+    //
+    // Scoped to REQUIRED STRENGTH deliberately. Leaving them in for the
+    // conditioning repair let it build a standalone conditioning day on a free
+    // slot where it would otherwise have attached a combined component — and
+    // because `allowCombinedStrengthConditioning` moves with capacity, the week's
+    // shape then moved with capacity too. `readinessDoseSweepTests` caught it as
+    // `prescribedSessions 3 -> 4 @low`, which is Sam's readiness law ("capacity
+    // never changes the shape of the week") breaking by side effect.
+    //
+    // Main strength was the domain that actually starved when the uninvited
+    // recovery placements went, so that is the only domain the extra capacity is
+    // handed to. Anything unclaimed goes back to rest.
+    if (repairPlaceholders.size > 0) {
+      const claimed = (session: SessionAllocation): boolean =>
+        plannedPatternsForAllocation(session).length > 0;
+      const beforeCleanup = adjusted.length;
+      adjusted = adjusted.filter((session) =>
+        !repairPlaceholders.has(session) || claimed(session));
+      if (adjusted.length !== beforeCleanup) {
+        validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+      }
     }
 
     let conditioningShortfall = Math.max(
@@ -7809,12 +7860,16 @@ function enforceAdjacentRegionLimit(
         if (isTeamDay(result[idx])) continue;
         if (ownsProtectedStrength(result[idx])) continue;
         if (result[idx].tier === 'optional') {
+          // NEUTRALISE, do not convert. Dropping the strength pattern is what
+          // makes the day neutral for adjacency; the old code ALSO retyped the
+          // session as recovery, which placed recovery uninvited to solve a
+          // clustering problem. It stays optional accessory work — Bible-invited,
+          // and the same day is just as neutral.
           result[idx] = {
             ...result[idx],
-            focus: 'Mobility, foam rolling, light movement',
-            tier: 'recovery',
+            focus: 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
             isHardExposure: false,
-            // Mobility ≠ strength exposure — drop any pattern the session
+            // Accessories ≠ strength exposure — drop any pattern the session
             // previously carried so invariants don't over-count.
             strengthPattern: undefined,
             strengthIntent: undefined,
@@ -8125,6 +8180,37 @@ function buildAIConstraints(
     maxExercisesPerSession: trainingAgePolicy.maxExercisesPerStrengthSession,
     notes,
     weeklyExposureContract,
+  };
+}
+
+/**
+ * A TEAM DAY IS NEVER REST.
+ *
+ * Team training is a FACT about the athlete's week — the club places it, not the
+ * app — so a team day always carries an allocation even when the app prescribes
+ * nothing extra on it. This focus is the placeholder that says exactly that, and
+ * the team-day label pass above wholesale-replaces it with the real team session
+ * (or the G-1 captain's run).
+ *
+ * IT IS A NAMED CONSTANT BECAUSE IT USED TO BE A COUPLING NOBODY COULD SEE. The
+ * placeholder was previously a recovery session — `tier: 'recovery'`, focus
+ * "Mobility, foam rolling, light movement" — and the label pass recognised it by
+ * matching that string. So deleting the generator's uninvited recovery
+ * placements (Sam's charter, 2026-07-30) silently deleted the TEAM SESSION on
+ * any team day the app had nothing else for: `section18PhasePlannerTests`
+ * scenario 29 caught a pre-season week that lost its third team training day
+ * entirely. One end of a two-ended string match is not a coupling anyone can
+ * maintain; both ends now read this.
+ */
+const TEAM_DAY_PLACEHOLDER_FOCUS = 'Full rest';
+
+function teamDayPlaceholderAllocation(dayName: string): SessionAllocation {
+  return {
+    tier: 'optional',
+    focus: TEAM_DAY_PLACEHOLDER_FOCUS,
+    dayOfWeek: dayName,
+    isHardExposure: false,
+    stressLevel: 'low',
   };
 }
 
