@@ -164,20 +164,18 @@ export function motivationDisplay(resolved: ResolvedMotivation): string {
 }
 
 /**
- * What `programmingBias` reads.
+ * What `programmingBias` reads: the authored labels, and NOTHING ELSE.
  *
- * The bias matches SUBSTRINGS over goal text ('injury', 'speed', 'muscle', …), so the
- * tokens it receives are the authored labels — unchanged from what the split used to hand
- * it, which is why this migration moves no athlete's program.
+ * SAM'S RULING, SIGNED 2026-07-31: goals "Other" = COACH-CONTEXT ONLY. Free text never
+ * generates a programming lean — the program leans only on the authored goal list. Same
+ * law as injury Other: never store-and-pretend. The free text still reaches the coach as
+ * flavour, through `motivationDisplay` — the coach prompt's `motivation` field — which
+ * `motivationGoalsTests` pins so the flavour channel cannot be cut silently.
  *
- * The free text is still passed through, deliberately and behaviour-preservingly: it did
- * reach the bias before, and silently cutting it off would be a programming change riding
- * inside a storage change. Whether it SHOULD reach the bias is a live question for Sam —
- * see the boundary report; it is the goals-side twin of the injury "Other" partial swallow
- * (`docs/INJURY_OTHER_PATH_TRACE_2026-07-30.md`).
+ * This closes the question the typed-goals migration left open on purpose: it passed the
+ * prose through behaviour-preservingly ("get fit, feel good" leaned freshness) and named
+ * the passthrough for ruling rather than deciding it inside a storage change.
  */
 export function motivationBiasTokens(resolved: ResolvedMotivation): string[] {
-  const tokens = resolved.goals.map(motivationGoalLabel);
-  if (resolved.other) tokens.push(resolved.other);
-  return tokens;
+  return resolved.goals.map(motivationGoalLabel);
 }
