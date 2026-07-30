@@ -13,6 +13,20 @@
 import type { Workout } from '../types/domain';
 import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import {
+  MOBILITY_FLOW_TEMPLATES,
+  type MobilityFlowMovement,
+} from '../data/mobilityFlowTemplates';
+
+/**
+ * Sam's ruling: the Mobility door offers 5-8 exercises.
+ *
+ * A window, not a target — the flows are authored at the length they are
+ * authored, and the door offers the ones that fit rather than padding or
+ * truncating one that does not.
+ */
+export const MOBILITY_DOOR_MIN_MOVEMENTS = 5;
+export const MOBILITY_DOOR_MAX_MOVEMENTS = 8;
+import {
   createStrengthIntent,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
@@ -34,7 +48,7 @@ export interface CoachRevisionTemplateDefinition {
    *  'strength' / 'accessories' = ENGINE-GENERATED via buildTagAwareSession
    *  / buildDerivedSession — the same principles as weekly programming
    *  (tag scoring, game proximity, injury filters). Sheet v2 phase 4. */
-  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories';
+  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories' | 'mobility';
   byeOnly: boolean;
   durationMinutes: number;
   /** True when the built content varies by DATE (engine-generated) — the
@@ -47,6 +61,8 @@ export interface CoachRevisionTemplateDefinition {
   strengthIntent?: StrengthIntent;
   /** Derived-session type for buildDerivedSession (accessories only). */
   derivedType?: 'arms_pump' | 'prehab_accessories';
+  /** Which authored flow backs this template (mobility only). */
+  mobilityFlowId?: string;
 }
 
 const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
@@ -121,6 +137,30 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: true,
     durationMinutes: 28,
   },
+  // ── Mobility: the athlete's own door onto Sam's authored flows ──
+  //
+  // ONE TEMPLATE PER AUTHORED FLOW, derived rather than transcribed — same rule
+  // as the seven strength variants, and for the same reason: a flow Sam authored
+  // that no door can reach is the defect this stage exists to close.
+  //
+  // THE 5-EXERCISE FLOOR IS A FILTER, NOT A PAD. Sam ruled the door offers 5-8
+  // exercises. `hips-adductors-groin-reset` carries 4, so it is NOT OFFERED —
+  // the app does not top it up from another flow to reach five, because "the app
+  // never invents to fill a quota" is his ruling and it does not stop at
+  // gunshows. Flagged for him: the honest alternatives are to amend that
+  // template or to lower the floor, and both are his call, not a builder's.
+  ...MOBILITY_FLOW_TEMPLATES
+    .filter((flow) => flow.movements.length >= MOBILITY_DOOR_MIN_MOVEMENTS
+      && flow.movements.length <= MOBILITY_DOOR_MAX_MOVEMENTS)
+    .map((flow): CoachRevisionTemplateDefinition => ({
+      templateId: `mobility_${flow.id.replace(/-/g, '_')}`,
+      label: flow.name,
+      description: `${flow.durationMinutes}min mobility flow - ${flow.movements.length} movements, easy ranges only.`,
+      category: 'mobility',
+      byeOnly: false,
+      durationMinutes: flow.durationMinutes,
+      mobilityFlowId: flow.id,
+    })),
   // ── Recovery: restore, never load ──
   {
     templateId: 'recovery_flow',
@@ -283,6 +323,9 @@ export function buildCoachRevisionTemplateWorkout(
 ): Workout | null {
   const def = definitionById(templateId);
   if (!def) return null;
+  if (def.category === 'mobility') {
+    return buildMobilityTemplateWorkout(def, date);
+  }
   if (def.category === 'recovery') {
     return buildRecoveryTemplateWorkout(def, date);
   }
@@ -329,6 +372,79 @@ export function buildCoachRevisionTemplateWorkout(
           name: row.name,
           description: row.notes,
           exerciseType: 'Conditioning',
+          muscleGroups: [],
+          equipmentRequired: [],
+          difficultyLevel: 'Beginner',
+          createdAt: '',
+          updatedAt: '',
+        },
+        createdAt: '',
+        updatedAt: '',
+      } as any;
+    }),
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
+}
+
+/**
+ * A mobility flow, materialised from the authored template.
+ *
+ * NOTHING IS COMPOSED HERE. The movements, their order, their doses and their
+ * count all come from `MOBILITY_FLOW_TEMPLATES` — Sam's data — and this function
+ * only turns them into rows. The doses are the flow's own warm-up prescriptions
+ * (`3 x 30-45s/side`, `1 x 8-10 reps`), rendered by the same formatting the
+ * recovery add-on has always used, so a movement reads identically wherever the
+ * athlete meets it.
+ *
+ * Row ids are `template:<id>:<n>` so the writer recognises registry ownership,
+ * exactly as the strength and accessory templates do.
+ */
+function buildMobilityTemplateWorkout(
+  def: CoachRevisionTemplateDefinition,
+  date: string,
+): Workout | null {
+  const flow = MOBILITY_FLOW_TEMPLATES.find((entry) => entry.id === def.mobilityFlowId);
+  if (!flow) return null;
+  const workoutId = `template-${def.templateId}`;
+  return {
+    id: workoutId,
+    microcycleId: 'coach-template',
+    dayOfWeek: isoDateToDayOfWeek(date),
+    name: flow.name,
+    description: def.description,
+    durationMinutes: flow.durationMinutes,
+    intensity: 'Light',
+    // A mobility flow is not conditioning and not strength. `countsAs: 'recovery'`
+    // is the AUTHORED answer in the template itself, and the charter's counting
+    // row says the same thing: no load, never hard, never breaks rest.
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    hasCombinedConditioning: false,
+    exercises: flow.movements.map((movement: MobilityFlowMovement, index: number) => {
+      const rowId = `template:${def.templateId}:${index}`;
+      return {
+        id: rowId,
+        workoutId,
+        exerciseId: rowId,
+        exerciseOrder: index,
+        prescribedSets: movement.sets ?? 1,
+        prescribedRepsMin: movement.repsMin ?? movement.durationSecondsMin ?? 1,
+        prescribedRepsMax: movement.repsMax ?? movement.durationSecondsMax ?? 1,
+        restSeconds: 0,
+        notes: '',
+        section18Evidence: {
+          protocolVersion: 1,
+          role: 'recovery_support',
+          strengthPattern: null,
+          mainStrengthPattern: null,
+          provenance: 'canonical_row_classifier',
+        },
+        exercise: {
+          id: rowId,
+          name: movement.name,
+          description: '',
+          exerciseType: 'Flexibility',
           muscleGroups: [],
           equipmentRequired: [],
           difficultyLevel: 'Beginner',

@@ -122,11 +122,24 @@ const SESSION_SLOTS: Record<DerivedSessionType, SessionSlot[]> = {
     { category: 'calves',             count: 1 },  // General calf work; lower_prehab (tib raises) reserved for lower/recovery sessions
     { category: 'hamstring_light',     count: 1 },
   ],
+  // GUNSHOW — Sam's signed structure, 2026-07-30: 2 biceps + 2 triceps +
+  // 2 shoulder, and "shoulder" means the PUMP delts pool, not shoulder health.
+  //
+  // It used to be 2 + 2 + 1 delt + 1 UPPER BACK PUMP. That last slot is a
+  // CROSS-FAMILY TOP-UP — the app reaching outside the sixteen candidates Sam
+  // signed to fill a sixth slot — and it is what put "Face Pull" (from
+  // `UPPER_BACK_PUMP_POOL`) into a session whose signed shoulder family holds
+  // "Cable Face Pull". His ruling is explicit: under thin equipment a gunshow
+  // gets SMALLER, never padded; the app never invents to fill a quota. Found by
+  // `sessionTypeCharterTests` group D on its first run.
+  //
+  // Shrinking is already how `pickFromPool` behaves — it returns the whole pool
+  // when the pool is smaller than the slot count and never repeats to reach it —
+  // so removing the top-up is the entire fix.
   arms_pump: [
     { category: 'biceps',           count: 2 },
     { category: 'triceps',          count: 2 },
-    { category: 'delts',            count: 1 },
-    { category: 'upper_back_pump',  count: 1 },
+    { category: 'delts',            count: 2 },
   ],
 };
 
@@ -339,13 +352,39 @@ function pickFromPool(
 
 // ─── WorkoutExercise Builder ───
 
+/**
+ * ACCESSORY WORK SAYS SO, instead of being guessed at from its exercise names.
+ *
+ * Sam's ruling 2 is that gunshow, prehab and accessories are never hard days,
+ * and `sessionTypeCharterTests` found the app breaking it: a built
+ * "Prehab & Accessories" session classified as `lower_strength` at HIGH stress
+ * and took a hard day off the week's budget. The mechanism was pure inference —
+ * the session draws Cossack Squat from the groin pool, the exercise tagger reads
+ * a squat exposure, and one accessory movement re-typed the whole session.
+ *
+ * The rows carried NO Section 18 evidence at all, so every consumer downstream
+ * had to guess. They now declare `strength_accessory`, which is what they are:
+ * the evaluator counts them as accessory (never main strength, never a hard
+ * day), and the guess has nothing left to do. A typed fact instead of a
+ * heuristic is the charter's whole point.
+ */
+const ACCESSORY_ROW_EVIDENCE = {
+  protocolVersion: 1,
+  role: 'strength_accessory',
+  strengthPattern: null,
+  mainStrengthPattern: null,
+  provenance: 'canonical_row_classifier',
+} as const;
+
 function poolExerciseToWorkoutExercise(
   pe: PoolExercise,
   workoutId: string,
   order: number,
+  section18Evidence?: WorkoutExercise['section18Evidence'],
 ): WorkoutExercise {
   const now = new Date().toISOString();
   return {
+    ...(section18Evidence ? { section18Evidence } : {}),
     id: `${workoutId}-ex-${order}`,
     workoutId,
     exerciseId: pe.id,
@@ -428,7 +467,12 @@ export function buildDerivedSession(
     const picks = pickFromPool(filtered, slot.count, slotSeed);
 
     for (const pe of picks) {
-      exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order));
+      // Recovery sessions already carry their identity in `workoutType`; the
+      // ACCESSORY types are the ones that were being inferred from content.
+      const evidence = type === 'prehab_accessories' || type === 'arms_pump'
+        ? ACCESSORY_ROW_EVIDENCE
+        : undefined;
+      exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order, evidence));
       order++;
     }
 

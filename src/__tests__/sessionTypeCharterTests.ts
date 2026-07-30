@@ -297,7 +297,14 @@ const REPRESENTATIVE: Readonly<Record<SessionTypeId, readonly string[]>> = {
   strength: ['strength_lower'],
   // Both, so `canBeHardDay` is observed against the template that could be hard.
   conditioning: ['easy_zone2_bike', 'metcon_offlegs'],
-  mobility: [],
+  // Mobility was UNOBSERVABLE until stage 4 built its door — no template, so no
+  // session, so no way to check any of its four answers against behaviour. The
+  // id is looked up rather than written down because there is one template per
+  // authored flow and their ids follow the flows, not this list.
+  mobility: listCoachRevisionTemplates()
+    .filter((template) => template.category === 'mobility')
+    .slice(0, 1)
+    .map((template) => template.templateId),
   prehab: ['accessories_prehab'],
   gunshow: ['accessories_pump'],
 };
@@ -432,35 +439,39 @@ run('C2. nothing outside strength and conditioning counts toward load', () => {
   }
 });
 
-run('C3. FOUND BY THIS GATE — the Accessories door builds a HARD strength day', () => {
-  // A DEFECT, PINNED RATHER THAN FIXED HERE, because fixing a Section 18
-  // classification is stage 4's door and not stage 1's charter.
+run('C3. the Accessories door is never a hard day (ruling 2)', () => {
+  // THE PIN, PAID. This cell asserted TODAY's behaviour with the defect named:
+  // `accessories_prehab` classified as `lower_strength` at HIGH stress and took
+  // a hard day off the week's budget, against Sam's ruling 2. The pin's own
+  // failure message said to rewrite it to the ruling when the door was fixed,
+  // and stage 4 fixed it.
   //
-  // The previous session verified Sam's ruling 2 ("gunshow, accessories, recovery
-  // and prehab are all NOT hard days") by READING the routing —
-  // `gunshow_prehab` -> `contributions.gunshow` -> `dayRecovery`, never
-  // `dayHard`. The routing is exactly as it was read. The sessions never reach
-  // it: `accessories_prehab` classifies as `lower_strength` at HIGH stress and
-  // takes a hard day, and `accessories_pump` classifies as `upper_strength`.
-  // NEITHER produces a `gunshow` contribution at all.
+  // THE FIX WAS TYPED EVIDENCE, NOT A NAME RULE. The rows carried no Section 18
+  // evidence at all, so every consumer inferred — and the session draws Cossack
+  // Squat from the groin pool, so one accessory movement re-typed the whole
+  // session as lower strength. Accessory rows now declare
+  // `role: 'strength_accessory'`, and the ledger stops guessing.
   //
-  // This is the AGENTS.md lesson with a live example: a check that reads code
-  // rather than behaviour is coupled to the code's shape, and the shape here was
-  // right while the behaviour was wrong. The cell asserts TODAY's behaviour so
-  // nothing drifts while stage 4 is pending — when the door is fixed, this cell
-  // fails and is rewritten to assert the ruling.
+  // STILL TRUE, AND STILL DEBT: the visible CLASSIFIER (`classifyVisibleSession`)
+  // continues to read the session as `upper_strength`/`lower_strength` rather
+  // than `gunshow_prehab`, because it works from names and exercises. That is
+  // the prehab/gunshow placement debt, and it is why this cell asserts the
+  // LEDGER — which is what the week's hard-day budget actually reads.
   const prehab = builtSession('accessories_prehab', FREE_DAY);
   const pump = builtSession('accessories_pump', FREE_DAY);
-  assert(prehab && pump, 'the Accessories door builds nothing — the pin has no subject');
-  const prehabClass = quiet(() => classifyVisibleSession(prehab));
-  const pumpClass = quiet(() => classifyVisibleSession(pump));
-  assert(prehabClass.contributions.gunshow === 0 && pumpClass.contributions.gunshow === 0,
-    'an Accessories session now produces a gunshow contribution. If stage 4 fixed the '
-    + 'classification, rewrite this cell to assert Sam\'s ruling 2 and lower the prehab '
-    + 'and gunshow debt — never one without the others.');
-  assert(evaluate([prehab]).ledger.restStress.hardDays.includes(FREE_DAY),
-    'a prehab session no longer takes a hard day. If that is the fix, rewrite this cell '
-    + 'to assert the ruling and lower the prehab counting debt in the same commit.');
+  assert(prehab && pump, 'the Accessories door builds nothing — the cell has no subject');
+  for (const [name, session] of [['prehab', prehab], ['gunshow', pump]] as const) {
+    const ledger = evaluate([session]).ledger;
+    assert(!ledger.restStress.hardDays.includes(FREE_DAY),
+      `an Accessories session (${name}) still takes a hard day. Ruling 2: gunshow, `
+      + 'accessories, recovery and prehab are never hard days.');
+    assert(ledger.mainStrength.achievedCount === EMPTY.ledger.mainStrength.achievedCount,
+      `an Accessories session (${name}) earned main-strength credit`);
+    assert(ledger.mainStrength.accessoryOnlySessionCount >
+      EMPTY.ledger.mainStrength.accessoryOnlySessionCount,
+      `${name} is not counted as accessory work at all — it is invisible to the `
+      + 'ledger rather than typed as accessory, which is a different thing');
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────────────

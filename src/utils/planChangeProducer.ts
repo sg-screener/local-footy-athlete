@@ -172,6 +172,7 @@ const CATEGORY_TEMPLATE_MATCH: Record<
   conditioning_light: (t) => t.category === 'flush',
   conditioning_hard: (t) => t.category === 'work_capacity',
   recovery: (t) => t.category === 'recovery',
+  mobility: (t) => t.category === 'mobility',
   // THE THREE DOORS ARE A PARTITION OF THE SEVEN (Sam's charter, 2026-07-30).
   //
   // These were three hand-maintained templateId lists, and they were WRONG the
@@ -197,6 +198,13 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   recovery: {
     label: 'Recovery',
     sub: 'Rolling, mobility, easy movement, breathing',
+  },
+  // PROPOSED, NOT YET SIGNED — goes to Sam with the stage 5 copy batch
+  // (artifacts/COPY_SHEET_RULINGS_2026-07-30.md). Written in the voice of the
+  // six beside it; the Title Case label follows his batch-1 capitalisation rule.
+  mobility: {
+    label: 'Mobility',
+    sub: 'A flow to loosen up - easy ranges only',
   },
   strength_upper: {
     label: 'Upper body',
@@ -239,7 +247,11 @@ function hasProtectedAnchors(snap: CoachVisibleDaySnapshot): boolean {
 }
 
 function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSessionKind {
-  if (category === 'recovery') return 'recovery';
+  // Mobility joins recovery as a RECOVERY-kind part: no load, never hard, never
+  // breaks rest (Sam's charter). The visible-kind vocabulary has no separate
+  // `mobility` member and does not need one — `kind` exists so the ledger can
+  // ask what counts, and the two answer that question identically.
+  if (category === 'recovery' || category === 'mobility') return 'recovery';
   if (category.startsWith('strength_') || category === 'accessories') return 'strength';
   return 'conditioning';
 }

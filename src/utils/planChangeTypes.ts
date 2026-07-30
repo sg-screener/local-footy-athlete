@@ -34,6 +34,11 @@ export const PLAN_CHANGE_CATEGORY_IDS = [
   'conditioning_light',
   'conditioning_hard',
   'recovery',
+  // MOBILITY (Sam's charter, stage 4). The Bible grants it outright at :122 —
+  // "you can always add a recovery or mobility flow to any day as optional" —
+  // and ten authored templates existed for months, reachable only as an add-on
+  // INSIDE recovery. The athlete's vocabulary was five wide where Sam's is seven.
+  'mobility',
   'strength_upper',
   'strength_lower',
   'strength_full',

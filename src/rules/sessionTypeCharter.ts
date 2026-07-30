@@ -287,7 +287,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
   mobility: {
     id: 'mobility',
     placedBy: ['athlete'],
-    chosenBy: { categories: [], otherDoor: 'a Mobility category — NOT BUILT (stage 4)' },
+    chosenBy: { categories: ['mobility'], otherDoor: null },
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
@@ -315,7 +315,8 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       kind: 'authored',
       source: 'data/exercisePools.ts GROIN_ADDUCTORS_POOL, CALVES_POOL, '
         + 'LOWER_PREHAB_POOL, TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL, '
-        + 'HAMSTRING_LIGHT_POOL',
+        + 'HAMSTRING_LIGHT_POOL, shaped one-per-region by '
+        + 'utils/sessionBuilder.ts SESSION_SLOTS.prehab_accessories',
       count: 36,
       sessionVariants: null,
     },
@@ -341,7 +342,8 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
-      source: 'data/exercisePools.ts BICEPS_POOL (5) + TRICEPS_POOL (5) + DELTS_POOL (6)',
+      source: 'data/exercisePools.ts BICEPS_POOL (5) + TRICEPS_POOL (5) + DELTS_POOL (6), '
+        + 'composed 2 + 2 + 2 by utils/sessionBuilder.ts SESSION_SLOTS.arms_pump',
       count: 16,
       sessionVariants: null,
     },
@@ -400,27 +402,6 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
       + 'place a mobility session for the gate to see',
     paidBy: 'stage 4 — the Mobility door',
   },
-  {
-    type: 'mobility',
-    question: 'chooser',
-    deviation: 'no Mobility category exists; the templates are reachable only as '
-      + 'an add-on inside Recovery',
-    paidBy: 'stage 4 — the Mobility door',
-  },
-  {
-    type: 'mobility',
-    question: 'counting',
-    deviation: 'unobservable — there is no mobility session builder, so the '
-      + 'charter\'s counting answer cannot be checked against behaviour at all',
-    paidBy: 'stage 4 — the Mobility door',
-  },
-  {
-    type: 'mobility',
-    question: 'composition',
-    deviation: 'unobservable — the ten authored templates exist and nothing builds '
-      + 'a session from them, so there are no contents to trace',
-    paidBy: 'stage 4 — the Mobility door',
-  },
 
   // ── Prehab: authored vocabulary, unattributable placement ──
   {
@@ -432,14 +413,6 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
       + '`gunshow_prehab` category at all: it classifies as `lower_strength`',
     paidBy: 'stage 4 — the Accessories door',
   },
-  {
-    type: 'prehab',
-    question: 'counting',
-    deviation: 'a day carrying only prehab is excluded from the rest quota, AND the '
-      + 'session the Accessories door builds is classified `lower_strength` at HIGH '
-      + 'stress, so it consumes a hard day — against Sam\'s ruling 2',
-    paidBy: 'stage 2 (rest quota) and stage 4 (the hard-day misclassification)',
-  },
 
   // ── Gunshow: the app draws a name Sam did not sign ──
   {
@@ -448,14 +421,6 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
     deviation: 'unattributable — `gunshow_prehab` is ONE SessionCategory covering '
       + 'both types, there is no `tier: gunshow` anywhere, and the session the '
       + 'Accessories door builds classifies as `upper_strength` instead',
-    paidBy: 'stage 4 — the Accessories door',
-  },
-  {
-    type: 'gunshow',
-    question: 'composition',
-    deviation: 'the built session draws "Face Pull" from UPPER_BACK_PUMP_POOL — a '
-      + 'seventeenth name outside the sixteen Sam signed, and a CROSS-FAMILY draw '
-      + 'against his no-top-ups ruling',
     paidBy: 'stage 4 — the Accessories door',
   },
 
@@ -475,9 +440,9 @@ export const CHARTER_DEBT_CEILING: Readonly<Record<SessionTypeId, number>> = {
   recovery: 1,
   strength: 0,
   conditioning: 1,
-  mobility: 4,
-  prehab: 2,
-  gunshow: 2,
+  mobility: 1,
+  prehab: 1,
+  gunshow: 1,
 };
 
 /** Debt entries for one type. */
