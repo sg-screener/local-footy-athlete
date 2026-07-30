@@ -36,7 +36,16 @@
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import { getSessionComponents } from '../utils/sessionComponents';
-import { signedCopy, type SignedCopy } from './signedCopy';
+import { composeDayDetail, type ComposedDayDetail } from '../utils/dayDetailComposition';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { resolveSessionDisplayName } from '../utils/sessionNaming';
+import {
+  exerciseCueCopyId,
+  exerciseNameCopyId,
+  registerProjectionCopy,
+  STRENGTH_HEADLINE_ID_BY_LABEL,
+} from './projectionCopy';
+import { signedCopy, signedCopyEntry, type SignedCopy } from './signedCopy';
 import {
   PART_COUNTS_TOWARD_LOAD,
   type DayCapabilities,
@@ -46,8 +55,14 @@ import {
   type VisibleDayOwner,
   type VisiblePart,
   type VisiblePartKind,
+  type VisibleRow,
   type VisibleWeek,
 } from './visibleProjection';
+
+// Registered once at module load, so every call to `project()` — the first
+// one included — finds its vocabulary already there. Idempotent: see
+// `registerProjectionCopy`'s own guard.
+registerProjectionCopy();
 
 /**
  * The structural half of a day — everything that needs no vocabulary.
@@ -121,17 +136,106 @@ function partCapabilities(kind: VisiblePartKind): PartCapabilities {
   };
 }
 
+/**
+ * The row-level rescue: same numbers, an authored template.
+ *
+ * Reuses the SHAPE `dayWorkoutHelpers.formatStrengthSetsReps` /
+ * `formatRecoveryPrescription` already ship — sets×reps and duration are the
+ * two dominant row shapes across strength/support/conditioning rows. A shape
+ * not covered here (distance, tempo, per-side) falls through to
+ * `row.prescription.unspecified` rather than inventing a template for it; see
+ * `projectionCopy.ts`'s header and the task report for that scope note.
+ */
+function prescriptionCopy(row: any): SignedCopy {
+  const sets = Number(row?.prescribedSets);
+  const min = Number(row?.prescribedRepsMin);
+  const max = Number(row?.prescribedRepsMax);
+  const hasRange = Number.isFinite(min) && Number.isFinite(max);
+  const pType = row?.prescriptionType;
+  if (pType === 'duration_minutes' && hasRange) {
+    return min === max
+      ? signedCopy('row.prescription.duration_minutes', { minutes: min })
+      : signedCopy('row.prescription.duration_minutes_range', { min, max });
+  }
+  if (pType === 'duration' && hasRange) {
+    return min === max
+      ? signedCopy('row.prescription.duration_seconds', { seconds: min })
+      : signedCopy('row.prescription.duration_seconds_range', { min, max });
+  }
+  if (Number.isFinite(sets) && hasRange) {
+    return min === max
+      ? signedCopy('row.prescription.sets_reps', { sets, reps: min })
+      : signedCopy('row.prescription.sets_reps_range', { sets, min, max });
+  }
+  return signedCopy('row.prescription.unspecified');
+}
+
+/**
+ * A raw row's exercise name, as `SignedCopy`.
+ *
+ * Never composed: most names a builder emits are members of the locked
+ * vocabulary (`selectableExerciseVocabulary.ts`, exercise-name-literal-lock
+ * unit) or the small conditioning-equipment-substitution set — both
+ * bulk-registered by `projectionCopy.ts`. Canonicalising before lookup handles
+ * spelling/case variants the same way `hasCuratedCue` already does. A name
+ * that traces to neither falls to the generic `exercise.name.unlisted`
+ * placeholder rather than throwing — `project()` must not throw for a
+ * generated week, and a generic word is honest about the gap where an
+ * invented one would not be.
+ */
+function rowName(row: any): SignedCopy {
+  const raw = String(row?.exercise?.name ?? row?.name ?? '');
+  const canonical = canonicalExerciseName(raw);
+  const id = exerciseNameCopyId(canonical);
+  return signedCopyEntry(id) ? signedCopy(id) : signedCopy('exercise.name.unlisted');
+}
+
+function rowCue(row: any): SignedCopy | null {
+  const raw = String(row?.exercise?.name ?? row?.name ?? '');
+  const canonical = canonicalExerciseName(raw);
+  const id = exerciseCueCopyId(canonical);
+  return id ? signedCopy(id) : null;
+}
+
+function toVisibleRows(rows: readonly any[]): VisibleRow[] {
+  return rows.map((row, index) => ({
+    id: String(row?.id ?? `${index}`),
+    name: rowName(row),
+    prescription: prescriptionCopy(row),
+    cue: rowCue(row),
+  }));
+}
+
+/**
+ * The rows a part shows, from the SAME derivation the day-detail screen uses.
+ *
+ * `composeDayDetail` is `useDayWorkout`'s composition, extracted so a harness
+ * can call it (`dayDetailCompositionOwnershipTests.ts`). Calling it here makes
+ * this projection its SECOND caller — the pin now names both, and Task 6
+ * shrinks it back to one (the projection) once the screen renders from
+ * `project()` instead of composing its own detail. Kinds with no row-level
+ * surface in `composeDayDetail` today (recovery, team_training, power, speed,
+ * game) get `[]`, matching what the existing screen shows for them.
+ */
+function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): VisibleRow[] {
+  if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
+  if (kind === 'support') return toVisibleRows(composed.supportExercises);
+  if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
+  return [];
+}
+
 function partsForWorkout(
   date: string,
   workout: Workout | null | undefined,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
+  const composed = composeDayDetail(workout, workout);
   return getSessionComponents(workout).map((component) => {
     const kind = COMPONENT_TO_PART[String(component.id)] ?? 'strength';
     return {
       id: `${date}:${String(component.id)}`,
       kind,
-      rows: [],
+      rows: rowsForKind(kind, composed),
       capabilities: partCapabilities(kind),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],
     };
@@ -196,7 +300,13 @@ export function project(args: {
         headline: dayHeadline(day.kind, source),
         parts: day.parts.map((part): VisiblePart => ({
           ...part,
-          headline: signedCopy(`part.headline.${part.kind}`),
+          headline: partHeadline(part.kind, source.workout, part.rows),
+          // Ambiguity resolution (Sam, as controller, 2026-07-31): populate from a
+          // part's existing signed sub-line where one exists, otherwise null — do
+          // not invent prose. No reliable authored sub-line source is wired to an
+          // arbitrary part yet, so every part gets `null` in this task; a future
+          // task can wire one in (e.g. `ConditioningVisibleIdentity.doseLabel`)
+          // without this shape changing.
           detail: null,
         })),
         capabilities: {
@@ -220,4 +330,37 @@ export function project(args: {
  */
 function dayHeadline(kind: VisibleDayKind, _day: ResolvedDay): SignedCopy {
   return signedCopy(`day.headline.${kind}`);
+}
+
+/**
+ * A part's one name.
+ *
+ * Looked up by KIND first (`part.headline.<kind>`, a generic fallback that
+ * always resolves), with ONE specific-name resolution ahead of it: a strength
+ * part's name is the pinned `canonicalStrengthLabel` output for its own typed
+ * `strengthIntent` — reusing `resolveSessionDisplayName`, the EXISTING single
+ * naming authority (`sessionNaming.ts`), rather than re-deriving movement
+ * patterns here and becoming a second one. When that authority's answer is not
+ * one of the seven pinned names (a gunshow/prehab/mobility variant, or a
+ * legacy session with no typed intent), it falls through to the generic
+ * "Strength" fallback rather than passing unregistered text through — see
+ * `projectionCopy.ts`'s module header ("SCOPE NOTE") for why conditioning gets
+ * the same generic treatment rather than a specific resolution in this task.
+ */
+function partHeadline(
+  kind: VisiblePartKind,
+  workout: Workout | null | undefined,
+  rows: readonly VisibleRow[],
+): SignedCopy {
+  if (kind === 'strength') {
+    const resolved = resolveSessionDisplayName({
+      strengthIntent: workout?.strengthIntent,
+      exercises: rows.map((row) => ({ name: row.name })),
+      isTeamDay: false,
+      tier: 'core',
+    }).trim();
+    const id = STRENGTH_HEADLINE_ID_BY_LABEL.get(resolved);
+    if (id) return signedCopy(id);
+  }
+  return signedCopy(`part.headline.${kind}`);
 }

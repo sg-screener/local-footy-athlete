@@ -93,7 +93,7 @@ import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { composeDayDetail } from '../utils/dayDetailComposition';
-import { projectParts } from '../rules/projectVisibleWeek';
+import { project } from '../rules/projectVisibleWeek';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -233,12 +233,15 @@ function detailStory(workout: Workout | null | undefined): {
 /**
  * The CANONICAL parts, from `project()` — the one projection.
  *
- * `projectParts` rather than `project` because these laws are structural and must
- * not wait on Sam's copy rulings; it is the same derivation with the copy lookup
- * not yet applied, not a second one.
+ * `project()`, not `projectParts()`, since the buttons/UI unit's Task 2: with a
+ * full registered vocabulary and populated rows, `project()` no longer throws
+ * for a real week, so there is no reason left to read the words-not-yet-applied
+ * half of the derivation here. Evaluating the fuller function also means a
+ * regression that only shows up once words are involved (an unregistered
+ * headline, an empty `rows` array) would be visible to this suite too.
  */
 function canonicalPartKinds(week: string, date: string): string[] {
-  const projected = projectParts({ week: projectedWeek(week), weekStart: week });
+  const projected = project({ week: projectedWeek(week), weekStart: week });
   const day = projected.days.find((candidate) => candidate.date === date);
   return (day?.parts ?? []).map((part) => part.kind);
 }

@@ -51,7 +51,7 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { project, projectParts } from '../rules/projectVisibleWeek';
-import { UnsignedCopyError } from '../rules/signedCopy';
+import { UnsignedCopyError, isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
 import { samExport8Profile, SAM_EXPORT_8_TODAY_ISO, SAM_EXPORT_8_CURRENT_WEEK } from './support/samDeviceExport8Fixture';
 
@@ -131,25 +131,41 @@ run('project() agrees with the derivation it succeeds, every day', () => {
   }
 });
 
-run('project() and projectParts() are one derivation, not two', () => {
+run('project() evaluates without throwing and every headline is registered copy', () => {
+  // TASK 2 (buttons/UI unit, 2026-07-31): `project()` now has a full registered
+  // vocabulary (`projectionCopy.ts`) and rows populated, so the positive claim
+  // replaces the old exception-tolerant one — a THROW here is now a real
+  // regression, not an accepted outcome. Still proves `project()` and
+  // `projectParts()` are one derivation, not two: their part counts must agree.
   world();
   for (const week of WEEKS) {
     const days = projected(week);
     const structural = projectParts({ week: days, weekStart: week });
-    // `project` adds words to `projectParts`; with no words signed it must raise
-    // rather than diverge. Either behaviour proves they share one derivation —
-    // silently returning a DIFFERENT structure would not.
-    let threw: unknown = null;
-    try { project({ week: days, weekStart: week }); } catch (error) { threw = error; }
-    if (threw === null) {
-      const full = project({ week: days, weekStart: week });
-      for (const [index, day] of full.days.entries()) {
-        assert(day.parts.length === structural.days[index].parts.length,
-          `${day.date}: project() and projectParts() disagree about part count`);
+    const visible = project({ week: days, weekStart: week });
+    assert(visible.days.length === structural.days.length,
+      `${week}: project() produced ${visible.days.length} days, projectParts() `
+      + `${structural.days.length}`);
+    for (const [index, day] of visible.days.entries()) {
+      assert(isSignedCopyText(day.headline),
+        `${day.date}: unregistered day headline "${day.headline}"`);
+      assert(day.parts.length === structural.days[index].parts.length,
+        `${day.date}: project() and projectParts() disagree about part count — one `
+        + 'derivation, not two');
+      for (const part of day.parts) {
+        assert(isSignedCopyText(part.headline),
+          `${day.date}/${part.id}: unregistered part headline "${part.headline}"`);
+        assert(Array.isArray(part.rows), `${day.date}/${part.id}: rows is not an array`);
+        for (const row of part.rows) {
+          assert(isSignedCopyText(row.name),
+            `${day.date}/${part.id}: unregistered row name "${row.name}"`);
+          assert(isSignedCopyText(row.prescription),
+            `${day.date}/${part.id}: unregistered row prescription "${row.prescription}"`);
+          if (row.cue) {
+            assert(isSignedCopyText(row.cue),
+              `${day.date}/${part.id}: unregistered row cue "${row.cue}"`);
+          }
+        }
       }
-    } else {
-      assert(threw instanceof UnsignedCopyError,
-        `project() failed for a reason other than unsigned copy: ${String(threw)}`);
     }
   }
 });
@@ -204,14 +220,20 @@ run('rest is a kind, not an absence of parts', () => {
   }
 });
 
-run('project() will not invent a headline', () => {
-  world();
+run('an unregistered id still throws — the sheet is the only source', () => {
+  // TASK 2: `project()` now has a full registered vocabulary, so it no longer
+  // throws for real weeks (see the cell above). What must still throw is the
+  // constructor itself, for an id nobody registered — `signedCopy()` has no
+  // fallback, on purpose (`signedCopy.ts`'s header). A deliberately bogus id
+  // proves the guarantee without depending on which ids happen to be gaps
+  // today.
   let threw: unknown = null;
-  try { project({ week: projected(WEEK), weekStart: WEEK }); }
+  try { signedCopy('projection_ownership_tests.deliberately_bogus_id'); }
   catch (error) { threw = error; }
   assert(threw instanceof UnsignedCopyError,
-    'project() produced athlete-facing headlines with nothing signed. The words '
-    + 'must come from artifacts/COPY_SHEET_RULINGS_2026-07-30.md or not exist.');
+    'signedCopy() produced text for an id nobody registered. The words must come '
+    + 'from artifacts/COPY_SHEET_RULINGS_2026-07-30.md (via the registered sheet) or '
+    + 'not exist.');
 });
 
 console.log(`\nProjection ownership totals: ${passed} passed, ${failed} failed`);
