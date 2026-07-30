@@ -199,6 +199,101 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
       { file: 'utils/postGenerationConstraintValidation.ts', symbol: 'weekInBlock' },
     ],
   },
+  // ── THE SIGNED LAWS OF 2026-07-30 (Bible Section 20) ──
+  //
+  // Six amendments Sam signed on 2026-07-30, each cited in both directions. These
+  // are the first anchors whose Bible text was WRITTEN from a ruling rather than
+  // quoted from Sam's original prose, so the discipline matters more, not less: the
+  // registry quotes Section 20 verbatim and every site below carries its marker.
+  {
+    id: 'optional_placement_five_conditions',
+    section: 'Section 20.1 — The Optional Placement Law',
+    quote: 'The app may place optional work only when all five of these hold: there is a '
+      + 'placement rule Sam has authored, the composition is one Sam has authored, it is '
+      + 'rendered visibly optional, it is binnable in one tap, and it is never counted '
+      + 'toward compliance, load or rest. Optional work that fails any of the 5 conditions '
+      + 'is not placed at all.',
+    states: [5],
+    meaning: 'The app may not fill a spare day because the day is spare. Every optional '
+      + 'placement needs an authored rule and authored composition, and must count toward '
+      + 'nothing. Recovery fails three of the five, so the app does not place it.',
+    sites: [
+      { file: 'rules/sessionTypeCharter.ts', symbol: 'PlacementAuthority' },
+      { file: 'rules/optionalTopUp.ts', symbol: 'computeOptionalTopUps' },
+      { file: 'utils/optionalTopUpPlacement.ts', symbol: 'applyOptionalTopUps' },
+      { file: 'utils/sessionResolver.ts', symbol: 'resolveWeekWithConditioning' },
+    ],
+  },
+  {
+    id: 'rest_quota_counts_no_required_work',
+    section: 'Section 20.2 — The Rest Law',
+    quote: 'The rest quota counts days on which nothing was REQUIRED of the athlete. '
+      + 'Athlete-added optional work — recovery, mobility, prehab, gunshow — never breaks a '
+      + 'rest day. A day may be both rested and active, and the week reports both.',
+    statesNoNumbers: 'Categorical: the law defines WHICH days the quota counts, not how '
+      + 'many. The quota itself (1-2, or 3 in bye-recovery and early off-season) is '
+      + 'Section 2 and is unchanged by this law.',
+    states: [],
+    meaning: 'A day holding only optional work is still a rested day. The rest quota is '
+      + 'computed from required work, never from whether a day has a session on it.',
+    sites: [
+      { file: 'rules/section18EffectiveWeekEvaluator.ts', symbol: 'trueRestDays' },
+    ],
+  },
+  {
+    id: 'gunshow_two_two_two',
+    section: 'Section 20.3 — Gunshow',
+    quote: 'A gunshow is 2 biceps + 2 triceps + 2 shoulder, 2-3 sets each. "Shoulder" means '
+      + 'the pump delts pool, not shoulder health — shoulder health stays with Accessories. '
+      + 'Under restricted equipment a gunshow gets smaller, never padded. There are no '
+      + 'cross-family top-ups: the app never invents to fill a quota.',
+    states: [2, 3],
+    meaning: 'The signed gunshow structure. Six movements from three named pools, and under '
+      + 'thin equipment FEWER — never a substitute drawn from a fourth pool.',
+    sites: [
+      { file: 'utils/sessionBuilder.ts', symbol: 'SESSION_SLOTS' },
+    ],
+  },
+  {
+    id: 'mobility_composed_from_pool',
+    section: 'Section 20.4 — Mobility',
+    quote: 'A mobility session is COMPOSED from the mobility pool: 5-8 movements at their '
+      + 'authored warm-up doses, spread across lower, hips, midline and upper. No pre-built '
+      + 'flow sits between the pool and the athlete. It counts toward nothing — never a hard '
+      + 'day, no exposure credit, and it never breaks rest.',
+    states: [5, 8],
+    meaning: 'A mobility session is composed from Sam\'s twenty authored movements at his '
+      + 'authored doses, spread across the four signed regions. The ten flow bundles that '
+      + 'used to sit between the pool and the athlete are deleted.',
+    sites: [
+      { file: 'rules/mobilitySessionComposition.ts', symbol: 'composeMobilitySession' },
+    ],
+  },
+  {
+    id: 'seven_strength_sessions',
+    section: 'Section 20.5 — The Seven Strength Sessions',
+    quote: 'There are 7 strength sessions: Lower Squat, Lower Hinge, Lower Body Strength, '
+      + 'Upper Push, Upper Pull, Upper Body Strength, Full Body Strength. The athlete picks '
+      + 'Upper, Lower or Full Body; the app resolves the variant.',
+    states: [7],
+    meaning: 'The authored set of strength sessions. A variant the generator can build is a '
+      + 'variant a door can reach, because both derive from the same seven.',
+    sites: [
+      { file: 'data/strengthSessionVariants.ts', symbol: 'STRENGTH_SESSION_VARIANTS' },
+    ],
+  },
+  {
+    id: 'four_questions_signed_rule',
+    section: 'Section 20.6 — The Four Questions',
+    quote: 'No session type exists until 4 questions are answered: who may place it, who '
+      + 'chooses it, what it counts as, and who authored its contents.',
+    states: [4],
+    meaning: 'The shape of the session-type charter. For any type the app may place, "who '
+      + 'may place it" is answered by a signed placement rule and never by naming a layer.',
+    sites: [
+      { file: 'rules/sessionTypeCharter.ts', symbol: 'SESSION_TYPE_CHARTER' },
+    ],
+  },
 ];
 
 /* ══ Injury severity: one owner for the band edges ══ */

@@ -78,6 +78,7 @@ export interface StrengthSessionVariant {
   readonly templateId: string;
 }
 
+// BIBLE_ANCHOR: seven_strength_sessions
 export const STRENGTH_SESSION_VARIANTS: readonly StrengthSessionVariant[] = [
   {
     id: 'lower_squat',

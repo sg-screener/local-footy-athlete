@@ -1703,78 +1703,30 @@ export function resolveWeekWithConditioning(
     }
   }
 
-  // Pass 3: recovery placement on remaining empty days
-  // Count existing recovery sessions (including G+1 from game proximity)
-  let weekRecoveryCount = 0;
-  for (const day of result) {
-    if (day.workout?.workoutType === 'Recovery' || day.workout?.sessionTier === 'recovery') {
-      weekRecoveryCount++;
-    }
-  }
-
-  for (let i = 0; i < result.length; i++) {
-    const day = result[i];
-
-    // Only place recovery on truly empty days within the active block
-    if (day.workout !== null) continue;
-    if (day.source !== 'none') continue;
-    if (!blockStart || !blockEnd) continue;
-    if (day.date < blockStart || day.date > blockEnd) continue;
-
-    // HARD CONSTRAINT: never place sessions on unavailable days
-    if (!isDayAvailable(day.dayOfWeek)) continue;
-
-    // Compute game proximity for this date
-    const [y, m, d] = day.date.split('-').map(Number);
-    const dateMs = new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
-    let daysToGame: number | null = null;
-    let daysSinceGame: number | null = null;
-    for (const gd of gameDates) {
-      const [gy, gm, gdd] = gd.split('-').map(Number);
-      const gameMs = new Date(gy, gm - 1, gdd, 12, 0, 0, 0).getTime();
-      const diffDays = Math.round((gameMs - dateMs) / (1000 * 60 * 60 * 24));
-      if (diffDays > 0 && (daysToGame === null || diffDays < daysToGame)) {
-        daysToGame = diffDays;
-      }
-      if (diffDays < 0 && (daysSinceGame === null || -diffDays < daysSinceGame)) {
-        daysSinceGame = -diffDays;
-      }
-    }
-
-    // Check if high-tier conditioning was placed yesterday (stacking concern)
-    const yesterday = addDays(day.date, -1);
-    const recentHighTier = conditioningPlaced.some(
-      s => s.dateStr === yesterday && (s.tier === 'A' || s.tier === 'B-high'),
-    );
-
-    // Feedback pattern: prefer full rest over additional recovery
-    // if athlete has been reporting 'cooked' repeatedly and already has recovery
-    if (shouldPreferRest(weekPatternSummary, weekRecoveryCount)) {
-      continue; // leave this day empty — full rest
-    }
-
-    // Try recovery placement
-    const recoveryResult = resolveRecovery(
-      daysToGame,
-      daysSinceGame,
-      state.seasonPhase,
-      state.readiness || 'medium',
-      weekRecoveryCount,
-      recentHighTier,
-    );
-
-    if (recoveryResult) {
-      const recoveryWorkout = buildDerivedSession(
-        recoveryResult.derivedType,
-        day.date,
-        microcycleIdForDate(day.date, state),
-        `Scheduled recovery - ${recoveryResult.category}`,
-        state.athleteContext,
-      );
-      result[i] = buildDay(day.date, day.dayOfWeek, today, recoveryWorkout, 'recovery');
-      weekRecoveryCount++;
-    }
-  }
+  // ── PASS 3 IS GONE: THE NINTH RECOVERY PLACEMENT SITE ──
+  // BIBLE_ANCHOR: optional_placement_five_conditions
+  //
+  // It placed a derived recovery session on every remaining empty day, through
+  // `resolveRecovery(daysToGame, daysSinceGame, phase, readiness, count, ...)` — an
+  // app-invented rule with no authored source, on days nobody asked to fill.
+  //
+  // THE OPTIONAL PLACEMENT LAW (Sam, signed 2026-07-30, Bible §20.1) permits the app
+  // to place optional work only under a placement rule Sam authored, with composition
+  // Sam authored, visibly optional, binnable in one tap, and counting toward nothing.
+  // Recovery fails the first: there is no authored rule that says "fill the spare
+  // days with recovery". The charter deleted eight such sites in the generator; this
+  // was the ninth, in the RESOLVER, and it survived because nothing could see it —
+  // the generator filled every spare day first, so this pass had no empty day to
+  // claim.
+  //
+  // Landing R2/R3/R4/R5 is what made it visible: with the day-based accessory
+  // placements gone, empty days appeared and this pass immediately claimed one.
+  // `athleteSessionDeletionTests` regression 6 caught it as a G+1 recovery session
+  // the athlete could not delete — the resolver re-derived it on every read, so the
+  // deletion never reached the visible week. A derived session cannot be binned,
+  // which is condition 4 failing as well.
+  //
+  // Empty days stay empty. The athlete has the recovery door, and it is theirs.
 
   // ── Game-day LOCK invariant ──
   // If virtual game is enabled and the week has no explicit game mark, the

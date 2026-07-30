@@ -538,6 +538,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     }
   }
 
+  // BIBLE_ANCHOR: rest_quota_counts_no_required_work
   const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !requiredWorkDays.includes(day));
 
   const splitDays = (

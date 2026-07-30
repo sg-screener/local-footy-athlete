@@ -347,19 +347,20 @@ const SITES: DisplacementSite[] = [
       name: 'Assault Bike Intervals',
     }),
   },
-  {
-    id: 'pass_3_recovery_fill',
-    anchor: 'Scheduled recovery - ${recoveryResult.category}',
-    answer: 'unreachable',
-    // Wednesday: the fill pass only runs on days that resolved to nothing.
-    dayOfWeek: 3,
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-pass-3',
-      planEntryId: undefined,
-      name: 'Assault Bike Intervals',
-    }),
-  },
+  // THE PASS-3 ROW IS GONE WITH ITS DERIVER (2026-07-30).
+  //
+  // `resolveWeekWithConditioning`'s recovery fill pass put a derived recovery
+  // session on every remaining empty day, and this row answered `unreachable`
+  // because the fill only ran on days that resolved to nothing — which, while the
+  // generator filled every spare day, never happened. Landing Sam's placement
+  // rulings (R2-R5) made empty days real and the pass claimed one immediately, on a
+  // G+1, where the athlete could not delete it. It fails condition 1 of the Optional
+  // Placement Law (Bible 20.1) and is deleted, so its row goes with it rather than
+  // sitting here answering for a deriver that no longer exists.
+  //
+  // `derivedSiteCount` below is what keeps this honest in the other direction: the
+  // table must have exactly one row per `buildDerivedSession(` site, so a deletion
+  // that forgot its row fails just as loudly as a new deriver that never wrote one.
 ];
 
 /** The freed-game and fill rows need the day set up before the plant lands. */

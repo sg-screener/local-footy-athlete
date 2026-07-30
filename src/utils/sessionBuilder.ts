@@ -111,6 +111,7 @@ interface SessionSlot {
   count: number;
 }
 
+// BIBLE_ANCHOR: gunshow_two_two_two
 const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
   recovery: [
     { category: 'tissue_quality',   count: 2 },

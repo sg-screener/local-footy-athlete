@@ -145,6 +145,7 @@ export function mobilityRegionOf(exercise: PoolExercise): MobilityRegion | null 
  * @param seed    a date hash; rotates which movement each region contributes
  * @param eligible the pool AFTER equipment and injury filtering, in pool order
  */
+// BIBLE_ANCHOR: mobility_composed_from_pool
 export function composeMobilitySession(args: {
   seed: number;
   eligible: readonly PoolExercise[];

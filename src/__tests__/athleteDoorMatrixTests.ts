@@ -54,6 +54,22 @@ process.env.TZ = 'Australia/Melbourne';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import {
+  ACCESSORY_REGION_THRESHOLD,
+  OFFSEASON_MOBILITY_TARGET,
+  accessoryRegionsCovered,
+} from '../rules/optionalTopUp';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import {
+  CALVES_POOL,
+  GROIN_ADDUCTORS_POOL,
+  HAMSTRING_LIGHT_POOL,
+  LOWER_PREHAB_POOL,
+  MOBILITY_POOL,
+  SHOULDER_HEALTH_POOL,
+  TRUNK_ANTI_ROTATION_POOL,
+} from '../data/exercisePools';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
@@ -410,16 +426,28 @@ const DAY_STATES: DayState[] = [
   {
     id: 'stacked_two_session_day',
     build: () => {
+      // A DAY WITH TWO VISIBLE PARTS, REACHED BY ACTING.
+      //
+      // It used to add conditioning to WEDNESDAY and rely on the generator having
+      // already put a day-based accessory session there (placement row R2). Sam's
+      // ruling of 2026-07-30 deleted that placement, so the same add produced a
+      // ONE-part day and this state silently stopped being the state it is named
+      // after — the cells kept passing while testing something else. That is the
+      // hand-built-fixture hazard in its quietest form: the fixture did not break,
+      // it just stopped meaning what it said.
+      //
+      // Monday carries the week's lower strength session, so stacking conditioning
+      // on top is two parts for the reason an athlete would have them: they chose to
+      // double up. It depends on no placement, so it cannot die with one.
       const weekStart = seedStores(baseProgram());
-      const wednesday = addDaysISO(weekStart, 2);
       quiet(() => applyPlanChange({
-        change: { kind: 'add_category', date: wednesday, category: 'conditioning_hard' },
+        change: { kind: 'add_category', date: weekStart, category: 'conditioning_hard' },
         visibleWeek: visibleWeek(weekStart),
         todayISO: world.todayISO,
         setManualOverride: (date, workout, ctx) =>
           useProgramStore.getState().setManualOverride(date, workout, ctx),
       }));
-      return { weekStart, date: wednesday };
+      return { weekStart, date: weekStart };
     },
   },
   {
@@ -636,7 +664,22 @@ function assertLaws(args: {
     const expectedGone: string = args.scope === 'strength' ? 'strength' : args.scope;
     assert(!remaining.includes(expectedGone),
       `${label}: the scoped component "${expectedGone}" is still on the day`);
-    const survivors = before.components.filter((part) => part !== expectedGone);
+    // SUPPORT ROWS BELONG TO THE SESSION THEY SIT IN, and this is the one place
+    // the law needed saying rather than assuming. `support` is not a session the
+    // athlete can hold on its own — it is the accessory rows after the main lifts
+    // (Bible `:224`, "midline and prehab sit after the accessories"). Moving the
+    // strength session moves its own accessories with it; that is the session
+    // travelling intact, not a scoped action overreaching.
+    //
+    // Asserted as a DECLARED belonging rather than by loosening the survivor set,
+    // so a scoped strength move that took the day's CONDITIONING with it still
+    // fails. Found when this state stopped inheriting its second part from a
+    // deleted placement and started stacking onto a real strength day.
+    const BELONGS_TO: Readonly<Record<string, readonly string[]>> = {
+      strength: ['support'],
+    };
+    const travelsWith = new Set<string>([expectedGone, ...(BELONGS_TO[expectedGone] ?? [])]);
+    const survivors = before.components.filter((part) => !travelsWith.has(part));
     for (const survivor of survivors) {
       assert(remaining.includes(survivor),
         `${label}: a SCOPED action took "${survivor}" with it — scoped means scoped`);
@@ -906,7 +949,188 @@ cell(`[${activeWorld.id}] athlete-placed content survives the resolver on every 
 });
 
 }
+// ── THE THIRD DIMENSION: PLACEMENT × DOMAIN ───────────────────────────────
+//
+// SAM'S RULING, 2026-07-30: "Build the (placement × domain) matrix cells from
+// question 7 — every optional placement deleted × every contract domain still
+// satisfiable — into the athlete-door matrix, red before the deletions, green
+// after."
+//
+// WHY THIS DIMENSION EXISTS, and it is the whole of L12 for its class. Two defects
+// were found by two different suites, months of work apart in feel and one commit
+// apart in fact: deleting an unauthored placement STARVED a shortfall repair,
+// because every repair reached its day by overwriting an existing allocation. The
+// strength domain starved first (found on a device round trip); the conditioning
+// domain starved second (found by a hydration suite). They differ only by which
+// domain — a coordinate in a space nothing enumerated.
+//
+// So the space is enumerated here. The two halves are asserted together, because
+// either alone is satisfiable by the wrong week:
+//
+//   D-DOMAIN     every contract domain is satisfied, in every scenario. This is
+//                the half that reds if a repair starves — the week comes out
+//                short and the gateway rejects it.
+//   D-PLACEMENT  no optional session exists that no NEED justifies. This is the
+//                half that reds if a day-based placement comes back. Without it,
+//                D-DOMAIN could be satisfied by re-introducing the filler.
+//
+// Held to the ALLOCATOR's output rather than to a door, because that is where both
+// defects lived. It shares the file with the door grid because it shares its
+// purpose: a coordinate nobody enumerated is where the next device round trip
+// comes from.
+
+console.log('\n-- Placement × domain --');
+
+const PLACEMENT_SCENARIOS: ReadonlyArray<{
+  readonly id: string;
+  readonly phase: 'In-season' | 'Off-season' | 'Pre-season';
+  readonly weeksAfterPhaseEntry: number;
+  readonly overrides: Record<string, unknown>;
+}> = [
+  { id: 'in-season/game/5d/2tt', phase: 'In-season', weeksAfterPhaseEntry: 0, overrides: {} },
+  { id: 'in-season/game/4d/0tt', phase: 'In-season', weeksAfterPhaseEntry: 0, overrides: {
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'] } },
+  { id: 'in-season/bye/5d/2tt', phase: 'In-season', weeksAfterPhaseEntry: 0, overrides: {
+    usualGameDay: undefined, gameDay: undefined } },
+  { id: 'in-season/bye/6d/0tt', phase: 'In-season', weeksAfterPhaseEntry: 0, overrides: {
+    usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 6,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] } },
+  { id: 'off-season/early/5d', phase: 'Off-season', weeksAfterPhaseEntry: 0, overrides: {
+    usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [] } },
+  { id: 'off-season/mid/5d', phase: 'Off-season', weeksAfterPhaseEntry: 2, overrides: {
+    usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [] } },
+  { id: 'off-season/late/6d', phase: 'Off-season', weeksAfterPhaseEntry: 6, overrides: {
+    usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 6,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] } },
+  { id: 'pre-season/mid/5d/1tt', phase: 'Pre-season', weeksAfterPhaseEntry: 2, overrides: {
+    usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 1, teamTrainingDays: ['Tuesday'] } },
+];
+
+/** The contract domains a week can be short of. Every one is asserted per week. */
+const CONTRACT_DOMAINS = ['main_strength', 'conditioning', 'sprint_high_speed'] as const;
+
+const PREHAB_NAMES = new Set([
+  ...GROIN_ADDUCTORS_POOL, ...CALVES_POOL, ...LOWER_PREHAB_POOL,
+  ...TRUNK_ANTI_ROTATION_POOL, ...SHOULDER_HEALTH_POOL, ...HAMSTRING_LIGHT_POOL,
+].map((entry) => canonicalExerciseName(entry.name)));
+const MOBILITY_NAMES = new Set(MOBILITY_POOL.map((entry) => canonicalExerciseName(entry.name)));
+
+const rowNamesOf = (workout: Workout): string[] =>
+  (workout.exercises ?? []).map((row) =>
+    canonicalExerciseName((row as { exercise?: { name?: string } }).exercise?.name ?? ''));
+const isComposedOf = (workout: Workout, pool: Set<string>): boolean => {
+  const names = rowNamesOf(workout);
+  return names.length > 0 && names.every((name) => pool.has(name));
+};
+
+for (const scenario of PLACEMENT_SCENARIOS) {
+  const scenarioProfile = {
+    ...syntheticProfile(),
+    seasonPhase: scenario.phase,
+    ...scenario.overrides,
+  } as unknown as OnboardingData;
+  const generationToday = SYNTHETIC_WEEK;
+  const phaseEntry = addDaysISO(generationToday, -7 * scenario.weeksAfterPhaseEntry);
+
+  let program: TrainingProgram | null = null;
+  cell(`[placement] ${scenario.id} generates at all`, () => {
+    program = quiet(() => generateProgramLocally(scenarioProfile, {
+      todayISO: generationToday, previousProgram: null,
+      seasonPhaseClock: {
+        protocolVersion: 1, selectedPhase: scenario.phase as never,
+        phaseEntryWeekStartISO: phaseEntry,
+        originProvenance: 'explicit_user_phase_change',
+        persistenceProvenance: 'preserved_persisted_state',
+      },
+    } as never));
+    if (!program) throw new Error('generation returned nothing');
+  });
+  if (!program) continue;
+
+  const microcycles = (program as TrainingProgram).microcycles ?? [];
+  microcycles.forEach((week, index) => {
+    const contract = (week as { exposureContractV2?: unknown }).exposureContractV2;
+    const workouts = week.workouts ?? [];
+
+    // ── D-DOMAIN: every contract domain satisfied, in every scenario ──
+    //
+    // The half that reds when a repair starves. It is asserted per DOMAIN rather
+    // than as one "accepted" boolean, because that is the coordinate the two
+    // defects differed by: a suite that only checks acceptance tells you the week
+    // failed, not which domain the filler was propping up.
+    for (const domain of CONTRACT_DOMAINS) {
+      cell(`[placement] ${scenario.id} w${index + 1} × ${domain} is satisfied`, () => {
+        if (!contract) throw new Error('the week carries no typed contract to satisfy');
+        const evaluation = evaluateSection18EffectiveWeek({
+          contract: contract as never,
+          workouts,
+          weekStart: week.startDate.slice(0, 10),
+        });
+        const breaches = evaluation.blockingViolations.filter(
+          (violation) => violation.domain === domain);
+        if (breaches.length > 0) {
+          throw new Error(
+            `${domain} is short: ${JSON.stringify(breaches)}. If this appeared when a `
+            + 'day-based optional placement was deleted, the repair for this domain was '
+            + 'reaching its day by overwriting that placement — see '
+            + 'docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.');
+        }
+      });
+    }
+
+    // ── D-PLACEMENT: no optional session that no need justifies ──
+    cell(`[placement] ${scenario.id} w${index + 1} × every optional session has a NEED`, () => {
+      const accessories = workouts.filter((workout) =>
+        workout.sessionTier === 'optional' && isComposedOf(workout, PREHAB_NAMES));
+      const mobility = workouts.filter((workout) => isComposedOf(workout, MOBILITY_NAMES));
+
+      // N1 places AT MOST ONE accessories session. Two means something other than
+      // the need placed one — a day-based rule is back.
+      if (accessories.length > 1) {
+        throw new Error(
+          `${accessories.length} composed Accessories sessions in one week. The need `
+          + 'computation places at most one; a second is a day-based placement.');
+      }
+      // AND THE NEED MUST ACTUALLY EXIST. The week WITHOUT the top-up has to be
+      // short of accessory coverage, or the session is a default wearing a need
+      // test — which is exactly what R2 (G-3 by the day) and R3 (any spare day)
+      // were, and what this cell reds on if either returns.
+      if (accessories.length === 1) {
+        const remainder = workouts.filter((workout) => workout !== accessories[0]);
+        const covered = accessoryRegionsCovered(remainder).size;
+        if (covered >= ACCESSORY_REGION_THRESHOLD) {
+          throw new Error(
+            `an Accessories session sits on a week that already covers ${covered} of the six `
+            + `prehab regions (threshold ${ACCESSORY_REGION_THRESHOLD}). Nothing was lacking, `
+            + 'so nothing should have been placed.');
+        }
+      }
+
+      // N2 is off-season only, and aims for two. In-season and pre-season it never
+      // fires — `:104` says chasing mobility while games and change-of-direction
+      // demands are live risks injury.
+      if (scenario.phase !== 'Off-season' && mobility.length > 0) {
+        throw new Error(
+          `${mobility.length} mobility session(s) placed in ${scenario.phase}. The Bible at `
+          + ':104 confines mobility gains to the off-season.');
+      }
+      if (mobility.length > OFFSEASON_MOBILITY_TARGET) {
+        throw new Error(
+          `${mobility.length} mobility sessions; the signed off-season aim is `
+          + `${OFFSEASON_MOBILITY_TARGET}.`);
+      }
+    });
+  });
+}
+
 console.log(`\nAthlete door matrix: ${cells} cells × 2 attempts over ${WORLDS.length} worlds`);
+console.log(`  plus placement × domain: ${PLACEMENT_SCENARIOS.length} scenarios × ${CONTRACT_DOMAINS.length} domains`);
 console.log(`Athlete door matrix totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`\nRED CELLS:\n  ${failures.join('\n  ')}`);

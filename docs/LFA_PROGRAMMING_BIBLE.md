@@ -4881,6 +4881,44 @@ Cross-path rules
 * When the signatures match, source prescriptions may be preserved, but target anchors, typed constraints and final Section 18 validation still win.
 * Detailed `required_core` and `planner_selected_core` identity remains attached to planner allocations and canonical workouts. An aggregate `core` compatibility projection may be used only by an unchanged legacy safety consumer; it does not replace the detailed phase-planner identity or allow optional work to receive core credit.
 
+20. The signed laws of 2026-07-30
+
+Sam signed all six of the amendments drafted in docs/BIBLE_AMENDMENTS_V2_2026-07-30.md on 2026-07-30. They are recorded here in full, as law, and every one of them is cited in both directions: the registry in src/data/bibleThresholdAnchors.ts quotes the sentence and names the code that enforces it, and each of those code sites carries a BIBLE_ANCHOR marker naming the law. A citation that only runs one way rots silently, so neither direction is optional.
+
+20.1 THE OPTIONAL PLACEMENT LAW
+
+The app may place optional work only when all five of these hold: there is a placement rule Sam has authored, the composition is one Sam has authored, it is rendered visibly optional, it is binnable in one tap, and it is never counted toward compliance, load or rest. Optional work that fails any of the 5 conditions is not placed at all.
+
+Early off-season's all-optional weeks are the pattern this law is drawn from: they are authored, so they are permitted. What it forbids is the app filling a spare day because the day was spare. Recovery is the worked example of a failure — it had no authored placement rule, its contents were invented, and it consumed the rest quota, so it fails three of the five and the app does not place it. The athlete's own recovery door is untouched: an athlete needs no rule to choose their own session.
+
+Optional placement is a NEED-BASED TOP-UP. The app builds the program, and if anything is lacking it adds a spare optional session to make up for it. Strength and conditioning are the 90%; accessories, mobility and the rest are the final 10%. No day-based or default placement of optional work exists anywhere.
+
+20.2 THE REST LAW
+
+The rest quota counts days on which nothing was REQUIRED of the athlete. Athlete-added optional work — recovery, mobility, prehab, gunshow — never breaks a rest day. A day may be both rested and active, and the week reports both.
+
+This is the enforcement clause for the rest sentence in Section 2, which already said rest days are days with no required S&C work and that optional easy recovery is okay. What Section 2 did not say, and what this adds, is that the QUOTA counts the same way the sentence does: a day holding only optional work is still a rested day, and the week is not in breach for having one.
+
+20.3 GUNSHOW
+
+A gunshow is 2 biceps + 2 triceps + 2 shoulder, 2-3 sets each. "Shoulder" means the pump delts pool, not shoulder health — shoulder health stays with Accessories. Under restricted equipment a gunshow gets smaller, never padded. There are no cross-family top-ups: the app never invents to fill a quota.
+
+20.4 MOBILITY
+
+A mobility session is COMPOSED from the mobility pool: 5-8 movements at their authored warm-up doses, spread across lower, hips, midline and upper. No pre-built flow sits between the pool and the athlete. It counts toward nothing — never a hard day, no exposure credit, and it never breaks rest.
+
+The region each of the twenty mobility exercises belongs to is signed as presented in docs/OPTIONAL_PLACEMENT_SHEET_2026-07-30.md section 3, and a composed session aims for 6 movements inside the 5-8 window. The ten "mobility flow" bundles that used to sit between the pool and the athlete are not recognised and are deleted: the exercises were Sam's, the groupings were not.
+
+20.5 THE SEVEN STRENGTH SESSIONS
+
+There are 7 strength sessions: Lower Squat, Lower Hinge, Lower Body Strength, Upper Push, Upper Pull, Upper Body Strength, Full Body Strength. The athlete picks Upper, Lower or Full Body; the app resolves the variant.
+
+20.6 THE FOUR QUESTIONS
+
+No session type exists until 4 questions are answered: who may place it, who chooses it, what it counts as, and who authored its contents.
+
+For any type the app may place, "who may place it" is answered by a signed placement rule — not by the word "generator". Naming the layer was never an answer to the question.
+
 19. Amendment changelog
 
 Sam's standing process ruling (2026-07-25): the Bible is AMENDED when a ruling supersedes it. Contradictions are removed, not accumulated. Every amendment below names the text it replaced.
@@ -4934,3 +4972,13 @@ Bible Amendment Pass — 2026-07-27 (sources: PROGRAMMING_DESIGN_SESSION_2026-07
 * Section 11, experience crosswalk (Sam, 2026-07-27). ADDED THE EXPERIENCE CROSSWALK — the single authored bridge from the onboarding answer ('Complete beginner' / '1-2 years' / '2-5 years' / '5+ years') to the ladder (new / developing / consistent / advanced) to the authored exercise gates (everyone / everyone (regression) / 1+ years / 2+ years / advanced only), plus the two boundary rulings: regressions are visible to complete beginners ONLY, and "2+ years" includes the "2-5 years" answer. Nothing was superseded; three vocabularies were already in use with NO mapping between them, so exercise gating had no authored answer at all. Sam authored the table to close that gap. No other crosswalk may exist.
 * Section 6, conditioning simple rules (Sam, 2026-07-27). ADDED the dose-boundary rule: "Dose counts main work only. Warm-up and cool-down never count toward a session's conditioning dose." Nothing was superseded; the Bible enforced this in code (`ALL-COND-DOSE-DESCRIPTOR-01`) but had never stated it. Authored by Sam to close that citation gap; the conformance rule now anchors to this sentence.
 * Terminology, whole document. "Trunk" and the muscle-group sense of "core" are replaced by MIDLINE (75 lines). The compulsory-session sense of "core" — core session, core exposure, `required_core`, `planner_selected_core`, "0. Core LFA principles" — is a homonym and is deliberately untouched. One ambiguous line in the Gunshow section, "A replacement for missing core strength work", was rewritten to "main strength work" to remove the ambiguity. Source: D13.
+
+Bible Amendment Pass — 2026-07-30 (source: BIBLE_AMENDMENTS_V2_2026-07-30.md, all six signed by Sam)
+
+* THE OPTIONAL PLACEMENT LAW (Sam, signed 2026-07-30). ADDED as Section 20.1. SUPERSEDES the withdrawn formulation "the app plans REST and offers the recovery door; it never places recovery uninvited" and the blanket ban it was generalised into — that generalisation was an agent's, not Sam's, and it would have red-flagged the authored early off-season all-optional contracts. The law permits optional placement under five conditions and forbids it otherwise. Consequences already landed: the eight placement rows of docs/OPTIONAL_PLACEMENT_SHEET_2026-07-30.md are ruled (R1 confirmed, R2 need-based, R3 killed, R4's default killed, R5 folded into the top-up, R6 confirmed, R7 and R8 composed), and the need-based top-up pass is what places optional work now. Recorded in docs/OPTIONAL_PLACEMENT_LAW_SUPERSESSION_2026-07-30.md and docs/OPTIONAL_PLACEMENT_RULINGS_2026-07-30.md.
+* THE REST LAW (Sam, signed 2026-07-30). ADDED as Section 20.2. Section 2's "Rest days are days with no required S&C work … Optional easy recovery is okay which involves a light mobility flow" was already Sam's text and is unchanged; the amendment is the enforcement clause the quota needed — a day holding only optional work is still rested, and the week reports both. This closes a live breach rather than adding a rule: `trueRestDays` had been computed as "days with no session at all", which contradicted the Section 2 sentence for as long as it existed and no gate could see it, because no gate reads the Bible.
+* GUNSHOW COMPOSITION (Sam, signed 2026-07-30). ADDED as Section 20.3. The signed structure is 2 biceps + 2 triceps + 2 pump delts at 2-3 sets. SUPERSEDES the app's 2 + 2 + 1 delt + 1 upper-back-pump shape, whose fourth slot was a cross-family top-up reaching outside the sixteen signed candidates — it is what put "Face Pull" into a session whose signed shoulder family holds "Cable Face Pull". Shrink-never-pad is stated explicitly: under thin equipment a gunshow gets smaller.
+* MOBILITY COMPOSED FROM THE POOL (Sam, signed 2026-07-30). ADDED as Section 20.4. SUPERSEDES the withdrawn draft's "drawn whole from the authored flows" and the 4-movement floor question that went with it. The ten `MOBILITY_FLOW_TEMPLATES` bundles are not recognised — the provenance trace found they arrived in one commit with no ruling cited, no changeset and no divergence report, beside a repo whose authored changes carry all three — and are DELETED. The region table (20/20) and the 6-movement target inside the 5-8 window are signed as presented.
+* THE SEVEN STRENGTH SESSIONS (Sam, signed 2026-07-30). ADDED as Section 20.5. Nothing was superseded; the app could previously only reach four of the seven through the athlete's own door, so this filled a gap between what the generator can build and what the athlete can choose.
+* THE FOUR QUESTIONS (Sam, signed 2026-07-30). ADDED as Section 20.6, with the clause the supersession added: for any type the app may place, "who may place it" is answered by a signed placement rule, not by the word "generator". The four questions are the shape of `rules/sessionTypeCharter.ts`, and the declared debt in `CHARTER_DEBT` is where the app does not yet answer them.
+

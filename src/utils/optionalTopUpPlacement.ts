@@ -90,6 +90,7 @@ export interface OptionalTopUpResult {
  * Returns the week unchanged when nothing is lacking, which is the common case and
  * the whole distinction between a top-up and a default.
  */
+// BIBLE_ANCHOR: optional_placement_five_conditions
 export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopUpResult {
   const placements = computeOptionalTopUps({
     workouts: args.workouts,

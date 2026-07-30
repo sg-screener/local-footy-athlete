@@ -154,6 +154,19 @@ function dayIsAvailable(day: number, input: OptionalTopUpInput): boolean {
     if (day === input.gameDayOfWeek) return false;
     const gMinusOne = (input.gameDayOfWeek + 6) % 7;
     if (day === gMinusOne) return false;
+    // AND NEVER G+1. The signed caps did not name it — the sheet listed the game
+    // day and G-1 and stopped — but the Bible does: "Rules around G+1: complete
+    // rest or recovery" (`BIBLE_ANCHOR g_plus_1_rest_or_recovery`, §2). Accessories
+    // are neither, so a top-up there breaches an anchor rather than filling a gap.
+    //
+    // It was not a theoretical gap. On a Sunday-fixture week the pass put an
+    // Accessories session on the Monday; the resolver's G+1 rule then converted it
+    // to recovery, and the athlete could not delete the result — a derived session
+    // re-appears on every read, so the deletion door reported
+    // `visible_change_unverified`. Found by `athleteSessionDeletionTests`
+    // regression 6, which is the second time that cell has caught a G+1 placement.
+    const gPlusOne = (input.gameDayOfWeek + 1) % 7;
+    if (day === gPlusOne) return false;
   }
   return !input.workouts.some((workout) => workout.dayOfWeek === day);
 }
@@ -196,6 +209,7 @@ function preferredDays(input: OptionalTopUpInput): number[] {
  * SAM'S RULING 4: mobility tops up TOWARD TWO, not one — "just want to get the
  * athlete feeling good again" — still shrinking when the days will not take it.
  */
+// BIBLE_ANCHOR: optional_placement_five_conditions
 export function computeOptionalTopUps(
   input: OptionalTopUpInput,
 ): OptionalTopUpPlacement[] {

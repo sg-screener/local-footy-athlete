@@ -257,6 +257,20 @@ run('CAP. never on the game day, never on G-1', () => {
     + 'session(s)');
 });
 
+run('CAP. never on G+1 — the Bible reserves it for complete rest or recovery', () => {
+  // NOT in the signed caps sheet, which named the game day and G-1 and stopped.
+  // `BIBLE_ANCHOR g_plus_1_rest_or_recovery` (§2, "Rules around G+1: complete rest
+  // or recovery") settles it: accessories are neither, so this is an anchor the
+  // sheet omitted rather than a cap being invented.
+  //
+  // The cost of the omission was real — see the comment on `dayIsAvailable`.
+  const placements = computeOptionalTopUps(
+    baseInput([workoutWith(1, ['Back Squat'])], { gameDayOfWeek: 0, candidateDays: [1] }),
+  );
+  assert(placements.length === 0,
+    `a week whose only free day is G+1 placed ${placements.length} session(s)`);
+});
+
 run('CAP. never on a day that already has a session', () => {
   const week = ALL_DAYS.map((day) => workoutWith(day, ['Back Squat']));
   const placements = computeOptionalTopUps(baseInput(week, { seasonPhase: 'Off-season' }));

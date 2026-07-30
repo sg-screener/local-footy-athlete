@@ -1981,19 +1981,23 @@ function buildWeeklyPlan(
 
     // ── STEP 5: the remaining days ──
     //
-    // EVERY OPTIONAL PLACEMENT HERE IS NOW COMPOSED, and none of them is deleted.
+    // ── STEP 5: the remaining days ──
     //
-    // The composition half of Sam's rulings lands in full: G−1 takes the authored
-    // Gunshow (`:153`, `:81`) and the accessory days take a composed Accessories
-    // session, both drawn from the signed pools through the same builders the
-    // athlete's own doors use.
+    // ONE PLACEMENT LEFT, and it is the authored one: G−1 takes the Gunshow the
+    // Bible names at `:153` and in all three of its ideal weekly structures
+    // (`:81`), composed from Sam's signed arms pools. Everything else is REST.
     //
-    // The PLACEMENT half — R2 need-based, R3 killed — is blocked on
-    // `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`: deleting these allocations
-    // starves the conditioning shortfall repair, which is the recovery-deletion
-    // class a second time and therefore a STOP rather than a patch.
+    // R2 (G−3 accessories) is NEED-BASED now and R3 (spare-day accessories) is
+    // KILLED — Sam's rulings of 2026-07-30, landed once his repair-capacity ruling
+    // stopped the shortfall repairs depending on this filler for their raw material.
+    // The need-based top-up pass still prefers G−3 when it places; it just has to be
+    // needed first.
+    //
+    // The `optional` BUDGET is no longer consulted here, because nothing left in
+    // this branch is budgeted: the gunshow is fixture-relative and the top-up pass
+    // has its own caps. The budget still shapes the off-season scorer, which is a
+    // different branch with a different authority.
     const remainingDays = daySlots.filter(d => !assigned.has(d.dayName));
-    let optCount = 0;
     let recCount = 0;
 
     for (const slot of remainingDays) {
@@ -2024,49 +2028,25 @@ function buildWeeklyPlan(
           composedOptionalKind: 'gunshow',
         });
       } else if (slot.offset === -3) {
-        // G−3 → optional light work, or REST (NEVER CORE).
+        // G−3 → REST (never core, and no longer a placement).
         //
-        // R2's COMPOSITION ruling is applied; its PLACEMENT ruling is BLOCKED. Sam
-        // ruled the trigger should be the LACK rather than the day, and deleting
-        // this branch is what that requires — but deleting it starves the
-        // conditioning shortfall repair, which reaches its day by overwriting
-        // exactly this allocation. That is the recovery-deletion class a second
-        // time, so the deletion stops here under CLAUDE.md's escalation rule and
-        // waits on `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
-        //
-        // What DOES land is the class ruling on what it places: a composed
-        // Accessories session from the six signed prehab pools, never a sentence.
-        if (optCount < optional) {
-          plan.push({
-            tier: 'optional',
-            focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility',
-            dayOfWeek: slot.dayName,
-            isHardExposure: false,
-            composedOptionalKind: 'accessories',
-          });
-          optCount++;
-        } else {
-          if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
-          recCount++;
-        }
+        // R2, RULED NEED-BASED: "The trigger is the LACK, not the day. Prefer G-3 /
+        // Wednesday WHEN PLACING. The day-based version is retired." This branch WAS
+        // the day-based version — it placed accessories on G−3 whether or not the
+        // week was short of them.
+        if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
+        recCount++;
       } else {
-        // Other unassigned days.
+        // Other unassigned days → REST.
         //
-        // R3 is KILLED by ruling — "Empty days stay empty; the athlete has the add
-        // menu" — and its deletion is BLOCKED by the same repair-capacity finding as
-        // R2. Its composition ruling lands: composed, not a sentence.
-        if (optCount < optional) {
-          plan.push({
-            tier: 'optional',
-            focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility',
-            dayOfWeek: slot.dayName,
-            isHardExposure: false,
-            composedOptionalKind: 'accessories',
-          });
-          optCount++;
-        } else if (recCount < recovery) {
-          // REST. The budget is still spent so the week's shape is unchanged;
-          // only the placement is gone.
+        // R3, KILLED: "Empty days stay empty; the athlete has the add menu." It was
+        // the only row on the sheet with no authority of any kind — a placement
+        // differing from R2 only in having no reason at all.
+        //
+        // The recovery BUDGET is still spent, exactly as the recovery deletion left
+        // it, so the week's shape is unchanged and this is a deletion of placements
+        // rather than a re-planning of the week.
+        if (recCount < recovery) {
           if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
           recCount++;
         } else if (slot.isTeamDay) {
@@ -2231,39 +2211,21 @@ function buildWeeklyPlan(
       }
     }
 
-    // R4's COMPOSITION lands; its KILL is BLOCKED, same finding as R2 and R3 — a
-    // bye week's support slot is repair raw material, and the recovery deletion's
-    // own comment names `in_season_bye_recovery` as the week that starved when a
-    // placement went. `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
+    // R4, KILLED AS A DEFAULT: "Bye weeks get the same need-based top-up as any
+    // week, nothing more."
     //
-    // A readiness declaration no longer removes the support slot — that is a
-    // count cut. A SCHEDULED deload week still may: that door is the block
-    // plan's own structural decision, not an athlete-driven reduction.
-    let supportSlotsRemaining = lighterByeWeek && inputs.weekKind === 'deload' ? 0 : 1;
+    // The sheet split this row in two and only half of it was ever authored. The
+    // DELOAD half — a scheduled deload bye may cut the slot to zero — came from the
+    // block plan's own structural statement. The other half, "one support slot on a
+    // normal bye", had no cited source at all: a day-based default wearing the word
+    // "support". Both halves go, because with no slot to cut there is nothing for the
+    // deload rule to decide, and a bye week now gets exactly what every other week
+    // gets — the top-up, if the week is genuinely lacking.
     for (const slot of daySlots) {
       const existing = allocations.get(slot.dayName);
-      if (existing) {
-        plan.push(existing);
-        continue;
-      }
-      if (slot.dayName === 'Sunday') {
-        // REST. Its own focus said "Full rest or light walk" while it pushed a
-        // recovery session — the day is now what the words said it was.
-      } else if (supportSlotsRemaining > 0) {
-        plan.push({
-          tier: 'optional',
-          focus: lighterByeWeek
-            ? 'Low-fatigue trunk, mobility and prehab (lighter bye week)'
-            : 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          stressLevel: 'low',
-          composedOptionalKind: 'accessories',
-        });
-        supportSlotsRemaining--;
-      }
-      // Every other bye-week day is REST. It used to be a recovery session with
-      // no authored source behind it.
+      if (existing) plan.push(existing);
+      // Every unallocated bye-week day is REST, Sunday included. It used to be a
+      // recovery session with no authored source, then a support slot with none.
     }
 
   } else {
@@ -5211,19 +5173,22 @@ function buildWeeklyPlan(
         placeStrengthCandidate(bestCandidate, slot, pos, isConsecutiveDay);
 
       } else if (bestCandidate === 'ACC') {
-        // R5's COMPOSITION lands — a composed Accessories session from the six
-        // signed prehab pools, where this branch used to hand a focus STRING to
-        // whatever read it. Its PLACEMENT is blocked with R2, R3 and R4:
-        // `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
+        // R5, FOLDED INTO THE TOP-UP PASS. The scorer may still CHOOSE accessories
+        // for this slot — that choice is what keeps the day out of the strength and
+        // conditioning budgets, and removing the candidate would silently re-shape
+        // the week — but choosing it now LEAVES THE DAY FREE, exactly as choosing
+        // REC does since the recovery deletion.
+        //
+        // Sam's governing principle: "No day-based or default placement of optional
+        // work exists anywhere." A scorer picking ACC because today scored best for
+        // it is a day-based placement. If the week is genuinely short of accessory
+        // coverage, the need-based pass places one session after acceptance — and
+        // composes it from the signed pools, which this branch never did.
+        //
+        // The budget accounting is unchanged (`st.optCount` still spends), so the
+        // same days come out light: a deletion of a placement, not a re-planning.
         const accessoryStress = candidateStress('ACC', pos, slot.isTeamDay);
-        plan.push({
-          tier: 'optional',
-          focus: buildFocus('ACC'),
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          stressLevel: accessoryStress,
-          composedOptionalKind: 'accessories',
-        });
+        if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
         st.optCount++;
         updateStressStreak(accessoryStress, isConsecutiveDay);
 
@@ -6432,42 +6397,67 @@ function buildWeeklyPlan(
       }
     }
 
-    // ── A FREE DAY IS REPAIR CAPACITY (Sam's charter, 2026-07-30) ──
+    // ═══ REPAIR CAPACITY — ONE OWNER, EVERY DOMAIN (Sam's ruling, 2026-07-30) ═══
     //
-    // Every shortfall repair below reaches its day through an EXISTING
-    // allocation it can overwrite — `tier === 'recovery' || 'optional'`. That
-    // was invisible while the generator filled every spare day with a recovery
-    // session: the repair always had raw material because the app had always
-    // put something there.
+    // THE BUILDER OWNS THE WEEK. A contract requiring three conditioning exposures
+    // gets a week ALLOCATED with three; the repair layer below exists for genuine
+    // ONE-OFF misses, never as the mechanism by which a systematically-missing
+    // exposure arrives. A repair doing structural work is an allocator bug.
     //
-    // Deleting those placements starved it, and the failure was silent in the
-    // worst way — an `in_season_bye_recovery` week came out with ONE main
-    // strength exposure where the contract required two, because the day that
-    // used to carry the second one now carried nothing and the repair could not
-    // see a day it could not overwrite.
+    // WHAT THIS REPLACES, and why it is a replacement rather than a widening. Every
+    // repair used to reach its day through an EXISTING allocation it could overwrite
+    // (`tier === 'recovery' || 'optional'`), so it read "something occupies this
+    // day" as evidence that the day was available. That premise is backwards — an
+    // EMPTY day is more available than an occupied one — and it made every repair
+    // silently dependent on the generator having filled spare days with work nobody
+    // asked for. Deleting those placements starved the strength repair (found on a
+    // device round trip) and then the conditioning repair (found by a hydration
+    // suite). Two defects differing only by domain; the reassessment is
+    // `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
     //
-    // The premise was backwards. An EMPTY day is MORE available than a recovery
-    // day, not less. So free days enter the candidate pool as blank placeholders
-    // and any that no repair claims are dropped again below — the week gains a
-    // session only where a contract requirement actually needed one.
-    const repairPlaceholders = new Set<SessionAllocation>();
-    {
+    // Sam's ruling, applied here:
+    //
+    //   FREE DAYS ARE CAPACITY FOR ALL DOMAINS. Not strength only, and not as
+    //   placeholders that are added and then removed — a candidate for a free day is
+    //   built but stays OUT of the week until a repair actually claims it, so there
+    //   is nothing to clean up and no window in which the week contains a session
+    //   nothing asked for.
+    //
+    //   NOTHING READS WHAT OCCUPIES A DAY AS EVIDENCE ABOUT THE DAY. Displacement is
+    //   a DECLARED, ordered list (`DISPLACEABLE_TIERS`), consulted last.
+    //
+    //   THE FALLBACK ORDER IS RULED: attach the missing work to an existing day
+    //   first; take a free day standalone second; displace only after that.
+    const DISPLACEABLE_TIERS: readonly SessionTier[] = ['optional', 'recovery'];
+    const mayDisplace = (session: SessionAllocation): boolean =>
+      DISPLACEABLE_TIERS.includes(session.tier);
+    /**
+     * A bare allocation per free day, held OUT of the week until claimed.
+     *
+     * Built once so every repair sees the same set and two repairs cannot both
+     * claim one day: claiming pushes the candidate into `adjusted`, and the
+     * `freeSlots()` reader below skips anything already in it.
+     */
+    const freeDayCandidates: SessionAllocation[] = (() => {
       const occupiedDays = new Set(adjusted.map((session) => session.dayOfWeek));
-      for (const slot of daySlots) {
-        if (occupiedDays.has(slot.dayName)) continue;
-        const placeholder: SessionAllocation = {
-          tier: 'optional',
+      return daySlots
+        .filter((slot) => !occupiedDays.has(slot.dayName))
+        .map((slot): SessionAllocation => ({
+          tier: 'core',
           focus: '',
           dayOfWeek: slot.dayName,
           isHardExposure: false,
           stressLevel: 'low',
-        };
-        repairPlaceholders.add(placeholder);
-        adjusted.push(placeholder);
-      }
+        }));
+    })();
+    const freeSlots = (): SessionAllocation[] =>
+      freeDayCandidates.filter((candidate) => !adjusted.includes(candidate));
+    /** Bring a claimed free day into the week. Idempotent for already-present days. */
+    const claimSlot = (session: SessionAllocation): void => {
+      if (adjusted.includes(session)) return;
+      adjusted.push(session);
       adjusted.sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
-      validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
-    }
+    };
 
     let strengthShortfall = Math.max(
       0,
@@ -6489,9 +6479,13 @@ function buildWeeklyPlan(
         validation.ledger.achieved.conditioning -
           weeklyExposureContract.conditioning.targetCount,
       );
-      const strengthCandidates = adjusted
+      // ATTACH (team-day stack) → FREE DAY → DISPLACE, per Sam's ruled order. The
+      // free candidates sit between the two: a team day that can carry a second
+      // exposure is an attach, an empty day is a standalone, and taking a day off an
+      // optional session is the last resort.
+      const strengthCandidates = [...adjusted, ...freeSlots()]
         .filter((session) => {
-          const lowValueTier = session.tier === 'recovery' || session.tier === 'optional';
+          const lowValueTier = mayDisplace(session) || freeDayCandidates.includes(session);
           const ownsConditioning = !!session.conditioningCategory;
           const teamStrengthStack = session.isTeamDay && !ownsConditioning;
           const canHostRequiredPattern = weeklyExposureContract.strength.requiredPatterns.some(
@@ -6568,6 +6562,8 @@ function buildWeeklyPlan(
           if (index >= 0) missingPatterns.splice(index, 1);
         }
         assignRequiredStrength(session, plannedPatterns);
+        // A free day only enters the week at the moment work lands on it.
+        claimSlot(session);
         for (const pattern of plannedPatterns) {
           repairPatternFrequencies.set(
             pattern,
@@ -6579,47 +6575,39 @@ function buildWeeklyPlan(
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
     }
 
-    // THE PLACEHOLDERS LEAVE HERE, before any other shortfall repair sees them.
+    // THE ADD-THEN-REMOVE CLEANUP IS GONE, and with it the strength-only scoping.
     //
-    // Scoped to REQUIRED STRENGTH deliberately. Leaving them in for the
-    // conditioning repair let it build a standalone conditioning day on a free
-    // slot where it would otherwise have attached a combined component — and
-    // because `allowCombinedStrengthConditioning` moves with capacity, the week's
-    // shape then moved with capacity too. `readinessDoseSweepTests` caught it as
-    // `prescribedSessions 3 -> 4 @low`, which is Sam's readiness law ("capacity
-    // never changes the shape of the week") breaking by side effect.
-    //
-    // Main strength was the domain that actually starved when the uninvited
-    // recovery placements went, so that is the only domain the extra capacity is
-    // handed to. Anything unclaimed goes back to rest.
-    if (repairPlaceholders.size > 0) {
-      const claimed = (session: SessionAllocation): boolean =>
-        plannedPatternsForAllocation(session).length > 0;
-      const beforeCleanup = adjusted.length;
-      adjusted = adjusted.filter((session) =>
-        !repairPlaceholders.has(session) || claimed(session));
-      if (adjusted.length !== beforeCleanup) {
-        validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
-      }
-    }
+    // It used to live here: placeholders were added for every free day, offered to
+    // the strength repair alone, and the unclaimed ones filtered back out before any
+    // other repair could see them. Sam retired both halves — free days are capacity
+    // for every domain, and a candidate that is only PUSHED when claimed needs no
+    // cleanup pass at all. What was a scoping decision with a cleanup step is now
+    // the absence of both.
 
     let conditioningShortfall = Math.max(
       0,
       weeklyExposureContract.conditioning.targetCount - validation.ledger.achieved.conditioning,
     );
     if (conditioningShortfall > 0) {
-      const standalone = adjusted.filter((session) =>
+      const eligible = (session: SessionAllocation): boolean =>
         isSafeRepairDay(session) &&
-        !session.conditioningCategory && !session.hasCombinedConditioning &&
+        !session.conditioningCategory && !session.hasCombinedConditioning;
+      // ATTACH — the missing work rides an existing training day. Sam's first
+      // choice, and only when the contract permits combining at this capacity.
+      const attach = adjusted.filter((session) =>
+        eligible(session) && plannedPatternsForAllocation(session).length > 0);
+      // STANDALONE on a FREE day — Sam's second choice, and the capacity this
+      // repair was denied until his ruling. Denying it is what starved the
+      // conditioning domain when the day-based accessory placements went.
+      const free = freeSlots().filter(eligible);
+      // DISPLACE — last, and only from the declared list.
+      const displace = adjusted.filter((session) =>
+        eligible(session) &&
         plannedPatternsForAllocation(session).length === 0 &&
-        (session.tier === 'recovery' || session.tier === 'optional'));
-      const combined = adjusted.filter((session) =>
-        isSafeRepairDay(session) &&
-        !session.conditioningCategory && !session.hasCombinedConditioning &&
-        plannedPatternsForAllocation(session).length > 0);
+        mayDisplace(session));
       const repairOrder = weeklyExposureContract.conditioning.allowCombinedStrengthConditioning
-        ? [...combined, ...standalone]
-        : [...standalone, ...combined];
+        ? [...attach, ...free, ...displace]
+        : [...free, ...displace, ...attach];
       for (const session of repairOrder) {
         if (conditioningShortfall <= 0) break;
         const hasStrength = plannedPatternsForAllocation(session).length > 0;
@@ -6636,6 +6624,7 @@ function buildWeeklyPlan(
         } else {
           session.focus = 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
         }
+        claimSlot(session);
         conditioningShortfall--;
       }
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
@@ -6647,7 +6636,10 @@ function buildWeeklyPlan(
     );
     if (sprintShortfall > 0) {
       const teamDays = new Set(weeklyExposureContract.anchors.teamTrainingDays);
-      const sprintCandidates = adjusted
+      // Attach (pre-lift on an existing day) before standalone on a free day: the
+      // sort below already prefers earlier training days, and an existing day is an
+      // attach where a free day is a new session.
+      const sprintCandidates = [...adjusted, ...freeSlots()]
         .filter((session) => isSafeRepairDay(session) && !session.speedBlock)
         .filter((session) => {
           const day = dayNameToNumber(session.dayOfWeek ?? '');
@@ -6688,6 +6680,7 @@ function buildWeeklyPlan(
         session.speedBlock = createSpeedTopUpBlock(placement, inputs, offseasonSubphase);
         session.isHardExposure = true;
         session.stressLevel = 'high';
+        claimSlot(session);
         sprintShortfall--;
       }
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);

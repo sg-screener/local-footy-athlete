@@ -50,16 +50,25 @@
  * WHAT THE GATE CANNOT SEE YET, stated so nobody reads a green run as more than
  * it is. Placement is observed over the GENERATOR's output — the microcycles a
  * generated program contains. It does not observe the RESOLVER, and the resolver
- * is a second placer: `applyGameProximity` still replaces a planned G+1 session
- * with a derived recovery session when one is there to replace. Stage 2 removed
- * its ability to conjure one onto an EMPTY G+1 (that variant made the deletion
- * door lie — see `sessionResolver.ts`), and the displacement variant is
- * deliberately left, because replacing planned work the day after a game is a
- * different and heavier question than filling a blank day. It is scoped to
- * stage 4 with the recovery door, and it is prose rather than a `CHARTER_DEBT`
- * entry ONLY because this gate has no observation that would make such an entry
- * checkable — declaring debt the gate cannot verify would be the stale-debt
- * failure with extra steps.
+ * is a second placer.
+ *
+ * TWO OF THE RESOLVER'S THREE RECOVERY PLACEMENTS ARE NOW GONE. Stage 2 removed its
+ * ability to conjure one onto an EMPTY G+1 (that variant made the deletion door
+ * lie). The 2026-07-30 placement unit removed the last fill pass —
+ * `resolveWeekWithConditioning`'s pass 3, which put a derived recovery session on
+ * every remaining empty day. It had survived every earlier sweep because nothing
+ * could reach it: the generator filled the spare days first, so the pass never saw
+ * an empty one. Deleting the day-based accessory placements (R2-R5) made empty days
+ * appear and it claimed one immediately, on a G+1, where the athlete then could not
+ * delete it — `athleteSessionDeletionTests` regression 6 again.
+ *
+ * WHAT IS DELIBERATELY LEFT: `applyGameProximity` still replaces a PLANNED G+1
+ * session with a derived recovery session when one is there to replace. Replacing
+ * planned work the day after a game is a different and heavier question than filling
+ * a blank day, and it is scoped to the recovery door with stage 4. It is prose rather
+ * than a `CHARTER_DEBT` entry ONLY because this gate has no observation that would
+ * make such an entry checkable — declaring debt the gate cannot verify would be the
+ * stale-debt failure with extra steps.
  */
 
 import type { PlanChangeCategoryId } from '../utils/planChangeTypes';
@@ -93,6 +102,8 @@ export const SESSION_TYPE_IDS = [
  * the placement — that is what "uninvited" means, and it is why deleting
  * Recovery's eight generator sites is a charter consequence rather than a taste.
  */
+// BIBLE_ANCHOR: optional_placement_five_conditions
+// BIBLE_ANCHOR: four_questions_signed_rule
 export type PlacementAuthority =
   /** The app may place it as part of building the week. */
   | 'generator'

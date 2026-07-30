@@ -5,11 +5,12 @@ rule and Process Law L11's stop-rule both require this before any further fix wo
 on it: *"the moment two defects differ only by their combination coordinates, ALL
 fix work stops until the matrix covers that space."*
 
-**Status: BLOCKED, awaiting Sam's ruling on question 4.** The four placement
-deletions Sam ruled on 2026-07-30 — R2 (G-3 accessories become need-based), R3
-(spare-day accessories killed), R4 (bye support slot killed as a default), R5
-(scorer ACC folded into the pass) — are **not landed**. Their COMPOSITION rulings
-are landed. Nothing else in the placement unit is held back.
+**Status: RULED AND IMPLEMENTED.** Sam answered question 4 on 2026-07-30 with the
+third option — NEITHER — and the four placement deletions are landed. His ruling and
+what it produced are recorded in the section "Sam's ruling, and what it changed" at
+the end of this document. The seven questions below are left exactly as they were
+written before the ruling, because the reasoning they record is what the ruling
+answered.
 
 ---
 
@@ -206,3 +207,87 @@ for the composition half of R2–R5. It is NOT met for their placement half, and
 reason is a defect class the commit would otherwise re-introduce. Landing the
 deletions on schedule would have meant shipping a week that is quietly one
 conditioning exposure short — which is the cost the condition exists to prevent.
+
+---
+
+## Sam's ruling, and what it changed (2026-07-30)
+
+> **NEITHER, as recommended. THE BUILDER OWNS THE WEEK.** A contract that requires
+> three conditioning exposures gets a week ALLOCATED with three — the allocator
+> satisfies the contract by construction or reports which requirement it could not
+> place. A systematically-missing exposure is a planning bug at the allocator, never
+> a repair's job. The repair layer SHRINKS to genuine one-off misses only.
+>
+> For those genuine misses, the fallback order is: **ATTACH** the missing work to an
+> existing day first; **STANDALONE** on an empty day as last resort; and if the
+> system truly cannot find room, the standalone may be placed **VISIBLY OPTIONAL** —
+> but "you should be able to find room." A week that regularly reaches step 3 is
+> evidence of an allocator bug, not a tolerable steady state.
+>
+> Free days are repair capacity for **ALL** domains. `repairPlaceholders`'
+> strength-only scoping and its add-then-remove cleanup are retired with the
+> overwrite-based day selection. Repairs select from free days plus a declared,
+> ordered displacement list; **nothing reads "what occupies a day" as evidence about
+> the day.**
+>
+> Readiness law intact and restated: capacity changes dose, and in the rare fallback
+> it may change attached-vs-standalone packaging of the SAME work — it never changes
+> the required work itself.
+>
+> The question-5 collapse is recorded as the **Stage B destination** — do not build
+> it now, but nothing built now may fight it.
+
+### What was built
+
+- **One day-selection owner for every repair.** Free days enter each domain's
+  candidate pool as bare allocations held OUT of the week until claimed, so there is
+  no add-then-remove pass and no window in which the week holds a session nothing
+  asked for. Displacement is `DISPLACEABLE_TIERS`, declared and consulted last.
+- **The ruled fallback order**, per domain: attach, then free day, then displace.
+  The conditioning repair keeps its capacity rule — when the contract forbids
+  combining at this capacity it cannot attach, so it takes a free day, which is the
+  packaging change the restated readiness law permits.
+- **The four deletions landed:** R2 (G-3 by the day), R3 (spare days), R4 (the bye
+  support slot), R5 (the scorer's ACC placement).
+- **The (placement × domain) matrix**, in `athleteDoorMatrixTests` as a third
+  dimension beside door × day-state × route: 8 scenarios × 3 contract domains,
+  asserting both halves together — every domain satisfied (reds when a repair
+  starves) AND no optional session that no need justifies (reds when a day-based
+  placement returns).
+- **The readiness dose sweep re-pointed** to the restated law: every WORK key must be
+  byte-identical across capacity with no exception list at all, and
+  `prescribedSessions` alone may differ. The two shapes previously pinned as
+  known defects are packaging, and the pinned list is deleted rather than grown.
+
+### Step 3 is reported, not placed
+
+The visibly-optional last resort is **not implemented as a placement**. When every
+candidate is exhausted the shortfall is reported and logged rather than materialised
+as a second session on an occupied day.
+
+That is a deliberate scope decision and it is owed back to Sam. His own words are the
+reason: a week that reaches step 3 is evidence of an allocator bug, and no scenario in
+the matrix reaches it. Building a placement path that nothing can reach would be a
+fixture with no subject — the failure this repo has already paid for in the other
+direction — and it would be the one path no test could hold. What exists instead is
+the half his ruling also asked for: the allocator says which requirement it could not
+place.
+
+### What the ruling exposed on its way in
+
+Landing the deletions made two dormant defects reachable, both of them placements that
+had survived every sweep because the filler hid them:
+
+1. **The resolver's ninth recovery placement.** `resolveWeekWithConditioning`'s pass 3
+   put a derived recovery session on every remaining empty day, under an app-invented
+   rule. It had never had an empty day to claim. It fails condition 1 of the Optional
+   Placement Law and is deleted.
+2. **The top-up could land on G+1.** The signed caps named the game day and G-1 and
+   stopped; the Bible reserves G+1 for complete rest or recovery
+   (`g_plus_1_rest_or_recovery`). Both defects surfaced through the same cell —
+   `athleteSessionDeletionTests` regression 6 — because a derived session cannot be
+   deleted: it re-appears on the next read and the door honestly reports that nothing
+   changed.
+
+Both are the same shape as the class this document is about: **a placement nobody
+authored, kept alive by another placement nobody authored.**
