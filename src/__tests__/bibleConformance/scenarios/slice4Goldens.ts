@@ -12,7 +12,7 @@ const scenario = (
 export const SLICE4_GOLDEN_SCENARIOS: readonly Slice4GoldenScenario[] = [
   scenario('generation-ai-fallback-equivalence', 'Deterministic and malformed AI fixture represent the same combined lower plus aerobic plan.', ['deterministic_generation', 'ai_fixture_normalisation'], ['ALL-PATH-EQUIV-01'], { patterns: ['squat', 'hinge'], components: ['strength', 'conditioning'] }),
   scenario('noop-inseason-week-rebuild', 'Identical fixed-date in-season rebuilds preserve canonical meaning.', ['no_op_week_rebuild'], ['ALL-REBUILD-IDEMPOTENT-01'], { changes: 0 }),
-  scenario('repeat-rich-week', 'Repeat Week carries Mixed, team-strength, support and recovery content.', ['repeat_week'], ['ALL-REPEAT-CONSERVE-01'], { conserve: true }),
+  scenario('week-overlay-copy-rich-week', 'A week-overlay copy carries Mixed, team-strength, support and recovery content.', ['week_overlay_copy'], ['ALL-REPEAT-CONSERVE-01'], { conserve: true }),
   scenario('block-rollover-contract', 'Four-week block rollover retains balanced typed strength and components.', ['block_rollover'], ['ALL-ROLLOVER-CONSERVE-01'], { patterns: ['squat', 'hinge', 'push', 'pull'] }),
   scenario('coach-add-bike-zone2', 'Coach add-conditioning edit promotes Bike Zone 2 out of strength rows.', ['conditioning_edit'], ['ALL-EDIT-CANONICAL-01'], { components: ['strength', 'conditioning'] }),
   scenario('coach-remove-contrast-lift', 'Removing the final heavy lift invalidates stale Contrast.', ['coach_revision'], ['ALL-EDIT-CANONICAL-01'], { contrast: false }),

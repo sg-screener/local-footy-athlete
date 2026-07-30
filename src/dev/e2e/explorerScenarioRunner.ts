@@ -87,7 +87,6 @@ function actionCanonicalIdentity(action: ExplorerExecutableAction): string {
     case 'equipment-fact': return action.target.equipmentFactId;
     case 'session-feedback': return action.target.feedbackId;
     case 'adjustment': return action.target.adjustmentId;
-    case 'week': return action.target.weekId;
   }
 }
 
@@ -95,7 +94,7 @@ function preflightRenderBinding(
   manifest: ExplorerScenarioContract,
   step: ExplorerScenarioStep,
 ): boolean {
-  if (step.action.type === 'coach.message') return false;
+  if (step.action.type === 'coach.message' || step.action.type === 'week.repeat') return false;
   const action = step.action;
   const adjustmentId = `preflight-adjustment:${manifest.scenarioId}:${step.stepId}`;
   try {
@@ -106,17 +105,13 @@ function preflightRenderBinding(
         canonicalSemanticIdentity: actionCanonicalIdentity(action),
         producedAdjustmentId: action.type === 'session.move' ||
           action.type === 'session.delete' ||
-          action.type === 'component.delete' ||
-          action.type === 'week.repeat'
+          action.type === 'component.delete'
           ? adjustmentId
           : null,
         exactAdjustmentId: action.type === 'adjustment.restore'
           ? adjustmentId
           : null,
-        adjustmentKind: action.type === 'adjustment.restore' &&
-          manifest.scenarioId.includes('repeat-week')
-          ? 'repeat_week'
-          : 'fixture_change',
+        adjustmentKind: 'fixture_change',
         feedbackTransactionId: action.type === 'session-feedback.record'
           ? `preflight-feedback:${manifest.scenarioId}:${step.stepId}`
           : null,

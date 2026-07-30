@@ -46,7 +46,6 @@ import {
   stageAthleteSessionMoveTransaction,
   type AthleteSessionMoveTransactionInput,
 } from '../store/acceptedStateTransaction';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   createEmptyReversibleAdjustmentLedger,
@@ -604,7 +603,7 @@ run('9 move staging closes persisted rolling-horizon dependencies', () => {
     `dependent week missing from horizon: ${staged.affectedWeekStarts.join(',')}`);
 });
 
-run('10 reload, rebuild, Repeat Week and rollover retain move ownership', () => {
+run('10 reload, rebuild and rollover retain move ownership', () => {
   const athlete = profile();
   seed(athlete);
   // The move target must start as rest; the generator's optional G-3 work
@@ -631,14 +630,6 @@ run('10 reload, rebuild, Repeat Week and rollover retain move ownership', () => 
   assert(!workoutOn(FUTURE_WEEK, 1), 'rebuild resurrected move source');
   assert(workoutOn(FUTURE_WEEK, 3)?.id === input.originalSourceWorkout.id,
     'rebuild lost move destination');
-  repeatWeekIntoNextWeek({
-    baseProfile: athlete,
-    sourceWeekDate: FUTURE_WEEK,
-    todayISO: CURRENT_WEEK,
-  });
-  assert(!workoutOn(FUTURE_WEEK, 1), 'Repeat Week resurrected concrete move source');
-  assert(workoutOn(FUTURE_WEEK, 3)?.id === input.originalSourceWorkout.id,
-    'Repeat Week lost concrete move destination');
   rolloverProgramBlock({ baseProfile: athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((constraint) =>
     constraint.mutationKind === 'move' &&

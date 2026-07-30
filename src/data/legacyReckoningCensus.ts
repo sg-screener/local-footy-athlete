@@ -403,7 +403,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     size: 'M',
     status: 'scheduled',
     detector: 'mirrorDecisionReads',
-    declared: 74,
+    declared: 72,
     foundingCount: 74,
   },
   {
@@ -760,12 +760,17 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 11 + 4 + 74.
+ * The sum of every declared count: 27 + 11 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
- * the ratchet rather than leaving slack somebody can spend later.
+ * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
+ * down 74 → 72 when a retired week-overlay writer's clear-adjustment path was
+ * deleted entirely (HOME_SCREEN_REDESIGN ruling 1, 2026-07-31): its two
+ * `useProfileStore` single-expression reads (one in the reversible-adjustment
+ * transaction store, one in the Explorer production bindings' now-excluded
+ * action case) went with it.
  */
-export const LEGACY_DEBT_BASELINE = 116;
+export const LEGACY_DEBT_BASELINE = 114;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

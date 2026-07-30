@@ -240,7 +240,8 @@ export interface ExplorerSyntheticRuntimeDependencies
   extends ExplorerRuntimeCommonDependencies {
   readonly actionExecutionMode: 'synthetic-direct-adapter';
   readonly executeProductionAction: (
-    action: Exclude<ExplorerScenarioStep['action'], { readonly type: 'coach.message' }>,
+    action: Exclude<ExplorerScenarioStep['action'],
+      { readonly type: 'coach.message' } | { readonly type: 'week.repeat' }>,
     claim: ExplorerActionClaimReceipt,
   ) => Promise<ExplorerProductionActionReceipt>;
 }

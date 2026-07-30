@@ -19,7 +19,7 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     id: 'ALL-REPEAT-CONSERVE-01', category: 'rebuild', section: 'Progression and repeating',
     anchorQuote: 'Do not progress just because a week passed.',
     statement: 'Repeat Week carries canonical content forward without stale raw-row regression.',
-    applicableScenarios: ['repeat-rich-week'], expectation: { preserveComponents: true, preserveIntent: true },
+    applicableScenarios: ['week-overlay-copy-rich-week'], expectation: { preserveComponents: true, preserveIntent: true },
   },
   {
     id: 'ALL-ROLLOVER-CONSERVE-01', category: 'rebuild', section: 'Block progression',
@@ -108,7 +108,7 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     id: 'ALL-COND-PLACEMENT-IDENTITY-01', category: 'identity', section: 'Conditioning finisher rules',
     anchorQuote: 'A finisher is not the same as a conditioning component.',
     statement: 'Attached conditioning remains secondary to the main session while standalone conditioning owns the primary title.',
-    applicableScenarios: ['standalone-conditioning-ownership', 'repeat-rich-week'],
+    applicableScenarios: ['standalone-conditioning-ownership', 'week-overlay-copy-rich-week'],
     expectation: { attachedPreservesPrimary: true, standaloneOwnsPrimary: true },
   },
   {

@@ -283,7 +283,7 @@ function validateEffectiveComposition(args: {
  * the pure-projection resolvers (mode/reduction live only in generation), so the
  * overlay-preserving inert path is a silent no-op. This authors the reduced week
  * as a scoped regeneration committed as a week overlay + fact-linked reversible
- * adjustment, mirroring repeatWeek: the base microcycle stays clean, the overlay
+ * adjustment: the base microcycle stays clean, the overlay
  * is the mutation layer, and clearing the fact cascade-reverts byte-exact via the
  * stored prior overlay (R12, keyed on `sourceFactId`).
  */

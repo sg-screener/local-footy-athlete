@@ -163,7 +163,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
   if (spec.id === 'rehydrate-preserves-contract') return pass(spec, slice4('canonical-program-rehydrate'), true, 'real rehydrate trace');
   if (spec.id === 'rehydrate-twice-idempotent') return pass(spec, slice4('canonical-program-rehydrate'), true, 'double rehydrate trace');
   if (spec.id === 'noop-rebuild-equivalent') return pass(spec, slice4('noop-inseason-week-rebuild'), true, 'rebuild trace');
-  if (spec.id === 'repeat-preserves-source') return pass(spec, slice4('repeat-rich-week'), true, 'repeat trace');
+  if (spec.id === 'repeat-preserves-source') return pass(spec, slice4('week-overlay-copy-rich-week'), true, 'repeat trace');
   if (spec.id === 'ai-deterministic-same-invariants') return pass(spec, slice4('generation-ai-fallback-equivalence'), true, 'generation equivalence trace');
   if (spec.id === 'game-sat-to-sun-spacing') {
     const sat = plannedFor({ game: 'Saturday', days: 5 });

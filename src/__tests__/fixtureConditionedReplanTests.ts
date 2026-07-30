@@ -761,21 +761,19 @@ async function main(): Promise<void> {
       'minimal candidate was not gateway-valid');
   });
 
-  await run('21 generation, calendar, rebuild, Repeat Week, rollover and hydration share the resolver', () => {
+  await run('21 generation, calendar, rebuild, rollover and hydration share the resolver', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fs = require('fs') as typeof import('fs');
     const sources = {
       generation: fs.readFileSync(`${__dirname}/../utils/coachingEngine.ts`, 'utf8'),
       calendar: fs.readFileSync(`${__dirname}/../store/acceptedStateTransaction.ts`, 'utf8'),
       rebuild: fs.readFileSync(`${__dirname}/../utils/weekRebuild.ts`, 'utf8'),
-      repeat: fs.readFileSync(`${__dirname}/../utils/repeatWeek.ts`, 'utf8'),
       rollover: fs.readFileSync(`${__dirname}/../utils/programBlockRollover.ts`, 'utf8'),
       hydration: fs.readFileSync(`${__dirname}/../rules/section18AcceptedWeekGateway.ts`, 'utf8'),
     };
     assert(/resolveProfileTargetWeekAvailability/.test(sources.generation), 'generation owner missing');
     assert(/resolveFixtureConditionedAvailability/.test(sources.calendar), 'calendar owner missing');
     assert(/resolveProfileTargetWeekAvailability/.test(sources.rebuild), 'rebuild owner missing');
-    assert(/resolveProfileTargetWeekAvailability/.test(sources.repeat), 'Repeat Week owner missing');
     assert(/rebuildLocalWeek/.test(sources.rollover), 'rollover does not reuse rebuild owner');
     assert(/resolveProfileTargetWeekAvailability/.test(sources.hydration), 'gateway/hydration owner missing');
   });

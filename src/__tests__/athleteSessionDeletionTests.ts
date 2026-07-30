@@ -48,7 +48,6 @@ import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProdu
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   createEmptyReversibleAdjustmentLedger,
@@ -819,7 +818,7 @@ run('regression', '9 tap and Coach whole-session deletion converge', () => {
   assert(visibleSemantic() === tapSemantic, 'tap and Coach accepted states differ');
 });
 
-run('regression', '10 reload, rebuild, Repeat Week and rollover do not resurrect target', () => {
+run('regression', '10 reload, rebuild and rollover do not resurrect target', () => {
   const seeded = seedExactSundayRegression();
   deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
   const persisted = clone(useProgramStore.getState());
@@ -837,8 +836,6 @@ run('regression', '10 reload, rebuild, Repeat Week and rollover do not resurrect
   }));
   commitProgramSetupRebuildTransaction({ program: rebuilt, profile: seeded.athlete, todayISO: WEEK });
   assert(!byDay().has(0), 'rebuild resurrected target');
-  repeatWeekIntoNextWeek({ baseProfile: seeded.athlete, sourceWeekDate: WEEK, todayISO: WEEK });
-  assert(!byDay().has(0), 'Repeat Week resurrected concrete target');
   rolloverProgramBlock({ baseProfile: seeded.athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((constraint) =>
     constraint.targetDate === SUNDAY && constraint.status === 'active'),
@@ -885,9 +882,6 @@ run('regression', '11 impossible relocation records typed reduction and keeps de
   commitProgramSetupRebuildTransaction({ program: rebuilt, profile: athlete, todayISO: WEEK });
   assert(accepted().contract.authorisedReductions.some((entry) =>
     entry.deletionIdentity === constraint.id), 'rebuild discarded typed deletion reduction');
-  repeatWeekIntoNextWeek({ baseProfile: athlete, sourceWeekDate: WEEK, todayISO: WEEK });
-  assert(accepted().contract.authorisedReductions.some((entry) =>
-    entry.deletionIdentity === constraint.id), 'Repeat Week discarded source reduction');
   rolloverProgramBlock({ baseProfile: athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((entry) =>
     entry.id === constraint.id && entry.status === 'active'),

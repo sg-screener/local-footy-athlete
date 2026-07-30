@@ -15,7 +15,7 @@ const RESULT_MARKER = 'BIBLE_SLICE4_MUTATION_RESULT ';
 const CASES: Record<Slice4MutationId, { scenarioId: Slice4ScenarioId; invariantId: Slice4InvariantId }> = {
   ai_drops_conditioning: { scenarioId: 'generation-ai-fallback-equivalence', invariantId: 'INV_EQUIVALENT_CANONICAL_LEDGER' },
   rebuild_joins_by_weekday: { scenarioId: 'noop-inseason-week-rebuild', invariantId: 'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS' },
-  repeat_drops_conditioning: { scenarioId: 'repeat-rich-week', invariantId: 'INV_REPEAT_WEEK_CONSERVES_CONTRACT' },
+  repeat_drops_conditioning: { scenarioId: 'week-overlay-copy-rich-week', invariantId: 'INV_WEEK_OVERLAY_COPY_CONSERVES_CONTRACT' },
   move_replaces_plan_id: { scenarioId: 'move-combined-lower', invariantId: 'INV_MOVE_PRESERVES_PLAN_IDENTITY' },
   swap_keeps_destination_ids: { scenarioId: 'swap-upper-and-lower', invariantId: 'INV_SWAP_PRESERVES_BOTH_IDENTITIES' },
   rehydrate_drops_second_pattern: { scenarioId: 'canonical-program-rehydrate', invariantId: 'INV_STORE_ROUNDTRIP_CONSERVED' },

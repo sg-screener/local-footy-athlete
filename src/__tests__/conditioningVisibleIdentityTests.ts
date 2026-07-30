@@ -8,7 +8,6 @@ import {
   projectConditioningVisibleIdentity,
 } from '../utils/conditioningVisibleIdentity';
 import { getConditioningLoggingConfig } from '../utils/conditioningLogging';
-import { buildRepeatWeekOverlay } from '../utils/repeatWeek';
 import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramReadModel';
 import { deriveVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
 import { weeklyPlanContextLabel, weeklyPlanTitle } from '../utils/weeklyPlanDisplay';
@@ -210,11 +209,22 @@ eq('logging headline agrees', getConditioningLoggingConfig(standaloneTempo).titl
 console.log('\n[6] persistence/repeat preserve derived identity without persisted display copy');
 const hydrated = JSON.parse(JSON.stringify(standaloneTempo)) as Workout;
 eq('JSON roundtrip family', projectConditioningVisibleIdentity(hydrated), projectConditioningVisibleIdentity(standaloneTempo));
-const repeat = buildRepeatWeekOverlay({ sourceWorkouts: [standaloneTempo], targetWeekStart: '2026-08-10' });
-const repeated = Object.values(repeat.workoutsByDate).find(Boolean) as Workout;
-eq('Repeat Week family', weeklyPlanTitle(repeated), 'Tempo Intervals');
-eq('Repeat Week weekly card omits dose', weeklyPlanContextLabel(repeated), null);
-eq('Repeat Week detail identity retains dose', deriveVisibleWorkoutIdentity(repeated).subtitle, '5 × 2 min');
+// Stand-in for the retired repeat-week overlay builder (HOME_SCREEN_REDESIGN
+// ruling 1 — the athlete-facing repeat-week writer is gone). Title derivation
+// stability across a week-overlay clone with a fresh id is a property of the
+// overlay-copy mechanism itself, not the retired button.
+const repeatedId = `${standaloneTempo.id}:week-overlay-copy`;
+const repeated: Workout = {
+  ...standaloneTempo,
+  id: repeatedId,
+  microcycleId: 'week-overlay-copy-mc',
+  exercises: (standaloneTempo.exercises ?? []).map((exercise) => ({
+    ...exercise, workoutId: repeatedId,
+  })),
+};
+eq('week-overlay copy family', weeklyPlanTitle(repeated), 'Tempo Intervals');
+eq('week-overlay copy weekly card omits dose', weeklyPlanContextLabel(repeated), null);
+eq('week-overlay copy detail identity retains dose', deriveVisibleWorkoutIdentity(repeated).subtitle, '5 × 2 min');
 
 console.log('\n[7] exact four-week off-season visible regression');
 const profile: OnboardingData = {

@@ -180,7 +180,7 @@ function extract(): ExtractedString[] {
  * number is the unit's visible progress; raising it requires a deliberate edit
  * somebody has to justify.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 187;
+const ATHLETE_VISIBLE_GAP_CEILING = 182;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

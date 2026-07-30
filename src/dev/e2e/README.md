@@ -130,18 +130,23 @@ second mutation path. Success is derived only from `applied`, `rejected`,
 `no-change`, `conflict`, or `failure` production outcomes. Reply text and UI copy
 are not bridge inputs. `coach.message` remains capability-disabled.
 
-`explorerSmokeScenarioManifests` compiles nine non-Coach scenarios (15 actions):
+`explorerSmokeScenarioManifests` compiles eight non-Coach scenarios (14 actions):
 whole-session deletion; stacked upper-pull component deletion; fixture move;
 the three-reload move/delete/restore chain; injury update/resolve; readiness
-set/clear; equipment clear/reapply; session feedback; and Repeat Week/restore.
+set/clear; equipment clear/reapply; and session feedback.
 Every step requires durable reload proof and a rendered witness.
+
+`week.repeat` remains a declared Explorer action/capability with no production
+owner — HOME_SCREEN_REDESIGN ruling 1 (2026-07-30) retired the athlete-facing
+repeat-week feature entirely, so this capability is permanently disabled
+alongside `coach.message` rather than removed from the type surface.
 
 Eligibility is deliberately fail-closed. A missing collection is not treated as
 an empty collection, a stale revision is not current, and an unavailable render
 test ID blocks before mutation. `explorerProductionBindings` now resolves the
 deterministic target, invokes the existing canonical owner once, and returns its
-typed receipt. Fixture and Repeat Week restoration bind to the exact adjustment
-ID returned by the manifest-declared baseline step and rehydrate that ID through
+typed receipt. Fixture restoration binds to the exact adjustment
+ID returned by the manifest-declared baseline step and rehydrates that ID through
 the exact prior TraceV2 chain after reload. The equipment seed installs its
 canonical source fact through the existing temporary-source-fact transaction.
 
@@ -166,7 +171,6 @@ Named seeds and their extra witnesses:
 | `equipment-restriction-case` | Complete bodyweight profile + active equipment constraint |
 | `feedback-progression-case` | Exact feedback source, baseline prescription, and future progression target |
 | `multi-reload-fixture-chain` | Four accepted weeks, exact fixture/rest/following-Monday identities, empty source facts, empty reversible ledger, and exact accepted revision |
-| `repeat-week-phase-transition` | Adjacent accepted weeks with different Section 18 phase signatures and explicit target fixture/Team Training anchors; no Repeat Week overlay is installed |
 | `coach-production-replay` | Empty Coach transcript/memory/history/clarifier/proposal with stable move, injury-exposure, and feedback-progression targets |
 
 The witness vocabulary also covers accepted-week count, Section 18

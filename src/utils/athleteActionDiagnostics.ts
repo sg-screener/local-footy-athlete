@@ -24,7 +24,6 @@ export type AthleteActionType =
   | 'game_day_change'
   | 'practice_match_change'
   | 'clear_adjustment'
-  | 'repeat_week'
   | 'rollover'
   | 'readiness_change'
   | 'injury_change'

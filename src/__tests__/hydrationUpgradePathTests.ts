@@ -219,6 +219,59 @@ async function main(): Promise<void> {
       + 'is unpersistable while a quarantined payload exists.');
   });
 
+  await run('a stored repeat_week overlay hydrates to an absent overlay and the week still derives', async () => {
+    // L15 (HOME_SCREEN_REDESIGN ruling 1, 2026-07-30). The repeat-week writer
+    // is retired entirely; a `reason: 'repeat_week'` overlay can only be a
+    // prior build's leftover output, never a fresh athlete decision. The read
+    // boundary drops it unconditionally — the target week re-derives from its
+    // own base/facts, exactly as if the overlay had never been written.
+    const fixture = seedDurableFromPreviousBuild();
+    const { state: preState } = programEnvelope();
+    assert(preState, 'the fixture carries no program-store envelope');
+    const overlays = preState.weekScopedOverlays as Record<string, Record<string, unknown>>;
+    const templateOverlay = overlays['2026-07-27'];
+    assert(templateOverlay, 'fixture lost its template overlay — pick a different source week');
+    const retiredWeekStart = '2026-08-10';
+    const retiredOverlay = {
+      ...templateOverlay,
+      id: `week-overlay:${retiredWeekStart}:repeat_week`,
+      weekStart: retiredWeekStart,
+      weekEnd: '2026-08-16',
+      anchorDate: null,
+      reason: 'repeat_week',
+    };
+    const mutatedState = {
+      ...preState,
+      weekScopedOverlays: { ...overlays, [retiredWeekStart]: retiredOverlay },
+    };
+    durable.set('program-store', JSON.stringify({
+      state: mutatedState,
+      version: 0,
+    }));
+    assert((JSON.parse(durable.get('program-store')!) as { state: { weekScopedOverlays: Record<string, unknown> } })
+      .state.weekScopedOverlays[retiredWeekStart], 'seeding the retired overlay onto disk failed');
+
+    const { threw } = await hydrate();
+    assert(!threw,
+      `hydrating a stored repeat_week overlay REFUSED it: ${threw?.name} — ${threw?.message}. `
+      + 'A retired-writer overlay is a legacy shape to drop, not a corrupt snapshot to reject.');
+
+    const live = useProgramStore.getState();
+    assert(!live.weekScopedOverlays[retiredWeekStart],
+      'the stored repeat_week overlay survived hydration — L15 requires it dropped');
+    assert(!!live.currentProgram && (live.currentProgram.microcycles?.length ?? 0) > 0,
+      'the program failed to derive after the retired overlay was dropped');
+
+    const { raw: persistedRaw } = programEnvelope();
+    const persistedOverlays = persistedRaw
+      ? (JSON.parse(persistedRaw) as { state?: { weekScopedOverlays?: Record<string, unknown> } })
+        .state?.weekScopedOverlays ?? {}
+      : {};
+    assert(!persistedOverlays[retiredWeekStart],
+      'the retired overlay was durably re-persisted after hydration — the drop must survive the write-back');
+    void fixture;
+  });
+
   console.log('\n  NOTE: green here is the upgrade path working, NOT the '
     + '2026-07-29 wipe fixed.\n        This fixture reaches the transaction but '
     + 'does not make it refuse, so the\n        quarantine law is guarded, not '

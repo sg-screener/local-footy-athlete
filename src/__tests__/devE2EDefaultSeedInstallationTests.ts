@@ -64,15 +64,11 @@ async function main(): Promise<void> {
     const { useCoachMutationHistoryStore } = require('../store/coachMutationHistoryStore') as
       typeof import('../store/coachMutationHistoryStore');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { section18PhaseTableSignature } = require('../rules/weeklyExposureContractV2') as
-      typeof import('../rules/weeklyExposureContractV2');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { readActiveDevE2EScenarioSession } = require('../dev/e2e/devE2EScenarioRuntime') as
       typeof import('../dev/e2e/devE2EScenarioRuntime');
 
     const seedIds = [
       'multi-reload-fixture-chain',
-      'repeat-week-phase-transition',
       'coach-production-replay',
     ] as const;
     const coordinator = createDefaultDevE2ESeedCoordinator(true);
@@ -91,16 +87,6 @@ async function main(): Promise<void> {
           'multi-reload default installation retains multiple accepted weeks and revision 8',
           (state.currentProgram?.microcycles.length ?? 0) >= 2 &&
             state.acceptedMaterialContext.revision === 8,
-        );
-      }
-
-      if (seedId === 'repeat-week-phase-transition') {
-        const weeks = useProgramStore.getState().currentProgram?.microcycles ?? [];
-        ok(
-          'Repeat Week default installation retains genuinely different phase signatures',
-          weeks.length >= 2 &&
-            section18PhaseTableSignature(weeks[0].exposureContractV2) !==
-              section18PhaseTableSignature(weeks[1].exposureContractV2),
         );
       }
 

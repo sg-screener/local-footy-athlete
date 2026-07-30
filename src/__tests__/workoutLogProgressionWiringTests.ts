@@ -17,7 +17,6 @@ import {
   deriveMissedStrengthSessionsThisWeek,
 } from '../utils/strengthProgressionIntegration';
 import { deriveConditioningProgressionInputOverrides } from '../utils/sessionBuilder';
-import { shouldRecommendRepeatWeek } from '../utils/repeatWeek';
 
 let pass = 0;
 let fail = 0;
@@ -189,12 +188,6 @@ function condRow(): WorkoutExercise[] {
   ok('skipped recovery_addon is not treated as failed conditioning', out.completionQuality !== 'failed', String(out.completionQuality));
   ok('skipped recovery_addon not counted as missed strength',
     deriveMissedStrengthSessionsThisWeek({ '2026-07-06': fb }, '2026-07-09') === 0);
-}
-
-// ── 13. Repeat-week recommender still passes ──
-{
-  ok('repeat recommender fires on repeated misses', shouldRecommendRepeatWeek({ plannedSessions: 5, completedSessions: 1 }));
-  ok('repeat recommender quiet on a good week', !shouldRecommendRepeatWeek({ plannedSessions: 5, completedSessions: 5 }));
 }
 
 // ── 14. collectLoggedStrengthSets bridges the store → builder ──

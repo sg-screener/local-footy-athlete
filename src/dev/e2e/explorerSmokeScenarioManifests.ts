@@ -24,7 +24,6 @@ const INJURY_EPISODE_ID =
   'injury-episode:v1:dev-e2e-injury-right-hamstring:20260713120000000';
 const EQUIPMENT_FACT_ID = 'temporary-equipment-bodyweight-only-2026-07-13';
 const FIXTURE_CHAIN_ADJUSTMENT_ID = 'receipt-from-move-fixture';
-const REPEAT_WEEK_ADJUSTMENT_ID = 'receipt-from-repeat-week';
 
 function acceptedOracles(args: {
   stepId: string;
@@ -501,66 +500,7 @@ const SESSION_FEEDBACK_RECEIPT = scenario({
   })],
 });
 
-const repeatWeek = acceptedStep({
-  stepId: 'repeat-week',
-  action: {
-    type: 'week.repeat',
-    target: { kind: 'week', weekId: DATE },
-    args: { sourceWeekStart: DATE, targetWeekStart: NEXT_MONDAY },
-    capability: { capabilityId: 'week.repeat', status: 'enabled' },
-  },
-  preconditions: [
-    {
-      predicateId: 'repeat-accepted-weeks',
-      type: 'accepted-week-count',
-      operator: 'at-least',
-      count: 2,
-    },
-    {
-      predicateId: 'repeat-source-phase',
-      type: 'phase-signature',
-      signature: 'in-season-standard',
-    },
-  ],
-  ingress: 'week-controls',
-  controlTestId: explorerTestId.repeatIngress(DATE),
-  renderTestId: explorerTestId.repeatActive(REPEAT_WEEK_ADJUSTMENT_ID),
-  selector: `/accepted/weeks/${NEXT_MONDAY}`,
-});
-const restoreRepeatedWeek = acceptedStep({
-  stepId: 'restore-repeated-week',
-  action: {
-    type: 'adjustment.restore',
-    target: { kind: 'adjustment', adjustmentId: REPEAT_WEEK_ADJUSTMENT_ID },
-    args: { restoredOn: NEXT_MONDAY },
-  },
-  preconditions: [{
-    predicateId: 'repeat-week-adjustment-active',
-    type: 'reversible-adjustment-status',
-    adjustmentId: REPEAT_WEEK_ADJUSTMENT_ID,
-    status: 'active',
-  }],
-  ingress: 'adjustment-history',
-  controlTestId: explorerTestId.repeatRestore(REPEAT_WEEK_ADJUSTMENT_ID),
-  renderTestId: explorerTestId.repeatRestored(REPEAT_WEEK_ADJUSTMENT_ID),
-  selector: `/accepted/weeks/${NEXT_MONDAY}`,
-  priorStepId: repeatWeek.stepId,
-  extraOracles: [{
-    oracleId: 'restore-repeated-week-baseline',
-    type: 'restoration-equality',
-    baselineStepId: repeatWeek.stepId,
-    selector: `/accepted/weeks/${NEXT_MONDAY}`,
-  }],
-  extraInvariants: ['restoration-equals-pre-mutation-state'],
-});
-
-const REPEAT_WEEK_PHASE_TRANSITION_AND_RESTORE = scenario({
-  scenarioId: 'smoke-repeat-week-phase-transition-and-restore',
-  seedId: 'repeat-week-phase-transition',
-  steps: [repeatWeek, restoreRepeatedWeek],
-});
-
-/** Exactly nine non-Coach smoke manifests. */
+/** Exactly eight non-Coach smoke manifests. */
 export const EXPLORER_NON_COACH_SMOKE_MANIFESTS = validateExplorerScenarioContracts([
   WHOLE_SESSION_DELETION,
   STACKED_UPPER_PULL_DELETION,
@@ -570,7 +510,6 @@ export const EXPLORER_NON_COACH_SMOKE_MANIFESTS = validateExplorerScenarioContra
   READINESS_SET_AND_CLEAR,
   EQUIPMENT_CLEAR_AND_REAPPLY,
   SESSION_FEEDBACK_RECEIPT,
-  REPEAT_WEEK_PHASE_TRANSITION_AND_RESTORE,
 ], {
   declaredCapabilities: EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS,
 });

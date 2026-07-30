@@ -44,6 +44,8 @@ const durable = new Map<string, string>();
   throw new Error('NETWORK DISABLED');
 };
 
+import fs from 'fs';
+import path from 'path';
 import { PERSISTED_STORE_HYDRATION_REGISTRY } from '../store/appHydrationGate';
 import {
   clearAllQuarantines,
@@ -71,6 +73,30 @@ function run(name: string, body: () => void): void {
     failures.push(name);
     console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
   }
+}
+
+const srcRoot = path.resolve(__dirname, '..');
+
+/** Every .ts/.tsx file under src/, repo-relative paths, node_modules excluded. */
+function walkSrc(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules') continue;
+        walk(full);
+        continue;
+      }
+      if (/\.tsx?$/.test(entry.name)) out.push(path.relative(srcRoot, full));
+    }
+  };
+  walk(srcRoot);
+  return out;
+}
+
+function read(relativePath: string): string {
+  return fs.readFileSync(path.join(srcRoot, relativePath), 'utf8');
 }
 
 /**
@@ -179,6 +205,18 @@ run('quarantine holds nothing when there is nothing to hold', () => {
   assert(decideQuarantinedWrite(key, '{"material":false}').allowed,
     'quarantining an empty payload armed the boundary — a refusal with nothing '
     + 'to protect must protect nothing');
+});
+
+run('repeat-week has no writer and no surface (HOME_SCREEN_REDESIGN ruling 1)', () => {
+  // This suite's own name and assertion text are exempt — they are the law
+  // statement, not a surviving surface. The hydration exemption is matched
+  // case-insensitively (`programHydrationIngress.ts` names the ingress lift).
+  const offenders = walkSrc().filter((f) =>
+    !f.toLowerCase().includes('hydration') &&
+    !f.endsWith('storedStateWriterAuditTests.ts') &&
+    read(f).match(/repeat_week|repeatWeek/i)
+  );
+  assert(offenders.length === 0, `repeat-week survives in: ${offenders.join(', ')}`);
 });
 
 console.log(`\nStored-state writer audit totals: ${passed} passed, ${failed} failed`);

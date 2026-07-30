@@ -78,7 +78,6 @@ const semanticIdentities: Array<[string, string, string]> = [
   ['equipment clear', explorerTestId.equipmentCleared('Fact:3'), 'equipment-cleared-fact-3'],
   ['feedback receipt', explorerTestId.feedbackReceipt('Transaction:4'), 'session-feedback-receipt-transaction-4'],
   ['adjustment restore', explorerTestId.adjustmentRestored('Adjustment:5'), 'adjustment-restored-adjustment-5'],
-  ['repeat restore', explorerTestId.repeatRestored('Repeat:6'), 'repeat-week-restored-repeat-6'],
 ];
 for (const [name, actual, expected] of semanticIdentities) {
   if (actual !== expected || actual.includes(stableTestIdToken('Mutable display copy'))) {

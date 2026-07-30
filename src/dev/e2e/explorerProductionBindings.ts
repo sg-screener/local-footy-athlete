@@ -43,7 +43,6 @@ import {
   resolveSessionOutcomeTarget,
 } from '../../store/sessionOutcomeTransaction';
 import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
-import { repeatWeekIntoNextWeek } from '../../utils/repeatWeek';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import {
@@ -121,7 +120,6 @@ export const EXPLORER_BOUND_ACTION_TYPES = [
   'equipment.clear',
   'session-feedback.record',
   'adjustment.restore',
-  'week.repeat',
 ] as const satisfies readonly ExplorerExecutableActionType[];
 
 const EQUIPMENT_TAGS = new Set<EquipmentTag>([
@@ -464,11 +462,6 @@ function defaultResolveTarget(
         adjustmentKind: adjustment.kind,
       };
     }
-    case 'week.repeat':
-      if (action.target.weekId !== action.args.sourceWeekStart) {
-        throw new Error(`explorer_week_seed_identity_mismatch:${action.target.weekId}`);
-      }
-      return { canonicalSemanticIdentity: action.target.weekId, seed };
     case 'readiness.set':
     case 'readiness.clear':
       if (action.target.readinessId !== `readiness-${action.args.date}`) {
@@ -874,32 +867,6 @@ async function defaultInvokeCanonicalOwner(
         adjustmentKind: target.adjustmentKind ?? null,
       };
     }
-    case 'week.repeat': {
-      const profile = useProfileStore.getState().onboardingData;
-      if (!profile) throw new Error('explorer_repeat_profile_missing');
-      const result = await repeatWeekIntoNextWeek({
-        baseProfile: profile,
-        sourceWeekDate: action.args.sourceWeekStart,
-        todayISO: action.args.sourceWeekStart,
-        expectedAcceptedRevision: acceptedRevision,
-        trace,
-      });
-      if (result.targetWeekStart !== action.args.targetWeekStart) {
-        throw new Error('explorer_repeat_target_week_mismatch');
-      }
-      return {
-        status: 'applied',
-        reasonCode: null,
-        canonicalReceipt: jsonValue({
-          sourceWeekStart: result.sourceWeekStart,
-          targetWeekStart: result.targetWeekStart,
-          adjustmentId: result.adjustmentId,
-          acceptedRevision: result.acceptedRevision,
-          observationId: result.observationId ?? null,
-        }),
-        producedAdjustmentId: result.adjustmentId,
-      };
-    }
   }
 }
 
@@ -934,7 +901,6 @@ function diagnosticActionType(action: ExplorerExecutableAction): AthleteActionTy
     case 'equipment.clear': return 'equipment_change';
     case 'session-feedback.record': return 'session_feedback';
     case 'adjustment.restore': return 'clear_adjustment';
-    case 'week.repeat': return 'repeat_week';
   }
 }
 
@@ -961,10 +927,6 @@ function actionDates(action: ExplorerExecutableAction): {
     };
     case 'equipment.clear': return { sourceDate: action.args.clearedOn };
     case 'adjustment.restore': return { sourceDate: action.args.restoredOn };
-    case 'week.repeat': return {
-      sourceDate: action.args.sourceWeekStart,
-      targetDate: action.args.targetWeekStart,
-    };
   }
 }
 

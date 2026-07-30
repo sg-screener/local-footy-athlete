@@ -281,7 +281,6 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
   return seedId === 'spent-week-friday' ||
     seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
-    seedId === 'repeat-week-phase-transition' ||
     seedId === 'coach-production-replay'
     ? 4
     : 1;
@@ -424,40 +423,7 @@ function programForSeed(seedId: DevE2ESeedId, profile: OnboardingData): Training
   if (seedId === 'one-set-strength') {
     program = withOneSetStrength(program);
   }
-  if (seedId === 'repeat-week-phase-transition') {
-    program = withRepeatPhaseTransition(program, seedId, profile);
-  }
   return program;
-}
-
-function withRepeatPhaseTransition(
-  program: TrainingProgram,
-  seedId: DevE2ESeedId,
-  profile: OnboardingData,
-): TrainingProgram {
-  const targetWeekStart = addDaysISO(devE2EWeekStartForSeed(seedId), 7);
-  const targetCandidate = generateProgramLocally(profile, {
-    todayISO: targetWeekStart,
-    blockNumber: 1,
-    previousProgram: program,
-    seasonPhaseClock: program.seasonPhaseClock,
-    targetFixtureDay: 'Saturday',
-    activeConstraints: [],
-    readinessSignal: null,
-    microcycleLimit: 1,
-  });
-  const target = targetCandidate.microcycles[0];
-  if (!target || program.microcycles.length < 2) {
-    throw new Error('repeat-week-phase-transition requires an adjacent target week.');
-  }
-  const result = clone(program);
-  result.microcycles[1] = stabilizeMicrocycle(
-    target,
-    seedId,
-    result.id,
-    targetWeekStart,
-  );
-  return result;
 }
 
 function underlyingWorkoutForDate(
@@ -716,14 +682,6 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
       equipment: ['bodyweight'],
     });
   }
-  if (seedId === 'repeat-week-phase-transition') {
-    const profile = fixedProfile({
-      seasonPhase: 'Pre-season',
-    });
-    delete profile.gameDay;
-    delete profile.usualGameDay;
-    return profile;
-  }
   return fixedProfile();
 }
 
@@ -946,74 +904,6 @@ export function witnessesForDevE2ESeed(
       }
       break;
     }
-    case 'repeat-week-phase-transition': {
-      const sourceWeek = anchorDate;
-      const targetWeek = followingMonday;
-      const sourceTeamDate = addDaysISO(sourceWeek, 1);
-      const targetTeamDate = addDaysISO(targetWeek, 1);
-      const targetFixtureDate = addDaysISO(targetWeek, 5);
-      const sourceTeam = teamTrainingWorkout(program, sourceTeamDate);
-      const targetTeam = teamTrainingWorkout(program, targetTeamDate);
-      const sourceSignature = contractSignatureForWeek(
-        { program, weekScopedOverlays: {} },
-        sourceWeek,
-      );
-      const targetSignature = contractSignatureForWeek(
-        { program, weekScopedOverlays: {} },
-        targetWeek,
-      );
-      if (sourceSignature === targetSignature) {
-        throw new Error('repeat-week-phase-transition requires differing phase signatures.');
-      }
-      witnesses.push({ kind: 'accepted_week_count', minimum: 2, consecutive: true });
-      witnesses.push({
-        kind: 'week_contract_signature',
-        weekStart: sourceWeek,
-        signature: sourceSignature,
-      });
-      witnesses.push({
-        kind: 'week_contract_signature',
-        weekStart: targetWeek,
-        signature: targetSignature,
-      });
-      witnesses.push({
-        kind: 'workout',
-        dayOfWeek: sourceTeam.dayOfWeek,
-        date: sourceTeamDate,
-        surface: 'underlying',
-        workoutId: sourceTeam.id,
-      });
-      witnesses.push({
-        kind: 'workout',
-        dayOfWeek: targetTeam.dayOfWeek,
-        date: targetTeamDate,
-        surface: 'underlying',
-        workoutId: targetTeam.id,
-      });
-      witnesses.push({
-        kind: 'fixture_identity',
-        date: targetFixtureDate,
-        workoutId: visibleFixtureWorkoutId(targetFixtureDate),
-        anchorKind: 'practice_match',
-      });
-      witnesses.push({
-        kind: 'component_identity',
-        date: targetTeamDate,
-        workoutId: targetTeam.id,
-        componentId: 'team_training',
-        identity: componentIdentity(targetTeam, 'team_training'),
-        surface: 'underlying',
-      });
-      witnesses.push({
-        kind: 'absent_overlay',
-        weekStart: targetWeek,
-        reason: 'repeat_week',
-        requireNoDateOverride: true,
-        requireNoOverrideContext: true,
-        requireNoUserRemovalOwnership: true,
-      });
-      break;
-    }
     case 'coach-production-replay': {
       const sunday = underlyingWorkoutForDate(program, sundayDate);
       const hamstring = futureHamstringExposure(program, anchorDate);
@@ -1082,12 +972,6 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
     case 'fixture-move':
     case 'multi-reload-fixture-chain':
     case 'coach-production-replay':
-      break;
-    case 'repeat-week-phase-transition':
-      auxiliaryState.push({
-        kind: 'calendar_game',
-        date: addDaysISO(anchorDate, 12),
-      });
       break;
     case 'lower-body-deletion':
       break;

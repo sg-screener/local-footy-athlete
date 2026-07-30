@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   const majorFamilies = [
     'game_day_change', 'practice_match_change', 'move_session', 'delete_session',
     'delete_component', 'add_session', 'clear_adjustment', 'injury_change',
-    'readiness_change', 'equipment_change', 'session_feedback', 'repeat_week', 'rollover',
+    'readiness_change', 'equipment_change', 'session_feedback', 'rollover',
   ];
   majorFamilies.forEach((actionType) => familyCoordinator.startRoot({
     source: actionType === 'rollover' ? 'system' : 'tap',

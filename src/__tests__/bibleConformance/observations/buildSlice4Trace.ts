@@ -5,7 +5,7 @@ import type { SessionAllocation } from '../../../utils/coachingEngine';
 import type { Workout } from '../../../types/domain';
 import { buildWorkoutsFromCoach } from '../../../data/defaultProgram';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
-import { buildRepeatWeekOverlay } from '../../../utils/repeatWeek';
+import { addDays } from '../../../utils/sessionResolver';
 import { rebuildLocalWeek } from '../../../utils/weekRebuild';
 import { rolloverProgramBlock } from '../../../utils/programBlockRollover';
 import { applyAdjustmentEvents, applyMoveSession } from '../../../utils/applyAdjustmentEvents';
@@ -191,6 +191,40 @@ function rebuildObservations(): Slice4PathObservation[] {
   ];
 }
 
+/** ISO date within `weekStart`'s week for a given day-of-week number (0-6). */
+function dateForDowInWeek(weekStart: string, dow: number): string {
+  const mondayOffset = dow === 0 ? 6 : dow - 1;
+  return addDays(weekStart, mondayOffset);
+}
+
+/**
+ * Local stand-in for the retired repeat-week overlay builder (HOME_SCREEN_REDESIGN
+ * ruling 1 — the athlete-facing repeat-week writer is gone). The Slice 4
+ * conditioning-identity-conservation law this scenario proves is about the
+ * week-overlay-copy mechanism itself — clone a source week's workouts onto a
+ * target week, skipping stale games — not the retired button, so this
+ * reproduces the same sparse copy without importing the deleted module.
+ */
+function buildWeekOverlayCopy(args: {
+  sourceWorkouts: Workout[];
+  targetWeekStart: string;
+}): Record<string, Workout | null> {
+  const overlayId = `week-overlay-copy:${args.targetWeekStart}`;
+  const workoutsByDate: Record<string, Workout | null> = {};
+  for (const workout of args.sourceWorkouts) {
+    if (workout.workoutType === 'Game') continue;
+    const date = dateForDowInWeek(args.targetWeekStart, workout.dayOfWeek);
+    const id = `${workout.id}:week-overlay-copy:${date}`;
+    workoutsByDate[date] = {
+      ...workout,
+      id,
+      microcycleId: overlayId,
+      exercises: (workout.exercises ?? []).map((exercise) => ({ ...exercise, workoutId: id })),
+    };
+  }
+  return workoutsByDate;
+}
+
 function repeatObservations(): Slice4PathObservation[] {
   const source = [combinedLower(), pathWorkout({
     id: 'repeat-team', dayOfWeek: 2, name: 'Team Training + Upper Pull', patterns: ['pull'], primary: 'pull',
@@ -198,11 +232,11 @@ function repeatObservations(): Slice4PathObservation[] {
     exercises: [pathExercise('repeat-team', 0, 'Pull-Ups')],
   })];
   const started = performance.now();
-  const overlay = buildRepeatWeekOverlay({ sourceWorkouts: source, targetWeekStart: '2026-03-30' });
-  const output = Object.values(overlay.workoutsByDate).filter(Boolean) as Workout[];
+  const workoutsByDate = buildWeekOverlayCopy({ sourceWorkouts: source, targetWeekStart: '2026-03-30' });
+  const output = Object.values(workoutsByDate).filter(Boolean) as Workout[];
   return [
-    observation('repeat_week', 'path_input', canonicalWeekLedger(source), 0),
-    observation('repeat_week', 'path_output', canonicalWeekLedger(output), performance.now() - started, ['date', 'workout_id', 'microcycle_id']),
+    observation('week_overlay_copy', 'path_input', canonicalWeekLedger(source), 0),
+    observation('week_overlay_copy', 'path_output', canonicalWeekLedger(output), performance.now() - started, ['date', 'workout_id', 'microcycle_id']),
   ];
 }
 
@@ -401,7 +435,7 @@ export function buildSlice4ScenarioTrace(
   if (scenario.id === 'generation-ai-fallback-equivalence') observations = generationObservations();
   else if (scenario.id === 'standalone-conditioning-ownership') observations = standaloneConditioningObservations();
   else if (scenario.id === 'noop-inseason-week-rebuild') observations = rebuildObservations();
-  else if (scenario.id === 'repeat-rich-week') observations = repeatObservations();
+  else if (scenario.id === 'week-overlay-copy-rich-week') observations = repeatObservations();
   else if (scenario.id === 'block-rollover-contract') observations = rolloverObservations();
   else if (scenario.id === 'coach-add-bike-zone2') observations = addBikeObservation();
   else if (scenario.id === 'coach-remove-contrast-lift') observations = contrastRemovalObservation();

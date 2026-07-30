@@ -168,7 +168,6 @@ function explorerCanonicalTargetIdsFromTarget(
     case 'equipment-fact': return [target.equipmentFactId];
     case 'session-feedback': return [target.sessionId, target.feedbackId];
     case 'adjustment': return [target.adjustmentId];
-    case 'week': return [target.weekId];
   }
 }
 

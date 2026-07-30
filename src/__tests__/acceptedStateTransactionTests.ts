@@ -2,7 +2,9 @@
  * Accepted-state transaction ownership — Section 18 systemic regressions.
  *
  * This suite deliberately drives the production stores/coordinators. It keeps
- * the 25 requested fixed regressions separate from broader properties and
+ * the 23 requested fixed regressions (originally 25 — regressions 18-19,
+ * Repeat Week's own publish/rollback behaviour, retired with the feature
+ * under HOME_SCREEN_REDESIGN ruling 1) separate from broader properties and
  * source-boundary mutation witnesses so the completion total cannot drift.
  *
  * Run: npm run test:accepted-state-transactions
@@ -66,7 +68,6 @@ import {
   buildWeekScopedWorkoutOverlay,
   rebuildLocalWeek,
 } from '../utils/weekRebuild';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
@@ -685,35 +686,6 @@ run('regression', '17 rebuild failure preserves all prior surfaces', () => {
   assert(materialSignature() === before, 'failed rebuild partially published state');
 });
 
-run('regression', '18 Repeat Week publishes overlay and accepted target once', () => {
-  const value = profile('Off-season');
-  seed(value);
-  let publishes = 0;
-  const stop = useProgramStore.subscribe(() => { publishes += 1; });
-  const result = repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK_START, todayISO: WEEK_START });
-  stop();
-  assert(publishes === 1, `Repeat Week published ${publishes} times`);
-  assert(useProgramStore.getState().weekScopedOverlays[result.targetWeekStart]?.reason === 'repeat_week',
-    'accepted repeat overlay missing');
-  assertAcceptedVisibleLedgerEquivalence({
-    operation: 'forward_decision',
-    surfaces: useProgramStore.getState(),
-    context: getAcceptedMaterialContext(),
-    weekStarts: [result.targetWeekStart],
-    profile: value,
-  });
-});
-
-run('regression', '19 Repeat Week failure preserves prior state', () => {
-  const value = profile('Off-season');
-  seed(value);
-  const before = materialSignature();
-  const failed = withGatewayFailure(() =>
-    repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK_START, todayISO: WEEK_START }));
-  assert(failed, 'failure injection did not reach Repeat Week gateway');
-  assert(materialSignature() === before, 'failed Repeat Week partially published state');
-});
-
 run('regression', '20 rollover restores all future overlays atomically', () => {
   const value = profile('Off-season');
   seed(value, '2026-06-08');
@@ -1139,7 +1111,7 @@ async function main(): Promise<void> {
   for (const test of tests) {
     if (test.kind !== previousKind) {
       const heading = test.kind === 'regression'
-        ? 'Required fixed regressions (25)'
+        ? 'Required fixed regressions (23)'
         : test.kind === 'property'
           ? 'Properties (10 distinct invariants)'
           : 'Mutation witnesses (10)';
@@ -1158,8 +1130,8 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
-  if (regressionPass !== 25 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
+  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/23 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+  if (regressionPass !== 23 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
     console.error(`Failures: ${failures.join(', ')}`);
     process.exit(1);
   }

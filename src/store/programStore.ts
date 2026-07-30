@@ -106,6 +106,7 @@ import {
 import {
   PROGRAM_STORE_PERSISTENCE_VERSION,
   ProgramHydrationIngressError,
+  dropRetiredWeekOverlaysAtHydration,
   requireProgramHydrationIngress,
   type ProgramHydrationIngressClassification,
   type ProgramHydrationIngressKind,
@@ -1416,12 +1417,16 @@ export function canonicaliseHydratedState(
 ): Partial<ProgramState> {
   // FIRST, and above every branch below. See `migrateHydratedStatePowerBlocks`.
   const persistedState = migrateHydratedStatePowerBlocks(rawPersistedState);
+  // ALSO above every branch below. See `dropRetiredWeekOverlaysAtHydration`
+  // (L15, HOME_SCREEN_REDESIGN ruling 1) — runs unconditionally, regardless of
+  // ingress classification.
+  const liftedState = dropRetiredWeekOverlaysAtHydration(persistedState);
   if (options.ingressKind === 'accepted_canonical') {
     return projectHydratedStateDerivedFields(
-      persistedState as Record<string, unknown>,
+      liftedState as Record<string, unknown>,
     ) as Partial<ProgramState>;
   }
-  const migrated = canonicaliseAcceptedBoundaryState(persistedState, {
+  const migrated = canonicaliseAcceptedBoundaryState(liftedState, {
     structuralMigrationRequired: true,
     profile: options.profile,
   });

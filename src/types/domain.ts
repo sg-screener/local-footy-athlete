@@ -969,7 +969,7 @@ export interface WeekScopedWorkoutOverlay {
    * days the athlete had marked as rest. See
    * docs/DERIVED_OVERRIDE_MATERIALISATION_REASSESSMENT_2026-07-30.md.
    */
-  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week' | 'readiness_reduction'
+  reason: 'one_off_game' | 'one_off_no_game' | 'readiness_reduction'
     | 'accepted_week_repair';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;

@@ -28,8 +28,6 @@ export type ReversibleAdjustmentKind =
   | 'session_component_delete'
   /** Net-new session added onto a previously empty/rest day (athlete addition). */
   | 'session_add'
-  /** Exact target-overlay transaction produced by Repeat Week. */
-  | 'repeat_week'
   /**
    * Exact week-overlay transaction authored by a DERIVING readiness/illness
    * source fact (severe illness → illness_recovery, cooked fatigue → readiness

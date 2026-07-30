@@ -55,14 +55,15 @@ export interface ExplorerCapabilityDeclaration {
 /**
  * Canonical production ownership registry. Explorer consumers may verify this
  * receipt, but they must not invent capability ownership locally.
+ *
+ * Empty: `week.repeat`'s writer was retired entirely (HOME_SCREEN_REDESIGN
+ * ruling 1, 2026-07-30) and `coach.message` never had a production owner.
+ * Both capability IDs stay declared in `EXPLORER_CAPABILITY_IDS` — permanently
+ * disabled rather than removed from the type surface — so this registry
+ * naming neither is the correct, honest state.
  */
-export const EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS = Object.freeze([
-  {
-    capabilityId: 'week.repeat',
-    owner: 'repeatWeekIntoNextWeek',
-    contractVersion: 'repeat-week-transaction-v1',
-  },
-] as const satisfies readonly ExplorerCapabilityDeclaration[]);
+export const EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS: readonly ExplorerCapabilityDeclaration[] =
+  Object.freeze([]);
 
 export interface ExplorerContractValidationOptions {
   readonly declaredCapabilities?: readonly ExplorerCapabilityDeclaration[];

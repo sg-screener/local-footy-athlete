@@ -12,6 +12,7 @@ import type {
   Microcycle,
   OnboardingData,
   TrainingProgram,
+  WeekScopedWorkoutOverlay,
   Workout,
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -34,7 +35,6 @@ import {
   validateProgramAgainstActiveConstraints,
   validateWeekOverlayAgainstActiveConstraints,
 } from '../utils/postGenerationConstraintValidation';
-import { buildRepeatWeekOverlay } from '../utils/repeatWeek';
 import {
   canonicaliseHydratedProgram,
   canonicaliseHydratedState,
@@ -383,7 +383,7 @@ function installOverrideDependency(value: ReturnType<typeof program>): { extraDa
     weekStart: base.startDate.slice(0, 10),
     weekEnd: base.endDate.slice(0, 10),
     anchorDate: null,
-    reason: 'repeat_week',
+    reason: 'one_off_game',
     exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
     exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
     workoutsByDate: { [sourceDate]: removeConditioningFromWorkout(source, 'overlay-without-core') },
@@ -442,7 +442,7 @@ function installOverlayDependency(value: ReturnType<typeof program>): { weekStar
     weekStart,
     weekEnd: base.endDate.slice(0, 10),
     anchorDate: null,
-    reason: 'repeat_week',
+    reason: 'one_off_game',
     exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
     exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
     workoutsByDate: { [extraDate]: additionalCoreConditioning(source, 3, OVERLAY_DEPENDENCY_WORKOUT_ID) },
@@ -774,20 +774,33 @@ check('21 generation cannot store a blocking final-visible violation',
   }).blockingViolations.length === 0;
   check('22 rebuild repairs a blocking final-visible candidate through production fallback',
     rebuildFallbackAccepted);
-  const repeat = buildRepeatWeekOverlay({
-    sourceWorkouts: allRest(base.workouts),
-    targetWeekStart: WEEK_START,
-    targetExposureContractV2: clone(base.exposureContractV2!),
-  });
+  // Local stand-in for the retired repeat-week overlay builder (HOME_SCREEN_
+  // REDESIGN ruling 1 — the athlete-facing repeat-week writer is gone). This
+  // proves the §18 repair fallback works uniformly across overlay-producing
+  // pathways in general, not the retired button specifically, so the fixture
+  // reproduces an equivalent sparse week-overlay copy without the deleted
+  // module.
+  const weekOverlayCopy: WeekScopedWorkoutOverlay = {
+    id: 'week-overlay-copy-check-23',
+    weekStart: WEEK_START,
+    weekEnd: dateForWeekDay(WEEK_START, 0),
+    anchorDate: null,
+    reason: 'one_off_game',
+    exposureContractV2: clone(base.exposureContractV2!),
+    workoutsByDate: Object.fromEntries(allRest(base.workouts).map((workout) =>
+      [dateForWeekDay(WEEK_START, workout.dayOfWeek), workout])),
+    createdAt: NOW,
+    updatedAt: NOW,
+  };
   const repairedRepeat = validateWeekOverlayAgainstActiveConstraints({
-    overlay: repeat, todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
+    overlay: weekOverlayCopy, todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
   });
   repeatWriteAccepted = evaluateSection18EffectiveWeek({
     contract: repairedRepeat.exposureContractV2!,
     workouts: Object.values(repairedRepeat.workoutsByDate).filter((workout): workout is Workout => !!workout),
     weekStart: WEEK_START,
   }).blockingViolations.length === 0;
-  check('23 Repeat Week repairs a blocking candidate through the accepted fallback', repeatWriteAccepted);
+  check('23 a week-overlay copy repairs a blocking candidate through the accepted fallback', repeatWriteAccepted);
   const repairedRollover = validateProgramAgainstActiveConstraints({
     program: { ...clone(mid.program), microcycles: [{ ...clone(base), workouts: allRest(base.workouts) }] },
     todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
