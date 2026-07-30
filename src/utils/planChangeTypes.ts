@@ -18,14 +18,29 @@ export type G1LandingRouteId =
   /** The same session under the one reduction mechanism, DELOAD_LAW. */
   | 'deloaded';
 
-export type PlanChangeCategoryId =
-  | 'conditioning_light'
-  | 'conditioning_hard'
-  | 'recovery'
-  | 'strength_upper'
-  | 'strength_lower'
-  | 'strength_full'
-  | 'accessories';
+/**
+ * THE ATHLETE'S ADD/SWAP VOCABULARY — one declaration, so the runtime list and
+ * the type can never disagree.
+ *
+ * It was a bare union. The session type charter has to ask "which doors exist?"
+ * at runtime and answer it EXHAUSTIVELY, and a type union cannot be enumerated,
+ * so the census would have been a hand-maintained second copy — one more
+ * representation of a decision, which is the shape the north star forbids.
+ * Deriving the union from the list makes a new door a compile error everywhere
+ * that switches on it AND a charter failure until Sam has ruled its four
+ * answers.
+ */
+export const PLAN_CHANGE_CATEGORY_IDS = [
+  'conditioning_light',
+  'conditioning_hard',
+  'recovery',
+  'strength_upper',
+  'strength_lower',
+  'strength_full',
+  'accessories',
+] as const;
+
+export type PlanChangeCategoryId = (typeof PLAN_CHANGE_CATEGORY_IDS)[number];
 
 /**
  * What a Move takes off the day (Sam, 2026-07-30 — session-scoped Move).

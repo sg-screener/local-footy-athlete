@@ -270,6 +270,38 @@ one is the exact failure this law exists to prevent.
 L11 says the matrix comes before the phone. L13 says the matrix must be deep enough
 to contain the defect.
 
+### L14 — Domain purity
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** Domain logic — rules,
+generation, repairs, counting, projection — knows nothing about React,
+navigation, screens, Supabase, or device time. Any new or moved domain module
+must be callable from a plain test with explicit inputs. The
+`dayDetailComposition` purity pin is the precedent; apply its standard to
+everything Stage B touches. Existing violations are census debt, not
+emergencies — they are converted when their unit comes up, not hunted.
+
+### L15 — One write format
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** New saves are always
+written in the current canonical format; superseded formats are never written
+again, by anything, ever. Old formats exist only as read-ingress lifts at the
+boundary (powerBlock precedent, hydration lift). A writer of a retired shape
+is a red-gate defect, not a compatibility feature.
+
+### L16 — Vertical slice first
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** A rebuilt system proves
+one complete loop before anything else builds on it: load → display → change →
+repair → approve → persist → relaunch-identical. Stage B is held to this shape
+explicitly: the engine's first acceptance is one clean slice through the
+walker, not breadth.
+
+*Context for L14–L16:* these arose from an external architecture review Sam
+commissioned on 2026-07-30. The review's remaining recommendation — a parallel
+V2 shell behind a legacy flag — was REJECTED by Sam's seat: two live truths is
+the disease every law here exists to kill; the in-place convergence continues.
+Recorded so nobody re-litigates it.
+
 ## Test Standard
 
 - Prefer invariant or scenario tests that prove the capability, not only the
