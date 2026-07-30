@@ -228,8 +228,8 @@ export type DeterministicCoachNoteEffectReason =
   | 'adaptation_held'
   | 'adaptation_increased'
   | 'beginner_conservative_prescription'
-  | 'testing_lower_strength'
-  | 'testing_upper_strength'
+  // 'testing_lower_strength' / 'testing_upper_strength' REMOVED 2026-07-31 with the
+  // squat/bench gap-lean they explained (Sam's ruling, 2026-07-30).
   | 'testing_aerobic'
   | 'testing_speed'
   | 'testing_robustness'

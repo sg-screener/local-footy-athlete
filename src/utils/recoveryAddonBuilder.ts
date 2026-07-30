@@ -183,8 +183,6 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
   const isBeginner = resolveTrainingAgePolicy(args.profile.experienceLevel).level === 'new';
   const testingBias = computeTestingBias({
     phase,
-    squatStrength: args.profile.squatStrength,
-    benchStrength: args.profile.benchStrength,
     conditioningLevel: args.profile.conditioningLevel,
     sprintExposure: args.profile.sprintExposure,
     biggestLimitation: args.profile.biggestLimitation,

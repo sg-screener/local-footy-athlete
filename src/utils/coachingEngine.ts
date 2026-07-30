@@ -160,8 +160,10 @@ export interface CoachingInputs {
   conditioningLevel: ConditioningLevel | undefined;
   recentTrainingLoad: RecentTrainingLoad | undefined;
   experienceLevel: ExperienceLevel | undefined;
-  squatStrength?: SquatStrength;
-  benchStrength?: BenchStrength;
+  // NO squatStrength / benchStrength. They reached this layer only to feed the
+  // squat/bench gap-lean, which Sam killed on 2026-07-30. They remain profile answers and
+  // still drive starting LOADS through `loadEstimation`'s ruled anchor ladders — that
+  // path reads `OnboardingData` directly and never came through here.
   biggestLimitation?: BiggestLimitation;
   injuries: OnboardingInjury[];
   goals: string[];
@@ -793,9 +795,7 @@ function firstPlanShapeDifference(
 }
 
 function hasActiveTestingBias(bias: ReturnType<typeof computeTestingBias>): boolean {
-  return bias.lowerStrengthBias > 0 ||
-    bias.upperStrengthBias > 0 ||
-    bias.speedBias > 0 ||
+  return bias.speedBias > 0 ||
     Object.keys(bias.conditioningCategoryPreference).length > 0 ||
     Object.keys(bias.recoveryAddonFocusPreference).length > 0;
 }
@@ -804,10 +804,10 @@ function testingEffectReason(
   bias: ReturnType<typeof computeTestingBias>,
   difference: PlanShapeDifference,
 ): DeterministicCoachNoteEffectReason | null {
-  if (difference.actual.strengthPattern !== difference.baseline?.strengthPattern) {
-    if (bias.lowerStrengthBias > bias.upperStrengthBias) return 'testing_lower_strength';
-    if (bias.upperStrengthBias > bias.lowerStrengthBias) return 'testing_upper_strength';
-  }
+  // NO STRENGTH-PATTERN REASON. The testing bias no longer has a regional direction to
+  // explain one with — Sam killed the squat/bench gap-lean (2026-07-30), so a changed
+  // strength pattern is never attributable to testing. A note claiming otherwise would be
+  // a fabricated explanation, which is worse than no note.
   if (difference.actual.conditioningCategory !== difference.baseline?.conditioningCategory) {
     if (
       (difference.actual.conditioningCategory === 'aerobic_base' ||
@@ -947,8 +947,6 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   });
   const testingBias = computeTestingBias({
     phase: inputs.seasonPhase,
-    squatStrength: inputs.squatStrength,
-    benchStrength: inputs.benchStrength,
     conditioningLevel: inputs.conditioningLevel,
     sprintExposure: inputs.sprintExposure,
     biggestLimitation: inputs.biggestLimitation,
@@ -2718,8 +2716,6 @@ function buildWeeklyPlan(
       }
     }
 
-    const TESTING_STRUCTURE_WEIGHT = 50; // 10% max bias => 5-point dose tie-break
-
     function scoreStructure(struct: StructureTemplate): number {
       let score = 0;
       for (const s of struct) {
@@ -2749,11 +2745,10 @@ function buildWeeklyPlan(
       // Reward having both upper patterns (push + pull)
       if (pu > 0 && pl > 0) score += 15;
 
-      // Small regional-dose tie-break within the approved structures. FB
-      // contributes half to both regions, and injury blocks above remain two
-      // orders of magnitude larger than this preference.
-      score += (sq + hi) * programmingBias.lowerStrengthBias * TESTING_STRUCTURE_WEIGHT;
-      score += (pu + pl) * programmingBias.upperStrengthBias * TESTING_STRUCTURE_WEIGHT;
+      // NO REGIONAL-DOSE TIE-BREAK. A small lower-vs-upper preference used to sit here,
+      // fed by the squat/bench gap. Sam killed the gap (2026-07-30): "we shouldn't bias
+      // lower over upper". Structure is now chosen by coverage, balance and the phase
+      // tables alone — no athlete-property lean tips it either way.
 
       // Lower body MUST be present — massive penalty if missing
       const hasLower = struct.some(s => s === 'L-sq' || s === 'L-hi');
@@ -4001,7 +3996,6 @@ function buildWeeklyPlan(
     // CHOICE EXISTS, without overriding category coverage (top rule).
     const W_SC_PAIRING_BAD = 35; // soft penalty for lower+glyco / lower+sprint
     const W_SEQUENCE_REGION = 25; // H-PRE-10: standalone-slot region preference vs team-day upper
-    const W_TESTING_REGION = 50; // 10% max bias => at most a 5-point tie-break
     const W_PROGRAMMING_STRENGTH = 20; // 15% max bias => at most a 3-point safe-choice nudge
 
     // Helper: count for a specific pattern
@@ -4030,14 +4024,11 @@ function buildWeeklyPlan(
       // sequencing meant to protect for Lower.
       const effectiveRegion = candidateStrengthRegion(c, pos);
 
-      // Testing imbalance is a tie-break only. It cannot create a candidate,
-      // alter the strength budget, or outrank the surrounding safety and
-      // structure rules.
-      if (effectiveRegion === 'lower') {
-        score += programmingBias.lowerStrengthBias * W_TESTING_REGION;
-      } else if (effectiveRegion === 'upper') {
-        score += programmingBias.upperStrengthBias * W_TESTING_REGION;
-      }
+      // NO TESTING-IMBALANCE TIE-BREAK. A lower/upper region nudge used to sit here, fed
+      // by the squat/bench gap. Sam killed it (2026-07-30). `effectiveRegion` is still
+      // computed and still read below — the region SEQUENCING rules (H-PRE-10, game
+      // proximity) own upper-vs-lower placement, and those are the Bible's, keyed on the
+      // calendar rather than on an athlete property.
       if (isStrength(c)) {
         score += programmingBias.strengthBias * W_PROGRAMMING_STRENGTH;
       }
@@ -8385,8 +8376,6 @@ export function onboardingToCoachingInputs(
     conditioningLevel: data.conditioningLevel,
     recentTrainingLoad: data.recentTrainingLoad,
     experienceLevel: data.experienceLevel,
-    squatStrength: data.squatStrength,
-    benchStrength: data.benchStrength,
     biggestLimitation: data.biggestLimitation,
     injuries: data.injuries || [],
     goals: data.motivation ? data.motivation.split(', ') : [],

@@ -243,16 +243,10 @@ function copyFor(reason: DeterministicCoachNoteEffectReason): { title: string; b
         title: 'Beginner dose active',
         body: 'Strength sets, loads and effort targets are being kept simple and conservative.',
       };
-    case 'testing_lower_strength':
-      return {
-        title: 'Testing focus active',
-        body: 'Lower-body strength was nudged slightly based on your testing profile.',
-      };
-    case 'testing_upper_strength':
-      return {
-        title: 'Testing focus active',
-        body: 'Upper-body strength was nudged slightly based on your testing profile.',
-      };
+    // `testing_lower_strength` / `testing_upper_strength` DELETED with the mechanism they
+    // described (Sam, 2026-07-30 — the squat/bench gap-lean is killed, not tuned). Both
+    // told the athlete their strength answers had nudged a region; nothing does that now,
+    // so the copy would have been a claim about a mechanism that no longer exists.
     case 'testing_aerobic':
       return {
         title: 'Testing focus active',
