@@ -36,6 +36,7 @@ import {
 } from '../utils/loadEstimation';
 import {
   buildConditioningTemplate,
+  buildDerivedSession,
   condEx,
   conditioningFlavourToExerciseName,
   conditioningCategoryToExerciseName,
@@ -2246,6 +2247,71 @@ export function buildWorkoutsFromCoach(
       );
       return attachSessionEffectEvidence(
         finalWorkout,
+        planEntry.deterministicCoachNoteEffects,
+      );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // COMPOSED OPTIONAL — the pools generate the exercises, not the AI
+    // ──────────────────────────────────────────────────────────────────────
+    //
+    // Sam's class ruling, 2026-07-30: REAL COMPOSED SESSIONS ONLY. Where the plan
+    // says `composedOptionalKind`, the day's content comes from the signed pools
+    // through the SAME builder the athlete's own doors use — so the generator and
+    // the doors cannot prescribe different work under one name.
+    //
+    // AI CONTENT IS DISCARDED HERE, deliberately and exactly as it is for
+    // standalone conditioning above. That branch has ignored the model's exercises
+    // since the conditioning templates were signed, for the same reason: when the
+    // composition is authored, a model's suggestion is not an input.
+    // The marker has to still be COHERENT with the rest of the entry, exactly as
+    // `isStandaloneConditioning` above requires a flavour AND no combined block. A
+    // repair can promote an optional accessory day to required strength or hang
+    // conditioning on it; if it does, this is not an accessory day any more,
+    // whatever it still says. `assignRequiredStrength` clears the marker at the
+    // point of promotion — this is the second half of the same boundary, so a
+    // future mutator that forgets cannot silently compose prehab over required work.
+    const composedOptional = planEntry?.composedOptionalKind
+      && !planEntry.strengthIntent
+      && !planEntry.strengthPattern
+      && !planEntry.conditioningFlavour
+      && !planEntry.conditioningCategory
+      && !planEntry.speedBlock
+      ? planEntry.composedOptionalKind
+      : null;
+    if (composedOptional) {
+      const composed = buildDerivedSession(
+        composedOptional === 'gunshow' ? 'arms_pump' : 'prehab_accessories',
+        syntheticDateStr(cw.dayOfWeek),
+        microcycleId,
+        planEntry.focus,
+        {
+          injuries: onboardingData?.injuries ?? [],
+          equipmentTags: [...availableEquipment],
+          trainingLocation: onboardingData?.trainingLocation || 'Commercial gym',
+          ...(onboardingData ? { onboardingData } : {}),
+        },
+      );
+      logger.debug(
+        `[BUILDER-TRACE] day=${cw.dayOfWeek} COMPOSED OPTIONAL `
+        + `(${composedOptional}) — ${composed.exercises.length} pool rows, `
+        + `AI exercises IGNORED: ${cw.exercises.length} discarded`,
+      );
+      const composedWorkout = finaliseBuiltWorkout({
+        ...composed,
+        id: workoutId,
+        microcycleId,
+        dayOfWeek: cw.dayOfWeek,
+        sessionTier: canonicalTier,
+        ...(planEntry.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
+        exercises: composed.exercises.map((row, index) => ({
+          ...row,
+          id: `we-${workoutId}-${index}`,
+          workoutId,
+        })),
+      } as Workout, planEntry);
+      return attachSessionEffectEvidence(
+        composedWorkout,
         planEntry.deterministicCoachNoteEffects,
       );
     }

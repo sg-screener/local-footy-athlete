@@ -49,7 +49,13 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
  * Build AthleteContext from profile store data.
  * Falls back to defaults if no onboarding data is available.
  */
-function useAthleteContext(): AthleteContext {
+/**
+ * Exported so the session screen's mobility flow filters through the SAME
+ * equipment/injury context the resolver builds sessions with. A second answer to
+ * "can this athlete do this movement" would first get the equipment gate on
+ * `dead-hang` and `db-pullovers` wrong.
+ */
+export function useAthleteContext(): AthleteContext {
   const onboardingData = useProfileStore((s) => s.onboardingData);
   const acceptedContext = useProgramStore((s) => s.acceptedMaterialContext);
   // eslint-disable-next-line @typescript-eslint/no-var-requires

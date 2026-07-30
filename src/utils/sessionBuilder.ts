@@ -53,6 +53,10 @@ import {
 } from '../rules/strengthPatternContributions';
 import { applyLoadEstimates } from './loadEstimation';
 import { MAS_FALLBACK_NOTE, masIntensityLabel } from './masCopy';
+import {
+  MOBILITY_SESSION_MINUTES,
+  composeMobilitySession,
+} from '../rules/mobilitySessionComposition';
 
 // ─── Athlete Context ───
 
@@ -81,7 +85,22 @@ export type DerivedSessionType =
   | 'passive_recovery'
   | 'extended_recovery'
   | 'prehab_accessories'
-  | 'arms_pump';
+  | 'arms_pump'
+  /**
+   * A standalone Mobility session, COMPOSED — Sam's signed 5-8 across the four
+   * regions, at the doses he authored on each movement.
+   *
+   * It is a derived type rather than a set of slots because its composition is a
+   * region SPREAD, not a per-category count, and because it now has two callers:
+   * the athlete's Mobility door (`coachRevisionTemplates`) and the need-based
+   * top-up pass. One owner of "what a Mobility session is" is the reason the door
+   * and the generator cannot disagree about it — the failure R1 turns out to have
+   * (see `composedOptionalKind`).
+   */
+  | 'mobility';
+
+/** The slot-composed types. `mobility` composes by region and is not one. */
+type SlotComposedSessionType = Exclude<DerivedSessionType, 'mobility'>;
 
 // ─── Session Slot Definitions ───
 // Each session type is a sequence of "slots" — pick N exercises from a category.
@@ -92,7 +111,7 @@ interface SessionSlot {
   count: number;
 }
 
-const SESSION_SLOTS: Record<DerivedSessionType, SessionSlot[]> = {
+const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
   recovery: [
     { category: 'tissue_quality',   count: 2 },
     { category: 'mobility',         count: 2 },
@@ -205,6 +224,17 @@ const SESSION_META: Record<DerivedSessionType, {
     intensity: 'Light',
     descriptionSuffix: 'light upper body pump work',
   },
+  // Not conditioning and not strength. The charter's counting row says what the
+  // ledger says: no load, never a hard day, never breaks rest — which is also why
+  // `:116` lets it sit on a rest day.
+  mobility: {
+    name: 'Mobility',
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    durationMinutes: MOBILITY_SESSION_MINUTES,
+    intensity: 'Light',
+    descriptionSuffix: 'easy ranges only, nothing forced',
+  },
 };
 
 // ─── Injury Mapping ───
@@ -292,8 +322,38 @@ export function inferEquipment(trainingLocation: string): EquipmentTag[] {
  * the equipment gate on `dead-hang` and `db-pullovers`.
  */
 export function filterMobilityPoolForAthlete(athlete: AthleteContext): PoolExercise[] {
+  return filterPoolForAthlete('mobility', athlete);
+}
+
+/**
+ * Any curated pool, filtered for this athlete.
+ *
+ * The general form of the function above, added when the D17 session flow needed
+ * five pools rather than one. Every consumer that asks "can this athlete do this
+ * movement" now asks the same function — which is the point: the first thing a
+ * second implementation gets wrong is the equipment gate on `dead-hang` and
+ * `db-pullovers`.
+ */
+export function filterPoolForAthlete(
+  category: ExerciseCategory,
+  athlete: AthleteContext,
+): PoolExercise[] {
+  return filterPoolEntriesForAthlete(POOL_REGISTRY[category] ?? [], athlete);
+}
+
+/**
+ * The same filter over an arbitrary set of curated entries.
+ *
+ * D17's flow draws its candidates by MUSCLE-SHEET pool rather than by registry
+ * category, so it arrives with entries rather than a category — and must still ask
+ * the one owner of "can this athlete do this movement".
+ */
+export function filterPoolEntriesForAthlete(
+  entries: readonly PoolExercise[],
+  athlete: AthleteContext,
+): PoolExercise[] {
   return filterPool(
-    POOL_REGISTRY.mobility ?? [],
+    [...entries],
     injuriesToTags(athlete.injuries),
     new Set(athlete.equipmentTags),
   );
@@ -392,6 +452,22 @@ const ACCESSORY_ROW_EVIDENCE = {
   provenance: 'canonical_row_classifier',
 } as const;
 
+/**
+ * A mobility row declares what it is for the same reason an accessory row does.
+ *
+ * `Cossack Squat` re-typed a whole prehab session as lower strength once. A
+ * mobility draw carries `ATG Split Squat` and `Deep Squat Hold`, which is the same
+ * trap one pool over — so the rows say `recovery_support` rather than leaving a
+ * classifier to read squats in a stretching session.
+ */
+const MOBILITY_ROW_EVIDENCE = {
+  protocolVersion: 1,
+  role: 'recovery_support',
+  strengthPattern: null,
+  mainStrengthPattern: null,
+  provenance: 'canonical_row_classifier',
+} as const;
+
 function poolExerciseToWorkoutExercise(
   pe: PoolExercise,
   workoutId: string,
@@ -449,7 +525,6 @@ export function buildDerivedSession(
   weekCategoryUsage?: Map<ExerciseCategory, number>,
 ): Workout {
   const meta = SESSION_META[type];
-  const slots = SESSION_SLOTS[type];
   const seed = dateHash(dateStr);
 
   // Build constraint sets
@@ -460,6 +535,24 @@ export function buildDerivedSession(
   const exercises: WorkoutExercise[] = [];
   const workoutId = `derived-${type}-${dateStr}`;
   let order = 1;
+
+  // MOBILITY composes by region, not by slot — Sam's signed shape. Everything
+  // after this point (naming, tier, load estimates, the returned Workout) is
+  // shared, so the door and the top-up get the identical session.
+  if (type === 'mobility') {
+    for (const movement of composeMobilitySession({
+      seed,
+      eligible: filterMobilityPoolForAthlete(athlete),
+    })) {
+      exercises.push(
+        poolExerciseToWorkoutExercise(movement, workoutId, order, MOBILITY_ROW_EVIDENCE),
+      );
+      order += 1;
+    }
+    return finaliseDerivedSession({ meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+  }
+
+  const slots = SESSION_SLOTS[type];
 
   // Use a category-specific sub-seed for each slot so different categories
   // rotate independently
@@ -501,6 +594,26 @@ export function buildDerivedSession(
     slotIndex++;
   }
 
+  return finaliseDerivedSession({ meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+}
+
+/**
+ * The parts every derived session shares once its rows are chosen.
+ *
+ * Factored out when `mobility` arrived: a second return statement assembling the
+ * same Workout is how the door and the generator would eventually disagree about a
+ * field nobody was looking at.
+ */
+function finaliseDerivedSession(args: {
+  meta: (typeof SESSION_META)[DerivedSessionType];
+  workoutId: string;
+  microcycleId: string;
+  dateStr: string;
+  reason: string;
+  athlete: AthleteContext;
+  exercises: WorkoutExercise[];
+}): Workout {
+  const { meta, workoutId, microcycleId, dateStr, reason, athlete, exercises } = args;
   // Apply intelligent load estimates for exercises that should have weight
   // (e.g. arms_pump curls, tricep pushdowns) if onboarding data is available.
   const finalExercises = athlete.onboardingData

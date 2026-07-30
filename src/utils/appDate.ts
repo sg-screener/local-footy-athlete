@@ -87,6 +87,22 @@ export function dayOfWeekForISODate(dateISO: string): number {
 }
 
 /**
+ * The inverse of `dayOfWeekForISODate`: which date a weekday falls on in a week.
+ *
+ * ONE OWNER, because the Monday..Sunday convention is a rule and not an
+ * expression. `dayOfWeek` is JS-style (Sunday 0), and the week runs Monday first,
+ * so Sunday is six days after the Monday rather than one day before it — get that
+ * backwards and a top-up lands in the previous week. There were already two
+ * identical private copies of this (`generateProgram`, `temporarySourceFactTransaction`)
+ * when a third consumer arrived; both now call here.
+ */
+export function isoDateForWeekday(weekStartISO: string, dayOfWeek: number): string {
+  const date = new Date(`${weekStartISO.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  return date.toISOString().slice(0, 10);
+}
+
+/**
  * Athlete-facing short calendar date, e.g. "3/7" (day/month, no padding,
  * AU order). Single owner of the d/m display rule — every surface that
  * shows a calendar date beside a weekday label formats it here, so the

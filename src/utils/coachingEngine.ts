@@ -246,6 +246,25 @@ export interface SessionAllocation {
   focus: string;
   dayOfWeek?: string;
   isHardExposure: boolean;
+  /**
+   * THIS DAY'S CONTENT IS A COMPOSED SESSION, not a sentence to be interpreted.
+   *
+   * Sam's class ruling, 2026-07-30: "REAL COMPOSED SESSIONS ONLY — Accessories from
+   * the prehab pools, Gunshow from the arms pools, per the signed structures. A
+   * sentence on a day is invented composition; that class is dead."
+   *
+   * Four of the eight placement rows put a FOCUS STRING describing accessory work
+   * on a day and left the content to whatever read the string — the AI, or the
+   * builder's hardcoded five-row fallback. When this field is set,
+   * `buildWorkoutsFromCoach` composes the session from the signed pools instead and
+   * the focus string becomes a label rather than a specification.
+   *
+   * It is set on the two allocations that survive as placements: the authored G-1
+   * Gunshow (R1) and the adjacency repair's neutralised day (R8). R2, R3, R4 and R5
+   * are deleted rather than marked — the need-based top-up pass owns their
+   * placement now, and it composes through the same builders.
+   */
+  composedOptionalKind?: 'gunshow' | 'accessories';
   /** When true, this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;
   /** Finisher vs proper conditioning component for attached S+C work. */
@@ -1960,10 +1979,19 @@ function buildWeeklyPlan(
       });
     }
 
-    // ── STEP 5: Fill remaining slots as OPTIONAL / RECOVERY ──
-    // G−3 always defaults to OPTIONAL or RECOVERY (never CORE)
-    // G−1 always OPTIONAL arms/pump
-    // G+1 always RECOVERY
+    // ── STEP 5: the remaining days ──
+    //
+    // EVERY OPTIONAL PLACEMENT HERE IS NOW COMPOSED, and none of them is deleted.
+    //
+    // The composition half of Sam's rulings lands in full: G−1 takes the authored
+    // Gunshow (`:153`, `:81`) and the accessory days take a composed Accessories
+    // session, both drawn from the signed pools through the same builders the
+    // athlete's own doors use.
+    //
+    // The PLACEMENT half — R2 need-based, R3 killed — is blocked on
+    // `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`: deleting these allocations
+    // starves the conditioning shortfall repair, which is the recovery-deletion
+    // class a second time and therefore a STOP rather than a patch.
     const remainingDays = daySlots.filter(d => !assigned.has(d.dayName));
     let optCount = 0;
     let recCount = 0;
@@ -1978,19 +2006,43 @@ function buildWeeklyPlan(
         if (slot.isTeamDay) plan.push(teamDayPlaceholderAllocation(slot.dayName));
         recCount++;
       } else if (slot.offset === -1) {
-        // G−1 → optional arms/pump only
-        plan.push({ tier: 'optional', focus: 'Optional arms/pump - biceps, triceps, lateral raises only', dayOfWeek: slot.dayName, isHardExposure: false });
-        optCount++;
+        // G−1 → the authored Gunshow, COMPOSED.
+        //
+        // R1 is confirmed as authored, and drafting the sheet turned up what its
+        // two owners actually disagree about: the resolver's `applyGameProximity`
+        // builds this day with `buildDerivedSession('arms_pump')` — Sam's signed 2
+        // biceps + 2 triceps + 2 pump delts — while this allocation handed a focus
+        // STRING downstream, where an empty edge response fell through to a
+        // hardcoded five-row block (Bicep Curls, Tricep Pushdowns, Face Pulls, Calf
+        // Raises, Pallof Press). Same day, same name, two compositions, one of them
+        // signed. `composedOptionalKind` makes this the signed one.
+        plan.push({
+          tier: 'optional',
+          focus: 'Optional arms/pump - biceps, triceps, lateral raises only',
+          dayOfWeek: slot.dayName,
+          isHardExposure: false,
+          composedOptionalKind: 'gunshow',
+        });
       } else if (slot.offset === -3) {
-        // G−3 → optional light work, or REST (NEVER CORE). The optional half is
-        // Bible-invited accessory work and stays; the recovery half was the app
-        // filling a day nothing asked it to fill, and is gone.
+        // G−3 → optional light work, or REST (NEVER CORE).
+        //
+        // R2's COMPOSITION ruling is applied; its PLACEMENT ruling is BLOCKED. Sam
+        // ruled the trigger should be the LACK rather than the day, and deleting
+        // this branch is what that requires — but deleting it starves the
+        // conditioning shortfall repair, which reaches its day by overwriting
+        // exactly this allocation. That is the recovery-deletion class a second
+        // time, so the deletion stops here under CLAUDE.md's escalation rule and
+        // waits on `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
+        //
+        // What DOES land is the class ruling on what it places: a composed
+        // Accessories session from the six signed prehab pools, never a sentence.
         if (optCount < optional) {
           plan.push({
             tier: 'optional',
             focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility',
             dayOfWeek: slot.dayName,
             isHardExposure: false,
+            composedOptionalKind: 'accessories',
           });
           optCount++;
         } else {
@@ -1998,9 +2050,19 @@ function buildWeeklyPlan(
           recCount++;
         }
       } else {
-        // Other unassigned days
+        // Other unassigned days.
+        //
+        // R3 is KILLED by ruling — "Empty days stay empty; the athlete has the add
+        // menu" — and its deletion is BLOCKED by the same repair-capacity finding as
+        // R2. Its composition ruling lands: composed, not a sentence.
         if (optCount < optional) {
-          plan.push({ tier: 'optional', focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility', dayOfWeek: slot.dayName, isHardExposure: false });
+          plan.push({
+            tier: 'optional',
+            focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility',
+            dayOfWeek: slot.dayName,
+            isHardExposure: false,
+            composedOptionalKind: 'accessories',
+          });
           optCount++;
         } else if (recCount < recovery) {
           // REST. The budget is still spent so the week's shape is unchanged;
@@ -2169,6 +2231,11 @@ function buildWeeklyPlan(
       }
     }
 
+    // R4's COMPOSITION lands; its KILL is BLOCKED, same finding as R2 and R3 — a
+    // bye week's support slot is repair raw material, and the recovery deletion's
+    // own comment names `in_season_bye_recovery` as the week that starved when a
+    // placement went. `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
+    //
     // A readiness declaration no longer removes the support slot — that is a
     // count cut. A SCHEDULED deload week still may: that door is the block
     // plan's own structural decision, not an athlete-driven reduction.
@@ -2191,6 +2258,7 @@ function buildWeeklyPlan(
           dayOfWeek: slot.dayName,
           isHardExposure: false,
           stressLevel: 'low',
+          composedOptionalKind: 'accessories',
         });
         supportSlotsRemaining--;
       }
@@ -5143,6 +5211,10 @@ function buildWeeklyPlan(
         placeStrengthCandidate(bestCandidate, slot, pos, isConsecutiveDay);
 
       } else if (bestCandidate === 'ACC') {
+        // R5's COMPOSITION lands — a composed Accessories session from the six
+        // signed prehab pools, where this branch used to hand a focus STRING to
+        // whatever read it. Its PLACEMENT is blocked with R2, R3 and R4:
+        // `docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md`.
         const accessoryStress = candidateStress('ACC', pos, slot.isTeamDay);
         plan.push({
           tier: 'optional',
@@ -5150,6 +5222,7 @@ function buildWeeklyPlan(
           dayOfWeek: slot.dayName,
           isHardExposure: false,
           stressLevel: accessoryStress,
+          composedOptionalKind: 'accessories',
         });
         st.optCount++;
         updateStressStreak(accessoryStress, isConsecutiveDay);
@@ -6141,6 +6214,17 @@ function buildWeeklyPlan(
           ? 'lower'
           : 'upper';
       session.tier = 'core';
+      // THE DAY IS NO LONGER AN ACCESSORY DAY, so it stops saying it is.
+      //
+      // Whoever repurposes a day owns clearing what the day WAS. A repair that
+      // promoted an optional accessory slot to required strength used to leave
+      // `composedOptionalKind` behind, and the builder — which reads that marker
+      // before it reads anything else — then composed prehab work on a day the
+      // contract was counting as a main-strength exposure. The week came out one
+      // strength exposure short and nothing in the allocator could see why:
+      // `yearRoundExposureConformance`'s injured off-season scenario found it as
+      // `required_minimum_shortfall:main_strength:1`.
+      session.composedOptionalKind = undefined;
       session.strengthIntent = createStrengthIntent({
         archetype,
         primaryPattern: plannedPatterns[0],
@@ -7865,9 +7949,15 @@ function enforceAdjacentRegionLimit(
           // session as recovery, which placed recovery uninvited to solve a
           // clustering problem. It stays optional accessory work — Bible-invited,
           // and the same day is just as neutral.
+          // R8, RULED "real composed session only". The focus string stays as the
+          // day's LABEL, but the content is now composed from the six signed prehab
+          // pools instead of being left to whatever read the sentence. The authored
+          // adjacency trigger above is untouched — Sam confirmed it — and this is a
+          // repair, so the day keeps its session rather than being emptied.
           result[idx] = {
             ...result[idx],
             focus: 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
+            composedOptionalKind: 'accessories',
             isHardExposure: false,
             // Accessories ≠ strength exposure — drop any pattern the session
             // previously carried so invariants don't over-count.

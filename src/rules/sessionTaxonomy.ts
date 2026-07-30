@@ -320,11 +320,37 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   //   (a) the exercises prove strength content, or
   //   (b) the NAME is not a conditioning session name. This stops
   //   "easy bike/row" style conditioning text false-matching the pull probe.
-  const hasStrengthExercises = countingRows(workout).some((ex) => {
+  // ── A ROW THAT DECLARES ITS ROLE IS NOT GUESSED AT ──
+  //
+  // The composed Accessories and Gunshow sessions stamp every row with
+  // `section18Evidence.role` ('strength_accessory' / 'recovery_support'), which is
+  // a TYPED FACT the builder authored. When every counting row declares a
+  // non-main-strength role, this session cannot be a main-strength session, and no
+  // amount of name or exercise inference may say otherwise.
+  //
+  // This closes a defect that was open, known and queued: "a built 'Prehab &
+  // Accessories' session classified as `lower_strength` at HIGH stress and took a
+  // hard day off the week's budget" — `sessionBuilder`'s `ACCESSORY_ROW_EVIDENCE`
+  // fixed it for §18's evaluator, which reads the evidence, and left it live in the
+  // VISIBLE classifier, which did not. Composing the generator's accessory days
+  // (Sam's class ruling, 2026-07-30) turned it from a latent defect into real
+  // counts: `legacyReckoningCensus` recorded `hardDays 1 → 2` and
+  // `mainStrengthExposures 3 → 4` on a week whose only change was that its
+  // accessory day stopped prescribing bicep curls.
+  //
+  // The mechanism is the same trap the row evidence was authored for: the groin
+  // pool contains a Cossack Squat, the exercise tagger reads a squat exposure, and
+  // one accessory movement re-types the whole session.
+  const countedRows = countingRows(workout);
+  const rowsDeclareNonMain = countedRows.length > 0 && countedRows.every((ex) => {
+    const role = (ex as { section18Evidence?: { role?: string } }).section18Evidence?.role;
+    return !!role && role !== 'main_strength';
+  });
+  const hasStrengthExercises = !rowsDeclareNonMain && countedRows.some((ex) => {
     const exName = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     return exName ? classifyExerciseExposures(exName).some((e) => STRENGTH_EXPOSURES.has(e)) : false;
   });
-  const hasMainLiftExerciseProof = hasMainLiftExercises(workout);
+  const hasMainLiftExerciseProof = !rowsDeclareNonMain && hasMainLiftExercises(workout);
   const typedEffectivePatterns = workout.strengthIntent
     ? normalizeStrengthIntent(workout.strengthIntent).effectivePatterns
     : [];

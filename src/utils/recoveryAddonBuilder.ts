@@ -16,11 +16,14 @@ import {
   type RecoveryAddonFocusArea,
   type RecoveryAddonReadinessTier,
 } from '../rules/recoveryAddonCoverage';
+import { composeMobilityFlow } from '../rules/mobilitySessionComposition';
+import type { PoolExercise } from '../data/exercisePools';
 import {
-  MOBILITY_FLOW_TEMPLATES,
-  type MobilityFlowMovement,
-  type MobilityFlowTemplate,
-} from '../data/mobilityFlowTemplates';
+  dateHash,
+  filterMobilityPoolForAthlete,
+  inferEquipment,
+  type AthleteContext,
+} from './sessionBuilder';
 import type { GenerationConstraintContext } from './generationConstraints';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
@@ -204,6 +207,7 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
     programmingBias.recoveryAddonFocusPreference,
   );
 
+  const athlete = athleteContextFor(args.profile);
   const next = attachRecommendationsToWeek({
     workouts: args.workouts,
     recommendations: biasedRecommendations,
@@ -211,6 +215,7 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
     phase,
     weekKind: args.weekKind ?? 'build',
     gameDay,
+    athlete,
   });
   if (Object.keys(testingBias.recoveryAddonFocusPreference).length === 0) return next;
 
@@ -221,6 +226,7 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
     phase,
     weekKind: args.weekKind ?? 'build',
     gameDay,
+    athlete,
   });
   const changedIndex = next.findIndex((workout, index) =>
     recoveryAddonShape(workout) !== recoveryAddonShape(baseline[index]),
@@ -240,6 +246,23 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
   return next;
 }
 
+/**
+ * Equipment and injuries, so a composed mobility draw filters like every other.
+ *
+ * `inferEquipment` from the training location is what the app uses wherever a
+ * constraint list is not in reach. It is stricter than the retired bundles, which
+ * ignored equipment entirely — a Home-gym athlete could be shown a Dead Hang.
+ */
+function athleteContextFor(profile: OnboardingData): AthleteContext {
+  const trainingLocation = profile.trainingLocation || 'Commercial gym';
+  return {
+    injuries: profile.injuries ?? [],
+    equipmentTags: inferEquipment(trainingLocation),
+    trainingLocation,
+    onboardingData: profile,
+  };
+}
+
 function attachRecommendationsToWeek(args: {
   workouts: Workout[];
   recommendations: readonly RecoveryAddonCoverageRecommendation[];
@@ -247,6 +270,7 @@ function attachRecommendationsToWeek(args: {
   phase: SeasonPhase;
   weekKind: WeekKind;
   gameDay: DayOfWeek | null;
+  athlete: AthleteContext;
 }): Workout[] {
   const next = stripEmptyRecoveryAddons(args.workouts);
   const assignedByWorkout = new Map<string, number>();
@@ -271,6 +295,7 @@ function attachRecommendationsToWeek(args: {
       weekKind: args.weekKind,
       daysUntilGame: candidate.daysUntilGame,
       slotIndex: assignedByWorkout.get(candidate.workout.id) ?? 0,
+      athlete: args.athlete,
     });
     if (!addon) continue;
 
@@ -480,14 +505,17 @@ function buildRecoveryAddon(args: {
   weekKind: WeekKind;
   daysUntilGame: number | null;
   slotIndex: number;
+  athlete: AthleteContext;
 }): RecoveryAddonBlock | null {
-  const { recommendation, phase, weekKind, daysUntilGame, slotIndex } = args;
+  const { recommendation, phase, weekKind, daysUntilGame, slotIndex, athlete } = args;
   const isGMinusOne = daysUntilGame === 1;
-  const exercises = exercisesFor(recommendation, phase, weekKind, isGMinusOne);
+  const exercises = exercisesFor(recommendation, phase, weekKind, isGMinusOne, {
+    athlete,
+    seed: dateHash(`${recommendation.focusArea}:${slotIndex}:${daysUntilGame ?? 'no-game'}`),
+  });
   if (exercises.length === 0) return null;
 
-  const templateId = templateIdFor(recommendation, phase, weekKind, isGMinusOne);
-  const durationMinutes = durationFor(recommendation, exercises, templateId);
+  const durationMinutes = durationFor(recommendation, exercises);
   return {
     id: `recovery-addon-${recommendation.focusArea}-${slotIndex}`,
     title: 'Optional Recovery Add-on',
@@ -503,7 +531,6 @@ function buildRecoveryAddon(args: {
       : 'Low-fatigue support work. Useful, optional, and safe to skip.',
     restrictions: recommendation.restrictions,
     cautions: recommendation.cautions.map((caution) => caution.action),
-    ...(templateId ? { templateId } : {}),
     counting: ZERO_CREDIT,
   };
 }
@@ -515,17 +542,26 @@ function kindForFocus(focusArea: RecoveryAddonFocusArea): RecoveryAddonKind {
   return 'prehab';
 }
 
+/**
+ * How long an add-on takes, from the rows it actually has.
+ *
+ * The bundle branch is gone: `template.durationMinutes` was a number attached to a
+ * grouping Sam does not recognise, and the mobility add-on is now composed, so its
+ * length varies with what the pool draw returned. Every add-on is now measured the
+ * same way — by its own rows — which is one rule instead of two.
+ */
 function durationFor(
   recommendation: RecoveryAddonCoverageRecommendation,
   exercises: RecoveryAddonExercise[],
-  templateId: string | undefined,
 ): number {
-  const template = templateId
-    ? MOBILITY_FLOW_TEMPLATES.find((item) => item.id === templateId)
-    : null;
-  if (template) return template.durationMinutes;
   if (recommendation.focusArea === 'carries') return 8;
   return Math.min(12, Math.max(6, exercises.length * 3));
+}
+
+/** Everything the composed mobility draw needs, and nothing the others do. */
+interface AddonCompositionContext {
+  athlete: AthleteContext;
+  seed: number;
 }
 
 function exercisesFor(
@@ -533,9 +569,10 @@ function exercisesFor(
   phase: SeasonPhase,
   weekKind: WeekKind,
   isGMinusOne: boolean,
+  composition: AddonCompositionContext,
 ): RecoveryAddonExercise[] {
   if (recommendation.focusArea === 'mobility_reset') {
-    return mobilityExercises(recommendation, phase, weekKind, isGMinusOne);
+    return mobilityExercises(composition);
   }
 
   switch (recommendation.focusArea) {
@@ -595,59 +632,45 @@ function exercisesFor(
   }
 }
 
+/**
+ * THE MOBILITY ADD-ON, COMPOSED — the last bundle read in the app, retired.
+ *
+ * It used to select one of ten `MOBILITY_FLOW_TEMPLATES` by phase, week kind and
+ * G-1 proximity, then take its first four movements. Sam does not recognise those
+ * groupings; the trace in `docs/OPTIONAL_PLACEMENT_LAW_SUPERSESSION_2026-07-30.md`
+ * agrees. It now draws from `MOBILITY_POOL` — his twenty movements at his authored
+ * doses — one per signed region, which is what the four-movement slice was standing
+ * in for.
+ *
+ * THE PHASE / DELOAD / G-1 SELECTION WENT WITH THE BUNDLES, and losing it costs
+ * nothing: what it chose between was ten agent-authored groupings of the same
+ * twenty exercises, all of them `fatigue: low` mobility work. WHETHER a mobility
+ * add-on is appropriate on a given day is still decided — by `placementScore`,
+ * which is where that decision lived all along (G-1 in-season admits mobility and
+ * nothing else; deload biases toward it).
+ */
 function mobilityExercises(
-  recommendation: RecoveryAddonCoverageRecommendation,
-  phase: SeasonPhase,
-  weekKind: WeekKind,
-  isGMinusOne: boolean,
+  composition: AddonCompositionContext,
 ): RecoveryAddonExercise[] {
-  const templateId = templateIdFor(recommendation, phase, weekKind, isGMinusOne);
-  const template = templateId
-    ? MOBILITY_FLOW_TEMPLATES.find((item) => item.id === templateId)
-    : null;
-  // Name and dose only. The template's `notes` pass-through was the second half
-  // of the same channel ruling 3 retired — a flow movement could carry its own
-  // display text straight past `EXERCISE_CUES`, and `localMeta` let it carry its
-  // own NAME too. Both are gone; a flow movement is now a curated name, so its
-  // text is the curated cue by construction.
-  return movementsFromTemplate(template).map((movement) => ({
+  const movements = composeMobilityFlow({
+    seed: composition.seed,
+    eligible: filterMobilityPoolForAthlete(composition.athlete),
+  });
+  // Name and dose only — the row's display text is the curated cue at render
+  // (Sam's run-7 ruling 3), and a pool entry cannot carry its own.
+  return movements.map((movement) => ({
     id: `recovery-addon-mobility-${slug(movement.name)}`,
     name: movement.name,
-    prescription: formatMovementPrescription(movement),
-    source: 'mobility_flow_template',
+    prescription: formatPoolPrescription(movement),
+    source: 'exercise_pool',
   }));
 }
 
-function templateIdFor(
-  recommendation: RecoveryAddonCoverageRecommendation,
-  phase: SeasonPhase,
-  weekKind: WeekKind,
-  isGMinusOne: boolean,
-): string | undefined {
-  if (isGMinusOne) return 'game-week-light-mobility';
-  if (weekKind === 'deload') return 'post-training-downshift';
-  if (phase === 'In-season' && recommendation.templateIds.includes('game-week-light-mobility')) {
-    return 'game-week-light-mobility';
-  }
-  return recommendation.templateIds[0];
-}
-
-function movementsFromTemplate(template: MobilityFlowTemplate | null | undefined): MobilityFlowMovement[] {
-  return (template?.movements ?? []).slice(0, 4);
-}
-
-function formatMovementPrescription(movement: MobilityFlowMovement): string {
-  const sets = movement.sets ?? 1;
+/** The pool entry's OWN dose. Nothing here picks sets, reps or seconds. */
+function formatPoolPrescription(movement: PoolExercise): string {
   const side = movement.perSide ? '/side' : '';
-  if (movement.prescriptionType === 'duration') {
-    const min = movement.durationSecondsMin ?? 30;
-    const max = movement.durationSecondsMax ?? min;
-    return `${sets} x ${range(min, max)}s${side}`;
-  }
-  const min = movement.repsMin ?? 6;
-  const max = movement.repsMax ?? min;
-  const unit = movement.prescriptionType === 'breathing_reps' ? 'breaths' : 'reps';
-  return `${sets} x ${range(min, max)} ${unit}${side}`;
+  const unit = movement.prescriptionType === 'duration' ? 's' : ' reps';
+  return `${movement.sets} x ${range(movement.repsMin, movement.repsMax)}${unit}${side}`;
 }
 
 /**
@@ -684,6 +707,19 @@ function exercise(name: string, prescription: string): RecoveryAddonExercise {
  * the builder actually emits and cannot drift from it. A second hand-maintained
  * list is precisely the failure mode this repo has already paid for once.
  */
+/**
+ * The widest athlete: no injuries, every equipment tag.
+ *
+ * The sweep has to see every movement the builder CAN emit, so it must not filter
+ * any out — a narrower context would shrink the vocabulary and let an uncurated
+ * name through on the athletes it excluded.
+ */
+const SWEEP_ATHLETE: AthleteContext = {
+  injuries: [],
+  equipmentTags: inferEquipment('Commercial gym'),
+  trainingLocation: 'Commercial gym',
+};
+
 export function recoveryAddonExerciseVocabulary(): string[] {
   const focusAreas: RecoveryAddonFocusArea[] = [
     'trunk_core',
@@ -704,23 +740,23 @@ export function recoveryAddonExerciseVocabulary(): string[] {
   const weekKinds: WeekKind[] = ['build', 'deload'];
 
   const names = new Set<string>();
+  // The composed mobility draw rotates by seed, so the sweep walks seeds as well
+  // as the decision space. It used to walk the ten flow bundles for the same
+  // reason: whatever the builder can reach, this has to reach.
+  const seeds = [0, 1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
   for (const focusArea of focusAreas) {
     for (const status of statuses) {
       for (const phase of phases) {
         for (const weekKind of weekKinds) {
           for (const isGMinusOne of [false, true]) {
-            // One template at a time: `templateIdFor` picks `templateIds[0]`, so
-            // passing the whole catalog at once would only ever reach one flow.
-            for (const template of MOBILITY_FLOW_TEMPLATES) {
+            for (const seed of seeds) {
               // Only the fields `exercisesFor` reads.
-              const recommendation = {
-                focusArea,
-                status,
-                templateIds: [template.id],
-              } as RecoveryAddonCoverageRecommendation;
-              for (const row of exercisesFor(recommendation, phase, weekKind, isGMinusOne)) {
-                names.add(row.name);
-              }
+              const recommendation = { focusArea, status } as RecoveryAddonCoverageRecommendation;
+              const rows = exercisesFor(recommendation, phase, weekKind, isGMinusOne, {
+                athlete: SWEEP_ATHLETE,
+                seed,
+              });
+              for (const row of rows) names.add(row.name);
             }
           }
         }

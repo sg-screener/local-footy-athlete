@@ -7,7 +7,6 @@ import {
   type RecoveryAddonFocusArea,
 } from '../rules/recoveryAddonCoverage';
 import { POOL_REGISTRY } from '../data/exercisePools';
-import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
 
 let pass = 0;
 let fail = 0;
@@ -47,7 +46,6 @@ function containsText(values: readonly string[], pattern: RegExp): boolean {
   return values.some((value) => pattern.test(value));
 }
 
-const templateIds = new Set(MOBILITY_FLOW_TEMPLATES.map((template) => template.id));
 const poolCategories = new Set(Object.keys(POOL_REGISTRY));
 
 section('[1] off-season returns broader support coverage');
@@ -201,8 +199,9 @@ for (const plan of [
       recommendation.suitableExerciseTags.length > 0);
     ok(`${plan.mode}/${recommendation.focusArea} categories resolve`,
       recommendation.suitableExerciseCategories.every((category) => poolCategories.has(category)));
-    ok(`${plan.mode}/${recommendation.focusArea} templates resolve`,
-      recommendation.templateIds.every((id) => templateIds.has(id)));
+    // The "templates resolve" cell is gone with `templateIds` itself: the field
+    // was a pointer into the flow bundles, retired 2026-07-30. What a mobility
+    // add-on now contains is asserted where it is built, against the pool.
     ok(`${plan.mode}/${recommendation.focusArea} has zero hard exposure`,
       recommendation.counting.hardExposure === false);
     ok(`${plan.mode}/${recommendation.focusArea} has zero main strength`,

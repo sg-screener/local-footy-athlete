@@ -1,7 +1,6 @@
 import type { DayOfWeek, ReadinessLevel, SeasonPhase, WeekKind } from '../types/domain';
 import type { ExerciseCategory } from '../data/exercisePools';
 import type { InjuryKey } from '../data/exerciseTags';
-import type { MobilityFlowFocusTag } from '../data/mobilityFlowTemplates';
 import {
   classifyBibleInjurySeverity,
   type BibleInjurySeverityBand,
@@ -91,8 +90,6 @@ export interface RecoveryAddonCoverageRecommendation {
   suitableExerciseCategories: ExerciseCategory[];
   suitableExerciseNames: string[];
   suitableExerciseTags: string[];
-  suitableMobilityFlowFocusTags: MobilityFlowFocusTag[];
-  templateIds: string[];
   restrictions: string[];
   cautions: RecoveryAddonCaution[];
   counting: RecoveryAddonCountingFence;
@@ -149,8 +146,6 @@ interface FocusDefinition {
   categories: ExerciseCategory[];
   exerciseNames: string[];
   exerciseTags: string[];
-  mobilityFocusTags: MobilityFlowFocusTag[];
-  templateIds: string[];
   defaultRestrictions: string[];
   gMinusOneNote: string;
 }
@@ -161,8 +156,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['trunk_anti_rotation'],
     exerciseNames: ['Dead Bug', 'Band Pallof Press', 'Side Plank', 'Bird Dog', 'McGill Sit Up'],
     exerciseTags: ['core', 'anti_rotation', 'anti_extension', 'mcgill_big_3'],
-    mobilityFocusTags: ['lower_back_trunk'],
-    templateIds: ['low-back-friendly-trunk-reset', 'post-training-downshift'],
     defaultRestrictions: ['Keep midline work controlled and low-soreness.'],
     gMinusOneNote: 'G-1 midline is breathing, McGill-style, or easy bracing only.',
   },
@@ -171,8 +164,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['groin_adductors', 'mobility'],
     exerciseNames: ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen', 'Adductor Rockback'],
     exerciseTags: ['groin', 'groin', 'isometric', 'copenhagen'],
-    mobilityFocusTags: ['groin_adductors', 'hips'],
-    templateIds: ['hips-adductors-groin-reset', 'recovery-day-full-body-flow'],
     defaultRestrictions: ['No aggressive groin stretching or sudden hard Copenhagens.'],
     gMinusOneNote: 'G-1 adductor work is gentle squeeze or short-range mobility only.',
   },
@@ -181,8 +172,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['calves', 'lower_prehab', 'mobility'],
     exerciseNames: ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises', 'Calf Stretch'],
     exerciseTags: ['calf', 'soleus', 'tibialis', 'ankle/foot'],
-    mobilityFocusTags: ['calves_ankles'],
-    templateIds: ['ankles-calves-reset', 'lower-body-reset'],
     defaultRestrictions: ['Keep lower-leg work controlled; no plyometric calf loading in this layer.'],
     gMinusOneNote: 'G-1 lower-leg work is gentle mobility or very low-volume activation only.',
   },
@@ -191,8 +180,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['hamstring_light', 'trunk_anti_rotation'],
     exerciseNames: ['Swiss Ball Hamstring Curl', 'Nordic Lower', 'Glute Bridge', 'Bird Dog'],
     exerciseTags: ['hamstring_light', 'isometric', 'bridge', 'nordic_low_rep'],
-    mobilityFocusTags: ['hamstrings', 'hips'],
-    templateIds: ['hamstring-hip-hinge-reset', 'lower-body-reset'],
     defaultRestrictions: ['Nordics stay low-rep and never become a hidden hard hamstring day.'],
     gMinusOneNote: 'G-1 hamstring work is easy bridge/isometric only; no Nordics.',
   },
@@ -201,8 +188,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['shoulder_health', 'upper_back_pump', 'mobility'],
     exerciseNames: ['Face Pull', 'Banded External Rotation', 'Scap Push-Up', 'Band Pull-Apart'],
     exerciseTags: ['shoulder_health', 'scap_control', 'rotator_cuff', 'upper_back_pump'],
-    mobilityFocusTags: ['shoulders_t_spine'],
-    templateIds: ['t-spine-shoulder-reset', 'recovery-day-full-body-flow'],
     defaultRestrictions: ['Shoulder/scap work stays pain-free and unloaded when needed.'],
     gMinusOneNote: 'G-1 shoulder/scap work is light activation or T-spine reset only.',
   },
@@ -211,8 +196,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['mobility', 'breathing_reset', 'tissue_quality'],
     exerciseNames: ['90/90 Breathing', 'Cat-Cow', 'Open Book Thoracic Rotation', 'Hip 90/90 Stretch'],
     exerciseTags: ['mobility', 'breathing_reset', 'downshift', 'recovery'],
-    mobilityFocusTags: ['full_body', 'hips', 'lower_back_trunk', 'shoulders_t_spine'],
-    templateIds: ['pre-training-movement-prep', 'post-training-downshift', 'game-week-light-mobility', 'recovery-day-full-body-flow'],
     defaultRestrictions: ['Mobility/reset must stay easy and should finish fresher than it started.'],
     gMinusOneNote: 'G-1 mobility/reset is explicitly allowed when very light.',
   },
@@ -221,8 +204,6 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
     categories: ['trunk_anti_rotation'],
     exerciseNames: ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Overhead Carry'],
     exerciseTags: ['carry', 'grip', 'bracing', 'contact_robustness'],
-    mobilityFocusTags: ['lower_back_trunk'],
-    templateIds: [],
     defaultRestrictions: ['No hard carries late in game week or after a huge lower-body session.'],
     gMinusOneNote: 'Carries are not a G-1 recovery add-on option.',
   },
@@ -366,8 +347,6 @@ function buildRecommendation(
     suitableExerciseCategories: [...definition.categories],
     suitableExerciseNames: [...definition.exerciseNames],
     suitableExerciseTags: [...definition.exerciseTags],
-    suitableMobilityFlowFocusTags: [...definition.mobilityFocusTags],
-    templateIds: [...definition.templateIds],
     restrictions: [...definition.defaultRestrictions],
     cautions: [],
     counting: ZERO_CREDIT,

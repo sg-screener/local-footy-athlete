@@ -17,7 +17,7 @@ import {
   type CoachingPlan,
   type AIConstraints,
 } from '../../utils/coachingEngine';
-import { todayISOLocal } from '../../utils/appDate';
+import { isoDateForWeekday, todayISOLocal } from '../../utils/appDate';
 import { missingRequiredProfileFields } from '../../utils/onboardingSteps';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
@@ -55,6 +55,7 @@ import {
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
+import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
 import {
   rebindDerivedSessionProvenance,
   stampPlannerDerivedSessionProvenance,
@@ -195,10 +196,50 @@ function dateAtNoonISO(dateISO: string): string {
   return new Date(`${dateISO}T12:00:00`).toISOString();
 }
 
-function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
-  const date = new Date(`${weekStartISO}T12:00:00`);
-  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  return date.toISOString().slice(0, 10);
+/** One owner of the Monday-first weekday-to-date rule. */
+const dateForWeekday = isoDateForWeekday;
+
+/**
+ * The game's day-of-week, for the top-up's caps.
+ *
+ * Read from the WEEK first — a Game session in the built week is the fact — and
+ * from the profile's usual game day only when the week has none, so a virtual
+ * Saturday still protects its G-1 for the authored Gunshow.
+ */
+function gameDayOfWeekFor(
+  workouts: readonly Workout[],
+  profile: OnboardingData,
+): number | null {
+  const game = workouts.find((workout) => workout.workoutType === 'Game');
+  if (game) return game.dayOfWeek;
+  const usual = profile.usualGameDay
+    ?? (profile.gameDay && profile.gameDay !== 'Varies' ? profile.gameDay : null);
+  return usual ? DAY_MAP[usual] ?? null : null;
+}
+
+/**
+ * Days the top-up may place on.
+ *
+ * TWO EXCLUSIONS, both of them the athlete's own inputs rather than the app's
+ * preferences. Days they did not name as training days are not the app's to fill —
+ * an optional session on an excluded day overrides a stated answer. And days before
+ * the governed boundary are history: the week's earlier days are pinned, and adding
+ * a session to one would be the app editing a day that has already happened.
+ */
+function topUpCandidateDays(args: {
+  profile: OnboardingData;
+  weekStart: string;
+  governedFromISO: string | null;
+}): number[] {
+  const declared = (args.profile.preferredTrainingDays ?? [])
+    .map((day) => DAY_MAP[day])
+    .filter((day): day is number => typeof day === 'number');
+  return [0, 1, 2, 3, 4, 5, 6].filter((day) => {
+    if (declared.length > 0 && !declared.includes(day)) return false;
+    if (args.governedFromISO &&
+      dateForWeekday(args.weekStart, day) < args.governedFromISO) return false;
+    return true;
+  });
 }
 
 function dateFromISO(todayISO: string): Date {
@@ -562,6 +603,39 @@ export function buildGeneratedMicrocycles(args: {
       });
       exposureContractV2 = accepted.contract;
     }
+    // ── THE NEED-BASED TOP-UP PASS ──
+    //
+    // Sam's ruling, 2026-07-30: "No defaults. Build the program; if anything is
+    // lacking, add a spare optional session to make up for it." This is the only
+    // place in the app that places optional accessory or mobility work into a
+    // generated week — R2, R3, R4 and R5 are deleted from the allocator in the same
+    // commit, so there is nothing left that places it by day.
+    //
+    // AND IT RUNS HERE, AFTER ACCEPTANCE, BECAUSE THE SEAM IS THE ARGUMENT. The
+    // contract was satisfied before these sessions existed and is never
+    // re-evaluated against them, so a top-up is INCAPABLE of affecting compliance
+    // or load rather than merely checked not to.
+    workouts = applyOptionalTopUps({
+      workouts,
+      seasonPhase: blockState.phaseClock.selectedPhase,
+      athlete: {
+        injuries: profile.injuries ?? [],
+        equipmentTags: [...equipment.tags],
+        trainingLocation: profile.trainingLocation || 'Commercial gym',
+        onboardingData: profile,
+      },
+      microcycleId,
+      weekStartISO: blockState.weekStart,
+      gameDayOfWeek: gameDayOfWeekFor(workouts, profile),
+      // Only days the athlete said they train, and never a day already governed as
+      // history: a top-up on a pinned past day would be the app editing a day that
+      // has already been.
+      candidateDays: topUpCandidateDays({
+        profile,
+        weekStart: blockState.weekStart,
+        governedFromISO: boundary?.governedFromISO ?? null,
+      }),
+    }).workouts;
     const exposureContract = weekPlan.weeklyExposureContract;
     // Contract v2 is the accepted-week authority. The legacy ledger cannot
     // represent two valid credits stacked on one day (for example TT plus an

@@ -5,6 +5,7 @@ import {
   normalizeAcceptedProgramSurfaces,
   type AcceptedCompositionBaseV1,
 } from './acceptedStateColdStart';
+import { isoDateForWeekday } from '../utils/appDate';
 import {
   assertAcceptedVisibleLedgerEquivalence,
   commitAcceptedStateTransaction,
@@ -361,11 +362,8 @@ function buildDerivingSourceFactAdjustment(args: {
   };
 }
 
-function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
-  const date = new Date(`${weekStartISO.slice(0, 10)}T12:00:00`);
-  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  return date.toISOString().slice(0, 10);
-}
+/** One owner of the Monday-first weekday-to-date rule. */
+const dateForWeekday = isoDateForWeekday;
 
 function commitDerivingSourceFactScopedRegen(args: {
   compositionBase: AcceptedCompositionBaseV1;

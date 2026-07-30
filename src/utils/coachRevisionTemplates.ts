@@ -15,7 +15,7 @@ import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import {
   MOBILITY_MAX_MOVEMENTS,
   MOBILITY_MIN_MOVEMENTS,
-  composeMobilitySession,
+  MOBILITY_SESSION_MINUTES,
 } from '../rules/mobilitySessionComposition';
 
 /** Sam's ruling: a mobility session is 5-8 movements. Re-exported for gates. */
@@ -163,7 +163,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     description: MOBILITY_DESCRIPTION,
     category: 'mobility',
     byeOnly: false,
-    durationMinutes: 15,
+    // One owner of the number, shared with the generator's top-up: the door and
+    // the pass compose the identical session, so they cannot quote two lengths.
+    durationMinutes: MOBILITY_SESSION_MINUTES,
     dynamic: true,
   },
   // ── Recovery: restore, never load ──
@@ -393,17 +395,19 @@ export function buildCoachRevisionTemplateWorkout(
 }
 
 /**
- * A mobility session, COMPOSED from Sam's authored pool.
+ * A mobility session, COMPOSED from Sam's authored pool — through the ONE builder.
  *
- * Nothing here chooses a dose or writes a name: every movement comes out of
- * `MOBILITY_POOL` with the sets, reps or hold Sam authored on it, and the only
- * decision this function makes is WHICH movements — spread across the four
- * regions, deterministic by date, filtered by the athlete's equipment and
- * injuries exactly as every other pool draw is.
+ * This function used to compose the session itself. It now asks
+ * `buildDerivedSession('mobility')` for it, because the need-based top-up pass
+ * places the same session from the generator and two composers of one session is
+ * how the door and the generator end up prescribing different work under the same
+ * name. R1 is the live example of that failure with a different session (see
+ * `composedOptionalKind`), and it is not worth reproducing here.
  *
- * Rows are stamped `role: 'recovery_support'`, so the ledger knows what they are
- * instead of inferring it from their names — the same fix the accessory rows got
- * when one Cossack Squat re-typed a whole prehab session as lower strength.
+ * What stays local is REGISTRY OWNERSHIP: row ids become `template:<id>:<n>` so
+ * the writer recognises the section as registry-owned. Exercise identity is left
+ * alone, exactly as the engine templates leave it — weight overrides, videos and
+ * history all key off the pool id.
  */
 function buildMobilityTemplateWorkout(
   def: CoachRevisionTemplateDefinition,
@@ -412,62 +416,32 @@ function buildMobilityTemplateWorkout(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { filterMobilityPoolForAthlete, dateHash } = require('./sessionBuilder');
+  const { buildDerivedSession } = require('./sessionBuilder');
   const ctx = getCoachRevisionTemplateContext();
-  const eligible = filterMobilityPoolForAthlete(ctx.athlete);
-  const movements = composeMobilitySession({ seed: dateHash(date), eligible });
-  if (movements.length === 0) return null;
+  const composed: Workout | null = buildDerivedSession(
+    'mobility',
+    date,
+    'coach-template',
+    'Athlete-added session',
+    ctx.athlete,
+  );
+  if (!composed || (composed.exercises ?? []).length === 0) return null;
 
   const workoutId = `template-${def.templateId}`;
   return {
+    ...composed,
     id: workoutId,
     microcycleId: 'coach-template',
     dayOfWeek: isoDateToDayOfWeek(date),
     name: def.label,
     description: def.description,
     durationMinutes: def.durationMinutes,
-    intensity: 'Light',
-    // Not conditioning and not strength. The charter's counting row says the
-    // same thing the ledger does: no load, never hard, never breaks rest.
-    workoutType: 'Recovery',
-    sessionTier: 'recovery',
     hasCombinedConditioning: false,
-    exercises: movements.map((movement: { id: string; name: string; sets: number; repsMin: number; repsMax: number; restSeconds: number; notes: string }, index: number) => {
-      const rowId = `template:${def.templateId}:${index}`;
-      return {
-        id: rowId,
-        workoutId,
-        exerciseId: rowId,
-        exerciseOrder: index,
-        prescribedSets: movement.sets,
-        prescribedRepsMin: movement.repsMin,
-        prescribedRepsMax: movement.repsMax,
-        restSeconds: movement.restSeconds,
-        notes: movement.notes,
-        section18Evidence: {
-          protocolVersion: 1,
-          role: 'recovery_support',
-          strengthPattern: null,
-          mainStrengthPattern: null,
-          provenance: 'canonical_row_classifier',
-        },
-        exercise: {
-          id: rowId,
-          name: movement.name,
-          description: movement.notes,
-          exerciseType: 'Flexibility',
-          muscleGroups: [],
-          equipmentRequired: [],
-          difficultyLevel: 'Beginner',
-          createdAt: '',
-          updatedAt: '',
-        },
-        createdAt: '',
-        updatedAt: '',
-      } as any;
-    }),
-    createdAt: '',
-    updatedAt: '',
+    exercises: (composed.exercises ?? []).map((row: any, index: number) => ({
+      ...row,
+      id: `template:${def.templateId}:${index}`,
+      workoutId,
+    })),
   } as Workout;
 }
 

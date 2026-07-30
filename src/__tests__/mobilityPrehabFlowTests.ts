@@ -1,12 +1,23 @@
 /**
  * D13 — the collapsed "Mobility & Prehab" flow at the top of the session.
  *
- * Spec: `docs/SESSION_TEMPLATE_SPEC_2026-07-25.md` §4. `MOBILITY_FLOW_TEMPLATES`
- * has existed as a catalog of 10 templates since before this unit, with no
- * screen to land on — the code comment at the old `DayWorkoutScreenV2:355`
- * called flow rendering "a POSSIBLE FUTURE BUILD, not now" because "a
- * suggestion naming a MOBILITY_FLOW_TEMPLATES entry has nowhere to land". This
- * is where they land.
+ * Spec: `docs/SESSION_TEMPLATE_SPEC_2026-07-25.md` §4. Bible `:229`.
+ *
+ * THE BUNDLES ARE GONE, AND THIS SUITE CHANGED SHAPE WITH THEM. It used to pin a
+ * SELECTION mechanism: ten `MOBILITY_FLOW_TEMPLATES` entries, one chosen per
+ * session shape, filtered by `phaseSuitability`, overridden on a game week. Sam
+ * does not recognise those groupings
+ * (`docs/OPTIONAL_PLACEMENT_LAW_SUPERSESSION_2026-07-30.md`), so there is nothing
+ * left to select among: the flow COMPOSES from `MOBILITY_POOL` — his twenty
+ * movements at his authored doses — one movement per signed region.
+ *
+ * The cells that went with the bundles are not weakened versions of themselves;
+ * they had no subject any more. A cell asserting "an upper day gets the
+ * t-spine/shoulder template" cannot be rephrased once no template exists, and
+ * rephrasing it into "an upper day gets SOMETHING" would be an assertion that
+ * passes for the wrong reason. What replaces them asserts the properties the
+ * bundles were standing in for: pool provenance, region spread, authored doses,
+ * determinism, and shrink-never-pad under filtering.
  *
  * THE LOAD-BEARING RULE (§6 item 6, and the reason most of this suite exists).
  * The product assumes athletes will sometimes skip the flow entirely, so the
@@ -16,13 +27,6 @@
  * work. §5 below is the part that would catch a future change quietly wiring it
  * in.
  *
- * §4.1's per-session-type mapping is an explicit v1 PLACEHOLDER (§6 items 6-7):
- * it ships now so the mechanism has something to render, and Sam curates the
- * real menus later. The tests below therefore pin the SELECTION MECHANISM —
- * that a session type resolves to exactly one template, deterministically,
- * filtered by season phase, with game week overriding — and treat the specific
- * template ids as the current placeholder content they are.
- *
  * Run: npm run test:mobility-flow
  */
 
@@ -31,8 +35,20 @@
 import fs from 'fs';
 import path from 'path';
 
-import type { SeasonPhase } from '../types/domain';
-import { selectMobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
+import type { OnboardingInjury, SeasonPhase } from '../types/domain';
+import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
+import { POOL_REGISTRY } from '../data/exercisePools';
+import {
+  EXERCISE_MUSCLE_METADATA,
+  MUSCLE_METADATA_POOLS,
+} from '../data/muscleExperienceMetadata';
+import {
+  FLOW_CATEGORY_MUSCLE_MAPPING,
+  FLOW_DOSING,
+  SESSION_FLOW_MENUS,
+  type FlowSlotCategory,
+} from '../data/sessionFlowMenus';
+import { DEFAULT_ATHLETE_CONTEXT, inferEquipment, type AthleteContext } from '../utils/sessionBuilder';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 
@@ -85,131 +101,265 @@ function workoutOf(overrides: Record<string, unknown> = {}): any {
   };
 }
 
-type FlowContext = { seasonPhase: SeasonPhase; isGameWeek: boolean };
+type FlowContext = {
+  seasonPhase: SeasonPhase;
+  isGameWeek: boolean;
+  athlete?: AthleteContext;
+  date?: string;
+};
 const IN_SEASON: FlowContext = { seasonPhase: 'In-season', isGameWeek: false };
+const DATE = '2026-07-30';
+
+function athleteWith(
+  location: string,
+  injuries: OnboardingInjury[] = [],
+): AthleteContext {
+  return {
+    injuries,
+    equipmentTags: inferEquipment(location),
+    trainingLocation: location,
+  };
+}
+
+function injury(bodyArea: string): OnboardingInjury {
+  return { bodyArea, description: '' } as OnboardingInjury;
+}
 
 function flowFor(workout: any, context: FlowContext = IN_SEASON) {
-  return selectMobilityPrehabFlow({ workout, ...context });
+  return selectMobilityPrehabFlow({
+    workout,
+    seasonPhase: context.seasonPhase,
+    isGameWeek: context.isGameWeek,
+    athlete: context.athlete ?? DEFAULT_ATHLETE_CONTEXT,
+    date: context.date ?? DATE,
+  });
 }
 
-function primerNames(flow: any): string[] {
-  return (flow?.primers ?? []).map((primer: any) => primer.name);
+function movementNames(flow: any): string[] {
+  return (flow?.movements ?? []).map((movement: any) => movement.exercise.name);
 }
 
-/* ══ 1. Session type selects the flow ══ */
+function movementEntries(flow: any): any[] {
+  return (flow?.movements ?? []).map((movement: any) => movement.exercise);
+}
 
-console.log('\n[1] Each session type resolves to exactly one flow');
+function authoredShapeIncludes(dayType: string, category: string): boolean {
+  const menu = SESSION_FLOW_MENUS.find((m) => m.dayType === dayType);
+  return !!menu && menu.slots.some((slot) => slot.category === category);
+}
+
+/* ══ 1. The flow is D17's menu, filled ══ */
+
+console.log("\n[1] Sam's D17 menus — the counts are law, the app picks which");
 {
-  const upper = flowFor(
-    workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] }),
-  );
-  ok('an upper day gets a flow', !!upper);
+  const upper = flowFor(workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] }));
+  const squat = flowFor(workoutOf({ exercises: [row('Back Squat'), row('Bulgarian Split Squat')] }));
+  const hinge = flowFor(workoutOf({ exercises: [row('Romanian Deadlift'), row('Barbell Hip Thrust')] }));
+  const fullBody = flowFor(workoutOf({ exercises: [row('Back Squat'), row('Bench Press')] }));
+
+  ok('an upper day takes the upper menu', upper?.dayType === 'upper', `got ${upper?.dayType}`);
   ok(
-    'an upper day gets the t-spine/shoulder template',
-    upper?.template.id === 't-spine-shoulder-reset',
-    `got ${upper?.template.id}`,
+    'a squat-dominant lower day takes the squat menu',
+    squat?.dayType === 'lower_squat',
+    `got ${squat?.dayType}`,
   );
   ok(
-    'the upper primer is the external rotation D13 names by example',
-    primerNames(upper).includes('Banded External Rotation'),
-    `got ${JSON.stringify(primerNames(upper))}`,
+    "a hinge day takes the hinge menu — Sam's precedence is hinge > squat > general",
+    hinge?.dayType === 'lower_hinge',
+    `got ${hinge?.dayType}`,
+  );
+  ok(
+    'a day carrying both a hinge and a squat still takes the HINGE menu',
+    flowFor(workoutOf({ exercises: [row('Romanian Deadlift'), row('Back Squat')] }))?.dayType
+      === 'lower_hinge',
+  );
+  ok(
+    'a full-body day takes the full-body menu',
+    fullBody?.dayType === 'full_body',
+    `got ${fullBody?.dayType}`,
   );
 
-  const squat = flowFor(
-    workoutOf({ exercises: [row('Back Squat'), row('Bulgarian Split Squat')] }),
-  );
+  // THE COUNTS ARE LAW. Sam: every menu lands on four flow items. A layer that
+  // changes a count is changing his programming, not rendering it.
+  for (const menu of SESSION_FLOW_MENUS) {
+    const total = menu.slots.reduce((n, slot) => n + slot.count, 0);
+    ok(`the ${menu.dayType} menu is authored at four items`, total === 4, `authored ${total}`);
+  }
+  for (const flow of [upper, squat, hinge, fullBody]) {
+    ok(
+      `the ${flow?.dayType} flow fills every authored slot`,
+      flow?.movementCount === 4,
+      `got ${flow?.movementCount} of 4`,
+    );
+  }
+
+  // EVERY SLOT IS FILLED FROM ITS OWN AUTHORED CATEGORY — not from whatever was
+  // nearest. This is the cell the retired bundles had no equivalent of: a bundle
+  // was a list, so nothing could be checked against a category at all.
+  const slotShape = (flow: any): string =>
+    (flow?.movements ?? []).map((m: any) => m.category).sort().join(',');
+  const authoredShape = (dayType: string): string =>
+    SESSION_FLOW_MENUS.find((m) => m.dayType === dayType)!
+      .slots.flatMap((slot) => Array(slot.count).fill(slot.category)).sort().join(',');
+  for (const flow of [upper, squat, hinge, fullBody]) {
+    ok(
+      `the ${flow?.dayType} flow's categories are exactly the menu's`,
+      slotShape(flow) === authoredShape(flow!.dayType),
+      `got ${slotShape(flow)}, authored ${authoredShape(flow!.dayType)}`,
+    );
+  }
+
+  // AND EVERY MOVEMENT BELONGS TO THE SLOT IT FILLED, through the authored muscle
+  // sheet. A slot that quietly drew from the wrong pool would pass the shape cell
+  // above and fail this one.
+  const misplaced: string[] = [];
+  for (const flow of [upper, squat, hinge, fullBody]) {
+    for (const movement of flow?.movements ?? []) {
+      const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[movement.category];
+      const entry = EXERCISE_MUSCLE_METADATA.find((e) => e.exercise === movement.exercise.name);
+      const poolOk = !!entry && mapping.pools.includes(entry.pool);
+      const groupOk = !!entry &&
+        [...entry.primary, ...entry.secondary].some((g) => mapping.muscleGroups.includes(g));
+      if (!poolOk || !groupOk) {
+        misplaced.push(`${movement.exercise.name} in ${movement.category}`);
+      }
+    }
+  }
   ok(
-    'a squat-dominant lower day gets the lower-body reset',
-    squat?.template.id === 'lower-body-reset',
-    `got ${squat?.template.id}`,
-  );
-  ok(
-    'the squat primer is a knee-activation entry from the lower prehab pool',
-    primerNames(squat).some((name) =>
-      ['Spanish Squat Hold', 'Banded TKE'].includes(name),
-    ),
-    `got ${JSON.stringify(primerNames(squat))}`,
+    "every movement is in its slot's authored pool AND muscle group",
+    misplaced.length === 0,
+    misplaced.join('; '),
   );
 
-  const hinge = flowFor(
-    workoutOf({ exercises: [row('Romanian Deadlift'), row('Barbell Hip Thrust')] }),
-  );
-  ok(
-    'a hinge-dominant lower day gets the hamstring/hinge reset',
-    hinge?.template.id === 'hamstring-hip-hinge-reset',
-    `got ${hinge?.template.id}`,
-  );
-  ok(
-    'the hinge primer is the hamstring/calf activation hold',
-    primerNames(hinge).includes('Bosch Hold'),
-    `got ${JSON.stringify(primerNames(hinge))}`,
-  );
-
-  const fullBody = flowFor(
-    workoutOf({ exercises: [row('Back Squat'), row('Bench Press')] }),
-  );
-  ok(
-    'a full-body day gets the movement-prep template built for exactly that',
-    fullBody?.template.id === 'pre-training-movement-prep',
-    `got ${fullBody?.template.id}`,
-  );
-  ok(
-    'a full-body day carries both an upper and a lower primer',
-    primerNames(fullBody).includes('Banded External Rotation') &&
-      primerNames(fullBody).length >= 2,
-    `got ${JSON.stringify(primerNames(fullBody))}`,
-  );
-
-  ok(
-    'selection is deterministic — the same session resolves the same way twice',
-    flowFor(workoutOf({ exercises: [row('Bench Press')] }))?.template.id ===
-      flowFor(workoutOf({ exercises: [row('Bench Press')] }))?.template.id,
-  );
-}
-
-/* ══ 2. Game week overrides the session type ══ */
-
-console.log('\n[2] Game week overrides regardless of session type');
-{
-  const gameWeek = flowFor(workoutOf({ exercises: [row('Back Squat')] }), {
-    seasonPhase: 'In-season',
-    isGameWeek: true,
+  // THE DOSES ARE SAM'S. `FLOW_DOSING.curatedDoseWins` is true and every candidate
+  // is a curated pool entry, so each movement carries the dose he authored on it.
+  // The retired bundles carried their own, which is how a grouping nobody authored
+  // came to prescribe work.
+  ok('the dosing rule still says curated wins', FLOW_DOSING.curatedDoseWins === true);
+  const poolByName = new Map<string, any>();
+  for (const pool of Object.values(POOL_REGISTRY)) {
+    for (const entry of pool) poolByName.set(entry.name, entry);
+  }
+  const reDosed = movementEntries(upper).concat(movementEntries(hinge)).filter((movement) => {
+    const source = poolByName.get(movement.name);
+    return !source ||
+      source.sets !== movement.sets ||
+      source.repsMin !== movement.repsMin ||
+      source.repsMax !== movement.repsMax;
   });
   ok(
-    'a game week takes the game-week template even on a squat day',
-    gameWeek?.template.id === 'game-week-light-mobility',
-    `got ${gameWeek?.template.id}`,
+    'every dose is the one authored on the curated pool entry',
+    reDosed.length === 0,
+    `re-dosed: ${reDosed.map((m: any) => m.name).join(', ')}`,
   );
-  ok('the game-week flow carries no primer', primerNames(gameWeek).length === 0);
+
+  ok(
+    'composition is deterministic — the same session and date fill the same flow',
+    JSON.stringify(movementNames(upper)) ===
+      JSON.stringify(movementNames(flowFor(
+        workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] }),
+      ))),
+  );
+  ok(
+    'a different date rotates which entries fill the slots',
+    JSON.stringify(movementNames(upper)) !==
+      JSON.stringify(movementNames(
+        flowFor(workoutOf({ exercises: [row('Bench Press'), row('Barbell Row')] }),
+          { ...IN_SEASON, date: '2026-08-27' }),
+      )),
+    'every date drew the identical four movements — the seed is not reaching the draw',
+  );
+  ok(
+    'no movement is ever repeated inside one flow',
+    new Set(movementNames(hinge)).size === movementNames(hinge).length,
+  );
 }
 
-/* ══ 3. Season phase filters the catalog ══ */
+/* ══ 2. Equipment and injuries filter it, exactly as every pool draw is filtered ══ */
 
-console.log('\n[3] phaseSuitability is honoured, not ignored');
+console.log('\n[2] Filtered like every other pool draw — and it SHRINKS, never pads');
 {
-  const offSeason = flowFor(workoutOf({ exercises: [row('Back Squat')] }), {
-    seasonPhase: 'Off-season',
-    isGameWeek: false,
+  const kneeAnkle = flowFor(workoutOf({ exercises: [row('Back Squat')] }), {
+    ...IN_SEASON,
+    athlete: athleteWith('Commercial gym', [injury('knee'), injury('ankle')]),
   });
+  const contraindicated = ['Deep Squat Hold', 'ATG Split Squat', 'Toe Stretch', 'Calf Stretch'];
   ok(
-    'an off-season flow is suitable for the off-season',
-    offSeason?.template.phaseSuitability.includes('Off-season'),
-    `got ${JSON.stringify(offSeason?.template.phaseSuitability)}`,
+    'a knee-and-ankle athlete is offered none of the movements those rule out',
+    contraindicated.every((name) => !movementNames(kneeAnkle).includes(name)),
+    `got ${JSON.stringify(movementNames(kneeAnkle))}`,
   );
 
-  // The game-week template is scoped to In-season / Deload / Game week only. An
-  // off-season game week must not be handed a template the catalog says is
-  // unsuitable — the override picks the flow, the phase filter still vetoes it.
-  const offSeasonGameWeek = flowFor(workoutOf({ exercises: [row('Back Squat')] }), {
-    seasonPhase: 'Off-season',
-    isGameWeek: true,
+  const outdoor = flowFor(workoutOf({ exercises: [row('Bench Press')] }), {
+    ...IN_SEASON,
+    athlete: athleteWith('Outdoor'),
   });
   ok(
-    'the game-week override cannot smuggle in a phase-unsuitable template',
-    !offSeasonGameWeek ||
-      offSeasonGameWeek.template.phaseSuitability.includes('Off-season') ||
-      offSeasonGameWeek.template.phaseSuitability.includes('Game week'),
-    `got ${offSeasonGameWeek?.template.id}`,
+    'an Outdoor athlete is never offered the bar-hang or the pullover',
+    !movementNames(outdoor).includes('Dead Hang') &&
+      !movementNames(outdoor).includes('Dumbbell Pullovers'),
+    `got ${JSON.stringify(movementNames(outdoor))}`,
+  );
+
+  // SHRINK, NEVER PAD — Sam's gunshow ruling, and it does not stop at gunshows. A
+  // slot whose candidates are all filtered out leaves the flow SHORTER; it never
+  // borrows a fifth movement from a category the menu did not ask for.
+  const thin = flowFor(workoutOf({ exercises: [row('Bench Press')] }), {
+    ...IN_SEASON,
+    athlete: athleteWith('Commercial gym', [injury('shoulder')]),
+  });
+  ok(
+    'a shoulder injury shrinks the upper menu rather than substituting a category',
+    !!thin && thin.movementCount <= 4 &&
+      thin.movements.every((m) => authoredShapeIncludes('upper', m.category)),
+    `got ${thin?.movementCount} movements: `
+      + `${(thin?.movements ?? []).map((m) => m.category).join(', ')}`,
+  );
+}
+
+/* ══ 3. The bundles are retired, not merely bypassed ══ */
+
+console.log('\n[3] MOBILITY_FLOW_TEMPLATES no longer exists, and D17 is wired');
+{
+  ok(
+    'the flow-bundle module is deleted',
+    !fs.existsSync(path.join(src, 'data/mobilityFlowTemplates.ts')),
+    'bypassing a catalog leaves it available to the next patch; deleting it does not',
+  );
+  const flowSource = fs.readFileSync(path.join(src, 'utils/mobilityPrehabFlow.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+  ok(
+    'the flow selector reads no template catalog at all',
+    !/MOBILITY_FLOW_TEMPLATES|TEMPLATE_FOR_SHAPE|phaseSuitability/.test(flowSource),
+    'the shape table and the phase filter existed to choose among bundles',
+  );
+  ok(
+    'and it composes through D17 — the authored source for THIS surface',
+    /SESSION_FLOW_MENUS/.test(flowSource) && /FLOW_CATEGORY_MUSCLE_MAPPING/.test(flowSource),
+    "sessionFlowMenus.ts said 'NOT WIRED YET: nothing composes a flow from this'",
+  );
+
+  // Every pool D17's mapping cites must be a real authored pool AND must actually
+  // yield candidates. An unresolvable name would silently empty a slot Sam
+  // authored — the flow would come out short and nothing would say why.
+  const unresolved: string[] = [];
+  const empty: string[] = [];
+  for (const category of Object.keys(FLOW_CATEGORY_MUSCLE_MAPPING) as FlowSlotCategory[]) {
+    for (const poolName of FLOW_CATEGORY_MUSCLE_MAPPING[category].pools) {
+      if (!MUSCLE_METADATA_POOLS.includes(poolName)) unresolved.push(`${poolName} (not authored)`);
+    }
+    if (flowSlotCandidates(category, DEFAULT_ATHLETE_CONTEXT).length === 0) empty.push(category);
+  }
+  ok(
+    'every pool D17 names is one of the authored muscle-sheet pools',
+    unresolved.length === 0,
+    unresolved.join('; '),
+  );
+  ok(
+    'every authored slot category has candidates to draw from',
+    empty.length === 0,
+    `no candidate resolves for: ${empty.join(', ')} — the slot would come out empty`,
   );
 }
 
@@ -243,7 +393,7 @@ console.log('\n[4] Days that get no flow at all');
       }),
     ) === null,
   );
-  ok('no flow without a workout', selectMobilityPrehabFlow({ workout: null, ...IN_SEASON }) === null);
+  ok('no flow without a workout', flowFor(null) === null);
   ok(
     'no flow on a strength day with no classifiable movement',
     flowFor(workoutOf({ exercises: [] })) === null,
@@ -271,7 +421,7 @@ console.log('\n[5] The flow is never counted, never gates, never logged');
     ...rows.supportRows,
     ...rows.conditioningRows,
   ].map((r: any) => r?.exercise?.name);
-  const flowMovementNames = flow!.template.movements.map((movement) => movement.name);
+  const flowMovementNames = movementNames(flow);
   ok(
     'no flow movement leaks into the counted component rows',
     flowMovementNames.every((name) => !allRowNames.includes(name)),
@@ -326,8 +476,14 @@ console.log('\n[6] Collapsed at the top, tap to expand, cosmetic tick only');
   );
   ok('tapping toggles it open and shut', /setExpanded\(\(prev\) => !prev\)/.test(section));
   ok(
-    'the collapsed header summarises movement count and duration',
-    /movementCount/.test(section) && /durationMinutes/.test(section),
+    'the collapsed header summarises the movement count',
+    /movementCount/.test(section),
+  );
+  ok(
+    'and it no longer promises a duration',
+    !/durationMinutes/.test(section),
+    'the minutes came from a retired bundle; a composed flow shrinks, so a promised '
+      + 'length is a signed sentence that can lie',
   );
 
   ok(

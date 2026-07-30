@@ -417,11 +417,17 @@ export type RecoveryAddonKind =
  * render, via `buildCueText(name)`, exactly like every other row; the field is
  * deleted rather than left unused so the channel cannot be reopened by a patch.
  */
+/**
+ * `source` lost `'mobility_flow_template'` on 2026-07-30 with the flow bundles it
+ * named. Every add-on row now comes out of a curated pool, so there is one value
+ * left that a writer can legitimately produce — and L15 says a retired shape is
+ * never written again, by anything, rather than kept as a tolerated option.
+ */
 export interface RecoveryAddonExercise {
   id: string;
   name: string;
   prescription: string;
-  source?: 'exercise_pool' | 'mobility_flow_template' | 'local';
+  source?: 'exercise_pool' | 'local';
 }
 
 export interface RecoveryAddonCountingFence {
@@ -445,7 +451,6 @@ export interface RecoveryAddonBlock {
   placementNote?: string;
   restrictions?: string[];
   cautions?: string[];
-  templateId?: string;
   counting: RecoveryAddonCountingFence;
 }
 

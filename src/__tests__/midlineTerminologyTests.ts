@@ -120,12 +120,10 @@ console.log('\n[1] Athlete-facing copy says midline');
     /label: 'Midline'/.test(coverage),
   );
 
-  const templates = read('data/mobilityFlowTemplates.ts');
-  ok(
-    'the mobility template display name says Midline',
-    /name: '[^']*Midline[^']*'/.test(templates),
-    'flow headers render template names the moment §4 ships, so this is now live copy',
-  );
+  // The flow-bundle module is retired (2026-07-30), and with it the one template
+  // NAME that rendered in a flow header. The composed flow renders no title of its
+  // own — only Sam's movement names, which this suite already sweeps through
+  // `data/exercisePools.ts` below.
 }
 
 /* ══ 2. No body-region "trunk" survives in athlete copy ══ */
@@ -145,7 +143,6 @@ console.log('\n[2] Sweep — no rendered literal still says trunk');
     'utils/coachRevisionTemplates.ts',
     'data/exercisePools.ts',
     'data/exerciseCues.ts',
-    'data/mobilityFlowTemplates.ts',
     'data/selectableExerciseVocabulary.ts',
     '../src/rules/recoveryAddonCoverage.ts',
     'screens/home/DayWorkoutScreenV2.tsx',
@@ -253,16 +250,9 @@ console.log('\n[4] Internal type keys keep their ids');
   const coverage = read('../src/rules/recoveryAddonCoverage.ts');
   ok("the focus-area key stays 'trunk_core'", /'trunk_core'/.test(coverage));
 
-  const templates = read('data/mobilityFlowTemplates.ts');
-  ok(
-    "the focus tag stays 'lower_back_trunk'",
-    /'lower_back_trunk'/.test(templates),
-  );
-  ok(
-    'the mobility template id is unchanged',
-    /id: 'low-back-friendly-trunk-reset'/.test(templates),
-    'ids are referenced by recoveryAddonCoverage; renaming one silently unlinks it',
-  );
+  // `lower_back_trunk` and the bundle ids went with the bundles. The internal
+  // identifier this suite still guards for the same reason is the focus-area KEY
+  // above: it is referenced across modules, where a display name is not.
 }
 
 /* ══ 5. The cue changeset stays the source of truth ══ */

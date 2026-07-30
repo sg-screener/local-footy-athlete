@@ -226,8 +226,14 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
-      source: 'data/mobilityFlowTemplates.ts MOBILITY_FLOW_TEMPLATES',
-      count: 10,
+      // THE CITATION WAS WRONG, and retiring the bundles is what exposed it. It
+      // named `MOBILITY_FLOW_TEMPLATES` — ten groupings Sam does not recognise —
+      // while `buildDerivedSession('recovery')` has always drawn from the four
+      // recovery pools instead. The charter now cites what the code does.
+      source: 'data/exercisePools.ts TISSUE_QUALITY_POOL + MOBILITY_POOL + '
+        + 'EASY_CARDIO_POOL + BREATHING_RESET_POOL, composed by '
+        + "utils/sessionBuilder.ts buildDerivedSession('recovery')",
+      count: 34,
       sessionVariants: null,
     },
     ruling: "Sam's rulings 1 and 3, 2026-07-30: recovery counts toward nothing, "
@@ -392,8 +398,10 @@ export const CHARTER_DEBT: readonly CharterDebtEntry[] = [
     question: 'composition',
     deviation: 'contents are INVENTED — the four rows of RECOVERY_FLOW_ROWS in '
       + 'coachRevisionTemplates.ts are hand-typed names that appear in no authored '
-      + 'source, and none of the ten mobility templates is consulted',
-    paidBy: 'stage 4 — the recovery door draws on the authored mobility templates',
+      + 'pool, so the recovery DOOR composes from nothing Sam wrote even though '
+      + "buildDerivedSession('recovery') composes from the four recovery pools",
+    paidBy: 'the recovery door composes from the recovery pools, as the Mobility '
+      + 'door now composes from MOBILITY_POOL',
   },
 
   // ── Mobility: authored, and unreachable ──

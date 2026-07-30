@@ -96,6 +96,35 @@ export const MOBILITY_TARGET_MOVEMENTS = 6;
 export const MOBILITY_MIN_MOVEMENTS = 5;
 export const MOBILITY_MAX_MOVEMENTS = 8;
 
+/**
+ * A FLOW is one movement per region. Not a session, and not a new number.
+ *
+ * The collapsed in-session flow (`:229`) and the mobility add-on both used to
+ * draw from the retired bundles; they now draw from this pool. Neither has an
+ * authored count — the Bible authorises that the flow EXISTS and that it is never
+ * load-bearing, and says nothing about its length — so rather than invent one,
+ * the flow is the region table's own shape: FOUR regions, one movement each.
+ *
+ * That is a derivation from something Sam signed, not a fifth number. It also
+ * happens to equal what the retired path emitted (`movementsFromTemplate` sliced
+ * to 4), so the size of an add-on does not change — only where its movements come
+ * from, which is the whole point of retiring the bundles.
+ *
+ * A SESSION is the signed 5-8 window with a target of six. The difference between
+ * the two is one pass of the same engine.
+ */
+export const MOBILITY_FLOW_MOVEMENTS = MOBILITY_REGIONS.length;
+
+/**
+ * How long the app says a composed Mobility session takes.
+ *
+ * NOT A NEW NUMBER: it is the Mobility door's own `durationMinutes`, moved here
+ * from `coachRevisionTemplates` so the door and the generator's top-up cannot
+ * quote different lengths for the identical composition. Unsigned — a duration is
+ * not in the Bible — and now unsigned in exactly one place.
+ */
+export const MOBILITY_SESSION_MINUTES = 15;
+
 export function mobilityRegionOf(exercise: PoolExercise): MobilityRegion | null {
   return MOBILITY_REGION_BY_ID[exercise.id] ?? null;
 }
@@ -125,6 +154,52 @@ export function composeMobilitySession(args: {
     Math.max(args.target ?? MOBILITY_TARGET_MOVEMENTS, MOBILITY_MIN_MOVEMENTS),
     MOBILITY_MAX_MOVEMENTS,
   );
+  return composeRegionSpread({ seed: args.seed, eligible: args.eligible, target });
+}
+
+/**
+ * The collapsed in-session flow and the mobility add-on: ONE MOVEMENT PER REGION.
+ *
+ * Same engine, same pool, same authored doses — one pass instead of the session's
+ * several. It shrinks below four exactly as the session shrinks below six, because
+ * equipment and injury filtering can empty a region, and it never pads.
+ */
+export function composeMobilityFlow(args: {
+  seed: number;
+  eligible: readonly PoolExercise[];
+}): PoolExercise[] {
+  return composeRegionSpread({
+    seed: args.seed,
+    eligible: args.eligible,
+    target: MOBILITY_FLOW_MOVEMENTS,
+    // ONE PASS, so "one movement per region" holds even when a region is empty.
+    // Without this the draw would take a second movement from another region to
+    // reach four — which is the padding the session's own rule forbids, and it
+    // would make the count a quota instead of a shape. Caught by
+    // `mobilityPrehabFlowTests` §2 on its first run: three regions produced four
+    // movements.
+    maxPasses: 1,
+  });
+}
+
+/**
+ * The region-spread draw both doses share.
+ *
+ * Held private-by-contract: callers ask for a SESSION or a FLOW, so the two signed
+ * shapes are the only ones reachable and neither can drift into an arbitrary
+ * count. It is exported only because the flow and the session live in different
+ * modules.
+ */
+export function composeRegionSpread(args: {
+  seed: number;
+  eligible: readonly PoolExercise[];
+  target: number;
+  /** How many times round the regions. The flow takes one; a session takes as
+   *  many as its target needs. */
+  maxPasses?: number;
+}): PoolExercise[] {
+  const target = args.target;
+  const maxPasses = args.maxPasses ?? MOBILITY_MAX_MOVEMENTS;
   const byRegion = new Map<MobilityRegion, PoolExercise[]>();
   for (const region of MOBILITY_REGIONS) byRegion.set(region, []);
   for (const exercise of args.eligible) {
@@ -137,7 +212,7 @@ export function composeMobilitySession(args: {
   // Pass 1..n: one per region per pass, regions in their declared order, so the
   // spread holds at every session length and the extras are distributed rather
   // than stacked.
-  for (let pass = 0; picked.length < target && pass < MOBILITY_MAX_MOVEMENTS; pass += 1) {
+  for (let pass = 0; picked.length < target && pass < maxPasses; pass += 1) {
     let addedThisPass = false;
     for (const region of MOBILITY_REGIONS) {
       if (picked.length >= target) break;

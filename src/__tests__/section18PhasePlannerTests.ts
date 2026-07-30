@@ -430,9 +430,18 @@ runCase('scenario', '23 late off-season two selected sprint doses remain control
   const second = createLateOffseasonSpeedBlock('standalone', { seasonPhase: 'Off-season', offseasonSubphase: 'late_offseason', weekNumber: 7 });
   invariant(late.plan.weeklyExposureContractV2?.sprintHighSpeed.exposure.permittedMaximum === 2 && !!first && !!second && first.durationMinutes <= 18 && second.durationMinutes <= 18 && /full (?:walk-back )?rest|full recovery|full rest/i.test(`${first.prescription} ${second.prescription}`), 'two-dose sprint policy is not controlled');
 });
-runCase('scenario', '24 late optional accessory work remains non-core', () => {
+runCase('scenario', '24 late optional accessory work remains non-core, and is COMPOSED', () => {
+  // The original half of this cell is unchanged: optional accessory work never
+  // takes main-strength credit.
+  //
+  // The addition is Sam's class ruling of 2026-07-30 — REAL COMPOSED SESSIONS ONLY.
+  // Every optional accessory allocation must declare `composedOptionalKind`, which
+  // is what routes its content through the signed prehab pools instead of leaving a
+  // focus STRING for the model or a hardcoded fallback to interpret.
   const accessory = late.allocations.filter((entry) => entry.tier === 'optional' && /accessor|prehab|gunshow|pump/i.test(entry.focus));
   invariant(accessory.length > 0 && accessory.every((entry) => !entry.strengthIntent), 'optional accessory gained main-strength credit', accessory);
+  invariant(accessory.every((entry) => entry.composedOptionalKind === 'accessories'),
+    'an optional accessory allocation places a sentence rather than a composed session', accessory);
 });
 runCase('scenario', '25 later off-season blocks remain on the late table', () => {
   invariant(lateLater.plan.weeklyExposureContractV2?.identity.mode === 'late_offseason' && lateLater.contract.strength.targetCount === 4 && lateLater.contract.conditioning.targetCount === 4, 'late table reset at rollover');

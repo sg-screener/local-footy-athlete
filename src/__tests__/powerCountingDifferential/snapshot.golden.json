@@ -17,7 +17,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -25,6 +25,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -46,7 +47,8 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 4,
@@ -73,8 +75,7 @@
                 }
               ],
               "components": [
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
@@ -114,7 +115,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -134,10 +135,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -167,6 +168,28 @@
                 "Nordic Lower"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -187,7 +210,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -195,6 +218,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -212,7 +236,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -220,6 +244,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -241,7 +266,8 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 4,
@@ -268,8 +294,7 @@
                 }
               ],
               "components": [
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
@@ -309,7 +334,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -329,10 +354,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -362,6 +387,28 @@
                 "Hamstring Curl"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -382,7 +429,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -390,6 +437,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -483,7 +531,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -503,10 +551,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -564,7 +612,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -584,10 +632,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -783,7 +831,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -803,10 +851,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -864,7 +912,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -884,10 +932,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1144,7 +1192,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1164,10 +1212,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1230,7 +1278,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1250,10 +1298,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1449,7 +1497,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1469,10 +1517,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1535,7 +1583,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1555,10 +1603,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1713,8 +1761,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -1753,7 +1800,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1763,17 +1810,20 @@
               ],
               "components": [
                 "strength",
+                "support",
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 2,
-                "support": 0,
+                "strength": 4,
+                "support": 1,
                 "conditioning": 0,
-                "total": 2
+                "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -1827,7 +1877,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -1836,17 +1886,21 @@
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "support",
+                "recovery_addon"
               ],
               "countedRows": {
-                "strength": 2,
-                "support": 0,
+                "strength": 4,
+                "support": 1,
                 "conditioning": 0,
-                "total": 2
+                "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2033,7 +2087,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2053,10 +2107,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2119,7 +2173,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2139,10 +2193,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2323,7 +2377,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -2331,6 +2385,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2420,7 +2475,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2440,10 +2495,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2473,6 +2528,28 @@
                 "Glute Bridge"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -2493,7 +2570,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -2501,6 +2578,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -2518,7 +2596,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -2526,6 +2604,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -2615,7 +2694,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2635,10 +2714,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2668,6 +2747,28 @@
                 "Glute Bridge"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -2688,7 +2789,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -2696,6 +2797,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -2746,7 +2848,8 @@
               "components": [
                 "speed",
                 "strength",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2765,7 +2868,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2785,10 +2888,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2824,7 +2927,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -2844,10 +2947,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -2899,8 +3002,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2994,7 +3096,8 @@
               "components": [
                 "speed",
                 "strength",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3013,7 +3116,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3033,10 +3136,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3072,7 +3175,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3092,10 +3195,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Glute Bridge"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3147,8 +3250,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3216,7 +3318,7 @@
             "runningExposures": 1,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -3224,6 +3326,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -3245,7 +3348,8 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning"
+                "conditioning",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3273,8 +3377,7 @@
                 }
               ],
               "components": [
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
@@ -3314,7 +3417,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3334,10 +3437,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Long-Lever Copenhagen",
+                "Banded External Rotation",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3368,6 +3471,28 @@
                 "Back Squat"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -3388,7 +3513,7 @@
               "runningExposures": 1,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -3396,6 +3521,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -3413,7 +3539,7 @@
             "runningExposures": 1,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -3421,6 +3547,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -3511,7 +3638,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3531,10 +3658,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Tib Raises"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3565,6 +3692,28 @@
                 "Back Squat"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -3585,7 +3734,7 @@
               "runningExposures": 1,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -3593,6 +3742,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -3686,7 +3836,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3706,10 +3856,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Lateral Lunge",
+                "Banded External Rotation",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3767,7 +3917,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -3787,10 +3937,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Groin Squeeze",
+                "Band Pull-Apart",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -3986,7 +4136,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4006,10 +4156,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Tib Raises"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -4067,7 +4217,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4077,7 +4227,8 @@
               ],
               "components": [
                 "strength",
-                "support"
+                "support",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 4,
@@ -4086,10 +4237,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Tib Raises"
+                "Long-Lever Copenhagen",
+                "Banded External Rotation",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -4141,8 +4292,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4271,7 +4421,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -4279,6 +4429,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -4368,7 +4519,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4382,16 +4533,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise"
               ],
               "power": null
             },
@@ -4421,6 +4571,28 @@
                 "Nordic Lower"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -4441,7 +4613,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -4449,6 +4621,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -4466,7 +4639,7 @@
             "runningExposures": 0,
             "sprintCodExposures": 0,
             "gunshowSessions": 1,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 0,
             "games": 0,
             "byCategory": {
@@ -4474,6 +4647,7 @@
               "full_body_strength": 1,
               "gunshow_prehab": 1,
               "lower_strength": 1,
+              "recovery": 1,
               "upper_strength": 1
             }
           },
@@ -4563,7 +4737,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4577,16 +4751,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise"
               ],
               "power": null
             },
@@ -4616,6 +4789,28 @@
                 "Hamstring Curl"
               ],
               "power": null
+            },
+            {
+              "dayOfWeek": 6,
+              "name": "Mobility",
+              "workoutType": "Recovery",
+              "taxonomy": [
+                {
+                  "category": "recovery",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "recovery"
+              ],
+              "countedRows": {
+                "strength": 0,
+                "support": 0,
+                "conditioning": 0,
+                "total": 6
+              },
+              "strengthRowNames": [],
+              "power": null
             }
           ],
           "section18": {
@@ -4636,7 +4831,7 @@
               "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
@@ -4644,6 +4839,7 @@
                 "full_body_strength": 1,
                 "gunshow_prehab": 1,
                 "lower_strength": 1,
+                "recovery": 1,
                 "upper_strength": 1
               }
             }
@@ -4736,7 +4932,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4750,16 +4946,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Single-Leg Calf Raise"
               ],
               "power": null
             },
@@ -4817,7 +5012,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -4831,16 +5026,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise"
               ],
               "power": null
             },
@@ -5036,7 +5230,7 @@
             },
             {
               "dayOfWeek": 2,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -5050,16 +5244,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise"
               ],
               "power": null
             },
@@ -5117,7 +5310,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -5131,16 +5324,15 @@
                 "recovery_addon"
               ],
               "countedRows": {
-                "strength": 4,
+                "strength": 3,
                 "support": 1,
                 "conditioning": 0,
-                "total": 5
+                "total": 4
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise"
               ],
               "power": null
             },
@@ -5321,12 +5513,13 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 0,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
+              "gunshow_prehab": 1,
               "lower_strength": 2,
               "team_training": 2,
               "upper_strength": 2
@@ -5413,6 +5606,34 @@
                 "Overhead Press",
                 "DB Bench Press",
                 "Bicep Curl (Barbell)"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Prehab & Accessories",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "gunshow_prehab",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "support"
+              ],
+              "countedRows": {
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
+              },
+              "strengthRowNames": [
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -5527,12 +5748,13 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
+                "gunshow_prehab": 1,
                 "lower_strength": 2,
                 "team_training": 2,
                 "upper_strength": 2
@@ -5551,12 +5773,13 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 0,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
+              "gunshow_prehab": 1,
               "lower_strength": 2,
               "team_training": 2,
               "upper_strength": 2
@@ -5643,6 +5866,34 @@
                 "Pull-Ups",
                 "Barbell Row",
                 "Face Pulls"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Prehab & Accessories",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "gunshow_prehab",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "support"
+              ],
+              "countedRows": {
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
+              },
+              "strengthRowNames": [
+                "Cossack Squat",
+                "Bottoms-Up KB Press",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -5757,12 +6008,13 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
+                "gunshow_prehab": 1,
                 "lower_strength": 2,
                 "team_training": 2,
                 "upper_strength": 2
@@ -5781,12 +6033,13 @@
             "extraConditioningSessions": 2,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 0,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 2,
+              "gunshow_prehab": 1,
               "lower_strength": 2,
               "team_training": 2,
               "upper_strength": 2
@@ -5873,6 +6126,34 @@
                 "Overhead Press",
                 "Push-ups",
                 "Hammer Curl"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Prehab & Accessories",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "gunshow_prehab",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "support"
+              ],
+              "countedRows": {
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
+              },
+              "strengthRowNames": [
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -5987,12 +6268,13 @@
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
+                "gunshow_prehab": 1,
                 "lower_strength": 2,
                 "team_training": 2,
                 "upper_strength": 2
@@ -6011,12 +6293,13 @@
             "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
-            "gunshowSessions": 0,
+            "gunshowSessions": 1,
             "recoverySessions": 0,
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
               "aerobic_base": 1,
+              "gunshow_prehab": 1,
               "lower_strength": 2,
               "team_training": 2,
               "upper_strength": 2
@@ -6099,6 +6382,34 @@
               "strengthRowNames": [
                 "Pull-Ups",
                 "Barbell Row"
+              ],
+              "power": null
+            },
+            {
+              "dayOfWeek": 3,
+              "name": "Prehab & Accessories",
+              "workoutType": "Strength",
+              "taxonomy": [
+                {
+                  "category": "gunshow_prehab",
+                  "modality": "none"
+                }
+              ],
+              "components": [
+                "strength",
+                "support"
+              ],
+              "countedRows": {
+                "strength": 4,
+                "support": 1,
+                "conditioning": 0,
+                "total": 5
+              },
+              "strengthRowNames": [
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -6203,12 +6514,13 @@
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 0,
               "byCategory": {
                 "aerobic_base": 1,
+                "gunshow_prehab": 1,
                 "lower_strength": 2,
                 "team_training": 2,
                 "upper_strength": 2
@@ -6223,6 +6535,7 @@
         "powerDaysBefore": [
           1,
           2,
+          3,
           5,
           6
         ],
@@ -6231,6 +6544,7 @@
         ],
         "powerDaysStripped": [
           2,
+          3,
           5,
           6
         ],
@@ -6250,12 +6564,13 @@
           "extraConditioningSessions": 2,
           "runningExposures": 2,
           "sprintCodExposures": 2,
-          "gunshowSessions": 0,
+          "gunshowSessions": 1,
           "recoverySessions": 0,
           "teamTrainingSessions": 2,
           "games": 0,
           "byCategory": {
             "aerobic_base": 2,
+            "gunshow_prehab": 1,
             "lower_strength": 2,
             "team_training": 2,
             "upper_strength": 2
@@ -6436,21 +6751,22 @@
             "visibleCounts": {
               "hardExposures": 3,
               "hardDays": 3,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
+                "gunshow_prehab": 1,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -6592,7 +6908,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -6612,16 +6928,16 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Lateral Lunge",
+                "Scap Push-Up",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
             {
               "dayOfWeek": 5,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -6641,10 +6957,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             }
@@ -6665,22 +6981,22 @@
             "visibleCounts": {
               "hardExposures": 3,
               "hardDays": 3,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 2,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -6822,7 +7138,7 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -6842,16 +7158,16 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Groin Squeeze",
+                "Banded External Rotation",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
             {
               "dayOfWeek": 5,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -6871,10 +7187,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Cossack Squat",
+                "Bottoms-Up KB Press",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             }
@@ -6895,22 +7211,22 @@
             "visibleCounts": {
               "hardExposures": 3,
               "hardDays": 3,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 1,
+              "gunshowSessions": 2,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -7081,21 +7397,22 @@
             "visibleCounts": {
               "hardExposures": 3,
               "hardDays": 3,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 1,
               "runningExposures": 2,
               "sprintCodExposures": 2,
-              "gunshowSessions": 0,
+              "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "game": 1,
+                "gunshow_prehab": 1,
                 "lower_strength": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -7127,21 +7444,22 @@
         "visibleCounts": {
           "hardExposures": 3,
           "hardDays": 3,
-          "mainStrengthExposures": 4,
+          "mainStrengthExposures": 3,
           "conditioningExposures": 3,
           "extraConditioningSessions": 1,
           "runningExposures": 3,
           "sprintCodExposures": 2,
-          "gunshowSessions": 0,
+          "gunshowSessions": 1,
           "recoverySessions": 0,
           "teamTrainingSessions": 1,
           "games": 1,
           "byCategory": {
             "game": 1,
+            "gunshow_prehab": 1,
             "lower_strength": 1,
             "team_training": 1,
             "tempo_conditioning": 1,
-            "upper_strength": 3
+            "upper_strength": 2
           }
         }
       }
@@ -7233,7 +7551,7 @@
             },
             {
               "dayOfWeek": 3,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -7253,10 +7571,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -7302,20 +7620,21 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 6,
+                "support": 0,
                 "conditioning": 0,
-                "total": 5
+                "total": 6
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Nordic Lower"
+                "Concentration Curl",
+                "Chin-Up Negative (Slow)",
+                "Dumbbell Kickback",
+                "Banded Tricep Pushdown",
+                "Single-Arm Shrug",
+                "Lateral Raise"
               ],
               "power": null
             }
@@ -7332,21 +7651,21 @@
             "visibleCounts": {
               "hardExposures": 4,
               "hardDays": 4,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 1,
+              "gunshowSessions": 2,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 1,
                 "team_training": 2,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -7434,7 +7753,7 @@
             },
             {
               "dayOfWeek": 3,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -7454,10 +7773,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Cossack Squat",
+                "Bottoms-Up KB Press",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -7503,20 +7822,21 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 6,
+                "support": 0,
                 "conditioning": 0,
-                "total": 5
+                "total": 6
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Hamstring Curl"
+                "Incline Dumbbell Curl",
+                "Banded Bicep Curl",
+                "Tricep Pushdown",
+                "Overhead Tricep Extension",
+                "Rear Delt Fly",
+                "Shrugs"
               ],
               "power": null
             }
@@ -7635,7 +7955,7 @@
             },
             {
               "dayOfWeek": 3,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -7655,10 +7975,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -7704,20 +8024,20 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Leg Extension"
+                "Chin-Up Negative (Slow)",
+                "Hammer Curl",
+                "Banded Tricep Pushdown",
+                "Dumbbell Skull Crusher",
+                "Cable Face Pull"
               ],
               "power": null
             }
@@ -7734,21 +8054,21 @@
             "visibleCounts": {
               "hardExposures": 4,
               "hardDays": 4,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 1,
+              "gunshowSessions": 2,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 1,
                 "team_training": 2,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }
@@ -7836,7 +8156,7 @@
             },
             {
               "dayOfWeek": 3,
-              "name": "Gunshow",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
@@ -7856,10 +8176,10 @@
                 "total": 5
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Copenhagen Plank (Half)",
+                "Scap Pull Ups",
+                "Single-Leg Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             },
@@ -7905,20 +8225,21 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 6,
+                "support": 0,
                 "conditioning": 0,
-                "total": 5
+                "total": 6
               },
               "strengthRowNames": [
-                "Bicep Curls",
-                "Tricep Pushdowns",
-                "Face Pulls",
-                "Calf Raises"
+                "Concentration Curl",
+                "Chin-Up Negative (Slow)",
+                "Dumbbell Kickback",
+                "Banded Tricep Pushdown",
+                "Single-Arm Shrug",
+                "Lateral Raise"
               ],
               "power": null
             }
@@ -7935,21 +8256,21 @@
             "visibleCounts": {
               "hardExposures": 4,
               "hardDays": 4,
-              "mainStrengthExposures": 4,
+              "mainStrengthExposures": 3,
               "conditioningExposures": 3,
               "extraConditioningSessions": 0,
               "runningExposures": 3,
               "sprintCodExposures": 3,
-              "gunshowSessions": 1,
+              "gunshowSessions": 2,
               "recoverySessions": 0,
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
                 "game": 1,
-                "gunshow_prehab": 1,
+                "gunshow_prehab": 2,
                 "lower_strength": 1,
                 "team_training": 2,
-                "upper_strength": 3
+                "upper_strength": 2
               }
             }
           }

@@ -90,8 +90,12 @@ import {
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { listCoachRevisionTemplates } from '../utils/coachRevisionTemplates';
-import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
-import { MOBILITY_POOL } from '../data/exercisePools';
+import {
+  BREATHING_RESET_POOL,
+  EASY_CARDIO_POOL,
+  MOBILITY_POOL,
+  TISSUE_QUALITY_POOL,
+} from '../data/exercisePools';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
@@ -481,6 +485,17 @@ run('C3. the Accessories door is never a hard day (ruling 2)', () => {
 
 console.log('\n-- D. who authored the contents --');
 
+/**
+ * What a recovery session actually draws from.
+ *
+ * The charter used to cite the ten flow bundles here. It was never true —
+ * `buildDerivedSession('recovery')` composes from these four pools — and retiring
+ * the bundles (2026-07-30) is what surfaced it.
+ */
+const RECOVERY_POOLS = [
+  TISSUE_QUALITY_POOL, MOBILITY_POOL, EASY_CARDIO_POOL, BREATHING_RESET_POOL,
+];
+
 const PREHAB_POOLS = [
   GROIN_ADDUCTORS_POOL, CALVES_POOL, LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL, HAMSTRING_LIGHT_POOL,
@@ -489,7 +504,7 @@ const PREHAB_POOLS = [
 /** The live population of each cited source, counted from the source itself. */
 const AUTHORED_POPULATION: Readonly<Record<SessionTypeId, number | null>> = {
   rest: null,
-  recovery: MOBILITY_FLOW_TEMPLATES.length,
+  recovery: RECOVERY_POOLS.reduce((total, pool) => total + pool.length, 0),
   strength: Object.keys(STRENGTH_POOLS).length,
   conditioning: CONDITIONING_TEMPLATES.length,
   mobility: MOBILITY_POOL.length,
@@ -509,8 +524,7 @@ const AUTHORED_POPULATION: Readonly<Record<SessionTypeId, number | null>> = {
  */
 const AUTHORED_NAMES: Readonly<Record<SessionTypeId, ReadonlySet<string> | null>> = {
   rest: null,
-  recovery: new Set(MOBILITY_FLOW_TEMPLATES.flatMap(
-    (template) => template.movements.map((movement) => canonicalExerciseName(movement.name)))),
+  recovery: new Set(RECOVERY_POOLS.flat().map((entry) => canonicalExerciseName(entry.name))),
   strength: new Set(selectableExerciseNames().map(canonicalExerciseName)),
   conditioning: new Set(CONDITIONING_TEMPLATES.map(
     (template) => canonicalExerciseName(template.name))),

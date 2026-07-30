@@ -49,7 +49,7 @@ import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useDayWorkout } from './useDayWorkout';
 import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
-import { useResolvedWeekForDate } from '../../hooks/useSchedule';
+import { useAthleteContext, useResolvedWeekForDate } from '../../hooks/useSchedule';
 import {
   buildDayWorkoutSmokeContractErrorResult,
   deriveDayWorkoutSmokeContract,
@@ -371,7 +371,7 @@ function suggestAddExercise(
     Mobility: [
       // Sam ruled 2026-07-25: Hip 90/90 Stretch. Flow-capable suggestions are a
       // POSSIBLE FUTURE BUILD, not now — this table emits single exercises, so a
-      // suggestion naming a MOBILITY_FLOW_TEMPLATES entry has nowhere to land.
+      // suggestion naming a whole composed flow has nowhere to land.
       // The prescription moved with the name: 5-8 MINUTES of a flow becomes
       // 30-45 SECONDS per side of a stretch, matching MOBILITY_POOL.
       { name: 'Hip 90/90 Stretch', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration', perSide: true, notes: 'Breathe into the stretch.' },
@@ -509,9 +509,16 @@ export default function DayWorkoutScreenV2() {
     () => resolvedWeek.some((day) => day.indicator === 'game'),
     [resolvedWeek],
   );
+  const flowAthlete = useAthleteContext();
   const mobilityFlow = React.useMemo(
-    () => selectMobilityPrehabFlow({ workout, seasonPhase, isGameWeek }),
-    [workout, seasonPhase, isGameWeek],
+    () => selectMobilityPrehabFlow({
+      workout,
+      seasonPhase,
+      isGameWeek,
+      athlete: flowAthlete,
+      date,
+    }),
+    [workout, seasonPhase, isGameWeek, flowAthlete, date],
   );
   React.useEffect(() => {
     if (!pendingComponentDeletionObservation) return;
