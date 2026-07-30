@@ -1753,8 +1753,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -1931,7 +1930,8 @@
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 3,
@@ -5537,13 +5537,13 @@
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -5797,13 +5797,13 @@
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -6057,13 +6057,13 @@
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -6314,13 +6314,13 @@
                     "exercise": "Lateral Bounds",
                     "sets": 2,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Use this as a standalone primer before strength work."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -6606,20 +6606,20 @@
                 "Deadlift"
               ],
               "power": {
-                "kind": "contrast",
+                "kind": "primer",
                 "family": "lower",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -6796,20 +6796,20 @@
                 "Deadlift"
               ],
               "power": {
-                "kind": "contrast",
+                "kind": "primer",
                 "family": "lower",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -6998,20 +6998,20 @@
                 "Deadlift"
               ],
               "power": {
-                "kind": "contrast",
+                "kind": "primer",
                 "family": "lower",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 3,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
@@ -7183,8 +7183,7 @@
                 }
               ],
               "components": [
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 0,
@@ -7211,7 +7210,8 @@
               ],
               "components": [
                 "strength",
-                "team_training"
+                "team_training",
+                "recovery_addon"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7251,20 +7251,20 @@
                 "Deadlift"
               ],
               "power": {
-                "kind": "contrast",
+                "kind": "primer",
                 "family": "lower",
                 "items": [
                   {
                     "exercise": "Lateral Bounds",
                     "sets": 2,
                     "repsMin": 3,
-                    "repsMax": 5,
+                    "repsMax": 3,
                     "equipmentRequired": [],
                     "order": 0
                   }
                 ],
                 "notes": [
-                  "Do this fresh, early in the session — before the main lifts. Contrast: perform sharply straight after your heavy set, then rest fully before the next round."
+                  "Do this fresh, early in the session — before the main lifts."
                 ],
                 "fence": {
                   "role": "power",
