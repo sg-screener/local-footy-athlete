@@ -291,3 +291,36 @@ had survived every sweep because the filler hid them:
 
 Both are the same shape as the class this document is about: **a placement nobody
 authored, kept alive by another placement nobody authored.**
+
+---
+
+## What the mutation test showed, and what it corrects
+
+Sam asked for the (placement × domain) cells to be **red before the deletions, green
+after**. Four mutations were run against the landed state to check that claim. Two of
+them corrected it.
+
+| Mutation | Result | What it means |
+|---|---|---|
+| Remove ALL free-day repair capacity | **RED** — `in-season/bye/6d/0tt` fails with `planner_selected_target_miss:main_strength:2` and `required_minimum_shortfall:conditioning:2` | The D-DOMAIN half is genuinely red-before / green-after. This is the starvation, caught by domain, and it is what the dimension exists for. |
+| Remove only CONDITIONING's free-day capacity | GREEN | Conditioning's own free-day capacity is currently **redundant in these scenarios**: the strength repair claims a free day first, and the conditioning repair then ATTACHES to the day strength just claimed. It was load-bearing in the hydration / legacy-migration path, which this dimension does not reach. |
+| Restore R2 (G-3 accessories by the day) | GREEN | R2 places on the same day the need chooses — G-3 of a Saturday game week is both the Bible's Wednesday and the only spare day — and the need genuinely exists in those weeks. |
+| Restore R3 (any spare day) | GREEN | Same coincidence: with one spare day and an optional budget of one, R3 and the need produce the identical week. |
+
+**Two claims are corrected by this.**
+
+1. **The four deletions are behaviour-preserving in the space the matrix covers.** They
+   were presented as a behaviour change; in these scenarios the week that comes out is
+   byte-identical. What they change is that the placement now has a stated reason
+   instead of a day, and that no repair depends on it. That is still the point — the
+   starvation is real and cost two device-visible defects — but the weeks did not move,
+   and saying they did would have been a stronger claim than the evidence supports.
+
+2. **D-PLACEMENT is a ratchet, not a proof.** It reds when a placement DIVERGES from
+   the need — a second session, or a day the need would not choose. It does not red on
+   a day-based rule that happens to coincide with the need, which is what the deleted
+   rows did here. The half carrying the red-before / green-after property is D-DOMAIN.
+
+The honest summary: **the deletions bought a reason, and the repair rework bought the
+week.** Only the second is visible in a generated week, and only the second is what the
+matrix can prove.

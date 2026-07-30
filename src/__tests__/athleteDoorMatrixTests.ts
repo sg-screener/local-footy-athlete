@@ -56,9 +56,8 @@ import type { ResolvedDay } from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
-  ACCESSORY_REGION_THRESHOLD,
   OFFSEASON_MOBILITY_TARGET,
-  accessoryRegionsCovered,
+  computeOptionalTopUps,
 } from '../rules/optionalTopUp';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import {
@@ -1012,6 +1011,10 @@ const PLACEMENT_SCENARIOS: ReadonlyArray<{
     teamTrainingDaysPerWeek: 1, teamTrainingDays: ['Tuesday'] } },
 ];
 
+const DAY_NAME_TO_NUMBER: Readonly<Record<string, number>> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
 /** The contract domains a week can be short of. Every one is asserted per week. */
 const CONTRACT_DOMAINS = ['main_strength', 'conditioning', 'sprint_high_speed'] as const;
 
@@ -1084,37 +1087,73 @@ for (const scenario of PLACEMENT_SCENARIOS) {
       });
     }
 
-    // ── D-PLACEMENT: no optional session that no need justifies ──
-    cell(`[placement] ${scenario.id} w${index + 1} × every optional session has a NEED`, () => {
-      const accessories = workouts.filter((workout) =>
-        workout.sessionTier === 'optional' && isComposedOf(workout, PREHAB_NAMES));
-      const mobility = workouts.filter((workout) => isComposedOf(workout, MOBILITY_NAMES));
+    // ── D-PLACEMENT: the optional sessions are EXACTLY the ones a need chose ──
+    //
+    // STRONGER THAN THE FIRST DRAFT, and the draft's weakness is worth recording
+    // because it is the mutation test that found it. The first form asked only
+    // whether a need EXISTED for each optional session ("the week without it covers
+    // fewer than three of the six regions"). Restoring the deleted R2 placement did
+    // not red it: R2 puts accessories on G-3 whether or not the week is short, and
+    // in these scenarios the week happens to BE short, so a day-based placement and
+    // a need-based one were indistinguishable by that question.
+    //
+    // The question that distinguishes them is not "is something lacking" but "is
+    // this the placement the need computation would make". So the cell RE-RUNS the
+    // need computation over the week stripped of its optional sessions and requires
+    // the observed set to equal the computed set, by type AND day.
+    //
+    // WHAT THE MUTATION TEST ACTUALLY SHOWED, recorded because it is weaker than the
+    // sentence above wants to be. Restoring R2, and then R3, left this cell GREEN in
+    // every scenario here: the deleted day-based rules place on the SAME day the need
+    // chooses (G-3 of a Saturday game week is both the Bible's Wednesday and the only
+    // spare day), and the need genuinely exists in those weeks. So the four deletions
+    // are BEHAVIOUR-PRESERVING in the space this dimension covers — what they change
+    // is that the placement now has a stated reason, and that the shortfall repairs no
+    // longer depend on it.
+    //
+    // This half is therefore a RATCHET against future divergence, not evidence that
+    // the deletions changed a week. The half that is genuinely red-before-green-after
+    // is D-DOMAIN above: removing the repairs' free-day capacity reds
+    // `in-season/bye/6d/0tt` with `main_strength:2` and `conditioning:2` — the
+    // starvation, named by domain, which is exactly what the dimension is for.
+    cell(`[placement] ${scenario.id} w${index + 1} × optional sessions are the NEEDED ones`, () => {
+      const isAccessories = (workout: Workout): boolean =>
+        workout.sessionTier === 'optional' && isComposedOf(workout, PREHAB_NAMES);
+      const isMobility = (workout: Workout): boolean => isComposedOf(workout, MOBILITY_NAMES);
+      const optional = workouts.filter((workout) => isAccessories(workout) || isMobility(workout));
+      const core = workouts.filter((workout) => !optional.includes(workout));
 
-      // N1 places AT MOST ONE accessories session. Two means something other than
-      // the need placed one — a day-based rule is back.
-      if (accessories.length > 1) {
+      const declaredDays = ((scenarioProfile as { preferredTrainingDays?: string[] })
+        .preferredTrainingDays ?? [])
+        .map((name) => DAY_NAME_TO_NUMBER[name])
+        .filter((day): day is number => typeof day === 'number');
+      const gameDayOfWeek = workouts.find((workout) => workout.workoutType === 'Game')
+        ?.dayOfWeek ?? null;
+
+      const needed = computeOptionalTopUps({
+        workouts: core,
+        seasonPhase: scenario.phase,
+        candidateDays: declaredDays.length > 0 ? declaredDays : [0, 1, 2, 3, 4, 5, 6],
+        gameDayOfWeek,
+      });
+
+      const shape = (entries: ReadonlyArray<{ type: string; dayOfWeek: number }>): string =>
+        entries.map((entry) => `${entry.type}@${entry.dayOfWeek}`).sort().join(',');
+      const observed = shape(optional.map((workout) => ({
+        type: isMobility(workout) ? 'mobility' : 'accessories',
+        dayOfWeek: workout.dayOfWeek,
+      })));
+      const computed = shape(needed);
+      if (observed !== computed) {
         throw new Error(
-          `${accessories.length} composed Accessories sessions in one week. The need `
-          + 'computation places at most one; a second is a day-based placement.');
-      }
-      // AND THE NEED MUST ACTUALLY EXIST. The week WITHOUT the top-up has to be
-      // short of accessory coverage, or the session is a default wearing a need
-      // test — which is exactly what R2 (G-3 by the day) and R3 (any spare day)
-      // were, and what this cell reds on if either returns.
-      if (accessories.length === 1) {
-        const remainder = workouts.filter((workout) => workout !== accessories[0]);
-        const covered = accessoryRegionsCovered(remainder).size;
-        if (covered >= ACCESSORY_REGION_THRESHOLD) {
-          throw new Error(
-            `an Accessories session sits on a week that already covers ${covered} of the six `
-            + `prehab regions (threshold ${ACCESSORY_REGION_THRESHOLD}). Nothing was lacking, `
-            + 'so nothing should have been placed.');
-        }
+          `the week's optional sessions are [${observed || 'none'}] but the need computation `
+          + `over the same week chooses [${computed || 'none'}]. A placement the need did not `
+          + 'make is a day-based placement — see docs/OPTIONAL_PLACEMENT_RULINGS_2026-07-30.md.');
       }
 
-      // N2 is off-season only, and aims for two. In-season and pre-season it never
-      // fires — `:104` says chasing mobility while games and change-of-direction
-      // demands are live risks injury.
+      // And the phase rule, asserted separately so a mobility session in the wrong
+      // phase names the Bible line rather than reading as a set mismatch.
+      const mobility = optional.filter(isMobility);
       if (scenario.phase !== 'Off-season' && mobility.length > 0) {
         throw new Error(
           `${mobility.length} mobility session(s) placed in ${scenario.phase}. The Bible at `
