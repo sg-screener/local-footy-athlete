@@ -48,7 +48,8 @@ import {
   SESSION_FLOW_MENUS,
   type FlowSlotCategory,
 } from '../data/sessionFlowMenus';
-import { DEFAULT_ATHLETE_CONTEXT, inferEquipment, type AthleteContext } from '../utils/sessionBuilder';
+import { DEFAULT_ATHLETE_CONTEXT, type AthleteContext } from '../utils/sessionBuilder';
+import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 
@@ -110,14 +111,22 @@ type FlowContext = {
 const IN_SEASON: FlowContext = { seasonPhase: 'In-season', isGameWeek: false };
 const DATE = '2026-07-30';
 
+// `inferEquipment(location)` is deleted (ruling 4, 2026-07-31) — equipment is
+// an athlete answer now. The test keeps the same two envelopes it always
+// exercised, stated as the tag sets they were.
+const EQUIPMENT_ENVELOPES: Record<string, readonly string[]> = {
+  'Commercial gym': FULL_GYM_EQUIPMENT,
+  Outdoor: ['bodyweight', 'bands'],
+};
+
 function athleteWith(
-  location: string,
+  location: keyof typeof EQUIPMENT_ENVELOPES,
   injuries: OnboardingInjury[] = [],
 ): AthleteContext {
   return {
     injuries,
-    equipmentTags: inferEquipment(location),
-    trainingLocation: location,
+    equipmentTags: [...EQUIPMENT_ENVELOPES[location]] as AthleteContext['equipmentTags'],
+    trainingLocation: location as string,
   };
 }
 

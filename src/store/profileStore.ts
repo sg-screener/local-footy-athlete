@@ -42,19 +42,14 @@ interface ProfileState {
   clear: () => void;
 }
 
-const initialOnboardingData: OnboardingData = {
-  trainingLocation: 'Commercial gym',
-  equipment: [
-    'barbell',
-    'dumbbells',
-    'squat_rack',
-    'pullup_bar',
-    'cable_machine',
-    'hamstring_curl',
-    'knee_extension',
-    'bands',
-  ],
-};
+/**
+ * HONESTLY EMPTY (Sam's ruling 4, 2026-07-31). This used to hand every new
+ * athlete a 'Commercial gym' location and an 8-tag kit nobody authored —
+ * "can never be missing" was true only because nothing could ever set them.
+ * Equipment is now a REQUIRED onboarding answer (`equipmentAnswer`), and a
+ * profile with no answer is unanswered, not silently full.
+ */
+const initialOnboardingData: OnboardingData = {};
 
 let acceptedProfileMirrorPublicationInProgress = false;
 
@@ -260,6 +255,18 @@ export interface ProfileWriteOutcome {
 
 /** The store's built-in default, exported so writers can be compared against it. */
 export const INITIAL_ONBOARDING_DATA: OnboardingData = initialOnboardingData;
+
+/**
+ * The saved equipment answer, read at the store's own door.
+ *
+ * The Equipment screen seeds its edit state from this once on mount. It lives
+ * HERE rather than as a selector in the screen so the read is a named door on
+ * the owner (the LR-1 direction) instead of one more scattered live-profile
+ * read for LR-4 to hunt — when LR-4 migrates readers, this is one site.
+ */
+export function savedEquipmentAnswer(): OnboardingData['equipmentAnswer'] {
+  return useProfileStore.getState().onboardingData?.equipmentAnswer;
+}
 
 const resetActionsInFlight = new Set<string>();
 let nextResetActionId = 1;

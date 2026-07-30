@@ -20,6 +20,7 @@ import { buildBlockWeekStates } from '../utils/programBlockState';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
+import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import {
   canonicaliseHydratedProgram,
   useProgramStore,
@@ -63,6 +64,8 @@ function withoutRoutineLogs<T>(run: () => T): T {
 }
 
 const OFF_PROFILE: OnboardingData = {
+  // Generation refuses a profile with no equipment input (2026-07-31).
+  equipmentAnswer: fullKitEquipmentAnswer(),
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],

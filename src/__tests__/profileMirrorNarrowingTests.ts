@@ -260,25 +260,28 @@ run('THE WHOLE LOOP: gap -> answer -> gap gone -> profile survives completion', 
 
 // ── Provenance: where the impoverished snapshot came from ───────────────
 
-run("the fixture's snapshot is byte-identical to the store's initial profile", () => {
+run("the fixture is the HISTORICAL default, and the live default is honestly empty", () => {
   // THE PROVENANCE PROOF, from Sam's real export of 2026-07-29. His
-  // `acceptedProfileSnapshot` is not a degraded record of answers he gave — it
-  // is `initialOnboardingData` verbatim, so it was minted from the in-memory
-  // default at a hydration acceptance, never from him. That is the fabrication
-  // mechanism PROFILE_MIRROR_OWNERSHIP_REASSESSMENT named.
+  // `acceptedProfileSnapshot` was `initialOnboardingData` AS IT THEN WAS —
+  // 'Commercial gym' + the unauthored 8-tag checklist — minted from the
+  // in-memory default at a hydration acceptance, never from him. That is the
+  // fabrication mechanism PROFILE_MIRROR_OWNERSHIP_REASSESSMENT named.
   //
-  // Pinned in both directions so the fixture cannot quietly become a fiction:
-  // if `initialOnboardingData` changes, this fails rather than leaving a
-  // "real device" fixture that no longer matches any real device.
-  const store = readFileSync(join(__dirname, '..', 'store', 'profileStore.ts'), 'utf8');
-  const block = /const initialOnboardingData: OnboardingData = \{([\s\S]*?)\n\};/.exec(store);
-  assert(block, 'initialOnboardingData is gone or reshaped');
-  const location = /trainingLocation: '([^']+)'/.exec(block[1]);
-  const equipment = Array.from(block[1].matchAll(/'([a-z_]+)'/g)).map((m) => m[1]);
-  assert(location && location[1] === IMPOVERISHED_SNAPSHOT.trainingLocation,
-    `trainingLocation drifted: store=${location?.[1]} fixture=${IMPOVERISHED_SNAPSHOT.trainingLocation}`);
-  assert(JSON.stringify(equipment) === JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment),
-    `equipment drifted:\n  store  =${JSON.stringify(equipment)}\n  fixture=${JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment)}`);
+  // The equipment rulings (2026-07-31) then DELETED that default: the store's
+  // initial data is `{}` now, so the same fabrication could only ever mint an
+  // obviously-empty profile. Both halves are pinned: the fixture stays the
+  // device-recorded historical shape (it may never drift toward the current
+  // default, or it stops matching the export it documents), and the current
+  // default stays empty (a value reappearing here is the fantasy gym coming
+  // back).
+  assert(IMPOVERISHED_SNAPSHOT.trainingLocation === 'Commercial gym' &&
+    JSON.stringify(IMPOVERISHED_SNAPSHOT.equipment) === JSON.stringify([
+      'barbell', 'dumbbells', 'squat_rack', 'pullup_bar',
+      'cable_machine', 'hamstring_curl', 'knee_extension', 'bands',
+    ]),
+    'the historical fixture drifted away from the 2026-07-29 export');
+  assert(Object.keys(INITIAL_ONBOARDING_DATA).length === 0,
+    `initialOnboardingData is no longer empty: ${JSON.stringify(INITIAL_ONBOARDING_DATA)}`);
 });
 
 // ── The fabrication, both ends (Sam's device, third onboarding lost) ──────
@@ -456,7 +459,9 @@ run('a reset writes the default, because that is what a reset IS', () => {
   });
 
   assert(outcome.ok, `the reset was refused: ${outcome.reason}`);
-  assert(liveAnswerCount() === 2,
+  // The default is honestly empty now (2026-07-31): a reset leaves NO answers,
+  // where it used to leave the two unauthored ones.
+  assert(liveAnswerCount() === 0,
     `the reset left ${liveAnswerCount()} answers behind`);
   assert(useProfileStore.getState().isOnboardingComplete === false,
     'the reset left onboarding marked complete');

@@ -45,6 +45,7 @@ import { logger } from '../../utils/logger';
 import {
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
+  type ResolvedEquipmentCapabilities,
 } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import type { StrengthIntent } from '../../rules/strengthPatternContributions';
@@ -290,6 +291,34 @@ export function generationSeasonPhaseOrThrow(
     );
   }
   return profile.seasonPhase;
+}
+
+/**
+ * The athlete's equipment input, or a refusal — the seasonPhase rule applied
+ * to equipment (Sam's ruling 2, 2026-07-31: generation does not run without an
+ * equipment answer).
+ *
+ * "Input" is the typed `equipmentAnswer` OR a legacy checklist lifted at read
+ * (L15): existing installs keep generating on the kit they actually recorded.
+ * What no longer exists is the third case — a profile with NOTHING that used
+ * to inherit a commercial-gym kit from a constant. That profile is refused,
+ * exactly as a missing seasonPhase is, and the flow's required Equipment step
+ * means no athlete can reach generation in that state through the app.
+ */
+export function generationEquipmentInputOrThrow(
+  profile: OnboardingData,
+  resolved: ResolvedEquipmentCapabilities,
+): ResolvedEquipmentCapabilities {
+  if (resolved.source === 'unanswered_floor') {
+    throw new ProgramGenError(
+      'missing_required_profile',
+      'I still need to know what equipment you can train with before I can build your program.',
+      'generation refused: no equipment answer and no legacy equipment selection',
+      false,
+      { missingRequired: missingRequiredProfileFields(profile) },
+    );
+  }
+  return resolved;
 }
 
 function generationPhaseResolution(
@@ -761,10 +790,13 @@ export function generateProgramLocally(
     baseProfile,
     generationConstraints,
   );
-  const resolvedEquipment = resolveEquipmentCapabilities(
+  const resolvedEquipment = generationEquipmentInputOrThrow(
     generationProfile,
-    activeConstraintsForGeneration,
-    availabilityDateISO,
+    resolveEquipmentCapabilities(
+      generationProfile,
+      activeConstraintsForGeneration,
+      availabilityDateISO,
+    ),
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const phaseResolution = generationPhaseResolution(generationProfile, blockStart, options);
@@ -1268,10 +1300,13 @@ export async function generateProgramFromProfile(
     baseProfile,
     generationConstraints,
   );
-  const resolvedEquipment = resolveEquipmentCapabilities(
+  const resolvedEquipment = generationEquipmentInputOrThrow(
     generationProfile,
-    activeConstraintsForGeneration,
-    availabilityDateISO,
+    resolveEquipmentCapabilities(
+      generationProfile,
+      activeConstraintsForGeneration,
+      availabilityDateISO,
+    ),
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const generationDate = dateFromISO(effectiveTodayISO);

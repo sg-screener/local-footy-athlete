@@ -295,17 +295,11 @@ function injuriesToTags(injuries: OnboardingInjury[]): Set<InjuryTag> {
 
 // ─── Equipment Inference ───
 
-const LOCATION_EQUIPMENT: Record<string, EquipmentTag[]> = {
-  'Commercial gym': ['bodyweight', 'dumbbells', 'barbell', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'pullup_bar', 'kettlebell', 'machine'],
-  'Club gym':       ['bodyweight', 'dumbbells', 'barbell', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'pullup_bar', 'machine'],
-  'Home gym':       ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell'],
-  'Outdoor':        ['bodyweight', 'bands'],
-};
-
-/** Infer available equipment from training location. */
-export function inferEquipment(trainingLocation: string): EquipmentTag[] {
-  return LOCATION_EQUIPMENT[trainingLocation] || LOCATION_EQUIPMENT['Commercial gym'];
-}
+// LOCATION_EQUIPMENT and inferEquipment are DELETED (Sam's ruling 4,
+// 2026-07-31). The four rows were unsigned, keyed on a `trainingLocation` no
+// screen ever collected, and live for 100% of athletes — every kit in the app
+// was this constant. Equipment now comes from the athlete's own answer via
+// `resolveEquipmentCapabilities`; nothing infers a kit from a location.
 
 // ─── Date Hash (deterministic variety) ───
 

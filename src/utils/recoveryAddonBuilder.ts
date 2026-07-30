@@ -21,9 +21,12 @@ import type { PoolExercise } from '../data/exercisePools';
 import {
   dateHash,
   filterMobilityPoolForAthlete,
-  inferEquipment,
   type AthleteContext,
 } from './sessionBuilder';
+import {
+  FULL_GYM_EQUIPMENT,
+  resolveEquipmentAvailability,
+} from './equipmentAvailability';
 import type { GenerationConstraintContext } from './generationConstraints';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
@@ -249,15 +252,16 @@ function buildWeekWithRecoveryAddons(args: AttachRecoveryAddonsArgs): Workout[] 
 /**
  * Equipment and injuries, so a composed mobility draw filters like every other.
  *
- * `inferEquipment` from the training location is what the app uses wherever a
- * constraint list is not in reach. It is stricter than the retired bundles, which
- * ignored equipment entirely — a Home-gym athlete could be shown a Dead Hang.
+ * The tags come from the SAME resolver generation uses — the athlete's own
+ * answer, lifted legacy checklist, or the bodyweight floor. The location
+ * inference that used to live here is deleted (Sam's ruling 4, 2026-07-31):
+ * a mobility draw must not see equipment the athlete never declared.
  */
 function athleteContextFor(profile: OnboardingData): AthleteContext {
   const trainingLocation = profile.trainingLocation || 'Commercial gym';
   return {
     injuries: profile.injuries ?? [],
-    equipmentTags: inferEquipment(trainingLocation),
+    equipmentTags: resolveEquipmentAvailability(profile),
     trainingLocation,
     onboardingData: profile,
   };
@@ -716,7 +720,9 @@ function exercise(name: string, prescription: string): RecoveryAddonExercise {
  */
 const SWEEP_ATHLETE: AthleteContext = {
   injuries: [],
-  equipmentTags: inferEquipment('Commercial gym'),
+  // Every tag in the vocabulary — the sweep must see every movement the
+  // builder CAN emit, and the retired location rows were narrower than this.
+  equipmentTags: [...FULL_GYM_EQUIPMENT],
   trainingLocation: 'Commercial gym',
 };
 

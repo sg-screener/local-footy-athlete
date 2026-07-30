@@ -11,7 +11,6 @@ import type {
   TrainingLocation,
 } from '../types/domain';
 import type { EquipmentClass } from './loadEstimation';
-import { inferEquipment } from './sessionBuilder';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -197,19 +196,23 @@ const ALL_CONDITIONING_MODALITIES: readonly ConditioningEquipmentModality[] = [
   'bike', 'row', 'ski', 'treadmill',
 ];
 
-const LOCATION_CONDITIONING_MODALITIES: Readonly<Record<TrainingLocation, readonly ConditioningEquipmentModality[]>> = {
-  'Commercial gym': ALL_CONDITIONING_MODALITIES,
-  'Club gym': ALL_CONDITIONING_MODALITIES,
-  'Home gym': [],
-  Outdoor: [],
-};
+// LOCATION_CONDITIONING_MODALITIES is DELETED (Sam's ruling 4, 2026-07-31).
+// It granted every athlete all four conditioning machines off a location
+// nobody was ever asked, which is how a ski erg reached athletes without one.
+// Modalities now come only from the athlete's answer or their own checklist.
 
 export type EquipmentCapabilitySource =
   /** The typed `equipmentAnswer` decision — the only path new saves take. */
   | 'athlete_answer'
-  | 'location_baseline'
-  | 'legacy_positive_plus_location'
-  | 'complete_selection';
+  /** A legacy explicitly-complete checklist, lifted at read (L15). */
+  | 'complete_selection'
+  /** A legacy positive-only checklist: its OWN tags lift, nothing is added.
+   * The location union that used to ride on this branch is deleted — an
+   * athlete's kit is what they said, never what a constant guessed. */
+  | 'legacy_positive_lift'
+  /** No equipment input of any kind. Bodyweight floor for reads; generation
+   * REFUSES rather than programming a kit nobody declared. */
+  | 'unanswered_floor';
 
 export interface ResolvedEquipmentCapabilities {
   tags: EquipmentTag[];
@@ -315,10 +318,6 @@ export function equipmentRequirementsAreAvailable(
     if (tags.length > 0 && !tags.some((tag) => availableSet.has(tag))) return false;
   }
   return true;
-}
-
-function fallbackTrainingLocation(profile: EquipmentAvailabilityProfile): TrainingLocation {
-  return profile?.trainingLocation ?? 'Commercial gym';
 }
 
 function localTodayISO(): string {
@@ -561,23 +560,17 @@ export function resolveEquipmentCapabilities(
   if (profile?.equipmentAnswer) {
     return resolveAnsweredCapabilities(profile.equipmentAnswer, constraints, effectiveDate);
   }
+  // THE LEGACY READ-INGRESS LIFT (L15). A stored checklist contributes exactly
+  // the tags its own options name — the location union that used to ride on
+  // the incomplete branch is DELETED (Sam's ruling 4, 2026-07-31). It put a
+  // full commercial-gym kit and all four conditioning machines on 100% of
+  // athletes, because nothing ever collected the location it keyed on.
   const checklist = (profile?.equipment ?? [])
     .map((item) => String(item ?? '').trim())
     .filter(Boolean);
   const completeness = inferredSelectionCompleteness(profile, checklist);
-  const source: EquipmentCapabilitySource = checklist.length === 0
-    ? 'location_baseline'
-    : completeness === 'legacy_incomplete'
-      ? 'legacy_positive_plus_location'
-      : 'complete_selection';
   const tags: EquipmentTag[] = ['bodyweight'];
-  const location = fallbackTrainingLocation(profile);
   const modalities: ConditioningEquipmentModality[] = [];
-
-  if (checklist.length === 0 || completeness === 'legacy_incomplete') {
-    addUnique(tags, inferEquipment(location));
-    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
-  }
 
   let recognized = 0;
   for (const option of checklist) {
@@ -588,10 +581,11 @@ export function resolveEquipmentCapabilities(
     modalities.push(...conditioningModalitiesForOption(option));
   }
 
-  if (recognized === 0) {
-    addUnique(tags, inferEquipment(location));
-    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
-  }
+  const source: EquipmentCapabilitySource = recognized === 0
+    ? 'unanswered_floor'
+    : completeness === 'legacy_incomplete'
+      ? 'legacy_positive_lift'
+      : 'complete_selection';
 
   const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
   const constrainedModalities = applyConditioningModalityConstraints(

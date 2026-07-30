@@ -5,7 +5,7 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
+import { savedEquipmentAnswer } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
@@ -40,7 +40,9 @@ type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Eq
  * nothing marked is a real answer — bodyweight-only programming, never a refusal.
  */
 export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) => {
-  const existing = useProfileStore((state) => state.onboardingData.equipmentAnswer);
+  // Seeded once on mount from the store's own named door — see
+  // `savedEquipmentAnswer` for why this is not a live selector.
+  const existing = savedEquipmentAnswer();
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Equipment');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 

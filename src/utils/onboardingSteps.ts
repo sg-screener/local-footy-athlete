@@ -253,14 +253,14 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 ];
 
 /**
- * Profile fields the store guarantees from its initial state rather than
- * collecting through a step. They are required for generation but can never be
- * missing, so no step can own them.
+ * EMPTY, and kept as a declaration so "no field is store-guaranteed" is a
+ * stated fact rather than an absence. It used to carry `trainingLocation` and
+ * `equipment` — "guaranteed from initial state" was true only because nothing
+ * could ever set them (the equipment ownership sheet's headline finding). The
+ * store's initial data is honestly empty now; every required answer has a
+ * step that owns it.
  */
-export const PROFILE_DEFAULT_REQUIRED_FIELDS: readonly (keyof OnboardingData)[] = [
-  'trainingLocation',
-  'equipment',
-];
+export const PROFILE_DEFAULT_REQUIRED_FIELDS: readonly (keyof OnboardingData)[] = [];
 
 export function visibleOnboardingSteps(data: OnboardingData): OnboardingStep[] {
   return ONBOARDING_STEPS.filter((step) => step.visible(data));

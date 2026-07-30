@@ -83,7 +83,23 @@ import {
   SHOULDER_HEALTH_POOL,
   HAMSTRING_LIGHT_POOL,
 } from '../data/exercisePools';
-import { samExport8Profile } from './support/samDeviceExport8Fixture';
+import {
+  samExport8Profile,
+  samExport8EquipmentAnswerThroughTheDoor,
+} from './support/samDeviceExport8Fixture';
+import { useProfileStore } from '../store/profileStore';
+
+// The doors under test read the LIVE athlete context, and they are post-
+// onboarding surfaces — a real athlete behind them has answered the (required)
+// equipment step. The store default is honestly empty now (2026-07-31), so the
+// suite seeds the answered athlete it samples.
+useProfileStore.setState({
+  onboardingData: {
+    ...samExport8Profile(),
+    equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+  },
+  isOnboardingComplete: true,
+} as never);
 
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }
@@ -312,7 +328,10 @@ run('C6. the region table and the pool are equal, both directions', () => {
 // D. ALL THREE COUNT TOWARD NOTHING — observed through the real evaluator.
 // ──────────────────────────────────────────────────────────────────────────
 
-const program = quiet(() => generateProgramLocally(samExport8Profile(), {
+const program = quiet(() => generateProgramLocally({
+  ...samExport8Profile(),
+  equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+} as never, {
   todayISO: '2026-07-13',
   previousProgram: null,
   seasonPhaseClock: {

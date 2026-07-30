@@ -220,5 +220,85 @@ console.log('\n[7] THE STEP — required, registered, and answered by the same p
     }).includes('equipmentAnswer'));
 }
 
+console.log('\n[8] THE DELETIONS — nothing infers a kit, and generation refuses true silence');
+{
+  // Behaviour pins first: the shapes that used to inherit the fantasy gym.
+  const emptyProfile = resolveEquipmentCapabilities({} as OnboardingData, null, DATE);
+  ok('an empty profile resolves to the bodyweight floor, source unanswered_floor',
+    JSON.stringify(emptyProfile.tags) === JSON.stringify(['bodyweight']) &&
+      emptyProfile.conditioningModalities.length === 0 &&
+      emptyProfile.source === 'unanswered_floor',
+    emptyProfile);
+
+  const eightTag = resolveEquipmentCapabilities({
+    trainingLocation: 'Commercial gym',
+    equipment: [
+      'barbell', 'dumbbells', 'squat_rack', 'pullup_bar',
+      'cable_machine', 'hamstring_curl', 'knee_extension', 'bands',
+    ],
+  } as OnboardingData, null, DATE);
+  ok('the legacy 8-tag profile lifts its OWN tags — no bench, kettlebell, foam roller or cardio from anywhere',
+    eightTag.source === 'legacy_positive_lift' &&
+      !eightTag.tags.includes('bench') && !eightTag.tags.includes('kettlebell') &&
+      !eightTag.tags.includes('foam_roller') && !eightTag.tags.includes('bike_or_treadmill') &&
+      eightTag.conditioningModalities.length === 0,
+    eightTag);
+  ok('the lift keeps what the athlete actually recorded',
+    ['barbell', 'dumbbells', 'pullup_bar', 'cables', 'machine', 'bands']
+      .every((tag) => eightTag.tags.includes(tag as never)),
+    eightTag.tags);
+
+  // Generation refuses true silence (ruling 2: refused, never defaulted) and
+  // accepts both real inputs.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { generationEquipmentInputOrThrow } =
+    require('../services/api/generateProgram') as typeof import('../services/api/generateProgram');
+  let refused: unknown = null;
+  try {
+    generationEquipmentInputOrThrow({} as OnboardingData, emptyProfile);
+  } catch (error) { refused = error; }
+  ok('generation REFUSES a profile with no equipment input of any kind',
+    !!refused && (refused as { kind?: string }).kind === 'missing_required_profile',
+    refused);
+  ok('generation accepts the lifted legacy checklist (existing installs keep working)',
+    generationEquipmentInputOrThrow({} as OnboardingData, eightTag) === eightTag);
+  ok('generation accepts the typed answer',
+    generationEquipmentInputOrThrow(
+      answered({}),
+      resolveEquipmentCapabilities(answered({ tags: { dumbbells: 'have' } }), null, DATE),
+    ).source === 'athlete_answer');
+
+  // The ban: the deleted identifiers stay deleted. Source-scan, the same
+  // mechanism that keeps the deleted cue-fallback table deleted — a
+  // re-introduction is a red gate, not a compatibility feature (L15).
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs') as typeof import('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path') as typeof import('path');
+  const src = path.resolve(__dirname, '..');
+  const banned = ['LOCATION_EQUIPMENT', 'LOCATION_CONDITIONING_MODALITIES', 'inferEquipment('];
+  const offenders: string[] = [];
+  const walkDir = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+        walkDir(full);
+        continue;
+      }
+      if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+      const text = fs.readFileSync(full, 'utf8');
+      // Strip comments so the deletion markers explaining the ban don't trip it.
+      const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+      for (const identifier of banned) {
+        if (code.includes(identifier)) offenders.push(`${full.slice(src.length + 1)}: ${identifier}`);
+      }
+    }
+  };
+  walkDir(src);
+  ok('the deleted location-inference identifiers appear nowhere in product code',
+    offenders.length === 0, offenders);
+}
+
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) process.exit(1);

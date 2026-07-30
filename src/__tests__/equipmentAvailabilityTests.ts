@@ -98,15 +98,18 @@ section('2. Fallback and bodyweight invariants');
     trainingLocation: 'Outdoor',
     equipment: [],
   });
+  // Ruling 4 (2026-07-31): the location union is DELETED. An empty or absent
+  // checklist resolves to the honest bodyweight floor — no location invents
+  // bands, kettlebells or anything else.
   assert(outdoor.includes('bodyweight'), 'bodyweight is included for empty checklist fallback');
-  assert(outdoor.includes('bands'), 'empty checklist falls back to inferEquipment(trainingLocation)');
+  assert(!outdoor.includes('bands'), 'empty checklist no longer inherits location equipment');
   assert(!outdoor.includes('barbell'), 'Outdoor fallback does not invent barbell');
 
   const absent = resolveEquipmentAvailability({
     trainingLocation: 'Home gym',
   });
   assert(absent.includes('bodyweight'), 'bodyweight is included when checklist is absent');
-  assert(absent.includes('kettlebell'), 'absent checklist falls back to Home gym inference');
+  assert(!absent.includes('kettlebell'), 'absent checklist no longer inherits Home gym inference');
 
   const legacy = resolveEquipmentAvailability({
     trainingLocation: 'Outdoor',
@@ -123,9 +126,9 @@ section('2. Fallback and bodyweight invariants');
     equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   });
   assert(
-    legacyCommercial.source === 'legacy_positive_plus_location' &&
-      sameSet(legacyCommercial.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
-    'legacy positive Commercial-gym checklist is supplemented by location capabilities',
+    legacyCommercial.source === 'legacy_positive_lift' &&
+      legacyCommercial.conditioningModalities.length === 0,
+    'legacy positive checklist lifts its OWN tags only — the location union is deleted',
   );
 
   const completeNoCardio = resolveEquipmentCapabilities({

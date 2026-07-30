@@ -109,7 +109,24 @@ import {
   SHOULDER_HEALTH_POOL,
   HAMSTRING_LIGHT_POOL,
 } from '../data/exercisePools';
-import { samExport8Profile } from './support/samDeviceExport8Fixture';
+import {
+  samExport8Profile,
+  samExport8EquipmentAnswerThroughTheDoor,
+} from './support/samDeviceExport8Fixture';
+import { useProfileStore } from '../store/profileStore';
+
+// The template doors read the LIVE athlete context, and they are post-
+// onboarding surfaces: a real athlete behind them always has an equipment
+// answer (the step is required, 2026-07-31). The store's initial data is now
+// honestly empty, so the suite seeds the same answered athlete it generates
+// for — an unseeded store here would sample a world no athlete is in.
+useProfileStore.setState({
+  onboardingData: {
+    ...samExport8Profile(),
+    equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+  },
+  isOnboardingComplete: true,
+} as never);
 
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }
@@ -257,7 +274,13 @@ run('B3. a type with no category has declared debt or a real other door', () => 
 const WEEK = '2026-07-27';
 const DATE_IN_WEEK = '2026-07-27';
 
-const program = quiet(() => generateProgramLocally(samExport8Profile(), {
+// Sam's export predates the equipment door; the charter walks his profile
+// through TODAY'S doors, so it answers the question the way he would — the
+// same composition the walker's conformance target uses.
+const program = quiet(() => generateProgramLocally({
+  ...samExport8Profile(),
+  equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+} as never, {
   todayISO: '2026-07-13',
   previousProgram: null,
   seasonPhaseClock: {
@@ -702,6 +725,7 @@ function charterTypesOf(workout: Workout): {
  */
 const inSeasonProgram = quiet(() => generateProgramLocally({
   ...samExport8Profile(),
+  equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
   seasonPhase: 'In-season',
   usualGameDay: 'Saturday',
   gameDay: 'Saturday',

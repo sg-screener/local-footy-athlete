@@ -29,7 +29,14 @@ const MUTATION_CASES: Record<Slice3MutationId, {
   legacy_list_exhaustive: { scenarioId: 'early-offseason-legacy-commercial', invariantId: 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' },
   edge_restores_unavailable_bike: { scenarioId: 'early-offseason-explicit-no-cardio', invariantId: 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' },
   fallback_drops_feasible_conditioning: { scenarioId: 'early-offseason-modern-full-gym', invariantId: 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING' },
-  second_week_conditioning_loss: { scenarioId: 'early-offseason-legacy-commercial', invariantId: 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING' },
+  // Under the equipment rulings (2026-07-31) the legacy-commercial athlete's
+  // checklist lifts its OWN tags — no location union, so no ergs — and their
+  // conditioning is run-SUBSTITUTED ('replaced'). Dropping week-2 conditioning
+  // now breaks the single-owner consistency between decisions and evidence
+  // BEFORE the cross-microcycle count check evaluates. The mutation is still
+  // killed; the killing invariant changed with the product. CROSS_MICROCYCLE
+  // itself stays probed by fallback_drops_feasible_conditioning above.
+  second_week_conditioning_loss: { scenarioId: 'early-offseason-legacy-commercial', invariantId: 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' },
   stale_subphase_note_survives: { scenarioId: 'early-offseason-explicit-no-cardio', invariantId: 'INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT' },
 };
 

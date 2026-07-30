@@ -387,6 +387,9 @@ console.log('\n[14] SKIPPING IS ANSWERING — an interrupted flow resumes correc
     teamTrainingIntensity: 'Moderate',
     trainingDaysPerWeek: 4,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+    // Equipment is a required step BEFORE the time trial (2026-07-31); an
+    // athlete who reached this step has answered it.
+    equipmentAnswer: { tags: { dumbbells: 'have' }, modalities: {}, answeredOn: '2026-07-01' },
     experienceLevel: '2-5 years', squatStrength: 'Around bodyweight',
     benchStrength: 'Around bodyweight',
   } as unknown as OnboardingData;
