@@ -40,6 +40,12 @@
  *   - The projection ruling: "REST is complete rest", and recovery is a real
  *     session — so a day holding one is arguably not a rest day at all, which
  *     makes the `restStress` movement correct rather than a violation.
+ *
+ * BOTH WERE ANSWERED (Sam's Rest law, then his supersession of 2026-07-30 —
+ * docs/OPTIONAL_PLACEMENT_LAW_SUPERSESSION_2026-07-30.md). The rest quota counts
+ * days with no REQUIRED work, and the generator MAY place optional work under a
+ * signed placement rule with authored composition. Recovery is not placed because
+ * it has neither, not because optional placement is banned.
  * The part that is hard to read either way is the FINDING: a week that misses
  * `full_rest` because the athlete added recovery is recovery affecting compliance,
  * which reads like counting. Recorded in the boundary report as a ruling owed.
@@ -269,21 +275,49 @@ run('and three recovery sessions raise no full-rest finding', () => {
     + 'Athlete-added optional sessions never break rest (Sam, 2026-07-30).');
 });
 
-run('THE UPSTREAM HALF — the generator places no recovery at all', () => {
-  // "The generator never places optional work uninvited", asserted by RUNNING the
-  // generator rather than by reading it. This is the half that makes the rewrite
-  // of 8a/8b/P5 a strengthening: without it, the rest law alone would let the app
-  // go back to filling days with its own recovery and crediting itself rest for
-  // them, which is the defect that suite was closing.
+run('THE UPSTREAM HALF — no optional work is placed authorless', () => {
+  // RE-FORMED TO SAM'S REFINED LAW (supersession, 2026-07-30).
+  //
+  // This cell asserted "the generator places no recovery at all", and the law it
+  // protected — "the generator never places optional work uninvited" — was MY
+  // formulation generalised from a finding about Recovery, and Sam has WITHDRAWN
+  // it. The generator MAY place optional work: gunshow, accessories, mobility,
+  // optional conditioning and strength, under a Sam-authored placement rule with
+  // Sam-authored composition, visibly optional, binnable in one tap, and never
+  // counted toward compliance, load or rest. Early off-season's authored
+  // all-optional contracts are the standing precedent.
+  //
+  // What killed recovery is unchanged and still dead: AUTHORLESS PLACEMENT +
+  // INVENTED COMPOSITION + REST INTERFERENCE. So the guard tests those three,
+  // which is strictly stronger than the ban it replaces — a ban would have
+  // permitted an authored gunshow to acquire invented composition and said
+  // nothing, and would have red-flagged the early off-season precedent Sam named.
+  //
+  // RECOVERY IS STILL THE CASE THAT FAILS ALL THREE, so it is still not placed:
+  // no rule in docs/OPTIONAL_PLACEMENT_SHEET_2026-07-30.md covers it, its
+  // composition was four hand-typed rows in no authored sheet, and it consumed
+  // the rest quota. This cell now says WHY rather than merely that.
   const placed = program.microcycles.flatMap((microcycle) =>
     (microcycle.workouts ?? []).filter((workout) => isGeneratorPlacedRecovery(workout)));
   assert(placed.length === 0,
     `the generator placed ${placed.length} recovery sessions: `
     + `${placed.map((w) => `${w.name}@${w.dayOfWeek}`).slice(0, 6).join(', ')}. `
-    + 'Recovery is the athlete\'s to choose (Sam, 2026-07-30) — and while the '
-    + 'generator can place it, the rest law above lets the app credit itself rest '
-    + 'for days it filled itself.');
+    + 'Under Sam\'s refined law that is permitted ONLY under a signed placement rule '
+    + 'with authored composition — recovery has neither, which is what killed it.');
 });
+
+// THE OTHER TWO OBSERVABLE CONDITIONS — optional work that IS placed must be
+// invisible to load and must not consume rest — are asserted in
+// `mobilityAccessoryDoorTests` D1, over the three door sessions.
+//
+// A cell for them was WRITTEN HERE AND REMOVED rather than weakened. This
+// suite's fixture is a pre-season program with no game, and the generator's
+// optional placements (G-1 gunshow, G-3 accessories) are in-season game-week
+// rules — so the sample contains no optional work at all and the assertion had
+// no subject. An assertion whose subject the harness cannot reach passes for the
+// wrong reason, which is the exact failure the fixture-fidelity law names. The
+// honest options were a second generation or a cross-reference; the coverage
+// already exists, so this is the cross-reference.
 
 run('non-recovery work still counts', () => {
   // NON-VACUITY, and the cell that matters most. Every assertion above would pass

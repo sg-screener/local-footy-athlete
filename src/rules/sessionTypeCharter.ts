@@ -291,8 +291,9 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
     counting: { countsTowardLoad: false, canBeHardDay: false, required: false },
     composition: {
       kind: 'authored',
-      source: 'data/mobilityFlowTemplates.ts MOBILITY_FLOW_TEMPLATES',
-      count: 10,
+      source: 'data/exercisePools.ts MOBILITY_POOL, composed 5-8 across four '
+        + 'regions by rules/mobilitySessionComposition.ts',
+      count: 20,
       sessionVariants: null,
     },
     ruling: 'LFA_PROGRAMMING_BIBLE :122; Sam 2026-07-30 — 5-8 exercises, warm-up '

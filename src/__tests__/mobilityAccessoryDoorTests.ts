@@ -4,8 +4,10 @@
  *
  * Sam's charter, stage 4 (2026-07-30):
  *
- *   MOBILITY   — 5-8 exercises, warm-up doses, full-body spread, the authored
- *                flows as source. Athlete-add only.
+ *   MOBILITY   — 5-8 movements, warm-up doses, full-body spread (lower / hips /
+ *                midline / upper), COMPOSED from the mobility pool. Sam's
+ *                supersession the same day retired the pre-built flow bundles:
+ *                he does not recognise them, and the provenance trace agrees.
  *   ACCESSORIES— prehab pools, with a per-region shape. Athlete-add only.
  *   GUNSHOW    — 2 biceps + 2 triceps + 2 pump delts. Under thin equipment it
  *                gets SMALLER, never padded. No cross-family top-ups.
@@ -61,7 +63,12 @@ import {
   buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
 } from '../utils/coachRevisionTemplates';
-import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
+import {
+  MOBILITY_REGIONS,
+  MOBILITY_REGION_BY_ID,
+  mobilityPool,
+  regionsCovered,
+} from '../rules/mobilitySessionComposition';
 import { PLAN_CHANGE_CATEGORY_IDS } from '../utils/planChangeTypes';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import {
@@ -206,70 +213,99 @@ const mobilityTemplates = listCoachRevisionTemplates().filter((t) => t.category 
 run('C1. the Mobility door exists and is reachable', () => {
   assert(PLAN_CHANGE_CATEGORY_IDS.includes('mobility' as never),
     'there is still no Mobility category — the Bible grants it at :122');
-  assert(mobilityTemplates.length > 0, 'the Mobility category is backed by no template');
+  assert(mobilityTemplates.length === 1,
+    `the Mobility door offers ${mobilityTemplates.length} templates. It composes ONE `
+    + 'session from the pool; a list of templates is the pre-built bundles again.');
 });
 
-run('C2. every offered flow is 5-8 movements', () => {
-  for (const template of mobilityTemplates) {
-    const workout = built(template.templateId);
-    assert(workout, `${template.templateId} builds nothing`);
+run('C2. NO PRE-BUILT BUNDLES — the door does not read the flow templates', () => {
+  // SAM'S SUPERSESSION, AS A CELL. He does not recognise the flow bundles, and
+  // the provenance trace agrees: the exercises are his, the GROUPINGS arrived in
+  // one commit with no ruling cited. Deriving the door from them was still
+  // deriving from something nobody authored.
+  //
+  // Asserted against the built SESSION rather than against an import, because an
+  // import can be removed while the shape it produced survives: every movement
+  // the door prescribes has to be a POOL entry, and a bundle would show up as a
+  // movement the pool does not contain.
+  const workout = built(mobilityTemplates[0].templateId);
+  assert(workout, 'the Mobility door builds nothing');
+  const pool = new Set(mobilityPool().map((entry) => canonicalExerciseName(entry.name)));
+  const strangers = names(workout).filter((n) => !pool.has(canonicalExerciseName(n)));
+  assert(strangers.length === 0,
+    `the Mobility session prescribes ${strangers.join(', ')}, which is not in `
+    + "MOBILITY_POOL. Sam's exercises are the source; nothing sits between them and the athlete.");
+});
+
+run('C3. a composed session is 5-8 movements', () => {
+  for (const date of ['2026-07-27', '2026-08-03', '2026-08-10', '2026-09-14']) {
+    const workout = quiet(() =>
+      buildCoachRevisionTemplateWorkout(mobilityTemplates[0].templateId, date));
+    assert(workout, `the Mobility door builds nothing on ${date}`);
     const count = (workout.exercises ?? []).length;
     assert(count >= MOBILITY_DOOR_MIN_MOVEMENTS && count <= MOBILITY_DOOR_MAX_MOVEMENTS,
-      `${template.templateId} offers ${count} movements, outside Sam's 5-8`);
+      `${date} composed ${count} movements, outside Sam's 5-8`);
   }
 });
 
-run('C3. a flow that does not fit the window is EXCLUDED, never padded', () => {
-  // The ruling applied where it is inconvenient. `hips-adductors-groin-reset`
-  // carries 4 movements, and the honest answers are to leave it out or to amend
-  // the template — never to top it up from another flow to reach five. Sam is
-  // asked which; until he rules, it is not offered.
-  const offeredIds = new Set(mobilityTemplates.map((t) => t.mobilityFlowId));
-  const tooShort = MOBILITY_FLOW_TEMPLATES.filter((flow) =>
-    flow.movements.length < MOBILITY_DOOR_MIN_MOVEMENTS);
-  for (const flow of tooShort) {
-    assert(!offeredIds.has(flow.id),
-      `${flow.id} has ${flow.movements.length} movements and is being offered anyway`);
-  }
-  // And the other direction: everything that DOES fit is offered, so the filter
-  // cannot quietly become a way of hiding flows.
-  for (const flow of MOBILITY_FLOW_TEMPLATES) {
-    if (flow.movements.length < MOBILITY_DOOR_MIN_MOVEMENTS) continue;
-    if (flow.movements.length > MOBILITY_DOOR_MAX_MOVEMENTS) continue;
-    assert(offeredIds.has(flow.id),
-      `${flow.id} fits Sam's window and no door offers it`);
+run('C4. every session spreads across the four regions', () => {
+  // FULL-BODY SPREAD, and the cell that matters most: hips is the pool's largest
+  // region, so an unshaped draw would produce six variations on hips. This is
+  // the property the pre-built bundles were standing in for.
+  for (const date of ['2026-07-27', '2026-08-03', '2026-08-10', '2026-09-14']) {
+    const workout = quiet(() =>
+      buildCoachRevisionTemplateWorkout(mobilityTemplates[0].templateId, date));
+    assert(workout, `the Mobility door builds nothing on ${date}`);
+    const byName = new Map(mobilityPool().map((entry) =>
+      [canonicalExerciseName(entry.name), entry] as const));
+    const picked = names(workout)
+      .map((n) => byName.get(canonicalExerciseName(n)))
+      .filter((entry): entry is NonNullable<typeof entry> => !!entry);
+    const covered = regionsCovered(picked);
+    assert(covered.length === MOBILITY_REGIONS.length,
+      `${date} covers ${covered.join('+') || 'nothing'} — Sam ruled lower / hips / `
+      + 'midline / upper');
   }
 });
 
-run('C4. the movements and their doses are the AUTHORED ones', () => {
-  // Nothing is composed. The rows, their order and their doses come from the
-  // flow; this is the cell that would fail if a builder started inventing.
-  for (const template of mobilityTemplates) {
-    const flow = MOBILITY_FLOW_TEMPLATES.find((entry) => entry.id === template.mobilityFlowId);
-    assert(flow, `${template.templateId} cites a flow that does not exist`);
-    const workout = built(template.templateId);
-    assert(workout, `${template.templateId} builds nothing`);
-    const rows = names(workout);
-    assert(JSON.stringify(rows) === JSON.stringify(flow.movements.map((m) => m.name)),
-      `${template.templateId} prescribes ${rows.join(', ')} where the flow authors `
-      + flow.movements.map((m) => m.name).join(', '));
-    (workout.exercises ?? []).forEach((row, index) => {
-      const movement = flow.movements[index];
-      assert((row as { prescribedSets?: number }).prescribedSets === (movement.sets ?? 1),
-        `${template.templateId} row ${index} carries a dose the flow did not author`);
-    });
-  }
+run('C5. the doses are the AUTHORED ones, and the composition is deterministic', () => {
+  const templateId = mobilityTemplates[0].templateId;
+  const first = built(templateId);
+  const again = built(templateId);
+  assert(first && again, 'the Mobility door builds nothing');
+  assert(JSON.stringify(names(first)) === JSON.stringify(names(again)),
+    'two builds of the same date produced different sessions — the advertised '
+    + 'snapshot and the written workout could not agree');
+  const byName = new Map(mobilityPool().map((entry) =>
+    [canonicalExerciseName(entry.name), entry] as const));
+  (first.exercises ?? []).forEach((row) => {
+    const source = byName.get(canonicalExerciseName(
+      (row as { exercise?: { name?: string } }).exercise?.name ?? ''));
+    assert(source, 'a prescribed movement is not a pool entry');
+    assert((row as { prescribedSets?: number }).prescribedSets === source.sets &&
+      (row as { prescribedRepsMin?: number }).prescribedRepsMin === source.repsMin &&
+      (row as { prescribedRepsMax?: number }).prescribedRepsMax === source.repsMax,
+      `${source.name} carries a dose Sam did not author`);
+  });
 });
 
-run('C5. the flows spread across the body', () => {
-  // "Full-body spread" as a property of the DOOR, not of one flow: whatever the
-  // athlete is handed, the set behind the door has to cover the regions Sam
-  // authored rather than offering six variations on hips.
-  const tags = new Set(mobilityTemplates.flatMap((template) =>
-    MOBILITY_FLOW_TEMPLATES.find((flow) => flow.id === template.mobilityFlowId)?.focusTags ?? []));
-  assert(tags.size >= 5,
-    `the Mobility door covers only ${tags.size} focus areas: ${Array.from(tags).join(', ')}`);
-  assert(tags.has('full_body'), 'no full-body flow is offered at all');
+run('C6. the region table and the pool are equal, both directions', () => {
+  // The one INVENTION in this unit, gated as such. An exercise Sam adds with no
+  // region would silently never be picked; a region for an exercise he removed
+  // would rot. Both fail here rather than in a session nobody inspects.
+  const poolIds = new Set(mobilityPool().map((entry) => entry.id));
+  const tableIds = new Set(Object.keys(MOBILITY_REGION_BY_ID));
+  const unmapped = Array.from(poolIds).filter((id) => !tableIds.has(id));
+  const orphaned = Array.from(tableIds).filter((id) => !poolIds.has(id));
+  assert(unmapped.length === 0,
+    `mobility exercises with no region: ${unmapped.join(', ')} — they can never be picked`);
+  assert(orphaned.length === 0,
+    `regions for exercises that are not in the pool: ${orphaned.join(', ')}`);
+  for (const region of MOBILITY_REGIONS) {
+    const size = Object.values(MOBILITY_REGION_BY_ID).filter((r) => r === region).length;
+    assert(size >= 2,
+      `region "${region}" has ${size} exercise(s) — a session cannot rotate within it`);
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -341,7 +377,7 @@ run('D2. NON-VACUITY — a real strength session still does all three', () => {
 });
 
 console.log(`\nMobility and Accessories doors: ${passed} passed, ${failed} failed`);
-console.log(`  ${mobilityTemplates.length} mobility flows offered of ${MOBILITY_FLOW_TEMPLATES.length} authored`);
+console.log(`  the Mobility door composes from ${mobilityPool().length} authored movements`);
 console.log('  DEPTH (L13): 1 — build each door\'s session and evaluate it. Whether the');
 console.log('  doors keep working on a well-worn week is NOT covered.');
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

@@ -13,39 +13,28 @@
 import type { Workout } from '../types/domain';
 import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import {
-  MOBILITY_FLOW_TEMPLATES,
-  type MobilityFlowMovement,
-} from '../data/mobilityFlowTemplates';
+  MOBILITY_MAX_MOVEMENTS,
+  MOBILITY_MIN_MOVEMENTS,
+  composeMobilitySession,
+} from '../rules/mobilitySessionComposition';
+
+/** Sam's ruling: a mobility session is 5-8 movements. Re-exported for gates. */
+export const MOBILITY_DOOR_MIN_MOVEMENTS = MOBILITY_MIN_MOVEMENTS;
+export const MOBILITY_DOOR_MAX_MOVEMENTS = MOBILITY_MAX_MOVEMENTS;
 
 /**
- * Sam's ruling: the Mobility door offers 5-8 exercises.
+ * The one sentence the Mobility door says about itself.
  *
- * A window, not a target — the flows are authored at the length they are
- * authored, and the door offers the ones that fit rather than padding or
- * truncating one that does not.
- */
-export const MOBILITY_DOOR_MIN_MOVEMENTS = 5;
-export const MOBILITY_DOOR_MAX_MOVEMENTS = 8;
-
-/**
- * The one sentence the Mobility door says about a flow.
- *
- * A NAMED TEMPLATE, not an inline template literal, so the copy gate can find
- * the exact words Sam is being asked to sign. Both blanks are `derived_number`
- * — the duration and the movement count come from his own authored flow — which
- * is the only kind of blank the batch-2 template-blank law permits: no free text
- * can reach either.
+ * NO BLANKS ANY MORE. It was a template with two `derived_number` blanks — the
+ * flow's duration and its movement count — and both came from a pre-built bundle
+ * that no longer exists. A composed session's length varies with the athlete's
+ * equipment (it SHRINKS rather than padding), so a sentence promising a count
+ * would be a signed sentence that can lie, which batch 3 forbids by name.
  *
  * PROPOSED, NOT SIGNED. See artifacts/COPY_SHEET_RULINGS_2026-07-30.md batch 5c.
  */
-const MOBILITY_DESCRIPTION_TEMPLATE =
-  '{minutes}min mobility flow - {count} movements, easy ranges only.';
-
-function mobilityDescription(minutes: number, count: number): string {
-  return MOBILITY_DESCRIPTION_TEMPLATE
-    .replace('{minutes}', String(minutes))
-    .replace('{count}', String(count));
-}
+const MOBILITY_DESCRIPTION =
+  'A full-body mobility flow - easy ranges only, nothing forced.';
 import {
   createStrengthIntent,
   type StrengthIntent,
@@ -81,8 +70,6 @@ export interface CoachRevisionTemplateDefinition {
   strengthIntent?: StrengthIntent;
   /** Derived-session type for buildDerivedSession (accessories only). */
   derivedType?: 'arms_pump' | 'prehab_accessories';
-  /** Which authored flow backs this template (mobility only). */
-  mobilityFlowId?: string;
 }
 
 const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
@@ -157,30 +144,28 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: true,
     durationMinutes: 28,
   },
-  // ── Mobility: the athlete's own door onto Sam's authored flows ──
+  // ── Mobility: COMPOSED from Sam's pool, never a pre-built bundle ──
   //
-  // ONE TEMPLATE PER AUTHORED FLOW, derived rather than transcribed — same rule
-  // as the seven strength variants, and for the same reason: a flow Sam authored
-  // that no door can reach is the defect this stage exists to close.
+  // SUPERSEDED IN ITS FIRST DAY, and the supersession is the point. Stage 4a
+  // offered one template per entry in `MOBILITY_FLOW_TEMPLATES` — nine bundles.
+  // Sam does not recognise those bundles, and the provenance trace agrees: the
+  // exercises are his, the GROUPINGS arrived in a single commit with no ruling
+  // cited and no changeset beside it. Deriving from them was still deriving from
+  // something nobody authored.
   //
-  // THE 5-EXERCISE FLOOR IS A FILTER, NOT A PAD. Sam ruled the door offers 5-8
-  // exercises. `hips-adductors-groin-reset` carries 4, so it is NOT OFFERED —
-  // the app does not top it up from another flow to reach five, because "the app
-  // never invents to fill a quota" is his ruling and it does not stop at
-  // gunshows. Flagged for him: the honest alternatives are to amend that
-  // template or to lower the floor, and both are his call, not a builder's.
-  ...MOBILITY_FLOW_TEMPLATES
-    .filter((flow) => flow.movements.length >= MOBILITY_DOOR_MIN_MOVEMENTS
-      && flow.movements.length <= MOBILITY_DOOR_MAX_MOVEMENTS)
-    .map((flow): CoachRevisionTemplateDefinition => ({
-      templateId: `mobility_${flow.id.replace(/-/g, '_')}`,
-      label: flow.name,
-      description: mobilityDescription(flow.durationMinutes, flow.movements.length),
-      category: 'mobility',
-      byeOnly: false,
-      durationMinutes: flow.durationMinutes,
-      mobilityFlowId: flow.id,
-    })),
+  // One template now. It composes 5-8 movements from `MOBILITY_POOL` with a
+  // full-body spread, and it is DYNAMIC — its content varies by date like the
+  // strength and accessory templates, so the validation policy computes
+  // per-date signatures for it.
+  {
+    templateId: 'mobility_flow',
+    label: 'Mobility',
+    description: MOBILITY_DESCRIPTION,
+    category: 'mobility',
+    byeOnly: false,
+    durationMinutes: 15,
+    dynamic: true,
+  },
   // ── Recovery: restore, never load ──
   {
     templateId: 'recovery_flow',
@@ -408,51 +393,57 @@ export function buildCoachRevisionTemplateWorkout(
 }
 
 /**
- * A mobility flow, materialised from the authored template.
+ * A mobility session, COMPOSED from Sam's authored pool.
  *
- * NOTHING IS COMPOSED HERE. The movements, their order, their doses and their
- * count all come from `MOBILITY_FLOW_TEMPLATES` — Sam's data — and this function
- * only turns them into rows. The doses are the flow's own warm-up prescriptions
- * (`3 x 30-45s/side`, `1 x 8-10 reps`), rendered by the same formatting the
- * recovery add-on has always used, so a movement reads identically wherever the
- * athlete meets it.
+ * Nothing here chooses a dose or writes a name: every movement comes out of
+ * `MOBILITY_POOL` with the sets, reps or hold Sam authored on it, and the only
+ * decision this function makes is WHICH movements — spread across the four
+ * regions, deterministic by date, filtered by the athlete's equipment and
+ * injuries exactly as every other pool draw is.
  *
- * Row ids are `template:<id>:<n>` so the writer recognises registry ownership,
- * exactly as the strength and accessory templates do.
+ * Rows are stamped `role: 'recovery_support'`, so the ledger knows what they are
+ * instead of inferring it from their names — the same fix the accessory rows got
+ * when one Cossack Squat re-typed a whole prehab session as lower strength.
  */
 function buildMobilityTemplateWorkout(
   def: CoachRevisionTemplateDefinition,
   date: string,
 ): Workout | null {
-  const flow = MOBILITY_FLOW_TEMPLATES.find((entry) => entry.id === def.mobilityFlowId);
-  if (!flow) return null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { filterMobilityPoolForAthlete, dateHash } = require('./sessionBuilder');
+  const ctx = getCoachRevisionTemplateContext();
+  const eligible = filterMobilityPoolForAthlete(ctx.athlete);
+  const movements = composeMobilitySession({ seed: dateHash(date), eligible });
+  if (movements.length === 0) return null;
+
   const workoutId = `template-${def.templateId}`;
   return {
     id: workoutId,
     microcycleId: 'coach-template',
     dayOfWeek: isoDateToDayOfWeek(date),
-    name: flow.name,
+    name: def.label,
     description: def.description,
-    durationMinutes: flow.durationMinutes,
+    durationMinutes: def.durationMinutes,
     intensity: 'Light',
-    // A mobility flow is not conditioning and not strength. `countsAs: 'recovery'`
-    // is the AUTHORED answer in the template itself, and the charter's counting
-    // row says the same thing: no load, never hard, never breaks rest.
+    // Not conditioning and not strength. The charter's counting row says the
+    // same thing the ledger does: no load, never hard, never breaks rest.
     workoutType: 'Recovery',
     sessionTier: 'recovery',
     hasCombinedConditioning: false,
-    exercises: flow.movements.map((movement: MobilityFlowMovement, index: number) => {
+    exercises: movements.map((movement: { id: string; name: string; sets: number; repsMin: number; repsMax: number; restSeconds: number; notes: string }, index: number) => {
       const rowId = `template:${def.templateId}:${index}`;
       return {
         id: rowId,
         workoutId,
         exerciseId: rowId,
         exerciseOrder: index,
-        prescribedSets: movement.sets ?? 1,
-        prescribedRepsMin: movement.repsMin ?? movement.durationSecondsMin ?? 1,
-        prescribedRepsMax: movement.repsMax ?? movement.durationSecondsMax ?? 1,
-        restSeconds: 0,
-        notes: '',
+        prescribedSets: movement.sets,
+        prescribedRepsMin: movement.repsMin,
+        prescribedRepsMax: movement.repsMax,
+        restSeconds: movement.restSeconds,
+        notes: movement.notes,
         section18Evidence: {
           protocolVersion: 1,
           role: 'recovery_support',
@@ -463,7 +454,7 @@ function buildMobilityTemplateWorkout(
         exercise: {
           id: rowId,
           name: movement.name,
-          description: '',
+          description: movement.notes,
           exerciseType: 'Flexibility',
           muscleGroups: [],
           equipmentRequired: [],

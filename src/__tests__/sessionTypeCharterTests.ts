@@ -91,6 +91,7 @@ import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { listCoachRevisionTemplates } from '../utils/coachRevisionTemplates';
 import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
+import { MOBILITY_POOL } from '../data/exercisePools';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
@@ -491,7 +492,7 @@ const AUTHORED_POPULATION: Readonly<Record<SessionTypeId, number | null>> = {
   recovery: MOBILITY_FLOW_TEMPLATES.length,
   strength: Object.keys(STRENGTH_POOLS).length,
   conditioning: CONDITIONING_TEMPLATES.length,
-  mobility: MOBILITY_FLOW_TEMPLATES.length,
+  mobility: MOBILITY_POOL.length,
   prehab: PREHAB_POOLS.reduce((total, pool) => total + pool.length, 0),
   gunshow: BICEPS_POOL.length + TRICEPS_POOL.length + DELTS_POOL.length,
 };
@@ -513,8 +514,7 @@ const AUTHORED_NAMES: Readonly<Record<SessionTypeId, ReadonlySet<string> | null>
   strength: new Set(selectableExerciseNames().map(canonicalExerciseName)),
   conditioning: new Set(CONDITIONING_TEMPLATES.map(
     (template) => canonicalExerciseName(template.name))),
-  mobility: new Set(MOBILITY_FLOW_TEMPLATES.flatMap(
-    (template) => template.movements.map((movement) => canonicalExerciseName(movement.name)))),
+  mobility: new Set(MOBILITY_POOL.map((entry) => canonicalExerciseName(entry.name))),
   prehab: new Set(PREHAB_POOLS.flat().map((entry) => canonicalExerciseName(entry.name))),
   gunshow: new Set([...BICEPS_POOL, ...TRICEPS_POOL, ...DELTS_POOL].map(
     (entry) => canonicalExerciseName(entry.name))),

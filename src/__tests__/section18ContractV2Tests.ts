@@ -498,14 +498,25 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
 //
 // Sam's ruling resolves it upstream instead of downstream:
 //
-//   THE GENERATOR NEVER PLACES OPTIONAL WORK UNINVITED.
 //   THE REST QUOTA COUNTS DAYS WITH NO REQUIRED WORK.
+//   THE GENERATOR MAY PLACE OPTIONAL WORK — but ONLY under a Sam-authored
+//   placement rule, with Sam-authored composition, rendered visibly optional,
+//   binnable in one tap, and NEVER counted toward compliance, load or rest.
 //
-// Under those two together the old defect is UNREPRESENTABLE, not detected: the
-// only recovery in a week is the athlete's, so there is no app-inflated rest
-// count left to catch. That is why these cells now assert the law rather than
-// the symptom — a detector for a condition that cannot arise is a cell that can
-// only ever fire on the athlete.
+// THE SECOND LINE WAS WRITTEN WRONG ONCE AND IS RECORDED HERE CORRECTED. It read
+// "the generator never places optional work uninvited" — my generalisation of a
+// finding about Recovery, which Sam WITHDREW on 2026-07-30 as an overreach
+// (docs/OPTIONAL_PLACEMENT_LAW_SUPERSESSION_2026-07-30.md). A blanket ban would
+// have red-flagged the early off-season all-optional contracts he names as the
+// standing precedent, and would have said nothing if an authored gunshow later
+// acquired invented composition.
+//
+// Under the refined law the old defect is still UNREPRESENTABLE rather than
+// detected — recovery fails three of the five conditions (no rule, invented
+// composition, rest interference), so there is no app-inflated rest count left
+// to catch. That is why these cells assert the law rather than the symptom: a
+// detector for a condition that cannot arise is a cell that can only ever fire
+// on the athlete.
 //
 // THE UPSTREAM HALF IS ASSERTED WHERE THE GENERATOR IS. This suite builds
 // synthetic witnesses and never runs generation, so "the generator places no

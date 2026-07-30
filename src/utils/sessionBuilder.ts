@@ -283,7 +283,23 @@ export function inferEquipment(trainingLocation: string): EquipmentTag[] {
  * Used to rotate exercise selection — same date always picks the same exercises,
  * but different dates get variety within the pool.
  */
-function dateHash(dateStr: string): number {
+/**
+ * The athlete's eligible mobility movements — equipment and injuries applied.
+ *
+ * Exported so the Mobility door composes through the SAME filter every other
+ * pool draw uses. Re-implementing it in the registry would be a second answer to
+ * "can this athlete do this movement", and the first thing it would get wrong is
+ * the equipment gate on `dead-hang` and `db-pullovers`.
+ */
+export function filterMobilityPoolForAthlete(athlete: AthleteContext): PoolExercise[] {
+  return filterPool(
+    POOL_REGISTRY.mobility ?? [],
+    injuriesToTags(athlete.injuries),
+    new Set(athlete.equipmentTags),
+  );
+}
+
+export function dateHash(dateStr: string): number {
   let hash = 0;
   for (let i = 0; i < dateStr.length; i++) {
     hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
