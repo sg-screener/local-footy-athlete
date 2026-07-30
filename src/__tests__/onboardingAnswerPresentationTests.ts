@@ -251,7 +251,6 @@ const COMPLETE_IN_SEASON = {
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
   teamTrainingDuration: '90 minutes',
-  teamTrainingIntensity: 'Moderate',
   trainingDaysPerWeek: 3,
   preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
   experienceLevel: '2-5 years',

@@ -130,7 +130,7 @@ function profileFor(rng: () => number): OnboardingData {
     teamTrainingDaysPerWeek: teamDays.length,
     teamTrainingDays: [...teamDays],
     teamTrainingDuration: '90 minutes',
-    teamTrainingIntensity: 'Hard',
+    teamTrainingIntensity: 'Moderate',
     trainingLocation: 'Commercial gym',
     equipment: ['barbell', 'dumbbells', 'squat_rack', 'pullup_bar',
       'cable_machine', 'hamstring_curl', 'knee_extension', 'bands'],

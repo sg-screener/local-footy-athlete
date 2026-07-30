@@ -28,8 +28,13 @@ export type StressLevel = 'high' | 'medium' | 'low';
 export interface StressContext {
   experienceLevel?: ExperienceLevel;
   conditioningLevel?: ConditioningLevel;
-  /** Usual club-training intensity from the profile. Default: moderate-hard. */
-  teamTrainingIntensity?: TeamTrainingIntensity;
+  /**
+   * RETIRED FROM STRESS (Sam, 2026-07-30): a team night is a hard day unconditionally,
+   * so this answer no longer decides stress. The field is gone rather than left unread —
+   * an input a classifier accepts and ignores is the shape that made this defect
+   * invisible. The answer itself survives as coach context and as the estimate-seed for
+   * team-night SIZE; see `docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md`.
+   */
 }
 
 const isBeginner = (ctx: StressContext): boolean =>
@@ -54,9 +59,23 @@ export function classifySessionStress(
     case 'game':
       return 'high';
     case 'team_training':
-      // "Light = skills/touch, low running" — the one team-training
-      // downshift the Bible allows. Otherwise assume moderate-to-hard.
-      return ctx.teamTrainingIntensity === 'Light' ? 'medium' : 'high';
+      // A TEAM NIGHT IS A HARD DAY, UNCONDITIONALLY (Sam's ruling, 2026-07-30).
+      //
+      // TWO BIBLE LINES WERE IN TENSION and the app had picked the wrong one to obey.
+      // `:119` lists what counts as a hard day and team training is first on it. `:704`
+      // gives the athlete's own intensity scale — "Light = skills/touch, low running" —
+      // and this branch used that answer to downshift a team night to MEDIUM, which took
+      // it off the hard-day budget.
+      //
+      // Sam ruled `:119` governs hard-day status and the intensity answer no longer
+      // decides it. `:704`'s scale is not deleted: it describes the athlete's starting
+      // assumption about team-night SIZE, which his estimate→measured ruling
+      // (docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md) makes a seed rather than a truth.
+      //
+      // Why the old reading was wrong even before the ruling: a static onboarding answer
+      // cannot know that THIS Tuesday was a match simulation. Believing it let a hard
+      // team night ride free against the budget for the whole season.
+      return 'high';
     case 'lower_strength':
       return 'high';
     case 'sprint':

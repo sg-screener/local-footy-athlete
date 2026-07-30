@@ -91,7 +91,7 @@ const S11_PROFILE: Partial<OnboardingData> = {
   seasonPhase: 'Pre-season', gameDay: 'Saturday', trainingDaysPerWeek: 5,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+  sprintExposure: '2+ times per week',
   conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent', injuries: [],
   motivation: 'Get stronger',
 };
@@ -130,7 +130,7 @@ console.log('\n── 1. S11 pre-season game week — target structure ──');
   // Validator view: counts + findings.
   const report = validateProgramWeek({
     days: validatorDays(sorted, 'Saturday'),
-    profile: { seasonPhase: 'Pre-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' },
+    profile: { seasonPhase: 'Pre-season', conditioningLevel: 'Good' },
   });
   ok('4 hard days (Mon lower, 2×TT+upper, game) — upper on TT adds NO extra hard day',
     report.counts.hardDays === 4, `hardDays=${report.counts.hardDays}`);
@@ -155,7 +155,7 @@ console.log('\n── 2. Sandwiched day between two team days ──');
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+    sprintExposure: '2+ times per week',
     conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent', injuries: [],
     motivation: 'Get stronger',
   });
@@ -188,7 +188,7 @@ console.log('\n── 2b. Controlled FB between team days when availability forc
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Tuesday', 'Wednesday', 'Thursday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard', sprintExposure: 'Occasionally',
+    sprintExposure: 'Occasionally',
     conditioningLevel: 'Average', recentTrainingLoad: 'Pretty consistent', injuries: [],
     motivation: 'Get stronger',
   });
@@ -261,13 +261,13 @@ console.log('\n── 4. Pre-season no-game (S12 shape) stays safe ──');
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Moderate', sprintExposure: 'Occasionally',
+    sprintExposure: 'Occasionally',
     conditioningLevel: 'Average', recentTrainingLoad: 'Pretty consistent', injuries: [],
     motivation: 'Get stronger',
   });
   const report = validateProgramWeek({
     days: validatorDays(sorted),
-    profile: { seasonPhase: 'Pre-season', teamTrainingIntensity: 'Moderate', conditioningLevel: 'Average' },
+    profile: { seasonPhase: 'Pre-season', conditioningLevel: 'Average' },
   });
   ok('no-game pre-season week has no strong/hard_stop findings',
     report.findings.every((f) => f.severity !== 'strong' && f.severity !== 'hard_stop'),

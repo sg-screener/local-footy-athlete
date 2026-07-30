@@ -103,7 +103,6 @@ function profileFor(options: PlannerOptions): OnboardingData {
     preferredTrainingDays: selectedDays,
     teamTrainingDaysPerWeek: teamTrainingCount,
     teamTrainingDays: TEAM_DAYS.slice(0, teamTrainingCount),
-    teamTrainingIntensity: 'Hard',
     usualGameDay: options.game ? 'Saturday' : undefined,
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],

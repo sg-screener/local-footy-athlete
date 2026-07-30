@@ -41,7 +41,6 @@ function profileFor(seasonPhase: SeasonPhase): OnboardingData {
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: seasonPhase === 'Off-season' ? 0 : 2,
     teamTrainingDays: seasonPhase === 'Off-season' ? [] : ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Moderate',
     sprintExposure: 'Occasionally',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Pretty consistent',

@@ -108,7 +108,6 @@ function profile(args: {
     availabilityConstraints: args.constraints,
     teamTrainingDaysPerWeek: tt,
     teamTrainingDays: teamDays[tt],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: args.lowReadiness ? 'Poor' : 'Good',
     recentTrainingLoad: args.lowReadiness ? 'Returning after 2+ months' : 'Very consistent',

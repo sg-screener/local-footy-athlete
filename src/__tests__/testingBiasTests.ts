@@ -417,7 +417,6 @@ console.log('\n[7] game, injury and readiness gates win');
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     usualGameDay: 'Saturday',
     squatStrength: 'Less than bodyweight',
     benchStrength: '1.25x bodyweight',

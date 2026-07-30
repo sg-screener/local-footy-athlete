@@ -68,7 +68,6 @@ function baseProfile(overrides: Partial<OnboardingData> = {}): Partial<Onboardin
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',

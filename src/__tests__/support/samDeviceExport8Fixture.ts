@@ -75,7 +75,7 @@ export function samExport8Profile(): OnboardingData {
     teamTrainingDays: ['Monday', 'Wednesday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDuration: '90 minutes',
-    teamTrainingIntensity: 'Hard',
+    teamTrainingIntensity: 'Moderate',
     trainingDaysPerWeek: 5,
     trainingDaysUnsure: false,
     trainingLocation: 'Commercial gym',

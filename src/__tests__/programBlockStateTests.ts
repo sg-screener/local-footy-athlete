@@ -38,7 +38,6 @@ const PROFILE: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  teamTrainingIntensity: 'Moderate',
   sprintExposure: 'Occasionally',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Pretty consistent',

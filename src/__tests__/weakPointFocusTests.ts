@@ -40,8 +40,14 @@ import {
   WEAK_POINT_LEAN,
   weakPointFocusFor,
   weakPointLeansOptionalTopUps,
+  weakPointNudgesPower,
+  weakPointPrefersAcceleration,
   type WeakPointFocus,
 } from '../rules/weakPointFocus';
+import {
+  LATE_OFFSEASON_SPEED_TEMPLATES,
+  selectLateOffseasonSpeedTemplate,
+} from '../rules/speedTemplates';
 import { computeTestingBias } from '../rules/testingBias';
 import {
   ACCESSORY_REGION_THRESHOLD,
@@ -79,7 +85,7 @@ console.log('\n[1] Every answer maps to a category `:105` actually names');
     'the Bible line moved or was reworded — the mapping cites text that is no longer there');
 
   const allowed: WeakPointFocus[] = ['mobility_and_injury_prevention', 'strength_and_size',
-    'conditioning', 'speed', 'unresolved'];
+    'conditioning', 'speed', 'power_and_acceleration', 'unresolved'];
   for (const answer of ANSWERS) {
     ok(`"${answer}" maps to a declared focus`,
       allowed.includes(WEAK_POINT_FOCUS_BY_ANSWER[answer]),
@@ -92,12 +98,25 @@ console.log('\n[1] Every answer maps to a category `:105` actually names');
     WEAK_POINT_FOCUS_BY_ANSWER.Size === 'strength_and_size' &&
     WEAK_POINT_FOCUS_BY_ANSWER.Strength === 'strength_and_size');
 
-  // POWER IS DECLARED UNRESOLVED, not silently grouped. Sam deferred it pending a search
-  // of the authored record; the search found no prior ruling (see the boundary report),
-  // so the honest state is a declared gap.
-  ok('Power & explosiveness is DECLARED unresolved, not guessed into speed',
-    WEAK_POINT_FOCUS_BY_ANSWER['Power & explosiveness'] === 'unresolved');
-  ok('and nothing leans on an unresolved answer',
+  // POWER IS ITS OWN CATEGORY, RULED (Sam, 2026-07-30) — never grouped with speed. The
+  // first draft had it `unresolved` pending a search of the authored record; the search
+  // found nothing, the question went back, and this is the answer.
+  ok('Power & explosiveness is its own fifth category',
+    WEAK_POINT_FOCUS_BY_ANSWER['Power & explosiveness'] === 'power_and_acceleration');
+  ok('and it is NOT the speed category',
+    WEAK_POINT_FOCUS_BY_ANSWER['Power & explosiveness'] !== WEAK_POINT_FOCUS_BY_ANSWER.Speed);
+
+  // THE SEPARATION, ASSERTED AS A PROPERTY rather than as two rows read side by side:
+  // neither category may set the other's flag, so no consumer can collapse them back.
+  ok('speed leans speed and NOT power/acceleration',
+    WEAK_POINT_LEAN.speed.speed && !WEAK_POINT_LEAN.speed.power &&
+    !WEAK_POINT_LEAN.speed.acceleration);
+  ok('power leans power AND acceleration, and NOT speed',
+    WEAK_POINT_LEAN.power_and_acceleration.power &&
+    WEAK_POINT_LEAN.power_and_acceleration.acceleration &&
+    !WEAK_POINT_LEAN.power_and_acceleration.speed);
+
+  ok('nothing leans on an unresolved answer — the value is kept for the next one',
     Object.values(WEAK_POINT_LEAN.unresolved).every((value) => value === false));
 }
 
@@ -219,7 +238,65 @@ console.log('\n[4] Ruling 4 — the no-weakness DEFAULT ORDER is law, not coinci
     { early: early.sprintHighSpeed });
 }
 
+console.log('\n[5] Ruling 0 — the power lean reaches its TWO real consumers');
+{
+  // Sam: "should focus more on power and accelerations — the lean targets the authored
+  // power pool / primer picks AND acceleration-flavoured speed work (accelerations
+  // specifically, not top-speed)."
+  //
+  // Those two live outside `testingBias`, so the focus reaches them directly. That is not
+  // a second vehicle for reading A — it is the same reading applied where the choice
+  // actually gets made, and both consumers are SELECTIONS between authored options.
+
+  ok('a power weakness nudges the authored power primer',
+    weakPointNudgesPower('power_and_acceleration'));
+  ok('and a speed weakness does not — they are separate categories',
+    !weakPointNudgesPower('speed'));
+  ok('no other weakness nudges it',
+    !weakPointNudgesPower('conditioning') && !weakPointNudgesPower('strength_and_size') &&
+    !weakPointNudgesPower('mobility_and_injury_prevention') &&
+    !weakPointNudgesPower('unresolved'));
+
+  ok('a power weakness holds speed selection on accelerations',
+    weakPointPrefersAcceleration('power_and_acceleration'));
+  ok('and a SPEED weakness does not — it may progress to top-speed',
+    !weakPointPrefersAcceleration('speed'));
+
+  // THE REAL SELECTION, through Sam's own templates. Late off-season position 3 is where
+  // the progression leaves accelerations for build-ups ("smooth build-ups, not all-out").
+  const context = {
+    seasonPhase: 'Off-season' as const,
+    offseasonSubphase: 'late_offseason' as const,
+    weekNumber: 9,
+    weekInBlock: 3,
+  };
+  const normal = selectLateOffseasonSpeedTemplate(context);
+  const power = selectLateOffseasonSpeedTemplate({ ...context, preferAcceleration: true });
+  ok('by default the progression reaches the build-up (toward top-speed)',
+    normal?.id === 'late_offseason_build_up_intro', normal?.id);
+  ok('a power weakness holds the ACCELERATION build instead',
+    power?.id === 'late_offseason_acceleration_build', power?.id);
+  ok('and both are Sam-authored templates — the lean picks, it does not invent',
+    LATE_OFFSEASON_SPEED_TEMPLATES.some((template) => template.id === power?.id) &&
+    LATE_OFFSEASON_SPEED_TEMPLATES.some((template) => template.id === normal?.id));
+
+  // READING A's BOUNDARY, once more: only the position that LEAVES accelerations changes.
+  // Position is `weekNumber - 3`, so weeks 4 and 5 are positions 1 and 2 — both already
+  // acceleration templates, and both identical either way. The lean does not reach back
+  // and re-pick something that was already an acceleration.
+  for (const [weekNumber, position] of [[4, 1], [5, 2]] as const) {
+    const early = selectLateOffseasonSpeedTemplate({ ...context, weekNumber });
+    const earlyPower = selectLateOffseasonSpeedTemplate({
+      ...context, weekNumber, preferAcceleration: true,
+    });
+    ok(`late position ${position} is identical either way`, early?.id === earlyPower?.id,
+      { position, early: early?.id, earlyPower: earlyPower?.id });
+    ok(`late position ${position} is already an acceleration template`,
+      /acceleration/.test(early?.id ?? ''), early?.id);
+  }
+}
+
 console.log(`\nWeak-point focus: ${passed} passed, ${failures.length} failed`);
 console.log('  DEPTH (L13): 0-1 — pure mapping, pure bias, authored phase tables.');
-console.log('  NOT COVERED: Power & explosiveness is declared unresolved and awaits Sam.');
+console.log('  Power & explosiveness is RULED as its own category (Sam, 2026-07-30).');
 if (failures.length > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

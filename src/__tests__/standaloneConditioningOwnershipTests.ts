@@ -179,7 +179,6 @@ const profile: OnboardingData = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  teamTrainingIntensity: 'Moderate',
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
   experienceLevel: '2-5 years',

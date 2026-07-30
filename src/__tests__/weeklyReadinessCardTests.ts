@@ -101,7 +101,7 @@ const PRESEASON: Partial<OnboardingData> = {
   seasonPhase: 'Pre-season', trainingDaysPerWeek: 5,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+  sprintExposure: '2+ times per week',
   conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent', injuries: [],
   motivation: 'Get stronger',
 };

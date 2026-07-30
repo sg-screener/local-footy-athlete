@@ -43,6 +43,20 @@ export type WeakPointFocus =
   | 'strength_and_size'
   | 'conditioning'
   | 'speed'
+  /**
+   * THE FIFTH CATEGORY (Sam's ruling, 2026-07-30). "Power & explosiveness" is its own
+   * weakness and is NEVER grouped with speed.
+   *
+   * His words: "should focus more on power and accelerations" — so the lean targets the
+   * authored power pool and primer picks AND acceleration-flavoured speed work,
+   * ACCELERATIONS SPECIFICALLY, not top-speed. That distinction is the whole reason it
+   * is not the speed category: the speed lean pulls toward maximum velocity, and this
+   * one pulls toward getting there.
+   *
+   * The first draft of the mapping had it `unresolved` pending a search of the authored
+   * record. The search found nothing, the question went back, and this is the answer.
+   */
+  | 'power_and_acceleration'
   | 'unresolved';
 
 /**
@@ -66,8 +80,9 @@ export const WEAK_POINT_FOCUS_BY_ANSWER:
   Size: 'strength_and_size',
   Endurance: 'conditioning',
   Speed: 'speed',
-  // AWAITING SAM. Returned as a question rather than assumed — see the header.
-  'Power & explosiveness': 'unresolved',
+  // RULED 2026-07-30 as its own category, after the search of the authored record found
+  // no prior ruling and the question went back. Never grouped with speed.
+  'Power & explosiveness': 'power_and_acceleration',
 };
 
 export function weakPointFocusFor(
@@ -88,22 +103,61 @@ export function weakPointFocusFor(
 export interface WeakPointLean {
   /** Aerobic/tempo conditioning template preference. */
   readonly aerobic: boolean;
-  /** Sprint and speed-quality preference. */
+  /** Sprint and speed-quality preference — pulls toward maximum velocity. */
   readonly speed: boolean;
   /** Strength accessory and support preference. */
   readonly accessory: boolean;
   /** Recovery / prehab add-on and mobility preference. */
   readonly recovery: boolean;
+  /**
+   * The authored power pool and primer picks.
+   *
+   * Reaches `powerPrimerPolicy` through the same `powerGoalNudge` a role/goal signal
+   * uses — a nudge toward contrast power, never a force, and never a count.
+   */
+  readonly power: boolean;
+  /**
+   * ACCELERATION-flavoured speed work, as distinct from top-speed.
+   *
+   * The late-off-season speed templates PROGRESS from accelerations toward build-ups
+   * ("smooth build-ups, not all-out" — position 3). An acceleration lean holds the
+   * selection on the acceleration templates instead of progressing off them, which is
+   * Sam's "accelerations specifically, not top-speed" expressed at the only place the
+   * app makes that choice.
+   */
+  readonly acceleration: boolean;
 }
 
 export const WEAK_POINT_LEAN: Readonly<Record<WeakPointFocus, WeakPointLean>> = {
-  mobility_and_injury_prevention:
-    { aerobic: false, speed: false, accessory: true, recovery: true },
-  strength_and_size: { aerobic: false, speed: false, accessory: true, recovery: false },
-  conditioning: { aerobic: true, speed: false, accessory: false, recovery: false },
-  speed: { aerobic: false, speed: true, accessory: false, recovery: false },
-  // Nothing leans on an unruled answer. This is the point of the value existing.
-  unresolved: { aerobic: false, speed: false, accessory: false, recovery: false },
+  mobility_and_injury_prevention: {
+    aerobic: false, speed: false, accessory: true, recovery: true,
+    power: false, acceleration: false,
+  },
+  strength_and_size: {
+    aerobic: false, speed: false, accessory: true, recovery: false,
+    power: false, acceleration: false,
+  },
+  conditioning: {
+    aerobic: true, speed: false, accessory: false, recovery: false,
+    power: false, acceleration: false,
+  },
+  // SPEED pulls toward maximum velocity. POWER pulls toward accelerating. Sam ruled them
+  // separate, and the two rows below are what "separate" means in code: neither sets the
+  // other's flag, so no consumer can collapse them back.
+  speed: {
+    aerobic: false, speed: true, accessory: false, recovery: false,
+    power: false, acceleration: false,
+  },
+  power_and_acceleration: {
+    aerobic: false, speed: false, accessory: false, recovery: false,
+    power: true, acceleration: true,
+  },
+  // Nothing leans on an unruled answer. The value stays because a future seventh answer
+  // may arrive before its ruling does, and this is where it waits honestly.
+  unresolved: {
+    aerobic: false, speed: false, accessory: false, recovery: false,
+    power: false, acceleration: false,
+  },
 };
 
 /**
@@ -123,3 +177,13 @@ export function weakPointLeansOptionalTopUps(focus: WeakPointFocus | null): bool
 
 /** N1's threshold under a mobility/injury-history weakness: below FOUR of the six. */
 export const WEAK_POINT_ACCESSORY_REGION_THRESHOLD = 4;
+
+/** Does this weakness nudge the authored power primer? (Sam's ruling 0.) */
+export function weakPointNudgesPower(focus: WeakPointFocus | null): boolean {
+  return focus !== null && WEAK_POINT_LEAN[focus].power;
+}
+
+/** Does this weakness hold speed selection on ACCELERATIONS? (Sam's ruling 0.) */
+export function weakPointPrefersAcceleration(focus: WeakPointFocus | null): boolean {
+  return focus !== null && WEAK_POINT_LEAN[focus].acceleration;
+}

@@ -97,7 +97,6 @@ function reportFor(resolvedWeek: ResolvedDay[]) {
     days: validatorDaysFromResolvedWeek(resolvedWeek),
     profile: {
       seasonPhase: 'In-season',
-      teamTrainingIntensity: 'Hard',
       conditioningLevel: 'Good',
     },
   });

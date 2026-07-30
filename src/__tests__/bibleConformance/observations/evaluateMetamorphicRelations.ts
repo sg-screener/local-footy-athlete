@@ -17,8 +17,7 @@ const BASE_PROFILE = {
   conditioningLevel: 'Good' as const, sprintExposure: 'Occasionally' as const,
   recentTrainingLoad: 'Very consistent' as const, injuries: [], seasonPhase: 'In-season' as const,
   trainingDaysPerWeek: 5, preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const,
-  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const,
-  teamTrainingIntensity: 'Hard' as const, teamTrainingDuration: '90 minutes' as const,
+  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const, teamTrainingDuration: '90 minutes' as const,
   usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const, trainingLocation: 'Commercial gym' as const, equipment: ['Full Gym'],
 };
 
@@ -150,6 +149,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
     const high = buildCoachingPlan(onboardingToCoachingInputs({ ...BASE_PROFILE } as any));
     const low = buildCoachingPlan(onboardingToCoachingInputs({
       ...BASE_PROFILE, recentTrainingLoad: 'Hardly at all', conditioningLevel: 'Poor',
+      teamTrainingIntensity: 'Hard',
       sprintExposure: 'No sprint training',
     } as any));
     const highHard = high.weeklyPlan.filter((entry) => entry.isHardExposure).length;

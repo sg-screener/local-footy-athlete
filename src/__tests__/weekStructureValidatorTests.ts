@@ -115,7 +115,10 @@ function option1Week(): ValidatorDayInput[] {
   });
 }
 
-const PROFILE = { teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' } as const;
+// `teamTrainingIntensity` is no longer part of the stress context — Sam ruled a team
+// night a hard day unconditionally on 2026-07-30, so the answer stopped deciding stress.
+// The fixture keeps only what the classifier still reads.
+const PROFILE = { conditioningLevel: 'Good' } as const;
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 1. Clean Bible Option 1 week ──');
@@ -553,7 +556,7 @@ try {
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+    sprintExposure: '2+ times per week',
     conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent',
     experienceLevel: '2-5 years', injuries: [],
   };
@@ -595,7 +598,7 @@ try {
   const resolved = resolveWeekWithConditioning(BLOCK_START, state);
   const report = validateProgramWeek({
     days: validatorDaysFromResolvedWeek(resolved),
-    profile: { seasonPhase: 'In-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good', experienceLevel: '2-5 years' },
+    profile: { seasonPhase: 'In-season', conditioningLevel: 'Good', experienceLevel: '2-5 years' },
   });
 
   if (report.findings.length > 0) {

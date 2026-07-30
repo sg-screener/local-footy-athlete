@@ -43,8 +43,7 @@ function profileFor(scenario: PairwiseScenario): OnboardingData {
     trainingDaysPerWeek: scenario.availability,
     preferredTrainingDays: [...preferredTrainingDays],
     teamTrainingDaysPerWeek: scenario.teamSessions,
-    teamTrainingDays: [...teamTrainingDays], teamTrainingIntensity: 'Hard',
-    teamTrainingDuration: '90 minutes', usualGameDay: gameDay, gameDay,
+    teamTrainingDays: [...teamTrainingDays], teamTrainingDuration: '90 minutes', usualGameDay: gameDay, gameDay,
     trainingLocation, equipment,
   };
 }

@@ -105,7 +105,6 @@ function inputsFor(c: Combination): CoachingInputs {
     selectedDays,
     teamTrainingDaysPerWeek: teamTrainingDays.length,
     teamTrainingDays,
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: CAPACITY[c.capacity].conditioningLevel,
     recentTrainingLoad: CAPACITY[c.capacity].recentTrainingLoad,

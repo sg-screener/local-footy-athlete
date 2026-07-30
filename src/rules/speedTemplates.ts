@@ -24,6 +24,13 @@ export interface SpeedTemplateSelectionContext {
   offseasonSubphase?: OffseasonSubphase | null;
   weekNumber?: number | null;
   weekInBlock?: number | null;
+  /**
+   * Hold the progression on ACCELERATIONS rather than progressing to build-ups.
+   *
+   * Set from the athlete's stated weakness when it is Power & explosiveness (Sam's
+   * ruling 0, 2026-07-30). Selection only — the exposure count is the contract's.
+   */
+  preferAcceleration?: boolean;
 }
 
 export const LATE_OFFSEASON_SPEED_TEMPLATES: readonly SpeedTemplate[] = [
@@ -80,6 +87,17 @@ export function selectLateOffseasonSpeedTemplate(
   const latePosition = resolveLateOffseasonPosition(context);
   if (latePosition <= 1) return TEMPLATE_BY_ID.late_offseason_low_risk_acceleration;
   if (latePosition === 2) return TEMPLATE_BY_ID.late_offseason_acceleration_build;
+  // ACCELERATIONS SPECIFICALLY, NOT TOP-SPEED (Sam's ruling 0, 2026-07-30).
+  //
+  // The progression's third step is the build-up — "smooth build-ups, not all-out" —
+  // which is the move toward maximum velocity. An athlete whose stated weakness is
+  // POWER & EXPLOSIVENESS holds on the acceleration build instead: his words were
+  // "should focus more on power and accelerations", and this is the only place in the
+  // app where accelerating and top-speed are a choice between two authored templates.
+  //
+  // Reading A holds — the same number of speed exposures, a different one of Sam's own
+  // templates filling it. No count moves.
+  if (context.preferAcceleration) return TEMPLATE_BY_ID.late_offseason_acceleration_build;
   return TEMPLATE_BY_ID.late_offseason_build_up_intro;
 }
 

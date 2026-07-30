@@ -125,9 +125,9 @@ console.log('sessionClassificationAdapterTests');
 console.log('\n[1] team and fixture anchors');
 {
   const team = workout('Team Training', { workoutType: 'Team Training', intensity: 'High' });
-  const result = classifyVisibleSession(team, { teamTrainingIntensity: 'Hard' });
+  const result = classifyVisibleSession(team);
   ok('team training is a team anchor', result.anchors.teamTraining && category(result, 'team_training'), result);
-  eq('normal/hard team training is high stress', result.stressLevel, 'high');
+  eq('a team night is high stress unconditionally (Sam, 2026-07-30)', result.stressLevel, 'high');
   eq('normal/hard team training creates one hard exposure/day',
     [result.contributions.hardExposures, result.contributions.hardDay], [1, 1]);
   eq('team training contributes one conditioning/running/sprint-COD exposure',
@@ -139,7 +139,7 @@ console.log('\n[1] team and fixture anchors');
     workoutType: 'Team Training',
     intensity: 'Light',
   });
-  const result = classifyVisibleSession(team, { teamTrainingIntensity: 'Light' });
+  const result = classifyVisibleSession(team);
   eq('light team training downshifts to medium', result.stressLevel, 'medium');
   eq('light team training does not create a hard exposure/day',
     [result.contributions.hardExposures, result.contributions.hardDay], [0, 0]);

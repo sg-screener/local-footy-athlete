@@ -22,10 +22,45 @@ authority**. Both are named plainly below rather than left to be inferred from s
 
 ---
 
+## §0 — CORRECTION: the load ratios are RULED, not [MINE]
+
+**Sam asked which it was — a second estimator, or mislabelled signed work. It is
+mislabelled signed work, and there is no second estimator.** Receipts:
+
+| Claim | Receipt |
+|---|---|
+| The chain is authored | `data/anchorMultipliers.ts` header: *"Anchor multipliers — Sam-authored ladders, 2026-07-28"*, carrying `ANCHOR_MULTIPLIER_RULING` with the verbatim sentences and attributing them to `docs/PROVENANCE_INVENTORY_2026-07-28.md` |
+| The chain is gated BOTH ways | `test:anchor-multipliers` 38/38 — each ruling sentence must still be present in the attributed document AND still state the shipped numbers |
+| The 77 ratios are gated against Sam's workbook | `test:load-ratio-rulings` 47/47, including *"every shipped ratio is in the workbook (code -> sheet)"* and the equipment-minimum tab in both directions, against `docs/LOAD_RATIO_REVIEW_2026-07-28.xlsx` |
+| There is ONE estimator | `test:single-estimation-owner` 14/14 — the render path no longer skips the beginner multiplier (`aad7d7f`) |
+| Landed | `2f633ee`..`0e983eb`, six commits, the whole load chain |
+
+The chain, so the shape of my error is visible:
+
+```
+anchor 1RM     = bodyweight × multiplier      ← anchorMultipliers.ts   RULED 2026-07-28
+working weight = anchor 1RM × exercise ratio  ← EXERCISE_LOAD_MAP (77) RULED + workbook-gated
+```
+
+**WHAT I DID WRONG, precisely.** I checked the Bible, found no line setting a load from
+bodyweight, and wrote **[MINE]**. But the map's own key says [MINE] means *"an agent chose
+it"* — and these numbers were chosen by Sam, in a sitting, six of thirteen anchor rows
+moving as a result. The correct mark is **[RULED]**, which is the mark that exists for
+exactly this: authored outside the Bible, ruling named.
+
+**The lesson, and it belongs in the map rather than in a commit message: checking the
+Bible is not checking the authored record.** [MINE] may only be written after searching
+BOTH — and this document, whose entire job is to distinguish those four states, got the
+distinction backwards on the one field where the money is. Every other [MINE] in §4 has
+now been re-checked against the ruling record the same way; they survive.
+
+---
+
 ## §1 — THE HEADLINE, before the detail
 
-**33 onboarding fields. 8 influence nothing about the program.** Of the 25 that do, **6
-influence it through a mechanism nobody authored.**
+**33 onboarding fields. 8 influence nothing about the program.** Of the 25 that do, **5
+influence it through a mechanism nobody authored** — six, before §0's correction removed
+the load estimator from the list.
 
 The three that matter most:
 
@@ -38,9 +73,9 @@ The three that matter most:
    seven answers leaned nothing at all. It is now bound to `:105` (Sam's reading-A
    ruling, same day as this document) — so it moves from UNAUTHORED to [BIBLE] in the
    same pass that found it.
-3. **`heightCm` and `weightKg`** reach the load estimator and the coach prompt, and
-   nothing else. No Bible line governs how bodyweight sets a starting load; the
-   estimator's ratios are [MINE].
+3. **`heightCm` reaches the load estimator and the coach prompt, and influences nothing
+   on its own.** `weightKg` reaches the estimator and matters a great deal — see the
+   correction below, which is the one thing this document got wrong.
 
 ---
 
@@ -58,7 +93,7 @@ The three that matter most:
 | `biggestFrustration` | **generation prompt only** (`generateProgram:968`) | free text into the AI prompt | **NO PROGRAMMING CONSUMER** |
 | `successVision` | **generation prompt only** (`generateProgram:969`) | free text into the AI prompt | **NO PROGRAMMING CONSUMER** |
 | `heightCm` | `loadEstimation`, coach prompt | nothing on its own | **NO RULE** — see `weightKg` |
-| `weightKg` | `loadEstimation`, `deloadWeekRules` rounding, snapshots | starting loads for bodyweight-relative lifts | **[MINE]** — the estimator's ratios cite no Bible line |
+| `weightKg` | `loadEstimation` (one owner, gated), `deloadWeekRules` rounding, snapshots | starting loads for every lift, through the anchor chain | **[RULED]** — Sam's anchor ladders + 77-ratio workbook, 2026-07-28. **CORRECTED, see §0** |
 
 ### 2.2 Season, fixtures and the week's skeleton
 
@@ -81,7 +116,7 @@ The three that matter most:
 | `experienceLevel` | `experienceCrosswalk` → the four-rung ladder, `trainingAgePolicy`, exercise gates | which exercises are offered; beginner dose | **[BIBLE]** §11 + **[RULED]** (the experience crosswalk, Bible amendment 2026-07-27) |
 | `conditioningLevel` | `capacityRubric` (with `recentTrainingLoad`), `testingBias` | the CAPACITY score → dose, never structure | **[BIBLE]** §9 — "Both answers are required; there is no default and no unknown tier" |
 | `recentTrainingLoad` | `capacityRubric` | same | **[BIBLE]** §9 |
-| `squatStrength` / `benchStrength` | `loadEstimation`, `testingBias` bands | starting loads; a small testing lean | **[MINE]** for the bias bands; loads as above |
+| `squatStrength` / `benchStrength` | `loadEstimation` anchor ladders (**[RULED]**), `testingBias` bands (**[MINE]**) | the anchor 1RM every ratio multiplies; a small testing lean | split: the LOADS are ruled and gated, the BIAS BANDS are not — see §0 and §4 |
 | `sprintExposure` | `testingBias` (a "no sprint training" answer leans speed) | template preference | **[MINE]** |
 | `twoKmTimeTrial` | `data/twoKmTimeTrial` → MAS derivation, `masCopy` | MAS-based conditioning prescriptions | **[RULED]** — "every 2km number Sam ruled" (`data/numericBound.ts`) |
 | `biggestLimitation` | `rules/weakPointFocus.ts` → `testingBias` | exercise/template SELECTION only; leans the optional top-ups for a mobility/injury answer | **[BIBLE]** `:105`, as of Sam's reading-A ruling 2026-07-30. **Was UNAUTHORED** — see §1 |
@@ -136,7 +171,6 @@ prompt decoration.
 | Mechanism | What it decides | Why it is UNAUTHORED or [MINE] |
 |---|---|---|
 | `rules/testingBias.ts` direction table | template/exercise leans from strength, conditioning, sprint and limitation answers | originating commit `3d13477` is a subject line — no ruling, no changeset. **The `biggestLimitation` half is now bound to `:105`; the squat/bench/sprint bands are still [MINE]** |
-| `loadEstimation` bodyweight ratios | starting loads for every lift | no Bible line sets a load from bodyweight |
 | `LOCATION_EQUIPMENT` (`inferEquipment`) | which equipment a location implies | a plausible table nobody signed |
 | `teamTrainingIntensity` → stress tier | whether a team night is a hard day | the Bible describes team load qualitatively and names no mapping from this answer |
 | `INJURY_BODY_AREA_MAP` and its two siblings | body part → filtered movements | three maps, different coverage — census **LR-27** |

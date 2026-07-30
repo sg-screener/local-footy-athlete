@@ -23,7 +23,6 @@ import type {
   ConditioningLevel,
   SprintExposure,
   RecentTrainingLoad,
-  TeamTrainingIntensity,
   AttachedConditioningKind,
   SpeedBlock,
   SpeedBlockPlacement,
@@ -93,6 +92,11 @@ import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
+  weakPointFocusFor,
+  weakPointNudgesPower,
+  weakPointPrefersAcceleration,
+} from '../rules/weakPointFocus';
+import {
   buildPreseasonExposureBlueprint,
   type PreseasonStrengthSlotIdentity,
 } from '../rules/preseasonExposureContract';
@@ -152,7 +156,6 @@ export interface CoachingInputs {
   selectedDays: string[];
   teamTrainingDaysPerWeek: number;
   teamTrainingDays: string[];
-  teamTrainingIntensity: TeamTrainingIntensity | undefined;
   sprintExposure: SprintExposure | undefined;
   conditioningLevel: ConditioningLevel | undefined;
   recentTrainingLoad: RecentTrainingLoad | undefined;
@@ -1402,8 +1405,15 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // attach to the final typed intent rather than stale initial allocation.
   {
     const powerGameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
+    // A POWER WEAKNESS NUDGES THE PRIMER IN ITS OWN RIGHT (Sam's ruling 0, 2026-07-30).
+    //
+    // The role/goal signal already nudged it through speed or strength bias. Power is its
+    // own weakness category now and leans neither of those, so without this line the one
+    // answer that says "power" would have been the one answer the power primer could not
+    // hear.
     const powerBiasNudge =
-      programmingBias.speedBias > 0 || programmingBias.strengthBias > 0;
+      programmingBias.speedBias > 0 || programmingBias.strengthBias > 0 ||
+      weakPointNudgesPower(weakPointFocusFor(inputs.biggestLimitation));
     const powerInjuries: PowerInjuryInput[] = inputs.injuries.map((injury) => ({
       area: `${injury.bodyArea ?? ''} ${injury.description ?? ''}`,
       severity: injury.severity === 'Severe' ? 8 : injury.severity === 'Moderate' ? 5 : 3,
@@ -1443,7 +1453,6 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const finalClassificationContext: StressContext = {
     experienceLevel: inputs.experienceLevel,
     conditioningLevel: inputs.conditioningLevel,
-    teamTrainingIntensity: inputs.teamTrainingIntensity,
   };
   for (const session of weeklyPlan) {
     const stress = classifyGenerationSession(session, finalClassificationContext).stressLevel;
@@ -1587,7 +1596,6 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     gameDay: inputs.gameDay,
     seasonPhase: inputs.seasonPhase ?? null,
     profile: {
-      teamTrainingIntensity: inputs.teamTrainingIntensity,
       conditioningLevel: inputs.conditioningLevel,
     },
     label: 'buildCoachingPlan',
@@ -1672,6 +1680,10 @@ function createSpeedTopUpBlock(
     offseasonSubphase,
     weekNumber: inputs.weekNumber,
     weekInBlock: inputs.weekInBlock,
+    // Accelerations, not top-speed, for a power weakness (Sam's ruling 0).
+    preferAcceleration: weakPointPrefersAcceleration(
+      weakPointFocusFor(inputs.biggestLimitation),
+    ),
   }) ?? createQualitySpeedMicroDoseBlock(placement);
 }
 
@@ -1700,7 +1712,6 @@ function buildWeeklyPlan(
   const classificationContext: StressContext = {
     experienceLevel: inputs.experienceLevel,
     conditioningLevel: inputs.conditioningLevel,
-    teamTrainingIntensity: inputs.teamTrainingIntensity,
   };
   const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   const days = [...inputs.selectedDays];
@@ -8370,7 +8381,6 @@ export function onboardingToCoachingInputs(
     selectedDays: selectedDays as any,
     teamTrainingDaysPerWeek: data.teamTrainingDaysPerWeek || 0,
     teamTrainingDays: teamDays as any,
-    teamTrainingIntensity: data.teamTrainingIntensity,
     sprintExposure: data.sprintExposure,
     conditioningLevel: data.conditioningLevel,
     recentTrainingLoad: data.recentTrainingLoad,

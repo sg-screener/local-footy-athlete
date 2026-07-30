@@ -57,7 +57,6 @@ const PRESEASON_PROFILE: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard',
   sprintExposure: '2+ times per week',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Very consistent',
@@ -125,7 +124,7 @@ console.log('\n── 1. Add Saturday practice match (pre-season) — fully loca
 
   const report = validateProgramWeek({
     days: validatorDaysFromResolvedWeek(resolved),
-    profile: { seasonPhase: 'Pre-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' },
+    profile: { seasonPhase: 'Pre-season', conditioningLevel: 'Good' },
   });
   ok('no game-proximity findings on the rebuilt week',
     report.findings.every((f) => !/^g1_|^g2_|^g_plus1/.test(f.ruleId)),
@@ -152,7 +151,7 @@ console.log('\n── 2. Move the practice match to Sunday ──');
     `${sat?.workout?.sessionTier}: ${sat?.workout?.name}`);
   const report = validateProgramWeek({
     days: validatorDaysFromResolvedWeek(resolved),
-    profile: { seasonPhase: 'Pre-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' },
+    profile: { seasonPhase: 'Pre-season', conditioningLevel: 'Good' },
   });
   ok('moved game: no game-proximity findings',
     report.findings.every((f) => !/^g1_|^g2_|^g_plus1/.test(f.ruleId)),
@@ -174,7 +173,7 @@ console.log('\n── 3. Remove the practice match — non-game pre-season week 
   ok('no Game Day rendered anywhere', resolved.every((d) => d.workout?.workoutType !== 'Game'));
   const report = validateProgramWeek({
     days: validatorDaysFromResolvedWeek(resolved),
-    profile: { seasonPhase: 'Pre-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' },
+    profile: { seasonPhase: 'Pre-season', conditioningLevel: 'Good' },
   });
   ok('no-game week returns to a fuller structure (≥3 strength exposures)',
     report.counts.mainStrengthExposures >= 3, `got ${report.counts.mainStrengthExposures}`);
@@ -203,7 +202,7 @@ console.log('\n── 4. In-season local rebuild keeps regular game behaviour �
     `${fri?.workout?.sessionTier}: ${fri?.workout?.name}`);
   const report = validateProgramWeek({
     days: validatorDaysFromResolvedWeek(resolved),
-    profile: { seasonPhase: 'In-season', teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' },
+    profile: { seasonPhase: 'In-season', conditioningLevel: 'Good' },
   });
   ok('in-season: no game-proximity findings',
     report.findings.every((f) => !/^g1_|^g2_|^g_plus1/.test(f.ruleId)),

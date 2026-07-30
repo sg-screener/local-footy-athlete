@@ -120,13 +120,13 @@ console.log('\n── 1. No sprint/COD finishers anywhere; no hidden sprint expo
       ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
       teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-      teamTrainingIntensity: 'Moderate', recentTrainingLoad: 'Very consistent',
+      recentTrainingLoad: 'Very consistent',
     }],
     ['pre-season S11 (game)', {
       seasonPhase: 'Pre-season', gameDay: 'Saturday', trainingDaysPerWeek: 5,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
       teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-      teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+      sprintExposure: '2+ times per week',
       conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent', injuries: [],
       motivation: 'Get stronger',
     }],
@@ -134,7 +134,7 @@ console.log('\n── 1. No sprint/COD finishers anywhere; no hidden sprint expo
       seasonPhase: 'Pre-season', trainingDaysPerWeek: 5,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
       teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-      teamTrainingIntensity: 'Moderate', sprintExposure: 'Occasionally',
+      sprintExposure: 'Occasionally',
       conditioningLevel: 'Average', recentTrainingLoad: 'Pretty consistent', injuries: [],
       motivation: 'Get stronger',
     }],
@@ -162,7 +162,7 @@ console.log('\n── 2. Lower/hinge days: easy off-feet aerobic only ──');
     ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    teamTrainingIntensity: 'Moderate', recentTrainingLoad: 'Very consistent',
+    recentTrainingLoad: 'Very consistent',
   })];
   for (const plan of plans) {
     const badLower = plan.filter((s) => isLowerish(s) && hasFinisher(s) && finisherAboveEasy(s));
@@ -223,7 +223,7 @@ console.log('\n── 4. Game window + team adjacency apply to finishers ──'
     seasonPhase: 'Pre-season', gameDay: 'Saturday', trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard', sprintExposure: '2+ times per week',
+    sprintExposure: '2+ times per week',
     conditioningLevel: 'Good', recentTrainingLoad: 'Very consistent', injuries: [],
     motivation: 'Get stronger',
   });
@@ -243,7 +243,7 @@ console.log('\n── 5. Label / flavour / category / stress consistency ──'
     ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    teamTrainingIntensity: 'Moderate', recentTrainingLoad: 'Very consistent',
+    recentTrainingLoad: 'Very consistent',
   }];
   for (const p of personas) {
     const plan = planFor(p);
@@ -360,7 +360,7 @@ console.log('\n── 7. Category-native hard work survives; TT weeks stay conse
     ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    teamTrainingIntensity: 'Moderate', recentTrainingLoad: 'Very consistent',
+    recentTrainingLoad: 'Very consistent',
   });
   const s7TempoFinishers = s7.filter((s) => hasFinisher(s) && s.conditioningCategory === 'tempo');
   ok('S7: no tempo finishers in a 3-TT week (all slots TT-adjacent)',
@@ -391,7 +391,7 @@ console.log('\n── 8. 4B standalone tempo modality law (typed conditioningOff
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Moderate', conditioningLevel: 'Elite',
+    conditioningLevel: 'Elite',
     recentTrainingLoad: 'Very consistent', sprintExposure: '2+ times per week',
     injuries: [], motivation: 'Get stronger',
   });
@@ -410,7 +410,7 @@ console.log('\n── 8. 4B standalone tempo modality law (typed conditioningOff
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Moderate', conditioningLevel: 'Elite',
+    conditioningLevel: 'Elite',
     recentTrainingLoad: 'Very consistent', sprintExposure: '2+ times per week',
     injuries: [{ bodyArea: 'Hamstring', description: 'mild hamstring tightness', severity: 'Mild' }] as OnboardingData['injuries'],
     motivation: 'Get stronger',

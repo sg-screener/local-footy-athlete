@@ -157,7 +157,6 @@ function stressContext(profile: OnboardingData): StressContext {
   return {
     experienceLevel: profile.experienceLevel,
     conditioningLevel: profile.conditioningLevel,
-    teamTrainingIntensity: profile.teamTrainingIntensity,
   };
 }
 

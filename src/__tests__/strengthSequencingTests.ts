@@ -332,8 +332,7 @@ section('[4] Pre-season team weeks prefer 3-on / 1-off / 2-on rhythm');
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Monday', 'Wednesday'],
-    teamTrainingIntensity: 'Moderate',
-  }).weeklyPlan;
+    }).weeklyPlan;
 
   const thursday = plan.find(s => s.dayOfWeek === 'Thursday');
   ok('pre-season team week has no 4-core-day run', maxConsecutiveCoreDays(plan) <= 3, shape(plan));
@@ -349,8 +348,7 @@ section('[4] Pre-season team weeks prefer 3-on / 1-off / 2-on rhythm');
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Monday', 'Wednesday'],
-    teamTrainingIntensity: 'Moderate',
-  }).weeklyPlan;
+    }).weeklyPlan;
   const fullWeekThursday = fullWeek.find(s => s.dayOfWeek === 'Thursday');
   const fullWeekSunday = fullWeek.find(s => s.dayOfWeek === 'Sunday');
   ok('fully available pre-season week keeps Thursday as the 3-on/1-off break', fullWeekThursday?.tier !== 'core', shape(fullWeek));

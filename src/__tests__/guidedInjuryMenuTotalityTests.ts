@@ -72,9 +72,37 @@ console.log('\n[1] FORWARD — every row the menu offers resolves to a bucket');
     ok(`"${gone}" is not offered`, !allRows.has(gone),
       'it resolved to no bucket, so tapping it stored an injury that filtered nothing');
   }
-  // The one that stayed, and why: it resolves.
-  ok('"Other midline" stays because it RESOLVES',
-    allRows.has('Other midline') && guidedInjuryBucketForArea('Other midline') === 'lowerBack');
+  // GONE TOO, once the door was wired to Sam's authored matrix: "Other midline" and
+  // "Abs / side" route to none of his 13 regions. They resolved under the old copy's own
+  // `/midline|abs|side/` pattern, which is exactly the kind of answer the copy invented
+  // for itself.
+  for (const gone of ['Other midline', 'Abs / side']) {
+    ok(`"${gone}" is not offered — no authored region routes it`, !allRows.has(gone));
+  }
+
+  // AND THE ROWS THAT STRADDLED TWO REGIONS ARE SPLIT. One row cannot answer which of two
+  // authored regions the athlete meant, and Sam's routing is single-target.
+  ok('"Hip / groin" is split into two rows', allRows.has('Hip') && allRows.has('Groin') &&
+    !allRows.has('Hip / groin'));
+  ok('"Chest / ribs" is split into two rows', allRows.has('Chest') && allRows.has('Ribs') &&
+    !allRows.has('Chest / ribs'));
+  ok('and each half reaches its own authored region',
+    guidedInjuryBucketForArea('Hip') === 'hip' &&
+    guidedInjuryBucketForArea('Groin') === 'groin' &&
+    guidedInjuryBucketForArea('Ribs') === 'ribs' &&
+    guidedInjuryBucketForArea('Chest') === 'shoulder');
+
+  // A LABEL MAY STILL LIST TWO WORDS when both route to ONE region.
+  ok('the surviving slash rows ask one question each',
+    guidedInjuryBucketForArea('Wrist / hand') === 'wrist/hand' &&
+    guidedInjuryBucketForArea('Calf / Achilles') === 'calf' &&
+    guidedInjuryBucketForArea('Ankle / foot') === 'ankle/foot');
+
+  // THE NECK RULING, landed: "Neck" reaches the NECK column, not shoulder.
+  ok('"Neck" reaches Sam\'s neck matrix column', guidedInjuryBucketForArea('Neck') === 'neck');
+  // And Quad reaches quad rather than being proxied to knee.
+  ok('"Quad" reaches the quad column, not knee',
+    guidedInjuryBucketForArea('Quad') === 'quad');
 }
 
 console.log('\n[2] REVERSE — every bucket the exercise tags filter on is reachable');
@@ -90,31 +118,19 @@ console.log('\n[2] REVERSE — every bucket the exercise tags filter on is reach
   const { reachableBuckets } = guidedInjuryMenuTotality();
   const reachable = new Set<string>(reachableBuckets);
   const unreachable = Array.from(tagged).filter((bucket) => !reachable.has(bucket)).sort();
-  // PINNED, not asserted empty, and the four entries are all PROXY MAPPINGS — a
-  // convention this repo already declares ("Comments mark proxy mappings (e.g. quad ->
-  // knee)", `programAdjustmentEngine`). The menu offers the body part; the phrase map
-  // sends it to the bucket whose filters are closest:
+  // ASSERTED EMPTY, and it took a ruling to get here. This list held four PROXY MAPPINGS
+  // when the door had its own phrase map — `hip` and `quad` folded into other regions,
+  // `ribs` rode "Chest / ribs" to shoulder, and `neck` was offered as a row that resolved
+  // to SHOULDER, so the authored neck column was unreachable by any answer.
   //
-  //   hip, quad   fold into "Hip / groin" -> groin and "Quad" -> knee
-  //   ribs        rides "Chest / ribs" -> shoulder
-  //   neck        "Neck" IS offered as its own row, and resolves to SHOULDER
-  //
-  // `neck` is the one worth reading twice, and this gate is what found it: the exercise
-  // tags carry a distinct `neck` key with its own per-exercise values, and no answer the
-  // athlete can give will ever reach it. A neck injury is programmed around as a
-  // shoulder injury. That may well be the right proxy — it is not mine to change — but
-  // it is a Sam question, and it is recorded in the onboarding influence map as one.
-  //
-  // Asserting zero would force a menu row per tag key, which is a different ruling.
-  // What must not happen is this list GROWING.
-  const KNOWN_UNREACHABLE = ['hip', 'neck', 'quad', 'ribs'];
-  const unexpected = unreachable.filter((bucket) => !KNOWN_UNREACHABLE.includes(bucket));
-  const repaired = KNOWN_UNREACHABLE.filter((bucket) => !unreachable.includes(bucket));
-  ok('no NEW exercise-tag bucket is unreachable from the menu', unexpected.length === 0,
-    `the tags can filter on ${unexpected.join(', ')} and no menu row reaches it — a `
-    + 'filter the athlete can never trigger');
-  ok('the known-unreachable list is still exactly three', repaired.length === 0,
-    { repaired, note: 'if a row now reaches these, delete them from the list in the same commit' });
+  // Sam ruled the door wired to his authored matrix (2026-07-30). All four repaired at
+  // once, because they were never four defects — they were one copy disagreeing with the
+  // owner. The list is DELETED rather than emptied, so a future proxy has to argue for
+  // itself here rather than inherit an allowance.
+  ok('EVERY exercise-tag bucket is reachable from the menu', unreachable.length === 0,
+    `the tags can filter on ${unreachable.join(', ')} and no menu row reaches it — a `
+    + 'filter the athlete can never trigger. Sam\'s 13 regions are all offered; a new '
+    + 'unreachable one means a row was removed or the routing owner changed.');
 }
 
 console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never stored');
@@ -127,10 +143,12 @@ console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never st
     GUIDED_INJURY_AREA_HINT.length > 0);
 
   ok('a programmable area passes the predicate', guidedInjuryAreaIsProgrammable('hamstring'));
-  // "rib cage thing" is deliberately NOT in this list — `/rib/` matches, so it resolves
-  // to shoulder and is programmable. It was in the first draft of this cell and the run
-  // corrected it, which is the cell doing its job on itself.
-  for (const unprogrammable of ['jaw', 'tricep', 'shin', 'dunno']) {
+  // THIS LIST HAS BEEN CORRECTED TWICE BY ITS OWN RUNS, which is worth recording because
+  // both corrections were the harness being wrong about the app. "rib cage thing" routes
+  // (ribs is a region). "tricep" routes to ELBOW — Sam's map covers it. What is left is
+  // genuinely unroutable, and the shortness of the list is itself the finding: his
+  // authored routing covers far more free text than the copy did.
+  for (const unprogrammable of ['jaw', 'shin', 'dunno', 'everything']) {
     ok(`"${unprogrammable}" is refused rather than accepted`,
       !guidedInjuryAreaIsProgrammable(unprogrammable));
   }
@@ -174,6 +192,8 @@ console.log('\n[4] THE SHEET refuses at the point of answering');
 
 console.log(`\nGuided injury menu totality: ${passed} passed, ${failures.length} failed`);
 console.log('  DEPTH (L13): 0 — a pure predicate over an authored menu.');
-console.log('  NOT COVERED: option 2 — the THREE body-part phrase maps are not yet one');
-console.log('  owner, so "shin" still means different things at different doors.');
+console.log('  This door now routes through data/injuryRegions.ts — Sam\'s 13 authored');
+console.log('  regions. NOT COVERED (census LR-27): programAdjustmentEngine and');
+console.log('  sessionBuilder still carry their own copies, so other doors can still');
+console.log('  disagree with the owner about a word.');
 if (failures.length > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

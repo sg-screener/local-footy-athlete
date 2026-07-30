@@ -94,7 +94,6 @@ function profile(args: {
     ],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',

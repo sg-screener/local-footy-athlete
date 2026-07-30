@@ -1,5 +1,6 @@
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import type { InjuryBucket } from './injuryAdjustmentEngine';
+import { resolveInjuryRegion } from '../data/injuryRegions';
 import {
   classifyBibleInjurySeverity,
   injurySeverityPausesAffectedTraining,
@@ -46,14 +47,34 @@ export const GUIDED_INJURY_REGION_OPTIONS: Array<{ id: GuidedInjuryRegion; label
  * "Other midline" STAYS because it resolves (`/midline/` → lowerBack). Sam named the
  * upper and lower rows specifically, and a row that works is not a row to delete.
  *
- * The athlete whose area is genuinely none of these now picks the CLOSEST one — the
- * sheet says so in Sam's own words — or asks the coach. `guidedInjuryMenuTotality`
- * below is the gate, and it holds in both directions.
+ * AND EVERY ROW IS NOW ONE AUTHORED REGION, which is what wiring the door to Sam's matrix
+ * (his ruling, 2026-07-30) actually required:
+ *
+ *   "Hip / groin"   SPLIT into Hip and Groin — they are two of his 13 regions, and one
+ *                   row could not say which the athlete meant.
+ *   "Chest / ribs"  SPLIT into Chest and Ribs. Ribs became its own region on 2026-07-28,
+ *                   and this row is the exact thing the matrix owner's header calls out:
+ *                   "`guidedInjuryControl` sent 'rib' to the shoulder, which stopped being
+ *                   true the moment ribs became a region."
+ *   "Abs / side"    GONE — no authored region routes it. "Other midline" likewise.
+ *   "Quad"          unchanged as a label, but it now reaches the QUAD column instead of
+ *                   being proxied to knee.
+ *
+ * The rows that keep a slash — "Wrist / hand", "Calf / Achilles", "Ankle / foot" — are the
+ * ones where BOTH words route to the SAME region, so the label lists two body parts and
+ * still asks one question. Sam's routing is single-target and these rows respect it.
+ *
+ * COPY: the two splits and the two removals are athlete-facing changes. PROPOSED, NOT
+ * SIGNED — they go to Sam with the copy batch.
+ *
+ * The athlete whose area is genuinely none of these picks the CLOSEST one — the sheet says
+ * so in Sam's own words — or asks the coach. `guidedInjuryMenuTotality` below is the gate,
+ * and it holds in both directions.
  */
 export const GUIDED_INJURY_AREA_OPTIONS: Record<Exclude<GuidedInjuryRegion, 'other'>, string[]> = {
-  upper_body: ['Neck', 'Shoulder', 'Elbow', 'Wrist / hand', 'Chest / ribs'],
-  lower_body: ['Hip / groin', 'Hamstring', 'Quad', 'Knee', 'Calf / Achilles', 'Ankle / foot'],
-  back_midline: ['Lower back', 'Upper back', 'Abs / side', 'Neck', 'Other midline'],
+  upper_body: ['Neck', 'Shoulder', 'Chest', 'Ribs', 'Elbow', 'Wrist / hand'],
+  lower_body: ['Hip', 'Groin', 'Hamstring', 'Quad', 'Knee', 'Calf / Achilles', 'Ankle / foot'],
+  back_midline: ['Lower back', 'Upper back', 'Neck'],
 };
 
 /**
@@ -159,18 +180,38 @@ function normaliseKey(value: string): string {
     .replace(/^-+|-+$/g, '') || 'unknown';
 }
 
+/**
+ * WIRED TO SAM'S AUTHORED MATRIX (his ruling, 2026-07-30 — "wire the guided door to
+ * Sam's authored neck matrix column").
+ *
+ * `data/injuryRegions.ts` is THE single owner of body-part routing: 13 regions,
+ * GENERATED from `docs/INJURY_MATRIX_RULINGS_2026-07-28.json`, single-target by his
+ * 2026-07-28 ruling. Its own header names five divergent copies it replaced — and
+ * `utils/guidedInjuryControl` is on that list. **The owner landed; this door never got
+ * wired to it.** So the eleven patterns below were not one of three accidental maps: they
+ * were a copy that survived its own consolidation.
+ *
+ * WHAT THAT COST, in the owner's own words: "`guidedInjuryControl` sent 'rib' to the
+ * shoulder, which stopped being true the moment ribs became a region" — and a neck
+ * complaint could not reach the neck column at all. `guidedInjuryMenuTotalityTests` found
+ * the neck half from the other side, as an authored filter no answer could trigger.
+ *
+ * `InjuryRegion` and `InjuryBucket` are the same thirteen keys (`keyof InjuryProfile`),
+ * so this is a delegation and not a translation — which is the point. A translation is
+ * what the copies were.
+ */
 export function guidedInjuryBucketForArea(area: string): InjuryBucket | null {
-  const key = area.trim().toLowerCase();
-  if (/shoulder|neck|chest|rib|pec/.test(key)) return 'shoulder';
-  if (/elbow/.test(key)) return 'elbow';
-  if (/wrist|hand/.test(key)) return 'wrist/hand';
-  if (/groin|adductor/.test(key)) return 'groin';
-  if (/hip/.test(key)) return 'groin';
-  if (/hamstring|hammy/.test(key)) return 'hamstring';
-  if (/knee|quad/.test(key)) return 'knee';
-  if (/calf|achilles/.test(key)) return 'calf';
-  if (/ankle|foot/.test(key)) return 'ankle/foot';
-  if (/lower back|upper back|back|midline|abs|side/.test(key)) return 'lowerBack';
+  const direct = resolveInjuryRegion(area);
+  if (direct) return direct as InjuryBucket;
+  // A LABEL MAY LIST TWO WORDS FOR ONE REGION ("Wrist / hand"). Splitting and asking the
+  // owner about each part is parsing the label, not translating it — and it is safe
+  // precisely because no remaining row straddles two regions, so the first part that
+  // routes is the only region the label can mean. It also catches free text typed the
+  // same way ("calf/achilles").
+  for (const part of area.split('/')) {
+    const routed = resolveInjuryRegion(part);
+    if (routed) return routed as InjuryBucket;
+  }
   return null;
 }
 

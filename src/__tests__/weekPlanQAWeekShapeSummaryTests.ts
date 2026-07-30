@@ -108,7 +108,6 @@ console.log('\n[1] readable week-shape summary includes Mon-Sun sessions, counts
     days: validatorDaysFromResolvedWeek(resolvedWeek),
     profile: {
       seasonPhase: 'Pre-season',
-      teamTrainingIntensity: 'Hard',
       conditioningLevel: 'Good',
     },
   });

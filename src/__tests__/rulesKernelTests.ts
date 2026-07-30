@@ -316,8 +316,14 @@ const unit = (category: SessionUnit['category'], modality: SessionUnit['modality
 
 ok('game → high', classifySessionStress(unit('game', 'running')) === 'high');
 ok('team training (default) → high', classifySessionStress(unit('team_training', 'running')) === 'high');
-ok('team training (Light profile) → medium',
-  classifySessionStress(unit('team_training', 'running'), null, { teamTrainingIntensity: 'Light' }) === 'medium');
+// A TEAM NIGHT IS A HARD DAY, UNCONDITIONALLY (Sam's ruling, 2026-07-30). This cell used
+// to assert the opposite — that a "Light" onboarding answer downshifted a team night to
+// medium stress, which took it off the hard-day budget for the whole season. Two Bible
+// lines were in tension (`:119` lists team training as a hard day; `:704` gives the
+// athlete's Light/Moderate/Hard scale) and Sam ruled `:119` governs. The scale now seeds
+// team-night SIZE instead — see docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md.
+ok('team training is high stress whatever the athlete answered',
+  classifySessionStress(unit('team_training', 'running')) === 'high');
 ok('lower strength → high', classifySessionStress(unit('lower_strength')) === 'high');
 ok('sprint → high', classifySessionStress(unit('sprint', 'running')) === 'high');
 ok('hard conditioning → high', classifySessionStress(unit('hard_conditioning', 'running')) === 'high');
@@ -358,7 +364,7 @@ const OPTION_1_WEEK: WeekDayInput[] = [
   { date: '2026-06-07', workout: mkWorkout({ name: 'Recovery Session', workoutType: 'Recovery', sessionTier: 'recovery' }) },
 ];
 
-const counts = countWeeklyExposures(OPTION_1_WEEK, { teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' });
+const counts = countWeeklyExposures(OPTION_1_WEEK, { conditioningLevel: 'Good' });
 
 ok('main strength = 3 (lower + 2 upper on team days)', counts.mainStrengthExposures === 3, `got ${counts.mainStrengthExposures}`);
 ok('hard exposures = 4 (lower, 2×TT, game)', counts.hardExposures === 4, `got ${counts.hardExposures}`);
@@ -716,7 +722,6 @@ const IN_SEASON_PROFILE: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard',
   sprintExposure: '2+ times per week',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Very consistent',
@@ -781,7 +786,6 @@ try {
   const resolved = resolveWeekWithConditioning(TEST_MONDAY, state);
   const weekInput: WeekDayInput[] = resolved.map((d) => ({ date: d.date, workout: d.workout }));
   const liveCounts = countWeeklyExposures(weekInput, {
-    teamTrainingIntensity: 'Hard',
     conditioningLevel: 'Good',
     experienceLevel: '2-5 years',
   });

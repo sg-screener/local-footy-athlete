@@ -50,7 +50,6 @@ function baseProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',

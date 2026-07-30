@@ -200,7 +200,6 @@ section('[4] Team/game anchors and pre-season team rhythm remain protected');
     seasonPhase: 'In-season',
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     hasGame: true,
     gameDay: 'Saturday',
   }).weeklyPlan;
@@ -223,7 +222,6 @@ section('[4] Team/game anchors and pre-season team rhythm remain protected');
     seasonPhase: 'Pre-season',
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     hasGame: false,
     gameDay: undefined,
     weekInBlock: 2,

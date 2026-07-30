@@ -88,7 +88,6 @@ function athlete(args: {
     availabilityConstraints: args.constraints,
     teamTrainingDaysPerWeek: tt,
     teamTrainingDays: teamDays[tt],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',
