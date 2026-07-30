@@ -58,6 +58,34 @@ export type EquipmentSelectionCompleteness = 'complete' | 'legacy_incomplete';
 /** Canonical conditioning-machine capabilities; treadmill is deliberately not off-feet. */
 export type ConditioningEquipmentModality = 'bike' | 'row' | 'ski' | 'treadmill';
 
+/**
+ * One athlete decision about one piece of equipment. The two values carry
+ * different SILENCES (Sam's ownership sheet §2.2, 2026-07-31): an item left
+ * unmarked means "not today" — the app may ask again or offer it — while
+ * `never` is a standing instruction to stop offering it, permanently. For
+ * capability resolution the two are identical: neither is programmed on.
+ */
+export type EquipmentPossession = 'have' | 'never';
+
+/**
+ * THE EQUIPMENT ANSWER — a typed profile decision (Sam's ruling 2, 2026-07-31).
+ *
+ * The keys an athlete is asked about are DERIVED from the exercise library
+ * (`rules/equipmentVocabulary`), never authored beside it. Availability is a
+ * derivation over this answer plus dated temporary facts; nothing stores its
+ * output. Under L15 this is the only baseline-equipment shape anything writes
+ * from now on — `equipment` + `equipmentSelectionCompleteness` are read-ingress
+ * only.
+ */
+export interface EquipmentAnswer {
+  /** Per askable equipment tag; absent = not today. */
+  readonly tags: Readonly<Partial<Record<import('../data/exercisePools').EquipmentTag, EquipmentPossession>>>;
+  /** Per conditioning machine; absent = not today. */
+  readonly modalities: Readonly<Partial<Record<ConditioningEquipmentModality, EquipmentPossession>>>;
+  /** ISO date of the answer/last edit — what makes "answered" representable. */
+  readonly answeredOn: string;
+}
+
 // Onboarding types for new user setup
 export type AgeRange = 'Under 18' | '18-22' | '22-26' | '26-30' | '30+';
 
@@ -166,6 +194,8 @@ export interface OnboardingData {
    * positive availability and may be supplemented by the location baseline.
    */
   equipmentSelectionCompleteness?: EquipmentSelectionCompleteness;
+  /** The typed equipment decision. Outranks every legacy equipment shape. */
+  equipmentAnswer?: EquipmentAnswer;
   experienceLevel?: ExperienceLevel;
   squatStrength?: SquatStrength;
   benchStrength?: BenchStrength;

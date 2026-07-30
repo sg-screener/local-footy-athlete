@@ -46,6 +46,11 @@ import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
 import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
 import {
+  CONDITIONING_MODALITY_LABELS,
+  EQUIPMENT_TAG_LABELS,
+  type AskableEquipmentTag,
+} from '../../rules/equipmentVocabulary';
+import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
 } from '../../utils/onboardingSteps';
@@ -116,6 +121,33 @@ const formatTeamIntensity = (intensity?: TeamTrainingIntensity): string | null =
  */
 const formatTeamSessions = (data: OnboardingData): string | null =>
   formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined);
+
+/**
+ * The equipment answer, in the same labels the step uses (one label owner —
+ * `rules/equipmentVocabulary`). HAVE items are listed; a NEVER-only or empty
+ * answer reads "Bodyweight only", which is exactly what generation will do
+ * with it. A legacy explicitly-complete selection (already an answer) shows
+ * its own options so the row is never blank for an answered athlete.
+ */
+const formatEquipmentAnswer = (data: OnboardingData): string => {
+  const answer = data.equipmentAnswer;
+  if (answer) {
+    const haveTags = (Object.keys(EQUIPMENT_TAG_LABELS) as AskableEquipmentTag[])
+      .filter((tag) => answer.tags[tag] === 'have')
+      .map((tag) => EQUIPMENT_TAG_LABELS[tag]);
+    const haveModalities = (
+      Object.keys(CONDITIONING_MODALITY_LABELS) as (keyof typeof CONDITIONING_MODALITY_LABELS)[]
+    )
+      .filter((modality) => answer.modalities[modality] === 'have')
+      .map((modality) => CONDITIONING_MODALITY_LABELS[modality]);
+    const parts = [...haveTags, ...haveModalities];
+    return parts.length > 0 ? parts.join(', ') : 'Bodyweight only';
+  }
+  if (data.equipmentSelectionCompleteness === 'complete' && (data.equipment ?? []).length > 0) {
+    return (data.equipment ?? []).join(', ');
+  }
+  return 'Not selected';
+};
 
 const formatExperience = (value?: ExperienceLevel): string => {
   if (!value) return 'Not selected';
@@ -283,6 +315,12 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     step: 'PreferredTrainingDays',
     value: (data) =>
       formatDays(data.preferredTrainingDays as DayOfWeek[] | undefined) ?? 'Not selected',
+  },
+  {
+    section: 'Training',
+    label: 'Equipment',
+    step: 'Equipment',
+    value: formatEquipmentAnswer,
   },
   {
     section: 'Physical',

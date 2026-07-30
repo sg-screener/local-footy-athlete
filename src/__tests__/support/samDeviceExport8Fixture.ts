@@ -85,6 +85,25 @@ export function samExport8Profile(): OnboardingData {
 }
 
 /**
+ * NOT part of the export. The export predates the equipment door (its profile
+ * carries the unauthored 8-tag checklist and no `equipmentAnswer`), but the
+ * conformance WALK reaches state by acting through TODAY'S doors, and today's
+ * flow asks the equipment question. This is the answer Sam gives at that door,
+ * expressed from his exported tags — plus the founding complaint, expressed the
+ * way the door now lets him express it: ski erg NEVER.
+ */
+export function samExport8EquipmentAnswerThroughTheDoor(): NonNullable<OnboardingData['equipmentAnswer']> {
+  return {
+    tags: {
+      barbell: 'have', dumbbells: 'have', pullup_bar: 'have',
+      cables: 'have', machine: 'have', bands: 'have', bench: 'have',
+    },
+    modalities: { bike: 'have', row: 'have', treadmill: 'have', ski: 'never' },
+    answeredOn: '2026-07-31',
+  };
+}
+
+/**
  * His calendar, verbatim. Two explicit fixtures and two rest marks — note that
  * 2026-07-31 is the Friday before the 08-01 game (his G-1) and carries a rest
  * mark, and 2026-07-28 is a Tuesday rest.

@@ -24,7 +24,10 @@ import {
 import { todayISOLocal } from './appDate';
 
 export type EquipmentAvailabilityProfile =
-  Pick<OnboardingData, 'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness'> | null | undefined;
+  Pick<
+    OnboardingData,
+    'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness' | 'equipmentAnswer'
+  > | null | undefined;
 
 export type TemporaryEquipmentPresetId =
   | 'bodyweight_only'
@@ -202,6 +205,8 @@ const LOCATION_CONDITIONING_MODALITIES: Readonly<Record<TrainingLocation, readon
 };
 
 export type EquipmentCapabilitySource =
+  /** The typed `equipmentAnswer` decision — the only path new saves take. */
+  | 'athlete_answer'
   | 'location_baseline'
   | 'legacy_positive_plus_location'
   | 'complete_selection';
@@ -497,12 +502,65 @@ function applyEquipmentConstraints(
   return tags;
 }
 
+/**
+ * Has this athlete ever ANSWERED the equipment question?
+ *
+ * True for the typed `equipmentAnswer` (the door being built for it is the
+ * onboarding step + profile surface), and for a legacy explicitly-complete
+ * selection — a real decision written by the coach baseline door, lifted at
+ * read under L15. FALSE for the unauthored 8-tag store constant and every
+ * other legacy shape: nobody answered those, and counting them would hand
+ * every existing install the fantasy gym as an "answer".
+ *
+ * This is the predicate generation's refusal reads: an unanswered profile is
+ * refused, never defaulted (Sam's ruling 2; the `DEFAULT_PROGRAM` precedent).
+ */
+export function equipmentAnswered(profile: EquipmentAvailabilityProfile): boolean {
+  if (profile?.equipmentAnswer) return true;
+  return profile?.equipmentSelectionCompleteness === 'complete';
+}
+
+function resolveAnsweredCapabilities(
+  answer: NonNullable<NonNullable<EquipmentAvailabilityProfile>['equipmentAnswer']>,
+  constraints: readonly unknown[] | null | undefined,
+  effectiveDate: string,
+): ResolvedEquipmentCapabilities {
+  const tags: EquipmentTag[] = ['bodyweight'];
+  for (const [tag, possession] of Object.entries(answer.tags)) {
+    if (possession === 'have') addUnique(tags, [tag as EquipmentTag]);
+  }
+  const modalities: ConditioningEquipmentModality[] = [];
+  for (const [modality, possession] of Object.entries(answer.modalities)) {
+    if (possession === 'have') modalities.push(modality as ConditioningEquipmentModality);
+  }
+
+  const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
+  const constrainedModalities = applyConditioningModalityConstraints(
+    modalities, constraints, effectiveDate,
+  );
+  const finalTags = constrainedModalities.length > 0
+    ? Array.from(new Set([...constrainedTags, 'bike_or_treadmill' as const]))
+    : constrainedTags.filter((tag) => tag !== 'bike_or_treadmill');
+  return {
+    tags: finalTags,
+    conditioningModalities: constrainedModalities,
+    selectionCompleteness: 'complete',
+    source: 'athlete_answer',
+  };
+}
+
 export function resolveEquipmentCapabilities(
   profile: EquipmentAvailabilityProfile,
   constraints?: readonly unknown[] | null,
   dateISO?: string,
 ): ResolvedEquipmentCapabilities {
   const effectiveDate = dateISO ?? localTodayISO();
+  // The typed decision outranks every legacy shape. On this path no location,
+  // constant or union branch contributes anything — the athlete's answer is
+  // the whole input, which is the point of the equipment unit.
+  if (profile?.equipmentAnswer) {
+    return resolveAnsweredCapabilities(profile.equipmentAnswer, constraints, effectiveDate);
+  }
   const checklist = (profile?.equipment ?? [])
     .map((item) => String(item ?? '').trim())
     .filter(Boolean);

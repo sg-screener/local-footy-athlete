@@ -1,5 +1,6 @@
 import type { OnboardingData } from '../types/domain';
 import { resolveMotivation } from '../rules/motivationGoals';
+import { equipmentAnswered } from './equipmentAvailability';
 
 /**
  * THE onboarding step registry.
@@ -28,6 +29,7 @@ export type OnboardingStepName =
   | 'TeamTrainingDuration'
   | 'TrainingCommitment'
   | 'PreferredTrainingDays'
+  | 'Equipment'
   | 'GymExperience'
   | 'SquatStrength'
   | 'BenchStrength'
@@ -161,6 +163,21 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['preferredTrainingDays'],
     visible: always,
     satisfied: (data) => filled(data.preferredTrainingDays),
+  },
+  {
+    name: 'Equipment',
+    // REQUIRED (Sam's ruling 2, 2026-07-31): generation does not run without an
+    // equipment answer, so this step has no skip. The checklist's CONTENT is
+    // derived from the exercise library (`rules/equipmentVocabulary`), never
+    // authored beside it. Answering "I have none of these" is an answer —
+    // refusal is for silence, not poverty.
+    answerLabel: 'what equipment you have',
+    collects: ['equipmentAnswer'],
+    visible: always,
+    // `equipmentAnswered`, not `filled`: a legacy explicitly-complete selection
+    // (the coach baseline door's shape) already answered this question, and an
+    // existing install that did so must not be marched back through the step.
+    satisfied: (data) => equipmentAnswered(data),
   },
   {
     name: 'GymExperience',

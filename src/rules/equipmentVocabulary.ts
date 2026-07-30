@@ -290,5 +290,35 @@ export function derivedConditioningModalityQuestions(): ConditioningEquipmentMod
   return deriveEquipmentVocabulary().requiredModalities.map((demand) => demand.modality);
 }
 
+/** A tag the checklist asks about (the derived list's element type). */
+export type AskableEquipmentTag = Exclude<EquipmentTag, 'bodyweight' | 'bike_or_treadmill'>;
+
+/**
+ * ATHLETE-FACING LABELS — one owner for the step, the profile surface and the
+ * Review row, so no two surfaces can describe one answer differently.
+ *
+ * PROPOSED COPY: rides to Sam with the audit sheet (§4 flags the wording as
+ * his); the Records are exhaustive over the vocabulary so a new askable tag
+ * cannot ship unlabelled — it fails compilation here instead.
+ */
+export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>> = {
+  barbell: 'Barbell & rack',
+  dumbbells: 'Dumbbells',
+  cables: 'Cable machine',
+  machine: 'Weight machines',
+  bands: 'Resistance bands',
+  bench: 'Bench',
+  pullup_bar: 'Pull-up bar',
+  kettlebell: 'Kettlebell',
+  foam_roller: 'Foam roller',
+};
+
+export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipmentModality, string>> = {
+  bike: 'Bike or bike erg',
+  row: 'Row erg',
+  ski: 'Ski erg',
+  treadmill: 'Treadmill',
+};
+
 /** Referenced so the rendering rules stay an import-checked source. */
 export const MODALITY_RULE_COUNT = MODALITY_RENDERING_RULES.length;

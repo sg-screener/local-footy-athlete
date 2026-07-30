@@ -58,6 +58,7 @@ import {
 import {
   SAM_EXPORT_8_CONFORMANCE_SHAPE,
   describeConformanceShape,
+  samExport8EquipmentAnswerThroughTheDoor,
 } from './support/samDeviceExport8Fixture';
 
 let passed = 0;
@@ -142,6 +143,18 @@ function profileFor(rng: () => number): OnboardingData {
     recentTrainingLoad: 'Very consistent',
     injuries: [],
     twoKmTimeTrial: { seconds: 420, recordedOn: INSTALL_DAY, source: 'onboarding' },
+    // The equipment door is a required step now; a walked athlete answers it.
+    // Full kit, matching what the retired location union used to resolve, so
+    // the walker's worlds keep their capability envelope.
+    equipmentAnswer: {
+      tags: {
+        barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+        bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+        foam_roller: 'have',
+      },
+      modalities: { bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+      answeredOn: INSTALL_DAY,
+    },
     ...(gameDay ? { usualGameDay: gameDay, gameDay } : {}),
   } as unknown as OnboardingData;
 }
@@ -663,7 +676,15 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
   const shape = SAM_EXPORT_8_CONFORMANCE_SHAPE;
   freshInstall();
   const history: WalkerAction[] = [
-    { kind: 'answer_onboarding', profile: shape.profile() },
+    // The export predates the equipment door; today's flow asks, so today's
+    // walk answers — see the fixture helper for why this is not in the export.
+    {
+      kind: 'answer_onboarding',
+      profile: {
+        ...shape.profile(),
+        equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+      },
+    },
     { kind: 'generate_program' },
   ];
   for (const [date, mark] of Object.entries(shape.markedDays)) {
