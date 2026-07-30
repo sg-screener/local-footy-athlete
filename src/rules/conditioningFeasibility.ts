@@ -12,7 +12,7 @@ import type { ResolvedEquipmentCapabilities } from '../utils/equipmentAvailabili
 import { injurySeverityReducesAffectedWork } from './injurySeverityBands';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
-import type { Section18EquipmentPolicyState } from './weeklyExposureContractV2';
+import type { Section18ConditioningStress, Section18EquipmentPolicyState } from './weeklyExposureContractV2';
 import { selectDefaultAerobicErgModalityFromHash } from '../utils/sessionBuilder';
 
 type ErgModality = NonNullable<SessionAllocation['ergModality']>;
@@ -347,6 +347,54 @@ export function resolveWeeklyConditioningFeasibility(
   return weeklyPlan.map((entry) => resolveConditioningFeasibility(entry, context));
 }
 
+/**
+ * The authored row name for each non-machine substitution family, by stress.
+ *
+ * THE SINGLE SOURCE for these names — `applyResolvedConditioningSubstitution`
+ * below looks its answer up here, and `rules/projectionCopy.ts` derives its
+ * signed-copy registration from `CONDITIONING_SUBSTITUTION_ROW_NAMES`
+ * (exported below) rather than transcribing the strings a second time. A
+ * family added here is automatically both emittable AND signed; one that is
+ * signed but never emitted, or emitted but never signed, cannot happen by
+ * construction.
+ *
+ * A family with one string (not `{ hard, other }`) does not vary by stress.
+ */
+export const CONDITIONING_SUBSTITUTION_LABELS: Readonly<
+  Partial<Record<ConditioningSubstitutionFamily, { hard: string; other: string } | string>>
+> = {
+  treadmill: { hard: 'Treadmill Intervals', other: 'Treadmill Aerobic Work' },
+  outdoor_running: { hard: 'Outdoor Running Intervals', other: 'Outdoor Aerobic Run' },
+  hill_running_or_walking: { hard: 'Hill Running Intervals', other: 'Brisk Hill Walk' },
+  brisk_walking: 'Brisk Walking',
+  bodyweight_circuit: 'Bodyweight Conditioning Circuit',
+};
+
+/** The label for any family not listed in `CONDITIONING_SUBSTITUTION_LABELS`. */
+export const CONDITIONING_SUBSTITUTION_DEFAULT_LABEL = 'Mixed-Modal Conditioning Circuit';
+
+function conditioningSubstitutionLabel(
+  family: ConditioningSubstitutionFamily,
+  stress: Section18ConditioningStress,
+): string {
+  const entry = CONDITIONING_SUBSTITUTION_LABELS[family];
+  if (!entry) return CONDITIONING_SUBSTITUTION_DEFAULT_LABEL;
+  if (typeof entry === 'string') return entry;
+  return stress === 'hard' ? entry.hard : entry.other;
+}
+
+/**
+ * Every row name `applyResolvedConditioningSubstitution` can emit — the flat
+ * form `projectionCopy.ts` registers as signed copy. Derived, not
+ * transcribed: a new family or a re-worded label here changes this list for
+ * free.
+ */
+export const CONDITIONING_SUBSTITUTION_ROW_NAMES: readonly string[] = [
+  ...Object.values(CONDITIONING_SUBSTITUTION_LABELS).flatMap((entry) =>
+    (typeof entry === 'string' ? [entry] : [entry.hard, entry.other])),
+  CONDITIONING_SUBSTITUTION_DEFAULT_LABEL,
+];
+
 /** Make a non-machine substitution real in canonical content, not metadata-only. */
 export function applyResolvedConditioningSubstitution(workout: Workout): Workout {
   const family = workout.conditioningFeasibility?.resolvedSubstitutionFamily;
@@ -356,17 +404,7 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
   }
   const stress = workout.section18Evidence?.conditioningStress ??
     (workout.intensity === 'High' || workout.intensity === 'Maximal' ? 'hard' : 'moderate');
-  const label = family === 'treadmill'
-    ? stress === 'hard' ? 'Treadmill Intervals' : 'Treadmill Aerobic Work'
-    : family === 'outdoor_running'
-      ? stress === 'hard' ? 'Outdoor Running Intervals' : 'Outdoor Aerobic Run'
-      : family === 'hill_running_or_walking'
-        ? stress === 'hard' ? 'Hill Running Intervals' : 'Brisk Hill Walk'
-        : family === 'brisk_walking'
-          ? 'Brisk Walking'
-          : family === 'bodyweight_circuit'
-            ? 'Bodyweight Conditioning Circuit'
-            : 'Mixed-Modal Conditioning Circuit';
+  const label = conditioningSubstitutionLabel(family, stress);
   const description = stress === 'hard'
     ? 'Complete the prescribed hard work and recovery structure at the same intended session stress.'
     : stress === 'light'

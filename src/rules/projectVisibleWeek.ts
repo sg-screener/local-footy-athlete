@@ -45,7 +45,7 @@ import {
   registerProjectionCopy,
   STRENGTH_HEADLINE_ID_BY_LABEL,
 } from './projectionCopy';
-import { signedCopy, signedCopyEntry, type SignedCopy } from './signedCopy';
+import { signedCopy, type SignedCopy } from './signedCopy';
 import {
   PART_COUNTS_TOWARD_LOAD,
   type DayCapabilities,
@@ -173,21 +173,25 @@ function prescriptionCopy(row: any): SignedCopy {
 /**
  * A raw row's exercise name, as `SignedCopy`.
  *
- * Never composed: most names a builder emits are members of the locked
+ * Never composed: every name a builder emits traces to either the locked
  * vocabulary (`selectableExerciseVocabulary.ts`, exercise-name-literal-lock
- * unit) or the small conditioning-equipment-substitution set — both
- * bulk-registered by `projectionCopy.ts`. Canonicalising before lookup handles
- * spelling/case variants the same way `hasCuratedCue` already does. A name
- * that traces to neither falls to the generic `exercise.name.unlisted`
- * placeholder rather than throwing — `project()` must not throw for a
- * generated week, and a generic word is honest about the gap where an
- * invented one would not be.
+ * unit) or the small, structurally-closed conditioning-equipment-substitution
+ * set (`conditioningFeasibility.ts`'s own exported list) — both
+ * bulk-registered by `projectionCopy.ts`. Canonicalising before lookup
+ * handles spelling/case variants the same way `hasCuratedCue` already does.
+ *
+ * NO FALLBACK, on purpose — the template-blank law
+ * (`artifacts/COPY_SHEET_RULINGS_2026-07-30.md` batch 2, ruling 1): "an
+ * unmapped engine value fails the build rather than falling back." A row name
+ * that resolves to neither traced source is a THIRD source this projection
+ * does not yet know about, and the honest behaviour is `UnsignedCopyError` —
+ * the gate goes red and names the gap — not a generic word an athlete would
+ * read as if it were the real exercise.
  */
 function rowName(row: any): SignedCopy {
   const raw = String(row?.exercise?.name ?? row?.name ?? '');
   const canonical = canonicalExerciseName(raw);
-  const id = exerciseNameCopyId(canonical);
-  return signedCopyEntry(id) ? signedCopy(id) : signedCopy('exercise.name.unlisted');
+  return signedCopy(exerciseNameCopyId(canonical));
 }
 
 function rowCue(row: any): SignedCopy | null {
@@ -353,6 +357,15 @@ function partHeadline(
   rows: readonly VisibleRow[],
 ): SignedCopy {
   if (kind === 'strength') {
+    // `focus`/`name` are deliberately NOT passed. `resolveSessionDisplayName`'s
+    // last-resort precedence step is a cleaned pass-through of exactly those
+    // fields, and that pass-through is defect 3's mechanism (planner-internal
+    // text like "aerobic conditioning component" reaching a headline via a
+    // punctuation tidier — see `surfaceAgreementTests.ts` cell 3, and this
+    // module's own header). Omitting them means this call can only ever
+    // return one of the pinned strength labels or fall through to `partHeadline`'s
+    // own generic fallback below — never composed/pass-through text. Do not
+    // add them back without re-closing that path.
     const resolved = resolveSessionDisplayName({
       strengthIntent: workout?.strengthIntent,
       exercises: rows.map((row) => ({ name: row.name })),

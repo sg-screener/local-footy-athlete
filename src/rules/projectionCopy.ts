@@ -57,34 +57,7 @@ import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import { TEAM_ONLY_NAME } from '../utils/sessionNaming';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
-
-/**
- * Conditioning-equipment-substitution row names.
- *
- * `applyResolvedConditioningSubstitution` (`rules/conditioningFeasibility.ts`)
- * renames a conditioning row's exercise to one of these when equipment forces
- * a modality swap ("Brisk Walking" and siblings). They are authored text, not
- * a builder's free choice, but they are NOT selectable generator vocabulary
- * (`exerciseNameCanonicalisationTests.ts`: "freeform... text is exempt by
- * render path, not [selectable-pool] naming rights") — so
- * `selectableExerciseNames()` does not carry them and they need their own
- * trace here. Transcribed from `conditioningFeasibility.ts:359-369`, the one
- * place that emits them — a transcription, not a derivation, so a new
- * substitution family added there needs this list updated by hand; recorded
- * as a known drift risk in the task report rather than solved with a second
- * test file in this task.
- */
-export const CONDITIONING_SUBSTITUTION_ROW_NAMES: readonly string[] = [
-  'Treadmill Intervals',
-  'Treadmill Aerobic Work',
-  'Outdoor Running Intervals',
-  'Outdoor Aerobic Run',
-  'Hill Running Intervals',
-  'Brisk Hill Walk',
-  'Brisk Walking',
-  'Bodyweight Conditioning Circuit',
-  'Mixed-Modal Conditioning Circuit',
-];
+import { CONDITIONING_SUBSTITUTION_ROW_NAMES } from './conditioningFeasibility';
 
 /**
  * Athlete-facing strength session name -> the `part.headline.strength.<id>`
@@ -278,19 +251,11 @@ export function registerProjectionCopy(): void {
         + 'invented number.',
       text: 'See session',
     },
-    {
-      id: 'exercise.name.unlisted',
-      source: 'sam_ruling',
-      provenance: 'NEW — proposed, Batch 6, Task 2. Last-resort fallback for a row '
-        + 'whose exercise name resolves to neither the locked selectable vocabulary '
-        + 'nor the conditioning-substitution names below — keeps `project()` from '
-        + 'throwing on a name this task did not anticipate, at the cost of a generic '
-        + 'word rather than the real one. A gap, recorded rather than hidden: see the '
-        + 'task report for whether this fired on any real fixture.',
-      text: 'Exercise',
-    },
-
     // ── Conditioning equipment-substitution row names. ──
+    //
+    // Imported from `conditioningFeasibility.ts`'s own exported list, not
+    // transcribed — see that module's `CONDITIONING_SUBSTITUTION_ROW_NAMES`
+    // header for why this is a derivation rather than a hand-copied set.
     ...CONDITIONING_SUBSTITUTION_ROW_NAMES.map((name): SignedCopyEntry => ({
       id: exerciseNameCopyId(name),
       source: 'authored_sheet',
