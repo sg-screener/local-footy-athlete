@@ -221,21 +221,27 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
     label: 'Full body',
     sub: 'Compound push, pull, squat and carry',
   },
-  // PROPOSED, NOT YET SIGNED — both go to Sam with the copy batch
-  // (docs/COPY_SHEET_RULINGS_2026-07-30.md). They replace one row that read
-  // "Accessories / Gunshow or prehab - small muscles, big payoff", which was the copy
-  // admitting the door was two doors: a sub-label naming two things with "or" is a
-  // menu that has not decided what it offers.
+  // Both rows replace one that read "Accessories / Gunshow or prehab - small
+  // muscles, big payoff", which was the copy admitting the door was two doors: a
+  // sub-label naming two things with "or" is a menu that has not decided what it
+  // offers.
   //
   // "Gunshow" is Sam's own word and is already the session's athlete-facing name, so
   // the label is his; the sub describes the signed structure without quoting counts,
-  // because a session that shrinks under thin equipment must not promise six.
+  // because a session that shrinks under thin equipment must not promise six. Still
+  // PROPOSED, NOT YET SIGNED (docs/COPY_SHEET_RULINGS_2026-07-30.md §6-II-c).
   gunshow: {
     label: 'Gunshow',
     sub: 'Arms and delts - light pump work',
   },
+  // SIGNED — Sam, 2026-07-31, closing §6-IV-1: the fifth Add/Swap row is
+  // **"ACCESSORIES"**, ruling 9's own word and the athlete's familiar term. The
+  // CATEGORY ID stays `prehab` — a typed id nobody reads — so the door, the
+  // template match and every capability are untouched; only the word changed. The
+  // sub-line is unchanged and still signed as written: "the armour work" describes
+  // what this door places whichever noun heads the row.
   prehab: {
-    label: 'Prehab',
+    label: 'Accessories',
     sub: 'Groin, calves, midline, shoulders - the armour work',
   },
 };
@@ -475,6 +481,37 @@ export interface PlanChangeDayOptions {
    *  add-flow blockers; the producer still enforces the same rules below. */
   visibleSessionCount: number;
   visibleSessionKinds: VisibleSessionKind[];
+}
+
+/**
+ * DOES REMOVING FROM THIS DAY EMPTY IT? — the ONE predicate, and the reason it
+ * is here rather than in the sheet.
+ *
+ * Sam ruled (2026-07-31, copy sheet §6-IV-3) that the Remove row's sub-line is
+ * STATE-SELECTED: "Remove it — the day becomes rest." on a day whose only content
+ * is the thing being removed, "Remove it — anything else on the day stays." on a
+ * day with more on it. Batch 3's principle — a signed sentence must never be able
+ * to lie — applied to itself, using this unit's own pattern: a typed cause picks
+ * the sentence, nothing guesses.
+ *
+ * THE HAZARD THIS EXISTS TO REMOVE IS TWO PREDICATES, NOT ONE MISSING SENTENCE.
+ * The confirmation one tap later already says "the day becomes rest", selected by
+ * `step.label === null`, which `PlanChangeSheet` sets from `binScopes.length`. If
+ * the row's sub-line derived that same claim from anything else — a part count, a
+ * `visibleSessionCount`, `canRemove` — the row and the confirmation could disagree
+ * about the same day, which is a signed sentence lying with a second signed
+ * sentence standing next to it saying so. So the sheet asks THIS function three
+ * times for one answer: whether to show the scope picker at all, which sub-line
+ * the row carries, and (through `label: null`) which confirmation follows.
+ *
+ * `binScopesForSnapshot` is the fact: it lists a single scope exactly when that
+ * scope IS the day (`kinds.length < 2` → `[WHOLE_DAY_SCOPE]`), and lists each part
+ * plus a whole-day option when there is more than one. One scope therefore means
+ * removing empties the day, and it is the same fact the producer already computed
+ * — not a new one derived beside it.
+ */
+export function removeEmptiesTheDay(options: PlanChangeDayOptions): boolean {
+  return options.binScopes.length <= 1;
 }
 
 // ── Options listing ──

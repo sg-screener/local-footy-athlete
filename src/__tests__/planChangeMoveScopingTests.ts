@@ -52,6 +52,7 @@ import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
   planChangeMoveOptionsAreConsistent,
+  removeEmptiesTheDay,
 } from '../utils/planChangeProducer';
 
 const CURRENT_WEEK = '2026-07-13';
@@ -443,6 +444,85 @@ run('the sheet never commits a move scope the athlete was never shown', () => {
   assert(/scopes\.length === 1\s*&&[^)]*visibleSessionCount/.test(startMove),
     'the scope step is skipped on a single offered scope ALONE — on a day the app '
     + 'renders as two sessions that commits a move the athlete was never shown');
+});
+
+// ── The Remove row's sub-line: one predicate, two signed sentences ────────
+//
+// SAM RULED, 2026-07-31 (copy sheet §6-IV-3, boundary question 4). Batch 3's
+// "Remove it — anything else on the day stays." is FALSE on a day whose only
+// content is the session being removed: the very next screen says the day becomes
+// rest, and there is nothing else to stay. Batch 3's own principle — a signed
+// sentence must never be able to lie — applied to itself. The ruling is a
+// STATE-SELECTED variant, this unit's own pattern: a typed cause picks the
+// sentence, exactly as `hasSession` picks the Swap row's disabled line.
+//
+// THESE TWO CELLS LIVE HERE, NOT IN `planChangeProducerTests`, BECAUSE THIS SUITE
+// IS ARMED IN `test:bible` AND THAT ONE IS NOT. The same reasoning put the
+// startMove source contract here (see the cell above): a law about what the
+// athlete is told is worth nothing in a suite the build does not run.
+
+run('one predicate decides whether removing this day empties it', () => {
+  // THE BEHAVIOURAL HALF, over really-produced options rather than a hand-built
+  // shape. `removeEmptiesTheDay` reads `binScopes`, which the producer already
+  // computed, so the sentence the athlete reads and the removal that follows are
+  // answering from one fact.
+  const weekStart = seed();
+  const plain = optionsFor(weekStart, addDaysISO(weekStart, 0));
+  const { date: combined } = combinedDay(weekStart);
+  const multi = optionsFor(weekStart, combined);
+
+  assert(plain.canRemove && multi.canRemove,
+    'one of the two days cannot be removed from at all, so neither sentence is '
+    + `reachable and this cell proves nothing (plain=${plain.canRemove}, multi=${multi.canRemove})`);
+  assert(removeEmptiesTheDay(plain),
+    'a plain strength day — whose only content IS the session — is reported as '
+    + `having something that survives the removal; binScopes=${JSON.stringify(plain.binScopes.map((s) => s.id))}. `
+    + 'It would read "anything else on the day stays" over a day about to become rest.');
+  // The combined day is the case that makes this more than a restatement of a
+  // length: a team night offers its two parts and NO whole-day scope at all, so
+  // removing either leaves the other standing.
+  assert(!removeEmptiesTheDay(multi),
+    'a combined team + gym day is reported as sole-content, so the Remove row would '
+    + `promise the day becomes rest while the anchor stays put; binScopes=${JSON.stringify(multi.binScopes.map((s) => s.id))}`);
+});
+
+run('the row sub-line and the remove confirmation cannot disagree', () => {
+  // THE SOURCE CONTRACT. Two signed sentences one tap apart make the SAME claim
+  // about the SAME day; that is only safe while ONE fact decides both. A second
+  // predicate answering "does this empty the day?" is precisely how the row and
+  // the confirmation come to contradict each other — and a signed sentence lying
+  // beside another signed sentence saying so is worse than either alone.
+  //
+  // Control flow and literal wording, which is the half a screen source reading
+  // can hold honestly (same standing as the two cells above).
+  const sheet = readFileSync(
+    join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
+    'utf8',
+  );
+  assert(/'Remove it — the day becomes rest\.'/.test(sheet)
+    && /'Remove it — anything else on the day stays\.'/.test(sheet),
+    'both of Sam\'s signed Remove sub-lines are no longer in the sheet');
+  assert(/removeEmptiesTheDay\(options\)\s*\n?\s*\?\s*'Remove it — the day becomes rest\.'/.test(sheet),
+    'the Remove row no longer selects its sub-line from removeEmptiesTheDay — if it '
+    + 'derives the claim any other way it can contradict the confirmation');
+
+  const startBin = sheet.slice(sheet.indexOf('const startBin'), sheet.indexOf('return ('));
+  assert(startBin.length > 0, 'startBin no longer exists in the sheet');
+  assert(/!removeEmptiesTheDay\(options\)/.test(startBin),
+    'the scope picker is no longer gated on the same predicate as the sub-line');
+  assert(/kind: 'confirm_remove'[\s\S]{0,80}label: null/.test(startBin),
+    'startBin no longer sets `label: null` on the sole-scope path, which is what '
+    + 'selects the "the day becomes rest" confirmation one tap later');
+  assert(/step\.label === null\s*\n?\s*\?\s*'Are you sure\? This will be removed and the day becomes rest\.'/.test(sheet),
+    'the confirmation no longer selects on `step.label === null`, so it and the row '
+    + 'are answering from two different facts again');
+
+  // AND NO SECOND DERIVATION. The sheet must ask the producer, never count for
+  // itself — a `binScopes.length` anywhere here is the second predicate coming
+  // back under a different name.
+  assert(!/binScopes\.length/.test(sheet),
+    'the sheet counts binScopes itself somewhere — that is the second predicate '
+    + 'this cell exists to forbid');
 });
 
 console.log(`\nMove scoping totals: ${passed} passed, ${failed} failed`);

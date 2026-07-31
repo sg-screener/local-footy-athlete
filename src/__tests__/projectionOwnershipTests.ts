@@ -51,6 +51,7 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { project, projectParts } from '../rules/projectVisibleWeek';
+import { projectDayDetail, visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { UnsignedCopyError, isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
 import { samExport8Profile, SAM_EXPORT_8_TODAY_ISO, SAM_EXPORT_8_CURRENT_WEEK } from './support/samDeviceExport8Fixture';
@@ -350,6 +351,105 @@ run('rest is a kind, not an absence of parts', () => {
     assert(emptyTraining.kind !== 'rest',
       'an empty training day is being reported as rest');
   }
+});
+
+/**
+ * A PRACTICE MATCH IS A FIXTURE WITH ITS OWN WORD — Sam, 2026-07-31.
+ *
+ * Ruling: a practice/trial fixture day reads "Practice Match", not "Game Day". It
+ * is a LABEL ruling and this cell is written to fail if it ever becomes more than
+ * one: the practice-match day and the competitive fixture beside it are projected
+ * from IDENTICAL input but for the `workoutType`, and everything except the
+ * headline is asserted equal between them — kind, owner, part kinds, and every
+ * capability at day and part level. A future change that lets the label leak into
+ * the week's SHAPE (a fixture that stops locking, a part that becomes editable)
+ * reds here rather than reaching a phone.
+ *
+ * IT IS ASSERTED THROUGH THE SHARED HELPERS, NOT THE RAW FIELD, because the field
+ * is not what the athlete reads. All three render sites go through two functions:
+ * the week card (`HomeScreenV2.cardLeadHeadline`) and the away-day picker (the
+ * same call, on the row it draws per date) read `visibleDayLeadHeadline`, and the
+ * day-detail title reads `projectDayDetail(...).headline`, which is the same
+ * function again. Asserting both is asserting all three.
+ *
+ * Built from an explicit `ResolvedDay` rather than seeded state, on purpose:
+ * `project()` is a pure function of resolved days (L14), and `'Practice Match'` is
+ * not a member of the `WorkoutType` union — it arrives on hand-built and legacy
+ * workouts, which is exactly the shape `dayIsFixture` compares as a string. This
+ * is the same fixture shape `planChangeProducerTests` has used for a practice-match
+ * day since Task 4, not a new invention. See `dayIsPracticeMatch`'s header for the
+ * honest reachability statement (the generator's own anchor still resolves through
+ * `createGameStub`, i.e. `workoutType: 'Game'`).
+ */
+run('a practice match reads its own word, and changes nothing else', () => {
+  const fixtureDay = (workoutType: string): ResolvedDay => ({
+    date: '2026-08-08',
+    dayOfWeek: 6,
+    short: 'SAT',
+    isToday: false,
+    workout: {
+      id: `fixture-${workoutType}`,
+      microcycleId: 'calendar',
+      dayOfWeek: 6,
+      name: 'Game Day',
+      description: 'Match day',
+      durationMinutes: 120,
+      intensity: 'High',
+      workoutType,
+      sessionTier: 'core',
+      exercises: [],
+      createdAt: '',
+      updatedAt: '',
+    } as unknown as ResolvedDay['workout'],
+    source: 'game',
+    indicator: 'game',
+  });
+
+  const projectOne = (workoutType: string) => project({
+    week: [fixtureDay(workoutType)],
+    weekStart: '2026-08-08',
+  }).days[0];
+
+  const game = projectOne('Game');
+  const practice = projectOne('Practice Match');
+
+  // NON-VACUITY FIRST. If the competitive fixture stopped reading "Game Day" the
+  // comparison below would pass while proving nothing about the new word.
+  assert(String(game.headline) === 'Game Day',
+    `a competitive fixture reads "${game.headline}" — the ruling was about practice `
+    + 'matches only, and the default must be untouched');
+
+  assert(String(practice.headline) === 'Practice Match',
+    `a practice-match fixture reads "${practice.headline}". Sam ruled 2026-07-31 that `
+    + 'a practice/trial fixture day reads "Practice Match", not "Game Day".');
+
+  // THE CARD AND THE AWAY PICKER (`visibleDayLeadHeadline`) AND THE DETAIL TITLE
+  // (`projectDayDetail`) — the same word through the two shared helpers.
+  assert(String(visibleDayLeadHeadline(practice)) === 'Practice Match',
+    `the card/away-picker headline for a practice match is "${visibleDayLeadHeadline(practice)}" — `
+    + 'a fixture leads with its day headline, so this must be the ruled word');
+  assert(String(projectDayDetail(practice)?.headline) === 'Practice Match',
+    `the day-detail title for a practice match is "${projectDayDetail(practice)?.headline}"`);
+
+  // AND NOTHING ELSE MOVED. Label only.
+  assert(practice.kind === 'game' && practice.kind === game.kind,
+    `a practice match projects kind "${practice.kind}" — the ruling varies the WORD, `
+    + 'never the kind; `dayIsFixture` and every capability it drives must be blind to it');
+  assert(practice.owner === game.owner,
+    `owner drifted: ${practice.owner} vs ${game.owner}`);
+  assert(JSON.stringify(practice.capabilities) === JSON.stringify(game.capabilities),
+    `day capabilities differ between a practice match and a game:\n        `
+    + `${JSON.stringify(practice.capabilities)}\n        ${JSON.stringify(game.capabilities)}`);
+  assert(practice.parts.length === game.parts.length && practice.parts.length > 0,
+    `part counts differ (${practice.parts.length} vs ${game.parts.length}), or a fixture `
+    + 'projects no parts at all and the capability comparison below is vacuous');
+  practice.parts.forEach((part, index) => {
+    const twin = game.parts[index];
+    assert(part.kind === twin.kind,
+      `part ${index} kind drifted: ${part.kind} vs ${twin.kind}`);
+    assert(JSON.stringify(part.capabilities) === JSON.stringify(twin.capabilities),
+      `part ${index} capabilities drifted between a practice match and a game`);
+  });
 });
 
 run('an unregistered id still throws — the sheet is the only source', () => {

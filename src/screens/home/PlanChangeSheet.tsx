@@ -12,6 +12,7 @@ import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
   previewPlanChangeRisk,
+  removeEmptiesTheDay,
   type PlanChange,
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
@@ -470,9 +471,17 @@ export function PlanChangeSheet({
   // `label: null` because a day that offers ONE scope has nothing else on it —
   // `binScopesForSnapshot` only lists a single part when that part is the day —
   // so removing it empties the day, and the confirmation must say so.
+  //
+  // ONE PREDICATE, THREE READERS. `removeEmptiesTheDay` (the producer, which owns
+  // `binScopes`) decides whether the scope picker appears here, which sub-line the
+  // Remove row carries below, and — through `label: null` — which confirmation
+  // sentence follows. Sam's 2026-07-31 ruling gave the row a state-selected
+  // sub-line, and a second predicate answering the same question is how the row
+  // and the confirmation come to disagree about one day. See that function's
+  // header for why the fact lives in the producer.
   const startBin = () => {
     const scopes = options?.binScopes ?? [];
-    if (scopes.length > 1) {
+    if (options && !removeEmptiesTheDay(options)) {
       setStep({ kind: 'pick_bin_scope' });
       return;
     }
@@ -553,14 +562,26 @@ export function PlanChangeSheet({
               : undefined}
             onPress={() => startMove()}
           />
+          {/* THE REMOVE ROW'S THREE SENTENCES.
+
+              `canRemove` is false only when the day holds nothing at all (a
+              fixture locks the whole sheet before this renders), so the
+              nothing-here sentence cannot be shown over a day that has work on it.
+
+              THE OTHER TWO ARE STATE-SELECTED, by the SAME predicate `startBin`
+              uses (Sam, 2026-07-31, closing copy sheet §6-IV-3). Batch 3's
+              "anything else on the day stays" was false on a day whose only
+              content IS the session being removed — the very next screen says the
+              day becomes rest — and batch 3's own principle is that a signed
+              sentence must never be able to lie. A typed cause picks it now, the
+              pattern this unit used for the Swap row's disabled lines. */}
           <MenuOption
             label="Remove this session"
-            // `canRemove` is false only when the day holds nothing at all (a
-            // fixture locks the whole sheet before this renders), so this
-            // sentence cannot be shown over a day that has work on it.
-            sub={options.canRemove
-              ? 'Remove it — anything else on the day stays.'
-              : "There's nothing on this day yet."}
+            sub={!options.canRemove
+              ? "There's nothing on this day yet."
+              : removeEmptiesTheDay(options)
+                ? 'Remove it — the day becomes rest.'
+                : 'Remove it — anything else on the day stays.'}
             icon={removeIcon(options.canRemove ? DANGER : MUTED)}
             disabled={!options.canRemove}
             testID={selectedWorkout
@@ -683,10 +704,11 @@ export function PlanChangeSheet({
           )}
           {/* RULING 9's "Accessories" ROW IS THE PREHAB DOOR. The charter split
               accessories into Gunshow and Prehab, and ruling 9 lists Gunshow
-              separately, so this is the other half. Which WORD the athlete
-              reads — "Accessories" or "Prehab" — is a Batch 6 question for Sam;
-              until he signs one, the row renders the label the producer already
-              proposed rather than inventing a second name for one door. */}
+              separately, so this is the other half. SIGNED (Sam, 2026-07-31,
+              closing copy sheet §6-IV-1): the athlete reads **"Accessories"** —
+              ruling 9's own word. The word lives in `CATEGORY_COPY` and this row
+              renders it, so there is still exactly one name for the door; the
+              typed id stays `prehab` because ids are not copy. */}
           {offers('prehab') && (
             <MenuOption
               label={copyFor('prehab')!.label}
@@ -1137,7 +1159,8 @@ const mobilityIcon = (color: string) => glyph(color, (
   <><Circle cx="12" cy="4" r="2" /><Path d="M12 6v6" /><Path d="M7 8l5 2 5-4" />
     <Path d="M12 12l-3 8" /><Path d="M12 12l3 8" /></>
 ));
-/** Prehab / Accessories — a shield: the armour work. */
+/** Accessories (the `prehab` door) — a shield: the armour work. Sam kept the
+ *  shield when he signed the label in 2026-07-31's ruling 1. */
 const prehabIcon = (color: string) => glyph(color, (
   <Path d="M12 3l8 3v6c0 4-3.5 7.5-8 9-4.5-1.5-8-5-8-9V6z" />
 ));

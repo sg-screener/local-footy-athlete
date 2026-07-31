@@ -240,6 +240,37 @@ function extract(): ExtractedString[] {
  * 25, DayWorkoutScreenV2 22, PlanChangeSheet 14, SessionFeedbackPanel 7,
  * homeScreenConstants 7, StaleOverrideBanner 5, GuidedInjuryFlowSheet 3,
  * ExerciseVideoModal 1, SessionCompleteMoment 1, CoachScreen 1.
+ *
+ * SAM'S FINAL RULINGS (2026-07-31) HOLD IT FLAT AT 141 — AND THE REASON IS AN
+ * INSTRUMENT LIMIT, NOT AN EMPTY LANDING. Two things landed that a reader would
+ * expect to move this number, and neither can:
+ *
+ *   1. THE FIFTH ADD/SWAP ROW'S LABEL, "Prehab" -> "Accessories" (ruling 6-IV-1).
+ *      `CATEGORY_COPY` lives in `utils/planChangeProducer.ts`, which is not in
+ *      `SURFACE_DIRS`, so this extractor has never counted it (the binder, which
+ *      DOES read that module by name, is what covers it — two instruments, two
+ *      kinds of blindness, and this is the pair working as designed). A one-word
+ *      Title Case label would not survive `looksLikeProse` in any case.
+ *   2. THE REMOVE ROW'S NEW SOLE-CONTENT SUB-LINE (ruling 6-IV-3),
+ *      "Remove it — the day becomes rest." — genuinely new athlete-visible prose
+ *      in `screens/home/PlanChangeSheet.tsx`, i.e. squarely inside `SURFACE_DIRS`,
+ *      and STILL not counted. `extract()` matches `field: 'literal'` on ONE LINE,
+ *      and a state-selected sub-line is a multi-line ternary: `sub={` sits on its
+ *      own line and each sentence sits on another, so the field name and the
+ *      literal are never adjacent. Its two siblings ("Remove it — anything else
+ *      on the day stays.", "There's nothing on this day yet.") have been invisible
+ *      the same way since Task 4.
+ *
+ * SO A FLAT 141 HERE IS NOT "no new athlete-visible words" — it is "no new words
+ * OF THE SHAPE THIS EXTRACTOR CAN SEE". Stated at the ceiling rather than in a
+ * report because the ceiling is what a future reader will trust. The gap is
+ * closed elsewhere and only elsewhere: every new sentence above is registered in
+ * `docs/COPY_SHEET_RULINGS_2026-07-30.md`, bound both directions by
+ * `copyRulingsBindingTests`, and — for anything the projection renders — covered
+ * at runtime by `surfaceAgreementTests` L-P2. Widening the field regex to span
+ * lines is the honest fix and is NOT done here: it would re-count strings across
+ * the whole surface tree in one commit, which is a ceiling re-baseline and a unit
+ * of its own, not a side effect of landing a ruling.
  */
 const ATHLETE_VISIBLE_GAP_CEILING = 141;
 

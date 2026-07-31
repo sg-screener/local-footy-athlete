@@ -906,6 +906,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] the remove confirmation cannot promise a day that is not there',
     /step\.label === null\s*\?\s*'Are you sure\? This will be removed and the day becomes rest\.'/.test(sheet)
       && !/step\.scope === 'whole_day'\s*\?\s*'Are you sure\?/.test(sheet));
+  // THE REMOVE SUB-LINE IS STATE-SELECTED SINCE SAM'S 2026-07-31 RULING (copy
+  // sheet §6-IV-3), and the law that the ROW and the CONFIRMATION are selected by
+  // ONE predicate lives in `planChangeMoveScopingTests` — which is armed in
+  // `test:bible`, and this suite is not. Stated once, in the gated place.
 
   // BATCH 3's VERB RULING, FINISHED. "Remove everywhere, not Bin" — the two
   // survivors were the bin-scope heading and the scoped confirmation sentence.

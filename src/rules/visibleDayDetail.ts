@@ -66,7 +66,9 @@ export interface VisibleDayDetail {
  * defect at two sizes, and the only way two surfaces cannot disagree is for both
  * to call one function.
  *
- *   - A FIXTURE always reads `day.headline` ("Game Day"), whatever its workout
+ *   - A FIXTURE always reads `day.headline` ("Game Day", or "Practice Match" on a
+ *     practice/trial fixture — Sam's 2026-07-31 label ruling, which varies the WORD
+ *     and nothing else), whatever its workout
  *     resolved. Task 6 also fixed the projection so a fixture's placeholder part
  *     is a `game` part rather than a `strength` one, so this now agrees with
  *     `parts[0]` instead of overruling it — but it is kept as the day-level

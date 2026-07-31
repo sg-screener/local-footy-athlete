@@ -47,7 +47,7 @@ rather than left implicit.
 | 6 | Every week-screen button carries an icon | SHIPPED | 7, 9 |
 | 7 | Intermediate "Edit this session" menu deleted | SHIPPED | 4 |
 | 8 | Four-action menu is the whole menu | SHIPPED | 4 |
-| 9 | Add/Swap menus offer the five signed types | PARTIALLY-BLOCKED — shipped, one row's label unruled (Sam Q1) | 4 |
+| 9 | Add/Swap menus offer the five signed types | SHIPPED — the fifth row's label RULED "Accessories" (Sam, 2026-07-31) | 4 |
 | 10 | Global icon rule, every option row | SHIPPED | 4, 8, 9 |
 | 11 | Injury "Other" data-path investigation | ALREADY DONE pre-unit (`4bb425a`) | — |
 | 12 | "Edit exercises" modal retired, inline editing | SHIPPED (+ Sam's live mid-review ruling on `concern_reason`) | 8 |
@@ -56,8 +56,8 @@ rather than left implicit.
 Full copy detail for every ruling and every new/retired string is in
 `docs/COPY_SHEET_RULINGS_2026-07-30.md` under "Batch 6 — buttons/UI unit
 (2026-07-31): ONE SIGNABLE PASS" (tidied by this task into
-SIGNED-BY-RULING / PROPOSED / RETIRED / OPEN QUESTIONS; `test:copy-rulings-binding`
-7/7).
+SIGNED-BY-RULING / SIGNED / RETIRED / RULED; `test:copy-rulings-binding`
+7/7). Batch 6 is SIGNED and §6-IV carries Sam's four final rulings.
 
 ## CONVERGENCE
 
@@ -201,8 +201,14 @@ and the stale-check passes trivially).
    not a harness artifact (the generate door now publishes through the same
    accept boundary the rollover uses, and the red survived unchanged). Owner:
    the program-block lifecycle owner (`weekRebuild.rebuildLocalWeek`
-   scope:block + `acceptedStateTransaction` validation) — raised for Sam,
-   nobody owns it yet.
+   scope:block + `acceptedStateTransaction` validation).
+   **RULED BY SAM, 2026-07-31 — and the entry STAYS RED.** End state is a
+   rolling ~two-block horizon derived on demand; the interim unit makes the
+   existing rollover succeed or refuse honestly with a sentence. A ruling is not
+   a fix: the athlete is still told nothing today, so the declaration stands
+   until the interim lands, and its `paidBy`/`expiresWhen` now name that unit
+   instead of "nobody owns it". Sam questions 5, and item 1 of the post-merge
+   queue below.
 
 7. ~~**2× domain gaps, one entry, two cells**
    (`g1_sunday_is_rest_not_a_recovery_day`)~~ — **CLOSED BY RULING,
@@ -241,52 +247,95 @@ and the stale-check passes trivially).
 Eleven, in the order they surfaced in the ledger. Each has a pointer into the
 copy sheet, a declared-red entry, or a task report for the full trace.
 
-**Answered after the unit closed** (Sam, 2026-07-31): question **10** — the
-signed rulings files are law and are now tracked in `docs/`; question **7** —
-the charter deleted recovery as an athlete-facing session type, so the G+1
-Sunday's Rest Day IS the end state and the declared domain gap is closed rather
-than scheduled. The numbering is kept as-is rather than compacted, so the
-pointers in the task reports and the ledger still land on the question they
-were written against.
+**ALL ELEVEN ARE NOW ANSWERED.** Sam ruled the remainder on 2026-07-31 in one
+final pass. The numbering is kept as-is rather than compacted, so the pointers in
+the task reports and the ledger still land on the question they were written
+against. Status at a glance:
 
-1. **Accessories vs Prehab.** Ruling 9 names the fifth Add/Swap row
-   "Accessories"; the session-type charter split accessories into two doors
-   the same day, and ruling 9 lists Gunshow separately, so the fifth row is
-   the PREHAB door. Ships wired to `prehab`, rendering the label "Prehab"
-   until Sam signs one of the two candidates. Pointer:
-   `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-1.
+| # | Question | Outcome |
+|---|---|---|
+| 1 | Accessories vs Prehab | RULED — "ACCESSORIES", landed |
+| 2 | Swap/Add sub-lines: neutral or enumerating | RULED — NEUTRAL as shipped, no code change |
+| 3 | Practice-match day reads "Game Day" | RULED — reads "Practice Match", landed |
+| 4 | Remove sub-line can lie on a single-session day | RULED — state-selected variant, landed |
+| 5 | Block rollover fails silently | RULED — end state + interim, TOP of the post-merge queue |
+| 6 | Generated conditioning rows have no authored name | QUEUED — conditioning vocabulary (Stage B) |
+| 7 | G+1 Sunday: rest or recovery | RULED-AND-CLOSED — Rest Day IS the end state |
+| 8 | Schedule-fact ownership collision | QUEUED — declared reds 8/9 VALIDATED by Sam's device |
+| 9 | What should "Short on time today" DO | QUEUED — with question 8, needs the "how short is short" ruling |
+| 10 | Are the signed rulings files law | RULED-AND-DONE — tracked in `docs/` |
+| 11 | Coach voice composes from `workout.name` | QUEUED — rides the LR-6 lift |
 
-2. **Swap/Add sub-line wording: neutral or enumerating.** The two sub-lines
-   one tap above the five-row Add/Swap menu can either name no type
-   ("Change it for another type of session", shipped) or enumerate the five
-   ("Change to strength, conditioning, gunshow, mobility or accessories").
-   Neutral avoids a sub-line that has already rotted twice as the menu's own
-   five types changed shape; enumerating tells the athlete what is behind
-   the row before they tap, which is closer to what ruling 9 asked for.
-   Pointer: `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-2.
+The four copy rulings (1-4) landed with the code and the copy sheet in the same
+commit; §6-IV of `docs/COPY_SHEET_RULINGS_2026-07-30.md` now records them as
+RULED and carries Sam's words. **Batch 6-II is SIGNED** — every PROPOSED string
+signed as written, with the §6-V caveat standing: the two sentences written
+against INTENDED behaviour re-sign when declared red 2 is paid.
 
-3. **Practice-match day now reads "Game Day."** The day-kind headline
-   (`day.headline.game`, proposed this unit) applies to every fixture day,
-   practice matches included — a consequence of `dayIsFixture`'s boolean
-   shape, not a copy decision anyone separately ruled. Ships as "Game Day"
-   (the default) until Sam rules whether a practice/trial match should read
-   differently. Pointer: `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-4.
+1. **RULED (Sam, 2026-07-31): the fifth Add/Swap row is "ACCESSORIES".**
+   Ruling 9's own word, and the athlete's familiar term. It stays wired to the
+   prehab door and the shield icon stands — the CATEGORY ID is `prehab`, a typed
+   id nobody reads, so the door, the template match and every capability are
+   untouched and only the word changed. `CATEGORY_COPY.prehab.label` carries it;
+   the sub-line ("...the armour work") is unchanged and signed as written.
+   Pointer: `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-1.
 
-4. **The Remove sub-line can lie on a single-session day.** Batch 3's signed
-   "Remove it — anything else on the day stays." is false when the day's
-   only content IS the session being removed — the next screen shows the day
-   becomes rest, not that anything stays. Batch 3's own principle ("a signed
-   sentence must never be able to lie") applies to itself here; this unit's
-   own pattern (typed cause selecting the sentence, not a guess) is the
-   candidate fix if Sam wants it applied. Not fixed in this unit. Pointer:
+2. **RULED (Sam, 2026-07-31): the NEUTRAL form, signed as shipped.** The two
+   sub-lines one tap above the five-row Add/Swap menu name no type ("Change it
+   for another type of session" / "Put another session on this day"). No code
+   change — the shipped wording is the signed wording. The enumerating
+   alternative is recorded in the sheet as NOT TAKEN, so the next person who
+   notices the menu is unnamed does not re-propose it. Pointer:
+   `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-2.
+
+3. **RULED (Sam, 2026-07-31): a practice match reads "Practice Match".** A
+   practice/trial fixture day carries its own signed day-headline variant
+   (`day.headline.practice_match`) instead of "Game Day". LABEL ONLY:
+   `dayIsFixture` keeps its week-shape behaviour, the day KIND stays `game`, and
+   every capability with it. All three render sites get it through the two
+   shared helpers (`visibleDayLeadHeadline` for the week card and the away-day
+   picker, `projectDayDetail` for the day-detail title).
+   `projectionOwnershipTests` projects a practice match and a competitive
+   fixture from identical input but for the `workoutType` and asserts everything
+   except the headline is equal. Pointer:
+   `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-4 and §6-II-a item 1b (which
+   records the producer seam honestly: the generator's own practice-match anchor
+   still resolves through `createGameStub`, so the word turns on when that
+   anchor materialises with its own type).
+
+4. **RULED (Sam, 2026-07-31): the Remove sub-line is STATE-SELECTED.**
+   Multi-content day: "Remove it — anything else on the day stays." Sole-content
+   day: "Remove it — the day becomes rest." A typed cause picks the sentence —
+   this unit's own pattern, like the swap sub selected by `hasSession`. The part
+   that is architecture rather than copy: the confirmation one tap later already
+   makes the same claim, so ONE predicate (`removeEmptiesTheDay`, in the producer
+   that owns `binScopes`) decides the scope picker, the row's sub-line and — via
+   `label: null` — the confirmation, and `planChangeMoveScopingTests` forbids the
+   sheet from re-deriving the question itself. Pointer:
    `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-3.
 
-5. **Block rollover fails silently — CONFIRMED REAL, unowned.** Four weeks
-   after install the block must roll over; when it cannot, the athlete's
-   program silently stops outside the edit horizon with no crash and no
-   sentence. Only the deep tier (this unit's own L13 work) reaches it.
-   Nobody owns this yet. Pointer: declared red 6 above,
-   `athleteActionWalkerTests.ts` `block_rollover_fails_silently_and_the_program_stops`.
+5. **RULED (Sam, 2026-07-31): block rollover — END STATE and INTERIM, and it is
+   the TOP of the post-merge queue.**
+
+   **END STATE (Stage B): a rolling horizon of ~TWO TRAINING BLOCKS, derived on
+   demand.** No stored future blocks, and therefore no rollover EVENT that can
+   fail. Later weeks derive as they enter the horizon, using the freshest logged
+   reality at the moment they do (estimate → measured). This is the north star's
+   own rule applied to the block lifecycle: the rollover is not a decision, so it
+   is not stored — it is the horizon moving, and a thing that is derived on
+   demand has no moment at which it can silently not happen.
+
+   **INTERIM (the unit that goes first): the existing rollover must SUCCEED, or
+   REFUSE HONESTLY with a sentence.** The silent stop IS the defect — not the
+   failure. Today `rebuildLocalWeek` finds ledger blockers and throws,
+   `useHomeScreen` catches and logs, and the athlete gets no crash and no
+   sentence, just a program that stopped outside the edit horizon. Whichever way
+   the interim lands, the athlete is told.
+
+   Declared red 6 (`block_rollover_fails_silently_and_the_program_stops`) STAYS
+   RED and stays declared until that interim unit lands; its `paidBy` /
+   `expiresWhen` now name the interim ruling rather than "unowned". Pointer:
+   declared red 6 above.
 
 6. **Generated conditioning rows have no authored name.** Half the
    conditioning-row population is composed at generation time from planner
@@ -315,20 +364,25 @@ were written against.
    outright.
 
 8. **Schedule-fact ownership collision — busy/away doors have been DEAD in
-   production.** The writer re-canonicalises against the accepted base; the
-   verifier forbids any non-scoped-regen change to that base; whichever side
-   is wrong, the fact is refused on every device with a real accepted
-   program. Two candidate fixes point opposite ways
-   (`temporarySourceFactTransaction.ts:707` vs `:731`;
+   production. VALIDATED BY SAM, 2026-07-31: "busy/away felt dead."** The writer
+   re-canonicalises against the accepted base; the verifier forbids any
+   non-scoped-regen change to that base; whichever side is wrong, the fact is
+   refused on every device with a real accepted program. Two candidate fixes
+   point opposite ways (`temporarySourceFactTransaction.ts:707` vs `:731`;
    `illnessClearGameWeek`'s own comment forbids one of them). Needs an
-   accepted-state ownership ruling, not a patch. Pointer: declared reds 8-9
+   accepted-state ownership ruling, not a patch. **Declared reds 8 and 9 are
+   VALIDATED, not merely declared** — Sam's own device experience matches what
+   the two reds assert, which is the confirmation a declared red normally has to
+   wait for. Queued second, behind block rollover. Pointer: declared reds 8-9
    above, `task-7-report.md`.
 
-9. **What should "Short on time today" DO to a session?** The `time_cap`
-   fact exists and structurally fits, but the minutes question it would need
-   ("how short is short?") has not been ruled. Even once the ownership
-   collision in question 8 is resolved, this constraint changes nothing
-   visible in any generated week today. Pointer: declared red 9 above.
+9. **What should "Short on time today" DO to a session? VALIDATED with 8.** The
+   `time_cap` fact exists and structurally fits, but the minutes question it
+   would need — Sam's phrasing, **"how short is short?"** — has not been ruled.
+   Even once the ownership collision in question 8 is resolved, this constraint
+   changes nothing visible in any generated week today. The ruling is owed with
+   the same unit as question 8, and until it lands the two success sentences in
+   copy sheet §6-II-f keep their caveat. Pointer: declared red 9 above.
 
 10. **RULED-AND-DONE (Sam, 2026-07-31): the signed rulings files are LAW and
     they get TRACKED.** The question was that `test:copy-rulings-binding`
@@ -361,6 +415,44 @@ were written against.
     re-homes the ~983 distinct name-production inputs / ~1,002 calls
     Task 11 measured. Pointer: `task-10-report.md` §2 (the full trace),
     `task-11-report.md` §"MEASURED SCOPE REDUCTION".
+
+## THE POST-MERGE QUEUE — confirmed by Sam, 2026-07-31, in this order
+
+Sam's own order, recorded so the next session starts from a ruled queue rather
+than picking the most legible item. Nothing here is in scope for this unit; the
+merge gate remains the combined device pass below.
+
+1. **BLOCK ROLLOVER — TOP.** Carries the two-block-horizon ruling: end state is
+   a rolling ~two-block horizon derived on demand (no stored future blocks, no
+   rollover event to fail); the INTERIM unit that goes first makes the existing
+   rollover either succeed or refuse honestly with a sentence. Sam question 5.
+2. **Schedule-fact ownership collision + the "how short is short" `time_cap`
+   ruling.** One unit: the accepted-state ownership ruling (question 8) and the
+   minutes question (question 9) are the two halves of making the busy/away
+   doors do something. Declared reds 8-9, VALIDATED by Sam's device.
+3. **The four D13 session-list conservation reds.** `L-P3 TEMPLATE = PROJECTION`
+   — the athlete's session list should be driven by the day's PARTS, not by two
+   `workoutType` predicates disagreeing with the projection. Declared reds 1-4.
+4. **Conditioning vocabulary (Stage B).** Generated conditioning rows composed
+   from planner nouns and numbers rather than named from Sam's 55 signed
+   `conditioningTemplates.ts` doses ("NOT WIRED YET"). Declared red 5,
+   question 6.
+5. **Coach voice migration — rides the LR-6 lift.** The packet's day summaries
+   still read planner-composed words that are also frozen matching keys.
+   Question 11. Cannot start before LR-6 is lifted with a migration plan.
+6. **`HomeScreenClassic` deletion.** Unreachable behind the `DESIGN_VERSION`
+   early return; nontrivial because source-regex pins elsewhere reference it.
+7. **The binder's `src/rules/` blind spot.** `copyRulingsBindingTests` cannot
+   see `projectionCopy.ts` or `temporarySourceFact.ts`. See NOT-COVERED below
+   for the exact residual — and note the sibling instrument gap recorded at the
+   ceiling: `signedCopyExtractionTests`'s line-based extractor cannot see a
+   multi-line ternary sub-line, which is why Sam's new Remove sentence is real
+   new athlete-visible prose that moved the count by zero.
+8. **Cross-walk contamination investigation.** Something from an earlier walk
+   contaminates a later one across the `freshInstall` boundary; currently
+   sidestepped by keeping the schedule doors in the deterministic cell. See
+   NOT-COVERED. Should be found before another door tries to move into the
+   random band and inherits the hazard.
 
 ## NOT-COVERED
 
@@ -580,7 +672,9 @@ merge condition: this checklist passes in ONE session, start to finish.
    a. Swap / Add / Move / Remove, four rows, each with an icon, no "Edit this
       session" step in front of them.
    b. Add offers exactly five rows: Strength / Conditioning / Gunshow /
-      Mobility / Accessories(Prehab) — no recovery row.
+      Mobility / Accessories — no recovery row. The fifth row reads
+      "Accessories" (Sam's ruling, 2026-07-31), never "Prehab", and carries
+      the shield.
    c. Tap Swap on a team night (has a session, not the athlete's to trade):
       confirm the sub-line reads "Nothing on this day can be swapped." — not
       the old, potentially-false "nothing here" line.

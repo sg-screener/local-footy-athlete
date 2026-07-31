@@ -1533,11 +1533,22 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'boundary the rollover itself uses, and THE RED SURVIVED UNCHANGED. '
       + 'Reproduce: DEEP seed 1, rolling into 2026-08-10. Not a surface defect and '
       + 'no task in this unit pays it.',
-    paidBy: 'the program-block lifecycle owner (`weekRebuild.rebuildLocalWeek` '
-      + 'scope:block + `acceptedStateTransaction` validation) — raised for Sam, '
-      + 'NOT a buttons/UI task',
-    expiresWhen: 'a deep walk crosses a block boundary without `rolloverProgramBlock` '
-      + 'throwing. If that happens before anyone works on it, the cause was '
+    paidBy: 'RULED BY SAM, 2026-07-31, and it is the TOP of the post-merge queue. '
+      + 'END STATE (Stage B): a rolling horizon of ~TWO TRAINING BLOCKS derived on '
+      + 'demand — no stored future blocks, and therefore no rollover EVENT that can '
+      + 'fail; later weeks derive as they enter the horizon from the freshest logged '
+      + 'reality (estimate -> measured). That is the north star applied to the block '
+      + 'lifecycle: the rollover is not a decision, so it is not stored. INTERIM, and '
+      + 'the unit that goes first: the existing rollover must SUCCEED or REFUSE '
+      + 'HONESTLY with a sentence. THE SILENT STOP IS THE DEFECT, not the failure — '
+      + 'whichever way it lands, the athlete is told. Owner: the program-block '
+      + 'lifecycle owner (`weekRebuild.rebuildLocalWeek` scope:block + '
+      + '`acceptedStateTransaction` validation). Still NOT a buttons/UI task.',
+    expiresWhen: 'THIS ENTRY STAYS RED AND STAYS DECLARED until the interim unit '
+      + 'above lands — a ruling is not a fix, and the athlete is still told nothing '
+      + 'today. Delete it when the rollover either succeeds or refuses with a '
+      + 'sentence the athlete can read. If instead a deep walk simply stops crossing '
+      + 'a block boundary without `rolloverProgramBlock` throwing, the cause was '
       + 'upstream and this entry must be deleted rather than left as a promise '
       + 'nobody owes.',
     redsIn: 'deep',

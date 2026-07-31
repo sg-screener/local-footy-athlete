@@ -52,6 +52,13 @@ All strings signed as extracted, except:
    combined days). **New (Sam-signed): "Remove it — anything else on the day
    stays."** Principle recorded: a signed sentence must never be able to lie —
    copy makes no claims about outcomes that depend on state it can't see.
+   **AMENDED 2026-07-31 (ruling 6-IV-3):** the replacement could lie in the
+   other direction — on a day whose only content IS the session being removed,
+   nothing stays. The sentence above is now the MULTI-CONTENT half of a
+   state-selected pair, with a sole-content half beside it. The principle is
+   unchanged; it was applied to its own replacement. The retired string named
+   here stays retired: it was hyphenated and unpunctuated, and the signed
+   sole-content sentence is neither.
 2. **Verb unification (Sam-ruled): REMOVE everywhere, not Bin.** "Bin this
    session" → "Remove this session"; "Yes, bin it" → "Yes, remove it";
    "No, keep it" stays. One verb for the act across the app.
@@ -180,7 +187,21 @@ name.
   `strengthSessionVariantTests` B3 so a rename is a red cell rather than a rename
   nothing notices.
 
-## Batch 6 — buttons/UI unit (2026-07-31): ONE SIGNABLE PASS
+## Batch 6 — buttons/UI unit (2026-07-31): SIGNED
+
+**STATUS: SIGNED BY SAM, 2026-07-31.** Every PROPOSED string in §6-II is signed
+as written. The five rulings he gave in the same pass are recorded in §6-IV,
+which is now four RULED items and no open questions.
+
+**THE ONE CAVEAT, STANDING.** Two of the signed sentences (§6-II-e's busy-fact
+body, §6-II-f's two success acknowledgments) are honest against INTENDED
+behaviour, not current behaviour, because of declared reds 8 and 9 (§6-V). Sam's
+signature covers them as written; **they come back for signing when that red is
+paid**, because the effect clause they will need does not exist yet. Recorded
+here rather than in a task report so the wording cannot outlive the behaviour.
+
+Icons remain IMAGERY and are not signed as text (§6-II-h) — they are checked at
+the combined device pass, which is where a glyph can actually be judged.
 
 Everything below was accumulated task-by-task across the buttons/UI unit
 (Tasks 1-11) and is tidied here, by Task 12, into four subsections so Sam can
@@ -251,7 +272,7 @@ where they touch copy, the words are task-composed and therefore PROPOSED
 | 12 | "Edit exercises" modal retired, inline editing | Task 8 | SHIPPED — Sam's live mid-review ruling recorded in 6-III |
 | 13 | Seven Coach preset chips removed | Task 10 | SHIPPED — strings retired, 6-III; coach voice migration LR-6-BLOCKED (NOT-COVERED) |
 
-### 6-II. PROPOSED — every new string, awaiting Sam
+### 6-II. SIGNED — every new string (proposed 2026-07-31, signed the same day)
 
 **6-II-a. Day/part headlines + row-prescription fallbacks [Task 2]**
 
@@ -280,8 +301,27 @@ binder next (boundary report, method findings) rather than silently converted
 to a table, which would make the binder falsely report every entry below as
 "proposed and not in the app."
 
-1. Day-kind headlines (`day.headline.<kind>`) — `projectionCopy.ts:107,116,122`:
+1. Day-kind headlines (`day.headline.<kind>`) — `projectionCopy.ts`:
    "Training Day", "Rest Day", "Game Day".
+   **1b. `day.headline.practice_match` — "Practice Match". NEW, SIGNED
+   2026-07-31 (ruling 6-IV-4).** The one day headline that is not a bare
+   kind lookup: a practice/trial fixture reads its own word. LABEL ONLY —
+   `dayIsFixture` keeps its week-shape behaviour, the day KIND stays `game`,
+   and every capability with it, so this is a second WORD for one kind of day
+   and never a second kind. Selected by `dayIsPracticeMatch`
+   (`projectVisibleWeek.ts`), a read of the same typed `workoutType` set
+   `dayIsFixture` already uses, so the label and the week shape cannot come
+   to disagree about which days are fixtures. It reaches all three render
+   sites through the two shared helpers — the week card and the away-day
+   picker via `visibleDayLeadHeadline`, the day-detail title via
+   `projectDayDetail`. **Known producer seam, recorded not assumed:**
+   `'Practice Match'` is not a member of the `WorkoutType` union, and the
+   generator's own practice-match anchor still resolves its day through
+   `createGameStub` (`workoutType: 'Game'`), so on a freshly generated week
+   the day still reads "Game Day". The signed word is registered and wired at
+   the one place the athlete reads it and turns on the day a practice-match
+   anchor materialises with its own type — a typed seam ahead of its
+   producer, not a dead string.
 2. The day refusal sentence (`day.refusal.nothing_to_change`) —
    `projectionCopy.ts:128`: "There's nothing to change on this day."
 3. Generic part-kind headline fallbacks (`part.headline.<kind>`) —
@@ -329,6 +369,8 @@ describes — a signed sentence never claims a state-dependent outcome, and
 | Swap (off, empty day) / Remove (off) | "There's nothing on this day yet." | `PlanChangeSheet.tsx:521,563` | NEW, one string for both. `canRemove` is false only when the day holds nothing, and the Swap row uses it on the same condition, so neither can show over a day that has work on it. |
 | Add row | "Put another session on this day" | `PlanChangeSheet.tsx:535` | REWRITE. Used to name extra strength or conditioning work — two of the five types behind it (ruling 9); retired wording in 6-III. **OPEN QUESTION 6-IV-2.** |
 | Strength row | "Upper, lower or full body" | `PlanChangeSheet.tsx:647` | REWRITE. Used to end by naming accessories too (6-III). Accessories and Gunshow now have rows of their own, so the strength bucket is three buckets and says so. |
+| Remove (live, day has more on it) | "Remove it — anything else on the day stays." | `PlanChangeSheet.tsx` Remove row | Batch-3-signed, now the MULTI-CONTENT half of a state-selected pair (ruling 6-IV-3). |
+| Remove (live, sole-content day) | "Remove it — the day becomes rest." | `PlanChangeSheet.tsx` Remove row | NEW, SIGNED 2026-07-31 (6-IV-3). The batch-3 sentence beside it was false on a day whose only content is the session being removed; the cause is typed, not guessed. |
 
 The Move row has no sub-line of its own: when the move door refuses, the row
 renders the producer's own TYPED refusal sentence. Two of those changed.
@@ -338,12 +380,15 @@ renders the producer's own TYPED refusal sentence. Two of those changed.
 | `anchored_day` | "Team training is fixed to this day, so it can't be moved from here." | `planChangeProducer.ts:416` | Used to continue with a clause offering to swap or bin the gym work on the day — two faults: the retired verb (Remove, not Bin), and a claim about state it cannot see (a team night with no gym work has none to swap). |
 | `nothing_movable` (NEW reason) | "Nothing on this day can be moved to another day." | `planChangeProducer.ts:418` | NEW. `anchored_day` used to cover two causes with one sentence, so a Club Session day told the athlete team training was fixed to a day with no team training. The reason is now split by the projection's part kinds; neither sentence can show about the wrong day. |
 
-**6-II-c. Reused, not new [Task 4]** — the Gunshow, Mobility and Prehab rows
-render `CATEGORY_COPY`'s existing batch-5 PROPOSED labels and sub-lines
-verbatim: "Gunshow" / "Arms and delts - light pump work", "Mobility" / "A
-flow to loosen up - easy ranges only", "Prehab" / "Groin, calves, midline,
-shoulders - the armour work" (`planChangeProducer.ts:237-241`). Already bound
-by Batch 5 — not re-listed here.
+**6-II-c. Reused, not new [Task 4]** — the Gunshow, Mobility and Accessories
+rows render `CATEGORY_COPY`'s existing labels and sub-lines verbatim: "Gunshow"
+/ "Arms and delts - light pump work", "Mobility" / "A flow to loosen up - easy
+ranges only", and the fifth row's sub-line "Groin, calves, midline, shoulders -
+the armour work" (`planChangeProducer.ts`). Already bound by Batch 5 — not
+re-listed here. **The fifth row's LABEL is no longer "Prehab":** Sam signed
+"Accessories" on 2026-07-31 (6-IV-1). The sub-line is unchanged and was signed
+as written — "the armour work" describes what the door places whichever noun
+heads the row.
 
 **6-II-d. What Task 6 changed with no new copy [Task 6]**
 
@@ -588,73 +633,94 @@ its two deletions were producers with no surface literal to count, so the
 extractor's own provenance block records the flat ratchet as correct, not
 missed.)
 
-### 6-IV. OPEN QUESTIONS FOR SAM
+### 6-IV. RULED BY SAM, 2026-07-31 — no open questions remain
 
-**6-IV-1. The fifth Add/Swap row's name — "Accessories" or "Prehab"? [Task 4]**
+All four items below were open questions when this batch went to Sam. All four
+are now ruled, in his words, and landed in the same commit as this edit.
 
-Ruling 9 names the fifth Add/Swap row **"Accessories"**. The session-type
-charter split `accessories` into two doors on 2026-07-30, and ruling 9 lists
-**Gunshow** separately, so the fifth row is the PREHAB door. Two candidate
-labels:
-- **"Accessories"** — ruling 9's own word; the athlete's familiar term.
-- **"Prehab"** — the batch-5 proposed label already in `CATEGORY_COPY`
-  (`planChangeProducer.ts:238`), and the word the sub-line ("...the armour
-  work") is written against.
+**6-IV-1. RULED: the fifth Add/Swap row is "ACCESSORIES". [Task 4]**
 
-The row SHIPS wired to the `prehab` door, currently rendering the
-`CATEGORY_COPY` label "Prehab", until Sam signs one. Ruling 10 (a glyph must
-mean its row) is satisfied either way: the icon is a shield.
+> Fifth Add/Swap row label = **"ACCESSORIES"** — ruling 9's own word. It stays
+> wired to the prehab door; the shield icon stands.
 
-**6-IV-2. The Swap/Add sub-lines — neutral or enumerating? [Task 4]**
+The session-type charter split `accessories` into two doors on 2026-07-30 and
+ruling 9 lists **Gunshow** separately, so the fifth row is the PREHAB door. The
+door, the template match and every capability are untouched: the CATEGORY ID
+stays `prehab`, which is a typed id nobody reads. Only the word changed.
 
-Ruling 9 asks the Add/Swap menus to reflect the charter. Two sub-lines sit
-one tap ABOVE that menu, and there are two honest ways to write them.
-**Shipped: the neutral form** (6-II-b). Recorded as a decision, not taken
-silently.
+| Where | Signed label |
+|---|---|
+| `CATEGORY_COPY.prehab.label` (`planChangeProducer.ts`) | "Accessories" |
 
-| Row | SHIPPED (neutral) |
+The sub-line is UNCHANGED and stands as signed — "Groin, calves, midline,
+shoulders - the armour work" describes what this door places whichever noun
+heads the row. Ruling 10 (a glyph must mean its row) is satisfied: the icon is
+a shield, and Sam kept it.
+
+**6-IV-2. RULED: the Swap/Add sub-lines keep the NEUTRAL form. [Task 4]**
+
+> Sub-lines: NEUTRAL form signed as shipped.
+
+No code change. The two sub-lines one tap above the five-row Add/Swap menu name
+no type; the shipped wording is the signed wording.
+
+| Row | SIGNED (neutral) |
 |---|---|
 | Swap | "Change it for another type of session" |
 | Add | "Put another session on this day" |
 
-The ENUMERATING alternatives, if Sam prefers the menu named up front (written
-outside the table on purpose — `copyRulingsBindingTests` requires a quoted
-table string to be in the app, and these deliberately are not):
+The ENUMERATING alternative is recorded as NOT TAKEN, so the option is not
+re-proposed by the next person who notices the menu is unnamed (written outside
+the table on purpose — `copyRulingsBindingTests` requires a quoted table string
+to be in the app, and these deliberately are not):
 
 - Swap: Change to strength, conditioning, gunshow, mobility or accessories
 - Add: Add strength, conditioning, gunshow, mobility or accessories
 
-The argument for neutral: the five rows are
-one tap away and name themselves, and an enumerating sub-line has already
-rotted TWICE (once when accessories split into Gunshow and Prehab, once when
-mobility arrived), each time leaving a signed sentence describing a menu
-that had moved. The argument for enumerating: it tells the athlete what is
-behind the row before they tap, which is what ruling 9 asked for. Sam's
-call — signing one is a single word either way.
+The argument that carried it: the five rows are one tap away and name
+themselves, and an enumerating sub-line has already rotted TWICE (once when
+accessories split into Gunshow and Prehab, once when mobility arrived), each
+time leaving a signed sentence describing a menu that had moved.
 
-**6-IV-3. The Remove sub-line lies on single-session days [Batch 3 residual,
+**6-IV-3. RULED: the Remove sub-line is STATE-SELECTED. [Batch 3 residual,
 surfaced again by this unit]**
 
-Batch 3's signed Remove-confirmation sentence — "Remove it — anything else
-on the day stays." — is false on a day whose only content is the session
-being removed: the next screen shows the day becomes rest, not that
-"anything else... stays" (there is nothing else). Batch 3's own principle
-("a signed sentence must never be able to lie") applies to itself here.
-Needs either a state-selected variant (the pattern this unit used for the
-Swap/Remove disabled-row lines, 6-II-b) or a reword that makes no claim about
-what else is on the day. Not fixed in this unit — recorded for Sam because
-the unit's own "typed cause, not a guessing sentence" pattern is the fix if
-he wants it applied here too.
+> Remove sub-line: STATE-SELECTED variant approved — multi-content day:
+> **"Remove it — anything else on the day stays."**; sole-content day:
+> **"Remove it — the day becomes rest."** A typed cause picks the sentence —
+> this unit's own pattern, like the swap sub selected by `hasSession`.
 
-**6-IV-4. Practice-match day now reads "Game Day" — an unruled copy
-consequence [Task 2/4/5, surfaced by this unit]**
+Batch 3's single sentence was false on a day whose only content IS the session
+being removed: the next screen shows the day becomes rest, and there is nothing
+else to stay. Batch 3's own principle — a signed sentence must never be able to
+lie — applied to itself. Both sentences are now signed (the first from batch 3,
+the second new here) and listed in 6-II-b.
 
-`day.headline.game` (6-II-a: "Game Day") is the day-kind headline for every
-fixture day, practice matches included. Nobody has separately ruled whether
-a practice/trial match should say "Game Day" the same way a competitive
-fixture does, or carry its own word — it is a consequence of
-`dayIsFixture`'s boolean shape, not a copy decision anyone signed. Recorded
-for Sam; ships as "Game Day" (the day-kind default) until ruled otherwise.
+**ONE PREDICATE, THREE READERS — the part that is architecture, not copy.**
+The confirmation one tap later already makes the same claim ("Are you sure? This
+will be removed and the day becomes rest."), selected by `step.label === null`.
+Two signed sentences making the same claim about the same day is only safe while
+ONE fact decides both, so `removeEmptiesTheDay` (`planChangeProducer.ts`, which
+owns `binScopes`) is asked three times for one answer: whether the scope picker
+appears, which sub-line the row carries, and — through `label: null` — which
+confirmation follows. `planChangeMoveScopingTests` (armed in `test:bible`) holds
+both halves: the behavioural one over really-produced options, and a source
+contract forbidding the sheet from re-deriving the question from
+`binScopes.length` itself.
+
+**6-IV-4. RULED: a practice match reads "Practice Match". [Task 2/4/5]**
+
+> PRACTICE MATCH: a practice/trial fixture day reads **"Practice Match"**, not
+> "Game Day" — a NEW signed day-headline variant. `dayIsFixture` keeps its
+> week-shape behaviour (capabilities/kind untouched); LABEL ONLY distinguishes.
+
+Registered as `day.headline.practice_match` and wired at the one place the
+athlete reads it. Full entry, including the honest producer seam, in 6-II-a
+item 1b. `projectionOwnershipTests` (armed in `test:bible`) projects a
+practice-match day and a competitive fixture from identical input but for the
+`workoutType` and asserts everything except the headline is equal — kind, owner,
+part kinds and every capability at day and part level — so a future change that
+lets the label leak into the week's SHAPE reds before it reaches a phone.
 
 ### 6-V. Standing declared reds this unit's copy depends on
 

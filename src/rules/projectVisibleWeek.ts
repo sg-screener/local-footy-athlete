@@ -126,7 +126,40 @@ const COMPONENT_TO_PART: Readonly<Record<string, VisiblePartKind>> = {
  * A set can be enumerated, and a fixture kind added later is a compile-adjacent
  * edit here rather than a regex somebody has to guess at.
  */
-const FIXTURE_WORKOUT_TYPES: ReadonlySet<string> = new Set(['Game', 'Practice Match']);
+const PRACTICE_MATCH_WORKOUT_TYPE = 'Practice Match';
+
+const FIXTURE_WORKOUT_TYPES: ReadonlySet<string> = new Set(['Game', PRACTICE_MATCH_WORKOUT_TYPE]);
+
+/**
+ * IS THIS FIXTURE A PRACTICE MATCH? — a LABEL question, and only a label question.
+ *
+ * Sam's ruling, 2026-07-31 (copy sheet §6-IV-4): a practice/trial fixture day reads
+ * "Practice Match", not "Game Day". What it does NOT change is anything else — the
+ * day's `kind` is still `game`, `dayIsFixture` still answers the same for it, and
+ * every capability the fixture lock computes is untouched. A practice match is the
+ * same shape of week with a different word on one day.
+ *
+ * It reads the SAME typed `workoutType` that `dayIsFixture` reads, deliberately: two
+ * predicates over the same question is how a menu and a writer came to disagree
+ * about which days were fixtures (see `dayIsFixture`'s header). This one narrows
+ * that set, it does not re-derive it — a day this returns true for is a day
+ * `dayIsFixture` returns true for, by construction.
+ *
+ * REACHABILITY, STATED RATHER THAN ASSUMED. `'Practice Match'` is not a member of
+ * the `WorkoutType` union: today it arrives on hand-built and legacy workouts, which
+ * is exactly why `dayIsFixture` compares `String(...)` against a set instead of
+ * switching on the type. The app's own generator marks a practice-match anchor
+ * (`TargetWeekFixture.kind: 'practice_match'`) and then resolves the day through
+ * `createGameStub`, whose `workoutType` is `'Game'` — so on a freshly generated week
+ * this returns false and the day still reads "Game Day". That is a gap in the
+ * PRODUCER, not in the ruling: the signed word is registered and wired at the one
+ * place the athlete reads it, and it turns on for free the day a practice-match
+ * anchor materialises with its own type. Recorded in the copy sheet §6-IV-4 so it is
+ * a known seam rather than a surprise.
+ */
+export function dayIsPracticeMatch(day: ResolvedDay): boolean {
+  return String(day.workout?.workoutType ?? '') === PRACTICE_MATCH_WORKOUT_TYPE;
+}
 
 /**
  * IS THIS DAY A FIXTURE? The one typed answer, for every athlete door.
@@ -575,8 +608,17 @@ export function project(args: {
  * was a composition, and a composition is what a day headline must never be. The
  * parts carry their own headlines and the surfaces render both; the day's name
  * says what kind of day it is and nothing more.
+ *
+ * ONE VARIANT, SIGNED (Sam, 2026-07-31): a fixture that is a practice match reads
+ * its own signed word. Still a LOOKUP, still not a composition — `dayIsPracticeMatch`
+ * is a typed read of the same `workoutType` set `dayIsFixture` uses, and it selects
+ * between two registered ids rather than assembling text. The KIND is unchanged, so
+ * nothing downstream of `dayKind` can tell the difference.
  */
-function dayHeadline(kind: VisibleDayKind, _day: ResolvedDay): SignedCopy {
+function dayHeadline(kind: VisibleDayKind, day: ResolvedDay): SignedCopy {
+  if (kind === 'game' && dayIsPracticeMatch(day)) {
+    return signedCopy('day.headline.practice_match');
+  }
   return signedCopy(`day.headline.${kind}`);
 }
 

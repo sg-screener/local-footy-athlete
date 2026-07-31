@@ -125,6 +125,18 @@ export function registerProjectionCopy(): void {
       text: 'Game Day',
     },
     {
+      id: 'day.headline.practice_match',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-07-31, closing docs/COPY_SHEET_RULINGS_2026-07-30.md '
+        + '§6-IV-4: a practice/trial fixture day reads "Practice Match", not "Game Day". '
+        + 'LABEL ONLY. `dayIsFixture` keeps its week-shape behaviour, the day KIND stays '
+        + '`game`, and every capability with it — this is a second WORD for one kind of '
+        + 'day, never a second kind. Selected by the same typed `workoutType` set '
+        + '`dayIsFixture` already reads, so the label and the week shape cannot come to '
+        + 'disagree about which days are fixtures.',
+      text: 'Practice Match',
+    },
+    {
       id: 'day.refusal.nothing_to_change',
       source: 'sam_ruling',
       provenance: 'NEW — proposed, Batch 6, Task 2. Shown when a day offers nothing to '
