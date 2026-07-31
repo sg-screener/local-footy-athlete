@@ -129,7 +129,13 @@ type Step =
   | { kind: 'pick_move_scope' }
   | { kind: 'pick_destination'; scope: PlanChangeMoveScopeId }
   | { kind: 'pick_bin_scope' }
-  | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
+  /**
+   * `label` NAMES WHAT GOES, or is null when everything on the day goes. Null is
+   * not "no label" — it selects the sentence, because "the rest of the day
+   * stays" is a claim about state and there is no rest of the day when the one
+   * offered scope IS the day.
+   */
+  | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string | null }
   | {
       kind: 'result';
       ok: boolean;
@@ -450,15 +456,27 @@ export function PlanChangeSheet({
     setStep({ kind: 'pick_move_scope' });
   };
 
-  // Bin entry point: multi-session days pick WHICH part first; single-part
-  // days go straight to the are-you-sure.
+  // Remove entry point: multi-part days pick WHICH part first; days offering one
+  // scope go straight to the are-you-sure.
+  //
+  // THE ONE OFFERED SCOPE IS THE SCOPE THAT GETS SENT. It used to hardcode
+  // `whole_day` here, which was invisible until this task's capability work
+  // ratified the Remove door on a team-only night: the producer offers exactly
+  // one scope there — `team`, Sam's "can't make it tonight, this date only" —
+  // and the sheet sent `whole_day`, which the writer refuses outright because
+  // the day carries an anchor. The row was live, the tap was honest, and the
+  // answer was a refusal for an action the athlete never asked for.
+  //
+  // `label: null` because a day that offers ONE scope has nothing else on it —
+  // `binScopesForSnapshot` only lists a single part when that part is the day —
+  // so removing it empties the day, and the confirmation must say so.
   const startBin = () => {
     const scopes = options?.binScopes ?? [];
     if (scopes.length > 1) {
       setStep({ kind: 'pick_bin_scope' });
       return;
     }
-    setStep({ kind: 'confirm_remove', scope: 'whole_day', label: 'this session' });
+    setStep({ kind: 'confirm_remove', scope: scopes[0]?.id ?? 'whole_day', label: null });
   };
 
   return (
@@ -489,9 +507,18 @@ export function PlanChangeSheet({
         <View>
           <MenuOption
             label="Swap this session"
+            // WHY IT IS OFF, NOT A GENERIC LINE — and selected by a typed fact
+            // the projection owns, never by guessing. `canSwap` is false for two
+            // different days: one with nothing on it, and one whose whole
+            // content is a fixed appointment. "There's nothing here to swap"
+            // was true of the first and false of the second (a team night HAS
+            // something; it just is not the athlete's to trade), and a signed
+            // sentence must never be able to lie (batch 3).
             sub={options.canSwap
-              ? "Change it for another type of session"
-              : "There's nothing here to swap."}
+              ? 'Change it for another type of session'
+              : options.hasSession
+                ? 'Nothing on this day can be swapped.'
+                : "There's nothing on this day yet."}
             icon={swapIcon(options.canSwap ? ACCENT : MUTED)}
             disabled={!options.canSwap}
             testID="plan-change-swap"
@@ -499,7 +526,13 @@ export function PlanChangeSheet({
           />
           <MenuOption
             label="Add to this day"
-            sub="Add extra strength or conditioning work to this day"
+            // NAMES NO TYPE. It read "Add extra strength or conditioning work to
+            // this day", which named two of the five behind it (ruling 9) — and
+            // that sub-line has now rotted twice, once when accessories split
+            // and once when mobility arrived. The five rows are one tap away and
+            // name themselves; see Batch 6a, where the enumerating alternative
+            // is written out for Sam.
+            sub="Put another session on this day"
             icon={addIcon(options.canAdd ? ACCENT : MUTED)}
             disabled={!options.canAdd}
             testID="plan-change-add"
@@ -522,9 +555,12 @@ export function PlanChangeSheet({
           />
           <MenuOption
             label="Remove this session"
+            // `canRemove` is false only when the day holds nothing at all (a
+            // fixture locks the whole sheet before this renders), so this
+            // sentence cannot be shown over a day that has work on it.
             sub={options.canRemove
               ? 'Remove it — anything else on the day stays.'
-              : "There's nothing here to remove."}
+              : "There's nothing on this day yet."}
             icon={removeIcon(options.canRemove ? DANGER : MUTED)}
             disabled={!options.canRemove}
             testID={selectedWorkout
@@ -905,9 +941,7 @@ export function PlanChangeSheet({
                 setStep({
                   kind: 'confirm_remove',
                   scope: scope.id,
-                  label: scope.id === 'whole_day'
-                    ? 'everything on this day'
-                    : scope.label.toLowerCase(),
+                  label: scope.id === 'whole_day' ? null : scope.label.toLowerCase(),
                 })}
             />
           ))}
@@ -918,7 +952,7 @@ export function PlanChangeSheet({
       {step.kind === 'confirm_remove' && (
         <View>
           <Text style={styles.confirmText}>
-            {step.scope === 'whole_day'
+            {step.label === null
               ? 'Are you sure? This will be removed and the day becomes rest.'
               : `Are you sure? This removes ${step.label} - the rest of the day stays.`}
           </Text>

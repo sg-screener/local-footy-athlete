@@ -33,11 +33,10 @@ import {
   type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
 } from './coachRevisionProposal';
-import { projectParts, type ProjectedDayParts } from '../rules/projectVisibleWeek';
+import { dayIsFixture, projectParts, type ProjectedDayParts } from '../rules/projectVisibleWeek';
 import {
   buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
-  visibleDayLooksLikeGame,
   type CoachRevisionTemplateDefinition,
 } from './coachRevisionTemplates';
 import {
@@ -270,6 +269,18 @@ function hasProtectedAnchors(snap: CoachVisibleDaySnapshot): boolean {
   return protectedAnchorsForDaySnapshot(snap).length > 0;
 }
 
+/**
+ * What KIND of part this category adds. Exported so the SHEET's add guard and
+ * the harness that drives it read the same owner instead of each keeping a
+ * copy — the copy is what let `mobility` mean `recovery` here and
+ * `conditioning` in `templateAddsSessionKind`.
+ */
+export function planChangeCategoryAddsSessionKind(
+  category: PlanChangeCategoryId,
+): VisibleSessionKind {
+  return categoryAddsSessionKind(category);
+}
+
 function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSessionKind {
   // Mobility joins recovery as a RECOVERY-kind part: no load, never hard, never
   // breaks rest (Sam's charter). The visible-kind vocabulary has no separate
@@ -280,10 +291,24 @@ function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSession
   return 'conditioning';
 }
 
+/**
+ * What KIND of part a registry template adds — the template-side twin of
+ * `categoryAddsSessionKind`, and it must agree with it.
+ *
+ * IT DID NOT. `mobility` had no branch here and fell through to the
+ * `conditioning` default, while `categoryAddsSessionKind` calls it `recovery`
+ * (Sam's charter: mobility is optional, no load, never hard, never breaks rest).
+ * One split, two athlete-visible faults: on a conditioning-occupied day the sheet
+ * offered Mobility and the writer refused it as a duplicate conditioning session
+ * — the sheet's own rule is that it never offers a door with nothing behind it —
+ * and on a strength-only day it published with `targetDomain: 'conditioning'`, so
+ * the validator was asked to check the change landed in a domain it did not land
+ * in. Neither is reachable now that the two agree.
+ */
 function templateAddsSessionKind(
   category: CoachRevisionTemplateDefinition['category'],
 ): VisibleSessionKind {
-  if (category === 'recovery') return 'recovery';
+  if (category === 'recovery' || category === 'mobility') return 'recovery';
   if (category === 'strength' || category === 'accessories') return 'strength';
   return 'conditioning';
 }
@@ -316,8 +341,20 @@ export interface PlanChangeMoveDestination {
 export type PlanChangeMoveRefusalReason =
   /** Nothing on the day to move. */
   | 'no_session'
-  /** Everything on the day is a protected anchor, so nothing may leave it. */
+  /** A TEAM ANCHOR holds the day. The sentence may name team training. */
   | 'anchored_day'
+  /**
+   * The day holds work, and none of it can leave on its own — a club
+   * commitment, a recovery add-on that rides with the day. SPLIT OUT of
+   * `anchored_day` (2026-07-31) because the two shared one sentence and that
+   * sentence named team training: on a Club Session day the athlete read
+   * "Team training is fixed to this day" about a day with no team training,
+   * and the four-action menu renders this line inline under the disabled Move
+   * row rather than only after a tap. A signed sentence must never be able to
+   * lie (batch 3), so the CAUSE is typed and the copy follows it, rather than
+   * one sentence guessing which cause it is describing.
+   */
+  | 'nothing_movable'
   /** There is movable content, but nowhere in view it could legally go. */
   | 'no_destination';
 
@@ -376,6 +413,8 @@ const MOVE_REFUSAL_COPY: Record<PlanChangeMoveRefusalReason, string> = {
   // lie, so the clause that can lie is gone rather than qualified.
   anchored_day:
     "Team training is fixed to this day, so it can't be moved from here.",
+  nothing_movable:
+    "Nothing on this day can be moved to another day.",
   no_destination:
     "There's nowhere to move this in the weeks you can edit — every other day is a game, team training, or already full.",
 };
@@ -591,8 +630,14 @@ function moveOptionsForDay(args: {
   // of them until the owner has said there is something to move. It used to
   // decide for itself, from `snapshot.workout` and the section kinds, and got a
   // different answer on a team night carrying a recovery add-on.
+  //
+  // WHICH refusal is decided by a typed fact the projection already carries —
+  // does this day hold a team anchor? — never by guessing from the reason code.
+  const holdsTeamAnchor = args.projected.parts.some((part) => part.kind === 'team_training');
+  const refuseImmovable = (): PlanChangeMoveOptions =>
+    refuse(holdsTeamAnchor ? 'anchored_day' : 'nothing_movable');
   if (!args.projected.capabilities.canMoveWholeDay) {
-    return refuse(args.projected.parts.length === 0 ? 'no_session' : 'anchored_day');
+    return args.projected.parts.length === 0 ? refuse('no_session') : refuseImmovable();
   }
 
   // A team night IS a destination (Sam's doubling law, 2026-07-30): the session
@@ -680,7 +725,7 @@ function moveOptionsForDay(args: {
     : componentScopes.length > 1
       ? ['whole_day', ...componentScopes]
       : ['whole_day'];
-  if (offered.length === 0) return refuse('anchored_day');
+  if (offered.length === 0) return refuseImmovable();
 
   const scopes = offered
     .map((id) => ({ id, ...MOVE_SCOPE_COPY[id], destinations: destinationsFor(id) }))
@@ -1040,8 +1085,13 @@ export function buildPlanChangeProposal(
     case 'swap_template': {
       const before = daySnap(change.date);
       if (!before?.workout) return { error: 'nothing_to_swap' };
-      if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
       const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
+      // ONE PREDICATE FOR THE MENU AND THE WRITER. This was
+      // `visibleDayLooksLikeGame(before)`, a regex over the snapshot's rendered
+      // title, while the menu locked the same day from `dayKind`. Two owners
+      // answering "is this a fixture?" is the split this task exists to close,
+      // and closing only the menu half narrowed the lock instead.
+      if (dayIsFixture(currentDay)) return { error: 'protected_anchor_day' };
       const materialized = materializeAthleteCandidate({
         change,
         currentDay,
@@ -1071,7 +1121,9 @@ export function buildPlanChangeProposal(
       // (otherwise this would silently become a pure-template replacement
       // in the writer).
       if (before.workout) {
-        if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
+        // Same one predicate the menu locks on — see the `swap_template` note.
+        const fixtureDay = ctx.visibleWeek.find((day) => day.date === change.date);
+        if (fixtureDay && dayIsFixture(fixtureDay)) return { error: 'protected_anchor_day' };
         const kinds = visibleSessionKindsForSnapshot(before);
         const addedKind = templateAddsSessionKind(definition.category);
         if (before.workout.sections.length === 0 || kinds.length === 0) {
@@ -1099,7 +1151,10 @@ export function buildPlanChangeProposal(
         if (materialized.ok === false) return { error: materialized.code };
         return revision({
           intent: 'add',
-          targetDomain: addedKind === 'strength' ? 'strength' : 'conditioning',
+          // The kind the template adds, not a two-way guess at it — a mobility
+          // stack is a recovery-domain change and the validator checks the
+          // declared domain.
+          targetDomain: addedKind,
           dates: [change.date],
           revisedDays: [materialized.projectedDay],
           explanation:
@@ -1118,13 +1173,10 @@ export function buildPlanChangeProposal(
 
       return revision({
         intent: 'add',
-        // The validator checks the change landed in the declared domain.
-        targetDomain:
-          definition.category === 'recovery'
-            ? 'recovery'
-            : definition.category === 'strength' || definition.category === 'accessories'
-            ? 'strength'
-            : 'conditioning',
+        // The validator checks the change landed in the declared domain. This
+        // used to re-spell `templateAddsSessionKind`'s body inline, which is how
+        // the mobility branch could be missing from one copy and not the other.
+        targetDomain: templateAddsSessionKind(definition.category),
         dates: [change.date],
         revisedDays: [materialized.projectedDay],
         explanation: `Sheet: add ${materialized.projectedDay.workout?.title ?? definition.label}`,

@@ -109,6 +109,48 @@ const COMPONENT_TO_PART: Readonly<Record<string, VisiblePartKind>> = {
 };
 
 /**
+ * Workout types that ARE a fixture, whatever route put them on the day.
+ *
+ * A fixture reaches a `ResolvedDay` two ways. The athlete's calendar mark is the
+ * usual one — `source: 'game'`, and `calendarStore` routes an in-season game and
+ * a pre-season practice match through the same mark — and `workoutToIndicator`
+ * turns a generated `Game` workout into `indicator: 'game'` beside it. The third
+ * is a workout the PROGRAM produced for a practice-match week
+ * (`coachingEngine`'s `practice_match_week` mode), which carries neither.
+ *
+ * Declared as a set of typed `workoutType` values rather than matched by a regex
+ * over the rendered title. `visibleDayLooksLikeGame` — the predicate this
+ * replaces for the athlete's doors — is `/\bgame\b/` over title + name +
+ * workoutType joined, which is the title-as-a-data-channel shape this unit exists
+ * to remove: it also matches a session an athlete happened to name "game prep".
+ * A set can be enumerated, and a fixture kind added later is a compile-adjacent
+ * edit here rather than a regex somebody has to guess at.
+ */
+const FIXTURE_WORKOUT_TYPES: ReadonlySet<string> = new Set(['Game', 'Practice Match']);
+
+/**
+ * IS THIS DAY A FIXTURE? The one typed answer, for every athlete door.
+ *
+ * Exported because the MENU and the WRITER must not disagree about it. They did:
+ * `listPlanChangeOptionsForDay` locked the day and `buildPlanChangeProposal`
+ * refused it through two different predicates, and this task's first pass made
+ * that worse by moving only the menu onto `dayKind` — narrowing the lock so a
+ * generated practice-match day, and a hand-built `Game` day carrying neither
+ * marker, stopped locking at all (`planChangeProducerTests` [4] and [17] caught
+ * it). One question, one predicate, both ends.
+ *
+ * The COACH paths keep `visibleDayLooksLikeGame` (LR-6: `coachRevisionPolicy`,
+ * `coachTurnController`, the semantic adapter are frozen). This owns the athlete
+ * doors only, and says so rather than pretending the repo has one predicate when
+ * it has two.
+ */
+export function dayIsFixture(day: ResolvedDay): boolean {
+  return day.source === 'game'
+    || day.indicator === 'game'
+    || FIXTURE_WORKOUT_TYPES.has(String(day.workout?.workoutType ?? ''));
+}
+
+/**
  * Is this day a fixture, complete rest, or training?
  *
  * REST IS ITS OWN KIND, never "a day whose workout is null" — that conflation is
@@ -116,7 +158,7 @@ const COMPONENT_TO_PART: Readonly<Record<string, VisiblePartKind>> = {
  * day and a rest day must be distinguishable here.
  */
 function dayKind(day: ResolvedDay): VisibleDayKind {
-  if (day.source === 'game' || day.indicator === 'game') return 'game';
+  if (dayIsFixture(day)) return 'game';
   if (day.source === 'rest') return 'rest';
   return 'training';
 }

@@ -617,6 +617,75 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 }
 
 {
+  console.log('\n[8b] the mobility door means the same thing on both sides');
+  // ONE CATEGORY, TWO KIND MAPPINGS. `categoryAddsSessionKind` calls `mobility`
+  // a recovery-kind add (Sam's charter: optional, no load, never hard, never
+  // breaks rest); `templateAddsSessionKind` had no mobility branch and fell
+  // through to `conditioning`. Two athlete-visible faults from that one split,
+  // and the door matrix could not see either — a REFUSAL is an honest outcome
+  // there, and the grid cannot build a one-session conditioning day.
+  //
+  // Both are asserted here, on fixtures built for exactly these two shapes.
+  const mobilityWeek = (occupied: Workout | null): ResolvedDay[] => [
+    visibleDay(MON, occupied),
+    visibleDay('2026-06-30', null),
+    visibleDay(TODAY, null),
+    visibleDay(THU, null),
+    visibleDay('2026-07-03', null),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+
+  // (a) A CONDITIONING-OCCUPIED DAY. The sheet offers Mobility there — its guard
+  // asks `categoryAddsSessionKind`, which says recovery, and recovery never
+  // duplicates. The writer must therefore not refuse it as a second conditioning
+  // session; the sheet's own rule is that it never offers a door with nothing
+  // behind it.
+  const condWeek = mobilityWeek(conditioningWorkout('mob-cond', 'Easy Zone 2 Bike', 1));
+  const condOptions = listPlanChangeOptionsForDay({
+    visibleWeek: condWeek, date: MON, todayISO: TODAY,
+  });
+  ok('[8b] a conditioning day offers Mobility (recovery never duplicates)',
+    condOptions.categories.some((c) => c.id === 'mobility'),
+    condOptions.categories.map((c) => c.id));
+  const condAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: MON, category: 'mobility' },
+    { visibleWeek: condWeek },
+  );
+  ok('[8b] adding Mobility to a conditioning day is not refused as a duplicate',
+    !('error' in condAdd),
+    condAdd);
+
+  // (b) A STRENGTH-ONLY DAY. It applied before the fix too — silently, with
+  // `targetDomain: 'conditioning'`, so the validator was asked to check the
+  // change landed in a domain it did not land in. Only the PROPOSAL shows that,
+  // which is why this cell reads the proposal rather than the outcome.
+  const strengthWeek = mobilityWeek(strengthWorkout('mob-str', 'Upper Push', 1));
+  const strengthAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: MON, category: 'mobility' },
+    { visibleWeek: strengthWeek },
+  );
+  ok('[8b] adding Mobility to a strength day is accepted', !('error' in strengthAdd), strengthAdd);
+  if (!('error' in strengthAdd) && strengthAdd.kind === 'revision') {
+    eq('[8b] a Mobility add publishes in the RECOVERY domain, never conditioning',
+      strengthAdd.userIntent.targetDomain, 'recovery');
+  }
+
+  // (c) AND ON A REST DAY, the same. The rest-day path builds its own
+  // `targetDomain` and used to re-spell the kind mapping inline, which is how one
+  // copy could carry the mobility branch and the other not.
+  const restAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: THU, category: 'mobility' },
+    { visibleWeek: mobilityWeek(strengthWorkout('mob-str2', 'Upper Push', 1)) },
+  );
+  ok('[8b] adding Mobility to a rest day is accepted', !('error' in restAdd), restAdd);
+  if (!('error' in restAdd) && restAdd.kind === 'revision') {
+    eq('[8b] a rest-day Mobility add publishes in the RECOVERY domain',
+      restAdd.userIntent.targetDomain, 'recovery');
+  }
+}
+
+{
   console.log('\n[9] day-level and exercise-level change doors stay separated (source contract)');
   // Systemic guard: the weekly board owns day/session changes through
   // PlanChangeSheet. The open workout owns exercise edits through its
@@ -724,7 +793,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && !/kind: 'menu'|kind: 'edit_session'|kind: 'pick_add_kind'/.test(sheet));
   ok('[9] the first step owns swap/add/move/remove and nothing else',
     /label="Swap this session"/.test(actionsBlock)
-      && /label="Add to this day"[\s\S]{0,140}Add extra strength or conditioning work to this day/.test(actionsBlock)
+      && /label="Add to this day"[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
+      && !/strength or conditioning work to this day/.test(sheet)
       && /label="Move this session"/.test(actionsBlock)
       && /label="Remove this session"/.test(actionsBlock)
       && !/label="Edit this session"|label="Add optional session"|label="I'm not 100%"|ask the coach/.test(actionsBlock));
@@ -744,7 +814,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /icon=\{addIcon\(/.test(actionsBlock)
       && /icon=\{moveIcon\(/.test(actionsBlock)
       && /icon=\{removeIcon\(/.test(actionsBlock)
-      && /label="Remove this session"[\s\S]{0,420}danger/.test(actionsBlock)
+      && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
       && /icon\?: React\.ReactNode/.test(sheet));
   ok('[9] swap category no longer offers Rest day because remove owns rest',
     !/label="Rest day"|Clear the day - same as binning the session/.test(sheet));
@@ -796,6 +866,25 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // readiness side, and the presence at the week-level owner.
   ok('[9] the day door holds no readiness and no coach-prefill escape hatch',
     !/onAskCoach|askCoach|onOpenReadiness|openReadiness/.test(sheet));
+  // THE SINGLE-SCOPE REMOVE PATH SENDS THE SCOPE IT WAS OFFERED.
+  //
+  // `startBin` hardcoded `whole_day` whenever the producer offered one scope,
+  // which was invisible until the capability work made Remove live on a
+  // team-only night: the one scope offered there is `team` (Sam's "can't make it
+  // tonight, this date only") and `whole_day` is refused outright on a day
+  // carrying an anchor. The matrix asserts the other half — every OFFERED scope
+  // is one the transaction ACCEPTS — and this asserts the sheet does not swap
+  // the offer for something else on the way. Control flow, which is the half a
+  // screen source reading can hold honestly (see `planChangeMoveScopingTests`).
+  const startBinBlock = sheet.slice(
+    sheet.indexOf('const startBin'), sheet.indexOf('return ('));
+  ok('[9] the one offered remove scope is the one that gets sent',
+    /scope: scopes\[0\]\?\.id \?\? 'whole_day'/.test(startBinBlock)
+      && !/kind: 'confirm_remove', scope: 'whole_day'/.test(startBinBlock));
+  ok('[9] the remove confirmation cannot promise a day that is not there',
+    /step\.label === null\s*\?\s*'Are you sure\? This will be removed and the day becomes rest\.'/.test(sheet)
+      && !/step\.scope === 'whole_day'\s*\?\s*'Are you sure\?/.test(sheet));
+
   // BATCH 3's VERB RULING, FINISHED. "Remove everywhere, not Bin" — the two
   // survivors were the bin-scope heading and the scoped confirmation sentence.
   ok('[9] no athlete-facing "bin" wording survives in the sheet',

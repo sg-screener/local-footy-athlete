@@ -86,9 +86,14 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
+  planChangeCategoryAddsSessionKind,
   previewPlanChangeRisk,
 } from '../utils/planChangeProducer';
-import type { PlanChange, PlanChangeMoveScopeId } from '../utils/planChangeTypes';
+import type {
+  PlanChange,
+  PlanChangeBinScopeId,
+  PlanChangeMoveScopeId,
+} from '../utils/planChangeTypes';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { projectParts } from '../rules/projectVisibleWeek';
@@ -470,6 +475,26 @@ const DAY_STATES: DayState[] = [
         name: 'Club Session', workoutType: 'Technical', sessionTier: 'core',
         exercises: [], durationMinutes: 90, conditioningBlock: undefined,
         speedBlock: undefined, hasCombinedConditioning: false,
+      });
+      return { weekStart, date: addDaysISO(weekStart, 2) };
+    },
+  },
+  {
+    id: 'team_only_night',
+    build: () => {
+      // A NIGHT THAT IS ONLY THE TEAM SESSION. The grid had the COMBINED team
+      // day (team + gym work) and no team-only one, and the two answer
+      // differently at exactly the place this task changed: a combined day
+      // offers two bin scopes, a team-only night offers ONE — `team`, Sam's
+      // "can't make it tonight, this date only" (2026-07-03). That single-scope
+      // shape is the one the sheet was silently converting to a whole-day
+      // removal the writer refuses.
+      const weekStart = seedStores(baseProgram());
+      plant(weekStart, 3, {
+        name: 'Team Training', workoutType: 'Team Training', sessionTier: 'core',
+        exercises: [], durationMinutes: 90, conditioningBlock: undefined,
+        speedBlock: undefined, hasCombinedConditioning: false,
+        recoveryAddons: undefined,
       });
       return { weekStart, date: addDaysISO(weekStart, 2) };
     },
@@ -960,6 +985,123 @@ cell(`[${activeWorld.id}] every option the day OFFERS is one the door accepts or
   // and that is exactly what the declaration is admitting.
   assert(optionsDriven > 0 || declared.size > 0,
     'no offered option was driven and nothing was declared — this cell is asleep');
+});
+
+/**
+ * L12, THE GAP THIS UNIT'S OWN REPORT NAMED: nothing asserted that a capability
+ * the PROJECTION grants is one a TRANSACTION will honour.
+ *
+ * `partCapabilities` now says a team night's commitment is removable — Sam's
+ * signed "can't make it tonight, this date only" — and the four-action menu
+ * renders Remove live because of it. Between that promise and the writer sits
+ * the sheet's scope choice, and it was hardcoding `whole_day` whenever the
+ * producer offered one scope. On a team-only night the one offered scope is
+ * `team`; `whole_day` is refused outright because the day carries an anchor. A
+ * live row, an honest tap, and a refusal for an action nobody asked for.
+ *
+ * So the law is the ROUND TRIP: every scope the menu OFFERS must be one the
+ * transaction ACCEPTS. Driven from the offer, so a new scope is covered the
+ * moment the producer starts listing it, and stated over every day-state rather
+ * than the one shape a report happened to name.
+ */
+cell(`[${activeWorld.id}] every bin scope the menu offers is one the transaction accepts`, () => {
+  let scopesDriven = 0;
+  let singleScopeShapesSeen = 0;
+  const broken: string[] = [];
+  for (const dayState of DAY_STATES) {
+    // Fresh build per scope: a removal that lands changes what the next scope
+    // would have been offered against.
+    const offered = (): { weekStart: string; date: string; ids: PlanChangeBinScopeId[] } => {
+      const context = quiet(() => dayState.build());
+      const options = quiet(() => listPlanChangeOptionsForDay({
+        visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: world.todayISO,
+      }));
+      return { ...context, ids: options.binScopes.map((scope) => scope.id) };
+    };
+    const ids = offered().ids;
+    if (ids.length === 1 && ids[0] !== 'whole_day') singleScopeShapesSeen += 1;
+    for (const scope of ids) {
+      const context = quiet(() => dayState.build());
+      scopesDriven += 1;
+      const result = quiet(() => applyPlanChange({
+        change: { kind: 'remove_session', date: context.date, scope },
+        visibleWeek: visibleWeek(context.weekStart),
+        todayISO: world.todayISO,
+        setManualOverride: (date, workout, ctx) =>
+          useProgramStore.getState().setManualOverride(date, workout, ctx),
+      }));
+      if (result.outcome === 'applied') continue;
+      broken.push(`${dayState.id}: the menu offered bin scope "${scope}", the door said `
+        + `${result.outcome} — "${result.message}"`);
+    }
+  }
+  assert(broken.length === 0,
+    `the menu offered a removal the door will not take:\n        ${broken.join('\n        ')}`);
+  assert(scopesDriven > 0, 'no bin scope was driven — this cell is asleep');
+  // NON-VACUITY FOR THE SHAPE THAT CAUSED IT. A grid with no single-non-whole-day
+  // scope would pass this law while proving nothing about the team-only night.
+  assert(singleScopeShapesSeen > 0,
+    'no day-state offers exactly ONE non-whole-day bin scope — the shape the sheet '
+    + 'was converting to a whole-day removal is unreachable, so this law is thin');
+});
+
+/**
+ * OFFER IMPLIES A WORKING DOOR, for the five types Sam's ruling 9 puts on the
+ * Add/Swap step.
+ *
+ * The `add_mobility` door in the grid above could not catch the mobility split,
+ * and that is worth saying plainly: a REFUSAL is an honest L2/L5 outcome, so a
+ * door that always refused would have held every law in this file. The sheet's
+ * own rule is stronger — it never offers a door with nothing behind it — and
+ * this is that rule as an assertion.
+ *
+ * The offer is reconstructed from the producer's own facts, not from a hand
+ * list: the type step renders `categories` (minus `recovery`, which ruling 9
+ * removes from the menu), and `chooseType` blocks a full day or a duplicate
+ * KIND. `planChangeCategoryAddsSessionKind` is the producer's own owner for that
+ * kind, imported rather than restated.
+ */
+cell(`[${activeWorld.id}] every session type the Add step offers is one the door accepts`, () => {
+  let offersDriven = 0;
+  const broken: string[] = [];
+  for (const dayState of DAY_STATES) {
+    const reachable = (): { weekStart: string; date: string; ids: string[] } => {
+      const context = quiet(() => dayState.build());
+      const options = quiet(() => listPlanChangeOptionsForDay({
+        visibleWeek: visibleWeek(context.weekStart), date: context.date, todayISO: world.todayISO,
+      }));
+      if (options.locked) return { ...context, ids: [] };
+      if (options.visibleSessionCount >= 2) return { ...context, ids: [] };
+      const ids = options.categories
+        .map((category) => category.id)
+        .filter((id) => id !== 'recovery')
+        .filter((id) => {
+          const adds = planChangeCategoryAddsSessionKind(id);
+          return adds === 'recovery' || !options.visibleSessionKinds.includes(adds);
+        });
+      return { ...context, ids };
+    };
+    for (const category of reachable().ids) {
+      const context = quiet(() => dayState.build());
+      offersDriven += 1;
+      const result = quiet(() => applyPlanChange({
+        change: { kind: 'add_category', date: context.date, category } as PlanChange,
+        visibleWeek: visibleWeek(context.weekStart),
+        todayISO: world.todayISO,
+        setManualOverride: (date, workout, ctx) =>
+          useProgramStore.getState().setManualOverride(date, workout, ctx),
+      }));
+      if (result.outcome === 'applied') continue;
+      // The G-1 ask is the funnel working, not a refusal — see the sibling law.
+      if (result.rejected?.some((entry) => entry.code === 'g1_route_required')) continue;
+      broken.push(`${dayState.id}: the Add step offered "${category}", the door said `
+        + `${result.outcome} — "${result.message}" `
+        + `codes=${JSON.stringify((result.rejected ?? []).map((entry) => entry.code))}`);
+    }
+  }
+  assert(broken.length === 0,
+    `the Add step offered a session type the door will not take:\n        ${broken.join('\n        ')}`);
+  assert(offersDriven > 0, 'no Add offer was driven — this cell is asleep');
 });
 
 cell(`[${activeWorld.id}] preview never throws, on any day-state`, () => {
