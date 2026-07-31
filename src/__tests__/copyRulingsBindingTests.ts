@@ -196,7 +196,12 @@ function proposedStrings(): { batch: string; text: string }[] {
   const out: { batch: string; text: string }[] = [];
   let batch = '5';
   for (const line of raw.slice(start).split('\n')) {
-    const heading = /^### (5[a-z])\./.exec(line);
+    // Any heading LEVEL and any batch NUMBER. It was `^### (5[a-z])\.`, which
+    // meant every string a later batch proposed was reported to Sam under the
+    // last batch-5 sub-heading the parser happened to have seen — Task 4's own
+    // rows came back labelled "5d". The failure message is what someone acts
+    // on, so it has to name the right batch.
+    const heading = /^#+ (\d+[a-z])\./.exec(line);
     if (heading) batch = heading[1];
     if (!line.trimStart().startsWith('|')) continue;
     for (const match of line.matchAll(/"([^"]+)"/g)) out.push({ batch, text: match[1] });

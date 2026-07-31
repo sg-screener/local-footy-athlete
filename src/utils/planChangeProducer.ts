@@ -32,8 +32,8 @@ import {
   type CoachRevisionProtectedAnchorKind,
   type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
-  type CoachVisibleWorkoutSnapshot,
 } from './coachRevisionProposal';
+import { projectParts, type ProjectedDayParts } from '../rules/projectVisibleWeek';
 import {
   buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
@@ -244,18 +244,26 @@ const MAX_VISIBLE_SESSIONS_PER_DAY = 2;
 
 type VisibleSessionKind = CoachRevisionSectionKind;
 
-function visibleSessionKindsForWorkout(
-  workout: CoachVisibleWorkoutSnapshot | null,
-): VisibleSessionKind[] {
-  return Array.from(
-    new Set((workout?.sections ?? []).map((section) => section.kind)),
-  );
-}
-
+/**
+ * The SECTION kinds the day shows.
+ *
+ * Deliberately NOT a capability question any more — those are the projection's
+ * (`projectVisibleWeek.partCapabilities`) and this module reads them rather than
+ * deriving them a second time. What survives here is the section vocabulary the
+ * MUTATIONS speak: bin scopes, move scopes and the split machinery all address a
+ * day by `CoachVisibleSectionSnapshot.kind`, so the offer has to be expressed in
+ * the same words the writer understands.
+ *
+ * (`visibleSessionKindsForWorkout`, the workout-level twin, is gone. It existed
+ * only so this could delegate to it, and a second entry point into one derivation
+ * is exactly the shape this unit removes.)
+ */
 function visibleSessionKindsForSnapshot(
   snap: CoachVisibleDaySnapshot,
 ): VisibleSessionKind[] {
-  return visibleSessionKindsForWorkout(snap.workout);
+  return Array.from(
+    new Set((snap.workout?.sections ?? []).map((section) => section.kind)),
+  );
 }
 
 function hasProtectedAnchors(snap: CoachVisibleDaySnapshot): boolean {
@@ -358,8 +366,16 @@ export function planChangeMoveOptionsAreConsistent(move: PlanChangeMoveOptions):
 
 const MOVE_REFUSAL_COPY: Record<PlanChangeMoveRefusalReason, string> = {
   no_session: "There's nothing on this day to move.",
+  // TWO PROBLEMS, ONE REWRITE (Batch 6, 2026-07-31). It read "…You can still
+  // swap or bin the gym work on it." That second clause used the retired verb
+  // (batch 3: Remove everywhere, not Bin) AND it made a claim about state it
+  // cannot see — on a team night with no gym work beside it, and now that the
+  // four-action menu renders this sentence inline under a disabled Move row
+  // rather than only after a tap, it would sit next to a Swap row that is also
+  // off. Batch 3's principle is that a signed sentence must never be able to
+  // lie, so the clause that can lie is gone rather than qualified.
   anchored_day:
-    "Team training is fixed to this day, so it can't be moved from here. You can still swap or bin the gym work on it.",
+    "Team training is fixed to this day, so it can't be moved from here.",
   no_destination:
     "There's nowhere to move this in the weeks you can edit — every other day is a game, team training, or already full.",
 };
@@ -371,11 +387,34 @@ const MOVE_SCOPE_COPY: Record<PlanChangeMoveScopeId, { label: string; sub: strin
   recovery: { label: 'Just the recovery work', sub: 'The rest of the day stays' },
 };
 
+/**
+ * THE FOUR-ACTION MENU, PLUS WHAT SITS BEHIND EACH ROW.
+ *
+ * `hasSession`, `canSwap`, `canAdd`, `canRemove` and the presence of a move
+ * refusal are RENDERED, not derived: every one of them is
+ * `projectVisibleWeek.projectParts`'s answer for this day, read once here so the
+ * sheet never asks "is this a session?" (`visibleProjection.ts` property 3). The
+ * menu used to answer those questions itself — `hasSession = workout !== null`,
+ * `canRemove = hasSession` — and a second derivation of a capability is a second
+ * story about the day: it offered to bin a team night the projection called an
+ * anchor, and refused a move on a day the projection called movable.
+ *
+ * What this module still OWNS is everything the projection has no vocabulary for:
+ * which template backs a category, which sections a scope addresses, where a
+ * session may legally land, and the edit WINDOW (`locked`) — the projection holds
+ * no opinion about how far ahead the plan is firm.
+ */
 export interface PlanChangeDayOptions {
   date: string;
   /** Why the menu is empty, when it is. */
   locked: null | 'outside_horizon' | 'game_day' | 'not_visible';
+  /** Does the projection carry any part on this day? */
   hasSession: boolean;
+  /** Projection: is any part on this day the athlete's to trade for another? */
+  canSwap: boolean;
+  /** Projection: may this day take more work at all? False for a fixture. */
+  canAdd: boolean;
+  /** Projection: can work be taken off this day? */
   canRemove: boolean;
   /** Registry templates legal for this date (bye gating applied). */
   templates: CoachRevisionTemplateDefinition[];
@@ -402,6 +441,21 @@ export interface PlanChangeDayOptions {
 // The menu IS the policy: bye-only templates appear only on bye-week dates,
 // nothing appears outside the horizon, destinations are only rest days.
 
+/**
+ * This day, as the ONE projection sees it.
+ *
+ * ONE DAY, NOT THE WEEK, and that is exact rather than an optimisation:
+ * `projectParts` maps each day independently — no cross-day derivation, no
+ * week-level state — so projecting `[day]` returns byte-identical output to
+ * projecting the week and picking this date out of it. The menu is listed once
+ * per day per surface render, and per day per action in the walker, so asking
+ * for six days nobody reads would multiply the cost of the single most-called
+ * function in this file by seven for no extra truth.
+ */
+function projectedDay(day: ResolvedDay): ProjectedDayParts {
+  return projectParts({ week: [day], weekStart: day.date }).days[0];
+}
+
 export function listPlanChangeOptionsForDay(args: {
   visibleWeek: ResolvedDay[];
   date: string;
@@ -411,6 +465,8 @@ export function listPlanChangeOptionsForDay(args: {
     date: args.date,
     locked,
     hasSession: false,
+    canSwap: false,
+    canAdd: false,
     canRemove: false,
     templates: [],
     categories: [],
@@ -428,8 +484,18 @@ export function listPlanChangeOptionsForDay(args: {
   if (!day) return empty('not_visible');
   if (!isWithinEditHorizon(args.date, args.todayISO)) return empty('outside_horizon');
 
+  const projected = projectedDay(day);
+  // A FIXTURE IS A TYPED FACT, NOT A TITLE THAT MENTIONS FOOTY. This was
+  // `visibleDayLooksLikeGame(snap)` — `/\bgame\b/` over the rendered title, the
+  // same title-regex shape `moveOptionsForDay` already complains about two
+  // hundred lines below. `dayKind` reads `day.source === 'game' || day.indicator
+  // === 'game'`, which is where the athlete's fixture actually lives, and it is
+  // the same read that makes the projection call every part of a game day
+  // uneditable. Two owners answering "is this a game day?" is how the menu came
+  // to lock a day the projection was offering to edit.
+  if (projected.kind === 'game') return empty('game_day');
+
   const snap = snapshotProjectedDay(day);
-  if (visibleDayLooksLikeGame(snap)) return empty('game_day');
 
   // Athlete override principle: EVERY registry template is offered on
   // every editable day. Game-week / volume caution is expressed as a
@@ -445,10 +511,14 @@ export function listPlanChangeOptionsForDay(args: {
     .filter((id) => templates.some(CATEGORY_TEMPLATE_MATCH[id]))
     .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
-  const hasSession = snap.workout !== null;
+  // THE PROJECTION'S ANSWERS, READ — NOT ASKED AGAIN.
+  const hasSession = projected.parts.length > 0;
+  const canSwap = projected.parts.some((part) => part.capabilities.canSwap);
+  const canRemove = projected.capabilities.canRemoveWholeDay;
   const move = moveOptionsForDay({
     day,
     snapshot: snap,
+    projected,
     visibleWeek: args.visibleWeek,
     date: args.date,
     todayISO: args.todayISO,
@@ -460,7 +530,7 @@ export function listPlanChangeOptionsForDay(args: {
   const visibleSessionKinds = visibleSessionKindsForSnapshot(snap);
   const visibleSessionCount = visibleSessionKinds.length;
   const canAddOnTop =
-    hasSession &&
+    projected.capabilities.canAdd &&
     visibleSessionCount > 0 &&
     visibleSessionCount < MAX_VISIBLE_SESSIONS_PER_DAY;
 
@@ -468,11 +538,13 @@ export function listPlanChangeOptionsForDay(args: {
     date: args.date,
     locked: null,
     hasSession,
-    canRemove: hasSession,
+    canSwap,
+    canAdd: projected.capabilities.canAdd,
+    canRemove,
     templates,
     categories,
     move,
-    binScopes: hasSession ? binScopesForSnapshot(snap) : [],
+    binScopes: canRemove ? binScopesForSnapshot(snap) : [],
     addOnTopCategories: canAddOnTop
       ? categories.filter((category) => {
           const addedKind = categoryAddsSessionKind(category.id);
@@ -504,6 +576,7 @@ export function listPlanChangeOptionsForDay(args: {
 function moveOptionsForDay(args: {
   day: ResolvedDay;
   snapshot: CoachVisibleDaySnapshot;
+  projected: ProjectedDayParts;
   visibleWeek: ResolvedDay[];
   date: string;
   todayISO: string;
@@ -512,7 +585,15 @@ function moveOptionsForDay(args: {
     scopes: [],
     refusal: { reason, message: MOVE_REFUSAL_COPY[reason] },
   });
-  if (!args.snapshot.workout) return refuse('no_session');
+  // WHETHER ANYTHING MAY LEAVE THIS DAY IS THE PROJECTION'S ANSWER. This door
+  // owns the two questions the projection cannot answer — WHICH scopes the
+  // mutation machinery can address, and WHERE they may land — and asks neither
+  // of them until the owner has said there is something to move. It used to
+  // decide for itself, from `snapshot.workout` and the section kinds, and got a
+  // different answer on a team night carrying a recovery add-on.
+  if (!args.projected.capabilities.canMoveWholeDay) {
+    return refuse(args.projected.parts.length === 0 ? 'no_session' : 'anchored_day');
+  }
 
   // A team night IS a destination (Sam's doubling law, 2026-07-30): the session
   // lands beside the anchor as a combined day. Only game day is excluded.
@@ -577,6 +658,16 @@ function moveOptionsForDay(args: {
   // binnable for one date (`binScopesForSnapshot` offers exactly that) but not
   // movable to another day. Its presence is what makes a whole-day move wrong —
   // that move would take the commitment with it.
+  //
+  // AND THIS IS NOT THE PROJECTION'S QUESTION, WHICH IS WHY IT IS STILL ASKED
+  // HERE. "Can anything leave this day?" is a capability and belongs to the
+  // owner — it is the gate at the top of this function now. "Would a WHOLE-DAY
+  // move drag something that must stay?" is a different question with a
+  // different answer for the same part: a recovery add-on cannot leave on its
+  // own (so `canMove` is false for it) but it TRAVELS with a whole-day move,
+  // because the workout moves and the add-on is a field on the workout. Reading
+  // `part.capabilities.canMove` here would turn every add-on day into a scoped
+  // offer and quietly retire the whole-day move from days that should have it.
   const carriesImmovableContent = visibleKinds.some(
     (kind) => !MOVABLE_SECTION_KINDS.includes(kind));
   const dragsSomethingItShouldNot = carriesImmovableContent ||
@@ -981,7 +1072,7 @@ export function buildPlanChangeProposal(
       // in the writer).
       if (before.workout) {
         if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
-        const kinds = visibleSessionKindsForWorkout(before.workout);
+        const kinds = visibleSessionKindsForSnapshot(before);
         const addedKind = templateAddsSessionKind(definition.category);
         if (before.workout.sections.length === 0 || kinds.length === 0) {
           return { error: 'day_not_stackable' };

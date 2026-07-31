@@ -124,9 +124,25 @@ export interface VisiblePart {
   readonly countsTowardLoad: boolean;
 }
 
+/**
+ * WHAT THE FOUR-ACTION MENU MAY OFFER ON THIS DAY.
+ *
+ * These are DOOR answers, not transaction shapes: each one says whether the
+ * athlete gets that row, and the producer then says which scopes and which
+ * destinations sit behind it.
+ *
+ * THE `WholeDay` SUFFIX IS OLDER THAN THE SCOPED DOORS AND NOW READS NARROWER
+ * THAN IT MEANS. Both fields are asked of the DAY, and a combined day answers
+ * yes to a move that takes only its gym session. Not renamed here because the
+ * name is part of `MenuView` and reaches surfaces this task does not own; the
+ * meaning is pinned below so nobody has to guess it from the identifier.
+ */
 export interface DayCapabilities {
+  /** May work be added to this day at all? False only for a fixture. */
   readonly canAdd: boolean;
+  /** Is there work on this day that can LEAVE it — whole or scoped? */
   readonly canMoveWholeDay: boolean;
+  /** Can work be taken OFF this day — whole or scoped? */
   readonly canRemoveWholeDay: boolean;
   /** Why the day offers nothing, in words the athlete may read. */
   readonly refusal: SignedCopy | null;

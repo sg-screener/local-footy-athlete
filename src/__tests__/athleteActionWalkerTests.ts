@@ -299,8 +299,17 @@ function weekFingerprint(): string {
 // 'accessories' still in this list, `add accessories` threw "undefined is not a
 // function" inside the door, because the id no longer resolves to a category. A door
 // that throws is L1, and a stale vocabulary is how a harness manufactures one.
+//
+// TASK 4, 2026-07-31 — THE SAME RULE APPLIED IN THE OTHER DIRECTION. Sam's design
+// ruling 9 names the five types the Add/Swap menus offer, and `recovery` is not one
+// of them: the sheet stopped offering it, so an athlete can no longer walk through
+// that door and the walker must not either. `mobility` takes its place — it was a
+// live producer category that `PlanChangeSheet` never rendered, so the walker was
+// walking a door the app did not have and not walking one it did. `recovery` stays
+// a `PLAN_CHANGE_CATEGORY_ID` (the charter still charters the type, and the
+// resolver/G+1 world still places it); it is the MENU that no longer offers it.
 const CATEGORIES = ['conditioning_light', 'conditioning_hard', 'strength_upper',
-  'strength_lower', 'strength_full', 'gunshow', 'prehab', 'recovery'] as const;
+  'strength_lower', 'strength_full', 'gunshow', 'prehab', 'mobility'] as const;
 const G1_ROUTES = [undefined, 'keep_the_day', 'take_the_gunshow',
   'accessories_only', 'deloaded'] as const;
 
@@ -1096,76 +1105,20 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     redsIn: 'deep',
   },
 
-  // ── L-P4: FOUR SHAPES, FOUR ENTRIES ──────────────────────────────────────
-  // Two capability shapes and two move shapes. The move pair only became visible
-  // when the clause was made symmetric (it previously accepted `anchored_day` and
-  // `no_destination` as legitimate), and the second capability shape only became
-  // visible when a declared red stopped consuming the law's one slot per action.
-  {
-    id: 'menu_offers_removal_of_a_team_night',
-    law: 'L-P4 MENU = PROJECTION',
-    matches: /a "training" day carrying \["team_training"\] and says its work CANNOT be removed; the menu \(locked=null, hasSession=true, canRemove=true\)/,
-    why: 'A team-only night projects one `team_training` part, which '
-      + '`partCapabilities` correctly calls an ANCHOR — not removable. The menu '
-      + 'derives `canRemove` from `workout !== null` and offers to bin the team '
-      + 'night. Reproduce: bounded seed 1, 2 actions — answer onboarding '
-      + '(In-season, team Wednesday), generate the program; 2026-07-22.',
-    paidBy: 'Task 4 (the menu derives its capabilities from project())',
-    expiresWhen: 'the menu refuses to remove a day whose only part is an anchor.',
-    redsIn: 'both',
-  },
-  {
-    id: 'projection_calls_a_game_day_editable',
-    law: 'L-P4 MENU = PROJECTION',
-    matches: /a "game" day carrying \["strength"\] and says its work CAN be removed; the menu \(locked=game_day, hasSession=false, canRemove=false\)/,
-    why: 'THE PROJECTION DOES NOT KNOW A GAME DAY AT PART LEVEL. `dayKind` says '
-      + '"game" and `COMPONENT_TO_PART` still maps the day\'s `session` component '
-      + 'to `strength`, so the projection offers remove on a fixture while the menu '
-      + 'locks it. One derivation disagreeing with itself is worse than two '
-      + 'surfaces disagreeing. Reproduce: bounded seed 2, 3 actions — answer '
-      + 'onboarding (Pre-season, team Wednesday), generate the program, mark '
-      + '2026-07-26 as game.',
-    paidBy: 'Task 4 (the menu derives its capabilities from project())',
-    expiresWhen: 'a projected game day carries no removable part.',
-    redsIn: 'both',
-  },
-  {
-    id: 'projection_offers_a_move_on_a_game_day',
-    law: 'L-P4 MENU = PROJECTION',
-    matches: /a "game" day carrying \["strength"\] and says its work CAN be moved; the move door refuses "no_session" \(locked=game_day\)/,
-    why: 'THE MOVE HALF OF THE GAME-DAY SPLIT, and it does not follow from the '
-      + 'remove half: `canMoveWholeDay` and `canRemoveWholeDay` are separately '
-      + 'derived, and a fix to one leaves the other. Same cause — the projection '
-      + 'reads a fixture\'s `session` component as movable strength. Reproduce: '
-      + 'bounded seed 2, 3 actions — answer onboarding (Pre-season, team '
-      + 'Wednesday), generate the program, mark 2026-07-26 as game.',
-    paidBy: 'Task 4 (the menu derives its capabilities from project())',
-    expiresWhen: 'a projected game day is not offered a move.',
-    redsIn: 'both',
-  },
-  {
-    id: 'projection_offers_a_move_off_an_anchored_day',
-    law: 'L-P4 MENU = PROJECTION',
-    matches: /and says its work CAN be moved; the move door refuses "anchored_day"/,
-    why: 'SURFACED BY MAKING THE MOVE CLAUSE SYMMETRIC. The first draft accepted '
-      + '`anchored_day` as a week-fact the projection had no opinion about; it does '
-      + 'have one — `canMoveWholeDay` is `editable.length > 0`, which is true for a '
-      + 'team night carrying recovery, while `moveOptionsForDay` refuses the whole '
-      + 'day because team training is fixed to it. Whichever is right, they are not '
-      + 'the same answer, and cell 4 asserts `!move.refusal` with no qualification. '
-      + 'Reproduce: bounded seed 5, 5 actions — answer onboarding (Pre-season, team '
-      + 'Wednesday), generate, advance 7, move 2026-07-28 -> 2026-07-29 (whole_day), '
-      + 'move 2026-07-29 -> 2026-07-31 (conditioning); 2026-07-29 projects '
-      + '["team_training","recovery"].',
-    paidBy: 'Task 4 (the menu derives its capabilities from project())',
-    expiresWhen: 'the projection\'s `canMoveWholeDay` and the move door agree on '
-      + 'an anchored day — by the projection learning about anchors, not by the '
-      + 'law accepting a refusal reason.',
-    // BOUNDED ONLY, verified by survey: the deep tier's three seeds do not build
-    // a team night carrying recovery. Real, deterministic, and reached at
-    // fourteen actions — it just is not one of three long walks' business.
-    redsIn: 'bounded',
-  },
+  // ── L-P4: PAID IN FULL BY TASK 4, 2026-07-31 ────────────────────────────
+  // Four entries lived here — two capability shapes and two move shapes, all on
+  // `L-P4 MENU = PROJECTION`. They are DELETED, not silenced: the survey
+  // (`WALKER_SURVEY=1`) now records zero L-P4 offences in either tier, and the
+  // stale-debt cell below would fail this file if any of them were left behind.
+  //
+  // What paid them was ownership, not four fixes. `partCapabilities` learned the
+  // three POSITIONS it was missing (a fixture owns its whole day; an appointment
+  // does not travel or trade but can be dropped for one date; an add-on rides
+  // with the day), and `listPlanChangeOptionsForDay` stopped deriving
+  // `hasSession`/`canRemove`/"is anything movable" for itself and now renders the
+  // projection's answers. The two shapes that named the MENU as wrong and the two
+  // that named the PROJECTION as wrong all came from the same defect: two owners
+  // answering one question.
 
   {
     id: 'block_rollover_fails_silently_and_the_program_stops',

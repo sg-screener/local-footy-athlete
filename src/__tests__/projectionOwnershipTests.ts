@@ -170,19 +170,109 @@ run('project() evaluates without throwing and every headline is registered copy'
   }
 });
 
-run('a recovery part is capable of everything a strength part is (ruling 3)', () => {
-  world();
-  const days = projected(WEEK).concat(projected('2026-08-03'));
-  const parts = projectParts({ week: days, weekStart: WEEK }).days.flatMap((d) => d.parts);
+run('a recovery SESSION is capable of everything a strength session is (ruling 3)', () => {
+  // RESTATED IN TASK 4, AND STRENGTHENED — read the reason before changing it back.
+  //
+  // This cell used to compare every `kind === 'recovery'` part in the real week
+  // against the first strength part. In this world EVERY recovery part is a
+  // `recovery_addon` (probed: 4 add-ons, 0 standalone recovery components), so it
+  // was stating ruling 3 about a POSITION the ruling is not about, and it would
+  // have passed just as happily if `partCapabilities` had returned all-false for
+  // both. Ruling 3 says a recovery DAY is a day type like any other; `position,
+  // never kind` is the same sentence from the other side.
+  //
+  // So the comparison is now made where the ruling lives — two standalone
+  // sessions in the same position, one recovery and one strength — and it asserts
+  // the capabilities are not only equal but FULL. The add-on's own rule (it rides
+  // with the day, so it is not independently editable) is the cell below, and the
+  // two together say what one vague cell used to imply.
+  const day = (date: string, workout: unknown): ResolvedDay => ({
+    date, source: 'plan', workout,
+  } as unknown as ResolvedDay);
+  const week = [
+    day('2026-07-13', {
+      id: 'recovery-session', name: 'Recovery Session', workoutType: 'Recovery',
+      sessionTier: 'recovery', exercises: [], durationMinutes: 30,
+    }),
+    day('2026-07-14', {
+      id: 'strength-session', name: 'Upper Push', workoutType: 'Strength',
+      sessionTier: 'core', durationMinutes: 60,
+      exercises: [{ id: 'r1', name: 'Bench Press', sets: 3, reps: 5 }],
+    }),
+  ];
+  const parts = projectParts({ week, weekStart: '2026-07-13' }).days.flatMap((d) => d.parts);
   const recovery = parts.filter((p) => p.kind === 'recovery');
   const strength = parts.filter((p) => p.kind === 'strength');
   assert(recovery.length > 0 && strength.length > 0,
-    `nothing to compare — recovery ${recovery.length}, strength ${strength.length}`);
+    `nothing to compare — recovery ${recovery.length}, strength ${strength.length}. `
+    + 'A vacuous ruling-3 cell is worse than none.');
+  const FULL = JSON.stringify({
+    canSwap: true, canMove: true, canRemove: true, canEditRows: true,
+  });
   for (const part of recovery) {
     assert(JSON.stringify(part.capabilities) === JSON.stringify(strength[0].capabilities),
-      `a recovery part is offered ${JSON.stringify(part.capabilities)} while a `
-      + `strength part gets ${JSON.stringify(strength[0].capabilities)}. Recovery is `
+      `a recovery session is offered ${JSON.stringify(part.capabilities)} while a `
+      + `strength session gets ${JSON.stringify(strength[0].capabilities)}. Recovery is `
       + 'a day type like any other.');
+    assert(JSON.stringify(part.capabilities) === FULL,
+      `a standalone session is offered ${JSON.stringify(part.capabilities)} — equal to `
+      + 'strength, but both are locked down. Equality alone is satisfiable by '
+      + 'refusing everything.');
+  }
+});
+
+run('an add-on rides with the day — position, never kind', () => {
+  // THE OTHER HALF OF RULING 3, and the reason the walker's
+  // `projection_offers_a_move_off_an_anchored_day` red could be paid honestly.
+  //
+  // `recoveryAddons` is a top-level workout field, so it produces no visible
+  // section: no bin scope names it, no move scope addresses it, and
+  // `materializeAcceptedVisibleSections`'s signed `keepRecoveryAddons` finding
+  // says the half of a split day that LEAVES never takes it. A part no door can
+  // act on must not be projected as one the athlete may act on — that mismatch is
+  // what made a team night carrying an add-on read as movable.
+  //
+  // This is NOT a recovery exception: the cell above proves a standalone recovery
+  // session is fully capable. It is the position that answers.
+  world();
+  const days = projected(WEEK).concat(projected('2026-08-03'));
+  const parts = projectParts({ week: days, weekStart: WEEK }).days.flatMap((d) => d.parts);
+  const addons = parts.filter((part) => part.id.endsWith(':recovery_addon'));
+  assert(addons.length > 0,
+    'no recovery add-on in his week — this cell has nothing to say and would pass '
+    + 'vacuously');
+  for (const addon of addons) {
+    assert(!addon.capabilities.canMove && !addon.capabilities.canRemove &&
+      !addon.capabilities.canSwap && !addon.capabilities.canEditRows,
+      `${addon.id} is offered ${JSON.stringify(addon.capabilities)} — but no door in `
+      + 'the app can move, remove or swap a recovery add-on on its own.');
+    assert(addon.kind === 'recovery' && addon.countsTowardLoad === false,
+      `${addon.id} stopped being a recovery part — the position rule must not `
+      + 'change what the part IS');
+  }
+});
+
+run('a fixture owns its whole day', () => {
+  // The two game-day walker reds, as a stated law. `dayKind` said "game" while
+  // `COMPONENT_TO_PART` mapped the fixture's `session` component to `strength`, so
+  // the projection offered a move and a removal on a day the athlete cannot touch
+  // — one derivation disagreeing with itself.
+  world();
+  const days = projected('2026-07-27');
+  const game = projectParts({ week: days, weekStart: '2026-07-27' })
+    .days.find((d) => d.kind === 'game');
+  assert(game, 'no game day in the week his fixture is in — nothing to assert');
+  assert(game.parts.length > 0,
+    `${game.date} projects no parts at all, so "nothing on it is editable" is `
+    + 'trivially true and this cell proves nothing');
+  assert(!game.capabilities.canAdd && !game.capabilities.canMoveWholeDay &&
+    !game.capabilities.canRemoveWholeDay,
+    `${game.date} is a fixture and the projection offers `
+    + `${JSON.stringify(game.capabilities)}`);
+  for (const part of game.parts) {
+    assert(!part.capabilities.canMove && !part.capabilities.canRemove &&
+      !part.capabilities.canSwap && !part.capabilities.canEditRows,
+      `${part.id} on a fixture is offered ${JSON.stringify(part.capabilities)}`);
   }
 });
 

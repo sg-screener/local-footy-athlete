@@ -698,55 +698,81 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     path.resolve(__dirname, '..', 'utils', 'planChangeRefusalCopy.ts'),
     'utf8',
   );
-  const menuIdx = sheet.indexOf("step.kind === 'menu'");
-  const editIdx = sheet.indexOf("step.kind === 'edit_session'");
-  const categoryIdx = sheet.indexOf("step.kind === 'pick_category'");
+  // REWRITTEN 2026-07-31 for Sam's design rulings 7-9. Everything below used to
+  // pin the INTERMEDIATE menu — a step whose only job was to open another step —
+  // plus the `hasEditableSession` branch that chose between its two rows by
+  // reading `workoutType === 'Recovery'` and a lowercased workout name. Both are
+  // deleted, so those cells now pin the shape that replaced them. This file's own
+  // 2026-07-30 note is the precedent and the warning: an assertion left pinning a
+  // door nobody can open is an assertion certifying dead code as correct.
+  const actionsIdx = sheet.indexOf("step.kind === 'actions'");
+  const typeIdx = sheet.indexOf("step.kind === 'pick_type'");
   const destinationIdx = sheet.indexOf("step.kind === 'pick_destination'");
   const binScopeIdx = sheet.indexOf("step.kind === 'pick_bin_scope'");
-  const wellbeingIdx = sheet.indexOf("step.kind === 'pick_wellbeing'");
-  const askCoachIdx = sheet.indexOf('const askCoach = () =>');
   const confirmWarningIdx = sheet.indexOf("step.kind === 'confirm_warning'");
   const blockWarningIdx = sheet.indexOf("step.kind === 'block_warning'");
-  const menuBlock = sheet.slice(menuIdx, editIdx);
-  const editBlock = sheet.slice(editIdx, categoryIdx);
+  const actionsBlock = sheet.slice(actionsIdx, sheet.indexOf("step.kind === 'add_blocked_max_sessions'"));
+  const typeBlock = sheet.slice(typeIdx, sheet.indexOf("step.kind === 'pick_conditioning'"));
+  const duplicateBlock = sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'"), typeIdx);
   const confirmWarningBlock = sheet.slice(confirmWarningIdx, blockWarningIdx);
   const blockWarningBlock = sheet.slice(blockWarningIdx, destinationIdx);
 
-  ok('[9] PlanChangeSheet has an explicit edit_session step',
-    /\| \{ kind: 'edit_session' \}/.test(sheet));
-  ok('[9] occupied top menu enters Edit this session',
-    /hasEditableSession \? \([\s\S]{0,220}label="Edit this session"[\s\S]{0,120}sub="Swap, add, move or remove this session"[\s\S]{0,140}setStep\(\{ kind: 'edit_session' \}\)/.test(menuBlock));
-  ok('[9] occupied top menu no longer directly lists edit actions',
-    !/label="Swap this session"|label="Add to this day"|label="Move this session"|label="Bin this session"/.test(menuBlock));
-  ok('[9] rest/recovery top menu offers optional add instead of edit',
-    /label="Add optional session"[\s\S]{0,120}sub="Add extra strength or conditioning work to this day"[\s\S]{0,180}startAdd\('menu'\)/.test(menuBlock)
-      && /selectedWorkout\?\.workoutType === 'Recovery'/.test(sheet)
-      && /selectedWorkout\?\.sessionTier === 'recovery'/.test(sheet));
-  ok('[9] edit_session menu owns swap/add/move/bin options',
-    /label="Swap this session"[\s\S]{0,80}Change to strength, conditioning or recovery/.test(editBlock)
-      && /label="Add to this day"[\s\S]{0,100}Add extra strength or conditioning work to this day/.test(editBlock)
-      && /label="Move this session"[\s\S]{0,80}Move it to another day or trade places/.test(editBlock)
-      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
-  ok('[9] swap category no longer offers Rest day because bin owns rest',
-    !/label="Rest day"|Clear the day - same as binning the session/.test(sheet)
-      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
-  ok('[9] edit_session reuses existing swap/add/move/bin routes',
-    /kind: 'pick_category', mode: 'swap', returnTo: 'edit_session'/.test(editBlock)
-      && /startAdd\('edit_session'\)/.test(editBlock)
-      && /onPress=\{\(\) => startMove\(\)\}/.test(editBlock)
-      && /onPress=\{startBin\}/.test(editBlock)
+  ok('[9] the four actions ARE the first step — no menu in front of the menu',
+    /\| \{ kind: 'actions' \}/.test(sheet)
+      && /useState<Step>\(\{ kind: 'actions' \}\)/.test(sheet)
+      && /if \(visible\) \{\s*setStep\(\{ kind: 'actions' \}\);/.test(sheet)
+      && !/kind: 'menu'|kind: 'edit_session'|kind: 'pick_add_kind'/.test(sheet));
+  ok('[9] the first step owns swap/add/move/remove and nothing else',
+    /label="Swap this session"/.test(actionsBlock)
+      && /label="Add to this day"[\s\S]{0,140}Add extra strength or conditioning work to this day/.test(actionsBlock)
+      && /label="Move this session"/.test(actionsBlock)
+      && /label="Remove this session"/.test(actionsBlock)
+      && !/label="Edit this session"|label="Add optional session"|label="I'm not 100%"|ask the coach/.test(actionsBlock));
+  ok('[9] the sheet no longer decides capability from a workout name or type',
+    !/workoutType === 'Recovery'/.test(sheet)
+      && !/sessionTier === 'recovery'/.test(sheet)
+      && !/hasEditableSession|isRestOrRecoveryDay|selectedWorkoutName/.test(sheet));
+  ok('[9] every action row is enabled from the projection\'s capability, not from content',
+    /disabled=\{!options\.canSwap\}/.test(actionsBlock)
+      && /disabled=\{!options\.canAdd\}/.test(actionsBlock)
+      && /disabled=\{!!options\.move\.refusal\}/.test(actionsBlock)
+      && /disabled=\{!options\.canRemove\}/.test(actionsBlock));
+  ok('[9] a disabled Move row renders the producer\'s own refusal sentence',
+    /options\.move\.refusal\s*\?\s*options\.move\.refusal\.message/.test(actionsBlock));
+  ok('[9] every action row carries an icon and the danger row is the destructive one',
+    /icon=\{swapIcon\(/.test(actionsBlock)
+      && /icon=\{addIcon\(/.test(actionsBlock)
+      && /icon=\{moveIcon\(/.test(actionsBlock)
+      && /icon=\{removeIcon\(/.test(actionsBlock)
+      && /label="Remove this session"[\s\S]{0,420}danger/.test(actionsBlock)
+      && /icon\?: React\.ReactNode/.test(sheet));
+  ok('[9] swap category no longer offers Rest day because remove owns rest',
+    !/label="Rest day"|Clear the day - same as binning the session/.test(sheet));
+  ok('[9] the first step reuses the existing swap/add/move/remove routes',
+    /kind: 'pick_type', mode: 'swap'/.test(actionsBlock)
+      && /onPress=\{startAdd\}/.test(actionsBlock)
+      && /onPress=\{\(\) => startMove\(\)\}/.test(actionsBlock)
+      && /onPress=\{startBin\}/.test(actionsBlock)
       && /apply\(\{[\s\S]{0,24}kind: 'move_session'/.test(sheet.slice(destinationIdx, binScopeIdx))
       && /apply\([\s\S]{0,80}\{ kind: 'remove_session'/.test(sheet));
-  ok('[9] Add to this day opens an ADD menu with strength and conditioning',
-    /\| \{ kind: 'pick_add_kind'; returnTo: StepBackTarget \}/.test(sheet)
-      && /step\.kind === 'pick_add_kind'[\s\S]{0,120}<Text style=\{styles\.sectionLabel\}>ADD:<\/Text>/.test(sheet)
-      && /label="Strength"[\s\S]{0,100}Upper, lower, full body or accessories/.test(sheet)
-      && /label="Conditioning"[\s\S]{0,100}Light or hard - bike, row, ski or intervals/.test(sheet));
-  ok('[9] ADD menu routes pickers with add intent and backs naturally',
-    /chooseAddKind\('strength', step\.returnTo\)/.test(sheet)
-      && /chooseAddKind\('conditioning', step\.returnTo\)/.test(sheet)
-      && /mode: 'add'/.test(sheet.slice(sheet.indexOf('const chooseAddKind')))
-      && /pickerBackStep\(step\.mode, step\.returnTo\)/.test(sheet));
+  ok('[9] Add and Swap open ONE type step offering Sam\'s five session types',
+    /\| \{ kind: 'pick_type'; mode: 'swap' \| 'add' \}/.test(sheet)
+      && /label="Strength"[\s\S]{0,140}Upper, lower or full body/.test(typeBlock)
+      && /label="Conditioning"[\s\S]{0,140}Light or hard - bike, row, ski or intervals/.test(typeBlock)
+      && /offers\('gunshow'\)/.test(typeBlock)
+      && /offers\('mobility'\)/.test(typeBlock)
+      && /offers\('prehab'\)/.test(typeBlock));
+  ok('[9] the type step offers no recovery row and mobility is finally reachable',
+    !/chooseCategory\((?:mode|step\.mode), 'recovery'\)/.test(sheet)
+      && !/c\.id === 'recovery'/.test(sheet)
+      && /chooseCategory\(mode, 'mobility'\)/.test(typeBlock));
+  ok('[9] the strength bucket is the three strength sessions only',
+    /filter\(\(c\) => c\.id\.startsWith\('strength_'\)\)/.test(sheet)
+      && !/c\.id\.startsWith\('strength_'\) \|\| c\.id === 'gunshow'/.test(sheet));
+  ok('[9] the type step routes pickers with the mode it was opened in',
+    /chooseType\(mode, 'strength',[\s\S]{0,80}kind: 'pick_strength', mode/.test(typeBlock)
+      && /chooseType\(mode, 'conditioning',[\s\S]{0,80}kind: 'pick_conditioning', mode/.test(typeBlock)
+      && /pickerBackStep\(step\.mode\)/.test(sheet));
   ok('[9] add blockers explain max sessions and duplicate session types',
     /Please remove a session first/.test(sheet)
       && /This day already has 2 sessions\. Remove one before adding another\./.test(sheet)
@@ -754,23 +780,29 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /This day already includes a strength session\. Swap the current session or remove one before adding another\./.test(sheet)
       && /Already has conditioning work/.test(sheet)
       && /This day already includes conditioning\. Swap the current session or remove one before adding another\./.test(sheet));
-  ok('[9] duplicate blockers route to existing swap/bin flows and back to ADD',
-    /label="Swap this session"[\s\S]{0,160}kind: 'pick_category'[\s\S]{0,80}mode: 'swap'/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
-      && /label="Remove a session"[\s\S]{0,80}onPress=\{startBin\}/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
-      && /kind: 'pick_add_kind', returnTo: step\.returnTo/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'"))));
-  ok('[9] nested edit backs return to edit_session',
-    /BackRow onPress=\{\(\) => setStep\(\{ kind: step\.returnTo \}\)\}/.test(sheet)
-      && /setStep\(\{ kind: 'edit_session' \}\)/.test(sheet.slice(destinationIdx)));
-  // UPDATED 2026-07-30. This used to require `setStep({ kind: 'pick_wellbeing' })`
-  // in the menu — a door the readiness-ownership unit deliberately retired, so
-  // the assertion had been failing on `main` and pinning dead code as correct.
-  // The current law is that the day card holds NO readiness committer and hands
-  // off to the single week-level owner; that is what gets pinned now.
-  ok('[9] ask coach and the readiness hand-off routes remain unchanged',
-    /onAskCoach\(`About \$\{weekdayLabel\(date\)\}: `\)/.test(sheet.slice(askCoachIdx))
-      && /label="I'm not 100%"[\s\S]{0,160}onPress=\{openReadiness\}/.test(menuBlock)
-      && /const openReadiness = \(\) => \{[\s\S]{0,120}onOpenReadiness\(\);/.test(sheet)
-      && /label="Something else - ask the coach"[\s\S]{0,120}onPress=\{askCoach\}/.test(menuBlock));
+  ok('[9] the add guard blocks a duplicate KIND and never blocks mobility',
+    /const chooseType = \([\s\S]{0,700}adds !== 'recovery' && \(options\?\.visibleSessionKinds \?\? \[\]\)\.includes\(adds\)/.test(sheet)
+      && /chooseType\(mode, 'recovery',/.test(typeBlock));
+  ok('[9] duplicate blockers route to existing swap/remove flows and back to the type step',
+    /label="Swap this session"[\s\S]{0,200}kind: 'pick_type', mode: 'swap'/.test(duplicateBlock)
+      && /label="Remove a session"[\s\S]{0,140}onPress=\{startBin\}/.test(duplicateBlock)
+      && /kind: 'pick_type', mode: 'add'/.test(duplicateBlock));
+  ok('[9] nested steps back out to the four actions, and the four actions close',
+    /setStep\(\{ kind: 'actions' \}\)/.test(sheet.slice(destinationIdx))
+      && /<BackRow onPress=\{onClose\} \/>/.test(actionsBlock));
+  // RULINGS 7 AND 8, THE ABSENCE HALF. Readiness lives on the week card and the
+  // Coach tab covers "something else"; neither door may exist here as well.
+  // `readinessSourceFactOwnershipTests` asserts the same absence from the
+  // readiness side, and the presence at the week-level owner.
+  ok('[9] the day door holds no readiness and no coach-prefill escape hatch',
+    !/onAskCoach|askCoach|onOpenReadiness|openReadiness/.test(sheet));
+  // BATCH 3's VERB RULING, FINISHED. "Remove everywhere, not Bin" — the two
+  // survivors were the bin-scope heading and the scoped confirmation sentence.
+  ok('[9] no athlete-facing "bin" wording survives in the sheet',
+    !/>Bin what\?</.test(sheet)
+      && !/This bins \$\{/.test(sheet)
+      && /Remove what\?/.test(sheet)
+      && /This removes \$\{step\.label\}/.test(sheet));
   ok('[9] PlanChangeSheet previews risk before committing tap edits',
     /previewPlanChangeRisk\(\{[\s\S]*change,[\s\S]*visibleWeek: weekDays[\s\S]*activeConstraints/.test(sheet)
       && sheet.indexOf('previewPlanChangeRisk') < sheet.indexOf('commitPlanChange(change'));

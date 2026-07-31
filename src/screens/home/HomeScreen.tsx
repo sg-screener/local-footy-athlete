@@ -459,7 +459,6 @@ function HomeScreenClassic() {
         date={changeSheetDate}
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
-        onAskCoach={handleMessageCoach}
       />
 
       {/* ─── Game Day Action Modal ─── */}

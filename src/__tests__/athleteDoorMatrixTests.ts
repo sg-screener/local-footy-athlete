@@ -29,6 +29,9 @@
  *      component and leaves the rest of the day where it was.
  *   L7 REPEAT IS HONEST. The same tap twice never reports two successes, and
  *      the second answer is still one of the three honest outcomes.
+ *   L-P4 THE MENU IS THE PROJECTION. Every capability the menu offers equals the
+ *      one `projectParts` computed for that day. The menu renders capability; it
+ *      never derives it a second time.
  *
  * WHAT A RED CELL MEANS. The cell name is the reproduction: door, day-state,
  * route, attempt. Nothing here needs a device to reproduce.
@@ -88,6 +91,7 @@ import {
 import type { PlanChange, PlanChangeMoveScopeId } from '../utils/planChangeTypes';
 import { getSessionComponents } from '../utils/sessionComponents';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
+import { projectParts } from '../rules/projectVisibleWeek';
 
 /**
  * TWO WORLDS, AND WHY THE SECOND ONE EXISTS.
@@ -519,6 +523,19 @@ function doorsFor(routeless: boolean): Door[] {
         ...(route ? { g1Route: route } : {}),
       }),
     });
+    // NEWLY REACHABLE, 2026-07-31. `mobility` has been a `PLAN_CHANGE_CATEGORY_ID`
+    // with ten authored templates since the charter unit, and `PlanChangeSheet`
+    // rendered no row for it — so no athlete could open this door and the grid
+    // had no reason to drive it. Ruling 9 gives it a row, which makes it a state
+    // an athlete can reach; a state an athlete can reach and the harness cannot
+    // is a defect in the harness (AGENTS.md), so it is a door here now.
+    doors.push({
+      id: `add_mobility${suffix}`,
+      change: ({ date }) => ({
+        kind: 'add_category', date, category: 'mobility',
+        ...(route ? { g1Route: route } : {}),
+      }),
+    });
     doors.push({
       id: `swap_conditioning${suffix}`,
       change: ({ date }) => ({
@@ -654,6 +671,50 @@ function assertLaws(args: {
     options.canRemove || !options.move.refusal || !!options.locked;
   assert(usable,
     `${label}: the day is DEAD afterwards — no door offered and nothing said why`);
+
+  // L-P4 THE MENU IS THE PROJECTION'S CAPABILITIES, NOT A SECOND DERIVATION.
+  //
+  // Sam's rulings 7-9: the four-action menu comes from the projection. So the
+  // menu may not ANSWER a capability question — it renders the answer
+  // `projectParts` already gave. The walker states this law over the worlds it
+  // can act its way to; this states it over the grid's own day-states, which is
+  // where the shapes a walk does not build (a pure commitment day, a marked rest
+  // day, a planted recovery G+1) actually live.
+  //
+  // Both directions, and no day is skipped for having a reason to refuse: a menu
+  // that offers less than the projection carries and a menu that offers more are
+  // the same split seen from two ends. `not_visible` / `outside_horizon` ARE
+  // skipped — the edit WINDOW is the producer's own fact and the projection holds
+  // no opinion about it. `game_day` is not skipped: that is a claim about the
+  // day's nature, and the projection has its own.
+  const canonicalDay = quiet(() => projectParts({
+    week: projectedWeek(weekStart), weekStart,
+  })).days.find((candidate) => candidate.date === date);
+  const windowLocked = options.locked === 'not_visible' || options.locked === 'outside_horizon';
+  if (canonicalDay && !windowLocked) {
+    const shape = `the projection calls this a "${canonicalDay.kind}" day carrying `
+      + `${JSON.stringify(canonicalDay.parts.map((part) => String(part.kind)))}`;
+    const menuRemovable = options.hasSession && options.canRemove;
+    assert(menuRemovable === canonicalDay.capabilities.canRemoveWholeDay,
+      `${label}: ${shape} and says its work `
+      + `${canonicalDay.capabilities.canRemoveWholeDay ? 'CAN' : 'CANNOT'} be removed; the menu `
+      + `(locked=${options.locked ?? 'null'}, hasSession=${options.hasSession}, `
+      + `canRemove=${options.canRemove}) says it ${menuRemovable ? 'CAN' : 'CANNOT'}. `
+      + 'One day, two capability stories.');
+    const menuMovable = !options.move.refusal;
+    assert(menuMovable === canonicalDay.capabilities.canMoveWholeDay,
+      `${label}: ${shape} and says its work `
+      + `${canonicalDay.capabilities.canMoveWholeDay ? 'CAN' : 'CANNOT'} be moved; the move door `
+      + `${menuMovable ? 'offers a move' : `refuses "${options.move.refusal?.reason}"`} `
+      + `(locked=${options.locked ?? 'null'}). One day, two move stories.`);
+    // The SWAP half, which no other suite states. The four-action menu offers
+    // Swap from `canSwap`, and an anchor is not swappable — a day whose only
+    // content is a fixed appointment must not offer to trade it for a gym
+    // session.
+    assert(options.canSwap === canonicalDay.parts.some((part) => part.capabilities.canSwap),
+      `${label}: ${shape}; the menu says the day ${options.canSwap ? 'CAN' : 'CANNOT'} be `
+      + 'swapped and the projection disagrees. One day, two swap stories.');
+  }
 
   // L6 SCOPED MEANS SCOPED.
   if (args.scope && result.outcome === 'applied') {

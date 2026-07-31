@@ -861,8 +861,23 @@ async function main(): Promise<void> {
       assert(!planSheet.includes(forbidden),
         `the day-card door must hold no readiness committer, found "${forbidden}" in PlanChangeSheet`);
     }
-    assert(planSheet.includes('onOpenReadiness') && planSheet.includes("I'm not 100%"),
-      'the day-card "I\'m not 100%" row must route to the week owner via onOpenReadiness');
+    // UPDATED 2026-07-31 — Sam's design ruling 7 (`HOME_SCREEN_REDESIGN_RULINGS`):
+    // "I'm not 100%" lives on the WEEK screen only. The day card used to carry a
+    // row that handed off to the week owner, and a hand-off is still a door: two
+    // places an athlete can start the same thing, one of which had to be kept in
+    // sync with the other's copy. The law is now stronger, not weaker — the day
+    // card holds no readiness committer AND no readiness door — so this asserts
+    // the ABSENCE here and the PRESENCE at the single owner, because "no door on
+    // the day card" would be trivially satisfiable by deleting the feature.
+    for (const gone of ['onOpenReadiness', "I'm not 100%"]) {
+      assert(!planSheet.includes(gone),
+        `the day-card door must hold no readiness door at all, found "${gone}" in `
+        + 'PlanChangeSheet');
+    }
+    const homeV2 = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
+    assert(homeV2.includes("I'm not 100%") && /<WeekReadinessSheet\b/.test(homeV2),
+      'the single week-level readiness owner is gone from HomeScreenV2 — the athlete '
+      + 'now has NO door, which is not what ruling 7 asked for');
   });
 
   // ── Invariant R17 (attribution per fact kind): a coach note for an ILLNESS

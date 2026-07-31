@@ -536,13 +536,17 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     hookSrc.includes('executeProgramControlActionDurably') &&
     !hookSrc.includes('weekReadinessIds.has(modifier.sourceId)'));
 
-  // Door unification (0.2 / R16): the day-card "I'm not 100%" door no longer runs
-  // a record-only wellbeing subtree — it opens the single week-level owner. The
-  // retired pick_wellbeing / shutdown_week paths must be gone.
+  // Door unification, second and final step. 0.2/R16 retired the day card's
+  // record-only wellbeing subtree and left a row that HANDED OFF to the week
+  // owner; Sam's design ruling 7 (2026-07-31) retires the row too — "I'm not
+  // 100%" lives on the week screen only. So the day card must hold neither the
+  // committer nor the door, and the week card must hold both.
   const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
-  ok('day-card "I\'m not 100%" opens the single week readiness owner (record-only branch retired)',
-    planSheet.includes("I'm not 100%") && planSheet.includes('onOpenReadiness') &&
-    !planSheet.includes('pick_wellbeing') && !planSheet.includes('shutdown_week'));
+  const homeV2Src = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
+  ok('the week card is the ONLY "I\'m not 100%" door (the day card no longer has one)',
+    !planSheet.includes("I'm not 100%") && !planSheet.includes('onOpenReadiness') &&
+    !planSheet.includes('pick_wellbeing') && !planSheet.includes('shutdown_week') &&
+    homeV2Src.includes("I'm not 100%") && /<WeekReadinessSheet\b/.test(homeV2Src));
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────

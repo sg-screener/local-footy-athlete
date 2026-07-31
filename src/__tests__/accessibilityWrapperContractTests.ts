@@ -117,12 +117,19 @@ section('[4] Required sheet titles and child controls remain independently expos
     /<Sheet[^>]*testID="plan-change-sheet">[\s\S]*?<Text style=\{styles\.title\}>/.test(planChangeSheet),
   );
   ok(
-    'Plan Change edit action keeps its identifier on MenuOption',
-    /<MenuOption[\s\S]*?testID="plan-change-edit-session"[\s\S]*?onPress=/.test(planChangeSheet),
+    'Plan Change actions keep their identifiers on MenuOption',
+    /<MenuOption[\s\S]*?testID="plan-change-swap"[\s\S]*?onPress=/.test(planChangeSheet)
+      && /<MenuOption[\s\S]*?testID="plan-change-add"[\s\S]*?onPress=/.test(planChangeSheet),
   );
   ok(
     'MenuOption forwards identifier and press to the same Pressable',
-    /function MenuOption[\s\S]*?<Pressable[\s\S]*?onPress=\{onPress\}[\s\S]*?testID=\{testID\}/.test(planChangeSheet),
+    // `onPress` is now gated on `disabled` — a row rendered OFF must not fire.
+    // The contract is unchanged: ONE Pressable carries both the id and the press.
+    /function MenuOption[\s\S]*?<Pressable[\s\S]*?onPress=\{disabled \? undefined : onPress\}[\s\S]*?testID=\{testID\}/.test(planChangeSheet),
+  );
+  ok(
+    'a disabled MenuOption tells accessibility it is disabled',
+    /function MenuOption[\s\S]*?disabled=\{disabled\}[\s\S]*?accessibilityState=\{\{ disabled: !!disabled \}\}/.test(planChangeSheet),
   );
   ok(
     'Fixture sheet title remains visible accessibility text inside Sheet',

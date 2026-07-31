@@ -129,22 +129,84 @@ function dayOwner(day: ResolvedDay): VisibleDayOwner {
 }
 
 /**
+ * Components that are FIXED APPOINTMENTS — a commitment the athlete keeps, not
+ * work the plan chose for them.
+ *
+ * `team_training` is the declared one. `session` is the same thing arriving
+ * through a different door: `getSessionComponents` emits it as the last-resort
+ * component for a workout with no recognisable training content — a "Club
+ * Session" with a name, a duration and no rows. `planChangeProducer` says it in
+ * its own words already ("a commitment is a fixed appointment, binnable for one
+ * date but not movable to another day"), and it says it from the SECTION kinds.
+ * Said here so the menu can stop saying it.
+ */
+const APPOINTMENT_COMPONENTS: ReadonlySet<string> = new Set(['team_training', 'session']);
+
+/**
+ * Components ATTACHED to the day rather than standing in it.
+ *
+ * A recovery add-on is a fact about the DAY, not a component of a session — that
+ * is `sessionComponents.materializeAcceptedVisibleSections`'s own signed finding
+ * (`keepRecoveryAddons`): the half of a split day that LEAVES never takes the
+ * add-on with it, because on a day of strength + conditioning + team training
+ * neither half owns it and moving the gym session silently deleted the athlete's
+ * mobility work. It follows that an add-on cannot leave on its own either, and no
+ * door can remove one: `recoveryAddons` is a top-level workout field, so it
+ * produces no visible section, so there is no bin scope, no move scope and no
+ * split that names it.
+ *
+ * NOT A RECOVERY EXCEPTION (ruling 3). A standalone recovery SESSION — the
+ * `recovery` component — is as swappable, movable and removable as a strength
+ * session, and `projectionOwnershipTests` states that directly. This is about
+ * POSITION: attached-to-the-day is a position, and a strength add-on, if one
+ * existed, would answer the same way.
+ */
+const ATTACHED_COMPONENTS: ReadonlySet<string> = new Set(['recovery_addon']);
+
+const NOTHING_MAY_BE_DONE: PartCapabilities = {
+  canSwap: false,
+  canMove: false,
+  canRemove: false,
+  canEditRows: false,
+};
+
+/**
  * What the athlete may do to a part.
  *
  * Derived from the part's POSITION in the day, never from its kind — that is
- * ruling 3 in code. A protected anchor (team training, a game) cannot be swapped
- * or removed because it is a fact about the athlete's week, not because of the
- * words on it; everything else on the day is equally editable whether it is
- * strength or recovery.
+ * ruling 3 in code. Three positions answer differently, and each is a fact about
+ * the athlete's week rather than about the words on the part:
+ *
+ *   1. A FIXTURE OWNS ITS WHOLE DAY. Nothing on a game day is the athlete's to
+ *      swap, move, remove or edit. The projection used to miss this: `dayKind`
+ *      said "game" while `COMPONENT_TO_PART` mapped the fixture's own `session`
+ *      component to `strength`, so one derivation offered a move and a removal on
+ *      a fixture while the menu locked it — one derivation disagreeing with
+ *      ITSELF, which is worse than two surfaces disagreeing (walker declared reds
+ *      `projection_calls_a_game_day_editable` / `projection_offers_a_move_on_a_
+ *      game_day`).
+ *   2. AN APPOINTMENT DOES NOT TRAVEL AND DOES NOT TRADE — but it CAN be dropped
+ *      for one date. Sam, 2026-07-03: "Can't make it tonight — this date only".
+ *      `binScopesForSnapshot` has offered exactly that since, and
+ *      `planChangeProducerTests` [12] pins it, so a blanket "an anchor is not
+ *      removable" would have deleted a signed capability. Remove is true; swap,
+ *      move and row-editing are not.
+ *   3. AN ADD-ON RIDES WITH THE DAY. See `ATTACHED_COMPONENTS`.
+ *
+ * Everything else on the day is equally editable whether it is strength or
+ * recovery.
  */
-function partCapabilities(kind: VisiblePartKind): PartCapabilities {
-  const isAnchor = kind === 'team_training' || kind === 'game';
-  return {
-    canSwap: !isAnchor,
-    canMove: !isAnchor,
-    canRemove: !isAnchor,
-    canEditRows: !isAnchor,
-  };
+function partCapabilities(
+  componentId: string,
+  kind: VisiblePartKind,
+  onDay: VisibleDayKind,
+): PartCapabilities {
+  if (onDay === 'game' || kind === 'game') return NOTHING_MAY_BE_DONE;
+  if (ATTACHED_COMPONENTS.has(componentId)) return NOTHING_MAY_BE_DONE;
+  if (APPOINTMENT_COMPONENTS.has(componentId) || kind === 'team_training') {
+    return { canSwap: false, canMove: false, canRemove: true, canEditRows: false };
+  }
+  return { canSwap: true, canMove: true, canRemove: true, canEditRows: true };
 }
 
 /**
@@ -242,14 +304,16 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): Visibl
 function partsForWorkout(
   date: string,
   workout: Workout | null | undefined,
+  onDay: VisibleDayKind,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
   return getSessionComponents(workout).map((component) => {
-    const kind = COMPONENT_TO_PART[String(component.id)] ?? 'strength';
+    const componentId = String(component.id);
+    const kind = COMPONENT_TO_PART[componentId] ?? 'strength';
     return {
-      id: `${date}:${String(component.id)}`,
+      id: `${date}:${componentId}`,
       kind,
-      capabilities: partCapabilities(kind),
+      capabilities: partCapabilities(componentId, kind, onDay),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],
     };
   });
@@ -269,19 +333,30 @@ export function projectParts(args: {
   return {
     weekStart: args.weekStart,
     days: args.week.map((day) => {
-      const parts = partsForWorkout(day.date, day.workout);
-      const editable = parts.filter((part) => part.capabilities.canRemove);
+      const kind = dayKind(day);
+      const parts = partsForWorkout(day.date, day.workout, kind);
+      const isFixture = kind === 'game';
       return {
         date: day.date,
-        kind: dayKind(day),
+        kind,
         owner: dayOwner(day),
         parts,
         capabilities: {
           // A day with room for more work can take more, whatever is on it
           // already. No recovery exception: ruling 3.
-          canAdd: dayKind(day) !== 'game',
-          canMoveWholeDay: editable.length > 0,
-          canRemoveWholeDay: editable.length > 0,
+          canAdd: !isFixture,
+          // THE MOVE DOOR IS OPEN IFF SOMETHING CAN LEAVE THIS DAY. Not "the
+          // whole day travels intact" — a combined day offers a SCOPED move and
+          // the anchor stays put, which is a move by any name the athlete uses.
+          // See `DayCapabilities` for why the field is still called
+          // `canMoveWholeDay`.
+          canMoveWholeDay: !isFixture && parts.some((part) => part.capabilities.canMove),
+          // THE REMOVE DOOR IS OPEN IFF THE DAY HOLDS ANYTHING. Removing the
+          // whole day takes everything on it, add-ons and appointments included
+          // — the day becomes rest — so this asks whether there is anything
+          // there, not whether every part could be removed on its own. A fixture
+          // is the one thing the athlete cannot take off their week.
+          canRemoveWholeDay: !isFixture && parts.length > 0,
         },
       };
     }),
