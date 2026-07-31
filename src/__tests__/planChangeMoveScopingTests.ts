@@ -525,6 +525,33 @@ run('the row sub-line and the remove confirmation cannot disagree', () => {
     + 'this cell exists to forbid');
 });
 
+run('the fifth Add/Swap row reads "Accessories"', () => {
+  // SAM RULED, 2026-07-31 (copy sheet §6-IV-1): the fifth Add/Swap row is
+  // "ACCESSORIES" — ruling 9's own word — wired to the `prehab` door with the
+  // shield. The typed id stays `prehab`; only the word changed.
+  //
+  // IT IS PINNED HERE BECAUSE NOTHING ELSE CATCHES IT, and that was measured
+  // rather than assumed. `copyRulingsBindingTests` passes with the old label
+  // still in place: its PROPOSED direction asks whether the string appears
+  // ANYWHERE in the scanned sources, and "Accessories" occurs in
+  // `coachRevisionTemplates.ts`'s "Prehab & Accessories" and in this sheet's own
+  // comments, so a substring search can never see the label revert. A one-word
+  // label is exactly the shape that gate is blind to. This asserts the produced
+  // option — what the row actually renders — instead.
+  const weekStart = seed();
+  const options = optionsFor(weekStart, addDaysISO(weekStart, 0));
+  const prehab = options.categories.find((category) => category.id === 'prehab');
+  assert(prehab,
+    'the `prehab` door is not offered on a plain day at all, so the label this cell '
+    + `pins is unreachable; offered: ${JSON.stringify(options.categories.map((c) => c.id))}`);
+  assert(prehab.label === 'Accessories',
+    `the fifth Add/Swap row reads "${prehab.label}". Sam signed "Accessories" on `
+    + '2026-07-31; the door id stays `prehab` because ids are not copy.');
+  assert(prehab.sub === 'Groin, calves, midline, shoulders - the armour work',
+    `the row's sub-line changed to "${prehab.sub}" — it was signed as written and `
+    + 'describes the door whichever noun heads the row');
+});
+
 console.log(`\nMove scoping totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);

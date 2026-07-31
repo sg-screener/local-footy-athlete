@@ -468,6 +468,30 @@ merge gate remains the combined device pass below.
   stops rendering it, with nothing in the bible saying so. Recorded here so
   whoever extends the binder next starts from a true inventory of what it
   cannot see, not just what it can.
+
+  **TWO MORE BLIND SPOTS, MEASURED WHILE LANDING SAM'S FINAL RULINGS
+  (2026-07-31) — found by mutation, not by reading.** Same inventory:
+
+  1. **The binder's PROPOSED direction cannot see a one-word label change.**
+     It asks whether a quoted string occurs ANYWHERE in the scanned sources, so
+     reverting `CATEGORY_COPY.prehab.label` from "Accessories" back to "Prehab"
+     leaves `test:copy-rulings-binding` **7/7 green** — "Accessories" still
+     occurs in `coachRevisionTemplates.ts`'s "Prehab & Accessories" and in
+     `PlanChangeSheet`'s own comments, and comments are part of the scanned
+     text. The ruling is pinned behaviourally instead, on the PRODUCED option
+     (`planChangeMoveScopingTests`, "the fifth Add/Swap row reads
+     'Accessories'"), which reds on that mutation. General shape: a substring
+     search over whole files is a weak gate for any string short enough to be
+     a substring of another.
+  2. **`signedCopyExtractionTests` cannot see a multi-line ternary sub-line.**
+     `extract()` matches a field name and its literal on ONE LINE, so a
+     state-selected `sub={...}` — the pattern this whole unit adopted — is
+     invisible to it. Sam's new "Remove it — the day becomes rest." is
+     genuinely new athlete-visible prose inside `SURFACE_DIRS` and moved the
+     count by zero; its two siblings have been invisible the same way since
+     Task 4. Stated in full at the ceiling's own docblock, because that is
+     where a future reader will look. Widening the regex re-counts the whole
+     surface tree in one commit — a ceiling re-baseline, and a unit of its own.
 - **`CoachScreen`'s verification layer reads** (`coachTurnController`,
   `coachUndoEngine`, `coachRevisionProposal`, `coachModalitySwapOrchestrator`,
   `programEditWriteGuard`) — explicitly not touched (LR-6); they keep
