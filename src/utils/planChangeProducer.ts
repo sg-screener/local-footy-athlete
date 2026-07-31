@@ -84,6 +84,7 @@ import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import {
   reduceAcceptedSessionForAthleteRemoval,
   splitAcceptedSessionForAthleteMove,
+  strengthComponentRows,
 } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -1060,7 +1061,15 @@ export function buildPlanChangeProposal(
       const survivorTitle = strengthSurvives
         ? strengthComponentDisplayName({
             strengthIntent: beforeWorkout?.strengthIntent,
-            exercises: beforeWorkout?.exercises,
+            // THE COMPONENT'S OWN ROWS, NOT THE DAY'S. This passed
+            // `beforeWorkout.exercises` — the whole pre-removal day — and one
+            // unrelated sibling row from a surviving section is enough to widen
+            // the inferred pattern set and FABRICATE a canonical label ("Full
+            // Body Strength" for a squat-only survivor). Same defect as the Bin
+            // remainder in `sessionComponents`; same owner fixes it.
+            exercises: beforeWorkout
+              ? strengthComponentRows(beforeWorkout, surviving)
+              : [],
             fallbackTitle: before.workout.title,
           })
         : surviving[0].title || before.workout.title;

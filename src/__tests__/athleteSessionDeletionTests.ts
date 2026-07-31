@@ -41,6 +41,7 @@ import {
   userRemovalConstraintId,
 } from '../rules/userRemovalConstraints';
 import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { reduceAcceptedSessionForAthleteRemoval } from '../utils/sessionComponents';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
@@ -1476,8 +1477,92 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
   'accepted rebasing ignored persisted constraint');
 });
 
+run('regression', 'a partial Bin names the survivor from ITS OWN rows, never the whole day', () => {
+  // REVIEW ROUND 2. `strengthComponentDisplayName` names a component from the
+  // rows it is handed; both callers handed it `workout.exercises` — the
+  // PRE-REMOVAL, WHOLE-DAY list. `inferMeaningfulExerciseMovementPatterns` runs
+  // over whatever it is given, so ONE row from a DIFFERENT surviving section is
+  // enough to widen the pattern set and FABRICATE a canonical label, which is
+  // then written into `workout.name` — a frozen coach matching key.
+  //
+  // THE FIXTURE IS THE POINT, so it is spelled out. The sibling row must land in
+  // another SECTION, not merely be another row: a squat day whose strength
+  // section happens to contain a pull-up really is more than squats, and naming
+  // it broadly is correct. Here the day is squat-only strength PLUS an attached
+  // bodyweight finisher whose row is "Push-ups" — the conditioning block puts it
+  // in the `conditioning` section (verified: strength -> [r-squat, r-front],
+  // conditioning -> [r-row]). Binning the TEAM component leaves both, and the
+  // strength component is still squat-only.
+  //
+  //   whole-day rows -> "Full Body Strength"   <- invented; nothing here is full-body
+  //   component rows -> "Lower Squat"          <- what the survivor actually is
+  //
+  // Asserted through the REAL reducer, not through the naming helper. The helper
+  // was already correct and the defect was entirely in what the call site passed,
+  // so a unit test of `strengthComponentDisplayName` would have stayed green
+  // through the whole bug — which is exactly how it shipped.
+  const row = (id: string, name: string) => ({
+    id,
+    workoutId: 'w-legacy',
+    exerciseId: id,
+    exercise: { id, name },
+    exerciseOrder: 1,
+    prescribedSets: 3,
+    prescribedRepsMin: 5,
+    prescribedRepsMax: 5,
+  });
+  // UNTYPED legacy day — no `strengthIntent`, so naming must fall through to the
+  // rows. With typed intent the rows are never consulted, which is why the whole
+  // reachable-world differential stays empty and this needs a hand-built day.
+  const workout = {
+    id: 'w-legacy',
+    microcycleId: 'mc-legacy',
+    dayOfWeek: 1,
+    name: 'Team Training + Lower Squat',
+    description: '',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    isTeamDay: true,
+    intensity: 'Moderate',
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      attachedKind: 'finisher',
+      options: [{
+        title: 'Bodyweight Conditioning Circuit',
+        description: '3 rounds',
+        exerciseIds: ['r-finisher'],
+        durationMinutes: 10,
+      }],
+    },
+    exercises: [
+      row('r-squat', 'Back Squat'),
+      row('r-front', 'Front Squat'),
+      row('r-finisher', 'Push-ups'),
+    ],
+  } as unknown as Workout;
+  const day = { date: WEEK, source: 'template', workout } as unknown as Parameters<
+    typeof reduceAcceptedSessionForAthleteRemoval
+  >[0]['day'];
+
+  const reduced = quiet(() => reduceAcceptedSessionForAthleteRemoval({
+    day, scope: 'team_component',
+  }));
+  assert(reduced.ok === true && !!reduced.remainingWorkout,
+    `the reducer refused the fixture (${JSON.stringify(reduced)}) — this cell `
+    + 'cannot see the defect it exists for');
+  const named = reduced.ok === true ? (reduced.remainingWorkout?.name ?? '') : '';
+  assert(named !== 'Full Body Strength',
+    `the survivor was named "${named}" — a canonical label FABRICATED from a row `
+    + 'that is not in the strength component. Nothing on this day is full-body; '
+    + 'the finisher\'s push-up widened the pattern set.');
+  assert(named === 'Lower Squat',
+    `the survivor was named "${named}", not "Lower Squat" — the surviving strength `
+    + 'component is two squat rows and nothing else.');
+});
+
 console.warn = originalWarn;
-console.log(`\nAthlete session deletion totals: regressions=${regressions}/23 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
+console.log(`\nAthlete session deletion totals: regressions=${regressions}/24 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

@@ -465,10 +465,24 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
  *   1. `strengthIntent` — the typed contract. Present in 29,896 of the 30,937
  *      distinct inputs a whole `test:bible` run produces, so this is the answer
  *      almost always.
- *   2. THE ROWS. `inferMeaningfulExerciseMovementPatterns` reads the component's
- *      own exercise names against the locked selectable vocabulary and returns
- *      movement patterns — `resolveSessionDisplayName`'s precedence step 2,
- *      which is consulted only when there is no typed intent.
+ *   2. THE ROWS — WHICHEVER ROWS THE CALLER HANDS OVER, AND THAT IS THE CALLER'S
+ *      JOB TO GET RIGHT. `inferMeaningfulExerciseMovementPatterns` reads exercise
+ *      names against the locked selectable vocabulary and returns movement
+ *      patterns — `resolveSessionDisplayName`'s precedence step 2, consulted only
+ *      when there is no typed intent.
+ *
+ *      THIS FUNCTION CANNOT CHECK THE SCOPE OF WHAT IT IS GIVEN, and the first
+ *      version of this docblock said "the component's own exercise names" as
+ *      though it could. Both callers were passing the PRE-REMOVAL WHOLE-DAY row
+ *      list, so one row from another surviving section widened the pattern set
+ *      and FABRICATED a canonical label — two squat rows plus an attached
+ *      finisher's push-up resolved "Full Body Strength" for a day with nothing
+ *      full-body on it, written into `workout.name`, a frozen coach matching key.
+ *      Callers now scope with `strengthComponentRows` (`sessionComponents.ts`),
+ *      which reuses the section-id filter `materializeAcceptedVisibleSections`
+ *      already applies to the rows the survivor keeps — so the name and the
+ *      content are derived from the same evidence. A wider list still produces a
+ *      wider name; that is the contract, not a bug in it.
  *
  * Step 2 is here because of a review finding, and the finding is worth keeping:
  * WITHOUT it, this function's fallback fired for every untyped day — even one

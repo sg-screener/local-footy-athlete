@@ -110,7 +110,8 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
   const survivorTitle = strengthSurvives
     ? strengthComponentDisplayName({
         strengthIntent: source.strengthIntent,
-        exercises: source.exercises,
+        // THE COMPONENT'S OWN ROWS, NOT THE DAY'S. See `strengthComponentRows`.
+        exercises: strengthComponentRows(source, survivingSections),
         fallbackTitle: snapshot.workout.title,
       })
     : survivingSections[0].title || snapshot.workout.title;
@@ -247,6 +248,50 @@ export function splitAcceptedSessionForAthleteMove(args: {
     },
     remainingWorkout: remainder.remainingWorkout,
   };
+}
+
+/**
+ * THE ROWS THAT BELONG TO THE STRENGTH COMPONENT — nobody else's.
+ *
+ * Introduced by review round 2, and the finding it pays is worth keeping because
+ * it is the same mistake twice in one unit. Round 1 fixed
+ * `strengthComponentDisplayName` to name a component "from its own rows"; both
+ * callers then handed it `workout.exercises` — the PRE-REMOVAL, WHOLE-DAY list,
+ * every section combined. The docblock said one thing and the call did another.
+ *
+ * The consequence is not a cosmetic mislabel. `inferMeaningfulExerciseMovementPatterns`
+ * runs over whatever it is given, so ONE unrelated sibling row from a surviving
+ * recovery or accessory section widens the pattern set and FABRICATES a canonical
+ * label:
+ *
+ *     two real squat rows + one "Assisted Pull-up" sibling
+ *       whole-day list  -> "Full Body Strength"    <- invented, nothing is full-body
+ *       component rows  -> "Lower Squat"           <- what the day actually is
+ *
+ * and that string is written into `workout.name`, a FROZEN coach matching key.
+ * A fabricated label is worse than the composed title it replaced: the composed
+ * title at least described something that had been on the day.
+ *
+ * The scoping rule is not new either — `materializeAcceptedVisibleSections`
+ * already filters the source rows by the surviving sections' own
+ * `items[].exerciseIds` (`wantedExerciseIds`). This is that rule, narrowed to
+ * the one section being named, so the name and the rows the survivor actually
+ * keeps are derived from the same evidence.
+ *
+ * An empty result is honest and expected: a strength section whose items carry
+ * no ids yields no rows, no patterns, and the caller falls back to the day's
+ * title — the residual already recorded above, unchanged.
+ */
+export function strengthComponentRows(
+  source: Workout,
+  sections: readonly CoachVisibleSectionSnapshot[],
+): Workout['exercises'] {
+  const strengthSection = sections.find((section) => section.kind === 'strength');
+  if (!strengthSection) return [];
+  const ownIds = new Set(strengthSection.items.flatMap((item) => item.exerciseIds));
+  if (ownIds.size === 0) return [];
+  return (source.exercises ?? []).filter((row: any) =>
+    workoutRowIds(row).some((id) => ownIds.has(id)));
 }
 
 function materializeAcceptedVisibleSections(args: {
