@@ -70,6 +70,7 @@ import {
   executeProgramControlAction,
   programControlActionForPlanChange,
 } from '../utils/programControlActions';
+import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { getSessionComponents } from '../utils/sessionComponents';
@@ -134,7 +135,10 @@ interface CanonicalWeek {
     readonly date: string;
     readonly kind: string;
     readonly parts: readonly { readonly kind: string }[];
-    readonly capabilities: { readonly canRemoveWholeDay: boolean };
+    readonly capabilities: {
+      readonly canRemoveWholeDay: boolean;
+      readonly canMoveWholeDay: boolean;
+    };
   }[];
 }
 
@@ -230,6 +234,8 @@ let directRoutedChanges = 0;
  * it, so one broken rollover is one violation and not one per later action.
  */
 let rolloverFailure: string | null = null;
+/** Did THIS walk ever fail to roll a block? The liveness check asks. */
+let rolloverFailedThisWalk = false;
 
 function freshInstall(): void {
   todayISO = INSTALL_DAY;
@@ -238,6 +244,7 @@ function freshInstall(): void {
   generated = false;
   lastChange = null;
   rolloverFailure = null;
+  rolloverFailedThisWalk = false;
   localStorageData.clear();
   useProfileStore.setState({ onboardingData: {} as OnboardingData, isOnboardingComplete: false });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
@@ -322,14 +329,35 @@ function performAction(action: WalkerAction): WalkerStepResult {
       const settled = program.microcycles[1] ?? program.microcycles[0]!;
       weekStart = settled.startDate.slice(0, 10);
       todayISO = weekStart;
-      const marks = useCalendarStore.getState().markedDays ?? {};
-      useProgramStore.setState({
-        currentProgram: program, currentMicrocycle: settled,
-        acceptedMaterialContext: {
-          ...useProgramStore.getState().acceptedMaterialContext,
-          markedDays: marks, revision: 1, lastTransaction: 'walker:generate',
+      // THE ACCEPT BOUNDARY, NOT `setState` NEXT TO IT.
+      //
+      // This door used to publish the program with a raw `setState`, which left
+      // `blockState`, `acceptedCompositionBase` and `acceptedProfileSnapshot`
+      // null — and the deep tier's L6 red was `rebuildLocalWeek` re-evaluating
+      // exactly that ledger four weeks later. A harness that writes state the
+      // product's accept boundary would have written differently is the
+      // `harness-enters-below-the-door` failure this repo has now named four
+      // times, and the first suspect for any red that only it can see.
+      //
+      // `commitRebuiltProgram` is the shared publisher: it derives `blockState`
+      // from the program and routes the whole thing through
+      // `commitAcceptedStateTransaction`, the same owner the rollover uses. The
+      // walker now enters there, so an L6 red means the PRODUCT could not roll a
+      // block it accepted — not that the harness handed it a program the product
+      // would never have stored.
+      quiet(() => commitRebuiltProgram(
+        program,
+        { preserve: [], clear: [], conflictsRemoved: [] },
+        {
+          markedDays: useCalendarStore.getState().markedDays ?? {},
+          selectedDate: todayISO,
+          reason: 'walker:generate',
         },
-      } as never);
+      ));
+      // The walker looks at the SETTLED week, not week one; the accept boundary
+      // selects for `selectedDate`, so point the microcycle at what the walk is
+      // about to act on.
+      useProgramStore.setState({ currentMicrocycle: settled } as never);
       generated = true;
       return { ...base, outcome: 'generated' };
     }
@@ -444,6 +472,7 @@ function performAction(action: WalkerAction): WalkerStepResult {
           // throw here would report a crash he never gets and would hide the
           // failure he does. It is recorded as its own law instead: L6.
           rolloverFailure = error instanceof Error ? error.message : String(error);
+          rolloverFailedThisWalk = true;
           break;
         }
       }
@@ -665,6 +694,29 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
     }
   }
 
+  // ONE ENTRY PER LAW PER ACTION — BUT A DECLARED RED DOES NOT SPEND THE SLOT.
+  //
+  // The brevity rule is real: a law that breaks on four days of one week is one
+  // defect, and four copies would drown the report. But the first draft applied
+  // it BEFORE the declared-red filter, and that combination is a hole, not a
+  // trade-off. The first offending day of the week matched a declared entry,
+  // spent the law's only slot, and every DIFFERENT-shaped offence in that law on
+  // Tuesday through Sunday was dropped without a trace. Review's survey caught
+  // it: zero L-P3/L-P4 offences on Thu-Sun across ~1900 day-checks, which is the
+  // fingerprint of a dedupe, not of a defect that politely happens on Mondays.
+  //
+  // So the order is: SURVEY EVERYTHING, then let declared reds through without
+  // consuming the slot, then dedupe what is left. A carried debt cannot shadow an
+  // undeclared red behind it.
+  const reported = new Set<string>();
+  const offend = (law: string, detail: string): void => {
+    recordOffence(law, detail);
+    if (declaredRedFor(law, detail)) return;
+    if (reported.has(law)) return;
+    reported.add(law);
+    broken.push({ law, detail });
+  };
+
   // L6 THE BLOCK ROLLS OVER — an athlete who keeps opening the app keeps
   // having a program.
   //
@@ -677,7 +729,7 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
   if (rolloverFailure) {
     const failure = rolloverFailure;
     rolloverFailure = null;
-    pushOffence(broken, 'L6 THE BLOCK ROLLS OVER',
+    offend('L6 THE BLOCK ROLLS OVER',
       `the program block would not roll forward for ${todayISO} and the athlete was `
       + `told nothing — ${failure}`);
   }
@@ -701,41 +753,36 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
   //   CARD      = `resolveWeekWithConditioning`  (what a week card renders)
   //   CANONICAL = `buildProgramTabProjectedWeek` -> `projectParts`
   //
-  // WORDS FIRST, STRUCTURE UNDERNEATH. `project()` is the full projection and a
-  // week whose words are unsigned is itself a surface defect — L-P2's family:
-  // the signed-copy gate exists so planner-internal text CANNOT reach an
-  // athlete, and a throw is that gate firing. But a copy gap must not disarm the
-  // structural laws, so when it throws the walk falls back to `projectParts` —
-  // "one derivation, no vocabulary" (`projectVisibleWeek.ts`) — and L-P1/L-P3/
-  // L-P4 are still judged on the same action.
+  // STRUCTURE ONCE, WORDS BESIDE IT — never one derived from the other's failure.
   //
-  // COST. One projection for the week and one menu per day, computed ONCE and
-  // shared with L5. The bounded tier is inside `test:bible` and every one of
-  // these runs after every action, in both tiers.
+  // The structural half is what L-P1/L-P3/L-P4 are judged against, and it is
+  // computed ONCE, unconditionally. The words half is asked separately: a week
+  // whose words are unsigned is itself a surface defect (L-P2's family — the
+  // signed-copy gate exists so planner-internal text cannot reach an athlete, and
+  // a throw is that gate firing), but a copy gap must not disarm three structural
+  // laws. The first draft read `project()` first and fell back to `projectParts`
+  // in the catch, which both evaluated the structure twice on the failing path
+  // AND fed the laws a different-shaped canonical depending on whether the words
+  // happened to resolve. One shape, one evaluation, always.
+  //
+  // COST. One structural projection plus one words pass for the week, and one
+  // menu per day shared with L5. The bounded tier is inside `test:bible` and
+  // every one of these runs after every action, in both tiers.
   let canonical: CanonicalWeek | null = null;
   try {
-    canonical = quiet(() => project({ week: projected, weekStart }));
+    canonical = quiet(() => projectParts({ week: projected, weekStart }));
+  } catch (structural) {
+    offend('L-P0 THE PROJECTION DERIVES',
+      'the structural projection threw for a week the athlete walked to — '
+      + `${structural instanceof Error ? structural.message : String(structural)}`);
+  }
+  try {
+    quiet(() => project({ week: projected, weekStart }));
   } catch (error) {
-    pushOffence(broken, 'L-P2 SIGNED WORDS',
+    offend('L-P2 SIGNED WORDS',
       'the projection refused to render the words for a week the athlete walked to '
       + `— ${error instanceof Error ? error.message : String(error)}`);
-    try {
-      canonical = quiet(() => projectParts({ week: projected, weekStart }));
-    } catch (structural) {
-      pushOffence(broken, 'L-P0 THE PROJECTION DERIVES',
-        'even the structural projection threw for a week the athlete walked to — '
-        + `${structural instanceof Error ? structural.message : String(structural)}`);
-    }
   }
-
-  // One entry per law per action: a law that breaks on four days of one week is
-  // one defect, and four copies of it would drown the report.
-  const reported = new Set<string>();
-  const offend = (law: string, detail: string): void => {
-    if (reported.has(law)) return;
-    reported.add(law);
-    pushOffence(broken, law, detail);
-  };
 
   for (const day of resolved) {
     const options = quiet(() => listPlanChangeOptionsForDay({
@@ -820,15 +867,28 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
           + `(locked=${options.locked ?? 'null'}, hasSession=${options.hasSession}, `
           + `canRemove=${options.canRemove}) says it ${menuRemovable ? 'CAN' : 'CANNOT'}. `
           + 'One day, two capability stories.');
-      } else if (projectionRemovable && options.move.refusal?.reason === 'no_session') {
-        // The move clause names only `no_session`, because that is the refusal
-        // that CONTRADICTS the projection. `anchored_day` and `no_destination`
-        // are facts about the week, not claims that the day is empty, and a walk
-        // that fills every other day reaches them honestly. Cell 4's Sunday had
-        // destinations, so this narrows nothing that cell asserted.
+      }
+      // THE MOVE CLAUSE, STRICT AND SYMMETRIC. Cell 4 asserts
+      // `!recoveryDay.move.refusal` with no qualification, and the projection has
+      // a matching field — `canMoveWholeDay`, which is `editable.length > 0`
+      // (`projectVisibleWeek.ts`). So the comparison is the equality, not a
+      // hand-picked subset of refusal reasons.
+      //
+      // The first draft accepted `anchored_day` and `no_destination` as "facts
+      // about the week the projection has no opinion about". That was asking less
+      // than the reference, which L13 forbids outright: the projection DOES have
+      // an opinion — it says the day's work is movable — and a menu that refuses
+      // is disagreeing with it whatever reason it gives. If the projection should
+      // learn about anchors and full weeks, that is a projection defect, and it
+      // gets to be visible as one.
+      const menuMovable = !options.move.refusal;
+      if (menuMovable !== canonicalDay.capabilities.canMoveWholeDay) {
         offend('L-P4 MENU = PROJECTION',
-          `${day.date}: the projection carries work and the move door answers "no_session" — `
-          + `"${options.move.refusal.message}"`);
+          `${day.date}: the projection calls this a "${canonicalDay.kind}" day carrying `
+          + `${JSON.stringify(canonicalDay.parts.map((part) => String(part.kind)))} and says its `
+          + `work ${canonicalDay.capabilities.canMoveWholeDay ? 'CAN' : 'CANNOT'} be moved; the `
+          + `move door ${menuMovable ? 'offers a move' : `refuses "${options.move.refusal?.reason}"`}`
+          + ` (locked=${options.locked ?? 'null'}). One day, two move stories.`);
       }
     }
   }
@@ -840,13 +900,6 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
   // 3 would cap every walk at three actions and the depth the tier declares
   // could never be reached. It also skips the shrink for an already-shrunk red.
   return broken.filter((violation) => !declaredRedFor(violation.law, violation.detail));
-}
-
-function pushOffence(
-  broken: { law: string; detail: string }[], law: string, detail: string,
-): void {
-  recordOffence(law, detail);
-  broken.push({ law, detail });
 }
 
 /** The part list a surface would show. The ONLY plural, per the ruling. */
@@ -939,8 +992,23 @@ interface DeclaredRed {
   why: string;
   /** The task that turns this cell green and deletes this entry. */
   paidBy: string;
-  /** Which tier this debt is real in. `both` = the bounded gate carries it too. */
-  redsIn: 'both' | 'deep';
+  /**
+   * The condition under which this entry must be gone. Written down because
+   * `paidBy` names WHO and this names WHEN — an entry whose owner ships without
+   * this shape disappearing has not been paid, and one whose shape disappears
+   * without its owner shipping was never the debt it claimed to be.
+   */
+  expiresWhen: string;
+  /**
+   * Which tiers are REQUIRED to see this shape, for the stale-debt check.
+   *
+   * Not "where the defect lives" — where it is DETERMINISTICALLY REACHED. The
+   * deep tier is three seeds wide; a shape that needs a particular seed's week
+   * can be perfectly real and still absent from those three, and demanding it
+   * there would make the ratchet fail for a reason that is not debt. The
+   * stale-debt cell caught exactly that on the anchored-day entry.
+   */
+  redsIn: 'bounded' | 'deep' | 'both';
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
@@ -957,40 +1025,93 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'Wednesday), generate the program. 12 distinct unsigned ids across the deep '
       + 'tier, e.g. "Aerobic conditioning component (3 x 8min zone 2 Mixed Erg '
       + 'Block)", "Assault Bike warm-up", "MetCon - Off-Legs", "Erg EMOM - 10-15 '
-      + 'cal", "Easy Spin or Walk". The generator composes these strings; the '
+      + 'cal", "Easy Spin or Walk". The generator COMPOSES these strings; the '
       + 'signed sheet cannot contain them and must not be made to.',
     paidBy: 'Task 6 (the detail/row surface migrates to project()\'s rows)',
+    expiresWhen: 'every row name a generated week can produce resolves through the '
+      + 'signed sheet — which means the generator stops composing row names, not '
+      + 'that the sheet grows to hold composed ones.',
+    redsIn: 'both',
+  },
+
+  // ── L-P3 DETAIL: THREE DEFECTS, THREE ENTRIES ────────────────────────────
+  // These shared one id and one regex until review pointed out what that costs:
+  // Task 6 could fix any one of them and the stale-debt cell would not notice,
+  // because the other two keep the entry alive. Debt is only a ratchet if each
+  // notch can be released on its own.
+  {
+    id: 'detail_has_no_row_surface_for_recovery_power_speed',
+    law: 'L-P3 DETAIL = PROJECTION',
+    // Omissions drawn ONLY from the three kinds `composeDayDetail` has no row
+    // surface for, and nothing invented. A detail that drops `strength` or
+    // `conditioning` is entry 2; one that invents is entry 3.
+    matches: /omits \["(?:power|recovery|speed)"(?:,"(?:power|recovery|speed)")*\] and invents \[\]/,
+    why: '`composeDayDetail` exposes rows for strength, support and conditioning '
+      + 'and nothing else, so a projected recovery, power or speed part simply has '
+      + 'no place on the detail screen and vanishes from its account. Reproduce: '
+      + 'bounded seed 1, 2 actions — answer onboarding (In-season, team Wednesday), '
+      + 'generate the program: 2026-07-20 detail ["strength"] / projection '
+      + '["recovery","strength"]. Observed omission sets: ["recovery"], ["power"], '
+      + '["power","recovery"], ["power","recovery","speed"].',
+    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
+    expiresWhen: 'a projected recovery/power/speed part appears in the detail\'s '
+      + 'own account of the day.',
     redsIn: 'both',
   },
   {
-    id: 'detail_screen_omits_projection_parts',
+    id: 'detail_shows_nothing_where_the_projection_has_work',
     law: 'L-P3 DETAIL = PROJECTION',
-    // Pinned to the OMISSION SET observed. A detail that drops `support` or
-    // `team_training`, or invents anything but `recovery`, is a different defect
-    // and still fails.
-    matches: /omits \["(?:conditioning|power|recovery|speed|strength)"(?:,"(?:conditioning|power|recovery|speed|strength)")*\] and invents (?:\[\]|\["recovery"\])/,
-    why: 'THE THIRD STORY, generalised off his one Sunday. `composeDayDetail` has no '
-      + 'row-level surface for recovery, power or speed, so the detail screen\'s own '
-      + 'account of a day silently drops parts the projection carries — and in one '
-      + 'shape it swaps them (omits ["conditioning"], invents ["recovery"]). '
-      + 'Reproduce: bounded seed 1, 2 actions — answer onboarding (In-season, team '
-      + 'Wednesday), generate the program: 2026-07-20 detail ["strength"] / '
-      + 'projection ["recovery","strength"]. Six distinct diff shapes across the '
-      + 'deep tier.',
+    // The omission set CONTAINS conditioning or strength — work with a row
+    // surface that still did not reach the screen. Disjoint from entry 1, which
+    // cannot contain either kind.
+    matches: /omits \[(?=[^\]]*"(?:conditioning|strength)")[^\]]*\] and invents \[\]/,
+    why: 'A DIFFERENT DEFECT WEARING THE SAME LAW. Here the missing kinds are ones '
+      + '`composeDayDetail` DOES have a surface for — it composed zero rows for a '
+      + 'day the projection says carries strength or conditioning, so the detail '
+      + 'renders an empty day over real work. Observed: omits ["conditioning"], '
+      + '["strength"], ["conditioning","recovery"], each with detail [] or a '
+      + 'strictly smaller list. Reproduce: bounded seed 10 reaches '
+      + 'detail [] / projection ["strength"] on 2026-07-20.',
     paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
+    expiresWhen: 'the detail\'s account of a day contains every strength and '
+      + 'conditioning part the projection carries.',
     redsIn: 'both',
   },
+  {
+    id: 'detail_swaps_conditioning_for_recovery',
+    law: 'L-P3 DETAIL = PROJECTION',
+    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
+    why: 'THE ONLY SHAPE THAT INVENTS. The detail reports a recovery day where the '
+      + 'projection has conditioning — not a part dropped but a part REPLACED, '
+      + 'which is defect 2\'s inverse split (`surfaceAgreementTests` cell 2) seen '
+      + 'from the detail side: conditioning added to a recovery day gets swallowed '
+      + 'by the recovery template. Rarest shape in the survey (1 occurrence, deep '
+      + 'seed 1, 2026-08-04) and the one most likely to be lost if it shared an id '
+      + 'with the two above. DEEP ONLY, verified by survey: it needs a week that has '
+      + 'accumulated both a recovery add-on and a conditioning placement, which the '
+      + 'bounded tier\'s fourteen actions do not build — the stale-debt cell caught '
+      + 'the first draft claiming `both` and refused it.',
+    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
+    expiresWhen: 'the detail never reports a kind the projection does not carry.',
+    redsIn: 'deep',
+  },
+
+  // ── L-P4: FOUR SHAPES, FOUR ENTRIES ──────────────────────────────────────
+  // Two capability shapes and two move shapes. The move pair only became visible
+  // when the clause was made symmetric (it previously accepted `anchored_day` and
+  // `no_destination` as legitimate), and the second capability shape only became
+  // visible when a declared red stopped consuming the law's one slot per action.
   {
     id: 'menu_offers_removal_of_a_team_night',
     law: 'L-P4 MENU = PROJECTION',
     matches: /a "training" day carrying \["team_training"\] and says its work CANNOT be removed; the menu \(locked=null, hasSession=true, canRemove=true\)/,
-    why: 'CAPABILITY PARITY, THE DIRECTION CELL 4 DOES NOT LOOK. A team-only night '
-      + 'projects one `team_training` part, which `partCapabilities` correctly calls '
-      + 'an ANCHOR — not removable. The menu derives `canRemove` from '
-      + '`workout !== null` and offers to bin the team night. Reproduce: bounded '
-      + 'seed 1, 2 actions — answer onboarding (In-season, team Wednesday), generate '
-      + 'the program; 2026-07-22.',
+    why: 'A team-only night projects one `team_training` part, which '
+      + '`partCapabilities` correctly calls an ANCHOR — not removable. The menu '
+      + 'derives `canRemove` from `workout !== null` and offers to bin the team '
+      + 'night. Reproduce: bounded seed 1, 2 actions — answer onboarding '
+      + '(In-season, team Wednesday), generate the program; 2026-07-22.',
     paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    expiresWhen: 'the menu refuses to remove a day whose only part is an anchor.',
     redsIn: 'both',
   },
   {
@@ -998,32 +1119,78 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     law: 'L-P4 MENU = PROJECTION',
     matches: /a "game" day carrying \["strength"\] and says its work CAN be removed; the menu \(locked=game_day, hasSession=false, canRemove=false\)/,
     why: 'THE PROJECTION DOES NOT KNOW A GAME DAY AT PART LEVEL. `dayKind` says '
-      + '"game" and `COMPONENT_TO_PART` still maps the day\'s `session` component to '
-      + '`strength`, so the projection offers move and remove on a fixture while the '
-      + 'menu locks it. One derivation disagreeing with itself is worse than two '
+      + '"game" and `COMPONENT_TO_PART` still maps the day\'s `session` component '
+      + 'to `strength`, so the projection offers remove on a fixture while the menu '
+      + 'locks it. One derivation disagreeing with itself is worse than two '
       + 'surfaces disagreeing. Reproduce: bounded seed 2, 3 actions — answer '
       + 'onboarding (Pre-season, team Wednesday), generate the program, mark '
       + '2026-07-26 as game.',
     paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    expiresWhen: 'a projected game day carries no removable part.',
     redsIn: 'both',
   },
+  {
+    id: 'projection_offers_a_move_on_a_game_day',
+    law: 'L-P4 MENU = PROJECTION',
+    matches: /a "game" day carrying \["strength"\] and says its work CAN be moved; the move door refuses "no_session" \(locked=game_day\)/,
+    why: 'THE MOVE HALF OF THE GAME-DAY SPLIT, and it does not follow from the '
+      + 'remove half: `canMoveWholeDay` and `canRemoveWholeDay` are separately '
+      + 'derived, and a fix to one leaves the other. Same cause — the projection '
+      + 'reads a fixture\'s `session` component as movable strength. Reproduce: '
+      + 'bounded seed 2, 3 actions — answer onboarding (Pre-season, team '
+      + 'Wednesday), generate the program, mark 2026-07-26 as game.',
+    paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    expiresWhen: 'a projected game day is not offered a move.',
+    redsIn: 'both',
+  },
+  {
+    id: 'projection_offers_a_move_off_an_anchored_day',
+    law: 'L-P4 MENU = PROJECTION',
+    matches: /and says its work CAN be moved; the move door refuses "anchored_day"/,
+    why: 'SURFACED BY MAKING THE MOVE CLAUSE SYMMETRIC. The first draft accepted '
+      + '`anchored_day` as a week-fact the projection had no opinion about; it does '
+      + 'have one — `canMoveWholeDay` is `editable.length > 0`, which is true for a '
+      + 'team night carrying recovery, while `moveOptionsForDay` refuses the whole '
+      + 'day because team training is fixed to it. Whichever is right, they are not '
+      + 'the same answer, and cell 4 asserts `!move.refusal` with no qualification. '
+      + 'Reproduce: bounded seed 5, 5 actions — answer onboarding (Pre-season, team '
+      + 'Wednesday), generate, advance 7, move 2026-07-28 -> 2026-07-29 (whole_day), '
+      + 'move 2026-07-29 -> 2026-07-31 (conditioning); 2026-07-29 projects '
+      + '["team_training","recovery"].',
+    paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    expiresWhen: 'the projection\'s `canMoveWholeDay` and the move door agree on '
+      + 'an anchored day — by the projection learning about anchors, not by the '
+      + 'law accepting a refusal reason.',
+    // BOUNDED ONLY, verified by survey: the deep tier's three seeds do not build
+    // a team night carrying recovery. Real, deterministic, and reached at
+    // fourteen actions — it just is not one of three long walks' business.
+    redsIn: 'bounded',
+  },
+
   {
     id: 'block_rollover_fails_silently_and_the_program_stops',
     law: 'L6 THE BLOCK ROLLS OVER',
     matches: /Accepted-state ledger mismatch/,
     why: 'ONLY DEPTH REACHES THIS, which is the whole argument for the tier. Four '
       + 'weeks after install the block must roll; `rebuildLocalWeek` re-evaluates '
-      + 'the accepted-state ledger, finds blockers '
-      + '(planner_selected_target_miss, required_minimum_shortfall, '
-      + 'pattern_restore_failure) and throws. `useHomeScreen` catches and logs, so '
-      + 'the athlete gets no crash and no sentence — he gets a program that stopped, '
-      + 'every day outside the edit horizon. Reproduce: DEEP seed 1, 6 actions — '
-      + 'answer onboarding (In-season, team Wednesday), generate the program, '
-      + 'advance 7, advance 7, mark 2026-08-09 as game, advance 7; fails rolling '
-      + 'into 2026-08-10. NOT A SURFACE DEFECT AND NO TASK IN THIS UNIT PAYS IT: '
-      + 'carried here so the tier can run, and reported to Sam for a ruling. See '
-      + 'the Task 3 report for why a harness artifact is not excluded.',
-    paidBy: 'UNASSIGNED — new finding, Task 3 report, awaiting Sam',
+      + 'the accepted-state ledger, finds blockers (planner_selected_target_miss, '
+      + 'required_minimum_shortfall, pattern_restore_failure) and throws. '
+      + '`useHomeScreen` catches and logs, so the athlete gets no crash and no '
+      + 'sentence — he gets a program that stopped, every day outside the edit '
+      + 'horizon. NOT A HARNESS ARTIFACT: review\'s first suspicion was this file\'s '
+      + 'own generate door writing `currentProgram` with a raw `setState` and '
+      + 'leaving the ledger null. That door now publishes through '
+      + '`commitRebuiltProgram` -> `commitAcceptedStateTransaction`, the same accept '
+      + 'boundary the rollover itself uses, and THE RED SURVIVED UNCHANGED. '
+      + 'Reproduce: DEEP seed 1, rolling into 2026-08-10. Not a surface defect and '
+      + 'no task in this unit pays it.',
+    paidBy: 'the program-block lifecycle owner (`weekRebuild.rebuildLocalWeek` '
+      + 'scope:block + `acceptedStateTransaction` validation) — raised for Sam, '
+      + 'NOT a buttons/UI task',
+    expiresWhen: 'a deep walk crosses a block boundary without `rolloverProgramBlock` '
+      + 'throwing. If that happens before anyone works on it, the cause was '
+      + 'upstream and this entry must be deleted rather than left as a promise '
+      + 'nobody owes.',
     redsIn: 'deep',
   },
 ];
@@ -1065,20 +1232,31 @@ run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
     // clock wherever the minimal history ended.
     if (DEEP) {
       const reached = daysBetweenISO(INSTALL_DAY, todayISO);
+      // DEPTH IS TWO CLAIMS, NOT ONE. Days elapsed says the clock moved; it says
+      // nothing about whether the athlete still has a life to act on. A walk that
+      // spends its last fifty actions on a week that projects nothing is as much a
+      // lie as one that never left week one — the other half of it. So the final
+      // week must still project work somewhere.
+      const live = quiet(() => projectParts({ week: projectedWeek(), weekStart }))
+        .days.some((day) => day.parts.length > 0);
+      const depth = `seed ${seed}: reached ${todayISO} — ${reached} days `
+        + `(${(reached / 7).toFixed(1)} weeks) after install, final week `
+        + `${live ? 'LIVE' : 'EMPTY'}`;
       if (reached < DEPTH_TIER.minWeeksAdvanced * 7) {
-        shallow.push(`seed ${seed} ended ${reached} days after install (needs `
-          + `${DEPTH_TIER.minWeeksAdvanced * 7})`);
+        shallow.push(`${depth} — needs ${DEPTH_TIER.minWeeksAdvanced * 7} days`);
+      } else if (!live && !rolloverFailedThisWalk) {
+        // Dead world with NO declared cause is a new red, not a known one.
+        shallow.push(`${depth} — the walk reached its depth on a week that projects `
+          + 'no parts at all, and no rollover failure explains it');
       } else {
-        console.log(`      seed ${seed}: reached ${todayISO} — ${reached} days `
-          + `(${(reached / 7).toFixed(1)} weeks) after install`);
+        console.log(`      ${depth}${
+          live ? '' : ' (explained by the declared L6 rollover red)'}`);
       }
     }
   }
-  assert(violations.length === 0,
-    `the walker found law violations:\n${violations.join('\n')}`);
-  assert(shallow.length === 0,
-    'the DEEP tier did not reach the depth it declares — a shallow walk wearing a '
-    + `deep label is what L13 forbids:\n    ${shallow.join('\n    ')}`);
+  // REPORTED BEFORE THE ASSERTS, ALWAYS. A survey that only prints on a green run
+  // is useless exactly when it is needed: the run that fails is the run whose
+  // full offence population someone has to read to write the next declared red.
   for (const id of declaredRedHits) {
     const entry = DECLARED_RED.find((candidate) => candidate.id === id)!;
     console.log(`      (declared red carried: ${id} — paid by ${entry.paidBy})`);
@@ -1090,6 +1268,11 @@ run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
         + `${entry.law}\n        ${entry.detail}`);
     }
   }
+  assert(violations.length === 0,
+    `the walker found law violations:\n${violations.join('\n')}`);
+  assert(shallow.length === 0,
+    'the DEEP tier did not reach the depth it declares — a shallow walk wearing a '
+    + `deep label is what L13 forbids:\n    ${shallow.join('\n    ')}`);
 });
 
 run('every declared red still reds — stale debt fails, it does not expire quietly', () => {
@@ -1097,8 +1280,10 @@ run('every declared red still reds — stale debt fails, it does not expire quie
   // went green, and the commit that turned it green owes the deletion of its
   // entry. Nothing here may outlive the defect it names.
   if (process.env.WALKER_HARVEST === '1') return;
+  const requiredHere = (entry: DeclaredRed): boolean =>
+    entry.redsIn === 'both' || entry.redsIn === (DEEP ? 'deep' : 'bounded');
   const owed = DECLARED_RED.filter((entry) =>
-    (entry.redsIn === 'both' || DEEP) && !declaredRedHits.has(entry.id));
+    requiredHere(entry) && !declaredRedHits.has(entry.id));
   assert(owed.length === 0,
     `declared red no longer reds in the ${TIER} tier — delete the entry, do not `
     + `leave it carrying debt that is already paid:\n    ${

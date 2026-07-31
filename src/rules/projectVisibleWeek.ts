@@ -68,8 +68,9 @@ registerProjectionCopy();
  * The structural half of a day — everything that needs no vocabulary.
  *
  * Same fields as `VisibleDay` minus the words. Not a second projection: it is the
- * same derivation, with the copy lookup not yet applied, so `project()` is
- * literally `projectParts()` plus headlines.
+ * same derivation with the words not yet applied, so `project()` is literally
+ * `projectParts()` plus the two things that carry `SignedCopy` — headlines and
+ * rows. Both live on the words side deliberately; see `ProjectedDayParts.parts`.
  */
 export interface ProjectedDayParts {
   readonly date: string;
