@@ -59,6 +59,8 @@ export const explorerTestId = {
 
   componentIdentity: (sessionId: string, componentId: string) =>
     `component-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
+  componentSwapIngress: (sessionId: string, componentId: string) =>
+    `component-swap-action-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
   componentDeleteIngress: (sessionId: string, componentId: string) =>
     `component-delete-action-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
   componentDeleteConfirm: (sessionId: string, componentId: string) =>

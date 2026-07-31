@@ -711,19 +711,27 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] DayWorkoutScreenV2 removes the weekly PlanChangeSheet',
     !/<PlanChangeSheet\b/.test(dayWorkoutSrc)
       && !/Want to change something\?/.test(dayWorkoutSrc));
+  // Ruling 12 (Task 8, buttons/UI unit) retired the "Edit exercises" link and
+  // its modal menu: exercise-level editing is now three top-of-page icons
+  // plus two per-row buttons, with the same guided ExerciseEditSheet behind
+  // all five. Updated to the new entry surface, not to a fantasy — see
+  // artifacts/COPY_SHEET_RULINGS_2026-07-30.md "Task 8" for the full retired
+  // string list.
   ok('[9] DayWorkoutScreenV2 renders an exercise-level change door',
-    dayWorkoutSrc.includes('"day-workout-make-change-link"')
-      && dayWorkoutSrc.includes('Edit exercises')
+    dayWorkoutSrc.includes('"day-workout-add-exercise-action"')
+      && dayWorkoutSrc.includes('"day-workout-equipment-concern-action"')
+      && dayWorkoutSrc.includes('"day-workout-injury-concern-action"')
       && /<ExerciseEditSheet\b/.test(dayWorkoutSrc));
   ok('[9] DayWorkoutScreenV2 exercise sheet has exercise-level actions only',
-    dayWorkoutSrc.includes('Swap an exercise')
-      && dayWorkoutSrc.includes('Add an exercise')
-      && dayWorkoutSrc.includes('Remove an exercise')
-      && dayWorkoutSrc.includes('Something hurts / no equipment')
+    !/'menu'|'exercise_menu'/.test(dayWorkoutSrc)
+      && /'swap_reason'/.test(dayWorkoutSrc)
+      && /'add_kind'/.test(dayWorkoutSrc)
+      && /'confirm_remove'/.test(dayWorkoutSrc)
       && !/Swap this session|Add to this day|Move this session|Bin this session/.test(dayWorkoutSrc));
-  ok('[9] DayWorkoutScreenV2 offers per-exercise Change actions',
-    /function ExerciseChangeAction/.test(dayWorkoutSrc)
-      && /exerciseChangeText/.test(dayWorkoutSrc));
+  ok('[9] DayWorkoutScreenV2 offers per-exercise swap and remove actions',
+    /function ExerciseRowActions/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Swap exercise"/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Remove exercise"/.test(dayWorkoutSrc));
   ok('[9] session exercise edits use deterministic current-session executors',
     /executeProgramControlAction/.test(dayWorkoutSrc)
       && /type:\s*'swap_exercise'/.test(dayWorkoutSrc)
@@ -741,14 +749,18 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && !/askCoachForFutureRemove/.test(dayWorkoutSrc));
   ok('[9] Team Training entries are excluded from exercise-level edits',
     /filter\(\(exercise: any\) => !isTeamTrainingItem\(exercise\)\)/.test(dayWorkoutSrc)
-      && /isTeamTrainingItem\(exercise\) \? undefined : \(\) => onChangeExercise\(exercise\)/.test(dayWorkoutSrc));
+      && /isEditableRow \? \(\) => onSwapExercise\(exercise\) : undefined/.test(dayWorkoutSrc)
+      && /isEditableRow \? \(\) => onRemoveExercise\(exercise\) : undefined/.test(dayWorkoutSrc));
   ok('[9] Team Training-only detail does not expose a Coach-prefill edit menu',
     /date && !isTeamOnly && editableExercises\.length > 0/.test(dayWorkoutSrc)
       && !/team_menu|I can.t make team training|Tell coach about team training/.test(dayWorkoutSrc));
+  // "Message the coach" was already renamed app-wide to "Ask Coach" by an
+  // earlier unit (COPY_SHEET_RULINGS batch 4); corrected here alongside the
+  // Task 8 update rather than left pointing at retired wording.
   ok('[9] Coach fallback is explicit from inside the exercise sheet',
     /kind: 'coach_fallback'/.test(dayWorkoutSrc)
       && /I need a bit more detail before changing this safely\./.test(dayWorkoutSrc)
-      && /label="Message the coach"/.test(dayWorkoutSrc));
+      && /label="Ask Coach"/.test(dayWorkoutSrc));
   ok('[9] tap exercise swaps use the Bible hierarchy adapter, not local regex tables',
     /getTapSwapChoices/.test(dayWorkoutSrc)
       && /resolveTapSwapEnvironment/.test(dayWorkoutSrc)

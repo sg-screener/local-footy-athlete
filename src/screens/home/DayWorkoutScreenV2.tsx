@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
@@ -107,7 +108,17 @@ type SuggestedSwap =
       reason: string;
     };
 
-type ExercisePickAction = 'swap' | 'remove' | 'concern';
+/**
+ * TASK 8: the two-step "which exercise, then what" menu died with ruling 12
+ * — swap and remove are now single-tap row buttons that already know their
+ * exercise, so `pick_exercise` only exists for the two entries that start
+ * from the TOP of the page with no row context yet: the injury door and the
+ * no-equipment door. `'swap' | 'remove'` are gone rather than kept as dead
+ * union members nothing sets — the same non-interference-with-a-live-shape
+ * rule this file already applies to `injury_area`/`injury_severity` (dead
+ * before this task, left alone by it).
+ */
+type ExercisePickAction = 'concern' | 'injury';
 type ExerciseConcern = 'No equipment' | 'Too hard / too easy';
 type SwapReason =
   | 'No equipment'
@@ -157,8 +168,6 @@ type FutureScopeStep =
 
 type ExerciseEditStep =
   | { kind: 'closed' }
-  | { kind: 'menu' }
-  | { kind: 'exercise_menu'; exercise: EditableExercise }
   | { kind: 'pick_exercise'; action: ExercisePickAction }
   | { kind: 'swap_reason'; exercise: EditableExercise }
   | { kind: 'add_kind' }
@@ -554,15 +563,42 @@ export default function DayWorkoutScreenV2() {
     [],
   );
 
-  const openExerciseEditor = React.useCallback(() => {
+  // TASK 8 (ruling 12): the "Edit exercises" link and its modal MENU are
+  // retired. The top-of-page icon row below opens these three doors
+  // directly — same gate the link used to apply (`!isTeamOnly &&
+  // editableExercises.length > 0`), now guarded at both the render site
+  // (hides the row) and here (defensive, matches the retired handler's
+  // own belt-and-braces check).
+  const openExerciseAdd = React.useCallback(() => {
     if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'menu' });
+    setExerciseEditStep({ kind: 'add_kind' });
   }, [editableExercises.length, isTeamOnly]);
 
-  const openSpecificExerciseEditor = React.useCallback((exercise: any) => {
+  const openExerciseConcernPicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'concern' });
+  }, [editableExercises.length, isTeamOnly]);
+
+  const openExerciseInjuryPicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'injury' });
+  }, [editableExercises.length, isTeamOnly]);
+
+  // Per-row swap/remove buttons. Replace `openSpecificExerciseEditor`,
+  // which routed every row tap through the now-deleted `exercise_menu`
+  // step. The row already tells us which exercise AND which action, so
+  // each opener lands straight on the guided step that action starts —
+  // no intermediate menu to choose from.
+  const openExerciseSwap = React.useCallback((exercise: any) => {
     const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
     if (!editable) return;
-    setExerciseEditStep({ kind: 'exercise_menu', exercise: editable });
+    setExerciseEditStep({ kind: 'swap_reason', exercise: editable });
+  }, []);
+
+  const openExerciseRemove = React.useCallback((exercise: any) => {
+    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
+    if (!editable) return;
+    setExerciseEditStep({ kind: 'confirm_remove', exercise: editable });
   }, []);
 
   const askCoachForExerciseEdit = React.useCallback(
@@ -1155,22 +1191,44 @@ export default function DayWorkoutScreenV2() {
             </Text>
           ) : null}
           {/*
-            Session-level change door. The weekly Program card owns
-            day/session edits; inside an opened workout this link edits
-            exercises only. Lives in the sticky header so it stays
-            reachable at any scroll depth. Quiet lime link, never a CTA.
+            Session-level change doors (ruling 12). The weekly Program card
+            owns day/session edits; inside an opened workout these icons edit
+            exercises only. The single "Edit exercises" link and its modal
+            MENU are retired — three doors, three icons, no menu in between.
+            Same gate the link used to apply, and the same hidden-when-not-
+            applicable pattern every other gated affordance on this screen
+            uses (staleWarning, the finish moment, the description line):
+            nothing renders rather than a disabled control sitting there.
+            Lives in the sticky header so it stays reachable at any scroll
+            depth.
           */}
           {date && !isTeamOnly && editableExercises.length > 0 ? (
-            <Pressable
-              onPress={openExerciseEditor}
-              style={({ pressed }) => [
-                styles.makeChangeLink,
-                pressed && { opacity: 0.7 },
-              ]}
-              testID="day-workout-make-change-link"
-            >
-              <Text style={styles.makeChangeText}>Edit exercises</Text>
-            </Pressable>
+            <View style={styles.exerciseActionsRow}>
+              <IconButton
+                onPress={openExerciseAdd}
+                accessibilityLabel="Add an exercise"
+                tone="accent"
+                size="sm"
+                icon={<PlusIcon />}
+                testID="day-workout-add-exercise-action"
+              />
+              <IconButton
+                onPress={openExerciseConcernPicker}
+                accessibilityLabel="No equipment for an exercise"
+                tone="default"
+                size="sm"
+                icon={<MaterialCommunityIcons name="dumbbell" size={16} color="#C6FF6B" />}
+                testID="day-workout-equipment-concern-action"
+              />
+              <IconButton
+                onPress={openExerciseInjuryPicker}
+                accessibilityLabel="Something hurts"
+                tone="default"
+                size="sm"
+                icon={<InjuryIcon />}
+                testID="day-workout-injury-concern-action"
+              />
+            </View>
           ) : null}
         </View>
       </View>
@@ -1245,10 +1303,12 @@ export default function DayWorkoutScreenV2() {
             */}
             <RecoveryBlock
               exercises={workout.exercises ?? []}
+              sessionId={workout.id}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               onSelectExercise={setSelectedExercise}
-              onChangeExercise={openSpecificExerciseEditor}
+              onSwapExercise={openExerciseSwap}
+              onRemoveExercise={openExerciseRemove}
             />
             <RecoveryAddonSection
               addons={workout.recoveryAddons ?? []}
@@ -1266,6 +1326,7 @@ export default function DayWorkoutScreenV2() {
             <MobilityPrehabFlowSection flow={mobilityFlow} />
             <SessionList
               items={sessionTemplate.items}
+              sessionId={workout.id}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               editingWeightId={editingWeightId}
@@ -1277,7 +1338,8 @@ export default function DayWorkoutScreenV2() {
               startEditingWeight={startEditingWeight}
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={setSelectedExercise}
-              onChangeExercise={openSpecificExerciseEditor}
+              onSwapExercise={openExerciseSwap}
+              onRemoveExercise={openExerciseRemove}
             />
           </>
         )}
@@ -1507,6 +1569,7 @@ function CoachNoteBanner({
  */
 interface SessionListProps {
   items: SessionTemplateItem[];
+  sessionId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -1518,10 +1581,12 @@ interface SessionListProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
-  onChangeExercise: (exercise: any) => void;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }
 function SessionList({
   items,
+  sessionId,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -1533,7 +1598,8 @@ function SessionList({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
-  onChangeExercise,
+  onSwapExercise,
+  onRemoveExercise,
 }: SessionListProps) {
   if (items.length === 0) return null;
 
@@ -1549,8 +1615,10 @@ function SessionList({
       return (
         <ConditioningChoiceRow
           key={key}
+          sessionId={sessionId}
           options={item.options}
-          onChangeExercise={onChangeExercise}
+          onSwapExercise={onSwapExercise}
+          onRemoveExercise={onRemoveExercise}
         />
       );
     }
@@ -1558,8 +1626,10 @@ function SessionList({
       return (
         <ConditioningPhaseRow
           key={key}
+          sessionId={sessionId}
           exercise={item.row}
-          onChangeExercise={onChangeExercise}
+          onSwapExercise={onSwapExercise}
+          onRemoveExercise={onRemoveExercise}
         />
       );
     }
@@ -1576,6 +1646,7 @@ function SessionList({
     return (
       <StrengthExerciseCard
         key={key}
+        sessionId={sessionId}
         exercise={item.row}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
@@ -1593,7 +1664,8 @@ function SessionList({
         startEditingWeight={startEditingWeight}
         commitWeightEdit={commitWeightEdit}
         onSelectExercise={onSelectExercise}
-        onChangeExercise={onChangeExercise}
+        onSwapExercise={onSwapExercise}
+        onRemoveExercise={onRemoveExercise}
       />
     );
   };
@@ -1735,10 +1807,14 @@ function AddonRow({
  */
 function ConditioningChoiceRow({
   options,
-  onChangeExercise,
+  sessionId,
+  onSwapExercise,
+  onRemoveExercise,
 }: {
   options: Array<{ title: string; description: string; rows: any[] }>;
-  onChangeExercise: (exercise: any) => void;
+  sessionId: string;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }) {
   const isChoice = options.length > 1;
   const [expanded, setExpanded] = React.useState(!isChoice);
@@ -1782,7 +1858,9 @@ function ConditioningChoiceRow({
                   key={exercise.id}
                   exercise={exercise}
                   idx={idx}
-                  onChangeExercise={onChangeExercise}
+                  sessionId={sessionId}
+                  onSwapExercise={onSwapExercise}
+                  onRemoveExercise={onRemoveExercise}
                 />
               ))}
             </View>
@@ -1807,6 +1885,7 @@ function ConditioningChoiceRow({
  */
 interface StrengthExerciseCardProps {
   exercise: any;
+  sessionId: string;
   label: string;
   isGrouped: boolean;
   isLastInGroup?: boolean;
@@ -1821,10 +1900,12 @@ interface StrengthExerciseCardProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
-  onChangeExercise: (exercise: any) => void;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }
 function StrengthExerciseCard({
   exercise,
+  sessionId,
   label,
   isGrouped,
   isLastInGroup = true,
@@ -1839,7 +1920,8 @@ function StrengthExerciseCard({
   startEditingWeight,
   commitWeightEdit,
   onSelectExercise,
-  onChangeExercise,
+  onSwapExercise,
+  onRemoveExercise,
 }: StrengthExerciseCardProps) {
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
@@ -1847,7 +1929,9 @@ function StrengthExerciseCard({
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
   const cueText = buildCueText(exerciseName);
   const isEditing = editingWeightId === exercise.exerciseId;
-  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
+  const componentId = exercise.id || exercise.exerciseId;
+  const exerciseToken = stableTestIdToken(componentId);
+  const isEditableRow = !isTeamTrainingItem(exercise);
 
   return (
     <Card
@@ -1865,9 +1949,10 @@ function StrengthExerciseCard({
         label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
-        onChange={
-          isTeamTrainingItem(exercise) ? undefined : () => onChangeExercise(exercise)
-        }
+        onSwap={isEditableRow ? () => onSwapExercise(exercise) : undefined}
+        onRemove={isEditableRow ? () => onRemoveExercise(exercise) : undefined}
+        swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
+        removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
       />
 
       {/*
@@ -1955,17 +2040,21 @@ function StrengthExerciseCard({
  */
 interface RecoveryBlockProps {
   exercises: any[];
+  sessionId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   onSelectExercise: (name: string) => void;
-  onChangeExercise: (exercise: any) => void;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }
 function RecoveryBlock({
   exercises,
+  sessionId,
   expandedCues,
   toggleCue,
   onSelectExercise,
-  onChangeExercise,
+  onSwapExercise,
+  onRemoveExercise,
 }: RecoveryBlockProps) {
   return (
     <View style={styles.exerciseList}>
@@ -1978,7 +2067,9 @@ function RecoveryBlock({
           exercise.prescribedSets > 1 ? `${exercise.prescribedSets} × ` : '';
         const restLabel = formatRest(exercise.restSeconds);
         const cueText = buildCueText(exerciseName);
-        const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
+        const componentId = exercise.id || exercise.exerciseId;
+        const exerciseToken = stableTestIdToken(componentId);
+        const isEditableRow = !isTeamTrainingItem(exercise);
 
         return (
           <Card
@@ -1993,9 +2084,10 @@ function RecoveryBlock({
               label={`${index + 1}`}
               name={exerciseDisplayName}
               onPlay={() => onSelectExercise(exerciseName)}
-              onChange={
-                isTeamTrainingItem(exercise) ? undefined : () => onChangeExercise(exercise)
-              }
+              onSwap={isEditableRow ? () => onSwapExercise(exercise) : undefined}
+              onRemove={isEditableRow ? () => onRemoveExercise(exercise) : undefined}
+              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
+              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
             />
 
             <View style={styles.recoveryPrescriptionRow}>
@@ -2107,16 +2199,21 @@ function RecoveryAddonSection({
  */
 function ConditioningPhaseRow({
   exercise,
-  onChangeExercise,
+  sessionId,
+  onSwapExercise,
+  onRemoveExercise,
 }: {
   exercise: any;
-  onChangeExercise: (exercise: any) => void;
+  sessionId: string;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }) {
   const phaseName = exercise.exercise?.name || 'Phase';
   const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
   const description = exercise.notes || exercise.exercise?.description || '';
   const restLabel = formatRest(exercise.restSeconds, 'recovery');
-  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
+  const componentId = exercise.id || exercise.exerciseId;
+  const exerciseToken = stableTestIdToken(componentId);
 
   return (
     <View
@@ -2130,7 +2227,12 @@ function ConditioningPhaseRow({
           </Text>
         </View>
         {!isTeamTrainingItem(exercise) ? (
-          <ExerciseChangeAction onPress={() => onChangeExercise(exercise)} />
+          <ExerciseRowActions
+            onSwap={() => onSwapExercise(exercise)}
+            onRemove={() => onRemoveExercise(exercise)}
+            swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
+            removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
+          />
         ) : null}
       </View>
       {description ? (
@@ -2152,14 +2254,23 @@ function ConditioningPhaseRow({
 interface ConditioningRowProps {
   exercise: any;
   idx: number;
-  onChangeExercise?: (exercise: any) => void;
+  sessionId: string;
+  onSwapExercise: (exercise: any) => void;
+  onRemoveExercise: (exercise: any) => void;
 }
-function ConditioningRow({ exercise, idx, onChangeExercise }: ConditioningRowProps) {
+function ConditioningRow({
+  exercise,
+  idx,
+  sessionId,
+  onSwapExercise,
+  onRemoveExercise,
+}: ConditioningRowProps) {
   const name = exercise.exercise?.name || `Phase ${idx + 1}`;
   const displayName = displayExerciseName(name, `Phase ${idx + 1}`);
   const notes = exercise.notes || '';
   const prescription = formatConditioningRowPrescription(exercise);
-  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
+  const componentId = exercise.id || exercise.exerciseId;
+  const exerciseToken = stableTestIdToken(componentId);
 
   return (
     <View
@@ -2170,8 +2281,13 @@ function ConditioningRow({ exercise, idx, onChangeExercise }: ConditioningRowPro
       <View style={{ flex: 1 }}>
         <View style={styles.conditioningRowHeader}>
           <Text style={styles.conditioningRowName}>{displayName}</Text>
-          {onChangeExercise && !isTeamTrainingItem(exercise) ? (
-            <ExerciseChangeAction onPress={() => onChangeExercise(exercise)} />
+          {!isTeamTrainingItem(exercise) ? (
+            <ExerciseRowActions
+              onSwap={() => onSwapExercise(exercise)}
+              onRemove={() => onRemoveExercise(exercise)}
+              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
+              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
+            />
           ) : null}
         </View>
         {prescription ? (
@@ -2217,7 +2333,15 @@ function TeamTrainingBanner() {
 }
 
 /**
- * Common exercise header: [label] Name ........ [play]
+ * Common exercise header: [label] Name ........ [swap] [remove] [play]
+ *
+ * TASK 8 (ruling 12): the single "Change" pill that opened the modal
+ * exercise_menu is retired. In its place, two icon buttons that already know
+ * their own destination — swap enters `swap_reason` for this exercise,
+ * remove enters `confirm_remove` — so what used to be "tap Change, then
+ * choose Swap or Remove from a sheet" is one tap. `onSwap`/`onRemove` are
+ * only present for rows the athlete can actually edit (team-training rows
+ * pass neither, same gate the old `onChange` used).
  *
  * The play target is a small, low-opacity affordance — present but never
  * competing with the exercise name. Pressing brightens it (opacity → 1,
@@ -2228,9 +2352,20 @@ interface ExerciseHeaderRowProps {
   label?: string;
   name: string;
   onPlay: () => void;
-  onChange?: () => void;
+  onSwap?: () => void;
+  onRemove?: () => void;
+  swapTestID?: string;
+  removeTestID?: string;
 }
-function ExerciseHeaderRow({ label, name, onPlay, onChange }: ExerciseHeaderRowProps) {
+function ExerciseHeaderRow({
+  label,
+  name,
+  onPlay,
+  onSwap,
+  onRemove,
+  swapTestID,
+  removeTestID,
+}: ExerciseHeaderRowProps) {
   return (
     <>
       <View style={styles.exerciseHeaderRow}>
@@ -2249,27 +2384,68 @@ function ExerciseHeaderRow({ label, name, onPlay, onChange }: ExerciseHeaderRowP
             {name}
           </Text>
         </Pressable>
-        {onChange ? <ExerciseChangeAction onPress={onChange} /> : null}
+        {onSwap && onRemove ? (
+          <ExerciseRowActions
+            onSwap={onSwap}
+            onRemove={onRemove}
+            swapTestID={swapTestID}
+            removeTestID={removeTestID}
+          />
+        ) : null}
         <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
       </View>
     </>
   );
 }
 
-function ExerciseChangeAction({ onPress }: { onPress: () => void }) {
+/**
+ * Two per-row icon buttons, shared by every row shape that used to mount the
+ * single `ExerciseChangeAction` pill (strength, recovery, and both
+ * conditioning row shapes) — one definition, so "what a row's edit
+ * affordance looks like" cannot drift between them the way three separate
+ * copies of a "Change" pill could have.
+ */
+function ExerciseRowActions({
+  onSwap,
+  onRemove,
+  swapTestID,
+  removeTestID,
+}: {
+  onSwap: () => void;
+  onRemove: () => void;
+  swapTestID?: string;
+  removeTestID?: string;
+}) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Change exercise"
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={({ pressed }) => [
-        styles.exerciseChangeAction,
-        pressed && { opacity: 0.65 },
-      ]}
-    >
-      <Text style={styles.exerciseChangeText}>Change</Text>
-    </Pressable>
+    <View style={styles.exerciseRowActions}>
+      <Pressable
+        onPress={onSwap}
+        testID={swapTestID}
+        accessibilityRole="button"
+        accessibilityLabel="Swap exercise"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={({ pressed }) => [
+          styles.exerciseRowActionBtn,
+          pressed && { opacity: 0.65 },
+        ]}
+      >
+        <SwapIcon />
+      </Pressable>
+      <Pressable
+        onPress={onRemove}
+        testID={removeTestID}
+        accessibilityRole="button"
+        accessibilityLabel="Remove exercise"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={({ pressed }) => [
+          styles.exerciseRowActionBtn,
+          styles.exerciseRowActionBtnDanger,
+          pressed && { opacity: 0.65 },
+        ]}
+      >
+        <RemoveIcon />
+      </Pressable>
+    </View>
   );
 }
 
@@ -2431,29 +2607,16 @@ function ExerciseEditSheet({
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
+  // TASK 8 (ruling 12): every step below used to have a menu or an
+  // exercise_menu to fall back to. Both are retired — every step here is now
+  // reached by a single direct tap (a row button or a top-of-page icon), so
+  // there is nowhere shallower to return to except closed. `future_scope`
+  // keeps its own destination (`onTodayOnly`, unchanged) and `confirm_add`
+  // keeps returning to `add_kind` (that pairing survives the menu's death
+  // untouched, since add was never routed through exercise_menu).
   const goBack = () => {
-    if (step.kind === 'exercise_menu') {
-      onStep({ kind: 'menu' });
-      return;
-    }
-    if (
-      step.kind === 'pick_exercise' ||
-      step.kind === 'add_kind' ||
-      step.kind === 'result'
-    ) {
-      onStep({ kind: 'menu' });
-      return;
-    }
-    if (step.kind === 'swap_reason' || step.kind === 'confirm_remove' || step.kind === 'confirm_swap') {
-      onStep({ kind: 'exercise_menu', exercise: step.exercise });
-      return;
-    }
     if (step.kind === 'confirm_add') {
       onStep({ kind: 'add_kind' });
-      return;
-    }
-    if (step.kind === 'concern_reason') {
-      onStep({ kind: 'exercise_menu', exercise: step.exercise });
       return;
     }
     if (step.kind === 'injury_area') {
@@ -2468,17 +2631,19 @@ function ExerciseEditSheet({
       onTodayOnly();
       return;
     }
-    if (step.kind === 'coach_fallback') {
-      onStep({ kind: 'menu' });
-      return;
-    }
     onClose();
   };
 
-  const showBack =
-    step.kind !== 'menu' &&
-    step.kind !== 'result';
+  const showBack = step.kind !== 'result';
 
+  // TASK 8: the only two doors left in front of this picker start from the
+  // TOP of the page, where there is no exercise context yet — the no-
+  // equipment door (`onConcern`, preselected 'No equipment' per its own
+  // callback — reading `prepareConcern`'s implementation shows it already
+  // resolves straight to a swap suggestion for that reason, so there is no
+  // separate "what's the concern?" question left to ask once the exercise is
+  // picked) and the injury door (`onInjuryStart`, unchanged — the same
+  // function the old exercise_menu's "Something hurts" row called).
   const renderExercisePicker = (action: ExercisePickAction) => {
     if (editableExercises.length === 0) {
       return (
@@ -2499,16 +2664,10 @@ function ExerciseEditSheet({
       <ExerciseSheetOption
         key={exercise.key}
         label={displayExerciseName(exercise.name)}
-        testID={action === 'remove'
-          ? explorerTestId.componentDeleteIngress(
-              sessionId,
-              exercise.targetId ?? exercise.key,
-            )
-          : explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
+        testID={explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
         onPress={() => {
-          if (action === 'swap') onStep({ kind: 'swap_reason', exercise });
-          if (action === 'remove') onStep({ kind: 'confirm_remove', exercise });
-          if (action === 'concern') onStep({ kind: 'concern_reason', exercise });
+          if (action === 'injury') onInjuryStart(exercise);
+          if (action === 'concern') onConcern(exercise, 'No equipment');
         }}
       />
     ));
@@ -2516,60 +2675,6 @@ function ExerciseEditSheet({
 
   const renderStep = () => {
     switch (step.kind) {
-      case 'menu':
-        return (
-          <>
-            <ExerciseSheetOption
-              label="Swap an exercise"
-              sub="Pick one exercise and choose why it needs changing"
-              onPress={() => onStep({ kind: 'pick_exercise', action: 'swap' })}
-            />
-            <ExerciseSheetOption
-              label="Add an exercise"
-              sub="Add one exercise or small block to this session"
-              onPress={() => onStep({ kind: 'add_kind' })}
-            />
-            <ExerciseSheetOption
-              label="Remove an exercise"
-              sub="Remove one exercise from today’s session"
-              onPress={() => onStep({ kind: 'pick_exercise', action: 'remove' })}
-            />
-            <ExerciseSheetOption
-              label="Something hurts / no equipment"
-              sub="Make a guided change inside this session"
-              onPress={() => onStep({ kind: 'pick_exercise', action: 'concern' })}
-            />
-          </>
-        );
-      case 'exercise_menu':
-        return (
-          <>
-            <ExerciseSheetOption
-              label="Swap exercise"
-              onPress={() => onStep({ kind: 'swap_reason', exercise: step.exercise })}
-            />
-            <ExerciseSheetOption
-              label="Remove exercise"
-              testID={explorerTestId.componentDeleteIngress(
-                sessionId,
-                step.exercise.targetId ?? step.exercise.key,
-              )}
-              onPress={() => onStep({ kind: 'confirm_remove', exercise: step.exercise })}
-            />
-            <ExerciseSheetOption
-              label="Something hurts"
-              onPress={() => onInjuryStart(step.exercise)}
-            />
-            <ExerciseSheetOption
-              label="No equipment"
-              onPress={() => onConcern(step.exercise, 'No equipment')}
-            />
-            <ExerciseSheetOption
-              label="Too hard / too easy"
-              onPress={() => onConcern(step.exercise, 'Too hard / too easy')}
-            />
-          </>
-        );
       case 'pick_exercise':
         return <>{renderExercisePicker(step.action)}</>;
       case 'swap_reason':
@@ -2831,10 +2936,6 @@ function ExerciseEditSheet({
 
 function exerciseEditTitle(step: ExerciseEditStep): string {
   switch (step.kind) {
-    case 'menu':
-      return 'Edit exercises';
-    case 'exercise_menu':
-      return displayExerciseName(step.exercise.name);
     case 'pick_exercise':
       return 'Which exercise?';
     case 'swap_reason':
@@ -2862,16 +2963,15 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
     case 'result':
       return step.title;
     default:
-      return 'Edit exercises';
+      // Unreachable: every live ExerciseEditStep kind has its own case
+      // above. Kept only as a type-safe fallback, never as athlete-facing
+      // copy — the retired "Edit exercises" title does not belong here.
+      return '';
   }
 }
 
 function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
   switch (step.kind) {
-    case 'menu':
-      return 'Make a focused change inside this session.';
-    case 'exercise_menu':
-      return 'Change this exercise only.';
     case 'pick_exercise':
       return 'Team training entries are left alone.';
     case 'swap_reason':
@@ -2959,6 +3059,56 @@ function PlayIcon() {
   return (
     <Svg width={10} height={10} viewBox="0 0 12 12">
       <Polygon points="3,2 3,10 10,6" fill="#C8FF00" />
+    </Svg>
+  );
+}
+
+// Circular-arrows swap glyph — the same shape `RowIcon`'s 'refresh' kind
+// draws on the week screen, redrawn here rather than imported so this row's
+// icon vocabulary does not reach across screens for a shared component that
+// does not exist yet. Neutral/muted tint: a per-row utility action, not a CTA.
+function SwapIcon() {
+  return (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M20 11a8 8 0 00-14.3-4.9L4 8" />
+      <Path d="M4 4v4h4" />
+      <Path d="M4 13a8 8 0 0014.3 4.9L20 16" />
+      <Path d="M20 20v-4h-4" />
+    </Svg>
+  );
+}
+
+// "−" in a circle — remove, in the app's own danger colour
+// (`colors.status.error`), never the plain grey the swap icon uses.
+function RemoveIcon() {
+  return (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={colors.status.error} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+      <Path d="M8 12h8" />
+    </Svg>
+  );
+}
+
+function PlusIcon() {
+  // Same plus glyph the week screen's "No game this week - add one" and
+  // "Add" menu rows already draw (`PlanChangeSheet.tsx`, `HomeScreenV2.tsx`)
+  // — one vocabulary for "add", not a new mark invented for this screen.
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 5v14" />
+      <Path d="M5 12h14" />
+    </Svg>
+  );
+}
+
+function InjuryIcon() {
+  // Plaster/bandage — the exact glyph `HomeScreenV2`'s "I'm injured" button
+  // draws (ruling 3/6), deliberately not the alert triangle or the pulse
+  // icon: one meaning, one mark, wherever an injury door appears.
+  return (
+    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
+      <Path d="M8.5 8.5 15.5 15.5" />
     </Svg>
   );
 }
@@ -3055,14 +3205,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
     marginTop: 3,
   },
-  // Change-door link — mirrors HomeScreenV2's makeChangeLink/-Text so the
-  // change vocabulary looks identical on every surface it appears on.
-  makeChangeLink: {
-    paddingVertical: spacing.xs,
+  // Session-level change doors (ruling 12) — three icon chips replacing the
+  // single "Edit exercises" link.
+  exerciseActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
     alignSelf: 'flex-start',
-    marginTop: 2,
   },
-  makeChangeText: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
 
   // ── Scroll body ──
   scroll: { flex: 1 },
@@ -3258,19 +3408,26 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
     lineHeight: 20,
   },
-  exerciseChangeAction: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
+  // Per-row swap/remove icon buttons (ruling 12) — replace the single
+  // retired "Change" pill styles.
+  exerciseRowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  exerciseRowActionBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.035)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  exerciseChangeText: {
-    color: '#8A8A8A',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+  exerciseRowActionBtnDanger: {
+    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+    borderColor: 'rgba(244, 67, 54, 0.25)',
   },
 
   // Muted play target — outline affordance, no resting fill at all.
