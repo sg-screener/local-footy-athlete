@@ -765,10 +765,20 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     /getTapSwapChoices/.test(dayWorkoutSrc)
       && /resolveTapSwapEnvironment/.test(dayWorkoutSrc)
       && !/function suggestExerciseReplacement|function suggestExerciseForInjury|function nameMatches/.test(dayWorkoutSrc));
+  // The "Something hurts" wiring moved from an exercise_menu/concern_reason
+  // row (`label="Something hurts" onPress={() => onInjuryStart(step.exercise)}`)
+  // to the top-of-page injury icon: its own accessibilityLabel, routed
+  // through pick_exercise's 'injury' action to the same onInjuryStart call —
+  // concern_reason retired in the same review-finding pass that updated this
+  // assertion (COPY_SHEET_RULINGS Task 8, 8a-ii; Sam ruled the equipment icon
+  // goes straight to the swap suggestion and concern_reason may retire with
+  // the other unreachable steps).
   ok('[9] injury/pain exercise edits open the guided injury flow',
     /<GuidedInjuryFlowSheet\b/.test(dayWorkoutSrc)
       && /reason === 'Injury \/ pain'[\s\S]*openExerciseInjuryFlow\(exercise\)/.test(dayWorkoutSrc)
-      && /label="Something hurts"[\s\S]*onInjuryStart\(step\.exercise\)/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Something hurts"/.test(dayWorkoutSrc)
+      && /if \(action === 'injury'\) onInjuryStart\(exercise\);/.test(dayWorkoutSrc)
+      && !/'concern_reason'/.test(dayWorkoutSrc)
       && /type:\s*'set_injury_modifier'/.test(dayWorkoutSrc));
 
   const sheet = fs.readFileSync(

@@ -31,7 +31,6 @@ import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import { classifyBibleInjurySeverity } from '../../rules/injurySeverityBands';
 import {
   buildGuidedInjuryConstraint,
-  guidedInjuryBucketForArea,
   type GuidedInjuryFlowResult,
 } from '../../utils/guidedInjuryControl';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
@@ -114,9 +113,11 @@ type SuggestedSwap =
  * exercise, so `pick_exercise` only exists for the two entries that start
  * from the TOP of the page with no row context yet: the injury door and the
  * no-equipment door. `'swap' | 'remove'` are gone rather than kept as dead
- * union members nothing sets — the same non-interference-with-a-live-shape
- * rule this file already applies to `injury_area`/`injury_severity` (dead
- * before this task, left alone by it).
+ * union members nothing sets. RETIREMENT PASS: `concern_reason`,
+ * `injury_area` and `injury_severity` — the steps `'concern'`/an earlier
+ * design would have routed through — are deleted outright rather than kept
+ * as dead-but-present, per Sam's ruling: the equipment icon goes straight to
+ * the swap suggestion, so nothing ever sets any of the three again.
  */
 type ExercisePickAction = 'concern' | 'injury';
 type ExerciseConcern = 'No equipment' | 'Too hard / too easy';
@@ -186,9 +187,6 @@ type ExerciseEditStep =
       suggestion: SuggestedExercise;
     }
   | FutureScopeStep
-  | { kind: 'concern_reason'; exercise: EditableExercise }
-  | { kind: 'injury_area'; exercise: EditableExercise }
-  | { kind: 'injury_severity'; exercise: EditableExercise; area: InjuryArea }
   | { kind: 'coach_fallback'; title: string; message: string; prefill: string }
   | { kind: 'result'; ok: boolean; title: string; message: string };
 
@@ -210,21 +208,6 @@ const ADD_EXERCISE_KINDS: AddExerciseKind[] = [
   'Conditioning finisher',
   'Other',
 ];
-
-const INJURY_AREAS: InjuryArea[] = [
-  'Shoulder',
-  'Elbow',
-  'Wrist',
-  'Lower back',
-  'Hip',
-  'Groin',
-  'Knee',
-  'Hamstring',
-  'Ankle',
-  'Other',
-];
-
-const INJURY_SEVERITIES: InjurySeverity[] = ['Mild', 'Moderate', 'Severe'];
 
 function getExerciseName(exercise: any, fallback = 'Exercise'): string {
   return String(exercise?.exercise?.name || exercise?.name || fallback).trim();
@@ -281,12 +264,6 @@ function tapSwapReason(reason: SwapReason | ExerciseConcern): TapSwapReason {
   if (reason === 'Too easy') return 'too_easy';
   if (reason === "Don't like it") return 'preference';
   return 'other';
-}
-
-function injurySeverityNumber(severity: InjurySeverity): number {
-  if (severity === 'Mild') return 2;
-  if (severity === 'Moderate') return 6;
-  return 9;
 }
 
 function suggestedSwapFromChoice(
@@ -690,24 +667,6 @@ export default function DayWorkoutScreenV2() {
         exercise,
         suggestion: suggestTapSwap(exercise, reason),
         reason: concern,
-      });
-    },
-    [suggestTapSwap],
-  );
-
-  const prepareInjurySwap = React.useCallback(
-    (exercise: EditableExercise, area: InjuryArea, severity: InjurySeverity) => {
-      const bucket = guidedInjuryBucketForArea(area);
-      const primaryInjury = bucket
-        ? { bucket, severity: injurySeverityNumber(severity) }
-        : null;
-      setExerciseEditStep({
-        kind: 'confirm_swap',
-        exercise,
-        suggestion: suggestTapSwap(exercise, 'Injury / pain', primaryInjury),
-        reason: 'Injury / pain',
-        injuryArea: area,
-        injurySeverity: severity,
       });
     },
     [suggestTapSwap],
@@ -1387,7 +1346,6 @@ export default function DayWorkoutScreenV2() {
         onAddKind={prepareAdd}
         onConcern={prepareConcern}
         onInjuryStart={openExerciseInjuryFlow}
-        onInjurySeverity={prepareInjurySwap}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
@@ -2573,11 +2531,6 @@ interface ExerciseEditSheetProps {
   onAddKind: (kind: AddExerciseKind) => void;
   onConcern: (exercise: EditableExercise, concern: ExerciseConcern) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
-  onInjurySeverity: (
-    exercise: EditableExercise,
-    area: InjuryArea,
-    severity: InjurySeverity,
-  ) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
   onRemoveToday: (exercise: EditableExercise) => void;
@@ -2597,7 +2550,6 @@ function ExerciseEditSheet({
   onAddKind,
   onConcern,
   onInjuryStart,
-  onInjurySeverity,
   onApplySwapToday,
   onApplyAddToday,
   onRemoveToday,
@@ -2607,24 +2559,18 @@ function ExerciseEditSheet({
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
-  // TASK 8 (ruling 12): every step below used to have a menu or an
-  // exercise_menu to fall back to. Both are retired — every step here is now
-  // reached by a single direct tap (a row button or a top-of-page icon), so
-  // there is nowhere shallower to return to except closed. `future_scope`
-  // keeps its own destination (`onTodayOnly`, unchanged) and `confirm_add`
-  // keeps returning to `add_kind` (that pairing survives the menu's death
-  // untouched, since add was never routed through exercise_menu).
+  // TASK 8 (ruling 12); RETIREMENT PASS (Sam's ruling on the reviewer's
+  // finding): every step below used to have a menu, an exercise_menu, or
+  // (concern_reason/injury_area/injury_severity) each other to fall back to.
+  // All are retired — every step here is now reached by a single direct tap
+  // (a row button or a top-of-page icon), so there is nowhere shallower to
+  // return to except closed. `future_scope` keeps its own destination
+  // (`onTodayOnly`, unchanged) and `confirm_add` keeps returning to
+  // `add_kind` (that pairing survives untouched, since add was never routed
+  // through exercise_menu or concern_reason).
   const goBack = () => {
     if (step.kind === 'confirm_add') {
       onStep({ kind: 'add_kind' });
-      return;
-    }
-    if (step.kind === 'injury_area') {
-      onStep({ kind: 'concern_reason', exercise: step.exercise });
-      return;
-    }
-    if (step.kind === 'injury_severity') {
-      onStep({ kind: 'injury_area', exercise: step.exercise });
       return;
     }
     if (step.kind === 'future_scope') {
@@ -2638,12 +2584,13 @@ function ExerciseEditSheet({
 
   // TASK 8: the only two doors left in front of this picker start from the
   // TOP of the page, where there is no exercise context yet — the no-
-  // equipment door (`onConcern`, preselected 'No equipment' per its own
-  // callback — reading `prepareConcern`'s implementation shows it already
-  // resolves straight to a swap suggestion for that reason, so there is no
-  // separate "what's the concern?" question left to ask once the exercise is
-  // picked) and the injury door (`onInjuryStart`, unchanged — the same
-  // function the old exercise_menu's "Something hurts" row called).
+  // equipment door (`onConcern`, straight to the swap suggestion once an
+  // exercise is picked — SAM RULED: "equipment icon → straight to the swap
+  // suggestion... The tapped icon states the reason; no intermediate menu")
+  // and the injury door (`onInjuryStart`, unchanged — the same function the
+  // old exercise_menu's "Something hurts" row called). `concern_reason`
+  // (the menu this collapses past) is retired along with `injury_area`/
+  // `injury_severity` below — none of the three has a live setter anymore.
   const renderExercisePicker = (action: ExercisePickAction) => {
     if (editableExercises.length === 0) {
       return (
@@ -2832,47 +2779,6 @@ function ExerciseEditSheet({
             />
           </>
         );
-      case 'concern_reason':
-        return (
-          <>
-            <ExerciseSheetOption
-              label="Something hurts"
-              onPress={() => onInjuryStart(step.exercise)}
-            />
-            <ExerciseSheetOption
-              label="No equipment"
-              onPress={() => onConcern(step.exercise, 'No equipment')}
-            />
-            <ExerciseSheetOption
-              label="Too hard / too easy"
-              onPress={() => onConcern(step.exercise, 'Too hard / too easy')}
-            />
-          </>
-        );
-      case 'injury_area':
-        return (
-          <>
-            {INJURY_AREAS.map((area) => (
-              <ExerciseSheetOption
-                key={area}
-                label={area}
-                onPress={() => onStep({ kind: 'injury_severity', exercise: step.exercise, area })}
-              />
-            ))}
-          </>
-        );
-      case 'injury_severity':
-        return (
-          <>
-            {INJURY_SEVERITIES.map((severity) => (
-              <ExerciseSheetOption
-                key={severity}
-                label={severity}
-                onPress={() => onInjurySeverity(step.exercise, step.area, severity)}
-              />
-            ))}
-          </>
-        );
       case 'coach_fallback':
         return (
           <>
@@ -2952,12 +2858,6 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       if (step.action === 'remove') return 'Exercise removed';
       if (step.action === 'swap') return 'Exercise swapped';
       return 'Exercise added';
-    case 'concern_reason':
-      return 'What needs changing?';
-    case 'injury_area':
-      return 'What area is bothering you?';
-    case 'injury_severity':
-      return 'How bad is it?';
     case 'coach_fallback':
       return step.title;
     case 'result':
@@ -2977,15 +2877,11 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
     case 'swap_reason':
     case 'confirm_remove':
     case 'confirm_swap':
-    case 'concern_reason':
-    case 'injury_area':
       return displayExerciseName(step.exercise.name);
     case 'confirm_add':
       return step.addKind;
     case 'add_kind':
       return 'Add one exercise or small block, not another full session.';
-    case 'injury_severity':
-      return `${displayExerciseName(step.exercise.name)} · ${step.area}`;
     case 'future_scope':
       return 'Default is today only.';
     case 'coach_fallback':

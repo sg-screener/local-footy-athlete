@@ -8,19 +8,37 @@
  * ruling's explicit boundary: "Existing guided flows behind these buttons are
  * unchanged; only the entry surface changes."
  *
- * This suite pins BOTH halves of that boundary as source contracts — the same
- * style as `keyboardConventionContractTests` (the repository ships no native
- * component renderer, so these read the file rather than mount it):
+ * RETIREMENT PASS (review finding, Sam ruling): `concern_reason`, `injury_area`
+ * and `injury_severity` had zero forward setters even before this file
+ * existed — only circular `goBack` references pointing at each other. Sam
+ * ruled the equipment icon goes straight to the swap suggestion ("The tapped
+ * icon states the reason; no intermediate menu"), which was already this
+ * screen's behaviour (option (a)) — and that `concern_reason` may retire with
+ * the other two unreachable steps. All three are now deleted (union, render
+ * switch, titles/subtitles, goBack targets), not merely left dead — this
+ * suite's job is to make sure that stays true, the same way it already pins
+ * `menu`/`exercise_menu`'s absence.
+ *
+ * This suite pins BOTH halves of ruling 12's boundary as source contracts —
+ * the same style as `keyboardConventionContractTests` (the repository ships
+ * no native component renderer, so these read the file rather than mount it):
  *
  *   1. The retired entry surface is actually gone (no `menu`/`exercise_menu`
- *      step, no "Edit exercises" link, no "Change" pill).
+ *      step, no "Edit exercises" link, no "Change" pill, and — the
+ *      retirement pass — no `concern_reason`/`injury_area`/`injury_severity`
+ *      step either).
  *   2. The new entry surface exists (three top-icon testIDs; swap+remove
  *      testIDs on every editable-row shape).
  *   3. Every guided-flow callback the ruling named as unchanged still exists,
  *      by name, in the file — so a future rewrite of the entry surface cannot
  *      quietly rewrite the flows behind it too without this suite noticing.
+ *      `prepareInjurySwap` is NOT in this list: it was `injury_severity`'s
+ *      only caller, so retiring the step orphaned it — it is deleted, not
+ *      "unchanged" (see [5]).
  *   4. Every step the guided flows depend on still exists as a case in the
  *      step machine.
+ *   5. The orphaned callback is actually gone, not left as dead code the
+ *      retired steps leave behind.
  *
  * Run: npm run test:exercise-edit-entry-surface
  */
@@ -75,6 +93,25 @@ console.log('\n[1] The retired entry surface is gone');
     !/function ExerciseChangeAction/.test(source) && !/exerciseChangeText/.test(source),
     'the pill that opened exercise_menu is replaced by two row buttons, not '
       + 'kept as a third way into the same retired menu',
+  );
+  ok(
+    'ExerciseEditStep has no `concern_reason` step',
+    !/'concern_reason'/.test(source),
+    'Sam ruled the equipment icon goes straight to the swap suggestion — '
+      + 'concern_reason (the "what needs changing?" menu it used to route '
+      + 'through) has no live setter left and is retired, not left dead',
+  );
+  ok(
+    'ExerciseEditStep has no `injury_area` step',
+    !/'injury_area'/.test(source),
+    'injury_area had zero forward setters before this pass (only a circular '
+      + 'goBack target) — retired alongside concern_reason and injury_severity',
+  );
+  ok(
+    'ExerciseEditStep has no `injury_severity` step',
+    !/'injury_severity'/.test(source),
+    'injury_severity had zero forward setters before this pass (only a '
+      + 'circular goBack target) — retired alongside the other two',
   );
 }
 
@@ -131,7 +168,7 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
 {
   const flowOwners = [
     'prepareSwap', 'prepareAdd', 'prepareConcern', 'openExerciseInjuryFlow',
-    'prepareInjurySwap', 'applyExerciseGuidedInjury', 'applySwapToday',
+    'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'askCoachForTeamTraining', 'suggestTapSwap',
   ];
@@ -150,8 +187,7 @@ console.log('\n[4] Every step the guided flows land on still exists');
 {
   const survivingSteps = [
     'pick_exercise', 'swap_reason', 'add_kind', 'confirm_remove', 'confirm_swap',
-    'confirm_add', 'future_scope', 'concern_reason', 'injury_area',
-    'injury_severity', 'coach_fallback', 'result',
+    'confirm_add', 'future_scope', 'coach_fallback', 'result',
   ];
   for (const step of survivingSteps) {
     ok(
@@ -161,6 +197,39 @@ console.log('\n[4] Every step the guided flows land on still exists');
         + 'as a guided flow behind the new direct entries',
     );
   }
+}
+
+console.log('\n[5] The orphaned callback is deleted, not left as dead code');
+{
+  // `prepareInjurySwap` was `injury_severity`'s only caller (via
+  // `onInjurySeverity`). Retiring the step orphaned it — ruling 12 says
+  // flows behind the entries are unchanged, and a flow with no entry is not
+  // behind anything.
+  ok(
+    'prepareInjurySwap is gone',
+    !/prepareInjurySwap/.test(source),
+    'injury_severity was its only caller; retiring the step with the '
+      + 'callback still defined would be new dead code, not a retirement',
+  );
+  ok(
+    'onInjurySeverity is gone from the sheet\'s prop contract',
+    !/onInjurySeverity/.test(source),
+    'the prop existed only to carry prepareInjurySwap into the deleted '
+      + 'injury_severity render',
+  );
+  ok(
+    'the injury-area/severity picker constants are gone',
+    !/INJURY_AREAS/.test(source) && !/INJURY_SEVERITIES/.test(source),
+    'these arrays only ever fed the injury_area/injury_severity render lists',
+  );
+  ok(
+    'prepareConcern is NOT deleted — it is still reached from the equipment icon',
+    /const prepareConcern = React\.useCallback/.test(source)
+      && /onConcern\(exercise, 'No equipment'\)/.test(source),
+    'unlike prepareInjurySwap, prepareConcern gained a new caller (the '
+      + 'equipment icon\'s pick_exercise collapse) rather than losing its '
+      + 'last one — it must stay, byte-identical, not be treated as orphaned',
+  );
 }
 
 console.log(`\nExercise-edit entry-surface totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
