@@ -5,7 +5,7 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Polygon } from 'react-native-svg';
+import Svg, { Circle, Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
@@ -2607,6 +2607,14 @@ function ExerciseEditSheet({
         </>
       );
     }
+    // `pick_exercise` rows are NOT iconized (ruling 10 scope line): the label
+    // is an unbounded, dynamic exercise name (`editableExercises` — the
+    // athlete's actual session content), not a fixed enum like the steps
+    // below. There is no established name -> icon vocabulary anywhere in the
+    // app for arbitrary exercise names, and inventing one is its own design
+    // pass, not an icon-only change. Now that `swap_reason`/`add_kind`/
+    // `future_scope` are paid, this exception is the dynamic-content case the
+    // brief anticipates, not a leftover gap.
     return editableExercises.map((exercise) => (
       <ExerciseSheetOption
         key={exercise.key}
@@ -2631,6 +2639,7 @@ function ExerciseEditSheet({
               <ExerciseSheetOption
                 key={reason}
                 label={reason}
+                icon={SWAP_REASON_ICON[reason](OPTION_ICON_ACCENT)}
                 onPress={() => onSwapReason(step.exercise, reason)}
               />
             ))}
@@ -2643,6 +2652,7 @@ function ExerciseEditSheet({
               <ExerciseSheetOption
                 key={kind}
                 label={kind}
+                icon={ADD_EXERCISE_KIND_ICON[kind](OPTION_ICON_ACCENT)}
                 onPress={() => onAddKind(kind)}
               />
             ))}
@@ -2756,6 +2766,7 @@ function ExerciseEditSheet({
             <ExerciseSheetOption
               label="Today only"
               sub="Keep this as a one-off change"
+              icon={todayOnlyIcon(OPTION_ICON_ACCENT)}
               testID={step.action === 'remove'
                 ? explorerTestId.componentDeleteScope(
                     sessionId,
@@ -2768,6 +2779,7 @@ function ExerciseEditSheet({
             <ExerciseSheetOption
               label="Future weeks too"
               sub="Save this as an ongoing adjustment"
+              icon={futureWeeksIcon(OPTION_ICON_ACCENT)}
               testID={step.action === 'remove'
                 ? explorerTestId.componentDeleteScope(
                     sessionId,
@@ -2904,10 +2916,17 @@ function futureScopeBody(step: FutureScopeStep): string {
 interface ExerciseSheetOptionProps {
   label: string;
   sub?: string;
+  /** Ruling 10 — the same 38x38 icon chip `SheetOption`/`MenuOption` use
+   * elsewhere. Optional because `pick_exercise` renders this component over
+   * an unbounded, dynamic list of real exercise names with no established
+   * icon vocabulary (see the `renderExercisePicker` comment below) — every
+   * FIXED-vocabulary caller (`swap_reason`, `add_kind`, `future_scope`) now
+   * passes one. */
+  icon?: React.ReactNode;
   testID?: string;
   onPress: () => void;
 }
-function ExerciseSheetOption({ label, sub, testID, onPress }: ExerciseSheetOptionProps) {
+function ExerciseSheetOption({ label, sub, icon, testID, onPress }: ExerciseSheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -2915,11 +2934,12 @@ function ExerciseSheetOption({ label, sub, testID, onPress }: ExerciseSheetOptio
       accessibilityRole="button"
       accessibilityLabel={testID ?? label}
       style={({ pressed }) => [
-        styles.exerciseEditOption,
+        icon ? styles.exerciseEditOptionWithIcon : styles.exerciseEditOption,
         pressed && styles.exerciseEditOptionPressed,
       ]}
     >
-      <View style={styles.exerciseEditOptionTextWrap}>
+      {icon ? <View style={styles.exerciseEditOptionIcon}>{icon}</View> : null}
+      <View style={[styles.exerciseEditOptionTextWrap, icon && { flex: 1 }]}>
         <Text style={styles.exerciseEditOptionLabel}>{label}</Text>
         {sub ? <Text style={styles.exerciseEditOptionSub}>{sub}</Text> : null}
       </View>
@@ -3008,6 +3028,97 @@ function InjuryIcon() {
     </Svg>
   );
 }
+
+// ── ExerciseSheetOption icons (ruling 10 — swap_reason / add_kind /
+// future_scope) ──
+// Redrawn locally rather than imported — the same convention `SwapIcon` and
+// `PlusIcon` above already state ("this row's icon vocabulary does not reach
+// across screens"): where a concept is the SAME fact as elsewhere
+// (add_kind's body areas vs. `GuidedInjuryFlowSheet`'s injury regions;
+// Prehab/Mobility/Conditioning vs. `PlanChangeSheet`'s session-type rows) the
+// glyph reuses the same visual family, but the SVG path lives here.
+const optionGlyph = (color: string, children: React.ReactNode) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </Svg>
+);
+const OPTION_ICON_ACCENT = '#C8FF00';
+/** "Other" — shared by both enums below; it is the same word meaning the
+ * same thing in each. */
+const otherOptionIcon = (color: string) => optionGlyph(color, (
+  <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
+));
+const ADD_EXERCISE_KIND_ICON: Record<AddExerciseKind, (color: string) => React.ReactNode> = {
+  /** Upper body — head + shoulders, same family as the injury flow's region glyph. */
+  'Upper body': (color) => optionGlyph(color, (
+    <><Circle cx="12" cy="4.5" r="2.3" />
+      <Path d="M5 20v-3A6.5 6.5 0 0 1 11.5 10.5h1A6.5 6.5 0 0 1 19 17v3" /></>
+  )),
+  /** Lower body — hip bar splitting into two legs. */
+  'Lower body': (color) => optionGlyph(color, (
+    <><Path d="M8 4h8" /><Path d="M12 4v5" /><Path d="M12 9l-3 11" /><Path d="M12 9l3 11" /></>
+  )),
+  /** Midline — a torso outline with the two ab lines a "core" glyph needs. */
+  Midline: (color) => optionGlyph(color, (
+    <><Path d="M12 4a4 4 0 0 1 4 4v8a4 4 0 0 1-8 0V8a4 4 0 0 1 4-4z" />
+      <Path d="M8.3 10.5h7.4" /><Path d="M8.3 14.5h7.4" /></>
+  )),
+  /** Prehab — a shield: the armour work, same glyph as PlanChangeSheet's. */
+  Prehab: (color) => optionGlyph(color, (
+    <Path d="M12 3l8 3v6c0 4-3.5 7.5-8 9-4.5-1.5-8-5-8-9V6z" />
+  )),
+  /** Mobility — a figure reaching through a range, same glyph as PlanChangeSheet's. */
+  Mobility: (color) => optionGlyph(color, (
+    <><Circle cx="12" cy="4" r="2" /><Path d="M12 6v6" /><Path d="M7 8l5 2 5-4" />
+      <Path d="M12 12l-3 8" /><Path d="M12 12l3 8" /></>
+  )),
+  /** Conditioning finisher — a heartbeat trace, same glyph as PlanChangeSheet's. */
+  'Conditioning finisher': (color) => optionGlyph(color, (
+    <Path d="M2 12h4l2-6 4 12 2-6h8" />
+  )),
+  Other: otherOptionIcon,
+};
+const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> = {
+  /** No equipment — a dumbbell struck through. */
+  'No equipment': (color) => optionGlyph(color, (
+    <><Circle cx="5.5" cy="12" r="2.3" /><Circle cx="18.5" cy="12" r="2.3" /><Path d="M8 12h8" />
+      <Path d="M3 3l18 18" /></>
+  )),
+  /** Injury / pain — the same warning triangle `WeekReadinessSheet`'s
+   * "Something hurts" row draws, redrawn here. */
+  'Injury / pain': (color) => optionGlyph(color, (
+    <><Path d="M12 9v4" /><Path d="M12 17h.01" />
+      <Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>
+  )),
+  /** Too hard — a line trending up and off the top. */
+  'Too hard': (color) => optionGlyph(color, (
+    <><Path d="M3 17l6-6 4 4 8-8" /><Path d="M15 7h6v6" /></>
+  )),
+  /** Too easy — the mirrored line, trending down. Distinct DIRECTION from
+   * "Too hard", not just a different colour on the same arrow. */
+  'Too easy': (color) => optionGlyph(color, (
+    <><Path d="M3 7l6 6 4-4 8 8" /><Path d="M15 17h6v-6" /></>
+  )),
+  /** Don't like it — thumbs down. */
+  "Don't like it": (color) => optionGlyph(color, (
+    <><Path d="M17 2v11" />
+      <Path d="M22 9a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.8 1.11L11 18v2a2 2 0 0 1-2 2c-.5 0-1-.19-1.37-.56L4 15" />
+      <Path d="M2 15h4v7H2z" /></>
+  )),
+  Other: otherOptionIcon,
+};
+/** future_scope — "Today only" vs. "Future weeks too": a blank calendar day
+ * (same family as `PlanChangeSheet`'s move-destination day glyph) vs. that
+ * same day with a repeat loop, because the row is asking whether the change
+ * repeats. */
+const todayOnlyIcon = (color: string) => optionGlyph(color, (
+  <><Path d="M4 5h16v15H4z" /><Path d="M4 10h16" /><Path d="M9 3v4" /><Path d="M15 3v4" /></>
+));
+const futureWeeksIcon = (color: string) => optionGlyph(color, (
+  <><Path d="M4 5h16v15H4z" /><Path d="M4 10h16" /><Path d="M9 3v4" /><Path d="M15 3v4" />
+    <Path d="M8 15a3 3 0 0 1 5-2.2" /><Path d="M16 15a3 3 0 0 1-5 2.2" />
+    <Path d="M8 12.5v1h1" /><Path d="M16 17.5v-1h-1" /></>
+));
 
 // ─────────────────────────────────────────────────────────────
 // Styles
@@ -3740,6 +3851,26 @@ const styles = StyleSheet.create({
   exerciseEditOptionPressed: {
     backgroundColor: 'rgba(200, 255, 0, 0.06)',
     borderColor: 'rgba(200, 255, 0, 0.28)',
+  },
+  exerciseEditOptionWithIcon: {
+    minHeight: 52,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#1B1B1B',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  exerciseEditOptionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#262626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   exerciseEditOptionTextWrap: {
     gap: 3,
