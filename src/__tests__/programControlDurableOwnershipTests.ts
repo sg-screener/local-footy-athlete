@@ -40,6 +40,7 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import * as fs from 'fs';
 import type { TrainingProgram } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { PlanChange } from '../utils/planChangeTypes';
@@ -54,6 +55,7 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { filterConstraintsForDate } from '../utils/readinessConstraints';
+import { buildScheduleAcknowledgment } from '../utils/readinessAcknowledgment';
 import { applyPlanChange } from '../utils/planChangeProducer';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
@@ -122,6 +124,14 @@ async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
     console.debug = debug; console.info = info; console.log = log;
   }
 }
+
+/**
+ * The sentence `temporarySourceFactTransaction` answers a refused fact commit
+ * with. Quoted here to prove the real branch ran, and — in the ack cell below —
+ * to prove it never reaches the athlete.
+ */
+const ENGINE_REFUSAL_SENTENCE =
+  'The report was not applied because the visible program could not be verified.';
 
 const TODAY = SAM_EXPORT_8_TODAY_ISO;
 const WEEK = SAM_EXPORT_8_CURRENT_WEEK;
@@ -534,15 +544,103 @@ async function main(): Promise<void> {
       + 'is stale and the finding needs re-tracing before it is reported again');
 
     // L3 CONSERVATION: a refusal changes nothing. Whatever else is wrong here,
-    // the athlete is not left with half a commit, and is told.
+    // the athlete is not left with half a commit.
     const result = await quietAsync(() =>
       executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
     assert(result.ok === false, 'the executor disagrees with the transaction it awaits');
-    assert(typeof result.message === 'string' && result.message.trim().length > 0,
-      'the door refused in silence');
     const after = dayFingerprints(projectedWeek());
     assert(JSON.stringify(before) === JSON.stringify(after),
       'a refused schedule tap changed the week anyway');
+
+    // THE ENGINE SENTENCE IS THE PROOF THE REAL BRANCH RAN. Delete the
+    // executor's `set_schedule_modifier` branch and the request falls through to
+    // the synchronous core, which also answers `ok: false` — so `ok === false`
+    // alone would keep this cell green over a door that no longer builds a fact
+    // at all. This exact sentence comes from `temporarySourceFactTransaction`
+    // and nowhere else.
+    assert(result.message === ENGINE_REFUSAL_SENTENCE,
+      `the refusal no longer comes from the fact transaction: "${result.message}"`);
+  });
+
+  await run('a refused schedule tap is acknowledged to the athlete, in the athlete\'s words', async () => {
+    // THE LAW THE FIRST DRAFT OF THIS FILE ASSERTED ONE LAYER TOO LOW.
+    //
+    // "The door refused in silence" was checked on the RESULT OBJECT — which
+    // always carried a sentence, while the SCREEN discarded it: the tap handler
+    // dropped the result on the floor and the away sheet closed unconditionally
+    // after its await, so a refusal read as a confirmation. Asserting on the
+    // result was the harness entering below the door, in a cell written about a
+    // door being dead.
+    //
+    // The ack layer is the athlete's answer, so the ack layer is what is
+    // asserted, for both doors and both tones.
+    for (const door of ['short_on_time', 'away'] as const) {
+      const refused = buildScheduleAcknowledgment(
+        { ok: false, message: ENGINE_REFUSAL_SENTENCE }, door,
+      );
+      assert(refused.tone === 'error',
+        `${door}: a refused tap is acknowledged as a success`);
+      assert(refused.message.trim().length > 0, `${door}: the ack is empty`);
+      assert(!refused.message.includes(ENGINE_REFUSAL_SENTENCE),
+        `${door}: the engine's verifier sentence reached the athlete verbatim: `
+        + `"${refused.message}"`);
+      assert(!/verif|program could not|transaction|fact/i.test(refused.message),
+        `${door}: the ack talks about the machine, not the athlete's week: `
+        + `"${refused.message}"`);
+
+      const landed = buildScheduleAcknowledgment({ ok: true }, door);
+      assert(landed.tone === 'success' && landed.message.trim().length > 0,
+        `${door}: a landed tap is not acknowledged`);
+      assert(landed.message !== refused.message,
+        `${door}: success and failure say the same sentence`);
+    }
+  });
+
+  await run('the screen wires both schedule doors to that acknowledgment', async () => {
+    // SOURCE-PINNED, because there is no render harness in this repo and the
+    // defect this pays was pure wiring: a discarded result and an unconditional
+    // close. Both are single lines, and both are single lines a refactor can put
+    // back without failing anything else.
+    const screen = fs.readFileSync(
+      `${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
+    assert(/const result = await handleApplyShortOnTimeToday\(\);\s*\n\s*setScheduleAck\(/
+      .test(screen),
+      'the short-on-time tap does not acknowledge its result — it is discarded, '
+      + 'which is the silence this unit exists to remove');
+    assert(/const result = await handleApplyAwayDays\(dates\);[\s\S]{0,200}?setScheduleAck\(/
+      .test(screen),
+      'the away commit does not acknowledge its result');
+    assert(/if \(result\?\.ok\) setAwayDaysVisible\(false\);/.test(screen),
+      'the away sheet closes without checking `ok` — closing IS the confirmation, '
+      + 'so an unconditional close reports a success that did not happen');
+    assert(!/onPress=\{\(\) => \{ void handleApplyShortOnTimeToday\(\); \}\}/.test(screen),
+      'the fire-and-forget tap handler is back');
+  });
+
+  await run('the short-on-time handler asks for the scope its words promise', async () => {
+    // RULING 2'S BEHAVIOURAL CORE, pinned where it is decided. The scope cells
+    // above build their own action literals, so reverting the handler to
+    // `current_week` would leave every one of them green while a rushed Tuesday
+    // reduced Saturday again. The handler is the only production caller.
+    const hook = fs.readFileSync(
+      `${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
+    const start = hook.indexOf('const handleApplyShortOnTimeToday');
+    assert(start > 0, 'the short-on-time handler is gone from useHomeScreen');
+    const body = hook.slice(start, hook.indexOf('}, [handleProgramControlResult]);', start));
+    assert(/surface: 'short_on_time_today'/.test(body),
+      'the short-on-time handler no longer names its own surface');
+    assert(/scope: 'today_only'/.test(body),
+      "the short-on-time handler stopped asking for 'today_only' — the button says "
+      + '"Short on time today" and the fact would span the week again');
+    assert(!/'current_week'/.test(body),
+      'the short-on-time handler asks for a week scope somewhere in its body');
+
+    // AND THE AWAY HANDLER STILL ASKS FOR THE WEEK — the two doors differ by
+    // scope, so a pin on one that would also pass for the other proves nothing.
+    const awayStart = hook.indexOf('const handleApplyAwayDays');
+    const awayBody = hook.slice(awayStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', awayStart));
+    assert(/scope: 'current_week'/.test(awayBody) && /surface: 'away_this_week'/.test(awayBody),
+      'the away handler no longer asks for the week scope it names');
   });
 
   // ────────────────────────────────────────────────────────────────────────

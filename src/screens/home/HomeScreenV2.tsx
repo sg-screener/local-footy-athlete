@@ -35,7 +35,7 @@ import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
-import { buildReadinessAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
 import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
@@ -186,6 +186,11 @@ export default function HomeScreenV2() {
   } | null>(null);
   const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
   const [awayDaysVisible, setAwayDaysVisible] = useState(false);
+  // ONE ACK STATE FOR BOTH SCHEDULE DOORS. They are two buttons writing one fact
+  // kind through one executor; two acknowledgment states would be two places to
+  // forget to set. Rendered under the rows for the sheet-less door and inside
+  // the sheet for the other, so the answer appears where the tap happened.
+  const [scheduleAck, setScheduleAck] = useState<ReadinessAcknowledgment | null>(null);
   const [equipmentVisible, setEquipmentVisible] = useState(false);
 
   // ── Weekly readiness ("I'm sick/flat today") — week-level card ──
@@ -609,7 +614,15 @@ export default function HomeScreenV2() {
             fact it writes is TODAY-scoped because the words say today. */}
         {isNormal && (
           <Pressable
-            onPress={() => { void handleApplyShortOnTimeToday(); }}
+            onPress={async () => {
+              // NEVER IN SILENCE. The tap used to discard its result, and the
+              // result is `ok: false` on every device with a real accepted base
+              // (declared red 1) — so this button reported nothing at all while
+              // doing nothing at all.
+              setScheduleAck(null);
+              const result = await handleApplyShortOnTimeToday();
+              setScheduleAck(buildScheduleAcknowledgment(result, 'short_on_time'));
+            }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
             testID="home-short-on-time-entry"
             accessibilityRole="button"
@@ -635,7 +648,7 @@ export default function HomeScreenV2() {
         {/* ── Away this week? (ruling 2) — the one question with an answer ── */}
         {isNormal && (
           <Pressable
-            onPress={() => setAwayDaysVisible(true)}
+            onPress={() => { setScheduleAck(null); setAwayDaysVisible(true); }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
             testID="home-away-this-week-entry"
             accessibilityRole="button"
@@ -653,6 +666,27 @@ export default function HomeScreenV2() {
                 </View>
                 <Text style={styles.busyAwayText}>Away this week?</Text>
               </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* The answer to a schedule tap, in the athlete's own words. Tapping it
+            dismisses it — an acknowledgment the athlete cannot clear is a banner. */}
+        {isNormal && scheduleAck && !awayDaysVisible && (
+          <Pressable
+            onPress={() => setScheduleAck(null)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-schedule-ack"
+            accessibilityRole="button"
+            accessibilityLabel={scheduleAck.message}
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <Text style={[
+                styles.busyAwayText,
+                scheduleAck.tone === 'error' && styles.scheduleAckError,
+              ]}>
+                {scheduleAck.message}
+              </Text>
             </Card>
           </Pressable>
         )}
@@ -710,7 +744,7 @@ export default function HomeScreenV2() {
                   {/* Plaster / bandage — an injury, not an alert triangle (that
                       one belongs to the readiness sheet's own "Something hurts"
                       row) and not the pulse above it. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FFC247" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
                     <Path d="M8.5 8.5 15.5 15.5" />
                   </Svg>
@@ -866,10 +900,16 @@ export default function HomeScreenV2() {
         visible={awayDaysVisible}
         weekDays={weekDays}
         visibleWeek={visibleWeek}
-        onClose={() => setAwayDaysVisible(false)}
+        acknowledgment={scheduleAck}
+        onClose={() => { setAwayDaysVisible(false); setScheduleAck(null); }}
         onAwayDays={async (dates) => {
-          await handleApplyAwayDays(dates);
-          setAwayDaysVisible(false);
+          // CLOSING IS THE CONFIRMATION, so it may only happen on success. The
+          // sheet used to close unconditionally after the await, which is how a
+          // refused commit read as "done" — the athlete watched the sheet
+          // dismiss and believed their days were cleared.
+          const result = await handleApplyAwayDays(dates);
+          setScheduleAck(buildScheduleAcknowledgment(result, 'away'));
+          if (result?.ok) setAwayDaysVisible(false);
         }}
       />
 
@@ -2391,10 +2431,13 @@ interface AwayDaysSheetProps {
   visible: boolean;
   weekDays: any[];
   visibleWeek: VisibleWeek;
+  acknowledgment: ReadinessAcknowledgment | null;
   onClose: () => void;
   onAwayDays: (dates: string[]) => void | Promise<void>;
 }
-function AwayDaysSheet({ visible, weekDays, visibleWeek, onClose, onAwayDays }: AwayDaysSheetProps) {
+function AwayDaysSheet({
+  visible, weekDays, visibleWeek, acknowledgment, onClose, onAwayDays,
+}: AwayDaysSheetProps) {
   const [selected, setSelected] = useState<string[]>([]);
 
   React.useEffect(() => {
@@ -2415,9 +2458,16 @@ function AwayDaysSheet({ visible, weekDays, visibleWeek, onClose, onAwayDays }: 
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-away-days-sheet">
-      {(
-        <View>
+      <View>
           <Text style={styles.sheetTitle}>Which days are you away?</Text>
+          {acknowledgment && (
+            <Text
+              style={[styles.busyAwayEmpty, acknowledgment.tone === 'error' && styles.scheduleAckError]}
+              testID="home-away-days-ack"
+            >
+              {acknowledgment.message}
+            </Text>
+          )}
           {awayCandidates.length === 0 ? (
             <Text style={styles.busyAwayEmpty}>
               No upcoming sessions to clear this week.
@@ -2470,8 +2520,7 @@ function AwayDaysSheet({ visible, weekDays, visibleWeek, onClose, onAwayDays }: 
             style={{ marginTop: spacing.md, opacity: selected.length > 0 ? 1 : 0.5 }}
           />
           <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
-        </View>
-      )}
+      </View>
     </Sheet>
   );
 }
@@ -2874,7 +2923,8 @@ const styles = StyleSheet.create({
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
   awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
-  injuredIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
+  injuredIconTint: { backgroundColor: 'rgba(255, 138, 76, 0.12)' },
+  scheduleAckError: { color: '#FF7A85' },
   equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',

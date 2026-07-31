@@ -36,7 +36,7 @@ import { explorerTestId, stableTestIdToken } from '../utils/stableTestId';
 import type { OnboardingData } from '../types/domain';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { executeProgramControlAction, scheduleModifierIdForDate, buildTapScheduleModifier } =
+const { executeProgramControlAction, scheduleModifierIdForDate } =
   require('../utils/programControlActions') as typeof import('../utils/programControlActions');
 
 // ─── Harness ─────────────────────────────────────────────────────────
@@ -236,11 +236,31 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
 
   // Busy/away constraint + owned Monday override (as the away flow writes).
   const awayId = scheduleModifierIdForDate(wk2Mon, 'away');
-  useCoachUpdatesStore.getState().upsertActiveConstraint(
-    buildTapScheduleModifier({
-      date: wk2Mon, todayISO: blockStart, variant: 'away', linkedOverrideDates: [wk2Mon],
-    }),
-  );
+  // The legacy away-modifier SHAPE, written out here rather than built by a
+  // production helper. `buildTapScheduleModifier` was deleted on 2026-07-31: no
+  // production path had called it since the away flow moved onto canonical
+  // schedule FACTS, and a builder kept alive by its only test is a second way to
+  // author a constraint that nothing authors. What this cell is about is the §18
+  // override rejection below, not the builder — so the shape is a literal.
+  useCoachUpdatesStore.getState().upsertActiveConstraint({
+    id: awayId,
+    type: 'schedule',
+    severity: 3,
+    status: 'active',
+    startDate: blockStart,
+    lastUpdatedAt: new Date().toISOString(),
+    reasonLabel: 'Away',
+    source: 'tap',
+    weekStartISO: wk2Mon,
+    expiresAt: addDays(wk2Mon, 6),
+    linkedOverrideDates: [wk2Mon],
+    modifierTitle: 'Away this week',
+    modifierBody: "The days you're away are cleared. Clear this note to bring them back.",
+    modifierAffects: ['current_week'],
+    rules: ['sessions on the days you’re away'],
+    safeFocus: ['Short, targeted sessions', 'Skill / technique work', 'Recovery + mobility'],
+    advice: [],
+  } as never);
   let awayOverrideRejected = false;
   try {
     useProgramStore.getState().setManualOverride(wk2Mon, {

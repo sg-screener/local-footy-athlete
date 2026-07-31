@@ -70,9 +70,11 @@ import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import {
   executeProgramControlAction,
+  executeProgramControlActionDurably,
   programControlActionForPlanChange,
   scheduleFactScopeForAction,
 } from '../utils/programControlActions';
+import { buildScheduleAcknowledgment } from '../utils/readinessAcknowledgment';
 import {
   composeTemporarySourceFactCompatibility,
   createTemporaryScheduleFact,
@@ -107,6 +109,21 @@ function assert(condition: unknown, detail: string): asserts condition {
 function run(name: string, body: () => void): void {
   try {
     body();
+    passed += 1;
+    console.log(`  PASS ${name}`);
+  } catch (error) {
+    failed += 1;
+    failures.push(name);
+    console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+/** The async twin. The schedule doors are awaited, so the cell that walks them
+ *  cannot be synchronous — and driving them below the await was the whole
+ *  defect the review found. */
+async function runAsync(name: string, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
     passed += 1;
     console.log(`  PASS ${name}`);
   } catch (error) {
@@ -308,6 +325,22 @@ function weekFingerprint(): string {
     .join(';');
 }
 
+/** The sentence `temporarySourceFactTransaction` refuses with, and nowhere else. */
+const ENGINE_REFUSAL_SENTENCE =
+  'The report was not applied because the visible program could not be verified.';
+
+async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
+  const warn = console.warn; const error = console.error;
+  const debug = console.debug; const info = console.info; const log = console.log;
+  console.warn = () => undefined; console.error = () => undefined;
+  console.debug = () => undefined; console.info = () => undefined;
+  console.log = () => undefined;
+  try { return await body(); } finally {
+    console.warn = warn; console.error = error;
+    console.debug = debug; console.info = info; console.log = log;
+  }
+}
+
 // ── The doors ─────────────────────────────────────────────────────────────
 
 // THE VOCABULARY GAINS A DOOR, it does not rename one. Sam split 'accessories' into
@@ -461,19 +494,24 @@ function performAction(action: WalkerAction): WalkerStepResult {
       } as never);
       return { ...base, outcome: 'declared' };
     }
-    // ── THE TWO SCHEDULE DOORS (Sam's ruling 2, 2026-07-31) ──────────────
+    // ── THE TWO SCHEDULE DOORS, AS A STATE-REACHER — NOT AS THE DOOR ─────
     //
-    // These write through the same fact CREATOR and the same SCOPE OWNER the
-    // real executor uses (`scheduleFactScopeForAction`), then compose the
-    // constraints with the same composer the transaction runs. What they skip is
-    // `transactTemporarySourceFact` itself — deliberately, and recorded rather
-    // than hidden: that transaction currently REFUSES every schedule fact
-    // against a real accepted base (declared red 1 in
-    // `programControlDurableOwnershipTests`), so a walker that entered there
-    // would walk a door that never opens and would never reach the state the
-    // fact creates. `declare_source_fact` above sets the same precedent for the
-    // readiness store. When the declared red is paid, both cases move onto the
-    // real transaction.
+    // THE DOOR IS WALKED ELSEWHERE, through the real executor, in
+    // `walkTheScheduleDoors` at the bottom of this file. These two cases exist
+    // for the opposite job: putting the walker's world INTO the state a landed
+    // schedule fact creates, so the other laws (L4b screen = domain, the
+    // projection checks) run over a week that has one. They cannot be the door
+    // because `perform` is synchronous and the executor is awaited — and because
+    // the executor currently REFUSES every schedule fact against a real accepted
+    // base (declared red 1), so a walker that only entered there would never
+    // reach this state at all.
+    //
+    // They use the real creator and the real scope owner
+    // (`scheduleFactScopeForAction`) and the real compatibility composer, so the
+    // state is the state, not a hand-drawn version of it. `declare_source_fact`
+    // above sets the same precedent for the readiness store. When declared red 1
+    // is paid, both of these collapse into the real transaction and this comment
+    // goes with them.
     case 'short_on_time_today':
     case 'away_this_week': {
       const dates = action.kind === 'away_this_week' ? [...action.dates].sort() : [];
@@ -1578,79 +1616,154 @@ run('every declared red still reds — stale debt fails, it does not expire quie
       owed.map((entry) => `${entry.id} (${entry.law}, paid by ${entry.paidBy})`).join('\n    ')}`);
 });
 
-run('the two schedule doors are walkable, and the laws hold through them', () => {
-  // L13: A DOOR THE WALKER CANNOT ACT THROUGH IS A DOOR THE HARNESS CANNOT
-  // REGRESS. Sam's ruling 2 (2026-07-31) put "Short on time today" and "Away
-  // this week?" on the week screen, so both are in the vocabulary above and both
-  // are driven here — onboard, generate, tap, let a week pass, tap the other,
-  // let another week pass — with the SAME `checkInvariants` the random walks
-  // use applied after every step.
-  //
-  // DRIVEN HERE RATHER THAN PROPOSED RANDOMLY, and that is a finding, not a
-  // preference. Putting them in the random band (same bands, same draw count,
-  // five doors instead of three) turns seed 6 red with an L1 crash inside
-  // generation — `Section 18 final-week rejection
-  // (pattern_restore_failure|planner_selected_target_miss|required_minimum_shortfall)`
-  // — whose shrunk history is `[answer onboarding, generate the program]`, two
-  // actions that do not crash when replayed on their own. Something a walk
-  // leaves behind survives `freshInstall`, and until that is found neither the
-  // crash nor the harness can be trusted to say which. Two resets that WERE
-  // missing (athlete pool prefs, coach modality preferences) are fixed above and
-  // do not account for it. Recorded for the boundary report; not paid here,
-  // because a buttons unit guessing at §18 generation state is how the next
-  // three defects get built.
-  freshInstall();
-  const profile = profileFor(makeRng(11));
-  performAction({ kind: 'answer_onboarding', profile });
-  performAction({ kind: 'generate_program' });
-  fingerprintBefore = weekFingerprint();
+/**
+ * The two schedule doors, driven through the REAL executor.
+ *
+ * L13: A DOOR THE WALKER CANNOT ACT THROUGH IS A DOOR THE HARNESS CANNOT
+ * REGRESS. Sam's ruling 2 (2026-07-31) put "Short on time today" and "Away this
+ * week?" on the week screen, so both are in the vocabulary above and both are
+ * walked here.
+ *
+ * THROUGH `executeProgramControlActionDurably`, WITH THE ACTION THE HANDLER
+ * BUILDS. The first draft of this cell reached the state by writing the accepted
+ * context directly — which meant deleting the executor's whole
+ * `set_schedule_modifier` branch would have kept it green. That is the harness
+ * entering below the door, in a cell written about a door. It now sends the same
+ * shape `useHomeScreen` sends, awaits it, and asserts what the athlete actually
+ * gets.
+ *
+ * WHAT THE LAW IS WHILE DECLARED RED 1 STANDS. The door is REFUSED against a
+ * real accepted base, so "it applies" is not assertable and pretending otherwise
+ * would be the lie. What IS assertable, and is asserted: the refusal comes from
+ * the fact transaction (a sentence only that layer writes — proving the branch
+ * ran and built a fact), the athlete is told in the athlete's own words, and the
+ * world is BYTE-UNCHANGED. That last one is L3 CONSERVATION, and it is the whole
+ * law for a refusal.
+ *
+ * DRIVEN HERE RATHER THAN PROPOSED RANDOMLY, and that is a finding, not a
+ * preference. Putting them in the random band (same bands, same draw count, five
+ * doors instead of three) turns seed 6 red with an L1 crash inside generation —
+ * `Section 18 final-week rejection (pattern_restore_failure |
+ * planner_selected_target_miss | required_minimum_shortfall)` — whose shrunk
+ * history is `[answer onboarding, generate the program]`, two actions that do
+ * not crash when replayed on their own (seeds 5-6 pass, seeds 4-6 fail).
+ * Something a walk leaves behind survives `freshInstall`, and until that is
+ * found neither the crash nor the shrinker's minimal history can be trusted. Two
+ * resets that WERE missing are fixed in `freshInstall` and do not account for
+ * it. Recorded for the boundary report; not paid here, because a buttons unit
+ * guessing at §18 generation state is how the next three defects get built.
+ */
+async function walkTheScheduleDoors(): Promise<void> {
+  const worldFingerprint = (): string => {
+    const state = useProgramStore.getState();
+    return JSON.stringify({
+      week: weekFingerprint(),
+      facts: state.acceptedMaterialContext.temporarySourceFacts,
+      constraints: state.acceptedMaterialContext.activeConstraints,
+      revision: state.acceptedMaterialContext.revision,
+      overrides: state.dateOverrides,
+      overlays: state.weekScopedOverlays,
+    });
+  };
 
-  const script: WalkerAction[] = [
-    { kind: 'short_on_time_today', date: todayISO },
-    { kind: 'advance_time', days: 7 },
-    { kind: 'clear_source_facts' },
-    { kind: 'advance_time', days: 1 },
-  ];
-  const violations: string[] = [];
-  for (const action of script) {
-    let result: WalkerStepResult;
-    try {
-      result = performAction(action);
-    } catch (error) {
-      violations.push(`L1 NO CRASH — ${action.kind} threw: ${
-        error instanceof Error ? error.message : String(error)}`);
-      break;
-    }
-    for (const broken of checkInvariants(result)) {
-      if (declaredRedFor(broken.law, broken.detail)) continue;
-      violations.push(`${broken.law} after ${action.kind} — ${broken.detail}`);
-    }
+  for (const door of ['short_on_time_today', 'away_this_week'] as const) {
+    freshInstall();
+    performAction({ kind: 'answer_onboarding', profile: profileFor(makeRng(11)) });
+    performAction({ kind: 'generate_program' });
     fingerprintBefore = weekFingerprint();
-  }
-  assert(violations.length === 0,
-    `the schedule doors broke a law:\n    ${violations.join('\n    ')}`);
 
-  // AWAY IS A SECOND DOOR, NOT THE SAME ONE WITH A FLAG — it names dates, and
-  // the dates are the fact's horizon. Driven separately so a walk cannot pass
-  // by never picking a day.
+    const occupied = visibleWeek().filter((day) => day.date >= todayISO && day.workout);
+    assert(occupied.length > 0, `${door}: no occupied day — this cell would be vacuous`);
+
+    // THE ACTION `useHomeScreen` BUILDS, field for field. Its scope is pinned at
+    // the handler by `programControlDurableOwnershipTests`; what is pinned here
+    // is that the executor answers this shape honestly.
+    const action = door === 'away_this_week'
+      ? {
+          type: 'set_schedule_modifier',
+          source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
+          scope: 'current_week',
+          payload: {
+            date: occupied[0].date,
+            todayISO,
+            planChange: { kind: 'clear_days', dates: [occupied[0].date] },
+          },
+          requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+        }
+      : {
+          type: 'set_schedule_modifier',
+          source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
+          scope: 'today_only',
+          payload: { date: todayISO, todayISO },
+          requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+        };
+
+    const before = worldFingerprint();
+    let result: { ok?: boolean; message?: string | null };
+    try {
+      result = await quietAsync(() => executeProgramControlActionDurably(
+        action as never, { visibleWeek: visibleWeek(), todayISO },
+      ));
+    } catch (error) {
+      throw new Error(`L1 NO CRASH — ${door} threw instead of answering: ${
+        error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // L2 HONEST OUTCOME, at the layer the athlete reads.
+    const ack = buildScheduleAcknowledgment(
+      result, door === 'away_this_week' ? 'away' : 'short_on_time',
+    );
+    assert(ack.message.trim().length > 0, `${door}: the tap is acknowledged with nothing`);
+    assert(ack.tone === (result.ok ? 'success' : 'error'),
+      `${door}: the acknowledgment disagrees with the result`);
+    assert(!RAW_CODE.test(ack.message), `${door}: a raw code reached the athlete: "${ack.message}"`);
+
+    if (result.ok) {
+      // DECLARED RED 1 IS PAID. Do not let this cell go quietly green on a door
+      // that has started working — the laws it should now assert are different.
+      throw new Error(
+        `${door} now COMMITS. Declared red 1 in programControlDurableOwnershipTests `
+        + 'is paid: rewrite this cell to assert what the door DOES (today lightens / '
+        + 'the away days clear) instead of that it refuses conservatively.');
+    }
+
+    // The refusal came from the fact transaction, not from the synchronous core's
+    // "this type needs the durable path" — which is what a deleted executor
+    // branch would answer, also with ok:false.
+    assert(result.message === ENGINE_REFUSAL_SENTENCE,
+      `${door}: the refusal no longer comes from the fact transaction — "${result.message}". `
+      + 'If the executor branch was deleted, this is the cell that says so.');
+
+    // L3 CONSERVATION — the whole law for a refusal, asserted byte for byte.
+    assert(worldFingerprint() === before,
+      `${door}: a refused tap changed the world anyway`);
+
+    // And every other law still holds over the untouched week.
+    for (const broken of checkInvariants({ action: { kind: 'clear_source_facts' }, outcome: null, message: null, threw: null })) {
+      if (declaredRedFor(broken.law, broken.detail)) continue;
+      throw new Error(`${broken.law} after ${door} — ${broken.detail}`);
+    }
+  }
+}
+
+run('freshInstall is total — the two resets it was missing are covered', () => {
+  // THE RESETS ADDED ON 2026-07-31 HAVE A CELL, because a reset nothing checks
+  // is a reset the next tidy-up deletes. Both stores are read by generation
+  // (`getAthletePrefs()`) and by the projection (modality preferences), so a
+  // walk that leaves either dirty hands the next walk a different athlete.
   freshInstall();
-  performAction({ kind: 'answer_onboarding', profile });
-  performAction({ kind: 'generate_program' });
-  fingerprintBefore = weekFingerprint();
-  const occupied = visibleWeek().filter((day) => day.date >= todayISO && day.workout);
-  assert(occupied.length > 0, 'no day to be away on — this cell would be vacuous');
-  const away = performAction({ kind: 'away_this_week', dates: [occupied[0].date] });
-  for (const broken of checkInvariants(away)) {
-    if (declaredRedFor(broken.law, broken.detail)) continue;
-    violations.push(`${broken.law} after away_this_week — ${broken.detail}`);
-  }
-  assert(violations.length === 0,
-    `the away door broke a law:\n    ${violations.join('\n    ')}`);
-
-  // NON-VACUITY: both doors actually published a schedule fact.
-  const facts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts;
-  assert(facts.some((fact) => 'factKind' in fact && fact.factKind === 'schedule'),
-    'the away door published no schedule fact — the walker walked through nothing');
+  useAthletePreferencesStore.setState({
+    prefs: { excluded: ['Back Squat'], pinned: ['Bicep Curl (Barbell)'] },
+  } as never);
+  useCoachPreferencesStore.setState({
+    modalityPreferences: { 'Easy Zone 2 Bike': { from: 'bike', to: 'row' } },
+  } as never);
+  freshInstall();
+  const prefs = useAthletePreferencesStore.getState().prefs;
+  assert(prefs.excluded.length === 0 && prefs.pinned.length === 0,
+    `freshInstall left athlete pool prefs behind: ${JSON.stringify(prefs)}`);
+  assert(Object.keys(useCoachPreferencesStore.getState().modalityPreferences ?? {}).length === 0,
+    'freshInstall left coach modality preferences behind');
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {
@@ -1747,8 +1860,17 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
   console.log(`      ${describeConformanceShape()}`);
 });
 
-console.log(`\nAction walker totals: ${passed} passed, ${failed} failed`);
-if (failed > 0) {
-  console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
-  process.exit(1);
-}
+// THE ASYNC TAIL. Every cell above is synchronous and has already run by the
+// time this executes; the schedule doors are awaited, so they run here and the
+// totals wait for them. Printing the totals before an outstanding cell finished
+// would be a suite reporting on work it had not done.
+void (async () => {
+  await runAsync('the two schedule doors are walkable through the REAL door, and the laws hold',
+    walkTheScheduleDoors);
+
+  console.log(`\nAction walker totals: ${passed} passed, ${failed} failed`);
+  if (failed > 0) {
+    console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
+    process.exit(1);
+  }
+})();

@@ -2,7 +2,6 @@ import { useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
   type ActiveInjuryConstraint,
-  type ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
@@ -403,63 +402,6 @@ export function scheduleModifierIdForDate(
   return variant === 'away'
     ? `tap-schedule-away:${weekStartISO}`
     : `tap-schedule-busy-week:${weekStartISO}`;
-}
-
-// Exported for tests (gameChangeLocalRebuildTests) — pure builder, the
-// production entry point remains executeProgramControlAction.
-export function buildTapScheduleModifier(args: {
-  date: string;
-  todayISO: string;
-  severity?: number;
-  reasonLabel?: string;
-  maxSessionsThisWeek?: number;
-  /** 'busy' reduces the whole week; 'away' records chosen days cleared. */
-  variant?: 'busy' | 'away';
-  /** Overrides removed when this modifier clears (away days restore). */
-  linkedOverrideDates?: string[];
-  modifierTitle?: string;
-  modifierBody?: string;
-}): ActiveScheduleConstraint {
-  const variant = args.variant ?? 'busy';
-  // Away is a lighter touch on the days the athlete IS training — its job
-  // is to clear the chosen days and record the note, not to strip the rest
-  // of the week. Busy is the aggressive whole-week reducer.
-  const severity = Math.max(
-    1,
-    Math.min(10, Math.round(args.severity ?? (variant === 'away' ? 3 : 5))),
-  );
-  const weekStartISO = getMondayForDate(args.date);
-  const id = scheduleModifierIdForDate(args.date, variant);
-  const now = new Date().toISOString();
-  return {
-    id,
-    type: 'schedule',
-    severity,
-    status: 'active',
-    startDate: args.todayISO,
-    lastUpdatedAt: now,
-    reasonLabel: args.reasonLabel ?? (variant === 'away' ? 'Away' : 'Busy week'),
-    source: 'tap',
-    weekStartISO,
-    maxSessionsThisWeek: args.maxSessionsThisWeek,
-    expiresAt: addDaysISO(weekStartISO, 6),
-    linkedOverrideDates: args.linkedOverrideDates ?? [],
-    modifierTitle:
-      args.modifierTitle ?? (variant === 'away' ? 'Away this week' : 'Busy week active'),
-    modifierBody:
-      args.modifierBody ??
-      (variant === 'away'
-        ? "The days you're away are cleared. Clear this note to bring them back."
-        : 'Your week is being kept tighter around limited availability.'),
-    modifierAffects: ['current_week'],
-    rules: variant === 'away'
-      ? ['sessions on the days you’re away']
-      : severity >= 7
-      ? ['max-effort sessions this week', 'long accessory blocks']
-      : ['long sessions this week', 'optional accessory volume'],
-    safeFocus: ['Short, targeted sessions', 'Skill / technique work', 'Recovery + mobility'],
-    advice: [],
-  };
 }
 
 function planChangeForAction(action: ProgramControlAction): PlanChange | null {
