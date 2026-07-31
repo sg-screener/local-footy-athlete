@@ -322,7 +322,7 @@ run('an unregistered id still throws — the sheet is the only source', () => {
   catch (error) { threw = error; }
   assert(threw instanceof UnsignedCopyError,
     'signedCopy() produced text for an id nobody registered. The words must come '
-    + 'from artifacts/COPY_SHEET_RULINGS_2026-07-30.md (via the registered sheet) or '
+    + 'from docs/COPY_SHEET_RULINGS_2026-07-30.md (via the registered sheet) or '
     + 'not exist.');
 });
 

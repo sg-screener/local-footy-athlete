@@ -60,7 +60,7 @@ const SATURDAY = '2026-07-18';
 /**
  * The week-screen readiness entry, as Sam wrote it.
  *
- * SIGNED BY RULING 4, `artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
+ * SIGNED BY RULING 4, `docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
  * '"I\'m not 100%" becomes "I\'m sick/flat today" on this screen.' The pin is
  * a NAMED constant now rather than a bare literal in two suites, so the next
  * rename is one edit and a red cell rather than a scavenger hunt.

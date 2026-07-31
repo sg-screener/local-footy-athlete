@@ -1,7 +1,7 @@
 /**
  * SESSION-DETAIL INLINE EDITING — source-level contracts (ruling 12).
  *
- * Sam's design ruling 12 (`artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
+ * Sam's design ruling 12 (`docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
  * the "Edit exercises" modal MENU on `DayWorkoutScreenV2` retires. Per-exercise-
  * row swap + remove buttons replace the "Change" pill; a top-of-page icon row
  * (add / equipment / injury) replaces the single sticky-header link. The

@@ -50,7 +50,7 @@ import type { WeakPointFocus } from '../rules/weakPointFocus';
  * The words a placed session carries as its reason — they land in its description.
  *
  * Athlete-facing, so it is copy: PROPOSED, NOT SIGNED, recorded in
- * `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` batch 6. It says what the session
+ * `docs/COPY_SHEET_RULINGS_2026-07-30.md` batch 6. It says what the session
  * IS rather than which need produced it, because "your week was short on groin
  * work" is a diagnosis and this is a sentence on a card.
  */

@@ -174,7 +174,7 @@ run('B3. the seven names are PINNED, because collapsing the duplicate made B1 ci
     assert(SIGNED_NAMES[variant.id] === variant.label,
       `"${variant.id}" is named "${variant.label}"; the athlete has been reading `
       + `"${SIGNED_NAMES[variant.id]}". Renaming a session is Sam's to sign — see `
-      + 'artifacts/COPY_SHEET_RULINGS_2026-07-30.md.');
+      + 'docs/COPY_SHEET_RULINGS_2026-07-30.md.');
   }
 });
 

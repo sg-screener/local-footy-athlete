@@ -1,9 +1,18 @@
 /**
  * THE RULINGS FILE AND THE SHEET ARE EQUAL, BOTH DIRECTIONS.
  *
- * `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` is the AUTHORING SOURCE — Sam's
+ * `docs/COPY_SHEET_RULINGS_2026-07-30.md` is the AUTHORING SOURCE — Sam's
  * signed rulings, compiled conversationally via Cowork. Sam's instruction: "it is
  * equality-bound both directions once implemented."
+ *
+ * IT LIVES IN `docs/` BECAUSE IT IS LAW, AND LAW IS TRACKED — Sam's ruling of
+ * 2026-07-31, answering the boundary report's question 10. This gate is armed in
+ * `test:bible` and hard-asserts the file exists, so while the file sat in the
+ * gitignored `artifacts/` scratch directory the bible could not be run from a
+ * fresh clone at all, and the whole signable batch was one `git clean` from
+ * gone. `artifacts/` stays gitignored for genuine scratch; a signed rulings file
+ * was never scratch. The read below is the tracked path, and it is the ONLY
+ * read — there is no second copy to keep in sync.
  *
  * Both directions, because one direction is worthless:
  *   - every REPLACEMENT Sam signed must actually be in the code, or the app still
@@ -41,7 +50,7 @@ function run(name: string, body: () => void): void {
 }
 
 const ROOT = path.join(__dirname, '..', '..');
-const RULINGS = path.join(ROOT, 'artifacts', 'COPY_SHEET_RULINGS_2026-07-30.md');
+const RULINGS = path.join(ROOT, 'docs', 'COPY_SHEET_RULINGS_2026-07-30.md');
 
 /**
  * Every REPLACEMENT Sam signed, as (old, new) pairs.
@@ -121,7 +130,7 @@ const SOURCES = surfaceSources();
 
 run('the rulings file is present and parses', () => {
   assert(fs.existsSync(RULINGS),
-    'artifacts/COPY_SHEET_RULINGS_2026-07-30.md is missing — it is the authoring '
+    'docs/COPY_SHEET_RULINGS_2026-07-30.md is missing — it is the authoring '
     + 'source, and without it nothing can be signed');
   assert(RULED.length >= 4,
     `only ${RULED.length} replacement rulings parsed from the file. Batches 1-3 `
@@ -252,7 +261,7 @@ run('every athlete-visible string in the NEW surfaces is proposed', () => {
   }
   assert(unproposed.length === 0,
     `athlete-visible wording nobody asked Sam about:\n        ${unproposed.join('\n        ')}\n      `
-    + 'Add it to the PROPOSED batch in artifacts/COPY_SHEET_RULINGS_2026-07-30.md.');
+    + 'Add it to the PROPOSED batch in docs/COPY_SHEET_RULINGS_2026-07-30.md.');
 });
 
 console.log(`\nCopy rulings binding totals: ${passed} passed, ${failed} failed`);

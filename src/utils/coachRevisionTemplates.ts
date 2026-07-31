@@ -31,7 +31,7 @@ export const MOBILITY_DOOR_MAX_MOVEMENTS = MOBILITY_MAX_MOVEMENTS;
  * equipment (it SHRINKS rather than padding), so a sentence promising a count
  * would be a signed sentence that can lie, which batch 3 forbids by name.
  *
- * PROPOSED, NOT SIGNED. See artifacts/COPY_SHEET_RULINGS_2026-07-30.md batch 5c.
+ * PROPOSED, NOT SIGNED. See docs/COPY_SHEET_RULINGS_2026-07-30.md batch 5c.
  */
 const MOBILITY_DESCRIPTION =
   'A full-body mobility flow - easy ranges only, nothing forced.';

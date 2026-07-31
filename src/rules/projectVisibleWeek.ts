@@ -296,7 +296,7 @@ function prescriptionCopy(row: any): SignedCopy {
  * handles spelling/case variants the same way `hasCuratedCue` already does.
  *
  * NO FALLBACK, on purpose — the template-blank law
- * (`artifacts/COPY_SHEET_RULINGS_2026-07-30.md` batch 2, ruling 1): "an
+ * (`docs/COPY_SHEET_RULINGS_2026-07-30.md` batch 2, ruling 1): "an
  * unmapped engine value fails the build rather than falling back." A row name
  * that resolves to neither traced source is a THIRD source this projection
  * does not yet know about, and the honest behaviour is `UnsignedCopyError` —

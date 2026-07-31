@@ -27,7 +27,7 @@
  * name (conditioning/recovery/power/speed/support/game), and prescription
  * templates for the two dominant row shapes (sets×reps, duration). Every one of
  * these is listed in
- * `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` under "Batch 6 — buttons/UI unit"
+ * `docs/COPY_SHEET_RULINGS_2026-07-30.md` under "Batch 6 — buttons/UI unit"
  * / "Proposed by Task 2 (projection headlines)", PROPOSED and awaiting Sam —
  * the transitional rule the file's own header states: a string may ship
  * PROPOSED, and it may never ship unlisted.
@@ -106,7 +106,7 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.headline.training',
       source: 'sam_ruling',
-      provenance: 'NEW — proposed, artifacts/COPY_SHEET_RULINGS_2026-07-30.md Batch 6, '
+      provenance: 'NEW — proposed, docs/COPY_SHEET_RULINGS_2026-07-30.md Batch 6, '
         + 'Task 2. A day whose kind is `training` and has no more specific name yet '
         + '(the day headline names the KIND per ruling 3, not the content — parts carry '
         + 'their own headlines).',

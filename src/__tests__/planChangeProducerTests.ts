@@ -715,7 +715,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // its modal menu: exercise-level editing is now three top-of-page icons
   // plus two per-row buttons, with the same guided ExerciseEditSheet behind
   // all five. Updated to the new entry surface, not to a fantasy — see
-  // artifacts/COPY_SHEET_RULINGS_2026-07-30.md "Task 8" for the full retired
+  // docs/COPY_SHEET_RULINGS_2026-07-30.md "Task 8" for the full retired
   // string list.
   ok('[9] DayWorkoutScreenV2 renders an exercise-level change door',
     dayWorkoutSrc.includes('"day-workout-add-exercise-action"')

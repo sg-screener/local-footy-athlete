@@ -35,7 +35,7 @@ behaviour, string, or matching key — changed; it is additive only, so it
 sits within the letter of the LR-6 freeze. Disclosed here for accuracy
 rather than left implicit.
 
-**The 13 design rulings** (`artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
+**The 13 design rulings** (`docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
 
 | # | Ruling | Status | Task |
 |---|---|---|---|
@@ -54,7 +54,7 @@ rather than left implicit.
 | 13 | Seven Coach preset chips removed | SHIPPED (UI only; coach pipeline untouched) | 10 |
 
 Full copy detail for every ruling and every new/retired string is in
-`artifacts/COPY_SHEET_RULINGS_2026-07-30.md` under "Batch 6 — buttons/UI unit
+`docs/COPY_SHEET_RULINGS_2026-07-30.md` under "Batch 6 — buttons/UI unit
 (2026-07-31): ONE SIGNABLE PASS" (tidied by this task into
 SIGNED-BY-RULING / PROPOSED / RETIRED / OPEN QUESTIONS; `test:copy-rulings-binding`
 7/7).
@@ -225,12 +225,17 @@ all stay red until their named owner pays them — none is a buttons/UI task.
 Eleven, in the order they surfaced in the ledger. Each has a pointer into the
 copy sheet, a declared-red entry, or a task report for the full trace.
 
+**Answered after the unit closed:** question 10 (Sam ruled 2026-07-31 — the
+signed rulings files are law and are now tracked in `docs/`). The numbering is
+kept as-is rather than compacted, so the pointers in the task reports and the
+ledger still land on the question they were written against.
+
 1. **Accessories vs Prehab.** Ruling 9 names the fifth Add/Swap row
    "Accessories"; the session-type charter split accessories into two doors
    the same day, and ruling 9 lists Gunshow separately, so the fifth row is
    the PREHAB door. Ships wired to `prehab`, rendering the label "Prehab"
    until Sam signs one of the two candidates. Pointer:
-   `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-1.
+   `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-1.
 
 2. **Swap/Add sub-line wording: neutral or enumerating.** The two sub-lines
    one tap above the five-row Add/Swap menu can either name no type
@@ -239,14 +244,14 @@ copy sheet, a declared-red entry, or a task report for the full trace.
    Neutral avoids a sub-line that has already rotted twice as the menu's own
    five types changed shape; enumerating tells the athlete what is behind
    the row before they tap, which is closer to what ruling 9 asked for.
-   Pointer: `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-2.
+   Pointer: `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-2.
 
 3. **Practice-match day now reads "Game Day."** The day-kind headline
    (`day.headline.game`, proposed this unit) applies to every fixture day,
    practice matches included — a consequence of `dayIsFixture`'s boolean
    shape, not a copy decision anyone separately ruled. Ships as "Game Day"
    (the default) until Sam rules whether a practice/trial match should read
-   differently. Pointer: `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-4.
+   differently. Pointer: `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-4.
 
 4. **The Remove sub-line can lie on a single-session day.** Batch 3's signed
    "Remove it — anything else on the day stays." is false when the day's
@@ -255,7 +260,7 @@ copy sheet, a declared-red entry, or a task report for the full trace.
    sentence must never be able to lie") applies to itself here; this unit's
    own pattern (typed cause selecting the sentence, not a guess) is the
    candidate fix if Sam wants it applied. Not fixed in this unit. Pointer:
-   `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-3.
+   `docs/COPY_SHEET_RULINGS_2026-07-30.md` §6-IV-3.
 
 5. **Block rollover fails silently — CONFIRMED REAL, unowned.** Four weeks
    after install the block must roll over; when it cannot, the athlete's
@@ -292,26 +297,28 @@ copy sheet, a declared-red entry, or a task report for the full trace.
    collision in question 8 is resolved, this constraint changes nothing
    visible in any generated week today. Pointer: declared red 9 above.
 
-10. **The copy sheet lives outside the tracked tree, but the bible depends
-    on it.** `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` is gitignored —
-    deliberately, `artifacts/` is a working directory — but
-    `test:copy-rulings-binding` (armed in `test:bible`, ~position 93)
-    hard-asserts the file exists and binds every quoted string against it
-    both directions. A fresh clone has no `artifacts/` directory, so the
-    bible fails immediately on it, and the entire signable Batch 6 pass
-    (§"Scope delivered" above) exists only as an untracked local file — one
-    `git clean` away from gone. Two fixes point opposite ways: track the
-    copy sheet (breaks the deliberate gitignore, but makes the bible
-    reproducible from a clean clone) or move the binder's read target out of
-    `artifacts/` into a tracked location (keeps the gitignore, adds a second
-    file to keep in sync). Since the gitignore is deliberate, this is Sam's
-    call to make, not a default to assume — but it needs to be asked, with
-    the fresh-clone/reproducibility consequence stated plainly. Pointer:
-    `.superpowers/sdd/2026-07-31-buttons-ui-unit/progress.md` (Task 7's
-    first addition surfaced this as its own numbered item; a later addition
-    reused the same number for a different question, and this one was
-    dropped by that collision — restored here as its own numbered question,
-    not folded into another).
+10. **RULED-AND-DONE (Sam, 2026-07-31): the signed rulings files are LAW and
+    they get TRACKED.** The question was that `test:copy-rulings-binding`
+    (armed in `test:bible`, ~position 93) hard-asserts a rulings file exists
+    and binds every quoted string against it both directions, while that file
+    sat in the gitignored `artifacts/` scratch directory — so a fresh clone
+    had no copy sheet, the bible failed immediately on it, and the entire
+    signable Batch 6 pass existed only as an untracked local file, one
+    `git clean` from gone. Neither of the two candidate fixes was taken;
+    Sam ruled the third: a signed rulings file is not scratch, so the three
+    of them moved into the tracked tree —
+    `docs/COPY_SHEET_RULINGS_2026-07-30.md`,
+    `docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`,
+    `docs/MOBILITY_PAIRING_RULINGS_2026-07-31.md`. The binder reads the
+    tracked path, so there is no second copy to keep in sync, and every other
+    reference across `src/` and `docs/` was repointed in the same commit.
+    `artifacts/` and its gitignore are UNTOUCHED — it remains a working
+    directory for genuine scratch. `docs/` was already where every other
+    signed rulings file lived (`ONBOARDING_PHASE_SHAPE_RULINGS`,
+    `OPTIONAL_PLACEMENT_RULINGS`, `STAGE_C_TIME_TRIAL_RULINGS`,
+    `BATCH4_BATCH6_RULINGS`), so the ruling names the convention that already
+    existed rather than inventing one. Pointer:
+    `.superpowers/sdd/2026-07-31-buttons-ui-unit/post-unit-rulings-report.md`.
 
 11. **Coach voice still composes from `workout.name`, LR-6-blocked.** The
     packet's day-summary prose is also a matching key the frozen

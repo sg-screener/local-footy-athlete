@@ -1,7 +1,7 @@
 /**
  * COACH SCREEN ENTRY SURFACE — source-level contract (ruling 13).
  *
- * Sam's design ruling 13 (`artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
+ * Sam's design ruling 13 (`docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
  * "All seven preset question chips REMOVED from the Coach screen (I missed a
  * session / I'm sore / Feeling cooked this week / Game day changed / Swap an
  * exercise / Busy week / I'm injured). The athlete just talks to the coach via

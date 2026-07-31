@@ -47,7 +47,7 @@ const failures: string[] = [];
 /**
  * The week-screen readiness entry, as Sam wrote it.
  *
- * SIGNED BY RULING 4, `artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
+ * SIGNED BY RULING 4, `docs/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
  * '"I\'m not 100%" becomes "I\'m sick/flat today" on this screen.'
  */
 const WEEK_READINESS_ENTRY_LABEL = "I'm sick/flat today";

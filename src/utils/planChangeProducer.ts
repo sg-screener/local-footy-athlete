@@ -203,7 +203,7 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
     sub: 'Rolling, mobility, easy movement, breathing',
   },
   // PROPOSED, NOT YET SIGNED — goes to Sam with the stage 5 copy batch
-  // (artifacts/COPY_SHEET_RULINGS_2026-07-30.md). Written in the voice of the
+  // (docs/COPY_SHEET_RULINGS_2026-07-30.md). Written in the voice of the
   // six beside it; the Title Case label follows his batch-1 capitalisation rule.
   mobility: {
     label: 'Mobility',
@@ -222,7 +222,7 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
     sub: 'Compound push, pull, squat and carry',
   },
   // PROPOSED, NOT YET SIGNED — both go to Sam with the copy batch
-  // (artifacts/COPY_SHEET_RULINGS_2026-07-30.md). They replace one row that read
+  // (docs/COPY_SHEET_RULINGS_2026-07-30.md). They replace one row that read
   // "Accessories / Gunshow or prehab - small muscles, big payoff", which was the copy
   // admitting the door was two doors: a sub-label naming two things with "or" is a
   // menu that has not decided what it offers.

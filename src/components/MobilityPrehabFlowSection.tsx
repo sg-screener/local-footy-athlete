@@ -59,7 +59,7 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
             Sam accepted for the Mobility door's description.
 
             PROPOSED, NOT SIGNED. Recorded in
-            artifacts/COPY_SHEET_RULINGS_2026-07-30.md alongside batch 5c.
+            docs/COPY_SHEET_RULINGS_2026-07-30.md alongside batch 5c.
           */}
           <Text style={styles.summary}>
             {flow.movementCount} movements · optional
