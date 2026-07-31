@@ -18,6 +18,13 @@ import {
 } from '../../rules/equipmentVocabulary';
 import { savedEquipmentAnswer } from '../../store/profileStore';
 import { todayISOLocal } from '../../utils/appDate';
+// SAME ICON OWNER AS THE THIS-WEEK SHEET (ruling 10) — `equipmentIconFor`
+// reads the exact `EQUIPMENT_TAG_ICON` / `CONDITIONING_MODALITY_ICON` maps
+// `EquipmentLimitationSheet` draws from, so the athlete's own kit looks like
+// the same kit whether they are marking it missing this week or editing it
+// here permanently. A second icon set for the same vocabulary would be the
+// two-representations defect this equipment unit exists to delete.
+import { equipmentIconFor } from '../home/EquipmentLimitationSheet';
 
 interface EquipmentEditorSheetProps {
   visible: boolean;
@@ -38,6 +45,9 @@ interface EquipmentEditorSheetProps {
  * may ask or offer later, not what it programs. The list is DERIVED from the
  * exercise library, the same one owner as the onboarding step.
  */
+const ITEM_ICON_ACCENT = '#C8FF00';
+const ITEM_ICON_MUTED = '#5A5A5A';
+
 export function EquipmentEditorSheet({
   visible,
   onClose,
@@ -75,12 +85,20 @@ export function EquipmentEditorSheet({
       accessibilityRole="button"
       style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[styles.itemLabel, possession === 'never' && styles.neverLabel]}>
-        {label}
-      </Text>
-      <Text style={styles.itemState}>
-        {possession === 'have' ? 'Have it' : possession === 'never' ? 'Never' : ''}
-      </Text>
+      <View style={[styles.itemIcon, possession === 'never' && styles.itemIconMuted]}>
+        {equipmentIconFor(
+          key as AskableEquipmentTag | ConditioningEquipmentModality,
+          possession === 'never' ? ITEM_ICON_MUTED : ITEM_ICON_ACCENT,
+        )}
+      </View>
+      <View style={styles.itemTextWrap}>
+        <Text style={[styles.itemLabel, possession === 'never' && styles.neverLabel]}>
+          {label}
+        </Text>
+        <Text style={styles.itemState}>
+          {possession === 'have' ? 'Have it' : possession === 'never' ? 'Never' : ''}
+        </Text>
+      </View>
     </Pressable>
   );
 
@@ -140,11 +158,28 @@ const styles = StyleSheet.create({
   },
   item: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  itemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#222222',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  itemIconMuted: {
+    opacity: 0.5,
+  },
+  itemTextWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   itemLabel: {
     color: colors.text.primary,

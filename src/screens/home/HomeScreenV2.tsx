@@ -2213,9 +2213,40 @@ function WeekReadinessSheet({
   const sickIcon = (color: string) => svg(color, <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />);
   const hurtIcon = (color: string) => svg(color, <><Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>);
   const moonIcon = (color: string) => svg(color, <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />);
-  const zapIcon = (color: string) => svg(color, <Path d="M13 2 3 14h7l-1 8 10-12h-7z" />);
   const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
-  const chevron = (color: string) => svg(color, <Path d="M9 18 15 12 9 6" />);
+  // Ruling 10's named fix: "Rough sleep" used to carry a bare '>' chevron —
+  // an icon that means nothing for a sleep row. A moon VARIANT of the tired
+  // leaves' plain crescent (moonIcon), with a small cloud over it — restless,
+  // overcast sleep — so it reads as sleep-family without duplicating the
+  // leaf icons underneath it.
+  const moonRestIcon = (color: string) => svg(color, (
+    <><Path d="M17 14.5a5.5 5.5 0 1 0-9.9-3.3" />
+      <Path d="M4 17.5a3.5 3.5 0 0 1 .5-6.96A5 5 0 0 1 14 12.5" />
+      <Path d="M4 17.5h13a3 3 0 0 0 0-6" /></>
+  ));
+  // Ruling 10's named fix: "Totally cooked" used to carry a zap bolt — zap
+  // reads as ENERGY, the opposite of cooked/drained. A snuffed flame reads as
+  // "no more fuel", which is what the row means.
+  const flameOutIcon = (color: string) => svg(color, (
+    <><Path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      <Path d="M2 2l20 20" /></>
+  ));
+  // Sick-severity ladder (audit finding: two rows shared one droplet glyph
+  // differing only by colour). droplet (a bit off) / thermometer (properly
+  // sick — a fever) / bed (can't get out of bed) — each glyph is the closest
+  // literal reading of its own row, ascending in how much it takes you out.
+  const bedIcon = (color: string) => svg(color, (
+    <><Path d="M2 18v-7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v7" />
+      <Path d="M2 18v2" /><Path d="M22 18v2" />
+      <Path d="M2 13h20" />
+      <Path d="M6 13V9.5a1.5 1.5 0 0 1 1.5-1.5H10a1.5 1.5 0 0 1 1.5 1.5V13" /></>
+  ));
+  // Lighter-day offer accept/decline — reuses the checkmark/x-cross pair
+  // already established for "Clear adjustment" (accept) and the fixture
+  // sheet's "Remove" (decline is a no), rather than one waveform icon
+  // recoloured twice for opposite answers.
+  const checkIcon = (color: string) => svg(color, <Path d="M20 6L9 17l-5-5" />);
+  const crossIcon = (color: string) => svg(color, <><Path d="M18 6L6 18" /><Path d="M6 6l12 12" /></>);
 
   // A2: "the athlete reported something in THIS visit" is a fact the sheet owns,
   // so it is recorded at the one boundary every tier already goes through rather
@@ -2248,13 +2279,13 @@ function WeekReadinessSheet({
             label="Yes — make today lighter"
             testID="readiness-lighter-accept"
             accent
-            icon={pulseIcon('#C8FF00')}
+            icon={checkIcon('#C8FF00')}
             onPress={() => { if (!lighterDayBusy) onAcceptLighterDay(lighterDayOffer.date); }}
           />
           <SheetOption
             label="No thanks — keep it as planned"
             testID="readiness-lighter-decline"
-            icon={pulseIcon('#8A94A6')}
+            icon={crossIcon('#8A94A6')}
             onPress={onDeclineLighterDay}
           />
           <Button label="Done" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
@@ -2347,7 +2378,7 @@ function WeekReadinessSheet({
             label="Rough sleep"
             sub="One bad night, or a few in a row"
             testID="readiness-leaf-sleep"
-            icon={chevron('#8A94A6')}
+            icon={moonRestIcon('#8A94A6')}
             onPress={() => setBucket('sleep')}
           />
           <SheetOption
@@ -2360,7 +2391,7 @@ function WeekReadinessSheet({
             label="Totally cooked — easier week"
             testID={explorerTestId.readinessOption('cooked_week')}
             accent
-            icon={zapIcon('#C8FF00')}
+            icon={flameOutIcon('#C8FF00')}
             onPress={() => onApply('cooked_week')}
           />
           <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
@@ -2400,14 +2431,14 @@ function WeekReadinessSheet({
             label="Properly sick"
             sub="I'll lighten the work while you're crook — your sessions stay put"
             testID={explorerTestId.readinessOption('illness_moderate')}
-            icon={dropletIcon('#FFC247')}
+            icon={sickIcon('#FFC247')}
             onPress={() => onApply('illness_moderate')}
           />
           <SheetOption
             label="Can't get out of bed"
             sub="Nothing will be required this week — gentle optional work if you're up to it"
             testID={explorerTestId.readinessOption('illness_severe')}
-            icon={sickIcon('#FF7A85')}
+            icon={bedIcon('#FF7A85')}
             onPress={() => onApply('illness_severe')}
           />
           <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />

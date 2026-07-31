@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
 import { useProgramStore } from '../../store';
@@ -871,6 +871,7 @@ export function PlanChangeSheet({
               key={scope.id}
               label={scope.label}
               sub={scope.sub}
+              icon={moveScopeIcon(scope.id, ACCENT)}
               testID={`plan-change-move-scope-${scope.id}`}
               onPress={() => setStep({ kind: 'pick_destination', scope: scope.id })}
             />
@@ -905,6 +906,11 @@ export function PlanChangeSheet({
                 sub={destination.occupiedBy
                   ? `Swap with ${destination.occupiedBy}`
                   : 'Currently a rest day'}
+                // Calendar/day glyph family (carry-forward from Task 4): an
+                // occupied destination gets the swap glyph — landing there
+                // trades with what's on it, which is what the sub-line says;
+                // an empty destination gets a blank calendar day.
+                icon={destination.occupiedBy ? swapIcon(ACCENT) : dayIcon(ACCENT)}
                 testID={explorerTestId.sessionMoveDestination(destination.date)}
                 onPress={() => apply({
                   kind: 'move_session',
@@ -934,6 +940,7 @@ export function PlanChangeSheet({
               label={scope.label}
               sub={scope.sub}
               danger={scope.id === 'whole_day'}
+              icon={binScopeIcon(scope.id, scope.id === 'whole_day' ? DANGER : '#FF7A85')}
               testID={selectedWorkout
                 ? explorerTestId.sessionDeleteScope(selectedWorkout.id, scope.id)
                 : undefined}
@@ -1134,6 +1141,51 @@ const mobilityIcon = (color: string) => glyph(color, (
 const prehabIcon = (color: string) => glyph(color, (
   <Path d="M12 3l8 3v6c0 4-3.5 7.5-8 9-4.5-1.5-8-5-8-9V6z" />
 ));
+/** Recovery — a refresh loop: the "easy" scope Move/the day can carry. */
+const recoveryIcon = (color: string) => glyph(color, (
+  <><Path d="M3 12a9 9 0 1 1 3 6.7" /><Path d="M3 16v-4h4" /></>
+));
+/** Team — two people: the anchor Bin's "team" scope removes. */
+const teamIcon = (color: string) => glyph(color, (
+  <><Circle cx="9" cy="8" r="3" /><Path d="M3.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" />
+    <Circle cx="17" cy="9" r="2.3" /><Path d="M14.8 13.6c2 .4 3.2 2 3.2 5.4" /></>
+));
+/** A blank calendar day — an empty rest day to move onto (destinations,
+ * carry-forward Task 4). Occupied destinations use `swapIcon` instead: the
+ * icon says whether landing there trades with a session or lands on nothing. */
+const dayIcon = (color: string) => glyph(color, (
+  <><Rect x="3" y="5" width="18" height="16" rx="2" />
+    <Path d="M3 10h18" /><Path d="M8 3v4" /><Path d="M16 3v4" /></>
+));
+
+/**
+ * "Move what?" scope rows (carry-forward from Task 4) — `whole_day` reuses
+ * the exact `moveIcon` from the four-action menu ("the move glyph family",
+ * Sam's brief: everything on the day moves, same glyph as the row that opens
+ * this step); the content scopes reuse the SAME per-type glyphs the
+ * "Strength" / "Conditioning" rows already draw one step earlier in this
+ * sheet — the scope IS a session type, so its icon says which one moves.
+ */
+function moveScopeIcon(id: PlanChangeMoveScopeId, color: string): React.ReactNode {
+  if (id === 'strength') return strengthIcon(color);
+  if (id === 'conditioning') return conditioningIcon(color);
+  if (id === 'recovery') return recoveryIcon(color);
+  return moveIcon(color);
+}
+/**
+ * "Remove what?" scope rows (carry-forward from Task 4) — the remove/danger
+ * family per Sam's brief. `whole_day` gets the literal bin in full danger
+ * red (everything goes); a partial scope shows what content is going, tinted
+ * the same softer coral the row's own danger styling already uses, so the
+ * glyph names the casualty instead of repeating the same bin four times.
+ */
+function binScopeIcon(id: PlanChangeBinScopeId, color: string): React.ReactNode {
+  if (id === 'whole_day') return removeIcon(color);
+  if (id === 'strength') return strengthIcon(color);
+  if (id === 'conditioning') return conditioningIcon(color);
+  if (id === 'recovery') return recoveryIcon(color);
+  return teamIcon(color);
+}
 
 function BackRow({ onPress }: { onPress: () => void }) {
   return (

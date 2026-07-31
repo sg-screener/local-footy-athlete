@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Sheet } from '../../components/ui';
 import { colors } from '../../theme/colors';
@@ -14,6 +15,105 @@ import {
 } from '../../rules/equipmentVocabulary';
 import { ownedEquipmentKit } from '../../store/profileStore';
 import { explorerTestId } from '../../utils/stableTestId';
+
+// ── Icons (ruling 10) ───────────────────────────────────────────────────────
+// One recognisable glyph per equipment tag / conditioning modality, keyed off
+// `EQUIPMENT_TAG_LABELS` / `CONDITIONING_MODALITY_LABELS` — the same derived
+// vocabulary this sheet already reads, so a new askable tag cannot ship with
+// no glyph (`equipmentIconFor` falls back to a neutral shape rather than
+// rendering an empty chip). Exported so `EquipmentEditorSheet` (the profile
+// surface asking the same vocabulary) draws the same glyphs — one icon owner
+// for one vocabulary, not two pictures of one fact.
+const EQUIPMENT_ICON_ACCENT = '#C8FF00';
+const EQUIPMENT_ICON_MUTED = '#5A5A5A';
+const glyph = (color: string, children: React.ReactNode) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </Svg>
+);
+export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => React.ReactNode> = {
+  /** Barbell — rectangular end plates on a straight bar. */
+  barbell: (color) => glyph(color, (
+    <><Path d="M4 9v6" /><Path d="M7 7v10" /><Path d="M17 7v10" /><Path d="M20 9v6" /><Path d="M7 12h10" /></>
+  )),
+  /** Dumbbells — round end weights, distinct from the barbell's flat plates. */
+  dumbbells: (color) => glyph(color, (
+    <><Circle cx="5.5" cy="12" r="2.5" /><Circle cx="18.5" cy="12" r="2.5" /><Path d="M8 12h8" /></>
+  )),
+  /** Cable machine — a pulley overhead, cable down to a D-handle. */
+  cables: (color) => glyph(color, (
+    <><Circle cx="12" cy="4.5" r="2" /><Path d="M12 6.5v9" /><Path d="M8.5 15.5h7l-1.5 4h-4z" /></>
+  )),
+  /** Weight machine — a plate stack on a guide rod with a selector pin. */
+  machine: (color) => glyph(color, (
+    <><Path d="M7 5h10" /><Path d="M7 9h10" /><Path d="M7 13h10" /><Path d="M12 13v6" /><Path d="M9 19h6" /></>
+  )),
+  /** Resistance band — a stretched, elastic S-curve. */
+  bands: (color) => glyph(color, <Path d="M4 12c2-6 6-6 8 0s6 6 8 0" />),
+  /** Bench — a flat top on two short legs. */
+  bench: (color) => glyph(color, (
+    <><Path d="M3 11h18" /><Path d="M3 11v3" /><Path d="M21 11v3" /><Path d="M6 14v4" /><Path d="M18 14v4" /></>
+  )),
+  /** Pull-up bar — a bar mounted high between two posts (a doorway rig). */
+  pullup_bar: (color) => glyph(color, (
+    <><Path d="M4 6v4" /><Path d="M20 6v4" /><Path d="M4 8h16" /></>
+  )),
+  /** Kettlebell — a ball with a handle loop on top. */
+  kettlebell: (color) => glyph(color, (
+    <><Circle cx="12" cy="15" r="6" /><Path d="M9 9a3 3 0 0 1 6 0v2H9z" /></>
+  )),
+  /** Foam roller — a capsule lying on its side. */
+  foam_roller: (color) => glyph(color, (
+    <Path d="M7 8h10a4 4 0 0 1 0 8H7a4 4 0 0 1 0-8z" />
+  )),
+  /** Plyo box — an isometric cube. */
+  plyo_box: (color) => glyph(color, (
+    <><Path d="M4 10l8-4 8 4-8 4z" /><Path d="M4 10v7l8 4 8-4v-7" /><Path d="M12 14v7" /></>
+  )),
+};
+export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
+  /** Bike / bike erg — two wheels and a frame. */
+  bike_erg: (color) => glyph(color, (
+    <><Circle cx="6" cy="17.5" r="3.5" /><Circle cx="18" cy="17.5" r="3.5" /><Path d="M6 17.5 10 8h4l3 5" /><Path d="M10 8l3 5h5" /><Circle cx="15" cy="5.5" r="1.3" /></>
+  )),
+  /** Air / assault bike — one large fan wheel, no rear wheel (unlike the erg bike). */
+  air_bike: (color) => glyph(color, (
+    <><Circle cx="12" cy="9" r="5" /><Path d="M12 4v5l4 2" /><Path d="M8 19h8" /><Path d="M10 19v-4" /><Path d="M14 19v-4" /></>
+  )),
+  /** Row erg — a rail, a seat, and the cable running up to the handle. */
+  row: (color) => glyph(color, (
+    <><Path d="M2 19h20" /><Path d="M6 19v-3h4v3" /><Path d="M10 16l8-10" /></>
+  )),
+  /** Ski erg — two angled ski planks. */
+  ski: (color) => glyph(color, (
+    <><Path d="M5 20L9 4" /><Path d="M15 20L19 4" /></>
+  )),
+  /** Treadmill — a belt loop on a stand, an incline post at the front. */
+  treadmill: (color) => glyph(color, (
+    <><Path d="M3 18h14a3 3 0 0 0 0-6H7a3 3 0 0 0 0 6" /><Path d="M17 12V8" /><Path d="M20 21H4" /></>
+  )),
+};
+/** No askable tag or modality should ever hit this — every key in both
+ * `Record`s above is exhaustive over the derived vocabulary, so TypeScript
+ * fails the build before this could render. It exists so a FUTURE vocabulary
+ * addition renders a real (if generic) glyph instead of an empty chip while
+ * the icon gets designed, rather than the sheet breaking. */
+export const equipmentIconFallback = (color: string) => glyph(color, (
+  <Circle cx="12" cy="12" r="7" />
+));
+/** One lookup across both `Record`s, with the neutral fallback — the single
+ * function both this sheet and `EquipmentEditorSheet` call, so "what glyph
+ * does this tag get" has one owner. */
+export function equipmentIconFor(
+  item: EquipmentTag | ConditioningEquipmentModality,
+  color: string,
+): React.ReactNode {
+  const tagIcon = (EQUIPMENT_TAG_ICON as Record<string, (color: string) => React.ReactNode>)[item];
+  if (tagIcon) return tagIcon(color);
+  const modalityIcon = (CONDITIONING_MODALITY_ICON as Record<string, (color: string) => React.ReactNode>)[item];
+  if (modalityIcon) return modalityIcon(color);
+  return equipmentIconFallback(color);
+}
 
 /**
  * The athlete's this-week decision, against their OWN kit (Sam's ruling 5,
@@ -111,6 +211,7 @@ export function EquipmentLimitationSheet({
           <MissingToggle
             key={tag}
             label={EQUIPMENT_TAG_LABELS[tag as AskableEquipmentTag] ?? labelFor(tag)}
+            icon={equipmentIconFor(tag, missingTags.has(tag) ? EQUIPMENT_ICON_MUTED : EQUIPMENT_ICON_ACCENT)}
             missing={missingTags.has(tag)}
             testID={optionTestId(tag)}
             onPress={() => toggleTag(tag)}
@@ -120,6 +221,7 @@ export function EquipmentLimitationSheet({
           <MissingToggle
             key={modality}
             label={CONDITIONING_MODALITY_LABELS[modality]}
+            icon={equipmentIconFor(modality, missingModalities.has(modality) ? EQUIPMENT_ICON_MUTED : EQUIPMENT_ICON_ACCENT)}
             missing={missingModalities.has(modality)}
             testID={optionTestId(modality)}
             onPress={() => toggleModality(modality)}
@@ -150,10 +252,17 @@ export function EquipmentLimitationSheet({
             testID={explorerTestId.equipmentClear(activeFactId)}
             accessibilityRole="button"
             accessibilityLabel={explorerTestId.equipmentClear(activeFactId)}
-            style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.optionWithIcon, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.optionLabel}>Equipment available again</Text>
-            <Text style={styles.optionSub}>End the temporary restriction</Text>
+            <View style={[styles.optionIcon, styles.optionIconAccent]}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={EQUIPMENT_ICON_ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M20 6L9 17l-5-5" />
+              </Svg>
+            </View>
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Equipment available again</Text>
+              <Text style={styles.optionSub}>End the temporary restriction</Text>
+            </View>
           </Pressable>
         ) : null}
       </View>
@@ -161,13 +270,21 @@ export function EquipmentLimitationSheet({
   );
 }
 
+/**
+ * One equipment/modality row, with its icon chip (Sam's design ruling 10).
+ * Same fixed 38x38 round chip as `HomeScreenV2`'s `SheetOption` — the icon
+ * dims to the muted tone the same moment the label gets its strikethrough,
+ * so a marked-missing row reads as off in both the glyph and the text.
+ */
 function MissingToggle({
   label,
+  icon,
   missing,
   testID,
   onPress,
 }: {
   label: string;
+  icon: React.ReactNode;
   missing: boolean;
   testID: string;
   onPress: () => void;
@@ -178,8 +295,9 @@ function MissingToggle({
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={testID}
-      style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.optionWithIcon, pressed && { opacity: 0.7 }]}
     >
+      <View style={[styles.optionIcon, missing && styles.optionIconMuted]}>{icon}</View>
       <View style={styles.optionRow}>
         <Text style={[styles.optionLabel, missing && styles.missingLabel]}>{label}</Text>
         <Text style={styles.optionSub}>{missing ? 'Missing this week' : ''}</Text>
@@ -201,12 +319,30 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: spacing.md,
   },
-  option: {
+  optionWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
+  optionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222222',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  optionIconMuted: {
+    opacity: 0.5,
+  },
+  optionIconAccent: {
+    backgroundColor: 'rgba(200,255,0,0.12)',
+  },
   optionRow: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
