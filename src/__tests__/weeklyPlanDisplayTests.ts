@@ -83,7 +83,16 @@ console.log('weeklyPlanDisplayTests');
 console.log('\n[1] non-conditioning weekly titles are preserved');
 eq('Upper Push', weeklyPlanTitle({ name: 'Upper Push', workoutType: 'Strength' }), 'Upper Push');
 eq('Full Body Strength', weeklyPlanTitle({ name: 'Full Body Strength', workoutType: 'Strength' }), 'Full Body Strength');
-eq('team strength leads', weeklyPlanTitle({ name: 'Team Training + Upper Push', workoutType: 'Team Training' }), 'Upper Push');
+// TASK 11 — this pinned 'Upper Push': `weeklyPlanTitle` used to re-read the
+// composed name with `splitSessionName` and hand back whichever half looked like
+// strength. That parser is deleted — a name is not a data channel, and a card
+// that wants the halves of a day asks the projection for `parts`, which is what
+// the shipping week card has done since Task 5. This function's remaining job is
+// the CONDITIONING identity (every cell below), and for everything else it
+// returns the canonical name it was given, unparsed.
+eq('a composed name is returned whole, never re-parsed',
+  weeklyPlanTitle({ name: 'Team Training + Upper Push', workoutType: 'Team Training' }),
+  'Team Training + Upper Push');
 eq('team only', weeklyPlanTitle({ name: 'Team Training', workoutType: 'Team Training' }), 'Team Training');
 eq('game', weeklyPlanTitle({ name: 'Game Day', workoutType: 'Game' }), 'Game Day');
 eq('accessories', weeklyPlanTitle({ name: 'Prehab & Accessories', workoutType: 'Strength' }), 'Accessories');

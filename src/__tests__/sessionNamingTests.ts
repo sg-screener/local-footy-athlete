@@ -162,10 +162,25 @@ eq(
   display({ focus: upperPullWithFinisher }),
   'Upper Pull',
 );
+// TASK 11 — this cell pinned `'Full body'`, and `'Full body'` was the DEFECT.
+// The claim in its name is real and is kept: ambiguous full-body metadata must
+// not be promoted to the canonical "Full Body Strength". But the string it
+// asserted was the output of `fallbackFromText` — a punctuation tidier that cut
+// the engine's focus at its first separator and handed the head over as a session
+// name. That is `surfaceAgreementTests` cell 3's defect at its source, and the
+// rule is deleted (0 of 30,937 distinct inputs across a whole bible run produced
+// anything through it). The claim now reads as what it always meant: no invented
+// credits, and no planner text either.
 eq(
   'ambiguous legacy full-body metadata does not invent four pattern credits',
   display({ focus: fullBodyWithFinisher, strengthPattern: 'full_body' }),
-  'Full body',
+  'Session',
+);
+ok(
+  'ambiguous legacy full-body metadata never leaks the engine focus as a name',
+  !display({ focus: fullBodyWithFinisher, strengthPattern: 'full_body' })
+    .toLowerCase().includes('full body'),
+  'the cleaned-focus pass-through is back — planner scratch is a session name again',
 );
 eq(
   'typed full body displays Full Body Strength',

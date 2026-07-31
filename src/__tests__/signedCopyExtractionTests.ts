@@ -211,6 +211,35 @@ function extract(): ExtractedString[] {
  * the app asserts) — recorded so nobody re-derives a false 14-string drop.
  * DROPPED IN THE SAME COMMIT AS THE DELETION — a ceiling left sitting above the
  * real count is not a ratchet, it is headroom.
+ *
+ * TASK 11 SETTLES IT AT 141, AND THE NON-MOVEMENT IS THE POINT.
+ *
+ * Task 11 deleted `splitSessionName`, two of `resolveSessionDisplayName`'s
+ * inference rules and one orphaned helper. It moved this number by ZERO, and the
+ * reason is worth stating so nobody reads a flat ratchet as a task that did
+ * nothing, or "re-checks" it later and re-derives a phantom drop:
+ *
+ *   1. WHAT DIED IS NOT ON THE SHEET. Every deletion is in `utils/` and
+ *      `rules/`, and this extractor walks `screens/home`, `screens/coach` and
+ *      `components` only (`SURFACE_DIRS`). What it counts is unauthored prose
+ *      sitting in a RENDER position; what Task 11 removed is the machinery that
+ *      let a name be re-derived from another name.
+ *   2. THE STRINGS THOSE RULES PRODUCED WERE NEVER COUNTABLE ANYWAY. They were
+ *      not literals in a surface file — they were the engine's `allocation.focus`
+ *      arriving at a card through a punctuation tidier, which is precisely the
+ *      class of athlete-facing word an extractor of literals CANNOT see. That
+ *      gap is closed by the runtime half of the law
+ *      (`surfaceAgreementTests` cell 5, L-P2: every string
+ *      `athleteVisibleStrings` returns must satisfy `isSignedCopyText`), not by
+ *      this count. Two instruments, two kinds of blindness.
+ *   3. NOTHING WAS ADDED. Confirmed by the count staying exactly on the ceiling,
+ *      so there is no headroom hiding an addition behind a deletion.
+ *
+ * The 141 that remain, by file, are the unit's residual and are listed in the
+ * task-11 report for the boundary report: HomeScreenV2 55, HomeQuickActionSheet
+ * 25, DayWorkoutScreenV2 22, PlanChangeSheet 14, SessionFeedbackPanel 7,
+ * homeScreenConstants 7, StaleOverrideBanner 5, GuidedInjuryFlowSheet 3,
+ * ExerciseVideoModal 1, SessionCompleteMoment 1, CoachScreen 1.
  */
 const ATHLETE_VISIBLE_GAP_CEILING = 141;
 

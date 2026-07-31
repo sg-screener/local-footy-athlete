@@ -22,7 +22,7 @@ import {
 } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { verifyVisibleDatesChanged } from './coachVisibleDomainVerifier';
-import { splitSessionName } from './sessionNaming';
+import { strengthComponentDisplayName } from './sessionNaming';
 import type { OverrideContext, UserRemovalScope, Workout } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import {
@@ -1046,15 +1046,28 @@ export function buildPlanChangeProposal(
       }
 
       // Partial bin: the day keeps its other parts. Title follows the
-      // survivors — the canonical name's strength half when strength
-      // survives, otherwise the surviving section's own title.
-      const survivorTitle = surviving.some((section) => section.kind === 'strength')
-        ? splitSessionName(before.workout.title).title || before.workout.title
+      // survivors — the strength component named from its OWN typed intent and
+      // rows when strength survives, otherwise the surviving section's own
+      // title.
+      //
+      // TASK 11 — this read `splitSessionName(before.workout.title).title`, a
+      // parse of the day's composed name. `before` is a snapshot and carries no
+      // typed intent, so the real day is fetched from the visible week the
+      // caller already handed us: the same object `daySnap` snapshots.
+      const strengthSurvives = surviving.some((section) => section.kind === 'strength');
+      const beforeWorkout =
+        ctx.visibleWeek.find((day) => day.date === change.date)?.workout ?? null;
+      const survivorTitle = strengthSurvives
+        ? strengthComponentDisplayName({
+            strengthIntent: beforeWorkout?.strengthIntent,
+            exercises: beforeWorkout?.exercises,
+            fallbackTitle: before.workout.title,
+          })
         : surviving[0].title || before.workout.title;
       const survivorWorkoutType =
         surviving.every((section) => section.kind === 'session')
           ? before.workout.workoutType
-          : surviving.some((section) => section.kind === 'strength')
+          : strengthSurvives
           ? 'Strength'
           : surviving.some((section) => section.kind === 'conditioning')
           ? 'Conditioning'

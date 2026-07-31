@@ -92,6 +92,8 @@ import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChang
 import { getSessionComponents } from '../utils/sessionComponents';
 import { project } from '../rules/projectVisibleWeek';
 import { projectDayDetail } from '../rules/visibleDayDetail';
+import { athleteVisibleStrings } from '../rules/visibleProjection';
+import { isSignedCopyText } from '../rules/signedCopy';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -445,6 +447,57 @@ run('(3) no surface renders internal planner vocabulary', () => {
     + `${offences.join('\n        ')}\n      Athlete-facing words come from the `
     + 'signed-copy sheet; `allocation.focus` must be structurally unable to reach '
     + 'a card.');
+});
+
+run('(5) L-P2 — every word the migrated surfaces render is signed', () => {
+  // THE RUNTIME HALF OF L-P2, ARMED (Task 11).
+  //
+  // Cell 3 above is the law stated as a BLOCKLIST: six phrases that must not
+  // appear. A blocklist only ever catches the leak somebody already found —
+  // "off-feet" was on it because Sam saw it on his phone. This is the same law
+  // stated as an ALLOWLIST, which is the only form that can catch the next one:
+  // every string the four migrated surfaces put on the glass must be IN the
+  // signed-copy sheet, not merely absent from a list of known-bad words.
+  //
+  // `athleteVisibleStrings` is the projection's own enumeration of what a day
+  // would render — day headline, refusal, every part headline and detail, every
+  // row name, prescription and cue (`visibleProjection.ts`). It is collected
+  // from the PROJECTION rather than by scraping components on purpose: the law
+  // is that the projection is the only source, so a surface that shows something
+  // this does not return has composed it, and cells 1-4 are what hold the
+  // surfaces to the projection.
+  //
+  // WHY THIS IS NOT VACUOUS EVEN THOUGH `project()` ONLY EVER CALLS
+  // `signedCopy()`. `SignedCopy` is a branded string, and a brand is a compile-
+  // time claim: one `as SignedCopy` cast, one template literal assembled from
+  // two signed halves, one `${}` interpolation of a number that no entry
+  // templates, and the type still passes while the athlete reads something
+  // nobody authored. `isSignedCopyText` re-derives the claim at runtime against
+  // the filled text of every registered entry. It is also the assertion that
+  // FAILS if a future edit reintroduces a pass-through: Task 11 deleted
+  // `resolveSessionDisplayName`'s cleaned-focus rule, and if it came back, a
+  // strength part on a legacy day would resolve to planner text, miss
+  // `STRENGTH_HEADLINE_ID_BY_LABEL`, and — were `partHeadline` ever to return it
+  // rather than fall through — land here.
+  //
+  // OVER THE WHOLE VISIBLE HORIZON, not one date: the same reason cell 3 gives.
+  // Which day a gap surfaces on is an accident of allocation.
+  reachHisWorldByActing();
+  const offences: string[] = [];
+  for (const week of [WEEK, '2026-08-03', '2026-08-10']) {
+    const projected = quiet(() => project({ week: projectedWeek(week), weekStart: week }));
+    for (const day of projected.days) {
+      for (const text of athleteVisibleStrings(day)) {
+        if (!isSignedCopyText(text)) {
+          offences.push(`${day.date}: "${text}"`);
+        }
+      }
+    }
+  }
+  assert(offences.length === 0,
+    `L-P2: the projection rendered ${offences.length} string(s) that are not in the `
+    + `signed-copy sheet:\n        ${offences.join('\n        ')}\n      `
+    + 'Athlete-facing words come from an authored source or a Sam ruling.');
 });
 
 run('(4) a recovery day is offered the same capabilities as any other day', () => {

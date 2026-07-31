@@ -326,5 +326,95 @@ run('an unregistered id still throws — the sheet is the only source', () => {
     + 'not exist.');
 });
 
+/**
+ * THE NAME CHANNEL IS CLOSED TO THE ATHLETE SURFACES — Task 11, source contract.
+ *
+ * `resolveSessionDisplayName` still reads `focus` and `name`, and it still has to:
+ * its output IS `workout.name`, which the frozen coach router/executor
+ * string-match and regex, and the whole-bible differential (30,937 distinct
+ * inputs) showed two of its rules and all three of its early domain-label guards
+ * are LIVE producers of those keys. Deleting them would be a silent
+ * coach-pipeline behaviour change, which LR-6 forbids. What this unit CAN
+ * guarantee — and what these cells hold — is that no athlete surface can reach
+ * them.
+ *
+ * The guarantee is an OMISSION, which is the fragile kind: `partHeadline`
+ * deliberately does not pass `focus`/`name`, so the surviving rules cannot fire
+ * through the projection. An omission is undone by one autocompleted property.
+ * These cells make undoing it fail the build instead.
+ *
+ * WHY SOURCE-CONTRACT DEPTH RATHER THAN BEHAVIOURAL. A behavioural cell can only
+ * prove the rules did not fire on the days it reached; cell 5 of
+ * `surfaceAgreementTests` (L-P2) is exactly that and runs over the whole visible
+ * horizon. What it cannot prove is that the CHANNEL is absent, because a
+ * pass-through that returns an already-signed word is invisible to it. Both
+ * depths, for the two halves of the claim.
+ */
+run('the projection cannot reach the name channel (source contract)', () => {
+  const fs = require('fs') as typeof import('fs');
+  const path = require('path') as typeof import('path');
+  const src = (rel: string): string =>
+    fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+
+  const projection = src('rules/projectVisibleWeek.ts');
+  const call = /resolveSessionDisplayName\(\{([\s\S]*?)\}\)/.exec(projection);
+  assert(call, 'projectVisibleWeek.ts no longer calls resolveSessionDisplayName — '
+    + 'if the strength headline moved to a different naming owner this cell must '
+    + 'follow it, not be deleted');
+  // TOP-LEVEL KEYS ONLY. A flat regex over the argument block finds the `name:`
+  // inside `exercises: rows.map((row) => ({ name: row.name }))` and reports the
+  // channel as open while it is shut — a cell that cries wolf gets loosened, and
+  // a loosened cell is how the channel actually reopens.
+  const topLevelKeys = (block: string): string[] => {
+    const keys: string[] = [];
+    let depth = 0;
+    let token = '';
+    for (const char of block) {
+      if (char === '{' || char === '[' || char === '(') { depth += 1; token = ''; continue; }
+      if (char === '}' || char === ']' || char === ')') { depth -= 1; token = ''; continue; }
+      if (depth > 0) continue;
+      if (char === ',') { token = ''; continue; }
+      if (char === ':') { keys.push(token.trim()); token = ''; continue; }
+      token += char;
+    }
+    return keys;
+  };
+  const args = topLevelKeys(call[1]).join(':') + ':';
+  assert(!/\bfocus\s*:/.test(args),
+    'the projection now passes `focus` to resolveSessionDisplayName. That reopens '
+    + 'the legacy focus-inference rule on the athlete\'s own week — the rule whose '
+    + 'measured output includes raw planner text. Derive the headline from typed '
+    + 'intent and rows, or register the word.');
+  assert(!/\bname\s*:/.test(args),
+    'the projection now passes `name` to resolveSessionDisplayName, reopening the '
+    + 'name pass-through on the athlete\'s own week.');
+
+  // AND THE PARSER IS GONE, everywhere, not just here. `splitSessionName` turned a
+  // composed name back into structure; `visibleProjection.ts`'s header calls its
+  // existence the proof that names were a data channel between layers. A
+  // reintroduction anywhere is the channel reopening.
+  const roots = ['rules', 'screens', 'utils', 'components', 'hooks', 'data'];
+  const offenders: string[] = [];
+  const walk = (dir: string): void => {
+    const full = path.join(__dirname, '..', dir);
+    if (!fs.existsSync(full)) return;
+    for (const entry of fs.readdirSync(full, { withFileTypes: true })) {
+      const rel = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(rel); continue; }
+      if (!/\.tsx?$/.test(entry.name)) continue;
+      const text = src(rel);
+      // Comments explaining the deletion are the point of the deletion, not a
+      // reintroduction. Only real code counts.
+      const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      if (/\bsplitSessionName\b/.test(code)) offenders.push(rel);
+    }
+  };
+  for (const root of roots) walk(root);
+  assert(offenders.length === 0,
+    `splitSessionName is back in ${offenders.join(', ')}. A name is not evidence `
+    + 'about content: ask the projection for `parts`, or name a component from its '
+    + 'own typed intent and rows (`strengthComponentDisplayName`).');
+});
+
 console.log(`\nProjection ownership totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

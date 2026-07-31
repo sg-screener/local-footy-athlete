@@ -5,7 +5,10 @@ import {
   type CoachRevisionSectionKind,
   type CoachVisibleSectionSnapshot,
 } from './coachRevisionProposal';
-import { resolveSessionDisplayName, splitSessionName } from './sessionNaming';
+import {
+  resolveSessionDisplayName,
+  strengthComponentDisplayName,
+} from './sessionNaming';
 import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
@@ -80,13 +83,24 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
     return { ok: true, remainingWorkout: null };
   }
 
-  const survivorTitle = survivingSections.some((section) => section.kind === 'strength')
-    ? splitSessionName(snapshot.workout.title).title || snapshot.workout.title
+  // WHAT STAYS IS NAMED FROM ITSELF TOO — the mirror of the rule below for what
+  // leaves. This read `splitSessionName(snapshot.workout.title).title`, parsing
+  // the day's composed name for a strength half; `strengthComponentDisplayName`
+  // derives it from the typed intent and the real rows instead, and falls back
+  // to the day's own title when there is no typed evidence to derive from —
+  // which is byte-identical to what the parser returned in that case.
+  const strengthSurvives = survivingSections.some((section) => section.kind === 'strength');
+  const survivorTitle = strengthSurvives
+    ? strengthComponentDisplayName({
+        strengthIntent: source.strengthIntent,
+        exercises: source.exercises,
+        fallbackTitle: snapshot.workout.title,
+      })
     : survivingSections[0].title || snapshot.workout.title;
   const survivorWorkoutType =
     survivingSections.every((section) => section.kind === 'session')
       ? source.workoutType
-      : survivingSections.some((section) => section.kind === 'strength')
+      : strengthSurvives
       ? 'Strength'
       : survivingSections.some((section) => section.kind === 'conditioning')
       ? 'Conditioning'
@@ -176,6 +190,26 @@ export function splitAcceptedSessionForAthleteMove(args: {
   // is what `fixtureMinimalReplan` already does when it splits a strength
   // component off a day. The composed half is named after it is composed, so the
   // name describes what is really in it.
+  //
+  // TASK 11 — UNCHANGED, AND THE DIFFERENTIAL IS WHY.
+  //
+  // This site was never the name channel: it already derives from typed intent
+  // and rows, which is what the remainder above was rewired to do. The first
+  // draft of Task 11 also routed it through `strengthComponentDisplayName` on
+  // the reasoning that one function should answer for both halves of a split —
+  // and the whole-bible day-name differential came back with exactly ONE
+  // difference, here: a moved component on 2026-08-07 went from "Session" to
+  // "Team Training + Upper Pull". The helper's fallback keeps the title the
+  // component arrived with, and the title an untyped strength component arrives
+  // with is the COMPOSITE DAY NAME — so the "improvement" was the defect the
+  // block above exists to prevent, handing a departing gym session a name that
+  // says "Team Training" and gets it swallowed as team-training items at its
+  // destination. Left exactly as it was.
+  //
+  // The two functions therefore differ deliberately in ONE respect: what to do
+  // when there is no typed evidence. What STAYS keeps the day's title (the day
+  // continues to exist under its own name, which is byte-for-byte what the
+  // deleted parser returned). What LEAVES must not inherit it.
   const movedWorkout = movedKind === 'strength'
     ? {
         ...moved,

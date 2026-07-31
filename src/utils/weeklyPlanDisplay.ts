@@ -9,7 +9,6 @@ import {
   projectConditioningVisibleIdentity,
   type ConditioningVisibleIdentity,
 } from './conditioningVisibleIdentity';
-import { splitSessionName } from './sessionNaming';
 
 export type ConditioningDisplayCategory = ConditioningVisibleIdentity['primaryLabel'];
 
@@ -123,7 +122,16 @@ export function weeklyPlanTitle(workout: WeeklyDisplayWorkout): string {
   if (name === 'Prehab & Accessories') return 'Accessories';
 
   if (isStandaloneConditioning(workout)) return legacyConditioningLabel(workout);
-  return splitSessionName(name).title || name;
+  // TASK 11 — this read `splitSessionName(name).title`, which parsed a composed
+  // day name for its strength half. The name is already the canonical one
+  // `resolveSessionDisplayName` produced; a card that wants the parts asks the
+  // projection for them (`project()` -> `day.parts[].headline`), which is what
+  // the shipping week card does since Task 5. This surface is the CLASSIC home
+  // screen's, which `HomeScreen.tsx` no longer reaches (`DESIGN_VERSION = 'v2'`,
+  // returning `<HomeScreenV2 />` before `HomeScreenClassic` is constructed), so
+  // no pixel changes; the parser is gone from the one place it could have been
+  // revived.
+  return name;
 }
 
 /** Weekly conditioning context exists only when conditioning is attached. */
@@ -149,5 +157,10 @@ export function weeklyPlanSecondaryLabel(
   const identity = projectConditioningVisibleIdentity(workout as Partial<Workout>);
   if (identity && isStandaloneConditioning(workout)) return null;
 
-  return splitSessionName(String(workout.name ?? '')).context;
+  // TASK 11 — the remaining branch used to be `splitSessionName(name).context`,
+  // i.e. "re-read the day's name and hand back whichever half the title did not
+  // take". Conditioning context is the ONLY secondary this function owns (the
+  // branch above), and every other kind of second line on a card is a part, which
+  // the projection carries as `day.parts[].headline`. See `weeklyPlanTitle`.
+  return null;
 }
