@@ -42,6 +42,8 @@ import { todayISOLocal } from '../utils/appDate';
 import { profileCapacityBandOrNull } from '../utils/readiness';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
+import { project } from '../rules/projectVisibleWeek';
+import type { VisibleWeek } from '../rules/visibleProjection';
 
 // ─── Internal: Read raw state from both stores ───
 
@@ -302,6 +304,12 @@ export function useResolvedWeek() {
     overrideContexts,
     modalityPreferences: (state as any).modalityPreferences,
   });
+  // THE ONE PROJECTION, computed once here beside `weekDays` — the card
+  // surface (HomeScreenV2) renders `visibleWeek.days[*].headline` /
+  // `.parts[*].headline` and reads no raw `workout.name`. No try/catch: a
+  // week whose words are not yet signed is a real gap (`UnsignedCopyError`)
+  // and must surface loudly, not be swallowed into free text.
+  const visibleWeek: VisibleWeek = project({ week: weekDays, weekStart: mondayStr });
   const weekLabel = formatWeekLabel(mondayStr);
   const isThisWeek = weekOffset === 0;
 
@@ -340,6 +348,7 @@ export function useResolvedWeek() {
 
   return {
     weekDays,
+    visibleWeek,
     weekLabel,
     weekOffset,
     isThisWeek,

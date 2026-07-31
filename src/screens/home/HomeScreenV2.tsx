@@ -19,12 +19,9 @@ import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import {
-  weeklyConditioningIconKind,
-  weeklyPlanSecondaryLabel,
-  weeklyPlanTitle,
-} from '../../utils/weeklyPlanDisplay';
+import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
+import type { VisibleDay, VisibleWeek } from '../../rules/visibleProjection';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -86,6 +83,7 @@ import {
 export default function HomeScreenV2() {
   const {
     weekDays,
+    visibleWeek,
     weekLabel,
     weekOffset,
     isThisWeek,
@@ -483,11 +481,18 @@ export default function HomeScreenV2() {
             const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
             const isPickerMode = mode.type === 'moveGame' || mode.type === 'addGame';
             const isMoveTarget = isPickerMode && !isMoveSource;
+            // The projection's answer for this date — the card's ONE source for
+            // its title/context words. `visibleWeek` and `weekDays` are the same
+            // derivation (`project()` wraps `buildProgramTabProjectedWeek`), so
+            // this find is always a hit; `undefined` only guards a render before
+            // the two have settled together.
+            const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
 
             return (
               <DayRow
                 key={day.date}
                 day={day}
+                visibleDay={visibleDay}
                 isSelected={isSelected}
                 isMoveSource={isMoveSource}
                 isMoveTarget={isMoveTarget}
@@ -794,6 +799,7 @@ export default function HomeScreenV2() {
       <BusyAwaySheet
         visible={busyAwayVisible}
         weekDays={weekDays}
+        visibleWeek={visibleWeek}
         onClose={() => setBusyAwayVisible(false)}
         onBusyReduce={async () => {
           await handleApplyBusyWeekReduce();
@@ -891,6 +897,8 @@ function MoveBanner({ text, onCancel }: MoveBannerProps) {
 
 interface DayRowProps {
   day: any;
+  /** The projection's answer for this date. Card words come from here — see `title`/`contextLabel` below. */
+  visibleDay: VisibleDay | undefined;
   isSelected: boolean;
   isMoveSource: boolean;
   isMoveTarget: boolean;
@@ -1237,7 +1245,7 @@ function rowIconPaths(kind: RowIconKind) {
  * selection IS the hierarchy, so no separate hero card exists.
  */
 function DayRow({
-  day, isSelected, isMoveSource, isMoveTarget, pickerMode,
+  day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning, onReviewStale,
   feedbackReceipts, progressionReceipts,
@@ -1245,19 +1253,25 @@ function DayRow({
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
-  // Weekly plan speaks in structure/purpose identities. Prescription copy
-  // remains inside the workout detail screen.
-  const title = hasWorkout ? weeklyPlanTitle(day.workout) : null;
+  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout. `title`
+  // is the day's one name (`day.headline`: "Training Day" / "Rest Day" /
+  // "Game Day"), present for every day including rest — no more `hasWorkout`
+  // branch and no more hardcoded "Rest" literal. `contextLabel` is whatever
+  // rides beside it: parts beyond the first (an attached component), the
+  // same "+ " convention the old `splitSessionName` context carried. Both are
+  // `SignedCopy`, so this can only ever render an authored string.
+  const title: string | null = visibleDay?.headline ?? null;
   const accentColor = getDayRowAccentColor({
     hasWorkout,
     isGame,
     sessionTier: day.workout?.sessionTier,
     title,
   });
-  const contextLabel = suppressDuplicateWorkoutContext(
-    title,
-    hasWorkout ? weeklyPlanSecondaryLabel(day.workout) : null,
-  );
+  const attachedParts = visibleDay?.parts.slice(1) ?? [];
+  const rawContext = attachedParts.length > 0
+    ? `+ ${attachedParts.map((part) => part.headline).join(' + ')}`
+    : null;
+  const contextLabel = suppressDuplicateWorkoutContext(title, rawContext);
   const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
   const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
   const contextIcon = contextIconKind(contextLabel);
@@ -1288,7 +1302,9 @@ function DayRow({
             : null}
     </>
   );
-  const selectedTitle = hasWorkout ? title : 'Rest';
+  // Always the projection's headline now — no `hasWorkout` branch, no
+  // hardcoded "Rest" literal. A rest day's `title` is already "Rest Day".
+  const selectedTitle = title;
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = isMoveSource
     ? 'move-source'
@@ -1313,7 +1329,7 @@ function DayRow({
       testID={isMoveTarget
         ? explorerTestId.fixtureTarget(day.date)
         : `day-row-${dayToken}`}
-      accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
+      accessibilityLabel={`Day ${day.short ?? ''}${title ? ` ${title}` : ''}`}
       accessible={!exposesExpandedActions}
       style={[
         styles.dayRow,
@@ -1482,7 +1498,7 @@ function DayRow({
             <View style={styles.restLine}>
               <RowIcon kind="recovery" size={15} color={accentColor} />
               <Text style={styles.restLabel}>
-                Rest
+                {title}
               </Text>
             </View>
           )}
@@ -2266,11 +2282,12 @@ function WeekReadinessSheet({
 interface BusyAwaySheetProps {
   visible: boolean;
   weekDays: any[];
+  visibleWeek: VisibleWeek;
   onClose: () => void;
   onBusyReduce: () => void | Promise<void>;
   onAwayDays: (dates: string[]) => void | Promise<void>;
 }
-function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }: BusyAwaySheetProps) {
+function BusyAwaySheet({ visible, weekDays, visibleWeek, onClose, onBusyReduce, onAwayDays }: BusyAwaySheetProps) {
   const [step, setStep] = useState<'menu' | 'away'>('menu');
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -2340,7 +2357,19 @@ function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }:
                   </View>
                   <Text style={styles.awayDayText}>
                     {shortDayMonthLabel(day.date)}
-                    {day.workout?.name ? ` · ${day.workout.name}` : ''}
+                    {(() => {
+                      // The projection's headline for this date, not the raw
+                      // workout name — this list is `day && workoutType !==
+                      // 'Game'` filtered, so every candidate is a `training`
+                      // day here; see task-5-report.md for the NEEDS_CONTEXT
+                      // note on what this collapses (every row now reads the
+                      // same generic day-kind word rather than the specific
+                      // session that was on it).
+                      const headline = visibleWeek.days.find(
+                        (candidate) => candidate.date === day.date,
+                      )?.headline;
+                      return headline ? ` · ${headline}` : '';
+                    })()}
                   </Text>
                 </Pressable>
               );

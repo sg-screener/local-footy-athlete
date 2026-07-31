@@ -138,6 +138,7 @@ export function useHomeScreen() {
 
   const {
     weekDays,
+    visibleWeek,
     weekLabel,
     weekOffset,
     isThisWeek,
@@ -1951,6 +1952,7 @@ export function useHomeScreen() {
   return {
     // Week nav / resolved week
     weekDays,
+    visibleWeek,
     weekLabel,
     weekOffset,
     isThisWeek,
