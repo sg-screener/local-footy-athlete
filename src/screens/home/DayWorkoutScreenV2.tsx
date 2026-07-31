@@ -70,7 +70,6 @@ import {
   sessionListLabels,
   type SessionTemplateItem,
 } from '../../utils/sessionTemplate';
-import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import { stableTestIdToken } from '../../utils/stableTestId';
 import { explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -456,12 +455,8 @@ export default function DayWorkoutScreenV2() {
     handleFeedbackSaved,
     handleScrollBeginDrag,
     handleReviewStale,
-    exerciseCount,
+    detail,
     isTeamOnly,
-    isRecovery,
-    isConditioning,
-    isCombinedDay,
-    strengthExercises,
   } = useDayWorkout();
 
   const smokeCoachBikeFlow =
@@ -1044,23 +1039,32 @@ export default function DayWorkoutScreenV2() {
       </SafeAreaView>
     );
   }
-  const visibleWorkoutTitle = deriveVisibleWorkoutIdentity(workout).title;
+  // ── Title + metadata: the projection speaks, the screen renders ──
+  //
+  // TASK 6. All three of these used to be composed here at render:
+  // `deriveVisibleWorkoutIdentity(workout).title` re-derived a name from
+  // `workout.name`; the subtitle pasted the raw internal `workout.workoutType`
+  // onto the glass (and hand-wrote `+ Conditioning`); the count picked one of
+  // four branches off `composeDayDetail`'s booleans. Now the title and the
+  // attached-part line are `SignedCopy` from `projectDayDetail`, and the count is
+  // read off the list the athlete can actually count.
+  //
+  // `detail` is null only when the projection has no such day. The workout guard
+  // above has already returned for a missing day, so this is the projection and
+  // the resolver disagreeing about the horizon — nothing is invented for it.
+  const visibleWorkoutTitle: string = detail?.headline ?? '';
 
-  // Header subtitle — "Recovery", "Upper Push", "Upper Push + Conditioning", etc.
-  const subtitleText = isRecovery
-    ? 'Recovery'
-    : isCombinedDay
-    ? `${workout.workoutType} + Conditioning`
-    : workout.workoutType;
+  // The parts the title did not already speak for — the SAME list the week card
+  // renders as its secondary line, from the same `projectDayDetail`.
+  const subtitleText = (detail?.attached ?? []).join(' + ');
 
-  // Subtitle meta count — only show when a real list is rendered.
-  const metaCount = isTeamOnly
+  // Subtitle meta count — the numbered rows the athlete sees, taken from the one
+  // list that renders them (`sessionListLabels` numbers exactly those). It used
+  // to be a fourth answer to "what kind of day is this", which is how a combined
+  // day counted its strength rows and a conditioning day counted nothing.
+  const metaCount = sessionTemplate.mode === 'recovery'
     ? 0
-    : isCombinedDay
-    ? strengthExercises.length
-    : isConditioning || isRecovery
-    ? 0
-    : exerciseCount;
+    : sessionListLabels(sessionTemplate.items).filter(Boolean).length;
 
   // Combined "Fri 3/7 · 6 exercises · Strength" subtitle. All fragments are
   // merged into a single line of plain body text — no stacked labels, no

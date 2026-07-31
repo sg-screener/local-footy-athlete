@@ -22,6 +22,7 @@ import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { VisibleDay, VisibleWeek } from '../../rules/visibleProjection';
+import { visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -1237,28 +1238,32 @@ function rowIconPaths(kind: RowIconKind) {
 
 /**
  * A day's ONE leading identity, for any card-ish surface (the week row, the
- * away-days picker). docs/ONE_PROJECTION_REASSESSMENT_2026-07-30.md §4
- * (Sam-ruled): "the card renders `headline` + `parts.map(p => p.headline)`"
- * — the first part leads when there is one, `day.headline`
- * ("Training Day"/"Rest Day"/"Game Day") is the fallback.
+ * away-days picker).
  *
- * `kind === 'game'` FORCES `day.headline`, never `parts[0]`, even though a
- * fixture commonly HAS a part: `getSessionComponents` falls through to its
- * last-resort `session` component for a workout with no recognised training
- * content (`createGameStub`/`createVirtualGameStub` both have `exercises:
- * []`, so this is the DEFAULT shape for a game day, not an edge one — traced,
- * not assumed), and `COMPONENT_TO_PART` maps `session` to a `strength`-kind
- * part. Task 4's report already named that gap ("the projection still calls
- * a game day's component `strength` at part level ... the KIND is not
- * [correct]") and parked the real fix as parts/detail-surface ownership.
- * Reading around it with `day.kind` here uses a field already correct at the
- * day level — the same field Task 4's menu locks a fixture on — rather than
- * inventing a new guard for this task.
+ * THE RULE MOVED, THE BEHAVIOUR DID NOT (Task 6). It now lives in
+ * `rules/visibleDayDetail.ts` beside the day-detail surface that reads it too:
+ * a card title and a detail title that disagree about which name leads is one
+ * defect at two sizes, and the only structural way two surfaces cannot disagree
+ * is for both to call one function. This wrapper keeps the card's
+ * `undefined`-tolerant shape (the week list can hold a date the projection has
+ * no day for); the rule itself is stated once, over there.
+ *
+ * THE GAME GATE IS STILL LOAD-BEARING, and Task 6 checked rather than assumed.
+ * Task 6 fixed the projection so a fixture's last-resort `session` placeholder
+ * projects as a `game` part instead of a `strength` one, which removes the
+ * ORIGINAL reason for the gate (a game card reading "Strength"). It does not
+ * make the gate redundant, and that was TRACED rather than assumed: only the
+ * PLACEHOLDER converts, so a fixture day whose workout carries real content
+ * still leads with `parts[0]`. A `Practice Match` day (in
+ * `FIXTURE_WORKOUT_TYPES`, and not one of the two hardcoded stubs) with a squat
+ * on it projects `kind: 'game'` and `parts[0].kind: 'strength'` — its card would
+ * read "Strength" without this line. A fixture's title is its fixture whatever
+ * its workout resolved (reassessment §4, Task 5's ruling), so deleting the gate
+ * would trade one traced regression for another.
  */
 function cardLeadHeadline(day: VisibleDay | undefined): string | null {
   if (!day) return null;
-  if (day.kind !== 'game' && day.parts.length > 0) return day.parts[0].headline;
-  return day.headline;
+  return visibleDayLeadHeadline(day);
 }
 
 /**

@@ -269,6 +269,37 @@ export function listCoachRevisionTemplates(): CoachRevisionTemplateDefinition[] 
   return TEMPLATE_DEFINITIONS;
 }
 
+/**
+ * EVERY ROW NAME THIS REGISTRY CAN PUT ON A DAY — derived from the emitter.
+ *
+ * `projectionCopy.ts` registers these so `project()` can carry a template-placed
+ * row as `SignedCopy`. They ARE authored: this module is "the ONLY source of
+ * addable content for one-off replacements (product policy: template-derived,
+ * never free-form)", and its labels and row names are the words the athlete
+ * already reads on the add-menu and on the day after adding.
+ *
+ * DERIVED, NOT TRANSCRIBED, and that is load-bearing: it calls the same
+ * `conditioningRowsForTemplate` the writer calls, so a template Sam adds — or a
+ * row name he changes — is signed for free rather than by somebody remembering
+ * to update a second list. A transcribed set would go stale the first time the
+ * registry grew, and the failure mode of a stale set is `UnsignedCopyError` on
+ * the athlete's day-detail screen.
+ *
+ * The engine-built categories (`strength`, `accessories`, `mobility`) are NOT
+ * here on purpose: their rows come from the locked exercise vocabulary
+ * (`selectableExerciseVocabulary.ts`), which `projectionCopy.ts` registers in
+ * bulk already. Enumerating them here would be a second, weaker claim about the
+ * same names.
+ */
+export const COACH_REVISION_TEMPLATE_ROW_NAMES: readonly string[] = Array.from(
+  new Set<string>([
+    ...TEMPLATE_DEFINITIONS
+      .filter((def) => def.category === 'flush' || def.category === 'work_capacity')
+      .flatMap((def) => conditioningRowsForTemplate(def).map((row) => row.name)),
+    ...RECOVERY_FLOW_ROWS.map((row) => row.name),
+  ]),
+);
+
 function definitionById(templateId: string): CoachRevisionTemplateDefinition | null {
   return TEMPLATE_DEFINITIONS.find((entry) => entry.templateId === templateId) ?? null;
 }

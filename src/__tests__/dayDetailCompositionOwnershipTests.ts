@@ -9,13 +9,13 @@
  * This suite exists so the extraction cannot quietly become a permanent second
  * projection. Two things are pinned:
  *
- *   1. A NAMED, CLOSED set of production callers — `useDayWorkout.ts` and, since
- *      the buttons/UI unit's Task 2, `rules/projectVisibleWeek.ts` (`project()`
- *      populates `rows` from this same composition rather than re-deriving one).
- *      A THIRD surface starting to compose its own detail is the defect class
- *      re-forming, and it must fail here rather than on his phone. Task 6 drops
- *      `useDayWorkout.ts` from the set once the screen renders `project()`'s
- *      parts instead of calling this itself — back down to one, not "any".
+ *   1. ONE production caller — `rules/projectVisibleWeek.ts`. It was two while the
+ *      migration was in flight (Task 2 added `project()`, which populates `rows`
+ *      from this composition rather than re-deriving one); Task 6 took
+ *      `useDayWorkout.ts` off the list when the day-detail screen started
+ *      rendering `project()`'s parts. A SECOND surface starting to compose its own
+ *      detail is the defect class re-forming, and it must fail here rather than on
+ *      his phone.
  *   2. PURITY. Same inputs, same answer — no store reads, no clock, no profile.
  *      The moment it reads anything else it stops being replaceable by
  *      `project()`, which is path 3 of the reassessment's deletion list.
@@ -66,17 +66,18 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 
 console.log('\n-- Day detail composition ownership --');
 
-run('exactly two production callers compose the day detail, and no others', () => {
-  // TASK 2 OF THE BUTTONS/UI UNIT (2026-07-31): `project()` (`rules/projectVisibleWeek.ts`)
-  // became a SECOND caller, deliberately — its `rows` are populated from this
-  // same composition rather than a re-derivation, which is what "make the
-  // composition an internal of the projection" means. This is a WIDENING, not a
-  // loosening: the pin still names exactly two callers, not "any". Task 6
-  // shrinks the list back to one (the projection) once the day-detail screen
-  // renders `project()`'s parts instead of calling `composeDayDetail` itself,
-  // at which point `screens/home/useDayWorkout.ts` comes off this list.
+run('exactly one production caller composes the day detail, and it is the projection', () => {
+  // THE RATCHET CLOSED (Task 6 of the buttons/UI unit, 2026-07-31). Task 2 widened
+  // this pin to TWO callers on purpose — `project()` populates its `rows` from this
+  // same composition rather than re-deriving one — and said what would shrink it
+  // back: the day-detail screen rendering `project()`'s parts instead of composing
+  // its own account. That landed, so `screens/home/useDayWorkout.ts` is off the
+  // list and the composition is an internal of the projection, which is the only
+  // shape in which it can be deleted outright (reassessment §5, path 3 of nine).
+  //
+  // ONE, not "at most two". A screen that starts composing again fails here rather
+  // than on his phone.
   const ALLOWED_CALLERS = new Set([
-    'screens/home/useDayWorkout.ts',
     'rules/projectVisibleWeek.ts',
   ]);
   const callers = sourceFiles('').filter((file) => {
@@ -86,8 +87,8 @@ run('exactly two production callers compose the day detail, and no others', () =
   });
   assert(
     callers.length === ALLOWED_CALLERS.size && callers.every((file) => ALLOWED_CALLERS.has(file)),
-    `the day detail is composed in ${JSON.stringify(callers)}. Exactly the two named `
-    + `callers are allowed (${JSON.stringify([...ALLOWED_CALLERS])}) — a THIRD surface `
+    `the day detail is composed in ${JSON.stringify(callers)}. Exactly the one named `
+    + `caller is allowed (${JSON.stringify([...ALLOWED_CALLERS])}) — a SECOND surface `
     + 'composing its own detail is the split re-forming.');
 });
 

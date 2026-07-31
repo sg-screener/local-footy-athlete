@@ -316,31 +316,128 @@ function rowCue(row: any): SignedCopy | null {
   return id ? signedCopy(id) : null;
 }
 
+/**
+ * Is this row an AUTHORED EXERCISE, or a prescription the builder composed?
+ *
+ * `sessionBuilder.condEx` — the one constructor for conditioning, sprint and
+ * speed rows — stamps `exerciseType: 'Cardio'` on everything it makes, and what
+ * it makes is not an exercise from a vocabulary: it is a sentence assembled at
+ * build time out of numbers, modality words and planner nouns ("Aerobic
+ * conditioning component (3 x 8min zone 2 Mixed Erg Block)", "Assault Bike
+ * warm-up", "Quality speed warm-up (short)"). Every other row on a generated day
+ * names an exercise from the locked vocabulary (`selectableExerciseVocabulary.ts`,
+ * exercise-name-literal-lock unit), and a template-placed row names one from the
+ * addable-content registry — both authored, both registered.
+ *
+ * ASKED OF THE ROW'S OWN TYPE, NOT OF THE COPY SHEET. "Is this name registered?"
+ * would be the same question backwards — the projection deciding what to carry by
+ * consulting the words, which makes the sheet the authority over content. This
+ * asks the emitter's own marker, so the boundary is a fact about how the row was
+ * built. It also does not depend on WHICH bucket the row landed in: the row that
+ * exposed this was a sprint warm-up that the keyword-tail classifier put in
+ * `strengthRows`, and a bucket-shaped rule would have missed it.
+ *
+ * WHAT IT COSTS, DECLARED NOT HIDDEN. A dropped row is not a silent omission: the
+ * walker's `L-P3 ROWS CONSERVATION` law reds for every part whose projected row
+ * count does not equal the day's, and carries the debt as a declared entry naming
+ * the conditioning-generation owner (`projection_carries_no_rows_for_a_
+ * conditioning_part`). See `rowsForKind` for why the alternatives are worse.
+ */
+export function isComposedPrescriptionRow(row: any): boolean {
+  return String(row?.exercise?.exerciseType ?? '') === 'Cardio';
+}
+
 function toVisibleRows(rows: readonly any[]): VisibleRow[] {
-  return rows.map((row, index) => ({
-    id: String(row?.id ?? `${index}`),
-    name: rowName(row),
-    prescription: prescriptionCopy(row),
-    cue: rowCue(row),
-  }));
+  return rows
+    .filter((row) => !isComposedPrescriptionRow(row))
+    .map((row, index) => ({
+      id: String(row?.id ?? `${index}`),
+      name: rowName(row),
+      prescription: prescriptionCopy(row),
+      cue: rowCue(row),
+    }));
 }
 
 /**
  * The rows a part shows, from the SAME derivation the day-detail screen uses.
  *
  * `composeDayDetail` is `useDayWorkout`'s composition, extracted so a harness
- * can call it (`dayDetailCompositionOwnershipTests.ts`). Calling it here makes
- * this projection its SECOND caller — the pin now names both, and Task 6
- * shrinks it back to one (the projection) once the screen renders from
- * `project()` instead of composing its own detail. Kinds with no row-level
- * surface in `composeDayDetail` today (recovery, team_training, power, speed,
- * game) get `[]`, matching what the existing screen shows for them.
+ * could call it (`dayDetailCompositionOwnershipTests.ts`). Since Task 6 this
+ * projection is its ONLY production caller — the screen renders `parts`, and the
+ * hook composes nothing.
+ *
+ * COMPOSED PRESCRIPTION ROWS ARE NOT CARRIED, AND THE GAP IS THE POINT (Task 6).
+ * See `isComposedPrescriptionRow` for the boundary. A generated conditioning or
+ * speed row's `exercise.name` is composed by `sessionBuilder.ts` out of planner
+ * nouns and numbers — "Aerobic conditioning component (3 x 8min zone 2 Mixed Erg
+ * Block)", "Assault Bike warm-up", "Quality speed warm-up (short)". That is
+ * defect 3 (`surfaceAgreementTests` cell 3) one layer down: cell 3 bans planner
+ * vocabulary from a session NAME, and the same text reaches a ROW name from the
+ * same composer. There are exactly three things this projection could do with it
+ * and two of them are the defect:
+ *
+ *   1. Register the composed strings as `SignedCopy`. That is laundering — the
+ *      module's whole premise is that `allocation.focus` CANNOT become a signed
+ *      word, and a sheet grown to hold the composer's output has conceded the
+ *      argument. The walker's declared red says so in its own words: "the sheet
+ *      cannot contain them and must not be made to".
+ *   2. Catch the `UnsignedCopyError` and substitute something. Banned outright
+ *      (L14, and `signedCopy.ts`'s "throws rather than falling back").
+ *   3. Say plainly that this projection has no authored name for a composed
+ *      prescription row yet. The part is still carried, still named, still
+ *      capable; its ROWS are the open gap, and the gap is declared (walker law
+ *      `L-P3 ROWS CONSERVATION`, entry
+ *      `projection_carries_no_rows_for_a_conditioning_part`) rather than hidden.
+ *
+ * Three is what this does. Nothing consumed those rows — the card renders
+ * headlines, the menu renders capabilities, and the day-detail screen's row
+ * rendering is the INPUT surface (weights, receipts, cues, video), which reads the
+ * workout directly and always did. The authored vocabulary these rows are owed
+ * exists and is not wired: `data/conditioningTemplates.ts`, Sam's 55 signed
+ * doses, "NOT WIRED YET ... Stage B switches selection onto it". Wiring it is the
+ * conditioning-generation owner's, not a UI task's.
+ *
+ * Kinds with no row-level surface in `composeDayDetail` (recovery, team_training,
+ * power, speed, game) still get `[]` here — unchanged from Task 2, and separately
+ * declared by the same rows-conservation law where the day does hold rows for
+ * them.
  */
 function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): VisibleRow[] {
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
   if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
   return [];
+}
+
+/**
+ * What KIND of work a component is, on the day it sits on.
+ *
+ * `COMPONENT_TO_PART` answers for every real component. The one thing it cannot
+ * answer alone is the LAST-RESORT `session` component: `getSessionComponents`
+ * emits it for a workout with no recognisable training content, which is two
+ * different things wearing one id — a "Club Session" appointment on an ordinary
+ * day, and the stub a FIXTURE carries (`createGameStub` /
+ * `createVirtualGameStub`, both `exercises: []`). Mapping both to `strength` put
+ * a "Strength" part on every game day: the projection called the day a game and
+ * its only part a strength session, which is one derivation disagreeing with
+ * ITSELF, and Tasks 4 and 5 each had to gate around it (the card's
+ * `cardLeadHeadline` forces `day.headline` for `kind === 'game'` precisely
+ * because `parts[0]` said "Strength").
+ *
+ * The day already knows the answer, so it gives it: on a fixture, the placeholder
+ * IS the fixture, and its kind is `game`. `VisiblePartKind` has carried `game`
+ * since Task 2 and `part.headline.game` has been registered since then — this is
+ * the mapping that makes it reachable.
+ *
+ * DELIBERATELY NARROW. Only the placeholder converts, and only on a fixture day.
+ * A fixture day that somehow carries real components (a `Practice Match`
+ * workoutType with generated content) keeps them named for what they are — a
+ * blanket "everything on a game day is a game part" would erase content to fix a
+ * placeholder. `partCapabilities` already locks the whole day either way.
+ */
+function partKind(componentId: string, onDay: VisibleDayKind): VisiblePartKind {
+  if (onDay === 'game' && componentId === 'session') return 'game';
+  return COMPONENT_TO_PART[componentId] ?? 'strength';
 }
 
 function partsForWorkout(
@@ -351,7 +448,7 @@ function partsForWorkout(
   if (!workout) return [];
   return getSessionComponents(workout).map((component) => {
     const componentId = String(component.id);
-    const kind = COMPONENT_TO_PART[componentId] ?? 'strength';
+    const kind = partKind(componentId, onDay);
     return {
       id: `${date}:${componentId}`,
       kind,

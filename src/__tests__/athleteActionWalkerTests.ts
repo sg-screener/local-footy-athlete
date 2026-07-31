@@ -73,9 +73,10 @@ import {
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
-import { getSessionComponents } from '../utils/sessionComponents';
-import { composeDayDetail } from '../utils/dayDetailComposition';
-import { project, projectParts } from '../rules/projectVisibleWeek';
+import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
+import { isComposedPrescriptionRow, project, projectParts } from '../rules/projectVisibleWeek';
+import { projectDayDetail } from '../rules/visibleDayDetail';
+import type { VisibleWeek } from '../rules/visibleProjection';
 import {
   walk, describeHistory, makeRng,
   type WalkerAction, type WalkerHost, type WalkerStepResult,
@@ -785,8 +786,9 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
       'the structural projection threw for a week the athlete walked to — '
       + `${structural instanceof Error ? structural.message : String(structural)}`);
   }
+  let words: VisibleWeek | null = null;
   try {
-    quiet(() => project({ week: projected, weekStart }));
+    words = quiet(() => project({ week: projected, weekStart }));
   } catch (error) {
     offend('L-P2 SIGNED WORDS',
       'the projection refused to render the words for a week the athlete walked to '
@@ -832,21 +834,100 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
         + '`parts` is the only plural; a surface showing a different list composed its own.');
     }
 
-    // L-P3 THE DETAIL SCREEN'S OWN ACCOUNT — `composeDayDetail` is
-    // `useDayWorkout`'s composition, extracted; this is the third story.
-    const detailKinds = detailPartKinds(mirror.workout);
-    const projectionKinds = Array.from(
-      new Set(canonicalDay.parts.map((part) => String(part.kind)))).sort();
-    if (JSON.stringify(detailKinds) !== JSON.stringify(projectionKinds)) {
-      // The DIFFERENCE is named, not just the two lists. A declared red has to
-      // be pinnable to the exact disagreement it carries, or it becomes a regex
-      // that swallows the next, different defect in the same law.
-      const omits = projectionKinds.filter((kind) => !detailKinds.includes(kind));
-      const invents = detailKinds.filter((kind) => !projectionKinds.includes(kind));
-      offend('L-P3 DETAIL = PROJECTION',
-        `${day.date}: the detail omits ${JSON.stringify(omits)} and invents `
-        + `${JSON.stringify(invents)} — detail ${JSON.stringify(detailKinds)} / projection `
-        + `${JSON.stringify(projectionKinds)}. The detail composes its own account at render.`);
+    // L-P3 THE DETAIL SCREEN'S OWN ACCOUNT — from the function the screen renders.
+    //
+    // This read `composeDayDetail` until Task 6 — `useDayWorkout`'s render-time
+    // composition, which had a surface for strength, support and conditioning and
+    // none at all for recovery, power or speed, so three kinds of work simply
+    // vanished from the athlete's account of his own day. That composition no
+    // longer reaches a screen: `projectDayDetail` (`rules/visibleDayDetail.ts`) is
+    // what `DayWorkoutScreenV2` renders, and it is what is asked here.
+    //
+    // It maps `parts`, so the lists agree by construction — which IS the ruled end
+    // state ("`parts` is the ONLY plural ... two surfaces reading one list cannot
+    // disagree"). The assertion is what keeps it that way: a filter or a `kind`
+    // branch added to the detail surface reds on the next walk. Only reachable when
+    // the words resolved; a week that threw is already an L-P2 offence above and
+    // gets no second, derived one.
+    const visibleDay = words?.days.find((candidate) => candidate.date === day.date) ?? null;
+    if (visibleDay) {
+      const detail = projectDayDetail(visibleDay);
+      const detailKinds = Array.from(
+        new Set((detail?.sections ?? []).map((section) => String(section.kind)))).sort();
+      const projectionKinds = Array.from(
+        new Set(visibleDay.parts.map((part) => String(part.kind)))).sort();
+      if (JSON.stringify(detailKinds) !== JSON.stringify(projectionKinds)) {
+        // The DIFFERENCE is named, not just the two lists. A declared red has to
+        // be pinnable to the exact disagreement it carries, or it becomes a regex
+        // that swallows the next, different defect in the same law.
+        const omits = projectionKinds.filter((kind) => !detailKinds.includes(kind));
+        const invents = detailKinds.filter((kind) => !projectionKinds.includes(kind));
+        offend('L-P3 DETAIL = PROJECTION',
+          `${day.date}: the detail omits ${JSON.stringify(omits)} and invents `
+          + `${JSON.stringify(invents)} — detail ${JSON.stringify(detailKinds)} / projection `
+          + `${JSON.stringify(projectionKinds)}. The detail composes its own account at render.`);
+      }
+
+      // L-P3 ROWS CONSERVATION — a part the projection carries must carry its work.
+      //
+      // NEW IN TASK 6, and it exists because a debt MOVED rather than being paid.
+      // `project()` used to compose every row from the workout, including the ones
+      // `sessionBuilder.condEx` assembles out of planner nouns and numbers, and it
+      // threw `UnsignedCopyError` on them — which, now that the card and the detail
+      // both render from `project()`, is a CRASH on the athlete's phone rather than
+      // a red in a harness. It stopped carrying composed prescription rows (see
+      // `isComposedPrescriptionRow`); the authored words they are owed do not exist
+      // yet, and signing the composer's output instead would be the defect the
+      // branded type exists to prevent. So the gap is stated here in its own words
+      // instead of as a throw: the part is carried, named and capable, and its rows
+      // do not add up.
+      //
+      // EXACT EQUALITY, not "at least one". A part that carried three of its five
+      // rows would satisfy a non-empty test while two pieces of the athlete's
+      // session had quietly gone missing.
+      //
+      // TWO LAWS, NOT ONE, and the split is what keeps either of them meaning
+      // something. `isComposedPrescriptionRow` is imported from the projection
+      // rather than reimplemented here, so what the law counts as owed is exactly
+      // what the projection claims it can carry — one predicate, both ends.
+      // Counting composed rows as owed would have made every arithmetic shortfall
+      // look alike, and the composed-row debt would have been free to hide a real
+      // lost strength row behind it (it nearly did: on a combined sprint day the
+      // keyword-tail classifier puts composed sprint rows in `strengthRows`, so
+      // the shortfall showed up on a STRENGTH part).
+      const rowsOwed = getSessionComponentRows(mirror.workout as never);
+      const authored = (rows: any[]): number =>
+        rows.filter((row) => !isComposedPrescriptionRow(row)).length;
+      const owedByKind: Record<string, number> = {
+        strength: authored(rowsOwed.strengthRows),
+        support: authored(rowsOwed.supportRows),
+        conditioning: authored(rowsOwed.conditioningRows),
+      };
+      for (const part of visibleDay.parts) {
+        const owed = owedByKind[String(part.kind)];
+        if (owed === undefined || owed === part.rows.length) continue;
+        offend('L-P3 ROWS CONSERVATION',
+          `${day.date}: the projection carries a "${part.kind}" part with `
+          + `${part.rows.length} rows while the day has ${owed} authored ones. A part `
+          + 'the athlete is shown must carry the work that is in it.');
+      }
+
+      // L-P2, AT ROW LEVEL — the work the projection cannot name.
+      //
+      // The other half of the split above, stated as what it is rather than as an
+      // arithmetic shortfall: these rows exist on the athlete's day and their names
+      // were assembled by `sessionBuilder.condEx` out of planner nouns and numbers,
+      // so no authored source owns them and no surface reading the projection can
+      // say them. Declared, with the conditioning-generation owner named.
+      const composedRows = [
+        ...rowsOwed.strengthRows, ...rowsOwed.supportRows, ...rowsOwed.conditioningRows,
+      ].filter(isComposedPrescriptionRow);
+      if (composedRows.length > 0) {
+        const example = String(composedRows[0]?.exercise?.name ?? composedRows[0]?.name ?? '');
+        offend('L-P2 SIGNED WORDS',
+          `${day.date}: ${composedRows.length} rows on this day carry names the builder `
+          + `composed, so the projection can name none of them — e.g. "${example}".`);
+      }
     }
 
     // L-P4 THE MENU AND THE PROJECTION AGREE ABOUT WHAT IS ON THE DAY.
@@ -914,23 +995,6 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
 /** The part list a surface would show. The ONLY plural, per the ruling. */
 function partIds(workout: unknown): string[] {
   return getSessionComponents((workout ?? null) as never).map((part) => String(part.id));
-}
-
-/**
- * What the DETAIL screen thinks is on a day, in the projection's vocabulary.
- * Ported from `surfaceAgreementTests.detailStory` — same five questions asked of
- * the same composition.
- */
-function detailPartKinds(workout: unknown): string[] {
-  const composed = quiet(() => composeDayDetail(
-    (workout ?? null) as never, (workout ?? null) as never));
-  const parts: string[] = [];
-  if (composed.strengthExercises.length > 0) parts.push('strength');
-  if (composed.supportExercises.length > 0) parts.push('support');
-  if (composed.conditioningRowCount > 0) parts.push('conditioning');
-  if (composed.isRecovery) parts.push('recovery');
-  if (composed.hasTeamTraining) parts.push('team_training');
-  return Array.from(new Set(parts)).sort();
 }
 
 const host: WalkerHost = {
@@ -1022,88 +1086,61 @@ interface DeclaredRed {
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   {
-    id: 'projection_row_names_are_planner_text',
+    id: 'generated_conditioning_rows_have_no_authored_name',
     law: 'L-P2 SIGNED WORDS',
-    // Row names ONLY. An unsigned day or part HEADLINE is a different gap and
-    // still fails this suite.
-    matches: /"exercise\.name\.[^"]*" is not in the signed-copy sheet/,
-    why: 'DEFECT 3, ONE LAYER DOWN. `surfaceAgreementTests` cell 3 banned planner '
-      + 'vocabulary from a session NAME; the walker finds it in a ROW name two '
-      + 'actions from a fresh install, which no fixture in the suite had reached. '
-      + 'Reproduce: bounded seed 1, 2 actions — answer onboarding (In-season, team '
-      + 'Wednesday), generate the program. 12 distinct unsigned ids across the deep '
-      + 'tier, e.g. "Aerobic conditioning component (3 x 8min zone 2 Mixed Erg '
-      + 'Block)", "Assault Bike warm-up", "MetCon - Off-Legs", "Erg EMOM - 10-15 '
-      + 'cal", "Easy Spin or Walk". The generator COMPOSES these strings; the '
-      + 'signed sheet cannot contain them and must not be made to.',
-    paidBy: 'Task 6 (the detail/row surface migrates to project()\'s rows)',
-    expiresWhen: 'every row name a generated week can produce resolves through the '
-      + 'signed sheet — which means the generator stops composing row names, not '
-      + 'that the sheet grows to hold composed ones.',
+    matches: /rows on this day carry names the builder composed/,
+    why: 'THE SUCCESSOR TO `projection_row_names_are_planner_text`, and it names the '
+      + 'debt where the debt actually is. That entry said `project()` threw '
+      + '`UnsignedCopyError` on row names from real generated weeks. Task 6 traced '
+      + 'the whole population and it splits in two. HALF was authored and simply '
+      + 'unregistered — every row the add menu places carries a name from '
+      + '`coachRevisionTemplates.ts`, "the ONLY source of addable content ... '
+      + 'template-derived, never free-form" — and that half is PAID: '
+      + '`projectionCopy.ts` registers the set, derived from the registry\'s own '
+      + 'emitter. The other half is not a registration gap at all: a generated '
+      + 'conditioning row\'s name is COMPOSED by `sessionBuilder.ts` out of planner '
+      + 'nouns and numbers ("Aerobic conditioning component (3 x 8min zone 2 Mixed '
+      + 'Erg Block)", "Assault Bike warm-up", "Quality speed warm-up (short)") — '
+      + 'defect 3 (`surfaceAgreementTests` cell 3) one layer down. Signing those '
+      + 'would launder planner scratch into `SignedCopy`, which is the one thing '
+      + 'this projection exists to make impossible, and the old entry said so '
+      + 'itself: "the sheet cannot contain them and must not be made to". So '
+      + '`project()` no longer carries a composed prescription row '
+      + '(`isComposedPrescriptionRow`), and the gap is stated as what it is rather '
+      + 'than as a throw — a throw being, now that the card and the detail both '
+      + 'render from `project()`, a CRASH on his phone rather than a red in a '
+      + 'harness. NOT a conditioning-only shape, which is why the predicate is the '
+      + 'row\'s own type and not its bucket: the row that exposed it was a sprint '
+      + 'micro-dose warm-up the keyword-tail classifier had put in `strengthRows`. '
+      + 'Reproduce: bounded seed 4, 2 actions — answer onboarding (Pre-season), '
+      + 'generate; also every combined or standalone conditioning day in every seed.',
+    paidBy: 'the conditioning-generation owner — `data/conditioningTemplates.ts` is '
+      + 'Sam\'s 55 signed doses and its own header says "NOT WIRED YET ... Stage B '
+      + 'switches selection onto it". When a conditioning row is named by the '
+      + 'authored template it came from, this projection can carry it. NOT a '
+      + 'buttons/UI task.',
+    expiresWhen: 'a generated conditioning row carries an authored name, so '
+      + '`rowsForKind` can return conditioning rows without composing a word.',
     redsIn: 'both',
   },
 
-  // ── L-P3 DETAIL: THREE DEFECTS, THREE ENTRIES ────────────────────────────
-  // These shared one id and one regex until review pointed out what that costs:
-  // Task 6 could fix any one of them and the stale-debt cell would not notice,
-  // because the other two keep the entry alive. Debt is only a ratchet if each
-  // notch can be released on its own.
-  {
-    id: 'detail_has_no_row_surface_for_recovery_power_speed',
-    law: 'L-P3 DETAIL = PROJECTION',
-    // Omissions drawn ONLY from the three kinds `composeDayDetail` has no row
-    // surface for, and nothing invented. A detail that drops `strength` or
-    // `conditioning` is entry 2; one that invents is entry 3.
-    matches: /omits \["(?:power|recovery|speed)"(?:,"(?:power|recovery|speed)")*\] and invents \[\]/,
-    why: '`composeDayDetail` exposes rows for strength, support and conditioning '
-      + 'and nothing else, so a projected recovery, power or speed part simply has '
-      + 'no place on the detail screen and vanishes from its account. Reproduce: '
-      + 'bounded seed 1, 2 actions — answer onboarding (In-season, team Wednesday), '
-      + 'generate the program: 2026-07-20 detail ["strength"] / projection '
-      + '["recovery","strength"]. Observed omission sets: ["recovery"], ["power"], '
-      + '["power","recovery"], ["power","recovery","speed"].',
-    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
-    expiresWhen: 'a projected recovery/power/speed part appears in the detail\'s '
-      + 'own account of the day.',
-    redsIn: 'both',
-  },
-  {
-    id: 'detail_shows_nothing_where_the_projection_has_work',
-    law: 'L-P3 DETAIL = PROJECTION',
-    // The omission set CONTAINS conditioning or strength — work with a row
-    // surface that still did not reach the screen. Disjoint from entry 1, which
-    // cannot contain either kind.
-    matches: /omits \[(?=[^\]]*"(?:conditioning|strength)")[^\]]*\] and invents \[\]/,
-    why: 'A DIFFERENT DEFECT WEARING THE SAME LAW. Here the missing kinds are ones '
-      + '`composeDayDetail` DOES have a surface for — it composed zero rows for a '
-      + 'day the projection says carries strength or conditioning, so the detail '
-      + 'renders an empty day over real work. Observed: omits ["conditioning"], '
-      + '["strength"], ["conditioning","recovery"], each with detail [] or a '
-      + 'strictly smaller list. Reproduce: bounded seed 10 reaches '
-      + 'detail [] / projection ["strength"] on 2026-07-20.',
-    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
-    expiresWhen: 'the detail\'s account of a day contains every strength and '
-      + 'conditioning part the projection carries.',
-    redsIn: 'both',
-  },
-  {
-    id: 'detail_swaps_conditioning_for_recovery',
-    law: 'L-P3 DETAIL = PROJECTION',
-    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
-    why: 'THE ONLY SHAPE THAT INVENTS. The detail reports a recovery day where the '
-      + 'projection has conditioning — not a part dropped but a part REPLACED, '
-      + 'which is defect 2\'s inverse split (`surfaceAgreementTests` cell 2) seen '
-      + 'from the detail side: conditioning added to a recovery day gets swallowed '
-      + 'by the recovery template. Rarest shape in the survey (1 occurrence, deep '
-      + 'seed 1, 2026-08-04) and the one most likely to be lost if it shared an id '
-      + 'with the two above. DEEP ONLY, verified by survey: it needs a week that has '
-      + 'accumulated both a recovery add-on and a conditioning placement, which the '
-      + 'bounded tier\'s fourteen actions do not build — the stale-debt cell caught '
-      + 'the first draft claiming `both` and refused it.',
-    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
-    expiresWhen: 'the detail never reports a kind the projection does not carry.',
-    redsIn: 'deep',
-  },
+  // ── L-P3 DETAIL: THREE ENTRIES, PAID IN FULL BY TASK 6, 2026-07-31 ───
+  // `detail_has_no_row_surface_for_recovery_power_speed`,
+  // `detail_shows_nothing_where_the_projection_has_work` and
+  // `detail_swaps_conditioning_for_recovery` lived here. All three were one defect
+  // seen three ways: the detail screen composed its own account of the day at
+  // render (`composeDayDetail`), and that composition had a row surface for
+  // strength, support and conditioning and NONE for recovery, power or speed — so
+  // work vanished, an empty day rendered over real work, and on a day carrying
+  // both, the added conditioning was folded inside the recovery template.
+  //
+  // DELETED, NOT SILENCED. What paid them is ownership, not three fixes:
+  // `DayWorkoutScreenV2` renders `projectDayDetail(visibleDay)` — the projection's
+  // own parts, every one of them, in order — and `useDayWorkout` composes nothing,
+  // which `dayDetailCompositionOwnershipTests` pins by naming ONE production
+  // caller. The survey (`WALKER_SURVEY=1`) records zero `L-P3 DETAIL = PROJECTION`
+  // offences in either tier, and the stale-debt cell below would fail this file if
+  // any of the three had been left carrying a debt that is paid.
 
   // ── L-P4: PAID IN FULL BY TASK 4, 2026-07-31 ────────────────────────────
   // Four entries lived here — two capability shapes and two move shapes, all on

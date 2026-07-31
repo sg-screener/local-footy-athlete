@@ -179,8 +179,14 @@ function extract(): ExtractedString[] {
  * words while the migration is in flight raises it and fails here. Lowering the
  * number is the unit's visible progress; raising it requires a deliberate edit
  * somebody has to justify.
+ *
+ * 187 -> 182 (Task 1, repeat-week deleted) -> 166 (Task 6). Task 6's drop is two
+ * things: the day-workout Classic render layer is deleted outright, and the
+ * day-detail header stopped pasting the raw engine `workoutType` onto the glass.
+ * DROPPED IN THE SAME COMMIT AS THE DELETION — a ceiling left sitting sixteen
+ * above the real count is not a ratchet, it is headroom.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 182;
+const ATHLETE_VISIBLE_GAP_CEILING = 166;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

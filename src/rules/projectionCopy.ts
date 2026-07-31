@@ -58,6 +58,7 @@ import { TEAM_ONLY_NAME } from '../utils/sessionNaming';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 import { CONDITIONING_SUBSTITUTION_ROW_NAMES } from './conditioningFeasibility';
+import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
 /**
  * Athlete-facing strength session name -> the `part.headline.strength.<id>`
@@ -179,11 +180,10 @@ export function registerProjectionCopy(): void {
     {
       id: 'part.headline.game',
       source: 'sam_ruling',
-      provenance: 'NEW — proposed, Batch 6, Task 2. Defensive registration: '
-        + '`COMPONENT_TO_PART` has no mapping that currently produces a `game`-kind '
-        + 'part, so this id is not reachable through `partsForWorkout` today, but '
-        + '`VisiblePartKind` includes it and the ownership test requires every kind '
-        + 'to resolve.',
+      provenance: 'NEW — proposed, Batch 6, Task 2; REACHABLE since Task 6. It was '
+        + 'registered defensively because no mapping produced a `game`-kind part; '
+        + '`partKind` now converts a fixture\'s last-resort `session` placeholder, so '
+        + 'a game day\'s part is named for what it is instead of reading "Strength".',
       text: 'Game Day',
     },
     {
@@ -262,6 +262,24 @@ export function registerProjectionCopy(): void {
       provenance: 'rules/conditioningFeasibility.ts applyResolvedConditioningSubstitution '
         + '— authored equipment-substitution names, already shipping; not selectable '
         + 'generator vocabulary (see module header).',
+      text: name,
+    })),
+
+    // ── Template-registry row names. ──
+    //
+    // TASK 6. `project()` threw on the athlete's day-detail screen the moment he
+    // added anything from the add menu: every row a template places carries a
+    // name from `coachRevisionTemplates.ts`, and none of them were in the sheet.
+    // That registry is the authored source — "the ONLY source of addable content
+    // ... template-derived, never free-form" — and the list is DERIVED from its
+    // own emitter (see `COACH_REVISION_TEMPLATE_ROW_NAMES`), so a template Sam
+    // adds is signed without a second edit here.
+    ...COACH_REVISION_TEMPLATE_ROW_NAMES.map((name): SignedCopyEntry => ({
+      id: exerciseNameCopyId(name),
+      source: 'authored_sheet',
+      provenance: 'utils/coachRevisionTemplates.ts — the addable-content registry '
+        + '(template labels + the recovery-flow rows). Already shipping: these are '
+        + 'the words the add menu offers and the day shows after the add.',
       text: name,
     })),
 

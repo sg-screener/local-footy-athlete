@@ -43,7 +43,7 @@ import { profileCapacityBandOrNull } from '../utils/readiness';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import { project } from '../rules/projectVisibleWeek';
-import type { VisibleWeek } from '../rules/visibleProjection';
+import type { VisibleDay, VisibleWeek } from '../rules/visibleProjection';
 
 // ─── Internal: Read raw state from both stores ───
 
@@ -278,6 +278,49 @@ export function useResolvedWeekForDate(date: string | undefined): ResolvedDay[] 
 }
 
 /**
+ * ONE PROJECTION COMPUTATION FOR THE WHOLE SCREEN FAMILY.
+ *
+ * The card path (`useResolvedWeek`) and the day-detail path (`useVisibleDay`)
+ * call THIS, not `project()` — because two call sites is two chances to pass
+ * different arguments, and "the card and the detail disagree" is the defect the
+ * projection exists to make unwritable. Same week builder, same weekStart, same
+ * `project()`.
+ *
+ * No try/catch, deliberately: a week whose words are not signed is a real gap
+ * (`UnsignedCopyError`) and must surface loudly rather than be swallowed into
+ * free text (L14).
+ */
+function projectWeekFor(
+  mondayISO: string,
+  state: ReturnType<typeof useScheduleState>,
+): { weekDays: ResolvedDay[]; visibleWeek: VisibleWeek } {
+  const overrideContexts = useProgramStore.getState().overrideContexts ?? {};
+  const weekDays = buildProgramTabProjectedWeek({
+    mondayISO,
+    todayISO: todayISOLocal(),
+    state,
+    overrideContexts,
+    modalityPreferences: (state as any).modalityPreferences,
+  });
+  return { weekDays, visibleWeek: project({ week: weekDays, weekStart: mondayISO }) };
+}
+
+/**
+ * The projected day the DAY-DETAIL screen renders.
+ *
+ * Same projection the week card reads, located by date. `useResolvedDay` stays
+ * beside it in `useDayWorkout` and keeps its job — it is the INPUT state (weights,
+ * receipts, keyboard, cues all key off the raw workout's rows). This one owns
+ * the words and the part list.
+ */
+export function useVisibleDay(date: string | undefined): VisibleDay | null {
+  const state = useScheduleState();
+  if (!date) return null;
+  const { visibleWeek } = projectWeekFor(getMondayStrForDate(date), state);
+  return visibleWeek.days.find((day) => day.date === date) ?? null;
+}
+
+/**
  * Navigable week resolution. Used by Program tab (HomeScreen).
  * Includes week navigation (prev/next/this week) and week label.
  */
@@ -292,24 +335,11 @@ export function useResolvedWeek() {
   const [weekOffset, setWeekOffset] = useState(0);
 
   const mondayStr = getMondayStr(weekOffset);
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { useProgramStore } = require('../store/programStore');
-  const overrideContexts =
-    useProgramStore.getState().overrideContexts ?? {};
-  const todayISO = todayISOLocal();
-  const weekDays = buildProgramTabProjectedWeek({
-    mondayISO: mondayStr,
-    todayISO,
-    state,
-    overrideContexts,
-    modalityPreferences: (state as any).modalityPreferences,
-  });
-  // THE ONE PROJECTION, computed once here beside `weekDays` — the card
-  // surface (HomeScreenV2) renders `visibleWeek.days[*].headline` /
-  // `.parts[*].headline` and reads no raw `workout.name`. No try/catch: a
-  // week whose words are not yet signed is a real gap (`UnsignedCopyError`)
-  // and must surface loudly, not be swallowed into free text.
-  const visibleWeek: VisibleWeek = project({ week: weekDays, weekStart: mondayStr });
+  // THE ONE PROJECTION, computed once beside `weekDays` — the card surface
+  // (HomeScreenV2) renders `visibleWeek.days[*].headline` / `.parts[*].headline`
+  // and reads no raw `workout.name`. Shared with the day-detail screen through
+  // `projectWeekFor`, so the two surfaces cannot be handed different arguments.
+  const { weekDays, visibleWeek } = projectWeekFor(mondayStr, state);
   const weekLabel = formatWeekLabel(mondayStr);
   const isThisWeek = weekOffset === 0;
 

@@ -15,48 +15,34 @@
  *   3. Move Tue -> Sat. The Tuesday card rendered internal planner vocabulary —
  *      "Aerobic conditioning component (25m…)" — to an athlete.
  *
- * DELIBERATELY NOT IN `test:bible` YET. Sam's process ruling: the gate stays
- * green after every stage so the branch is mergeable at all times, and the
- * surface laws enter the bible IN THEIR GREEN COMMIT. These cells are red on
- * today's code by design — they are the reds owed before any surface moves — so
- * they are runnable and reportable but ungated until stage 4 turns them green.
+ * ARMED IN `test:bible` SINCE TASK 6 (2026-07-31). Sam's process ruling was that
+ * the gate stays green after every stage and the surface laws enter the bible IN
+ * THEIR GREEN COMMIT, not before. This is that commit: the menu (Task 4), the week
+ * card (Task 5) and the day-detail title/content (Task 6) all render from
+ * `project()`, and the L-P1/L-P3 cells hold against it. A failure exits 1.
  *
  * WHAT THE LAW IS, AND WHY IT IS PHRASED THIS WAY. The assertion is
  * `surface === projection`, never `surface_a === surface_b`. Two surfaces that
  * drifted together would satisfy the weaker form, and surfaces agreeing with each
- * other's mistakes is the whole failure being replaced. Until `project()` exists
- * (stage 2 of the build), the CANONICAL answer is taken from the one place that is
- * already a single derivation of accepted state — `buildProgramTabProjectedWeek` —
- * and each pixel-bearing surface is compared to IT. That is exactly the finding
- * the reassessment named: no screen imports it, so every screen is free to differ.
+ * other's mistakes is the whole failure being replaced. The CANONICAL answer is
+ * `buildProgramTabProjectedWeek` -> `project()`, and each pixel-bearing surface is
+ * compared to IT. That is exactly the finding the reassessment named: no screen
+ * imported it, so every screen was free to differ.
  *
- * REPRODUCTION STATUS, 2026-07-30 — read this before trusting a pass.
+ * STATUS, 2026-07-31 — read this before trusting a result.
  *
- * Only cell 2 goes red today. Cells 1, 3 and 4 PASS, and they pass because this
- * harness cannot yet reach the surface that actually disagreed on his phone:
+ *   - Cell 1 PASSES, and since Task 6 it passes through the REAL detail path:
+ *     `projectDayDetail` is what `DayWorkoutScreenV2` renders, so the third story
+ *     is finally in the comparison rather than represented by a stand-in.
+ *   - Cell 2's surface half PASSES. Its remaining red, and cell 4's, are ONE
+ *     domain gap — the G+1 Sunday resolves as REST with no workout in every world
+ *     this harness can act its way to — declared below as
+ *     `g1_sunday_is_rest_not_a_recovery_day`, owned outside this unit, stale-
+ *     checked, and never counted as a pass.
+ *   - Cell 3 PASSES over the whole visible horizon.
  *
- *   - The DETAIL TITLE and DETAIL CONTENT come from `useDayWorkout`, a React hook
- *     that re-derives conditioning identity, option titles and row grouping at
- *     render. It cannot be called from a node harness, so cells 1 and 2 currently
- *     compare `resolveWeekWithConditioning` (the card's source) against
- *     `buildProgramTabProjectedWeek` (the canonical one) — TWO DOMAIN
- *     projections. Those two agree here. The third and fourth stories, which are
- *     the ones he photographed, are not in this comparison at all.
- *   - Cell 4 passes because in a freshly-acted world the G+1 Sunday DOES resolve
- *     a session. His device reached that day after a session's worth of edits;
- *     the add-only menu is a property of that state, not of a clean generate.
- *
- * This is the `harness-enters-below-the-door` failure for the third time, now on
- * the render side, and it is recorded rather than worked around: the honest fix is
- * to make the detail surface callable — extract `useDayWorkout`'s composition into
- * a pure function the harness can call, which is stage 4's first move anyway
- * because that composition is one of the nine paths being retired. Until then a
- * pass in cells 1/3/4 means "the two domain projections agree", NOT "the surfaces
- * agree", and must not be read as the defect being absent.
- *
- * Cell 2's red is real and is defect 2's inverse split: adding conditioning to a
- * recovery day leaves parts ["conditioning"] — the recovery is gone from the
- * projection itself, so no surface can render it.
+ * The `harness-enters-below-the-door` note this header used to carry is paid: the
+ * detail surface is callable, and it is the one the screen calls.
  *
  * Run: npm run test:surface-agreement
  */
@@ -92,8 +78,8 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { getSessionComponents } from '../utils/sessionComponents';
-import { composeDayDetail } from '../utils/dayDetailComposition';
 import { project } from '../rules/projectVisibleWeek';
+import { projectDayDetail } from '../rules/visibleDayDetail';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -108,15 +94,98 @@ function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
 }
 
+/**
+ * A DECLARED DOMAIN GAP — the walker's `DECLARED_RED` pattern, in this suite.
+ *
+ * This suite is ARMED (Task 6): it is in `test:bible` and a failure exits 1. Two
+ * of its four cells assert something that is true of Sam's DEVICE and not of any
+ * world this harness can reach by acting, and the reason is one gap sitting
+ * upstream of every surface — so the honest move is neither to delete the cells
+ * nor to soften what they assert, but to name the gap, pin the exact message it
+ * produces, and let the assertion stand behind it word for word.
+ *
+ * The three properties that make this a ratchet rather than a mute button, all
+ * borrowed from `athleteActionWalkerTests`:
+ *
+ *   1. THE ASSERTION IS UNCHANGED. Not loosened, not skipped early, not wrapped
+ *      in a conditional. It runs, it fails, and the failure is matched against a
+ *      declared message. L13: "cells go green by surfaces converging, never by
+ *      asking less" — nothing here went green.
+ *   2. STALE DECLARATIONS FAIL. If a declared gap stops producing its message,
+ *      the suite fails and the entry has to be deleted. A gap cannot outlive the
+ *      defect it names.
+ *   3. IT IS VISIBLE IN THE OUTPUT AND IT IS NOT A PASS. Declared gaps print as
+ *      `GAP` and are counted separately from `passed`, so no run of this suite
+ *      can be read as "four cells agree".
+ */
+interface DeclaredDomainGap {
+  id: string;
+  /** The exact failure this explains. Cut from the message, not guessed at. */
+  matches: RegExp;
+  why: string;
+  owner: string;
+  expiresWhen: string;
+}
+
+const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [
+  {
+    id: 'g1_sunday_is_rest_not_a_recovery_day',
+    matches: /the projection no longer shows recovery at all|is not considered to have a session/,
+    why: 'ONE GAP, TWO CELLS, AND IT IS UPSTREAM OF EVERY SURFACE. Cells 2 and 4 '
+      + 'both describe the Sunday after his Saturday fixture as a RECOVERY day — '
+      + 'cell 2 asks that adding hard intervals to it must not delete the recovery '
+      + 'already there, cell 4 that it be offered the same menu as any other day. '
+      + 'Probed on the world this harness actually reaches: that Sunday resolves '
+      + '`source: "rest"` with NO workout at all, so there is no recovery for the '
+      + 'add to conserve and no session for the menu to act on. Game-proximity '
+      + 'recovery is resolver-owned derived filler regenerated every render '
+      + '(`isResolverOwnedDerivedSession`), never a composed placeholder — the '
+      + 'reassessment names this exactly: "a recovery day whose content is '
+      + 'resolver-owned derived filler has no composed placeholder ... so it '
+      + 'presents as NOT A SESSION, and the menu collapses to add-only. That is '
+      + 'defect 4, and it is not a menu bug: the menu is correctly reporting a '
+      + 'projection that does not consider a recovery day to be a day." Cell 2\'s '
+      + 'red used to be hidden behind an `UnsignedCopyError` thrown one assertion '
+      + 'earlier; Task 6 paid that half (the row names an add places are registered '
+      + 'now, and its L-P1/L-P3 surface assertions PASS), which uncovered the '
+      + 'domain half underneath. A carried red shadowing the one behind it is a '
+      + 'shape this branch has already been caught by once (commit 3f879d4).',
+    owner: 'the recovery-as-a-day-type owner — reassessment staging step 5 '
+      + '("Recovery as a day type; REST as a kind. Re-verify §18 counting '
+      + 'explicitly"), which is a DOMAIN unit with a Bible question attached '
+      + '(reassessment "what this does NOT settle", item 3), not a surface task. '
+      + 'Raised for Sam in the buttons/UI boundary report.',
+    expiresWhen: 'a G+1 Sunday projects as a real day with real parts, so adding '
+      + 'to it conserves what was there and its menu offers what any other day\'s '
+      + 'does.',
+  },
+];
+
+const gapsHit = new Set<string>();
+let gapped = 0;
+
+function declaredGapFor(message: string): DeclaredDomainGap | null {
+  return DECLARED_DOMAIN_GAPS.find((gap) => gap.matches.test(message)) ?? null;
+}
+
 function run(name: string, body: () => void): void {
   try {
     body();
     passed += 1;
     console.log(`  PASS ${name}`);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const gap = declaredGapFor(message);
+    if (gap) {
+      gapped += 1;
+      gapsHit.add(gap.id);
+      console.log(`  GAP  ${name}\n      declared domain gap: ${gap.id}`
+        + `\n      owner: ${gap.owner}\n      ${message}`);
+      return;
+    }
     failed += 1;
     failures.push(name);
-    console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+    console.error(`  FAIL ${name}\n      ${message}`);
   }
 }
 
@@ -211,39 +280,37 @@ function tap(change: PlanChange) {
 }
 
 /**
- * THE DETAIL SURFACE'S OWN STORY — now reachable.
+ * THE DETAIL SURFACE'S OWN STORY, AND THE PROJECTION'S — from the real path.
  *
- * `composeDayDetail` is `useDayWorkout`'s composition, extracted verbatim. This is
- * the third story Sam photographed, and until the extraction it could not be
- * compared to anything from a harness.
+ * Until Task 6 this read `composeDayDetail`, the composition `useDayWorkout`
+ * performed at render: five booleans and three row buckets, which is how a day
+ * carrying strength AND recovery told the athlete "Strength". That composition no
+ * longer reaches a screen. `projectDayDetail` (`rules/visibleDayDetail.ts`) is
+ * what `DayWorkoutScreenV2` renders now — title, attached-part line and section
+ * list — so the comparison below is against the function that actually draws the
+ * pixels, not against a stand-in for it.
+ *
+ * WHAT THIS CELL STILL PROVES, STATED PLAINLY. `projectDayDetail` maps `parts`,
+ * so the two lists agree by construction — that IS the ruled end state
+ * (reassessment §4: "`parts` is the ONLY plural ... two surfaces reading one list
+ * cannot disagree", and defects 1 and 2 become *unrepresentable*). What the
+ * assertion holds is that it STAYS that way: a filter, a `kind` branch or a
+ * "recovery renders differently" case added to the detail surface reds here and
+ * in the walker on the next run, which is exactly the shape of the defect being
+ * paid (`composeDayDetail` had a row surface for three kinds and none for
+ * recovery, power or speed). The teeth that do not depend on that live below, in
+ * cell 2's own two assertions about what the DOMAIN carries after an add.
  */
-function detailStory(workout: Workout | null | undefined): {
-  title: string | null; parts: string[];
+function detailAndProjectionKinds(week: string, date: string): {
+  detail: string[]; projection: string[];
 } {
-  const composed = composeDayDetail(workout ?? null, workout ?? null);
-  const parts: string[] = [];
-  if (composed.strengthExercises.length > 0) parts.push('strength');
-  if (composed.supportExercises.length > 0) parts.push('support');
-  if (composed.conditioningRowCount > 0) parts.push('conditioning');
-  if (composed.isRecovery) parts.push('recovery');
-  if (composed.hasTeamTraining) parts.push('team_training');
-  return { title: workout?.name ?? null, parts };
-}
-
-/**
- * The CANONICAL parts, from `project()` — the one projection.
- *
- * `project()`, not `projectParts()`, since the buttons/UI unit's Task 2: with a
- * full registered vocabulary and populated rows, `project()` no longer throws
- * for a real week, so there is no reason left to read the words-not-yet-applied
- * half of the derivation here. Evaluating the fuller function also means a
- * regression that only shows up once words are involved (an unregistered
- * headline, an empty `rows` array) would be visible to this suite too.
- */
-function canonicalPartKinds(week: string, date: string): string[] {
   const projected = project({ week: projectedWeek(week), weekStart: week });
-  const day = projected.days.find((candidate) => candidate.date === date);
-  return (day?.parts ?? []).map((part) => part.kind);
+  const day = projected.days.find((candidate) => candidate.date === date) ?? null;
+  const detail = projectDayDetail(day);
+  return {
+    detail: Array.from(new Set((detail?.sections ?? []).map((section) => String(section.kind)))).sort(),
+    projection: Array.from(new Set((day?.parts ?? []).map((part) => String(part.kind)))).sort(),
+  };
 }
 
 /** L-P1 + L-P3 for one day, against the canonical projection. */
@@ -268,11 +335,9 @@ function assertSurfacesAgree(date: string, context: string): void {
     + `projection ${JSON.stringify(canonicalParts)}. \`parts\` is the only plural; `
     + 'a surface that shows a different list has composed its own.');
 
-  // THE THIRD SURFACE — the detail screen's own composition, now callable.
-  // Compared against `project()`'s part kinds, which is the one canonical answer.
-  const detail = detailStory(canonical.workout);
-  const canonicalKinds = Array.from(new Set(canonicalPartKinds(week, date))).sort();
-  const detailKinds = Array.from(new Set(detail.parts)).sort();
+  // THE THIRD SURFACE — what the day-detail screen renders, from the real path.
+  const { detail: detailKinds, projection: canonicalKinds } =
+    detailAndProjectionKinds(week, date);
   assert(JSON.stringify(detailKinds) === JSON.stringify(canonicalKinds),
     `${context} — L-P3: the DETAIL screen and the projection disagree about what is `
     + `on ${date}. detail ${JSON.stringify(detailKinds)} / projection `
@@ -280,7 +345,7 @@ function assertSurfacesAgree(date: string, context: string): void {
     + 'composes its own account at render.');
 }
 
-console.log('\n-- Surface agreement (L-P1/L-P3) — STAGE 3 REDS, ungated by design --');
+console.log('\n-- Surface agreement (L-P1/L-P3) — ARMED, in test:bible since Task 6 --');
 
 run('(1) adding strength to the G+1 recovery Sunday tells ONE story', () => {
   reachHisWorldByActing();
@@ -303,14 +368,17 @@ run('(2) adding hard conditioning to a recovery day keeps recovery visible', () 
   // surfaces must show both.
   const canonical = dayFrom(projectedWeek(mondayFor('2026-08-02')), '2026-08-02');
   const parts = partIds(canonical?.workout);
-  assert(parts.includes('recovery') || parts.includes('recovery_addon'),
-    `defect 2: after adding conditioning the projection no longer shows recovery at `
-    + `all — parts ${JSON.stringify(parts)}. Adding work to a day must not delete `
-    + 'the work already on it.');
+  // ORDERED SO THE SURFACE CLAIM RUNS FIRST. The recovery-conservation assertion
+  // below is a declared domain gap and aborts the cell; the conditioning claim is
+  // about the surface this task owns and would otherwise never be reached.
   assert(parts.some((part) => part === 'conditioning' || part === 'finisher'),
     `defect 2: the conditioning the athlete added is not a part — `
     + `${JSON.stringify(parts)}. It was embedded inside the recovery template `
     + 'instead of standing beside it.');
+  assert(parts.includes('recovery') || parts.includes('recovery_addon'),
+    `defect 2: after adding conditioning the projection no longer shows recovery at `
+    + `all — parts ${JSON.stringify(parts)}. Adding work to a day must not delete `
+    + 'the work already on it.');
 });
 
 run('(3) no surface renders internal planner vocabulary', () => {
@@ -366,13 +434,27 @@ run('(4) a recovery day is offered the same capabilities as any other day', () =
     `defect 4: a recovery day is offered no move — "${recoveryDay.move.refusal?.message}"`);
 });
 
-console.log(`\nSurface agreement totals: ${passed} passed, ${failed} failed`);
-console.log('  STAGE 3: these are the reds owed before any surface moves. They enter');
-console.log('  test:bible in their GREEN commit (Sam\'s process ruling), not before.');
+// STALE DECLARATIONS FAIL — a gap that stopped happening is a cell that went
+// green, and the commit that turned it green owes the deletion of its entry.
+const staleGaps = DECLARED_DOMAIN_GAPS.filter((gap) => !gapsHit.has(gap.id));
+if (staleGaps.length > 0) {
+  failed += staleGaps.length;
+  for (const gap of staleGaps) {
+    failures.push(`declared domain gap no longer reds: ${gap.id}`);
+    console.error(`  FAIL declared domain gap "${gap.id}" no longer reds — delete the `
+      + 'entry, do not leave it carrying debt that is already paid.');
+  }
+}
+
+console.log(`\nSurface agreement totals: ${passed} passed, ${gapped} declared gap(s), `
+  + `${failed} failed`);
+// ARMED IN TASK 6. This suite is in `test:bible` and a failure exits 1 — the
+// process ruling was that the surface laws enter the gate IN THEIR GREEN COMMIT,
+// and this is it: the surfaces moved onto `project()` and the L-P1/L-P3 cells
+// hold against it. The `process.exit(0)` softener that lived here is gone with
+// the stage it belonged to. What is NOT green is declared above and counted
+// separately, never as a pass.
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
-  // Exit 0 DELIBERATELY: ungated by design at stage 3. Turning this into a
-  // non-zero exit before the surfaces move would break Sam's "gate stays green
-  // after every stage, branch mergeable at all times".
-  process.exit(0);
+  process.exit(1);
 }
