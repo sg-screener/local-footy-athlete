@@ -26,6 +26,15 @@ independently by Task 11's measurement (2/9/972 of 30,937 distinct
 keys, so those three rules could not be deleted — only the ATHLETE-facing
 reads were closed, structurally, via a source contract).
 
+**LR-6 disclosure.** `coachRevisionTemplates.ts` changed additively this
+unit (Task 6): an exported row-name list (`COACH_REVISION_TEMPLATE_ROW_NAMES`,
+derived from the same emitter the writer already calls, not transcribed) was
+added so `projectionCopy.ts` could register template-placed row names as
+`SignedCopy`. The file is coach-pipeline-adjacent but nothing existing —
+behaviour, string, or matching key — changed; it is additive only, so it
+sits within the letter of the LR-6 freeze. Disclosed here for accuracy
+rather than left implicit.
+
 **The 13 design rulings** (`artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`):
 
 | # | Ruling | Status | Task |
@@ -213,7 +222,7 @@ all stay red until their named owner pays them — none is a buttons/UI task.
 
 ## SAM QUESTIONS
 
-Ten, in the order they surfaced in the ledger. Each has a pointer into the
+Eleven, in the order they surfaced in the ledger. Each has a pointer into the
 copy sheet, a declared-red entry, or a task report for the full trace.
 
 1. **Accessories vs Prehab.** Ruling 9 names the fifth Add/Swap row
@@ -283,7 +292,28 @@ copy sheet, a declared-red entry, or a task report for the full trace.
    collision in question 8 is resolved, this constraint changes nothing
    visible in any generated week today. Pointer: declared red 9 above.
 
-10. **Coach voice still composes from `workout.name`, LR-6-blocked.** The
+10. **The copy sheet lives outside the tracked tree, but the bible depends
+    on it.** `artifacts/COPY_SHEET_RULINGS_2026-07-30.md` is gitignored —
+    deliberately, `artifacts/` is a working directory — but
+    `test:copy-rulings-binding` (armed in `test:bible`, ~position 93)
+    hard-asserts the file exists and binds every quoted string against it
+    both directions. A fresh clone has no `artifacts/` directory, so the
+    bible fails immediately on it, and the entire signable Batch 6 pass
+    (§"Scope delivered" above) exists only as an untracked local file — one
+    `git clean` away from gone. Two fixes point opposite ways: track the
+    copy sheet (breaks the deliberate gitignore, but makes the bible
+    reproducible from a clean clone) or move the binder's read target out of
+    `artifacts/` into a tracked location (keeps the gitignore, adds a second
+    file to keep in sync). Since the gitignore is deliberate, this is Sam's
+    call to make, not a default to assume — but it needs to be asked, with
+    the fresh-clone/reproducibility consequence stated plainly. Pointer:
+    `.superpowers/sdd/2026-07-31-buttons-ui-unit/progress.md` (Task 7's
+    first addition surfaced this as its own numbered item; a later addition
+    reused the same number for a different question, and this one was
+    dropped by that collision — restored here as its own numbered question,
+    not folded into another).
+
+11. **Coach voice still composes from `workout.name`, LR-6-blocked.** The
     packet's day-summary prose is also a matching key the frozen
     router/executor string-compare, so moving it to projection vocabulary is
     a frozen-layer behaviour change LR-6 forbids. Unblocking needs a
@@ -294,8 +324,18 @@ copy sheet, a declared-red entry, or a task report for the full trace.
 
 ## NOT-COVERED
 
-- **Coach packet/voice composition** — LR-6-blocked; see Sam question 10 and
+- **Coach packet/voice composition** — LR-6-blocked; see Sam question 11 and
   the Scope-delivered section above.
+- **The binder's `src/rules/` blind spot.** `copyRulingsBindingTests`'s
+  SOURCES scan covers `screens/home`, `screens/coach`, `components`, and four
+  named authoring modules — it cannot see `src/rules/projectionCopy.ts` or
+  `src/rules/temporarySourceFact.ts`, both of which carry athlete-visible
+  strings that ship today (copy sheet §6-II-a, §6-II-e/f). Runtime `L-P2`
+  covers every rendered word, so the residual is direction-one only: a
+  RETIRED string could still sit unseen inside `src/rules/` after the app
+  stops rendering it, with nothing in the bible saying so. Recorded here so
+  whoever extends the binder next starts from a true inventory of what it
+  cannot see, not just what it can.
 - **`CoachScreen`'s verification layer reads** (`coachTurnController`,
   `coachUndoEngine`, `coachRevisionProposal`, `coachModalitySwapOrchestrator`,
   `programEditWriteGuard`) — explicitly not touched (LR-6); they keep
@@ -304,7 +344,14 @@ copy sheet, a declared-red entry, or a task report for the full trace.
 - **Recovery-as-a-day-type, stage 5 of the reassessment** — the 69 recovery
   branches beyond the migrated surfaces, and the §18 recovery-counting
   question. Needs Sam's ruling before it is buildable; the G+1 Sunday domain
-  gap (Sam question 7) is its symptom inside this unit's own gates.
+  gap (Sam question 7) is its symptom inside this unit's own gates. Handover
+  note for whoever builds this: `planChangeProducer.ts`'s `projectedDay(day)`
+  projects a single-day week (`[day]`), which is exact today only because
+  `projectParts` maps each day independently with no cross-day read — the
+  moment cross-day recovery derivation lands (a day's projection depending on
+  its neighbour, e.g. G+1 reading G's fixture), that single-day shortcut will
+  silently diverge from projecting the full week and picking the date out.
+  Re-verify the equivalence, don't assume it still holds.
 - **`HomeScreenClassic` deletion** — unreachable (`DESIGN_VERSION = 'v2'`
   early return) but not deleted; a nontrivial removal (source-regex pins
   elsewhere reference it) out of scope for a copy/UI unit.
@@ -318,13 +365,25 @@ copy sheet, a declared-red entry, or a task report for the full trace.
   classifiable row, keeps the whole composed title as the survivor's name —
   unreachable in every harness world today, but the honest closure (a
   strength section owning its own title) lives in `coachRevisionProposal.ts`,
-  LR-6 FROZEN. Belongs to the same coach-pipeline unit as Sam question 10.
+  LR-6 FROZEN. Belongs to the same coach-pipeline unit as Sam question 11.
   Three conjuncts gate reachability (composed title AND no strengthIntent AND
   no classifiable row), which is why no harness world hits it today.
 - **The refusal-numbers artifact gap** (Task 11, minor). The exact
   differential counts (2/6, 9/9, 972/987 of 30,937) are not re-runnable from
   disk as a standing artifact — the method is documented (~15 min rebuild)
   but there is no committed script that reproduces them on demand.
+- **The Task 7 cross-walk contamination harness hole** (minor, schedule
+  soon). The walker's schedule doors (`busy_week` / `away`) are driven by a
+  deterministic cell, not the random action band — because putting them in
+  the random band turns seed 6 red with an L1 generation crash, and the
+  shrunk history `[onboarding, generate]` does not reproduce it alone
+  (seeds 5-6 pass, seeds 4-6 fail), meaning something from an earlier walk
+  is contaminating a later one across the freshInstall boundary. Two missing
+  resets (athlete pool prefs, coach modality prefs) were fixed and do not
+  account for it. Currently sidestepped by keeping the doors in the
+  deterministic cell; the contamination itself is unfound and should be
+  scheduled soon, before another door tries to move into the random band and
+  inherits the same hazard.
 
 ## Method findings (from the ledger, verbatim in spirit)
 
@@ -395,7 +454,14 @@ merge condition: this checklist passes in ONE session, start to finish.
 2. RENDER CHECKS — card vs. day title vs. day content:
    a. Confirm identical wording for a day's name on the week card, the
       day-detail title, and the day-detail metadata line, across every day
-      of the visible fortnight, INCLUDING a G+1 recovery day.
+      of the visible fortnight — INCLUDING the day after a Saturday fixture
+      (G+1 Sunday). Declared gap 7 (`g1_sunday_is_rest_not_a_recovery_day`,
+      Sam question 7) means that day currently has no recovery placeholder
+      at all, so the CORRECT check here is that it reads "Rest Day"
+      consistently across card, title and content — NOT that it shows a
+      recovery day. A "Rest Day" reading on G+1 is expected and passes this
+      line; recovery-day rendering for that slot is future work gated on
+      Sam's stage-5 ruling, not a defect of this pass.
    b. Open a combined team + strength day and confirm it still reads
       "Team Training + <strength name>" the same way on the card and the
       title.
@@ -405,7 +471,7 @@ merge condition: this checklist passes in ONE session, start to finish.
 3. NEW WEEK-SCREEN BUTTONS (ruling 2-4, 6):
    a. "Short on time today" — tap it, confirm an acknowledgment sentence
       appears (not silence); TODAY's session should be the only one to
-      change; every other day's plan must be untouched. NOTE: declared red 1
+      change; every other day's plan must be untouched. NOTE: declared red 8
       (schedule-fact ownership collision) means this may currently refuse on
       a real accepted program — if it refuses, confirm the refusal sentence
       reads "That didn't save — your week is unchanged. Give it another go
