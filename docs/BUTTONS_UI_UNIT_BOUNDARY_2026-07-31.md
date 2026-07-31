@@ -144,7 +144,11 @@ elsewhere) a new caller, and did not fork a new fact kind. Consistent with
   does not expire quietly'`; `staleGaps` check) — a red cannot be silently
   fixed and forgotten, and it cannot be silently un-fixed either: an owner
   who pays the debt must delete the entry in the same commit or the suite
-  reds for the opposite reason.
+  reds for the opposite reason. **This was exercised within a day**: Sam's
+  2026-07-31 ruling closed `DECLARED_DOMAIN_GAPS`'s only entry, and the
+  mechanism forced its deletion in the same commit that re-pointed the two
+  cells — the list is now empty, which is a result the mechanism is designed
+  to be able to report.
 
 ## L13 depth reached
 
@@ -160,11 +164,15 @@ actions never accumulate enough state to reach.
 
 ## Declared reds standing (with owners)
 
-Six entries in `athleteActionWalkerTests.ts`'s `DECLARED_RED`, one in
-`surfaceAgreementTests.ts`'s `DECLARED_DOMAIN_GAPS` (covering two matrix
-cells), two in `programControlDurableOwnershipTests.ts`. All are gated in
-`test:bible` (a declared red is a pass with a receipt, not a hidden fail) and
-all stay red until their named owner pays them — none is a buttons/UI task.
+Six entries in `athleteActionWalkerTests.ts`'s `DECLARED_RED`, two in
+`programControlDurableOwnershipTests.ts`. All are gated in `test:bible` (a
+declared red is a pass with a receipt, not a hidden fail) and all stay red
+until their named owner pays them — none is a buttons/UI task.
+
+`surfaceAgreementTests.ts`'s `DECLARED_DOMAIN_GAPS` is now **EMPTY** — see
+entry 7, closed by ruling rather than by work. The mechanism stays (it is
+general, and it degrades correctly on an empty list: nothing absorbs a failure,
+and the stale-check passes trivially).
 
 1-4. **4× D13 session-template conservation** (`L-P3 TEMPLATE = PROJECTION`,
    `session_list_drops_conditioning_attached_to_an_appointment`,
@@ -196,19 +204,27 @@ all stay red until their named owner pays them — none is a buttons/UI task.
    scope:block + `acceptedStateTransaction` validation) — raised for Sam,
    nobody owns it yet.
 
-7. **2× domain gaps, one entry, two cells**
-   (`g1_sunday_is_rest_not_a_recovery_day`, cells "(2) adding hard
-   conditioning" and "(4) a recovery day is offered"). The Sunday after a
-   Saturday fixture resolves `source: 'rest'` with no workout at all —
-   game-proximity recovery is resolver-owned derived filler, never a
-   composed placeholder, so it presents as NOT A SESSION and the menu
-   collapses to add-only. Cell 4 aborts on its first assertion, so its
-   `canRemove` and `!move.refusal` checks have not run since this entry was
-   written — recorded so they are treated as new, not regressions, when the
-   gap closes. Owner: the recovery-as-a-day-type owner — reassessment
-   staging step 5 ("Recovery as a day type; REST as a kind. Re-verify §18
-   counting explicitly"), a DOMAIN unit with a Bible question attached, not a
-   surface task.
+7. ~~**2× domain gaps, one entry, two cells**
+   (`g1_sunday_is_rest_not_a_recovery_day`)~~ — **CLOSED BY RULING,
+   2026-07-31, not by work.** See Sam question 7 below for the connection.
+   The entry declared that the G+1 Sunday resolves `source: 'rest'` with no
+   workout, so cells 2 and 4 (which described it as a RECOVERY day) could not
+   pass, and named "the recovery-as-a-day-type owner, reassessment staging
+   step 5" as the owner who would eventually close it. Sam ruled that owner
+   out of existence: the session-type charter work deleted recovery as an
+   athlete-facing session type, so REST with zero parts IS the end state.
+   Both cells are re-pointed at that end state and **PASS** against it —
+   `kind: 'rest'`, zero parts, "Rest Day" on card and detail, an Add door
+   offering the five signed types, and swap/move/remove refusing with the
+   typed cause `no_session`. The entry is deleted, which the mechanism's own
+   direction 3 ("stale debt fails") would have forced on the next run
+   regardless.
+
+   Carried forward from the old entry, because it is still true: cell 4 used
+   to abort on its first assertion, so its `canRemove` and move claims had
+   not run since the entry was written. They run now, against the OPPOSITE
+   expectation, and they were unproven in either direction before this
+   commit — treat them as new cells, not as regressions, if they ever red.
 
 8-9. **2× schedule-door** (`programControlDurableOwnershipTests.ts`,
    Task 7). (1) The schedule-fact transaction refuses every schedule fact
@@ -225,10 +241,13 @@ all stay red until their named owner pays them — none is a buttons/UI task.
 Eleven, in the order they surfaced in the ledger. Each has a pointer into the
 copy sheet, a declared-red entry, or a task report for the full trace.
 
-**Answered after the unit closed:** question 10 (Sam ruled 2026-07-31 — the
-signed rulings files are law and are now tracked in `docs/`). The numbering is
-kept as-is rather than compacted, so the pointers in the task reports and the
-ledger still land on the question they were written against.
+**Answered after the unit closed** (Sam, 2026-07-31): question **10** — the
+signed rulings files are law and are now tracked in `docs/`; question **7** —
+the charter deleted recovery as an athlete-facing session type, so the G+1
+Sunday's Rest Day IS the end state and the declared domain gap is closed rather
+than scheduled. The numbering is kept as-is rather than compacted, so the
+pointers in the task reports and the ledger still land on the question they
+were written against.
 
 1. **Accessories vs Prehab.** Ruling 9 names the fifth Add/Swap row
    "Accessories"; the session-type charter split accessories into two doors
@@ -275,11 +294,25 @@ ledger still land on the question they were written against.
    `conditioningTemplates.ts` doses, which exist but are "NOT WIRED YET" per
    that file's own header. Pointer: declared red 5 above.
 
-7. **G+1 Sunday resolves REST, not recovery.** The day after a Saturday
-   fixture has no composed placeholder and presents as not-a-session, so it
-   cannot be added to (conserving nothing) or offered the same menu as any
-   other day. Needs the reassessment's stage-5 ruling ("Recovery as a day
-   type") plus a §18 Bible re-verification. Pointer: declared red 7 above.
+7. **RULED-AND-CLOSED (Sam, 2026-07-31): the G+1 Sunday resolves REST, and
+   REST is the answer.** The question was raised as a gap awaiting the
+   reassessment's stage-5 "recovery as a day type" ruling. **The connection
+   that closes it: that ruling had already been made, in another unit.** The
+   session-type charter work DELETED recovery as an athlete-facing session
+   type — design ruling 9's "(type deleted)" — and Task 4 of this very unit
+   implemented the consequence, dropping the recovery row from the Add and
+   Swap menus. So a day the athlete cannot add recovery to, swap recovery
+   onto, or reach recovery through was still being described by two of this
+   unit's own cells as a recovery day, and the "gap" was those cells holding
+   the app to a type Sam had retired. There is no stage-5 recovery unit
+   pending: **Rest Day is the ruled end state**, and the two cells now assert
+   it exactly (declared red 7 above, deleted).
+
+   What this does NOT close, and what does not follow from it: the recovery
+   VOCABULARY still standing in the code below the menus. See NOT-COVERED,
+   "the recovery vocabulary the ruling leaves behind", for the four named
+   residuals and the one place the charter now contradicts the ruling
+   outright.
 
 8. **Schedule-fact ownership collision — busy/away doors have been DEAD in
    production.** The writer re-canonicalises against the accepted base; the
@@ -348,17 +381,69 @@ ledger still land on the question they were written against.
   `programEditWriteGuard`) — explicitly not touched (LR-6); they keep
   `buildProgramTabProjectedWeek`/`snapshotProjectedDay` and are recorded as
   census debt, not migrated.
-- **Recovery-as-a-day-type, stage 5 of the reassessment** — the 69 recovery
-  branches beyond the migrated surfaces, and the §18 recovery-counting
-  question. Needs Sam's ruling before it is buildable; the G+1 Sunday domain
-  gap (Sam question 7) is its symptom inside this unit's own gates. Handover
-  note for whoever builds this: `planChangeProducer.ts`'s `projectedDay(day)`
-  projects a single-day week (`[day]`), which is exact today only because
-  `projectParts` maps each day independently with no cross-day read — the
-  moment cross-day recovery derivation lands (a day's projection depending on
-  its neighbour, e.g. G+1 reading G's fixture), that single-day shortcut will
-  silently diverge from projecting the full week and picking the date out.
-  Re-verify the equivalence, don't assume it still holds.
+- **The recovery vocabulary the ruling leaves behind** (replaces the former
+  "recovery-as-a-day-type, stage 5" bullet, which described a unit that is no
+  longer coming — see Sam question 7). Recovery is not an athlete-facing
+  session type; it is still all over the code. Four residuals, each named so
+  the next owner starts from an inventory rather than a search:
+
+  1. **THE CHARTER NOW CONTRADICTS THE RULING, and its gate cannot see it.**
+     `src/rules/sessionTypeCharter.ts` still charters `recovery` as one of
+     Sam's seven programmable types, with
+     `chosenBy: { categories: ['recovery'], otherDoor: null }`. The charter's
+     own chooser rule (that field's docblock) says: *"Never 'there is no
+     door': a type the athlete cannot reach at all is a type the charter
+     refuses."* Since Task 4, `PlanChangeSheet` renders five type rows and
+     `recovery` is not one of them, so the athlete cannot reach it — the
+     charter is now asserting a door that does not exist. The gate passes
+     anyway, and precisely why matters: `sessionTypeCharterTests` cell **B2**
+     checks only that each claimed category is a member of
+     `PLAN_CHANGE_CATEGORY_IDS`, and `recovery` is still one of those. The
+     gate binds the charter to the PRODUCER's vocabulary and has no
+     observation of what the SHEET draws. **This is not fixed here.** The
+     charter is another unit's authored source and rewriting it from a
+     surface unit is exactly the ownership violation the charter exists to
+     prevent — but the contradiction is stated precisely so its own unit can
+     rule it: either recovery keeps a door (and the sheet grows a sixth row),
+     or its charter row moves to `otherDoor`/debt and B2 gains an
+     observation of the rendered menu.
+  2. **The producer's `CATEGORY_COPY.recovery` row** and `recovery` as a live
+     `PLAN_CHANGE_CATEGORY_ID` — `listPlanChangeOptionsForDay` still returns
+     it in `options.categories` on every editable day. Nothing renders it
+     (the sheet groups categories into ruling 9's five rows), and
+     `addOnTopCategories` already filters it explicitly. Census debt: a door
+     the producer offers and no surface draws.
+  3. **`applyGameProximity` still places recovery** (`sessionResolver.ts`).
+     An EMPTY G+1 is rest — that half was paid by the charter unit, and it is
+     what makes the ruled Rest Day above true. But when a real planned,
+     displaceable, non-core session sits on G+1, the resolver still replaces
+     it with a derived `Post-game recovery` session. So the athlete can still
+     be SHOWN a recovery day that no menu offers and no door can produce.
+     The charter file already carries this as prose ("what is deliberately
+     left"), scoped to the recovery door; it is now the sharper question,
+     because the door it was scoped to has been deleted.
+  4. **The §18 counting question is NOT open.** Recorded here because the old
+     bullet listed it as outstanding: `test:section18-recovery-neutrality` is
+     armed in `test:bible` and pins the ledger's numbers directly
+     (`trueFullRestDays` / `activeRecoveryDays` / findings) rather than
+     asserting a green run. Sam's ruling-3 requirement, "§18 counting must be
+     proven unchanged with explicit tests," is met. What remains is
+     vocabulary, not arithmetic.
+
+- **The `projectedDay` single-day shortcut** — RE-EXAMINED 2026-07-31 and
+  CONVERTED, not carried. This bullet used to warn that
+  `planChangeProducer.ts`'s `projectedDay(day)` projects a single-day week and
+  would silently diverge "the moment cross-day recovery derivation lands (a
+  day's projection depending on its neighbour, e.g. G+1 reading G's fixture)".
+  That named trigger is retired by the ruling above — there is no cross-day
+  recovery derivation coming. The hazard was MISNAMED rather than removed: any
+  cross-day read added to `projectParts` (a week-level rest quota, a
+  second-hard-day rule, a fixture glance at the neighbour) makes the MENU
+  project a different day from every other surface, silently. So the claim is
+  now a law instead of a warning — `projectionOwnershipTests`, "projecting ONE
+  day equals projecting the week and picking that day out", asserts the
+  equality over the whole generated horizon and reds if a cross-day read is
+  ever introduced. Mutation-checked: a `week.length`-dependent `canAdd` reds it.
 - **`HomeScreenClassic` deletion** — unreachable (`DESIGN_VERSION = 'v2'`
   early return) but not deleted; a nontrivial removal (source-regex pins
   elsewhere reference it) out of scope for a copy/UI unit.
@@ -462,13 +547,10 @@ merge condition: this checklist passes in ONE session, start to finish.
    a. Confirm identical wording for a day's name on the week card, the
       day-detail title, and the day-detail metadata line, across every day
       of the visible fortnight — INCLUDING the day after a Saturday fixture
-      (G+1 Sunday). Declared gap 7 (`g1_sunday_is_rest_not_a_recovery_day`,
-      Sam question 7) means that day currently has no recovery placeholder
-      at all, so the CORRECT check here is that it reads "Rest Day"
-      consistently across card, title and content — NOT that it shows a
-      recovery day. A "Rest Day" reading on G+1 is expected and passes this
-      line; recovery-day rendering for that slot is future work gated on
-      Sam's stage-5 ruling, not a defect of this pass.
+      (G+1 Sunday), which must read "Rest Day" on all three. That is the
+      RULED state (Sam, 2026-07-31: recovery is not an athlete-facing session
+      type, so an empty G+1 is rest), not a placeholder for something better.
+      A recovery day rendered in that slot is a DEFECT of this pass.
    b. Open a combined team + strength day and confirm it still reads
       "Team Training + <strength name>" the same way on the card and the
       title.

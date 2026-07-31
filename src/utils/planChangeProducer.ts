@@ -491,6 +491,17 @@ export interface PlanChangeDayOptions {
  * per day per surface render, and per day per action in the walker, so asking
  * for six days nobody reads would multiply the cost of the single most-called
  * function in this file by seven for no extra truth.
+ *
+ * AND THAT IS NOW CHECKED, NOT CLAIMED. `projectionOwnershipTests`, "projecting
+ * ONE day equals projecting the week and picking that day out", asserts the
+ * equality over the whole generated horizon. It was a docblock promise and a
+ * handover warning aimed at one named future — cross-day RECOVERY derivation —
+ * until Sam ruled recovery out as an athlete-facing session type on 2026-07-31
+ * and left the warning pointing at a trigger that is not coming. The hazard was
+ * misnamed rather than removed: ANY cross-day read added to `projectParts` makes
+ * this shortcut project a different day from the one every other surface
+ * projects, silently. If that cell reds, the read moves out of `projectParts` or
+ * this function stops taking the shortcut.
  */
 function projectedDay(day: ResolvedDay): ProjectedDayParts {
   return projectParts({ week: [day], weekStart: day.date }).days[0];

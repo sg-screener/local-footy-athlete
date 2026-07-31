@@ -362,6 +362,18 @@ async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
 // walking a door the app did not have and not walking one it did. `recovery` stays
 // a `PLAN_CHANGE_CATEGORY_ID` (the charter still charters the type, and the
 // resolver/G+1 world still places it); it is the MENU that no longer offers it.
+//
+// SAM CLOSED THE OTHER HALF ON 2026-07-31, and it does not change this list — it
+// changes what the list MEANS. Recovery is not an athlete-facing session type at
+// all: an empty G+1 Sunday is REST, which is the ruled end state rather than a gap
+// awaiting a recovery unit (`surfaceAgreementTests` cells 2 and 4, re-pointed).
+// The walker still must not walk a recovery door, for the stronger reason that
+// there is no such door to walk. What survives — the `PLAN_CHANGE_CATEGORY_ID`,
+// the producer's `CATEGORY_COPY.recovery` row, the charter's recovery row, and
+// `applyGameProximity` replacing a PLANNED G+1 session with a derived recovery
+// one — is vocabulary the athlete cannot reach through any menu, recorded as
+// named follow-up debt in `docs/BUTTONS_UI_UNIT_BOUNDARY_2026-07-31.md` for the
+// charter's own unit, not paid here.
 const CATEGORIES = ['conditioning_light', 'conditioning_hard', 'strength_upper',
   'strength_lower', 'strength_full', 'gunshow', 'prehab', 'mobility'] as const;
 const G1_ROUTES = [undefined, 'keep_the_day', 'take_the_gunshow',
@@ -1091,14 +1103,21 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
 
     // L-P4 THE MENU AND THE PROJECTION AGREE ABOUT WHAT IS ON THE DAY.
     //
-    // Ruling 3: recovery is a day type like any other — same menu capabilities,
-    // same editing rules. Cell 4 asserts three things about one recovery Sunday;
-    // the generalisation is by STATE, not by asking less — every day is asked,
-    // and the comparison is BOTH directions. A menu that offers less than the
-    // projection carries is the recovery-Sunday defect; a menu that offers less
-    // while the projection offers MORE is the same split seen from the other end,
-    // and skipping it because the menu had a reason is exactly the "loosen until
-    // it passes" move L13 forbids.
+    // ONE DAY, ONE CAPABILITY STORY — whatever kind of day it is. Cell 4 of
+    // `surfaceAgreementTests` asserts the menu's answers about ONE day (the G+1
+    // Sunday, which Sam ruled REST on 2026-07-31); this is the same claim
+    // generalised by STATE, not by asking less — every day is asked, and the
+    // comparison is BOTH directions. A menu that offers less than the projection
+    // carries was the original recovery-Sunday defect; a menu that offers MORE
+    // than the projection carries is the same split seen from the other end (a
+    // door with nothing behind it), and skipping it because the menu had a reason
+    // is exactly the "loosen until it passes" move L13 forbids.
+    //
+    // WHY THIS SURVIVED THE RULING UNCHANGED. The re-pointed cell 4 now expects a
+    // rest day to REFUSE swap/move/remove, which is the opposite of what it used
+    // to expect — and this law needed no edit for that, because it never encoded
+    // an expectation about recovery in the first place. It compares the two
+    // answers. A rest day gives `false === false` and agrees.
     //
     // `not_visible` and `outside_horizon` ARE skipped, and that is not a
     // loosening: both are facts about the editing WINDOW, and the projection
@@ -1117,9 +1136,10 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
           + `canRemove=${options.canRemove}) says it ${menuRemovable ? 'CAN' : 'CANNOT'}. `
           + 'One day, two capability stories.');
       }
-      // THE MOVE CLAUSE, STRICT AND SYMMETRIC. Cell 4 asserts
-      // `!recoveryDay.move.refusal` with no qualification, and the projection has
-      // a matching field — `canMoveWholeDay`, which is `editable.length > 0`
+      // THE MOVE CLAUSE, STRICT AND SYMMETRIC. Cell 4 asserts the menu's move
+      // answer with no qualification — since the 2026-07-31 re-pointing, that the
+      // rest Sunday refuses with the typed cause `no_session` — and the projection
+      // has a matching field, `canMoveWholeDay`, which is `editable.length > 0`
       // (`projectVisibleWeek.ts`). So the comparison is the equality, not a
       // hand-picked subset of refusal reasons.
       //
@@ -1374,8 +1394,11 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'bounded tier\'s fourteen actions do not build. Reproduce: deep, '
       + '2026-08-06 — template ["recovery"] / projection ["conditioning"].',
     paidBy: 'the D13 session-template owner, with `sessionComponents` — one of the '
-      + 'two has to stop answering. Ruling 3 ("recovery is a day type like any '
-      + 'other") says the answer should come from the parts.',
+      + 'two has to stop answering, and the answer should come from the PARTS. '
+      + "Sam's 2026-07-31 ruling sharpens this rather than closing it: recovery is "
+      + 'not an athlete-facing session type at all any more, so a template that '
+      + 'shows an athlete a recovery day over conditioning work is now showing them '
+      + 'a type no door offers and no menu can act on.',
     expiresWhen: 'the session list never reports a kind of work the projection does '
       + 'not carry.',
     redsIn: 'deep',

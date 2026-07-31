@@ -170,6 +170,48 @@ run('project() evaluates without throwing and every headline is registered copy'
   }
 });
 
+run('projecting ONE day equals projecting the week and picking that day out', () => {
+  // THE COMMENT THAT WAS A CLAIM, MADE INTO A LAW — 2026-07-31.
+  //
+  // `planChangeProducer.projectedDay(day)` projects a single-day week (`[day]`,
+  // `weekStart: day.date`) rather than the real week, because the menu is listed
+  // once per day per surface render and per day per action in the walker. Its
+  // docblock asserted the shortcut is EXACT — `projectParts` maps each day
+  // independently, no cross-day derivation, no week-level state — and the
+  // buttons/UI boundary report carried the same claim as a handover warning
+  // aimed at one named future trigger: cross-day RECOVERY derivation, a G+1
+  // reading G's fixture.
+  //
+  // Sam retired that trigger on 2026-07-31 (recovery is not an athlete-facing
+  // session type; a G+1 Sunday is REST), so the warning was left pointing at a
+  // future that is not coming. The hazard is not gone, it was only ever
+  // MISNAMED: any cross-day read added to `projectParts` — a week-level rest
+  // quota, a fixture-proximity glance at the neighbour, a "second hard day this
+  // week" rule — silently makes the menu project a different day from the one
+  // every other surface projects, with no error and no diff to notice.
+  //
+  // A comment asserting a property is not evidence of the property (this
+  // branch's own method finding). So the property is asserted here, over the
+  // real generated horizon, exactly as the shortcut takes it: same shape, same
+  // capabilities, same parts, byte-for-byte.
+  world();
+  for (const week of WEEKS) {
+    const days = projected(week);
+    const whole = projectParts({ week: days, weekStart: week });
+    for (const [index, day] of days.entries()) {
+      const alone = projectParts({ week: [day], weekStart: day.date }).days[0];
+      assert(JSON.stringify(alone) === JSON.stringify(whole.days[index]),
+        `${day.date}: projecting this day ALONE differs from projecting the week and `
+        + `picking it out.\n        alone ${JSON.stringify(alone)}\n        in-week `
+        + `${JSON.stringify(whole.days[index])}\n      `
+        + '`planChangeProducer.projectedDay` takes the single-day shortcut on every '
+        + 'menu listing, so a cross-day read in `projectParts` makes the MENU project '
+        + 'a different day from every other surface. Either the read moves out of '
+        + '`projectParts`, or `projectedDay` stops taking the shortcut.');
+    }
+  }
+});
+
 run('a recovery SESSION is capable of everything a strength session is (ruling 3)', () => {
   // RESTATED IN TASK 4, AND STRENGTHENED — read the reason before changing it back.
   //

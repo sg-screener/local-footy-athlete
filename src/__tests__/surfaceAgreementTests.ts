@@ -29,6 +29,27 @@
  * compared to IT. That is exactly the finding the reassessment named: no screen
  * imported it, so every screen was free to differ.
  *
+ * CELLS 2 AND 4 WERE RE-POINTED, 2026-07-31, BY A SAM RULING — NOT LOOSENED.
+ *
+ * They used to describe the Sunday after his Saturday fixture as a RECOVERY day
+ * and assert recovery behaviour on it, and both reds were carried as one declared
+ * domain gap (`g1_sunday_is_rest_not_a_recovery_day`) waiting on a stage-5
+ * "recovery as a day type" unit. That unit is not coming: the session-type
+ * charter work DELETED recovery as an athlete-facing session type (design ruling
+ * 9's "(type deleted)"; the Add/Swap menus stopped offering it in Task 4), so
+ * Sam ruled that a G+1 Sunday resolving REST with zero parts IS the end state,
+ * not a gap.
+ *
+ * So the reference these two cells are held to changed, and they are held to the
+ * new one just as exactly: `kind: 'rest'`, zero parts, the same words on card,
+ * detail and menu, an ADD door offering the five signed types, and swap / move /
+ * remove REFUSING because there is nothing on the day to act on. That is
+ * capability parity for a day of that shape — the charter's own Rest row says the
+ * athlete reaches rest through Remove and never by adding a rest session — and it
+ * is asserted as equalities on the ruled state, never as a softened version of the
+ * recovery expectation. L13 holds: nothing here asks less, it asks something
+ * different because Sam ruled something different.
+ *
  * STATUS, 2026-07-31 — read this before trusting a result.
  *
  *   - Cell 1 PASSES. READ WHAT THAT DOES AND DOES NOT MEAN. Since Task 6 the
@@ -44,11 +65,9 @@
  *     generated weeks by acting. That law reds today, in four declared shapes
  *     owned by D13 — so the content half of "one story" is watched, and it is
  *     not yet true.
- *   - Cell 2's surface half PASSES. Its remaining red, and cell 4's, are ONE
- *     domain gap — the G+1 Sunday resolves as REST with no workout in every world
- *     this harness can act its way to — declared below as
- *     `g1_sunday_is_rest_not_a_recovery_day`, owned outside this unit, stale-
- *     checked, and never counted as a pass.
+ *   - Cells 2 and 4 PASS against the ruled rest-day end state (above). The
+ *     declared domain gap they used to share is DELETED, because the thing it
+ *     declared is no longer a defect.
  *   - Cell 3 PASSES over the whole visible horizon.
  *
  * The `harness-enters-below-the-door` note this header used to carry is HALF paid:
@@ -90,8 +109,12 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { getSessionComponents } from '../utils/sessionComponents';
+import type { PlanChangeCategoryId } from '../utils/planChangeTypes';
+import type { PlanChangeDayOptions } from '../utils/planChangeProducer';
 import { project } from '../rules/projectVisibleWeek';
+import type { VisibleDayDetail } from '../rules/visibleDayDetail';
 import { projectDayDetail } from '../rules/visibleDayDetail';
+import type { VisibleDay } from '../rules/visibleProjection';
 import { athleteVisibleStrings } from '../rules/visibleProjection';
 import { isSignedCopyText } from '../rules/signedCopy';
 import {
@@ -149,45 +172,29 @@ interface DeclaredDomainGap {
   expiresWhen: string;
 }
 
-const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [
-  {
-    id: 'g1_sunday_is_rest_not_a_recovery_day',
-    cells: ['(2) adding hard conditioning', '(4) a recovery day is offered'],
-    matches: /the projection no longer shows recovery at all|is not considered to have a session/,
-    why: 'ONE GAP, TWO CELLS, AND IT IS UPSTREAM OF EVERY SURFACE. Cells 2 and 4 '
-      + 'both describe the Sunday after his Saturday fixture as a RECOVERY day — '
-      + 'cell 2 asks that adding hard intervals to it must not delete the recovery '
-      + 'already there, cell 4 that it be offered the same menu as any other day. '
-      + 'Probed on the world this harness actually reaches: that Sunday resolves '
-      + '`source: "rest"` with NO workout at all, so there is no recovery for the '
-      + 'add to conserve and no session for the menu to act on. Game-proximity '
-      + 'recovery is resolver-owned derived filler regenerated every render '
-      + '(`isResolverOwnedDerivedSession`), never a composed placeholder — the '
-      + 'reassessment names this exactly: "a recovery day whose content is '
-      + 'resolver-owned derived filler has no composed placeholder ... so it '
-      + 'presents as NOT A SESSION, and the menu collapses to add-only. That is '
-      + 'defect 4, and it is not a menu bug: the menu is correctly reporting a '
-      + 'projection that does not consider a recovery day to be a day." Cell 2\'s '
-      + 'red used to be hidden behind an `UnsignedCopyError` thrown one assertion '
-      + 'earlier; Task 6 paid that half (the row names an add places are registered '
-      + 'now, and its L-P1/L-P3 surface assertions PASS), which uncovered the '
-      + 'domain half underneath. A carried red shadowing the one behind it is a '
-      + 'shape this branch has already been caught by once (commit 3f879d4). '
-      + 'WHAT IS UNEXERCISED WHILE THIS STANDS, recorded so nobody reads the gap '
-      + 'as narrower than it is: cell 4 aborts on its FIRST assertion '
-      + '(`hasSession`), so its `canRemove` and `!move.refusal` assertions have '
-      + 'not run since this entry was written. When the gap closes, those two are '
-      + 'unproven and must be treated as new, not as regressions.',
-    owner: 'the recovery-as-a-day-type owner — reassessment staging step 5 '
-      + '("Recovery as a day type; REST as a kind. Re-verify §18 counting '
-      + 'explicitly"), which is a DOMAIN unit with a Bible question attached '
-      + '(reassessment "what this does NOT settle", item 3), not a surface task. '
-      + 'Raised for Sam in the buttons/UI boundary report.',
-    expiresWhen: 'a G+1 Sunday projects as a real day with real parts, so adding '
-      + 'to it conserves what was there and its menu offers what any other day\'s '
-      + 'does.',
-  },
-];
+/**
+ * EMPTY, AND THAT IS A RESULT — not a mechanism nobody wired up.
+ *
+ * One entry lived here: `g1_sunday_is_rest_not_a_recovery_day`, covering cells 2
+ * and 4, owned by "the recovery-as-a-day-type owner — reassessment staging step
+ * 5". Sam CLOSED that question on 2026-07-31 instead of scheduling it: the
+ * session-type charter work deleted recovery as an athlete-facing session type,
+ * so a G+1 Sunday resolving REST with zero parts is the ruled end state and there
+ * is nothing left to declare. The two cells are re-pointed at that end state
+ * (see the header) and they pass against it, so the entry goes — property 2 of
+ * this mechanism, "stale declarations fail", would have red on the very next run
+ * if it had been left behind.
+ *
+ * THE MECHANISM STAYS. It is general — the next suite-level domain gap declares
+ * itself here rather than being softened into an assertion — and it degrades
+ * correctly on an empty list: `declaredGapFor` finds nothing so every failure is
+ * a real failure, and `staleGaps` is empty so the stale-check passes trivially.
+ * There is deliberately no non-vacuity floor on THIS list (unlike `PROPOSED` in
+ * `copyRulingsBindingTests`): a floor would mean the suite could not report
+ * "every cell agrees with the projection", which is the state it is supposed to
+ * be able to reach.
+ */
+const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [];
 
 const gapsHit = new Set<string>();
 let gapped = 0;
@@ -232,6 +239,13 @@ function quiet<T>(body: () => T): T {
 
 const TODAY = SAM_EXPORT_8_TODAY_ISO;
 const WEEK = SAM_EXPORT_8_CURRENT_WEEK;
+
+/**
+ * The Sunday after his Saturday fixture — G+1, and under Sam's 2026-07-31 ruling
+ * a REST day. Named once because three cells describe the same date and a typo in
+ * one of them would look like a disagreement between surfaces.
+ */
+const G1_SUNDAY = '2026-08-02';
 
 function mondayFor(date: string): string {
   const parsed = new Date(`${date}T12:00:00`);
@@ -381,7 +395,56 @@ function assertSurfacesAgree(date: string, context: string): void {
 
 console.log('\n-- Surface agreement (L-P1/L-P3) — ARMED, in test:bible since Task 6 --');
 
-run('(1) adding strength to the G+1 recovery Sunday tells ONE story', () => {
+/**
+ * THE G+1 SUNDAY AS THE PROJECTION SEES IT, plus what the detail surface makes
+ * of it. One read, used by both re-pointed cells so they cannot describe the
+ * same day two ways.
+ */
+function g1Sunday(): { day: VisibleDay | null; detail: VisibleDayDetail | null } {
+  const week = mondayFor(G1_SUNDAY);
+  const projected = quiet(() => project({ week: projectedWeek(week), weekStart: week }));
+  const day = projected.days.find((candidate) => candidate.date === G1_SUNDAY) ?? null;
+  return { day, detail: projectDayDetail(day) };
+}
+
+/**
+ * THE RULED SHAPE OF A G+1 SUNDAY, asserted as equalities.
+ *
+ * Sam's ruling of 2026-07-31: recovery is not an athlete-facing session type, so
+ * the day after a Saturday fixture with nothing planned on it is REST — and rest
+ * is a decision with an owner (`sessionTypeCharter.ts`, the Rest row), not a
+ * residue. "Consistently on every surface" is the whole of the claim, so the card
+ * name, the detail headline and the part list are each compared, and each is an
+ * equality rather than a "contains" or a "not-empty".
+ */
+function assertG1SundayIsRest(context: string): void {
+  const { day, detail } = g1Sunday();
+  assert(day, `${context}: the projection has no ${G1_SUNDAY}`);
+  assert(String(day.kind) === 'rest',
+    `${context}: the G+1 Sunday projects "${day.kind}", not "rest". Sam's ruling `
+    + 'is that this day IS rest — a recovery placeholder here is the type the '
+    + 'charter deleted, coming back.');
+  assert(day.parts.length === 0,
+    `${context}: the G+1 rest Sunday carries `
+    + `${JSON.stringify(day.parts.map((part) => String(part.kind)))}. A rest day has `
+    + 'no contents (charter, Rest row: "a rest day has no contents").');
+  assert(String(day.headline) === 'Rest Day',
+    `${context}: the day-kind headline reads "${day.headline}", not "Rest Day".`);
+  // THE DETAIL SURFACE SAYS THE SAME WORD, from the same field — `projectDayDetail`
+  // falls back to `day.headline` at zero parts, and this holds it there.
+  assert(detail, `${context}: the detail surface has nothing for ${G1_SUNDAY}`);
+  assert(String(detail.headline) === String(day.headline),
+    `${context}: the detail titles the day "${detail.headline}" while the projection `
+    + `calls it "${day.headline}". One day, two stories.`);
+  assert(detail.attached.length === 0 && detail.sections.length === 0,
+    `${context}: the detail invented ${detail.sections.length} section(s) and `
+    + `${detail.attached.length} attached headline(s) for a day with no parts.`);
+  // AND THE CARD. `assertSurfacesAgree` is the card-vs-projection law itself, so
+  // the rest day is put through it rather than given a private version of it.
+  assertSurfacesAgree(G1_SUNDAY, `${context} — the untouched G+1 rest Sunday`);
+}
+
+run('(1) adding strength to the G+1 Sunday tells ONE story', () => {
   reachHisWorldByActing();
   const added = tap({ kind: 'add_category', date: '2026-08-02', category: 'strength_full' } as PlanChange);
   assert(added.outcome === 'applied',
@@ -390,29 +453,58 @@ run('(1) adding strength to the G+1 recovery Sunday tells ONE story', () => {
   assertSurfacesAgree('2026-08-02', 'defect 1, G+1 recovery Sunday + Full Body Strength');
 });
 
-run('(2) adding hard conditioning to a recovery day keeps recovery visible', () => {
+run('(2) adding hard conditioning to the G+1 rest Sunday lands on every surface', () => {
+  // RE-POINTED 2026-07-31 BY SAM'S RULING, and this is what it now asks.
+  //
+  // The old cell asked that adding hard intervals to a RECOVERY Sunday must not
+  // delete the recovery already there — defect 2 of the 2026-07-29 render split,
+  // where the card dropped recovery and the detail swallowed the intervals inside
+  // the recovery template. There is no recovery on that Sunday to conserve any
+  // more and there is not supposed to be: the charter deleted recovery as an
+  // athlete-facing type, so the day is REST and the athlete's add is the ONLY
+  // thing that puts work on it.
+  //
+  // The conservation question does not disappear, it changes subject: the day
+  // starts with nothing, so after the add the projection must carry EXACTLY the
+  // conditioning the athlete asked for — not less (the add lost), not more (a
+  // recovery placeholder conjured beside it, which is the deleted type coming
+  // back through the resolver). Both are equalities on the ruled state.
   reachHisWorldByActing();
-  const added = tap({ kind: 'add_category', date: '2026-08-02', category: 'conditioning_hard' } as PlanChange);
+  assertG1SundayIsRest('before the add');
+
+  const added = tap({ kind: 'add_category', date: G1_SUNDAY, category: 'conditioning_hard' } as PlanChange);
   assert(added.outcome === 'applied',
     `the door refused the add (${added.outcome}: "${added.message}")`);
-  assertSurfacesAgree('2026-08-02', 'defect 2, recovery day + hard intervals');
 
-  // The inverse split, named: the card dropped recovery, the detail swallowed the
-  // intervals into the recovery template. Either way, BOTH parts exist and both
-  // surfaces must show both.
-  const canonical = dayFrom(projectedWeek(mondayFor('2026-08-02')), '2026-08-02');
+  // THE ADD LANDED AND EVERY SURFACE TELLS THE SAME STORY ABOUT IT.
+  assertSurfacesAgree(G1_SUNDAY, 'the G+1 rest Sunday + hard intervals');
+
+  const canonical = dayFrom(projectedWeek(mondayFor(G1_SUNDAY)), G1_SUNDAY);
   const parts = partIds(canonical?.workout);
-  // ORDERED SO THE SURFACE CLAIM RUNS FIRST. The recovery-conservation assertion
-  // below is a declared domain gap and aborts the cell; the conditioning claim is
-  // about the surface this task owns and would otherwise never be reached.
-  assert(parts.some((part) => part === 'conditioning' || part === 'finisher'),
-    `defect 2: the conditioning the athlete added is not a part — `
-    + `${JSON.stringify(parts)}. It was embedded inside the recovery template `
-    + 'instead of standing beside it.');
-  assert(parts.includes('recovery') || parts.includes('recovery_addon'),
-    `defect 2: after adding conditioning the projection no longer shows recovery at `
-    + `all — parts ${JSON.stringify(parts)}. Adding work to a day must not delete `
-    + 'the work already on it.');
+  assert(JSON.stringify(parts) === JSON.stringify(['conditioning']),
+    `the day carries ${JSON.stringify(parts)} after the athlete added hard intervals `
+    + 'to an empty rest day. Exactly one part, and it is the one they asked for: '
+    + 'anything less lost the add, anything more was invented beside it.');
+
+  // AND THE DAY STOPPED BEING REST, on the projection and on the detail together.
+  const { day, detail } = g1Sunday();
+  assert(day, 'the projection has no G+1 Sunday after the add');
+  assert(String(day.kind) === 'training',
+    `after the add the projection still calls the day "${day.kind}". A day with work `
+    + 'on it is a training day.');
+  assert(JSON.stringify(day.parts.map((part) => String(part.kind))) === JSON.stringify(['conditioning']),
+    `the projection's parts are ${JSON.stringify(day.parts.map((part) => String(part.kind)))}.`);
+  assert(detail, 'the detail surface has nothing for the G+1 Sunday after the add');
+  assert(JSON.stringify(detail.sections.map((section) => String(section.kind)))
+    === JSON.stringify(day.parts.map((part) => String(part.kind))),
+    `the detail renders ${JSON.stringify(detail.sections.map((section) => String(section.kind)))} `
+    + `while the projection carries ${JSON.stringify(day.parts.map((part) => String(part.kind)))}.`);
+  assert(String(detail.headline) === String(day.parts[0].headline),
+    `the detail titles the day "${detail.headline}" while the part it is showing is `
+    + `"${day.parts[0].headline}". The lead name is one rule for both surfaces.`);
+  assert(detail.attached.length === 0,
+    `the detail attached ${JSON.stringify(detail.attached.map(String))} to a `
+    + 'single-part day.');
 });
 
 run('(3) no surface renders internal planner vocabulary', () => {
@@ -500,23 +592,104 @@ run('(5) L-P2 — every word the migrated surfaces render is signed', () => {
     + 'Athlete-facing words come from an authored source or a Sam ruling.');
 });
 
-run('(4) a recovery day is offered the same capabilities as any other day', () => {
-  // Sam's ruling 3: recovery is a day type like any other — same menu
-  // capabilities, same editing rules. The menu derives capability from
-  // `workout.sections.map(kind)` and `hasSession = workout !== null`, and a G+1
-  // recovery day is resolver-owned derived filler with no composed placeholder,
-  // so it presents as not-a-day and collapses to add-only.
+/**
+ * THE FIVE ROWS THE ADD/SWAP SHEET ACTUALLY DRAWS, computed the way the sheet
+ * computes them.
+ *
+ * `PlanChangeSheet` does not render `options.categories` one row per id — it
+ * groups them into design ruling 9's five types: Strength (any of the three
+ * buckets), Conditioning (either intensity), Gunshow, Mobility and
+ * Prehab/Accessories. Restating that grouping here rather than asserting over the
+ * raw id list is what makes the assertion about the MENU the athlete sees; the
+ * raw list still carries `recovery` for the producer's own reasons, and that
+ * residual is named as follow-up debt in the boundary report rather than pinned
+ * here as though Sam had ruled it.
+ */
+const SIGNED_ADD_ROWS = ['conditioning', 'gunshow', 'mobility', 'prehab', 'strength'] as const;
+
+function addRowsOffered(options: PlanChangeDayOptions): string[] {
+  const offers = (id: PlanChangeCategoryId) =>
+    options.categories.some((category) => category.id === id);
+  const rows: string[] = [];
+  if (offers('strength_upper') || offers('strength_lower') || offers('strength_full')) rows.push('strength');
+  if (offers('conditioning_light') || offers('conditioning_hard')) rows.push('conditioning');
+  if (offers('gunshow')) rows.push('gunshow');
+  if (offers('mobility')) rows.push('mobility');
+  if (offers('prehab')) rows.push('prehab');
+  return rows.sort();
+}
+
+run('(4) a rest day is offered the capabilities a day of its shape has', () => {
+  // RE-POINTED 2026-07-31 BY SAM'S RULING. This cell used to read "a recovery day
+  // is offered the same capabilities as any other day" and assert `hasSession`,
+  // `canRemove` and a move with no refusal on the G+1 Sunday — reassessment
+  // defect 4, where the menu collapsed to add-only on a day the app had decided
+  // was recovery. Recovery is no longer an athlete-facing session type, so the
+  // day is REST, and the honest question is what capability parity MEANS for a
+  // day with nothing on it.
+  //
+  // It means this: the ADD door is fully open, with the same five signed types
+  // every other day offers, and swap / move / remove REFUSE — not because rest is
+  // a lesser day, but because there is nothing there to swap, move or remove. A
+  // menu that offered them would be offering doors with nothing behind them,
+  // which is the defect this suite exists to catch pointed the other way. The
+  // charter says the same thing from the domain side: the athlete reaches rest
+  // through Remove, never by adding a rest session.
+  //
+  // NOTE FOR WHOEVER READS A FAILURE HERE. Under the old declaration this cell
+  // aborted on its FIRST assertion, so its `canRemove` and move claims had not
+  // run since the gap was written. They run now, against the opposite
+  // expectation, and they were unproven in either direction before this commit.
   reachHisWorldByActing();
-  const recoveryDay = quiet(() => listPlanChangeOptionsForDay({
-    visibleWeek: cardWeek(mondayFor('2026-08-02')), date: '2026-08-02', todayISO: TODAY,
+  assertG1SundayIsRest('the menu\'s subject');
+
+  const restDay = quiet(() => listPlanChangeOptionsForDay({
+    visibleWeek: cardWeek(mondayFor(G1_SUNDAY)), date: G1_SUNDAY, todayISO: TODAY,
   }));
-  assert(recoveryDay.hasSession,
-    'defect 4: the G+1 recovery Sunday is not considered to have a session, so the '
-    + 'menu offers add only. Recovery is a day type like any other.');
-  assert(recoveryDay.canRemove,
-    'defect 4: a recovery day cannot be removed while a strength day can');
-  assert(!recoveryDay.move.refusal,
-    `defect 4: a recovery day is offered no move — "${recoveryDay.move.refusal?.message}"`);
+
+  assert(restDay.locked === null,
+    `the rest Sunday is locked "${restDay.locked}" — it is inside the edit horizon `
+    + 'and it is not a fixture, so the menu opens.');
+
+  // THE ADD DOOR — the whole of what a rest day can offer, and all of it.
+  assert(restDay.canAdd,
+    'the rest Sunday refuses ADD. A rest day is the one day every optional type '
+    + 'can land on.');
+  assert(JSON.stringify(addRowsOffered(restDay)) === JSON.stringify([...SIGNED_ADD_ROWS]),
+    `the rest day's Add menu draws ${JSON.stringify(addRowsOffered(restDay))}, not the `
+    + `five signed types ${JSON.stringify([...SIGNED_ADD_ROWS])} (design ruling 9).`);
+
+  // AND THE THREE DOORS THAT CORRECTLY REFUSE, each for the same one reason.
+  assert(restDay.hasSession === false,
+    'the menu says the rest Sunday has a session. It has zero parts — a menu that '
+    + 'thinks otherwise is about to offer swap and remove on nothing.');
+  assert(restDay.canSwap === false,
+    'the menu offers SWAP on a day with nothing to swap.');
+  assert(restDay.canRemove === false,
+    'the menu offers REMOVE on a day with nothing to remove. Rest is already what '
+    + 'Remove produces.');
+  assert(JSON.stringify(restDay.binScopes) === '[]',
+    `the menu lists bin scopes ${JSON.stringify(restDay.binScopes)} on an empty day.`);
+  assert(restDay.move.refusal?.reason === 'no_session',
+    `the move door refuses "${restDay.move.refusal?.reason ?? 'nothing — it offers a move'}" `
+    + 'on an empty day. The typed cause is `no_session`, and the sentence the athlete '
+    + 'reads is selected from it.');
+  assert(restDay.move.refusal?.message === "There's nothing on this day to move.",
+    `the move refusal reads "${restDay.move.refusal?.message}".`);
+  assert(JSON.stringify(restDay.move.scopes) === '[]',
+    `the move door refuses and still lists scopes ${JSON.stringify(restDay.move.scopes)}.`);
+
+  // ADD-ON-TOP IS EMPTY, AND THAT IS NOT THE SAME AS ADD BEING SHUT. Stacking is
+  // defined against what is already on the day; nothing is, so the normal add
+  // flow above owns this day entirely (`PlanChangeDayOptions.addOnTopCategories`:
+  // "Rest days instead use `categories` via the normal add flow").
+  assert(JSON.stringify(restDay.addOnTopCategories) === '[]',
+    `the rest day lists add-on-top categories `
+    + `${JSON.stringify(restDay.addOnTopCategories.map((category) => category.id))} with `
+    + 'nothing underneath to stack on.');
+  assert(restDay.visibleSessionCount === 0 && restDay.visibleSessionKinds.length === 0,
+    `the menu counts ${restDay.visibleSessionCount} visible session(s) `
+    + `${JSON.stringify(restDay.visibleSessionKinds)} on a day with no parts.`);
 });
 
 // STALE DECLARATIONS FAIL — a gap that stopped happening is a cell that went
