@@ -552,6 +552,74 @@ run('the fifth Add/Swap row reads "Accessories"', () => {
     + 'describes the door whichever noun heads the row');
 });
 
+// ── The row sub-line and the whole-day scope confirm can still disagree ──
+//
+// POST-UNIT REVIEW FINDING, 2026-07-31 — open question, copy sheet §6-VI. Not a
+// regression of 6-IV-3; a state 6-IV-3's ruling did not name. `removeEmptiesTheDay`
+// is a binary (sole-content vs multi-content), but `binScopesForSnapshot`
+// (`planChangeProducer.ts:846-862`) has a third shape: an UNANCHORED day carrying
+// two-plus section kinds returns `[...parts, WHOLE_DAY_SCOPE]` — more than one
+// part (so `removeEmptiesTheDay` is FALSE, and the row reads "anything else on
+// the day stays"), but a "Whole day" scope is offered anyway, because nothing
+// anchors the day and removing everything is a legal choice. Picking it sets
+// `label: null` (`PlanChangeSheet.tsx:973`), which the confirmation reads as "the
+// day becomes rest" (`:985`) — the sole-content sentence, under a row that just
+// promised the opposite.
+//
+// THIS CELL PINS CURRENT BEHAVIOUR, NOT A FIX. No new copy is invented here
+// (batch 3's own principle forbids guessing a signed sentence into existence).
+// When Sam rules the open question (device-pass checklist item 4f), this cell
+// should RED — that is the stale-check signal to re-point it at whichever
+// sentence he picks, per this repo's declared-red/declared-gap pattern.
+run('the row sub-line and the whole-day scope can still disagree on an '
+  + 'unanchored multi-kind day (PINNED, copy sheet §6-VI, unruled)', () => {
+  const weekStart = seed();
+  const monday = addDaysISO(weekStart, 0);
+  const before = optionsFor(weekStart, monday);
+  assert(before.canRemove && removeEmptiesTheDay(before),
+    'the seed\'s Monday is no longer a plain sole-content strength day, so this '
+    + `cell cannot build the unanchored multi-kind fixture from it; before=${JSON.stringify(before.binScopes.map((s) => s.id))}`);
+
+  const added = quiet(() => applyPlanChange({
+    change: { kind: 'add_category', date: monday, category: 'conditioning_light' },
+    visibleWeek: visibleWeek(weekStart),
+    todayISO: weekStart,
+    setManualOverride: (overrideDate, workout, context) =>
+      useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+  }));
+  assert(added.ok, `adding conditioning to the plain Monday day was refused: ${added.message}`);
+
+  const after = optionsFor(weekStart, monday);
+  // THE ROW'S HALF: unanchored, two kinds, `removeEmptiesTheDay` is false —
+  // the row reads "anything else on the day stays."
+  assert(!removeEmptiesTheDay(after),
+    'the unanchored two-kind day is reported as sole-content again — the fixture '
+    + `no longer reaches the state this cell pins; binScopes=${JSON.stringify(after.binScopes.map((s) => s.id))}`);
+  // THE PICKER'S HALF: a whole-day scope is offered anyway, alongside the parts.
+  const wholeDay = after.binScopes.find((scope) => scope.id === 'whole_day');
+  assert(wholeDay,
+    'no whole_day scope is offered on this unanchored multi-kind day — if the '
+    + 'producer stopped offering one, the collision this cell pins is closed and '
+    + `the cell should be re-pointed at that outcome; binScopes=${JSON.stringify(after.binScopes.map((s) => s.id))}`);
+  const parts = after.binScopes.filter((scope) => scope.id !== 'whole_day');
+  assert(parts.length >= 2,
+    'fewer than two non-whole-day parts are offered, so this is not the shape '
+    + `binScopesForSnapshot's [...parts, WHOLE_DAY_SCOPE] branch describes; binScopes=${JSON.stringify(after.binScopes.map((s) => s.id))}`);
+
+  // THE CONTRADICTION ITSELF, over the sheet's own control flow (same standing as
+  // the source-contract cells above): choosing the offered whole_day scope sets
+  // `label: null`, which is what selects the sole-content confirmation sentence —
+  // the one the row, one tap earlier, contradicted.
+  const sheet = readFileSync(
+    join(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
+    'utf8',
+  );
+  assert(/scope\.id === 'whole_day' \? null/.test(sheet),
+    'the scope picker no longer sets label:null for the whole_day choice — if this '
+    + 'was fixed by naming the scope\'s own confirmation instead, the collision this '
+    + 'cell pins is closed and it should be re-pointed at that outcome');
+});
+
 console.log(`\nMove scoping totals: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);

@@ -266,7 +266,7 @@ where they touch copy, the words are task-composed and therefore PROPOSED
 | 6 | Every week-screen button carries an icon | Tasks 7, 9 | SHIPPED — imagery, no per-icon signing (6-II-h below) |
 | 7 | Intermediate "Edit this session" menu deleted | Task 4 | SHIPPED — strings retired, 6-III |
 | 8 | The four-action menu is the whole menu | Task 4 | SHIPPED — sub-line wording task-composed, 6-II |
-| 9 | Add/Swap menus offer the five signed types | Task 4 | SHIPPED — label question open, 6-IV |
+| 9 | Add/Swap menus offer the five signed types | Task 4 | SHIPPED — fifth row label RULED "Accessories" (Sam, 2026-07-31), 6-IV-1 |
 | 10 | Global icon rule, every option row | Tasks 4, 8, 9 | SHIPPED — imagery, no per-icon signing |
 | 11 | Injury "Other" data-path investigation | pre-unit, commit `4bb425a` | ALREADY DONE — not a task in this unit |
 | 12 | "Edit exercises" modal retired, inline editing | Task 8 | SHIPPED — Sam's live mid-review ruling recorded in 6-III |
@@ -364,10 +364,10 @@ describes — a signed sentence never claims a state-dependent outcome, and
 
 | Row | String | Where it appears (HEAD) | Why it is here |
 |---|---|---|---|
-| Swap (live) | "Change it for another type of session" | `PlanChangeSheet.tsx:518` | REWRITE of a batch-3-signed sub-line (it enumerated strength, conditioning and recovery — see 6-III). `recovery` left the menu under ruling 9. **OPEN QUESTION 6-IV-2:** this names no type at all rather than listing the five. |
+| Swap (live) | "Change it for another type of session" | `PlanChangeSheet.tsx:518` | REWRITE of a batch-3-signed sub-line (it enumerated strength, conditioning and recovery — see 6-III). `recovery` left the menu under ruling 9. **RULED 6-IV-2:** the neutral form (names no type) is signed as shipped. |
 | Swap (off, day has work) | "Nothing on this day can be swapped." | `PlanChangeSheet.tsx:520` | NEW. A team night or a club commitment HAS something on it; it is just not the athlete's to trade. Selected by `hasSession`, which the projection owns. |
 | Swap (off, empty day) / Remove (off) | "There's nothing on this day yet." | `PlanChangeSheet.tsx:521,563` | NEW, one string for both. `canRemove` is false only when the day holds nothing, and the Swap row uses it on the same condition, so neither can show over a day that has work on it. |
-| Add row | "Put another session on this day" | `PlanChangeSheet.tsx:535` | REWRITE. Used to name extra strength or conditioning work — two of the five types behind it (ruling 9); retired wording in 6-III. **OPEN QUESTION 6-IV-2.** |
+| Add row | "Put another session on this day" | `PlanChangeSheet.tsx:535` | REWRITE. Used to name extra strength or conditioning work — two of the five types behind it (ruling 9); retired wording in 6-III. **RULED 6-IV-2:** the neutral form is signed as shipped. |
 | Strength row | "Upper, lower or full body" | `PlanChangeSheet.tsx:647` | REWRITE. Used to end by naming accessories too (6-III). Accessories and Gunshow now have rows of their own, so the strength bucket is three buckets and says so. |
 | Remove (live, day has more on it) | "Remove it — anything else on the day stays." | `PlanChangeSheet.tsx` Remove row | Batch-3-signed, now the MULTI-CONTENT half of a state-selected pair (ruling 6-IV-3). |
 | Remove (live, sole-content day) | "Remove it — the day becomes rest." | `PlanChangeSheet.tsx` Remove row | NEW, SIGNED 2026-07-31 (6-IV-3). The batch-3 sentence beside it was false on a day whose only content is the session being removed; the cause is typed, not guessed. |
@@ -732,3 +732,55 @@ ownership collision between the writer and the verifier, unpatched, needs
 Sam; (2) even composed by hand, the constraint changes nothing in any
 generated week. Full detail in the boundary report
 (`docs/BUTTONS_UI_UNIT_BOUNDARY_2026-07-31.md`), §"Declared reds standing".
+
+### 6-VI. OPEN QUESTION — the Remove row's sub-line and the whole-day scope
+confirm disagree on an unanchored multi-kind day [post-unit review finding,
+2026-07-31]
+
+**Not proposed, not signed — a collision between two ALREADY-SIGNED
+sentences, surfaced by review after 6-IV-3 landed.** Written outside any
+table, on purpose (both sentences below are already present in the app and
+already bound by table rows elsewhere in this document — 6-II-b — so a third
+quoted occurrence here would be redundant against the binder, not new).
+
+6-IV-3 ruled the Remove row's sub-line STATE-SELECTED by
+`removeEmptiesTheDay`: multi-content day, "Remove it — anything else on the
+day stays."; sole-content day, "Remove it — the day becomes rest." That
+ruling assumed a binary state. `binScopesForSnapshot` produces a third shape
+it did not consider: an UNANCHORED day carrying two or more section kinds
+(e.g. a plain strength day the athlete has added conditioning to) reports
+`removeEmptiesTheDay` FALSE (there is more than one part, so the row reads
+"anything else on the day stays") while still offering a "Whole day" scope in
+the picker one tap later — because nothing anchors the day, removing
+everything is a legal choice, not just a removal of one part. Choosing that
+scope reaches the confirmation Sam ruled for the OTHER state: "Are you sure?
+This will be removed and the day becomes rest." The row's own sentence and
+the confirm one tap later now disagree about the same day, in the same flow,
+for a state 6-IV-3 did not name.
+
+**The exact two-sentence collision, reachable and reproduced:**
+- Row (`PlanChangeSheet.tsx:584`): "Remove it — anything else on the day
+  stays."
+- Confirm, after picking "Whole day" from the scope picker
+  (`PlanChangeSheet.tsx:985`): "Are you sure? This will be removed and the
+  day becomes rest."
+
+**The ruling needed:** which sentence does the Remove row carry on an
+unanchored day that offers a whole-day scope alongside its parts? Candidates,
+none taken here (batch 3's principle stands — no signed sentence may be
+guessed into existence to close this): (a) the row could read the
+sole-content sentence whenever a whole-day scope is ONE OF the offered
+scopes, regardless of part count; (b) the row could gain a third,
+whole-day-scope-aware sentence; (c) the picker's own "Whole day" row already
+carries "Everything - the day becomes rest" as its sub-line, so the ruling
+could be that the top-level Remove row's sub-line is scoped to describe only
+the DEFAULT/no-scope-chosen outcome and the picker's per-scope sub-lines are
+what govern once a scope is offered — in which case nothing is broken and the
+"collision" is a misreading of which sentence answers which question.
+
+Full trace, file:line, and reproduction recipe (plain strength day,
+`add_category`'d with `conditioning_light`):
+`docs/BUTTONS_UI_UNIT_BOUNDARY_2026-07-31.md`, NOT-COVERED. Pinned
+behaviourally (current behaviour, not a proposed fix) in
+`planChangeMoveScopingTests.ts`. Combined device pass checklist item 4f asks
+Sam to look at exactly this flow live.

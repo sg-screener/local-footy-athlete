@@ -256,7 +256,7 @@ against. Status at a glance:
 |---|---|---|
 | 1 | Accessories vs Prehab | RULED — "ACCESSORIES", landed |
 | 2 | Swap/Add sub-lines: neutral or enumerating | RULED — NEUTRAL as shipped, no code change |
-| 3 | Practice-match day reads "Game Day" | RULED — reads "Practice Match", landed |
+| 3 | Practice-match day reads "Game Day" | RULED — signed + wired, awaits its producer (reads "Game Day" on device until createGameStub ships the type) |
 | 4 | Remove sub-line can lie on a single-session day | RULED — state-selected variant, landed |
 | 5 | Block rollover fails silently | RULED — end state + interim, TOP of the post-merge queue |
 | 6 | Generated conditioning rows have no authored name | QUEUED — conditioning vocabulary (Stage B) |
@@ -453,11 +453,41 @@ merge gate remains the combined device pass below.
    sidestepped by keeping the schedule doors in the deterministic cell. See
    NOT-COVERED. Should be found before another door tries to move into the
    random band and inherits the hazard.
+9. **Practice-match workoutType producer.** `day.headline.practice_match` is
+   signed and wired at the one render seam (6-IV-4), but nothing in the app
+   produces a `Workout` whose `workoutType` triggers it: `createGameStub`
+   (`sessionResolver.ts:397`) hardcodes `'Game'`, and the pre-season
+   practice-match fixture resolves through that same stub. Small, named so it
+   is not mistaken for a defect of this pass — see checklist item 2d below.
 
 ## NOT-COVERED
 
 - **Coach packet/voice composition** — LR-6-blocked; see Sam question 11 and
   the Scope-delivered section above.
+- **The Remove row's sub-line and the whole-day scope confirm can still
+  disagree, on an unanchored multi-kind day.** `binScopesForSnapshot`
+  (`planChangeProducer.ts:846-862`) returns `[...parts, WHOLE_DAY_SCOPE]` for
+  an unanchored day carrying two or more section kinds (e.g. a plain strength
+  day the athlete added conditioning to) — `parts` because there is more than
+  one thing to remove individually, `WHOLE_DAY_SCOPE` because nothing anchors
+  the day. `removeEmptiesTheDay` (`planChangeProducer.ts:513-515`, reading
+  `binScopes.length <= 1`) is therefore false on that day, so the Remove row
+  (`PlanChangeSheet.tsx:582-584`) reads "Remove it — anything else on the day
+  stays." — correct for the row as a general statement, since `canRemove`
+  alone does not empty the day. But `startBin` (`PlanChangeSheet.tsx:482-489`)
+  still routes to the `pick_bin_scope` step because `removeEmptiesTheDay` is
+  false, and that step (`PlanChangeSheet.tsx:956-979`) offers the
+  `WHOLE_DAY_SCOPE` alongside the parts; choosing it sets
+  `label: scope.id === 'whole_day' ? null : ...` (`:973`), and the
+  `confirm_remove` step (`:981-986`) reads `step.label === null` as "Are you
+  sure? This will be removed and the day becomes rest." — the row's own
+  promise, contradicted one tap later, on a day the row itself was describing.
+  Reproduced and confirmed real (not a fixture accident): a generated Monday
+  strength day, `add_category`'d with `conditioning_light`, reaches exactly
+  this state. Not invented copy here — recorded as open question 6-VI in
+  `docs/COPY_SHEET_RULINGS_2026-07-30.md`, pinned behaviourally (current
+  behaviour, not the intended fix) in `planChangeMoveScopingTests.ts`, and on
+  the combined device pass checklist as item 4f for Sam to rule on live.
 - **The binder's `src/rules/` blind spot.** `copyRulingsBindingTests`'s
   SOURCES scan covers `screens/home`, `screens/coach`, `components`, and four
   named authoring modules — it cannot see `src/rules/projectionCopy.ts` or
@@ -672,6 +702,13 @@ merge condition: this checklist passes in ONE session, start to finish.
       title.
    c. Open a plain strength day and confirm the exercise count matches what
       is actually numbered on screen (not a stale four-branch classification).
+   d. A practice-match / pre-season fixture day still reads "Game Day" today
+      — NOT a defect of this pass. The signed word "Practice Match"
+      (`day.headline.practice_match`) is registered and wired at every render
+      site; it turns on when the producer ships the workoutType. Seam:
+      `createGameStub` (`sessionResolver.ts:397`) hardcodes `workoutType:
+      'Game'`, so no route in the app produces `'Practice Match'` yet. See
+      post-merge queue item 9.
 
 3. NEW WEEK-SCREEN BUTTONS (ruling 2-4, 6):
    a. "Short on time today" — tap it, confirm an acknowledgment sentence
@@ -707,6 +744,22 @@ merge condition: this checklist passes in ONE session, start to finish.
    e. Per-row swap/remove buttons on the session-detail page (no modal); top
       icon row (+ / equipment / injury); confirm no "Edit exercises" modal
       appears anywhere in the app.
+   f. Tap Remove and confirm the row's sub-line is the STATE-SELECTED
+      sentence (ruling 6-IV-3): a sole-content day reads "Remove it — the day
+      becomes rest."; a day with more than one thing on it reads "Remove it —
+      anything else on the day stays." KNOWN RESIDUAL, Sam to rule live: on
+      an UNANCHORED day with two-plus section kinds (e.g. a plain strength
+      day an athlete has added conditioning to), the row reads "...anything
+      else on the day stays" — but tapping Remove still opens a scope picker
+      offering "Whole day", and choosing that scope shows a confirm reading
+      "Are you sure? This will be removed and the day becomes rest." under a
+      row that just promised the opposite. Look at exactly that flow (plain
+      strength day + Add > Conditioning, then Remove) and rule which sentence
+      the row should carry when a whole-day scope is on offer. Recorded as
+      open question 6-VI in `docs/COPY_SHEET_RULINGS_2026-07-30.md`, pinned
+      behaviourally in `planChangeMoveScopingTests.ts` ("the row sub-line and
+      the whole-day scope can still disagree on an unanchored multi-kind
+      day"), and traced in this doc's NOT-COVERED with the file:line.
 
 5. COACH SCREEN: no chips on a fresh conversation (welcome message followed
    by nothing); the input still works; a day-menu "Ask the coach" door still

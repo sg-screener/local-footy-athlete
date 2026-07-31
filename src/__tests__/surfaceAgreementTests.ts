@@ -446,11 +446,11 @@ function assertG1SundayIsRest(context: string): void {
 
 run('(1) adding strength to the G+1 Sunday tells ONE story', () => {
   reachHisWorldByActing();
-  const added = tap({ kind: 'add_category', date: '2026-08-02', category: 'strength_full' } as PlanChange);
+  const added = tap({ kind: 'add_category', date: G1_SUNDAY, category: 'strength_full' } as PlanChange);
   assert(added.outcome === 'applied',
     `the door refused the add (${added.outcome}: "${added.message}") — this cell is `
     + 'about surfaces, and the tape shows the door accepting');
-  assertSurfacesAgree('2026-08-02', 'defect 1, G+1 recovery Sunday + Full Body Strength');
+  assertSurfacesAgree(G1_SUNDAY, 'defect 1, G+1 rest Sunday + Full Body Strength');
 });
 
 run('(2) adding hard conditioning to the G+1 rest Sunday lands on every surface', () => {
