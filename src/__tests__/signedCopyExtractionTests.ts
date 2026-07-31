@@ -181,7 +181,8 @@ function extract(): ExtractedString[] {
  * somebody has to justify.
  *
  * 187 -> 182 (Task 1, repeat-week deleted) -> 166 (Task 6) -> 164 (Task 7)
- * -> 151 (Task 8, entry surface) -> 148 (Task 8, retirement pass).
+ * -> 151 (Task 8, entry surface) -> 148 (Task 8, retirement pass)
+ * -> 141 (Task 10, coach chips).
  * Task 6's drop is two things: the day-workout Classic render layer is deleted
  * outright, and the day-detail header stopped pasting the raw engine
  * `workoutType` onto the glass. Task 7's is the busy/away sheet's menu step —
@@ -200,10 +201,18 @@ function extract(): ExtractedString[] {
  * their three literal `ExerciseSheetOption` labels ("Something hurts", "No
  * equipment", "Too hard / too easy"; injury_area/injury_severity's own rows
  * were `label={area}`/`label={severity}` dynamic expressions, never counted).
+ * Task 10's drop is ruling 13 — the Coach screen's seven preset question chips,
+ * whose seven `label` strings were the only prose this extractor counted in
+ * `CoachScreen.tsx` besides the input's own placeholder. Nothing replaces them:
+ * the ruling is "the athlete just talks to the coach via the input", so the
+ * surface loses seven strings and gains none. Their seven `prefill` strings
+ * retire with them but were never counted (`prefill` is not `VISIBLE_FIELDS`,
+ * and a prefill is text the athlete can edit before sending rather than text
+ * the app asserts) — recorded so nobody re-derives a false 14-string drop.
  * DROPPED IN THE SAME COMMIT AS THE DELETION — a ceiling left sitting above the
  * real count is not a ratchet, it is headroom.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 148;
+const ATHLETE_VISIBLE_GAP_CEILING = 141;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
