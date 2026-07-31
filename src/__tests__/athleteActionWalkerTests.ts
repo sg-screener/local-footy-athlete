@@ -11,8 +11,27 @@
  * door × day-state × route combinations that must always hold. This suite owns
  * the space above it, which is unbounded and cannot be enumerated by hand.
  *
- * BUDGETS. `test:bible` runs the bounded budget (fast, deterministic seeds).
- * `WALKER_BUDGET=extended` runs the long sweep for nightly/pre-merge.
+ * BUDGETS, AND WHY DEPTH IS ITS OWN DIMENSION (L13, 2026-07-30). Width and depth
+ * are different instruments and are DECLARED separately, because a shallow gate
+ * wearing the deep one's name is the failure that law exists to prevent:
+ *
+ *   npm run test:action-walker           bounded  — 10 × 14. `test:bible`'s gate.
+ *   npm run test:action-walker:extended  WIDE     — 200 × 60. Nightly/pre-merge.
+ *   npm run test:action-walker:deep      DEEP     — 3 × 90, ≥4 weeks of clock per
+ *                                                   walk, ASSERTED. Accumulated
+ *                                                   life: one program, many edits,
+ *                                                   blocks rolling over.
+ *
+ *   WALKER_SURVEY=1   tally every distinct offence shape instead of the first.
+ *   WALKER_HARVEST=1  arm every declared red, so the walk fails, shrinks and
+ *                     prints the minimal history an entry has to carry.
+ *
+ * WHAT THE LAWS ARE. The athlete-door matrix's laws (L1-L5) after EVERY action,
+ * plus L6 (the block rolls over) and the SURFACE laws L-P0/L-P1/L-P2/L-P3/L-P4,
+ * ported from `surfaceAgreementTests` where they were stated against one world.
+ * A law is a law: they run in every tier. Reds that today's code cannot hold are
+ * carried in DECLARED_RED with the task that pays each one, and a declared red
+ * that stops redding FAILS the suite.
  *
  * Run: npm run test:action-walker
  */
@@ -51,6 +70,11 @@ import {
   executeProgramControlAction,
   programControlActionForPlanChange,
 } from '../utils/programControlActions';
+import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
+import { rolloverProgramBlock } from '../utils/programBlockRollover';
+import { getSessionComponents } from '../utils/sessionComponents';
+import { composeDayDetail } from '../utils/dayDetailComposition';
+import { project, projectParts } from '../rules/projectVisibleWeek';
 import {
   walk, describeHistory, makeRng,
   type WalkerAction, type WalkerHost, type WalkerStepResult,
@@ -97,6 +121,27 @@ function addDaysISO(date: string, days: number): string {
   const parsed = new Date(`${date}T12:00:00`);
   parsed.setDate(parsed.getDate() + days);
   return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * The only shape the surface laws read from the canonical projection. BOTH halves
+ * satisfy it — `project()` (words included) and `projectParts()` (structure
+ * alone) — which is what lets a copy gap degrade to the structural answer rather
+ * than disarming the structural laws.
+ */
+interface CanonicalWeek {
+  readonly days: readonly {
+    readonly date: string;
+    readonly kind: string;
+    readonly parts: readonly { readonly kind: string }[];
+    readonly capabilities: { readonly canRemoveWholeDay: boolean };
+  }[];
+}
+
+function daysBetweenISO(from: string, to: string): number {
+  return Math.round(
+    (new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime())
+    / 86400000);
 }
 
 // ── The world the walker acts on ──────────────────────────────────────────
@@ -180,6 +225,11 @@ let lastChange: PlanChange | null = null;
  */
 let wrapperRoutedChanges = 0;
 let directRoutedChanges = 0;
+/**
+ * The last block rollover that FAILED, if one did. Cleared when a law has seen
+ * it, so one broken rollover is one violation and not one per later action.
+ */
+let rolloverFailure: string | null = null;
 
 function freshInstall(): void {
   todayISO = INSTALL_DAY;
@@ -187,6 +237,7 @@ function freshInstall(): void {
   onboarded = false;
   generated = false;
   lastChange = null;
+  rolloverFailure = null;
   localStorageData.clear();
   useProfileStore.setState({ onboardingData: {} as OnboardingData, isOnboardingComplete: false });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
@@ -358,6 +409,44 @@ function performAction(action: WalkerAction): WalkerStepResult {
     }
     case 'advance_time': {
       todayISO = addDaysISO(todayISO, action.days);
+      // THE APP'S OWN ANSWER TO TIME PASSING — the block rolls over.
+      //
+      // L13 required a DEEP tier and the first attempt at one proved the
+      // vocabulary was incomplete: `generateProgramLocally` emits FOUR
+      // microcycles (2026-07-13 .. 2026-08-09 from this install day), so a walk
+      // that advanced past four weeks fell off the end of its own program —
+      // every day resolved REST, every menu answered `outside_horizon`, and the
+      // "deep" walk was a walk through an empty world. That is exactly the
+      // shallow-gate-wearing-a-deep-costume this law exists to forbid.
+      //
+      // The app does not do that. `useHomeScreen` rolls the block forward on
+      // render, one block per pass, until today is inside the active window
+      // (`useHomeScreen.ts:320-356`). An athlete in week five HAS a week five.
+      // So the walker's clock door calls the same coordinator the screen calls,
+      // with its own today rather than the wall clock. Per this file's founding
+      // rule: a state an athlete can be in that the walker cannot reach is a
+      // defect in the harness, and this was one.
+      for (let pass = 0; pass < 6; pass++) {
+        const store = useProgramStore.getState();
+        const status = getProgramBlockRolloverStatus({
+          program: store.currentProgram, dateISO: todayISO, blockState: store.blockState,
+        });
+        if (!status.needsRollover) break;
+        try {
+          quiet(() => rolloverProgramBlock({
+            baseProfile: useProfileStore.getState().onboardingData,
+            targetDateISO: todayISO,
+          }));
+        } catch (error) {
+          // THE SCREEN CATCHES, SO THE DOOR CATCHES. `useHomeScreen.ts:346-348`
+          // wraps this call in try/catch and logs — an athlete whose rollover
+          // fails sees no crash, he sees a program that stopped. Letting it
+          // throw here would report a crash he never gets and would hide the
+          // failure he does. It is recorded as its own law instead: L6.
+          rolloverFailure = error instanceof Error ? error.message : String(error);
+          break;
+        }
+      }
       // Crossing into a new week moves what the athlete is looking at, exactly
       // as the app does when Monday arrives.
       const monday = mondayFor(todayISO);
@@ -408,7 +497,12 @@ function proposeAction(rng: () => number, step: number): WalkerAction | null {
     };
   }
   if (roll < 0.21) return { kind: 'clear_source_facts' };
-  if (roll < 0.28) return { kind: 'advance_time', days: pickFrom(rng, [1, 2, 7] as const) };
+  // THE ONLY THING THE DEEP TIER CHANGES ABOUT THE VOCABULARY: how often the
+  // athlete reaches for the clock. Same action, same day sizes {1,2,7} — a tier
+  // that advanced in bigger jumps would be a different life, not a longer one.
+  if (roll < (DEEP ? 0.45 : 0.28)) {
+    return { kind: 'advance_time', days: pickFrom(rng, [1, 2, 7] as const) };
+  }
 
   // A door. Only propose what is legal to ATTEMPT — the producer still gets to
   // refuse; what we must not do is spend the budget on actions no screen offers.
@@ -481,6 +575,27 @@ function actionOfChange(change: PlanChange): 'move' | 'add' | 'swap' | 'remove' 
 
 let fingerprintBefore = '';
 
+/**
+ * THE SURVEY. Every law offence the walk sees, tallied by its shape rather than
+ * by the day it landed on.
+ *
+ * A declared red has to carry its reproduction, and a regex written from ONE
+ * observed message is how a broad entry ends up swallowing the next, different
+ * defect in the same law. `WALKER_SURVEY=1` prints the distinct shapes and the
+ * first seed that reached each, which is what an entry's `matches` should be cut
+ * from — and what Tasks 4-6 re-run to check an entry is still earning its place.
+ */
+const offenceTally = new Map<string,
+  { law: string; detail: string; count: number; firstSeed: number }>();
+let currentSeed = 0;
+
+function recordOffence(law: string, detail: string): void {
+  const key = `${law}::${detail.replace(/\d{4}-\d{2}-\d{2}/g, '<date>').slice(0, 220)}`;
+  const seen = offenceTally.get(key);
+  if (seen) seen.count += 1;
+  else offenceTally.set(key, { law, detail, count: 1, firstSeed: currentSeed });
+}
+
 function checkInvariants(last: WalkerStepResult): { law: string; detail: string }[] {
   const broken: { law: string; detail: string }[] = [];
   if (!generated) return broken;
@@ -550,24 +665,210 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
     }
   }
 
-  // L5 THE DAY STAYS USABLE — every day, after every action.
+  // L6 THE BLOCK ROLLS OVER — an athlete who keeps opening the app keeps
+  // having a program.
+  //
+  // Only the DEEP tier can reach this: the generated block is four microcycles
+  // wide, so nothing shallower than four weeks of clock ever asks the lifecycle
+  // boundary to do its job. When it refuses, the screen logs and moves on and
+  // the athlete is left standing on the last week of a spent block, every day
+  // `outside_horizon`, with no crash and no sentence. That silence is the defect,
+  // which is why it is a law here and not a swallowed catch.
+  if (rolloverFailure) {
+    const failure = rolloverFailure;
+    rolloverFailure = null;
+    pushOffence(broken, 'L6 THE BLOCK ROLLS OVER',
+      `the program block would not roll forward for ${todayISO} and the athlete was `
+      + `told nothing — ${failure}`);
+  }
+
+  // ── THE SURFACE LAWS (L-P), AS WALKER INVARIANTS ─────────────────────────
+  //
+  // `surfaceAgreementTests` states these laws against ONE world — his device's
+  // shape, three taps from generate — and L13 named what that costs: cells 1 and
+  // 4 PASS there, because in a freshly-acted world the G+1 Sunday still resolves
+  // a real session and the surfaces agree. The two defects he photographed most
+  // directly were the two the harness could not reach. A law that only holds
+  // where it was written is not a law, so the COMPARISONS move here, where the
+  // walker reaches accumulated worlds by acting. The fixture stays behind.
+  //
+  // The comparison bodies are ported from `surfaceAgreementTests.ts:250-281`
+  // (L-P1, L-P3) and `:350-367` (L-P4). The shape is always
+  // surface === projection, never surface_a === surface_b: two surfaces that
+  // drifted together satisfy the weaker form, and surfaces agreeing with each
+  // other's mistakes is the whole failure being replaced.
+  //
+  //   CARD      = `resolveWeekWithConditioning`  (what a week card renders)
+  //   CANONICAL = `buildProgramTabProjectedWeek` -> `projectParts`
+  //
+  // WORDS FIRST, STRUCTURE UNDERNEATH. `project()` is the full projection and a
+  // week whose words are unsigned is itself a surface defect — L-P2's family:
+  // the signed-copy gate exists so planner-internal text CANNOT reach an
+  // athlete, and a throw is that gate firing. But a copy gap must not disarm the
+  // structural laws, so when it throws the walk falls back to `projectParts` —
+  // "one derivation, no vocabulary" (`projectVisibleWeek.ts`) — and L-P1/L-P3/
+  // L-P4 are still judged on the same action.
+  //
+  // COST. One projection for the week and one menu per day, computed ONCE and
+  // shared with L5. The bounded tier is inside `test:bible` and every one of
+  // these runs after every action, in both tiers.
+  let canonical: CanonicalWeek | null = null;
+  try {
+    canonical = quiet(() => project({ week: projected, weekStart }));
+  } catch (error) {
+    pushOffence(broken, 'L-P2 SIGNED WORDS',
+      'the projection refused to render the words for a week the athlete walked to '
+      + `— ${error instanceof Error ? error.message : String(error)}`);
+    try {
+      canonical = quiet(() => projectParts({ week: projected, weekStart }));
+    } catch (structural) {
+      pushOffence(broken, 'L-P0 THE PROJECTION DERIVES',
+        'even the structural projection threw for a week the athlete walked to — '
+        + `${structural instanceof Error ? structural.message : String(structural)}`);
+    }
+  }
+
+  // One entry per law per action: a law that breaks on four days of one week is
+  // one defect, and four copies of it would drown the report.
+  const reported = new Set<string>();
+  const offend = (law: string, detail: string): void => {
+    if (reported.has(law)) return;
+    reported.add(law);
+    pushOffence(broken, law, detail);
+  };
+
   for (const day of resolved) {
     const options = quiet(() => listPlanChangeOptionsForDay({
       visibleWeek: resolved, date: day.date, todayISO,
     }));
+
+    // L5 THE DAY STAYS USABLE — every day, after every action.
     const usable = options.categories.length > 0 || options.addOnTopCategories.length > 0 ||
       options.canRemove || !options.move.refusal || !!options.locked;
     if (!usable) {
-      broken.push({
-        law: 'L5 THE DAY STAYS USABLE',
-        detail: `${day.date} is DEAD — no door offered and nothing said why`,
-      });
-      break;
+      offend('L5 THE DAY STAYS USABLE',
+        `${day.date} is DEAD — no door offered and nothing said why`);
+    }
+
+    if (!canonical) continue;
+    const mirror = projected.find((candidate) => candidate.date === day.date);
+    const canonicalDay = canonical.days.find((candidate) => candidate.date === day.date);
+    if (!mirror || !canonicalDay) {
+      offend('L-P3 PARTS CONSERVATION',
+        `${day.date} is on the card and absent from the projection entirely`);
+      continue;
+    }
+
+    // L-P1 ONE DAY, ONE NAME.
+    const cardName = day.workout?.name ?? null;
+    const canonicalName = mirror.workout?.name ?? null;
+    if (cardName !== canonicalName) {
+      offend('L-P1 ONE DAY ONE NAME',
+        `${day.date}: card "${cardName}" / projection "${canonicalName}". One day, two stories.`);
+    }
+
+    // L-P3 PARTS CONSERVATION — same ids, same order, same count.
+    const cardParts = partIds(day.workout);
+    const canonicalIds = partIds(mirror.workout);
+    if (JSON.stringify(cardParts) !== JSON.stringify(canonicalIds)) {
+      offend('L-P3 PARTS CONSERVATION',
+        `${day.date}: card ${JSON.stringify(cardParts)} / projection ${JSON.stringify(canonicalIds)}. `
+        + '`parts` is the only plural; a surface showing a different list composed its own.');
+    }
+
+    // L-P3 THE DETAIL SCREEN'S OWN ACCOUNT — `composeDayDetail` is
+    // `useDayWorkout`'s composition, extracted; this is the third story.
+    const detailKinds = detailPartKinds(mirror.workout);
+    const projectionKinds = Array.from(
+      new Set(canonicalDay.parts.map((part) => String(part.kind)))).sort();
+    if (JSON.stringify(detailKinds) !== JSON.stringify(projectionKinds)) {
+      // The DIFFERENCE is named, not just the two lists. A declared red has to
+      // be pinnable to the exact disagreement it carries, or it becomes a regex
+      // that swallows the next, different defect in the same law.
+      const omits = projectionKinds.filter((kind) => !detailKinds.includes(kind));
+      const invents = detailKinds.filter((kind) => !projectionKinds.includes(kind));
+      offend('L-P3 DETAIL = PROJECTION',
+        `${day.date}: the detail omits ${JSON.stringify(omits)} and invents `
+        + `${JSON.stringify(invents)} — detail ${JSON.stringify(detailKinds)} / projection `
+        + `${JSON.stringify(projectionKinds)}. The detail composes its own account at render.`);
+    }
+
+    // L-P4 THE MENU AND THE PROJECTION AGREE ABOUT WHAT IS ON THE DAY.
+    //
+    // Ruling 3: recovery is a day type like any other — same menu capabilities,
+    // same editing rules. Cell 4 asserts three things about one recovery Sunday;
+    // the generalisation is by STATE, not by asking less — every day is asked,
+    // and the comparison is BOTH directions. A menu that offers less than the
+    // projection carries is the recovery-Sunday defect; a menu that offers less
+    // while the projection offers MORE is the same split seen from the other end,
+    // and skipping it because the menu had a reason is exactly the "loosen until
+    // it passes" move L13 forbids.
+    //
+    // `not_visible` and `outside_horizon` ARE skipped, and that is not a
+    // loosening: both are facts about the editing WINDOW, and the projection
+    // holds no opinion about the window at all. `game_day` is not skipped —
+    // that is a claim about the day's nature, and the projection has its own.
+    const windowLocked = options.locked === 'not_visible' || options.locked === 'outside_horizon';
+    if (!windowLocked) {
+      const menuRemovable = options.hasSession && options.canRemove;
+      const projectionRemovable = canonicalDay.capabilities.canRemoveWholeDay;
+      if (menuRemovable !== projectionRemovable) {
+        offend('L-P4 MENU = PROJECTION',
+          `${day.date}: the projection calls this a "${canonicalDay.kind}" day carrying `
+          + `${JSON.stringify(canonicalDay.parts.map((part) => String(part.kind)))} and says its `
+          + `work ${projectionRemovable ? 'CAN' : 'CANNOT'} be removed; the menu `
+          + `(locked=${options.locked ?? 'null'}, hasSession=${options.hasSession}, `
+          + `canRemove=${options.canRemove}) says it ${menuRemovable ? 'CAN' : 'CANNOT'}. `
+          + 'One day, two capability stories.');
+      } else if (projectionRemovable && options.move.refusal?.reason === 'no_session') {
+        // The move clause names only `no_session`, because that is the refusal
+        // that CONTRADICTS the projection. `anchored_day` and `no_destination`
+        // are facts about the week, not claims that the day is empty, and a walk
+        // that fills every other day reaches them honestly. Cell 4's Sunday had
+        // destinations, so this narrows nothing that cell asserted.
+        offend('L-P4 MENU = PROJECTION',
+          `${day.date}: the projection carries work and the move door answers "no_session" — `
+          + `"${options.move.refusal.message}"`);
+      }
     }
   }
 
   fingerprintBefore = weekFingerprint();
-  return broken;
+  // DECLARED REDS ARE CARRIED, NOT TERMINAL. Filtering here rather than on the
+  // walk's return is what lets the deep tier BE deep: a violation returned from
+  // `walk()` ends that walk at the step it happened, so a cell that reds at step
+  // 3 would cap every walk at three actions and the depth the tier declares
+  // could never be reached. It also skips the shrink for an already-shrunk red.
+  return broken.filter((violation) => !declaredRedFor(violation.law, violation.detail));
+}
+
+function pushOffence(
+  broken: { law: string; detail: string }[], law: string, detail: string,
+): void {
+  recordOffence(law, detail);
+  broken.push({ law, detail });
+}
+
+/** The part list a surface would show. The ONLY plural, per the ruling. */
+function partIds(workout: unknown): string[] {
+  return getSessionComponents((workout ?? null) as never).map((part) => String(part.id));
+}
+
+/**
+ * What the DETAIL screen thinks is on a day, in the projection's vocabulary.
+ * Ported from `surfaceAgreementTests.detailStory` — same five questions asked of
+ * the same composition.
+ */
+function detailPartKinds(workout: unknown): string[] {
+  const composed = quiet(() => composeDayDetail(
+    (workout ?? null) as never, (workout ?? null) as never));
+  const parts: string[] = [];
+  if (composed.strengthExercises.length > 0) parts.push('strength');
+  if (composed.supportExercises.length > 0) parts.push('support');
+  if (composed.conditioningRowCount > 0) parts.push('conditioning');
+  if (composed.isRecovery) parts.push('recovery');
+  if (composed.hasTeamTraining) parts.push('team_training');
+  return Array.from(new Set(parts)).sort();
 }
 
 const host: WalkerHost = {
@@ -582,54 +883,226 @@ const host: WalkerHost = {
 
 // ── The sweep ─────────────────────────────────────────────────────────────
 
+/**
+ * L13: THE DEEP TIER IS DECLARED, NOT A SCALED SHALLOW ONE.
+ *
+ * Depth is not "the same walk, more of it". It is ACCUMULATED LIFE: one program,
+ * many edits, weeks of the clock actually moving, blocks rolling over. The law is
+ * explicit that a shallow gate wearing the deep one's name is the exact failure it
+ * exists to prevent, so the two tiers are declared side by side here and the deep
+ * one carries a MINIMUM DEPTH it must prove it reached.
+ *
+ *   bounded  — `test:bible`'s budget. Fast, wide, three-ish weeks of clock.
+ *   extended — the nightly sweep. Wide, not deep.
+ *   deep     — `npm run test:action-walker:deep`. Narrow and long.
+ *
+ * `minWeeksAdvanced` is asserted, not hoped for: a deep walk that stayed inside
+ * one week is a shallow walk with a deep label, and it FAILS the tier.
+ */
 const EXTENDED = process.env.WALKER_BUDGET === 'extended';
-const WALK_COUNT = EXTENDED ? 200 : 10;
-const WALK_LENGTH = EXTENDED ? 60 : 14;
+const DEEP = process.env.WALKER_TIER === 'deep';
+const DEPTH_TIER = { walks: 3, length: 90, minWeeksAdvanced: 4 } as const;
+const WALK_COUNT = DEEP ? DEPTH_TIER.walks : EXTENDED ? 200 : 10;
+const WALK_LENGTH = DEEP ? DEPTH_TIER.length : EXTENDED ? 60 : 14;
+const TIER = DEEP ? 'DEEP' : EXTENDED ? 'EXTENDED' : 'bounded';
 
-console.log(`\n-- Athlete action-sequence walker (${EXTENDED ? 'EXTENDED' : 'bounded'}: `
-  + `${WALK_COUNT} walks × ${WALK_LENGTH} actions) --`);
+console.log(`\n-- Athlete action-sequence walker (${TIER}: `
+  + `${WALK_COUNT} walks × ${WALK_LENGTH} actions${
+    DEEP ? `, ≥${DEPTH_TIER.minWeeksAdvanced} weeks of clock per walk` : ''}) --`);
 
 /**
- * DECLARED RED CELLS — none.
+ * DECLARED RED CELLS.
  *
- * The machinery is kept because the ruling that produced it stands: a defect
- * carved out of a unit is NAMED, reproduced and skipped, never absorbed
- * quietly. It is currently empty because the one entry it held —
- * `off_season_generation_breaches_maximums` — was fixed in the same session it
- * was declared, so its seeds now assert like any other and STAY in the suite.
+ * The ruling that produced this stands: a defect carved out of a unit is NAMED,
+ * reproduced and skipped, never absorbed quietly. An entry is a promise, not a
+ * parking space — it carries the reproduction, it names the task that pays it,
+ * and it DELETES when that task lands.
  *
- * An entry here is a promise, not a parking space: it carries the minimal
- * reproduction and it deletes when its unit lands.
+ * Two properties make it a ratchet rather than a bin:
+ *
+ *   1. `redsIn` says which tier the debt is real in, so a bounded run cannot be
+ *      quietly credited with a debt only the deep tier ever incurs.
+ *   2. STALE DEBT FAILS. If a declared red stops redding across a whole tier,
+ *      the suite fails with "declared red no longer reds" — the entry has to be
+ *      removed in the commit that turns the cell green. Debt in this repo only
+ *      ever moves down.
+ *
+ * L13, verbatim, on what this must never become: "Loosening an assertion so that
+ * it reds in a shallow world. Cells go red by the walker walking FURTHER, never
+ * by asking less." Every entry below is a red the walker reached by walking, with
+ * the assertion stated exactly as `surfaceAgreementTests` states it.
  */
-const DECLARED_RED: ReadonlyArray<{ id: string; matches: RegExp; why: string }> = [];
-
-function declaredRedFor(detail: string): string | null {
-  return DECLARED_RED.find((entry) => entry.matches.test(detail))?.id ?? null;
+interface DeclaredRed {
+  id: string;
+  law: string;
+  matches: RegExp;
+  why: string;
+  /** The task that turns this cell green and deletes this entry. */
+  paidBy: string;
+  /** Which tier this debt is real in. `both` = the bounded gate carries it too. */
+  redsIn: 'both' | 'deep';
 }
 
-run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold all seven laws`, () => {
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
+  {
+    id: 'projection_row_names_are_planner_text',
+    law: 'L-P2 SIGNED WORDS',
+    // Row names ONLY. An unsigned day or part HEADLINE is a different gap and
+    // still fails this suite.
+    matches: /"exercise\.name\.[^"]*" is not in the signed-copy sheet/,
+    why: 'DEFECT 3, ONE LAYER DOWN. `surfaceAgreementTests` cell 3 banned planner '
+      + 'vocabulary from a session NAME; the walker finds it in a ROW name two '
+      + 'actions from a fresh install, which no fixture in the suite had reached. '
+      + 'Reproduce: bounded seed 1, 2 actions — answer onboarding (In-season, team '
+      + 'Wednesday), generate the program. 12 distinct unsigned ids across the deep '
+      + 'tier, e.g. "Aerobic conditioning component (3 x 8min zone 2 Mixed Erg '
+      + 'Block)", "Assault Bike warm-up", "MetCon - Off-Legs", "Erg EMOM - 10-15 '
+      + 'cal", "Easy Spin or Walk". The generator composes these strings; the '
+      + 'signed sheet cannot contain them and must not be made to.',
+    paidBy: 'Task 6 (the detail/row surface migrates to project()\'s rows)',
+    redsIn: 'both',
+  },
+  {
+    id: 'detail_screen_omits_projection_parts',
+    law: 'L-P3 DETAIL = PROJECTION',
+    // Pinned to the OMISSION SET observed. A detail that drops `support` or
+    // `team_training`, or invents anything but `recovery`, is a different defect
+    // and still fails.
+    matches: /omits \["(?:conditioning|power|recovery|speed|strength)"(?:,"(?:conditioning|power|recovery|speed|strength)")*\] and invents (?:\[\]|\["recovery"\])/,
+    why: 'THE THIRD STORY, generalised off his one Sunday. `composeDayDetail` has no '
+      + 'row-level surface for recovery, power or speed, so the detail screen\'s own '
+      + 'account of a day silently drops parts the projection carries — and in one '
+      + 'shape it swaps them (omits ["conditioning"], invents ["recovery"]). '
+      + 'Reproduce: bounded seed 1, 2 actions — answer onboarding (In-season, team '
+      + 'Wednesday), generate the program: 2026-07-20 detail ["strength"] / '
+      + 'projection ["recovery","strength"]. Six distinct diff shapes across the '
+      + 'deep tier.',
+    paidBy: 'Task 6 (the day-detail screen renders project()\'s parts)',
+    redsIn: 'both',
+  },
+  {
+    id: 'menu_offers_removal_of_a_team_night',
+    law: 'L-P4 MENU = PROJECTION',
+    matches: /a "training" day carrying \["team_training"\] and says its work CANNOT be removed; the menu \(locked=null, hasSession=true, canRemove=true\)/,
+    why: 'CAPABILITY PARITY, THE DIRECTION CELL 4 DOES NOT LOOK. A team-only night '
+      + 'projects one `team_training` part, which `partCapabilities` correctly calls '
+      + 'an ANCHOR — not removable. The menu derives `canRemove` from '
+      + '`workout !== null` and offers to bin the team night. Reproduce: bounded '
+      + 'seed 1, 2 actions — answer onboarding (In-season, team Wednesday), generate '
+      + 'the program; 2026-07-22.',
+    paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    redsIn: 'both',
+  },
+  {
+    id: 'projection_calls_a_game_day_editable',
+    law: 'L-P4 MENU = PROJECTION',
+    matches: /a "game" day carrying \["strength"\] and says its work CAN be removed; the menu \(locked=game_day, hasSession=false, canRemove=false\)/,
+    why: 'THE PROJECTION DOES NOT KNOW A GAME DAY AT PART LEVEL. `dayKind` says '
+      + '"game" and `COMPONENT_TO_PART` still maps the day\'s `session` component to '
+      + '`strength`, so the projection offers move and remove on a fixture while the '
+      + 'menu locks it. One derivation disagreeing with itself is worse than two '
+      + 'surfaces disagreeing. Reproduce: bounded seed 2, 3 actions — answer '
+      + 'onboarding (Pre-season, team Wednesday), generate the program, mark '
+      + '2026-07-26 as game.',
+    paidBy: 'Task 4 (the menu derives its capabilities from project())',
+    redsIn: 'both',
+  },
+  {
+    id: 'block_rollover_fails_silently_and_the_program_stops',
+    law: 'L6 THE BLOCK ROLLS OVER',
+    matches: /Accepted-state ledger mismatch/,
+    why: 'ONLY DEPTH REACHES THIS, which is the whole argument for the tier. Four '
+      + 'weeks after install the block must roll; `rebuildLocalWeek` re-evaluates '
+      + 'the accepted-state ledger, finds blockers '
+      + '(planner_selected_target_miss, required_minimum_shortfall, '
+      + 'pattern_restore_failure) and throws. `useHomeScreen` catches and logs, so '
+      + 'the athlete gets no crash and no sentence — he gets a program that stopped, '
+      + 'every day outside the edit horizon. Reproduce: DEEP seed 1, 6 actions — '
+      + 'answer onboarding (In-season, team Wednesday), generate the program, '
+      + 'advance 7, advance 7, mark 2026-08-09 as game, advance 7; fails rolling '
+      + 'into 2026-08-10. NOT A SURFACE DEFECT AND NO TASK IN THIS UNIT PAYS IT: '
+      + 'carried here so the tier can run, and reported to Sam for a ruling. See '
+      + 'the Task 3 report for why a harness artifact is not excluded.',
+    paidBy: 'UNASSIGNED — new finding, Task 3 report, awaiting Sam',
+    redsIn: 'deep',
+  },
+];
+
+const declaredRedHits = new Set<string>();
+
+function declaredRedFor(law: string, detail: string): string | null {
+  const entry = DECLARED_RED.find((candidate) =>
+    candidate.law === law && candidate.matches.test(detail));
+  if (!entry) return null;
+  // HARVEST MODE arms every declared red so the walk fails, shrinks and reports
+  // the minimal history — the evidence an entry has to carry. It can only ever
+  // make the suite redder, which is why it is safe to leave reachable.
+  if (process.env.WALKER_HARVEST === '1') return null;
+  declaredRedHits.add(entry.id);
+  return entry.id;
+}
+
+run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
   const violations: string[] = [];
-  const declaredHits = new Set<string>();
+  const shallow: string[] = [];
   for (let seed = 1; seed <= WALK_COUNT; seed++) {
+    currentSeed = seed;
     const violation = walk({ host, seed, length: WALK_LENGTH });
-    if (violation && declaredRedFor(violation.detail)) {
-      declaredHits.add(declaredRedFor(violation.detail)!);
-      continue;
-    }
     if (violation) {
+      // L1 crashes never reach `checkInvariants`, so the declared-red filter has
+      // to be offered one more chance here.
+      if (declaredRedFor(violation.law, violation.detail)) continue;
       violations.push(
         `\n    SEED ${seed} — ${violation.law}\n    ${violation.detail}\n`
         + `    minimal failing history (${violation.history.length} actions):\n`
         + `${describeHistory(violation.history)}`);
       // Report every distinct law, not just the first seed that trips.
       if (violations.length >= 5) break;
+      continue;
+    }
+    // THE TIER PROVES ITS OWN DEPTH. Only meaningful on a clean walk: a
+    // violation is shrunk before `walk` returns, and the replays leave the
+    // clock wherever the minimal history ended.
+    if (DEEP) {
+      const reached = daysBetweenISO(INSTALL_DAY, todayISO);
+      if (reached < DEPTH_TIER.minWeeksAdvanced * 7) {
+        shallow.push(`seed ${seed} ended ${reached} days after install (needs `
+          + `${DEPTH_TIER.minWeeksAdvanced * 7})`);
+      } else {
+        console.log(`      seed ${seed}: reached ${todayISO} — ${reached} days `
+          + `(${(reached / 7).toFixed(1)} weeks) after install`);
+      }
     }
   }
   assert(violations.length === 0,
     `the walker found law violations:\n${violations.join('\n')}`);
-  for (const id of declaredHits) {
-    console.log(`      (declared red cell reached and skipped: ${id})`);
+  assert(shallow.length === 0,
+    'the DEEP tier did not reach the depth it declares — a shallow walk wearing a '
+    + `deep label is what L13 forbids:\n    ${shallow.join('\n    ')}`);
+  for (const id of declaredRedHits) {
+    const entry = DECLARED_RED.find((candidate) => candidate.id === id)!;
+    console.log(`      (declared red carried: ${id} — paid by ${entry.paidBy})`);
   }
+  if (process.env.WALKER_SURVEY === '1') {
+    console.log(`\n  -- offence survey (${offenceTally.size} distinct shapes) --`);
+    for (const entry of [...offenceTally.values()].sort((a, b) => b.count - a.count)) {
+      console.log(`  [${String(entry.count).padStart(5)}x, first seed ${entry.firstSeed}] `
+        + `${entry.law}\n        ${entry.detail}`);
+    }
+  }
+});
+
+run('every declared red still reds — stale debt fails, it does not expire quietly', () => {
+  // THE RATCHET DIRECTION. A declared red that no longer happens is a cell that
+  // went green, and the commit that turned it green owes the deletion of its
+  // entry. Nothing here may outlive the defect it names.
+  if (process.env.WALKER_HARVEST === '1') return;
+  const owed = DECLARED_RED.filter((entry) =>
+    (entry.redsIn === 'both' || DEEP) && !declaredRedHits.has(entry.id));
+  assert(owed.length === 0,
+    `declared red no longer reds in the ${TIER} tier — delete the entry, do not `
+    + `leave it carrying debt that is already paid:\n    ${
+      owed.map((entry) => `${entry.id} (${entry.law}, paid by ${entry.paidBy})`).join('\n    ')}`);
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {

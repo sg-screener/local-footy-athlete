@@ -274,6 +274,7 @@
     "test:device-findings": "TZ=Australia/Melbourne sucrase-node src/__tests__/deviceFindingsReplayTests.ts",
     "test:action-walker": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionWalkerTests.ts",
     "test:action-walker:extended": "WALKER_BUDGET=extended TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionWalkerTests.ts",
+    "test:action-walker:deep": "TZ=Australia/Melbourne WALKER_TIER=deep sucrase-node src/__tests__/athleteActionWalkerTests.ts",
     "test:shortfall-copy": "TZ=Australia/Melbourne sucrase-node src/__tests__/section18ShortfallCopyTests.ts",
     "test:athlete-door-matrix": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteDoorMatrixTests.ts",
     "test:session-type-charter": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionTypeCharterTests.ts",

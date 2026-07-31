@@ -75,7 +75,17 @@ export interface ProjectedDayParts {
   readonly date: string;
   readonly kind: VisibleDayKind;
   readonly owner: VisibleDayOwner;
-  readonly parts: readonly Omit<VisiblePart, 'headline' | 'detail'>[];
+  /**
+   * NO `rows` HERE, AND THAT IS THE POINT. Rows carry `SignedCopy`, so composing
+   * them inside the structural half made a COPY GAP disarm the STRUCTURAL laws:
+   * one unsigned row name and `projectParts` threw, taking parts conservation
+   * (L-P3) and capability parity (L-P4) down with it. The action walker found it
+   * two actions from a fresh install on every seed it tried — a real generated
+   * week emits a planner-composed row name (defect 3's class, at row level) that
+   * no fixture in the suite had reached. Rows are composed in `project()`, where
+   * the words already live.
+   */
+  readonly parts: readonly Omit<VisiblePart, 'headline' | 'detail' | 'rows'>[];
   readonly capabilities: Omit<DayCapabilities, 'refusal'>;
 }
 
@@ -233,13 +243,11 @@ function partsForWorkout(
   workout: Workout | null | undefined,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
-  const composed = composeDayDetail(workout, workout);
   return getSessionComponents(workout).map((component) => {
     const kind = COMPONENT_TO_PART[String(component.id)] ?? 'strength';
     return {
       id: `${date}:${String(component.id)}`,
       kind,
-      rows: rowsForKind(kind, composed),
       capabilities: partCapabilities(kind),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],
     };
@@ -297,22 +305,30 @@ export function project(args: {
     weekStart: structural.weekStart,
     days: structural.days.map((day, index): VisibleDay => {
       const source = args.week[index];
+      // The words half owns row composition — see `ProjectedDayParts.parts`.
+      const composed = source.workout
+        ? composeDayDetail(source.workout, source.workout)
+        : null;
       return {
         date: day.date,
         kind: day.kind,
         owner: day.owner,
         headline: dayHeadline(day.kind, source),
-        parts: day.parts.map((part): VisiblePart => ({
-          ...part,
-          headline: partHeadline(part.kind, source.workout, part.rows),
-          // Ambiguity resolution (Sam, as controller, 2026-07-31): populate from a
-          // part's existing signed sub-line where one exists, otherwise null — do
-          // not invent prose. No reliable authored sub-line source is wired to an
-          // arbitrary part yet, so every part gets `null` in this task; a future
-          // task can wire one in (e.g. `ConditioningVisibleIdentity.doseLabel`)
-          // without this shape changing.
-          detail: null,
-        })),
+        parts: day.parts.map((part): VisiblePart => {
+          const rows = composed ? rowsForKind(part.kind, composed) : [];
+          return {
+            ...part,
+            rows,
+            headline: partHeadline(part.kind, source.workout, rows),
+            // Ambiguity resolution (Sam, as controller, 2026-07-31): populate from
+            // a part's existing signed sub-line where one exists, otherwise null —
+            // do not invent prose. No reliable authored sub-line source is wired to
+            // an arbitrary part yet, so every part gets `null` in this task; a
+            // future task can wire one in (e.g.
+            // `ConditioningVisibleIdentity.doseLabel`) without this shape changing.
+            detail: null,
+          };
+        }),
         capabilities: {
           ...day.capabilities,
           refusal: day.capabilities.canAdd || day.parts.length > 0
