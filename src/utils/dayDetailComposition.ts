@@ -19,9 +19,12 @@
  * renders them and this file goes. Until then it exists so the harness enters the
  * door the athlete uses.
  *
- * NO CALLER MAY GROW A SECOND ONE. `useDayWorkout` is the only production caller;
- * `dayDetailCompositionOwnershipTests` pins that, so a second surface cannot start
- * composing its own detail while the migration is in flight.
+ * NO CALLER MAY GROW A SECOND ONE. Since Task 6 the ONLY production caller is
+ * `rules/projectVisibleWeek.ts` — `useDayWorkout` came off the list when the
+ * day-detail screen started rendering `project()`'s parts, which is what this
+ * module's own second paragraph said would happen. `dayDetailCompositionOwnership
+ * Tests` pins the one caller, so a surface cannot start composing its own detail
+ * again.
  */
 
 import type { Workout } from '../types/domain';

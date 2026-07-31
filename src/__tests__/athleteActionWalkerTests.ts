@@ -75,6 +75,7 @@ import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import { isComposedPrescriptionRow, project, projectParts } from '../rules/projectVisibleWeek';
+import { buildSessionTemplate, type SessionTemplateItem } from '../utils/sessionTemplate';
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleWeek } from '../rules/visibleProjection';
 import {
@@ -868,6 +869,29 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
           + `${JSON.stringify(projectionKinds)}. The detail composes its own account at render.`);
       }
 
+      // L-P3 TEMPLATE = PROJECTION — the CONTENT the screen is about to draw.
+      //
+      // The one check here that crosses representations. `buildSessionTemplate` is
+      // a separate composition of the same day, owned by D13, and it is what fills
+      // the athlete's session list; `visibleDay.parts` is what the projection says
+      // is on the day. Neither is derived from the other, so this can actually
+      // fail — and it is the successor to the three deleted `L-P3 DETAIL =
+      // PROJECTION` entries, which named exactly this defect class one composition
+      // earlier. See `sessionTemplateKinds` for the enumerated mapping.
+      const templateKinds = sessionTemplateKinds(mirror.workout);
+      const contentKinds = Array.from(new Set(visibleDay.parts
+        .map((part) => String(part.kind))
+        .filter((kind) => !TITLE_ONLY_PART_KINDS.has(kind)))).sort();
+      if (JSON.stringify(templateKinds) !== JSON.stringify(contentKinds)) {
+        const omits = contentKinds.filter((kind) => !templateKinds.includes(kind));
+        const invents = templateKinds.filter((kind) => !contentKinds.includes(kind));
+        offend('L-P3 TEMPLATE = PROJECTION',
+          `${day.date}: the session list omits ${JSON.stringify(omits)} and invents `
+          + `${JSON.stringify(invents)} — template ${JSON.stringify(templateKinds)} / `
+          + `projection ${JSON.stringify(contentKinds)}. The list the athlete reads `
+          + 'and the projection tell one story or neither is the projection.');
+      }
+
       // L-P3 ROWS CONSERVATION — a part the projection carries must carry its work.
       //
       // NEW IN TASK 6, and it exists because a debt MOVED rather than being paid.
@@ -997,6 +1021,83 @@ function partIds(workout: unknown): string[] {
   return getSessionComponents((workout ?? null) as never).map((part) => String(part.id));
 }
 
+/**
+ * WHAT THE SCREEN'S CONTENT LIST IS ABOUT TO SHOW, in the projection's vocabulary.
+ *
+ * THE CROSS-REPRESENTATION LAW'S OTHER SIDE, and the reason it is a law rather
+ * than an identity. Review caught the first version of Task 6's replacement
+ * checks being restatements of `project()` over its own output:
+ * `projectDayDetail` maps `parts` one-to-one, so comparing its section kinds to
+ * `parts` kinds could only ever agree. Meanwhile the rows the athlete actually
+ * reads come from somewhere else entirely — `buildSessionTemplate(workout)`, D13's
+ * one-list composition owner (`DayWorkoutScreenV2.tsx:489`, rendered at
+ * `:1230-1261`) — and NOTHING compared that to the projection. Which is to say the
+ * exact defect class the three deleted declared reds named (the rendered account
+ * omitting work the projection carries) was unwatched on the surface that ships.
+ *
+ * So this asks the D13 owner, on real generated weeks, what kinds of work its
+ * items represent, and the law compares it to `visibleDay.parts`. Two
+ * compositions, one story, or a red.
+ *
+ * THE MAPPING IS ENUMERATED, NOT INFERRED. Every arm below is a stated claim
+ * about what a template item puts on the glass; a template item shape added later
+ * lands in no arm and reds as `unmapped:<kind>` rather than being quietly ignored.
+ *
+ * `game` is the one part kind the CONTENT list is not responsible for and it is
+ * excluded here by name: a fixture's part is the placeholder `getSessionComponents`
+ * emits for a workout with no training content (`exercises: []`), so there is
+ * nothing for a list to hold and the TITLE speaks it ("Game Day", via
+ * `visibleDayLeadHeadline`). This is not a hole — a fixture day carrying real
+ * components projects those as real kinds, and they are compared like any other.
+ */
+const TEMPLATE_ITEM_KIND: Record<string, string> = {
+  // A conditioning choice block, and a conditioning phase row on a
+  // conditioning-only day, are both the day's conditioning work.
+  conditioning_choice: 'conditioning',
+  conditioning_phase: 'conditioning',
+  // Add-on rows: `recoveryAddons`, rendered as ordinary optional rows since D13.
+  addon: 'recovery',
+  // The team-training banner.
+  team_training: 'team_training',
+};
+
+const STRENGTH_ROLE_KIND: Record<string, string> = {
+  power: 'power',
+  midline: 'support',
+  main_lift: 'strength',
+  accessory: 'strength',
+  prehab: 'strength',
+  conditioning: 'conditioning',
+};
+
+/** Part kinds the day-detail CONTENT list does not carry — see the header above. */
+const TITLE_ONLY_PART_KINDS: ReadonlySet<string> = new Set(['game']);
+
+function sessionTemplateKinds(workout: unknown): string[] {
+  const template = quiet(() => buildSessionTemplate((workout ?? null) as never));
+  const kinds = new Set<string>();
+  if (template.mode === 'recovery') {
+    // Sam's §6 item 3 exception: a recovery day keeps its own simple template —
+    // `RecoveryBlock` over the workout's rows plus `RecoveryAddonSection`. No
+    // items, and the whole day is recovery work.
+    kinds.add('recovery');
+    return [...kinds].sort();
+  }
+  for (const item of template.items as SessionTemplateItem[]) {
+    if (item.kind === 'team_training') { kinds.add(TEMPLATE_ITEM_KIND.team_training); continue; }
+    if (item.kind === 'conditioning_choice') {
+      kinds.add(TEMPLATE_ITEM_KIND.conditioning_choice);
+      continue;
+    }
+    if (item.presentation === 'strength') {
+      kinds.add(STRENGTH_ROLE_KIND[String(item.role)] ?? `unmapped_role:${String(item.role)}`);
+      continue;
+    }
+    kinds.add(TEMPLATE_ITEM_KIND[item.presentation] ?? `unmapped:${String(item.presentation)}`);
+  }
+  return [...kinds].sort();
+}
+
 const host: WalkerHost = {
   reset: () => { freshInstall(); fingerprintBefore = ''; },
   perform: (action) => {
@@ -1085,6 +1186,106 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
+  // ── L-P3 TEMPLATE = PROJECTION — FOUR REAL REDS, FOUND BY THE NEW LAW ────
+  //
+  // These are the deliverable Task 6's first pass owed and did not produce. Its
+  // two replacement checks were identities over `project()`'s own output, so the
+  // defect class the three deleted `L-P3 DETAIL = PROJECTION` entries named — the
+  // rendered account omitting work the projection carries — went unwatched on the
+  // surface that ships. `L-P3 TEMPLATE = PROJECTION` compares D13's
+  // `buildSessionTemplate` (what fills the athlete's session list) against
+  // `visibleDay.parts`, two compositions neither derived from the other, and it
+  // reds on real generated weeks in four distinct shapes. Every one of them is
+  // work the projection says is on the day and the list does not show.
+  //
+  // FOUR ENTRIES, NOT ONE. Task 3's review established the rule: a shared id lets
+  // an owner fix one shape while the others keep the entry alive, so each notch
+  // has to be releasable on its own.
+  {
+    id: 'session_list_drops_conditioning_attached_to_an_appointment',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \["conditioning"\] and invents \[\] — template \[[^\]]*"team_training"[^\]]*\]/,
+    why: 'A TEAM NIGHT CARRYING CONDITIONING SHOWS NONE OF IT. The projection '
+      + 'carries a `conditioning` part (the components say so), and '
+      + '`buildSessionTemplate` emits nothing for it: its conditioning arms are '
+      + '`isConditioningOnly` (a `CONDITIONING_ONLY_TYPES` workoutType) and '
+      + '`isCombinedDay` (`hasCombinedConditioning`), and a Team Training day with '
+      + 'attached conditioning is neither, so `resolveConditioningOptions` never '
+      + 'runs and the rows never enter the one list. This is the same shape as the '
+      + 'spec bug D13 was written to fix — "team training hid on conditioning days '
+      + 'because `TeamTrainingBlock` only existed inside the strength branch" '
+      + '(§2 item 4c) — with the two kinds swapped. Reproduce: bounded seed 5, 5 '
+      + 'actions, 2026-07-29; deep seeds reach 2026-08-19 and 2026-09-23.',
+    paidBy: 'the D13 session-template owner (`utils/sessionTemplate.ts`, spec '
+      + '`docs/SESSION_TEMPLATE_SPEC_2026-07-25.md`). Under the one-projection '
+      + 'ruling the list should be driven by the day\'s PARTS rather than by two '
+      + 'workoutType predicates; that is a composition-ownership change, not a '
+      + 'titling one. NOT paid by the detail-surface task.',
+    expiresWhen: 'every conditioning part the projection carries appears in the '
+      + 'session list, whatever else is on the day.',
+    redsIn: 'both',
+  },
+  {
+    id: 'session_list_calls_a_conditioning_day_recovery',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
+    why: 'THE ONLY SHAPE THAT INVENTS, and it is two classifiers disagreeing about '
+      + 'one day. `buildSessionTemplate` short-circuits to `mode: "recovery"` on '
+      + '`isRecoveryWorkout` (workoutType `Recovery` OR `sessionTier === '
+      + '"recovery"`), which renders `RecoveryBlock` and no items at all; '
+      + '`getSessionComponents` looked at the same workout and said conditioning. '
+      + 'So the athlete is shown a recovery day over conditioning work. DEEP ONLY: '
+      + 'it needs a day whose tier and whose content have come apart, which the '
+      + 'bounded tier\'s fourteen actions do not build. Reproduce: deep, '
+      + '2026-08-06 — template ["recovery"] / projection ["conditioning"].',
+    paidBy: 'the D13 session-template owner, with `sessionComponents` — one of the '
+      + 'two has to stop answering. Ruling 3 ("recovery is a day type like any '
+      + 'other") says the answer should come from the parts.',
+    expiresWhen: 'the session list never reports a kind of work the projection does '
+      + 'not carry.',
+    redsIn: 'deep',
+  },
+  {
+    id: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \[\] and invents \["support"\]/,
+    why: 'THE TRUNK/SUPPORT SPLIT, ANSWERED TWICE. The template badges a row '
+      + '`midline` via `classifyExerciseRole(name)` — a NAME classifier — while '
+      + '`getSessionComponentRows` decides the same question with '
+      + '`isTrunkSupportRow`, put the row in `strengthRows`, and so no `support` '
+      + 'component exists for the projection to carry. Nothing is lost from the '
+      + 'glass here (the row renders either way); what disagrees is what KIND of '
+      + 'work the athlete is being told it is, which is the same defect class from '
+      + 'the other end. DEEP ONLY, by survey. Reproduce: deep, 2026-08-24 — '
+      + 'template ["strength","support"] / projection ["strength"].',
+    paidBy: 'the D13 session-template owner, with `sessionComponents` — role should '
+      + 'come from the part the row belongs to, not from a second reading of its '
+      + 'name (the name-as-a-data-channel shape this unit exists to remove).',
+    expiresWhen: 'the session list never badges work as a kind the projection does '
+      + 'not carry on that day.',
+    redsIn: 'deep',
+  },
+  {
+    id: 'session_list_has_no_representation_for_speed_work',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \["speed"\] and invents \[\]/,
+    why: 'SPEED WORK IS PRESCRIBED AND NEVER RENDERED. `getSessionComponents` emits '
+      + 'a `speed` component from `workout.speedBlock`, so the projection carries a '
+      + '`speed` part; `buildSessionTemplate` has no arm for it — it reads '
+      + '`powerRows`, `strengthRows`, `supportRows`, `conditioningRows` and '
+      + '`recoveryAddons`, and the speed block is none of those. The athlete opens '
+      + 'the day and the speed work is not in the list. Sibling of the power case, '
+      + 'which D13 DID handle ("power joins the one list as an ordinary row"); '
+      + 'speed was missed. BOUNDED, by survey — it needs a week the sprint-exposure '
+      + 'gate put a speed block in. Reproduce: bounded seed 4, 2 actions, '
+      + '2026-07-20 — template ["conditioning","power","recovery","strength"] / '
+      + 'projection [... ,"speed", ...].',
+    paidBy: 'the D13 session-template owner — the same move that put power in the '
+      + 'one list, applied to the block it missed.',
+    expiresWhen: 'a projected `speed` part appears in the session list.',
+    redsIn: 'bounded',
+  },
+
   {
     id: 'generated_conditioning_rows_have_no_authored_name',
     law: 'L-P2 SIGNED WORDS',

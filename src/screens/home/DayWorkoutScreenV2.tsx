@@ -1015,8 +1015,17 @@ export default function DayWorkoutScreenV2() {
     );
   }, [smokeCoachBikeFlow, smokeContract.state, smokeContract.label]);
 
-  // ── Missing-workout fallback ──
-  if (!workout) {
+  // ── Missing-day fallback: BOTH resolvers must have a day, or neither speaks ──
+  //
+  // `workout` comes from `useResolvedDay` (the input state) and `detail` from
+  // `useVisibleDay` (the projection). Two resolvers means their disagreement is
+  // representable, and the first version of this screen substituted a blank title
+  // for it (`detail?.headline ?? ''`) — an untitled session over a full row list,
+  // with `accessibilityLabel` reading "Workout: ". That is a silent substitution
+  // where the words are missing, which is the one thing this whole migration
+  // exists to stop, and everywhere else in it a missing answer is loud. If the
+  // projection has no day, the screen says so instead of drawing one.
+  if (!workout || !detail) {
     return (
       <SafeAreaView style={styles.container}>
         {smokeCoachBikeFlow
@@ -1049,14 +1058,12 @@ export default function DayWorkoutScreenV2() {
   // attached-part line are `SignedCopy` from `projectDayDetail`, and the count is
   // read off the list the athlete can actually count.
   //
-  // `detail` is null only when the projection has no such day. The workout guard
-  // above has already returned for a missing day, so this is the projection and
-  // the resolver disagreeing about the horizon — nothing is invented for it.
-  const visibleWorkoutTitle: string = detail?.headline ?? '';
+  // Both are non-null past the guard above — no fallback, nothing substituted.
+  const visibleWorkoutTitle: string = detail.headline;
 
   // The parts the title did not already speak for — the SAME list the week card
   // renders as its secondary line, from the same `projectDayDetail`.
-  const subtitleText = (detail?.attached ?? []).join(' + ');
+  const subtitleText = detail.attached.join(' + ');
 
   // Subtitle meta count — the numbered rows the athlete sees, taken from the one
   // list that renders them (`sessionListLabels` numbers exactly those). It used

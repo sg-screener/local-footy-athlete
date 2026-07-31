@@ -319,15 +319,28 @@ function rowCue(row: any): SignedCopy | null {
 /**
  * Is this row an AUTHORED EXERCISE, or a prescription the builder composed?
  *
- * `sessionBuilder.condEx` — the one constructor for conditioning, sprint and
- * speed rows — stamps `exerciseType: 'Cardio'` on everything it makes, and what
- * it makes is not an exercise from a vocabulary: it is a sentence assembled at
- * build time out of numbers, modality words and planner nouns ("Aerobic
- * conditioning component (3 x 8min zone 2 Mixed Erg Block)", "Assault Bike
- * warm-up", "Quality speed warm-up (short)"). Every other row on a generated day
- * names an exercise from the locked vocabulary (`selectableExerciseVocabulary.ts`,
- * exercise-name-literal-lock unit), and a template-placed row names one from the
- * addable-content registry — both authored, both registered.
+ * `exerciseType: 'Cardio'` is the marker, and FOUR places stamp it — the claim
+ * here is about all four, not just the generator:
+ *
+ *   - `sessionBuilder.condEx` (`:1051`) — the constructor for conditioning,
+ *     sprint and speed rows, and the population this filter exists for. What it
+ *     makes is not an exercise from a vocabulary: it is a sentence assembled at
+ *     build time out of numbers, modality words and planner nouns ("Aerobic
+ *     conditioning component (3 x 8min zone 2 Mixed Erg Block)", "Assault Bike
+ *     warm-up", "Quality speed warm-up (short)").
+ *   - `applyAdjustmentEvents.ts:735` and `coachCommandExecutor.ts:3807` — rows
+ *     an adjustment or a coach command materialises, whose names come from the
+ *     same composed vocabulary and are equally unsigned. Dropped for the same
+ *     reason, deliberately.
+ *   - `data/defaultProgram.ts:395,406` — two rows of the hardcoded default
+ *     program. Also dropped; `defaultProgram` is the pre-generation placeholder
+ *     and its conditioning rows have no authored name either.
+ *
+ * Every other row on a generated day names an exercise from the locked vocabulary
+ * (`selectableExerciseVocabulary.ts`, exercise-name-literal-lock unit), and a
+ * template-placed row names one from the addable-content registry
+ * (`coachRevisionTemplates.ts`, `exerciseType: 'Conditioning'` — untouched by this
+ * filter) — both authored, both registered.
  *
  * ASKED OF THE ROW'S OWN TYPE, NOT OF THE COPY SHEET. "Is this name registered?"
  * would be the same question backwards — the projection deciding what to carry by

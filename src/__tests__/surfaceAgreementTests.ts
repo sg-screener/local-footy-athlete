@@ -31,9 +31,19 @@
  *
  * STATUS, 2026-07-31 — read this before trusting a result.
  *
- *   - Cell 1 PASSES, and since Task 6 it passes through the REAL detail path:
- *     `projectDayDetail` is what `DayWorkoutScreenV2` renders, so the third story
- *     is finally in the comparison rather than represented by a stand-in.
+ *   - Cell 1 PASSES. READ WHAT THAT DOES AND DOES NOT MEAN. Since Task 6 the
+ *     detail comparison here reads `projectDayDetail`, which is what
+ *     `DayWorkoutScreenV2` uses for its TITLE and its attached-part line — and
+ *     `projectDayDetail` maps `parts` one-to-one, so those two lists agree by
+ *     construction. What the cell holds is that they STAY that way: a filter or a
+ *     `kind` branch added to the detail surface reds it. It does NOT compare the
+ *     rendered CONTENT: the athlete's session list is filled by D13's separate
+ *     composition (`buildSessionTemplate`), and the law that crosses those two
+ *     representations lives in `athleteActionWalkerTests` as
+ *     `L-P3 TEMPLATE = PROJECTION`, because only the walker reaches real
+ *     generated weeks by acting. That law reds today, in four declared shapes
+ *     owned by D13 — so the content half of "one story" is watched, and it is
+ *     not yet true.
  *   - Cell 2's surface half PASSES. Its remaining red, and cell 4's, are ONE
  *     domain gap — the G+1 Sunday resolves as REST with no workout in every world
  *     this harness can act its way to — declared below as
@@ -41,8 +51,10 @@
  *     checked, and never counted as a pass.
  *   - Cell 3 PASSES over the whole visible horizon.
  *
- * The `harness-enters-below-the-door` note this header used to carry is paid: the
- * detail surface is callable, and it is the one the screen calls.
+ * The `harness-enters-below-the-door` note this header used to carry is HALF paid:
+ * the detail surface is callable and it is the one the screen calls for its
+ * words. The content list entered a harness only when
+ * `L-P3 TEMPLATE = PROJECTION` was written, and it went red immediately.
  *
  * Run: npm run test:surface-agreement
  */
@@ -120,6 +132,14 @@ function assert(condition: unknown, detail: string): asserts condition {
  */
 interface DeclaredDomainGap {
   id: string;
+  /**
+   * WHICH CELLS THIS MAY EXPLAIN. Scoped by name, not global: a matcher loose
+   * enough to be useful is loose enough to absorb a future red in a DIFFERENT
+   * cell that happens to contain the same phrase, and a gap that can swallow an
+   * unrelated failure has stopped being a declaration. Matched against the cell
+   * name as a prefix.
+   */
+  cells: readonly string[];
   /** The exact failure this explains. Cut from the message, not guessed at. */
   matches: RegExp;
   why: string;
@@ -130,6 +150,7 @@ interface DeclaredDomainGap {
 const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [
   {
     id: 'g1_sunday_is_rest_not_a_recovery_day',
+    cells: ['(2) adding hard conditioning', '(4) a recovery day is offered'],
     matches: /the projection no longer shows recovery at all|is not considered to have a session/,
     why: 'ONE GAP, TWO CELLS, AND IT IS UPSTREAM OF EVERY SURFACE. Cells 2 and 4 '
       + 'both describe the Sunday after his Saturday fixture as a RECOVERY day — '
@@ -149,7 +170,12 @@ const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [
       + 'earlier; Task 6 paid that half (the row names an add places are registered '
       + 'now, and its L-P1/L-P3 surface assertions PASS), which uncovered the '
       + 'domain half underneath. A carried red shadowing the one behind it is a '
-      + 'shape this branch has already been caught by once (commit 3f879d4).',
+      + 'shape this branch has already been caught by once (commit 3f879d4). '
+      + 'WHAT IS UNEXERCISED WHILE THIS STANDS, recorded so nobody reads the gap '
+      + 'as narrower than it is: cell 4 aborts on its FIRST assertion '
+      + '(`hasSession`), so its `canRemove` and `!move.refusal` assertions have '
+      + 'not run since this entry was written. When the gap closes, those two are '
+      + 'unproven and must be treated as new, not as regressions.',
     owner: 'the recovery-as-a-day-type owner — reassessment staging step 5 '
       + '("Recovery as a day type; REST as a kind. Re-verify §18 counting '
       + 'explicitly"), which is a DOMAIN unit with a Bible question attached '
@@ -164,8 +190,9 @@ const DECLARED_DOMAIN_GAPS: readonly DeclaredDomainGap[] = [
 const gapsHit = new Set<string>();
 let gapped = 0;
 
-function declaredGapFor(message: string): DeclaredDomainGap | null {
-  return DECLARED_DOMAIN_GAPS.find((gap) => gap.matches.test(message)) ?? null;
+function declaredGapFor(cell: string, message: string): DeclaredDomainGap | null {
+  return DECLARED_DOMAIN_GAPS.find((gap) =>
+    gap.cells.some((scope) => cell.startsWith(scope)) && gap.matches.test(message)) ?? null;
 }
 
 function run(name: string, body: () => void): void {
@@ -175,7 +202,7 @@ function run(name: string, body: () => void): void {
     console.log(`  PASS ${name}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const gap = declaredGapFor(message);
+    const gap = declaredGapFor(name, message);
     if (gap) {
       gapped += 1;
       gapsHit.add(gap.id);
@@ -290,16 +317,21 @@ function tap(change: PlanChange) {
  * list — so the comparison below is against the function that actually draws the
  * pixels, not against a stand-in for it.
  *
- * WHAT THIS CELL STILL PROVES, STATED PLAINLY. `projectDayDetail` maps `parts`,
- * so the two lists agree by construction — that IS the ruled end state
- * (reassessment §4: "`parts` is the ONLY plural ... two surfaces reading one list
- * cannot disagree", and defects 1 and 2 become *unrepresentable*). What the
+ * WHAT THIS CELL PROVES AND WHAT IT DOES NOT, STATED PLAINLY. `projectDayDetail`
+ * maps `parts`, so the two lists agree by construction — that IS the ruled end
+ * state (reassessment §4: "`parts` is the ONLY plural ... two surfaces reading one
+ * list cannot disagree", and defects 1 and 2 become *unrepresentable*). What the
  * assertion holds is that it STAYS that way: a filter, a `kind` branch or a
  * "recovery renders differently" case added to the detail surface reds here and
- * in the walker on the next run, which is exactly the shape of the defect being
- * paid (`composeDayDetail` had a row surface for three kinds and none for
- * recovery, power or speed). The teeth that do not depend on that live below, in
- * cell 2's own two assertions about what the DOMAIN carries after an add.
+ * in the walker on the next run. It is NOT a cross-representation check, and it
+ * must not be read as one: the words this covers are the title and the
+ * attached-part line, not the rendered session list, which D13's
+ * `buildSessionTemplate` composes separately. That comparison is
+ * `L-P3 TEMPLATE = PROJECTION` in `athleteActionWalkerTests` — the walker,
+ * because only the walker reaches real generated weeks — and it is red today in
+ * four declared shapes. The teeth in THIS suite that do not depend on the
+ * construction live below, in cell 2's own two assertions about what the DOMAIN
+ * carries after an add.
  */
 function detailAndProjectionKinds(week: string, date: string): {
   detail: string[]; projection: string[];
