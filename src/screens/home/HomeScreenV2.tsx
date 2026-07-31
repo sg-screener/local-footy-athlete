@@ -1236,6 +1236,32 @@ function rowIconPaths(kind: RowIconKind) {
 }
 
 /**
+ * A day's ONE leading identity, for any card-ish surface (the week row, the
+ * away-days picker). docs/ONE_PROJECTION_REASSESSMENT_2026-07-30.md §4
+ * (Sam-ruled): "the card renders `headline` + `parts.map(p => p.headline)`"
+ * — the first part leads when there is one, `day.headline`
+ * ("Training Day"/"Rest Day"/"Game Day") is the fallback.
+ *
+ * `kind === 'game'` FORCES `day.headline`, never `parts[0]`, even though a
+ * fixture commonly HAS a part: `getSessionComponents` falls through to its
+ * last-resort `session` component for a workout with no recognised training
+ * content (`createGameStub`/`createVirtualGameStub` both have `exercises:
+ * []`, so this is the DEFAULT shape for a game day, not an edge one — traced,
+ * not assumed), and `COMPONENT_TO_PART` maps `session` to a `strength`-kind
+ * part. Task 4's report already named that gap ("the projection still calls
+ * a game day's component `strength` at part level ... the KIND is not
+ * [correct]") and parked the real fix as parts/detail-surface ownership.
+ * Reading around it with `day.kind` here uses a field already correct at the
+ * day level — the same field Task 4's menu locks a fixture on — rather than
+ * inventing a new guard for this task.
+ */
+function cardLeadHeadline(day: VisibleDay | undefined): string | null {
+  if (!day) return null;
+  if (day.kind !== 'game' && day.parts.length > 0) return day.parts[0].headline;
+  return day.headline;
+}
+
+/**
  * Day row — one of seven identical rows in the week list.
  *
  * The SELECTED row (default: today, via useHomeScreen) is the screen's
@@ -1253,21 +1279,26 @@ function DayRow({
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
-  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout. `title`
-  // is the day's one name (`day.headline`: "Training Day" / "Rest Day" /
-  // "Game Day"), present for every day including rest — no more `hasWorkout`
-  // branch and no more hardcoded "Rest" literal. `contextLabel` is whatever
-  // rides beside it: parts beyond the first (an attached component), the
-  // same "+ " convention the old `splitSessionName` context carried. Both are
-  // `SignedCopy`, so this can only ever render an authored string.
-  const title: string | null = visibleDay?.headline ?? null;
+  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout. See
+  // `cardLeadHeadline` above for the title rule (parts[0] leads; day.headline
+  // for rest and — deliberately, not merely "zero parts" — for every
+  // fixture). `contextLabel` is whatever rides beside the leading identity:
+  // for a fixture, nothing (a fixture's own part(s) are already spoken for by
+  // `title`, and a game day has never shown a secondary line — matches
+  // today's behaviour, where `splitSessionName("Game Day").context` is
+  // already `null`); for a training day, parts beyond the first, the same
+  // "+ " convention the old `splitSessionName` context carried. Every value
+  // here is `SignedCopy`, so this can only ever render an authored string.
+  const visibleParts = visibleDay?.parts ?? [];
+  const isFixtureDay = visibleDay?.kind === 'game';
+  const title: string | null = cardLeadHeadline(visibleDay);
   const accentColor = getDayRowAccentColor({
     hasWorkout,
     isGame,
     sessionTier: day.workout?.sessionTier,
     title,
   });
-  const attachedParts = visibleDay?.parts.slice(1) ?? [];
+  const attachedParts = isFixtureDay ? [] : visibleParts.slice(1);
   const rawContext = attachedParts.length > 0
     ? `+ ${attachedParts.map((part) => part.headline).join(' + ')}`
     : null;
@@ -1302,8 +1333,9 @@ function DayRow({
             : null}
     </>
   );
-  // Always the projection's headline now — no `hasWorkout` branch, no
-  // hardcoded "Rest" literal. A rest day's `title` is already "Rest Day".
+  // Always `title` now — no `hasWorkout` branch, no hardcoded "Rest"
+  // literal. A rest day's `title` is already "Rest Day" (via `day.headline`,
+  // the zero-parts fallback above); a training day's is its first part.
   const selectedTitle = title;
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = isMoveSource
@@ -2358,17 +2390,19 @@ function BusyAwaySheet({ visible, weekDays, visibleWeek, onClose, onBusyReduce, 
                   <Text style={styles.awayDayText}>
                     {shortDayMonthLabel(day.date)}
                     {(() => {
-                      // The projection's headline for this date, not the raw
-                      // workout name — this list is `day && workoutType !==
-                      // 'Game'` filtered, so every candidate is a `training`
-                      // day here; see task-5-report.md for the NEEDS_CONTEXT
-                      // note on what this collapses (every row now reads the
-                      // same generic day-kind word rather than the specific
-                      // session that was on it).
-                      const headline = visibleWeek.days.find(
-                        (candidate) => candidate.date === day.date,
-                      )?.headline;
-                      return headline ? ` · ${headline}` : '';
+                      // The projection's own words for this date, not the raw
+                      // workout name — the SAME `cardLeadHeadline` rule the
+                      // week card uses. This list filters `workoutType !==
+                      // 'Game'` only (not the broader fixture set —
+                      // `dayIsFixture` also matches `workoutType: 'Practice
+                      // Match'`), so a practice-match row can reach here;
+                      // `cardLeadHeadline` still answers it correctly via
+                      // `kind === 'game'`.
+                      const candidate = visibleWeek.days.find(
+                        (day2) => day2.date === day.date,
+                      );
+                      const label = cardLeadHeadline(candidate);
+                      return label ? ` · ${label}` : '';
                     })()}
                   </Text>
                 </Pressable>
