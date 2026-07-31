@@ -276,7 +276,6 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       payload: {
         date: wk2Mon,
         todayISO,
-        reasonLabel: 'Away',
         planChange: { kind: 'clear_days', dates: [wk2Mon] },
       },
       requiresRebuild: false,

@@ -1352,12 +1352,14 @@ export function useHomeScreen() {
           surface: 'home_quick_action_busy_week',
           initiatedBy: 'tap',
         },
+        // V1 HomeScreen's quick action, which is not on the athlete's path
+        // (App.tsx renders HomeScreenV2). Its copy still says "Busy week", so
+        // its scope still says week — the ruling that made the scope a lie
+        // renamed the V2 button, not this one.
         scope: 'current_week',
         payload: {
           date: todayISO,
           todayISO,
-          severity: 5,
-          reasonLabel: 'Busy week',
         },
         requiresRebuild: false,
         createsActiveModifier: true,
@@ -1407,20 +1409,28 @@ export function useHomeScreen() {
     weekDays,
   ]);
 
-  // ── Busy week / Away / Holiday (vocab group 5) ──
-  // Busy and away are canonical temporary schedule facts. Away carries exact
-  // unavailable dates and never creates fact-owned Rest overrides.
-  const handleApplyBusyWeekReduce = useCallback(async () => {
+  // ── Short on time today / Away this week (vocab group 5) ──
+  // Both are canonical temporary schedule facts through the one door. Away
+  // carries exact unavailable dates and never creates fact-owned Rest
+  // overrides.
+  //
+  // SCOPE IS THE COPY'S PROMISE, NOT A DEFAULT. Sam's ruling 2 (2026-07-31)
+  // named this button "Short on time today", so the fact it writes is
+  // today-scoped: `scope: 'today_only'` reaches the executor, which builds a
+  // `date`-kind fact horizon, which `constraintAppliesToDate` honours on
+  // exactly one day. It used to say `current_week` under the same tap, so a
+  // rushed Tuesday reduced Saturday too.
+  const handleApplyShortOnTimeToday = useCallback(async () => {
     const todayISO = todayISOLocal();
     const result = await executeProgramControlActionDurably({
       type: 'set_schedule_modifier',
       source: {
         screen: 'program_tab',
-        surface: 'busy_away_sheet_busy',
+        surface: 'short_on_time_today',
         initiatedBy: 'tap',
       },
-      scope: 'current_week',
-      payload: { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+      scope: 'today_only',
+      payload: { date: todayISO, todayISO },
       requiresRebuild: false,
       createsActiveModifier: true,
       oneOffOnly: false,
@@ -1429,7 +1439,7 @@ export function useHomeScreen() {
     return result;
   }, [handleProgramControlResult]);
 
-  // ── Weekly readiness ("I'm not 100%") ──
+  // ── Weekly readiness ("I'm sick/flat today") ──
   // This surface only routes into existing owners: today's readiness signal
   // for tired/sore, a factual week-scoped cooked report, and week recovery
   // mode for sick. Independent facts remain active until their exact report
@@ -1507,14 +1517,13 @@ export function useHomeScreen() {
       type: 'set_schedule_modifier',
       source: {
         screen: 'program_tab',
-        surface: 'busy_away_sheet_away',
+        surface: 'away_this_week',
         initiatedBy: 'tap',
       },
       scope: 'current_week',
       payload: {
         date: anchor,
         todayISO,
-        reasonLabel: 'Away',
         planChange: { kind: 'clear_days', dates },
       },
       requiresRebuild: false,
@@ -1978,8 +1987,8 @@ export function useHomeScreen() {
     handleApplyGuidedInjury,
     handleApplyEquipmentDecision,
 
-    // Busy / away + missed sessions (vocab groups 5 + 2)
-    handleApplyBusyWeekReduce,
+    // Short on time / away + missed sessions (vocab groups 5 + 2)
+    handleApplyShortOnTimeToday,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,

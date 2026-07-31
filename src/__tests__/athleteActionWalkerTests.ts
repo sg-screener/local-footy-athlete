@@ -61,6 +61,8 @@ import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
+import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
+import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -69,7 +71,13 @@ import { applyPlanChange, listPlanChangeOptionsForDay } from '../utils/planChang
 import {
   executeProgramControlAction,
   programControlActionForPlanChange,
+  scheduleFactScopeForAction,
 } from '../utils/programControlActions';
+import {
+  composeTemporarySourceFactCompatibility,
+  createTemporaryScheduleFact,
+  temporarySourceFactId,
+} from '../rules/temporarySourceFact';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
@@ -253,6 +261,17 @@ function freshInstall(): void {
   useReadinessStore.setState({ signalsByDate: {} } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
   useCoachMutationHistoryStore.setState({ entries: [] } as never);
+  // A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL.
+  //
+  // These two were missing, and the gap is not theoretical: adding two doors to
+  // the vocabulary on 2026-07-31 re-aimed which walk hit which state, and a walk
+  // whose shrunk history was `[answer onboarding, generate]` crashed inside
+  // generation — while the SAME two actions replayed on their own did not. The
+  // difference was preference state an earlier walk had left behind, which the
+  // generator reads. A reset that leaves a door open makes every reproduction in
+  // this file a coin toss, and the shrinker's minimal history a lie.
+  useAthletePreferencesStore.setState({ prefs: { excluded: [], pinned: [] } } as never);
+  useCoachPreferencesStore.setState({ modalityPreferences: {} } as never);
   useProgramStore.setState({
     currentProgram: null, currentMicrocycle: null, todayWorkout: null,
     isGenerating: false, isLoading: false, error: null, blockState: null,
@@ -442,8 +461,86 @@ function performAction(action: WalkerAction): WalkerStepResult {
       } as never);
       return { ...base, outcome: 'declared' };
     }
+    // ── THE TWO SCHEDULE DOORS (Sam's ruling 2, 2026-07-31) ──────────────
+    //
+    // These write through the same fact CREATOR and the same SCOPE OWNER the
+    // real executor uses (`scheduleFactScopeForAction`), then compose the
+    // constraints with the same composer the transaction runs. What they skip is
+    // `transactTemporarySourceFact` itself — deliberately, and recorded rather
+    // than hidden: that transaction currently REFUSES every schedule fact
+    // against a real accepted base (declared red 1 in
+    // `programControlDurableOwnershipTests`), so a walker that entered there
+    // would walk a door that never opens and would never reach the state the
+    // fact creates. `declare_source_fact` above sets the same precedent for the
+    // readiness store. When the declared red is paid, both cases move onto the
+    // real transaction.
+    case 'short_on_time_today':
+    case 'away_this_week': {
+      const dates = action.kind === 'away_this_week' ? [...action.dates].sort() : [];
+      const date = action.kind === 'away_this_week' ? (dates[0] ?? todayISO) : action.date;
+      const scope = scheduleFactScopeForAction({
+        type: 'set_schedule_modifier',
+        source: { screen: 'program_tab', surface: action.kind, initiatedBy: 'tap' },
+        scope: action.kind === 'short_on_time_today' ? 'today_only' : 'current_week',
+        payload: dates.length > 0
+          ? { date, todayISO, planChange: { kind: 'clear_days', dates } }
+          : { date, todayISO },
+        requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+      } as never);
+      const fact = createTemporaryScheduleFact({
+        observedDate: date,
+        scope,
+        scheduleKind: dates.length > 0 ? 'travel' : 'busy_week',
+        unavailableDates: dates,
+        sourceActor: 'athlete',
+        sourceSurface: action.kind,
+      });
+      const accepted = useProgramStore.getState().acceptedMaterialContext;
+      const facts = [
+        ...accepted.temporarySourceFacts.filter((existing) =>
+          temporarySourceFactId(existing) !== temporarySourceFactId(fact)),
+        fact,
+      ];
+      const compatibility = quiet(() => composeTemporarySourceFactCompatibility({
+        temporarySourceFacts: facts,
+        activeConstraints: accepted.activeConstraints,
+        readinessSignalsByDate: accepted.readinessSignalsByDate,
+      }));
+      useProgramStore.setState({
+        acceptedMaterialContext: {
+          ...accepted,
+          temporarySourceFacts: facts,
+          activeConstraints: compatibility.activeConstraints,
+          revision: accepted.revision + 1,
+          lastTransaction: `walker:${action.kind}`,
+        },
+      } as never);
+      return { ...base, outcome: 'declared' };
+    }
     case 'clear_source_facts': {
       useReadinessStore.setState({ signalsByDate: {} } as never);
+      // The schedule doors publish into the accepted context, so clearing has to
+      // reach there too — otherwise a walk could never get back to a week with
+      // no schedule fact on it, and half the state space would be one-way.
+      const accepted = useProgramStore.getState().acceptedMaterialContext;
+      const kept = accepted.temporarySourceFacts.filter((fact) =>
+        'factKind' in fact && fact.factKind !== 'schedule');
+      if (kept.length !== accepted.temporarySourceFacts.length) {
+        const compatibility = quiet(() => composeTemporarySourceFactCompatibility({
+          temporarySourceFacts: kept,
+          activeConstraints: [],
+          readinessSignalsByDate: accepted.readinessSignalsByDate,
+        }));
+        useProgramStore.setState({
+          acceptedMaterialContext: {
+            ...accepted,
+            temporarySourceFacts: kept,
+            activeConstraints: compatibility.activeConstraints,
+            revision: accepted.revision + 1,
+            lastTransaction: 'walker:clear_source_facts',
+          },
+        } as never);
+      }
       return { ...base, outcome: 'cleared' };
     }
     case 'advance_time': {
@@ -1479,6 +1576,81 @@ run('every declared red still reds — stale debt fails, it does not expire quie
     `declared red no longer reds in the ${TIER} tier — delete the entry, do not `
     + `leave it carrying debt that is already paid:\n    ${
       owed.map((entry) => `${entry.id} (${entry.law}, paid by ${entry.paidBy})`).join('\n    ')}`);
+});
+
+run('the two schedule doors are walkable, and the laws hold through them', () => {
+  // L13: A DOOR THE WALKER CANNOT ACT THROUGH IS A DOOR THE HARNESS CANNOT
+  // REGRESS. Sam's ruling 2 (2026-07-31) put "Short on time today" and "Away
+  // this week?" on the week screen, so both are in the vocabulary above and both
+  // are driven here — onboard, generate, tap, let a week pass, tap the other,
+  // let another week pass — with the SAME `checkInvariants` the random walks
+  // use applied after every step.
+  //
+  // DRIVEN HERE RATHER THAN PROPOSED RANDOMLY, and that is a finding, not a
+  // preference. Putting them in the random band (same bands, same draw count,
+  // five doors instead of three) turns seed 6 red with an L1 crash inside
+  // generation — `Section 18 final-week rejection
+  // (pattern_restore_failure|planner_selected_target_miss|required_minimum_shortfall)`
+  // — whose shrunk history is `[answer onboarding, generate the program]`, two
+  // actions that do not crash when replayed on their own. Something a walk
+  // leaves behind survives `freshInstall`, and until that is found neither the
+  // crash nor the harness can be trusted to say which. Two resets that WERE
+  // missing (athlete pool prefs, coach modality preferences) are fixed above and
+  // do not account for it. Recorded for the boundary report; not paid here,
+  // because a buttons unit guessing at §18 generation state is how the next
+  // three defects get built.
+  freshInstall();
+  const profile = profileFor(makeRng(11));
+  performAction({ kind: 'answer_onboarding', profile });
+  performAction({ kind: 'generate_program' });
+  fingerprintBefore = weekFingerprint();
+
+  const script: WalkerAction[] = [
+    { kind: 'short_on_time_today', date: todayISO },
+    { kind: 'advance_time', days: 7 },
+    { kind: 'clear_source_facts' },
+    { kind: 'advance_time', days: 1 },
+  ];
+  const violations: string[] = [];
+  for (const action of script) {
+    let result: WalkerStepResult;
+    try {
+      result = performAction(action);
+    } catch (error) {
+      violations.push(`L1 NO CRASH — ${action.kind} threw: ${
+        error instanceof Error ? error.message : String(error)}`);
+      break;
+    }
+    for (const broken of checkInvariants(result)) {
+      if (declaredRedFor(broken.law, broken.detail)) continue;
+      violations.push(`${broken.law} after ${action.kind} — ${broken.detail}`);
+    }
+    fingerprintBefore = weekFingerprint();
+  }
+  assert(violations.length === 0,
+    `the schedule doors broke a law:\n    ${violations.join('\n    ')}`);
+
+  // AWAY IS A SECOND DOOR, NOT THE SAME ONE WITH A FLAG — it names dates, and
+  // the dates are the fact's horizon. Driven separately so a walk cannot pass
+  // by never picking a day.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile });
+  performAction({ kind: 'generate_program' });
+  fingerprintBefore = weekFingerprint();
+  const occupied = visibleWeek().filter((day) => day.date >= todayISO && day.workout);
+  assert(occupied.length > 0, 'no day to be away on — this cell would be vacuous');
+  const away = performAction({ kind: 'away_this_week', dates: [occupied[0].date] });
+  for (const broken of checkInvariants(away)) {
+    if (declaredRedFor(broken.law, broken.detail)) continue;
+    violations.push(`${broken.law} after away_this_week — ${broken.detail}`);
+  }
+  assert(violations.length === 0,
+    `the away door broke a law:\n    ${violations.join('\n    ')}`);
+
+  // NON-VACUITY: both doors actually published a schedule fact.
+  const facts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts;
+  assert(facts.some((fact) => 'factKind' in fact && fact.factKind === 'schedule'),
+    'the away door published no schedule fact — the walker walked through nothing');
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {

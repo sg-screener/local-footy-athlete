@@ -512,6 +512,24 @@ const DAY_STATES: DayState[] = [
 ];
 
 // ── Doors ─────────────────────────────────────────────────────────────────
+//
+// WHAT THIS GRID'S DOOR AXIS IS, AND WHAT IT IS NOT (recorded 2026-07-31).
+//
+// Every door here is a `PlanChange` driven through `applyPlanChange`. That is
+// the axis, and it is why the two schedule doors Sam's ruling 2 added — "Short
+// on time today" and "Away this week?" — are NOT cells in this grid and were not
+// bolted on as one. They are not plan changes: they write a
+// `TemporaryScheduleFact` through `executeProgramControlActionDurably`, they
+// change no day's composition, and they answer with a fact-transaction outcome
+// rather than one of the three plan-change outcomes L2 is written about. Giving
+// them a row would mean a second `change` shape, a second executor and a second
+// meaning for every law in `assertLaws` — a grid that asserts two different
+// things under one name proves neither.
+//
+// They are covered instead where their own boundaries live: the scope decision
+// and both declared reds in `programControlDurableOwnershipTests`, and the
+// walkability + law-holding in `athleteActionWalkerTests`. Recorded as
+// NOT-COVERED-HERE on purpose, so nobody reads this grid as a claim about them.
 
 interface Door {
   id: string;

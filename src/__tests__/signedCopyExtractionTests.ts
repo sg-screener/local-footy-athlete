@@ -180,13 +180,17 @@ function extract(): ExtractedString[] {
  * number is the unit's visible progress; raising it requires a deliberate edit
  * somebody has to justify.
  *
- * 187 -> 182 (Task 1, repeat-week deleted) -> 166 (Task 6). Task 6's drop is two
- * things: the day-workout Classic render layer is deleted outright, and the
- * day-detail header stopped pasting the raw engine `workoutType` onto the glass.
- * DROPPED IN THE SAME COMMIT AS THE DELETION — a ceiling left sitting sixteen
- * above the real count is not a ratchet, it is headroom.
+ * 187 -> 182 (Task 1, repeat-week deleted) -> 166 (Task 6) -> 164 (Task 7).
+ * Task 6's drop is two things: the day-workout Classic render layer is deleted
+ * outright, and the day-detail header stopped pasting the raw engine
+ * `workoutType` onto the glass. Task 7's is the busy/away sheet's menu step —
+ * five strings out (its title, its two rows, its Back button, and the readiness
+ * entry's old label) against three signed replacements and one new signed
+ * button, all four now carried by Sam's rulings 2-4 in the copy sheet.
+ * DROPPED IN THE SAME COMMIT AS THE DELETION — a ceiling left sitting above the
+ * real count is not a ratchet, it is headroom.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 166;
+const ATHLETE_VISIBLE_GAP_CEILING = 164;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

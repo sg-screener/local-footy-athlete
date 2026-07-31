@@ -922,12 +922,7 @@ console.log('\n[18] busy-week schedule modifier stays out of Coach');
   const todayISO = todayISOLocal();
   const result = executeProgramControlAction(baseAction(
     'set_schedule_modifier',
-    {
-      date: todayISO,
-      todayISO,
-      severity: 5,
-      reasonLabel: 'Busy week',
-    },
+    { date: todayISO, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   const notes = selectActiveCoachNotes({
@@ -1154,7 +1149,7 @@ console.log('\n[25] busy-week schedule modifier creates a Coach Note (no chat)')
   const todayISO = todayISOLocal();
   const result = executeProgramControlAction(baseAction(
     'set_schedule_modifier',
-    { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+    { date: todayISO, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   const notes = selectActiveCoachNotes({

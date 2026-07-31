@@ -57,6 +57,16 @@ import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProdu
 const WEEK = '2026-07-13';
 const SATURDAY = '2026-07-18';
 
+/**
+ * The week-screen readiness entry, as Sam wrote it.
+ *
+ * SIGNED BY RULING 4, `artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
+ * '"I\'m not 100%" becomes "I\'m sick/flat today" on this screen.' The pin is
+ * a NAMED constant now rather than a bare literal in two suites, so the next
+ * rename is one edit and a red cell rather than a scavenger hunt.
+ */
+const WEEK_READINESS_ENTRY_LABEL = "I'm sick/flat today";
+
 const originalWarn = console.warn;
 console.warn = (...args: unknown[]) => {
   const first = String(args[0] ?? '');
@@ -869,15 +879,23 @@ async function main(): Promise<void> {
     // card holds no readiness committer AND no readiness door — so this asserts
     // the ABSENCE here and the PRESENCE at the single owner, because "no door on
     // the day card" would be trivially satisfiable by deleting the feature.
-    for (const gone of ['onOpenReadiness', "I'm not 100%"]) {
+    // The literal moved on 2026-07-31 (ruling 4: "I'm not 100%" → "I'm
+    // sick/flat today"). The PIN moves with it rather than being deleted: what
+    // this cell is about is that exactly one screen carries the week-readiness
+    // door, and a renamed door is still a door.
+    for (const gone of ['onOpenReadiness', WEEK_READINESS_ENTRY_LABEL, "I'm not 100%"]) {
       assert(!planSheet.includes(gone),
         `the day-card door must hold no readiness door at all, found "${gone}" in `
         + 'PlanChangeSheet');
     }
     const homeV2 = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
-    assert(homeV2.includes("I'm not 100%") && /<WeekReadinessSheet\b/.test(homeV2),
-      'the single week-level readiness owner is gone from HomeScreenV2 — the athlete '
-      + 'now has NO door, which is not what ruling 7 asked for');
+    assert(homeV2.includes(WEEK_READINESS_ENTRY_LABEL) && /<WeekReadinessSheet\b/.test(homeV2),
+      `the single week-level readiness owner ("${WEEK_READINESS_ENTRY_LABEL}") is gone `
+      + 'from HomeScreenV2 — the athlete now has NO door, which is not what ruling 7 '
+      + 'asked for');
+    assert(!homeV2.includes("I'm not 100%"),
+      'HomeScreenV2 still says "I\'m not 100%" — Sam replaced that wording under '
+      + 'ruling 4, and both versions cannot ship');
   });
 
   // ── Invariant R17 (attribution per fact kind): a coach note for an ILLNESS

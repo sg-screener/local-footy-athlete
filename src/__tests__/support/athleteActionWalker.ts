@@ -66,6 +66,12 @@ export type WalkerAction =
   | { kind: 'plan_change'; change: PlanChange }
   | { kind: 'mark_calendar'; date: string; mark: 'game' | 'rest' | 'clear' }
   | { kind: 'declare_source_fact'; date: string; fact: 'illness_minor' | 'illness_severe' | 'poor_sleep' }
+  // THE TWO SCHEDULE DOORS SAM SPLIT ON 2026-07-31 (ruling 2). "Short on time
+  // today" and "Away this week?" are things an athlete can now do from the week
+  // screen, and a state an athlete can reach that the walker cannot is a defect
+  // in the harness (L13), not a gap in the app.
+  | { kind: 'short_on_time_today'; date: string }
+  | { kind: 'away_this_week'; dates: string[] }
   | { kind: 'clear_source_facts' }
   | { kind: 'advance_time'; days: number };
 
@@ -249,6 +255,10 @@ export function describeHistory(history: readonly WalkerAction[]): string {
         return `  ${index + 1}. mark ${action.date} as ${action.mark}`;
       case 'declare_source_fact':
         return `  ${index + 1}. declare ${action.fact} on ${action.date}`;
+      case 'short_on_time_today':
+        return `  ${index + 1}. tap "Short on time today" on ${action.date}`;
+      case 'away_this_week':
+        return `  ${index + 1}. tap "Away this week?" and pick ${action.dates.join(', ')}`;
       case 'clear_source_facts': return `  ${index + 1}. clear all source facts`;
       case 'advance_time': return `  ${index + 1}. advance time ${action.days} day(s)`;
       default: return `  ${index + 1}. ${JSON.stringify(action)}`;

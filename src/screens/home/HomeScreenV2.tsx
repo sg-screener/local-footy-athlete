@@ -103,7 +103,7 @@ export default function HomeScreenV2() {
     handleMessageCoach,
     handleApplyGuidedInjury,
     handleApplyEquipmentDecision,
-    handleApplyBusyWeekReduce,
+    handleApplyShortOnTimeToday,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
@@ -185,10 +185,10 @@ export default function HomeScreenV2() {
     note: ActiveCoachNote;
   } | null>(null);
   const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
-  const [busyAwayVisible, setBusyAwayVisible] = useState(false);
+  const [awayDaysVisible, setAwayDaysVisible] = useState(false);
   const [equipmentVisible, setEquipmentVisible] = useState(false);
 
-  // ── Weekly readiness ("I'm not 100%") — week-level card ──
+  // ── Weekly readiness ("I'm sick/flat today") — week-level card ──
   // Active state is derived from the EXISTING tap modifiers for the
   // currently selected week (ids are week-keyed by Monday).
   const [readinessVisible, setReadinessVisible] = useState(false);
@@ -603,27 +603,61 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* ── Busy / away this week ── */}
+        {/* ── Short on time today (ruling 2) ──
+            TWO BUTTONS, TWO FACTS, NO MENU BETWEEN THEM. This half commits on
+            the tap — as the busy row inside the old sheet already did — and the
+            fact it writes is TODAY-scoped because the words say today. */}
         {isNormal && (
           <Pressable
-            onPress={() => setBusyAwayVisible(true)}
+            onPress={() => { void handleApplyShortOnTimeToday(); }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-busy-away-entry"
+            testID="home-short-on-time-entry"
+            accessibilityRole="button"
+            accessibilityLabel="Short on time today"
           >
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
                 <View style={styles.busyAwayIcon}>
+                  {/* Hourglass — time running out on ONE day. The clock this
+                      replaced is now nobody's, so no two rows share a glyph. */}
                   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M12 6v6l4 2" />
+                    <Path d="M5 2h14" /><Path d="M5 22h14" />
+                    <Path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" />
+                    <Path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22" />
                   </Svg>
                 </View>
-                <Text style={styles.busyAwayText}>Busy or away this week?</Text>
+                <Text style={styles.busyAwayText}>Short on time today</Text>
               </View>
             </Card>
           </Pressable>
         )}
 
-        {/* ── Weekly readiness ("I'm not 100%") — all phases, week-level ── */}
+        {/* ── Away this week? (ruling 2) — the one question with an answer ── */}
+        {isNormal && (
+          <Pressable
+            onPress={() => setAwayDaysVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-away-this-week-entry"
+            accessibilityRole="button"
+            accessibilityLabel="Away this week?"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.awayIconTint]}>
+                  {/* Globe — the same glyph the away row carried inside the old
+                      sheet, promoted with it. */}
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#7CC4FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M3 12h18" />
+                    <Path d="M12 2a15 15 0 010 20" /><Path d="M12 2a15 15 0 000 20" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>Away this week?</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── Weekly readiness ("I'm sick/flat today") — all phases, week-level ── */}
         {isNormal && (
           <Pressable
             onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
@@ -649,8 +683,39 @@ export default function HomeScreenV2() {
                       fact kind; re-deriving it here from scope/isRecovery threw
                       that away and printed the same generic line for every
                       fact, which is what Sam saw on the phone. */}
-                  {weekReadiness ? weekReadiness.title : "I'm not 100%"}
+                  {weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
                 </Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── I'm injured (ruling 3) ──
+            ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
+            the readiness sheet's "Something hurts" row opens, and both complete
+            through `handleApplyGuidedInjury`. The row inside the sheet stays:
+            an athlete who starts at "I'm sick/flat" and discovers it is a niggle
+            must not have to back out to a different button. */}
+        {isNormal && (
+          <Pressable
+            onPress={() => setReadinessInjuryVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-injured-entry"
+            accessibilityRole="button"
+            accessibilityLabel="I'm injured"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.injuredIconTint]}>
+                  {/* Plaster / bandage — an injury, not an alert triangle (that
+                      one belongs to the readiness sheet's own "Something hurts"
+                      row) and not the pulse above it. */}
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FFC247" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
+                    <Path d="M8.5 8.5 15.5 15.5" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>I'm injured</Text>
               </View>
             </Card>
           </Pressable>
@@ -797,18 +862,14 @@ export default function HomeScreenV2() {
         }}
       />
 
-      <BusyAwaySheet
-        visible={busyAwayVisible}
+      <AwayDaysSheet
+        visible={awayDaysVisible}
         weekDays={weekDays}
         visibleWeek={visibleWeek}
-        onClose={() => setBusyAwayVisible(false)}
-        onBusyReduce={async () => {
-          await handleApplyBusyWeekReduce();
-          setBusyAwayVisible(false);
-        }}
+        onClose={() => setAwayDaysVisible(false)}
         onAwayDays={async (dates) => {
           await handleApplyAwayDays(dates);
-          setBusyAwayVisible(false);
+          setAwayDaysVisible(false);
         }}
       />
 
@@ -2037,7 +2098,7 @@ function MissedChip({ label, primary, onPress }: {
   );
 }
 
-// ── Weekly "I'm not 100%" sheet ──
+// ── Weekly "I'm sick/flat today" sheet ──
 interface WeekReadinessSheetProps {
   visible: boolean;
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
@@ -2316,23 +2377,28 @@ function WeekReadinessSheet({
   );
 }
 
-interface BusyAwaySheetProps {
+/**
+ * THE MENU STEP IS GONE, because there is no longer a question to ask.
+ *
+ * Sam's ruling 2 (2026-07-31) split "Busy or away this week?" into two buttons
+ * on the week screen. "Short on time today" commits on the tap — as the busy row
+ * inside this sheet already did, one step further in — so the only thing left
+ * behind a sheet is the one question that genuinely has an answer: WHICH days.
+ * A menu whose every entry is already a button on the screen behind it is a step
+ * that exists to be dismissed.
+ */
+interface AwayDaysSheetProps {
   visible: boolean;
   weekDays: any[];
   visibleWeek: VisibleWeek;
   onClose: () => void;
-  onBusyReduce: () => void | Promise<void>;
   onAwayDays: (dates: string[]) => void | Promise<void>;
 }
-function BusyAwaySheet({ visible, weekDays, visibleWeek, onClose, onBusyReduce, onAwayDays }: BusyAwaySheetProps) {
-  const [step, setStep] = useState<'menu' | 'away'>('menu');
+function AwayDaysSheet({ visible, weekDays, visibleWeek, onClose, onAwayDays }: AwayDaysSheetProps) {
   const [selected, setSelected] = useState<string[]>([]);
 
   React.useEffect(() => {
-    if (visible) {
-      setStep('menu');
-      setSelected([]);
-    }
+    if (visible) setSelected([]);
   }, [visible]);
 
   const todayISO = todayISOLocal();
@@ -2348,26 +2414,8 @@ function BusyAwaySheet({ visible, weekDays, visibleWeek, onClose, onBusyReduce, 
     );
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-busy-away-sheet">
-      {step === 'menu' && (
-        <View>
-          <Text style={styles.sheetTitle}>Busy or away this week?</Text>
-          <SheetOption
-            label="Busy week — keep me training, go lighter"
-            accent
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 6v6l4 2"/><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></Svg>}
-            onPress={onBusyReduce}
-          />
-          <SheetOption
-            label="Away some days — clear them"
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 12h18"/><Path d="M12 3a15 15 0 010 18"/><Path d="M12 3a15 15 0 000 18"/></Svg>}
-            onPress={() => setStep('away')}
-          />
-          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
-        </View>
-      )}
-
-      {step === 'away' && (
+    <Sheet visible={visible} onClose={onClose} testID="home-away-days-sheet">
+      {(
         <View>
           <Text style={styles.sheetTitle}>Which days are you away?</Text>
           {awayCandidates.length === 0 ? (
@@ -2421,7 +2469,7 @@ function BusyAwaySheet({ visible, weekDays, visibleWeek, onClose, onBusyReduce, 
             onPress={() => selected.length > 0 && onAwayDays(selected)}
             style={{ marginTop: spacing.md, opacity: selected.length > 0 ? 1 : 0.5 }}
           />
-          <Button label="Back" variant="secondary" size="md" onPress={() => setStep('menu')} style={{ marginTop: spacing.sm }} />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
         </View>
       )}
     </Sheet>
@@ -2825,6 +2873,8 @@ const styles = StyleSheet.create({
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
+  injuredIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',

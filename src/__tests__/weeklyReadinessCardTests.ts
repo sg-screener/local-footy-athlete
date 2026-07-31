@@ -43,6 +43,14 @@ const { executeProgramControlAction, scheduleModifierIdForDate, buildTapSchedule
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
+
+/**
+ * The week-screen readiness entry, as Sam wrote it.
+ *
+ * SIGNED BY RULING 4, `artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md`:
+ * '"I\'m not 100%" becomes "I\'m sick/flat today" on this screen.'
+ */
+const WEEK_READINESS_ENTRY_LABEL = "I'm sick/flat today";
 function ok(name: string, cond: boolean, detail?: string) {
   if (cond) { pass++; console.log(`  ✓ ${name}`); }
   else {
@@ -306,7 +314,7 @@ console.log('\n── 4. Today-scoped clear removes only wellbeing state ──'
     type: 'set_schedule_modifier',
     source: { screen: 'program_tab', surface: 'busy_away_sheet_busy', initiatedBy: 'tap' },
     scope: 'current_week',
-    payload: { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+    payload: { date: todayISO, todayISO },
     requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
   }, { todayISO });
   applyReadiness('tired_today', todayISO, todayISO);
@@ -335,6 +343,24 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fs = require('fs');
   const src = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
+  /**
+   * THE READINESS SHEET'S OWN SOURCE, not the whole screen.
+   *
+   * "Short on time" was banned from this FILE, which was the same thing as
+   * banning it from the sheet right up until 2026-07-31, when Sam's ruling 2
+   * gave the week screen a "Short on time today" BUTTON. The law those two
+   * cells encode is his 2026-07-27 one — time is a session fact, not a readiness
+   * state, so it must not be an option on this sheet or a prop of it — and a
+   * week-screen row that writes a SCHEDULE fact is that law being obeyed, not
+   * broken. So the ban narrows to the component it was always about.
+   */
+  const sheetSrc = (() => {
+    const start = src.indexOf('function WeekReadinessSheet');
+    // The component ends at its own closing brace in column 0 — not at the next
+    // `function`, which would swallow the docblock in between.
+    const end = src.indexOf('\n}\n', start + 1);
+    return start < 0 ? '' : src.slice(start, end < 0 ? undefined : end);
+  })();
   const hookSrc = fs.readFileSync(`${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
   const witnessSrc = fs.readFileSync(
     `${__dirname}/../components/ExplorerRenderWitness.tsx`, 'utf8',
@@ -422,7 +448,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     src.includes('A bit off') && src.includes('Properly sick') &&
     src.includes("Can't get out of bed") &&
     src.includes('Rough sleep') && src.includes('Bit tired today') &&
-    !src.includes('Short on time') && !src.includes('Sick / run down') &&
+    !sheetSrc.includes('Short on time') && !src.includes('Sick / run down') &&
     !src.includes('Just a bit tired today') &&
     // The superseded label must be GONE, not merely unused.
     !src.includes('Coming down with something'));
@@ -477,7 +503,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('[A2] a FAILED report does not enter the confirmed state',
     /acknowledgment\?\.tone === 'success'/.test(src));
   ok('Short on time removed from the sheet — no dead affordance and no dead prop',
-    !src.includes('Short on time') && !/onShortTime/.test(src) &&
+    sheetSrc.length > 0 && !sheetSrc.includes('Short on time') && !/onShortTime/.test(src) &&
     !/readinessOption\('short_time'\)/.test(src));
   ok('top-level buckets use distinct icons (icon cleanup, no repeated-pulse spam)',
     src.includes('flatIcon') && src.includes('sickIcon') &&
@@ -506,7 +532,9 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     !src.includes("'Not 100% this week'") &&
     !src.includes("'Recovery mode this week'"));
   ok('[A4] the un-set card still invites a report',
-    src.includes('"I\'m not 100%"'));
+    src.includes(`"${WEEK_READINESS_ENTRY_LABEL}"`));
+  ok('[A4] the wording Sam replaced under ruling 4 is gone',
+    !src.includes("I'm not 100%"));
   ok('active state update/clear affordances present',
     src.includes('Clear adjustment'));
 
@@ -543,10 +571,11 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // committer nor the door, and the week card must hold both.
   const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
   const homeV2Src = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
-  ok('the week card is the ONLY "I\'m not 100%" door (the day card no longer has one)',
-    !planSheet.includes("I'm not 100%") && !planSheet.includes('onOpenReadiness') &&
+  ok(`the week card is the ONLY "${WEEK_READINESS_ENTRY_LABEL}" door (the day card no longer has one)`,
+    !planSheet.includes(WEEK_READINESS_ENTRY_LABEL) && !planSheet.includes("I'm not 100%") &&
+    !planSheet.includes('onOpenReadiness') &&
     !planSheet.includes('pick_wellbeing') && !planSheet.includes('shutdown_week') &&
-    homeV2Src.includes("I'm not 100%") && /<WeekReadinessSheet\b/.test(homeV2Src));
+    homeV2Src.includes(WEEK_READINESS_ENTRY_LABEL) && /<WeekReadinessSheet\b/.test(homeV2Src));
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────

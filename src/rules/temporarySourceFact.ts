@@ -825,6 +825,24 @@ function equipmentProjection(
   })).sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/**
+ * THE SENTENCE READS THE FACT'S HORIZON, because the fact has one.
+ *
+ * A `busy_week` fact used to be week-scoped by construction, so every word here
+ * could say "week" and be right. Sam's ruling 2 (2026-07-31) gave the busy door
+ * the words "Short on time today" and the executor now honours a `today_only`
+ * request with a `date`-kind scope — at which point "Busy week active" is a
+ * sentence about a week the athlete never mentioned.
+ *
+ * The horizon is not re-derived here and no new stored field carries it: the
+ * fact's own `scope.kind` is the whole input, and the same value already decides
+ * which dates `constraintAppliesToDate` lets this constraint touch. One fact,
+ * one horizon, and the copy agrees with it.
+ */
+function scheduleFactIsSingleDay(fact: TemporaryScheduleFact): boolean {
+  return fact.scope.kind === 'date';
+}
+
 function scheduleProjection(
   facts: readonly TemporaryScheduleFact[],
 ): ActiveScheduleConstraint[] {
@@ -836,7 +854,9 @@ function scheduleProjection(
     startDate: fact.effectiveFrom,
     lastUpdatedAt: fact.updatedAt,
     reasonLabel: fact.scheduleKind === 'travel' ? 'Away / travel' :
-      fact.scheduleKind === 'busy_week' ? 'Busy week' : 'Temporary availability',
+      fact.scheduleKind === 'busy_week'
+        ? (scheduleFactIsSingleDay(fact) ? 'Short on time' : 'Busy week')
+        : 'Temporary availability',
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
@@ -849,12 +869,14 @@ function scheduleProjection(
     modifierTitle: fact.scheduleKind === 'travel'
       ? 'Away / travel period active'
       : fact.scheduleKind === 'busy_week'
-        ? 'Busy week active'
+        ? (scheduleFactIsSingleDay(fact) ? 'Short on time today' : 'Busy week active')
         : 'Temporary availability active',
     modifierBody: fact.scheduleKind === 'travel'
       ? 'Your program is avoiding the dates you are away.'
       : fact.scheduleKind === 'busy_week'
-        ? 'Your bounded week is being kept within the session limit you set.'
+        ? (scheduleFactIsSingleDay(fact)
+            ? "Today's session drops the highest-cost work. The rest of your week is untouched."
+            : 'Your bounded week is being kept within the session limit you set.')
         : 'Your program is avoiding the dates or weekdays you marked unavailable.',
     modifierAffects: ['current_week', 'future_generation'],
     rules: [

@@ -71,6 +71,7 @@ import {
   isNonInjuryTemporarySourceFact,
   temporaryFactScope,
   temporarySourceFactId,
+  type TemporarySourceFactScope,
 } from '../rules/temporarySourceFact';
 import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
@@ -234,18 +235,28 @@ export type ProgramControlAction =
       date: string;
       todayISO?: string;
     }>
+  /**
+   * FOUR FIELDS LEFT THIS PAYLOAD ON 2026-07-31, unread by anybody.
+   *
+   * `severity`, `reasonLabel`, `modifierTitle` and `modifierBody` were passed by
+   * every caller and consumed by none: the durable executor builds a
+   * `TemporaryScheduleFact` from `scheduleKind` alone, and `scheduleProjection`
+   * (`rules/temporarySourceFact.ts`) derives the severity, the reason label and
+   * both modifier sentences from the FACT. A request field that no owner reads
+   * is a second, silent opinion about the same decision — it looked like the
+   * busy tap chose its own severity and its own words, and it never did.
+   *
+   * What the athlete actually decides is: WHICH schedule fact (busy vs away vs a
+   * bounded maximum), on WHICH horizon (`ProgramControlActionBase.scope`), over
+   * WHICH dates. That is the whole input, and it is what remains.
+   */
   | ProgramControlActionBase<'set_schedule_modifier', {
       date: string;
       todayISO?: string;
-      severity?: number;
-      reasonLabel?: string;
       maxSessionsThisWeek?: number;
       /** Away / holiday dates. The durable executor stores them as schedule
        *  facts; it never creates fact-owned Rest overrides. */
       planChange?: PlanChange;
-      /** Coach Notes copy overrides (busy vs away wording). */
-      modifierTitle?: string;
-      modifierBody?: string;
     }>
   | ProgramControlActionBase<'update_lfa_days', Record<string, unknown>>
   | ProgramControlActionBase<'update_team_training_days', Record<string, unknown>>
@@ -1098,6 +1109,55 @@ export function executeProgramControlAction(
   });
 }
 
+/** The exact dates an away/holiday request names, sorted, day-precision. */
+function scheduleModifierAwayDates(
+  action: Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
+): string[] {
+  return action.payload.planChange?.kind === 'clear_days'
+    ? [...action.payload.planChange.dates.map((value) => value.slice(0, 10))].sort()
+    : [];
+}
+
+/**
+ * THE ACTION'S DECLARED SCOPE IS THE FACT'S HORIZON.
+ *
+ * `ProgramControlActionBase.scope` has always been part of this request and the
+ * schedule branch always threw it away: every schedule fact got a WEEK, whatever
+ * the door said. That was invisible while the only door said "Busy or away this
+ * week?" — and became a lie the moment Sam's ruling 2 (2026-07-31) split it and
+ * named the busy half "Short on time today". Being short on time on a Tuesday
+ * says nothing about Thursday.
+ *
+ * The horizon is not a second opinion invented here. `scheduleProjection`
+ * already publishes `startDate: effectiveFrom` / `expiresAt: effectiveUntil`,
+ * and `constraintAppliesToDate` already refuses the constraint on any date
+ * outside them — so a `date`-kind scope reaches exactly one day through
+ * machinery that was already there. One door, one fact kind, a scoped payload:
+ * no second writer, no forked kind, no per-button special case.
+ *
+ * Exported because it is the whole decision this door makes, and a decision
+ * worth asserting is worth naming. `executeProgramControlActionDurably` is its
+ * only production caller.
+ */
+export function scheduleFactScopeForAction(
+  action: Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
+): TemporarySourceFactScope {
+  const date = action.payload.date.slice(0, 10);
+  const awayDates = scheduleModifierAwayDates(action);
+  // Away names its own dates, so the window IS the answer — a scope word cannot
+  // improve on the days the athlete ticked.
+  if (awayDates.length > 0) {
+    return temporaryFactScope({
+      kind: 'window',
+      from: awayDates[0],
+      until: awayDates[awayDates.length - 1],
+    });
+  }
+  return action.scope === 'today_only'
+    ? temporaryFactScope({ kind: 'date', date })
+    : temporaryFactScope({ kind: 'week', date });
+}
+
 /** Durable accepted boundary for the migrated tap-owned session mutations.
  * Unmigrated actions retain the existing synchronous control path. */
 export async function executeProgramControlActionDurably(
@@ -1280,19 +1340,10 @@ async function executeProgramControlActionDurablyWithinTrace(
     const date = action.payload.date.slice(0, 10);
     const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
     const sourceSurface = action.source.surface ?? action.source.screen;
-    const awayDates = action.payload.planChange?.kind === 'clear_days'
-      ? action.payload.planChange.dates.map((value) => value.slice(0, 10))
-      : [];
-    const sortedAwayDates = [...awayDates].sort();
+    const awayDates = scheduleModifierAwayDates(action);
     const fact = createTemporaryScheduleFact({
       observedDate: date,
-      scope: awayDates.length > 0
-        ? temporaryFactScope({
-            kind: 'window',
-            from: sortedAwayDates[0],
-            until: sortedAwayDates[sortedAwayDates.length - 1],
-          })
-        : temporaryFactScope({ kind: 'week', date }),
+      scope: scheduleFactScopeForAction(action),
       scheduleKind: awayDates.length > 0
         ? 'travel'
         : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
