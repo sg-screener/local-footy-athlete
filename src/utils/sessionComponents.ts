@@ -86,9 +86,26 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
   // WHAT STAYS IS NAMED FROM ITSELF TOO — the mirror of the rule below for what
   // leaves. This read `splitSessionName(snapshot.workout.title).title`, parsing
   // the day's composed name for a strength half; `strengthComponentDisplayName`
-  // derives it from the typed intent and the real rows instead, and falls back
-  // to the day's own title when there is no typed evidence to derive from —
-  // which is byte-identical to what the parser returned in that case.
+  // derives it from the typed intent and, failing that, from the component's own
+  // rows.
+  //
+  // WHERE THE LAST FALLBACK DIFFERS FROM THE DELETED PARSER — stated because the
+  // first version of this comment claimed "byte-identical" and that was FALSE for
+  // composed titles. When a day has NEITHER typed intent NOR a classifiable row,
+  // the day's own title is returned: identical to the parser for an uncomposed
+  // title, but for "Team Training + Upper Push" the parser returned "Upper Push"
+  // and this returns the whole string — which after a partial Bin can name the
+  // component just removed, in a frozen coach matching key.
+  //
+  // WHY THAT IS ACCEPTED HERE. The population is a day with a composed title, no
+  // `strengthIntent` (present in 29,896 of 30,937 distinct inputs across a whole
+  // bible run) AND no row the authored vocabulary can classify — unreachable in
+  // every world the harness reaches, and the whole-bible day-name differential is
+  // empty across both Bin call sites. Closing it honestly means giving a strength
+  // SECTION its own title instead of the day's, and `buildVisibleSections` sets
+  // it to `cleanText(workout.name)` in `coachRevisionProposal.ts`, which is on the
+  // LR-6 frozen list. Recorded as residual risk with a device-pass line, not
+  // patched around here. See `strengthComponentDisplayName`'s docblock.
   const strengthSurvives = survivingSections.some((section) => section.kind === 'strength');
   const survivorTitle = strengthSurvives
     ? strengthComponentDisplayName({

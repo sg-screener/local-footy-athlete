@@ -357,21 +357,69 @@ run('the projection cannot reach the name channel (source contract)', () => {
     fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 
   const projection = src('rules/projectVisibleWeek.ts');
-  const call = /resolveSessionDisplayName\(\{([\s\S]*?)\}\)/.exec(projection);
-  assert(call, 'projectVisibleWeek.ts no longer calls resolveSessionDisplayName — '
+
+  /**
+   * THE ARGUMENT BLOCK, BRACE-MATCHED — not regex-matched.
+   *
+   * The first version of this cell read the block with
+   * `/resolveSessionDisplayName\(\{([\s\S]*?)\}\)/`, and the lazy quantifier
+   * stopped at the FIRST `})` inside the arguments — which is the one closing
+   * `exercises: rows.map((row) => ({ name: row.name }))`. Everything after that
+   * line was outside the guard, so a `focus:` PREPENDED to the object was caught
+   * and a `focus:` APPENDED to it was not. Appending is what an autocomplete
+   * does, and the docblock above names autocomplete as the threat, so the cell
+   * was blind to exactly the mutation it was written for. Found in review, not
+   * by the cell.
+   *
+   * Balanced-brace scan instead: from the `{` after the call's `(`, count depth
+   * until it returns to zero. Every call site is read, not just the first, so a
+   * second naming call added below cannot slip in unguarded.
+   */
+  const argumentBlocks = (source: string, fn: string): string[] => {
+    const blocks: string[] = [];
+    const opener = new RegExp(`\\b${fn}\\s*\\(\\s*\\{`, 'g');
+    let hit: RegExpExecArray | null;
+    while ((hit = opener.exec(source)) !== null) {
+      let depth = 1;
+      let index = hit.index + hit[0].length;
+      while (index < source.length && depth > 0) {
+        const char = source[index];
+        if (char === '{') depth += 1;
+        else if (char === '}') depth -= 1;
+        index += 1;
+      }
+      assert(depth === 0,
+        `unbalanced braces reading ${fn}'s argument block — the contract cannot `
+        + 'read the call it guards, which is a failure, not a pass');
+      blocks.push(source.slice(hit.index + hit[0].length, index - 1));
+    }
+    return blocks;
+  };
+
+  const blocks = argumentBlocks(projection, 'resolveSessionDisplayName');
+  assert(blocks.length > 0,
+    'projectVisibleWeek.ts no longer calls resolveSessionDisplayName — '
     + 'if the strength headline moved to a different naming owner this cell must '
     + 'follow it, not be deleted');
+
   // TOP-LEVEL KEYS ONLY. A flat regex over the argument block finds the `name:`
   // inside `exercises: rows.map((row) => ({ name: row.name }))` and reports the
   // channel as open while it is shut — a cell that cries wolf gets loosened, and
   // a loosened cell is how the channel actually reopens.
+  //
+  // `depth` is clamped at zero. The block handed in is already balanced, but a
+  // scanner that lets depth go NEGATIVE on a stray closer silently treats the
+  // rest of the object as nested and stops reporting keys — the same
+  // fail-open shape as the regex above, one level down.
   const topLevelKeys = (block: string): string[] => {
     const keys: string[] = [];
     let depth = 0;
     let token = '';
     for (const char of block) {
       if (char === '{' || char === '[' || char === '(') { depth += 1; token = ''; continue; }
-      if (char === '}' || char === ']' || char === ')') { depth -= 1; token = ''; continue; }
+      if (char === '}' || char === ']' || char === ')') {
+        depth = Math.max(0, depth - 1); token = ''; continue;
+      }
       if (depth > 0) continue;
       if (char === ',') { token = ''; continue; }
       if (char === ':') { keys.push(token.trim()); token = ''; continue; }
@@ -379,15 +427,20 @@ run('the projection cannot reach the name channel (source contract)', () => {
     }
     return keys;
   };
-  const args = topLevelKeys(call[1]).join(':') + ':';
-  assert(!/\bfocus\s*:/.test(args),
+  const keys = blocks.flatMap(topLevelKeys);
+  assert(!keys.includes('focus'),
     'the projection now passes `focus` to resolveSessionDisplayName. That reopens '
     + 'the legacy focus-inference rule on the athlete\'s own week — the rule whose '
     + 'measured output includes raw planner text. Derive the headline from typed '
     + 'intent and rows, or register the word.');
-  assert(!/\bname\s*:/.test(args),
+  assert(!keys.includes('name'),
     'the projection now passes `name` to resolveSessionDisplayName, reopening the '
     + 'name pass-through on the athlete\'s own week.');
+  // NON-VACUITY. If the extractor ever returns nothing, both assertions above
+  // pass for free and the contract has quietly stopped existing.
+  assert(keys.includes('strengthIntent'),
+    'the argument extractor found no `strengthIntent` key, so it is not reading '
+    + 'the call — both channel assertions above are passing vacuously');
 
   // AND THE PARSER IS GONE, everywhere, not just here. `splitSessionName` turned a
   // composed name back into structure; `visibleProjection.ts`'s header calls its

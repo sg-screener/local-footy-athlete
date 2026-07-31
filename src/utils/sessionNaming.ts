@@ -460,17 +460,54 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
  * already paid for the half that LEAVES ("WHAT LEAVES IS NAMED FROM ITSELF, NOT
  * FROM THE DAY IT LEFT"). This is that same fix for the half that STAYS.
  *
- * THE FALLBACK IS BEHAVIOUR-PRESERVING, DELIBERATELY. When the surviving content
- * carries no typed strength evidence, `resolveSessionDisplayName` has nothing to
- * name it from and would answer "Session"; the day's existing title is returned
- * instead, which is byte-for-byte what the parser returned in that case (no
- * " + " -> `title === name`). `workout.name` is a frozen coach matching key
- * (LR-6), so this replaces HOW the name is derived without changing WHAT it is:
- * the whole-bible differential across both call sites is empty.
+ * TWO SOURCES OF EVIDENCE, IN PRECEDENCE ORDER, AND NEITHER IS A NAME.
+ *
+ *   1. `strengthIntent` — the typed contract. Present in 29,896 of the 30,937
+ *      distinct inputs a whole `test:bible` run produces, so this is the answer
+ *      almost always.
+ *   2. THE ROWS. `inferMeaningfulExerciseMovementPatterns` reads the component's
+ *      own exercise names against the locked selectable vocabulary and returns
+ *      movement patterns — `resolveSessionDisplayName`'s precedence step 2,
+ *      which is consulted only when there is no typed intent.
+ *
+ * Step 2 is here because of a review finding, and the finding is worth keeping:
+ * WITHOUT it, this function's fallback fired for every untyped day — even one
+ * whose rows are Barbell Bench Press and Barbell Row. `resolveSessionDisplayName`
+ * only consults visible content when `strengthPattern` is set or the focus/name
+ * text says "strength" (`movementPatternsFromVisibleContent`), and this call
+ * deliberately passes NEITHER focus nor name, so real strength rows were being
+ * ignored and the day's title came back instead. Deriving the patterns here and
+ * handing them over as `movementPatterns` restores content evidence without
+ * reopening the text channel: exercise names come from the authored vocabulary,
+ * a composed session name does not.
+ *
+ * THE FALLBACK, AND EXACTLY WHEN IT DIFFERS FROM THE DELETED PARSER. When there
+ * is neither typed intent nor a classifiable row, the day's own title is
+ * returned. For an UNCOMPOSED title that is byte-for-byte what the parser
+ * returned (no " + " -> `title === name`). For a COMPOSED title it is NOT: the
+ * parser returned one half ("Team Training + Upper Push" -> "Upper Push") and
+ * this returns the whole string — which, after a partial Bin, can name the
+ * component that was just removed. That is a real divergence and it is recorded
+ * rather than hidden:
+ *
+ *   - it is UNREACHABLE in every world the harness reaches (whole-bible day-name
+ *     differential: empty, 1,705 observations), because the population it needs
+ *     is a day with a composed title, no typed intent AND no classifiable row;
+ *   - the honest closure is for a strength SECTION to carry its own title
+ *     instead of the day's — `buildVisibleSections` sets it to
+ *     `cleanText(workout.name)`, so the snapshot cannot tell a component's name
+ *     from its day's. That is a change to `coachRevisionProposal.ts`, which is on
+ *     the LR-6 frozen list, so it is NOT available to this unit;
+ *   - the deleted parser had the SAME defect class from the other side: on
+ *     "Easy Zone 2 Ski Erg + Upper Push" with the conditioning binned, its
+ *     left-half fallback named the removed component too.
+ *
+ * Carried to the boundary report as residual risk on the untyped-legacy
+ * population, with a device-pass line attached.
  *
  * `isTeamDay: false` is not a claim about the day. It is the same argument the
- * departing half passes, and it is what keeps the answer equal to the parser's:
- * the strength component's own name is asked for, not the day's.
+ * departing half passes: the strength component's own name is asked for, not the
+ * day's.
  */
 export function strengthComponentDisplayName(args: {
   strengthIntent?: StrengthIntent;
@@ -479,6 +516,9 @@ export function strengthComponentDisplayName(args: {
 }): string {
   const named = resolveSessionDisplayName({
     strengthIntent: args.strengthIntent,
+    // Consulted only when `strengthIntent` is absent — the typed contract wins
+    // inside `resolveSessionDisplayName` before patterns are read at all.
+    movementPatterns: inferMeaningfulExerciseMovementPatterns(args.exercises),
     exercises: args.exercises,
     isTeamDay: false,
     tier: 'core',

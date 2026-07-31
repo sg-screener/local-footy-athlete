@@ -147,18 +147,42 @@ export function signedCopy(
 }
 
 /**
+ * What a `{placeholder}` is allowed to have been filled with.
+ *
+ * A NUMBER, and nothing else. Every templated entry in the sheet is a
+ * `derived_number` — `{sets} × {reps}`, `{minutes} min`, `{min}-{max}s` — so the
+ * only thing a filled slot can honestly contain is a figure the app computed.
+ *
+ * This was `.+`, and `.+` made the L-P2 runtime law weaker than it reads:
+ * "{minutes} min" would accept *literally whatever* min, so a composed string
+ * with the right suffix traced to an authored template it never came from. The
+ * law is that athlete-facing words come from the sheet; a placeholder is the one
+ * sanctioned hole in that, and it should be exactly as wide as the thing it
+ * exists for.
+ *
+ * If a future entry legitimately templates a WORD rather than a number, this
+ * pattern is the thing to widen — deliberately, in that entry's commit, with the
+ * reason. Widening it to `.+` again to make an unrelated red go away is the
+ * loosening this comment exists to make visible.
+ */
+const FILLED_PLACEHOLDER = '\\d+(?:\\.\\d+)?';
+
+/**
  * Is this value signed?
  *
- * For the walker's L-P2 assertion, which checks rendered strings against the
- * sheet at runtime. It compares against the FILLED text of every entry, so a
- * string carrying a formatted number still traces to its authored template.
+ * For the walker's L-P2 assertion and `surfaceAgreementTests` cell 5, which check
+ * rendered strings against the sheet at runtime. It compares against the FILLED
+ * text of every entry, so a string carrying a formatted number still traces to
+ * its authored template.
  */
 export function isSignedCopyText(value: string): boolean {
   for (const entry of REGISTRY.values()) {
     if (entry.text === value) return true;
     if (!entry.text.includes('{')) continue;
     const pattern = new RegExp(
-      `^${entry.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{\w+\\\}/g, '.+')}$`,
+      `^${entry.text
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\\\{\w+\\\}/g, FILLED_PLACEHOLDER)}$`,
     );
     if (pattern.test(value)) return true;
   }
