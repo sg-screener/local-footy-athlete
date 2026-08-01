@@ -1150,13 +1150,20 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
         const charterWord = (
           { gunshow: 'Gunshow', prehab: 'Accessories', mobility: 'Mobility' } as const
         )[optionalKind];
-        const partWords = visibleDay.parts.map((part) => String(part.headline));
-        if (!partWords.includes(charterWord)) {
+        // ONE WORD (ruling 7-e, signed 2026-08-01): the marker guarantees the
+        // workout IS one composed session (`stackTemplate` clears it on
+        // combining), so its own parts are exactly the door's word. Attached
+        // add-on parts ride with the DAY, not the session, and are excluded —
+        // they carry their own word by position.
+        const ownWords = visibleDay.parts
+          .filter((part) => !part.id.endsWith(':recovery_addon'))
+          .map((part) => String(part.headline));
+        if (JSON.stringify(ownWords) !== JSON.stringify([charterWord])) {
           offend('L-P6 CHARTER TYPE NAMES ITSELF',
             `${day.date}: a typed ${optionalKind} session renders `
-            + `${JSON.stringify(partWords)} — the charter word "${charterWord}" is `
-            + 'missing (device-pass fail 2: the honest-generic fallback shown to an '
-            + 'athlete who tapped a named door).');
+            + `${JSON.stringify(ownWords)} — ruling 7-e says exactly `
+            + `["${charterWord}"]: the door's name alone, rows are contents not `
+            + 'card vocabulary.');
         }
       }
 
@@ -2089,13 +2096,18 @@ run('a door-added charter session names itself (device-pass fail 2)', () => {
     const day = week.days.find((candidate) => candidate.date === target);
     assert(day, `${category}: the target day vanished from the projection`);
     const words = day.parts.map((part) => String(part.headline));
-    if (!words.includes(word)) {
-      offences.push(`${category}: renders ${JSON.stringify(words)} — the charter word `
-        + `"${word}" is missing`);
+    // ONE WORD (Sam's 7-e ruling, 2026-08-01, signed with Batch 7): the
+    // door's name ALONE — an added Accessories session must never read
+    // "Accessories + Midline Work"; its rows are contents, not card
+    // vocabulary. Exact equality, not includes: a second part word is the
+    // defect the ruling retires.
+    if (JSON.stringify(words) !== JSON.stringify([word])) {
+      offences.push(`${category}: renders ${JSON.stringify(words)} — ruling 7-e says `
+        + `exactly ["${word}"]`);
     }
   }
   assert(offences.length === 0,
-    `charter sessions render generic vocabulary over a named door's session:\n    ${
+    `charter sessions do not read their door's name alone (ruling 7-e):\n    ${
       offences.join('\n    ')}`);
 });
 

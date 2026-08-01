@@ -74,16 +74,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Dragon Flag",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -294,16 +294,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Groin Squeeze",
                 "Banded External Rotation",
                 "Seated Calf Raise",
@@ -542,16 +542,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -834,16 +834,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Ab Wheel",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -1186,16 +1186,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Dragon Flag",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -1483,16 +1483,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Groin Squeeze",
                 "Banded External Rotation",
                 "Seated Calf Raise",
@@ -1779,16 +1779,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -2059,16 +2059,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Ab Wheel",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -2388,16 +2388,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Dragon Flag",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -2608,16 +2608,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Groin Squeeze",
                 "Banded External Rotation",
                 "Seated Calf Raise",
@@ -2833,16 +2833,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -3073,16 +3073,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Ab Wheel",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -3316,16 +3316,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -3538,16 +3538,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Plank",
                 "Groin Squeeze",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -3787,16 +3787,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Bird Dog",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise",
@@ -4395,16 +4395,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 3,
-                "support": 1,
+                "strength": 4,
+                "support": 0,
                 "conditioning": 0,
                 "total": 4
               },
               "strengthRowNames": [
+                "Dragon Flag",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise"
@@ -4614,16 +4614,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 3,
-                "support": 1,
+                "strength": 4,
+                "support": 0,
                 "conditioning": 0,
                 "total": 4
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Groin Squeeze",
                 "Banded External Rotation",
                 "Seated Calf Raise"
@@ -4861,16 +4861,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 3,
-                "support": 1,
+                "strength": 4,
+                "support": 0,
                 "conditioning": 0,
                 "total": 4
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Single-Leg Calf Raise"
@@ -5152,16 +5152,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 3,
-                "support": 1,
+                "strength": 4,
+                "support": 0,
                 "conditioning": 0,
                 "total": 4
               },
               "strengthRowNames": [
+                "Ab Wheel",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise"
@@ -5523,16 +5523,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Single-Leg Calf Raise",
@@ -5780,16 +5780,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Bird Dog",
                 "Cossack Squat",
                 "Bottoms-Up KB Press",
                 "Single-Leg Calf Raise",
@@ -6037,16 +6037,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Woodchop (Standing)",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Seated Calf Raise",
@@ -6290,16 +6290,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Single-Leg Calf Raise",
@@ -6807,16 +6807,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank",
                 "Lateral Lunge",
                 "Scap Push-Up",
                 "Seated Calf Raise",
@@ -7007,16 +7007,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Banded Dead Bug",
                 "Groin Squeeze",
                 "Banded External Rotation",
                 "Seated Calf Raise",
@@ -7389,16 +7389,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Side Plank Row",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Single-Leg Calf Raise",
@@ -7591,16 +7591,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Bird Dog",
                 "Cossack Squat",
                 "Bottoms-Up KB Press",
                 "Single-Leg Calf Raise",
@@ -7793,16 +7793,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Woodchop (Standing)",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Seated Calf Raise",
@@ -7994,16 +7994,16 @@
                 }
               ],
               "components": [
-                "strength",
-                "support"
+                "strength"
               ],
               "countedRows": {
-                "strength": 4,
-                "support": 1,
+                "strength": 5,
+                "support": 0,
                 "conditioning": 0,
                 "total": 5
               },
               "strengthRowNames": [
+                "Hanging Leg Raise",
                 "Copenhagen Plank (Half)",
                 "Scap Pull Ups",
                 "Single-Leg Calf Raise",

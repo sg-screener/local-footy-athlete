@@ -785,12 +785,16 @@ behaviourally (current behaviour, not a proposed fix) in
 `planChangeMoveScopingTests.ts`. Combined device pass checklist item 4f asks
 Sam to look at exactly this flow live.
 
-## Batch 7 — device-pass fix round (2026-08-01): PROPOSED
+## Batch 7 — device-pass fix round (2026-08-01): SIGNED
+
+**STATUS: SIGNED BY SAM, 2026-08-01, same day** — 7-a as proposed, 7-b's
+reword + the L-P7 deleted-vocabulary law confirmed, 7-c signed. His signing
+message also carried a PART-COMPOSITION ruling, recorded as 7-e below.
 
 Sam's combined device pass (7/11) failed three cells in one class — the
 projection's naming layer lagging the session-type charter — and ruled the
-charter-type headline work into the merge gate. Every string below ships
-PROPOSED and comes to Sam for signing at the re-run. **All entries are prose,
+charter-type headline work into the merge gate. Every string below shipped
+PROPOSED and was signed at the head of this batch. **All entries are prose,
 not table rows, deliberately**: every one lives in `src/rules/projectionCopy.ts`
 or `src/utils/workoutCanonicalisation.ts`, which the binder's SOURCES scan
 cannot see (the same recorded gap as 6-II-a/6-II-e; boundary report
@@ -840,3 +844,22 @@ protection and the recovery-template rebuild now materialise MOBILITY sessions
 and "Scheduled recovery - active" are RETIRED from the resolver; the generation
 recovery-add-on placement pass is retired outright (charter: placement of
 optional work is athlete-only).
+
+**7-e. RULED: ONE WORD for a composed optional session (Sam, 2026-08-01,
+with the Batch 7 signature).**
+
+> An athlete-added session reads its door's name alone — "Accessories",
+> never "Accessories + Midline Work". Its rows are contents, visible
+> inside, not card vocabulary. Apply the same principle to the other
+> composed optional types.
+
+Landed structurally, not as a label: `getSessionComponentRows`
+(`sessionComponents.ts`) no longer carves a trunk-support part out of a
+workout carrying the typed `composedOptionalKind` marker, so the session is
+ONE component → ONE part → ONE word, and every reader of that one function
+(the projection's parts, the day-detail buckets, the rows-conservation law)
+agrees by construction. The marker guarantees purity — `stackTemplate`
+clears it the moment a day combines — so a combined day still names both of
+its things (7-e governs the composed session's own card word, never the
+team-combo join). The walker's charter cell now asserts the EXACT one-word
+part list for all three door-added types.

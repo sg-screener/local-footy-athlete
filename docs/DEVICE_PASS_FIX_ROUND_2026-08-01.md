@@ -151,12 +151,20 @@ re-answered.** Reassessment §4 rules the card renders `headline` + every part
 headline. The census says the length came from PRODUCERS, not the rule:
 (a) generation add-ons put a sixth word on full days ("Training Day + Power +
 Lower Body Strength + Midline Work + Conditioning + Recovery" at seed 1) —
-retired; (b) a prehab session splits strength+support via a name-tag row
-classifier, so one Accessories add reads "Accessories + Midline Work" — TWO
-words for ONE tapped door. (b) is a genuine §4 question for Sam: should a
-composed optional session project ONE part carrying all its rows? Changing
-part KINDS moves L-P3 conservation, the D13 template comparison and §18
-counting, so it is a ruling plus its own unit, not a fix-round edit.
+retired; (b) a prehab session split strength+support via a name-tag row
+classifier, so one Accessories add read "Accessories + Midline Work" — TWO
+words for ONE tapped door.
+
+**(b) IS NOW RULED AND LANDED (Sam, 2026-08-01, with the Batch 7 signature —
+copy sheet 7-e): ONE WORD.** An athlete-added session reads its door's name
+alone; its rows are contents, visible inside, not card vocabulary. Landed at
+the one owner — `getSessionComponentRows` no longer carves a trunk-support
+part out of a marker-carrying workout — so the projection's parts, the
+day-detail buckets and the rows-conservation law all agree by construction
+(`composeDayDetail` reads the same function). The marker's purity guarantee
+(`stackTemplate` clears it on combining) is what makes this safe: a combined
+day still names both of its things. The walker's charter cell and L-P6 now
+assert the EXACT one-word part list for all three door-added types.
 
 ## NOT-COVERED
 

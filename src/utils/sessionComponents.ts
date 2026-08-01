@@ -635,7 +635,15 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     ? new Set<string>()
     : legacyConditioningTailIds(workout, renderableRows);
   const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds]);
-  const supportRows = isRecoveryWorkout(workout)
+  // ONE WORD FOR A COMPOSED OPTIONAL SESSION (Sam's ruling, 2026-08-01,
+  // signed with Batch 7): an athlete-added Gunshow / Accessories / Mobility
+  // session reads its door's name ALONE — its rows are contents, visible
+  // inside, never card vocabulary. So the trunk-row split that used to carve
+  // a "Midline Work" part out of an Accessories session does not apply to a
+  // workout carrying the typed marker: the marker means the whole session IS
+  // one composed thing (`stackTemplate` clears it the moment the day
+  // combines, so purity is guaranteed by construction, not re-inferred).
+  const supportRows = isRecoveryWorkout(workout) || (workout as Workout).composedOptionalKind
     ? []
     : renderableRows.filter(isTrunkSupportRow);
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
