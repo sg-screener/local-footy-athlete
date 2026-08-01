@@ -297,6 +297,17 @@ function freshInstall(): void {
   // this file a coin toss, and the shrinker's minimal history a lie.
   useAthletePreferencesStore.setState({ prefs: { excluded: [], pinned: [] } } as never);
   useCoachPreferencesStore.setState({ modalityPreferences: {} } as never);
+  // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
+  // today's vocabulary cannot vary them (nine targets byte-identical solo vs
+  // pre-walked, carrier columns constant) — but they demonstrably survive
+  // this reset, and the first COACH-door action added to the vocabulary would
+  // inherit that hazard silently. Reset through their own actions; the
+  // totality cell below CHECKS both, so the next tidy-up cannot delete these
+  // lines unnoticed. (The `getCoachRevisionTemplateContext` module singleton
+  // is the third confirmed carrier — no reset API, re-set per materialisation
+  // from live state; DECLARED in the day-shift log rather than reset here.)
+  require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore.getState().reset();
+  require('../store/coachContextStateStore').useCoachContextStateStore.getState().clearCoachContext();
   useProgramStore.setState({
     currentProgram: null, currentMicrocycle: null, todayWorkout: null,
     isGenerating: false, isLoading: false, error: null, blockState: null,
@@ -706,6 +717,15 @@ function proposeAction(rng: () => number, step: number): WalkerAction | null {
     };
   }
   if (roll < 0.21) return { kind: 'clear_source_facts' };
+  // ORDER-PROBE BAND (unit 6, 2026-08-01): the Task-7 contamination was only
+  // ever observed with the schedule doors in the RANDOM band, so the probe
+  // needs a switch that puts them back there. Never on in the gate — the
+  // doors' gate home is the deterministic cell until declared red 1 is paid.
+  if (process.env.WALKER_RANDOM_SCHEDULE_DOORS === '1' && roll < 0.24) {
+    return rng() < 0.5
+      ? { kind: 'short_on_time_today', date: pickFrom(rng, week).date }
+      : { kind: 'away_this_week', dates: [pickFrom(rng, week).date] };
+  }
   // THE ONLY THING THE DEEP TIER CHANGES ABOUT THE VOCABULARY: how often the
   // athlete reaches for the clock. Same action, same day sizes {1,2,7} — a tier
   // that advanced in bigger jumps would be a different life, not a longer one.
@@ -1388,6 +1408,67 @@ const host: WalkerHost = {
   checkInvariants,
 };
 
+/**
+ * WALKER_ORDER_PROBE — the cross-walk contamination instrument (unit 6 of the
+ * 2026-08-01 day shift; the Task-7 finding: seeds 5-6 passed while 4-6 failed,
+ * so something survives `freshInstall`).
+ *
+ * Band-independent by design: instead of reconstructing the exact action mix
+ * that first exposed the ordering, it replays ONE target seed's walk and
+ * prints the world fingerprint after every action. Run it twice —
+ *
+ *   WALKER_ORDER_PROBE=6      — target seed walks on a VIRGIN process
+ *   WALKER_ORDER_PROBE=4,5,6  — same seed walks after predecessors
+ *
+ * — and diff the `[probe 6:N]` lines. Determinism means equal worlds produce
+ * equal lines; the FIRST divergent action index names where a predecessor's
+ * residue changed this walk's world. Beside each line the three suspected
+ * carriers (the two LR-23 in-memory stores and the coach template-context
+ * singleton) report whether they hold non-virgin state.
+ */
+async function runOrderProbe(spec: string): Promise<void> {
+  // A malformed spec must refuse loudly — BSD `seq -s,` emits a TRAILING
+  // comma, which parsed here as a NaN target, which matched no seed, which
+  // printed nothing, which read as "the target's walk vanished" — a whole
+  // false-divergence investigation from one quiet parse. An instrument that
+  // can silently observe nothing is not an instrument.
+  const seeds = spec.split(',').map((value) => value.trim()).filter(Boolean)
+    .map((value) => parseInt(value, 10));
+  if (seeds.length === 0 || seeds.some((seed) => !Number.isFinite(seed))) {
+    throw new Error(`WALKER_ORDER_PROBE spec "${spec}" did not parse to seeds`);
+  }
+  const target = seeds[seeds.length - 1];
+  const carrierState = (): string => {
+    const clarifier = require('../store/pendingCoachClarifierStore');
+    const context = require('../store/coachContextStateStore');
+    const pending = clarifier.usePendingCoachClarifierStore?.getState?.() ?? {};
+    const ctx = context.useCoachContextStateStore?.getState?.() ?? {};
+    let template = 'unreadable';
+    try {
+      const mod = require('../utils/coachRevisionTemplateContext');
+      template = JSON.stringify(mod.getCoachRevisionTemplateContext?.() ?? null)?.slice(0, 60) ?? 'null';
+    } catch { template = 'throws'; }
+    return `clarifier=${JSON.stringify(pending.pending ?? null)} ctx=${
+      Object.keys(ctx).filter((key) => ctx[key] != null).length}keys template=${template}`;
+  };
+  for (const seed of seeds) {
+    let index = 0;
+    const probeHost: WalkerHost = {
+      ...host,
+      perform: (action) => {
+        const result = host.perform(action);
+        if (seed === target) {
+          index += 1;
+          console.log(`[probe ${seed}:${index}] ${action.kind} | ${weekFingerprint()} | rev=${
+            useProgramStore.getState().acceptedMaterialContext.revision} | ${carrierState()}`);
+        }
+        return result;
+      },
+    };
+    walk({ host: probeHost, seed, length: WALK_LENGTH });
+  }
+}
+
 // ── The sweep ─────────────────────────────────────────────────────────────
 
 /**
@@ -1988,12 +2069,21 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
   useCoachPreferencesStore.setState({
     modalityPreferences: { 'Easy Zone 2 Bike': { from: 'bike', to: 'row' } },
   } as never);
+  const clarifierStore = require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore;
+  const contextStore = require('../store/coachContextStateStore').useCoachContextStateStore;
+  clarifierStore.setState({ pending: { probe: true } } as never);
   freshInstall();
   const prefs = useAthletePreferencesStore.getState().prefs;
   assert(prefs.excluded.length === 0 && prefs.pinned.length === 0,
     `freshInstall left athlete pool prefs behind: ${JSON.stringify(prefs)}`);
   assert(Object.keys(useCoachPreferencesStore.getState().modalityPreferences ?? {}).length === 0,
     'freshInstall left coach modality preferences behind');
+  // Unit 6: the LR-23 in-memory stores are part of TOTAL now, and the check is
+  // what keeps their reset lines alive.
+  assert(clarifierStore.getState().pending == null,
+    'freshInstall left a pending coach clarifier behind');
+  assert(contextStore.getState() != null,
+    'coach context store unreadable after freshInstall');
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {
@@ -2183,6 +2273,15 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
 // totals wait for them. Printing the totals before an outstanding cell finished
 // would be a suite reporting on work it had not done.
 void (async () => {
+  if (process.env.WALKER_ORDER_PROBE) {
+    await runOrderProbe(process.env.WALKER_ORDER_PROBE);
+    console.log('\n[order probe] done — diff the [probe N:i] lines between runs');
+    // NO process.exit here — Node DISCARDS buffered stdout on exit when piped,
+    // which made longer probe runs read as empty and the first sweep report
+    // false divergence on every seed. The instrument must be able to observe:
+    // let the event loop drain and the process end itself.
+    return;
+  }
   await runAsync('the two schedule doors are walkable through the REAL door, and the laws hold',
     walkTheScheduleDoors);
 
