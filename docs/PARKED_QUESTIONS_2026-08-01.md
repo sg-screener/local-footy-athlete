@@ -47,3 +47,31 @@ reword the seven strings; rule choice 1 (does SWAP raise the same ask, or
 stay refused?) and choice 2 (permanent route confirms inline, or deep-links
 to program setup?).
 **Shipped meanwhile:** the sheet.
+
+## 5. LR-27: the injury-routing divergence table — rule row by row
+
+**Parked by:** Unit 5 (LR-27), 2026-08-01.
+**Blocked on the answer:** every convergence of the three surviving copies
+onto `data/injuryRegions.ts` — the differential proved NO copy is
+reproducible from the owner by composition, so each divergence is a routing
+POLICY choice on injury safety, not a refactor.
+**What shipped meanwhile:** the divergence GATE
+(`test:injury-routing-divergence`, in `test:bible`): every copy's vocabulary
+source-pinned, the divergence set per door pinned with EQUALITY — the
+five-copies-drifting-invisibly failure mode is now structurally impossible;
+a ruled row converges and drops its pin in the same commit.
+**The table** (identical across all three bucket doors; tags door separate):
+
+| Phrase | Copies say | Owner (Sam's sheet) says | The question |
+|---|---|---|---|
+| glute / glutes | bucket `hamstring` | region `hip` | which profile protects a glute strain? |
+| hip / hips | bucket `groin` | region `hip` | hip complaints: groin profile or hip profile? |
+| neck | bucket `shoulder` | region `neck` | neck has its own column since the matrix — keep the proxy? |
+| quad / quads / quadriceps | bucket `knee` | region `quad` | quad has its own column — keep the knee proxy? |
+| upper back | bucket `lowerBack` | region `shoulder` | your sheet routes upper back to shoulder; the engines send it to lower back |
+| achilles (tags) | `ankle+calf` | `calf` (single-target ruling) | dual tags or your single-target rule? |
+| shin / shins (tags) | `calf+ankle` | UNROUTABLE | add shin to the ruling sheet? (regenerates the owner) |
+
+Also note: the owner's own `quadricep` (singular) routes to `knee` while
+`quadriceps`/`quads` route to `quad` — flagged in case it is a sheet typo
+rather than a ruling.
