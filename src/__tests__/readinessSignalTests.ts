@@ -57,8 +57,7 @@ const rampProfile: OnboardingData = {
   preferredTrainingDays: ['Monday', 'Wednesday'],
   teamTrainingDaysPerWeek: 1,
   teamTrainingDays: ['Thursday'],
-  teamTrainingIntensity: 'Hard',
-};
+  };
 
 function signal(
   date: string,

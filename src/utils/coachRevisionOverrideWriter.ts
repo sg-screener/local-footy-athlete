@@ -18,6 +18,7 @@ import {
 import { logWeekValidation } from '../rules/weekStructureValidator';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
 import type { TemplatePlanChange } from './planChangeTypes';
 
 export interface CoachRevisionOverrideWrite {
@@ -124,6 +125,11 @@ export function applyCoachRevisionDateOverrides(
           change: input.planChange,
           currentDay: beforeDay,
           todayISO: input.todayISO,
+          // The legacy write path materialises a SECOND time, after the
+          // proposal. Without the athlete's answered G-1 route here, the
+          // proposal would show the deloaded session and the write would land
+          // the full one.
+          transformTemplate: g1RouteTemplateTransform(input.planChange),
           canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout, {
             deferWeekAcceptance: deferWeekAcceptanceToTransaction,
           }),

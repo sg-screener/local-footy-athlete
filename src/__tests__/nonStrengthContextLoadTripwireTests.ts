@@ -47,7 +47,6 @@ import fs from 'fs';
 import path from 'path';
 
 import { POOL_REGISTRY } from '../data/exercisePools';
-import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
 import { recoveryAddonExerciseVocabulary } from '../utils/recoveryAddonBuilder';
 import { resolveLoadAuthority } from '../utils/loadEstimation';
 
@@ -91,7 +90,6 @@ console.log('\n[1] The tripwire is watching something real');
     .reduce((n, c) => n + ((POOL_REGISTRY as Record<string, unknown[]>)[c] ?? []).length, 0);
   ok('the recovery-context pools are non-empty', total > 20, `${total} exercises`);
 
-  ok('mobility flow templates are loaded', MOBILITY_FLOW_TEMPLATES.length > 0);
 
   // Proof the detector can see a prescribed load at all — otherwise [2] would
   // pass because the check is broken rather than because the gap is dormant.
@@ -116,11 +114,9 @@ console.log('\n[2] THE TRIPWIRE — no prescribed load on a WEIGHT-BEARING non-s
     }
   }
 
-  for (const template of MOBILITY_FLOW_TEMPLATES) {
-    for (const movement of template.movements) {
-      if (prescribed(movement.name)) offenders.push(`mobility flow "${template.name}": ${movement.name}`);
-    }
-  }
+  // The flow bundles are retired (2026-07-30); the composed flow draws from
+  // POOL_REGISTRY.mobility, which the loop above already sweeps — so this surface
+  // is still covered, by the pool rather than by ten groupings of it.
 
   okEmpty('no weight-bearing non-strength surface offers a prescribed-load exercise', offenders,
     'THE GAP IS NOW LIVE. A beginner can read one weight on a generated card and '

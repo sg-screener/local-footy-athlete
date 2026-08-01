@@ -12,6 +12,7 @@ import {
   buildCoachRevisionTemplateSection,
   listCoachRevisionTemplates,
   visibleDayLooksLikeGame,
+  type CoachRevisionTemplateDefinition,
 } from './coachRevisionTemplates';
 import type { CoachVisibleSectionSnapshot } from './coachRevisionProposal';
 import { logger } from './logger';
@@ -258,7 +259,11 @@ export interface CoachRevisionProposalLLMContext {
     templateId: string;
     label: string;
     description: string;
-    category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories';
+    // Derived from the registry rather than restated. It was a second copy of
+    // the same union and went stale the moment the Mobility door was added
+    // (Sam's charter, stage 4) — the compiler caught it, which is the only
+    // reason it is not still stale.
+    category: CoachRevisionTemplateDefinition['category'];
     byeOnly: boolean;
     section: CoachVisibleSectionSnapshot;
   }>;

@@ -27,7 +27,13 @@ const contracts: Array<[string, string, RegExp]> = [
   ['workout start action', sources.program, /testID="view-workout-button"/],
   ['fixture actions use exact fixture identity', sources.program, /fixtureIngress\('move', fixtureId\)[\s\S]*fixtureIngress\('remove', fixtureId\)/],
   ['fixture cards and lifecycle states use exact fixture identity', sources.program, /fixtureCard\(day\.workout\.id\)[\s\S]*fixtureState\(day\.workout\.id, 'active'\)[\s\S]*fixtureState\(`calendar-game-\$\{day\.date\}`, 'absent'\)/],
-  ['plan edit action', sources.plan, /testID="plan-change-edit-session"/],
+  // UPDATED 2026-07-31 (design rulings 7-8). `plan-change-edit-session` was the
+  // intermediate menu's one row, and the intermediate menu is deleted — the four
+  // actions are the first step now, so the stable ids are theirs.
+  ['plan action entry points', sources.plan,
+    /testID="plan-change-swap"[\s\S]*testID="plan-change-add"/],
+  ['plan session-type rows carry stable ids', sources.plan,
+    /testID="plan-change-type-strength"[\s\S]*testID="plan-change-type-conditioning"[\s\S]*testID="plan-change-type-gunshow"[\s\S]*testID="plan-change-type-mobility"[\s\S]*testID="plan-change-type-prehab"/],
   ['plan deletion and movement use session identity', sources.plan, /sessionMoveIngress\(selectedWorkout\.id\)[\s\S]*sessionDeleteIngress\(selectedWorkout\.id\)/],
   ['move destinations use dates', sources.plan, /sessionMoveDestination\(destination\.date\)/],
   ['delete scopes use session and scope', sources.plan, /sessionDeleteScope\(selectedWorkout\.id, scope\.id\)/],
@@ -78,7 +84,6 @@ const semanticIdentities: Array<[string, string, string]> = [
   ['equipment clear', explorerTestId.equipmentCleared('Fact:3'), 'equipment-cleared-fact-3'],
   ['feedback receipt', explorerTestId.feedbackReceipt('Transaction:4'), 'session-feedback-receipt-transaction-4'],
   ['adjustment restore', explorerTestId.adjustmentRestored('Adjustment:5'), 'adjustment-restored-adjustment-5'],
-  ['repeat restore', explorerTestId.repeatRestored('Repeat:6'), 'repeat-week-restored-repeat-6'],
 ];
 for (const [name, actual, expected] of semanticIdentities) {
   if (actual !== expected || actual.includes(stableTestIdToken('Mutable display copy'))) {

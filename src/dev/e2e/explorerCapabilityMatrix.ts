@@ -1,7 +1,6 @@
 import { semanticFingerprintV2, type SemanticFingerprintV2 } from '../../utils/semanticFingerprintV2';
 import {
   EXPLORER_ACTION_TYPES,
-  EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS,
   type ExplorerActionType,
   type ExplorerCapabilityDeclaration,
   type ExplorerCapabilityId,
@@ -125,24 +124,15 @@ const actionPairs = (
   EXPLORER_ACTION_TYPES.flatMap((actionKind) =>
     (selections[actionKind] ?? defaultValues).map((value) => [actionKind, value] as const));
 
-const WEEK_REPEAT_DECLARATION = EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS.find(
-  (declaration) => declaration.capabilityId === 'week.repeat',
-) ?? null;
-
 const ACTION_CAPABILITIES: readonly ExplorerActionCapabilityProfile[] =
   EXPLORER_ACTION_TYPES.map((actionKind): ExplorerActionCapabilityProfile => {
-    if (actionKind === 'week.repeat') {
+    // `week.repeat` has no production owner — HOME_SCREEN_REDESIGN ruling 1
+    // (2026-07-30) retired the athlete-facing repeat-week writer entirely, so
+    // this capability is permanently disabled, exactly like `coach.message`.
+    if (actionKind === 'week.repeat' || actionKind === 'coach.message') {
       return {
         actionKind,
-        capabilityId: 'week.repeat',
-        status: 'enabled',
-        declaration: WEEK_REPEAT_DECLARATION,
-      };
-    }
-    if (actionKind === 'coach.message') {
-      return {
-        actionKind,
-        capabilityId: 'coach.message',
+        capabilityId: actionKind,
         status: 'disabled',
         declaration: null,
       };
@@ -233,6 +223,7 @@ const CONSTRAINTS: readonly ExplorerBinaryCapabilityConstraint[] = [
     rightDimension: 'expectedDisposition',
     allowedPairs: actionPairs({
       'coach.message': ['capability-disabled'],
+      'week.repeat': ['capability-disabled'],
     }, ['accepted', 'rejected']),
   },
   {

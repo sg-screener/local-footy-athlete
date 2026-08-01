@@ -100,7 +100,6 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
     teamTrainingDuration: '60-90 minutes',
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
@@ -567,6 +566,29 @@ run('8c anchor-relocated-disclosure: an anchor-day strength-displacing Swap relo
 // adjustment (and can refuse for an off-target §18 condition).
 run('10 empty-day-add: add_category on a rest day routes through the transaction, §18 owned by it', () => {
   seed();
+  // WEDNESDAY ARRIVES OCCUPIED NOW, and it is the athlete who empties it.
+  //
+  // The generator places optional accessory work on G-3 (Bible-invited), and the
+  // §18 gateway used to DELETE it to manufacture a rest day. Sam's Rest law
+  // (2026-07-30) stops that — a day carrying only optional work already counts
+  // as rest — so this cell reaches its empty-day precondition by ACTING, through
+  // the same removal door an athlete uses.
+  {
+    const occupying = acceptedByDay().get(3);
+    if (occupying && exerciseCells(occupying).length > 0) {
+      const week = visibleWeek();
+      const removal = { kind: 'remove_session' as const, date: WEDNESDAY };
+      const preview = previewPlanChangeRisk({
+        change: removal, visibleWeek: week, todayISO: WEEK,
+        profile: useProfileStore.getState().onboardingData ?? undefined,
+      });
+      applyPlanChange({
+        change: removal, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+        setManualOverride: (date, workout, ctx) =>
+          useProgramStore.getState().setManualOverride(date, workout, ctx),
+      });
+    }
+  }
   const beforeWed = acceptedByDay().get(3);
   const wedEmpty = !beforeWed || beforeWed.workoutType === 'Rest' || exerciseCells(beforeWed).length === 0;
   assert(wedEmpty,

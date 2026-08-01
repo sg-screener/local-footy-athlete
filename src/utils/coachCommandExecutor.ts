@@ -3504,7 +3504,20 @@ function runRemoveSession(
       visibleWeekBefore,
       visibleWeekAfter,
     });
-  const otherDaysVerified = verification.otherDaysUnchanged || requiredCoreRelocated;
+  // RELOCATION IS DISCLOSED, NOT REFUSED (Sam, 2026-07-30).
+  //
+  // This door used to require that NO other day moved, and rolled the whole
+  // removal back when one did. But a removal that authorises equivalent-exposure
+  // relocation is SUPPOSED to move other days — that is the week rebalancing,
+  // and the bin door has disclosed it in words since the repair-disclosure law.
+  // The two doors therefore disagreed about the same transaction: the tap door
+  // applied and the coach door refused. Refusing over disclosed rebalancing was
+  // the defect; the rebalance was never the defect.
+  //
+  // The verification that remains is the one that matters: the TARGET actually
+  // changed. Everything else that moved is named in the reply, so the disclosed
+  // set is the moved set.
+  const otherDaysVerified = true;
 
   logger.debug('[coach-command-executor] remove_session', {
     targetDate,
@@ -3550,7 +3563,8 @@ function runRemoveSession(
     kind: 'mutated',
     reply: requiredCoreRelocated
       ? `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)} and relocated the required weekly work to a safe day.`
-      : `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}.`,
+      : `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}.`
+        + rebalanceDisclosure(verification.changedOtherDates),
     applied: true,
     route: 'remove_session:applied',
     progress: stages,
@@ -4020,6 +4034,23 @@ function hasRelocatableMainStrength(workout: ResolvedDay['workout'] | null): boo
  * and leaves the requested date empty. Custom test seams keep the stricter
  * historical "other days unchanged" contract.
  */
+/**
+ * Name every day the removal moved, in the bin door's own words.
+ *
+ * Sam's disclosure law: doors report success with the rebalance disclosed, and
+ * the disclosed set is the moved set. Sharing the sentence with
+ * `planChangeProducer.residualRepairClause` keeps the two doors saying the same
+ * thing about the same event, which is the whole point of the ruling.
+ */
+function rebalanceDisclosure(changedOtherDates: readonly string[]): string {
+  if (changedOtherDates.length === 0) return '';
+  const days = changedOtherDates.map((date) => humanDate(date));
+  const named = days.length === 1
+    ? days[0]
+    : `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}`;
+  return ` I also rebalanced ${named} to keep your week balanced.`;
+}
+
 function verifyAcceptedRequiredCoreRelocation(args: {
   targetDate: string;
   beforeWorkout: ResolvedDay['workout'] | null;

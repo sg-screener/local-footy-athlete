@@ -18,8 +18,8 @@ import {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildBlockWeekStates } from '../utils/programBlockState';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
+import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import {
   canonicaliseHydratedProgram,
   useProgramStore,
@@ -63,12 +63,13 @@ function withoutRoutineLogs<T>(run: () => T): T {
 }
 
 const OFF_PROFILE: OnboardingData = {
+  // Generation refuses a profile with no equipment input (2026-07-31).
+  equipmentAnswer: fullKitEquipmentAnswer(),
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  teamTrainingIntensity: 'Moderate',
   sprintExposure: 'Occasionally',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Pretty consistent',
@@ -185,18 +186,6 @@ check('11 rebuild preserves phase entry and target subphase',
 
 resetProgramStore();
 useProgramStore.getState().setCurrentProgram(firstOffProgram);
-useProgramStore.getState().setCurrentMicrocycle(firstOffProgram.microcycles[3]);
-const repeated = withoutRoutineLogs(() => repeatWeekIntoNextWeek({
-  baseProfile: OFF_PROFILE,
-  sourceWeekDate: '2026-07-27',
-  todayISO: '2026-07-27',
-}));
-check('12 Repeat Week uses target phase identity, not source identity',
-  repeated.overlay.exposureContractV2?.identity.phaseWeek === 5 &&
-    repeated.overlay.exposureContractV2?.identity.declaredSubphase === 'late_offseason');
-
-resetProgramStore();
-useProgramStore.getState().setCurrentProgram(firstOffProgram);
 const rolled = withoutRoutineLogs(() => rolloverProgramBlock({
   baseProfile: OFF_PROFILE,
   targetDateISO: '2026-08-03',
@@ -302,10 +291,9 @@ const hydratedLate = withoutRoutineLogs(() => canonicaliseHydratedProgram(genera
 const pathIdentities = [
   generatedLate.microcycles[0].exposureContractV2?.identity,
   rolled.program?.microcycles[0].exposureContractV2?.identity,
-  repeated.overlay.exposureContractV2?.identity,
   hydratedLate.microcycles[0].exposureContractV2?.identity,
 ].filter(Boolean);
-check('cross-path generation/rollover/repeat/rehydration identity is equivalent',
+check('cross-path generation/rollover/rehydration identity is equivalent',
   pathIdentities.every((identity) =>
     identity?.phaseWeek === 5 && identity.declaredSubphase === 'late_offseason'));
 
@@ -381,7 +369,7 @@ for (const selectedPhase of ['Off-season', 'Pre-season', 'In-season'] as const) 
     const expected = resolve(selectedPhase, '2026-07-06', target);
     for (const noise of [
       { blockNumber: 1, arrayPosition: 0, sourceWeek: 1, path: 'edge' },
-      { blockNumber: 99, arrayPosition: 3, sourceWeek: 44, path: 'repeat' },
+      { blockNumber: 99, arrayPosition: 3, sourceWeek: 44, path: 'week-overlay-copy' },
       { blockNumber: 2, arrayPosition: 1, sourceWeek: 8, path: 'rollover' },
     ]) {
       const actual = resolve(selectedPhase, '2026-07-06', target);
@@ -408,7 +396,6 @@ const mutationWitnesses: Array<[string, boolean]> = [
     resolve('Off-season', '2026-07-06', '2026-08-24').subphase !== 'early_offseason'],
   ['deload first Off-season Week 4', offWeeks[3].weekKind !== 'deload'],
   ['reset phase entry during rollover', rolled.program?.seasonPhaseClock?.phaseEntryWeekStartISO !== '2026-08-03'],
-  ['copy source subphase during Repeat Week', repeated.overlay.exposureContractV2?.identity.declaredSubphase !== 'mid_offseason'],
   ['move inferred entry on every hydration',
     hydratedOnce.seasonPhaseClock?.phaseEntryWeekStartISO === hydratedTwice.seasonPhaseClock?.phaseEntryWeekStartISO],
   ['automatically switch late Off-season to Pre-season', offWeeks[7].clock.selectedPhase !== 'Pre-season'],
@@ -425,11 +412,11 @@ for (const [name, killed] of mutationWitnesses) {
 
 console.log('\nseasonPhaseClockTests summary');
 console.log(`  Fixed scenarios/observer/path checks: ${fixedPass} passed, ${fixedFail} failed`);
-console.log(`  Required fixed scenarios:             20/20 evaluated`);
+console.log(`  Required fixed scenarios:             19/19 evaluated`);
 console.log(`  Property checks:                      ${propertyPass}/36`);
-console.log(`  Mutation witnesses:                   ${mutationPass}/7 killed`);
+console.log(`  Mutation witnesses:                   ${mutationPass}/6 killed`);
 
-if (fixedFail > 0 || propertyPass !== 36 || mutationPass !== 7 || failures.length > 0) {
+if (fixedFail > 0 || propertyPass !== 36 || mutationPass !== 6 || failures.length > 0) {
   console.error(failures.join('\n'));
   process.exit(1);
 }

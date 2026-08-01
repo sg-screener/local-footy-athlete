@@ -151,7 +151,19 @@ export interface Section18EffectiveWeekLedger {
     split: Section18ExposureSplit;
   };
   restStress: {
+    /**
+     * THE REST QUOTA — days on which nothing was REQUIRED of the athlete.
+     *
+     * Sam's Rest law, 2026-07-30. It is NOT "days with nothing on them": an
+     * athlete who adds a recovery flow, a mobility flow, prehab or a gunshow to
+     * their Sunday has still rested, and every consumer that asks "did the week
+     * meet its rest target" is asking THIS question. Days that carry optional
+     * work are named separately by `activeRecoveryDays`, so "you rested, and you
+     * also rolled" is still sayable — it is one day appearing in both lists, not
+     * a contradiction.
+     */
     trueFullRestDays: number[];
+    /** Rest days the athlete put optional work on. Overlaps `trueFullRestDays`. */
     activeRecoveryDays: number[];
     moderateDays: number[];
     hardDays: number[];
@@ -289,6 +301,8 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   const sprintSources: Section18SprintCreditSource[] = [];
   const mainDays: number[] = [];
   const activeRecoveryDays: number[] = [];
+  /** Days carrying work the plan REQUIRED. The Rest law's only input. */
+  const requiredWorkDays: number[] = [];
   const moderateDays: number[] = [];
   const hardDays: number[] = [];
   const anchorHardDays: number[] = [];
@@ -492,9 +506,40 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       !dayMain && !dayCoreConditioning && !daySprint && !dayPower) {
       activeRecoveryDays.push(day);
     }
+
+    // ── THE REST LAW (Sam, 2026-07-30) ──
+    //
+    //   "The quota counts days with no REQUIRED work. Athlete-added optional
+    //    sessions never break rest."
+    //
+    // This is the line that used to read `!activeDays.has(day)` — "nobody put
+    // anything here" — and it is why an athlete who chose to foam-roll on their
+    // Sunday lost their rest day and the week then reported a shortfall it had
+    // created itself. Rest stops being a RESIDUE and becomes an answer to a
+    // question: was anything REQUIRED of the athlete today?
+    //
+    // Required is a property of a session's ROLE in the week, not of its type
+    // alone: core conditioning is required, an optional flush the athlete added
+    // is not. `dayHard` is in the list as a belt — it cannot fire for any of the
+    // four types Sam's law protects, because recovery, mobility, prehab and
+    // gunshow are never hard by his ruling 2, and "you did a hard session and it
+    // was a rest day" should not be sayable by any route.
+    //
+    // WHY THIS DOES NOT REOPEN THE DEFECT `section18ContractV2Tests` 8a/8b/P5
+    // closed. That defect was the APP crediting itself a rest day it had filled
+    // with its own recovery session — a contract-satisfaction claim. It becomes
+    // UNREPRESENTABLE in the same commit that deletes the generator's recovery
+    // placement: the only optional work in a week is the athlete's, and the
+    // athlete's own choice was never what the old assertion was protecting
+    // against. See docs/SESSION_TYPE_CHARTER_2026-07-30.md.
+    const anchorOnDay = input.contract.anchors.some((anchor) => anchor.dayOfWeek === day);
+    if (dayMain || dayCoreConditioning || daySprint || dayPower || anchorOnDay || dayHard) {
+      requiredWorkDays.push(day);
+    }
   }
 
-  const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !activeDays.has(day));
+  // BIBLE_ANCHOR: rest_quota_counts_no_required_work
+  const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !requiredWorkDays.includes(day));
 
   const splitDays = (
     days: readonly number[],
@@ -657,12 +702,36 @@ function evaluateNumeric(args: {
   // already did), and delivered work never buys a fresh full allowance on top
   // of itself. With no governed boundary the split is all-prescribed and this
   // is exactly the old whole-week check.
+  //
+  // THE ATHLETE'S OWN EXPOSURE IS THE OTHER PART THE APP DOES NOT CONTROL.
+  // Team training and games are facts about the athlete's week, not choices the
+  // app made, and it can no more un-prescribe them than it can un-prescribe
+  // history. This rule is already authored two hundred lines up, on the sprint
+  // prohibition: "the athlete's own team-training and game exposure is theirs
+  // ... neither is something the app can un-prescribe"
+  // (SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24 §2 Q6). That check
+  // obeys it by reading `split.appPrescribed`; this one did not, and read
+  // `split.prescribed`.
+  //
+  // The cost was a dead app on an ordinary profile: early off-season authors a
+  // sprint maximum of ZERO, an athlete who attends team training is credited
+  // sprint for it, and generation refused its own output before the first
+  // screen. Same athlete with no team days generated fine — which is the
+  // signature of a limit being charged for something the athlete, not the app,
+  // decided.
+  //
+  // The maximum still binds the TOTAL week, exactly as the paragraph above
+  // says. What changes is that the allowance is what remains after everything
+  // the app cannot touch, and the breach is judged on what the app actually
+  // prescribed.
   const delivered = args.split?.delivered ?? 0;
   const prescribed = args.split ? args.split.prescribed : args.actual;
+  const appPrescribed = args.split ? args.split.appPrescribed : args.actual;
+  const athleteOwnedExposure = Math.max(0, prescribed - appPrescribed);
   const prescribedAllowance = args.maximum === null
     ? null
-    : Math.max(0, args.maximum - delivered);
-  if (prescribedAllowance !== null && prescribed > prescribedAllowance) {
+    : Math.max(0, args.maximum - delivered - athleteOwnedExposure);
+  if (prescribedAllowance !== null && appPrescribed > prescribedAllowance) {
     addFinding(args.findings, {
       code: 'maximum_breach',
       severity: 'blocking',
@@ -670,7 +739,7 @@ function evaluateNumeric(args: {
       expected: args.maximum,
       actual: args.actual,
       detail: delivered > 0
-        ? `${args.label} exceeds the Section 18 permitted maximum: ${delivered} already delivered leaves room for ${prescribedAllowance}, and ${prescribed} more ${prescribed === 1 ? 'is' : 'are'} prescribed.`
+        ? `${args.label} exceeds the Section 18 permitted maximum: ${delivered} already delivered leaves room for ${prescribedAllowance}, and ${appPrescribed} more ${appPrescribed === 1 ? 'is' : 'are'} prescribed.`
         : `${args.label} exceeds the Section 18 permitted maximum.`,
       evidence: args.evidence ?? [],
     });
@@ -791,6 +860,30 @@ function assessContract(
     ledger.restStress.hardDays.length - permittedHardDayMaximum,
   );
   return contract;
+}
+
+/**
+ * THE ACHIEVED COUNTS ARE DERIVED AT READ — Sam's ruling, 2026-07-29.
+ *
+ * `achievedCount` and its sibling tallies (`achievedMeaningfulMainLifts`,
+ * `achievedPrimerCount`, the rest/stress counts, the conditioning credits) are
+ * DERIVATIONS of a week, not facts about it. Storing them on the contract gave
+ * one derivable fact three homes — the microcycle's contract, the week
+ * overlay's contract, and `exposureContractsByWeek` — and a week that changed
+ * through a door which refreshed only one of them left the other two stale.
+ * NORTH_STAR.md names that class verbatim: stored outputs going stale beside
+ * live inputs.
+ *
+ * The contained fix would have been a fourth writer syncing the three, which is
+ * the banned patch shape. This is the collapse instead: ask, and the count is
+ * computed from the week you are asking about.
+ *
+ * SCOPE. Counts only. The contract's AUTHORED TARGETS — `requiredMinimum`,
+ * `plannerSelectedTarget`, the ceilings — are Sam-authored inputs and stay
+ * stored; they are what the derivation is judged against.
+ */
+export function deriveAchievedCounts(input: Section18EffectiveWeekInput): WeeklyExposureContractV2 {
+  return evaluateSection18EffectiveWeek(input).contract;
 }
 
 export function evaluateSection18EffectiveWeek(
@@ -929,19 +1022,33 @@ export function evaluateSection18EffectiveWeek(
       `${dateForDay(input.weekStart, credit.dayOfWeek)}:${credit.source}:${credit.role}:${credit.stress}`),
   });
 
-  const totalConditioningForOptionalMaximum = ledger.conditioning.coreCount +
+  // SELECTED means selected BY THE APP — the same rule as the maximum above,
+  // and this check's own sentence has always said so ("Selected optional
+  // conditioning exceeds the phase maximum"). It counted `coreCount`, which
+  // includes the conditioning credit the athlete earns by turning up to team
+  // training, so a maximum authored over the app's own selection was charged
+  // for the athlete's club commitments.
+  //
+  // Sam's authored table settles it. Early off-season permits core
+  // `{min:1,max:2}` plus optional flush `{min:1,max:2}` under a maximum of 3 —
+  // ranges that cannot all be satisfied at once if the maximum bounded a total
+  // including anchors, and that read perfectly as a bound on what the app may
+  // choose. The same table sets the early-off-season sprint maximum to ZERO,
+  // which would make every athlete who attends team training illegal on the
+  // other reading.
+  const appSelectedConditioningForOptionalMaximum = ledger.conditioning.appCoreCount +
     ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount +
       ledger.conditioning.optionalNonCoreCount +
     ledger.conditioning.legacyUnknownCount;
   if (
     contract.conditioning.core.plannerSelectionKind === 'optional' &&
     contract.conditioning.core.permittedMaximum !== null &&
-    totalConditioningForOptionalMaximum > contract.conditioning.core.permittedMaximum
+    appSelectedConditioningForOptionalMaximum > contract.conditioning.core.permittedMaximum
   ) {
     addFinding(findings, {
       code: 'maximum_breach', severity: 'blocking', domain: 'conditioning',
       expected: contract.conditioning.core.permittedMaximum,
-      actual: totalConditioningForOptionalMaximum,
+      actual: appSelectedConditioningForOptionalMaximum,
       detail: 'Selected optional conditioning exceeds the phase maximum.',
       evidence: [`core=${ledger.conditioning.coreCount}`, `optional=${ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount + ledger.conditioning.optionalNonCoreCount}`, `legacyUnknown=${ledger.conditioning.legacyUnknownCount}`],
     });
@@ -1149,16 +1256,29 @@ export function evaluateSection18EffectiveWeek(
       evidence: [],
     });
   }
+  // THE RECOVERY HALF OF THIS FINDING IS RETIRED (Sam's Rest law, 2026-07-30).
+  //
+  // It used to fire whenever the week carried active recovery and fell short on
+  // rest, on the reading that "visible recovery/flush/accessory work is active
+  // and cannot be credited as full rest". Under the Rest law that is precisely
+  // backwards for the athlete's own optional work: a day of foam rolling they
+  // chose is still their rest day, and raising a BLOCKING finding against them
+  // for choosing it is the app punishing an athlete for a decision the Bible
+  // explicitly grants (":122 — you can always add a recovery or mobility flow to
+  // any day as optional").
+  //
+  // What survives is the half that was never about the ruling: a LEGACY reported
+  // count that disagrees with the ledger is still a miscount, and still blocking.
   if (
-    (input.legacyReportedFullRestCount !== undefined && input.legacyReportedFullRestCount !== null &&
-      input.legacyReportedFullRestCount !== trueRest) ||
-    (ledger.restStress.activeRecoveryDays.length > 0 && trueRest < contract.restStress.requiredFullRestMinimum)
+    input.legacyReportedFullRestCount !== undefined &&
+    input.legacyReportedFullRestCount !== null &&
+    input.legacyReportedFullRestCount !== trueRest
   ) {
     addFinding(findings, {
       code: 'full_rest_miscount', severity: 'blocking', domain: 'full_rest',
       expected: trueRest,
-      actual: input.legacyReportedFullRestCount ?? 'active recovery cannot be full rest',
-      detail: 'Visible recovery/flush/accessory work is active and cannot be credited as full rest.',
+      actual: input.legacyReportedFullRestCount,
+      detail: 'A legacy full-rest count disagrees with the Section 18 ledger.',
       evidence: ledger.restStress.activeRecoveryDays.map((day) => dateForDay(input.weekStart, day)),
     });
   }

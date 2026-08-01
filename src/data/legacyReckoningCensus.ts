@@ -1,0 +1,827 @@
+/**
+ * THE LEGACY RECKONING CENSUS — pre-law surface, declared, ratcheting down.
+ *
+ * SAM'S RULING (2026-07-30, docs/LEGACY_RECKONING_CENSUS_2026-07-30.md). The
+ * profile-wipe saga cost five device round trips because the store predated
+ * every law it was eventually judged by: nobody owned the write, nobody could
+ * name the writer, and the record could not correct itself. The ruling is to
+ * stop waiting for pre-law code to break — map it, and schedule its reckonings.
+ *
+ * WHY THIS FILE EXISTS. 24 units of pre-law surface across the stores, the coach
+ * pipeline, the generation engine and the gates. A gate that failed on all of
+ * them the day it landed would be switched off by the first person it blocked —
+ * the precise failure the provenance inventory predicted for any all-at-once
+ * gate, and the reason both the readiness census and the load-ratio work grew
+ * one cluster at a time.
+ *
+ * So the debt is DECLARED rather than banned, and the gate ratchets in four
+ * directions:
+ *
+ *   1. a unit's actual detector count must equal its declared count, so a new
+ *      violation fails until someone classifies it;
+ *   2. total debt may never exceed LEGACY_DEBT_BASELINE, so it only shrinks;
+ *   3. LEGACY_DEBT_BASELINE must equal the current total, so paying debt down
+ *      tightens the ratchet instead of leaving re-spendable slack;
+ *   4. LEGACY_DEBT_BASELINE may never exceed LEGACY_DEBT_FOUNDING_BASELINE.
+ *
+ * THE FOURTH IS THE ONE THAT MATTERS, and it is the one the readiness census
+ * does not have. Directions 2 and 3 are circular on their own: a newcomer can
+ * raise a declared count and the baseline together and stay green. The founding
+ * baseline is frozen at the number the census landed with, so accommodating new
+ * surface means exceeding a constant whose name carries its own date. Old
+ * surface may be DECLARED; new surface may only be FIXED.
+ *
+ * WHAT IT DOES NOT DO. It pays nothing. Every unit still needs its ruling and
+ * its build. And it holds only what a mechanical detector can count: the rest
+ * are `tracked_only` and must say WHY, so the census never reads as more
+ * enforcement than it has. Four of twenty-four units are ratcheted. That number
+ * is honest, not aspirational, and it is meant to rise as detectors are found —
+ * by adding a detector to an existing unit, never by admitting a new one.
+ *
+ * A CENSUS MUST BE ABLE TO DIE. When a unit's detector reaches zero the entry is
+ * deleted and the baseline drops to match. A list that keeps naming problems it
+ * has already fixed rots into the `LOAD_RULING_PENDING` shape from the other
+ * side, where the contents stop describing reality but still read as a
+ * considered position.
+ */
+
+export const LEGACY_RECKONING_RULING = {
+  ruledOn: '2026-07-30',
+  where: 'docs/LEGACY_RECKONING_CENSUS_2026-07-30.md',
+  quote:
+    'Old surface may be declared; new surface may only be fixed.',
+} as const;
+
+/**
+ * The law book, by id. Every unit must name the laws it will land under, and
+ * every name must resolve here — a unit pointing at a law nobody wrote is a
+ * unit whose acceptance criteria are undefined.
+ *
+ * The prose for each lives in the census document; this is the index the gate
+ * checks against.
+ */
+export const LEGACY_LAW_IDS = [
+  // Ownership
+  'L-A1', 'L-A2', 'L-A3', 'L-A4', 'L-A5', 'L-A6', 'L-A7', 'L-A8',
+  // Derivation
+  'L-B1', 'L-B2', 'L-B3', 'L-B4', 'L-B5', 'L-B6',
+  // Honesty
+  'L-C1', 'L-C2', 'L-C3', 'L-C4',
+  // Instrumentation
+  'L-D1', 'L-D2', 'L-D3',
+  // Gates and process
+  'L-E1', 'L-E2', 'L-E3', 'L-E4',
+] as const;
+
+export type LegacyLawId = (typeof LEGACY_LAW_IDS)[number];
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The persisted-store ownership registry (LR-2)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export interface PersistedStoreOwnership {
+  /** Path relative to `src/`. */
+  readonly file: string;
+  /** The zustand persist key, so a rename is visible here too. */
+  readonly persistKey: string;
+  /**
+   * The single door every athlete-facing write goes through, or `null`.
+   *
+   * Non-null means ALL THREE: one door, typed refusals, and the writer named on
+   * the tape. Partial ownership is `null` with the caveat recorded — that is
+   * why `programStore` is unowned here while its accepted state is owned. The
+   * raw write primitive is what LR-1 exists for.
+   */
+  readonly owner: string | null;
+  /** Does a write here reach the athlete action log? */
+  readonly taped: boolean;
+  readonly caveat?: string;
+}
+
+/**
+ * Deliberately declared HERE and not as a tag in each store file, so a store
+ * the registry has never heard of counts as unowned by default. That is the
+ * property that makes a new persisted store fail the gate instead of joining it.
+ */
+export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
+  {
+    file: 'store/profileStore.ts',
+    persistKey: 'profile-store',
+    owner: 'applyProfileOnboardingWrite',
+    taped: true,
+  },
+  {
+    file: 'store/programStore.ts',
+    persistKey: 'program-store',
+    owner: null,
+    taped: false,
+    caveat: 'Accepted state is owned by commitAcceptedStateTransaction. '
+      + '`setManualOverride` is a self-described "raw storage primitive" with no owner, '
+      + 'no refusal and no writer on the tape — see LR-1.',
+  },
+  {
+    file: 'store/calendarStore.ts',
+    persistKey: 'calendar-storage',
+    owner: null,
+    taped: false,
+    caveat: 'Six writers marked COMPATIBILITY-ONLY in their own JSDoc, with three live callers.',
+  },
+  { file: 'store/readinessStore.ts', persistKey: 'readiness-store', owner: null, taped: false },
+  { file: 'store/coachUpdatesStore.ts', persistKey: 'coach-updates', owner: null, taped: true },
+  {
+    file: 'store/coachMutationHistoryStore.ts',
+    persistKey: 'coach-mutation-history-store',
+    owner: null,
+    taped: false,
+    caveat: 'AGENTS.md requires mutation history for follow-up target resolution.',
+  },
+  {
+    file: 'store/coachPreferencesStore.ts',
+    persistKey: 'coach-preferences-store',
+    owner: null,
+    taped: false,
+  },
+  {
+    file: 'store/athletePreferencesStore.ts',
+    persistKey: 'athlete-preferences-store',
+    owner: null,
+    taped: false,
+  },
+  { file: 'store/coachStore.ts', persistKey: 'coach-store', owner: null, taped: false },
+  { file: 'store/coachMemoryStore.ts', persistKey: 'coach-memory-store', owner: null, taped: false },
+  { file: 'store/uiStore.ts', persistKey: 'ui-store', owner: null, taped: false },
+  { file: 'store/authStore.ts', persistKey: 'auth-store', owner: null, taped: false },
+];
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Detectors
+ *
+ * Each matches ONE idiom. Deliberately not parsers — the readiness census's
+ * lesson, and the reason each is pinned from both sides by
+ * `legacyReckoningCensusTests` block [7]. A detector nobody checked counts
+ * whatever its regex happened to match.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Strip block comments, line comments and trailing comments. */
+function code(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      return !t.startsWith('//') && !t.startsWith('*');
+    })
+    .map((line) => line.replace(/\s\/\/.*$/, ''))
+    .join('\n');
+}
+
+/**
+ * LR-1 — reaching the program store's raw write primitive.
+ *
+ * The idiom is a PROPERTY ACCESS: `.setManualOverride`. That is what every real
+ * call site looks like, including the capture form
+ * (`const setManualOverride = useProgramStore.getState().setManualOverride`)
+ * where the bare left-hand binding is a local name rather than a second reach
+ * for the door. A parameter of the same name in an injection seam is a
+ * declaration, not a reference, and is not counted.
+ */
+export function rawProgramWriteRefs(source: string, _file?: string): number {
+  return [...code(source).matchAll(/\.setManualOverride\b/g)].length;
+}
+
+/**
+ * LR-4 — reading the compatibility mirror as a decision input.
+ *
+ * DECLARED LIMIT: this sees a single-expression read only. A two-step read
+ * (`const p = useProfileStore.getState();` then `p.onboardingData`) is
+ * invisible to it, so LR-4's number is a FLOOR, not a total. Pinned as a known
+ * hole in block [7] rather than left as a silent one. Widening this into a
+ * parser is not the fix; migrating the readers is.
+ */
+export function mirrorDecisionReads(source: string, _file?: string): number {
+  return [...code(source).matchAll(/useProfileStore[^;\n]{0,60}?\bonboardingData\b/g)].length;
+}
+
+/** LR-3 — call sites of the legacy §18 override writer, excluding its own definition. */
+export function legacyOverrideWriterRefs(source: string, _file?: string): number {
+  return [...code(source).matchAll(/(?<!function\s)\bapplyCoachRevisionDateOverrides\s*\(/g)]
+    .length;
+}
+
+/** Is this file a persisted zustand store? */
+function isPersistedStoreFile(source: string, file?: string): boolean {
+  if (!file || !file.startsWith('store/')) return false;
+  return /\bpersist\s*\(/.test(code(source));
+}
+
+/**
+ * LR-2 — a persisted store with no single write owner.
+ *
+ * A store the registry has never heard of has no owner by definition, so a new
+ * persisted store raises the count and turns the gate red.
+ */
+export function unownedPersistedStores(source: string, file?: string): number {
+  if (!isPersistedStoreFile(source, file)) return 0;
+  const declared = PERSISTED_STORE_OWNERSHIP.find((s) => s.file === file);
+  return declared && declared.owner !== null ? 0 : 1;
+}
+
+export const DETECTORS = {
+  rawProgramWriteRefs,
+  unownedPersistedStores,
+  legacyOverrideWriterRefs,
+  mirrorDecisionReads,
+} as const;
+
+export type LegacyDetectorId = keyof typeof DETECTORS;
+
+/**
+ * Files a detector must not count, because they are the thing being measured
+ * rather than a consumer of it.
+ */
+export function detectorScopeExempts(id: LegacyDetectorId): readonly string[] {
+  switch (id) {
+    case 'rawProgramWriteRefs':
+      // The store that DEFINES the primitive, and the census that counts it.
+      return ['store/programStore.ts', 'data/legacyReckoningCensus.ts'];
+    case 'mirrorDecisionReads':
+      // The store itself, the one consolidated context owner LR-4 migrates
+      // readers onto, and the accepted-profile projection that is the correct
+      // source. Counting these would be counting the destination as the problem.
+      return [
+        'store/profileStore.ts',
+        'utils/liveAthleteContext.ts',
+        'rules/acceptedProfileProjection.ts',
+        'data/legacyReckoningCensus.ts',
+      ];
+    case 'legacyOverrideWriterRefs':
+      return ['data/legacyReckoningCensus.ts'];
+    case 'unownedPersistedStores':
+      return ['data/legacyReckoningCensus.ts'];
+    default:
+      return ['data/legacyReckoningCensus.ts'];
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The census
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export type LegacyBlastRadius =
+  /** The athlete loses answers they gave. */
+  | 'athlete_answers'
+  /** The athlete loses accepted content — a week they had. */
+  | 'accepted_content'
+  /** The athlete sees a wrong, silent or unreachable week. */
+  | 'visible_week'
+  /** The app tells the athlete something untrue. */
+  | 'honesty'
+  /** A law is stated but nothing proves it. */
+  | 'gates';
+
+export type LegacyUnitStatus =
+  /** Ranked and waiting. */
+  | 'scheduled'
+  /** Being built right now, elsewhere — listed so it is not double-scheduled. */
+  | 'in_flight'
+  /** Blocks other work until a reassessment is written and approved. */
+  | 'stop'
+  /**
+   * Paid off. The entry STAYS, holding its detector at zero forever.
+   *
+   * A classification census deletes a solved entry so the list cannot read as
+   * approval. A retirement census must not: deleting the entry deletes the
+   * detector, and the surface it retired can then come back unobserved. What is
+   * left of a paid unit is the ban that keeps it paid.
+   */
+  | 'retired';
+
+export interface LegacyUnit {
+  readonly id: string;
+  readonly title: string;
+  readonly tier: 1 | 2 | 3;
+  readonly laws: readonly LegacyLawId[];
+  readonly blastRadius: LegacyBlastRadius;
+  /** What proves this is real. A file:line, or the document that found it. */
+  readonly founding: string;
+  readonly size: 'S' | 'M' | 'L' | 'XL';
+  readonly status: LegacyUnitStatus;
+  /** Sam's sequencing, where he ruled one. */
+  readonly sequence?: string;
+  /** The detector holding this unit's line, or `null` for tracked-only. */
+  readonly detector: LegacyDetectorId | null;
+  /** Required when `detector` is set. */
+  readonly declared?: number;
+  /**
+   * What this unit measured on census day, 2026-07-30. Required when `detector`
+   * is set, and it NEVER rises.
+   *
+   * The per-unit ceiling exists because a single global one is not enough: debt
+   * paid on one unit would otherwise fund a new violation on another, and the
+   * whole suite would stay green while admitting surface that did not exist when
+   * the census landed. That was demonstrated, not theorised — see direction 4a.
+   * Slack retires where it was earned.
+   */
+  readonly foundingCount?: number;
+  /** Required when `detector` is `null`. */
+  readonly whyNotDetectable?: string;
+}
+
+/**
+ * Sam ruled this on 2026-07-30. LR-1 and LR-2 are one unit in two entries; the
+ * gate asserts the two strings stay identical so the ruling cannot drift apart.
+ */
+const LR1_LR2_SEQUENCE =
+  'Sam, 2026-07-30: LR-1 and LR-2 run together as the next major unit — after the '
+  + 'G-1 branch merges, before Stage B. The stores get one door and the full tape '
+  + 'before the engine builds on them.';
+
+export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
+  /* ── Tier 1 — the athlete loses answers or accepted content ── */
+  {
+    id: 'LR-1',
+    title: 'One door to the program store',
+    tier: 1,
+    laws: ['L-A2', 'L-A1', 'L-A8', 'L-D1'],
+    blastRadius: 'accepted_content',
+    founding: 'programStore.ts:1629 describes itself as a "Raw storage primitive"; '
+      + '27 references across 13 files, including a screen (PlanChangeSheet.tsx:261) '
+      + 'and a dev seed. This is the profile store\'s shape on 2026-07-28 — the day '
+      + 'before the fix — with thirteen writers instead of two.',
+    size: 'L',
+    status: 'scheduled',
+    sequence: LR1_LR2_SEQUENCE,
+    detector: 'rawProgramWriteRefs',
+    declared: 27,
+    foundingCount: 27,
+  },
+  {
+    id: 'LR-2',
+    title: 'The persisted stores get write owners (= Master Plan 5D.1)',
+    tier: 1,
+    laws: ['L-A2', 'L-D1', 'L-E2'],
+    blastRadius: 'athlete_answers',
+    founding: 'Eleven of twelve persisted stores have no single write owner and nine '
+      + 'reach no tape. calendarStore marks six writers COMPATIBILITY-ONLY in their own '
+      + 'JSDoc and has three live callers. Two hand-maintained registries '
+      + '(appHydrationGate\'s 12 handles, resetCoach\'s 22 clears) must agree about this '
+      + 'set and nothing checks that they do.',
+    size: 'L',
+    status: 'scheduled',
+    sequence: LR1_LR2_SEQUENCE,
+    detector: 'unownedPersistedStores',
+    declared: 11,
+    foundingCount: 11,
+  },
+  {
+    id: 'LR-3',
+    title: 'The §18 residuals leave the legacy override writer',
+    tier: 1,
+    laws: ['L-A1', 'L-A2', 'L-A3', 'L-C1'],
+    blastRadius: 'accepted_content',
+    founding: 'planChangeProducer.ts:1365,1583,1594,1596 defer occupied-day stack adds, '
+      + 'active-removal re-adds and no-template swaps to applyCoachRevisionDateOverrides; '
+      + 'coachTurnController.ts:2343,2429 calls it directly. Tracked in the §18 '
+      + 'retirement ledger since 2026-07-22 and re-verified open 2026-07-30.',
+    size: 'M',
+    status: 'scheduled',
+    detector: 'legacyOverrideWriterRefs',
+    declared: 4,
+    foundingCount: 4,
+  },
+  {
+    id: 'LR-4',
+    title: 'Mirror readers migrate to the accepted snapshot',
+    tier: 1,
+    laws: ['L-A4', 'L-A1'],
+    blastRadius: 'athlete_answers',
+    founding: '74 single-expression live-profile reads across 34 files feed decisions '
+      + 'rather than displays — the reader half of the defect whose publication half '
+      + 'closed on 2026-07-29. liveAthleteContext is the consolidated owner and has two '
+      + 'callers. NOTE: 11 of the 13 reads inside acceptedStateTransaction.ts are '
+      + 'decision-feeding, not reconciliation, which is why that file is not exempt.',
+    size: 'M',
+    status: 'scheduled',
+    detector: 'mirrorDecisionReads',
+    declared: 72,
+    foundingCount: 74,
+  },
+  {
+    id: 'LR-5',
+    title: 'Failure-state sweep (= Master Plan 5D.2)',
+    tier: 1,
+    laws: ['L-C1', 'L-C4', 'L-A8'],
+    blastRadius: 'accepted_content',
+    founding: 'The season-phase skew: a phase shift whose profile write landed and whose '
+      + 'rebuild failed, leaving the two disagreeing with nothing to disclose it.',
+    size: 'L',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The subject is what survives a transaction killed mid-flight. '
+      + 'That is a property of an execution, not a shape in the source — it is found by '
+      + 'fault injection, which is the unit itself.',
+  },
+
+  /* ── Tier 2 — a wrong, silent or unreachable week ── */
+  {
+    id: 'LR-6',
+    title: 'The coach request has eight representations — the escalation reassessment',
+    tier: 2,
+    laws: ['L-A1', 'L-B3'],
+    blastRadius: 'visible_week',
+    founding: 'CoachIntentPayload -> CoachMutateOperation -> ProgramEditDraftAction -> '
+      + 'CoachRevisionIntent -> CoachResolvedTarget -> CoachPlanChangeKind, plus the LLM '
+      + "tool-call JSON and the tap door's PlanChange, across 49 modules. "
+      + 'coachIntentDispatcher.ts:104 still names its fallback "the legacy /coach-chat". '
+      + 'Six of the nine suites that crash silently on load are in this cluster.',
+    size: 'XL',
+    status: 'stop',
+    sequence: 'Sam, 2026-07-30: a standing STOP. No coach-pipeline work of any kind — no '
+      + 'new resolver, guard, fallback, compatibility branch, phrase handler or finaliser '
+      + 'patch — before this reassessment is written and approved. CLAUDE.md\'s seven '
+      + 'questions are the form it takes.',
+    detector: null,
+    whyNotDetectable: 'Counting exported type names would count vocabulary, not '
+      + 'representations, and would go green on a rename. The finding is an architectural '
+      + 'reading; the reassessment is what discharges it.',
+  },
+  {
+    id: 'LR-7',
+    title: 'The G+1 derived-filler storage form',
+    tier: 2,
+    laws: ['L-A3', 'L-A8'],
+    blastRadius: 'visible_week',
+    founding: 'planChangeProducer.ts:1508 refuses a move onto a resolver-owned filler '
+      + 'because "it is regenerated every render, so a real session moved onto its day is '
+      + 'silently overwritten". That refusal is a containment; sessionResolver.ts\'s '
+      + 'priority ladder is what it contains.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The question is whether derived fillers are stored or derived — a '
+      + 'design decision with no single idiom. The containment it produced is one refusal '
+      + 'branch, and counting that would count the fix, not the defect.',
+  },
+  {
+    id: 'LR-8',
+    title: 'skipConstraintProjection — a fact recorded that changes nothing',
+    tier: 2,
+    laws: ['L-A8', 'L-C2', 'L-C1'],
+    blastRadius: 'honesty',
+    founding: 'temporarySourceFactTransaction.ts:527,708 pass skipConstraintProjection '
+      + 'unconditionally, so Busy week / Away days / Missing equipment durably record a '
+      + 'fact and never re-validate the materialised week. Tracked NO-OP-DEAD as G7/G8/G9 '
+      + 'in the dead-affordance inventory.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Two call sites of a boolean. A count of two that can only ever be '
+      + 'two or zero is a checklist item, not a ratchet — and the fix is a behaviour '
+      + 'change (rebuild, or stop recording), not a deletion.',
+  },
+  {
+    id: 'LR-9',
+    title: 'DELOAD_LAW row classification reads the authored structure (= 5D.4)',
+    tier: 2,
+    laws: ['L-A5'],
+    blastRadius: 'visible_week',
+    founding: 'isConditioningExerciseRow decides conditioning from a regex over the '
+      + 'exercise name while conditioningBlock.options[].exerciseIds names the rows '
+      + 'outright. "3 x 8min zone 2 Rower" does not match \\brow\\b, so the accessory trim '
+      + 'deletes the only row. g1LandingAskFlowTests 26 asserts the classifier still '
+      + 'empties that template and goes RED when this lands — that is the signal to delete '
+      + 'the containment, not a regression.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'The regex is NOT to be widened. Adding the missing words makes the next '
+      + 'unmatched name a silent defect instead of a loud one.',
+    detector: null,
+    whyNotDetectable: 'A single classifier function. Its defect is what it consults, not '
+      + 'how many times it is called.',
+  },
+  {
+    id: 'LR-10',
+    title: 'Deletion doors stop writing schedule facts',
+    tier: 2,
+    laws: ['L-A7', 'L-A1'],
+    blastRadius: 'visible_week',
+    founding: 'LOCKED_DAY_DIAGNOSIS_2026-07-30.md §3, read from Sam\'s device.',
+    size: 'S',
+    status: 'in_flight',
+    sequence: 'Being built in the concurrent lane as this census landed '
+      + '(deletionCalendarOwnershipTests + userRemovalConstraints). Listed so it is not '
+      + 'double-scheduled.',
+    detector: null,
+    whyNotDetectable: 'In flight — a detector would be counting a defect that is being '
+      + 'removed while the count is taken.',
+  },
+  {
+    id: 'LR-11',
+    title: 'Add-optional onto the typed transaction',
+    tier: 2,
+    laws: ['L-A2', 'L-C1'],
+    blastRadius: 'accepted_content',
+    founding: 'PlanChangeSheet.tsx:261 — the last athlete door that reaches the store by '
+      + 'injecting setManualOverride from a screen.',
+    size: 'S',
+    status: 'scheduled',
+    sequence: 'Subsumed by LR-1 if LR-1 lands first; cheap to do alone if it does not.',
+    detector: null,
+    whyNotDetectable: 'Its one call site is already counted by LR-1\'s detector. Giving it '
+      + 'a second detector would double-count the same reference and corrupt the baseline.',
+  },
+  {
+    id: 'LR-12',
+    title: 'coachingEngine.ts — 8,229 lines, pre-law',
+    tier: 2,
+    laws: ['L-A1', 'L-B1', 'L-B5'],
+    blastRadius: 'visible_week',
+    founding: 'Created 2026-05-04, still the largest file in the repo. Its readiness edges '
+      + 'were paid to zero and the weekly-dose unit deleted 280 lines; nothing else about '
+      + 'it is owned.',
+    size: 'XL',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Line count is not a law violation. It must be decomposed into owned '
+      + 'units before anything about it can be counted honestly.',
+  },
+  {
+    id: 'LR-27',
+    title: 'One body-part vocabulary, every door',
+    tier: 2,
+    laws: ['L-A1', 'L-B3'],
+    blastRadius: 'visible_week',
+    founding: 'docs/INJURY_OTHER_PATH_TRACE_2026-07-30.md: three phrase maps answer one '
+      + 'question with different coverage. `guidedInjuryControl.guidedInjuryBucketForArea` '
+      + '(11 patterns) does not know `shin`; `sessionBuilder.INJURY_BODY_AREA_MAP` (~30 '
+      + 'keys) does; `programAdjustmentEngine.BODY_PART_TO_BUCKET` says in its own comment '
+      + 'that it mirrors a fourth map in `injuryAdjustmentEngine`. Same word, same '
+      + 'athlete, different answers depending on which door they used.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The subject is DISAGREEMENT between maps, not a shape in any one '
+      + 'of them. Each map is individually plausible; the defect is only visible by '
+      + 'asking all of them the same word, which is the unit itself.',
+    // ADDED BY RULING, which is the only way this list may grow — and the founding count
+    // below rises by exactly one in the same commit, with the ruling cited, so the
+    // headroom is attributable rather than manufactured.
+    //
+    // Sam, 2026-07-30, ruling on the injury "Other" path: "Option 2 (collapse the two
+    // phrase maps to ONE owner so every door speaks one body-part vocabulary) is QUEUED
+    // on the census as its own unit — the convergent fix, 'shin' must mean the same thing
+    // at every door." The trace then found a THIRD map, and a fourth named by comment.
+  },
+  {
+    id: 'LR-13',
+    title: 'The visible week has one projection',
+    tier: 2,
+    laws: ['L-A8', 'L-A1'],
+    blastRadius: 'visible_week',
+    founding: 'visibleProgramProjection, visibleProgramReadModel and weeklyPlanDisplay all '
+      + 'answer "what does the athlete see", plus per-screen derivation in useHomeScreen '
+      + '(2,235 lines) and DayWorkoutScreenV2 (3,723 lines).',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Three modules with different exports and no shared idiom. The '
+      + 'duplication is semantic, and a name-based count would go green on a merge that '
+      + 'changed nothing.',
+  },
+
+  /* ── Tier 3 — honesty, vocabulary and the gates ── */
+  {
+    id: 'LR-14',
+    title: 'Nine silent suites and 49 red ones',
+    tier: 3,
+    laws: ['L-E3', 'L-D3'],
+    blastRadius: 'gates',
+    founding: 'NON_BIBLE_TEST_ROT_SWEEP_2026-07-29.md: 155 non-bible suites run — 97 pass, '
+      + '49 assert_fail, 9 LOAD_CRASH reporting nothing at all. profileResetUITests '
+      + 'asserted nothing for weeks and nothing noticed.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'Sam, 2026-07-30: runs in parallel with LR-1 + LR-2. No design needed.',
+    detector: null,
+    whyNotDetectable: 'A suite that reports nothing is found by RUNNING it, not by reading '
+      + 'it. The sweep\'s static precursor — test files resolving fixture paths that no '
+      + 'longer exist — predicted only three of the nine and belongs to this unit as a '
+      + 'recurring check, not to this gate as a count.',
+  },
+  {
+    id: 'LR-15',
+    title: 'The vocabulary lock crosses the network boundary',
+    tier: 3,
+    laws: ['L-B6', 'L-A1'],
+    blastRadius: 'visible_week',
+    founding: 'hardcodedExerciseNameLockTests sweeps src/ only. '
+      + 'supabase/functions/coach-chat/index.ts carries 39 lines of canonical '
+      + 'exercise-name literals outside it, and injuryClarificationGuard.ts:13 states '
+      + 'outright that the edge function "carries an embedded mirror" of it.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The surface is under supabase/, outside the src/ tree every '
+      + 'detector here walks. Extending the existing name lock to that root is the unit; '
+      + 'a second detector here would duplicate it.',
+  },
+  {
+    id: 'LR-16',
+    title: 'Raw error.message reaching a native Alert',
+    tier: 3,
+    laws: ['L-C3'],
+    blastRadius: 'honesty',
+    founding: 'reversibleAdjustmentTransaction.ts:423,523,1015,1039 fall back to raw error '
+      + 'text, which reaches useHomeScreen.ts:1683\'s Alert unmodified. The parallel '
+      + 'injuryEpisodeTransaction was hardened; this module was missed.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The idiom is byte-identical whether it reaches an Alert or a log '
+      + 'line — 13 files use it and most are correct. A detector would count 24 sites and '
+      + 'demand the 20 legitimate ones be "fixed", which is how a gate teaches people to '
+      + 'switch it off.',
+  },
+  {
+    id: 'LR-17',
+    title: 'Dev/E2E seams write product state through owners',
+    tier: 3,
+    laws: ['L-A2'],
+    blastRadius: 'accepted_content',
+    founding: 'defaultDevE2ESeedCoordinator.ts:303 writes through the raw primitive; its '
+      + 'profile calls already land on the one door and are therefore taped and refusable.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Its one call site is already counted by LR-1\'s detector.',
+  },
+  {
+    id: 'LR-18',
+    title: 'workoutLogStore is in-memory',
+    tier: 3,
+    laws: ['L-C1', 'L-C2'],
+    blastRadius: 'honesty',
+    founding: 'workoutLogStore.ts has no persist(...), so logged sets do not survive a '
+      + 'relaunch. Four readers. Either a real data-loss defect or dead code.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Diagnosis first, then a ruling. Whether an absent persist() is a '
+      + 'defect depends on whether the surface that feeds it is meant to exist.',
+  },
+  {
+    id: 'LR-19',
+    title: 'Position feeds identity',
+    tier: 3,
+    laws: ['L-A5'],
+    blastRadius: 'visible_week',
+    founding: 'Row order standing in for role. Queued from the power-row redesign and '
+      + 'named in MASTER_PLAN PART 3 as a known instance of Sam\'s standing class.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Carried from the power-row reassessment without independent '
+      + 're-derivation in this census. Needs its own founding read before a detector '
+      + 'could be designed.',
+  },
+  {
+    id: 'LR-20',
+    title: 'Role-vocabulary collapse',
+    tier: 3,
+    laws: ['L-A1', 'L-B6'],
+    blastRadius: 'visible_week',
+    founding: 'The second unit queued from the power-row redesign.',
+    size: 'M',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Same as LR-19 — carried from its originating report, not '
+      + 're-derived here.',
+  },
+  {
+    id: 'LR-21',
+    title: 'InjuryTag vs the injury-matrix region vocabulary',
+    tier: 3,
+    laws: ['L-A1', 'L-B6'],
+    blastRadius: 'visible_week',
+    founding: 'Two 13-region vocabularies — exercisePools.ts:35\'s InjuryTag union and the '
+      + 'injury matrix\'s authored regions — with no gate holding them equal, beside 1,937 '
+      + 'authored cells that assume they are.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'The defect is a disagreement between two lists, so the check is an '
+      + 'equality assertion in the unit itself, not a count of anything.',
+  },
+  {
+    id: 'LR-22',
+    title: 'Producer fixtures',
+    tier: 3,
+    laws: ['L-D3', 'L-E3'],
+    blastRadius: 'gates',
+    founding: 'test:plan-change-producer is assert_fail on main (rot sweep line 137). Its '
+      + 'fixtures predate move-scoping and G-1 ownership.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'A red suite is found by running it — LR-14 is the unit that does '
+      + 'that systematically; this is its largest single instance.',
+  },
+  {
+    id: 'LR-23',
+    title: 'Coach clarifier and context stores are in-memory',
+    tier: 3,
+    laws: ['L-B3', 'L-C1'],
+    blastRadius: 'honesty',
+    founding: 'pendingCoachClarifierStore and coachContextStateStore have no persist(...), '
+      + 'so a clarifier spent across a relaunch and coach context rebuilt from nothing are '
+      + 'both silent.',
+    size: 'S',
+    status: 'scheduled',
+    detector: null,
+    whyNotDetectable: 'Diagnosis first, as with LR-18.',
+  },
+  {
+    id: 'LR-24',
+    title: 'Action-log coverage completion (= 5D.3 remainder)',
+    tier: 3,
+    laws: ['L-D1', 'L-D2'],
+    blastRadius: 'gates',
+    founding: 'The tape covers the transaction owners and the profile store. It does not '
+      + 'cover the eleven unowned stores or the raw program-write primitive.',
+    size: 'S',
+    status: 'scheduled',
+    sequence: 'Lands WITH LR-1 and LR-2, not before. A tape over a store with no write '
+      + 'owner records writes it cannot attribute.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the tape coverage of LR-1 and LR-2\'s surfaces, '
+      + 'which those units\' detectors already count. A third count of the same '
+      + 'references would corrupt the baseline.',
+  },
+];
+
+/**
+ * The sum of every declared count: 27 + 11 + 4 + 72.
+ *
+ * Direction 3 keeps this equal to the live total, so paying debt down tightens
+ * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
+ * down 74 → 72 when a retired week-overlay writer's clear-adjustment path was
+ * deleted entirely (HOME_SCREEN_REDESIGN ruling 1, 2026-07-31): its two
+ * `useProfileStore` single-expression reads (one in the reversible-adjustment
+ * transaction store, one in the Explorer production bindings' now-excluded
+ * action case) went with it.
+ */
+export const LEGACY_DEBT_BASELINE = 114;
+
+/**
+ * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
+ *
+ * This is what makes the ratchet non-circular. Directions 2 and 3 both compare
+ * the total against LEGACY_DEBT_BASELINE, so raising both together would keep
+ * the gate green — exactly how a newcomer declares a fresh violation into a
+ * census instead of fixing it. Against this number that move is red.
+ *
+ * It must equal the sum of the per-unit `foundingCount`s, so it cannot be
+ * edited on its own to create headroom nothing accounts for.
+ *
+ * Raising it is a RULING, not an edit. If a genuine pre-law surface was missed
+ * by the founding sweep, say so in the census document, get it ruled, and raise
+ * the unit's founding count and this total together — with the sweep that
+ * missed it named.
+ */
+export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
+
+/**
+ * The census was founded with 24 units, and holds 25 by RULING. DIRECTION 4c.
+ *
+ * Per-unit ceilings stop debt migrating between existing units; this stops a
+ * newcomer manufacturing headroom by adding one more. The census may SHRINK as units
+ * are paid off and deleted — that is required, so it can die — but it may not grow
+ * without a ruling.
+ *
+ * 24 -> 25 on 2026-07-30, and the ruling is quoted on the LR-27 entry above: Sam queued
+ * the body-part vocabulary collapse as its own census unit while ruling the injury
+ * "Other" path. The gate's own instruction is what this follows — "name the sweep that
+ * missed it and get it ruled, do not file it in quietly" — and the sweep that missed it
+ * is the founding sweep, which counted stores and writers rather than asking two phrase
+ * maps the same word.
+ */
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 25;
+
+/**
+ * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.
+ *
+ * No constant in a file makes an edit impossible; every number here is editable.
+ * What the three clauses do is remove every route that looks like ordinary
+ * bookkeeping and leave only routes that read as a lie in a diff: lowering a
+ * `foundingCount` (which records a measurement), raising a constant whose name
+ * carries its founding date, or adding a twenty-fifth unit to a list that says
+ * it was founded with twenty-four.
+ *
+ * The genuinely stronger form is to compare against the value committed in git
+ * rather than the value in the file — history is the one input an editor cannot
+ * set. That was considered and not built: it would make the gate depend on git
+ * being present and on a non-shallow clone, which is a real cost for a tripwire
+ * that is already loud. If the raise-both move is ever actually attempted, that
+ * is the escalation.
+ */
+export const DIRECTION_4_IS_A_TRIPWIRE_NOT_A_PROOF = true;

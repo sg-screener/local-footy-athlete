@@ -61,6 +61,12 @@ import {
   clearActiveProgramModifier,
 } from './activeProgramModifiers';
 import { fireResetSignal } from './resetSignals';
+import { beginProfileResetAction, endProfileResetAction } from '../store/profileStore';
+import {
+  beginAthleteActionTrace,
+  emitAthleteActionEvent,
+  type AthleteActionTraceContext,
+} from './athleteActionDiagnostics';
 import {
   DEV_TEST_ONBOARDING_DATA,
   isDevOnboardingSkipEnabled,
@@ -534,6 +540,44 @@ export function resetProgramAndOnboarding(opts?: {
 }): ResetSummary {
   const deps: ResetDeps = { ...defaultDeps(), ...(opts?.deps ?? {}) } as ResetDeps;
   logger.debug('[reset] full_reset_started');
+  // ON THE TAPE, AND BOUNDED IN TIME (Sam, export 5).
+  //
+  // Every store below is cleared SYNCHRONOUSLY, inside this call. The reset
+  // action opened here is in flight for exactly that long, which is what makes
+  // a write belonging to this reset but arriving later refusable rather than
+  // catastrophic — the suspected shape of the loss that cost three onboardings
+  // was a reset's write landing over answers given after it.
+  //
+  // The tape gains the one datum four reconstructions lacked: when the reset
+  // actually ran, against when the answers went in.
+  const resetActionId = beginProfileResetAction('full_reset');
+  const trace = beginAthleteActionTrace({
+    source: 'tap',
+    actionType: 'program_change',
+    route: 'resetProgramAndOnboarding',
+  }, undefined, { forceRoot: true });
+  emitAthleteActionEvent(trace, 'athlete_action_requested', {
+    internalResultCode: 'full_reset_started',
+    resetActionId,
+  });
+  try {
+    return runFullReset(deps, opts, trace, resetActionId);
+  } finally {
+    endProfileResetAction(resetActionId);
+    emitAthleteActionEvent(trace, 'athlete_action_completed', {
+      outcome: 'accepted',
+      internalResultCode: 'full_reset_complete',
+      resetActionId,
+    });
+  }
+}
+
+function runFullReset(
+  deps: ResetDeps,
+  opts: { deps?: Partial<ResetDeps> } | undefined,
+  trace: AthleteActionTraceContext,
+  resetActionId: string,
+): ResetSummary {
 
   // 1. First do a surgical coach clear so the per-feature logs fire
   //    (so the audit trail shows what was cleared, not just "everything").
@@ -569,6 +613,10 @@ export function resetProgramAndOnboarding(opts?: {
     pendingInjuryCleared: true,
   };
   logger.debug('[reset] complete', { mode: 'full_reset', summary });
+  emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+    internalResultCode: 'full_reset_stores_cleared',
+    resetActionId,
+  });
   return summary;
 }
 

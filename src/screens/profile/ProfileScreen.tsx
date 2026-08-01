@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motivationGoalLabel, resolveMotivation } from '../../rules/motivationGoals';
 import {
   ActivityIndicator,
   Animated,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -30,6 +32,10 @@ import {
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
+import {
+  serialiseStoredStateExport,
+  storedStateExportHeadline,
+} from '../../dev/devStoredStateExport';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -55,6 +61,8 @@ import {
 } from '../../data/twoKmTimeTrial';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
+import { EquipmentEditorSheet } from './EquipmentEditorSheet';
+import { formatEquipmentAnswerSummary } from '../../rules/equipmentVocabulary';
 
 type SetupSheetStep =
   | 'overview'
@@ -149,6 +157,9 @@ export default function ProfileScreen() {
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
   const [setupSheetVisible, setSetupSheetVisible] = useState(false);
+  const [equipmentEditorVisible, setEquipmentEditorVisible] = useState(false);
+  const [equipmentSaving, setEquipmentSaving] = useState(false);
+  const [equipmentSaveError, setEquipmentSaveError] = useState<string | null>(null);
 
   // ─── TEMPORARY DEVICE DIAGNOSTIC — "Something changed?" dead tap ───
   // 2026-07-29. The tap does nothing on Sam's device and reproduces nowhere in
@@ -295,6 +306,20 @@ export default function ProfileScreen() {
     );
   };
 
+  // Sam's one-tap instrument (2026-07-30). The profile-mirror wipe had to be
+  // diagnosed against a reconstruction of his device because nobody could read
+  // the real bytes. This shares them verbatim — no summary, no interpretation.
+  const onDevExportStoredState = async () => {
+    try {
+      await Share.share({
+        title: storedStateExportHeadline(),
+        message: serialiseStoredStateExport(),
+      });
+    } catch {
+      // A dismissed share sheet is not a failure worth reporting.
+    }
+  };
+
   const onDevPostOnboardingReset = async () => {
     if (isDevResetting) return;
     logger.debug('[reset-ui] dev_post_onboarding_reset_pressed');
@@ -382,7 +407,11 @@ export default function ProfileScreen() {
   const daysPerWeek = onboardingData.trainingDaysPerWeek;
   const teamDays = onboardingData.teamTrainingDays || [];
   const gameDay = onboardingData.gameDay || onboardingData.usualGameDay || '';
-  const mainFocus = onboardingData.biggestLimitation || onboardingData.goals?.[0] || '';
+  const mainFocus = onboardingData.biggestLimitation
+    || (resolveMotivation(onboardingData).goals[0]
+      ? motivationGoalLabel(resolveMotivation(onboardingData).goals[0])
+      : '')
+    || '';
   const activeIssues = selectActiveCoachNotes({
     activeConstraints,
     activeInjury,
@@ -644,6 +673,39 @@ export default function ProfileScreen() {
           >
             {`tap in ${setupTapDiag.pressIn} · press ${setupTapDiag.press} · handler ${setupTapDiag.handlerEnd} · sheet ${setupSheetVisible ? 'OPEN' : 'closed'}`}
           </Text>
+          {/* ─── TEMPORARY, DELIBERATELY VISIBLE IN RELEASE ───
+              2026-07-30. The developer-tools section is `__DEV__`-only, so on
+              Sam's Release build the export was unreachable — his Profile goes
+              Legal → Danger Zone and the section is not there at all. Requiring
+              Metro or a debug build to read a wiped profile defeats the point:
+              the wipe is on the RELEASE device, and that is the state we need.
+              Same treatment as the tap counters above — explicitly visible,
+              never `__DEV__`-gated, and removed with them.
+
+              The counts render INLINE so the key question is answered without
+              sharing anything: `answers` is the live profile, `snapshot` is the
+              accepted profile snapshot. A healthy device shows both in the high
+              twenties. `answers 2` is the wipe; if `snapshot` is still healthy
+              while `answers` is not, the real profile survives in the snapshot
+              and recovery is a read, not a re-onboard. */}
+          <Text
+            variant="bodySmall"
+            color={colors.accent.lime}
+            testID="profile-stored-state-readout"
+          >
+            {storedStateExportHeadline()}
+          </Text>
+          <TouchableOpacity
+            onPress={onDevExportStoredState}
+            testID="profile-export-stored-state"
+            accessibilityRole="button"
+            accessibilityLabel="Export stored state"
+            style={styles.storedStateExportButton}
+          >
+            <Text variant="body" color={colors.surface.primary} style={{ fontWeight: '700' }}>
+              Export stored state
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Program setup */}
@@ -666,6 +728,19 @@ export default function ProfileScreen() {
             ) : null}
             {gameDay ? <ProfileRow label="Game Day" value={gameDay} /> : null}
             {mainFocus ? <ProfileRow label="Main goal / focus" value={mainFocus} /> : null}
+            <ProfileRow
+              label="Equipment"
+              value={formatEquipmentAnswerSummary(onboardingData)}
+            />
+            <TouchableOpacity
+              style={styles.setupChangeButton}
+              activeOpacity={0.7}
+              onPress={() => { setEquipmentSaveError(null); setEquipmentEditorVisible(true); }}
+              testID="profile-equipment-edit"
+              accessibilityLabel="Edit equipment"
+            >
+              <Text style={styles.setupChangeText}>Edit equipment</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.setupChangeButton}
               activeOpacity={0.7}
@@ -930,6 +1005,36 @@ export default function ProfileScreen() {
           setSetupSheetStep('confirm');
         }}
         onConfirmUpdate={executeSetupUpdate}
+      />
+      <EquipmentEditorSheet
+        visible={equipmentEditorVisible}
+        saving={equipmentSaving}
+        errorMessage={equipmentSaveError}
+        onClose={() => setEquipmentEditorVisible(false)}
+        onSave={async (answer) => {
+          // The same owned transaction every profile edit commits through:
+          // apply, rebuild, verify, or roll back together.
+          setEquipmentSaving(true);
+          setEquipmentSaveError(null);
+          try {
+            const result = await commitProfileProgramTransaction({
+              change: { kind: 'equipment_answer', answer },
+              todayISO: todayISOLocal(),
+              sourceSurface: 'profile_equipment_editor',
+            });
+            if (!result.ok) {
+              setEquipmentSaveError(
+                classifyProgramMutationRefusal({ reason: result.reason }).userMessage,
+              );
+              return;
+            }
+            setEquipmentEditorVisible(false);
+          } catch (err: any) {
+            setEquipmentSaveError(classifyProgramMutationRefusal({ error: err }).userMessage);
+          } finally {
+            setEquipmentSaving(false);
+          }
+        }}
       />
     </SafeAreaView>
   );
@@ -1482,7 +1587,7 @@ function SetupUpdateSheet({
         onPress={onMessageCoach}
       >
         <Text style={styles.sheetCoachFallbackText}>
-          Need to explain something? Message the coach
+          Need to explain something? Ask Coach
         </Text>
       </TouchableOpacity>
     </>
@@ -1621,6 +1726,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     fontWeight: '800',
     marginBottom: spacing.xs,
+  },
+  /** TEMPORARY — remove with the stored-state export. */
+  storedStateExportButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: '#C8FF00',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   headerSubtitle: {
     lineHeight: 20,

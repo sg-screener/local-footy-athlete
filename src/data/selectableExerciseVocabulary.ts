@@ -31,7 +31,6 @@
  *
  *   STRENGTH_POOLS         anchors + accessories, per (slot, role)
  *   POOL_REGISTRY          arms / prehab / core / mobility / recovery
- *   MOBILITY_FLOW_TEMPLATES recovery flow movements
  *   CONDITIONING_META      conditioning formats
  *   POWER_EXERCISE_POOL    power-block entries (Sam's power spec, wired 2026-07-27)
  *
@@ -41,7 +40,6 @@
 
 import { POOL_REGISTRY } from './exercisePools';
 import { STRENGTH_POOLS, type PoolSlotKey, type PoolRole } from './exercisePoolsStrength';
-import { MOBILITY_FLOW_TEMPLATES } from './mobilityFlowTemplates';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import { CONDITIONING_META } from './exerciseTags';
 
@@ -293,10 +291,10 @@ export function selectableVocabularyGroups(): VocabularyGroup[] {
   for (const [category, pool] of Object.entries(POOL_REGISTRY)) {
     push(REGISTRY_GROUP_LABELS[category] ?? category, pool.map((e) => e.name));
   }
-  push(
-    'Recovery flows',
-    MOBILITY_FLOW_TEMPLATES.flatMap((t) => t.movements.map((m) => m.name)),
-  );
+  // The 'Recovery flows' group is gone with the flow bundles it enumerated
+  // (2026-07-30). Every movement it contributed was a curated pool name — that was
+  // the constraint on those bundles — so `POOL_REGISTRY.mobility` above already
+  // carries all of them, and the composed flow can only ever draw from there.
   push('Power', POWER_EXERCISE_POOL.map((entry) => entry.name));
   push('Conditioning', Object.keys(CONDITIONING_META));
 
@@ -364,8 +362,8 @@ export const LITERAL_EXEMPTION_KINDS: Record<LiteralExemptionKind, LiteralExempt
   },
   recovery_flow: {
     ruling:
-      'A recovery/mobility FLOW rendered as one card standing for a template of '
-      + 'movements (MOBILITY_FLOW_TEMPLATES), not a single movement to cue.',
+      'A recovery/mobility FLOW rendered as one card standing for several '
+      + 'movements, not a single movement to cue.',
   },
   conditioning_prescription: {
     ruling:

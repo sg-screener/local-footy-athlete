@@ -104,7 +104,7 @@ function caseData(domain: GeneratedDomain, random: DeterministicRandom, ordinal:
   const operations = random.shuffle([
     'add_exercise', 'remove_exercise', 'replace_exercise', 'add_conditioning',
     'replace_modality', 'add_support', 'move', 'swap', 'remove_main_lift',
-    'repeat_week', 'rebuild',
+    'week_overlay_copy', 'rebuild',
   ]).slice(0, 3 + random.integer(4));
   return { operations };
 }

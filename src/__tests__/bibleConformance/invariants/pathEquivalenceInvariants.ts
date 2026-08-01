@@ -152,14 +152,14 @@ function equivalentExposure(trace: Slice4ScenarioTrace): InvariantCheckResult {
 
 function planJoin(trace: Slice4ScenarioTrace): InvariantCheckResult {
   const id = 'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS' as const;
-  const applied = applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild', 'repeat-rich-week');
+  const applied = applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild', 'week-overlay-copy-rich-week');
   const first = trace.observations[0]; const second = trace.observations[1];
   const expected = first.ledger.workouts.map((workout) => workout.planEntryId).sort();
   const actual = second.ledger.workouts.map((workout) => workout.planEntryId).sort();
   const diff = difference(expected, actual);
   return check(id, trace, applied, same(expected, actual), () => failure({
     trace, invariantId: id,
-    ruleId: trace.scenario.id === 'repeat-rich-week' ? 'ALL-REPEAT-CONSERVE-01' : trace.scenario.id === 'noop-inseason-week-rebuild' ? 'ALL-REBUILD-IDEMPOTENT-01' : 'ALL-PATH-EQUIV-01',
+    ruleId: trace.scenario.id === 'week-overlay-copy-rich-week' ? 'ALL-REPEAT-CONSERVE-01' : trace.scenario.id === 'noop-inseason-week-rebuild' ? 'ALL-REBUILD-IDEMPOTENT-01' : 'ALL-PATH-EQUIV-01',
     observed: second, expected, actual, ...diff,
   }));
 }
@@ -175,8 +175,8 @@ function noOpRebuild(trace: Slice4ScenarioTrace): InvariantCheckResult {
 }
 
 function repeatConserves(trace: Slice4ScenarioTrace): InvariantCheckResult {
-  const id = 'INV_REPEAT_WEEK_CONSERVES_CONTRACT' as const;
-  const applied = applies(trace, 'repeat-rich-week');
+  const id = 'INV_WEEK_OVERLAY_COPY_CONSERVES_CONTRACT' as const;
+  const applied = applies(trace, 'week-overlay-copy-rich-week');
   const first = observation(trace, 'path_input'); const second = observation(trace, 'path_output');
   return check(id, trace, applied, same(weekSemantic(first.ledger), weekSemantic(second.ledger)), () => {
     const expectedComponents = first.ledger.workouts.flatMap((workout) => workout.components);
@@ -409,7 +409,7 @@ function legacyMigrationIdempotent(trace: Slice4ScenarioTrace): InvariantCheckRe
 export const SLICE4_INVARIANT_IDS: readonly Slice4InvariantId[] = [
   'INV_EQUIVALENT_CANONICAL_LEDGER', 'INV_EQUIVALENT_VISIBLE_WEEK',
   'INV_EQUIVALENT_VISIBLE_DETAIL', 'INV_EQUIVALENT_EXPOSURE_CREDIT',
-  'INV_NOOP_REBUILD_IDEMPOTENT', 'INV_REPEAT_WEEK_CONSERVES_CONTRACT',
+  'INV_NOOP_REBUILD_IDEMPOTENT', 'INV_WEEK_OVERLAY_COPY_CONSERVES_CONTRACT',
   'INV_ROLLOVER_ONLY_AUTHORISED_CHANGE', 'INV_EDIT_USES_CANONICAL_FINALISER',
   'INV_MOVE_PRESERVES_PLAN_IDENTITY', 'INV_SWAP_PRESERVES_BOTH_IDENTITIES',
   'INV_STORE_ROUNDTRIP_CONSERVED', 'INV_STORE_REHYDRATE_IDEMPOTENT',
@@ -434,14 +434,14 @@ export function evaluateSlice4Trace(trace: Slice4ScenarioTrace): InvariantCheckR
     applies(trace, 'standalone-conditioning-ownership') ? modernNoStrengthOwnershipWins(trace) : inactive('INV_MODERN_TYPED_OWNERSHIP_WINS'),
     applies(trace, 'standalone-conditioning-ownership') ? conditioningHeadlineUsesWork(trace) : inactive('INV_CONDITIONING_HEADLINE_USES_WORK'),
     applies(trace, 'legacy-program-rehydrate') ? legacyMigrationIdempotent(trace) : inactive('INV_LEGACY_MIGRATION_IDEMPOTENT'),
-    applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild', 'repeat-rich-week')
+    applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild', 'week-overlay-copy-rich-week')
       ? planJoin(trace) : inactive('INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS'),
     applies(trace, 'generation-ai-fallback-equivalence') ? equivalentCanonical(trace) : inactive('INV_EQUIVALENT_CANONICAL_LEDGER'),
     applies(trace, 'generation-ai-fallback-equivalence') ? equivalentVisible(trace, false) : inactive('INV_EQUIVALENT_VISIBLE_WEEK'),
     applies(trace, 'generation-ai-fallback-equivalence') ? equivalentVisible(trace, true) : inactive('INV_EQUIVALENT_VISIBLE_DETAIL'),
     applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild') ? equivalentExposure(trace) : inactive('INV_EQUIVALENT_EXPOSURE_CREDIT'),
     applies(trace, 'noop-inseason-week-rebuild') ? noOpRebuild(trace) : inactive('INV_NOOP_REBUILD_IDEMPOTENT'),
-    applies(trace, 'repeat-rich-week') ? repeatConserves(trace) : inactive('INV_REPEAT_WEEK_CONSERVES_CONTRACT'),
+    applies(trace, 'week-overlay-copy-rich-week') ? repeatConserves(trace) : inactive('INV_WEEK_OVERLAY_COPY_CONSERVES_CONTRACT'),
     applies(trace, 'block-rollover-contract') ? rollover(trace) : inactive('INV_ROLLOVER_ONLY_AUTHORISED_CHANGE'),
     applies(trace, 'coach-add-bike-zone2', 'coach-remove-contrast-lift', 'direct-add-pallof') ? editCanonical(trace) : inactive('INV_EDIT_USES_CANONICAL_FINALISER'),
     applies(trace, 'move-combined-lower') ? moveIdentity(trace) : inactive('INV_MOVE_PRESERVES_PLAN_IDENTITY'),

@@ -55,8 +55,42 @@ export type TrainingLocation = 'Commercial gym' | 'Home gym' | 'Club gym' | 'Out
 /** Whether profile equipment is an exhaustive user declaration or legacy positive-only data. */
 export type EquipmentSelectionCompleteness = 'complete' | 'legacy_incomplete';
 
-/** Canonical conditioning-machine capabilities; treadmill is deliberately not off-feet. */
-export type ConditioningEquipmentModality = 'bike' | 'row' | 'ski' | 'treadmill';
+/**
+ * Canonical conditioning-machine capabilities; treadmill is deliberately not
+ * off-feet. `bike_erg` and `air_bike` are SEPARATE questions (Sam's audit
+ * ruling 2, 2026-07-31: "different for sure") — the library's native-air-bike
+ * rows and the flywheel rule can only be respected if the athlete's answer can
+ * tell the two apart. A session that just needs "a bike" renders on either.
+ */
+export type ConditioningEquipmentModality = 'bike_erg' | 'air_bike' | 'row' | 'ski' | 'treadmill';
+
+/**
+ * One athlete decision about one piece of equipment. The two values carry
+ * different SILENCES (Sam's ownership sheet §2.2, 2026-07-31): an item left
+ * unmarked means "not today" — the app may ask again or offer it — while
+ * `never` is a standing instruction to stop offering it, permanently. For
+ * capability resolution the two are identical: neither is programmed on.
+ */
+export type EquipmentPossession = 'have' | 'never';
+
+/**
+ * THE EQUIPMENT ANSWER — a typed profile decision (Sam's ruling 2, 2026-07-31).
+ *
+ * The keys an athlete is asked about are DERIVED from the exercise library
+ * (`rules/equipmentVocabulary`), never authored beside it. Availability is a
+ * derivation over this answer plus dated temporary facts; nothing stores its
+ * output. Under L15 this is the only baseline-equipment shape anything writes
+ * from now on — `equipment` + `equipmentSelectionCompleteness` are read-ingress
+ * only.
+ */
+export interface EquipmentAnswer {
+  /** Per askable equipment tag; absent = not today. */
+  readonly tags: Readonly<Partial<Record<import('../data/exercisePools').EquipmentTag, EquipmentPossession>>>;
+  /** Per conditioning machine; absent = not today. */
+  readonly modalities: Readonly<Partial<Record<ConditioningEquipmentModality, EquipmentPossession>>>;
+  /** ISO date of the answer/last edit — what makes "answered" representable. */
+  readonly answeredOn: string;
+}
 
 // Onboarding types for new user setup
 export type AgeRange = 'Under 18' | '18-22' | '22-26' | '26-30' | '30+';
@@ -85,6 +119,21 @@ export type SprintExposure = 'No sprint training' | 'Occasionally' | '2+ times p
 export type RecentTrainingLoad = 'Hardly at all' | 'A bit' | 'Pretty consistent' | 'Very consistent';
 
 export type BiggestLimitation = 'Strength' | 'Speed' | 'Endurance' | 'Size' | 'Injury history' | 'Mobility' | 'Power & explosiveness';
+
+/**
+ * The authored goal set (Sam, 2026-07-30 — "the goal OPTION list pinned as an authored
+ * set, gated both directions"). The labels, the option order and the both-directions gate
+ * live in `rules/motivationGoals.ts`; only the union lives here, so `OnboardingData` can
+ * name it without importing a rule module.
+ */
+export type MotivationGoal =
+  | 'make_senior_team'
+  | 'dominate_level'
+  | 'fresh_on_game_day'
+  | 'stay_injury_free'
+  | 'stronger_and_fitter'
+  | 'build_muscle'
+  | 'stay_consistent';
 
 export type InjurySeverity = 'Mild' | 'Moderate' | 'Severe';
 
@@ -119,7 +168,16 @@ export interface OnboardingData {
   firstName?: string;
   ageRange?: AgeRange;
   position?: Position;
+  /**
+   * RETIRED FOR WRITING (L15, Sam's ruling 2026-07-30). The joined display sentence.
+   *
+   * `goals` + `motivationOther` are the stored decision now; this string is READ-INGRESS
+   * ONLY, lifted by `rules/motivationGoals.ts` for profiles written before them. Nothing
+   * writes it again — `motivationGoalsTests` fails the build if anything does.
+   */
   motivation?: string;
+  /** The athlete's own words from the "Other" tile, kept apart from the authored set. */
+  motivationOther?: string;
   heightCm?: number;
   weightKg?: number;
   seasonPhase?: SeasonPhase;
@@ -142,6 +200,8 @@ export interface OnboardingData {
    * positive availability and may be supplemented by the location baseline.
    */
   equipmentSelectionCompleteness?: EquipmentSelectionCompleteness;
+  /** The typed equipment decision. Outranks every legacy equipment shape. */
+  equipmentAnswer?: EquipmentAnswer;
   experienceLevel?: ExperienceLevel;
   squatStrength?: SquatStrength;
   benchStrength?: BenchStrength;
@@ -157,7 +217,14 @@ export interface OnboardingData {
   sprintExposure?: SprintExposure;
   recentTrainingLoad?: RecentTrainingLoad;
   injuries?: OnboardingInjury[];
-  goals?: string[];
+  /**
+   * THE ATHLETE'S CHOSEN GOALS — the stored decision (Sam, 2026-07-30).
+   *
+   * Was `string[]` and had NO WRITER at all: three surfaces read it, nothing ever filled
+   * it, and the real answer lived in the `motivation` sentence beside it. It is now the
+   * typed owner, written by the Motivation door, with the display string derived.
+   */
+  goals?: MotivationGoal[];
   biggestLimitation?: BiggestLimitation;
   biggestFrustration?: string;
   successVision?: string;
@@ -228,8 +295,8 @@ export type DeterministicCoachNoteEffectReason =
   | 'adaptation_held'
   | 'adaptation_increased'
   | 'beginner_conservative_prescription'
-  | 'testing_lower_strength'
-  | 'testing_upper_strength'
+  // 'testing_lower_strength' / 'testing_upper_strength' REMOVED 2026-07-31 with the
+  // squat/bench gap-lean they explained (Sam's ruling, 2026-07-30).
   | 'testing_aerobic'
   | 'testing_speed'
   | 'testing_robustness'
@@ -417,11 +484,17 @@ export type RecoveryAddonKind =
  * render, via `buildCueText(name)`, exactly like every other row; the field is
  * deleted rather than left unused so the channel cannot be reopened by a patch.
  */
+/**
+ * `source` lost `'mobility_flow_template'` on 2026-07-30 with the flow bundles it
+ * named. Every add-on row now comes out of a curated pool, so there is one value
+ * left that a writer can legitimately produce — and L15 says a retired shape is
+ * never written again, by anything, rather than kept as a tolerated option.
+ */
 export interface RecoveryAddonExercise {
   id: string;
   name: string;
   prescription: string;
-  source?: 'exercise_pool' | 'mobility_flow_template' | 'local';
+  source?: 'exercise_pool' | 'local';
 }
 
 export interface RecoveryAddonCountingFence {
@@ -445,7 +518,6 @@ export interface RecoveryAddonBlock {
   placementNote?: string;
   restrictions?: string[];
   cautions?: string[];
-  templateId?: string;
   counting: RecoveryAddonCountingFence;
 }
 
@@ -503,8 +575,9 @@ export interface UserProfile {
   hasDumbbells: boolean;
   hasFullGym: boolean;
 
-  // Training preferences
-  trainingLocation: TrainingLocation;
+  // Training preferences. Location is optional and coach-context only
+  // (Sam's audit ruling 3, 2026-07-31): nothing programs off it.
+  trainingLocation?: TrainingLocation;
   daysPerWeek: number;
 
   // Health and history
@@ -711,6 +784,42 @@ export interface Workout {
 
   /** Stable deterministic allocation identity used during generated-week normalisation. */
   planEntryId?: string;
+  /**
+   * "This day is anchored by team training."
+   *
+   * The generator has always written it (`coachingEngine` widens `Workout` with
+   * an ad-hoc `& { isTeamDay?: boolean }` to do so) and `isTeamTrainingSession`
+   * has always read it, but it was never declared here — so four call sites read
+   * it through `as any` and no composition site could be type-checked against
+   * it. It is declared now because the anchor is a fact about the DAY and has to
+   * travel deliberately: splitting a combined day used to hand it to both halves
+   * by inheritance, which sent the team night away with the gym session. See
+   * `splitAcceptedSessionForAthleteMove`.
+   */
+  isTeamDay?: boolean;
+  /**
+   * WHICH WORD THIS FIXTURE WEARS. Stamped by the resolver's game-stub
+   * factories from the season phase (`canonicalFixtureKind`,
+   * `rules/fixtureConditionedAvailability.ts` — the app's ONE
+   * phase→fixture-identity expression, the same one the §18 week mode uses,
+   * so the label and the mode cannot disagree). LABEL ONLY, by ruling
+   * 6-IV-4: `workoutType` stays `'Game'` and every `=== 'Game'` comparison
+   * with it — the ~99 sites that decide week shape, locks and invariants are
+   * untouched by construction. Read by `dayIsPracticeMatch` alone.
+   */
+  fixtureVariant?: 'practice_match';
+  /**
+   * WHICH CHARTER OPTIONAL TYPE THIS SESSION IS. The plan entry has carried
+   * `composedOptionalKind` since the charter unit; the builder consumed and
+   * discarded it, so a Gunshow reached the projection as name-only and the
+   * signed part headline had nothing typed to read (combined device pass
+   * 2026-08-01, fail 2). Stamped by `sessionBuilder.finaliseDerivedSession`
+   * from the `DerivedSessionType` it already receives — one site, every
+   * route (generator, athlete door, resolver derivation) funnels through it.
+   * Carried, never inferred: a canonicalisation pass must not re-derive it
+   * from names.
+   */
+  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility';
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
   /**
@@ -874,7 +983,17 @@ export interface WeekScopedWorkoutOverlay {
   weekStart: string;
   weekEnd: string;
   anchorDate: string | null;
-  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week' | 'readiness_reduction';
+  /**
+   * `accepted_week_repair` is the §18 accepted-week gateway's own repair of a
+   * BASE-OWNED week. It used to be written into `dateOverrides` for want of an
+   * overlay to hold it, which filed derived content under the athlete's
+   * signature and — because a date override outranks a calendar mark on the
+   * screen and is outranked by it in the accepted week — rendered a session on
+   * days the athlete had marked as rest. See
+   * docs/DERIVED_OVERRIDE_MATERIALISATION_REASSESSMENT_2026-07-30.md.
+   */
+  reason: 'one_off_game' | 'one_off_no_game' | 'readiness_reduction'
+    | 'accepted_week_repair';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
   /** Parallel Section 18 policy contract for observational evaluation. */

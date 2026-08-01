@@ -37,7 +37,6 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
     preferredTrainingDays: ALL_DAYS,
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',

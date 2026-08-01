@@ -125,9 +125,9 @@ console.log('sessionClassificationAdapterTests');
 console.log('\n[1] team and fixture anchors');
 {
   const team = workout('Team Training', { workoutType: 'Team Training', intensity: 'High' });
-  const result = classifyVisibleSession(team, { teamTrainingIntensity: 'Hard' });
+  const result = classifyVisibleSession(team);
   ok('team training is a team anchor', result.anchors.teamTraining && category(result, 'team_training'), result);
-  eq('normal/hard team training is high stress', result.stressLevel, 'high');
+  eq('a team night is high stress unconditionally (Sam, 2026-07-30)', result.stressLevel, 'high');
   eq('normal/hard team training creates one hard exposure/day',
     [result.contributions.hardExposures, result.contributions.hardDay], [1, 1]);
   eq('team training contributes one conditioning/running/sprint-COD exposure',
@@ -139,7 +139,7 @@ console.log('\n[1] team and fixture anchors');
     workoutType: 'Team Training',
     intensity: 'Light',
   });
-  const result = classifyVisibleSession(team, { teamTrainingIntensity: 'Light' });
+  const result = classifyVisibleSession(team);
   eq('light team training downshifts to medium', result.stressLevel, 'medium');
   eq('light team training does not create a hard exposure/day',
     [result.contributions.hardExposures, result.contributions.hardDay], [0, 0]);
@@ -196,9 +196,21 @@ for (const test of [
 }
 
 console.log('\n[3] support and recovery components stay outside main credits');
-for (const name of ['Gunshow', 'Prehab & Accessories', 'Upper body accessory pump']) {
+// SPLIT (Sam, 2026-07-30). Each name lands on ITS type — the point of the split is
+// that a placed accessory session can now say which of Sam's two it is. The property
+// asserted below is unchanged: neither takes main strength, conditioning or a hard day.
+for (const [name, expected] of [
+  ['Gunshow', 'gunshow'],
+  ['Prehab & Accessories', 'prehab'],
+  // "accessory" is the decisive word, so this legacy-style name reads as Prehab. The
+  // ARMS words (gunshow, arm pump, pump session) are what make a session the arms one;
+  // "pump" alone is ambiguous and is not enough. Either answer would satisfy what this
+  // fixture exists to prove — that neither type takes main-strength credit — so the
+  // choice is made on the name and stated rather than left to whichever regex ran first.
+  ['Upper body accessory pump', 'prehab'],
+] as const) {
   const result = classifyVisibleSession(workout(name, { intensity: 'Light' }));
-  ok(`${name} stays gunshow/prehab`, category(result, 'gunshow_prehab'), result.categories);
+  ok(`${name} stays ${expected}`, category(result, expected), result.categories);
   eq(`${name} has no main strength/conditioning/hard-day credit`, {
     mainStrength: result.contributions.mainStrength,
     conditioning: result.contributions.conditioning,

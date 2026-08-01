@@ -148,11 +148,6 @@ const ACTIONS: readonly ExplorerExecutableAction[] = [
     target: { kind: 'adjustment', adjustmentId: 'adjustment-one' },
     args: { restoredOn: '2026-07-20' },
   },
-  {
-    type: 'week.repeat', target: { kind: 'week', weekId: '2026-07-13' },
-    args: { sourceWeekStart: '2026-07-13', targetWeekStart: '2026-07-20' },
-    capability: { capabilityId: 'week.repeat', status: 'enabled' },
-  },
 ];
 
 function buildAdapters(args: {

@@ -1,4 +1,6 @@
 import type { OnboardingData } from '../types/domain';
+import { resolveMotivation } from '../rules/motivationGoals';
+import { equipmentAnswered } from './equipmentAvailability';
 
 /**
  * THE onboarding step registry.
@@ -27,6 +29,7 @@ export type OnboardingStepName =
   | 'TeamTrainingDuration'
   | 'TrainingCommitment'
   | 'PreferredTrainingDays'
+  | 'Equipment'
   | 'GymExperience'
   | 'SquatStrength'
   | 'BenchStrength'
@@ -89,9 +92,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     name: 'Motivation',
     answerLabel: 'what you want out of training',
-    collects: ['motivation'],
+    // `goals` is what the door writes now (Sam, 2026-07-30). It was `motivation`, and
+    // leaving it there would have been a silent onboarding lock: the screen stopped
+    // writing that field, so `satisfied` could never become true and
+    // `resolveOnboardingResumeStep` would have returned the athlete to this screen
+    // forever, however many times they answered it.
+    collects: ['goals'],
     visible: always,
-    satisfied: (data) => filled(data.motivation),
+    // Answering only "Other" is a real answer — free text with no authored goal beside
+    // it — so satisfaction asks the resolver, not either field on its own.
+    satisfied: (data) => {
+      const resolved = resolveMotivation(data);
+      return resolved.goals.length > 0 || !!resolved.other;
+    },
   },
   {
     name: 'SeasonPhase',
@@ -118,10 +131,24 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   },
   {
     name: 'TeamTrainingDuration',
-    answerLabel: 'how long and how hard team training is',
-    collects: ['teamTrainingDuration', 'teamTrainingIntensity'],
+    // DURATION IS NO LONGER ASKED (Sam's ruling, 2026-07-30). It had NO programming
+    // consumer — the influence map found it reached the Review screen and the coach
+    // prompt and nothing else — and with team-night SIZE now measured from logged nights,
+    // there was no mechanism left for it to seed. Sam's options were "give it a consumer"
+    // or "stop asking"; he chose to stop asking.
+    //
+    // The step and its screen survive because INTENSITY is still asked: it is the
+    // estimate seed the rolling read falls back to until the first team night is logged
+    // (`rules/teamNightSize.ts`). The step NAME is left alone deliberately — it is a
+    // persisted navigation/resume key, and renaming it would strand athletes mid-flow for
+    // no gain.
+    //
+    // `teamTrainingDuration` stays on `OnboardingData` as a read-only legacy answer:
+    // profiles that already answered it keep it, nothing new writes it.
+    answerLabel: 'how hard team training is',
+    collects: ['teamTrainingIntensity'],
     visible: preOrInSeason,
-    satisfied: (data) => filled(data.teamTrainingDuration) && filled(data.teamTrainingIntensity),
+    satisfied: (data) => filled(data.teamTrainingIntensity),
   },
   {
     name: 'TrainingCommitment',
@@ -136,6 +163,21 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     collects: ['preferredTrainingDays'],
     visible: always,
     satisfied: (data) => filled(data.preferredTrainingDays),
+  },
+  {
+    name: 'Equipment',
+    // REQUIRED (Sam's ruling 2, 2026-07-31): generation does not run without an
+    // equipment answer, so this step has no skip. The checklist's CONTENT is
+    // derived from the exercise library (`rules/equipmentVocabulary`), never
+    // authored beside it. Answering "I have none of these" is an answer —
+    // refusal is for silence, not poverty.
+    answerLabel: 'what equipment you have',
+    collects: ['equipmentAnswer'],
+    visible: always,
+    // `equipmentAnswered`, not `filled`: a legacy explicitly-complete selection
+    // (the coach baseline door's shape) already answered this question, and an
+    // existing install that did so must not be marched back through the step.
+    satisfied: (data) => equipmentAnswered(data),
   },
   {
     name: 'GymExperience',
@@ -211,14 +253,14 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 ];
 
 /**
- * Profile fields the store guarantees from its initial state rather than
- * collecting through a step. They are required for generation but can never be
- * missing, so no step can own them.
+ * EMPTY, and kept as a declaration so "no field is store-guaranteed" is a
+ * stated fact rather than an absence. It used to carry `trainingLocation` and
+ * `equipment` — "guaranteed from initial state" was true only because nothing
+ * could ever set them (the equipment ownership sheet's headline finding). The
+ * store's initial data is honestly empty now; every required answer has a
+ * step that owns it.
  */
-export const PROFILE_DEFAULT_REQUIRED_FIELDS: readonly (keyof OnboardingData)[] = [
-  'trainingLocation',
-  'equipment',
-];
+export const PROFILE_DEFAULT_REQUIRED_FIELDS: readonly (keyof OnboardingData)[] = [];
 
 export function visibleOnboardingSteps(data: OnboardingData): OnboardingStep[] {
   return ONBOARDING_STEPS.filter((step) => step.visible(data));

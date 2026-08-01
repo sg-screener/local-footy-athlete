@@ -1,0 +1,218 @@
+# The hydration wipe: refuse, then overwrite
+
+**STATUS: DIAGNOSIS. NO FIX WRITTEN. NO RED CELL YET — and that is why no fix is
+written** (Sam, this unit: *red cells before fixes, as always*). Both root causes
+are located exactly in code. The reproduction is specified but not achieved; what
+blocked it is recorded below because it narrows the target rather than merely
+failing.
+
+Tape: `device-export-2026-07-29-hydration-failure.json`, 73 entries,
+18:32:06.942 – 18:32:21.288. Final state: `hasProgram: false`,
+`microcycleCount: 0`, `acceptedRevision: 3`, `lastTransaction:
+temporary_source_fact:hydrate`. Profile (23 answers) and 5 calendar marks
+survived; the program did not.
+
+## The chain, from the tape
+
+| time | event |
+|---|---|
+| 18:32:07.384 | `hydrated_state_checked` **succeeded**, version **43**, 2 overlays, 8 constraints — data intact |
+| 18:32:07.4–.7 | gateway re-evaluates each stored week; 2026-08-03 `repair_candidate_rejected` `maximum_breach:conditioning`, `searchExhausted: true`, **outcome impossible**, then `candidatePath: fallback` — a REDUCED candidate is produced |
+| 18:32:07.830 | `visible_projection_result` 2026-08-03 `rejectionCodes: ["maximum_breach"]` |
+| 18:32:07.830 | `transaction_verification_result` **verified false**, `accepted_state_ledger_mismatch`, boundary `assertAcceptedVisibleLedgerEquivalence` |
+| 18:32:07.830 | `accepted_state_publication_result` published false, `atomicRollback: true`, `persistenceResult: not_started` |
+| — | **13.4 second gap** — the boot gate's `HYDRATION_TIMEOUT_MS` is 10_000, then the boot error screen's Try Again |
+| 18:32:21.245 | `hydrated_state_checked` **succeeded**, version **1**, **0 overlays, 0 constraints** |
+| 18:32:21.258 | `persistence_result` operation **write**, program-store, **succeeded** ← the overwrite |
+| 18:32:21.288 | `athlete_action_completed` `hydration_accepted` |
+
+## Finding 3 — one transaction, two modes (confirmed exactly)
+
+`assertAcceptedVisibleLedgerEquivalence` (`acceptedStateTransaction.ts:464`)
+branches on `args.operation`:
+
+- `restoration` → **throws** `AcceptedStateLedgerMismatchError` on any blocking
+  violation;
+- otherwise → accept-and-reduce (record the shortfall, publish).
+
+`commitAcceptedStateTransaction` defaults it: `operation: proposal.operation ??
+'restoration'` (`:632`, `:740`). The hydration acceptance call
+(`programStore.ts:2317`) passes **no `operation`**, so it is strict.
+
+Meanwhile the SAME transaction's staging path —
+`canonicaliseAcceptedStateCandidate` → `runSection18AcceptedWeekGateway` — runs
+accept-and-reduce unconditionally, which is what produced the reduced candidate
+at 18:32:07.7. So the candidate was reduced by one half of the transaction and
+then refused by the other. That is Sam's mixed mode, verbatim.
+
+**The ownership question this poses:** old-build state meeting new rules is a
+LEGACY SHAPE. It wants a read-ingress lift (the `powerBlock` precedent), after
+which a strict restoration is the correct and only mode. It does not want a
+re-gating that shrinks (that would merge a defect into accepted state) nor a
+strict check that strands (that is this wipe).
+
+## Finding 4 — the refusal has nowhere to put what it refused
+
+`programStore.ts:2367-2380`: the acceptance catch emits `athlete_action_failed`
+and **rethrows**. Consequences, all confirmed by reading:
+
+1. `programHydrationAcceptancePromise` rejects; `programHydrationAccepted` stays
+   `false`; the wrapped `persist.hasHydrated()` (`:2427`) therefore returns
+   false forever.
+2. `appHydrationGate.settleStore` polls to `HYDRATION_TIMEOUT_MS` (10s), reports
+   `failed`, and the boot error screen offers Try Again →
+   `retryAppHydration()` → `persist.rehydrate()` (`appHydrationGate.ts:155-168`).
+3. **Nothing quarantines the refused payload.** There is no holding surface: the
+   refused v43 state exists only in memory and in whatever the storage envelope
+   still happens to contain, and no writer is prevented from overwriting it.
+4. **Nothing makes the bare fallback unpersistable.** The second cycle's
+   acceptance publishes and persists normally, because it has no way to know a
+   refused payload exists.
+
+**The law this unit owes: A REFUSAL MUST NEVER PERSIST THE STATE IT REFUSED
+INTO.** This is the profile-mirror wipe law (`docs/PROFILE_MIRROR_OWNERSHIP_
+REASSESSMENT_2026-07-24.md`) at a second store — the class's second occurrence,
+which is also the L11 stop-rule condition.
+
+## The reproduction: specified, attempted, NOT achieved
+
+Four attempts against a real generated store persisted as an envelope, each with
+a declared previous-build transform. **None reproduced the refusal**, and the
+reason is itself a finding:
+
+- Lowering `conditioning.core.permittedMaximum` below the delivered count did
+  nothing: `evaluateExposure` (`section18EffectiveWeekEvaluator.ts:683-689`)
+  charges a maximum only against `split.appPrescribed`, and Sam's profile earns
+  most of its conditioning credit from team training, which the app cannot
+  un-prescribe.
+- With a no-team-days profile (so the exposure is app-prescribed) the gateway
+  simply repaired the week — correctly.
+- With a contradictory contract (`requiredMinimum` = achieved, `permittedMaximum`
+  = achieved − 1) it still did not refuse.
+
+**Why: my envelopes classify as `accepted_canonical`, and that path returns
+early.** `programStore.ts:2202` — an `accepted_canonical` ingress takes the
+canonical projection branch and **never calls
+`commitAcceptedStateTransaction`**, so it cannot reach the boundary that threw.
+The revision stayed 43 and `lastTransaction` was unchanged in every attempt,
+which is the proof.
+
+**Therefore the reproduction needs an envelope classified `legacy_precanonical`
+or `migration_required`** (`programHydrationIngress.ts:303-320` —
+`hasAcceptedCanonicalEvidence` must be false while `hasMaterialProgramState` is
+true). That is exactly what "a previous-build store" means, and it is the next
+step, not a fix.
+
+## What is NOT done
+
+- No red cell. No fix. Neither finding is repaired.
+- Walker upgrade-path vocabulary (`hydrate a previous-build store`) not built.
+- The L12 audit — every stored-state writer and its failure-state behaviour —
+  not started.
+
+`test:bible` is EXIT=0 and untouched by this unit; the wipe is not gated, and
+nothing here should be read as saying it is.
+
+---
+
+## Addendum, 2026-07-30 — the approved worktree path, run
+
+Sam approved producing the previous-build envelope **by acting through the old
+code**. Done, and the result changes the plan.
+
+**The method works.** `git worktree add --detach <path> 49c8579` (no branch
+switch in the shared checkout), `node_modules` symlinked, the old build driven
+through its own real doors — profile, `generateProgramLocally` +
+`setCurrentProgram`, calendar, `applyPlanChange`,
+`executeProgramControlActionDurably` — and the bytes read back from the same
+storage the persist middleware wrote. 588KB, acted, not authored. It is committed
+as `src/__tests__/fixtures/previousBuildStore-49c8579.json` with its provenance.
+
+**But the branch point is NOT OLD ENOUGH.** Today's classifier calls that payload
+`accepted_canonical` / `current_accepted_protocols_verified`, so hydration takes
+the early-return branch (`programStore.ts:2202`) and never reaches
+`commitAcceptedStateTransaction`. The reason is specific and checkable: 49c8579
+already writes `acceptedCompositionBase` (protocolVersion 1), `native_v1` source
+facts, and schedule constraints carrying `temporarySourceFactIds` — so every
+clause of `hasAcceptedCanonicalEvidence` passes and `hasKnownLegacySignatures`
+finds nothing. **`src/store/programHydrationIngress.ts` is byte-identical between
+49c8579 and HEAD**, so this is not a classifier change; it is what the old build
+wrote.
+
+Sam's device envelope was therefore written by a build OLDER than the branch
+point — consistent with revision 43 accumulated across many builds.
+
+**Next base identified, not yet captured:** `1e9c822`, the parent of `2b06be5`
+("feat: add canonical injury episode ownership") — the last commit before the
+accepted-composition-base and source-fact protocols existed. A worktree there was
+created and run; its persist path goes straight at AsyncStorage with no node
+fallback (needs the `window.localStorage` shim, unlike 49c8579), and
+`generateProgramLocally` has a different options shape at that commit, so the
+capture produced an envelope with no program (612 bytes). **Working out that
+build's own call conventions is the remaining step**, and it is mechanical.
+
+**Recorded because it is evidence, not noise:** the 49c8579 build REFUSED two of
+Sam's four calendar marks (`section18_week_rejected` on both rest marks) and threw
+`Section18SafetyContradictionError` on a game mark, for his exact profile. The
+old build was already failing his week at the calendar door.
+
+### Still NOT done
+
+Red cell, both fixes, walker upgrade-path action, L12 per-store audit. Nothing in
+this addendum is a fix and `test:bible` is untouched by it.
+
+---
+
+## Resolution, 2026-07-30 — Sam's ruling, and what shipped
+
+**The archaeology stopped by ruling.** Reproducing the exact CAUSE would mean
+acting a pre-release build's edits into a week today's evaluator scores
+differently. Not done, and it protects nobody: the whole population of
+pre-release stores is Sam's test device, which is being deleted and re-onboarded.
+
+### Shipped
+
+**The wipe law, proven and gated.** `test:hydration-refusal-quarantine`. The
+refusal is INJECTED at the acceptance boundary — the approved failure-state
+sweep. That is not an authored seed: the tape documents the refusal happening in
+reality at this exact boundary, and a law about what must happen after **any**
+refusal is rightly proven cause-independently, which also covers causes nobody
+has thought of. The payload underneath is the acted `previousBuildStore-1e9c822`.
+
+It went RED on today's code first: **4 microcycles → 0**, the wipe reproduced.
+`store/refusedPayloadQuarantine.ts` holds the refused DISK copy (not the
+in-memory one — memory rolled back correctly and always did; the disk copy is
+what a later writer destroys), and `programStateStorage.setItem` — the store's
+single writer boundary — refuses a payload carrying no program while a
+quarantined one is held. A material payload always passes and releases the hold,
+because a quarantine that blocked the lift would strand the athlete as surely as
+the wipe destroyed him. In memory only: a fresh install has no quarantine by
+construction. Both halves mutation-killed.
+
+**L12, answered per-store.** `test:stored-state-writer-audit` reads the boot
+registry — the same list `appHydrationGate` gates on — and requires every
+persisted store to be protected or a DECLARED DEBT. Eleven stores are still
+wipeable and are named. The list is a ratchet: entries may leave, none may join
+without an explicit edit. A new persisted store cannot escape the audit by not
+being remembered.
+
+**Hydration's mode is declared.** `operation: 'restoration'` is now stated at the
+call rather than inherited from `?? 'restoration'`. NOT WHOLE: staging still runs
+the §18 gateway's accept-and-reduce unconditionally, so one transaction can still
+reduce a week and then refuse the reduction. Declaring removes the accident;
+making the halves agree needs the read-ingress lift — see NOT-COVERED.
+
+### The boot race — investigated, not reproducible on HEAD
+
+Populated store losing to a later empty hydration, observed while capturing at
+1e9c822. Probed on current code in two orderings — act-then-hydrate, and the
+faithful read-empty → act → late-merge — and the program survived both. Recorded
+as an old-build artifact, not a live defect. Two orderings is not a proof of
+absence.
+
+### Standing law (Sam, 2026-07-30)
+
+At every release, capture that release's acted store; the upgrade cell runs HEAD
+against the PREVIOUS RELEASE's payload. No pre-release archaeology, ever again.
+Recorded in `hydrationUpgradePathTests`' header, where the guard-not-proof note
+lives.

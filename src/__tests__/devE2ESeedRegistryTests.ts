@@ -24,7 +24,6 @@ function ok(name: string, condition: boolean, detail = ''): void {
 
 const EXPLORER_SEEDS = [
   'multi-reload-fixture-chain',
-  'repeat-week-phase-transition',
   'coach-production-replay',
 ] as const;
 
@@ -45,8 +44,6 @@ const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
     'program,profile_exact,session_feedback,future_progression_target,visible_card_detail_equality',
   'multi-reload-fixture-chain':
     'program,profile_exact,accepted_week_count,calendar_mark,fixture_identity,eligible_target_date,workout,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state,accepted_revision,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality',
-  'repeat-week-phase-transition':
-    'program,profile_exact,accepted_week_count,week_contract_signature,week_contract_signature,workout,workout,fixture_identity,component_identity,absent_overlay',
   'coach-production-replay':
     'program,profile_exact,empty_coach_state,calendar_mark,fixture_identity,eligible_target_date,workout,exercise_present,future_progression_target,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality',
 };
@@ -60,8 +57,8 @@ globalThis.fetch = (async () => {
 
 try {
   ok(
-    'Explorer campaign adds exactly the three requested seed IDs',
-    DEV_E2E_SEED_IDS.length === 12 &&
+    'Explorer campaign adds exactly the two requested seed IDs',
+    DEV_E2E_SEED_IDS.length === 11 &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===
       EXPLORER_SEEDS.join(','),
@@ -140,15 +137,6 @@ try {
     (spentState.temporarySourceFacts ?? []).length === 0 &&
       spentState.activeInjury === null &&
       spentState.activeConstraints.length === 0,
-  );
-
-  const repeatSeed = buildDevE2ESeed('repeat-week-phase-transition');
-  const repeatSignatures = repeatSeed.witnesses
-    .filter((witness) => witness.kind === 'week_contract_signature')
-    .map((witness) => witness.signature);
-  ok(
-    'repeat-week seed proves source and target phase signatures differ',
-    repeatSignatures.length === 2 && repeatSignatures[0] !== repeatSignatures[1],
   );
 
   const multiSeed = buildDevE2ESeed('multi-reload-fixture-chain');

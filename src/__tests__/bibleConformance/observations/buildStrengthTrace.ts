@@ -240,7 +240,6 @@ function scheduleState(args: {
       ...DEFAULT_ATHLETE_CONTEXT,
       injuries: args.profile.injuries ?? [],
       equipmentTags,
-      trainingLocation: args.profile.trainingLocation ?? 'Commercial gym',
       onboardingData: args.profile,
     },
     seasonPhase: args.profile.seasonPhase,

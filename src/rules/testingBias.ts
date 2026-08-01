@@ -9,25 +9,59 @@
  */
 
 import type {
-  BenchStrength,
   BiggestLimitation,
   ConditioningLevel,
   OnboardingInjury,
   SeasonPhase,
   SprintExposure,
-  SquatStrength,
 } from '../types/domain';
 import type { RecoveryAddonFocusArea } from './recoveryAddonCoverage';
+// BIBLE_ANCHOR: weak_point_off_season_focus
+import { WEAK_POINT_LEAN, weakPointFocusFor } from './weakPointFocus';
 import type {
   BiasConditioningCategory,
   ProgrammingBias,
   RecoveryAddonFocusPreference,
 } from './programmingBias';
 
+/**
+ * THE STRENGTH ANSWERS ARE ABSENT ON PURPOSE — Sam's ruling, 2026-07-30.
+ *
+ * `squatStrength` and `benchStrength` used to be here, banded 0-4 and COMPARED, and a
+ * two-band gap leaned the program toward the trailing region. Sam killed the mechanism
+ * twice on record:
+ *
+ *   > "unlikely someone is super strong upper and super weak lower"
+ *   > "we shouldn't bias lower over upper"
+ *
+ * DELETED, not tuned — so the band-comparability question ("is squat band 3 the same
+ * amount of strong as bench band 3?") is moot rather than answered. See
+ * `docs/UNAUTHORED_TRANSLATIONS_SHEET_2026-07-30.md` §1.
+ *
+ * WHAT ANSWERS THE WEAK-BUT-FIT ATHLETE INSTEAD. Nothing inferred. A global lean toward
+ * strength is the STATED-weakness mechanism doing its job — `biggestLimitation` below,
+ * bound to `:105` — plus `:105`'s own default ordering. The app asks; it does not deduce.
+ *
+ * THE ONE LEGITIMATE UPPER/LOWER ASYMMETRY is in-season game proximity, and it is a
+ * PLACEMENT rule keyed on the calendar, not a lean keyed on an athlete property. The
+ * Bible owns it outright and needs no mechanism built here — `strengthAnswerAuthority`
+ * cites the lines and gates their presence:
+ *
+ *   `:78`  "What is acceptable 1-2 days before a game: upper body training, gunshow,
+ *          accessories, low volume low range power work..."
+ *   `:378` "In-season version: Upper strength can stay in year-round. It can often be
+ *          placed before team training or closer to game day than lower strength."
+ *   `:803` "If lower strength is unsafe close to game day, preserve upper strength
+ *          where possible."
+ *
+ * WHERE THE STRENGTH ANSWERS DO STILL GO: `loadEstimation`, through Sam's anchor ladders
+ * (`data/anchorMultipliers.ts`, RULED 2026-07-28, workbook-gated both directions). That
+ * is a starting LOAD, not a verdict on the athlete — which is exactly why "I don't squat"
+ * can carry a conservative 0.5 multiplier there while meaning UNTESTED, never "weak",
+ * here.
+ */
 export interface TestingBiasInputs {
   phase: SeasonPhase;
-  squatStrength?: SquatStrength;
-  benchStrength?: BenchStrength;
   conditioningLevel?: ConditioningLevel;
   sprintExposure?: SprintExposure;
   biggestLimitation?: BiggestLimitation;
@@ -36,8 +70,6 @@ export interface TestingBiasInputs {
 }
 
 export interface TestingBias {
-  lowerStrengthBias: number;
-  upperStrengthBias: number;
   speedBias: number;
   conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>>;
   recoveryAddonFocusPreference: RecoveryAddonFocusPreference;
@@ -49,8 +81,6 @@ export interface TestingBias {
 }
 
 export interface ComposedProgrammingBias extends ProgrammingBias {
-  lowerStrengthBias: number;
-  upperStrengthBias: number;
   testingDebug: TestingBias['debug'];
 }
 
@@ -68,32 +98,11 @@ function clamp(value: number, max: number): number {
   return Math.round(Math.max(-max, Math.min(max, value)) * 1e4) / 1e4 || 0;
 }
 
-function squatBand(value: SquatStrength | undefined): number | null {
-  switch (value) {
-    case "I don't squat": return 0;
-    case 'Less than bodyweight': return 1;
-    case 'Around bodyweight': return 2;
-    case '1.5x bodyweight': return 3;
-    case '2x bodyweight+': return 4;
-    default: return null;
-  }
-}
-
-function benchBand(value: BenchStrength | undefined): number | null {
-  switch (value) {
-    case "I don't bench": return 0;
-    case 'Less than bodyweight': return 1;
-    case 'Around bodyweight': return 2;
-    case '1.25x bodyweight': return 3;
-    case '1.5x bodyweight+': return 4;
-    default: return null;
-  }
-}
-
 /**
- * Compute a testing bias from signals the profile already stores. Relative
- * strength requires a clear two-band gap; missing / "Not sure" values never
- * become weakness evidence.
+ * Compute a testing bias from signals the profile already stores.
+ *
+ * Reads conditioning, sprint exposure, the stated weakness and injury history. It does
+ * NOT read the strength answers — see `TestingBiasInputs` for Sam's ruling.
  */
 export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   const phaseScale = PHASE_SCALE[inputs.phase] ?? PHASE_SCALE['Pre-season'];
@@ -101,33 +110,11 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   const phaseAdjustedWeight = Math.round(phaseScale * beginnerScale * 1e4) / 1e4;
   const notes: string[] = [];
 
-  let lower = 0;
-  let upper = 0;
   let aerobic = 0;
   let speed = 0;
   let recovery = 0;
-  let accessory = 0;
-  let weakLowerSignal = false;
-  let weakUpperSignal = false;
   let robustnessSignal = false;
   let mobilitySignal = false;
-
-  const lowerBand = squatBand(inputs.squatStrength);
-  const upperBand = benchBand(inputs.benchStrength);
-  if (lowerBand !== null && upperBand !== null) {
-    const gap = upperBand - lowerBand;
-    if (gap >= 2) {
-      lower += 1;
-      accessory += 0.5;
-      weakLowerSignal = true;
-      notes.push('Testing: lower strength trails upper by a clear margin');
-    } else if (gap <= -2) {
-      upper += 1;
-      accessory += 0.5;
-      weakUpperSignal = true;
-      notes.push('Testing: upper strength trails lower by a clear margin');
-    }
-  }
 
   if (inputs.conditioningLevel === 'Poor') {
     aerobic += 1;
@@ -139,32 +126,46 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
     notes.push('Testing gap: no current sprint exposure — small speed lean');
   }
 
-  switch (inputs.biggestLimitation) {
-    case 'Endurance':
-      aerobic += 1;
-      notes.push('Limitation: endurance');
-      break;
-    case 'Speed':
-      speed += 1;
-      notes.push('Limitation: speed');
-      break;
-    case 'Strength':
-      accessory += 0.5;
-      notes.push('Limitation: general strength — small support lean');
-      break;
-    case 'Injury history':
-      recovery += 1;
-      accessory += 0.25;
-      robustnessSignal = true;
-      notes.push('Limitation: injury history — robustness/prehab lean');
-      break;
-    case 'Mobility':
-      recovery += 0.5;
-      mobilitySignal = true;
-      notes.push('Limitation: mobility — recovery add-on lean');
-      break;
-    default:
-      break;
+  // ── THE STATED WEAKNESS, BOUND TO `:105` (Sam's ruling, 2026-07-30) ──
+  //
+  // READING A: a stated weakness changes WHAT FILLS the week, never its counts or
+  // distributions. This is the whole of the weak-point mechanism, and its DIRECTION is
+  // now `rules/weakPointFocus.ts` rather than a switch here — because the direction is
+  // the part Sam signs and `:105` is the line it answers to. `weakPointFocusTests` binds
+  // the two so neither can drift.
+  //
+  // IT WAS A SWITCH OVER FIVE OF SEVEN ANSWERS. `Size` and `Power & explosiveness` fell
+  // to `default: break` and leaned nothing — Size is half of `:105`'s own "strength and
+  // size" category, so its silence was a gap and not a decision. It leans now.
+  // `Power & explosiveness` still leans nothing, but for a stated reason: Sam deferred
+  // it, the authored record holds no prior ruling, and the map declares it `unresolved`
+  // rather than guessing it into speed.
+  const weakPointFocus = weakPointFocusFor(inputs.biggestLimitation);
+  if (weakPointFocus) {
+    const lean = WEAK_POINT_LEAN[weakPointFocus];
+    if (lean.aerobic) aerobic += 1;
+    if (lean.speed) speed += 1;
+    if (lean.recovery) recovery += 1;
+    // `lean.accessory` IS NOT READ HERE, AND WAS NEVER INDEPENDENTLY READ. Deleting the
+    // squat/bench gap made that visible: the accessory weight this block used to
+    // accumulate was consumed ONLY inside the two gap-gated blocks below, so a stated
+    // `strength_and_size` weakness expressed its accessory direction only when the gap
+    // ALSO fired — and expressed nothing at all otherwise.
+    //
+    // Not repaired here on purpose. `WEAK_POINT_LEAN.strength_and_size.accessory` is
+    // Sam's signed direction and stays declared; giving it a consumer is a mechanism, and
+    // Sam's instruction on this unit was to return an unruled asymmetry as a QUESTION
+    // rather than build one. `strengthAnswerAuthorityTests` pins the finding so it cannot
+    // be quietly rediscovered as a bug, and the boundary report carries it to him.
+    if (weakPointFocus === 'mobility_and_injury_prevention') {
+      // Both halves of `:105`'s first category, kept distinguishable: an injury history
+      // is a robustness signal and a mobility answer is a mobility one. The bias
+      // consumers read these separately, so collapsing them would lose real information
+      // the mapping does not intend to lose.
+      if (inputs.biggestLimitation === 'Injury history') robustnessSignal = true;
+      if (inputs.biggestLimitation === 'Mobility') mobilitySignal = true;
+    }
+    notes.push(`Limitation: ${inputs.biggestLimitation} → :105 focus "${weakPointFocus}"`);
   }
 
   if ((inputs.injuries ?? []).length > 0) {
@@ -183,12 +184,9 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   const toBias = (raw: number) =>
     clamp(raw * BASE_UNIT * phaseScale * beginnerScale, TESTING_MAX_BIAS);
 
-  const lowerStrengthBias = toBias(lower);
-  const upperStrengthBias = toBias(upper);
   const aerobicBias = toBias(aerobic);
   const speedBias = toBias(speed);
   const recoveryAddonBias = toBias(recovery);
-  const accessoryBias = toBias(accessory);
 
   const conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>> = {};
   if (aerobicBias > 0) {
@@ -209,15 +207,6 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
       );
     }
   };
-  if (weakLowerSignal && accessoryBias > 0) {
-    addFocuses(
-      ['trunk_core', 'adductors_groin', 'calves_tib_ankles', 'hamstring_light_prehab'],
-      accessoryBias,
-    );
-  }
-  if (weakUpperSignal && accessoryBias > 0) {
-    addFocuses(['shoulder_scap', 'trunk_core', 'carries'], accessoryBias);
-  }
   if (robustnessSignal && recoveryAddonBias > 0) {
     addFocuses(
       ['trunk_core', 'adductors_groin', 'calves_tib_ankles', 'hamstring_light_prehab'],
@@ -231,8 +220,6 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   if (notes.length === 0) notes.push('No clear testing imbalance — neutral bias');
 
   return {
-    lowerStrengthBias,
-    upperStrengthBias,
     speedBias,
     conditioningCategoryPreference,
     recoveryAddonFocusPreference,
@@ -276,8 +263,6 @@ export function composeProgrammingBias(
     ...roleGoal,
     strengthBias: clamp(roleGoal.strengthBias, COMPOSED_MAX_BIAS),
     speedBias: clamp(roleGoal.speedBias + testing.speedBias, COMPOSED_MAX_BIAS),
-    lowerStrengthBias: testing.lowerStrengthBias,
-    upperStrengthBias: testing.upperStrengthBias,
     conditioningCategoryPreference: mergeCategoryPreferences(
       roleGoal.conditioningCategoryPreference,
       testing.conditioningCategoryPreference,

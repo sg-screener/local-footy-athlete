@@ -56,8 +56,7 @@ function eq(name: string, actual: unknown, expected: unknown): void {
 }
 
 function allNeutral(bias: ReturnType<typeof computeTestingBias>): boolean {
-  return [bias.lowerStrengthBias, bias.upperStrengthBias, bias.speedBias]
-    .every((value) => value === 0) &&
+  return bias.speedBias === 0 &&
     Object.keys(bias.conditioningCategoryPreference).length === 0 &&
     Object.keys(bias.recoveryAddonFocusPreference).length === 0;
 }
@@ -159,11 +158,12 @@ console.log('\n[1] neutral and balanced signals');
     Object.keys(missing).sort().join(',') === [
       'conditioningCategoryPreference',
       'debug',
-      'lowerStrengthBias',
       'recoveryAddonFocusPreference',
       'speedBias',
-      'upperStrengthBias',
     ].sort().join(','),
+    Object.keys(missing));
+  ok('the bias exposes no regional strength direction at all — Sam killed the gap-lean',
+    !('lowerStrengthBias' in missing) && !('upperStrengthBias' in missing),
     Object.keys(missing));
   ok('neutral testing reason is explicitly debug-only',
     missing.debug.reasons.some((reason) => /neutral bias/i.test(reason)),
@@ -171,56 +171,36 @@ console.log('\n[1] neutral and balanced signals');
 
   const balanced = computeTestingBias({
     phase: 'Off-season',
-    squatStrength: '1.5x bodyweight',
-    benchStrength: '1.25x bodyweight',
     conditioningLevel: 'Good',
     sprintExposure: '2+ times per week',
     injuries: [],
   });
-  ok('balanced testing remains neutral', allNeutral(balanced), balanced);
-
-  const unknown = computeTestingBias({
-    phase: 'Off-season',
-    squatStrength: 'Not sure',
-    benchStrength: 'Not sure',
-  });
-  ok('Not sure never becomes weakness evidence', allNeutral(unknown), unknown);
+  ok('a healthy profile with no stated weakness remains neutral', allNeutral(balanced), balanced);
 }
 
-console.log('\n[2] strength imbalance signals are small and regional');
+console.log('\n[2] the strength answers lean NOTHING — Sam killed the gap (2026-07-30)');
 {
-  const weakLower = computeTestingBias({
-    phase: 'Off-season',
+  // The full authority gate is `strengthAnswerAuthorityTests` (in `test:bible`). These
+  // two keep the claim adjacent to the mechanism that used to hold it.
+  const lopsided = planFor(profile({
     squatStrength: 'Less than bodyweight',
-    benchStrength: '1.25x bodyweight',
-  });
-  ok('weak lower signal creates lower bias', weakLower.lowerStrengthBias > 0, weakLower);
-  eq('weak lower does not create upper bias', weakLower.upperStrengthBias, 0);
-  ok('weak lower adds small lower-support preference',
-    (weakLower.recoveryAddonFocusPreference.hamstring_light_prehab ?? 0) > 0,
-    weakLower);
-  ok('weak lower bias stays at or below 10%', weakLower.lowerStrengthBias <= 0.1, weakLower);
-
-  const weakUpper = computeTestingBias({
-    phase: 'Off-season',
-    squatStrength: '1.5x bodyweight',
-    benchStrength: 'Less than bodyweight',
-  });
-  ok('weak upper signal creates upper bias', weakUpper.upperStrengthBias > 0, weakUpper);
-  eq('weak upper does not create lower bias', weakUpper.lowerStrengthBias, 0);
-  ok('weak upper adds small upper-support preference',
-    (weakUpper.recoveryAddonFocusPreference.shoulder_scap ?? 0) > 0,
-    weakUpper);
-
-  const neutralPlan = planFor(profile());
-  const weakLowerPlan = planFor(profile({
-    squatStrength: 'Less than bodyweight',
-    benchStrength: '1.25x bodyweight',
+    benchStrength: '1.5x bodyweight+',
   }));
-  ok('weak lower can only favour approved lower/full-body support, not add sessions',
-    lowerDose(weakLowerPlan.weeklyPlan) >= lowerDose(neutralPlan.weeklyPlan) &&
-      weakLowerPlan.coreSessions === neutralPlan.coreSessions,
-    { neutral: planText(neutralPlan), weakLower: planText(weakLowerPlan) });
+  const mirrored = planFor(profile({
+    squatStrength: '2x bodyweight+',
+    benchStrength: 'Less than bodyweight',
+  }));
+  const neutralPlan = planFor(profile());
+  ok('a lopsided profile and its mirror produce the SAME week as a balanced one',
+    planText(lopsided) === planText(neutralPlan) &&
+      planText(mirrored) === planText(neutralPlan),
+    { neutral: planText(neutralPlan), lopsided: planText(lopsided), mirrored: planText(mirrored) });
+  eq('neither direction moves the lower dose',
+    [lowerDose(lopsided.weeklyPlan), lowerDose(mirrored.weeklyPlan)],
+    [lowerDose(neutralPlan.weeklyPlan), lowerDose(neutralPlan.weeklyPlan)]);
+  eq('neither direction moves the upper dose',
+    [upperDose(lopsided.weeklyPlan), upperDose(mirrored.weeklyPlan)],
+    [upperDose(neutralPlan.weeklyPlan), upperDose(neutralPlan.weeklyPlan)]);
 }
 
 console.log('\n[3] aerobic and speed testing gaps only re-order permitted categories');
@@ -266,24 +246,33 @@ console.log('\n[3] aerobic and speed testing gaps only re-order permitted catego
 
 console.log('\n[4] phase scaling and beginner policy');
 {
-  const signal = {
-    squatStrength: 'Less than bodyweight' as const,
-    benchStrength: '1.25x bodyweight' as const,
-    biggestLimitation: 'Speed' as const,
-  };
+  const signal = { biggestLimitation: 'Speed' as const };
   const off = computeTestingBias({ phase: 'Off-season', ...signal });
   const pre = computeTestingBias({ phase: 'Pre-season', ...signal });
   const inSeason = computeTestingBias({ phase: 'In-season', ...signal });
-  ok('off-season expresses more lower bias than pre-season and in-season',
-    off.lowerStrengthBias > pre.lowerStrengthBias && pre.lowerStrengthBias > inSeason.lowerStrengthBias,
+  ok('off-season expresses more speed bias than pre-season and in-season',
+    off.speedBias > pre.speedBias && pre.speedBias > inSeason.speedBias,
     { off, pre, inSeason });
-  ok('in-season testing bias remains minimal',
-    Math.max(inSeason.lowerStrengthBias, inSeason.speedBias) <= 0.03,
-    inSeason);
+  ok('in-season testing bias remains minimal', inSeason.speedBias <= 0.03, inSeason);
+
+  const aerobicOff = computeTestingBias({ phase: 'Off-season', conditioningLevel: 'Poor' });
+  const aerobicIn = computeTestingBias({ phase: 'In-season', conditioningLevel: 'Poor' });
+  ok('phase scaling applies to the aerobic direction too',
+    (aerobicOff.conditioningCategoryPreference.aerobic_base ?? 0) >
+      (aerobicIn.conditioningCategoryPreference.aerobic_base ?? 0),
+    { aerobicOff, aerobicIn });
 
   const beginner = computeTestingBias({ phase: 'Off-season', ...signal, isBeginner: true });
   eq('beginner policy fully suppresses speed testing bias', beginner.speedBias, 0);
-  ok('beginner support bias is damped', beginner.lowerStrengthBias < off.lowerStrengthBias, beginner);
+  const beginnerRobust = computeTestingBias({
+    phase: 'Off-season', biggestLimitation: 'Injury history', isBeginner: true,
+  });
+  const adultRobust = computeTestingBias({ phase: 'Off-season', biggestLimitation: 'Injury history' });
+  ok('beginner support bias is damped rather than removed',
+    (beginnerRobust.recoveryAddonFocusPreference.trunk_core ?? 0) > 0 &&
+      (beginnerRobust.recoveryAddonFocusPreference.trunk_core ?? 0) <
+        (adultRobust.recoveryAddonFocusPreference.trunk_core ?? 0),
+    { beginnerRobust, adultRobust });
 
   const beginnerPlan = planFor(profile({
     experienceLevel: 'Complete beginner',
@@ -315,8 +304,6 @@ console.log('\n[5] role/goal + testing compose without doubling');
   const combinedActiveWeights = [
     combined.strengthBias,
     combined.speedBias,
-    combined.lowerStrengthBias,
-    combined.upperStrengthBias,
     ...Object.values(combined.conditioningCategoryPreference),
     ...Object.values(combined.recoveryAddonFocusPreference),
   ];
@@ -417,7 +404,6 @@ console.log('\n[7] game, injury and readiness gates win');
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     usualGameDay: 'Saturday',
     squatStrength: 'Less than bodyweight',
     benchStrength: '1.25x bodyweight',
@@ -470,11 +456,26 @@ console.log('\n[7] game, injury and readiness gates win');
       injuryKeys: ['knee'],
     }],
   };
+  // ⚠ PRE-EXISTING RED — NOT caused by the strength-band deletion (2026-07-31).
+  //
+  // Verified against a clean worktree at HEAD (`92db2b0`): this assertion already failed
+  // there, with the same message, for BOTH a lopsided and a balanced profile. HEAD's own
+  // run of this file is "42 passed, 1 failed" and it is this one. The reason nobody knew:
+  // `test:testing-bias` is NOT in `test:bible`, so the suite has been rotting unwatched.
+  //
+  // WHAT IT SAYS. An athlete with an active knee constraint whose triggers include
+  // `squat` and `jumping` still gets a Friday session whose focus reads "Lower body -
+  // squat emphasis". The assertion is on the plan's FOCUS TEXT, so what is established is
+  // that the LABEL survives the constraint — whether the exercises underneath it are
+  // knee-safe is NOT established by this test either way, and was not investigated here.
+  //
+  // Left failing deliberately. Loosening it to go green is exactly what L13 forbids, and
+  // the defect belongs to the injury-constraint/placement owner, not to this unit.
   const injuredLower = planFor(profile({
     squatStrength: 'Less than bodyweight',
     benchStrength: '1.25x bodyweight',
   }), kneeConstraint);
-  ok('knee constraint blocks squat bias while safe work remains',
+  ok('[PRE-EXISTING RED at HEAD] knee constraint blocks squat bias while safe work remains',
     !/squat emphasis|quad-dominant main/i.test(planText(injuredLower)) &&
       injuredLower.weeklyPlan.some((session) =>
         session.strengthPattern === 'push' || session.strengthPattern === 'pull' || session.strengthPattern === 'upper_combined'),

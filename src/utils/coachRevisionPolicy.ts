@@ -12,6 +12,7 @@
  * two-representations disease the revision pipeline was built to kill.
  */
 
+import type { Workout } from '../types/domain';
 import { getMondayForDate } from './sessionResolver';
 import type { ResolvedDay } from './sessionResolver';
 import {
@@ -31,14 +32,18 @@ import {
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { projectVisibleDay } from './visibleProgramProjection';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
+import type { G1LandingRouteId } from './planChangeTypes';
 
 function canonicalTemplateSectionSignature(
   templateId: string,
   date: string,
   todayISO: string,
+  transformTemplate?: (template: Workout) => Workout,
 ): string | null {
-  const workout = buildCoachRevisionTemplateWorkout(templateId, date);
-  if (!workout) return null;
+  const built = buildCoachRevisionTemplateWorkout(templateId, date);
+  if (!built) return null;
+  const workout = transformTemplate ? transformTemplate(built) : built;
   let canonical;
   try {
     canonical = validateLiveWorkoutWrite(date, workout);
@@ -68,6 +73,18 @@ function canonicalTemplateSectionSignature(
 export function coachRevisionValidationPolicyForWeek(
   visibleWeek: ResolvedDay[],
   todayISO: string,
+  /**
+   * The G-1 route the athlete answered with, if any.
+   *
+   * Added content is authorised by BYTE-EXACT match against what the registry
+   * can materialise — that is what keeps free-form sections unaddable. A route
+   * transforms the registry template (half the sets, or accessories only), so
+   * the answered content matches nothing and the athlete's own choice comes
+   * back as "unknown strength section". The fix is not to loosen the match: it
+   * is to authorise the same registry templates AS ROUTED, which is still a
+   * closed set the app itself produces.
+   */
+  g1Route?: G1LandingRouteId,
 ) {
   const signatureFor = (templateId: string, date: string): string | null => {
     const section = buildCoachRevisionTemplateSection(templateId, date);
@@ -97,12 +114,26 @@ export function coachRevisionValidationPolicyForWeek(
     // Canonicalisation can be date/phase dependent, so compute every visible
     // date even for otherwise-static template builders.
     for (const date of weekDates) {
-      const signature = canonicalTemplateSectionSignature(
-        template.templateId,
-        date,
-        todayISO,
-      );
-      if (signature) standard.push(signature);
+      // Plain, and — when the athlete has answered the G-1 ask — the same
+      // template as their answer transforms it.
+      //
+      // THE EMPTY-DAY CASE IS WHY THIS IS HERE AND NOT ONLY IN THE LOOP BELOW.
+      // That loop begins `if (!day.workout) continue;`, so a day with nothing
+      // on it authorised the plain template and nothing else. Sam binned his
+      // G-1 session, answered the ask on the next add, and the answer came back
+      // `unknown_section_id` — the app refusing content it had just offered
+      // him. A day with nothing on it is exactly the day an add is for.
+      for (const route of g1Route ? [undefined, g1Route] : [undefined]) {
+        const signature = canonicalTemplateSectionSignature(
+          template.templateId,
+          date,
+          todayISO,
+          g1RouteTemplateTransform({
+            kind: 'add_template', date, templateId: template.templateId, g1Route: route,
+          }),
+        );
+        if (signature) standard.push(signature);
+      }
     }
   }
   // A template stacked onto an accepted container can legitimately acquire a
@@ -115,21 +146,23 @@ export function coachRevisionValidationPolicyForWeek(
     if (!day.workout) continue;
     for (const template of listCoachRevisionTemplates()) {
       for (const kind of ['add_template', 'swap_template'] as const) {
-        const candidate = materializeCanonicalPlanChangeCandidate({
-          change: {
-            kind,
-            date: day.date,
-            templateId: template.templateId,
-          },
-          currentDay: day,
-          todayISO,
-          canonicalizeWorkout: (date, workout) =>
-            validateLiveWorkoutWrite(date, workout),
-        });
-        if (candidate.ok === false) continue;
-        for (const section of candidate.projectedDay.workout?.sections ?? []) {
-          if (templateIdFromSection(section) !== template.templateId) continue;
-          standard.push(coachRevisionSectionBodySignature(section));
+        // Plain, and — when the athlete has answered the G-1 ask — the same
+        // template as their answer transforms it. Both are registry-derived.
+        for (const route of g1Route ? [undefined, g1Route] : [undefined]) {
+          const change = { kind, date: day.date, templateId: template.templateId, g1Route: route };
+          const candidate = materializeCanonicalPlanChangeCandidate({
+            change,
+            currentDay: day,
+            todayISO,
+            canonicalizeWorkout: (date, workout) =>
+              validateLiveWorkoutWrite(date, workout),
+            transformTemplate: g1RouteTemplateTransform(change),
+          });
+          if (candidate.ok === false) continue;
+          for (const section of candidate.projectedDay.workout?.sections ?? []) {
+            if (templateIdFromSection(section) !== template.templateId) continue;
+            standard.push(coachRevisionSectionBodySignature(section));
+          }
         }
       }
     }

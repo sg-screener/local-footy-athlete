@@ -4,7 +4,6 @@ import { Text } from './common/Text';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import type { MobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
-import type { MobilityFlowMovement } from '../data/mobilityFlowTemplates';
 import type { PoolExercise } from '../data/exercisePools';
 
 interface MobilityPrehabFlowSectionProps {
@@ -44,7 +43,7 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
         onPress={() => setExpanded((prev) => !prev)}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`Mobility and prehab flow, ${flow.movementCount} movements, about ${flow.durationMinutes} minutes`}
+        accessibilityLabel={`Mobility and prehab flow, ${flow.movementCount} movements, optional`}
         style={({ pressed }) => [styles.header, pressed && { opacity: 0.7 }]}
         testID="mobility-prehab-flow-toggle"
       >
@@ -52,8 +51,18 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
           <Text style={styles.title}>
             Mobility &amp; Prehab{done ? ' ✓' : ''}
           </Text>
+          {/*
+            NO MINUTES CLAIM ANY MORE. The duration came from a pre-built bundle
+            that no longer exists; a composed flow's length varies with the
+            athlete's equipment (it SHRINKS rather than padding), so a promised
+            "~N min" would be a signed sentence that can lie — the same argument
+            Sam accepted for the Mobility door's description.
+
+            PROPOSED, NOT SIGNED. Recorded in
+            docs/COPY_SHEET_RULINGS_2026-07-30.md alongside batch 5c.
+          */}
           <Text style={styles.summary}>
-            {flow.movementCount} movements · ~{flow.durationMinutes} min · optional
+            {flow.movementCount} movements · optional
           </Text>
         </View>
         <Text style={styles.chevron}>{expanded ? '−' : '+'}</Text>
@@ -61,26 +70,19 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
 
       {expanded ? (
         <View style={styles.body}>
-          <Text style={styles.templateName}>{flow.template.name}</Text>
-          {flow.template.movements.map((movement, index) => (
+          {/*
+            ONE LIST. It used to be a bundle's name, the bundle's movements, and a
+            "Primer" group of hand-mapped prehab picks. The bundles are retired and
+            the primers went with them — D17's menus carry authored prehab slots —
+            so what is left is Sam's movements at Sam's doses.
+          */}
+          {flow.movements.map(({ exercise }) => (
             <MovementRow
-              key={`flow-movement-${index}`}
-              name={movement.name}
-              dose={movementDose(movement)}
+              key={`flow-movement-${exercise.id}`}
+              name={exercise.name}
+              dose={movementDose(exercise)}
             />
           ))}
-          {flow.primers.length > 0 ? (
-            <>
-              <Text style={styles.primerLabel}>Primer</Text>
-              {flow.primers.map((primer) => (
-                <MovementRow
-                  key={`flow-primer-${primer.id}`}
-                  name={primer.name}
-                  dose={primerDose(primer)}
-                />
-              ))}
-            </>
-          ) : null}
 
           <Pressable
             onPress={() => setDone((prev) => !prev)}
@@ -118,23 +120,12 @@ function range(min: number | undefined, max: number | undefined): string {
   return low === high ? `${low}` : `${low}-${high}`;
 }
 
-function movementDose(movement: MobilityFlowMovement): string {
-  const sets = movement.sets && movement.sets > 1 ? `${movement.sets} × ` : '';
+/** The pool entry's OWN dose, rendered. Nothing here chooses a number. */
+function movementDose(movement: PoolExercise): string {
+  const sets = movement.sets > 1 ? `${movement.sets} × ` : '';
   const side = movement.perSide ? ' / side' : '';
-  if (movement.prescriptionType === 'duration') {
-    return `${sets}${range(movement.durationSecondsMin, movement.durationSecondsMax)}s${side}`;
-  }
-  if (movement.prescriptionType === 'breathing_reps') {
-    return `${sets}${range(movement.repsMin, movement.repsMax)} breaths${side}`;
-  }
-  return `${sets}${range(movement.repsMin, movement.repsMax)}${side}`;
-}
-
-function primerDose(primer: PoolExercise): string {
-  const sets = primer.sets > 1 ? `${primer.sets} × ` : '';
-  const side = primer.perSide ? ' / side' : '';
-  const unit = primer.prescriptionType === 'duration' ? 's' : '';
-  return `${sets}${range(primer.repsMin, primer.repsMax)}${unit}${side}`;
+  const unit = movement.prescriptionType === 'duration' ? 's' : '';
+  return `${sets}${range(movement.repsMin, movement.repsMax)}${unit}${side}`;
 }
 
 const styles = StyleSheet.create({
@@ -159,23 +150,6 @@ const styles = StyleSheet.create({
   chevron: { color: '#7A7A7A', fontSize: 20, fontWeight: '400' },
 
   body: { paddingBottom: spacing.md, gap: 6 },
-  templateName: {
-    color: '#5A5A5A',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  primerLabel: {
-    color: '#5A5A5A',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginTop: spacing.sm,
-    marginBottom: 2,
-  },
   movementRow: {
     flexDirection: 'row',
     alignItems: 'baseline',

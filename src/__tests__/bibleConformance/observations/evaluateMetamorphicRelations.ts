@@ -17,8 +17,7 @@ const BASE_PROFILE = {
   conditioningLevel: 'Good' as const, sprintExposure: 'Occasionally' as const,
   recentTrainingLoad: 'Very consistent' as const, injuries: [], seasonPhase: 'In-season' as const,
   trainingDaysPerWeek: 5, preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const,
-  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const,
-  teamTrainingIntensity: 'Hard' as const, teamTrainingDuration: '90 minutes' as const,
+  teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'] as const, teamTrainingDuration: '90 minutes' as const,
   usualGameDay: 'Saturday' as const, gameDay: 'Saturday' as const, trainingLocation: 'Commercial gym' as const, equipment: ['Full Gym'],
 };
 
@@ -150,6 +149,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
     const high = buildCoachingPlan(onboardingToCoachingInputs({ ...BASE_PROFILE } as any));
     const low = buildCoachingPlan(onboardingToCoachingInputs({
       ...BASE_PROFILE, recentTrainingLoad: 'Hardly at all', conditioningLevel: 'Poor',
+      teamTrainingIntensity: 'Hard',
       sprintExposure: 'No sprint training',
     } as any));
     const highHard = high.weeklyPlan.filter((entry) => entry.isHardExposure).length;
@@ -163,7 +163,7 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
   if (spec.id === 'rehydrate-preserves-contract') return pass(spec, slice4('canonical-program-rehydrate'), true, 'real rehydrate trace');
   if (spec.id === 'rehydrate-twice-idempotent') return pass(spec, slice4('canonical-program-rehydrate'), true, 'double rehydrate trace');
   if (spec.id === 'noop-rebuild-equivalent') return pass(spec, slice4('noop-inseason-week-rebuild'), true, 'rebuild trace');
-  if (spec.id === 'repeat-preserves-source') return pass(spec, slice4('repeat-rich-week'), true, 'repeat trace');
+  if (spec.id === 'repeat-preserves-source') return pass(spec, slice4('week-overlay-copy-rich-week'), true, 'repeat trace');
   if (spec.id === 'ai-deterministic-same-invariants') return pass(spec, slice4('generation-ai-fallback-equivalence'), true, 'generation equivalence trace');
   if (spec.id === 'game-sat-to-sun-spacing') {
     const sat = plannedFor({ game: 'Saturday', days: 5 });

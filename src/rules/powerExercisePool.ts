@@ -212,7 +212,18 @@ function hasEquipment(
 ): boolean {
   if (entry.equipmentRequired.length === 0) return true;
   const owned = new Set(available.map((item) => item.trim().toLowerCase()));
-  return entry.equipmentRequired.every((needed) => owned.has(needed.trim().toLowerCase()));
+  // Requirements resolve through the SAME mapper the availability check uses,
+  // so an authored string like 'Box' meets the athlete's `plyo_box` answer.
+  // The literal comparison this replaces could never match a resolved tag,
+  // which kept Depth Jumps unselectable for every athlete until Sam's audit
+  // ruling (2026-07-31) made the box askable.
+  return entry.equipmentRequired.every((needed) => {
+    if (owned.has(needed.trim().toLowerCase())) return true;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { equipmentTagsForRequirement } = require('../utils/equipmentAvailability');
+    const tags = equipmentTagsForRequirement(needed) as readonly string[] | null;
+    return !!tags && tags.some((tag) => owned.has(tag));
+  });
 }
 
 /**

@@ -23,7 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { EXERCISE_CUES, getExerciseCue } from '../data/exerciseCues';
 import { CONDITIONING_META } from '../data/exerciseTags';
-import { POOL_REGISTRY } from '../data/exercisePools';
+import { MOBILITY_POOL, POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
   resolveLoadAuthority,
@@ -50,7 +50,6 @@ import {
   enforceCuratedAddonCueContract,
   enforceCuratedCueContract,
 } from '../rules/curatedCueContract';
-import { MOBILITY_FLOW_TEMPLATES } from '../data/mobilityFlowTemplates';
 import { recoveryAddonExerciseVocabulary } from '../utils/recoveryAddonBuilder';
 
 const src = path.resolve(__dirname, '..');
@@ -424,10 +423,11 @@ console.log('\n[11] The builder-inline text class — add-on and flow rows sourc
   // it was displacing.)
   //
   // The class is killed by CONSTRUCTION, not by deleting fifteen strings: the
-  // `notes` field is gone from `RecoveryAddonExercise` and `MobilityFlowMovement`,
-  // and `localMeta` — which let a flow movement ship its own name AND its own text,
-  // bypassing the vocabulary entirely — is gone with it. A field that does not
-  // exist cannot be repopulated by a future patch.
+  // `notes` field is gone from `RecoveryAddonExercise`, and the whole
+  // `MobilityFlowMovement` type went with the flow bundles on 2026-07-30 — along
+  // with `localMeta`, which had let a flow movement ship its own name AND its own
+  // text, bypassing the vocabulary entirely. A field that does not exist cannot be
+  // repopulated by a future patch, and neither can a module.
   // Comments stripped throughout: retiring a channel means retiring the CODE,
   // and the prose that records why necessarily quotes what it retired.
   const codeOf = (relative: string): string =>
@@ -435,7 +435,6 @@ console.log('\n[11] The builder-inline text class — add-on and flow rows sourc
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/[^\n]*/g, '');
   const builder = codeOf('utils/recoveryAddonBuilder.ts');
-  const templates = codeOf('data/mobilityFlowTemplates.ts');
   const domain = codeOf('types/domain.ts');
 
   ok(
@@ -454,22 +453,23 @@ console.log('\n[11] The builder-inline text class — add-on and flow rows sourc
       !/export interface RecoveryAddonExercise \{[^}]*notes/.test(domain),
   );
   ok(
-    'MobilityFlowMovement carries neither notes nor a localMeta escape hatch',
-    !/export interface MobilityFlowMovement \{[^}]*notes/.test(templates) &&
-      !/localMeta/.test(templates),
-    'localMeta let a movement bypass the curated vocabulary with its own text',
+    'the flow-bundle module is gone, and with it notes and localMeta',
+    !fs.existsSync(path.join(src, 'data/mobilityFlowTemplates.ts')),
+    'localMeta let a movement bypass the curated vocabulary with its own text; the '
+      + 'module that carried it is retired, not merely emptied',
   );
 
   // The positive half: everything those rows can name must actually HAVE curated
   // text, or retiring the inline strings would have traded uncurated text for no
   // text. Swept over the real content, not a fixture.
-  const flowNames = new Set<string>();
-  for (const template of MOBILITY_FLOW_TEMPLATES) {
-    for (const movement of template.movements) flowNames.add(movement.name);
-  }
-  const cuelessFlow = [...flowNames].filter((name) => buildCueText(name) === null);
+  // The composed flow draws from MOBILITY_POOL, so the sweep is over the pool the
+  // draw can reach rather than over ten groupings of it. Strictly wider: a bundle
+  // only ever named a subset.
+  const cuelessFlow = MOBILITY_POOL
+    .map((entry) => entry.name)
+    .filter((name) => buildCueText(name) === null);
   ok(
-    'every mobility-flow movement resolves a curated cue',
+    'every composable mobility movement resolves a curated cue',
     cuelessFlow.length === 0,
     `no curated cue: ${cuelessFlow.join(', ')}`,
   );

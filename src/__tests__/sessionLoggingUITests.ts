@@ -25,7 +25,14 @@ function source(file: string): string {
   return fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', file), 'utf8');
 }
 
-const classic = source('DayWorkoutScreen.tsx');
+// TASK 6 (buttons/UI unit, 2026-07-31): `DayWorkoutScreen.tsx`'s Classic render
+// layer is DELETED — it was unreachable behind a hardcoded `DESIGN_VERSION` and
+// was the last consumer of the day-detail composition the one-projection ruling
+// retires (see that file's header). Every assertion below that read `classic`
+// had a V2 counterpart asserting the same behaviour on the surface that ships;
+// those counterparts are untouched, so nothing this suite proved about the
+// LIVE screen stopped being proved. What went with the code is the code's own
+// markup.
 const v2 = source('DayWorkoutScreenV2.tsx');
 const feedbackPanel = fs.readFileSync(
   path.resolve(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'),
@@ -49,15 +56,11 @@ const trunkSupportSection = fs.readFileSync(
 );
 
 console.log('\n=== 1. Main finish CTA is not gated by team training ===');
-assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(classic), 'Classic finish CTA is not hidden by team training');
 assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(v2), 'V2 finish CTA is not hidden by team training');
-assert(/title="Finish Session"/.test(classic), 'Classic renders Finish Session');
 assert(/<FinishMoment onPress=\{handleFinishWorkout\}/.test(v2), 'V2 renders FinishMoment from shared finish handler');
 
 console.log('\n=== 2. Team Training card does not replace logging path ===');
-assert(!/Log Team Training/.test(classic), 'Classic Team Training card has no replacement log button');
 assert(!/Log Team Training/.test(v2), 'V2 Team Training card has no replacement log button');
-assert(/teamTrainingCard/.test(classic), 'Classic still renders team training card styling');
 assert(/testID="team-training-section"/.test(v2), 'V2 still renders team training information block');
 
 console.log('\n=== 3. Component reasons render under component questions ===');
@@ -133,12 +136,6 @@ assert(
 );
 
 console.log('\n=== 6. Power primer is visible before the main workout in both screens ===');
-const classicPowerCall = classic.indexOf('<PowerPrimerSection block={workout.powerBlock} />');
-const classicMainBranch = classic.indexOf('{isConditioning ? (', classicPowerCall);
-assert(
-  classicPowerCall >= 0 && classicMainBranch > classicPowerCall,
-  'Classic renders powerBlock before conditioning/recovery/strength work',
-);
 // V2 took the D13 one-list template (2026-07-25): power is no longer a box the
 // screen positions above a branch, it is the first ITEM the composition owner
 // emits. The ordering proof moved with it — see sessionTemplateOneListTests §2.
@@ -150,7 +147,6 @@ assert(
   /buildSessionTemplate/.test(v2) && !/<PowerPrimerSection/.test(v2),
   'V2 gets power placement from the composition owner, not from its own branch order',
 );
-assert(/workout\.powerBlock\?\.title/.test(classic), 'Classic header summary includes the power block title');
 assert(/workout\.powerBlock\?\.title/.test(v2), 'V2 header summary includes the power block title');
 assert(/testID="power-primer-section"/.test(powerPrimerSection), 'power primer has a visible test seam');
 assert(/POWER \/ EXPLOSIVE PRIMER/.test(powerPrimerSection), 'power section is labelled clearly');
@@ -165,10 +161,6 @@ assert(/option\.sets/.test(powerPrimerSection) && /option\.repsMin/.test(powerPr
 assert(/block\.notes\.map/.test(powerPrimerSection), 'power notes/rest copy are rendered');
 
 console.log('\n=== 7. Trunk/support is visible and explanation UI is removed ===');
-assert(
-  /<TrunkSupportSection rows=\{supportExercises\} \/>/.test(classic),
-  'Classic renders the resolved trunk/support rows in their own section',
-);
 // V2 took the D13 one-list template (2026-07-25): trunk rows are no longer a
 // section, they are Midline-badged rows inside the single list. That the rows
 // still REACH the athlete is proved by sessionTemplateOneListTests §2/§7.
@@ -180,16 +172,8 @@ assert(/testID="trunk-support-section"/.test(trunkSupportSection), 'trunk/suppor
 assert(/>Trunk \/ Support</.test(trunkSupportSection), 'trunk/support section is labelled honestly');
 assert(/row\?\.exercise\?\.name/.test(trunkSupportSection), 'trunk/support exercise names are rendered');
 assert(
-  !/SessionExplanationBanner|Why this session/i.test(classic),
-  'Classic has no Why this session link or explanation panel',
-);
-assert(
   !/SessionExplanationBanner|Why this session/i.test(v2),
   'V2 has no Why this session link or explanation panel',
-);
-assert(
-  /conditioningExercises\.map/.test(classic),
-  'Classic conditioning phases render only resolved conditioning rows',
 );
 // V2 took the D13 one-list template (2026-07-25): conditioning rows arrive as
 // template items whose rows the composition owner resolved from
@@ -198,17 +182,9 @@ assert(
   /<ConditioningPhaseRow[\s\S]{0,80}exercise=\{item\.row\}/.test(v2),
   'V2 conditioning phases render only the rows the composition owner resolved',
 );
-const classicConditioningRenderer = classic.slice(
-  classic.indexOf('const renderConditioningRow ='),
-  classic.indexOf('return (', classic.indexOf('const renderConditioningRow =') + 1000),
-);
 const v2ConditioningRenderer = v2.slice(
   v2.indexOf('function ConditioningRow('),
   v2.indexOf('function TeamTrainingBanner', v2.indexOf('function ConditioningRow(')),
-);
-assert(
-  !/weightControl|prescribedWeightKg|formatWeight/.test(classicConditioningRenderer),
-  'Classic conditioning rows never render kilogram controls',
 );
 assert(
   !/weightControl|prescribedWeightKg|formatWeight/.test(v2ConditioningRenderer),

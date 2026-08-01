@@ -11,7 +11,6 @@ import type {
   TrainingLocation,
 } from '../types/domain';
 import type { EquipmentClass } from './loadEstimation';
-import { inferEquipment } from './sessionBuilder';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -24,25 +23,15 @@ import {
 import { todayISOLocal } from './appDate';
 
 export type EquipmentAvailabilityProfile =
-  Pick<OnboardingData, 'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness'> | null | undefined;
+  Pick<
+    OnboardingData,
+    'equipment' | 'equipmentSelectionCompleteness' | 'equipmentAnswer'
+  > | null | undefined;
 
-export type TemporaryEquipmentPresetId =
-  | 'bodyweight_only'
-  | 'dumbbells_only'
-  | 'home_hotel_gym'
-  | 'no_barbell_rack'
-  | 'no_machines_cables'
-  | 'no_erg_cardio'
-  | 'back_to_normal';
-
-export interface TemporaryEquipmentPreset {
-  id: TemporaryEquipmentPresetId;
-  label: string;
-  sub: string;
-  mode?: ActiveEquipmentConstraint['mode'];
-  tags: readonly EquipmentTag[];
-  clearsActiveEquipment?: boolean;
-}
+// The seven TEMPORARY_EQUIPMENT_PRESETS are RETIRED (Sam's ruling 5,
+// 2026-07-31): the this-week flow is expressed against the athlete's OWN kit
+// (EquipmentLimitationSheet + the set_equipment_modifier decision payload),
+// never a preset menu nobody signed.
 
 export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'bodyweight',
@@ -56,6 +45,7 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'pullup_bar',
   'kettlebell',
   'machine',
+  'plyo_box',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -110,58 +100,6 @@ export const EQUIPMENT_CHECKLIST_OPTION_TAGS: Readonly<Record<string, readonly E
   ...CURRENT_CHECKLIST_OPTION_TAGS,
 };
 
-export const TEMPORARY_EQUIPMENT_PRESETS: readonly TemporaryEquipmentPreset[] = [
-  {
-    id: 'bodyweight_only',
-    label: 'Bodyweight only',
-    sub: 'Use bodyweight options this week',
-    mode: 'only',
-    tags: ['bodyweight'],
-  },
-  {
-    id: 'dumbbells_only',
-    label: 'Dumbbells only',
-    sub: 'Use dumbbell/bodyweight options this week',
-    mode: 'only',
-    tags: ['bodyweight', 'dumbbells'],
-  },
-  {
-    id: 'home_hotel_gym',
-    label: 'Home / hotel gym',
-    sub: 'Use bodyweight, dumbbells and bands this week',
-    mode: 'only',
-    tags: ['bodyweight', 'dumbbells', 'bands'],
-  },
-  {
-    id: 'no_barbell_rack',
-    label: 'No barbell/rack',
-    sub: 'Avoid barbell work this week',
-    mode: 'without',
-    tags: ['barbell'],
-  },
-  {
-    id: 'no_machines_cables',
-    label: 'No machines/cables',
-    sub: 'Avoid machine and cable work this week',
-    mode: 'without',
-    tags: ['machine', 'cables'],
-  },
-  {
-    id: 'no_erg_cardio',
-    label: 'No erg/cardio machines',
-    sub: 'Avoid cardio-machine options this week',
-    mode: 'without',
-    tags: ['bike_or_treadmill'],
-  },
-  {
-    id: 'back_to_normal',
-    label: 'Equipment available again',
-    sub: 'End the temporary equipment restriction after the program is restored',
-    tags: [],
-    clearsActiveEquipment: true,
-  },
-];
-
 function addUnique(tags: EquipmentTag[], next: readonly EquipmentTag[]): void {
   for (const tag of next) {
     if (!tags.includes(tag)) tags.push(tag);
@@ -191,20 +129,26 @@ const LEGACY_POSITIVE_KEYS = new Set([
 ]);
 
 const ALL_CONDITIONING_MODALITIES: readonly ConditioningEquipmentModality[] = [
-  'bike', 'row', 'ski', 'treadmill',
+  'bike_erg', 'air_bike', 'row', 'ski', 'treadmill',
 ];
 
-const LOCATION_CONDITIONING_MODALITIES: Readonly<Record<TrainingLocation, readonly ConditioningEquipmentModality[]>> = {
-  'Commercial gym': ALL_CONDITIONING_MODALITIES,
-  'Club gym': ALL_CONDITIONING_MODALITIES,
-  'Home gym': [],
-  Outdoor: [],
-};
+// LOCATION_CONDITIONING_MODALITIES is DELETED (Sam's ruling 4, 2026-07-31).
+// It granted every athlete all four conditioning machines off a location
+// nobody was ever asked, which is how a ski erg reached athletes without one.
+// Modalities now come only from the athlete's answer or their own checklist.
 
 export type EquipmentCapabilitySource =
-  | 'location_baseline'
-  | 'legacy_positive_plus_location'
-  | 'complete_selection';
+  /** The typed `equipmentAnswer` decision — the only path new saves take. */
+  | 'athlete_answer'
+  /** A legacy explicitly-complete checklist, lifted at read (L15). */
+  | 'complete_selection'
+  /** A legacy positive-only checklist: its OWN tags lift, nothing is added.
+   * The location union that used to ride on this branch is deleted — an
+   * athlete's kit is what they said, never what a constant guessed. */
+  | 'legacy_positive_lift'
+  /** No equipment input of any kind. Bodyweight floor for reads; generation
+   * REFUSES rather than programming a kit nobody declared. */
+  | 'unanswered_floor';
 
 export interface ResolvedEquipmentCapabilities {
   tags: EquipmentTag[];
@@ -233,7 +177,11 @@ function conditioningModalitiesForOption(raw: string): readonly ConditioningEqui
   if (/^(full_gym|gym|fullgym|cardio_equipment)$/.test(normalized)) {
     return ALL_CONDITIONING_MODALITIES;
   }
-  if (/^(bike|stationary_bike|assault_bike|air_bike|bikeerg|bike_erg)$/.test(normalized)) return ['bike'];
+  // Legacy checklist options predate the bike split (ruling 2, 2026-07-31):
+  // an assault/air-bike option lifts to air_bike, every other bike wording to
+  // bike_erg — the lift keeps what was said, it does not grant the sibling.
+  if (/^(assault_bike|air_bike|airbike)$/.test(normalized)) return ['air_bike'];
+  if (/^(bike|stationary_bike|bikeerg|bike_erg)$/.test(normalized)) return ['bike_erg'];
   if (/^(rowerg|row_erg|rower|rowing_erg)$/.test(normalized)) return ['row'];
   if (/^(skierg|ski_erg)$/.test(normalized)) return ['ski'];
   if (/^(treadmill)$/.test(normalized)) return ['treadmill'];
@@ -291,6 +239,9 @@ export function equipmentTagsForRequirement(
     return ['bike_or_treadmill'];
   }
   if (/^(foam_roller)$/.test(normalized)) return ['foam_roller'];
+  // Sam's audit ruling 1, 2026-07-31: the box is askable, so the requirement
+  // maps instead of being unanswerable.
+  if (/^(box|plyo_box|plyometric_box)$/.test(normalized)) return ['plyo_box'];
   if (/^(bodyweight|none|no_equipment)$/.test(normalized)) return ['bodyweight'];
 
   const mapped = tagsForChecklistOption(value);
@@ -310,10 +261,6 @@ export function equipmentRequirementsAreAvailable(
     if (tags.length > 0 && !tags.some((tag) => availableSet.has(tag))) return false;
   }
   return true;
-}
-
-function fallbackTrainingLocation(profile: EquipmentAvailabilityProfile): TrainingLocation {
-  return profile?.trainingLocation ?? 'Commercial gym';
 }
 
 function localTodayISO(): string {
@@ -399,39 +346,6 @@ export function temporaryEquipmentConstraintIdForDate(dateISO: string): string {
   return `equipment-temporary:${startOfWeekISO(dateISO)}`;
 }
 
-export function temporaryEquipmentPresetById(
-  presetId: TemporaryEquipmentPresetId,
-): TemporaryEquipmentPreset {
-  const preset = TEMPORARY_EQUIPMENT_PRESETS.find((candidate) => candidate.id === presetId);
-  if (!preset) {
-    throw new Error(`Unknown temporary equipment preset: ${presetId}`);
-  }
-  return preset;
-}
-
-export function buildTemporaryEquipmentConstraint(args: {
-  presetId: Exclude<TemporaryEquipmentPresetId, 'back_to_normal'>;
-  date: string;
-  todayISO?: string;
-  source?: ActiveEquipmentConstraint['source'];
-}): ActiveEquipmentConstraint {
-  const preset = temporaryEquipmentPresetById(args.presetId);
-  if (!preset.mode || preset.clearsActiveEquipment) {
-    throw new Error(`Temporary equipment preset cannot build a constraint: ${args.presetId}`);
-  }
-  return buildActiveEquipmentConstraint({
-    id: temporaryEquipmentConstraintIdForDate(args.date),
-    mode: preset.mode,
-    tags: preset.tags,
-    source: args.source ?? 'tap',
-    startDate: args.date,
-    nowISO: args.todayISO,
-    scope: 'this_week',
-    modifierAffects: ['current_week'],
-    reasonLabel: preset.label,
-  });
-}
-
 export function upsertActiveEquipmentConstraint(
   constraint: ActiveEquipmentConstraint,
 ): {
@@ -497,29 +411,76 @@ function applyEquipmentConstraints(
   return tags;
 }
 
+/**
+ * Has this athlete ever ANSWERED the equipment question?
+ *
+ * True for the typed `equipmentAnswer` (the door being built for it is the
+ * onboarding step + profile surface), and for a legacy explicitly-complete
+ * selection — a real decision written by the coach baseline door, lifted at
+ * read under L15. FALSE for the unauthored 8-tag store constant and every
+ * other legacy shape: nobody answered those, and counting them would hand
+ * every existing install the fantasy gym as an "answer".
+ *
+ * This is the predicate generation's refusal reads: an unanswered profile is
+ * refused, never defaulted (Sam's ruling 2; the `DEFAULT_PROGRAM` precedent).
+ */
+export function equipmentAnswered(profile: EquipmentAvailabilityProfile): boolean {
+  if (profile?.equipmentAnswer) return true;
+  return profile?.equipmentSelectionCompleteness === 'complete';
+}
+
+function resolveAnsweredCapabilities(
+  answer: NonNullable<NonNullable<EquipmentAvailabilityProfile>['equipmentAnswer']>,
+  constraints: readonly unknown[] | null | undefined,
+  effectiveDate: string,
+): ResolvedEquipmentCapabilities {
+  const tags: EquipmentTag[] = ['bodyweight'];
+  for (const [tag, possession] of Object.entries(answer.tags)) {
+    if (possession === 'have') addUnique(tags, [tag as EquipmentTag]);
+  }
+  const modalities: ConditioningEquipmentModality[] = [];
+  for (const [modality, possession] of Object.entries(answer.modalities)) {
+    if (possession === 'have') modalities.push(modality as ConditioningEquipmentModality);
+  }
+
+  const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
+  const constrainedModalities = applyConditioningModalityConstraints(
+    modalities, constraints, effectiveDate,
+  );
+  const finalTags = constrainedModalities.length > 0
+    ? Array.from(new Set([...constrainedTags, 'bike_or_treadmill' as const]))
+    : constrainedTags.filter((tag) => tag !== 'bike_or_treadmill');
+  return {
+    tags: finalTags,
+    conditioningModalities: constrainedModalities,
+    selectionCompleteness: 'complete',
+    source: 'athlete_answer',
+  };
+}
+
 export function resolveEquipmentCapabilities(
   profile: EquipmentAvailabilityProfile,
   constraints?: readonly unknown[] | null,
   dateISO?: string,
 ): ResolvedEquipmentCapabilities {
   const effectiveDate = dateISO ?? localTodayISO();
+  // The typed decision outranks every legacy shape. On this path no location,
+  // constant or union branch contributes anything — the athlete's answer is
+  // the whole input, which is the point of the equipment unit.
+  if (profile?.equipmentAnswer) {
+    return resolveAnsweredCapabilities(profile.equipmentAnswer, constraints, effectiveDate);
+  }
+  // THE LEGACY READ-INGRESS LIFT (L15). A stored checklist contributes exactly
+  // the tags its own options name — the location union that used to ride on
+  // the incomplete branch is DELETED (Sam's ruling 4, 2026-07-31). It put a
+  // full commercial-gym kit and all four conditioning machines on 100% of
+  // athletes, because nothing ever collected the location it keyed on.
   const checklist = (profile?.equipment ?? [])
     .map((item) => String(item ?? '').trim())
     .filter(Boolean);
   const completeness = inferredSelectionCompleteness(profile, checklist);
-  const source: EquipmentCapabilitySource = checklist.length === 0
-    ? 'location_baseline'
-    : completeness === 'legacy_incomplete'
-      ? 'legacy_positive_plus_location'
-      : 'complete_selection';
   const tags: EquipmentTag[] = ['bodyweight'];
-  const location = fallbackTrainingLocation(profile);
   const modalities: ConditioningEquipmentModality[] = [];
-
-  if (checklist.length === 0 || completeness === 'legacy_incomplete') {
-    addUnique(tags, inferEquipment(location));
-    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
-  }
 
   let recognized = 0;
   for (const option of checklist) {
@@ -530,10 +491,11 @@ export function resolveEquipmentCapabilities(
     modalities.push(...conditioningModalitiesForOption(option));
   }
 
-  if (recognized === 0) {
-    addUnique(tags, inferEquipment(location));
-    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
-  }
+  const source: EquipmentCapabilitySource = recognized === 0
+    ? 'unanswered_floor'
+    : completeness === 'legacy_incomplete'
+      ? 'legacy_positive_lift'
+      : 'complete_selection';
 
   const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
   const constrainedModalities = applyConditioningModalityConstraints(
@@ -558,147 +520,13 @@ export function resolveEquipmentAvailability(
   return resolveEquipmentCapabilities(profile, constraints, dateISO).tags;
 }
 
-function sameEquipmentTagSet(
-  left: readonly EquipmentTag[],
-  right: readonly EquipmentTag[],
-): boolean {
-  return left.length === right.length && left.every((tag) => right.includes(tag));
-}
-
-export interface BaselineEquipmentSavePlan {
-  selectedEquipment: string[];
-  nextProfile: OnboardingData;
-  previousResolvedEquipment: EquipmentTag[];
-  nextResolvedEquipment: EquipmentTag[];
-  resolvedEquipmentChanged: boolean;
-  rebuildRequired: boolean;
-  message: 'Equipment updated. Your program was refreshed.' | 'Equipment saved.';
-}
-
-export interface BaselineEquipmentSaveResult extends BaselineEquipmentSavePlan {
-  profileUpdated: true;
-  refreshed: boolean;
-}
-
-export function buildBaselineEquipmentSavePlan(
-  profile: OnboardingData,
-  selectedEquipment: readonly string[],
-  dateISO: string = localTodayISO(),
-): BaselineEquipmentSavePlan {
-  const selected = selectedEquipment.map((item) => String(item));
-  const nextProfile: OnboardingData = {
-    ...profile,
-    equipment: selected,
-    equipmentSelectionCompleteness: 'complete',
-  };
-  const previousResolvedEquipment = resolveEquipmentAvailability(profile, null, dateISO);
-  const nextResolvedEquipment = resolveEquipmentAvailability(nextProfile, null, dateISO);
-  const resolvedEquipmentChanged = !sameEquipmentTagSet(
-    previousResolvedEquipment,
-    nextResolvedEquipment,
-  );
-  return {
-    selectedEquipment: selected,
-    nextProfile,
-    previousResolvedEquipment,
-    nextResolvedEquipment,
-    resolvedEquipmentChanged,
-    rebuildRequired: resolvedEquipmentChanged,
-    message: resolvedEquipmentChanged
-      ? 'Equipment updated. Your program was refreshed.'
-      : 'Equipment saved.',
-  };
-}
-
-interface SaveBaselineEquipmentSelectionInput {
-  profile: OnboardingData;
-  selectedEquipment: readonly string[];
-  dateISO?: string;
-  updateOnboardingData: (
-    data: Pick<OnboardingData, 'equipment' | 'equipmentSelectionCompleteness'>,
-  ) => void;
-  refreshProgram?: (nextProfile: OnboardingData) => void;
-}
-
-function saveBaselineEquipmentSelectionWithinTrace(
-  args: SaveBaselineEquipmentSelectionInput,
-  plan: BaselineEquipmentSavePlan,
-): BaselineEquipmentSaveResult {
-  if (plan.rebuildRequired) {
-    args.refreshProgram?.(plan.nextProfile);
-  }
-  args.updateOnboardingData({
-    equipment: plan.selectedEquipment,
-    equipmentSelectionCompleteness: 'complete',
-  });
-  return {
-    ...plan,
-    profileUpdated: true,
-    refreshed: plan.rebuildRequired && typeof args.refreshProgram === 'function',
-  };
-}
-
-/** Profile equipment save entry; diagnostics never retain the selected equipment values. */
-export function saveBaselineEquipmentSelection(
-  args: SaveBaselineEquipmentSelectionInput,
-): BaselineEquipmentSaveResult {
-  const dateISO = args.dateISO ?? localTodayISO();
-  const plan = buildBaselineEquipmentSavePlan(args.profile, args.selectedEquipment, dateISO);
-  const trace = beginAthleteActionTrace({
-    source: 'tap',
-    actionType: 'equipment_change',
-    route: 'equipment_settings_save',
-    currentWeekId: startOfWeekISO(dateISO),
-    targetDate: dateISO,
-    scope: 'baseline_equipment',
-  });
-  return runWithAthleteActionTrace(trace, () => {
-    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
-      parsedMutationType: 'baseline_equipment_change',
-      selectedEquipmentCount: plan.selectedEquipment.length,
-      previousEquipmentHash: athleteActionDiagnosticHash(plan.previousResolvedEquipment),
-      nextEquipmentHash: athleteActionDiagnosticHash(plan.nextResolvedEquipment),
-      resolvedEquipmentChanged: plan.resolvedEquipmentChanged,
-    });
-    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
-      selectedRoute: plan.rebuildRequired ? 'equipment_program_rebuild' : 'profile_only_save',
-      producer: 'saveBaselineEquipmentSelection',
-    });
-    try {
-      const result = saveBaselineEquipmentSelectionWithinTrace(args, plan);
-      const internalResultCode = result.rebuildRequired
-        ? 'equipment_updated_program_refreshed'
-        : 'equipment_saved_no_program_change';
-      emitAthleteActionEvent(trace, 'athlete_action_completed', {
-        outcome: result.rebuildRequired ? 'accepted_changed' : 'accepted_no_change',
-        internalResultCode,
-        profileUpdated: result.profileUpdated,
-        programRefreshed: result.refreshed,
-      });
-      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
-        uiSurface: 'equipment_settings',
-        uiOutcome: 'success',
-        internalResultCode,
-        finalUiMessageKey: result.rebuildRequired ? 'equipment_updated' : 'equipment_saved',
-      });
-      return result;
-    } catch (error) {
-      const rejectionCode = athleteActionErrorCode(error, 'equipment_save_unknown_error');
-      emitAthleteActionEvent(trace, 'athlete_action_failed', {
-        outcome: 'threw',
-        internalResultCode: 'equipment_save_failed',
-        originalRejectionCode: rejectionCode,
-        rejectionCodes: [rejectionCode],
-        firstFailingBoundary: 'saveBaselineEquipmentSelection',
-        failureCategory: classifyAthleteActionFailure(rejectionCode, 'equipment'),
-        validCandidateExisted: false,
-        previousStateRestored: true,
-        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
-      });
-      throw error;
-    }
-  });
-}
+// The baseline-equipment save door (saveBaselineEquipmentSelection and its
+// plan builder) is DELETED under L15. It wrote the legacy `equipment` +
+// completeness shape, and no product screen ever called it — the ownership
+// sheet's §1.4 finding. The profile surface commits the canonical
+// `equipment_answer` change through `commitProfileProgramTransaction`; the
+// coach chat's `baseline_equipment` producer is the one remaining legacy
+// writer, named and left for the LR-6 unit.
 
 export function equipmentTagsToSubstituteEquipmentClasses(
   tags: readonly EquipmentTag[] | null | undefined,

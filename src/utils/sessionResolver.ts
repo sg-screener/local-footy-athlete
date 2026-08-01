@@ -62,6 +62,10 @@ import {
 import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
 import type { SessionFeedback } from '../store/programStore';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import {
+  canonicalFixtureKindForResolvedPhase,
+  type FixtureAvailabilityKind,
+} from '../rules/fixtureConditionedAvailability';
 import { logger } from './logger';
 import {
   getProgramBlockStateForDate,
@@ -79,7 +83,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
-import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 
@@ -110,8 +114,17 @@ export interface ScheduleState {
    * 'Varies' is excluded).
    */
   gameDay?: GameDay;
-  /** Athlete readiness for conditioning caps. Defaults to 'medium'. */
-  readiness: ReadinessLevel;
+  /**
+   * Athlete capacity band for conditioning caps.
+   *
+   * `null` means the profile CANNOT be scored — not 'medium'. The consumers
+   * below read `state.readiness || 'medium'`, which is the pre-existing shape
+   * and is only reachable for a profile that HAS a program; generation refuses
+   * an unscoreable profile, so an unscoreable athlete has no week for these
+   * caps to modulate. Do not turn the null into a tier here (Sam, 2026-07-30):
+   * that is the silent default the rubric's fail-loud exists to kill.
+   */
+  readiness: ReadinessLevel | null;
   /** Session feedback keyed by ISO date. Used to feed feeling/patterns into progression. */
   sessionFeedback?: Record<string, SessionFeedback>;
   /** Logged strength history, newest first, when already available to the caller. */
@@ -356,6 +369,19 @@ export function canReplaceSession(
 ): boolean {
   if (!workout) return true;
 
+  // The athlete's own placement outranks every replacement this guard governs,
+  // and it is asked FIRST because it does not depend on which pass happened to
+  // put the session on the day — a placed session can render from any source.
+  if (!resolverMayDisplace(workout)) {
+    if (IS_DEV) {
+      logger.debug(
+        `[resolver] BLOCKED replacement of athlete-placed "${workout.name}" on ${date}`
+        + ` — context: ${context}`
+      );
+    }
+    return false;
+  }
+
   // Only protect template (engine-planned) and manual (coach-authored) sessions
   if (source !== 'template' && source !== 'manual') return true;
 
@@ -372,7 +398,11 @@ export function canReplaceSession(
   return true;
 }
 
-function createGameStub(dateStr: string, dow: number): Workout {
+function createGameStub(
+  dateStr: string,
+  dow: number,
+  variant: FixtureAvailabilityKind = 'game',
+): Workout {
   const now = new Date().toISOString();
   return {
     id: `calendar-game-${dateStr}`,
@@ -382,7 +412,11 @@ function createGameStub(dateStr: string, dow: number): Workout {
     description: 'Match day',
     durationMinutes: 120,
     intensity: 'High',
+    // LABEL ONLY (ruling 6-IV-4): the variant is a WORD channel for
+    // `dayIsPracticeMatch`, never a second workoutType — every `=== 'Game'`
+    // comparison (locks, invariants, proximity) keeps meaning what it means.
     workoutType: 'Game',
+    ...(variant === 'practice_match' ? { fixtureVariant: 'practice_match' as const } : {}),
     sessionTier: 'core',
     exercises: [],
     createdAt: now,
@@ -650,29 +684,65 @@ function applyGameProximity(
     },
   });
 
-  // G+1: day after a game → recovery (even if no template workout)
+  // G+1: the day after a game.
+  //
+  // AN EMPTY G+1 IS REST, NOT RECOVERY (Sam's charter, 2026-07-30). This branch
+  // used to read "even if no template workout" and materialise a recovery
+  // session onto a day nothing was planned for. The Bible's anchor is
+  // `g_plus_1_rest_or_recovery` — a DISJUNCTION the app was resolving on the
+  // athlete's behalf, which is the whole finding of the session-type survey.
+  //
+  // AND IT MADE THE DELETION DOOR LIE. Once the generator stopped filling spare
+  // days (the nine deleted recovery sites), G+1 had no template, so this derived
+  // one from nothing — and an athlete tapping Remove on that session got
+  // `visible_change_unverified`, because there was no stored thing to remove and
+  // the day re-derived identically. `athleteSessionDeletionTests` regression 6
+  // caught it on the Sunday-fixture scenario. A day whose content exists only as
+  // a derivation cannot be edited by a door that edits stored decisions.
+  //
+  // What is NOT changed here: when a real planned session sits on G+1, the
+  // proximity rule still applies. Replacing planned work with recovery is a
+  // second, heavier question — it protects the athlete from training the day
+  // after a game — and it is declared charter debt rather than settled in
+  // passing. See `rules/sessionTypeCharter.ts`, recovery/placement.
   const previousDate = shiftDate(date, -1);
-  if (gameDates.has(previousDate)) {
-    if (!templateWorkout || (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game')) {
+  if (gameDates.has(previousDate) && templateWorkout) {
+    if (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game') {
       // GUARD: never replace protected core exposure for virtual/recurring
       // proximity. Explicit calendar game/practice-match marks are different:
       // Bible G+1 wins, so the core session is dropped rather than made up.
-      if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate)) {
+      //
+      // AND never replace what the athlete put here. Sam's law is not about
+      // which side of the fixture the day falls on — the day after a game was
+      // eating athlete-placed sessions for exactly as long as the day before
+      // was, it just had no device report against it.
+      if (!resolverMayDisplace(templateWorkout) ||
+        (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate))) {
         if (IS_DEV) {
           logger.debug(
             `[resolver] BLOCKED G+1 recovery replacing protected core "${templateWorkout!.name}" on ${date}`
           );
         }
       } else {
-        const recovery = buildDerivedSession(
-          'recovery',
+        // THE DELETED TYPE IS NOT MATERIALISED (2026-08-01, device-pass
+        // fail 3). This used to build a `recovery` session named "Post-game
+        // recovery" — recovery is charter-deleted, and its authored contents
+        // ARE the mobility flows (the charter's own row: "the 10 mobility
+        // flow templates"). The Bible's G+1 protection stands — planned
+        // displaceable work is still replaced with easy movement the day
+        // after a game — but what lands is a MOBILITY session that names
+        // itself, not a type no door offers. The planned-work-on-G+1
+        // disjunction itself stays the charter's declared debt; this changes
+        // which WORD and which authored composition the protection uses.
+        const flush = buildDerivedSession(
+          'mobility',
           date,
           microcycleId,
-          'Post-game recovery',
+          'Post-game',
           athlete,
         );
         return {
-          ...recovery,
+          ...flush,
           derivedSessionProvenance: [fixtureDependency({
             origin: 'fixture_recovery',
             fixtureDate: previousDate,
@@ -701,38 +771,43 @@ function applyGameProximity(
     if (templateWorkout?.workoutType === 'Game') {
       return null;
     }
-    // SAM'S LAW (2026-07-28): athlete-placed content outranks derived filler.
-    // The athlete deliberately put this session on the day before their game
-    // and was warned about it by the ask-flow before it landed — the Gunshow is
-    // a filler regenerated every render and has no standing to overwrite a
-    // decision. Unconditional by design: the guard below is disabled for
-    // EXPLICIT fixtures, which is exactly how a practice-match week used to eat
-    // an athlete's moved session. Generation still never PLANS hard work here;
-    // this only concerns what the athlete places.
-    if (isAthletePlacedSession(templateWorkout)) {
+    // ── WHO OWNS THE DAY BEFORE A FIXTURE ────────────────────────────────
+    //
+    // SAM'S LAW (2026-07-28), extended by his rulings of 2026-07-30 (#4, #5):
+    // athlete-placed content outranks derived filler, and the G-1 ask-flow is
+    // the ONLY door onto this day. So there is exactly one question here, and
+    // the placement stamp answers it: did the athlete put this here?
+    //
+    // Two things used to answer it alongside the stamp, and both have been
+    // retired because neither is information about ownership:
+    //
+    //   * `!explicitGameDates.has(nextDate)` — the STORAGE FORM of the fixture.
+    //     An identical week behaved one way on a usual Saturday and another on
+    //     an explicit practice match, so whether a committed swap survived
+    //     depended on how the fixture happened to be recorded (ruling #5).
+    //   * `isProtectedCoreExposure(templateWorkout)` — the session's NAME and
+    //     TIER. That is `applyGameProximity` re-deciding ownership from a
+    //     heuristic, which ruling #4 forbids: it consults the stamp, it does
+    //     not re-decide. It also silently made G-1 non-light whenever
+    //     generation happened to plan a core exposure there, which is the
+    //     opposite of the Bible rule it was written next to.
+    //
+    // Required exposure displaced from G-1 is not lost — §18 owns the week's
+    // counts and relocates it, which is the pipeline doing its job rather than
+    // a render-time heuristic pre-empting it.
+    if (!resolverMayDisplace(templateWorkout)) {
       return null;
     }
-    // GUARD: never replace protected core exposure for virtual/recurring
-    // proximity. Explicit one-off games can move across week boundaries, and
-    // the Bible says G-1 must be light, so they may displace the core session.
-    if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(nextDate)) {
-      if (IS_DEV) {
-        logger.debug(
-          `[resolver] BLOCKED G-1 Gunshow replacing protected core "${templateWorkout!.name}" on ${date}`
-        );
-      }
-    } else {
-      // Everything else → Gunshow (derivedType key remains 'arms_pump')
-      return {
-        ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
-        derivedSessionProvenance: [fixtureDependency({
-          origin: 'fixture_proximity',
-          fixtureDate: nextDate,
-          relation: 'g_minus_1',
-          creditMetric: 'safe_session_content',
-        })],
-      };
-    }
+    // Everything the athlete did not place → Gunshow (derivedType 'arms_pump')
+    return {
+      ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
+      derivedSessionProvenance: [fixtureDependency({
+        origin: 'fixture_proximity',
+        fixtureDate: nextDate,
+        relation: 'g_minus_1',
+        creditMetric: 'safe_session_content',
+      })],
+    };
   }
 
   if (!templateWorkout) return null;
@@ -895,7 +970,15 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, null, 'rest');
   }
   if (mark === 'game') {
-    return buildDay(date, dow, today, createGameStub(date, dow), 'game');
+    // A calendar mark carries no variant of its own — the SEASON decides which
+    // word the fixture wears (`calendarStore` routes an in-season game and a
+    // pre-season practice match through the same mark). One predicate, shared
+    // with the engine's week mode.
+    return buildDay(
+      date, dow, today,
+      createGameStub(date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase)),
+      'game',
+    );
   }
   // 'noGame' is handled below during virtual-game injection: it suppresses
   // the virtual game on its own date but does not, by itself, block template
@@ -1012,13 +1095,33 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // AI-generated recovery workouts lack structured prescription fields (prescriptionType,
   // perSide, restSeconds). Replace them with deterministic pool-built sessions so every
   // recovery exercise has proper sets/duration/reps for the structured renderer.
+  // A recovery session the ATHLETE placed is not an AI-generated one missing
+  // its prescription fields — it is the session they chose, and rebuilding it
+  // from the pool replaces their content with the app's while keeping the
+  // shape close enough that nobody notices.
   if (
     templateWorkout &&
-    (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery')
+    resolverMayDisplace(templateWorkout) &&
+    (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery') &&
+    // A TYPED COMPOSED OPTIONAL SESSION IS NOT A LEGACY TEMPLATE (2026-08-01).
+    // This branch exists because AI-generated recovery templates lack
+    // structured prescription fields; a session `buildDerivedSession` composed
+    // (a mobility top-up, an athlete's Mobility add) already has them, and
+    // rebuilding it re-rolled its composition on every read — worse, the
+    // rebuilt id collided with the stored top-up's id in the bake-back pass,
+    // so a `sessionTier: 'optional'` top-up was silently re-stored at tier
+    // `recovery` (found by the absolutely-cooked bible cell). The typed marker
+    // is the boundary: carried, never inferred, and never rebuilt over.
+    !templateWorkout.composedOptionalKind
   ) {
+    // Recovery-tier templates are LEGACY ingress now (generation stopped
+    // minting the athlete-visible 'Recovery Session'; the allocator's safety
+    // demotions materialise as Mobility). Whatever recovery-shaped template
+    // still arrives is rebuilt as the thing its contents are — a mobility
+    // flow that names itself — never as the charter-deleted type's word.
     return buildDay(
       date, dow, today,
-      buildDerivedSession('recovery', date, templateMicrocycleId, 'Scheduled recovery - active', state.athleteContext),
+      buildDerivedSession('mobility', date, templateMicrocycleId, 'Scheduled mobility', state.athleteContext),
       'template',
     );
   }
@@ -1645,78 +1748,30 @@ export function resolveWeekWithConditioning(
     }
   }
 
-  // Pass 3: recovery placement on remaining empty days
-  // Count existing recovery sessions (including G+1 from game proximity)
-  let weekRecoveryCount = 0;
-  for (const day of result) {
-    if (day.workout?.workoutType === 'Recovery' || day.workout?.sessionTier === 'recovery') {
-      weekRecoveryCount++;
-    }
-  }
-
-  for (let i = 0; i < result.length; i++) {
-    const day = result[i];
-
-    // Only place recovery on truly empty days within the active block
-    if (day.workout !== null) continue;
-    if (day.source !== 'none') continue;
-    if (!blockStart || !blockEnd) continue;
-    if (day.date < blockStart || day.date > blockEnd) continue;
-
-    // HARD CONSTRAINT: never place sessions on unavailable days
-    if (!isDayAvailable(day.dayOfWeek)) continue;
-
-    // Compute game proximity for this date
-    const [y, m, d] = day.date.split('-').map(Number);
-    const dateMs = new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
-    let daysToGame: number | null = null;
-    let daysSinceGame: number | null = null;
-    for (const gd of gameDates) {
-      const [gy, gm, gdd] = gd.split('-').map(Number);
-      const gameMs = new Date(gy, gm - 1, gdd, 12, 0, 0, 0).getTime();
-      const diffDays = Math.round((gameMs - dateMs) / (1000 * 60 * 60 * 24));
-      if (diffDays > 0 && (daysToGame === null || diffDays < daysToGame)) {
-        daysToGame = diffDays;
-      }
-      if (diffDays < 0 && (daysSinceGame === null || -diffDays < daysSinceGame)) {
-        daysSinceGame = -diffDays;
-      }
-    }
-
-    // Check if high-tier conditioning was placed yesterday (stacking concern)
-    const yesterday = addDays(day.date, -1);
-    const recentHighTier = conditioningPlaced.some(
-      s => s.dateStr === yesterday && (s.tier === 'A' || s.tier === 'B-high'),
-    );
-
-    // Feedback pattern: prefer full rest over additional recovery
-    // if athlete has been reporting 'cooked' repeatedly and already has recovery
-    if (shouldPreferRest(weekPatternSummary, weekRecoveryCount)) {
-      continue; // leave this day empty — full rest
-    }
-
-    // Try recovery placement
-    const recoveryResult = resolveRecovery(
-      daysToGame,
-      daysSinceGame,
-      state.seasonPhase,
-      state.readiness || 'medium',
-      weekRecoveryCount,
-      recentHighTier,
-    );
-
-    if (recoveryResult) {
-      const recoveryWorkout = buildDerivedSession(
-        recoveryResult.derivedType,
-        day.date,
-        microcycleIdForDate(day.date, state),
-        `Scheduled recovery - ${recoveryResult.category}`,
-        state.athleteContext,
-      );
-      result[i] = buildDay(day.date, day.dayOfWeek, today, recoveryWorkout, 'recovery');
-      weekRecoveryCount++;
-    }
-  }
+  // ── PASS 3 IS GONE: THE NINTH RECOVERY PLACEMENT SITE ──
+  // BIBLE_ANCHOR: optional_placement_five_conditions
+  //
+  // It placed a derived recovery session on every remaining empty day, through
+  // `resolveRecovery(daysToGame, daysSinceGame, phase, readiness, count, ...)` — an
+  // app-invented rule with no authored source, on days nobody asked to fill.
+  //
+  // THE OPTIONAL PLACEMENT LAW (Sam, signed 2026-07-30, Bible §20.1) permits the app
+  // to place optional work only under a placement rule Sam authored, with composition
+  // Sam authored, visibly optional, binnable in one tap, and counting toward nothing.
+  // Recovery fails the first: there is no authored rule that says "fill the spare
+  // days with recovery". The charter deleted eight such sites in the generator; this
+  // was the ninth, in the RESOLVER, and it survived because nothing could see it —
+  // the generator filled every spare day first, so this pass had no empty day to
+  // claim.
+  //
+  // Landing R2/R3/R4/R5 is what made it visible: with the day-based accessory
+  // placements gone, empty days appeared and this pass immediately claimed one.
+  // `athleteSessionDeletionTests` regression 6 caught it as a G+1 recovery session
+  // the athlete could not delete — the resolver re-derived it on every read, so the
+  // deletion never reached the visible week. A derived session cannot be binned,
+  // which is condition 4 failing as well.
+  //
+  // Empty days stay empty. The athlete has the recovery door, and it is theirs.
 
   // ── Game-day LOCK invariant ──
   // If virtual game is enabled and the week has no explicit game mark, the

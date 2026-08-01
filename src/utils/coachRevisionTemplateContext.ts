@@ -61,8 +61,6 @@ function liveStoreProvider(): CoachRevisionTemplateContext {
       useCoachUpdatesStore.getState().activeConstraints ?? [];
     const todayISO = todayISOLocal();
 
-    const trainingLocation =
-      onboardingData?.trainingLocation || 'Commercial gym';
     const athlete: AthleteContext = onboardingData
       ? {
           injuries: onboardingData.injuries || [],
@@ -71,7 +69,6 @@ function liveStoreProvider(): CoachRevisionTemplateContext {
             activeConstraints,
             todayISO,
           ),
-          trainingLocation,
           onboardingData,
         }
       : DEFAULT_ATHLETE_CONTEXT;

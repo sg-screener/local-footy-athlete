@@ -5,7 +5,7 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { TeamTrainingDuration, TeamTrainingIntensity } from '../../types/domain';
+import { TeamTrainingIntensity } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
@@ -17,33 +17,29 @@ type TeamTrainingDurationScreenProps = NativeStackScreenProps<
 >;
 
 /**
- * Combined "What are team sessions like?" screen.
+ * "What are team sessions like?" — the intensity SEED.
  *
- * Duration + intensity collected in one pass. The screen renders two
- * clearly-separated sections ("HOW LONG?" / "HOW HARD?") using the shared
- * <SelectableTile /> primitive.
+ * DURATION WAS REMOVED HERE (Sam's ruling, 2026-07-30). The screen used to ask "HOW
+ * LONG?" as well, and the answer had no programming consumer anywhere in the app — the
+ * influence map found it reached this screen, the Review row and the coach prompt, and
+ * stopped. Sam's options were to give it a consumer or to stop asking; he chose to stop
+ * asking, so the athlete is asked one question here instead of two.
  *
- * Two different tile variants are used on purpose:
- *   • Duration row uses `variant="grid"` — "60 min" / "90 min" / "2 hrs"
- *     are compact, number-led labels, so the light chrome + lime text
- *     let the value dominate.
- *   • Intensity row uses the default `variant="card"` — each tile has a
- *     label AND a subtitle ("Match-level intensity"), so the fuller
- *     selected fill helps the two-line block read as a selected block.
+ * WHAT INTENSITY IS FOR NOW. It is the ESTIMATE SEED, and only that: the team-night size
+ * that actually drives programming is a rolling read of the last three LOGGED team nights
+ * (`rules/teamNightSize.ts`). This answer holds until the first of those exists, and then
+ * measurement takes over — the same estimate→measured shape as loads and the 2km TT.
  *
- * Continue is persistent: when incomplete, the button stays visible but
- * dimmed and the footer explains "Select duration and intensity".
+ * Intensity tiles use the default `variant="card"` — each has a label AND a subtitle
+ * ("Match-level intensity"), so the fuller selected fill helps the two-line block read as
+ * a selected block.
+ *
+ * Continue is persistent: when incomplete, the button stays visible but dimmed.
  *
  * Presentation labels (Light / Moderate / Hard / Very hard) map to the
  * stored enum values (`Light` / `Moderate` / `Hard` / `Very intense`) —
  * downstream load-estimation logic reads the enum, not the label.
  */
-
-const DURATION_OPTIONS: { id: TeamTrainingDuration; label: string }[] = [
-  { id: '60 minutes', label: '60 min' },
-  { id: '90 minutes', label: '90 min' },
-  { id: '2 hours', label: '2 hrs' },
-];
 
 const INTENSITY_OPTIONS: {
   id: TeamTrainingIntensity;
@@ -59,21 +55,19 @@ const INTENSITY_OPTIONS: {
 export const TeamTrainingDurationScreen: React.FC<TeamTrainingDurationScreenProps> = ({
   navigation,
 }) => {
-  const [duration, setDuration] = useState<TeamTrainingDuration | null>(null);
   const [intensity, setIntensity] = useState<TeamTrainingIntensity | null>(null);
   const { label: stepLabel, progressPercent } =
     useOnboardingProgress('TeamTrainingDuration');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const canContinue = duration !== null && intensity !== null;
+  const canContinue = intensity !== null;
 
   const handleContinue = useCallback(() => {
-    if (!canContinue || !duration || !intensity) return;
+    if (!intensity) return;
     void commitAndAdvance({
-      teamTrainingDuration: duration,
       teamTrainingIntensity: intensity,
     }, () => navigation.navigate('TrainingCommitment'));
-  }, [canContinue, duration, intensity, navigation, commitAndAdvance]);
+  }, [intensity, navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
@@ -84,7 +78,7 @@ export const TeamTrainingDurationScreen: React.FC<TeamTrainingDurationScreenProp
       saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!canContinue}
-      footerHelperText={canContinue ? undefined : 'Select duration and intensity'}
+      footerHelperText={canContinue ? undefined : 'Pick how hard team training usually is'}
     >
       <View style={styles.titleSection}>
         <Text
@@ -103,32 +97,8 @@ export const TeamTrainingDurationScreen: React.FC<TeamTrainingDurationScreenProp
         </Text>
       </View>
 
-      {/* ── Duration section ────────────────────────────────────── */}
-      <Text style={styles.sectionHeader}>HOW LONG?</Text>
-      <View style={styles.durationRow}>
-        {DURATION_OPTIONS.map((option) => {
-          const active = duration === option.id;
-          return (
-            <SelectableTile
-              key={option.id}
-              variant="grid"
-              isSelected={active}
-              onPress={() => setDuration(option.id)}
-              style={styles.durationSlot}
-            >
-              <Text style={[
-                styles.cardLabel,
-                active && styles.cardLabelSelectedGrid,
-              ]}>
-                {option.label}
-              </Text>
-            </SelectableTile>
-          );
-        })}
-      </View>
-
       {/* ── Intensity section ───────────────────────────────────── */}
-      <Text style={[styles.sectionHeader, styles.sectionHeaderGap]}>HOW HARD?</Text>
+      <Text style={styles.sectionHeader}>HOW HARD?</Text>
       <View style={styles.intensityGrid}>
         {INTENSITY_OPTIONS.map((option) => (
           <SelectableTile

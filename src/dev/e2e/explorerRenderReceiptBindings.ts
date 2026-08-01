@@ -63,12 +63,6 @@ export type ExplorerRenderStateWitness =
       readonly adjustmentKind: string;
       readonly targetWeekStart: string | null;
       readonly expectedStatus: 'cleared';
-    }
-  | {
-      readonly kind: 'repeat-week';
-      readonly adjustmentId: string;
-      readonly targetWeekStart: string;
-      readonly expectedStatus: 'active';
     };
 
 export interface ExplorerRenderExpectation {
@@ -297,27 +291,12 @@ export function buildExplorerRenderExpectation(
       const adjustmentId = args.exactAdjustmentId;
       if (!adjustmentId) throw new Error('explorer_restore_exact_adjustment_id_missing');
       const controls = [explorerTestId.adjustmentRestored(adjustmentId)];
-      if (args.adjustmentKind === 'repeat_week') {
-        controls.push(explorerTestId.repeatRestored(adjustmentId));
-      }
       return withControls(base, controls, {
         kind: 'adjustment',
         adjustmentId,
         adjustmentKind: args.adjustmentKind ?? 'unknown',
-        targetWeekStart: args.adjustmentKind === 'repeat_week'
-          ? action.args.restoredOn
-          : null,
+        targetWeekStart: null,
         expectedStatus: 'cleared',
-      });
-    }
-    case 'week.repeat': {
-      const adjustmentId = args.producedAdjustmentId;
-      if (!adjustmentId) throw new Error('explorer_repeat_adjustment_id_missing');
-      return withControls(base, [explorerTestId.repeatActive(adjustmentId)], {
-        kind: 'repeat-week',
-        adjustmentId,
-        targetWeekStart: action.args.targetWeekStart,
-        expectedStatus: 'active',
       });
     }
     default: {
@@ -500,11 +479,6 @@ export function explorerRenderExpectationIsSatisfied(
         adjustment.id === witness.adjustmentId && adjustment.status === 'cleared') &&
         (witness.targetWeekStart === null ||
           !snapshot.weekScopedOverlayIds[witness.targetWeekStart]);
-    case 'repeat-week':
-      return snapshot.reversibleAdjustments.some((adjustment) =>
-        adjustment.id === witness.adjustmentId &&
-        adjustment.kind === 'repeat_week' && adjustment.status === 'active') &&
-        !!snapshot.weekScopedOverlayIds[witness.targetWeekStart];
   }
 }
 

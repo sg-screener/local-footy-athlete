@@ -258,6 +258,36 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
  */
 export const STRUCTURE_DEBT_BASELINE = 0;
 
+/**
+ * DIRECTION 4 — the ceiling the baseline may never exceed. Backported from
+ * `data/legacyReckoningCensus.ts` on 2026-07-30, because the first three
+ * directions are CIRCULAR and this census had the same hole.
+ *
+ * Directions 1-3 all compare the debt against `STRUCTURE_DEBT_BASELINE`. So a
+ * new readiness->structure edge could be admitted by raising a declared count
+ * and the baseline together, and every assertion above would stay green — which
+ * is exactly how a violation gets DECLARED into a census instead of fixed. This
+ * was not a theory: it was demonstrated against the legacy census on 2026-07-30,
+ * where the full suite passed 289/289 while brand-new surface was admitted, and
+ * that probe is what sent the fix back here.
+ *
+ * FROZEN AT ZERO, and that is the whole point. The debt was paid to zero on
+ * 2026-07-29 (`docs/READINESS_CENSUS_SWEEP_2026-07-29.md`), so the ruling is
+ * fully discharged and there is no headroom to declare into. Where the legacy
+ * census grandfathers 116 units of pre-law surface, this one grandfathers
+ * nothing: **every future readiness->structure edge must be FIXED.**
+ *
+ * A NOTE ON WHAT THIS IS NOT. No constant in a file can make an edit
+ * impossible — this one is editable like any other. What it does is make the
+ * raise-both-numbers move require changing a constant whose name carries its own
+ * date and whose comment says a ruling is needed. The escape stops being a
+ * plausible edit and becomes a visible one. If that is ever not enough, the
+ * stronger form is to compare against the value committed in git rather than a
+ * value in the file; that was considered here and judged disproportionate for a
+ * census whose ceiling is zero.
+ */
+export const STRUCTURE_DEBT_FOUNDING_CEILING = 0;
+
 export interface SupersededExemptionClaim {
   /** Path relative to `src/`. */
   readonly file: string;

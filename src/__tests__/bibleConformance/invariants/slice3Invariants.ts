@@ -453,9 +453,17 @@ function feasibilitySingleOwner(trace: Slice3ScenarioTrace): InvariantCheckResul
   const valid = observations.every((observed) =>
     observed.conditioningFeasibility?.owner === 'conditioningFeasibility' &&
     equalSet(observed.conditioningFeasibility.allowedModalities, baselineAllowed) &&
-    (observed.stage === 'weekly_accounting' || observed.conditioning.every((entry) => entry.modality === 'mixed_off_feet'
-      ? baselineAllowed.includes('bike') && baselineAllowed.some((value) => value === 'row' || value === 'ski')
-      : entry.modality === 'other' || baselineAllowed.includes(entry.modality)))) &&
+    (observed.stage === 'weekly_accounting' || observed.conditioning.every((entry) => {
+      // The session-side 'bike' family renders on EITHER bike machine — the
+      // athlete's equipment answer split into bike_erg / air_bike (ruling 2,
+      // 2026-07-31) while session modalities kept their family names.
+      const anyBike = baselineAllowed.includes('bike_erg') || baselineAllowed.includes('air_bike');
+      if (entry.modality === 'mixed_off_feet') {
+        return anyBike && baselineAllowed.some((value) => value === 'row' || value === 'ski');
+      }
+      if (entry.modality === 'bike') return anyBike;
+      return entry.modality === 'other' || baselineAllowed.includes(entry.modality);
+    }))) &&
     (baselineAllowed.length > 0 || observations.every((observed) =>
       observed.conditioning.length > 0 &&
       observed.conditioning.every((entry) => entry.modality === 'other') &&

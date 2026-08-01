@@ -35,6 +35,7 @@ import path from 'path';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 import { selectMobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
+import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 
 const src = path.resolve(__dirname, '..');
 
@@ -124,6 +125,8 @@ console.log('\n[2] No badges and no flow on a recovery day');
       workout: recoveryWorkout(),
       seasonPhase: 'In-season',
       isGameWeek: false,
+      athlete: DEFAULT_ATHLETE_CONTEXT,
+      date: '2026-07-30',
     }) === null,
   );
   ok(

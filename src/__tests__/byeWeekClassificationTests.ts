@@ -68,7 +68,6 @@ function baseProfile(overrides: Partial<OnboardingData> = {}): Partial<Onboardin
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',
@@ -390,14 +389,21 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
     running: week.report.counts.runningExposures,
     sprintCod: week.report.counts.sprintCodExposures,
   });
-  const gunshowWorkouts = week.workouts.filter((workout) =>
-    classifyVisibleSession(workout).contributions.gunshow > 0);
+  // BOTH of Sam's two accessory types, since the split (2026-07-30). The property
+  // asserted is unchanged — neither takes main-strength credit — but it now has to
+  // hold for each of them separately, which is the point of splitting them.
+  const gunshowWorkouts = week.workouts.filter((workout) => {
+    const contributions = classifyVisibleSession(workout).contributions;
+    return contributions.gunshow > 0 || contributions.prehab > 0;
+  });
   ok('optional gunshow/accessory work never counts as main strength when present',
     gunshowWorkouts.every((workout) =>
       classifyVisibleSession(workout).contributions.mainStrength === 0),
     gunshowWorkouts);
-  const withoutGunshow = week.workouts.filter((workout) =>
-    classifyVisibleSession(workout).contributions.gunshow === 0);
+  const withoutGunshow = week.workouts.filter((workout) => {
+    const contributions = classifyVisibleSession(workout).contributions;
+    return contributions.gunshow === 0 && contributions.prehab === 0;
+  });
   const withoutGunshowValidation = week.exposureContract
     ? evaluateEffectiveWeekExposureContract(
         week.exposureContract,
@@ -483,7 +489,7 @@ console.log('\n[6] recovery and injury-constrained byes retain their typed struc
   eq('low-readiness bye does not add conditioning', lowReadiness.report.counts.extraConditioningSessions, 0);
   ok('low-readiness bye keeps Saturday light',
     lowReadiness.report.counts.days.find((day) => dayLabel(day.date) === 'Sat')?.units.every((unit) =>
-      unit.category === 'recovery' || unit.category === 'gunshow_prehab' || unit.category === 'rest'),
+      unit.category === 'recovery' || unit.category === 'gunshow' || unit.category === 'prehab' || unit.category === 'rest'),
     lowReadiness.report.counts.days);
 
   const cooked = generatedWeek(baseProfile(), { generationConstraints: COOKED_READINESS });

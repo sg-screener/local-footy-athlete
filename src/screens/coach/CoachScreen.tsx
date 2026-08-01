@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motivationBiasTokens, motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
 import {
   TextInput,
   View,
@@ -611,21 +612,6 @@ function initialCoachScreenMessages(storedMessages?: CoachMessage[]): Message[] 
   return fromStoredCoachMessages(persisted);
 }
 
-interface QuickAction {
-  label: string;
-  prefill: string;
-}
-
-const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'I missed a session',       prefill: "I missed yesterday's session - " },
-  { label: "I'm sore",                  prefill: "I'm pretty sore today, especially in my " },
-  { label: 'Feeling cooked this week',  prefill: "I'm feeling cooked this week - can we lighten the load?" },
-  { label: 'Game day changed',          prefill: "My game day's changed - " },
-  { label: 'Swap an exercise',          prefill: 'Can you swap ' },
-  { label: 'Busy week',                 prefill: "I've got a busy week ahead - " },
-  { label: "I'm injured",                prefill: "I've picked up a niggle - " },
-];
-
 function isGenericReadinessWithoutInjuryTarget(message: string): boolean {
   if (extractBodyPart(message)) return false;
   if (/\b\d{1,2}\s*(?:\/\s*10|out\s+of\s+10)\b/i.test(message)) return false;
@@ -762,13 +748,6 @@ export default function CoachScreen() {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [route.params?.prefill]);
-
-  // Inline quick action — prefill the input WITHOUT auto-sending
-  // so the athlete can edit before firing.
-  const handleQuickAction = (prefill: string) => {
-    setInputValue(prefill);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
 
   // ── Smoke-only direct DayWorkout navigation ────────────────────────
   //
@@ -1888,7 +1867,9 @@ export default function CoachScreen() {
             athleteProfile: {
               ageRange: onboardingData.ageRange,
               position: onboardingData.position,
-              motivation: onboardingData.motivation,
+              // Derived, never the stored sentence — the coach sees exactly what Review
+              // shows the athlete.
+              motivation: motivationDisplay(resolveMotivation(onboardingData)),
               heightCm: onboardingData.heightCm,
               weightKg: onboardingData.weightKg,
               seasonPhase: onboardingData.seasonPhase,
@@ -1913,7 +1894,7 @@ export default function CoachScreen() {
               sprintExposure: onboardingData.sprintExposure,
               recentTrainingLoad: onboardingData.recentTrainingLoad,
               injuries: onboardingData.injuries,
-              goals: onboardingData.goals,
+              goals: motivationBiasTokens(resolveMotivation(onboardingData)),
               biggestLimitation: onboardingData.biggestLimitation,
               biggestFrustration: onboardingData.biggestFrustration,
               successVision: onboardingData.successVision,
@@ -2292,26 +2273,6 @@ export default function CoachScreen() {
         onContentSizeChange={() =>
           flatListRef.current?.scrollToEnd({ animated: true })
         }
-        ListFooterComponent={
-          messages.length === 1 ? (
-            <View style={styles.quickActionsContainer}>
-              {QUICK_ACTIONS.map((action) => (
-                <Pressable
-                  key={action.label}
-                  style={({ pressed }) => [
-                    styles.quickActionChip,
-                    pressed && styles.quickActionChipPressed,
-                  ]}
-                  onPress={() => handleQuickAction(action.prefill)}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.label}
-                >
-                  <Text style={styles.quickActionText}>{action.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null
-        }
       />
 
       {/* KeyboardStickyView: native UI-thread component that moves with keyboard */}
@@ -2533,29 +2494,5 @@ const styles = StyleSheet.create({
     color: '#C8FF00',
     fontSize: 12,
     fontWeight: '600',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  quickActionChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 9,
-    borderRadius: 18,
-    backgroundColor: '#1B1B1B',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#2A2A2A',
-  },
-  quickActionChipPressed: {
-    backgroundColor: '#262626',
-    borderColor: '#C8FF00',
-  },
-  quickActionText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '500',
   },
 });

@@ -5,6 +5,7 @@ import {
   normalizeAcceptedProgramSurfaces,
   type AcceptedCompositionBaseV1,
 } from './acceptedStateColdStart';
+import { isoDateForWeekday } from '../utils/appDate';
 import {
   assertAcceptedVisibleLedgerEquivalence,
   commitAcceptedStateTransaction,
@@ -266,6 +267,8 @@ function validateEffectiveComposition(args: {
     validateWeekStarts: args.weekStarts,
   });
   assertAcceptedVisibleLedgerEquivalence({
+    // The athlete declared a life-fact (illness, readiness). Forward.
+    operation: 'forward_decision',
     surfaces: normalizeAcceptedProgramSurfaces(projected),
     context: args.context,
     weekStarts: args.weekStarts,
@@ -280,7 +283,7 @@ function validateEffectiveComposition(args: {
  * the pure-projection resolvers (mode/reduction live only in generation), so the
  * overlay-preserving inert path is a silent no-op. This authors the reduced week
  * as a scoped regeneration committed as a week overlay + fact-linked reversible
- * adjustment, mirroring repeatWeek: the base microcycle stays clean, the overlay
+ * adjustment: the base microcycle stays clean, the overlay
  * is the mutation layer, and clearing the fact cascade-reverts byte-exact via the
  * stored prior overlay (R12, keyed on `sourceFactId`).
  */
@@ -359,11 +362,8 @@ function buildDerivingSourceFactAdjustment(args: {
   };
 }
 
-function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
-  const date = new Date(`${weekStartISO.slice(0, 10)}T12:00:00`);
-  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  return date.toISOString().slice(0, 10);
-}
+/** One owner of the Monday-first weekday-to-date rule. */
+const dateForWeekday = isoDateForWeekday;
 
 function commitDerivingSourceFactScopedRegen(args: {
   compositionBase: AcceptedCompositionBaseV1;

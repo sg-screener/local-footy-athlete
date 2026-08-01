@@ -85,7 +85,7 @@ function HomeScreenClassic() {
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
-    handleApplyEquipmentPreset,
+    handleApplyEquipmentDecision,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -448,8 +448,8 @@ function HomeScreenClassic() {
         onOpenDayControls={openSelectedDayControls}
         onOpenProgramSetup={handleOpenProgramSetup}
         onApplyBusyWeekReduction={() => void handleApplyHomeQuickStatus('busy_week_reduce')}
-        onApplyEquipmentPreset={(presetId) =>
-          void handleApplyEquipmentPreset(presetId, selectedQuickActionDate ?? undefined)}
+        onApplyEquipmentDecision={(decision) =>
+          void handleApplyEquipmentDecision(decision, selectedQuickActionDate ?? undefined)}
         onApplyGuidedInjury={handleApplyGuidedInjury}
         onMessageCoach={handleMessageCoach}
       />
@@ -459,7 +459,6 @@ function HomeScreenClassic() {
         date={changeSheetDate}
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
-        onAskCoach={handleMessageCoach}
       />
 
       {/* ─── Game Day Action Modal ─── */}

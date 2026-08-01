@@ -142,7 +142,6 @@ function week(byIndex: Record<number, Array<Workout | null>>): ValidatorDayInput
 
 const PROFILE = {
   seasonPhase: 'In-season' as const,
-  teamTrainingIntensity: 'Hard' as const,
   conditioningLevel: 'Good' as const,
 };
 

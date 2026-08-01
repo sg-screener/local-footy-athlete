@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { Text } from '../../components/common/Text';
+import { StoredStateExportButton } from '../../dev/StoredStateExportButton';
 import { Button } from '../../components/common/Button';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -410,7 +411,18 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
 
   const handleStartTraining = () => {
     try {
-      completeOnboarding();
+      // Completion is an outcome with a reason now (Sam's ruling #3): it refuses
+      // rather than closing over a profile the app cannot build on. The screen
+      // routes that refusal to the step that owns the answer, exactly as the
+      // pre-generation completeness check above already does.
+      const outcome = completeOnboarding();
+      if (outcome.ok === false) {
+        const assessment = assessOnboardingCompleteness(onboardingData);
+        if (assessment.firstIncompleteStep) setIncompleteStep(assessment.firstIncompleteStep);
+        setErrorMessage(outcome.message);
+        setPhase('error');
+        return;
+      }
     } catch (error) {
       const pipelineError = toOnboardingPipelineError(
         error,
@@ -472,6 +484,13 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
               fullWidth
             />
           )}
+          {/*
+           * The evidence lives on the far side of this refusal (Sam, locked
+           * out 2026-07-30). "Finish that step" is the athlete's way forward;
+           * this is the diagnostician's, and it must not require the flow that
+           * is currently refusing. See dev/StoredStateExportButton.
+           */}
+          <StoredStateExportButton testID="onboarding-refusal-export-button" />
         </View>
       </SafeAreaView>
     );

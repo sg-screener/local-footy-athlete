@@ -42,7 +42,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { logger } from './logger';
 import { todayISOLocal as getTodayISOLocal } from './appDate';
-import { deriveProfileReadiness } from './readiness';
+import { profileCapacityBandOrNull } from './readiness';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import {
@@ -160,7 +160,12 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const todayReadinessSignal = acceptedOwnsMaterialState
     ? acceptedContext.readinessSignalsByDate[todayISO]
     : useReadinessStore.getState().signalsByDate[todayISO];
-  const readiness = deriveProfileReadiness(onboardingData);
+  // RENDER MUST NOT THROW (Sam, 2026-07-30). This is a read, not a prescription,
+  // so it asks for the band OR NULL. `deriveProfileReadiness` still throws and
+  // is still what generation calls — an unscoreable profile is refused a
+  // program, it is not refused a screen. `null` travels as null; see
+  // rules note in utils/readiness.ts.
+  const readiness = profileCapacityBandOrNull(onboardingData);
 
   const preferredDays = onboardingData?.preferredTrainingDays;
   const availableDayNumbers =

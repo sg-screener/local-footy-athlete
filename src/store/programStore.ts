@@ -14,6 +14,12 @@ import {
 } from '../types/domain';
 import { logger } from '../utils/logger';
 import {
+  decideQuarantinedWrite,
+  quarantineRefusedPayload,
+  registerQuarantineBoundary,
+  releaseQuarantine,
+} from './refusedPayloadQuarantine';
+import {
   addDaysISO,
   deriveStoredBlockStateFromProgram,
   getBlockNumberForDate,
@@ -28,7 +34,7 @@ import type {
   FeedbackSoreness,
   SessionOutcomeTransactionReceipt,
 } from '../types/sessionOutcome';
-import { dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
+import { appDateNow, dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   buildSection18WeeklyExposureContractV2,
@@ -45,6 +51,10 @@ import {
   migrateStoredPowerBlock,
   migrateStoredPowerBlocks,
 } from '../rules/legacyPowerBlockMigration';
+import {
+  isGeneratorPlacedRecovery,
+  liftGeneratorRecoveryToRest,
+} from '../rules/generatorRecoveryRestLift';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
   finaliseSection18SafetyWeek,
@@ -61,6 +71,7 @@ import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
+import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
   athleteActionDiagnosticHash,
   clearProgramHydrationTrace,
@@ -95,6 +106,7 @@ import {
 import {
   PROGRAM_STORE_PERSISTENCE_VERSION,
   ProgramHydrationIngressError,
+  dropRetiredWeekOverlaysAtHydration,
   requireProgramHydrationIngress,
   type ProgramHydrationIngressClassification,
   type ProgramHydrationIngressKind,
@@ -241,6 +253,26 @@ async function persistCanonicalHydratedEnvelopeReadback(): Promise<void> {
   }
 }
 
+/**
+ * THE PROGRAM STORE'S WRITER BOUNDARY, declared once.
+ *
+ * `carriesMaterial` is the store's own answer to "does this payload carry the
+ * athlete's state?" — a program with at least one microcycle. An unreadable
+ * envelope answers no: bytes we cannot parse are not bytes we can prove hold
+ * anything.
+ */
+registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
+  carriesMaterial: (envelope) => {
+    try {
+      const state = (JSON.parse(envelope) as { state?: Record<string, unknown> }).state ?? {};
+      const program = state.currentProgram as { microcycles?: unknown[] } | null | undefined;
+      return !!program && (program.microcycles ?? []).length > 0;
+    } catch {
+      return false;
+    }
+  },
+});
+
 const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     const trace = programHydrationTrace();
@@ -269,6 +301,34 @@ const programStateStorage = {
     if (activeProgramPersistenceStage) {
       return;
     }
+    // A REFUSAL MUST NEVER PERSIST THE STATE IT REFUSED INTO (Sam, 2026-07-30).
+    //
+    // This is the single writer boundary for this store, which is why the law
+    // lives here rather than at any of the callers: the wipe was not caused by a
+    // bad caller, it was caused by there being nothing between a bare fallback
+    // and the disk. While a refused payload is held, a payload carrying no
+    // program does not travel. A payload that DOES carry one is always allowed
+    // through and releases the hold — that write is the lift succeeding, and a
+    // quarantine that blocked the repair would strand the athlete as surely as
+    // the wipe destroyed him.
+    const decision = decideQuarantinedWrite(name, value);
+    if (!decision.allowed) {
+      emitAthleteActionEvent(currentAthleteActionTrace(), 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: decision.reason,
+        rejectingBoundary: 'programStateStorage.setItem.quarantine',
+        failureCategory: 'persistence_failure',
+        previousStateRestored: true,
+      });
+      logger.error(
+        '[programStore] refused to persist over a quarantined payload.',
+        { store: name, reason: decision.reason },
+      );
+      return;
+    }
+    releaseQuarantine(name);
     // Capture the explicit token synchronously at this async boundary. The
     // local variable preserves correlation through the awaited write; FIFO
     // ordering is never used as an authority.
@@ -1076,9 +1136,24 @@ function canonicaliseAcceptedBoundaryState(
             activeConstraints: options.activeConstraints,
           })
       : undefined;
+    // THE COLLAPSE, AND ACCEPT-AND-REDUCE (Sam, 2026-07-29, rulings 1 and 2).
+    //
+    // This was `requireSection18AcceptedWeek`, and its throw escaped the
+    // transaction owner to reach the tap door as a dead screen — reachable from
+    // a fresh install in three actions (onboard, generate, mark a day as rest).
+    // A typed refusal interpreted five ways is the two-representations disease
+    // wearing an exception, so the gateway's own typed result flows here and
+    // THIS owner decides what a rejected week means.
+    //
+    // What it means is ruling 2: a rest mark is the athlete stating a fact
+    // about their life, and this app does not refuse facts. The gateway's
+    // `canonicalWorkouts` on an `impossible` verdict is the best week it could
+    // build around the fact — so the mark is KEPT, that week is published, and
+    // the shortfall is disclosed in Sam's signed words rather than swallowed.
+    // Crashing was the worst answer; refusing was the second worst.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const accepted = require('../rules/section18AcceptedWeekGateway')
-      .requireSection18AcceptedWeek({
+      .runSection18AcceptedWeekGateway({
         contract,
         workouts: rebased.composedWorkouts,
         weekStart,
@@ -1100,7 +1175,38 @@ function canonicaliseAcceptedBoundaryState(
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
     );
-    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : null;
+    // A DERIVED REPAIR NEVER LANDS ON THE ATHLETE'S SURFACE (Sam, 2026-07-30).
+    //
+    // The gateway's repair used to go into `dateOverrides` whenever the week had
+    // no overlay to hold it. `dateOverrides` is the athlete's DECISION surface —
+    // `rebaseAcceptedEffectiveWeek` says so in its own comment and treats
+    // `date_override` as athlete-owned — so that filed derived content under his
+    // signature, and one rest mark materialised five overrides, one of them on
+    // the rest day itself.
+    //
+    // What made it visible is that the two resolvers order the same two inputs
+    // oppositely: `_resolveDateRaw` puts a manual override at Priority 1 ABOVE
+    // the calendar mark, while `rebaseAcceptedEffectiveWeek` composes the
+    // override and applies the marks LAST. So the screen prescribed Lower Squat
+    // on the day he had marked as rest while the accepted week correctly held
+    // nothing, three actions from a fresh install. It also cost two device
+    // findings: the move door's target-identity check compares accepted against
+    // visible and was refusing, correctly, about a day that disagreed with
+    // itself.
+    //
+    // The overlay already means "derived content for this week, authored by a
+    // fact, not by the athlete", which is exactly what a gateway repair is. So a
+    // base-owned week MINTS one rather than borrowing the athlete's. This is a
+    // deletion of a second home for one kind of content, not a new branch: after
+    // it, a repair has one surface and `dateOverrides` means one thing.
+    //
+    // The first branch is untouched and is the one case where writing there is
+    // right — an override the athlete DID author is his, and the repair updates
+    // it in place. A fix that simply deleted the write would pass the ownership
+    // assertions and lose every edit in the app; `derivedRepairOwnershipTests`
+    // holds that cell open.
+    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : {};
+    let repairedBaseOwnedWeek = false;
     for (let offset = 0; offset < 7; offset++) {
       const date = addDaysISO(weekStart, offset);
       const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
@@ -1110,21 +1216,29 @@ function canonicaliseAcceptedBoundaryState(
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
         if (after) dateOverrides[date] = after;
         else delete dateOverrides[date];
-      } else if (overlayWorkouts) {
+      } else {
         overlayWorkouts[date] = after;
-      } else if (after) {
-        dateOverrides = { ...(dateOverrides ?? {}), [date]: after };
+        if (!overlay) repairedBaseOwnedWeek = true;
       }
     }
-    if (overlay && overlayWorkouts && weekScopedOverlays) {
+    if (weekScopedOverlays && (overlay || repairedBaseOwnedWeek)) {
+      const now = appDateNow().toISOString();
       weekScopedOverlays[weekStart] = {
-        ...overlay,
+        ...(overlay ?? {
+          id: `accepted-week-repair:${weekStart}`,
+          weekStart,
+          weekEnd: addDaysISO(weekStart, 6),
+          anchorDate: null,
+          reason: 'accepted_week_repair' as const,
+          createdAt: now,
+        }),
         workoutsByDate: overlayWorkouts,
         exposureContractV2: accepted.contract,
+        updatedAt: now,
       };
     } else {
-      // The accepted contract is the persisted ledger for a base-owned week.
-      // Repairs may live in explicit date overrides, but the corresponding
+      // The accepted contract is the persisted ledger for a base-owned week that
+      // needed no repair. Nothing changed, so no overlay is minted, but the
       // achieved/reduction ledger must not remain stranded in the transient
       // gateway result.
       if (currentProgram && baseMicrocycle) {
@@ -1245,18 +1359,28 @@ function migrateHydratedStatePowerBlocks(
       ...next.currentProgram,
       microcycles: (next.currentProgram.microcycles ?? []).map((microcycle) => ({
         ...microcycle,
-        workouts: migrateStoredPowerBlocks(microcycle.workouts ?? []),
+        // TWO LIFTS, ONE INGRESS. The recovery lift runs on the PLAN only —
+        // `dateOverrides` and `weekScopedOverlays` below are athlete-owned
+        // surfaces and are deliberately not visited. See
+        // `rules/generatorRecoveryRestLift.ts`.
+        workouts: liftGeneratorRecoveryToRest(
+          migrateStoredPowerBlocks(microcycle.workouts ?? []),
+        ),
       })),
     };
   }
   if (next.currentMicrocycle) {
     next.currentMicrocycle = {
       ...next.currentMicrocycle,
-      workouts: migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
+      workouts: liftGeneratorRecoveryToRest(
+        migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
+      ),
     };
   }
   if (next.todayWorkout) {
-    next.todayWorkout = migrateStoredPowerBlock(next.todayWorkout);
+    next.todayWorkout = isGeneratorPlacedRecovery(next.todayWorkout)
+      ? null
+      : migrateStoredPowerBlock(next.todayWorkout);
   }
   if (next.dateOverrides) {
     next.dateOverrides = Object.fromEntries(
@@ -1293,12 +1417,16 @@ export function canonicaliseHydratedState(
 ): Partial<ProgramState> {
   // FIRST, and above every branch below. See `migrateHydratedStatePowerBlocks`.
   const persistedState = migrateHydratedStatePowerBlocks(rawPersistedState);
+  // ALSO above every branch below. See `dropRetiredWeekOverlaysAtHydration`
+  // (L15, HOME_SCREEN_REDESIGN ruling 1) — runs unconditionally, regardless of
+  // ingress classification.
+  const liftedState = dropRetiredWeekOverlaysAtHydration(persistedState);
   if (options.ingressKind === 'accepted_canonical') {
     return projectHydratedStateDerivedFields(
-      persistedState as Record<string, unknown>,
+      liftedState as Record<string, unknown>,
     ) as Partial<ProgramState>;
   }
-  const migrated = canonicaliseAcceptedBoundaryState(persistedState, {
+  const migrated = canonicaliseAcceptedBoundaryState(liftedState, {
     structuralMigrationRequired: true,
     profile: options.profile,
   });
@@ -1339,6 +1467,16 @@ export interface SessionFeedback {
   difficulty?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;
+  /**
+   * "How was training?" — Light / Normal / Hard, asked ONLY on a team-training day.
+   *
+   * Sam's signed mechanism, 2026-07-30. This is the ANSWER; the team-night size is a
+   * rolling read over the last three of them (`rules/teamNightSize.ts`) and is never
+   * stored. It rides `SessionFeedback` because the app already records a completed
+   * session per date through a transaction with a receipt — which is what made the
+   * smallest mechanism small.
+   */
+  teamNightSize?: import('../rules/teamNightSize').TeamNightSize;
   /** Optional reason when an athlete completed only part of the session. */
   partialReason?: FeedbackPartialReason;
   /** Required reason when an athlete skips the session from the feedback form. */
@@ -1664,6 +1802,8 @@ export const useProgramStore = create<ProgramState>()(
         }
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // An athlete placing content on a day is a decision they stated.
+          operation: 'forward_decision',
           reason: `override:set:${date}`,
           program: {
             dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
@@ -2187,6 +2327,32 @@ export const useProgramStore = create<ProgramState>()(
               acceptedBefore.acceptedCompositionBase?.updatedAt ??
               acceptedBefore.acceptedCompositionBase?.capturedAt ??
               new Date(0).toISOString();
+            // NEVER MINT AN ACCEPTANCE NOBODY MADE (Sam, export 4, 2026-07-29).
+            //
+            // This is where his device's `sourceRevision: 1` snapshot came
+            // from: hydration ran mid-onboarding, minted an accepted profile
+            // from the store's 2-key DEFAULT, and every later hydration
+            // republished it over whatever he had answered since. Three
+            // onboardings.
+            //
+            // The guard above it — no program AND revision 0 — did not fire,
+            // because generation had already built him a program from those
+            // two answers. Program presence was never the question:
+            // `isOnboardingComplete` is, because that is the athlete's own act
+            // of acceptance. See rules/profileMirrorNarrowing.
+            const mintRefusal = acceptedProfileSnapshotMintRefusal({
+              isOnboardingComplete: !!(persistedProfile.isOnboardingComplete ??
+                require('./profileStore').useProfileStore.getState().isOnboardingComplete),
+              onboardingData: profileForAcceptance,
+            });
+            if (mintRefusal && !acceptedBefore.acceptedProfileSnapshot) {
+              emitAthleteActionEvent(trace, 'athlete_action_completed', {
+                outcome: 'accepted',
+                internalResultCode: 'hydration_snapshot_mint_refused',
+                mintRefusalReason: mintRefusal.reason,
+              });
+              return;
+            }
             let acceptedProfileSnapshot: AcceptedProfileSnapshotV1 =
               acceptedBefore.acceptedProfileSnapshot ?? {
                 protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
@@ -2233,6 +2399,26 @@ export const useProgramStore = create<ProgramState>()(
             await runWithAthleteActionTrace(trace, async () => {
               require('./acceptedStateTransaction').commitAcceptedStateTransaction({
                 reason: 'program:hydration_acceptance',
+                // HYDRATION WEARS ONE DECLARED MODE (Sam, 2026-07-30).
+                //
+                // This field was absent, so the mode arrived by DEFAULT —
+                // `proposal.operation ?? 'restoration'` — and the type's own
+                // comment warns that is how a call site inherits a mode by
+                // accident. It is stated here because hydration is a
+                // restoration by nature: it replays state that was accepted
+                // once, so a week it cannot reproduce means the stored snapshot
+                // needs LIFTING, not reducing. Publishing a reduced version of
+                // a snapshot we do not understand would merge a defect into
+                // accepted state, which is the wipe's shape wearing a success.
+                //
+                // NOT YET WHOLE: the staging path below still runs the §18
+                // gateway's accept-and-reduce unconditionally, so one
+                // transaction can still reduce a week and then refuse the
+                // reduction. Declaring the mode removes the accident; making
+                // the two halves agree needs the read-ingress lift, which is
+                // its own unit. See
+                // docs/HYDRATION_WIPE_DIAGNOSIS_2026-07-30.md.
+                operation: 'restoration',
                 trace,
                 profile: profileForAcceptance,
                 acceptedProfileSnapshot,
@@ -2296,6 +2482,27 @@ export const useProgramStore = create<ProgramState>()(
             const rejectionCode = hydrationError instanceof Error
               ? hydrationError.name
               : 'program_hydration_acceptance_failed';
+            // HOLD WHAT WAS REFUSED, before anything else can reach the disk.
+            //
+            // The rollback above restores memory correctly and always did; the
+            // 2026-07-29 wipe happened fourteen seconds LATER, when the boot
+            // gate timed out, the athlete tapped Try Again, and a second cycle
+            // published an empty baseline over the only copy of his program.
+            // What is quarantined is therefore the DISK copy, read here rather
+            // than serialised from memory: the disk copy is the one a later
+            // writer can destroy, and it is the one he actually still has.
+            //
+            // Best-effort by design. If the read fails we are already in a
+            // storage failure and there is nothing to protect; swallowing that
+            // must not replace the real rejection the athlete is owed.
+            try {
+              quarantineRefusedPayload(
+                PROGRAM_STORE_PERSISTENCE_KEY,
+                await readDurableProgramStoreEnvelope(),
+              );
+            } catch {
+              // fall through to the rejection below
+            }
             emitAthleteActionEvent(trace, 'athlete_action_failed', {
               outcome: 'failed',
               internalResultCode: 'program_hydration_acceptance_failed',

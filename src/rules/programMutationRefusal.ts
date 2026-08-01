@@ -25,6 +25,15 @@
 export type ProgramMutationRefusalKind =
   /** Nothing needed doing. An OUTCOME, not a failure. */
   | 'no_change'
+  /**
+   * The athlete asked for a change their plan already carries. Same family as
+   * `no_change` — nothing applied, retrying changes nothing — but a different
+   * subject, so it gets its own sentence rather than borrowing the settings one.
+   * Added for Sam's ruling #6 (2026-07-30): the accepted-state transactions
+   * short-circuit a repeat mutation as `already_applied`, and that used to reach
+   * the athlete as "Done." over a day nothing had happened to.
+   */
+  | 'already_applied'
   /** Something else changed the accepted program first. Re-open and re-apply. */
   | 'accepted_revision_changed'
   /** The command's fixture identity disagreed with the owned season phase. */
@@ -57,6 +66,7 @@ export interface ProgramMutationRefusal {
  */
 const CAN_RETRY: Record<ProgramMutationRefusalKind, boolean> = {
   no_change: false,
+  already_applied: false,
   accepted_revision_changed: true,
   season_phase_mismatch: false,
   game_anchor_unanswered: false,
@@ -68,6 +78,7 @@ const CAN_RETRY: Record<ProgramMutationRefusalKind, boolean> = {
 
 const COPY: Record<ProgramMutationRefusalKind, string> = {
   no_change: 'Nothing to update — those settings are already what your program is built on.',
+  already_applied: 'Your plan already has that, so nothing changed.',
   accepted_revision_changed:
     'Your program changed while this was open, so nothing was applied. Close this and try the change again.',
   season_phase_mismatch:
@@ -89,6 +100,8 @@ const COPY: Record<ProgramMutationRefusalKind, string> = {
  */
 const REASON_KINDS: Record<string, ProgramMutationRefusalKind> = {
   no_change: 'no_change',
+
+  athlete_mutation_already_applied: 'already_applied',
 
   accepted_revision_changed: 'accepted_revision_changed',
   accepted_revision_conflict: 'accepted_revision_changed',

@@ -17,7 +17,7 @@ import {
   type CoachingPlan,
   type AIConstraints,
 } from '../../utils/coachingEngine';
-import { todayISOLocal } from '../../utils/appDate';
+import { isoDateForWeekday, todayISOLocal } from '../../utils/appDate';
 import { missingRequiredProfileFields } from '../../utils/onboardingSteps';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
@@ -34,7 +34,6 @@ import {
   type GenerationConstraintContext,
 } from '../../utils/generationConstraints';
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
-import { attachRecoveryAddonsToWeek } from '../../utils/recoveryAddonBuilder';
 import type { ReadinessSignal } from '../../utils/readiness';
 import type { EquipmentTag } from '../../data/exercisePools';
 import {
@@ -45,6 +44,7 @@ import { logger } from '../../utils/logger';
 import {
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
+  type ResolvedEquipmentCapabilities,
 } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import type { StrengthIntent } from '../../rules/strengthPatternContributions';
@@ -55,6 +55,8 @@ import {
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
+import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
+import { weakPointFocusFor } from '../../rules/weakPointFocus';
 import {
   rebindDerivedSessionProvenance,
   stampPlannerDerivedSessionProvenance,
@@ -195,10 +197,50 @@ function dateAtNoonISO(dateISO: string): string {
   return new Date(`${dateISO}T12:00:00`).toISOString();
 }
 
-function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
-  const date = new Date(`${weekStartISO}T12:00:00`);
-  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  return date.toISOString().slice(0, 10);
+/** One owner of the Monday-first weekday-to-date rule. */
+const dateForWeekday = isoDateForWeekday;
+
+/**
+ * The game's day-of-week, for the top-up's caps.
+ *
+ * Read from the WEEK first — a Game session in the built week is the fact — and
+ * from the profile's usual game day only when the week has none, so a virtual
+ * Saturday still protects its G-1 for the authored Gunshow.
+ */
+function gameDayOfWeekFor(
+  workouts: readonly Workout[],
+  profile: OnboardingData,
+): number | null {
+  const game = workouts.find((workout) => workout.workoutType === 'Game');
+  if (game) return game.dayOfWeek;
+  const usual = profile.usualGameDay
+    ?? (profile.gameDay && profile.gameDay !== 'Varies' ? profile.gameDay : null);
+  return usual ? DAY_MAP[usual] ?? null : null;
+}
+
+/**
+ * Days the top-up may place on.
+ *
+ * TWO EXCLUSIONS, both of them the athlete's own inputs rather than the app's
+ * preferences. Days they did not name as training days are not the app's to fill —
+ * an optional session on an excluded day overrides a stated answer. And days before
+ * the governed boundary are history: the week's earlier days are pinned, and adding
+ * a session to one would be the app editing a day that has already happened.
+ */
+function topUpCandidateDays(args: {
+  profile: OnboardingData;
+  weekStart: string;
+  governedFromISO: string | null;
+}): number[] {
+  const declared = (args.profile.preferredTrainingDays ?? [])
+    .map((day) => DAY_MAP[day])
+    .filter((day): day is number => typeof day === 'number');
+  return [0, 1, 2, 3, 4, 5, 6].filter((day) => {
+    if (declared.length > 0 && !declared.includes(day)) return false;
+    if (args.governedFromISO &&
+      dateForWeekday(args.weekStart, day) < args.governedFromISO) return false;
+    return true;
+  });
 }
 
 function dateFromISO(todayISO: string): Date {
@@ -248,6 +290,34 @@ export function generationSeasonPhaseOrThrow(
     );
   }
   return profile.seasonPhase;
+}
+
+/**
+ * The athlete's equipment input, or a refusal — the seasonPhase rule applied
+ * to equipment (Sam's ruling 2, 2026-07-31: generation does not run without an
+ * equipment answer).
+ *
+ * "Input" is the typed `equipmentAnswer` OR a legacy checklist lifted at read
+ * (L15): existing installs keep generating on the kit they actually recorded.
+ * What no longer exists is the third case — a profile with NOTHING that used
+ * to inherit a commercial-gym kit from a constant. That profile is refused,
+ * exactly as a missing seasonPhase is, and the flow's required Equipment step
+ * means no athlete can reach generation in that state through the app.
+ */
+export function generationEquipmentInputOrThrow(
+  profile: OnboardingData,
+  resolved: ResolvedEquipmentCapabilities,
+): ResolvedEquipmentCapabilities {
+  if (resolved.source === 'unanswered_floor') {
+    throw new ProgramGenError(
+      'missing_required_profile',
+      'I still need to know what equipment you can train with before I can build your program.',
+      'generation refused: no equipment answer and no legacy equipment selection',
+      false,
+      { missingRequired: missingRequiredProfileFields(profile) },
+    );
+  }
+  return resolved;
 }
 
 function generationPhaseResolution(
@@ -488,8 +558,20 @@ export function buildGeneratedMicrocycles(args: {
       ];
     };
     const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] => {
-      const built = attachRecoveryAddonsToWeek({
-        workouts: buildWorkoutsFromCoach(
+      // RECOVERY ADD-ONS ARE NOT PLACED BY GENERATION ANY MORE (2026-08-01,
+      // device-pass fail 3). `attachRecoveryAddonsToWeek` put 2-4 generator-
+      // chosen add-ons on every generated week — including team nights, which
+      // is exactly Sam's "TT + Recovery" card — and recovery is a
+      // charter-deleted type whose placement is ATHLETE-ONLY (the charter's
+      // rest law: the generator stops placing optional work uninvited). The
+      // builder module stays for its classifier exports; the placement pass is
+      // retired here. Add-ons ALREADY STORED on devices are not stripped at
+      // hydration in this round — they render the mobility vocabulary their
+      // rows always were (`part.headline.recovery` → "Mobility"), and content
+      // removal from §18-verified stored surfaces is its own unit (recorded in
+      // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
+      // as the pattern to follow).
+      const built = buildWorkoutsFromCoach(
           source,
           microcycleId,
           weekPlan.weeklyPlan,
@@ -508,11 +590,7 @@ export function buildGeneratedMicrocycles(args: {
             availableEquipment: equipment.tags,
             conditioningModalities: equipment.conditioningModalities,
           },
-        ),
-        profile,
-        weekKind: effectiveWeekKind,
-        generationConstraints,
-      });
+        );
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
         constraint.type === 'equipment' ||
         (constraint.type === 'schedule' &&
@@ -562,6 +640,41 @@ export function buildGeneratedMicrocycles(args: {
       });
       exposureContractV2 = accepted.contract;
     }
+    // ── THE NEED-BASED TOP-UP PASS ──
+    //
+    // Sam's ruling, 2026-07-30: "No defaults. Build the program; if anything is
+    // lacking, add a spare optional session to make up for it." This is the only
+    // place in the app that places optional accessory or mobility work into a
+    // generated week — R2, R3, R4 and R5 are deleted from the allocator in the same
+    // commit, so there is nothing left that places it by day.
+    //
+    // AND IT RUNS HERE, AFTER ACCEPTANCE, BECAUSE THE SEAM IS THE ARGUMENT. The
+    // contract was satisfied before these sessions existed and is never
+    // re-evaluated against them, so a top-up is INCAPABLE of affecting compliance
+    // or load rather than merely checked not to.
+    workouts = applyOptionalTopUps({
+      workouts,
+      seasonPhase: blockState.phaseClock.selectedPhase,
+      athlete: {
+        injuries: profile.injuries ?? [],
+        equipmentTags: [...equipment.tags],
+        onboardingData: profile,
+      },
+      microcycleId,
+      weekStartISO: blockState.weekStart,
+      gameDayOfWeek: gameDayOfWeekFor(workouts, profile),
+      // Only days the athlete said they train, and never a day already governed as
+      // history: a top-up on a pinned past day would be the app editing a day that
+      // has already been.
+      // Reading A, at the only place it touches placement: a mobility or injury-history
+      // weakness leans the OPTIONAL needs (Sam's ruling 3). Required work is untouched.
+      weakPointFocus: weakPointFocusFor(profile.biggestLimitation),
+      candidateDays: topUpCandidateDays({
+        profile,
+        weekStart: blockState.weekStart,
+        governedFromISO: boundary?.governedFromISO ?? null,
+      }),
+    }).workouts;
     const exposureContract = weekPlan.weeklyExposureContract;
     // Contract v2 is the accepted-week authority. The legacy ledger cannot
     // represent two valid credits stacked on one day (for example TT plus an
@@ -683,10 +796,13 @@ export function generateProgramLocally(
     baseProfile,
     generationConstraints,
   );
-  const resolvedEquipment = resolveEquipmentCapabilities(
+  const resolvedEquipment = generationEquipmentInputOrThrow(
     generationProfile,
-    activeConstraintsForGeneration,
-    availabilityDateISO,
+    resolveEquipmentCapabilities(
+      generationProfile,
+      activeConstraintsForGeneration,
+      availabilityDateISO,
+    ),
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const phaseResolution = generationPhaseResolution(generationProfile, blockStart, options);
@@ -788,7 +904,6 @@ export function generateProgramLocally(
     athleteContext: {
       injuries: baseProfile.injuries || [],
       equipmentTags: [...resolvedEquipmentTags],
-      trainingLocation: baseProfile.trainingLocation || 'Commercial gym',
       onboardingData: baseProfile,
     },
     seasonPhase: generationProfile.seasonPhase || null,
@@ -1190,10 +1305,13 @@ export async function generateProgramFromProfile(
     baseProfile,
     generationConstraints,
   );
-  const resolvedEquipment = resolveEquipmentCapabilities(
+  const resolvedEquipment = generationEquipmentInputOrThrow(
     generationProfile,
-    activeConstraintsForGeneration,
-    availabilityDateISO,
+    resolveEquipmentCapabilities(
+      generationProfile,
+      activeConstraintsForGeneration,
+      availabilityDateISO,
+    ),
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const generationDate = dateFromISO(effectiveTodayISO);

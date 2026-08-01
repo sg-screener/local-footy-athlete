@@ -47,8 +47,8 @@ function derivedStatus(count: number, notApplicable = false): CoverageStatus {
 
 function pathsFor(rule: RuleSeed): string[] {
   if (rule.category === 'persistence') return ['store_rehydrate', 'legacy_store_rehydrate', 'post_rehydrate_edit', 'post_rehydrate_rebuild'];
-  if (rule.category === 'identity') return ['workout_move', 'workout_swap', 'repeat_week'];
-  if (rule.category === 'rebuild') return ['no_op_week_rebuild', 'repeat_week', 'block_rollover'];
+  if (rule.category === 'identity') return ['workout_move', 'workout_swap', 'week_overlay_copy'];
+  if (rule.category === 'rebuild') return ['no_op_week_rebuild', 'week_overlay_copy', 'block_rollover'];
   if (rule.category === 'edit') return ['coach_revision', 'direct_exercise_edit', 'conditioning_edit'];
   if (rule.category === 'generation') return ['deterministic_generation', 'ai_fixture_normalisation'];
   return ['deterministic_generation', 'generated_fallback', 'visible_week', 'visible_detail'];

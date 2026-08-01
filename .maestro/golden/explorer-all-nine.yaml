@@ -1,5 +1,5 @@
 appId: com.localfootyathlete.app
-name: Explorer - all nine registered smoke scenarios
+name: Explorer - all eight registered smoke scenarios (repeat-week retired, ruling 1)
 tags:
   - e2e
   - explorer
@@ -29,6 +29,3 @@ tags:
 - runFlow:
     file: ../common/run-explorer-scenario.yaml
     env: { SCENARIO_ID: smoke-session-feedback-receipt, SCENARIO_BUDGET_MS: 30000 }
-- runFlow:
-    file: ../common/run-explorer-scenario.yaml
-    env: { SCENARIO_ID: smoke-repeat-week-phase-transition-and-restore, SCENARIO_BUDGET_MS: 60000 }

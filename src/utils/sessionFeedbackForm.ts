@@ -9,10 +9,12 @@ import type {
 } from '../store/programStore';
 import type { ConditioningPerformanceLog } from './conditioningLogging';
 import type { SessionComponent } from './sessionComponents';
+import type { TeamNightSize } from '../rules/teamNightSize';
 import type { StrengthExercisePerformanceLog } from './strengthLogging';
 
 export type FeedbackFormSectionId =
   | 'completion'
+  | 'teamNightSize'
   | 'feeling'
   | 'soreness'
   | 'partialReason'
@@ -28,6 +30,10 @@ export interface FeedbackFormSection {
 
 export const FEEDBACK_FORM_SECTION_LABELS = {
   completion: 'Did you complete it?',
+  // Sam's signed wording, 2026-07-30. Also registered in the signed-copy sheet
+  // (`team_night_size_question`) — this constant is where the panel reads it, the sheet
+  // is where its provenance lives.
+  teamNightSize: 'How was training?',
   feeling: 'How did the session feel?',
   partialFeeling: 'How did the completed part feel?',
   soreness: 'How sore are you?',
@@ -63,6 +69,8 @@ export const SKIP_REASON_OPTIONS: {
 
 export interface FeedbackFormDraft {
   completion: FeedbackCompletion | null;
+  /** Only ever set on a team-training day — see `getVisibleFeedbackSections`. */
+  teamNightSize?: TeamNightSize | null;
   componentCompletions?: Record<string, FeedbackCompletion | null>;
   componentReasons?: Record<string, ComponentFeedbackReasonState>;
   feeling: FeedbackFeeling | null;
@@ -85,9 +93,18 @@ export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
   components?: SessionComponent[];
 }
 
+/**
+ * THE ONE QUESTION, ON A SURFACE THAT ALREADY EXISTS (Sam, 2026-07-30).
+ *
+ * It appears only on a team-training day, and only when the athlete actually did the
+ * session — a skipped team night has no size, and asking would collect an answer about a
+ * night that did not happen. That is why it rides `completion` rather than sitting at the
+ * top of the form.
+ */
 export function getVisibleFeedbackSections(
   completion: FeedbackCompletion | null,
   includeConditioningPerformance = false,
+  isTeamTrainingDay = false,
 ): FeedbackFormSection[] {
   const sections: FeedbackFormSection[] = [
     {
@@ -96,6 +113,16 @@ export function getVisibleFeedbackSections(
       required: true,
     },
   ];
+
+  if (completion === 'full' || completion === 'partial') {
+    if (isTeamTrainingDay) {
+      sections.push({
+        id: 'teamNightSize',
+        label: FEEDBACK_FORM_SECTION_LABELS.teamNightSize,
+        required: false,
+      });
+    }
+  }
 
   if (completion === 'full') {
     sections.push(
@@ -300,9 +327,15 @@ export function sanitizeFeedbackDraftForCompletion(
   draft: FeedbackFormDraft,
   nextCompletion: FeedbackCompletion | null,
 ): FeedbackFormDraft {
+  // This function REBUILDS the draft rather than patching it, so every field must be
+  // carried forward explicitly — a field omitted here is silently lost the moment the
+  // athlete changes their completion answer. `teamNightSize` survives a full/partial
+  // switch (they did the session either way) and is cleared for skipped and unanswered
+  // (there is no size for a night that did not happen).
   if (nextCompletion === 'full') {
     return {
       completion: 'full',
+      teamNightSize: draft.teamNightSize ?? null,
       feeling: draft.feeling ?? null,
       soreness: draft.soreness ?? null,
       partialReason: null,
@@ -313,6 +346,7 @@ export function sanitizeFeedbackDraftForCompletion(
   if (nextCompletion === 'partial') {
     return {
       completion: 'partial',
+      teamNightSize: draft.teamNightSize ?? null,
       feeling: draft.feeling ?? null,
       soreness: draft.soreness ?? null,
       partialReason: draft.partialReason ?? null,
@@ -323,6 +357,7 @@ export function sanitizeFeedbackDraftForCompletion(
   if (nextCompletion === 'skipped') {
     return {
       completion: 'skipped',
+      teamNightSize: null,
       feeling: null,
       soreness: null,
       partialReason: null,
@@ -332,6 +367,7 @@ export function sanitizeFeedbackDraftForCompletion(
 
   return {
     completion: null,
+    teamNightSize: null,
     feeling: null,
     soreness: null,
     partialReason: null,
@@ -422,6 +458,10 @@ export function buildSessionFeedbackPayload(
     'strength',
   );
   const performedSessionExtras = {
+    // The team-night answer travels with the performed session and nowhere else. A
+    // skipped night returns above without it, which is deliberate: there is no size for a
+    // night that did not happen, and a stored `normal` would be a measurement of nothing.
+    ...(input.teamNightSize ? { teamNightSize: input.teamNightSize } : {}),
     ...(includeConditioning && Number.isFinite(input.difficulty)
       ? { difficulty: input.difficulty }
       : {}),

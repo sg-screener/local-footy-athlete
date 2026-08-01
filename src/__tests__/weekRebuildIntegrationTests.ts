@@ -80,7 +80,6 @@ const PRESEASON: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard',
   sprintExposure: '2+ times per week',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Very consistent',
@@ -107,7 +106,6 @@ const PRESEASON_NO_TEAM_4_DAY: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  teamTrainingIntensity: 'Moderate',
   sprintExposure: 'Occasionally',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Pretty consistent',
@@ -278,7 +276,6 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       payload: {
         date: wk2Mon,
         todayISO,
-        reasonLabel: 'Away',
         planChange: { kind: 'clear_days', dates: [wk2Mon] },
       },
       requiresRebuild: false,

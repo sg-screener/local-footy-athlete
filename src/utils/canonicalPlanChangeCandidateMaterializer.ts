@@ -20,6 +20,15 @@ export interface CanonicalPlanChangeCandidateInput {
    * pure finaliseWorkoutAfterMutation boundary with an explicit context.
    */
   canonicalizeWorkout: (date: string, workout: Workout) => Workout;
+  /**
+   * Transform the registry template BEFORE it is stacked or swapped in.
+   *
+   * The G-1 landing ask is the only caller: when the athlete has answered
+   * "accessories only" or "deloaded", it is the content they are ADDING that
+   * changes, never the session already on the day. Transforming the stacked
+   * result instead would strip or deload rows the athlete never touched.
+   */
+  transformTemplate?: (template: Workout) => Workout;
 }
 
 export type CanonicalPlanChangeCandidateResult =
@@ -93,6 +102,26 @@ function teamTrainingAnchorContainer(source: Workout): Workout {
   } as Workout;
 }
 
+/**
+ * Stack a session onto a day that carries a team-training anchor, keeping the
+ * anchor where it is.
+ *
+ * Sam's doubling law (2026-07-30): a session moved onto a team night lands as a
+ * COMBINED day — the same shape generation produces, and the same shape a swap
+ * already builds when it replaces the gym half of a team day. The move door had
+ * no way to say that, so it replaced the day and took the anchor with it.
+ */
+export function stackSessionOntoTeamAnchor(args: {
+  anchorDay: Workout;
+  addition: Workout;
+}): Workout {
+  return stackTemplate({
+    base: teamTrainingAnchorContainer(args.anchorDay),
+    template: args.addition,
+    preservesTeamTraining: true,
+  });
+}
+
 function combinedWorkoutType(args: {
   base: Workout;
   template: Workout;
@@ -106,6 +135,22 @@ function combinedWorkoutType(args: {
   if (conditioning) return 'Conditioning';
   if (args.template.workoutType === 'Recovery') return 'Recovery';
   return args.base.workoutType;
+}
+
+/**
+ * The day's own name and the added session's, joined once. A name that already
+ * contains the other is left alone rather than repeating it — re-adding to an
+ * already-combined day must not produce "A + B + B".
+ */
+function joinStackedNames(base: string, added: string): string {
+  const trimmedBase = base.trim();
+  const trimmedAdded = added.trim();
+  if (!trimmedBase) return trimmedAdded;
+  if (!trimmedAdded) return trimmedBase;
+  if (trimmedBase === trimmedAdded) return trimmedBase;
+  const parts = trimmedBase.split(' + ').map((part) => part.trim());
+  if (parts.includes(trimmedAdded)) return trimmedBase;
+  return `${trimmedBase} + ${trimmedAdded}`;
 }
 
 function stackTemplate(args: {
@@ -127,11 +172,13 @@ function stackTemplate(args: {
     : baseHasStrength
     ? args.base
     : null;
+  // THE TITLE NAMES BOTH (Sam, 2026-07-30). A stack is two things on one day,
+  // and naming one of them is how an added optional session made the recovery
+  // it sat on top of disappear from the card. The team anchor has always used
+  // this join; nothing about it was specific to team training.
   const name = args.preservesTeamTraining
     ? `Team Training + ${args.template.name}`
-    : templateHasStrength && !baseHasStrength
-    ? args.template.name
-    : args.base.name;
+    : joinStackedNames(args.base.name, args.template.name);
 
   return {
     ...args.base,
@@ -164,6 +211,15 @@ function stackTemplate(args: {
       ...(args.base.recoveryAddons ?? []),
       ...(args.template.recoveryAddons ?? []),
     ],
+    // A STACKED DAY IS NOT A COMPOSED OPTIONAL SESSION (2026-08-01). The
+    // marker means "this workout IS one composed Gunshow/Accessories/Mobility
+    // session"; spreading the base carried it onto combined days, where the
+    // projection then named an added conditioning part with the optional
+    // word's claim standing beside it (deep walker, L-P6, seeds 1 and 3 —
+    // a typed mobility day + conditioning add rendered no "Mobility" at all).
+    // The parts of a combined day name themselves by content; the marker dies
+    // with the purity it describes.
+    composedOptionalKind: undefined,
     derivedSessionProvenance: undefined,
   } as Workout;
 }
@@ -171,15 +227,17 @@ function stackTemplate(args: {
 function rawCandidate(
   change: TemplatePlanChange,
   source: Workout | null,
+  transformTemplate?: (template: Workout) => Workout,
 ): CanonicalPlanChangeCandidateResult | Workout {
-  const template = buildCoachRevisionTemplateWorkout(change.templateId, change.date);
-  if (!template) {
+  const built = buildCoachRevisionTemplateWorkout(change.templateId, change.date);
+  if (!built) {
     return {
       ok: false,
       code: 'unknown_template',
       reason: `Unknown plan-change template ${change.templateId}.`,
     };
   }
+  const template = transformTemplate ? transformTemplate(built) : built;
   if (source && visibleDayLooksLikeGame({ workout: source })) {
     return {
       ok: false,
@@ -220,7 +278,11 @@ function rawCandidate(
 export function materializeCanonicalPlanChangeCandidate(
   input: CanonicalPlanChangeCandidateInput,
 ): CanonicalPlanChangeCandidateResult {
-  const raw = rawCandidate(input.change, input.currentDay.workout ?? null);
+  const raw = rawCandidate(
+    input.change,
+    input.currentDay.workout ?? null,
+    input.transformTemplate,
+  );
   if ('ok' in raw && raw.ok === false) return raw;
 
   const rawWorkout: Workout = {

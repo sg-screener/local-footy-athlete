@@ -11,7 +11,8 @@ import {
   buildGenerationPrompt,
 } from '../services/api/generateProgram';
 import {
-  buildTemporaryEquipmentConstraint,
+  buildActiveEquipmentConstraint,
+  temporaryEquipmentConstraintIdForDate,
   resolveEquipmentCapabilities,
 } from '../utils/equipmentAvailability';
 import { buildBlockWeekStates, computeBlockBounds } from '../utils/programBlockState';
@@ -171,9 +172,16 @@ console.log('\n[2] explicit no-cardio and temporary no-cardio are authoritative'
       workout,
     }))).some((note) => note.title === 'Early off-season focus'));
 
-  const temporary = buildTemporaryEquipmentConstraint({
-    presetId: 'no_erg_cardio', date: REFERENCE_DATE,
-    todayISO: `${REFERENCE_DATE}T09:00:00.000Z`,
+  const temporary = buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate(REFERENCE_DATE),
+    mode: 'without',
+    tags: ['bike_or_treadmill'],
+    source: 'tap',
+    startDate: REFERENCE_DATE,
+    nowISO: `${REFERENCE_DATE}T09:00:00.000Z`,
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: 'Missing this week',
   });
   const constrained = generate(profile(), [temporary]);
   ok('temporary missing cardio overrides legacy Commercial-gym baseline',

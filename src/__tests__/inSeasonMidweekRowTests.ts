@@ -31,7 +31,6 @@ const tueThuSatInputs: CoachingInputs = {
   selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Moderate',
   sprintExposure: '2+ times per week',
   conditioningLevel: 'Elite',
   recentTrainingLoad: 'Very consistent',

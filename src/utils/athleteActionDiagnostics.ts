@@ -12,6 +12,7 @@ import {
   claimRegisteredDevE2EScenarioAction,
   registerClaimedDevE2EScenarioActionTrace,
 } from './devE2EScenarioActionBridge';
+import { recordAthleteActionLogEntry } from './athleteActionLog';
 
 export type AthleteActionSource = 'tap' | 'coach' | 'system';
 
@@ -23,7 +24,6 @@ export type AthleteActionType =
   | 'game_day_change'
   | 'practice_match_change'
   | 'clear_adjustment'
-  | 'repeat_week'
   | 'rollover'
   | 'readiness_change'
   | 'injury_change'
@@ -60,6 +60,16 @@ export type AthleteActionEventName =
   | 'athlete_ui_outcome_shown'
   | 'ui_outcome_mapped'
   | 'hydrated_state_checked'
+  // The onboarding store, added 2026-07-30 after Sam's third lost onboarding.
+  // The log covered the stores where the LAST class of defect lived; this is
+  // the store where this one does. Answers are never recorded — only which
+  // fields were written and how many the profile held afterwards.
+  | 'onboarding_step_committed'
+  | 'onboarding_completion_result'
+  | 'profile_mirror_publication_refused'
+  | 'profile_write'
+  | 'profile_rehydrated'
+  | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';
 
 export type AthleteActionFailureCategory =
@@ -201,6 +211,42 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
   return traceStack[traceStack.length - 1];
 }
 
+/**
+ * THE GLASS ACK, ON THE TAPE (2026-08-01, combined device pass). Sam tapped
+ * "Short on time today" and saw nothing — not even the refusal sentence — while
+ * the executor layer proved green at the tape's own depth (the walker's
+ * tape-world cell drives the identical action against the identical world). So
+ * the dark layer is the screen's tap → state → render path, which no harness in
+ * this repo can mount. This is that layer's instrument, alive on Release
+ * because it rides `emitAthleteActionEvent`'s log-before-enabled-check: the
+ * screen calls it at the moment it SETS the acknowledgment it is about to
+ * render. The next tape then answers what four reconstructions could not — a
+ * completed schedule action with no `athlete_ui_outcome_shown` beside it names
+ * the break as "between the executor's return and the screen's setState", and
+ * one WITH it moves the break into render, each without another guess.
+ *
+ * Called after the executor's trace has closed, so it builds a presentation
+ * span from the result's own traceId rather than reading the (empty) stack.
+ */
+export function recordScheduleAckPresented(args: {
+  traceId?: string | null;
+  surface: 'short_on_time_today' | 'away_this_week';
+  tone: 'success' | 'error';
+}): void {
+  emitAthleteActionEvent({
+    traceId: args.traceId ?? 'ack-without-trace',
+    spanId: 'ack-presentation',
+    source: 'tap',
+    actionType: 'program_change',
+    startedAt: now().toISOString(),
+    route: `ack_presentation:${args.surface}`,
+  } as AthleteActionTraceContext, 'athlete_ui_outcome_shown', {
+    internalResultCode: `schedule_ack_${args.tone}`,
+    ackSurface: args.surface,
+    ackTone: args.tone,
+  });
+}
+
 /** First production entry owns the trace; nested entries reuse it. */
 export function beginAthleteActionTrace(
   input: Omit<AthleteActionTraceContext, 'traceId' | 'spanId' | 'startedAt'>,
@@ -331,7 +377,7 @@ export function emitAthleteActionEvent(
   event: AthleteActionEventName,
   fields: Record<string, unknown> = {},
 ): AthleteActionDiagnosticEvent | null {
-  if (!trace || !athleteActionDiagnosticsEnabled()) return null;
+  if (!trace) return null;
   const diagnostic: AthleteActionDiagnosticEvent = {
     event,
     traceId: trace.traceId,
@@ -356,6 +402,14 @@ export function emitAthleteActionEvent(
     ...(trace.controlId !== undefined ? { controlId: trace.controlId } : {}),
     ...safeFields(fields),
   };
+  // THE ACTION LOG IS NOT A DEV DIAGNOSTIC (Sam, 2026-07-30). It records here,
+  // BEFORE the enabled check, because everything below this line is switched
+  // off on the build the defects live on — which is the entire reason four
+  // reconstructions of one device were needed to answer "what did you tap?".
+  // The event is already redacted at this point; the log is a reader of this
+  // shape, never a second author of it. See utils/athleteActionLog.
+  recordAthleteActionLogEntry(diagnostic);
+  if (!athleteActionDiagnosticsEnabled()) return null;
   retainedEvents.push(diagnostic);
   if (retainedEvents.length > MAX_RETAINED_EVENTS) {
     retainedEvents.splice(0, retainedEvents.length - MAX_RETAINED_EVENTS);

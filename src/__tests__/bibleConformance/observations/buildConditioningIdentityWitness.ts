@@ -1,6 +1,5 @@
 import type { Workout, WorkoutExercise } from '../../../types/domain';
 import { projectConditioningVisibleIdentity } from '../../../utils/conditioningVisibleIdentity';
-import { buildRepeatWeekOverlay } from '../../../utils/repeatWeek';
 import { deriveVisibleWorkoutIdentity } from '../../../utils/visibleWorkoutIdentity';
 import { weeklyPlanContextLabel, weeklyPlanTitle } from '../../../utils/weeklyPlanDisplay';
 import type { ConditioningIdentityWitness } from '../invariants/conditioningIdentityInvariants';
@@ -56,9 +55,21 @@ export function buildConditioningIdentityWitness(): ConditioningIdentityWitness 
     conditioningBlock: { intent: 'tempo', options: [{ title: 'same', description: '', exerciseIds: ['s1'] }] },
   });
   const hydrated = JSON.parse(JSON.stringify(long)) as Workout;
-  const repeated = Object.values(buildRepeatWeekOverlay({
-    sourceWorkouts: [long], targetWeekStart: '2026-08-10',
-  }).workoutsByDate).find(Boolean) as Workout;
+  // Stand-in for the retired repeat-week overlay builder (HOME_SCREEN_REDESIGN
+  // ruling 1 — the athlete-facing repeat-week writer is gone). The law this
+  // proves — title derivation is stable across a week-overlay clone with a
+  // fresh id — is a property of the overlay-copy mechanism itself, not the
+  // retired button, so this reproduces the same clone without the deleted
+  // module.
+  const repeatedId = `${long.id}:week-overlay-copy`;
+  const repeated: Workout = {
+    ...long,
+    id: repeatedId,
+    microcycleId: 'week-overlay-copy-mc',
+    exercises: (long.exercises ?? []).map((exercise) => ({
+      ...exercise, workoutId: repeatedId,
+    })),
+  };
 
   return {
     canonicalLongTitle: weeklyPlanTitle(long),

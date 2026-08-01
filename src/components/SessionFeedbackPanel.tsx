@@ -83,6 +83,8 @@ import {
 import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
 import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObservation';
 import { explorerTestId } from '../utils/stableTestId';
+import { isTeamTrainingSession } from '../utils/teamTraining';
+import { TEAM_NIGHT_SIZE_OPTIONS, type TeamNightSize } from '../rules/teamNightSize';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 
 interface Props {
@@ -218,6 +220,9 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   const [componentReasons, setComponentReasons] = useState<
     Record<string, ComponentFeedbackReasonState>
   >(existingDraft.componentReasons ?? {});
+  const [teamNightSize, setTeamNightSize] = useState<TeamNightSize | null>(
+    existing?.teamNightSize ?? null,
+  );
   const [partialReason, setPartialReason] = useState(existingDraft.partialReason);
   const [skipReason, setSkipReason] = useState(existingDraft.skipReason);
   const [notes, setNotes] = useState(existing?.notes ?? '');
@@ -253,6 +258,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     setCompletion(nextDraft.completion);
     setComponentCompletions(nextDraft.componentCompletions ?? {});
     setComponentReasons(nextDraft.componentReasons ?? {});
+    setTeamNightSize(existing?.teamNightSize ?? null);
     setPartialReason(nextDraft.partialReason);
     setSkipReason(nextDraft.skipReason);
     setNotes(existing?.notes ?? '');
@@ -272,6 +278,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     completion,
     componentCompletions,
     componentReasons,
+    teamNightSize,
     feeling,
     soreness,
     partialReason,
@@ -289,12 +296,18 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   const conditioningWasPerformed =
     conditioningComponentCompletion === 'full' ||
     conditioningComponentCompletion === 'partial';
+  // DERIVED, not a new prop. The panel already resolves the workout, and
+  // `isTeamTrainingSession` is the app's existing owner of "is this a team night" — a
+  // second answer threaded down from a caller is exactly the two-owners shape the repo
+  // keeps paying for.
+  const isTeamNight = useMemo(() => isTeamTrainingSession(workout), [workout]);
   const visibleSections = useMemo(
     () => getVisibleFeedbackSections(
       activeCompletion,
       conditioningConfig.level === 'trackable' && conditioningWasPerformed,
+      isTeamNight,
     ),
-    [activeCompletion, conditioningConfig.level, conditioningWasPerformed],
+    [activeCompletion, conditioningConfig.level, conditioningWasPerformed, isTeamNight],
   );
   const hasSection = useCallback(
     (id: FeedbackFormSectionId) => visibleSections.some((section) => section.id === id),
@@ -496,6 +509,10 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       componentCompletions,
       componentReasons,
       components: sessionComponents,
+      // Only ever sent on a team night. `isTeamNight` is the same flag that decides
+      // whether the question was ASKED, so the app cannot store an answer to a question
+      // it did not put on the screen.
+      teamNightSize: isTeamNight ? teamNightSize : null,
       feeling,
       soreness,
       partialReason,
@@ -704,6 +721,26 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
                 selected={skipReason === opt.key}
                 selectedColor={colors.accent.lime}
                 onPress={() => setSkipReason(opt.key)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {hasSection('teamNightSize') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.teamNightSize}
+          </SectionLabel>
+          <View style={styles.row}>
+            {TEAM_NIGHT_SIZE_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                testID={`feedback-team-night-size-${opt.key}`}
+                label={opt.label}
+                selected={teamNightSize === opt.key}
+                selectedColor={opt.color}
+                onPress={() => setTeamNightSize(teamNightSize === opt.key ? null : opt.key)}
               />
             ))}
           </View>

@@ -262,16 +262,22 @@ console.log('\n[onboarding generation] transient failures get exactly one automa
         threw === null, `threw: ${(threw as any)?.message}`);
     }
 
+    // The store default WAS 'Commercial gym', pinned here because an unknown
+    // value crashed the (now deleted) location lookup. Under the equipment
+    // rulings (2026-07-31) nothing infers a kit from a location: the store's
+    // initial data is honestly EMPTY, and the resolver ignores location on
+    // every path — which the next assertion proves directly.
     const storeDefault = useProfileStore.getState().onboardingData?.trainingLocation;
-    ok('the store default training location is one of the valid locations',
-      LOCATIONS.includes(storeDefault),
-      `store default is ${JSON.stringify(storeDefault)} — an unknown value crashes generation`);
-
-    ok('onboarding never collects trainingLocation through a step (so it cannot be arbitrary)',
-      /PROFILE_DEFAULT_REQUIRED_FIELDS[\s\S]{0,200}'trainingLocation'/.test(
-        fs.readFileSync(path.join(__dirname, '..', 'utils/onboardingSteps.ts'), 'utf8'),
-      ),
-      'if a step ever starts collecting it, the unguarded lookup becomes reachable and needs a guard');
+    ok('the store no longer defaults a training location nobody chose',
+      storeDefault === undefined,
+      `store default is ${JSON.stringify(storeDefault)}`);
+    let undefinedLocationThrew: unknown = null;
+    try {
+      resolveEquipmentAvailability({ equipment: [] } as any, []);
+    } catch (error) { undefinedLocationThrew = error; }
+    ok('an absent training location resolves equipment without throwing',
+      undefinedLocationThrew === null,
+      `threw: ${(undefinedLocationThrew as any)?.message}`);
   }
 
   console.log(`\n${passed} passed, ${failures.length} failed`);

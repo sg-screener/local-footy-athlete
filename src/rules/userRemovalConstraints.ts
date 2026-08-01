@@ -46,8 +46,60 @@ export function applyUserRemovalConstraintsToWeek(args: {
     if (constraint.targetDate >= start && constraint.targetDate <= endISO) {
       const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
+      if (!constraint.remainingWorkout && constraint.wholeDayRestOwned) {
+        // THE ATHLETE EMPTIED THIS DAY, AND THAT IS A DECISION TOO.
+        //
+        // Binning used to write `markedDays[date] = 'rest'`, and the day stayed
+        // empty because a CALENDAR mark outranks every deriver. Sam ruled that
+        // out — a deletion door does not speak for the calendar — and removing
+        // the mark alone put the derived G-1 Gunshow straight back onto the day
+        // the athlete had just cleared.
+        //
+        // So the emptiness is owned exactly as placed content is: a canonical
+        // rest stub carrying the placement stamp. `resolverMayDisplace` reads
+        // it, every deriver already asks that question, and the day renders
+        // empty as before — without a standing instruction to the planner that
+        // nothing the athlete can reach could take back.
+        workouts.push({
+          ...clone(constraint.originalWorkout),
+          id: `athlete-rest:${constraint.id}`,
+          planEntryId: undefined,
+          dayOfWeek,
+          name: 'Rest',
+          description: '',
+          durationMinutes: 0,
+          intensity: 'Low',
+          workoutType: 'Rest',
+          sessionTier: 'recovery',
+          exercises: [],
+          conditioningBlock: undefined,
+          speedBlock: undefined,
+          strengthIntent: undefined,
+          strengthPatternContributions: undefined,
+          hasCombinedConditioning: false,
+          athletePlacement: athletePlacementFor({
+            constraintId: constraint.id,
+            placedDate: constraint.targetDate,
+          }),
+        } as unknown as Workout);
+      }
       if (constraint.remainingWorkout) {
-        workouts.push({ ...clone(constraint.remainingWorkout), dayOfWeek });
+        // Sam's ruling (2026-07-30, #4): ownership is stamped here for EVERY
+        // athlete door, not just Move. A swap's replacement, an add's new
+        // session and a component-bin's remainder all arrive as
+        // `remainingWorkout`, and all three are content the athlete decided
+        // belongs on this day. Stamping only the Move branch below is what let
+        // the derived G-1 Gunshow regenerate over a committed swap while the
+        // sheet reported "Done." — the door, not the athlete, decided who owned
+        // the day. See rules/athletePlacement.ts.
+        workouts.push({
+          ...clone(constraint.remainingWorkout),
+          dayOfWeek,
+          athletePlacement: athletePlacementFor({
+            constraintId: constraint.id,
+            placedDate: constraint.targetDate,
+          }),
+        });
       }
     }
     if (
@@ -59,11 +111,9 @@ export function applyUserRemovalConstraintsToWeek(args: {
     ) {
       const targetDayOfWeek = new Date(`${constraint.moveTargetDate}T12:00:00`).getDay();
       workouts = workouts.filter((workout) => workout.dayOfWeek !== targetDayOfWeek);
-      // THE single athlete-content ingress site, and therefore the only writer
-      // of the placement marker. Everything downstream — the §18 gateway, the
-      // resolver, the visible week — learns "the athlete put this here" from
-      // here and nowhere else, so the marker cannot disagree with the
-      // constraint that is its source of truth. See rules/athletePlacement.ts.
+      // The move's destination half. Both pushes in this function — and no site
+      // outside it — write the placement marker, so the marker cannot disagree
+      // with the constraint that is its source of truth.
       workouts.push({
         ...clone(constraint.movedWorkout),
         dayOfWeek: targetDayOfWeek,

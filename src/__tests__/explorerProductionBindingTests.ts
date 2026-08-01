@@ -123,11 +123,6 @@ const ACTIONS: readonly ExplorerExecutableAction[] = [
     target: { kind: 'adjustment', adjustmentId: 'logical-adjustment-one' },
     args: { restoredOn: '2026-07-20' },
   },
-  {
-    type: 'week.repeat', target: { kind: 'week', weekId: '2026-07-13' },
-    args: { sourceWeekStart: '2026-07-13', targetWeekStart: '2026-07-20' },
-    capability: { capabilityId: 'week.repeat', status: 'enabled' },
-  },
 ];
 
 const EXPECTED_OWNER_BY_ACTION = {
@@ -145,7 +140,6 @@ const EXPECTED_OWNER_BY_ACTION = {
   'equipment.clear': 'transactTemporarySourceFact',
   'session-feedback.record': 'commitSessionOutcomeTransaction',
   'adjustment.restore': 'clearReversibleAdjustment',
-  'week.repeat': 'repeatWeekIntoNextWeek',
 } as const;
 
 function canonicalIdentity(action: ExplorerExecutableAction): string {
@@ -158,7 +152,6 @@ function canonicalIdentity(action: ExplorerExecutableAction): string {
     case 'equipment-fact': return action.target.equipmentFactId;
     case 'session-feedback': return action.target.feedbackId;
     case 'adjustment': return 'exact-adjustment-from-producing-receipt';
-    case 'week': return action.target.weekId;
   }
 }
 
@@ -175,9 +168,9 @@ async function main(): Promise<void> {
   const manifest = EXPLORER_NON_COACH_SMOKE_MANIFESTS[0];
   const step = manifest.steps[0];
 
-  await test('all 15 declared bindings are installed exactly once', () => {
-    expect(EXPLORER_BOUND_ACTION_TYPES.length === 15, 'wrong binding count');
-    expect(new Set(EXPLORER_BOUND_ACTION_TYPES).size === 15, 'duplicate binding type');
+  await test('all 14 declared bindings are installed exactly once', () => {
+    expect(EXPLORER_BOUND_ACTION_TYPES.length === 14, 'wrong binding count');
+    expect(new Set(EXPLORER_BOUND_ACTION_TYPES).size === 14, 'duplicate binding type');
     expect(ACTIONS.every((action) => EXPLORER_BOUND_ACTION_TYPES.includes(action.type)),
       'action fixture does not cover every binding');
     expect(JSON.stringify(EXPLORER_PRODUCTION_OWNER_BY_ACTION) ===
@@ -257,8 +250,7 @@ async function main(): Promise<void> {
               canonicalReceipt: { ownerCall: ownerCalls },
               ...(candidate.type === 'session.move' ||
                 candidate.type === 'session.delete' ||
-                candidate.type === 'component.delete' ||
-                candidate.type === 'week.repeat'
+                candidate.type === 'component.delete'
                 ? { producedAdjustmentId: `produced:${candidate.type}` }
                 : {}),
               ...(candidate.type === 'adjustment.restore'
@@ -321,22 +313,6 @@ async function main(): Promise<void> {
       chain.scenarioId,
       'receipt-from-move-fixture',
     ) === 'exact-fixture-adjustment', 'restore rebound to unrelated later adjustment');
-  });
-
-  await test('Repeat Week restore binds its exact producing receipt', () => {
-    const repeat = EXPLORER_NON_COACH_SMOKE_MANIFESTS.find((candidate) =>
-      candidate.scenarioId ===
-        'smoke-repeat-week-phase-transition-and-restore')!;
-    const registry = new ExplorerAdjustmentReceiptRegistry();
-    registry.recordProducedAdjustment({
-      manifest: repeat,
-      sourceStepId: 'repeat-week',
-      exactAdjustmentId: 'exact-repeat-week-adjustment',
-    });
-    expect(registry.resolveExactAdjustmentId(
-      repeat.scenarioId,
-      'receipt-from-repeat-week',
-    ) === 'exact-repeat-week-adjustment', 'Repeat Week exact ID was not retained');
   });
 
   await test('one binding execution owns one TraceV2 root with exact prior linkage', async () => {

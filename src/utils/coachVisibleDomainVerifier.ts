@@ -21,6 +21,60 @@ import {
   type SemanticDaySnapshot,
 } from './programSemanticSnapshot';
 
+/**
+ * DOOR-AGNOSTIC visible verification.
+ *
+ * Everything below this comment is coupled to the coach's `ProgramEditDraft`,
+ * because the coach door was the only door that verified anything. Sam's ruling
+ * #7 (2026-07-30) put the tap door on the same footing: the device finding was a
+ * swap that committed into accepted state, was re-derived away by the resolver,
+ * and still reported "Done." — the exact failure this module exists to catch,
+ * missed only because the sheet never called it.
+ *
+ * A `PlanChange` has no draft, so it cannot use `compareVisibleDomainBeforeAfter`.
+ * What both doors share is the question "did the day the athlete touched
+ * actually change in the week they can SEE?", and the shared primitive that
+ * answers it is `fingerprintVisibleProgramDay`. This is that question, asked
+ * without a draft.
+ */
+export interface VisibleDatesChangeVerification {
+  ok: boolean;
+  /** Dates the mutation claimed but whose visible day is byte-identical. */
+  unchangedDates: string[];
+  /** Dates that vanished from the week entirely — a resolution fault, not a no-op. */
+  missingDates: string[];
+}
+
+export function verifyVisibleDatesChanged(args: {
+  before: readonly ResolvedDay[];
+  after: readonly ResolvedDay[];
+  dates: readonly string[];
+}): VisibleDatesChangeVerification {
+  const unchangedDates: string[] = [];
+  const missingDates: string[] = [];
+  for (const date of Array.from(new Set(args.dates))) {
+    const beforeDay = args.before.find((day) => day.date === date);
+    const afterDay = args.after.find((day) => day.date === date);
+    if (!afterDay) {
+      missingDates.push(date);
+      continue;
+    }
+    // A date absent from the BEFORE week is not a fault: an add can target a day
+    // the caller's snapshot never carried. Only a present-then-identical day is
+    // the silent no-op this exists to catch.
+    if (!beforeDay) continue;
+    if (JSON.stringify(fingerprintVisibleProgramDay(beforeDay)) ===
+      JSON.stringify(fingerprintVisibleProgramDay(afterDay))) {
+      unchangedDates.push(date);
+    }
+  }
+  return {
+    ok: unchangedDates.length === 0 && missingDates.length === 0,
+    unchangedDates,
+    missingDates,
+  };
+}
+
 export interface CoachVisibleDomainFingerprint {
   date: string;
   semantic: SemanticDaySnapshot;

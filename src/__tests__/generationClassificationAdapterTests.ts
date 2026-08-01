@@ -141,9 +141,7 @@ eq('accessory fatigue remains a separate adjacency policy', [
 
 console.log('\n[2] team and fixture anchors use shared stress/exposure rules');
 {
-  const hardTeam = classify({ focus: 'Team Training', isTeamDay: true }, {
-    teamTrainingIntensity: 'Hard',
-  });
+  const hardTeam = classify({ focus: 'Team Training', isTeamDay: true });
   eq('hard team anchor classification', {
     anchor: hardTeam.anchors.teamTraining,
     stress: hardTeam.stressLevel,
@@ -160,14 +158,17 @@ console.log('\n[2] team and fixture anchors use shared stress/exposure rules');
     sprintCod: 1,
   });
 
-  const lightTeam = classify({ focus: 'Light Team Training', isTeamDay: true }, {
-    teamTrainingIntensity: 'Light',
-  });
-  eq('light team anchor is medium and does not create a hard day', {
+  // A LIGHT TEAM NIGHT IS STILL A HARD DAY (Sam's ruling, 2026-07-30). This cell asserted
+  // the opposite — that a "Light" onboarding answer made a team night medium stress and
+  // cost no hard day. Bible `:119` lists team training as a hard day, and Sam ruled `:119`
+  // governs: the intensity answer no longer decides it. A static answer cannot know that
+  // THIS Tuesday was a match simulation.
+  const lightTeam = classify({ focus: 'Light Team Training', isTeamDay: true });
+  eq('a team night is high stress and a hard day whatever the athlete answered', {
     anchor: lightTeam.anchors.teamTraining,
     stress: lightTeam.stressLevel,
     hardDay: lightTeam.contributions.hardDay,
-  }, { anchor: true, stress: 'medium', hardDay: 0 });
+  }, { anchor: true, stress: 'high', hardDay: 1 });
 }
 for (const focus of ['Game Day', 'Practice Match']) {
   const fixture = classify({ focus, workoutType: 'Game', intensity: 'High' });
@@ -275,7 +276,6 @@ const profiles: Array<[string, Partial<OnboardingData>]> = [
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingIntensity: 'Light',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',
     experienceLevel: '2-5 years',
@@ -289,7 +289,6 @@ for (const [label, profile] of profiles) {
   const context = {
     experienceLevel: inputs.experienceLevel,
     conditioningLevel: inputs.conditioningLevel,
-    teamTrainingIntensity: inputs.teamTrainingIntensity,
   };
   const mismatches = plan.filter((session: SessionAllocation) =>
     session.stressLevel !== classifyGenerationSession(session, context).stressLevel);

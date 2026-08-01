@@ -24,7 +24,7 @@ export type ExplorerProductionReceiptStatus =
 
 export type ExplorerExecutableAction = Exclude<
   ExplorerAction,
-  { readonly type: 'coach.message' }
+  { readonly type: 'coach.message' } | { readonly type: 'week.repeat' }
 >;
 
 export type ExplorerExecutableActionType = ExplorerExecutableAction['type'];
@@ -51,7 +51,6 @@ export const EXPLORER_PRODUCTION_OWNER_BY_ACTION = Object.freeze({
   'equipment.clear': 'transactTemporarySourceFact',
   'session-feedback.record': 'commitSessionOutcomeTransaction',
   'adjustment.restore': 'clearReversibleAdjustment',
-  'week.repeat': 'repeatWeekIntoNextWeek',
 } as const satisfies Readonly<Record<ExplorerExecutableActionType, string>>);
 
 export type ExplorerProductionOwnerName =
@@ -254,8 +253,10 @@ export function createExplorerActionBridge(
 export function assertExplorerActionExecutable(
   action: ExplorerAction,
 ): asserts action is ExplorerExecutableAction {
-  if (action.type === 'coach.message' ||
-    (action.type === 'week.repeat' && action.capability.status !== 'enabled')) {
+  // `week.repeat` has no production owner — HOME_SCREEN_REDESIGN ruling 1
+  // (2026-07-30) retired the athlete-facing repeat-week writer entirely, so
+  // this capability is permanently disabled, exactly like `coach.message`.
+  if (action.type === 'coach.message' || action.type === 'week.repeat') {
     fail(EXPLORER_ACTION_BRIDGE_FAILURE.CAPABILITY_DISABLED, action.type);
   }
 }

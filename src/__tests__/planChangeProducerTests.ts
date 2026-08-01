@@ -25,6 +25,8 @@ import {
   buildPlanChangeProposal,
   isWithinEditHorizon,
   listPlanChangeOptionsForDay,
+  type PlanChangeDayOptions,
+  type PlanChangeMoveDestination,
   pickTemplateForCategory,
   planChangeWarningForCategory,
   previewPlanChangeRisk,
@@ -38,7 +40,55 @@ import { validateLiveWorkoutWrite } from '../utils/postGenerationConstraintValid
 import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
 import { projectVisibleDay } from '../utils/visibleProgramProjection';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
-import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
+import { canonicaliseAcceptedStateCandidate, useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
+import { generateProgramLocally } from '../services/api/generateProgram';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+
+/**
+ * Flatten the typed move answer for the assertions that only care about WHERE a
+ * day can go. `options.move` is a union now (Sam, 2026-07-30, direction b): a
+ * bare array could not carry the refusal, and its emptiness is exactly what the
+ * sheet rendered as a dead end.
+ */
+function moveDestinationsOf(options: PlanChangeDayOptions): PlanChangeMoveDestination[] {
+  if (options.move.refusal) return [];
+  const seen = new Set<string>();
+  const flat: PlanChangeMoveDestination[] = [];
+  for (const scope of options.move.scopes) {
+    for (const destination of scope.destinations) {
+      if (seen.has(destination.date)) continue;
+      seen.add(destination.date);
+      flat.push(destination);
+    }
+  }
+  return flat;
+}
+
+/**
+ * THE CONVERSE of "every offered option validates".
+ *
+ * The original invariant looped over `moveDestinations` and asserted each one
+ * validated. On a combined day that list was empty, so the loop made ZERO
+ * assertions and passed while the device showed a picker with nothing in it.
+ * A one-directional invariant cannot see absence. This is the other direction:
+ * a picker the sheet can open must offer something, or the producer must have
+ * refused in words.
+ */
+function assertPickerIsUsableOrRefused(label: string, options: PlanChangeDayOptions): void {
+  if (options.locked !== null) return;
+  if (!options.move.refusal) {
+    ok(`${label} move offers at least one scope`, options.move.scopes.length > 0, options.move);
+    for (const scope of options.move.scopes) {
+      ok(`${label} move scope ${scope.id} offers at least one destination`,
+        scope.destinations.length > 0, scope);
+    }
+  } else {
+    ok(`${label} move refusal is a sentence, not a code`,
+      options.move.refusal.message.length > 0 && !/_/.test(options.move.refusal.message),
+      options.move.refusal);
+  }
+}
 
 const TODAY = '2026-07-01'; // Wednesday
 const MON = '2026-06-29';
@@ -46,6 +96,118 @@ const THU = '2026-07-02';
 const SAT = '2026-07-04';
 const NEXT_SAT = '2026-07-11';
 const WEEK_4_MON = '2026-07-20'; // outside this week + next 2
+
+/**
+ * STORE SEED.
+ *
+ * This suite builds its weeks as synthetic `ResolvedDay[]` fixtures and, until
+ * now, ran with empty stores. That was fine when the producer only built
+ * proposals. It stopped being fine when the athlete mutations became
+ * accepted-state transactions: they read the live program and profile for
+ * capacity scoring, Contract v2 and the accepted week, so twenty-three
+ * assertions in this file have been failing on `main` — long enough that the
+ * suite was left out of `test:bible` rather than fixed. Sam's ruling
+ * (2026-07-30) puts it in the gate, so the rot is paid off here.
+ *
+ * The seeded program is deliberately REAL (generated, not hand-stubbed): the
+ * transactions validate against it, and a hand-stub that satisfied them would
+ * be asserting against a fiction.
+ */
+function seedAcceptedStores(): void {
+  const athlete = {
+    seasonPhase: 'In-season',
+    position: 'inside_mid',
+    motivation: 'Build strength and football fitness',
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    teamTrainingDuration: '60-90 minutes',
+    trainingLocation: 'Commercial gym',
+    equipment: ['Full Gym'],
+    equipmentSelectionCompleteness: 'complete',
+    experienceLevel: 'Advanced',
+    squatStrength: '1.5x bodyweight',
+    benchStrength: '1.25x bodyweight',
+    conditioningLevel: 'Good',
+    sprintExposure: '2+ times per week',
+    recentTrainingLoad: 'Very consistent',
+    injuries: [],
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+  } as any;
+  const warn = console.warn;
+  const error = console.error;
+  console.warn = () => undefined;
+  console.error = () => undefined;
+  let program: any;
+  try {
+    program = generateProgramLocally(athlete, {
+      todayISO: MON,
+      previousProgram: null,
+      seasonPhaseClock: {
+        protocolVersion: 1,
+        selectedPhase: 'In-season',
+        phaseEntryWeekStartISO: MON,
+        originProvenance: 'explicit_user_phase_change',
+        persistenceProvenance: 'preserved_persisted_state',
+      },
+    });
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true } as any);
+  useProgramStore.setState({
+    currentProgram: program,
+    currentMicrocycle: program.microcycles[0] ?? null,
+    todayWorkout: null,
+    isGenerating: false,
+    isLoading: false,
+    error: null,
+    blockState: null,
+    acceptedMaterialContext: {
+      markedDays: {},
+      readinessSignalsByDate: {},
+      activeConstraints: [],
+      activeInjury: null,
+      revision: 1,
+      lastTransaction: 'plan-change-producer-test:seed',
+      injuryEpisodes: [],
+      temporarySourceFacts: [],
+      acceptedCompositionBase: null,
+      acceptedProfileSnapshot: null,
+    },
+    dateOverrides: {},
+    overrideContexts: {},
+    weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+    exposureContractsByWeek: {},
+    sessionFeedback: {},
+    weightOverrides: {},
+  } as any);
+}
+
+/**
+ * The seed is SCOPED, never global. Most of this suite tests the producer as a
+ * pure function over synthetic `ResolvedDay[]` weeks that deliberately do not
+ * correspond to any stored program — seeding globally makes
+ * `buildPlanChangeProposal` validate those fixtures against a real accepted
+ * week and reject them. Only the blocks that commit through a transaction need
+ * a store, and they take one for the length of the block.
+ */
+function withAcceptedStores<T>(body: () => T): T {
+  const priorProgram = useProgramStore.getState();
+  const priorProfile = useProfileStore.getState();
+  seedAcceptedStores();
+  try {
+    return body();
+  } finally {
+    useProgramStore.setState(priorProgram as any);
+    useProfileStore.setState(priorProfile as any);
+  }
+}
 
 let pass = 0;
 let fail = 0;
@@ -282,24 +444,24 @@ console.log('planChangeProducerTests');
       options.templates.some((t) => t.templateId === 'erg_emom'),
     options.templates.map((t) => t.templateId));
   ok('[2] move destinations include every non-game day',
-    options.moveDestinations.length > 0 &&
-      options.moveDestinations.every((destination) => {
+    moveDestinationsOf(options).length > 0 &&
+      moveDestinationsOf(options).every((destination) => {
         const day = bothWeeks().find((d) => d.date === destination.date);
         return day != null && day.workout?.workoutType !== 'Game';
       }),
-    options.moveDestinations);
+    moveDestinationsOf(options));
   {
     // Rest days first, then occupied (swap) destinations.
-    const firstOccupiedIdx = options.moveDestinations.findIndex((d) => d.occupiedBy !== null);
-    const lastRestIdx = options.moveDestinations
+    const firstOccupiedIdx = moveDestinationsOf(options).findIndex((d) => d.occupiedBy !== null);
+    const lastRestIdx = moveDestinationsOf(options)
       .map((d, i) => (d.occupiedBy === null ? i : -1))
       .reduce((a, b) => Math.max(a, b), -1);
     ok('[2] rest days listed before occupied days',
       firstOccupiedIdx === -1 || lastRestIdx < firstOccupiedIdx,
-      options.moveDestinations);
+      moveDestinationsOf(options));
     ok('[2] occupied destinations carry the session name',
-      options.moveDestinations.some((d) => d.occupiedBy === 'Lower Body Strength'),
-      options.moveDestinations);
+      moveDestinationsOf(options).some((d) => d.occupiedBy === 'Lower Body Strength'),
+      moveDestinationsOf(options));
   }
 }
 
@@ -334,8 +496,17 @@ console.log('planChangeProducerTests');
 }
 
 {
-  console.log('\n[5] CORE INVARIANT: every offered option validates');
+  console.log('\n[5] CORE INVARIANT: every offered option validates, and every picker is usable');
   const week = bothWeeks();
+  // The converse direction (Sam's ruling, 2026-07-30). "Every offered option
+  // validates" is vacuously true of a day that offers nothing, which is how the
+  // empty "Move to:" list survived this suite. Assert over EVERY day that a
+  // picker the sheet can open either has contents or was refused in words.
+  for (const day of week) {
+    assertPickerIsUsableOrRefused(`[5] ${day.date}`, listPlanChangeOptionsForDay({
+      visibleWeek: week, date: day.date, todayISO: TODAY,
+    }));
+  }
   for (const date of [THU, '2026-07-08']) {
     const options = listPlanChangeOptionsForDay({
       visibleWeek: week,
@@ -353,7 +524,7 @@ console.log('planChangeProducerTests');
         eq(`[5] swap ${template.templateId} on ${date} validates`,
           validation2.status, 'valid');
       }
-      for (const destination of options.moveDestinations) {
+      for (const destination of moveDestinationsOf(options)) {
         const validation3 = validateProposal(
           build({ kind: 'move_session', fromDate: date, toDate: destination.date }, week),
           week);
@@ -446,6 +617,75 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 }
 
 {
+  console.log('\n[8b] the mobility door means the same thing on both sides');
+  // ONE CATEGORY, TWO KIND MAPPINGS. `categoryAddsSessionKind` calls `mobility`
+  // a recovery-kind add (Sam's charter: optional, no load, never hard, never
+  // breaks rest); `templateAddsSessionKind` had no mobility branch and fell
+  // through to `conditioning`. Two athlete-visible faults from that one split,
+  // and the door matrix could not see either — a REFUSAL is an honest outcome
+  // there, and the grid cannot build a one-session conditioning day.
+  //
+  // Both are asserted here, on fixtures built for exactly these two shapes.
+  const mobilityWeek = (occupied: Workout | null): ResolvedDay[] => [
+    visibleDay(MON, occupied),
+    visibleDay('2026-06-30', null),
+    visibleDay(TODAY, null),
+    visibleDay(THU, null),
+    visibleDay('2026-07-03', null),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+
+  // (a) A CONDITIONING-OCCUPIED DAY. The sheet offers Mobility there — its guard
+  // asks `categoryAddsSessionKind`, which says recovery, and recovery never
+  // duplicates. The writer must therefore not refuse it as a second conditioning
+  // session; the sheet's own rule is that it never offers a door with nothing
+  // behind it.
+  const condWeek = mobilityWeek(conditioningWorkout('mob-cond', 'Easy Zone 2 Bike', 1));
+  const condOptions = listPlanChangeOptionsForDay({
+    visibleWeek: condWeek, date: MON, todayISO: TODAY,
+  });
+  ok('[8b] a conditioning day offers Mobility (recovery never duplicates)',
+    condOptions.categories.some((c) => c.id === 'mobility'),
+    condOptions.categories.map((c) => c.id));
+  const condAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: MON, category: 'mobility' },
+    { visibleWeek: condWeek },
+  );
+  ok('[8b] adding Mobility to a conditioning day is not refused as a duplicate',
+    !('error' in condAdd),
+    condAdd);
+
+  // (b) A STRENGTH-ONLY DAY. It applied before the fix too — silently, with
+  // `targetDomain: 'conditioning'`, so the validator was asked to check the
+  // change landed in a domain it did not land in. Only the PROPOSAL shows that,
+  // which is why this cell reads the proposal rather than the outcome.
+  const strengthWeek = mobilityWeek(strengthWorkout('mob-str', 'Upper Push', 1));
+  const strengthAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: MON, category: 'mobility' },
+    { visibleWeek: strengthWeek },
+  );
+  ok('[8b] adding Mobility to a strength day is accepted', !('error' in strengthAdd), strengthAdd);
+  if (!('error' in strengthAdd) && strengthAdd.kind === 'revision') {
+    eq('[8b] a Mobility add publishes in the RECOVERY domain, never conditioning',
+      strengthAdd.userIntent.targetDomain, 'recovery');
+  }
+
+  // (c) AND ON A REST DAY, the same. The rest-day path builds its own
+  // `targetDomain` and used to re-spell the kind mapping inline, which is how one
+  // copy could carry the mobility branch and the other not.
+  const restAdd = buildPlanChangeProposal(
+    { kind: 'add_category', date: THU, category: 'mobility' },
+    { visibleWeek: mobilityWeek(strengthWorkout('mob-str2', 'Upper Push', 1)) },
+  );
+  ok('[8b] adding Mobility to a rest day is accepted', !('error' in restAdd), restAdd);
+  if (!('error' in restAdd) && restAdd.kind === 'revision') {
+    eq('[8b] a rest-day Mobility add publishes in the RECOVERY domain',
+      restAdd.userIntent.targetDomain, 'recovery');
+  }
+}
+
+{
   console.log('\n[9] day-level and exercise-level change doors stay separated (source contract)');
   // Systemic guard: the weekly board owns day/session changes through
   // PlanChangeSheet. The open workout owns exercise edits through its
@@ -471,19 +711,27 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] DayWorkoutScreenV2 removes the weekly PlanChangeSheet',
     !/<PlanChangeSheet\b/.test(dayWorkoutSrc)
       && !/Want to change something\?/.test(dayWorkoutSrc));
+  // Ruling 12 (Task 8, buttons/UI unit) retired the "Edit exercises" link and
+  // its modal menu: exercise-level editing is now three top-of-page icons
+  // plus two per-row buttons, with the same guided ExerciseEditSheet behind
+  // all five. Updated to the new entry surface, not to a fantasy — see
+  // docs/COPY_SHEET_RULINGS_2026-07-30.md "Task 8" for the full retired
+  // string list.
   ok('[9] DayWorkoutScreenV2 renders an exercise-level change door',
-    dayWorkoutSrc.includes('"day-workout-make-change-link"')
-      && dayWorkoutSrc.includes('Edit exercises')
+    dayWorkoutSrc.includes('"day-workout-add-exercise-action"')
+      && dayWorkoutSrc.includes('"day-workout-equipment-concern-action"')
+      && dayWorkoutSrc.includes('"day-workout-injury-concern-action"')
       && /<ExerciseEditSheet\b/.test(dayWorkoutSrc));
   ok('[9] DayWorkoutScreenV2 exercise sheet has exercise-level actions only',
-    dayWorkoutSrc.includes('Swap an exercise')
-      && dayWorkoutSrc.includes('Add an exercise')
-      && dayWorkoutSrc.includes('Remove an exercise')
-      && dayWorkoutSrc.includes('Something hurts / no equipment')
+    !/'menu'|'exercise_menu'/.test(dayWorkoutSrc)
+      && /'swap_reason'/.test(dayWorkoutSrc)
+      && /'add_kind'/.test(dayWorkoutSrc)
+      && /'confirm_remove'/.test(dayWorkoutSrc)
       && !/Swap this session|Add to this day|Move this session|Bin this session/.test(dayWorkoutSrc));
-  ok('[9] DayWorkoutScreenV2 offers per-exercise Change actions',
-    /function ExerciseChangeAction/.test(dayWorkoutSrc)
-      && /exerciseChangeText/.test(dayWorkoutSrc));
+  ok('[9] DayWorkoutScreenV2 offers per-exercise swap and remove actions',
+    /function ExerciseRowActions/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Swap exercise"/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Remove exercise"/.test(dayWorkoutSrc));
   ok('[9] session exercise edits use deterministic current-session executors',
     /executeProgramControlAction/.test(dayWorkoutSrc)
       && /type:\s*'swap_exercise'/.test(dayWorkoutSrc)
@@ -501,22 +749,36 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && !/askCoachForFutureRemove/.test(dayWorkoutSrc));
   ok('[9] Team Training entries are excluded from exercise-level edits',
     /filter\(\(exercise: any\) => !isTeamTrainingItem\(exercise\)\)/.test(dayWorkoutSrc)
-      && /isTeamTrainingItem\(exercise\) \? undefined : \(\) => onChangeExercise\(exercise\)/.test(dayWorkoutSrc));
+      && /isEditableRow \? \(\) => onSwapExercise\(exercise\) : undefined/.test(dayWorkoutSrc)
+      && /isEditableRow \? \(\) => onRemoveExercise\(exercise\) : undefined/.test(dayWorkoutSrc));
   ok('[9] Team Training-only detail does not expose a Coach-prefill edit menu',
     /date && !isTeamOnly && editableExercises\.length > 0/.test(dayWorkoutSrc)
       && !/team_menu|I can.t make team training|Tell coach about team training/.test(dayWorkoutSrc));
+  // "Message the coach" was already renamed app-wide to "Ask Coach" by an
+  // earlier unit (COPY_SHEET_RULINGS batch 4); corrected here alongside the
+  // Task 8 update rather than left pointing at retired wording.
   ok('[9] Coach fallback is explicit from inside the exercise sheet',
     /kind: 'coach_fallback'/.test(dayWorkoutSrc)
       && /I need a bit more detail before changing this safely\./.test(dayWorkoutSrc)
-      && /label="Message the coach"/.test(dayWorkoutSrc));
+      && /label="Ask Coach"/.test(dayWorkoutSrc));
   ok('[9] tap exercise swaps use the Bible hierarchy adapter, not local regex tables',
     /getTapSwapChoices/.test(dayWorkoutSrc)
       && /resolveTapSwapEnvironment/.test(dayWorkoutSrc)
       && !/function suggestExerciseReplacement|function suggestExerciseForInjury|function nameMatches/.test(dayWorkoutSrc));
+  // The "Something hurts" wiring moved from an exercise_menu/concern_reason
+  // row (`label="Something hurts" onPress={() => onInjuryStart(step.exercise)}`)
+  // to the top-of-page injury icon: its own accessibilityLabel, routed
+  // through pick_exercise's 'injury' action to the same onInjuryStart call —
+  // concern_reason retired in the same review-finding pass that updated this
+  // assertion (COPY_SHEET_RULINGS Task 8, 8a-ii; Sam ruled the equipment icon
+  // goes straight to the swap suggestion and concern_reason may retire with
+  // the other unreachable steps).
   ok('[9] injury/pain exercise edits open the guided injury flow',
     /<GuidedInjuryFlowSheet\b/.test(dayWorkoutSrc)
       && /reason === 'Injury \/ pain'[\s\S]*openExerciseInjuryFlow\(exercise\)/.test(dayWorkoutSrc)
-      && /label="Something hurts"[\s\S]*onInjuryStart\(step\.exercise\)/.test(dayWorkoutSrc)
+      && /accessibilityLabel="Something hurts"/.test(dayWorkoutSrc)
+      && /if \(action === 'injury'\) onInjuryStart\(exercise\);/.test(dayWorkoutSrc)
+      && !/'concern_reason'/.test(dayWorkoutSrc)
       && /type:\s*'set_injury_modifier'/.test(dayWorkoutSrc));
 
   const sheet = fs.readFileSync(
@@ -527,55 +789,82 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     path.resolve(__dirname, '..', 'utils', 'planChangeRefusalCopy.ts'),
     'utf8',
   );
-  const menuIdx = sheet.indexOf("step.kind === 'menu'");
-  const editIdx = sheet.indexOf("step.kind === 'edit_session'");
-  const categoryIdx = sheet.indexOf("step.kind === 'pick_category'");
+  // REWRITTEN 2026-07-31 for Sam's design rulings 7-9. Everything below used to
+  // pin the INTERMEDIATE menu — a step whose only job was to open another step —
+  // plus the `hasEditableSession` branch that chose between its two rows by
+  // reading `workoutType === 'Recovery'` and a lowercased workout name. Both are
+  // deleted, so those cells now pin the shape that replaced them. This file's own
+  // 2026-07-30 note is the precedent and the warning: an assertion left pinning a
+  // door nobody can open is an assertion certifying dead code as correct.
+  const actionsIdx = sheet.indexOf("step.kind === 'actions'");
+  const typeIdx = sheet.indexOf("step.kind === 'pick_type'");
   const destinationIdx = sheet.indexOf("step.kind === 'pick_destination'");
   const binScopeIdx = sheet.indexOf("step.kind === 'pick_bin_scope'");
-  const wellbeingIdx = sheet.indexOf("step.kind === 'pick_wellbeing'");
-  const askCoachIdx = sheet.indexOf('const askCoach = () =>');
   const confirmWarningIdx = sheet.indexOf("step.kind === 'confirm_warning'");
   const blockWarningIdx = sheet.indexOf("step.kind === 'block_warning'");
-  const menuBlock = sheet.slice(menuIdx, editIdx);
-  const editBlock = sheet.slice(editIdx, categoryIdx);
+  const actionsBlock = sheet.slice(actionsIdx, sheet.indexOf("step.kind === 'add_blocked_max_sessions'"));
+  const typeBlock = sheet.slice(typeIdx, sheet.indexOf("step.kind === 'pick_conditioning'"));
+  const duplicateBlock = sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'"), typeIdx);
   const confirmWarningBlock = sheet.slice(confirmWarningIdx, blockWarningIdx);
   const blockWarningBlock = sheet.slice(blockWarningIdx, destinationIdx);
 
-  ok('[9] PlanChangeSheet has an explicit edit_session step',
-    /\| \{ kind: 'edit_session' \}/.test(sheet));
-  ok('[9] occupied top menu enters Edit this session',
-    /hasEditableSession \? \([\s\S]{0,220}label="Edit this session"[\s\S]{0,120}sub="Swap, add, move or remove this session"[\s\S]{0,140}setStep\(\{ kind: 'edit_session' \}\)/.test(menuBlock));
-  ok('[9] occupied top menu no longer directly lists edit actions',
-    !/label="Swap this session"|label="Add to this day"|label="Move this session"|label="Bin this session"/.test(menuBlock));
-  ok('[9] rest/recovery top menu offers optional add instead of edit',
-    /label="Add optional session"[\s\S]{0,120}sub="Add extra strength or conditioning work to this day"[\s\S]{0,180}startAdd\('menu'\)/.test(menuBlock)
-      && /selectedWorkout\?\.workoutType === 'Recovery'/.test(sheet)
-      && /selectedWorkout\?\.sessionTier === 'recovery'/.test(sheet));
-  ok('[9] edit_session menu owns swap/add/move/bin options',
-    /label="Swap this session"[\s\S]{0,80}Change to strength, conditioning or recovery/.test(editBlock)
-      && /label="Add to this day"[\s\S]{0,100}Add extra strength or conditioning work to this day/.test(editBlock)
-      && /label="Move this session"[\s\S]{0,80}Move it to another day or trade places/.test(editBlock)
-      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
-  ok('[9] swap category no longer offers Rest day because bin owns rest',
-    !/label="Rest day"|Clear the day - same as binning the session/.test(sheet)
-      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
-  ok('[9] edit_session reuses existing swap/add/move/bin routes',
-    /kind: 'pick_category', mode: 'swap', returnTo: 'edit_session'/.test(editBlock)
-      && /startAdd\('edit_session'\)/.test(editBlock)
-      && /kind: 'pick_destination'/.test(editBlock)
-      && /onPress=\{startBin\}/.test(editBlock)
-      && /apply\(\{ kind: 'move_session'/.test(sheet.slice(destinationIdx, binScopeIdx))
+  ok('[9] the four actions ARE the first step — no menu in front of the menu',
+    /\| \{ kind: 'actions' \}/.test(sheet)
+      && /useState<Step>\(\{ kind: 'actions' \}\)/.test(sheet)
+      && /if \(visible\) \{\s*setStep\(\{ kind: 'actions' \}\);/.test(sheet)
+      && !/kind: 'menu'|kind: 'edit_session'|kind: 'pick_add_kind'/.test(sheet));
+  ok('[9] the first step owns swap/add/move/remove and nothing else',
+    /label="Swap this session"/.test(actionsBlock)
+      && /label="Add to this day"[\s\S]{0,600}sub="Put another session on this day"/.test(actionsBlock)
+      && !/strength or conditioning work to this day/.test(sheet)
+      && /label="Move this session"/.test(actionsBlock)
+      && /label="Remove this session"/.test(actionsBlock)
+      && !/label="Edit this session"|label="Add optional session"|label="I'm not 100%"|ask the coach/.test(actionsBlock));
+  ok('[9] the sheet no longer decides capability from a workout name or type',
+    !/workoutType === 'Recovery'/.test(sheet)
+      && !/sessionTier === 'recovery'/.test(sheet)
+      && !/hasEditableSession|isRestOrRecoveryDay|selectedWorkoutName/.test(sheet));
+  ok('[9] every action row is enabled from the projection\'s capability, not from content',
+    /disabled=\{!options\.canSwap\}/.test(actionsBlock)
+      && /disabled=\{!options\.canAdd\}/.test(actionsBlock)
+      && /disabled=\{!!options\.move\.refusal\}/.test(actionsBlock)
+      && /disabled=\{!options\.canRemove\}/.test(actionsBlock));
+  ok('[9] a disabled Move row renders the producer\'s own refusal sentence',
+    /options\.move\.refusal\s*\?\s*options\.move\.refusal\.message/.test(actionsBlock));
+  ok('[9] every action row carries an icon and the danger row is the destructive one',
+    /icon=\{swapIcon\(/.test(actionsBlock)
+      && /icon=\{addIcon\(/.test(actionsBlock)
+      && /icon=\{moveIcon\(/.test(actionsBlock)
+      && /icon=\{removeIcon\(/.test(actionsBlock)
+      && /label="Remove this session"[\s\S]{0,900}danger/.test(actionsBlock)
+      && /icon\?: React\.ReactNode/.test(sheet));
+  ok('[9] swap category no longer offers Rest day because remove owns rest',
+    !/label="Rest day"|Clear the day - same as binning the session/.test(sheet));
+  ok('[9] the first step reuses the existing swap/add/move/remove routes',
+    /kind: 'pick_type', mode: 'swap'/.test(actionsBlock)
+      && /onPress=\{startAdd\}/.test(actionsBlock)
+      && /onPress=\{\(\) => startMove\(\)\}/.test(actionsBlock)
+      && /onPress=\{startBin\}/.test(actionsBlock)
+      && /apply\(\{[\s\S]{0,24}kind: 'move_session'/.test(sheet.slice(destinationIdx, binScopeIdx))
       && /apply\([\s\S]{0,80}\{ kind: 'remove_session'/.test(sheet));
-  ok('[9] Add to this day opens an ADD menu with strength and conditioning',
-    /\| \{ kind: 'pick_add_kind'; returnTo: StepBackTarget \}/.test(sheet)
-      && /step\.kind === 'pick_add_kind'[\s\S]{0,120}<Text style=\{styles\.sectionLabel\}>ADD:<\/Text>/.test(sheet)
-      && /label="Strength"[\s\S]{0,100}Upper, lower, full body or accessories/.test(sheet)
-      && /label="Conditioning"[\s\S]{0,100}Light or hard - bike, row, ski or intervals/.test(sheet));
-  ok('[9] ADD menu routes pickers with add intent and backs naturally',
-    /chooseAddKind\('strength', step\.returnTo\)/.test(sheet)
-      && /chooseAddKind\('conditioning', step\.returnTo\)/.test(sheet)
-      && /mode: 'add'/.test(sheet.slice(sheet.indexOf('const chooseAddKind')))
-      && /pickerBackStep\(step\.mode, step\.returnTo\)/.test(sheet));
+  ok('[9] Add and Swap open ONE type step offering Sam\'s five session types',
+    /\| \{ kind: 'pick_type'; mode: 'swap' \| 'add' \}/.test(sheet)
+      && /label="Strength"[\s\S]{0,140}Upper, lower or full body/.test(typeBlock)
+      && /label="Conditioning"[\s\S]{0,140}Light or hard - bike, row, ski or intervals/.test(typeBlock)
+      && /offers\('gunshow'\)/.test(typeBlock)
+      && /offers\('mobility'\)/.test(typeBlock)
+      && /offers\('prehab'\)/.test(typeBlock));
+  ok('[9] the type step offers no recovery row and mobility is finally reachable',
+    !/chooseCategory\((?:mode|step\.mode), 'recovery'\)/.test(sheet)
+      && !/c\.id === 'recovery'/.test(sheet)
+      && /chooseCategory\(mode, 'mobility'\)/.test(typeBlock));
+  ok('[9] the strength bucket is the three strength sessions only',
+    /filter\(\(c\) => c\.id\.startsWith\('strength_'\)\)/.test(sheet)
+      && !/c\.id\.startsWith\('strength_'\) \|\| c\.id === 'gunshow'/.test(sheet));
+  ok('[9] the type step routes pickers with the mode it was opened in',
+    /chooseType\(mode, 'strength',[\s\S]{0,80}kind: 'pick_strength', mode/.test(typeBlock)
+      && /chooseType\(mode, 'conditioning',[\s\S]{0,80}kind: 'pick_conditioning', mode/.test(typeBlock)
+      && /pickerBackStep\(step\.mode\)/.test(sheet));
   ok('[9] add blockers explain max sessions and duplicate session types',
     /Please remove a session first/.test(sheet)
       && /This day already has 2 sessions\. Remove one before adding another\./.test(sheet)
@@ -583,18 +872,52 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       && /This day already includes a strength session\. Swap the current session or remove one before adding another\./.test(sheet)
       && /Already has conditioning work/.test(sheet)
       && /This day already includes conditioning\. Swap the current session or remove one before adding another\./.test(sheet));
-  ok('[9] duplicate blockers route to existing swap/bin flows and back to ADD',
-    /label="Swap this session"[\s\S]{0,160}kind: 'pick_category'[\s\S]{0,80}mode: 'swap'/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
-      && /label="Remove a session"[\s\S]{0,80}onPress=\{startBin\}/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
-      && /kind: 'pick_add_kind', returnTo: step\.returnTo/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'"))));
-  ok('[9] nested edit backs return to edit_session while wellbeing stays on menu path',
-    /BackRow onPress=\{\(\) => setStep\(\{ kind: step\.returnTo \}\)\}/.test(sheet)
-      && /BackRow onPress=\{\(\) => setStep\(\{ kind: 'edit_session' \}\)\}/.test(sheet.slice(destinationIdx))
-      && /BackRow onPress=\{\(\) => setStep\(\{ kind: 'menu' \}\)\}/.test(sheet.slice(wellbeingIdx)));
-  ok('[9] ask coach and wellbeing routes remain unchanged',
-    /onAskCoach\(`About \$\{weekdayLabel\(date\)\}: `\)/.test(sheet.slice(askCoachIdx, wellbeingIdx))
-      && /label="I'm not 100%"[\s\S]{0,140}setStep\(\{ kind: 'pick_wellbeing' \}\)/.test(menuBlock)
-      && /label="Something else - ask the coach"[\s\S]{0,120}onPress=\{askCoach\}/.test(menuBlock));
+  ok('[9] the add guard blocks a duplicate KIND and never blocks mobility',
+    /const chooseType = \([\s\S]{0,700}adds !== 'recovery' && \(options\?\.visibleSessionKinds \?\? \[\]\)\.includes\(adds\)/.test(sheet)
+      && /chooseType\(mode, 'recovery',/.test(typeBlock));
+  ok('[9] duplicate blockers route to existing swap/remove flows and back to the type step',
+    /label="Swap this session"[\s\S]{0,200}kind: 'pick_type', mode: 'swap'/.test(duplicateBlock)
+      && /label="Remove a session"[\s\S]{0,140}onPress=\{startBin\}/.test(duplicateBlock)
+      && /kind: 'pick_type', mode: 'add'/.test(duplicateBlock));
+  ok('[9] nested steps back out to the four actions, and the four actions close',
+    /setStep\(\{ kind: 'actions' \}\)/.test(sheet.slice(destinationIdx))
+      && /<BackRow onPress=\{onClose\} \/>/.test(actionsBlock));
+  // RULINGS 7 AND 8, THE ABSENCE HALF. Readiness lives on the week card and the
+  // Coach tab covers "something else"; neither door may exist here as well.
+  // `readinessSourceFactOwnershipTests` asserts the same absence from the
+  // readiness side, and the presence at the week-level owner.
+  ok('[9] the day door holds no readiness and no coach-prefill escape hatch',
+    !/onAskCoach|askCoach|onOpenReadiness|openReadiness/.test(sheet));
+  // THE SINGLE-SCOPE REMOVE PATH SENDS THE SCOPE IT WAS OFFERED.
+  //
+  // `startBin` hardcoded `whole_day` whenever the producer offered one scope,
+  // which was invisible until the capability work made Remove live on a
+  // team-only night: the one scope offered there is `team` (Sam's "can't make it
+  // tonight, this date only") and `whole_day` is refused outright on a day
+  // carrying an anchor. The matrix asserts the other half — every OFFERED scope
+  // is one the transaction ACCEPTS — and this asserts the sheet does not swap
+  // the offer for something else on the way. Control flow, which is the half a
+  // screen source reading can hold honestly (see `planChangeMoveScopingTests`).
+  const startBinBlock = sheet.slice(
+    sheet.indexOf('const startBin'), sheet.indexOf('return ('));
+  ok('[9] the one offered remove scope is the one that gets sent',
+    /scope: scopes\[0\]\?\.id \?\? 'whole_day'/.test(startBinBlock)
+      && !/kind: 'confirm_remove', scope: 'whole_day'/.test(startBinBlock));
+  ok('[9] the remove confirmation cannot promise a day that is not there',
+    /step\.label === null\s*\?\s*'Are you sure\? This will be removed and the day becomes rest\.'/.test(sheet)
+      && !/step\.scope === 'whole_day'\s*\?\s*'Are you sure\?/.test(sheet));
+  // THE REMOVE SUB-LINE IS STATE-SELECTED SINCE SAM'S 2026-07-31 RULING (copy
+  // sheet §6-IV-3), and the law that the ROW and the CONFIRMATION are selected by
+  // ONE predicate lives in `planChangeMoveScopingTests` — which is armed in
+  // `test:bible`, and this suite is not. Stated once, in the gated place.
+
+  // BATCH 3's VERB RULING, FINISHED. "Remove everywhere, not Bin" — the two
+  // survivors were the bin-scope heading and the scoped confirmation sentence.
+  ok('[9] no athlete-facing "bin" wording survives in the sheet',
+    !/>Bin what\?</.test(sheet)
+      && !/This bins \$\{/.test(sheet)
+      && /Remove what\?/.test(sheet)
+      && /This removes \$\{step\.label\}/.test(sheet));
   ok('[9] PlanChangeSheet previews risk before committing tap edits',
     /previewPlanChangeRisk\(\{[\s\S]*change,[\s\S]*visibleWeek: weekDays[\s\S]*activeConstraints/.test(sheet)
       && sheet.indexOf('previewPlanChangeRisk') < sheet.indexOf('commitPlanChange(change'));
@@ -685,7 +1008,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const week = bothWeeks();
 
   const ALL_CATEGORIES = [
-    'accessories', 'conditioning_hard', 'conditioning_light', 'recovery',
+    'gunshow', 'prehab', 'conditioning_hard', 'conditioning_light', 'recovery',
     'strength_full', 'strength_lower', 'strength_upper',
   ];
   const bye = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
@@ -794,7 +1117,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     (recoveryWrites[0]?.workout as any)?.sessionTier, 'recovery');
 }
 
-{
+withAcceptedStores(() => {
   console.log('\n[11] move-as-swap: occupied destinations exchange atomically');
   const week = bothWeeks();
 
@@ -841,11 +1164,11 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     visibleWeek: week, date: '2026-07-07', todayISO: TODAY,
   });
   ok('[11] game day never offered as destination',
-    thuOptions.moveDestinations.every((d) => d.date !== NEXT_SAT),
-    thuOptions.moveDestinations);
-}
+    moveDestinationsOf(thuOptions).every((d) => d.date !== NEXT_SAT),
+    moveDestinationsOf(thuOptions));
+});
 
-{
+withAcceptedStores(() => {
   console.log('\n[12] bin scopes: multi-session days bin by part, team training included');
 
   // Team + strength combined day (Tue of a bye-style week).
@@ -986,7 +1309,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     wholeWrites[0]?.remainingWorkout, null);
   eq('[12] whole-day commit owns whole-session scope',
     wholeWrites[0]?.scope, 'whole_session');
-}
+});
 
 {
   console.log('\n[13] add-on-top: strength and conditioning stack onto occupied days');
@@ -1041,7 +1364,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[13] conditioning day offers add-on-top strength',
     conditioningOptions.addOnTopCategories.length > 0 &&
       conditioningOptions.addOnTopCategories.every((c) =>
-        c.id.startsWith('strength_') || c.id === 'accessories'),
+        c.id.startsWith('strength_') || c.id === 'gunshow' || c.id === 'prehab'),
     conditioningOptions.addOnTopCategories);
   eq('[13] conditioning day reports one visible session',
     conditioningOptions.visibleSessionKinds, ['conditioning']);
@@ -1120,7 +1443,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // All strength buckets + accessories are offered.
   const options = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
   ok('[14] strength buckets offered',
-    ['strength_upper', 'strength_lower', 'strength_full', 'accessories'].every((id) =>
+    ['strength_upper', 'strength_lower', 'strength_full', 'gunshow', 'prehab'].every((id) =>
       options.categories.some((c) => c.id === id)),
     options.categories.map((c) => c.id));
 
@@ -1134,8 +1457,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     upperPick?.templateId, 'strength_upper_pull');
 
   // Deterministic engine build: same date + context → same session.
-  const pickA = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
-  const pickB = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
+  const pickA = pickTemplateForCategory({ category: 'prehab', date: SAT, visibleWeek: week });
+  const pickB = pickTemplateForCategory({ category: 'prehab', date: SAT, visibleWeek: week });
   eq('[14] accessory pick deterministic', pickA?.templateId, pickB?.templateId);
 
   // Swap THU's Upper Push for a lower-body engine session, end to end. The swap
@@ -1170,7 +1493,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // Accessories end to end on a rest day (add).
   const accWrites: Array<{ date: string; workout: Workout | null }> = [];
   const accResult = applyPlanChange({
-    change: { kind: 'add_category', date: SAT, category: 'accessories' },
+    change: { kind: 'add_category', date: SAT, category: 'prehab' },
     visibleWeek: week,
     todayISO: TODAY,
     setManualOverride: (date, workout) => accWrites.push({ date, workout }),
@@ -1293,8 +1616,17 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ];
 
   const teamOptions = listPlanChangeOptionsForDay({ visibleWeek: week, date: teamDate, todayISO: TODAY });
-  eq('[17] team day is editable but offers no move destinations',
-    teamOptions.moveDestinations.length, 0);
+  // DELETED (Sam, 2026-07-30): this used to assert the team day offered ZERO
+  // move destinations, pinning the device dead end as correct behaviour. The
+  // anchor is a fact about team training, not about the gym session beside it —
+  // so the gym work moves and the anchor stays.
+  ok('[17] team day offers a session-scoped move, never an empty picker',
+    !teamOptions.move.refusal && teamOptions.move.scopes.some((scope) => scope.id === 'strength'),
+    teamOptions.move);
+  ok('[17] team day never offers to move the whole day (that would take the anchor)',
+    !teamOptions.move.refusal && !teamOptions.move.scopes.some((scope) => scope.id === 'whole_day'),
+    teamOptions.move);
+  assertPickerIsUsableOrRefused('[17] team day', teamOptions);
   eq('[17] team-only protected bin scopes omit whole-day',
     teamOptions.binScopes.map((s) => s.id).sort(), ['strength', 'team']);
 

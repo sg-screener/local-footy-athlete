@@ -22,6 +22,7 @@ import {
   runDevOnboardingSkip,
 } from '../../utils/devOnboardingSkip';
 import { logger } from '../../utils/logger';
+import { StoredStateExportButton } from '../../dev/StoredStateExportButton';
 
 // AFL background image
 const welcomeBg = require('../../../assets/footy-bg.jpg');
@@ -231,6 +232,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             <Text style={styles.ctaSubtext}>
               Takes about 3 minutes
             </Text>
+            {/*
+             * The other place a locked-out athlete can be: "Finish that step"
+             * on the completion refusal drops them here, and from here the
+             * only route to the Profile export is finishing the onboarding
+             * that is refusing. See dev/StoredStateExportButton.
+             */}
+            <StoredStateExportButton testID="onboarding-welcome-export-button" />
             {/*
              * TEMP DEV ONLY — Maestro smoke-test entry point.
              *

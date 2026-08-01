@@ -2,7 +2,9 @@
  * Accepted-state transaction ownership — Section 18 systemic regressions.
  *
  * This suite deliberately drives the production stores/coordinators. It keeps
- * the 25 requested fixed regressions separate from broader properties and
+ * the 23 requested fixed regressions (originally 25 — regressions 18-19,
+ * Repeat Week's own publish/rollback behaviour, retired with the feature
+ * under HOME_SCREEN_REDESIGN ruling 1) separate from broader properties and
  * source-boundary mutation witnesses so the completion total cannot drift.
  *
  * Run: npm run test:accepted-state-transactions
@@ -50,6 +52,7 @@ import {
   commitAcceptedStateTransaction,
   commitReadinessSignalTransaction,
   getAcceptedMaterialContext,
+  takeAcceptedWeekShortfallDisclosure,
 } from '../store/acceptedStateTransaction';
 import {
   createTemporaryFatigueFact,
@@ -65,7 +68,6 @@ import {
   buildWeekScopedWorkoutOverlay,
   rebuildLocalWeek,
 } from '../utils/weekRebuild';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
@@ -137,7 +139,6 @@ function profile(
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
@@ -337,20 +338,29 @@ function ledgerSignature(contract: ReturnType<typeof acceptedWeek>['contract']):
 }
 
 function withGatewayFailure(body: () => void): boolean {
-  // Every accepted path reaches this dynamically-loaded final gateway.
+  // BOTH gateway entry points, since Sam's ownership collapse (2026-07-29).
+  // `requireSection18AcceptedWeek` is no longer "the final gateway every
+  // accepted path reaches" — the transaction owner now calls the non-throwing
+  // `runSection18AcceptedWeekGateway` so a rejected week is a typed RESULT it
+  // can accept-and-reduce rather than an exception thrown past it. An injection
+  // that only stubs the throwing wrapper stops reaching the owner's path, and
+  // this regression then reports that the failure "did not reach" a gateway it
+  // simply no longer goes through. The injection follows the owner.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const original = gateway.requireSection18AcceptedWeek;
-  gateway.requireSection18AcceptedWeek = () => {
-    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
-  };
+  const originalRequire = gateway.requireSection18AcceptedWeek;
+  const originalRun = gateway.runSection18AcceptedWeekGateway;
+  const inject = () => { throw new Error('INJECTED_ACCEPTANCE_FAILURE'); };
+  gateway.requireSection18AcceptedWeek = inject;
+  gateway.runSection18AcceptedWeekGateway = inject;
   try {
     body();
     return false;
   } catch (error) {
     return String(error).includes('INJECTED_ACCEPTANCE_FAILURE');
   } finally {
-    gateway.requireSection18AcceptedWeek = original;
+    gateway.requireSection18AcceptedWeek = originalRequire;
+    gateway.runSection18AcceptedWeekGateway = originalRun;
   }
 }
 
@@ -446,9 +456,30 @@ run('regression', '3 adding a rest mark cannot silently remove required core wor
   } else {
     const after = acceptedWeek(WEEK_START);
     assert(getAcceptedMaterialContext().markedDays[date] === 'rest', 'rest mark did not commit');
-    assert(after.evaluation.ledger.conditioning.coreCount >= after.contract.conditioning.core.requiredMinimum,
-      'required core work was silently lost');
-    assert(after.evaluation.blockingViolations.length === 0, 'rest-marked week has blockers');
+    // RE-POINTED at the new owner, not weakened — Sam's accept-and-reduce
+    // ruling (2026-07-29). The word this regression has always turned on is
+    // SILENTLY. It used to enforce silence by forbidding the loss outright,
+    // which under the ruling is the second-worst answer: a rest mark is the
+    // athlete stating a fact about their life, and the app does not refuse
+    // facts. So the mark commits, and what must hold is that the athlete is
+    // TOLD.
+    //
+    // Either the week still meets its contract, or it does not and the
+    // shortfall is disclosed in Sam's signed words. What is still forbidden,
+    // and is the whole point of the regression, is losing the work with
+    // nothing said.
+    const disclosure = takeAcceptedWeekShortfallDisclosure(WEEK_START);
+    const wholeWeek =
+      after.evaluation.ledger.conditioning.coreCount >= after.contract.conditioning.core.requiredMinimum &&
+      after.evaluation.blockingViolations.length === 0;
+    assert(wholeWeek || disclosure,
+      'required core work was SILENTLY lost — the week is short and nothing was disclosed');
+    if (disclosure) {
+      assert(/means you'll miss/.test(disclosure),
+        `the shortfall disclosure is not Sam's signed sentence: "${disclosure}"`);
+      assert(!/exposure/i.test(disclosure),
+        `"exposure" reached the athlete: "${disclosure}"`);
+    }
   }
 });
 
@@ -655,34 +686,6 @@ run('regression', '17 rebuild failure preserves all prior surfaces', () => {
   assert(materialSignature() === before, 'failed rebuild partially published state');
 });
 
-run('regression', '18 Repeat Week publishes overlay and accepted target once', () => {
-  const value = profile('Off-season');
-  seed(value);
-  let publishes = 0;
-  const stop = useProgramStore.subscribe(() => { publishes += 1; });
-  const result = repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK_START, todayISO: WEEK_START });
-  stop();
-  assert(publishes === 1, `Repeat Week published ${publishes} times`);
-  assert(useProgramStore.getState().weekScopedOverlays[result.targetWeekStart]?.reason === 'repeat_week',
-    'accepted repeat overlay missing');
-  assertAcceptedVisibleLedgerEquivalence({
-    surfaces: useProgramStore.getState(),
-    context: getAcceptedMaterialContext(),
-    weekStarts: [result.targetWeekStart],
-    profile: value,
-  });
-});
-
-run('regression', '19 Repeat Week failure preserves prior state', () => {
-  const value = profile('Off-season');
-  seed(value);
-  const before = materialSignature();
-  const failed = withGatewayFailure(() =>
-    repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK_START, todayISO: WEEK_START }));
-  assert(failed, 'failure injection did not reach Repeat Week gateway');
-  assert(materialSignature() === before, 'failed Repeat Week partially published state');
-});
-
 run('regression', '20 rollover restores all future overlays atomically', () => {
   const value = profile('Off-season');
   seed(value, '2026-06-08');
@@ -829,6 +832,7 @@ run('regression', '25 re-evaluated visible week matches the gateway ledger exact
   assert(ledgerSignature(week.contract) === ledgerSignature(week.evaluation.contract),
     're-evaluated visible ledger is not exact');
   assertAcceptedVisibleLedgerEquivalence({
+    operation: 'forward_decision',
     surfaces: useProgramStore.getState(),
     context: getAcceptedMaterialContext(),
     weekStarts: [WEEK_START],
@@ -856,6 +860,7 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
       continue;
     }
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });
@@ -877,6 +882,7 @@ run('property', 'no structural readiness change can bypass the gateway', async (
       });
     }
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });
@@ -928,6 +934,7 @@ run('property', 'visible projection is ledger-equivalent to gateway acceptance',
     const value = profile(phase);
     seed(value);
     assertAcceptedVisibleLedgerEquivalence({
+      operation: 'forward_decision',
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
     });
@@ -1104,7 +1111,7 @@ async function main(): Promise<void> {
   for (const test of tests) {
     if (test.kind !== previousKind) {
       const heading = test.kind === 'regression'
-        ? 'Required fixed regressions (25)'
+        ? 'Required fixed regressions (23)'
         : test.kind === 'property'
           ? 'Properties (10 distinct invariants)'
           : 'Mutation witnesses (10)';
@@ -1123,8 +1130,8 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
-  if (regressionPass !== 25 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
+  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/23 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+  if (regressionPass !== 23 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
     console.error(`Failures: ${failures.join(', ')}`);
     process.exit(1);
   }

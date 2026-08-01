@@ -103,7 +103,6 @@ function profileFor(options: PlannerOptions): OnboardingData {
     preferredTrainingDays: selectedDays,
     teamTrainingDaysPerWeek: teamTrainingCount,
     teamTrainingDays: TEAM_DAYS.slice(0, teamTrainingCount),
-    teamTrainingIntensity: 'Hard',
     usualGameDay: options.game ? 'Saturday' : undefined,
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
@@ -178,10 +177,32 @@ function fixtureOffset(entry: SessionAllocation): number {
   return offset === -6 ? 1 : offset;
 }
 
+/**
+ * Put an optional flush on a day — ADDING the day when the week has none.
+ *
+ * It used to require an existing allocation to overwrite, which worked only
+ * because the generator filled every spare day with a recovery session. Sam's
+ * charter (2026-07-30) deleted those placements, Thursday became genuine rest,
+ * and the witness could no longer be built.
+ *
+ * Adding the allocation is not a workaround for that — it is the more faithful
+ * fixture. "The athlete adds an optional flush to a rest day" is exactly the
+ * case the charter makes possible and the invariant is about: it must not become
+ * a fifth CORE conditioning exposure however it got there.
+ */
 function addOptionalFlush(source: PlannerSnapshot, day: string): SessionAllocation[] {
   const allocations = cloneAllocations(source.allocations);
-  const entry = allocations.find((candidate) => candidate.dayOfWeek === day);
-  invariant(entry, `missing ${day} slot for optional flush witness`);
+  let entry = allocations.find((candidate) => candidate.dayOfWeek === day);
+  if (!entry) {
+    entry = {
+      tier: 'optional',
+      focus: 'Optional flush',
+      dayOfWeek: day,
+      isHardExposure: false,
+      stressLevel: 'low',
+    } as SessionAllocation;
+    allocations.push(entry);
+  }
   entry.conditioningCategory = 'aerobic_base';
   entry.conditioningFlavour = 'aerobic';
   entry.section18ConditioningRole = 'optional_flush';
@@ -408,9 +429,24 @@ runCase('scenario', '23 late off-season two selected sprint doses remain control
   const second = createLateOffseasonSpeedBlock('standalone', { seasonPhase: 'Off-season', offseasonSubphase: 'late_offseason', weekNumber: 7 });
   invariant(late.plan.weeklyExposureContractV2?.sprintHighSpeed.exposure.permittedMaximum === 2 && !!first && !!second && first.durationMinutes <= 18 && second.durationMinutes <= 18 && /full (?:walk-back )?rest|full recovery|full rest/i.test(`${first.prescription} ${second.prescription}`), 'two-dose sprint policy is not controlled');
 });
-runCase('scenario', '24 late optional accessory work remains non-core', () => {
+runCase('scenario', '24 the off-season scorer no longer PLACES optional accessory work', () => {
+  // RE-POINTED, NOT WEAKENED. This cell used to require at least one optional
+  // accessory ALLOCATION in a late off-season week and then check it carried no
+  // strength intent. R5 is folded into the need-based top-up pass, so that subject
+  // no longer exists — and an assertion whose subject the harness cannot reach
+  // passes for the wrong reason, which is why the old form is gone rather than
+  // relaxed.
+  //
+  // The new form is strictly stronger — ZERO such allocations. The scorer may still
+  // choose ACC for a slot (that choice is what keeps the day out of the strength and
+  // conditioning budgets); choosing it now leaves the day free.
+  //
+  // Where the property it protected now lives: a top-up is appended AFTER
+  // `requireSection18AcceptedWeek`, so it is incapable of taking main-strength
+  // credit — the contract was satisfied before it existed — and its rows declare
+  // `role: 'strength_accessory'`. Asserted in `optionalTopUpTests` §B.
   const accessory = late.allocations.filter((entry) => entry.tier === 'optional' && /accessor|prehab|gunshow|pump/i.test(entry.focus));
-  invariant(accessory.length > 0 && accessory.every((entry) => !entry.strengthIntent), 'optional accessory gained main-strength credit', accessory);
+  invariant(accessory.length === 0, 'the off-season scorer still places optional accessory work by day', accessory);
 });
 runCase('scenario', '25 later off-season blocks remain on the late table', () => {
   invariant(lateLater.plan.weeklyExposureContractV2?.identity.mode === 'late_offseason' && lateLater.contract.strength.targetCount === 4 && lateLater.contract.conditioning.targetCount === 4, 'late table reset at rollover');

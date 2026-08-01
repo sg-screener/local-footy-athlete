@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
 import { colors } from '../../theme/colors';
@@ -11,9 +12,87 @@ import {
   GUIDED_INJURY_TRIGGER_OPTIONS,
   type GuidedInjuryFlowResult,
   type GuidedInjuryRegion,
+  GUIDED_INJURY_AREA_HINT,
+  GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL,
+  guidedInjuryAreaIsProgrammable,
 } from '../../utils/guidedInjuryControl';
 import { explorerTestId } from '../../utils/stableTestId';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
+
+// ── Icons (ruling 10) ──────────────────────────────────────────────────────
+// Inline stroked SVG, the house pattern (`HomeScreenV2`'s `svg` helper /
+// `PlanChangeSheet`'s `glyph` helper). One recognisable shape per region, and
+// areas REUSE their region's glyph (the brief's own instruction) rather than
+// inventing seventeen more — an area is a subdivision of the region an
+// athlete already picked, not a new concept.
+const REGION_COLOR: Record<GuidedInjuryRegion, string> = {
+  upper_body: '#1EA7FF',
+  lower_body: '#FFC247',
+  back_midline: '#7CC4FF',
+  other: '#8A94A6',
+};
+const glyph = (color: string, children: React.ReactNode) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </Svg>
+);
+/** Upper body — head + shoulders silhouette. */
+const upperBodyIcon = (color: string) => glyph(color, (
+  <><Path d="M12 2.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+    <Path d="M5 21v-3.5A6.5 6.5 0 0 1 11.5 11h1A6.5 6.5 0 0 1 19 17.5V21" /></>
+));
+/** Lower body — a hip bar splitting into two legs. */
+const lowerBodyIcon = (color: string) => glyph(color, (
+  <><Path d="M8 4h8" /><Path d="M12 4v5" /><Path d="M12 9l-3 11" /><Path d="M12 9l3 11" /></>
+));
+/** Back / midline — a spine: vertebrae stacked on a straight line. */
+const backMidlineIcon = (color: string) => glyph(color, (
+  <><Path d="M12 3v18" />
+    <Circle cx="12" cy="6.5" r="1.3" /><Circle cx="12" cy="11" r="1.3" />
+    <Circle cx="12" cy="15.5" r="1.3" /><Circle cx="12" cy="20" r="1.3" /></>
+));
+/** Other — a question mark. The region has no shape of its own to draw. */
+const otherRegionIcon = (color: string) => glyph(color, (
+  <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
+));
+const REGION_ICON: Record<GuidedInjuryRegion, (color: string) => React.ReactNode> = {
+  upper_body: upperBodyIcon,
+  lower_body: lowerBodyIcon,
+  back_midline: backMidlineIcon,
+  other: otherRegionIcon,
+};
+/**
+ * Severity — ascending bars, like a signal-strength meter: N bars lit for
+ * severity level N (1 of 4 mild, up to 4 of 4 "avoid"). Colour climbs the
+ * same ladder the sub-copy already describes (mild -> annoying -> limiting
+ * -> bad), so the glyph and the words agree.
+ */
+const SEVERITY_BAR_COLORS = ['#4CAF50', '#FFC247', '#FF8A4C', '#F44336'];
+const severityBarsIcon = (level: number, color: string) => {
+  const bars = [
+    { x: 2, h: 6 }, { x: 8, h: 10 }, { x: 14, h: 14 }, { x: 20, h: 18 },
+  ].slice(0, level);
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      {bars.map((bar) => (
+        <Path
+          key={bar.x}
+          d={`M${bar.x} 22h2v-${bar.h}h-2z`}
+          fill={color}
+        />
+      ))}
+    </Svg>
+  );
+};
+/** Triggers — a shared spark, deliberately identical on all 13 chips. Thirteen
+ * distinct trigger glyphs (sprinting vs. kicking vs. pressing vs. "always
+ * there"...) would be noise nobody reads at chip size; the spark marks "this
+ * is a cause", the label still says which one. */
+const triggerSparkIcon = (color: string) => (
+  <Svg width={10} height={10} viewBox="0 0 24 24" fill={color} stroke="none">
+    <Path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z" />
+  </Svg>
+);
 
 const INJURY_AREA_TEST_IDS: Record<string, string> = {
   Neck: 'neck',
@@ -80,6 +159,8 @@ export function GuidedInjuryFlowSheet({
   const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
   const [area, setArea] = useState('');
   const [customArea, setCustomArea] = useState('');
+  /** Sam's refusal, shown when the typed area is one the app cannot program around. */
+  const [areaRefusal, setAreaRefusal] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState(GUIDED_INJURY_SEVERITY_OPTIONS[1]);
   const [triggers, setTriggers] = useState<string[]>([]);
 
@@ -149,6 +230,7 @@ export function GuidedInjuryFlowSheet({
               key={option.id}
               testID={`injury-region-${option.id}`}
               label={option.label}
+              icon={REGION_ICON[option.id](REGION_COLOR[option.id])}
               selected={region === option.id}
               onPress={() => {
                 setRegion(option.id);
@@ -168,11 +250,20 @@ export function GuidedInjuryFlowSheet({
       return (
         <>
           <Text style={styles.title}>Where is the issue?</Text>
+          {/*
+            SAM'S WORDS, from the 2026-07-30 ruling. The "Other upper body" and "Other
+            lower body" rows are gone because they resolved to no bucket, so the athlete
+            whose area is not listed needs telling what to do instead.
+          */}
+          <Text style={styles.body}>{GUIDED_INJURY_AREA_HINT}</Text>
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
             <FlowOption
               key={option}
               testID={`injury-area-${INJURY_AREA_TEST_IDS[option]}`}
               label={option}
+              // Areas reuse their region's glyph family (Sam's brief) — the
+              // area step never left the region the athlete already picked.
+              icon={REGION_ICON[region](REGION_COLOR[region])}
               selected={area === option}
               onPress={() => {
                 setArea(option);
@@ -191,7 +282,12 @@ export function GuidedInjuryFlowSheet({
           <Text style={styles.title}>What area is it?</Text>
           <AppTextInput
             value={customArea}
-            onChangeText={setCustomArea}
+            onChangeText={(next: string) => {
+              setCustomArea(next);
+              // The refusal clears as soon as they change the answer — a refusal that
+              // outlives the answer it refused reads as a broken field.
+              if (areaRefusal) setAreaRefusal(null);
+            }}
             placeholder="e.g. calf, wrist, elbow"
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={styles.input}
@@ -199,12 +295,30 @@ export function GuidedInjuryFlowSheet({
             testID="injury-area-custom-input"
             accessibilityLabel="injury-area-custom-input"
           />
+          {areaRefusal ? (
+            <Text style={styles.safetyNote} testID="injury-area-custom-refusal">
+              {areaRefusal}
+            </Text>
+          ) : null}
           <Button
             label="Continue"
             testID="injury-area-custom-continue"
             glow={false}
             disabled={customArea.trim().length === 0}
-            onPress={() => setStep('severity')}
+            onPress={() => {
+              // HONESTLY REFUSED AT THE POINT OF ANSWERING (Sam's ruling, 2026-07-30).
+              //
+              // The app used to accept anything here, store it, change the week's dose
+              // through the severity answer, and filter no movement — so it looked like
+              // it had listened. It had, about the dose. It was still programming the
+              // movement that hurt.
+              if (!guidedInjuryAreaIsProgrammable(customArea)) {
+                setAreaRefusal(GUIDED_INJURY_UNRESOLVABLE_AREA_REFUSAL);
+                return;
+              }
+              setAreaRefusal(null);
+              setStep('severity');
+            }}
           />
           <BackButton onPress={back} />
         </>
@@ -244,12 +358,13 @@ export function GuidedInjuryFlowSheet({
       return (
         <>
           <Text style={styles.title}>How much is it limiting you?</Text>
-          {GUIDED_INJURY_SEVERITY_OPTIONS.map((option) => (
+          {GUIDED_INJURY_SEVERITY_OPTIONS.map((option, index) => (
             <FlowOption
               key={option.label}
               testID={`injury-severity-${option.severityBand}`}
               label={option.label}
               sub={option.sub}
+              icon={severityBarsIcon(index + 1, SEVERITY_BAR_COLORS[index])}
               selected={selectedSeverity.label === option.label}
               onPress={() => {
                 setSelectedSeverity(option);
@@ -285,6 +400,7 @@ export function GuidedInjuryFlowSheet({
                 pressed && { opacity: 0.75 },
               ]}
             >
+              {triggerSparkIcon(triggers.includes(trigger) ? colors.accent.lime : colors.text.secondary)}
               <Text
                 style={[
                   styles.triggerText,
@@ -322,10 +438,20 @@ export function GuidedInjuryFlowSheet({
   );
 }
 
+/**
+ * One region/area/severity row, with an icon chip (Sam's design ruling 10 —
+ * every option row carries a meaningful icon). Same fixed 38x38 round chip as
+ * `HomeScreenV2`'s `SheetOption` / `PlanChangeSheet`'s `MenuOption`, so this
+ * sheet reads as the same app as the ones either side of it. `icon` is
+ * optional in the type only because `BackButton` and the confirmation
+ * buttons below never went through `FlowOption` at all — every live call
+ * site now passes one.
+ */
 function FlowOption({
   testID,
   label,
   sub,
+  icon,
   selected,
   danger,
   onPress,
@@ -333,6 +459,7 @@ function FlowOption({
   testID?: string;
   label: string;
   sub?: string;
+  icon?: React.ReactNode;
   selected?: boolean;
   danger?: boolean;
   onPress: () => void;
@@ -344,15 +471,22 @@ function FlowOption({
       accessibilityRole="button"
       accessibilityLabel={testID}
       style={({ pressed }) => [
-        styles.option,
+        icon ? styles.optionWithIcon : styles.option,
         selected && styles.optionSelected,
         pressed && { opacity: 0.72 },
       ]}
     >
-      <Text style={[styles.optionLabel, danger && styles.optionDanger]}>
-        {label}
-      </Text>
-      {sub ? <Text style={styles.optionSub}>{sub}</Text> : null}
+      {icon ? (
+        <View style={[styles.optionIcon, selected && styles.optionIconSelected]}>
+          {icon}
+        </View>
+      ) : null}
+      <View style={icon ? { flex: 1 } : undefined}>
+        <Text style={[styles.optionLabel, danger && styles.optionDanger]}>
+          {label}
+        </Text>
+        {sub ? <Text style={styles.optionSub}>{sub}</Text> : null}
+      </View>
     </Pressable>
   );
 }
@@ -402,6 +536,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
+  optionWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  optionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222222',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  optionIconSelected: {
+    backgroundColor: 'rgba(200,255,0,0.12)',
+  },
   optionSelected: {
     borderBottomColor: 'rgba(200,255,0,0.35)',
   },
@@ -436,6 +589,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   triggerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',

@@ -53,7 +53,6 @@ const EXACT_IDS = [
   'smoke-readiness-set-and-clear',
   'smoke-equipment-clear-and-reapply',
   'smoke-session-feedback-receipt',
-  'smoke-repeat-week-phase-transition-and-restore',
 ] as const;
 
 const completeResult = (): ExplorerRuntimeResult => ({
@@ -90,13 +89,13 @@ async function main() {
     }
   });
 
-  await test('scenario-session V2 resolves exactly all nine smoke IDs', () => {
-    expect(EXPLORER_DEV_E2E_SCENARIO_MANIFESTS.length === 9, 'live registry count changed');
+  await test('scenario-session V2 resolves exactly all eight smoke IDs', () => {
+    expect(EXPLORER_DEV_E2E_SCENARIO_MANIFESTS.length === 8, 'live registry count changed');
     expect(EXACT_IDS.every((id, index) =>
       EXPLORER_DEV_E2E_SCENARIO_MANIFESTS[index]?.scenarioId === id &&
       resolveDevE2EScenarioManifest(id)?.protocolVersion === 2),
     'an exact smoke ID is missing or registry order drifted');
-    expect(DEV_E2E_SCENARIO_MANIFESTS.length >= 9, 'combined registry lost Explorer entries');
+    expect(DEV_E2E_SCENARIO_MANIFESTS.length >= 8, 'combined registry lost Explorer entries');
   });
 
   await test('deterministic dev routes reach the real scenario and campaign callers', () => {

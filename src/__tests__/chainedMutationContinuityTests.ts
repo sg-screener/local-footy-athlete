@@ -41,7 +41,6 @@ import {
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 
 const WEEK = '2026-03-23';
 const NEXT_WEEK = '2026-03-30';
@@ -88,7 +87,6 @@ function athlete(args: {
     availabilityConstraints: args.constraints,
     teamTrainingDaysPerWeek: tt,
     teamTrainingDays: teamDays[tt],
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Very consistent',
@@ -487,31 +485,6 @@ async function main(): Promise<void> {
     useCoachUpdatesStore.getState().setActiveInjury(null);
   });
 
-  await run('10 Repeat Week preserves an active cross-week dependency and its new restoration', () => {
-    const value = athlete();
-    reset(value);
-    moveToSunday(value);
-    const repeatedMonday = byDay(accepted()).get(1);
-    repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK, todayISO: WEEK });
-    const protectedMonday = accepted(NEXT_WEEK).composedWorkouts.find((workout) =>
-      workout.dayOfWeek === 1);
-    const dependency = protectedMonday?.derivedSessionProvenance?.find((record) =>
-      record.origin === 'fixture_recovery' && record.dependency?.source.date === SUNDAY);
-    assert(protectedMonday?.sessionTier === 'recovery', 'Repeat Week erased active G+1 recovery');
-    assert(dependency?.dependency?.restoration.workout?.planEntryId === repeatedMonday?.planEntryId,
-      'Repeat Week did not update the dependency restoration target');
-    executeHomeGameMutation({
-      baseProfile: value,
-      currentPhase: 'In-season',
-      newGameDay: null,
-      targetDate: SUNDAY,
-      beforeRows: visibleRows(),
-      todayISO: WEEK,
-    });
-    assert(byDay(accepted(NEXT_WEEK)).get(1)?.planEntryId === repeatedMonday?.planEntryId,
-      'fixture removal did not restore the repeated Monday');
-  });
-
   await run('3 live remove-session relocates accepted Saturday hard conditioning', () => {
     reset();
     removeGame();
@@ -744,19 +717,17 @@ async function main(): Promise<void> {
     assert(byDay().get(0)?.workoutType === 'Game', 'Sunday practice-match projection missing');
   });
 
-  await run('17 rebuild Repeat Week rollover and rehydration use accepted rebasing ownership', () => {
+  await run('17 rebuild, rollover and rehydration use accepted rebasing ownership', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fs = require('fs') as typeof import('fs');
     const sources = {
       transaction: fs.readFileSync(`${__dirname}/../store/acceptedStateTransaction.ts`, 'utf8'),
       rebuild: fs.readFileSync(`${__dirname}/../utils/weekRebuild.ts`, 'utf8'),
-      repeat: fs.readFileSync(`${__dirname}/../utils/repeatWeek.ts`, 'utf8'),
       rollover: fs.readFileSync(`${__dirname}/../utils/programBlockRollover.ts`, 'utf8'),
       hydration: fs.readFileSync(`${__dirname}/../store/programStore.ts`, 'utf8'),
     };
     assert(/rebaseAcceptedEffectiveWeek/.test(sources.transaction), 'transaction rebase missing');
     assert(/buildFixtureProjection/.test(sources.rebuild), 'rebuild rebase door missing');
-    assert(/rebaseAcceptedEffectiveWeek/.test(sources.repeat), 'Repeat Week rebase missing');
     assert(/rebuildLocalWeek/.test(sources.rollover), 'rollover bypasses rebuild');
     assert(/rebaseAcceptedEffectiveWeek/.test(sources.hydration), 'rehydration rebase missing');
   });
@@ -886,7 +857,7 @@ async function main(): Promise<void> {
     assert(checks.every(Boolean), `surviving mutation witnesses=${checks.map((ok, index) => ok ? null : index + 1).filter(Boolean)}`);
   });
 
-  console.log(`\nChained-mutation continuity totals: passed=${passed}/32 failures=${failures.length}`);
+  console.log(`\nChained-mutation continuity totals: passed=${passed}/31 failures=${failures.length}`);
   if (failures.length > 0) console.log(`Failures: ${failures.join(' | ')}`);
   if (failures.length > 0) process.exit(1);
 }

@@ -39,12 +39,13 @@ import type {
   RecentTrainingLoad,
   SprintExposure,
   SquatStrength,
-  TeamTrainingDuration,
   TeamTrainingIntensity,
   TwoKmTimeTrialAnswer,
 } from '../../types/domain';
 import { formatTwoKmTime } from '../../data/twoKmTimeTrial';
 import { roleBucketLabel } from '../../utils/roleBuckets';
+import { motivationDisplay, resolveMotivation } from '../../rules/motivationGoals';
+import { formatEquipmentAnswerSummary } from '../../rules/equipmentVocabulary';
 import {
   ONBOARDING_STEPS,
   type OnboardingStepName,
@@ -101,28 +102,21 @@ const formatDays = (days?: DayOfWeek[]): string | null => {
   return sortDays(days).join(', ');
 };
 
-const formatTeamDuration = (duration?: TeamTrainingDuration): string | null => {
-  if (!duration) return null;
-  const labels: Record<TeamTrainingDuration, string> = {
-    '60 minutes': '60 min',
-    '90 minutes': '90 min',
-    '2 hours': '2 hrs',
-  };
-  return labels[duration];
-};
-
 const formatTeamIntensity = (intensity?: TeamTrainingIntensity): string | null => {
   if (!intensity) return null;
   return intensity === 'Very intense' ? 'Very hard' : intensity;
 };
 
-const formatTeamSessions = (data: OnboardingData): string | null => {
-  const parts = [
-    formatTeamDuration(data.teamTrainingDuration as TeamTrainingDuration | undefined),
-    formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined),
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : null;
-};
+/**
+ * Duration is no longer ASKED (Sam, 2026-07-30), so it is no longer shown back.
+ *
+ * Review's contract is that every row routes to a step the athlete can edit; a duration
+ * row would route to a screen that no longer collects it — an "Edit" that changes nothing.
+ * Athletes who answered it before the ruling keep the stored value; they simply are not
+ * shown a question the app has stopped asking.
+ */
+const formatTeamSessions = (data: OnboardingData): string | null =>
+  formatTeamIntensity(data.teamTrainingIntensity as TeamTrainingIntensity | undefined);
 
 const formatExperience = (value?: ExperienceLevel): string => {
   if (!value) return 'Not selected';
@@ -230,7 +224,10 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     section: 'About You',
     label: 'Goals',
     step: 'Motivation',
-    value: (data) => present(data.motivation || data.goals?.join(', ')),
+    // DERIVED AT RENDER, per Sam's ruling. Was `data.motivation || goals.join(', ')` —
+    // two shapes racing, with the stored sentence winning. `resolveMotivation` prefers the
+    // typed decision and lifts a legacy sentence when that is all a profile has.
+    value: (data) => present(motivationDisplay(resolveMotivation(data))),
   },
   {
     section: 'Body',
@@ -287,6 +284,12 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     step: 'PreferredTrainingDays',
     value: (data) =>
       formatDays(data.preferredTrainingDays as DayOfWeek[] | undefined) ?? 'Not selected',
+  },
+  {
+    section: 'Training',
+    label: 'Equipment',
+    step: 'Equipment',
+    value: formatEquipmentAnswerSummary,
   },
   {
     section: 'Physical',

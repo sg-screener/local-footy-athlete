@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useResolvedDay } from '../../hooks/useSchedule';
+import { useResolvedDay, useVisibleDay } from '../../hooks/useSchedule';
 import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
@@ -13,18 +13,12 @@ import {
   resolveLoadAuthority,
   startingWeightForAthlete,
 } from '../../utils/loadEstimation';
-import {
-  DESCRIPTIVE_CONDITIONING_TYPES,
-  LEGACY_FLAVOUR_TITLE,
-  DAY_NAMES,
-} from './dayWorkoutHelpers';
 import { logger } from '../../utils/logger';
 import {
   getTeamTrainingWorkoutState,
   normalizeTeamTrainingWorkoutForDisplay,
 } from '../../utils/teamTraining';
-import { getSessionComponentRows } from '../../utils/sessionComponents';
-import { projectConditioningVisibleIdentity } from '../../utils/conditioningVisibleIdentity';
+import { projectDayDetail } from '../../rules/visibleDayDetail';
 import type { SessionOutcomeTransactionReceipt } from '../../types/sessionOutcome';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
@@ -34,27 +28,30 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 /**
  * How long the SessionCompleteMoment stays on screen after a successful
- * feedback save before `navigation.goBack()` fires. Shared by both the V2
- * and Classic render layers because they both consume this hook.
+ * feedback save before `navigation.goBack()` fires.
  */
 const SESSION_COMPLETE_DISMISS_MS = 2500;
 
 /**
- * useDayWorkout — shared orchestration for DayWorkoutScreen (Classic + V2).
+ * useDayWorkout — the day-workout screen's INPUT layer.
  *
- * Reads the route date, resolves the day, derives the session category
- * (team-only / recovery / conditioning / combined / strength), and wires
- * all the weight-override and feedback-flow handlers. The Classic and V2
- * render layers consume this identically — only the visuals differ.
+ * It used to be two things: the input layer, and a composition that decided what
+ * kind of day this was and how to split its exercise list. The second half is
+ * gone (Task 6, buttons/UI unit) — it was the fourth projection of the athlete's
+ * week and the one that told the third of the three stories Sam photographed.
+ * Words and part lists come from `project()` now, through `projectDayDetail`.
  *
- * ## Behaviour contract
- * Reproduces the inline DayWorkoutScreen logic bit-for-bit:
+ * ## What is left, and it is all input
  * - Weight overrides (+/- buttons, manual edit, BW handling): undefined
  *   override = no override, null override = explicit bodyweight, number = loaded.
- * - startFinished route param boots straight into the feedback flow for
+ * - Cue disclosure, the video-modal selection, the session-outcome receipt, the
+ *   keyboard's editing state, and the finish/feedback flow.
+ * - `startFinished` route param boots straight into the feedback flow for
  *   external logging shortcuts.
- * - Conditioning options resolution: structured `conditioningBlock` first,
- *   legacy keyword-tail fallback second, empty array otherwise.
+ *
+ * Every one of those keys off the RAW workout's own rows (`exercise.exerciseId`,
+ * row ids, exercise names), which is why `useResolvedDay` stays exactly where it
+ * was rather than being replaced by the projection.
  *
  * Return shape is deliberately flat — consumers destructure what their JSX
  * needs, matching the HomeScreen hook pattern.
@@ -82,7 +79,21 @@ export function useDayWorkout() {
   const savedDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Resolved data ───
+  //
+  // TWO READS, TWO JOBS, AND THEY ARE NOT INTERCHANGEABLE (Task 6).
+  //
+  // `useResolvedDay` is the INPUT state. Every input surface below keys off the
+  // raw workout's own rows: weight overrides are stored per `exercise.exerciseId`,
+  // the cue disclosure per row id, the video modal by exercise name, the session
+  // receipt per date. Moving those onto projected rows would renumber the
+  // athlete's saved weights, so the raw day stays exactly where it was.
+  //
+  // `useVisibleDay` is the WORDS and the PART LIST — the same projection the week
+  // card renders, located by date (`projectWeekFor`, `hooks/useSchedule.ts`). The
+  // screen's title, its attached-part line and its section list come from here and
+  // from nothing else; the hook composes no account of the day any more.
   const resolved = useResolvedDay(date);
+  const visibleDay = useVisibleDay(date);
   const rawWorkout = resolved?.workout ?? null;
   const workout = useMemo(
     () => normalizeTeamTrainingWorkoutForDisplay(rawWorkout),
@@ -363,116 +374,27 @@ export function useDayWorkout() {
     [navigation],
   );
 
-  // ─── Derived session categorisation + content resolution ───
+  // ─── The detail surface, read from the one projection ───
   //
-  // All of the "what kind of workout is this, and how do we split the
-  // exercise list" logic happens here so both Classic and V2 consume the
-  // same resolved structures and can focus purely on rendering.
-  const derived = useMemo(() => {
-    if (!workout) {
-      return {
-        exerciseCount: 0,
-        dayName: '',
-        isTeamOnly: false,
-        isRecovery: false,
-        isConditioning: false,
-        isCombinedDay: false,
-        strengthExercises: [] as any[],
-        supportExercises: [] as any[],
-        conditioningExercises: [] as any[],
-        conditioningOptions: [] as ResolvedConditioningOption[],
-        conditioningRowCount: 0,
-      };
-    }
+  // This memo used to be the day-detail composition over the raw workout — the fourth
+  // projection of the athlete's week, computed at render, and the one that told
+  // the third of the three stories Sam photographed. It is gone: the screen's
+  // title, attached-part line and section list are `projectDayDetail(visibleDay)`,
+  // a pure reading of `project()`.
+  //
+  // `dayDetailCompositionOwnershipTests` pins the consequence — `composeDayDetail`
+  // has exactly ONE production caller now, `rules/projectVisibleWeek.ts`, and this
+  // hook is not it.
+  const detail = useMemo(() => projectDayDetail(visibleDay), [visibleDay]);
 
-    const teamState = getTeamTrainingWorkoutState(rawWorkout);
-    const exerciseCount = teamState.renderableExercises.length;
-    const dayName = DAY_NAMES[workout.dayOfWeek] || '';
-
-    // Team Training is a session commitment, not a gym exercise. The
-    // shared state object filters malformed legacy rows out of every
-    // render branch and tells the UI whether a separate Team Training
-    // card should be shown.
-    const hasTeamTraining = teamState.hasTeamTraining;
-    const isTeamOnly = teamState.isTeamTrainingOnly;
-
-    // Recovery sessions — structured prescriptions, play buttons, formatted
-    // sets/duration/reps. Detect via workoutType OR sessionTier to catch
-    // AI-generated sessions with the wrong workoutType but correct tier.
-    const isRecovery =
-      !isTeamOnly &&
-      (workout.workoutType === 'Recovery' ||
-        (workout as any).sessionTier === 'recovery');
-
-    // Conditioning sessions — descriptive phase cards, no numbered exercises.
-    // Recovery wins when both would match (AI may tag recovery as Conditioning).
-    const isConditioning =
-      !isTeamOnly &&
-      DESCRIPTIVE_CONDITIONING_TYPES.has(workout.workoutType) &&
-      !isRecovery;
-
-    // ── Combined S+C day: resolve conditioning from workout.conditioningBlock ──
-    //
-    // The builder attaches a structured `conditioningBlock` with a single
-    // intent and one or more training-equivalent options. Each option owns
-    // its title, description, and the ids of the WorkoutExercise rows it
-    // renders — so header and rows can never drift.
-    const isCombinedDay =
-      !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
-    const condBlock = workout.conditioningBlock;
-    const conditioningIdentity = projectConditioningVisibleIdentity(workout);
-    const componentRows = getSessionComponentRows(workout);
-    const strengthExercises = componentRows.strengthRows;
-    const supportExercises = componentRows.supportRows;
-    const conditioningExercises = componentRows.conditioningRows;
-    let conditioningOptions: ResolvedConditioningOption[] = [];
-
-    if (isCombinedDay && condBlock) {
-      // Structured path — drive rows from resolved exerciseIds only.
-      conditioningOptions = condBlock.options.map((opt: any) => {
-        const optIds = new Set<string>(opt.exerciseIds);
-        return {
-          title: conditioningIdentity?.attachedLabel ?? opt.title,
-          description: opt.description,
-          rows: conditioningExercises.filter((ex: any) => optIds.has(ex.id)),
-        };
-      });
-    } else if (isCombinedDay && conditioningExercises.length > 0) {
-      // Legacy fallback uses the shared component owner to separate the tail;
-      // trunk/support rows cannot leak into conditioning.
-      const legacyTitle =
-        (workout.conditioningFlavour &&
-          LEGACY_FLAVOUR_TITLE[workout.conditioningFlavour]) ||
-        'Conditioning';
-      conditioningOptions = [
-        {
-          title: conditioningIdentity?.attachedLabel ?? legacyTitle,
-          description: '',
-          rows: conditioningExercises,
-        },
-      ];
-    }
-
-    const conditioningRowCount = conditioningOptions.reduce(
-      (sum, o) => sum + o.rows.length,
-      0,
-    );
-
-    return {
-      exerciseCount,
-      dayName,
-      isTeamOnly,
-      isRecovery,
-      isConditioning,
-      isCombinedDay,
-      hasTeamTraining,
-      strengthExercises,
-      supportExercises,
-      conditioningExercises,
-      conditioningOptions,
-      conditioningRowCount,
-    };
-  }, [rawWorkout, workout]);
+  // The team-training state read the input layer needs: `isTeamOnly` gates the
+  // "Edit exercises" door and `buildEditableExercises`, both of which act on raw
+  // rows. Read straight from the team-training owner — the same call
+  // `composeDayDetail` made — rather than through a composition of the day.
+  const isTeamOnly = useMemo(
+    () => getTeamTrainingWorkoutState(rawWorkout).isTeamTrainingOnly,
+    [rawWorkout],
+  );
 
   return {
     // Route
@@ -513,13 +435,10 @@ export function useDayWorkout() {
     handleScrollBeginDrag,
     handleReviewStale,
 
-    // Derived
-    ...derived,
+    // The detail surface — projection-derived words and part list.
+    detail,
+    // An input-layer fact, NOT a composition of the day: `isTeamOnly` gates the
+    // exercise-edit door, which acts on raw rows.
+    isTeamOnly,
   };
 }
-
-export type ResolvedConditioningOption = {
-  title: string;
-  description: string;
-  rows: any[];
-};

@@ -386,15 +386,17 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
 
   const bodyweight = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'bodyweight_only', date, todayISO },
+    { decision: { kind: 'missing_this_week', tags: ['barbell', 'dumbbells', 'cables', 'machine', 'bands', 'bench', 'pullup_bar', 'kettlebell', 'foam_roller', 'plyo_box', 'bike_or_treadmill'], conditioningModalities: ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'] }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   let equipment = useCoachUpdatesStore.getState().activeConstraints
     .find((constraint: any) => constraint.type === 'equipment') as any;
   eq('bodyweight preset succeeds', bodyweight.ok, true);
   eq('bodyweight preset requests rebuild', bodyweight.requiresRebuild, true);
-  eq('bodyweight mode only', equipment?.mode, 'only');
-  eq('bodyweight tags', equipment?.tags, ['bodyweight']);
+  eq('bodyweight decision writes a without-everything constraint', equipment?.mode, 'without');
+  ok('bodyweight decision marks every owned tag missing',
+    Array.isArray(equipment?.tags) && equipment.tags.includes('barbell') &&
+    equipment.tags.includes('bike_or_treadmill'));
   ok('bodyweight Coach Note appears', selectActiveCoachNotes({
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
     todayISO,
@@ -412,7 +414,7 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
 
   const dumbbells = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'dumbbells_only', date, todayISO },
+    { decision: { kind: 'missing_this_week', tags: ['barbell', 'cables', 'machine', 'bands', 'bench', 'pullup_bar', 'kettlebell', 'foam_roller', 'plyo_box', 'bike_or_treadmill'], conditioningModalities: ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'] }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   equipment = useCoachUpdatesStore.getState().activeConstraints
@@ -421,13 +423,13 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
   eq('dumbbell preset updates same weekly equipment id',
     equipment?.id,
     temporaryEquipmentConstraintIdForDate(date));
-  eq('dumbbell tags include bodyweight + dumbbells',
-    equipment?.tags,
-    ['bodyweight', 'dumbbells']);
+  ok('dumbbell decision leaves dumbbells unmarked',
+    Array.isArray(equipment?.tags) && !equipment.tags.includes('dumbbells') &&
+    equipment.tags.includes('barbell'));
 
   const noBarbell = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'no_barbell_rack', date, todayISO },
+    { decision: { kind: 'missing_this_week', tags: ['barbell'], conditioningModalities: [] }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   equipment = useCoachUpdatesStore.getState().activeConstraints
@@ -438,7 +440,7 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
 
   const noMachines = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'no_machines_cables', date, todayISO },
+    { decision: { kind: 'missing_this_week', tags: ['machine', 'cables'], conditioningModalities: [] }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   equipment = useCoachUpdatesStore.getState().activeConstraints
@@ -449,7 +451,7 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
 
   const noCardio = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'no_erg_cardio', date, todayISO },
+    { decision: { kind: 'missing_this_week', tags: ['bike_or_treadmill'], conditioningModalities: ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'] }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   equipment = useCoachUpdatesStore.getState().activeConstraints
@@ -488,7 +490,7 @@ console.log('\n[5b] temporary equipment presets create and clear active equipmen
   ]);
   const clear = executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'back_to_normal', date, todayISO },
+    { decision: { kind: 'available_again' }, date, todayISO },
     { scope: 'current_week', createsActiveModifier: false },
   ), { todayISO });
   const remaining = useCoachUpdatesStore.getState().activeConstraints;
@@ -768,7 +770,7 @@ console.log('\n[14c] equipment and shared hard-stop risk gates still win');
   seedStrengthWorkout(date);
   executeProgramControlAction(baseAction(
     'set_equipment_modifier',
-    { presetId: 'no_barbell_rack', date, todayISO: date },
+    { decision: { kind: 'missing_this_week', tags: ['barbell'], conditioningModalities: [] }, date, todayISO: date },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO: date });
   let result = executeProgramControlAction(baseAction(
@@ -920,12 +922,7 @@ console.log('\n[18] busy-week schedule modifier stays out of Coach');
   const todayISO = todayISOLocal();
   const result = executeProgramControlAction(baseAction(
     'set_schedule_modifier',
-    {
-      date: todayISO,
-      todayISO,
-      severity: 5,
-      reasonLabel: 'Busy week',
-    },
+    { date: todayISO, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   const notes = selectActiveCoachNotes({
@@ -1152,7 +1149,7 @@ console.log('\n[25] busy-week schedule modifier creates a Coach Note (no chat)')
   const todayISO = todayISOLocal();
   const result = executeProgramControlAction(baseAction(
     'set_schedule_modifier',
-    { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+    { date: todayISO, todayISO },
     { scope: 'current_week', createsActiveModifier: true },
   ), { todayISO });
   const notes = selectActiveCoachNotes({

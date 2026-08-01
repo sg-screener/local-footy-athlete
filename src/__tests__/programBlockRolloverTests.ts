@@ -74,7 +74,6 @@ const IN_SEASON_PROFILE: OnboardingData = {
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
   teamTrainingDuration: '60-90 minutes',
-  teamTrainingIntensity: 'Hard',
   trainingLocation: 'Commercial gym',
   equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   sprintExposure: '2+ times per week',
@@ -93,8 +92,7 @@ const OFF_SEASON_PROFILE: OnboardingData = {
   teamTrainingDays: [],
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  teamTrainingIntensity: 'Moderate',
-};
+  };
 
 const PRE_SEASON_NO_ANCHOR_PROFILE: OnboardingData = {
   ...IN_SEASON_PROFILE,

@@ -1,4 +1,4 @@
-import type { SeasonPhase, DayOfWeek, Workout } from '../../types/domain';
+import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 
 /**
  * Shared constants for the Home screen.
@@ -67,18 +67,15 @@ export const NEXT_PHASE: Record<SeasonPhase, SeasonPhase> = {
   'Pre-season': 'In-season',
 };
 
-type ConditioningLabelWorkout = Partial<Workout>;
-
-export function getConditioningContextLabel(
-  workout: ConditioningLabelWorkout | null | undefined,
-): string | null {
-  if (!workout) return null;
-  // Weekly conditioning context is attached-only. Standalone prescriptions
-  // remain available to workout detail and logging paths, never week cards.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { weeklyPlanContextLabel } = require('../../utils/weeklyPlanDisplay');
-  return weeklyPlanContextLabel(workout);
-}
+// `getConditioningContextLabel` IS DELETED (Task 11). It was a lazy `require` of
+// `weeklyPlanContextLabel` behind a second name, and it had no forward caller:
+// the only reference left in the repo was a source regex in
+// `coachNoteDisplayTests`, which cannot run at all — it reads
+// `screens/home/TodayWorkoutCard.tsx` and `screens/home/WeekViewCard.tsx`, and
+// neither file exists (ENOENT on load, one of the nine LOAD_CRASH suites census
+// entry LR-14 names). A dead function whose only witness is a suite that reports
+// nothing is exactly the shape this unit has been retiring. Callers that want the
+// attached-conditioning line call `weeklyPlanContextLabel` directly.
 
 function normaliseDisplayLabel(label: string | null | undefined): string {
   return String(label ?? '')
@@ -135,7 +132,7 @@ export interface HomeQuickAction {
   label: string;
   /**
    * Legacy context string used only after the athlete explicitly chooses
-   * "Message the coach" from a guided fallback sheet.
+   * "Ask Coach" from a guided fallback sheet.
    */
   prefill: string;
 }

@@ -50,7 +50,6 @@ function baseProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
@@ -108,7 +107,12 @@ export const POWER_SCENARIOS: readonly PowerScenario[] = [
     description:
       'Off-season, bodyweight only — the pool drops Depth Jumps rather than substituting an implement.',
     profile: baseProfile({
-      equipment: ['None'],
+      // "I own none of these" is an ANSWER (2026-07-31): the typed shape with
+      // nothing marked. The old `equipment: ['None']` string was unrecognised,
+      // which now reads as silence and silence is refused.
+      equipment: undefined,
+      equipmentSelectionCompleteness: undefined,
+      equipmentAnswer: { tags: {}, modalities: {}, answeredOn: '2026-07-01' },
       trainingLocation: 'Outdoor',
     }),
   },

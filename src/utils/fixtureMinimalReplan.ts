@@ -9,7 +9,6 @@ import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
   runSection18AcceptedWeekGateway,
-  requireSection18AcceptedWeek,
   type Section18AcceptedWeekGatewayResult,
 } from '../rules/section18AcceptedWeekGateway';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -1330,12 +1329,22 @@ export function buildFixtureMinimalReplan(
       if (JSON.stringify(nextContract) === JSON.stringify(reducedContract)) break;
       reducedContract = nextContract;
     }
-    if (reducedGateway.status === 'impossible') {
-      throw new Error(
-        `Athlete deletion could not be published after typed reduction ` +
-        `(${reducedGateway.failureSignature ?? 'unknown'}).`,
-      );
-    }
+    // ACCEPT-AND-REDUCE, FORWARD (Sam, 2026-07-29). This threw, and the throw
+    // reached the tap door: the walker gets here in seven actions, ending in a
+    // bin and a game mark.
+    //
+    // Binning a session is a DECISION the athlete stated, and the typed
+    // reduction above is already this ruling's machinery — the loop exists
+    // precisely to keep their removal and pay for it with an authorised
+    // reduction. When even the reduction cannot satisfy the contract, the
+    // answer is not to take the decision back; it is to keep it, publish the
+    // best week around it, and let the publication boundary disclose the
+    // shortfall in Sam's signed words. The athlete's calendar wins and the
+    // program adapts, at this door exactly as at the calendar mark.
+    //
+    // The `impossible` verdict is not discarded: it travels on `reducedGateway`
+    // and is what `assertAcceptedVisibleLedgerEquivalence` reads to build the
+    // disclosure — and, on a RESTORATION, to refuse.
     reducedGateway.repairs.push({
       kind: 'athlete_removal_typed_reduction',
       detail: `Preserved athlete removal on ${constraint.targetDate} and recorded explicit_user_override for the unavoidable shortfall.`,
@@ -1404,7 +1413,15 @@ export function buildFixtureMinimalReplan(
     );
   }
 
-  const fallbackGateway = requireSection18AcceptedWeek({
+  // THE COLLAPSE (Sam, 2026-07-29, ruling 1). This used to be
+  // `requireSection18AcceptedWeek`, which throws — and the throw escaped the
+  // transaction owner and reached the tap door as a dead screen. The gateway
+  // already returns a typed result carrying `status: 'impossible'`, and this
+  // function already returns it as `gateway`, so the rejection has had a
+  // typed channel all along. Letting it flow is the whole fix: the OWNER
+  // decides what a rejected week means, instead of five callers each
+  // catching an exception and inventing their own answer.
+  const fallbackGateway = runSection18AcceptedWeekGateway({
     contract,
     workouts: source,
     weekStart: args.weekStart,

@@ -17,14 +17,11 @@ import type { OnboardingData } from '../types/domain';
 import {
   EQUIPMENT_CHECKLIST_OPTION_TAGS,
   FULL_GYM_EQUIPMENT,
-  TEMPORARY_EQUIPMENT_PRESETS,
-  buildBaselineEquipmentSavePlan,
   buildActiveEquipmentConstraint,
-  buildTemporaryEquipmentConstraint,
+  temporaryEquipmentConstraintIdForDate,
   equipmentTagsToSubstituteEquipmentClasses,
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
-  saveBaselineEquipmentSelection,
 } from '../utils/equipmentAvailability';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
 import { useCoachUpdatesStore, type ActiveEquipmentConstraint } from '../store/coachUpdatesStore';
@@ -82,7 +79,6 @@ section('1. Current checklist option mapping');
       `mapping exists for current option "${option}"`,
     );
     const resolved = resolveEquipmentAvailability({
-      trainingLocation: 'Commercial gym',
       equipment: [option],
     });
     assert(
@@ -95,21 +91,21 @@ section('1. Current checklist option mapping');
 section('2. Fallback and bodyweight invariants');
 {
   const outdoor = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: [],
   });
+  // Ruling 4 (2026-07-31): the location union is DELETED. An empty or absent
+  // checklist resolves to the honest bodyweight floor — no location invents
+  // bands, kettlebells or anything else.
   assert(outdoor.includes('bodyweight'), 'bodyweight is included for empty checklist fallback');
-  assert(outdoor.includes('bands'), 'empty checklist falls back to inferEquipment(trainingLocation)');
+  assert(!outdoor.includes('bands'), 'empty checklist no longer inherits location equipment');
   assert(!outdoor.includes('barbell'), 'Outdoor fallback does not invent barbell');
 
   const absent = resolveEquipmentAvailability({
-    trainingLocation: 'Home gym',
   });
   assert(absent.includes('bodyweight'), 'bodyweight is included when checklist is absent');
-  assert(absent.includes('kettlebell'), 'absent checklist falls back to Home gym inference');
+  assert(!absent.includes('kettlebell'), 'absent checklist no longer inherits Home gym inference');
 
   const legacy = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: ['barbell', 'dumbbells', 'cable_machine', 'hamstring_curl', 'bands'],
   });
   assert(legacy.includes('barbell'), 'legacy barbell checklist value maps to barbell');
@@ -119,17 +115,15 @@ section('2. Fallback and bodyweight invariants');
   assert(legacy.includes('bands'), 'legacy bands checklist value maps to bands');
 
   const legacyCommercial = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
   });
   assert(
-    legacyCommercial.source === 'legacy_positive_plus_location' &&
-      sameSet(legacyCommercial.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
-    'legacy positive Commercial-gym checklist is supplemented by location capabilities',
+    legacyCommercial.source === 'legacy_positive_lift' &&
+      legacyCommercial.conditioningModalities.length === 0,
+    'legacy positive checklist lifts its OWN tags only — the location union is deleted',
   );
 
   const completeNoCardio = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['Dumbbells Only'],
     equipmentSelectionCompleteness: 'complete',
   });
@@ -140,7 +134,6 @@ section('2. Fallback and bodyweight invariants');
   );
 
   const rowOnly = resolveEquipmentCapabilities({
-    trainingLocation: 'Commercial gym',
     equipment: ['RowErg'],
     equipmentSelectionCompleteness: 'complete',
   });
@@ -153,14 +146,12 @@ section('2. Fallback and bodyweight invariants');
 section('3. Full gym and substitution class bridge');
 {
   const full = resolveEquipmentAvailability({
-    trainingLocation: 'Outdoor',
     equipment: ['Full Gym'],
   });
   assert(sameSet(full, FULL_GYM_EQUIPMENT), 'Full Gym maps to the broad gym equipment superset');
 
   const classes = equipmentTagsToSubstituteEquipmentClasses(
     resolveEquipmentAvailability({
-      trainingLocation: 'Commercial gym',
       equipment: ['Dumbbells Only'],
     }),
   );
@@ -181,7 +172,6 @@ section('4. Generation diagnostics serialize resolved equipment');
     seasonPhase: 'Off-season',
     trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-    trainingLocation: 'Commercial gym',
     equipment: ['Dumbbells Only'],
     experienceLevel: '2-5 years',
     squatStrength: 'Around bodyweight',
@@ -219,7 +209,6 @@ section('4. Generation diagnostics serialize resolved equipment');
 section('5. Equipment constraints apply to availability');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   const onlyDb: ActiveEquipmentConstraint = buildActiveEquipmentConstraint({
@@ -255,10 +244,17 @@ section('5. Equipment constraints apply to availability');
   assert(!resolvedWithout.includes('machine'), 'mode=without subtracts unavailable machine');
   assert(resolvedWithout.includes('dumbbells'), 'mode=without keeps unrelated baseline equipment');
 
-  const noCardio = buildTemporaryEquipmentConstraint({
-    presetId: 'no_erg_cardio',
-    date: '2026-04-23',
-    todayISO: '2026-04-23T09:00:00.000Z',
+  // The retired no-cardio preset, expressed as the own-kit decision builds it.
+  const noCardio = buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate('2026-04-23'),
+    mode: 'without',
+    tags: ['bike_or_treadmill'],
+    source: 'tap',
+    startDate: '2026-04-23',
+    nowISO: '2026-04-23T09:00:00.000Z',
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: 'Missing this week',
   });
   const constrainedCapabilities = resolveEquipmentCapabilities(profile, [noCardio], '2026-04-23');
   assert(
@@ -267,51 +263,18 @@ section('5. Equipment constraints apply to availability');
   );
   const restoredCapabilities = resolveEquipmentCapabilities(profile, [], '2026-04-23');
   assert(
-    sameSet(restoredCapabilities.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
+    sameSet(restoredCapabilities.conditioningModalities, ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill']),
     'clearing temporary no-cardio constraint restores baseline modalities',
   );
 }
 
-section('5b. Temporary equipment preset mapping');
-{
-  const date = '2026-04-22';
-  const expected = {
-    bodyweight_only: { mode: 'only', tags: ['bodyweight'] },
-    dumbbells_only: { mode: 'only', tags: ['bodyweight', 'dumbbells'] },
-    home_hotel_gym: { mode: 'only', tags: ['bodyweight', 'dumbbells', 'bands'] },
-    no_barbell_rack: { mode: 'without', tags: ['barbell'] },
-    no_machines_cables: { mode: 'without', tags: ['machine', 'cables'] },
-    no_erg_cardio: { mode: 'without', tags: ['bike_or_treadmill'] },
-  } as const;
-  for (const [presetId, expectation] of Object.entries(expected)) {
-    const constraint = buildTemporaryEquipmentConstraint({
-      presetId: presetId as keyof typeof expected,
-      date,
-      todayISO: `${date}T09:00:00.000Z`,
-    });
-    assert(
-      constraint.mode === expectation.mode,
-      `${presetId} uses mode ${expectation.mode}`,
-    );
-    assert(
-      sameSet(constraint.tags as readonly string[], expectation.tags),
-      `${presetId} uses canonical tags ${expectation.tags.join(', ')}`,
-    );
-    assert(
-      constraint.expiresAt === '2026-04-26',
-      `${presetId} expires at selected week end`,
-    );
-  }
-  assert(
-    TEMPORARY_EQUIPMENT_PRESETS.some((preset) => preset.id === 'back_to_normal' && preset.clearsActiveEquipment),
-    'Back to normal preset clears active equipment constraints',
-  );
-}
+// Section 5b (temporary equipment preset mapping) is DELETED with the presets
+// (Sam's ruling 5, 2026-07-31): the this-week flow is expressed against the
+// athlete's own kit; there is no preset table left to map.
 
 section('6. Equipment constraint expiry lifecycle');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   const weekOnly = buildActiveEquipmentConstraint({
@@ -375,7 +338,6 @@ section('6. Equipment constraint expiry lifecycle');
 section('7. Store lifecycle and modifier metadata');
 {
   const profile: OnboardingData = {
-    trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
   useProgramStore.setState({
@@ -448,104 +410,11 @@ section('7. Store lifecycle and modifier metadata');
   );
 }
 
-section('8. Baseline equipment save/rebuild behaviour');
-{
-  const date = '2026-04-22';
-  const baseline: OnboardingData = {
-    trainingLocation: 'Commercial gym',
-    equipment: ['Full Gym'],
-  };
-  let updatedEquipment: string[] | undefined;
-  let refreshedProfile: OnboardingData | undefined;
-  const changed = saveBaselineEquipmentSelection({
-    profile: baseline,
-    selectedEquipment: ['Dumbbells Only'],
-    dateISO: date,
-    updateOnboardingData: (data) => {
-      updatedEquipment = data.equipment;
-    },
-    refreshProgram: (nextProfile) => {
-      refreshedProfile = nextProfile;
-    },
-  });
-  assert(changed.profileUpdated === true, 'changing baseline equipment updates profile/onboarding equipment');
-  assert(changed.rebuildRequired === true, 'changed resolved baseline equipment requires rebuild');
-  assert(changed.refreshed === true, 'changed resolved baseline equipment triggers refresh callback');
-  assert(sameSet(updatedEquipment ?? [], ['Dumbbells Only']), 'profile save writes selected equipment checklist');
-  assert(sameSet(refreshedProfile?.equipment ?? [], ['Dumbbells Only']), 'refresh receives patched profile');
-
-  let unchangedRefreshCalled = false;
-  const unchanged = saveBaselineEquipmentSelection({
-    profile: { trainingLocation: 'Commercial gym', equipment: ['dumbbells'] },
-    selectedEquipment: ['Dumbbells Only'],
-    dateISO: date,
-    updateOnboardingData: () => undefined,
-    refreshProgram: () => {
-      unchangedRefreshCalled = true;
-    },
-  });
-  assert(unchanged.rebuildRequired === true, 'modern exhaustive save replaces ambiguous legacy positive baseline');
-  assert(unchangedRefreshCalled === true, 'legacy-to-modern capability change refreshes program');
-  assert(unchanged.message === 'Equipment updated. Your program was refreshed.', 'legacy-to-modern save reports refresh');
-  assert(
-    unchanged.nextProfile.equipmentSelectionCompleteness === 'complete',
-    'modern equipment save records authoritative completeness',
-  );
-
-  const plan = buildBaselineEquipmentSavePlan(baseline, ['Bodyweight Only'], date);
-  assert(plan.rebuildRequired === true, 'baseline bodyweight change is meaningful');
-  assert(
-    selectActiveCoachNotes({
-      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-      onboardingData: plan.nextProfile,
-      todayISO: date,
-    }).length === 0,
-    'baseline equipment change does not create persistent Coach Note',
-  );
-  assert(
-    useCoachUpdatesStore.getState().activeConstraints.every((constraint) => constraint.type !== 'equipment'),
-    'baseline equipment change does not create active equipment constraint',
-  );
-
-  const temporaryFact = createTemporaryEquipmentFact({
-    factId: 'equipment-baseline-save-survival',
-    observedDate: date,
-    scope: temporaryFactScope({ kind: 'week', date }),
-    mode: 'only',
-    equipmentTags: ['bodyweight'],
-    sourceSurface: 'test',
-  });
-  await transactTemporarySourceFact({
-    operation: 'create',
-    fact: temporaryFact,
-    todayISO: date,
-  });
-  const savedWithTemporary = saveBaselineEquipmentSelection({
-    profile: baseline,
-    selectedEquipment: ['Full Gym'],
-    dateISO: date,
-    updateOnboardingData: () => undefined,
-    refreshProgram: () => undefined,
-  });
-  assert(
-    useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
-      .some((candidate) =>
-        temporarySourceFactId(candidate) === temporaryFact.factId &&
-        candidate.status === 'active'),
-    'active temporary equipment fact survives baseline save planning',
-  );
-  assert(
-    sameSet(
-      resolveEquipmentAvailability(
-        savedWithTemporary.nextProfile,
-        useCoachUpdatesStore.getState().activeConstraints,
-        date,
-      ),
-      ['bodyweight'],
-    ),
-    'resolved availability after baseline save still applies live temporary constraint',
-  );
-}
+// Section 8 (baseline equipment save/rebuild) is DELETED with its subject:
+// saveBaselineEquipmentSelection wrote the legacy shape and had no product
+// caller (ownership sheet §1.4). The profile surface commits the canonical
+// `equipment_answer` change through commitProfileProgramTransaction, which is
+// asserted where that transaction's tests live.
 
 console.log(`\n[equipmentAvailability] ${pass} passed, ${fail} failed`);
 if (fail > 0) {

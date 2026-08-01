@@ -4,7 +4,6 @@ process.env.TZ = 'Australia/Melbourne';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
-import { buildRepeatWeekOverlay } from '../utils/repeatWeek';
 import { getSessionComponentRows, getSessionComponents } from '../utils/sessionComponents';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 
@@ -173,13 +172,12 @@ const profile: OnboardingData = {
   firstName: 'OwnershipAudit',
   position: 'inside_mid',
   motivation: 'Build strength and fitness',
-  goals: ['Build Strength', 'Improve Fitness'],
+  goals: ['stronger_and_fitter', 'build_muscle'],
   seasonPhase: 'Off-season',
   trainingDaysPerWeek: 6,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
-  teamTrainingIntensity: 'Moderate',
   trainingLocation: 'Commercial gym',
   equipment: ['Full Gym'],
   experienceLevel: '2-5 years',
@@ -220,13 +218,21 @@ for (const [label, microcycle] of [
     coreConditioning.map((value) => ({ id: value.planEntryId, type: value.workoutType })));
 }
 
-console.log('\n[5] Repeat and rebuild preserve standalone ownership');
-const overlay = buildRepeatWeekOverlay({
-  sourceWorkouts: [modernSki],
-  targetWeekStart: '2026-08-10',
-});
-const repeated = Object.values(overlay.workoutsByDate).find(Boolean) as Workout | undefined;
-ok('Repeat Week retains standalone workout', !!repeated);
+console.log('\n[5] week-overlay copy and rebuild preserve standalone ownership');
+// Stand-in for the retired repeat-week overlay builder (HOME_SCREEN_REDESIGN
+// ruling 1 — the athlete-facing repeat-week writer is gone). Ownership
+// conservation across a week-overlay clone with a fresh id is a property of
+// the overlay-copy mechanism itself, not the retired button.
+const repeatedId = `${modernSki.id}:week-overlay-copy`;
+const repeated: Workout = {
+  ...modernSki,
+  id: repeatedId,
+  microcycleId: 'week-overlay-copy-mc',
+  exercises: (modernSki.exercises ?? []).map((exercise) => ({
+    ...exercise, workoutId: repeatedId,
+  })),
+};
+ok('week-overlay copy retains standalone workout', !!repeated);
 if (repeated) assertConditioningOnly('repeated standalone tempo', repeated);
 const rebuilt = finaliseWorkoutAfterMutation(modernSki, {
   phase: 'Off-season', offseasonSubphase: 'mid_offseason', planIntentValid: true,

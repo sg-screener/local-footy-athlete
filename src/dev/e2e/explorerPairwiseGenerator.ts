@@ -349,7 +349,7 @@ function actionForRow(row: ExplorerCapabilityRow): ExplorerAction {
         type: 'week.repeat',
         target: { kind: 'week', weekId: 'week-primary' },
         args: { sourceWeekStart: DATE.weekStart, targetWeekStart: DATE.nextWeekStart },
-        capability: { capabilityId: 'week.repeat', status: 'enabled' },
+        capability: { capabilityId: 'week.repeat', status: 'disabled' },
       };
     case 'coach.message':
       return {

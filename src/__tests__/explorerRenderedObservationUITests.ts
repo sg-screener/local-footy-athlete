@@ -45,8 +45,7 @@ check('readiness and equipment observation waits for accepted fact plus constrai
   /useEffect\(\(\) => \{[\s\S]*pendingSourceFactObservation[\s\S]*activeConstraintExists[\s\S]*renderedStatus[\s\S]*observeRenderedAthleteActionOutcome/.test(hook));
 check('injury observation waits for the accepted episode lifecycle state',
   /useEffect\(\(\) => \{[\s\S]*pendingInjuryObservation[\s\S]*episode\?\.status[\s\S]*observeRenderedAthleteActionOutcome/.test(hook));
-check('repeat and restoration observations wait for accepted revision and adjustment identity',
-  /pendingRepeatObservation\.acceptedRevision[\s\S]*activeRepeatWeekAdjustment\?\.id[\s\S]*observeRenderedAthleteActionOutcome/.test(hook) &&
+check('restoration observations wait for accepted revision after clearing an adjustment',
   /pendingRestorationObservation\.acceptedRevisionAfter[\s\S]*observeRenderedAthleteActionOutcome/.test(hook));
 check('session move/delete observation waits for visible source, target and component state',
   /sourceReleased[\s\S]*targetSessionId[\s\S]*deletedScopeStillRendered[\s\S]*renderedStateMatches[\s\S]*observeRenderedAthleteActionOutcome/.test(plan));

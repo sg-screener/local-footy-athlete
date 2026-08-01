@@ -37,7 +37,6 @@ import {
   validateWorkoutAgainstActiveConstraints,
 } from '../utils/postGenerationConstraintValidation';
 import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
@@ -208,7 +207,7 @@ function overlay(workoutsByDate: Record<string, Workout | null>): WeekScopedWork
     weekStart: NEXT_MON,
     weekEnd: '2099-01-18',
     anchorDate: null,
-    reason: 'repeat_week',
+    reason: 'one_off_game',
     workoutsByDate,
     createdAt: '',
     updatedAt: '',
@@ -560,7 +559,7 @@ section('[6b] red-flag and full-pause readiness hard stops remain hard stops');
   ok('full-pause readiness hard-stops non-anchor training', readinessResult.workout === null);
 }
 
-section('[7] final ProgramStore boundary covers rebuild, manual, overlay, and repeat writes');
+section('[7] final ProgramStore boundary covers rebuild, manual and overlay writes');
 {
   resetStores();
   useCoachUpdatesStore.getState().upsertActiveConstraint(injury('hamstring', 9));
@@ -582,16 +581,6 @@ section('[7] final ProgramStore boundary covers rebuild, manual, overlay, and re
   useProgramStore.getState().setWeekScopedOverlay(overlay({ [NEXT_MON]: sprintOnly }));
   ok('week overlay cannot reintroduce affected work',
     useProgramStore.getState().weekScopedOverlays[NEXT_MON].workoutsByDate[NEXT_MON] === null);
-
-  resetStores();
-  const sourceProgram = program([unsafe]);
-  useProgramStore.getState().setCurrentProgram(sourceProgram);
-  useCoachUpdatesStore.getState().upsertActiveConstraint(injury('hamstring', 9));
-  repeatWeekIntoNextWeek({ baseProfile: FULL_GYM, sourceWeekDate: MON, todayISO: TODAY });
-  const repeated = useProgramStore.getState().weekScopedOverlays[NEXT_MON];
-  ok('repeat-week overlay cannot reintroduce affected source work',
-    Object.values(repeated.workoutsByDate).every((value) =>
-      value === null || (!names(value).includes('Deadlift') && !names(value).includes('10m Sprint'))));
 }
 
 section('[8] equipment refresh and coach revision writes pass through the same boundary');

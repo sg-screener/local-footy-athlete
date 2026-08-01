@@ -19,12 +19,10 @@ import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import {
-  weeklyConditioningIconKind,
-  weeklyPlanSecondaryLabel,
-  weeklyPlanTitle,
-} from '../../utils/weeklyPlanDisplay';
+import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
+import type { VisibleDay, VisibleWeek } from '../../rules/visibleProjection';
+import { visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -37,7 +35,8 @@ import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
-import { buildReadinessAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
@@ -86,6 +85,7 @@ import {
 export default function HomeScreenV2() {
   const {
     weekDays,
+    visibleWeek,
     weekLabel,
     weekOffset,
     isThisWeek,
@@ -103,8 +103,8 @@ export default function HomeScreenV2() {
     handleFinishTeamSession,
     handleMessageCoach,
     handleApplyGuidedInjury,
-    handleApplyEquipmentPreset,
-    handleApplyBusyWeekReduce,
+    handleApplyEquipmentDecision,
+    handleApplyShortOnTimeToday,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
@@ -147,15 +147,6 @@ export default function HomeScreenV2() {
     rebuildMsgOpacity,
     handleCancelRebuild,
     handleConfirmRebuild,
-    repeatWeekConfirmVisible,
-    repeatWeekBusy,
-    repeatWeekResult,
-    repeatWeekRestoreStatus,
-    activeRepeatWeekAdjustment,
-    handleOpenRepeatWeek,
-    handleCancelRepeatWeek,
-    handleConfirmRepeatWeek,
-    handleRestoreRepeatWeek,
     phaseShiftModalVisible,
     phaseShiftStep,
     pendingPreferredDays,
@@ -195,10 +186,15 @@ export default function HomeScreenV2() {
     note: ActiveCoachNote;
   } | null>(null);
   const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
-  const [busyAwayVisible, setBusyAwayVisible] = useState(false);
+  const [awayDaysVisible, setAwayDaysVisible] = useState(false);
+  // ONE ACK STATE FOR BOTH SCHEDULE DOORS. They are two buttons writing one fact
+  // kind through one executor; two acknowledgment states would be two places to
+  // forget to set. Rendered under the rows for the sheet-less door and inside
+  // the sheet for the other, so the answer appears where the tap happened.
+  const [scheduleAck, setScheduleAck] = useState<ReadinessAcknowledgment | null>(null);
   const [equipmentVisible, setEquipmentVisible] = useState(false);
 
-  // ── Weekly readiness ("I'm not 100%") — week-level card ──
+  // ── Weekly readiness ("I'm sick/flat today") — week-level card ──
   // Active state is derived from the EXISTING tap modifiers for the
   // currently selected week (ids are week-keyed by Monday).
   const [readinessVisible, setReadinessVisible] = useState(false);
@@ -492,11 +488,18 @@ export default function HomeScreenV2() {
             const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
             const isPickerMode = mode.type === 'moveGame' || mode.type === 'addGame';
             const isMoveTarget = isPickerMode && !isMoveSource;
+            // The projection's answer for this date — the card's ONE source for
+            // its title/context words. `visibleWeek` and `weekDays` are the same
+            // derivation (`project()` wraps `buildProgramTabProjectedWeek`), so
+            // this find is always a hit; `undefined` only guards a render before
+            // the two have settled together.
+            const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
 
             return (
               <DayRow
                 key={day.date}
                 day={day}
+                visibleDay={visibleDay}
                 isSelected={isSelected}
                 isMoveSource={isMoveSource}
                 isMoveTarget={isMoveTarget}
@@ -578,81 +581,11 @@ export default function HomeScreenV2() {
                   ? explorerTestId.adjustmentRestored(adjustment.id)
                   : explorerTestId.adjustmentState(adjustment.id, adjustment.status)}
             />
-            {adjustment.kind === 'repeat_week' ? (
-              <ExplorerRenderWitness
-                testID={adjustment.status === 'active'
-                  ? explorerTestId.repeatActive(adjustment.id)
-                  : adjustment.status === 'cleared'
-                    ? explorerTestId.repeatRestored(adjustment.id)
-                    : explorerTestId.adjustmentState(adjustment.id, adjustment.status)}
-              />
-            ) : null}
           </React.Fragment>
         ))}
         {adjustmentResultWitnesses.map((testID) => (
           <ExplorerRenderWitness key={testID} testID={testID} />
         ))}
-
-        {repeatWeekResult && (
-          <Card
-            tone={repeatWeekResult.tone === 'success' ? 'accent' : 'outline'}
-            padding="md"
-            radius="lg"
-            style={styles.repeatWeekCard}
-          >
-            <Text testID="repeat-week-result-message" style={styles.repeatWeekMessage}>
-              {repeatWeekResult.message}
-            </Text>
-          </Card>
-        )}
-
-        {activeRepeatWeekAdjustment && (
-          <Card
-            tone="outline"
-            padding="lg"
-            radius="xl"
-            style={styles.repeatWeekCard}
-            testID="repeat-week-active-card"
-          >
-            <Text style={styles.phaseBadge}>Repeated week active</Text>
-            <Text style={styles.phaseBody}>
-              This week is using the saved Repeat Week overlay. You can restore the exact plan it displaced.
-            </Text>
-            <Button
-              label="Restore previous target week"
-              onPress={() => void handleRestoreRepeatWeek()}
-              variant="outline"
-              size="md"
-              loading={repeatWeekBusy}
-              testID={explorerTestId.repeatRestore(activeRepeatWeekAdjustment.id)}
-            />
-          </Card>
-        )}
-
-        {repeatWeekRestoreStatus && (
-          <Text testID="repeat-week-restore-status" style={styles.repeatWeekStatus}>
-            {repeatWeekRestoreStatus}
-          </Text>
-        )}
-
-        {repeatWeekResult?.tone === 'success' && activeRepeatWeekAdjustment && (
-          <View pointerEvents="none" testID="home-visible-week-after-repeat" />
-        )}
-        {repeatWeekRestoreStatus && !activeRepeatWeekAdjustment && (
-          <View pointerEvents="none" testID="home-visible-week-after-repeat-restoration" />
-        )}
-
-        {isNormal && !activeRepeatWeekAdjustment && (
-          <Button
-            label="Repeat this week into next week"
-            onPress={handleOpenRepeatWeek}
-            variant="outline"
-            size="md"
-            disabled={repeatWeekBusy}
-            testID={explorerTestId.repeatIngress(weekAnchorISO)}
-            style={styles.repeatWeekCard}
-          />
-        )}
 
         {/* ── No game CTA ── */}
         {isNormal && currentPhase === 'In-season' && !weekHasGame && showAddGameCTA && (
@@ -676,27 +609,97 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* ── Busy / away this week ── */}
+        {/* ── Short on time today (ruling 2) ──
+            TWO BUTTONS, TWO FACTS, NO MENU BETWEEN THEM. This half commits on
+            the tap — as the busy row inside the old sheet already did — and the
+            fact it writes is TODAY-scoped because the words say today. */}
         {isNormal && (
           <Pressable
-            onPress={() => setBusyAwayVisible(true)}
+            onPress={async () => {
+              // NEVER IN SILENCE. The tap used to discard its result, and the
+              // result is `ok: false` on every device with a real accepted base
+              // (declared red 1) — so this button reported nothing at all while
+              // doing nothing at all.
+              setScheduleAck(null);
+              const result = await handleApplyShortOnTimeToday();
+              const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+              setScheduleAck(ack);
+              // The tape's witness that the ack layer RAN — Sam's 2026-08-01
+              // silence could not be reproduced below this line, so this line
+              // reports itself. See recordScheduleAckPresented.
+              recordScheduleAckPresented({
+                traceId: result?.traceId, surface: 'short_on_time_today', tone: ack.tone,
+              });
+            }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-busy-away-entry"
+            testID="home-short-on-time-entry"
+            accessibilityRole="button"
+            accessibilityLabel="Short on time today"
           >
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
                 <View style={styles.busyAwayIcon}>
+                  {/* Hourglass — time running out on ONE day. The clock this
+                      replaced is now nobody's, so no two rows share a glyph. */}
                   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M12 6v6l4 2" />
+                    <Path d="M5 2h14" /><Path d="M5 22h14" />
+                    <Path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" />
+                    <Path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22" />
                   </Svg>
                 </View>
-                <Text style={styles.busyAwayText}>Busy or away this week?</Text>
+                <Text style={styles.busyAwayText}>Short on time today</Text>
               </View>
             </Card>
           </Pressable>
         )}
 
-        {/* ── Weekly readiness ("I'm not 100%") — all phases, week-level ── */}
+        {/* ── Away this week? (ruling 2) — the one question with an answer ── */}
+        {isNormal && (
+          <Pressable
+            onPress={() => { setScheduleAck(null); setAwayDaysVisible(true); }}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-away-this-week-entry"
+            accessibilityRole="button"
+            accessibilityLabel="Away this week?"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.awayIconTint]}>
+                  {/* Globe — the same glyph the away row carried inside the old
+                      sheet, promoted with it. */}
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#7CC4FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M3 12h18" />
+                    <Path d="M12 2a15 15 0 010 20" /><Path d="M12 2a15 15 0 000 20" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>Away this week?</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* The answer to a schedule tap, in the athlete's own words. Tapping it
+            dismisses it — an acknowledgment the athlete cannot clear is a banner. */}
+        {isNormal && scheduleAck && !awayDaysVisible && (
+          <Pressable
+            onPress={() => setScheduleAck(null)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-schedule-ack"
+            accessibilityRole="button"
+            accessibilityLabel={scheduleAck.message}
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <Text style={[
+                styles.busyAwayText,
+                scheduleAck.tone === 'error' && styles.scheduleAckError,
+              ]}>
+                {scheduleAck.message}
+              </Text>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── Weekly readiness ("I'm sick/flat today") — all phases, week-level ── */}
         {isNormal && (
           <Pressable
             onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
@@ -722,8 +725,39 @@ export default function HomeScreenV2() {
                       fact kind; re-deriving it here from scope/isRecovery threw
                       that away and printed the same generic line for every
                       fact, which is what Sam saw on the phone. */}
-                  {weekReadiness ? weekReadiness.title : "I'm not 100%"}
+                  {weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
                 </Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── I'm injured (ruling 3) ──
+            ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
+            the readiness sheet's "Something hurts" row opens, and both complete
+            through `handleApplyGuidedInjury`. The row inside the sheet stays:
+            an athlete who starts at "I'm sick/flat" and discovers it is a niggle
+            must not have to back out to a different button. */}
+        {isNormal && (
+          <Pressable
+            onPress={() => setReadinessInjuryVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-injured-entry"
+            accessibilityRole="button"
+            accessibilityLabel="I'm injured"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.injuredIconTint]}>
+                  {/* Plaster / bandage — an injury, not an alert triangle (that
+                      one belongs to the readiness sheet's own "Something hurts"
+                      row) and not the pulse above it. */}
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
+                    <Path d="M8.5 8.5 15.5 15.5" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>I'm injured</Text>
               </View>
             </Card>
           </Pressable>
@@ -804,8 +838,6 @@ export default function HomeScreenV2() {
         date={changeSheetDate}
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
-        onAskCoach={handleMessageCoach}
-        onOpenReadiness={() => { setReadinessAck(null); setReadinessVisible(true); }}
       />
 
       <GameDaySheet
@@ -872,17 +904,24 @@ export default function HomeScreenV2() {
         }}
       />
 
-      <BusyAwaySheet
-        visible={busyAwayVisible}
+      <AwayDaysSheet
+        visible={awayDaysVisible}
         weekDays={weekDays}
-        onClose={() => setBusyAwayVisible(false)}
-        onBusyReduce={async () => {
-          await handleApplyBusyWeekReduce();
-          setBusyAwayVisible(false);
-        }}
+        visibleWeek={visibleWeek}
+        acknowledgment={scheduleAck}
+        onClose={() => { setAwayDaysVisible(false); setScheduleAck(null); }}
         onAwayDays={async (dates) => {
-          await handleApplyAwayDays(dates);
-          setBusyAwayVisible(false);
+          // CLOSING IS THE CONFIRMATION, so it may only happen on success. The
+          // sheet used to close unconditionally after the await, which is how a
+          // refused commit read as "done" — the athlete watched the sheet
+          // dismiss and believed their days were cleared.
+          const result = await handleApplyAwayDays(dates);
+          const ack = buildScheduleAcknowledgment(result, 'away');
+          setScheduleAck(ack);
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
+          if (result?.ok) setAwayDaysVisible(false);
         }}
       />
 
@@ -891,8 +930,8 @@ export default function HomeScreenV2() {
         activeFactId={activeEquipmentFact?.factId}
         targetFactId={equipmentFacts.find((fact) => fact.status !== 'active')?.factId}
         onClose={() => setEquipmentVisible(false)}
-        onApply={async (presetId) => {
-          await handleApplyEquipmentPreset(presetId, weekAnchorISO);
+        onApply={async (decision) => {
+          await handleApplyEquipmentDecision(decision, weekAnchorISO);
           setEquipmentVisible(false);
         }}
       />
@@ -907,31 +946,6 @@ export default function HomeScreenV2() {
         msgOpacity={rebuildMsgOpacity}
         onConfirm={handleConfirmRebuild}
       />
-
-      <Sheet
-        visible={repeatWeekConfirmVisible}
-        onClose={handleCancelRepeatWeek}
-        dismissable={!repeatWeekBusy}
-        testID="repeat-week-confirm-sheet"
-      >
-        <Text style={styles.sheetTitle}>Repeat this week?</Text>
-        <Text style={styles.sheetBody}>
-          We’ll save this displayed week into next week while keeping next week’s fixtures, Team Training, and phase rules.
-        </Text>
-        <Button
-          label="Repeat this week into next week"
-          onPress={() => void handleConfirmRepeatWeek()}
-          loading={repeatWeekBusy}
-          testID={explorerTestId.repeatConfirm(weekAnchorISO)}
-        />
-        <Button
-          label="Cancel"
-          onPress={handleCancelRepeatWeek}
-          variant="ghost"
-          disabled={repeatWeekBusy}
-          testID="repeat-week-cancel"
-        />
-      </Sheet>
 
       <CoachNoteSheet
         state={coachNoteSheet}
@@ -997,6 +1011,8 @@ function MoveBanner({ text, onCancel }: MoveBannerProps) {
 
 interface DayRowProps {
   day: any;
+  /** The projection's answer for this date. Card words come from here — see `title`/`contextLabel` below. */
+  visibleDay: VisibleDay | undefined;
   isSelected: boolean;
   isMoveSource: boolean;
   isMoveTarget: boolean;
@@ -1334,6 +1350,36 @@ function rowIconPaths(kind: RowIconKind) {
 }
 
 /**
+ * A day's ONE leading identity, for any card-ish surface (the week row, the
+ * away-days picker).
+ *
+ * THE RULE MOVED, THE BEHAVIOUR DID NOT (Task 6). It now lives in
+ * `rules/visibleDayDetail.ts` beside the day-detail surface that reads it too:
+ * a card title and a detail title that disagree about which name leads is one
+ * defect at two sizes, and the only structural way two surfaces cannot disagree
+ * is for both to call one function. This wrapper keeps the card's
+ * `undefined`-tolerant shape (the week list can hold a date the projection has
+ * no day for); the rule itself is stated once, over there.
+ *
+ * THE GAME GATE IS STILL LOAD-BEARING, and Task 6 checked rather than assumed.
+ * Task 6 fixed the projection so a fixture's last-resort `session` placeholder
+ * projects as a `game` part instead of a `strength` one, which removes the
+ * ORIGINAL reason for the gate (a game card reading "Strength"). It does not
+ * make the gate redundant, and that was TRACED rather than assumed: only the
+ * PLACEHOLDER converts, so a fixture day whose workout carries real content
+ * still leads with `parts[0]`. A `Practice Match` day (in
+ * `FIXTURE_WORKOUT_TYPES`, and not one of the two hardcoded stubs) with a squat
+ * on it projects `kind: 'game'` and `parts[0].kind: 'strength'` — its card would
+ * read "Strength" without this line. A fixture's title is its fixture whatever
+ * its workout resolved (reassessment §4, Task 5's ruling), so deleting the gate
+ * would trade one traced regression for another.
+ */
+function cardLeadHeadline(day: VisibleDay | undefined): string | null {
+  if (!day) return null;
+  return visibleDayLeadHeadline(day);
+}
+
+/**
  * Day row — one of seven identical rows in the week list.
  *
  * The SELECTED row (default: today, via useHomeScreen) is the screen's
@@ -1343,7 +1389,7 @@ function rowIconPaths(kind: RowIconKind) {
  * selection IS the hierarchy, so no separate hero card exists.
  */
 function DayRow({
-  day, isSelected, isMoveSource, isMoveTarget, pickerMode,
+  day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning, onReviewStale,
   feedbackReceipts, progressionReceipts,
@@ -1351,19 +1397,30 @@ function DayRow({
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
-  // Weekly plan speaks in structure/purpose identities. Prescription copy
-  // remains inside the workout detail screen.
-  const title = hasWorkout ? weeklyPlanTitle(day.workout) : null;
+  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout. See
+  // `cardLeadHeadline` above for the title rule (parts[0] leads; day.headline
+  // for rest and — deliberately, not merely "zero parts" — for every
+  // fixture). `contextLabel` is whatever rides beside the leading identity:
+  // for a fixture, nothing (a fixture's own part(s) are already spoken for by
+  // `title`, and a game day has never shown a secondary line — matches
+  // today's behaviour, where `splitSessionName("Game Day").context` is
+  // already `null`); for a training day, parts beyond the first, the same
+  // "+ " convention the old `splitSessionName` context carried. Every value
+  // here is `SignedCopy`, so this can only ever render an authored string.
+  const visibleParts = visibleDay?.parts ?? [];
+  const isFixtureDay = visibleDay?.kind === 'game';
+  const title: string | null = cardLeadHeadline(visibleDay);
   const accentColor = getDayRowAccentColor({
     hasWorkout,
     isGame,
     sessionTier: day.workout?.sessionTier,
     title,
   });
-  const contextLabel = suppressDuplicateWorkoutContext(
-    title,
-    hasWorkout ? weeklyPlanSecondaryLabel(day.workout) : null,
-  );
+  const attachedParts = isFixtureDay ? [] : visibleParts.slice(1);
+  const rawContext = attachedParts.length > 0
+    ? `+ ${attachedParts.map((part) => part.headline).join(' + ')}`
+    : null;
+  const contextLabel = suppressDuplicateWorkoutContext(title, rawContext);
   const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
   const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
   const contextIcon = contextIconKind(contextLabel);
@@ -1394,7 +1451,10 @@ function DayRow({
             : null}
     </>
   );
-  const selectedTitle = hasWorkout ? title : 'Rest';
+  // Always `title` now — no `hasWorkout` branch, no hardcoded "Rest"
+  // literal. A rest day's `title` is already "Rest Day" (via `day.headline`,
+  // the zero-parts fallback above); a training day's is its first part.
+  const selectedTitle = title;
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = isMoveSource
     ? 'move-source'
@@ -1419,7 +1479,7 @@ function DayRow({
       testID={isMoveTarget
         ? explorerTestId.fixtureTarget(day.date)
         : `day-row-${dayToken}`}
-      accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
+      accessibilityLabel={`Day ${day.short ?? ''}${title ? ` ${title}` : ''}`}
       accessible={!exposesExpandedActions}
       style={[
         styles.dayRow,
@@ -1588,7 +1648,7 @@ function DayRow({
             <View style={styles.restLine}>
               <RowIcon kind="recovery" size={15} color={accentColor} />
               <Text style={styles.restLabel}>
-                Rest
+                {title}
               </Text>
             </View>
           )}
@@ -1771,7 +1831,7 @@ function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string 
   if (note.reversibleAdjustmentId) {
     return {
       title: 'Restore the previous fixture?',
-      body: 'This restores the exact displaced sessions and repairs the affected fixture horizon.',
+      body: 'This puts the moved sessions back and sorts the week around your game.',
     };
   }
   if (note.type === 'injury') {
@@ -1795,7 +1855,7 @@ function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string 
   }
   return {
     title: 'Clear this adjustment?',
-    body: "We'll remove this active adjustment from future program decisions.",
+    body: "We'll stop factoring this in and get your week back to normal.",
   };
 }
 
@@ -2090,7 +2150,7 @@ function MissedChip({ label, primary, onPress }: {
   );
 }
 
-// ── Weekly "I'm not 100%" sheet ──
+// ── Weekly "I'm sick/flat today" sheet ──
 interface WeekReadinessSheetProps {
   visible: boolean;
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
@@ -2165,9 +2225,40 @@ function WeekReadinessSheet({
   const sickIcon = (color: string) => svg(color, <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />);
   const hurtIcon = (color: string) => svg(color, <><Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>);
   const moonIcon = (color: string) => svg(color, <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />);
-  const zapIcon = (color: string) => svg(color, <Path d="M13 2 3 14h7l-1 8 10-12h-7z" />);
   const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
-  const chevron = (color: string) => svg(color, <Path d="M9 18 15 12 9 6" />);
+  // Ruling 10's named fix: "Rough sleep" used to carry a bare '>' chevron —
+  // an icon that means nothing for a sleep row. A moon VARIANT of the tired
+  // leaves' plain crescent (moonIcon), with a small cloud over it — restless,
+  // overcast sleep — so it reads as sleep-family without duplicating the
+  // leaf icons underneath it.
+  const moonRestIcon = (color: string) => svg(color, (
+    <><Path d="M17 14.5a5.5 5.5 0 1 0-9.9-3.3" />
+      <Path d="M4 17.5a3.5 3.5 0 0 1 .5-6.96A5 5 0 0 1 14 12.5" />
+      <Path d="M4 17.5h13a3 3 0 0 0 0-6" /></>
+  ));
+  // Ruling 10's named fix: "Totally cooked" used to carry a zap bolt — zap
+  // reads as ENERGY, the opposite of cooked/drained. A snuffed flame reads as
+  // "no more fuel", which is what the row means.
+  const flameOutIcon = (color: string) => svg(color, (
+    <><Path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      <Path d="M2 2l20 20" /></>
+  ));
+  // Sick-severity ladder (audit finding: two rows shared one droplet glyph
+  // differing only by colour). droplet (a bit off) / thermometer (properly
+  // sick — a fever) / bed (can't get out of bed) — each glyph is the closest
+  // literal reading of its own row, ascending in how much it takes you out.
+  const bedIcon = (color: string) => svg(color, (
+    <><Path d="M2 18v-7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v7" />
+      <Path d="M2 18v2" /><Path d="M22 18v2" />
+      <Path d="M2 13h20" />
+      <Path d="M6 13V9.5a1.5 1.5 0 0 1 1.5-1.5H10a1.5 1.5 0 0 1 1.5 1.5V13" /></>
+  ));
+  // Lighter-day offer accept/decline — reuses the checkmark/x-cross pair
+  // already established for "Clear adjustment" (accept) and the fixture
+  // sheet's "Remove" (decline is a no), rather than one waveform icon
+  // recoloured twice for opposite answers.
+  const checkIcon = (color: string) => svg(color, <Path d="M20 6L9 17l-5-5" />);
+  const crossIcon = (color: string) => svg(color, <><Path d="M18 6L6 18" /><Path d="M6 6l12 12" /></>);
 
   // A2: "the athlete reported something in THIS visit" is a fact the sheet owns,
   // so it is recorded at the one boundary every tier already goes through rather
@@ -2200,13 +2291,13 @@ function WeekReadinessSheet({
             label="Yes — make today lighter"
             testID="readiness-lighter-accept"
             accent
-            icon={pulseIcon('#C8FF00')}
+            icon={checkIcon('#C8FF00')}
             onPress={() => { if (!lighterDayBusy) onAcceptLighterDay(lighterDayOffer.date); }}
           />
           <SheetOption
             label="No thanks — keep it as planned"
             testID="readiness-lighter-decline"
-            icon={pulseIcon('#8A94A6')}
+            icon={crossIcon('#8A94A6')}
             onPress={onDeclineLighterDay}
           />
           <Button label="Done" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
@@ -2299,7 +2390,7 @@ function WeekReadinessSheet({
             label="Rough sleep"
             sub="One bad night, or a few in a row"
             testID="readiness-leaf-sleep"
-            icon={chevron('#8A94A6')}
+            icon={moonRestIcon('#8A94A6')}
             onPress={() => setBucket('sleep')}
           />
           <SheetOption
@@ -2312,7 +2403,7 @@ function WeekReadinessSheet({
             label="Totally cooked — easier week"
             testID={explorerTestId.readinessOption('cooked_week')}
             accent
-            icon={zapIcon('#C8FF00')}
+            icon={flameOutIcon('#C8FF00')}
             onPress={() => onApply('cooked_week')}
           />
           <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
@@ -2352,14 +2443,14 @@ function WeekReadinessSheet({
             label="Properly sick"
             sub="I'll lighten the work while you're crook — your sessions stay put"
             testID={explorerTestId.readinessOption('illness_moderate')}
-            icon={dropletIcon('#FFC247')}
+            icon={sickIcon('#FFC247')}
             onPress={() => onApply('illness_moderate')}
           />
           <SheetOption
             label="Can't get out of bed"
             sub="Nothing will be required this week — gentle optional work if you're up to it"
             testID={explorerTestId.readinessOption('illness_severe')}
-            icon={sickIcon('#FF7A85')}
+            icon={bedIcon('#FF7A85')}
             onPress={() => onApply('illness_severe')}
           />
           <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
@@ -2369,22 +2460,31 @@ function WeekReadinessSheet({
   );
 }
 
-interface BusyAwaySheetProps {
+/**
+ * THE MENU STEP IS GONE, because there is no longer a question to ask.
+ *
+ * Sam's ruling 2 (2026-07-31) split "Busy or away this week?" into two buttons
+ * on the week screen. "Short on time today" commits on the tap — as the busy row
+ * inside this sheet already did, one step further in — so the only thing left
+ * behind a sheet is the one question that genuinely has an answer: WHICH days.
+ * A menu whose every entry is already a button on the screen behind it is a step
+ * that exists to be dismissed.
+ */
+interface AwayDaysSheetProps {
   visible: boolean;
   weekDays: any[];
+  visibleWeek: VisibleWeek;
+  acknowledgment: ReadinessAcknowledgment | null;
   onClose: () => void;
-  onBusyReduce: () => void | Promise<void>;
   onAwayDays: (dates: string[]) => void | Promise<void>;
 }
-function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }: BusyAwaySheetProps) {
-  const [step, setStep] = useState<'menu' | 'away'>('menu');
+function AwayDaysSheet({
+  visible, weekDays, visibleWeek, acknowledgment, onClose, onAwayDays,
+}: AwayDaysSheetProps) {
   const [selected, setSelected] = useState<string[]>([]);
 
   React.useEffect(() => {
-    if (visible) {
-      setStep('menu');
-      setSelected([]);
-    }
+    if (visible) setSelected([]);
   }, [visible]);
 
   const todayISO = todayISOLocal();
@@ -2400,28 +2500,17 @@ function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }:
     );
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-busy-away-sheet">
-      {step === 'menu' && (
-        <View>
-          <Text style={styles.sheetTitle}>Busy or away this week?</Text>
-          <SheetOption
-            label="Busy week — keep me training, go lighter"
-            accent
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 6v6l4 2"/><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></Svg>}
-            onPress={onBusyReduce}
-          />
-          <SheetOption
-            label="Away some days — clear them"
-            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 12h18"/><Path d="M12 3a15 15 0 010 18"/><Path d="M12 3a15 15 0 000 18"/></Svg>}
-            onPress={() => setStep('away')}
-          />
-          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
-        </View>
-      )}
-
-      {step === 'away' && (
-        <View>
+    <Sheet visible={visible} onClose={onClose} testID="home-away-days-sheet">
+      <View>
           <Text style={styles.sheetTitle}>Which days are you away?</Text>
+          {acknowledgment && (
+            <Text
+              style={[styles.busyAwayEmpty, acknowledgment.tone === 'error' && styles.scheduleAckError]}
+              testID="home-away-days-ack"
+            >
+              {acknowledgment.message}
+            </Text>
+          )}
           {awayCandidates.length === 0 ? (
             <Text style={styles.busyAwayEmpty}>
               No upcoming sessions to clear this week.
@@ -2446,7 +2535,21 @@ function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }:
                   </View>
                   <Text style={styles.awayDayText}>
                     {shortDayMonthLabel(day.date)}
-                    {day.workout?.name ? ` · ${day.workout.name}` : ''}
+                    {(() => {
+                      // The projection's own words for this date, not the raw
+                      // workout name — the SAME `cardLeadHeadline` rule the
+                      // week card uses. This list filters `workoutType !==
+                      // 'Game'` only (not the broader fixture set —
+                      // `dayIsFixture` also matches `workoutType: 'Practice
+                      // Match'`), so a practice-match row can reach here;
+                      // `cardLeadHeadline` still answers it correctly via
+                      // `kind === 'game'`.
+                      const candidate = visibleWeek.days.find(
+                        (day2) => day2.date === day.date,
+                      );
+                      const label = cardLeadHeadline(candidate);
+                      return label ? ` · ${label}` : '';
+                    })()}
                   </Text>
                 </Pressable>
               );
@@ -2459,9 +2562,8 @@ function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }:
             onPress={() => selected.length > 0 && onAwayDays(selected)}
             style={{ marginTop: spacing.md, opacity: selected.length > 0 ? 1 : 0.5 }}
           />
-          <Button label="Back" variant="secondary" size="md" onPress={() => setStep('menu')} style={{ marginTop: spacing.sm }} />
-        </View>
-      )}
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
+      </View>
     </Sheet>
   );
 }
@@ -2863,6 +2965,9 @@ const styles = StyleSheet.create({
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
+  injuredIconTint: { backgroundColor: 'rgba(255, 138, 76, 0.12)' },
+  scheduleAckError: { color: '#FF7A85' },
   equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',
@@ -3193,14 +3298,6 @@ const styles = StyleSheet.create({
   },
   phaseBody: { color: '#D0D0D0', fontSize: 14, lineHeight: 20 },
   phaseBodyAccent: { color: '#C8FF00', fontSize: 14, fontWeight: '400' },
-  repeatWeekCard: { marginTop: spacing.md, gap: spacing.sm },
-  repeatWeekMessage: { color: '#F2F2F2', fontSize: 14, lineHeight: 20 },
-  repeatWeekStatus: {
-    color: '#B8B8B8',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: spacing.sm,
-  },
 
   // Sheet
   // Back chevron — absolute top-left. Deliberately chromeless (no bg, no

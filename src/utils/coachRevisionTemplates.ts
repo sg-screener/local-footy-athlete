@@ -11,6 +11,30 @@
  */
 
 import type { Workout } from '../types/domain';
+import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
+import {
+  MOBILITY_MAX_MOVEMENTS,
+  MOBILITY_MIN_MOVEMENTS,
+  MOBILITY_SESSION_MINUTES,
+} from '../rules/mobilitySessionComposition';
+
+/** Sam's ruling: a mobility session is 5-8 movements. Re-exported for gates. */
+export const MOBILITY_DOOR_MIN_MOVEMENTS = MOBILITY_MIN_MOVEMENTS;
+export const MOBILITY_DOOR_MAX_MOVEMENTS = MOBILITY_MAX_MOVEMENTS;
+
+/**
+ * The one sentence the Mobility door says about itself.
+ *
+ * NO BLANKS ANY MORE. It was a template with two `derived_number` blanks — the
+ * flow's duration and its movement count — and both came from a pre-built bundle
+ * that no longer exists. A composed session's length varies with the athlete's
+ * equipment (it SHRINKS rather than padding), so a sentence promising a count
+ * would be a signed sentence that can lie, which batch 3 forbids by name.
+ *
+ * PROPOSED, NOT SIGNED. See docs/COPY_SHEET_RULINGS_2026-07-30.md batch 5c.
+ */
+const MOBILITY_DESCRIPTION =
+  'A full-body mobility flow - easy ranges only, nothing forced.';
 import {
   createStrengthIntent,
   type StrengthIntent,
@@ -33,7 +57,7 @@ export interface CoachRevisionTemplateDefinition {
    *  'strength' / 'accessories' = ENGINE-GENERATED via buildTagAwareSession
    *  / buildDerivedSession — the same principles as weekly programming
    *  (tag scoring, game proximity, injury filters). Sheet v2 phase 4. */
-  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories';
+  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories' | 'mobility';
   byeOnly: boolean;
   durationMinutes: number;
   /** True when the built content varies by DATE (engine-generated) — the
@@ -120,6 +144,30 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: true,
     durationMinutes: 28,
   },
+  // ── Mobility: COMPOSED from Sam's pool, never a pre-built bundle ──
+  //
+  // SUPERSEDED IN ITS FIRST DAY, and the supersession is the point. Stage 4a
+  // offered one template per entry in `MOBILITY_FLOW_TEMPLATES` — nine bundles.
+  // Sam does not recognise those bundles, and the provenance trace agrees: the
+  // exercises are his, the GROUPINGS arrived in a single commit with no ruling
+  // cited and no changeset beside it. Deriving from them was still deriving from
+  // something nobody authored.
+  //
+  // One template now. It composes 5-8 movements from `MOBILITY_POOL` with a
+  // full-body spread, and it is DYNAMIC — its content varies by date like the
+  // strength and accessory templates, so the validation policy computes
+  // per-date signatures for it.
+  {
+    templateId: 'mobility_flow',
+    label: 'Mobility',
+    description: MOBILITY_DESCRIPTION,
+    category: 'mobility',
+    byeOnly: false,
+    // One owner of the number, shared with the generator's top-up: the door and
+    // the pass compose the identical session, so they cannot quote two lengths.
+    durationMinutes: MOBILITY_SESSION_MINUTES,
+    dynamic: true,
+  },
   // ── Recovery: restore, never load ──
   {
     templateId: 'recovery_flow',
@@ -130,59 +178,33 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: false,
     durationMinutes: 30,
   },
-  // ── Strength: engine-generated with the weekly-programming principles ──
-  {
-    templateId: 'strength_upper_push',
-    label: 'Upper Push',
-    description: 'Pressing strength - chest, shoulders and triceps.',
+  // ── Strength: ALL SEVEN, derived from the authored set ──
+  //
+  // Four were hand-written here and three of the seven had no entry at all, so
+  // the athlete's Lower Body door could only ever hand back combined
+  // squat+hinge. `data/strengthSessionVariants.ts` is the one authored set now
+  // (Sam's charter, 2026-07-30) and these are derived from it, so a variant the
+  // generator can build is a variant a door can reach — by construction, not by
+  // somebody remembering to add it in both places.
+  ...STRENGTH_SESSION_VARIANTS.map((variant): CoachRevisionTemplateDefinition => ({
+    templateId: variant.templateId,
+    label: variant.label,
+    description: variant.description,
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
     dynamic: true,
-    engineName: 'Upper Push',
+    // The engine's intent builder takes the athlete-facing label; it always did
+    // (`engineName: 'Upper Push'`). The one exception was `strength_full_body`,
+    // whose engineName was 'Full Body' while its label was 'Full Body Strength'
+    // — a second name for one session, and exactly what this set removes.
+    engineName: variant.label,
     strengthIntent: createStrengthIntent({
-      archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push'],
+      archetype: variant.archetype,
+      primaryPattern: variant.primaryPattern,
+      plannedPatterns: [...variant.plannedPatterns],
     }),
-  },
-  {
-    templateId: 'strength_upper_pull',
-    label: 'Upper Pull',
-    description: 'Pulling strength - back and biceps.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Upper Pull',
-    strengthIntent: createStrengthIntent({
-      archetype: 'upper', primaryPattern: 'pull', plannedPatterns: ['pull'],
-    }),
-  },
-  {
-    templateId: 'strength_lower',
-    label: 'Lower Body Strength',
-    description: 'Squat and hinge strength - legs and glutes.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Lower Body Strength',
-    strengthIntent: createStrengthIntent({
-      archetype: 'lower', primaryPattern: 'squat', plannedPatterns: ['squat', 'hinge'],
-    }),
-  },
-  {
-    templateId: 'strength_full_body',
-    label: 'Full Body Strength',
-    description: 'Compound push, pull, squat and carry.',
-    category: 'strength',
-    byeOnly: false,
-    durationMinutes: 60,
-    dynamic: true,
-    engineName: 'Full Body',
-    strengthIntent: createStrengthIntent({
-      archetype: 'full_body', primaryPattern: 'squat', plannedPatterns: ['squat', 'push', 'pull'],
-    }),
-  },
+  })),
   // ── Accessories: pump + prehab derived sessions ──
   {
     templateId: 'accessories_pump',
@@ -247,6 +269,37 @@ export function listCoachRevisionTemplates(): CoachRevisionTemplateDefinition[] 
   return TEMPLATE_DEFINITIONS;
 }
 
+/**
+ * EVERY ROW NAME THIS REGISTRY CAN PUT ON A DAY — derived from the emitter.
+ *
+ * `projectionCopy.ts` registers these so `project()` can carry a template-placed
+ * row as `SignedCopy`. They ARE authored: this module is "the ONLY source of
+ * addable content for one-off replacements (product policy: template-derived,
+ * never free-form)", and its labels and row names are the words the athlete
+ * already reads on the add-menu and on the day after adding.
+ *
+ * DERIVED, NOT TRANSCRIBED, and that is load-bearing: it calls the same
+ * `conditioningRowsForTemplate` the writer calls, so a template Sam adds — or a
+ * row name he changes — is signed for free rather than by somebody remembering
+ * to update a second list. A transcribed set would go stale the first time the
+ * registry grew, and the failure mode of a stale set is `UnsignedCopyError` on
+ * the athlete's day-detail screen.
+ *
+ * The engine-built categories (`strength`, `accessories`, `mobility`) are NOT
+ * here on purpose: their rows come from the locked exercise vocabulary
+ * (`selectableExerciseVocabulary.ts`), which `projectionCopy.ts` registers in
+ * bulk already. Enumerating them here would be a second, weaker claim about the
+ * same names.
+ */
+export const COACH_REVISION_TEMPLATE_ROW_NAMES: readonly string[] = Array.from(
+  new Set<string>([
+    ...TEMPLATE_DEFINITIONS
+      .filter((def) => def.category === 'flush' || def.category === 'work_capacity')
+      .flatMap((def) => conditioningRowsForTemplate(def).map((row) => row.name)),
+    ...RECOVERY_FLOW_ROWS.map((row) => row.name),
+  ]),
+);
+
 function definitionById(templateId: string): CoachRevisionTemplateDefinition | null {
   return TEMPLATE_DEFINITIONS.find((entry) => entry.templateId === templateId) ?? null;
 }
@@ -308,6 +361,9 @@ export function buildCoachRevisionTemplateWorkout(
 ): Workout | null {
   const def = definitionById(templateId);
   if (!def) return null;
+  if (def.category === 'mobility') {
+    return buildMobilityTemplateWorkout(def, date);
+  }
   if (def.category === 'recovery') {
     return buildRecoveryTemplateWorkout(def, date);
   }
@@ -366,6 +422,57 @@ export function buildCoachRevisionTemplateWorkout(
     }),
     createdAt: '',
     updatedAt: '',
+  } as Workout;
+}
+
+/**
+ * A mobility session, COMPOSED from Sam's authored pool — through the ONE builder.
+ *
+ * This function used to compose the session itself. It now asks
+ * `buildDerivedSession('mobility')` for it, because the need-based top-up pass
+ * places the same session from the generator and two composers of one session is
+ * how the door and the generator end up prescribing different work under the same
+ * name. R1 is the live example of that failure with a different session (see
+ * `composedOptionalKind`), and it is not worth reproducing here.
+ *
+ * What stays local is REGISTRY OWNERSHIP: row ids become `template:<id>:<n>` so
+ * the writer recognises the section as registry-owned. Exercise identity is left
+ * alone, exactly as the engine templates leave it — weight overrides, videos and
+ * history all key off the pool id.
+ */
+function buildMobilityTemplateWorkout(
+  def: CoachRevisionTemplateDefinition,
+  date: string,
+): Workout | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getCoachRevisionTemplateContext } = require('./coachRevisionTemplateContext');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildDerivedSession } = require('./sessionBuilder');
+  const ctx = getCoachRevisionTemplateContext();
+  const composed: Workout | null = buildDerivedSession(
+    'mobility',
+    date,
+    'coach-template',
+    'Athlete-added session',
+    ctx.athlete,
+  );
+  if (!composed || (composed.exercises ?? []).length === 0) return null;
+
+  const workoutId = `template-${def.templateId}`;
+  return {
+    ...composed,
+    id: workoutId,
+    microcycleId: 'coach-template',
+    dayOfWeek: isoDateToDayOfWeek(date),
+    name: def.label,
+    description: def.description,
+    durationMinutes: def.durationMinutes,
+    hasCombinedConditioning: false,
+    exercises: (composed.exercises ?? []).map((row: any, index: number) => ({
+      ...row,
+      id: `template:${def.templateId}:${index}`,
+      workoutId,
+    })),
   } as Workout;
 }
 

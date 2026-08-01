@@ -53,6 +53,10 @@ import {
 } from '../rules/strengthPatternContributions';
 import { applyLoadEstimates } from './loadEstimation';
 import { MAS_FALLBACK_NOTE, masIntensityLabel } from './masCopy';
+import {
+  MOBILITY_SESSION_MINUTES,
+  composeMobilitySession,
+} from '../rules/mobilitySessionComposition';
 
 // ─── Athlete Context ───
 
@@ -61,8 +65,10 @@ export interface AthleteContext {
   injuries: OnboardingInjury[];
   /** Equipment tags the athlete has access to. */
   equipmentTags: EquipmentTag[];
-  /** Training location for equipment inference. */
-  trainingLocation: string;
+  // The training-location field is REMOVED (Sam's audit ruling 3, 2026-07-31): the
+  // location is a UI seed for the equipment step and coach context, and
+  // nothing downstream may read it. Equipment inference died with ruling 4;
+  // this field was its last shadow — carried everywhere, consumed nowhere.
   /** Full onboarding data — used for load estimation (strength levels, bodyweight). */
   onboardingData?: import('../types/domain').OnboardingData;
 }
@@ -71,7 +77,6 @@ export interface AthleteContext {
 export const DEFAULT_ATHLETE_CONTEXT: AthleteContext = {
   injuries: [],
   equipmentTags: ['bodyweight', 'dumbbells', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'machine'],
-  trainingLocation: 'Commercial gym',
 };
 
 // ─── Derived Session Types ───
@@ -81,7 +86,22 @@ export type DerivedSessionType =
   | 'passive_recovery'
   | 'extended_recovery'
   | 'prehab_accessories'
-  | 'arms_pump';
+  | 'arms_pump'
+  /**
+   * A standalone Mobility session, COMPOSED — Sam's signed 5-8 across the four
+   * regions, at the doses he authored on each movement.
+   *
+   * It is a derived type rather than a set of slots because its composition is a
+   * region SPREAD, not a per-category count, and because it now has two callers:
+   * the athlete's Mobility door (`coachRevisionTemplates`) and the need-based
+   * top-up pass. One owner of "what a Mobility session is" is the reason the door
+   * and the generator cannot disagree about it — the failure R1 turns out to have
+   * (see `composedOptionalKind`).
+   */
+  | 'mobility';
+
+/** The slot-composed types. `mobility` composes by region and is not one. */
+type SlotComposedSessionType = Exclude<DerivedSessionType, 'mobility'>;
 
 // ─── Session Slot Definitions ───
 // Each session type is a sequence of "slots" — pick N exercises from a category.
@@ -92,7 +112,8 @@ interface SessionSlot {
   count: number;
 }
 
-const SESSION_SLOTS: Record<DerivedSessionType, SessionSlot[]> = {
+// BIBLE_ANCHOR: gunshow_two_two_two
+const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
   recovery: [
     { category: 'tissue_quality',   count: 2 },
     { category: 'mobility',         count: 2 },
@@ -122,11 +143,24 @@ const SESSION_SLOTS: Record<DerivedSessionType, SessionSlot[]> = {
     { category: 'calves',             count: 1 },  // General calf work; lower_prehab (tib raises) reserved for lower/recovery sessions
     { category: 'hamstring_light',     count: 1 },
   ],
+  // GUNSHOW — Sam's signed structure, 2026-07-30: 2 biceps + 2 triceps +
+  // 2 shoulder, and "shoulder" means the PUMP delts pool, not shoulder health.
+  //
+  // It used to be 2 + 2 + 1 delt + 1 UPPER BACK PUMP. That last slot is a
+  // CROSS-FAMILY TOP-UP — the app reaching outside the sixteen candidates Sam
+  // signed to fill a sixth slot — and it is what put "Face Pull" (from
+  // `UPPER_BACK_PUMP_POOL`) into a session whose signed shoulder family holds
+  // "Cable Face Pull". His ruling is explicit: under thin equipment a gunshow
+  // gets SMALLER, never padded; the app never invents to fill a quota. Found by
+  // `sessionTypeCharterTests` group D on its first run.
+  //
+  // Shrinking is already how `pickFromPool` behaves — it returns the whole pool
+  // when the pool is smaller than the slot count and never repeats to reach it —
+  // so removing the top-up is the entire fix.
   arms_pump: [
     { category: 'biceps',           count: 2 },
     { category: 'triceps',          count: 2 },
-    { category: 'delts',            count: 1 },
-    { category: 'upper_back_pump',  count: 1 },
+    { category: 'delts',            count: 2 },
   ],
 };
 
@@ -192,6 +226,17 @@ const SESSION_META: Record<DerivedSessionType, {
     intensity: 'Light',
     descriptionSuffix: 'light upper body pump work',
   },
+  // Not conditioning and not strength. The charter's counting row says what the
+  // ledger says: no load, never a hard day, never breaks rest — which is also why
+  // `:116` lets it sit on a rest day.
+  mobility: {
+    name: 'Mobility',
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    durationMinutes: MOBILITY_SESSION_MINUTES,
+    intensity: 'Light',
+    descriptionSuffix: 'easy ranges only, nothing forced',
+  },
 };
 
 // ─── Injury Mapping ───
@@ -251,17 +296,11 @@ function injuriesToTags(injuries: OnboardingInjury[]): Set<InjuryTag> {
 
 // ─── Equipment Inference ───
 
-const LOCATION_EQUIPMENT: Record<string, EquipmentTag[]> = {
-  'Commercial gym': ['bodyweight', 'dumbbells', 'barbell', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'pullup_bar', 'kettlebell', 'machine'],
-  'Club gym':       ['bodyweight', 'dumbbells', 'barbell', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'pullup_bar', 'machine'],
-  'Home gym':       ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell'],
-  'Outdoor':        ['bodyweight', 'bands'],
-};
-
-/** Infer available equipment from training location. */
-export function inferEquipment(trainingLocation: string): EquipmentTag[] {
-  return LOCATION_EQUIPMENT[trainingLocation] || LOCATION_EQUIPMENT['Commercial gym'];
-}
+// LOCATION_EQUIPMENT and inferEquipment are DELETED (Sam's ruling 4,
+// 2026-07-31). The four rows were unsigned, keyed on a location field no
+// screen ever collected, and live for 100% of athletes — every kit in the app
+// was this constant. Equipment now comes from the athlete's own answer via
+// `resolveEquipmentCapabilities`; nothing infers a kit from a location.
 
 // ─── Date Hash (deterministic variety) ───
 
@@ -270,7 +309,53 @@ export function inferEquipment(trainingLocation: string): EquipmentTag[] {
  * Used to rotate exercise selection — same date always picks the same exercises,
  * but different dates get variety within the pool.
  */
-function dateHash(dateStr: string): number {
+/**
+ * The athlete's eligible mobility movements — equipment and injuries applied.
+ *
+ * Exported so the Mobility door composes through the SAME filter every other
+ * pool draw uses. Re-implementing it in the registry would be a second answer to
+ * "can this athlete do this movement", and the first thing it would get wrong is
+ * the equipment gate on `dead-hang` and `db-pullovers`.
+ */
+export function filterMobilityPoolForAthlete(athlete: AthleteContext): PoolExercise[] {
+  return filterPoolForAthlete('mobility', athlete);
+}
+
+/**
+ * Any curated pool, filtered for this athlete.
+ *
+ * The general form of the function above, added when the D17 session flow needed
+ * five pools rather than one. Every consumer that asks "can this athlete do this
+ * movement" now asks the same function — which is the point: the first thing a
+ * second implementation gets wrong is the equipment gate on `dead-hang` and
+ * `db-pullovers`.
+ */
+export function filterPoolForAthlete(
+  category: ExerciseCategory,
+  athlete: AthleteContext,
+): PoolExercise[] {
+  return filterPoolEntriesForAthlete(POOL_REGISTRY[category] ?? [], athlete);
+}
+
+/**
+ * The same filter over an arbitrary set of curated entries.
+ *
+ * D17's flow draws its candidates by MUSCLE-SHEET pool rather than by registry
+ * category, so it arrives with entries rather than a category — and must still ask
+ * the one owner of "can this athlete do this movement".
+ */
+export function filterPoolEntriesForAthlete(
+  entries: readonly PoolExercise[],
+  athlete: AthleteContext,
+): PoolExercise[] {
+  return filterPool(
+    [...entries],
+    injuriesToTags(athlete.injuries),
+    new Set(athlete.equipmentTags),
+  );
+}
+
+export function dateHash(dateStr: string): number {
   let hash = 0;
   for (let i = 0; i < dateStr.length; i++) {
     hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
@@ -339,13 +424,55 @@ function pickFromPool(
 
 // ─── WorkoutExercise Builder ───
 
+/**
+ * ACCESSORY WORK SAYS SO, instead of being guessed at from its exercise names.
+ *
+ * Sam's ruling 2 is that gunshow, prehab and accessories are never hard days,
+ * and `sessionTypeCharterTests` found the app breaking it: a built
+ * "Prehab & Accessories" session classified as `lower_strength` at HIGH stress
+ * and took a hard day off the week's budget. The mechanism was pure inference —
+ * the session draws Cossack Squat from the groin pool, the exercise tagger reads
+ * a squat exposure, and one accessory movement re-typed the whole session.
+ *
+ * The rows carried NO Section 18 evidence at all, so every consumer downstream
+ * had to guess. They now declare `strength_accessory`, which is what they are:
+ * the evaluator counts them as accessory (never main strength, never a hard
+ * day), and the guess has nothing left to do. A typed fact instead of a
+ * heuristic is the charter's whole point.
+ */
+const ACCESSORY_ROW_EVIDENCE = {
+  protocolVersion: 1,
+  role: 'strength_accessory',
+  strengthPattern: null,
+  mainStrengthPattern: null,
+  provenance: 'canonical_row_classifier',
+} as const;
+
+/**
+ * A mobility row declares what it is for the same reason an accessory row does.
+ *
+ * `Cossack Squat` re-typed a whole prehab session as lower strength once. A
+ * mobility draw carries `ATG Split Squat` and `Deep Squat Hold`, which is the same
+ * trap one pool over — so the rows say `recovery_support` rather than leaving a
+ * classifier to read squats in a stretching session.
+ */
+const MOBILITY_ROW_EVIDENCE = {
+  protocolVersion: 1,
+  role: 'recovery_support',
+  strengthPattern: null,
+  mainStrengthPattern: null,
+  provenance: 'canonical_row_classifier',
+} as const;
+
 function poolExerciseToWorkoutExercise(
   pe: PoolExercise,
   workoutId: string,
   order: number,
+  section18Evidence?: WorkoutExercise['section18Evidence'],
 ): WorkoutExercise {
   const now = new Date().toISOString();
   return {
+    ...(section18Evidence ? { section18Evidence } : {}),
     id: `${workoutId}-ex-${order}`,
     workoutId,
     exerciseId: pe.id,
@@ -394,7 +521,6 @@ export function buildDerivedSession(
   weekCategoryUsage?: Map<ExerciseCategory, number>,
 ): Workout {
   const meta = SESSION_META[type];
-  const slots = SESSION_SLOTS[type];
   const seed = dateHash(dateStr);
 
   // Build constraint sets
@@ -405,6 +531,24 @@ export function buildDerivedSession(
   const exercises: WorkoutExercise[] = [];
   const workoutId = `derived-${type}-${dateStr}`;
   let order = 1;
+
+  // MOBILITY composes by region, not by slot — Sam's signed shape. Everything
+  // after this point (naming, tier, load estimates, the returned Workout) is
+  // shared, so the door and the top-up get the identical session.
+  if (type === 'mobility') {
+    for (const movement of composeMobilitySession({
+      seed,
+      eligible: filterMobilityPoolForAthlete(athlete),
+    })) {
+      exercises.push(
+        poolExerciseToWorkoutExercise(movement, workoutId, order, MOBILITY_ROW_EVIDENCE),
+      );
+      order += 1;
+    }
+    return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+  }
+
+  const slots = SESSION_SLOTS[type];
 
   // Use a category-specific sub-seed for each slot so different categories
   // rotate independently
@@ -428,7 +572,12 @@ export function buildDerivedSession(
     const picks = pickFromPool(filtered, slot.count, slotSeed);
 
     for (const pe of picks) {
-      exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order));
+      // Recovery sessions already carry their identity in `workoutType`; the
+      // ACCESSORY types are the ones that were being inferred from content.
+      const evidence = type === 'prehab_accessories' || type === 'arms_pump'
+        ? ACCESSORY_ROW_EVIDENCE
+        : undefined;
+      exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order, evidence));
       order++;
     }
 
@@ -441,6 +590,44 @@ export function buildDerivedSession(
     slotIndex++;
   }
 
+  return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+}
+
+/**
+ * The parts every derived session shares once its rows are chosen.
+ *
+ * Factored out when `mobility` arrived: a second return statement assembling the
+ * same Workout is how the door and the generator would eventually disagree about a
+ * field nobody was looking at.
+ */
+/**
+ * The typed charter identity a derived optional session carries to the
+ * projection (2026-08-01, device-pass fail 2). The plan entry's
+ * `composedOptionalKind` used to die here — the builder consumed the type and
+ * emitted name-only identity, so a Gunshow reached the athlete's card as the
+ * generic word "Strength". Stamped from the `DerivedSessionType` the builder
+ * already receives; the recovery variants stamp nothing (recovery is a
+ * charter-deleted type — nothing may carry its identity forward).
+ */
+const COMPOSED_OPTIONAL_KIND_BY_TYPE: Partial<
+  Record<DerivedSessionType, NonNullable<Workout['composedOptionalKind']>>
+> = {
+  arms_pump: 'gunshow',
+  prehab_accessories: 'prehab',
+  mobility: 'mobility',
+};
+
+function finaliseDerivedSession(args: {
+  type: DerivedSessionType;
+  meta: (typeof SESSION_META)[DerivedSessionType];
+  workoutId: string;
+  microcycleId: string;
+  dateStr: string;
+  reason: string;
+  athlete: AthleteContext;
+  exercises: WorkoutExercise[];
+}): Workout {
+  const { type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises } = args;
   // Apply intelligent load estimates for exercises that should have weight
   // (e.g. arms_pump curls, tricep pushdowns) if onboarding data is available.
   const finalExercises = athlete.onboardingData
@@ -460,6 +647,9 @@ export function buildDerivedSession(
     intensity: meta.intensity,
     workoutType: meta.workoutType,
     sessionTier: meta.sessionTier,
+    ...(COMPOSED_OPTIONAL_KIND_BY_TYPE[type]
+      ? { composedOptionalKind: COMPOSED_OPTIONAL_KIND_BY_TYPE[type] }
+      : {}),
     exercises: finalExercises,
     createdAt: now,
     updatedAt: now,

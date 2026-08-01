@@ -136,11 +136,14 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
 }
 {
   const u = classifyDaySessions(mkWorkout({ name: 'Gunshow', description: 'Biceps, triceps, delts pump' }));
-  ok('Gunshow → [gunshow_prehab] (NOT main strength)', cats(u) === 'gunshow_prehab', cats(u));
+  // SPLIT (Sam, 2026-07-30): Gunshow and Prehab are two of his seven types, so the
+  // taxonomy names them separately. A Gunshow lands on `gunshow`, not on a shared
+  // category that could not say which session it was.
+  ok('Gunshow → [gunshow] (NOT main strength)', cats(u) === 'gunshow', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({ name: 'Prehab & Accessories', description: 'Shoulder health + calves' }));
-  ok('Prehab & Accessories → [gunshow_prehab]', cats(u) === 'gunshow_prehab', cats(u));
+  ok('Prehab & Accessories → [prehab]', cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -148,16 +151,16 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
     description: 'Curls, pushdowns, face pulls, calves, Pallof press',
     exercises: [mkEx('Bicep Curl'), mkEx('Tricep Pushdown'), mkEx('Face Pull')],
   }));
-  ok('upper hypertrophy/trunk accessories → [gunshow_prehab], not upper_strength',
-    cats(u) === 'gunshow_prehab', cats(u));
+  ok('upper hypertrophy/trunk accessories → [prehab], not upper_strength',
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
     name: 'Upper body accessory',
     description: 'Small-muscle pump and trunk only',
   }));
-  ok('vague upper body accessory text without main-lift proof → gunshow_prehab',
-    cats(u) === 'gunshow_prehab', cats(u));
+  ok('vague upper body accessory text without main-lift proof → prehab',
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -187,7 +190,7 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
     description: 'Face pulls, rear delt fly, calf raises, hamstring bridge',
   }));
   ok('gunshow-named session with pattern words in description stays gunshow',
-    cats(u) === 'gunshow_prehab', cats(u));
+    cats(u) === 'prehab', cats(u));
 }
 {
   const u = classifyDaySessions(mkWorkout({
@@ -313,8 +316,14 @@ const unit = (category: SessionUnit['category'], modality: SessionUnit['modality
 
 ok('game → high', classifySessionStress(unit('game', 'running')) === 'high');
 ok('team training (default) → high', classifySessionStress(unit('team_training', 'running')) === 'high');
-ok('team training (Light profile) → medium',
-  classifySessionStress(unit('team_training', 'running'), null, { teamTrainingIntensity: 'Light' }) === 'medium');
+// A TEAM NIGHT IS A HARD DAY, UNCONDITIONALLY (Sam's ruling, 2026-07-30). This cell used
+// to assert the opposite — that a "Light" onboarding answer downshifted a team night to
+// medium stress, which took it off the hard-day budget for the whole season. Two Bible
+// lines were in tension (`:119` lists team training as a hard day; `:704` gives the
+// athlete's Light/Moderate/Hard scale) and Sam ruled `:119` governs. The scale now seeds
+// team-night SIZE instead — see docs/TEAM_NIGHT_SIZE_SHEET_2026-07-30.md.
+ok('team training is high stress whatever the athlete answered',
+  classifySessionStress(unit('team_training', 'running')) === 'high');
 ok('lower strength → high', classifySessionStress(unit('lower_strength')) === 'high');
 ok('sprint → high', classifySessionStress(unit('sprint', 'running')) === 'high');
 ok('hard conditioning → high', classifySessionStress(unit('hard_conditioning', 'running')) === 'high');
@@ -327,7 +336,7 @@ ok('tempo for poor conditioning → high',
   classifySessionStress(unit('tempo_conditioning', 'running'), null, { conditioningLevel: 'Poor' }) === 'high');
 ok('aerobic flush → low',
   classifySessionStress(unit('aerobic_base', 'off_feet'), mkWorkout({ name: 'Bike Flush', intensity: 'Light' })) === 'low');
-ok('gunshow → low', classifySessionStress(unit('gunshow_prehab')) === 'low');
+ok('gunshow → low', classifySessionStress(unit('prehab')) === 'low');
 ok('recovery → low', classifySessionStress(unit('recovery')) === 'low');
 
 // ═════════════════════════════════════════════════════════════════════
@@ -355,7 +364,7 @@ const OPTION_1_WEEK: WeekDayInput[] = [
   { date: '2026-06-07', workout: mkWorkout({ name: 'Recovery Session', workoutType: 'Recovery', sessionTier: 'recovery' }) },
 ];
 
-const counts = countWeeklyExposures(OPTION_1_WEEK, { teamTrainingIntensity: 'Hard', conditioningLevel: 'Good' });
+const counts = countWeeklyExposures(OPTION_1_WEEK, { conditioningLevel: 'Good' });
 
 ok('main strength = 3 (lower + 2 upper on team days)', counts.mainStrengthExposures === 3, `got ${counts.mainStrengthExposures}`);
 ok('hard exposures = 4 (lower, 2×TT, game)', counts.hardExposures === 4, `got ${counts.hardExposures}`);
@@ -713,7 +722,6 @@ const IN_SEASON_PROFILE: Partial<OnboardingData> = {
   preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   teamTrainingDaysPerWeek: 2,
   teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard',
   sprintExposure: '2+ times per week',
   conditioningLevel: 'Good',
   recentTrainingLoad: 'Very consistent',
@@ -778,7 +786,6 @@ try {
   const resolved = resolveWeekWithConditioning(TEST_MONDAY, state);
   const weekInput: WeekDayInput[] = resolved.map((d) => ({ date: d.date, workout: d.workout }));
   const liveCounts = countWeeklyExposures(weekInput, {
-    teamTrainingIntensity: 'Hard',
     conditioningLevel: 'Good',
     experienceLevel: '2-5 years',
   });

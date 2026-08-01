@@ -430,6 +430,25 @@ function canonicalStrengthName(
   return isTeamDay ? `Team Training + ${label}` : label;
 }
 
+/**
+ * The final content owns the name — but on a COMBINED day it owns only its own
+ * half of it.
+ *
+ * "Recovery Session + Full Body Strength" carries a container the strength
+ * label knows nothing about, and rewriting the whole name from the strength
+ * patterns deleted it: the card named the session the athlete added and not the
+ * one it was added to. The strength half is still verified against the final
+ * patterns, so a name whose strength half has gone stale is still corrected;
+ * only a container that is still on the day survives.
+ */
+function nameWithContainerPreserved(
+  currentName: string,
+  canonical: string | null,
+): string | null {
+  if (!canonical) return null;
+  return currentName.endsWith(` + ${canonical}`) ? currentName : canonical;
+}
+
 function domainPatterns(rows: readonly ClassifiedRow[]): MainStrengthPattern[] {
   return Array.from(new Set(
     rows.flatMap(({ classification }) =>
@@ -870,9 +889,12 @@ export function finaliseWorkoutAfterMutation(
   const canonicalName = isAnchor || isRecovery
     ? workout.name
     : hasStrength
-      ? canonicalStrengthName(
-          finalStrengthIntent?.effectivePatterns ?? finalStrengthPatterns,
-          anchorClassification.anchors.teamTraining,
+      ? nameWithContainerPreserved(
+          workout.name,
+          canonicalStrengthName(
+            finalStrengthIntent?.effectivePatterns ?? finalStrengthPatterns,
+            anchorClassification.anchors.teamTraining,
+          ),
         ) ?? workout.name
       : workout.name;
   if (canonicalName !== workout.name) {
@@ -882,8 +904,13 @@ export function finaliseWorkoutAfterMutation(
   const generatedRecoveryAddon = recoveryAddonRows.length > 0
     ? {
         id: `canonical-recovery-${workout.id}`,
-        title: 'Optional Recovery Add-on',
-        label: 'Recovery',
+        // MOBILITY VOCABULARY (2026-08-01, device-pass fail 3): recovery is a
+        // charter-deleted type; these rows have always been typed
+        // `kind: 'mobility'` one line down, and the athlete-visible words now
+        // say what the rows are. The id prefix is identity, not vocabulary —
+        // it stays, so nothing keyed on it moves.
+        title: 'Optional Mobility Add-on',
+        label: 'Mobility',
         kind: 'mobility' as const,
         focusArea: 'General recovery',
         optional: true as const,

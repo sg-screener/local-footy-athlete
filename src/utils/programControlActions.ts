@@ -2,7 +2,6 @@ import { useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
   type ActiveInjuryConstraint,
-  type ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
@@ -10,9 +9,12 @@ import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain'
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import {
   applyPlanChange,
+  planChangeResultIsLandingAsk,
+  type PlanChangeOutcome,
   previewPlanChangeRisk,
   type PlanChange,
   type PlanChangeBinScopeId,
+  type PlanChangeMoveScopeId,
   type PlanChangeCategoryId,
 } from './planChangeProducer';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
@@ -32,10 +34,8 @@ import {
   withActiveProgramModifierContext,
   type TapRecoveryModifierScope,
 } from './tapProgramModifiers';
-import {
-  temporaryEquipmentPresetById,
-  type TemporaryEquipmentPresetId,
-} from './equipmentAvailability';
+import type { EquipmentTag } from '../data/exercisePools';
+import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
@@ -70,6 +70,7 @@ import {
   isNonInjuryTemporarySourceFact,
   temporaryFactScope,
   temporarySourceFactId,
+  type TemporarySourceFactScope,
 } from '../rules/temporarySourceFact';
 import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
@@ -157,7 +158,17 @@ interface ExercisePrescriptionPayload {
 export type ProgramControlAction =
   | ProgramControlActionBase<'swap_session', SessionCategoryPayload>
   | ProgramControlActionBase<'add_to_day', SessionCategoryPayload>
-  | ProgramControlActionBase<'move_session', { fromDate: string; toDate: string }>
+  // `scope` is the COMPONENT the athlete chose to move ("just the gym
+  // session"), and it had nowhere to live here. The sheet offers the choice,
+  // this payload could not express it, and `planChangeForAction` therefore
+  // built a whole-day move — which is what travelled. Note this is a different
+  // axis from `ProgramControlActionBase.scope` ('today_only'), which is about
+  // recurrence; two different meanings of the word, one of which was missing.
+  | ProgramControlActionBase<'move_session', {
+      fromDate: string;
+      toDate: string;
+      scope?: PlanChangeMoveScopeId;
+    }>
   | ProgramControlActionBase<'bin_session', { date: string; scope?: PlanChangeBinScopeId }>
   | ProgramControlActionBase<'swap_exercise', {
       date: string;
@@ -208,22 +219,43 @@ export type ProgramControlAction =
       episodeId?: string;
     }>
   | ProgramControlActionBase<'set_equipment_modifier', {
-      presetId: TemporaryEquipmentPresetId;
+      /**
+       * The athlete's decision, expressed against their OWN kit (Sam's ruling
+       * 5, 2026-07-31): which of their items are missing this week, or that
+       * everything is available again. The seven unsigned presets are retired.
+       */
+      decision:
+        | {
+            kind: 'missing_this_week';
+            tags: readonly EquipmentTag[];
+            conditioningModalities: readonly ConditioningEquipmentModality[];
+          }
+        | { kind: 'available_again' };
       date: string;
       todayISO?: string;
     }>
+  /**
+   * FOUR FIELDS LEFT THIS PAYLOAD ON 2026-07-31, unread by anybody.
+   *
+   * `severity`, `reasonLabel`, `modifierTitle` and `modifierBody` were passed by
+   * every caller and consumed by none: the durable executor builds a
+   * `TemporaryScheduleFact` from `scheduleKind` alone, and `scheduleProjection`
+   * (`rules/temporarySourceFact.ts`) derives the severity, the reason label and
+   * both modifier sentences from the FACT. A request field that no owner reads
+   * is a second, silent opinion about the same decision — it looked like the
+   * busy tap chose its own severity and its own words, and it never did.
+   *
+   * What the athlete actually decides is: WHICH schedule fact (busy vs away vs a
+   * bounded maximum), on WHICH horizon (`ProgramControlActionBase.scope`), over
+   * WHICH dates. That is the whole input, and it is what remains.
+   */
   | ProgramControlActionBase<'set_schedule_modifier', {
       date: string;
       todayISO?: string;
-      severity?: number;
-      reasonLabel?: string;
       maxSessionsThisWeek?: number;
       /** Away / holiday dates. The durable executor stores them as schedule
        *  facts; it never creates fact-owned Rest overrides. */
       planChange?: PlanChange;
-      /** Coach Notes copy overrides (busy vs away wording). */
-      modifierTitle?: string;
-      modifierBody?: string;
     }>
   | ProgramControlActionBase<'update_lfa_days', Record<string, unknown>>
   | ProgramControlActionBase<'update_team_training_days', Record<string, unknown>>
@@ -277,6 +309,12 @@ export interface ProgramControlActionResult {
   fallbackReason?: string;
   needsGuidedFollowUp?: boolean;
   route: ProgramControlRoute;
+  /**
+   * Present when this action ran a plan change. Carries the producer's typed
+   * three-way answer (ruling #6) so a stage that published nothing is not
+   * flattened into `ok: false` and rendered as an error by the surface.
+   */
+  outcome?: PlanChangeOutcome;
   /** Development-only explicit token correlation for the render observer. */
   traceId?: string;
 }
@@ -366,63 +404,6 @@ export function scheduleModifierIdForDate(
     : `tap-schedule-busy-week:${weekStartISO}`;
 }
 
-// Exported for tests (gameChangeLocalRebuildTests) — pure builder, the
-// production entry point remains executeProgramControlAction.
-export function buildTapScheduleModifier(args: {
-  date: string;
-  todayISO: string;
-  severity?: number;
-  reasonLabel?: string;
-  maxSessionsThisWeek?: number;
-  /** 'busy' reduces the whole week; 'away' records chosen days cleared. */
-  variant?: 'busy' | 'away';
-  /** Overrides removed when this modifier clears (away days restore). */
-  linkedOverrideDates?: string[];
-  modifierTitle?: string;
-  modifierBody?: string;
-}): ActiveScheduleConstraint {
-  const variant = args.variant ?? 'busy';
-  // Away is a lighter touch on the days the athlete IS training — its job
-  // is to clear the chosen days and record the note, not to strip the rest
-  // of the week. Busy is the aggressive whole-week reducer.
-  const severity = Math.max(
-    1,
-    Math.min(10, Math.round(args.severity ?? (variant === 'away' ? 3 : 5))),
-  );
-  const weekStartISO = getMondayForDate(args.date);
-  const id = scheduleModifierIdForDate(args.date, variant);
-  const now = new Date().toISOString();
-  return {
-    id,
-    type: 'schedule',
-    severity,
-    status: 'active',
-    startDate: args.todayISO,
-    lastUpdatedAt: now,
-    reasonLabel: args.reasonLabel ?? (variant === 'away' ? 'Away' : 'Busy week'),
-    source: 'tap',
-    weekStartISO,
-    maxSessionsThisWeek: args.maxSessionsThisWeek,
-    expiresAt: addDaysISO(weekStartISO, 6),
-    linkedOverrideDates: args.linkedOverrideDates ?? [],
-    modifierTitle:
-      args.modifierTitle ?? (variant === 'away' ? 'Away this week' : 'Busy week active'),
-    modifierBody:
-      args.modifierBody ??
-      (variant === 'away'
-        ? "The days you're away are cleared. Clear this note to bring them back."
-        : 'Your week is being kept tighter around limited availability.'),
-    modifierAffects: ['current_week'],
-    rules: variant === 'away'
-      ? ['sessions on the days you’re away']
-      : severity >= 7
-      ? ['max-effort sessions this week', 'long accessory blocks']
-      : ['long sessions this week', 'optional accessory volume'],
-    safeFocus: ['Short, targeted sessions', 'Skill / technique work', 'Recovery + mobility'],
-    advice: [],
-  };
-}
-
 function planChangeForAction(action: ProgramControlAction): PlanChange | null {
   if (action.type === 'swap_session') {
     if (action.payload.category) {
@@ -441,10 +422,71 @@ function planChangeForAction(action: ProgramControlAction): PlanChange | null {
     }
   }
   if (action.type === 'move_session') {
-    return { kind: 'move_session', fromDate: action.payload.fromDate, toDate: action.payload.toDate };
+    return {
+      kind: 'move_session',
+      fromDate: action.payload.fromDate,
+      toDate: action.payload.toDate,
+      ...(action.payload.scope ? { scope: action.payload.scope } : {}),
+    };
   }
   if (action.type === 'bin_session') {
     return { kind: 'remove_session', date: action.payload.date, scope: action.payload.scope };
+  }
+  return null;
+}
+
+/**
+ * THE SCREEN'S DOOR, AS ONE OWNER.
+ *
+ * `PlanChangeSheet.commitPlanChange` decides which change kinds go through the
+ * program-control wrapper (move and bin) and which go straight to the producer,
+ * and it builds the wrapper payload. That decision and that payload ARE the
+ * screen's behaviour, so they live here rather than inside a component — the
+ * sheet calls this, and so does the harness that has to enter the same door.
+ *
+ * Written because the alternative was proven bad within one commit: the device
+ * replay suite hand-copied the sheet's payload in order to reproduce a defect,
+ * and the moment the sheet was fixed the copy still carried the bug. A harness
+ * that mirrors a screen drifts from it; a harness that CALLS it cannot.
+ *
+ * Returns null when the change is not one the wrapper owns — the caller then
+ * goes straight to `applyPlanChange`, exactly as the sheet always has.
+ */
+export function programControlActionForPlanChange(
+  change: PlanChange,
+): ProgramControlAction | null {
+  const source = {
+    screen: 'program_tab' as const,
+    surface: 'plan_change_sheet' as const,
+    initiatedBy: 'tap' as const,
+  };
+  const shared = {
+    source,
+    scope: 'today_only' as const,
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: true,
+  };
+  if (change.kind === 'move_session') {
+    return {
+      ...shared,
+      type: 'move_session',
+      payload: {
+        fromDate: change.fromDate,
+        toDate: change.toDate,
+        // The component the athlete picked. It used to stop at this boundary:
+        // the sheet offered "just the gym session", the payload could not say
+        // so, and the whole day moved.
+        ...(change.scope ? { scope: change.scope } : {}),
+      },
+    } as ProgramControlAction;
+  }
+  if (change.kind === 'remove_session') {
+    return {
+      ...shared,
+      type: 'bin_session',
+      payload: { date: change.date, scope: change.scope },
+    } as ProgramControlAction;
   }
   return null;
 }
@@ -486,13 +528,30 @@ function executePlanChangeAction(
     setManualOverride: context.setManualOverride ?? defaultSetManualOverride,
     trace: risk.trace,
   });
+  // THE WRAPPER ROUTES THE PRODUCER'S ANSWER. IT DOES NOT INTERPRET IT.
+  //
+  // This mapped every non-ok producer result to a bare `ok: false`, and the
+  // outer layer then computed
+  // `program_control_<type>_${needsGuidedFollowUp ? 'needs_input' : 'rejected'}`
+  // — so a QUESTION arrived at the athlete as `..._rejected` with
+  // `failureCategory: technical_failure`, and the G-1 ask never rendered. The
+  // vocabulary for the right answer already existed here and was simply never
+  // set on this path.
+  //
+  // The owner decides what its own answer means: `planChangeResultIsLandingAsk`
+  // is asked, never a code string matched. Nothing else about the result is
+  // reinterpreted — the producer's own sentence is passed through as it always
+  // was.
+  const isAsk = planChangeResultIsLandingAsk(result);
   return {
     ok: result.ok,
+    outcome: result.outcome,
     changedProgram: result.ok && result.appliedDates.length > 0,
     requiresRebuild: false,
     message: result.message,
     fallbackToCoach: false,
-    route: route.route,
+    ...(isAsk ? { needsGuidedFollowUp: true } : {}),
+    route: isAsk ? 'guided_follow_up_sheet' : route.route,
   };
 }
 
@@ -661,6 +720,7 @@ function executeProgramControlActionWithinTrace(
         if (!planResult.ok) {
           return {
             ok: false,
+            outcome: planResult.outcome,
             changedProgram: false,
             requiresRebuild: false,
             message: planResult.message,
@@ -991,6 +1051,55 @@ export function executeProgramControlAction(
   });
 }
 
+/** The exact dates an away/holiday request names, sorted, day-precision. */
+function scheduleModifierAwayDates(
+  action: Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
+): string[] {
+  return action.payload.planChange?.kind === 'clear_days'
+    ? [...action.payload.planChange.dates.map((value) => value.slice(0, 10))].sort()
+    : [];
+}
+
+/**
+ * THE ACTION'S DECLARED SCOPE IS THE FACT'S HORIZON.
+ *
+ * `ProgramControlActionBase.scope` has always been part of this request and the
+ * schedule branch always threw it away: every schedule fact got a WEEK, whatever
+ * the door said. That was invisible while the only door said "Busy or away this
+ * week?" — and became a lie the moment Sam's ruling 2 (2026-07-31) split it and
+ * named the busy half "Short on time today". Being short on time on a Tuesday
+ * says nothing about Thursday.
+ *
+ * The horizon is not a second opinion invented here. `scheduleProjection`
+ * already publishes `startDate: effectiveFrom` / `expiresAt: effectiveUntil`,
+ * and `constraintAppliesToDate` already refuses the constraint on any date
+ * outside them — so a `date`-kind scope reaches exactly one day through
+ * machinery that was already there. One door, one fact kind, a scoped payload:
+ * no second writer, no forked kind, no per-button special case.
+ *
+ * Exported because it is the whole decision this door makes, and a decision
+ * worth asserting is worth naming. `executeProgramControlActionDurably` is its
+ * only production caller.
+ */
+export function scheduleFactScopeForAction(
+  action: Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
+): TemporarySourceFactScope {
+  const date = action.payload.date.slice(0, 10);
+  const awayDates = scheduleModifierAwayDates(action);
+  // Away names its own dates, so the window IS the answer — a scope word cannot
+  // improve on the days the athlete ticked.
+  if (awayDates.length > 0) {
+    return temporaryFactScope({
+      kind: 'window',
+      from: awayDates[0],
+      until: awayDates[awayDates.length - 1],
+    });
+  }
+  return action.scope === 'today_only'
+    ? temporaryFactScope({ kind: 'date', date })
+    : temporaryFactScope({ kind: 'week', date });
+}
+
 /** Durable accepted boundary for the migrated tap-owned session mutations.
  * Unmigrated actions retain the existing synchronous control path. */
 export async function executeProgramControlActionDurably(
@@ -1080,8 +1189,8 @@ async function executeProgramControlActionDurablyWithinTrace(
     const date = action.payload.date.slice(0, 10);
     const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
     const sourceSurface = action.source.surface ?? action.source.screen;
-    const preset = temporaryEquipmentPresetById(action.payload.presetId);
-    if (preset.clearsActiveEquipment) {
+    const decision = action.payload.decision;
+    if (decision.kind === 'available_again') {
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       const facts = accepted.temporarySourceFacts
         .filter((fact) => isTemporaryEquipmentFact(fact) && fact.status === 'active');
@@ -1140,11 +1249,14 @@ async function executeProgramControlActionDurablyWithinTrace(
         route: routeProgramControlAction(action).route,
       };
     }
+    // The decision is 'without' by construction: the athlete marked which of
+    // their OWN items are missing. There is no preset menu to translate.
     const fact = createTemporaryEquipmentFact({
       observedDate: date,
       scope: temporaryFactScope({ kind: 'week', date }),
-      mode: preset.mode!,
-      equipmentTags: preset.tags,
+      mode: 'without',
+      equipmentTags: decision.tags,
+      conditioningModalities: decision.conditioningModalities,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface,
     });
@@ -1170,19 +1282,10 @@ async function executeProgramControlActionDurablyWithinTrace(
     const date = action.payload.date.slice(0, 10);
     const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
     const sourceSurface = action.source.surface ?? action.source.screen;
-    const awayDates = action.payload.planChange?.kind === 'clear_days'
-      ? action.payload.planChange.dates.map((value) => value.slice(0, 10))
-      : [];
-    const sortedAwayDates = [...awayDates].sort();
+    const awayDates = scheduleModifierAwayDates(action);
     const fact = createTemporaryScheduleFact({
       observedDate: date,
-      scope: awayDates.length > 0
-        ? temporaryFactScope({
-            kind: 'window',
-            from: sortedAwayDates[0],
-            until: sortedAwayDates[sortedAwayDates.length - 1],
-          })
-        : temporaryFactScope({ kind: 'week', date }),
+      scope: scheduleFactScopeForAction(action),
       scheduleKind: awayDates.length > 0
         ? 'travel'
         : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
@@ -1394,6 +1497,29 @@ async function executeProgramControlActionDurablyWithinTrace(
     didApply: (result) => result.ok && result.changedProgram,
   });
   if (transaction.ok) return transaction.value;
+  // THE DURABLE TWIN ROUTES THE CORE'S ANSWER. IT DOES NOT TRANSLATE IT.
+  //
+  // This is the wrapper defect one layer up, on the ONLY path the sheet awaits.
+  // `executePlanChangeAction` was taught to route the producer's
+  // `g1_route_required` sentinel to the ask-flow, and the synchronous executor
+  // duly answers `needsGuidedFollowUp: true` / `guided_follow_up_sheet`. Then
+  // this ran that executor inside `runCoachMutationTransaction`, whose
+  // `didApply` is `ok && changedProgram` — which an ask satisfies neither of, by
+  // construction, because an ask deliberately publishes nothing. The transaction
+  // reported "not applied", correctly, and everything the core had said was
+  // thrown away and replaced with "That change didn't go through — nothing on
+  // your plan changed. Try again, or ask your coach." A question, again, as a
+  // bug report.
+  //
+  // A core result that is ALREADY `ok: false` has answered for itself: the
+  // transaction's "not applied" is a restatement of that answer, not new
+  // information about it. So it is returned in the core's own words.
+  // `athleteSafeRefusal` still owns the case it was written for — the core
+  // claimed success and the transaction could not keep it (rollback, semantic
+  // verification), which is the only situation where this layer knows something
+  // the core does not.
+  const core = transaction.value;
+  if (core && !core.ok) return core;
   return {
     ok: false,
     changedProgram: false,

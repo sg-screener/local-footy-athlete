@@ -106,6 +106,202 @@ The general shape: **a gate that reads code rather than behaviour is coupled to
 the code's SHAPE, and refactoring changes shape by definition.** After any
 de-duplication, ask what the gate matches on and whether it still matches.
 
+## Instrumentation must be alive where the defects are
+
+**A diagnostic that is off on the build the defect lives on is a green gate that
+lies.** If you add logging, an export, a trace, or a fixture to investigate
+something the repo owner is seeing on his phone, it has to run on HIS build —
+not only under `__DEV__`, not only in a test process, not only behind a dev
+menu.
+
+This went wrong three times in one session (2026-07-29), each time costing a
+device round-trip:
+
+- a profile-mirror **fixture** that exercised an inert mirror, so the suite
+  passed against a mirror that could never have failed;
+- a stored-state **export** gated on `__DEV__`, invisible on the Release build
+  it was written to diagnose;
+- an athlete-action **trace** gated the same way, dark on the only device whose
+  behaviour was in question.
+
+Each looked like instrumentation and reported like instrumentation. None of them
+could observe the case they were built for.
+
+Before adding a diagnostic, answer two questions:
+
+1. **Which build will this run on?** If the answer is not "the one the defect is
+   on", it is not instrumentation yet.
+2. **What would it print if the defect were present?** If you cannot say, it is
+   not evidence, and a passing run of it is not a result.
+
+The same rule applies to fixtures: a fixture whose input cannot exhibit the
+defect proves nothing, however many assertions it carries.
+
+## Hand-built state fixtures are deprecated for athlete-facing suites
+
+**Sam's ruling, 2026-07-30: a seed library is SAMPLING, not coverage.**
+
+Seeding a harness from a device export — or from a hand-written store snapshot —
+proves things about one state and quietly implies things about the space around
+it. The space is where the defects live. Worse, a seed cannot be checked: it
+asserts a state nobody arrived at by acting, so nothing catches it when the
+state it claims to represent is not reachable at all.
+
+That failure is not hypothetical. Seeding the athlete-door matrix from
+`device-export-8.json` produced a week scoring squat 0 / hinge 0 / push 2 /
+pull 1, which §18 cannot repair and which threw straight through the tap door.
+Sam's device was demonstrably NOT in that state — it held a materialised
+overlay for the very week the seed could not rebuild, because the export
+carries overlay KEYS and not overlay CONTENT. **A seed that cannot restore what
+it claims to restore manufactures defects, and a manufactured defect costs a
+device round trip — the exact cost the matrix exists to avoid.**
+
+The replacement, for anything asserting athlete-facing behaviour:
+
+- **Reach state by ACTING.** Start from a fresh install and perform real
+  athlete actions through the real doors — onboarding, generation, every door,
+  life-facts, calendar marks, and the passage of time. `athleteActionWalker`
+  is the engine; `athleteActionWalkerTests` is the wiring.
+- **A state you cannot reach by acting is a state no athlete can be in.** If a
+  state an athlete CAN be in is unreachable, the ACTION VOCABULARY is
+  incomplete, and that is a defect in the harness.
+- **A device export's only legitimate role is a CONFORMANCE TARGET** — proof
+  that the vocabulary can reach a shape a real phone was in. Never a seed.
+
+This is the fixture-fidelity law ("a fixture whose input cannot exhibit the
+defect proves nothing") carried one step further: a fixture whose input could
+never have existed proves something false. It is also the verification-layer
+statement of the north star — store only decisions, derive everything else. A
+seed stores a derived output; a walker stores the decisions and derives the
+state, which is why only one of them can be wrong about what it represents.
+
+## PROCESS LAW — L11, L12 and L13
+
+Process Law L1–L10 lives in `docs/MASTER_PLAN_2026-07-23.md` PART 1 and is
+unchanged. L11, L12 and L13 are recorded HERE because they bind every session that
+touches this repo, including the review and orchestration seat (Cowork) — which
+never touches git and would otherwise never read the master plan. **A reviewer is
+bound by these exactly as an implementer is.**
+
+### L11 — The matrix before the phone
+
+**Sam's device is the LAST instrument, never the first.**
+
+No athlete-facing change is accepted on targeted tests alone. The
+**athlete-action matrix** — every door × every day-state × every route, driven
+through real transactions, with law assertions per cell — must be green before
+Sam is asked to touch his phone.
+
+**The stop-rule: the moment two defects differ only by their combination
+coordinates, ALL fix work stops until the matrix covers that space.** Proposing
+another single fix in that condition is a violation of this law, whoever
+proposes it. It does not matter that the next fix is correct; a correct fix
+chosen by the same method that missed the last one is the failure repeating, and
+the cost is another device round trip Sam pays for.
+
+*Founding case:* `docs/LOCKED_DAY_DIAGNOSIS_2026-07-30.md` found two defects on
+one day — a deletion door writing a schedule fact, and route (b) placing the
+landing session at full size. They differ only by which door and which route,
+i.e. by coordinates in a space nothing enumerated. The profile-wipe saga is the
+same shape at five device round trips
+(`docs/LOST_ONBOARDING_DIAGNOSIS_2026-07-30.md`), and the G-1 add-optional
+investigation took four seed reconstructions before anyone asked what was
+actually tapped.
+
+*Status when this law was written (2026-07-30), so it is not mistaken for
+satisfied:* the machinery exists — `src/dev/e2e/explorerCapabilityMatrix.ts`
+declares the dimensions (season phase × fixture state × source-fact
+combination), with a pairwise generator, scenario runner and oracle evaluator
+beside it, and 18 of its 19 suites pass. **None of them is in `test:bible`.** A
+harness that is green and ungated is not a matrix that is green — it is a
+diagnostic nobody runs before the build, which is the failure named two sections
+above in its mirror image. Gating it, and completing the door × day-state ×
+route coverage, is the work L11 requires.
+
+L10 and L11 are complementary, not in tension. L10 says Sam's phone is what makes
+a thing DONE. L11 says his phone is not what makes it TESTED — and asking him to
+find what a matrix should have found spends the one instrument that cannot be
+automated.
+
+### L12 — Verification strategy is reviewed like code
+
+**Every boundary report must state what would catch the NEXT defect of this
+class, not just this one.** A report that names the fix and its regression test
+but says nothing about the class is incomplete, and is to be sent back the same
+way an unreviewed diff is.
+
+**A reviewer who accepts fix-by-fix verification during a combination-shaped
+failure pattern is failing the same way the fix is.** Verification strategy is
+not the implementer's private business subject to the reviewer's approval of the
+outcome; it is part of the work under review. "The tests pass" is an
+observation, not a verification strategy.
+
+This pairs with the mandatory NOT-COVERED section (L2): NOT-COVERED says what was
+not looked at, L12 says what the looking would have to change to catch the next
+one.
+
+### L13 — The walker reaches ACCUMULATED state
+
+**Sam ratified, 2026-07-30.** A harness that only reaches freshly-acted worlds
+tests a life nobody lives. The walker must reach **accumulated** state — long
+athlete lives, many edits deep, weeks of time advancing — and athlete-facing
+suites must assert over those states, not only over three-actions-from-install.
+
+**A defect class that only exists in well-worn state is in scope by law.**
+
+*Why it is law:* it had already cost three units in three different layers.
+The hydration wipe could not be reproduced because Sam's week breached a current
+rule only after 43 revisions of edits. Surface-agreement cells 1 and 4 both pass
+in a freshly-acted world, because there the G+1 Sunday resolves a real session and
+the surfaces agree — so the two defects he photographed most directly were the
+ones the harness could not reach. And the G-1 ask cell tapped a move off an empty
+Thursday, which one added session fixed: the same lesson at depth one.
+
+**What it forbids.** Loosening an assertion so that it reds in a shallow world.
+Cells go red by the walker walking FURTHER, never by asking less. And "passes in a
+freshly-acted world" stops counting as evidence of absence — a pass at depth 3 says
+nothing about depth 43, so **a report must state the depth it reached.**
+
+**What it requires.** The walker's budget gains a DEPTH dimension beside its
+width. Because depth is expensive — every walk generates a program — the shallow
+and deep tiers must be DECLARED separately: a shallow gate that looks like the deep
+one is the exact failure this law exists to prevent.
+
+L11 says the matrix comes before the phone. L13 says the matrix must be deep enough
+to contain the defect.
+
+### L14 — Domain purity
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** Domain logic — rules,
+generation, repairs, counting, projection — knows nothing about React,
+navigation, screens, Supabase, or device time. Any new or moved domain module
+must be callable from a plain test with explicit inputs. The
+`dayDetailComposition` purity pin is the precedent; apply its standard to
+everything Stage B touches. Existing violations are census debt, not
+emergencies — they are converted when their unit comes up, not hunted.
+
+### L15 — One write format
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** New saves are always
+written in the current canonical format; superseded formats are never written
+again, by anything, ever. Old formats exist only as read-ingress lifts at the
+boundary (powerBlock precedent, hydration lift). A writer of a retired shape
+is a red-gate defect, not a compatibility feature.
+
+### L16 — Vertical slice first
+
+**Sam ratified, 2026-07-30 (recorded via Cowork).** A rebuilt system proves
+one complete loop before anything else builds on it: load → display → change →
+repair → approve → persist → relaunch-identical. Stage B is held to this shape
+explicitly: the engine's first acceptance is one clean slice through the
+walker, not breadth.
+
+*Context for L14–L16:* these arose from an external architecture review Sam
+commissioned on 2026-07-30. The review's remaining recommendation — a parallel
+V2 shell behind a legacy flag — was REJECTED by Sam's seat: two live truths is
+the disease every law here exists to kill; the in-place convergence continues.
+Recorded so nobody re-litigates it.
+
 ## Test Standard
 
 - Prefer invariant or scenario tests that prove the capability, not only the

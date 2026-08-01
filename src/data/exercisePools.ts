@@ -30,7 +30,10 @@ export type EquipmentTag =
   | 'bike_or_treadmill'
   | 'pullup_bar'
   | 'kettlebell'
-  | 'machine';
+  | 'machine'
+  // Sam's audit ruling 1, 2026-07-31: the box joins the checklist as the 10th
+  // equipment question, and Depth Jumps' requirement maps to it.
+  | 'plyo_box';
 
 export type InjuryTag =
   | 'shoulder'

@@ -52,7 +52,6 @@ function identity(action: ExplorerExecutableAction): string {
     case 'equipment-fact': return action.target.equipmentFactId;
     case 'session-feedback': return action.target.feedbackId;
     case 'adjustment': return `exact:${action.target.adjustmentId}`;
-    case 'week': return action.target.weekId;
   }
 }
 
@@ -70,17 +69,13 @@ function expectationFor(
       canonicalSemanticIdentity: identity(action),
       producedAdjustmentId: action.type === 'session.move' ||
         action.type === 'session.delete' ||
-        action.type === 'component.delete' ||
-        action.type === 'week.repeat'
+        action.type === 'component.delete'
         ? adjustmentId
         : null,
       exactAdjustmentId: action.type === 'adjustment.restore'
         ? identity(action)
         : null,
-      adjustmentKind: action.type === 'adjustment.restore' &&
-        scenarioId.includes('repeat-week')
-        ? 'repeat_week'
-        : 'fixture_change',
+      adjustmentKind: 'fixture_change',
       feedbackTransactionId: action.type === 'session-feedback.record'
         ? `feedback-transaction:${stepId}`
         : null,
@@ -176,14 +171,6 @@ function satisfiedSnapshot(
           kind: witness.adjustmentKind,
           status: 'cleared',
         }],
-      };
-    case 'repeat-week':
-      return {
-        ...snapshot,
-        reversibleAdjustments: [{
-          id: witness.adjustmentId, kind: 'repeat_week', status: 'active',
-        }],
-        weekScopedOverlayIds: { [witness.targetWeekStart]: 'repeat-overlay' },
       };
   }
 }

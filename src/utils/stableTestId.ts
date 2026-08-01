@@ -59,6 +59,8 @@ export const explorerTestId = {
 
   componentIdentity: (sessionId: string, componentId: string) =>
     `component-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
+  componentSwapIngress: (sessionId: string, componentId: string) =>
+    `component-swap-action-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
   componentDeleteIngress: (sessionId: string, componentId: string) =>
     `component-delete-action-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
   componentDeleteConfirm: (sessionId: string, componentId: string) =>
@@ -127,15 +129,4 @@ export const explorerTestId = {
     `adjustment-restored-${stableTestIdToken(adjustmentId)}`,
   adjustmentState: (adjustmentId: string, state: string) =>
     `adjustment-${stableTestIdToken(state)}-${stableTestIdToken(adjustmentId)}`,
-
-  repeatIngress: (sourceWeekStart: string) =>
-    `repeat-week-action-${stableTestIdToken(sourceWeekStart)}`,
-  repeatConfirm: (sourceWeekStart: string) =>
-    `repeat-week-confirm-${stableTestIdToken(sourceWeekStart)}`,
-  repeatActive: (adjustmentId: string) =>
-    `repeat-week-active-${stableTestIdToken(adjustmentId)}`,
-  repeatRestore: (adjustmentId: string) =>
-    `repeat-week-restore-${stableTestIdToken(adjustmentId)}`,
-  repeatRestored: (adjustmentId: string) =>
-    `repeat-week-restored-${stableTestIdToken(adjustmentId)}`,
 } as const;

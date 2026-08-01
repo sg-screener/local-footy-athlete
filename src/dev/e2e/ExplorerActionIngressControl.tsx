@@ -38,7 +38,8 @@ export function ExplorerActionIngressControl(): React.ReactElement | null {
     ? manifest?.steps.find((candidate) => candidate.stepId === request.stepId)
     : undefined;
   let manifestMatches = false;
-  if (request && step && step.action.type !== 'coach.message') {
+  if (request && step && step.action.type !== 'coach.message' &&
+    step.action.type !== 'week.repeat') {
     manifestMatches = step.controlTestId === request.expectedControlId &&
       explorerActionSemanticHash(step.action) === request.actionSemanticHash &&
       JSON.stringify([...explorerCanonicalTargetIds(step.action)].sort()) ===
@@ -50,7 +51,7 @@ export function ExplorerActionIngressControl(): React.ReactElement | null {
     }
   }, [manifestMatches, request?.requestId]);
   if (!request || !step || step.action.type === 'coach.message' ||
-    !manifestMatches) return null;
+    step.action.type === 'week.repeat' || !manifestMatches) return null;
 
   const onPress = () => {
     const acceptedRevision =

@@ -53,6 +53,12 @@ export interface SessionClassificationContributions {
   teamAnchors: number;
   gameAnchors: number;
   gunshow: number;
+  /**
+   * The counterpart the charter's prehab debt named as missing: "the classifier
+   * carries one `gunshow` contribution with no `prehab` counterpart". Both of Sam's
+   * types now count themselves, so neither is attributed to the other.
+   */
+  prehab: number;
   recovery: number;
 }
 
@@ -128,6 +134,7 @@ function emptyUnitContributions(): Omit<SessionClassificationContributions, 'har
     teamAnchors: 0,
     gameAnchors: 0,
     gunshow: 0,
+    prehab: 0,
     recovery: 0,
   };
 }
@@ -145,7 +152,8 @@ function contributionsForUnit(
 
   if (stress === 'high') contributions.hardExposures = 1;
   if (MAIN_STRENGTH_CATEGORIES.has(unit.category)) contributions.mainStrength = 1;
-  if (unit.category === 'gunshow_prehab') contributions.gunshow = 1;
+  if (unit.category === 'gunshow') contributions.gunshow = 1;
+  if (unit.category === 'prehab') contributions.prehab = 1;
   if (unit.category === 'recovery') contributions.recovery = 1;
   if (unit.category === 'team_training') contributions.teamAnchors = 1;
   if (unit.category === 'game') contributions.gameAnchors = 1;

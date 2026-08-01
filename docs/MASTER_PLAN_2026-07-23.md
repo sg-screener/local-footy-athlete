@@ -63,6 +63,20 @@ report lists exactly what Sam should check and how; Sam's confirmation
 closes the item. Terminals report "gates green, awaiting Sam device
 acceptance" — never "done" — for athlete-facing work.
 
+**L11 — The matrix before the phone.** **L12 — Verification strategy is
+reviewed like code.** Both live in `AGENTS.md` under "PROCESS LAW — L11 and
+L12", because they bind the review/orchestration seat (Cowork) as well as
+implementing sessions, and that seat reads `AGENTS.md` rather than this
+document. They are Process Law with the same force as L1–L10; the list does not
+stop at L10.
+
+In short: L11 makes Sam's device the LAST instrument (the athlete-action matrix
+— every door × every day-state × every route — must be green first, and all fix
+work stops the moment two defects differ only by their combination coordinates).
+L12 requires every boundary report to say what would catch the NEXT defect of
+its class, and makes accepting fix-by-fix verification a reviewer's failure, not
+just an implementer's.
+
 ---
 
 # PART 2 — THE ROAD (dependency order)
@@ -203,6 +217,79 @@ Per JOURNAL_DESIGN_2026-07-23.md, with Sam's structural clarification:
 - 5C.5 All record-only/projection per the design doc (never a mutation
   door, all on-device, no privacy change). Sam device acceptance per L10.
 
+## Phase 5D — stored-state integrity (Sam-approved 2026-07-30)
+
+Both units run BEFORE Phase 6's full verification pass. Each was triggered by a
+shipped defect that every gate was green through, and both are about the same
+thing: state that is already wrong, written or left behind by something nobody
+owns.
+
+- 5D.1 **STORED-STATE WRITERS AUDIT.** Enumerate every code path that can write
+      or replace stored athlete data — compatibility mirrors, migrations,
+      hydration repairs, sync, any store `setState` that replaces rather than
+      merges. Each writer must PROVE two things: it only ever narrows toward the
+      accepted truth, and it can never delete an answer the athlete gave. A
+      writer with no owner, or one that cannot prove both, is retired rather
+      than guarded.
+      *Founding case:* the profile compatibility mirror replacing
+      `onboardingData` whole with a stale accepted snapshot — on a real device
+      that took 28 answers to 2, `seasonPhase` among them, and left generation
+      refusing an answer the athlete had given months earlier. Pre-existing on
+      main, reproducible with one ordinary profile edit, invisible to every
+      suite because every fixture left the mirror inert. Law and first fix:
+      `rules/profileMirrorNarrowing.ts`.
+
+- 5D.2 **FAILURE-STATE SWEEP.** Fault-inject every transaction — kill it
+      mid-flight — and assert the surviving state is whole and honest: rebuilds,
+      phase shifts, fixture changes, onboarding completion, athlete
+      move/swap/add/bin. "Honest" means the athlete is told what happened and
+      no surface reports a success the state does not carry.
+      *Founding case:* the season-phase skew — a phase shift whose profile write
+      landed and whose rebuild failed, leaving the two disagreeing with nothing
+      to disclose it. The disclosure-plus-repair card exists because that state
+      was reachable and silent.
+
+- 5D.3 **ON-DEVICE ACTION LOG** (Sam-approved 2026-07-30). Every mutating
+      athlete action recorded as a typed event — timestamp, screen, door,
+      arguments, resulting transaction id — in a rolling buffer (~200),
+      included in Export stored state, zero network. Diagnosis reads the log
+      instead of interviewing the athlete. It is also the post-launch support
+      tool.
+      *Founding case:* the G-1 add-optional investigation took FOUR seed
+      reconstructions and ended on the question "what did you actually tap?".
+      The answer — "Want to change something → Add optional session → Strength →
+      Full Body" — explained every byte instantly, and a twenty-line log would
+      have supplied it in one read.
+      *Mostly wiring, not building:* `utils/athleteActionDiagnostics.ts` already
+      emits this vocabulary. The gaps are that it is disabled on production
+      builds, in-memory only, unbounded, and absent from the export.
+
+- 5D.4 **DELOAD_LAW ROW CLASSIFICATION READS THE AUTHORED STRUCTURE**
+      (Sam-approved 2026-07-30). `isConditioningExerciseRow` decides whether a
+      row is conditioning from its NAME, by regex. The workout it belongs to
+      already carries the authored answer — `conditioningBlock.options[]
+      .exerciseIds` names those exact rows — and the classifier does not read
+      it. The unit is for the classification to consult that structure, with the
+      name heuristic left only where no structure exists. **The regex is not to
+      be widened**; adding the missing words is what makes the next unmatched
+      name a silent defect rather than a loud one.
+      *Founding case:* the registry's own single-row conditioning templates —
+      "Flush Out - 2min On / 1min Off" and "3 x 8min zone 2 Rower", where
+      "Rower" does not match `\brow\b`. Both are classified as strength
+      accessories, and the accessory trim (`floor(1 × 0.5) = 0`) deletes the
+      only row, so the G-1 ask's route (c) would have published an empty day
+      under a "Done."
+      *Contained, not patched, in the G-1 landing unit:* a route is a smaller
+      session, never no session — `placeSessionForRoute` returns null for an
+      empty result and the landing funnel refuses in words already shipped.
+      `g1LandingAskFlowTests` 26 asserts the classifier still empties that
+      template, so it **goes red the moment this unit lands**. That is the
+      signal to delete the containment, not a regression.
+      *Class:* another **name-decides-identity** instance (Sam, 2026-07-30) —
+      see PART 3. The same shape as intensity feeding identity and position
+      feeding identity: a derived or incidental property standing in for
+      authored truth.
+
 ## Phase 6 — full verification under the new law
 - 6.1 Extend SUPPORTED_ATHLETE_ACTIONS.md to the whole-app surface (X3):
       first-run, generation, season transitions, session lifecycle.
@@ -234,6 +321,23 @@ Per JOURNAL_DESIGN_2026-07-23.md, with Sam's structural clarification:
 
 # PART 3 — STANDING ANSWERS (so nothing regresses to folklore)
 
+- **A derived property never decides identity** (Sam's standing class). Whether
+  a thing IS something is answered by the authored truth, never by a number that
+  says how hard it is, a slot that says where it sits, or a string that says
+  what it is called. Known instances, all the same defect in different clothes:
+  - INTENSITY feeds identity — a deload's halved sets demoted a hinge lift to an
+    accessory and the session left the week's count. Ruled and closed:
+    `docs/READINESS_FAMILY_BOUNDARY_2026-07-27.md` ("intensity and prescribed
+    volume must never feed identity"), one defect at five sites.
+  - POSITION feeds identity — row order standing in for role. Queued from the
+    power-row redesign.
+  - NAME feeds identity (2026-07-30) — `isConditioningExerciseRow` deciding
+    conditioning from a regex over the exercise name while the workout's own
+    `conditioningBlock` names the rows outright. Queued as 5D.4.
+  The fix is always the same shape: read the authored structure. **Widening the
+  heuristic is not the fix** — it buys back the current case and hides the next
+  one, because a heuristic that nearly always works is the hardest kind to catch
+  being wrong.
 - Gunshow: intentional brand voice, stays (2026-07-23).
 - Feedback form: message + required email only; no star rating.
 - Bed-ridden: illness_recovery week — minimums lifted, sessions optional +

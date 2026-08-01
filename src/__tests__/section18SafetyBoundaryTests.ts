@@ -11,7 +11,7 @@ import type {
 } from '../utils/generationConstraints';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { validateMicrocycleAgainstActiveConstraints } from '../utils/postGenerationConstraintValidation';
-import { buildRepeatWeekOverlay } from '../utils/repeatWeek';
+import { addDays } from '../utils/sessionResolver';
 import {
   buildSection18WeeklyExposureContractV2,
   type AnchorParticipationState,
@@ -361,19 +361,22 @@ run('scenario', '10 Coach edit cannot reinsert a prohibited pattern', () => {
   assert(!edited.exercises.some((exercise) => exercise.section18Evidence?.strengthPattern === 'squat'), 'Coach edit restored squat');
 });
 
-run('scenario', '11 Repeat Week cannot copy prohibited content into the target week', () => {
+run('scenario', '11 a week-overlay copy cannot copy prohibited content into the target week', () => {
+  // Local stand-in for the retired repeat-week overlay builder (HOME_SCREEN_
+  // REDESIGN ruling 1 — the athlete-facing repeat-week writer is gone). The
+  // safety boundary this proves applies to the week-overlay-copy mechanism
+  // itself, not the retired button, so the fixture reproduces an equivalent
+  // sparse copy without the deleted module.
   const contract = withSafety(baseContract(), injuryContext('lower_body'));
-  const overlay = buildRepeatWeekOverlay({
-    sourceWorkouts: [workout('repeat-source', 1, ['Back Squat', 'Romanian Deadlift', 'Bench Press'])],
-    targetWeekStart: '2026-07-20',
-    targetExposureContractV2: contract,
-  });
+  const targetWeekStart = '2026-07-20';
+  const source = workout('repeat-source', 1, ['Back Squat', 'Romanian Deadlift', 'Bench Press']);
+  const targetDate = addDays(targetWeekStart, source.dayOfWeek === 0 ? 6 : source.dayOfWeek - 1);
   const result = finaliseSection18SafetyWeek({
     contract,
-    workouts: Object.values(overlay.workoutsByDate).filter((value): value is Workout => !!value),
-    weekStart: overlay.weekStart,
+    workouts: [{ ...source, id: `${source.id}:week-overlay-copy:${targetDate}` }],
+    weekStart: targetWeekStart,
   });
-  assert(!allPatterns(result).includes('squat') && !allPatterns(result).includes('hinge'), 'Repeat Week copied prohibited work');
+  assert(!allPatterns(result).includes('squat') && !allPatterns(result).includes('hinge'), 'week-overlay copy copied prohibited work');
 });
 
 run('scenario', '12 rebuild and rollover-style revalidation reject a deficient final week', () => {

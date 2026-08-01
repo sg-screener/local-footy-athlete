@@ -40,8 +40,8 @@ function profileFor(scenario: Slice3GoldenScenario): OnboardingData {
     : scenario.id === 'early-offseason-explicit-no-cardio' ? ['Dumbbells Only']
       : scenario.id === 'early-offseason-row-only' ? ['RowErg'] : LEGACY_EQUIPMENT;
   return {
-    firstName: 'BibleEquipment', position: 'inside_mid', motivation: 'Build strength and fitness',
-    goals: ['Build Strength', 'Improve Fitness'], seasonPhase: 'Off-season',
+    firstName: 'BibleEquipment', position: 'inside_mid',
+    goals: ['stronger_and_fitter', 'build_muscle'], seasonPhase: 'Off-season',
     trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],    trainingLocation: 'Commercial gym', equipment,

@@ -45,7 +45,8 @@ import {
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
-import type { G1MoveRouteId } from '../rules/g1MoveAsk';
+import type { G1LandingRouteId } from '../rules/g1LandingAsk';
+import { staleAcceptedSnapshotRepair } from '../rules/profileMirrorNarrowing';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -95,6 +96,12 @@ import {
 } from '../rules/reversibleAdjustmentLedger';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
+import { collapseWorkoutToRest } from '../utils/workoutContent';
+import type { Section18FindingDomain } from '../rules/section18EffectiveWeekEvaluator';
+import {
+  shortfallsFromFindings,
+  renderSection18ShortfallDisclosure,
+} from '../rules/section18ShortfallDisclosure';
 import {
   athleteActionDiagnosticHash,
   athleteActionDiagnosticsEnabled,
@@ -120,8 +127,30 @@ export type AcceptedProgramSurfaces = Pick<
   | 'exposureContractsByWeek'
 >;
 
+/**
+ * WHAT KIND OF THING THIS TRANSACTION IS — Sam's forward-only ruling
+ * (2026-07-29). Accept-and-reduce serves FACTS AND DECISIONS THE ATHLETE
+ * STATED. A restoration replays state that was already accepted, and a stored
+ * snapshot that cannot reproduce a valid week is a DEFECT, not a fact — nobody
+ * ever stated `requiredMinimum: 99`. `LOST_ONBOARDING_DIAGNOSIS` already ruled
+ * this class: refuse and report a corrupt snapshot, never merge it.
+ *
+ * A typed kind and not a boolean, and never a reason-string inspection. This
+ * repo has been bitten three times by unions discriminated on booleans, and
+ * `preserveExactAcceptedWorkouts` is a storage-shape flag that happens to
+ * correlate with restoration today — correlation is not the distinction.
+ *
+ * ABSENT MEANS `restoration`, i.e. STRICT. The permissive path is opted into,
+ * so a caller added later that says nothing gets a refusal rather than silently
+ * publishing an unmeetable week. Same reasoning as the profile mirror's
+ * publication origin, where the gated reading is the default.
+ */
+export type AcceptedStateOperationKind = 'forward_decision' | 'restoration';
+
 export interface AcceptedStateTransactionProposal {
   reason: string;
+  /** See `AcceptedStateOperationKind`. Absent = `restoration` (strict). */
+  operation?: AcceptedStateOperationKind;
   /** One explicit date owner for transactions that began before async work. */
   todayISO?: string;
   /** Development-only correlation context; never persisted. */
@@ -295,39 +324,87 @@ function materialiseFixtureMarksForCandidate(args: {
   return changed ? { ...args.candidate, weekScopedOverlays: overlays } : args.candidate;
 }
 
-function acceptedLedgerSignature(contract: WeeklyExposureContractV2): string {
-  return JSON.stringify({
-    strength: contract.mainStrength.exposure.achievedCount,
-    patterns: contract.strengthPatterns.achievedMeaningfulMainLifts,
-    conditioningCore: contract.conditioning.core.achievedCount,
-    conditioningOptionalFlush: contract.conditioning.optionalFlush.achievedCount,
-    conditioningOptionalRecovery: contract.conditioning.optionalRecoveryAerobic.achievedCount,
-    conditioningOptionalOther: contract.conditioning.optionalNonCoreAchievedCount,
-    conditioningLegacyUnknown: contract.conditioning.legacyUnknownAchievedCount,
-    conditioningStress: contract.conditioning.achievedByStress,
-    conditioningAnchors: contract.conditioning.anchorCredit,
-    conditioningApp: contract.conditioning.appAuthoredCoreCredit,
-    sprint: contract.sprintHighSpeed.exposure.achievedCount,
-    sprintSources: contract.sprintHighSpeed.achievedSources,
-    power: contract.power.achievedPrimerCount,
-    rest: contract.restStress.achievedTrueFullRestCount,
-    activeRecovery: contract.restStress.achievedActiveRecoveryCount,
-    moderateDays: contract.restStress.achievedModerateDayCount,
-    hardDays: contract.restStress.achievedHardDayCount,
-  });
-}
+/**
+ * THE STALE-LEDGER COMPARISON, DELETED — Sam's derive-at-read ruling
+ * (2026-07-29). It is recorded here rather than quietly removed, because
+ * deleting an invariant deserves an argument.
+ *
+ * `acceptedLedgerSignature` compared the contract's STORED achieved counts
+ * against the counts recomputed from the week that actually renders. It was a
+ * real invariant while the counts were stored: it caught a week whose stored
+ * tallies had gone stale beside the live week, which is exactly what the walker
+ * reached in five actions (move a session off Thursday, add one back, mark a
+ * game — the move refreshed the overlay's contract, the add wrote only a date
+ * override, and the two disagreed at the next transaction).
+ *
+ * With `deriveAchievedCounts` as the one owner, both sides of that comparison
+ * are the same derivation of the same week. There is no stored copy left to go
+ * stale, so the comparison has no subject. This is the north star's promise
+ * landing rather than an assertion being weakened: the divergence is now
+ * UNREPRESENTABLE instead of tested-for.
+ *
+ * What still protects the behaviour the docstring cared about — "a later
+ * visible precedence layer changing exposure, power, rest or stress" — is
+ * behaviour-level and stronger: L4 (visible = accepted) and L4b (screen =
+ * domain) in the athlete-door matrix and the action walker, asserted after
+ * every action rather than against a stamped copy.
+ *
+ * The blocking-violation path below is untouched and is still the boundary
+ * that matters: forward decisions accept-and-disclose, restorations refuse.
+ */
 
 /**
  * Re-resolve a staged persisted week and prove that its observable ledger is
  * exactly the ledger stamped by the accepted gateway. This forbids a later
  * visible precedence layer from changing exposure, power, rest or stress.
  */
+/**
+ * The shortfall the athlete is told about, derived and handed to the
+ * disclosure owner. DERIVED, never stored: it is a fact about the week that
+ * falls out of the contract and the week itself, so persisting it would be a
+ * stored copy of a derivation — the north star's presumed-wrong shape, and the
+ * exact class that produced the profile-mirror wipe.
+ *
+ * The last shortfall observed is kept in module scope purely so the door that
+ * is mid-transaction can render it; it is recomputed on every evaluation and
+ * never read back as truth.
+ */
+let lastAcceptedWeekShortfall: {
+  weekStart: string;
+  shortfalls: ReturnType<typeof shortfallsFromFindings>;
+} | null = null;
+
+function recordAcceptedWeekShortfall(
+  weekStart: string,
+  blockingViolations: readonly { domain: Section18FindingDomain; expected: unknown; actual: unknown }[],
+): void {
+  lastAcceptedWeekShortfall = {
+    weekStart,
+    shortfalls: shortfallsFromFindings({ date: weekStart, findings: blockingViolations }),
+  };
+}
+
+/** What the door should tell the athlete, or null when the week is whole. */
+export function takeAcceptedWeekShortfallDisclosure(weekStart?: string): string | null {
+  const recorded = lastAcceptedWeekShortfall;
+  lastAcceptedWeekShortfall = null;
+  if (!recorded) return null;
+  if (weekStart && recorded.weekStart !== weekStart.slice(0, 10)) return null;
+  return renderSection18ShortfallDisclosure(recorded.shortfalls);
+}
+
 export function assertAcceptedVisibleLedgerEquivalence(args: {
   surfaces: AcceptedProgramSurfaces;
   context: AcceptedMaterialContext;
   weekStarts: readonly string[];
   profile?: OnboardingData | null;
   trace?: AthleteActionTraceContext;
+  /**
+   * Required, deliberately. Every publication boundary states what it is
+   * publishing; there is no default here so a new call site cannot inherit
+   * accept-and-reduce by accident.
+   */
+  operation: AcceptedStateOperationKind;
 }): void {
   const surfaces = normalizeAcceptedProgramSurfaces(args.surfaces);
   const context = normalizeAcceptedMaterialContext(args.context);
@@ -360,37 +437,38 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
           dayOfWeek: workout.dayOfWeek,
           identity: workout.planEntryId ?? workout.id,
         }))),
-        visibleEqualsAcceptedState: false,
+        visibleEqualsAcceptedState: true,
         rejectionCodes: evaluation.blockingViolations.map((finding) => finding.code),
         rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
-        failureCategory: 'projection_mismatch',
+        failureCategory: 'accepted_with_shortfall',
       });
-      throw new AcceptedStateLedgerMismatchError(
-        weekStart,
-        `re-evaluation produced blockers ${evaluation.blockingViolations
-          .map((finding: { code: string }) => finding.code).join(',')}`,
-      );
-    }
-    if (acceptedLedgerSignature(contract) !== acceptedLedgerSignature(evaluation.contract)) {
-      emitAthleteActionEvent(args.trace, 'visible_projection_result', {
-        acceptedStateVersion: context.revision,
-        weekId: weekStart,
-        visibleStateHash: athleteActionDiagnosticHash(rebased.visibleWorkouts.map((workout) => ({
-          dayOfWeek: workout.dayOfWeek,
-          identity: workout.planEntryId ?? workout.id,
-        }))),
-        visibleEqualsAcceptedState: false,
-        rejectionCodes: ['accepted_state_ledger_mismatch'],
-        rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
-        failureCategory: 'projection_mismatch',
-      });
-      throw new AcceptedStateLedgerMismatchError(
-        weekStart,
-        `persisted and visible ledgers differ: ${JSON.stringify({
-          persisted: JSON.parse(acceptedLedgerSignature(contract)),
-          visible: JSON.parse(acceptedLedgerSignature(evaluation.contract)),
-        })}`,
-      );
+      // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). This used to throw.
+      //
+      // A blocking violation here does NOT mean the two representations
+      // disagree — it means the week the athlete now has cannot meet its
+      // contract, which is the honest consequence of a fact they stated. The
+      // athlete's calendar wins and the program adapts: the fact is kept, the
+      // best week around it is published, and the shortfall is disclosed in
+      // Sam's signed words (`rules/section18ShortfallDisclosure`).
+      //
+      // This assertion keeps the job it is named for and only that job — the
+      // check immediately below, where the PERSISTED and VISIBLE ledgers
+      // genuinely differ. That is two representations of one week disagreeing,
+      // it is always a defect, and it still throws.
+      //
+      // A RESTORATION gets the old behaviour and must: it is replaying state
+      // that was accepted once, so a week it cannot reproduce means the stored
+      // snapshot is corrupt. Publishing a reduced version of a corrupt snapshot
+      // would merge a defect into accepted state, which is the mirror-wipe
+      // shape this repo has already paid for once.
+      if (args.operation === 'restoration') {
+        throw new AcceptedStateLedgerMismatchError(
+          weekStart,
+          `re-evaluation produced blockers ${evaluation.blockingViolations
+            .map((finding: { code: string }) => finding.code).join(',')}`,
+        );
+      }
+      recordAcceptedWeekShortfall(weekStart, evaluation.blockingViolations);
     }
     emitAthleteActionEvent(args.trace, 'visible_projection_result', {
       acceptedStateVersion: context.revision,
@@ -455,7 +533,48 @@ export function stageAcceptedStateTransaction(
     const profileChanged = JSON.stringify(
       context.acceptedProfileSnapshot.onboardingData,
     ) !== JSON.stringify(profile);
-    if (proposal.acceptedProfileSnapshot !== undefined ||
+    // A RECORD POORER THAN THE PROFILE REPAIRS ITSELF (Sam, export 6).
+    //
+    // The condition below asks for `proposal.profile`, and no ordinary
+    // transaction carries one — so a snapshot that had gone wrong could never
+    // be corrected, while being republished over the live profile by every
+    // transaction that ran. Four refused attempts in one second on his device,
+    // with the record still reading 2 answers at revision 13.
+    //
+    // Refusing the publication stopped the damage. This ends the cause: when
+    // the record is missing answers the athlete has, the record is what is
+    // wrong, and it is re-minted from the live profile at the revision it is
+    // corrected at. Deliberately NOT from `profile` — that resolves to the
+    // snapshot itself once a revision exists, which would re-mint the corruption.
+    //
+    // ONLY FOR A TRANSACTION WITH NO OPINION ABOUT THE PROFILE. A transaction
+    // that CARRIES one is making a profile decision — leaving In-season clears
+    // the game day — and "repairing" that back from the live mirror would undo
+    // the athlete's own change. `phaseShiftAtomicityTests` catches it.
+    const transactionOwnsTheProfile = proposal.profile !== undefined ||
+      proposal.acceptedProfileSnapshot !== undefined;
+    const liveProfileNow = useProfileStore.getState().onboardingData;
+    const staleRecord = transactionOwnsTheProfile ? null : staleAcceptedSnapshotRepair({
+      live: liveProfileNow,
+      snapshot: context.acceptedProfileSnapshot.onboardingData,
+    });
+    if (staleRecord) {
+      context = normalizeAcceptedMaterialContext({
+        ...context,
+        acceptedProfileSnapshot: {
+          ...context.acceptedProfileSnapshot,
+          updatedAt: appDateNow().toISOString(),
+          sourceRevision: context.revision,
+          onboardingData: liveProfileNow,
+        },
+      });
+      emitAthleteActionEvent(proposal.trace ?? currentAthleteActionTrace(),
+        'profile_snapshot_repaired', {
+          internalResultCode: staleRecord.reason,
+          missingAnswerCount: staleRecord.missingAnswers.length,
+          repairedAtRevision: context.revision,
+        });
+    } else if (proposal.acceptedProfileSnapshot !== undefined ||
       (proposal.profile !== undefined && profileChanged)) {
       context = normalizeAcceptedMaterialContext({
         ...context,
@@ -510,6 +629,7 @@ export function stageAcceptedStateTransaction(
       context,
       weekStarts: proposal.validateWeekStarts ?? [],
       profile,
+      operation: proposal.operation ?? 'restoration',
       trace: proposal.trace,
     });
     return { program: candidate, context };
@@ -617,6 +737,7 @@ export function commitAcceptedStateTransaction(
   }
   try {
     assertAcceptedVisibleLedgerEquivalence({
+      operation: proposal.operation ?? 'restoration',
       surfaces: staged.program,
       context: staged.context,
       weekStarts: Array.from(equivalenceWeeks),
@@ -692,8 +813,12 @@ export function commitAcceptedStateTransaction(
     });
   }
   if (staged.context.acceptedProfileSnapshot) {
+    // The athlete's own change, being published as it is accepted — including
+    // an answer they deliberately removed (leaving In-season clears the game
+    // day). This is the new truth, not a replay of an old one.
     publishAcceptedProfileCompatibilityMirror(
       staged.context.acceptedProfileSnapshot.onboardingData,
+      { origin: 'accepted_transaction' },
     );
   }
   const afterStateHash = athleteActionDiagnosticHash({
@@ -2000,6 +2125,10 @@ export function commitCalendarStateTransaction(args: {
     }
   }
   return commitAcceptedStateTransaction({
+    // A calendar mark IS the athlete stating a fact about their life — the
+    // founding case for accept-and-reduce. The mark is kept and the shortfall
+    // disclosed; it is never refused back at them.
+    operation: 'forward_decision',
     reason: args.reason,
     todayISO: args.todayISO,
     program: { ...(args.program ?? {}), weekScopedOverlays: overlays },
@@ -2098,7 +2227,7 @@ export interface AthleteDeletionPublishedOutcome {
 }
 
 export interface AthleteSessionDeletionTransactionResult
-  extends AcceptedStateTransactionResult {
+  extends AcceptedStateTransactionResult, AthleteMutationPublication {
   deletionOutcome: AthleteDeletionPublishedOutcome;
 }
 
@@ -2123,7 +2252,7 @@ export interface AthleteAdditionPublishedOutcome {
 }
 
 export interface AthleteSessionAdditionTransactionResult
-  extends AcceptedStateTransactionResult {
+  extends AcceptedStateTransactionResult, AthleteMutationPublication {
   additionOutcome: AthleteAdditionPublishedOutcome;
 }
 
@@ -2141,13 +2270,28 @@ export interface AthleteSessionMoveTransactionInput {
    * The session that actually LANDS, when it is not the source session verbatim
    * — the G-1 ask-flow's accessories-only and deloaded routes.
    *
-   * It must carry the source session's identity (`rules/g1MoveAsk` guarantees
+   * It must carry the source session's identity (`rules/g1LandingAsk` guarantees
    * this), so the move stays one atomic transaction and the conservation
    * post-condition still sees the athlete's session survive. `originalWorkout`
    * on the constraint is unaffected and remains the FULL accepted session, so
    * Undo restores exactly what was there before the athlete chose a route.
    */
-  placedSession?: { route: G1MoveRouteId; workout: Workout } | null;
+  placedSession?: { route?: G1LandingRouteId; workout: Workout } | null;
+  /**
+   * The placed session ALREADY CONTAINS the destination's content — a move onto
+   * a team night, which lands as a combined day (Sam's doubling law). There is
+   * nothing to swap back, and swapping would take the anchor off the day.
+   */
+  placedSessionAbsorbsTarget?: boolean;
+  /**
+   * A SESSION-scoped move off a combined day (Sam, 2026-07-30): the gym session
+   * leaves, team training stays anchored. Both halves arrive together from one
+   * `splitAcceptedSessionForAthleteMove` call so the day that stays and the
+   * session that leaves cannot disagree about which rows went where.
+   *
+   * Absent = the whole-day move every caller meant before scoping existed.
+   */
+  componentSplit?: { movedWorkout: Workout; remainingWorkout: Workout | null } | null;
 }
 
 export interface AthleteMutationTransactionStage {
@@ -2157,6 +2301,32 @@ export interface AthleteMutationTransactionStage {
   affectedWeekStarts: string[];
   outcome: RollingHorizonFixtureRepairResult['outcome'] | 'already_applied';
   alreadyApplied: boolean;
+  /** Set exactly when `alreadyApplied` — see AthleteMutationNoChange. */
+  noChange?: AthleteMutationNoChange | null;
+}
+
+/**
+ * A stage that published NOTHING, and why.
+ *
+ * Sam's ruling #6 (2026-07-30). The `already_applied` short-circuits below
+ * return before any proposal is built, so the commit functions returned
+ * normally and every caller read that as success — the device symptom was
+ * "Done. Lower Body Strength is now on <date>" printed over a day holding a
+ * Gunshow, with the stored constraint naming a third session. Nothing published
+ * is an OUTCOME with a reason; it travels on the result so no caller has to
+ * infer it from the absence of a throw. The reason code is the one
+ * `rules/programMutationRefusal` maps to athlete-facing copy.
+ */
+export interface AthleteMutationNoChange {
+  reason: 'athlete_mutation_already_applied';
+  /** The constraint that already owns this date. */
+  constraintId: string;
+  date: string;
+}
+
+/** Every athlete-mutation commit answers "did anything publish?" the same way. */
+export interface AthleteMutationPublication {
+  noChange: AthleteMutationNoChange | null;
 }
 
 function workoutIdentity(workout: Workout | null | undefined): string | null {
@@ -2416,6 +2586,13 @@ function stageAthleteMutationConstraint(args: {
       ? args.constraint.remainingWorkout
       : state.todayWorkout;
   const proposal: AcceptedStateTransactionProposal = {
+    // Every mutation staged here is an athlete DECISION — a removal, a move or
+    // an addition they performed. Forward, and therefore accept-and-reduce:
+    // their edit stands and the shortfall is disclosed. Without this the
+    // proposal inherited the strict default, which is exactly what it should do
+    // when a path says nothing — and is how the newly-retired legacy stack-add
+    // deferral surfaced the moment it started using this owner.
+    operation: 'forward_decision',
     reason: args.reason,
     program: {
       dateOverrides,
@@ -2452,6 +2629,8 @@ function stageAthleteMutationConstraint(args: {
   });
   const result = creation.result;
   assertAcceptedVisibleLedgerEquivalence({
+    // The athlete binned a session: a decision they stated.
+    operation: 'forward_decision',
     surfaces: result.program,
     context: result.context,
     weekStarts: affectedWeekStarts,
@@ -2506,6 +2685,11 @@ export function stageAthleteSessionDeletionTransaction(
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: date,
+      },
     };
   }
   // A swap rides this deletion with a non-null remainingWorkout (the new
@@ -2549,8 +2733,18 @@ export function stageAthleteSessionDeletionTransaction(
     wholeDayRestOwned: constraint.wholeDayRestOwned,
     provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
   });
+  // A DELETION DOOR NEVER WRITES A CALENDAR MARK (Sam, 2026-07-30).
+  //
+  // This wrote `markedDays[date] = 'rest'` whenever a whole-session bin emptied
+  // a day. "There is no session here today" and "this is a rest day" are
+  // different claims: the first is what the athlete said, the second is a
+  // standing instruction to the planner of the same class as a game mark — and
+  // nothing on the athlete's path took it back.
+  //
+  // The emptiness is still OWNED; it is owned the way placed content is, by the
+  // constraint and its stamp (see rules/userRemovalConstraints). The calendar is
+  // left to the calendar's own doors.
   const markedDays = { ...prior.markedDays };
-  if (wholeDayRest) markedDays[date] = 'rest';
   return stageAthleteMutationConstraint({
     reason: args.reason,
     source: args.source,
@@ -2605,12 +2799,36 @@ export function stageAthleteSessionMoveTransaction(
       affectedWeekStarts: Array.from(new Set([mondayForDate(sourceDate), mondayForDate(targetDate)])).sort(),
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: sourceDate,
+      },
     };
   }
   // The athlete's chosen route decides WHAT lands; the source session decides
   // WHOSE it is. `placedSession` always carries the source identity, so this
   // stays one session moving rather than a delete plus an add.
-  const placed = args.placedSession?.workout ?? acceptedSource;
+  //
+  // AN ABSORBING PLACEMENT IS ALREADY BOTH HALVES, so it outranks the component.
+  // This ordering was written when a scoped move's destination was a free day by
+  // construction — the same stale assumption the swap branch below still states
+  // in words — so putting the moved component first was safe. Under Sam's
+  // doubling law a scoped move may land on a team night, where
+  // `stackSessionOntoTeamAnchor` has already combined the anchor WITH the moved
+  // component. Taking `componentSplit.movedWorkout` there threw the anchor away,
+  // and the conservation post-condition caught it exactly as it should:
+  // `athlete_move_content_not_conserved`, "Move would silently destroy session".
+  // The athlete was refused a destination his own menu had just offered him.
+  //
+  // `placedSessionAbsorbsTarget` is the existing typed statement of "this
+  // placement contains the destination too", so it is asked rather than
+  // re-derived.
+  const placed = (args.placedSessionAbsorbsTarget && args.placedSession?.workout)
+    ? args.placedSession.workout
+    : args.componentSplit?.movedWorkout
+      ?? args.placedSession?.workout
+      ?? acceptedSource;
   const movedWorkout = cloneWorkoutForDate(placed, targetDate);
   // A game-proximity FILLER on the destination is not a swap partner. It is
   // regenerated every render from the fixture, so relocating it to the source
@@ -2618,9 +2836,16 @@ export function stageAthleteSessionMoveTransaction(
   // duplicate it the moment the resolver rebuilt the original. Discard it and
   // let the source day become rest, exactly as a move onto an empty day does.
   const acceptedTargetIsSwappable = !isResolverOwnedDerivedSession(acceptedTarget);
-  const swappedWorkout = acceptedTarget && acceptedTargetIsSwappable
-    ? cloneWorkoutForDate(acceptedTarget, sourceDate)
-    : null;
+  // A scoped move leaves the REMAINDER of the source day behind rather than a
+  // swapped-back partner: the destination is a free day by construction, so
+  // there is nothing to swap and the day it left is not emptied.
+  const swappedWorkout = args.componentSplit
+    ? (args.componentSplit.remainingWorkout
+        ? cloneWorkoutForDate(args.componentSplit.remainingWorkout, sourceDate)
+        : null)
+    : acceptedTarget && acceptedTargetIsSwappable && !args.placedSessionAbsorbsTarget
+      ? cloneWorkoutForDate(acceptedTarget, sourceDate)
+      : null;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,
@@ -2693,6 +2918,7 @@ export function commitAthleteSessionDeletionTransaction(
     : staged.result;
   return {
     ...published,
+    noChange: staged.noChange ?? null,
     deletionOutcome: deriveAthleteDeletionPublishedOutcome({
       input: args,
       before,
@@ -2763,11 +2989,11 @@ function detectAthleteMoveContentLoss(args: {
 
 export function commitAthleteSessionMoveTransaction(
   args: AthleteSessionMoveTransactionInput,
-): AcceptedStateTransactionResult {
+): AcceptedStateTransactionResult & AthleteMutationPublication {
   const priorState = { ...useProgramStore.getState() };
   const profile = useProfileStore.getState().onboardingData;
   const staged = stageAthleteSessionMoveTransaction(args, { purpose: 'commit' });
-  if (!staged.proposal) return staged.result;
+  if (!staged.proposal) return { ...staged.result, noChange: staged.noChange ?? null };
   const published = commitAcceptedStateTransaction(staged.proposal);
   // Conservation post-condition (defense-in-depth behind the producer's
   // not-swappable guard): a relocation must never silently destroy an athlete-
@@ -2777,8 +3003,22 @@ export function commitAthleteSessionMoveTransaction(
   // (Coach door, hydration) that bypass the producer gate.
   if (profile) {
     const violation = detectAthleteMoveContentLoss({
-      moved: args.originalSourceWorkout,
-      displaced: args.existingTargetWorkout,
+      // A scoped move conserves the two HALVES of the split, not the combined
+      // day identity — that identity no longer names anything after the split.
+      //
+      // An ABSORBING move is the mirror image: the source session and the team
+      // night become one combined day, so it is the COMBINED identity that must
+      // survive and the source identity that stops naming anything. Nothing was
+      // displaced — the anchor never left — so there is no second survivor to
+      // require. Sam's doubling law, and the same reasoning as the split above.
+      moved: args.placedSessionAbsorbsTarget
+        ? args.placedSession?.workout ?? args.originalSourceWorkout
+        : args.componentSplit?.movedWorkout ?? args.originalSourceWorkout,
+      displaced: args.placedSessionAbsorbsTarget
+        ? null
+        : args.componentSplit
+          ? args.componentSplit.remainingWorkout
+          : args.existingTargetWorkout,
       weekStarts: staged.affectedWeekStarts,
       profile,
     });
@@ -2789,7 +3029,7 @@ export function commitAthleteSessionMoveTransaction(
       throw error;
     }
   }
-  return published;
+  return { ...published, noChange: null };
 }
 
 /**
@@ -2823,11 +3063,32 @@ export function stageAthleteSessionAdditionTransaction(
   const accepted = rebaseAcceptedEffectiveWeek({
     surfaces: state, weekStart: mondayForDate(date), profile, markedDays: prior.markedDays,
   });
-  const restPlaceholder = accepted.composedWorkouts.find(
+  const composedPlaceholder = accepted.composedWorkouts.find(
     (workout) => workout.dayOfWeek === dayOfWeek) ?? null;
-  if (!restPlaceholder?.id) {
-    throw new Error('Athlete addition requires a base day placeholder to pin against');
-  }
+  // A DAY THE ACCEPTED WEEK LEAVES EMPTY IS STILL A DAY THE ATHLETE CAN FILL.
+  //
+  // This threw, and the throw became "I couldn't safely make that change" on a
+  // day the sheet had just offered to add to. The day after a game is the case:
+  // the athlete sees a Recovery Session, but that session is resolver-owned
+  // derived filler, so the COMPOSED week has nothing on that date to pin
+  // against. The generator never allocated the day; the recovery is rebuilt
+  // every render.
+  //
+  // Adding there is therefore an empty-day add against accepted state, and the
+  // right thing to pin is the emptiness itself: a canonical rest stub for that
+  // date, deterministic in id so the pin is stable across renders and the undo
+  // restores the day to empty — at which point the derived recovery reappears on
+  // its own, because deriving it is what the resolver does. It is the same
+  // canonical-rest-stub shape `applyUserRemovalConstraintsToWeek` already uses
+  // to own a day the athlete emptied.
+  const restPlaceholder: Workout = composedPlaceholder?.id
+    ? composedPlaceholder
+    : {
+        ...collapseWorkoutToRest(cloneWorkoutForDate(args.addedWorkout, date)),
+        id: `accepted-empty-day:${date}`,
+        planEntryId: undefined,
+        dayOfWeek,
+      };
   const addedWorkout = cloneWorkoutForDate(args.addedWorkout, date);
   const id = userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder });
   const existing = state.userRemovalConstraints.find((constraint) =>
@@ -2841,6 +3102,11 @@ export function stageAthleteSessionAdditionTransaction(
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
+      noChange: {
+        reason: 'athlete_mutation_already_applied',
+        constraintId: id,
+        date: date,
+      },
     };
   }
   const constraint: UserRemovalConstraint = {
@@ -2904,6 +3170,7 @@ export function commitAthleteSessionAdditionTransaction(
     .sort();
   return {
     ...published,
+    noChange: staged.noChange ?? null,
     additionOutcome: {
       kind: repairedDates.length > 0 ? 'added_with_repair' : 'added',
       targetDate: date,

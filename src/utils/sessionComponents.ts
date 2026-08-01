@@ -5,7 +5,10 @@ import {
   type CoachRevisionSectionKind,
   type CoachVisibleSectionSnapshot,
 } from './coachRevisionProposal';
-import { splitSessionName } from './sessionNaming';
+import {
+  resolveSessionDisplayName,
+  strengthComponentDisplayName,
+} from './sessionNaming';
 import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
@@ -80,13 +83,42 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
     return { ok: true, remainingWorkout: null };
   }
 
-  const survivorTitle = survivingSections.some((section) => section.kind === 'strength')
-    ? splitSessionName(snapshot.workout.title).title || snapshot.workout.title
+  // WHAT STAYS IS NAMED FROM ITSELF TOO — the mirror of the rule below for what
+  // leaves. This read `splitSessionName(snapshot.workout.title).title`, parsing
+  // the day's composed name for a strength half; `strengthComponentDisplayName`
+  // derives it from the typed intent and, failing that, from the component's own
+  // rows.
+  //
+  // WHERE THE LAST FALLBACK DIFFERS FROM THE DELETED PARSER — stated because the
+  // first version of this comment claimed "byte-identical" and that was FALSE for
+  // composed titles. When a day has NEITHER typed intent NOR a classifiable row,
+  // the day's own title is returned: identical to the parser for an uncomposed
+  // title, but for "Team Training + Upper Push" the parser returned "Upper Push"
+  // and this returns the whole string — which after a partial Bin can name the
+  // component just removed, in a frozen coach matching key.
+  //
+  // WHY THAT IS ACCEPTED HERE. The population is a day with a composed title, no
+  // `strengthIntent` (present in 29,896 of 30,937 distinct inputs across a whole
+  // bible run) AND no row the authored vocabulary can classify — unreachable in
+  // every world the harness reaches, and the whole-bible day-name differential is
+  // empty across both Bin call sites. Closing it honestly means giving a strength
+  // SECTION its own title instead of the day's, and `buildVisibleSections` sets
+  // it to `cleanText(workout.name)` in `coachRevisionProposal.ts`, which is on the
+  // LR-6 frozen list. Recorded as residual risk with a device-pass line, not
+  // patched around here. See `strengthComponentDisplayName`'s docblock.
+  const strengthSurvives = survivingSections.some((section) => section.kind === 'strength');
+  const survivorTitle = strengthSurvives
+    ? strengthComponentDisplayName({
+        strengthIntent: source.strengthIntent,
+        // THE COMPONENT'S OWN ROWS, NOT THE DAY'S. See `strengthComponentRows`.
+        exercises: strengthComponentRows(source, survivingSections),
+        fallbackTitle: snapshot.workout.title,
+      })
     : survivingSections[0].title || snapshot.workout.title;
   const survivorWorkoutType =
     survivingSections.every((section) => section.kind === 'session')
       ? source.workoutType
-      : survivingSections.some((section) => section.kind === 'strength')
+      : strengthSurvives
       ? 'Strength'
       : survivingSections.some((section) => section.kind === 'conditioning')
       ? 'Conditioning'
@@ -105,6 +137,163 @@ export function reduceAcceptedSessionForAthleteRemoval(args: {
   };
 }
 
+export type AthleteSessionComponentSplitResult =
+  | { ok: true; movedWorkout: Workout; remainingWorkout: Workout | null }
+  | { ok: false; code: 'nothing_to_move' | 'scope_not_on_day' | 'scope_is_whole_day' };
+
+/**
+ * Split a day into the component that LEAVES and the day that STAYS.
+ *
+ * Sam's ruling (2026-07-30): a session-scoped Move on a combined day — take the
+ * gym session, leave team training anchored — "same scoping Bin has". Bin's
+ * half of that already exists above; this returns BOTH halves from ONE snapshot
+ * so the day that stays and the session that leaves cannot disagree about which
+ * rows went where. Splitting them across two calls is how a move silently
+ * duplicates or drops content.
+ *
+ * IDENTITY. The remainder keeps the source identity — the day continues to
+ * exist — and the departing component takes a deterministic `:<kind>-component`
+ * suffix. That is the convention the §18 relocation path already mints (see
+ * `componentIdentity` in acceptedStateTransaction), so the move's conservation
+ * post-condition can find both halves rather than reading the split as a loss.
+ */
+export function splitAcceptedSessionForAthleteMove(args: {
+  day: ResolvedDay;
+  scope: UserRemovalScope;
+}): AthleteSessionComponentSplitResult {
+  const source = args.day.workout;
+  if (!source) return { ok: false, code: 'nothing_to_move' };
+  if (args.scope === 'whole_session') return { ok: false, code: 'scope_is_whole_day' };
+
+  const snapshot = snapshotProjectedDay(args.day);
+  if (!snapshot.workout) return { ok: false, code: 'nothing_to_move' };
+  const movedKind = REMOVAL_SECTION_KIND[args.scope];
+  const movedSections = movedKind
+    ? snapshot.workout.sections.filter((section) => section.kind === movedKind)
+    : [];
+  if (!movedKind || movedSections.length === 0) {
+    return { ok: false, code: 'scope_not_on_day' };
+  }
+
+  const remainder = reduceAcceptedSessionForAthleteRemoval({ day: args.day, scope: args.scope });
+  if (remainder.ok === false) return { ok: false, code: remainder.code === 'nothing_to_remove' ? 'nothing_to_move' : 'scope_not_on_day' };
+
+  const sourceIdentity = source.planEntryId ?? source.id;
+  const moved = materializeAcceptedVisibleSections({
+    source,
+    title: movedSections[0].title || snapshot.workout.title,
+    workoutType: source.workoutType,
+    durationMinutes: snapshot.workout.durationMinutes,
+    intensity: snapshot.workout.intensity,
+    sections: movedSections,
+    // The day keeps its recovery add-on; only the recovery component itself
+    // takes one away. See `keepRecoveryAddons`.
+    keepRecoveryAddons: movedKind === 'recovery',
+  });
+  // WHAT LEAVES IS NAMED FROM ITSELF, NOT FROM THE DAY IT LEFT.
+  //
+  // This used to string-split the composite day name with `splitSessionName`,
+  // on the reasoning that "Team Training + Upper Push" yields "Upper Push". It
+  // does — but only when the other half is a canonical strength label. When the
+  // strength arrived by a later ADD, the day is still called "Team Training +
+  // Easy Zone 2 Ski Erg", neither half is a strength label, and the splitter
+  // falls back to the LEFT one. So the gym session moved to its destination
+  // called "Team Training", was then classified team-only by its own name (its
+  // eight rows swallowed as team-training items), and stacking that onto a real
+  // team night was refused — the athlete was told his plan could not safely
+  // change, about a destination his own menu had just offered him.
+  //
+  // A parse of a name is not evidence about content. `resolveSessionDisplayName`
+  // is the naming owner and derives from typed intent and the actual rows, which
+  // is what `fixtureMinimalReplan` already does when it splits a strength
+  // component off a day. The composed half is named after it is composed, so the
+  // name describes what is really in it.
+  //
+  // TASK 11 — UNCHANGED, AND THE DIFFERENTIAL IS WHY.
+  //
+  // This site was never the name channel: it already derives from typed intent
+  // and rows, which is what the remainder above was rewired to do. The first
+  // draft of Task 11 also routed it through `strengthComponentDisplayName` on
+  // the reasoning that one function should answer for both halves of a split —
+  // and the whole-bible day-name differential came back with exactly ONE
+  // difference, here: a moved component on 2026-08-07 went from "Session" to
+  // "Team Training + Upper Pull". The helper's fallback keeps the title the
+  // component arrived with, and the title an untyped strength component arrives
+  // with is the COMPOSITE DAY NAME — so the "improvement" was the defect the
+  // block above exists to prevent, handing a departing gym session a name that
+  // says "Team Training" and gets it swallowed as team-training items at its
+  // destination. Left exactly as it was.
+  //
+  // The two functions therefore differ deliberately in ONE respect: what to do
+  // when there is no typed evidence. What STAYS keeps the day's title (the day
+  // continues to exist under its own name, which is byte-for-byte what the
+  // deleted parser returned). What LEAVES must not inherit it.
+  const movedWorkout = movedKind === 'strength'
+    ? {
+        ...moved,
+        name: resolveSessionDisplayName({
+          strengthIntent: moved.strengthIntent,
+          exercises: moved.exercises,
+          isTeamDay: false,
+          tier: 'core',
+        }) || moved.name,
+      }
+    : moved;
+  return {
+    ok: true,
+    movedWorkout: {
+      ...movedWorkout,
+      id: `${sourceIdentity}:${movedKind}-component`,
+      planEntryId: `${sourceIdentity}:${movedKind}-component`,
+    },
+    remainingWorkout: remainder.remainingWorkout,
+  };
+}
+
+/**
+ * THE ROWS THAT BELONG TO THE STRENGTH COMPONENT — nobody else's.
+ *
+ * Introduced by review round 2, and the finding it pays is worth keeping because
+ * it is the same mistake twice in one unit. Round 1 fixed
+ * `strengthComponentDisplayName` to name a component "from its own rows"; both
+ * callers then handed it `workout.exercises` — the PRE-REMOVAL, WHOLE-DAY list,
+ * every section combined. The docblock said one thing and the call did another.
+ *
+ * The consequence is not a cosmetic mislabel. `inferMeaningfulExerciseMovementPatterns`
+ * runs over whatever it is given, so ONE unrelated sibling row from a surviving
+ * recovery or accessory section widens the pattern set and FABRICATES a canonical
+ * label:
+ *
+ *     two real squat rows + one "Assisted Pull-up" sibling
+ *       whole-day list  -> "Full Body Strength"    <- invented, nothing is full-body
+ *       component rows  -> "Lower Squat"           <- what the day actually is
+ *
+ * and that string is written into `workout.name`, a FROZEN coach matching key.
+ * A fabricated label is worse than the composed title it replaced: the composed
+ * title at least described something that had been on the day.
+ *
+ * The scoping rule is not new either — `materializeAcceptedVisibleSections`
+ * already filters the source rows by the surviving sections' own
+ * `items[].exerciseIds` (`wantedExerciseIds`). This is that rule, narrowed to
+ * the one section being named, so the name and the rows the survivor actually
+ * keeps are derived from the same evidence.
+ *
+ * An empty result is honest and expected: a strength section whose items carry
+ * no ids yields no rows, no patterns, and the caller falls back to the day's
+ * title — the residual already recorded above, unchanged.
+ */
+export function strengthComponentRows(
+  source: Workout,
+  sections: readonly CoachVisibleSectionSnapshot[],
+): Workout['exercises'] {
+  const strengthSection = sections.find((section) => section.kind === 'strength');
+  if (!strengthSection) return [];
+  const ownIds = new Set(strengthSection.items.flatMap((item) => item.exerciseIds));
+  if (ownIds.size === 0) return [];
+  return (source.exercises ?? []).filter((row: any) =>
+    workoutRowIds(row).some((id) => ownIds.has(id)));
+}
+
 function materializeAcceptedVisibleSections(args: {
   source: Workout;
   title: string;
@@ -112,6 +301,26 @@ function materializeAcceptedVisibleSections(args: {
   durationMinutes?: number;
   intensity?: string;
   sections: CoachVisibleSectionSnapshot[];
+  /**
+   * Does the day's recovery ADD-ON belong to this half?
+   *
+   * THE ADD-ON IS A FACT ABOUT THE DAY, NOT ABOUT A COMPONENT — the same shape
+   * as `isTeamDay` above, and it went wrong the same way. `recoveryAddons` is a
+   * top-level field, so it was carried by whichever half happened to satisfy
+   * `hasRecovery`; on a day of strength + conditioning + team training NEITHER
+   * half does, and moving the gym session silently deleted the athlete's
+   * mobility work. `deviceFindingsReplayTests` caught it as a scoped move
+   * taking `recovery_addon` with it.
+   *
+   * It was invisible until Sam's charter (2026-07-30) stopped the generator
+   * filling spare days: the add-on used to land on the standalone recovery
+   * session the app placed, so a strength day rarely carried one.
+   *
+   * Default `true` keeps every existing caller's behaviour for the half that
+   * STAYS; the half that LEAVES passes false unless it is the recovery
+   * component itself.
+   */
+  keepRecoveryAddons?: boolean;
 }): Workout {
   const strength = args.sections.find((section) => section.kind === 'strength');
   const conditioning = args.sections.find((section) => section.kind === 'conditioning');
@@ -166,6 +375,23 @@ function materializeAcceptedVisibleSections(args: {
   return cloneWorkout(args.source, {
     name: title,
     workoutType: workoutType as Workout['workoutType'],
+    // THE ANCHOR IS A FACT ABOUT THE DAY, NOT ABOUT A COMPONENT.
+    //
+    // `isTeamDay` is what `isTeamTrainingSession` reads, and `cloneWorkout`
+    // inherits every field this call does not override — so BOTH halves of a
+    // split came out flagged as team days. The consequences were mirror images
+    // of each other and both wrong: the half that LEFT was classified team-only
+    // (its eight gym rows swallowed as team-training items, renamed "Team
+    // Training"), and the half that STAYED was renamed off the anchor, so the
+    // athlete's combined Monday reported as conditioning alone and the team
+    // night appeared to have travelled with the gym session.
+    //
+    // `hasSession` is exactly the question "did the team section stay with this
+    // half?" — team training snapshots as section kind `session`
+    // (REMOVAL_SECTION_KIND maps `team_component` -> `session`). So the anchor
+    // travels with the section that represents it and with nothing else. A Bin
+    // of the team component drops it; a Bin of anything else keeps it.
+    isTeamDay: hasSession,
     durationMinutes: args.durationMinutes ?? args.source.durationMinutes,
     intensity: (args.intensity ?? args.source.intensity) as Workout['intensity'],
     description: onlyConditioning
@@ -200,7 +426,9 @@ function materializeAcceptedVisibleSections(args: {
     strengthPatternContributions: hasStrength
       ? args.source.strengthPatternContributions
       : undefined,
-    recoveryAddons: hasRecovery ? args.source.recoveryAddons : undefined,
+    recoveryAddons: (args.keepRecoveryAddons ?? true) || hasRecovery
+      ? args.source.recoveryAddons
+      : undefined,
     coachAddedConditioningLabel: onlyConditioning
       ? title
       : nextConditioningBlock
@@ -407,7 +635,15 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     ? new Set<string>()
     : legacyConditioningTailIds(workout, renderableRows);
   const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds]);
-  const supportRows = isRecoveryWorkout(workout)
+  // ONE WORD FOR A COMPOSED OPTIONAL SESSION (Sam's ruling, 2026-08-01,
+  // signed with Batch 7): an athlete-added Gunshow / Accessories / Mobility
+  // session reads its door's name ALONE — its rows are contents, visible
+  // inside, never card vocabulary. So the trunk-row split that used to carve
+  // a "Midline Work" part out of an Accessories session does not apply to a
+  // workout carrying the typed marker: the marker means the whole session IS
+  // one composed thing (`stackTemplate` clears it the moment the day
+  // combines, so purity is guaranteed by construction, not re-inferred).
+  const supportRows = isRecoveryWorkout(workout) || (workout as Workout).composedOptionalKind
     ? []
     : renderableRows.filter(isTrunkSupportRow);
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));

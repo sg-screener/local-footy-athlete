@@ -136,7 +136,6 @@ function athleteContext(profile: OnboardingData | null | undefined): AthleteCont
   return {
     injuries: profile.injuries ?? [],
     equipmentTags: equipment.tags,
-    trainingLocation: profile.trainingLocation ?? DEFAULT_ATHLETE_CONTEXT.trainingLocation,
     onboardingData: profile,
   };
 }

@@ -345,3 +345,35 @@ export function requireProgramHydrationIngress(
   }
   return classification as AcceptedProgramHydrationIngressClassification;
 }
+
+/**
+ * L15 (HOME_SCREEN_REDESIGN ruling 1, 2026-07-30). The week-repeat writer is
+ * retired entirely — no code path can ever produce this overlay reason again.
+ * A week-scoped overlay carrying it is DERIVED OUTPUT from a prior build, not
+ * an athlete decision: dropping it at the read boundary is convergence, not
+ * loss, because the underlying week re-derives from its own base/facts on the
+ * very next read, exactly as if the overlay had never been written.
+ *
+ * The retired reason is named ONLY in this local type — it is never
+ * reintroduced into the live `WeekScopedWorkoutOverlay['reason']` union for
+ * the writer's sake. Any stored overlay whose `reason` matches it is dropped
+ * here, unconditionally, regardless of ingress classification.
+ */
+type RetiredWeekOverlayReason = 'repeat_week';
+const RETIRED_WEEK_OVERLAY_REASONS: readonly RetiredWeekOverlayReason[] = ['repeat_week'];
+
+export function dropRetiredWeekOverlaysAtHydration<
+  TState extends { weekScopedOverlays?: Record<string, { reason?: unknown } | null> },
+>(state: TState): TState {
+  const overlays = state.weekScopedOverlays;
+  if (!overlays) return state;
+  const entries = Object.entries(overlays);
+  const kept = entries.filter(([, overlay]) =>
+    !overlay ||
+    !RETIRED_WEEK_OVERLAY_REASONS.includes(overlay.reason as RetiredWeekOverlayReason));
+  if (kept.length === entries.length) return state;
+  return {
+    ...state,
+    weekScopedOverlays: Object.fromEntries(kept),
+  };
+}

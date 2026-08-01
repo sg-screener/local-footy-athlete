@@ -87,7 +87,7 @@ export const PreferredTrainingDaysScreen: React.FC<
       void commitAndAdvance({
         preferredTrainingDays: selectedDays,
         trainingDaysPerWeek: nextTrainingDays,
-      }, () => navigation.navigate('GymExperience'));
+      }, () => navigation.navigate('Equipment'));
     }
   };
 

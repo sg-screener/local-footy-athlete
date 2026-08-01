@@ -211,7 +211,7 @@ function constraintChecks(entry: GeneratedPropertyCase): GeneratedCheckResult[] 
 function slice4Checks(entry: GeneratedPropertyCase): GeneratedCheckResult[] {
   const scenarioId = entry.domain === 'placement'
     ? ((entry.data.swap as boolean) ? 'swap-upper-and-lower' : 'move-combined-lower')
-    : (entry.data.operations as string[]).includes('repeat_week') ? 'repeat-rich-week' : 'coach-add-bike-zone2';
+    : (entry.data.operations as string[]).includes('week_overlay_copy') ? 'week-overlay-copy-rich-week' : 'coach-add-bike-zone2';
   const scenario = SLICE4_GOLDEN_SCENARIOS.find((value) => value.id === scenarioId)!;
   const trace = buildSlice4ScenarioTrace(scenario);
   const first = trace.observations[0].ledger;

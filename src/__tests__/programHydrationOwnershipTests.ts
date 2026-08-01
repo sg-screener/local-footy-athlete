@@ -169,11 +169,11 @@ function acceptedFixture() {
     microcycles: [microcycle], primaryFocus: 'Football', isActive: true,
     createdAt: NOW, updatedAt: NOW,
   };
-  const repeatWorkout = simpleWorkout('repeat-week-owned', 1, 'Recovery');
+  const overlayWorkout = simpleWorkout('weekly-overlay-owned', 1, 'Recovery');
   const overlay = {
-    id: 'repeat-week-overlay', weekStart: '2026-07-20', weekEnd: '2026-07-26',
-    anchorDate: null, reason: 'repeat_week', exposureContractV2: currentContract(),
-    workoutsByDate: { '2026-07-20': repeatWorkout }, createdAt: NOW, updatedAt: NOW,
+    id: 'weekly-overlay-owned', weekStart: '2026-07-20', weekEnd: '2026-07-26',
+    anchorDate: null, reason: 'one_off_game', exposureContractV2: currentContract(),
+    workoutsByDate: { '2026-07-20': overlayWorkout }, createdAt: NOW, updatedAt: NOW,
   };
   const deletedWorkout = simpleWorkout('deleted-session', 0, 'Strength');
   const removal = {
@@ -188,11 +188,11 @@ function acceptedFixture() {
     protocolVersion: 1,
     adjustments: [{
       protocolVersion: 1,
-      id: 'reversible:repeat-week-owned',
-      kind: 'repeat_week',
+      id: 'reversible:weekly-overlay-owned',
+      kind: 'session_add',
       sourceActor: 'athlete',
       sourceSurface: 'program_tab',
-      sourceActionOrIntentId: 'repeat-week-action',
+      sourceActionOrIntentId: 'weekly-overlay-action',
       createdAt: NOW,
       acceptedRevision: 7,
       status: 'active',
@@ -373,15 +373,15 @@ async function main(): Promise<void> {
       'deletion ownership changed');
   });
 
-  await run('6 move, fixture, override and Repeat Week ownership remains unchanged', () => {
+  await run('6 move, fixture, override and week-overlay ownership remains unchanged', () => {
     const state = programStore.useProgramStore.getState();
     assert(state.acceptedMaterialContext.markedDays['2026-07-14'] === 'game',
       'fixture changed');
     assert(state.overrideContexts['2026-07-16']?.label === 'Athlete-owned move destination',
       'move/override context changed');
-    const repeat = state.weekScopedOverlays['2026-07-20'];
-    assert(repeat?.reason === 'repeat_week' && repeat.id === 'repeat-week-overlay',
-      'Repeat Week ownership changed');
+    const overlay = state.weekScopedOverlays['2026-07-20'];
+    assert(overlay?.reason === 'one_off_game' && overlay.id === 'weekly-overlay-owned',
+      'week-overlay ownership changed');
   });
 
   await run('7 current source facts, readiness, equipment and accepted profile truth remain unchanged', () => {
@@ -403,7 +403,7 @@ async function main(): Promise<void> {
     assert(JSON.stringify(state.reversibleAdjustmentLedger) ===
       JSON.stringify(fixture.reversibleAdjustmentLedger), 'reversible ledger changed');
     assert(state.reversibleAdjustmentLedger.adjustments[0]?.id ===
-      'reversible:repeat-week-owned', 'ledger identity changed');
+      'reversible:weekly-overlay-owned', 'ledger identity changed');
   });
 
   await run('9 accepted composition base is preserved except derived projections', () => {

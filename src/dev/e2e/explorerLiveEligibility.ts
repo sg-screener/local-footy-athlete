@@ -189,7 +189,7 @@ function buildLiveExplorerEligibilityWitnessState(args: {
       )),
     })),
     interpretationReceiptIds: [],
-    availableCapabilities: ['week.repeat'],
+    availableCapabilities: [],
     availableRenderTestIds: [
       args.step.controlTestId,
       ...(args.step.targetTestIds ?? []),

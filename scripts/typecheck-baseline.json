@@ -23,19 +23,18 @@
     "here so a future reader does not mistake a deletion for a fix, and so the",
     "product count dropping 63 -> 38 is attributable rather than mysterious."
   ],
-  "generatedAt": "2026-07-28",
+  "generatedAt": "2026-07-31",
   "scopes": {
     "product": {
       "label": "product src (ships to athletes)",
       "config": "tsconfig.compile.json",
-      "total": 37,
+      "total": 36,
       "files": {
         "src/dev/e2e/devE2EScenarioSession.ts": 1,
         "src/rules/illnessRecoveryWeekMode.ts": 1,
         "src/rules/reversibleAdjustmentLedger.ts": 1,
         "src/rules/temporarySourceFact.ts": 3,
         "src/screens/home/homeGameMutationController.ts": 1,
-        "src/screens/home/HomeScreen.tsx": 1,
         "src/screens/home/HomeScreenV2.tsx": 5,
         "src/screens/home/useHomeScreen.ts": 1,
         "src/store/fixtureMutationTransaction.ts": 3,
@@ -81,7 +80,7 @@
     "tests": {
       "label": "test harness (runs untyped via sucrase-node)",
       "config": "tsconfig.tests.json",
-      "total": 378,
+      "total": 375,
       "files": {
         "src/__tests__/acceptedStateTransactionTests.ts": 3,
         "src/__tests__/athleteSessionDeletionTests.ts": 5,
@@ -130,7 +129,6 @@
         "src/__tests__/devE2ESeedRegistryTests.ts": 1,
         "src/__tests__/devE2ESeedTestSupport.ts": 1,
         "src/__tests__/deviceExactSeed.ts": 10,
-        "src/__tests__/equipmentAvailabilityTests.ts": 1,
         "src/__tests__/explorerActionIngressTests.ts": 11,
         "src/__tests__/explorerRenderBindingTests.ts": 2,
         "src/__tests__/explorerRuntimeTests.ts": 7,
@@ -161,7 +159,6 @@
         "src/__tests__/programHydrationOwnershipTests.ts": 1,
         "src/__tests__/readinessSourceFactOwnershipTests.ts": 8,
         "src/__tests__/recoveryAddonAttachmentTests.ts": 1,
-        "src/__tests__/repeatWeekTransactionTests.ts": 2,
         "src/__tests__/resolverInjuryFilterTests.ts": 1,
         "src/__tests__/scenarioQA/actions.ts": 1,
         "src/__tests__/scenarioQA/invariants.ts": 1,

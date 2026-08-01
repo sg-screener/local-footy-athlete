@@ -39,6 +39,10 @@ import {
   shouldUseLegacyStrengthInference,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
+import {
+  STRENGTH_SESSION_VARIANTS,
+  strengthVariantForPatterns,
+} from '../data/strengthSessionVariants';
 
 export type MovementPattern = 'squat' | 'hinge' | 'push' | 'pull';
 
@@ -254,29 +258,23 @@ function movementPatternsFromVisibleContent(input: SessionNameInput): MovementPa
  * Map an unordered set of movement patterns to the canonical athlete-facing
  * strength label. Returns null when no strength patterns are present.
  */
+/**
+ * IT NO LONGER KNOWS THE SEVEN — IT ASKS.
+ *
+ * This function held the mapping, and the coach revision registry held a
+ * FOUR-entry list of the same sessions, and neither could see the other: the
+ * athlete's Lower Body door could only hand back combined squat+hinge, while
+ * Lower Squat and Lower Hinge — which the generator places every week and which
+ * this function has always had names for — were unreachable through any door.
+ * Two representations of one decision, which `docs/NORTH_STAR.md` presumes wrong.
+ *
+ * `data/strengthSessionVariants.ts` is the authored set now and this is a lookup
+ * into it, so a card's name and a picker's name cannot drift.
+ */
 export function canonicalStrengthLabel(
   patterns: MovementPattern[],
 ): string | null {
-  const set = new Set(patterns);
-  const hasSquat = set.has('squat');
-  const hasHinge = set.has('hinge');
-  const hasPush = set.has('push');
-  const hasPull = set.has('pull');
-  const hasLower = hasSquat || hasHinge;
-  const hasUpper = hasPush || hasPull;
-
-  if (hasLower && hasUpper) return 'Full Body Strength';
-  if (hasLower) {
-    if (hasSquat && hasHinge) return 'Lower Body Strength';
-    if (hasSquat) return 'Lower Squat';
-    return 'Lower Hinge';
-  }
-  if (hasUpper) {
-    if (hasPush && hasPull) return 'Upper Body Strength';
-    if (hasPush) return 'Upper Push';
-    return 'Upper Pull';
-  }
-  return null;
+  return strengthVariantForPatterns(patterns)?.label ?? null;
 }
 
 /** Canonical team-session name (team day with no strength load). */
@@ -301,8 +299,57 @@ function fallbackFromText(text: string | undefined): string {
  *   3. Meaningful patterns from final visible exercises for generic strength.
  *   4. Typed strengthPattern from the engine/session allocation.
  *   5. Inferred patterns from strength-scoped focus (legacy fallback).
- *   6. Inferred patterns from strength-scoped name (AI-generated fallback).
- *   7. Cleaned name/focus pass-through (for conditioning / recovery / other).
+ *   6. DELETED (Task 11) — inferred patterns from strength-scoped name.
+ *   7. Name pass-through for conditioning / recovery / other. The CLEANED-FOCUS
+ *      half of this step is DELETED (Task 11).
+ *
+ * WHAT THIS FUNCTION IS TO THE COACH, AND WHY TWO RULES SURVIVED — Task 11.
+ *
+ * Its output IS `workout.name`, and `workout.name` is a FROZEN matching key: the
+ * router compares `entry.sessionName` case-insensitively against the classifier's
+ * `targetSessionName` (`coachCommandRouter.ts:787`), the executor regexes it
+ * (`coachCommandExecutor.ts:1870`), and the packet's `stripDay` hands it to the
+ * LLM as the ONLY vocabulary it can name a session with (task-10-report §2.2).
+ * Changing what an untyped session resolves to is therefore a silent
+ * coach-pipeline behaviour change, which LR-6 forbids. So the rules were not
+ * deleted on the strength of the argument that nothing should read them; each was
+ * MEASURED first, by recording every `(input -> output)` pair this function
+ * produced across a full `npm run test:bible` run (30,937 distinct inputs, 31,036
+ * calls) and replaying the corpus against each candidate deletion:
+ *
+ *   rule 6, name inference   — 0 of 30,937 changed.  DELETED.
+ *   rule 7, cleaned focus    — 0 of 30,937 changed.  DELETED. This one was
+ *                              defect 3's exact mechanism: `allocation.focus`
+ *                              reaching a card through a punctuation tidier
+ *                              ("easy off-feet aerobic finisher (bike/row/ski/
+ *                              erg, 15-20min)" was a session NAME). It is now
+ *                              structurally unable to become a name.
+ *   rule 5, focus inference  — 2 distinct inputs / 6 calls changed. KEPT.
+ *                              The load-bearing one is a legacy team day whose
+ *                              only evidence of its strength half is the focus
+ *                              text: `{focus: "Team training + Upper body -
+ *                              balanced push + pull (…)", isTeamDay: true, name:
+ *                              "Team Training", exercises: []}` resolves to
+ *                              "Team Training + Upper Body Strength" and would
+ *                              silently become "Team Training".
+ *   rule 7, name pass-through — 9 distinct inputs / 9 calls changed. KEPT.
+ *                              Hand-composed and coach-authored sessions
+ *                              ("Strength Session", "Upper Strength") carry a
+ *                              name and no typed classification; without it they
+ *                              become "Session" and the coach loses the key.
+ *
+ * The three EARLY guards below (recovery tier, accessory/prehab wording,
+ * standalone conditioning) are the same channel and are the LOUDEST: 972
+ * distinct inputs / 987 calls change without them, because they are what gives
+ * every conditioning and recovery session its template name.
+ *
+ * THE ATHLETE SURFACES DO NOT DEPEND ON ANY OF THIS, and that is the property
+ * this unit bought. `project()` calls this function with `strengthIntent`,
+ * `exercises`, `isTeamDay` and `tier` and DELIBERATELY passes neither `focus`
+ * nor `name` (`projectVisibleWeek.ts` `partHeadline`), so no surviving rule can
+ * fire through the athlete's own projection. That omission is pinned by a source
+ * contract (`projectionOwnershipTests`) so it cannot be undone by accident.
+ * What remains is coach-pipeline debt, owned by whoever lifts LR-6.
  */
 export function resolveSessionDisplayName(input: SessionNameInput): string {
   const isTeam = !!input.isTeamDay;
@@ -342,7 +389,6 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
   } else {
     const visibleContentPatterns = movementPatternsFromVisibleContent(input);
     const legacyFocus = strengthTextForMovementInference(input.focus);
-    const legacyName = strengthTextForMovementInference(input.name);
     const allowLegacyTextInference = shouldUseLegacyStrengthInference({
       strengthIntent: input.strengthIntent,
       standaloneConditioning: isStandaloneConditioning,
@@ -359,7 +405,11 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
         ? input.movementPatterns
         : visibleContentPatterns,
       focus: isConditioningOnlyText(legacyFocus) ? undefined : legacyFocus,
-      name: isConditioningOnlyText(legacyName) ? undefined : legacyName,
+      // RULE 6 DELETED (Task 11). `name` was the AI-generated-name inference
+      // channel into the legacy adapter's `patternsFromLegacyText`. Measured over
+      // the whole bible corpus it changed nothing (0 of 30,937 distinct inputs),
+      // so it is gone rather than kept "just in case" — a channel nothing travels
+      // is still a channel a future edit can start using.
       allowTextInference: allowLegacyTextInference,
       allowScalarInference: allowLegacyTextInference,
     });
@@ -376,67 +426,129 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
   // Step 3: strength session (no team) — use canonical label.
   if (strengthLabel) return strengthLabel;
 
-  // Step 4: conditioning / recovery / other — pass through name (or cleaned focus).
+  // Step 4: conditioning / recovery / other — pass through name.
+  //
+  // THE CLEANED-FOCUS HALF IS DELETED (Task 11). It used to be
+  // `fallbackFromText(input.focus)` — a punctuation tidier that cut the engine's
+  // focus string at its first separator and handed the head to the athlete as a
+  // session name. That is defect 3 in `surfaceAgreementTests` cell 3, stated as a
+  // mechanism instead of a symptom: "easy off-feet aerobic finisher
+  // (bike/row/ski/erg, 15-20min)" was a NAME, not a leak from somewhere else.
+  // Measured over the whole bible corpus it produced nothing (0 of 30,937
+  // distinct inputs), so `allocation.focus` can no longer become a name by any
+  // route through this function.
   if (existingName) return existingName;
-  const cleaned = fallbackFromText(input.focus);
-  if (cleaned) return cleaned;
   return 'Session';
 }
 
 /**
- * Canonical strength labels — the closed set of strings produced by
- * canonicalStrengthLabel. Used by splitSessionName as the presentation-layer
- * "is this side the strength?" probe, so the display can lead with strength
- * regardless of how the canonical name composed the parts.
+ * NAME THE STRENGTH COMPONENT FROM ITSELF — the successor to `splitSessionName`.
+ *
+ * `splitSessionName` is DELETED (Task 11). It took a composed day name like
+ * "Team Training + Upper Push", looked for a " + ", and asked whether either
+ * half happened to be one of seven strings — a PARSER that turned a name back
+ * into structure. `visibleProjection.ts`'s own header names its existence as the
+ * proof that names were being used as a data channel between layers, and the
+ * unit that header belongs to exists to end that.
+ *
+ * Both of its remaining callers wanted the same thing and asked the wrong
+ * question to get it. A Bin that leaves the strength work standing has to name
+ * what is left; they named it by parsing the name of the day it came out of.
+ * When the strength arrived by a later ADD the day is called "Team Training +
+ * Easy Zone 2 Ski Erg", NEITHER half is a strength label, and the parser falls
+ * back to the LEFT one — which is exactly the defect `sessionComponents`
+ * already paid for the half that LEAVES ("WHAT LEAVES IS NAMED FROM ITSELF, NOT
+ * FROM THE DAY IT LEFT"). This is that same fix for the half that STAYS.
+ *
+ * TWO SOURCES OF EVIDENCE, IN PRECEDENCE ORDER, AND NEITHER IS A NAME.
+ *
+ *   1. `strengthIntent` — the typed contract. Present in 29,896 of the 30,937
+ *      distinct inputs a whole `test:bible` run produces, so this is the answer
+ *      almost always.
+ *   2. THE ROWS — WHICHEVER ROWS THE CALLER HANDS OVER, AND THAT IS THE CALLER'S
+ *      JOB TO GET RIGHT. `inferMeaningfulExerciseMovementPatterns` reads exercise
+ *      names against the locked selectable vocabulary and returns movement
+ *      patterns — `resolveSessionDisplayName`'s precedence step 2, consulted only
+ *      when there is no typed intent.
+ *
+ *      THIS FUNCTION CANNOT CHECK THE SCOPE OF WHAT IT IS GIVEN, and the first
+ *      version of this docblock said "the component's own exercise names" as
+ *      though it could. Both callers were passing the PRE-REMOVAL WHOLE-DAY row
+ *      list, so one row from another surviving section widened the pattern set
+ *      and FABRICATED a canonical label — two squat rows plus an attached
+ *      finisher's push-up resolved "Full Body Strength" for a day with nothing
+ *      full-body on it, written into `workout.name`, a frozen coach matching key.
+ *      Callers now scope with `strengthComponentRows` (`sessionComponents.ts`),
+ *      which reuses the section-id filter `materializeAcceptedVisibleSections`
+ *      already applies to the rows the survivor keeps — so the name and the
+ *      content are derived from the same evidence. A wider list still produces a
+ *      wider name; that is the contract, not a bug in it.
+ *
+ * Step 2 is here because of a review finding, and the finding is worth keeping:
+ * WITHOUT it, this function's fallback fired for every untyped day — even one
+ * whose rows are Barbell Bench Press and Barbell Row. `resolveSessionDisplayName`
+ * only consults visible content when `strengthPattern` is set or the focus/name
+ * text says "strength" (`movementPatternsFromVisibleContent`), and this call
+ * deliberately passes NEITHER focus nor name, so real strength rows were being
+ * ignored and the day's title came back instead. Deriving the patterns here and
+ * handing them over as `movementPatterns` restores content evidence without
+ * reopening the text channel: exercise names come from the authored vocabulary,
+ * a composed session name does not.
+ *
+ * THE FALLBACK, AND EXACTLY WHEN IT DIFFERS FROM THE DELETED PARSER. When there
+ * is neither typed intent nor a classifiable row, the day's own title is
+ * returned. For an UNCOMPOSED title that is byte-for-byte what the parser
+ * returned (no " + " -> `title === name`). For a COMPOSED title it is NOT: the
+ * parser returned one half ("Team Training + Upper Push" -> "Upper Push") and
+ * this returns the whole string — which, after a partial Bin, can name the
+ * component that was just removed. That is a real divergence and it is recorded
+ * rather than hidden:
+ *
+ *   - it is UNREACHABLE in every world the harness reaches (whole-bible day-name
+ *     differential: empty, 1,705 observations), because the population it needs
+ *     is a day with a composed title, no typed intent AND no classifiable row;
+ *   - the honest closure is for a strength SECTION to carry its own title
+ *     instead of the day's — `buildVisibleSections` sets it to
+ *     `cleanText(workout.name)`, so the snapshot cannot tell a component's name
+ *     from its day's. That is a change to `coachRevisionProposal.ts`, which is on
+ *     the LR-6 frozen list, so it is NOT available to this unit;
+ *   - the deleted parser had the SAME defect class from the other side: on
+ *     "Easy Zone 2 Ski Erg + Upper Push" with the conditioning binned, its
+ *     left-half fallback named the removed component too.
+ *
+ * Carried to the boundary report as residual risk on the untyped-legacy
+ * population, with a device-pass line attached.
+ *
+ * `isTeamDay: false` is not a claim about the day. It is the same argument the
+ * departing half passes: the strength component's own name is asked for, not the
+ * day's.
  */
-const STRENGTH_LABELS: ReadonlySet<string> = new Set([
-  'Lower Squat',
-  'Lower Hinge',
-  'Lower Body Strength',
-  'Upper Push',
-  'Upper Pull',
-  'Upper Body Strength',
-  'Full Body Strength',
-]);
+export function strengthComponentDisplayName(args: {
+  strengthIntent?: StrengthIntent;
+  exercises?: SessionNameInput['exercises'];
+  fallbackTitle: string;
+}): string {
+  const named = resolveSessionDisplayName({
+    strengthIntent: args.strengthIntent,
+    // Consulted only when `strengthIntent` is absent — the typed contract wins
+    // inside `resolveSessionDisplayName` before patterns are read at all.
+    movementPatterns: inferMeaningfulExerciseMovementPatterns(args.exercises),
+    exercises: args.exercises,
+    isTeamDay: false,
+    tier: 'core',
+  });
+  return isCanonicalStrengthSessionLabel(named) ? named : args.fallbackTitle;
+}
 
 /**
- * UI helper: split a canonical name like "Team Training + Upper Push" into
- * { title, context }. When there's no " + " separator, context is null.
+ * Is this string one of the authored strength-session labels?
  *
- * Presentation rule (display order):
- *   When one half is a canonical strength label, the strength ALWAYS leads
- *   as `title` and the other half becomes `context` prefixed with "+ ".
- *   This is purely a display-order swap — the canonical name itself
- *   (produced by resolveSessionDisplayName) is unchanged, so logs, AI
- *   payloads, and persisted state stay stable.
- *
- *     "Team Training + Upper Push"    → { title: "Upper Push",        context: "+ Team Training" }
- *     "Team Training + Lower Squat"   → { title: "Lower Squat",       context: "+ Team Training" }
- *     "Team Training"                 → { title: "Team Training",     context: null }
- *     "Upper Push"                    → { title: "Upper Push",        context: null }
- *     "Long Nasal Run"                → { title: "Long Nasal Run",    context: null }
- *
- * Callers should use resolveSessionDisplayName FIRST to produce the canonical
- * name, then this to render a two-tier card layout.
+ * Read from `data/strengthSessionVariants.ts`, the authored set — NOT from a
+ * hand-written list beside it. `splitSessionName` carried its own seven-string
+ * copy of the same labels, which is the two-representations shape the authored
+ * table was introduced to end (see `canonicalStrengthLabel` above). An eighth
+ * variant is now automatically recognised here.
  */
-export function splitSessionName(
-  name: string,
-): { title: string; context: string | null } {
-  if (!name) return { title: '', context: null };
-  const idx = name.indexOf(' + ');
-  if (idx < 0) return { title: name.trim(), context: null };
-  const left = name.slice(0, idx).trim();
-  const right = name.slice(idx + 3).trim();
-  // Strength-leads rule: if exactly one half is a canonical strength label,
-  // lead with strength and demote the other half to a "+ context" subtitle.
-  const leftIsStrength = STRENGTH_LABELS.has(left);
-  const rightIsStrength = STRENGTH_LABELS.has(right);
-  if (rightIsStrength && !leftIsStrength) {
-    return { title: right, context: `+ ${left}` };
-  }
-  if (leftIsStrength && !rightIsStrength) {
-    return { title: left, context: `+ ${right}` };
-  }
-  // Neither (or both — defensive): preserve the canonical order.
-  return { title: left, context: right };
+export function isCanonicalStrengthSessionLabel(name: string): boolean {
+  return STRENGTH_SESSION_VARIANTS.some((variant) => variant.label === name);
 }

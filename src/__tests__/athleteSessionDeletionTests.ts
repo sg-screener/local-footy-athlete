@@ -40,6 +40,8 @@ import {
   applyUserRemovalConstraintsToWeek,
   userRemovalConstraintId,
 } from '../rules/userRemovalConstraints';
+import { isAthletePlacedSession } from '../rules/athletePlacement';
+import { reduceAcceptedSessionForAthleteRemoval } from '../utils/sessionComponents';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
@@ -47,7 +49,6 @@ import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProdu
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
-import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   createEmptyReversibleAdjustmentLedger,
@@ -118,7 +119,6 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
     teamTrainingDuration: '60-90 minutes',
-    teamTrainingIntensity: 'Hard',
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete',
@@ -602,8 +602,16 @@ run('regression', '5 whole-session deletion on a stacked day leaves Rest', () =>
   const date = dateForDay(WEEK, stacked.dayOfWeek);
   deleteWorkout({ date, workout: stacked });
   assert(!byDay().has(stacked.dayOfWeek), 'whole stacked day survived');
-  assert(useProgramStore.getState().acceptedMaterialContext.markedDays[date] === 'rest',
-    'whole deletion did not own Rest');
+  // RE-POINTED, not deleted (Sam, 2026-07-30): a deletion door never writes a
+  // calendar mark. The day is still owned as Rest — by the constraint and the
+  // placement stamp, which is what the resolver reads — and the athlete's
+  // calendar stays theirs. Asserting the mark was asserting the mechanism.
+  assert(useProgramStore.getState().acceptedMaterialContext.markedDays[date] === undefined,
+    'the deletion wrote a calendar mark');
+  const owned = useProgramStore.getState().userRemovalConstraints
+    .find((constraint) => constraint.targetDate === date && constraint.status === 'active');
+  assert(owned?.wholeDayRestOwned === true,
+    'whole deletion did not own Rest through its constraint');
 });
 
 run('regression', '6 phase matrix keeps deletion authoritative and Bible-valid', () => {
@@ -811,7 +819,7 @@ run('regression', '9 tap and Coach whole-session deletion converge', () => {
   assert(visibleSemantic() === tapSemantic, 'tap and Coach accepted states differ');
 });
 
-run('regression', '10 reload, rebuild, Repeat Week and rollover do not resurrect target', () => {
+run('regression', '10 reload, rebuild and rollover do not resurrect target', () => {
   const seeded = seedExactSundayRegression();
   deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
   const persisted = clone(useProgramStore.getState());
@@ -829,8 +837,6 @@ run('regression', '10 reload, rebuild, Repeat Week and rollover do not resurrect
   }));
   commitProgramSetupRebuildTransaction({ program: rebuilt, profile: seeded.athlete, todayISO: WEEK });
   assert(!byDay().has(0), 'rebuild resurrected target');
-  repeatWeekIntoNextWeek({ baseProfile: seeded.athlete, sourceWeekDate: WEEK, todayISO: WEEK });
-  assert(!byDay().has(0), 'Repeat Week resurrected concrete target');
   rolloverProgramBlock({ baseProfile: seeded.athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((constraint) =>
     constraint.targetDate === SUNDAY && constraint.status === 'active'),
@@ -877,9 +883,6 @@ run('regression', '11 impossible relocation records typed reduction and keeps de
   commitProgramSetupRebuildTransaction({ program: rebuilt, profile: athlete, todayISO: WEEK });
   assert(accepted().contract.authorisedReductions.some((entry) =>
     entry.deletionIdentity === constraint.id), 'rebuild discarded typed deletion reduction');
-  repeatWeekIntoNextWeek({ baseProfile: athlete, sourceWeekDate: WEEK, todayISO: WEEK });
-  assert(accepted().contract.authorisedReductions.some((entry) =>
-    entry.deletionIdentity === constraint.id), 'Repeat Week discarded source reduction');
   rolloverProgramBlock({ baseProfile: athlete, targetDateISO: '2026-08-10' });
   assert(useProgramStore.getState().userRemovalConstraints.some((entry) =>
     entry.id === constraint.id && entry.status === 'active'),
@@ -973,7 +976,21 @@ run('regression', '15 exact Upper Pull component deletion preserves Team Trainin
   assert(prescriptionSignature(byDay().get(4)) === prescriptionSignature(pushBefore),
     `Thursday Upper Push identity/prescription changed ` +
     `${prescriptionSignature(pushBefore)} -> ${prescriptionSignature(byDay().get(4))}`);
-  assert(!byDay().has(5), 'optional Friday work was not displaced before CORE work');
+  // REWRITTEN, AND THE CHANGE IS THE POINT (Sam's Rest law, 2026-07-30).
+  //
+  // This asserted that Friday was EMPTIED — that the repair deleted the
+  // athlete's optional Gunshow to manufacture a rest day. Under the Rest law it
+  // never has to: a day carrying only optional work already counts as rest, so
+  // the athlete keeps what they chose and the week still meets its minimum.
+  // The old assertion was pinning the app taking something from the athlete.
+  const friday = byDay().get(5);
+  assert(friday && (friday as { sessionTier?: string }).sessionTier === 'optional',
+    `the athlete's optional Friday work was deleted to manufacture rest: ${friday?.name ?? 'gone'}`);
+  assert(after.evaluation.ledger.restStress.trueFullRestDays.includes(5),
+    'Friday carries only optional work and is not counted as rest');
+  assert(after.evaluation.ledger.restStress.trueFullRestDays.length >=
+    after.contract.restStress.requiredFullRestMinimum,
+    'the week no longer meets its full-rest minimum');
   assert(after.evaluation.ledger.mainStrength.achievedCount ===
     before.evaluation.ledger.mainStrength.achievedCount, 'pull relocation reduced strength');
   assert(after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull === 1,
@@ -982,11 +999,12 @@ run('regression', '15 exact Upper Pull component deletion preserves Team Trainin
     entry.reason === 'explicit_user_override'), 'pull relocation created a reduction');
   assert(useProgramStore.getState().acceptedMaterialContext.markedDays['2026-07-14'] !== 'rest',
     'component deletion widened to whole-day Rest');
-  // Binning Tuesday's pull relocates it to Wednesday AND empties Friday's
-  // optional session (a real repair side effect — bug 3). Disclosed-repair
-  // (invariant #4) requires the confirmation to name every touched day.
-  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday. ' +
-    'I also rebalanced Friday to keep your week balanced.',
+  // DISCLOSED-REPAIR (invariant #4) still holds, and now discloses less because
+  // less is done: the confirmation names every day the repair TOUCHED, and Friday
+  // is no longer one of them. A sentence that still said "I also rebalanced
+  // Friday" would be a signed sentence that lies — the thing Sam's copy ruling
+  // forbids by name.
+  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday.',
     `message=${result.message}`);
   assert(visibleWeek().find((day) => day.date === '2026-07-15')?.workout?.planEntryId ===
     relocated.planEntryId, 'weekly card and accepted pull differ');
@@ -1184,7 +1202,12 @@ run('property', 'workout names and stale workoutType are not removal identity', 
     ? { ...workout, name: 'Renamed by rebuild', workoutType: 'Strength' as const }
     : workout);
   const visible = applyUserRemovalConstraintsToWeek({ workouts: mutated, weekStart: WEEK, constraints: [constraint] });
-  assert(!visible.some((workout) => workout.dayOfWeek === 0), 'copy fields defeated target ownership');
+  // The day may now carry the athlete-owned REST stub that replaced the
+  // calendar mark. What must not survive is the SESSION.
+  const survivingSession = visible.find((workout) =>
+    workout.dayOfWeek === 0 && workout.workoutType !== 'Rest');
+  assert(!survivingSession,
+    `copy fields defeated target ownership: "${survivingSession?.name ?? ''}"`);
 });
 
 run('property', 'equivalent work may relocate but never to prohibited target', () => {
@@ -1410,10 +1433,17 @@ run('mutation', 'ignoring persisted removal resurrects target and is detected', 
     wholeDayRestOwned: true, createdAt: '2026-07-15T00:00:00.000Z',
     restoredAt: null, restorationReason: null,
   };
-  const ignored = accepted().composedWorkouts.some((workout) => workout.dayOfWeek === 0);
+  const hasSession = (workouts: readonly Workout[]): boolean =>
+    workouts.some((workout) => workout.dayOfWeek === 0 && workout.workoutType !== 'Rest');
+  const ignored = hasSession(accepted().composedWorkouts);
   const enforced = applyUserRemovalConstraintsToWeek({ workouts: accepted().composedWorkouts, weekStart: WEEK, constraints: [constraint] });
-  assert(ignored && !enforced.some((workout) => workout.dayOfWeek === 0),
+  assert(ignored && !hasSession(enforced),
     'mutation witness did not distinguish ignored ownership');
+  // And the emptiness is OWNED rather than merely absent — that stamp is what
+  // keeps the derived filler off the day now that no calendar mark does.
+  const restStub = enforced.find((workout) => workout.dayOfWeek === 0);
+  assert(restStub && isAthletePlacedSession(restStub),
+    'the emptied day carries no athlete-placement stamp — a deriver will refill it');
 });
 
 run('mutation', 'component scope cannot mutate into whole-day Rest ownership', () => {
@@ -1447,8 +1477,92 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
   'accepted rebasing ignored persisted constraint');
 });
 
+run('regression', 'a partial Bin names the survivor from ITS OWN rows, never the whole day', () => {
+  // REVIEW ROUND 2. `strengthComponentDisplayName` names a component from the
+  // rows it is handed; both callers handed it `workout.exercises` — the
+  // PRE-REMOVAL, WHOLE-DAY list. `inferMeaningfulExerciseMovementPatterns` runs
+  // over whatever it is given, so ONE row from a DIFFERENT surviving section is
+  // enough to widen the pattern set and FABRICATE a canonical label, which is
+  // then written into `workout.name` — a frozen coach matching key.
+  //
+  // THE FIXTURE IS THE POINT, so it is spelled out. The sibling row must land in
+  // another SECTION, not merely be another row: a squat day whose strength
+  // section happens to contain a pull-up really is more than squats, and naming
+  // it broadly is correct. Here the day is squat-only strength PLUS an attached
+  // bodyweight finisher whose row is "Push-ups" — the conditioning block puts it
+  // in the `conditioning` section (verified: strength -> [r-squat, r-front],
+  // conditioning -> [r-row]). Binning the TEAM component leaves both, and the
+  // strength component is still squat-only.
+  //
+  //   whole-day rows -> "Full Body Strength"   <- invented; nothing here is full-body
+  //   component rows -> "Lower Squat"          <- what the survivor actually is
+  //
+  // Asserted through the REAL reducer, not through the naming helper. The helper
+  // was already correct and the defect was entirely in what the call site passed,
+  // so a unit test of `strengthComponentDisplayName` would have stayed green
+  // through the whole bug — which is exactly how it shipped.
+  const row = (id: string, name: string) => ({
+    id,
+    workoutId: 'w-legacy',
+    exerciseId: id,
+    exercise: { id, name },
+    exerciseOrder: 1,
+    prescribedSets: 3,
+    prescribedRepsMin: 5,
+    prescribedRepsMax: 5,
+  });
+  // UNTYPED legacy day — no `strengthIntent`, so naming must fall through to the
+  // rows. With typed intent the rows are never consulted, which is why the whole
+  // reachable-world differential stays empty and this needs a hand-built day.
+  const workout = {
+    id: 'w-legacy',
+    microcycleId: 'mc-legacy',
+    dayOfWeek: 1,
+    name: 'Team Training + Lower Squat',
+    description: '',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    isTeamDay: true,
+    intensity: 'Moderate',
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      attachedKind: 'finisher',
+      options: [{
+        title: 'Bodyweight Conditioning Circuit',
+        description: '3 rounds',
+        exerciseIds: ['r-finisher'],
+        durationMinutes: 10,
+      }],
+    },
+    exercises: [
+      row('r-squat', 'Back Squat'),
+      row('r-front', 'Front Squat'),
+      row('r-finisher', 'Push-ups'),
+    ],
+  } as unknown as Workout;
+  const day = { date: WEEK, source: 'template', workout } as unknown as Parameters<
+    typeof reduceAcceptedSessionForAthleteRemoval
+  >[0]['day'];
+
+  const reduced = quiet(() => reduceAcceptedSessionForAthleteRemoval({
+    day, scope: 'team_component',
+  }));
+  assert(reduced.ok === true && !!reduced.remainingWorkout,
+    `the reducer refused the fixture (${JSON.stringify(reduced)}) — this cell `
+    + 'cannot see the defect it exists for');
+  const named = reduced.ok === true ? (reduced.remainingWorkout?.name ?? '') : '';
+  assert(named !== 'Full Body Strength',
+    `the survivor was named "${named}" — a canonical label FABRICATED from a row `
+    + 'that is not in the strength component. Nothing on this day is full-body; '
+    + 'the finisher\'s push-up widened the pattern set.');
+  assert(named === 'Lower Squat',
+    `the survivor was named "${named}", not "Lower Squat" — the surviving strength `
+    + 'component is two squat rows and nothing else.');
+});
+
 console.warn = originalWarn;
-console.log(`\nAthlete session deletion totals: regressions=${regressions}/23 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
+console.log(`\nAthlete session deletion totals: regressions=${regressions}/24 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

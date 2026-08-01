@@ -23,7 +23,6 @@ const DIAGNOSTIC_ACTION_TYPE: Readonly<Record<string, string>> = {
   'equipment.clear': 'equipment_change',
   'session-feedback.record': 'session_feedback',
   'adjustment.restore': 'clear_adjustment',
-  'week.repeat': 'repeat_week',
 };
 
 /** Exact Explorer smoke manifests projected into the scenario-session V2 protocol. */

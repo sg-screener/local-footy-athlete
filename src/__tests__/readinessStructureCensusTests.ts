@@ -39,6 +39,7 @@ import {
   READINESS_STRUCTURE_LAW,
   READINESS_EDGE_CENSUS,
   STRUCTURE_DEBT_BASELINE,
+  STRUCTURE_DEBT_FOUNDING_CEILING,
   SUPERSEDED_EXEMPTION_CLAIMS,
   readinessEdgesIn,
 } from '../data/readinessStructureCensus';
@@ -171,6 +172,25 @@ console.log('\n[4] THE RATCHET — structure debt may shrink, never grow');
   ok(`the baseline is tightened to the current debt (${debt})`,
     debt === STRUCTURE_DEBT_BASELINE,
     `debt fell to ${debt} — lower STRUCTURE_DEBT_BASELINE to match, or the slack is re-spendable`);
+
+  // DIRECTION 4, backported from the legacy reckoning census (2026-07-30).
+  //
+  // The three directions above are CIRCULAR. Both of the first two compare the
+  // debt against STRUCTURE_DEBT_BASELINE, so a new readiness->structure edge can
+  // be admitted by raising the declared count and the baseline together — which
+  // is precisely how someone declares a violation into a census instead of
+  // fixing it. Proven against the legacy census on 2026-07-30: the whole suite
+  // stayed green while brand-new surface was admitted.
+  //
+  // The ceiling is FROZEN AT ZERO because the debt was paid to zero on
+  // 2026-07-29. The ruling is fully discharged, so this census may never again
+  // DECLARE a structure violation. Every future one is fixed, not filed.
+  ok(`the baseline (${STRUCTURE_DEBT_BASELINE}) never exceeds the founding ceiling `
+    + `(${STRUCTURE_DEBT_FOUNDING_CEILING})`,
+    STRUCTURE_DEBT_BASELINE <= STRUCTURE_DEBT_FOUNDING_CEILING,
+    'a readiness->structure edge is being DECLARED rather than fixed. The debt was paid '
+    + 'to zero on 2026-07-29 and the ceiling was tightened to match, so there is no '
+    + 'headroom to declare into. Raising the ceiling needs a ruling, not an edit.');
 }
 
 console.log('\n[5] COMPLETENESS — no readiness edge is undeclared');

@@ -105,7 +105,6 @@ function inputsFor(c: Combination): CoachingInputs {
     selectedDays,
     teamTrainingDaysPerWeek: teamTrainingDays.length,
     teamTrainingDays,
-    teamTrainingIntensity: 'Hard',
     sprintExposure: '2+ times per week',
     conditioningLevel: CAPACITY[c.capacity].conditioningLevel,
     recentTrainingLoad: CAPACITY[c.capacity].recentTrainingLoad,
@@ -160,7 +159,26 @@ function structureOf(plan: CoachingPlan): Record<string, number | string> {
     coreSessions: plan.coreSessions,
     optionalSessions: plan.optionalSessions,
     recoverySessions: plan.recoverySessions,
-    sessions: plan.weeklyPlan.length,
+    // WHAT THE APP PRESCRIBES, not how many days it materialised.
+    //
+    // This was `plan.weeklyPlan.length`, and it was a structural fact only
+    // because the generator filled EVERY available day — it put a recovery
+    // session on anything it had nothing else for, so the raw length was
+    // essentially "available days" and moved with nothing. Sam's charter
+    // (2026-07-30) deleted those placements, so the raw length now measures
+    // whether the app chose to leave a day free, which is a residue and not a
+    // structure.
+    //
+    // The law it serves — capacity never changes the shape of the week — is
+    // unchanged and still asserted over every other key here: the core, optional
+    // and recovery BUDGETS, the strength, conditioning and sprint counts, and
+    // all four contract targets. Those are what "shape" means, and they must
+    // stay byte-identical across capacity. This key now counts allocations
+    // carrying actual prescribed work, which is the thing the raw length was
+    // standing in for.
+    prescribedSessions: plan.weeklyPlan.filter((a) =>
+      a.strengthPattern !== undefined || a.conditioningCategory !== undefined ||
+      a.hasCombinedConditioning === true || a.speedWorkKind !== undefined).length,
     strengthSessions: plan.weeklyPlan.filter((a) => a.strengthPattern !== undefined).length,
     conditioningSessions: conditioning.length,
     sprintSessions: plan.weeklyPlan.filter((a) =>
@@ -581,8 +599,48 @@ console.log('\n[6] The same week at low capacity has the same structure');
       }
     }
   }
-  ok(`no week shape changes structure with capacity (${weekShapes().length} shapes)`,
-    differences.length === 0, differences.slice(0, 25));
+  /**
+   * THE LAW, AS SAM RESTATED IT (2026-07-30, with the repair-capacity ruling):
+   *
+   *   "Capacity changes dose, and in the rare fallback it may change
+   *    attached-vs-standalone PACKAGING of the SAME work — it never changes the
+   *    required work itself."
+   *
+   * That restatement resolves the two differences this block used to carry as
+   * PINNED DEFECTS. They were `prescribedSessions 3 -> 4 @low` in two
+   * mid-pre-season game-week shapes, and the note beside them described the
+   * mechanism exactly: "the tempo conditioning rides on a strength day at medium
+   * capacity and takes its own day at low. Same strength count, same conditioning
+   * count, different week." Under the restatement that is PACKAGING, and packaging
+   * is permitted — the missing conditioning attaches when the contract allows
+   * combining at that capacity and takes a free day when it does not.
+   *
+   * SO THE ASSERTION IS SPLIT RATHER THAN RELAXED, and it is now stricter in the
+   * half that matters. Every WORK key — the core/optional/recovery budgets, the
+   * strength, conditioning and sprint counts, and all four contract targets — must
+   * be byte-identical across capacity, with NO permitted exceptions and no pinned
+   * list to hide in. `prescribedSessions` alone may differ, and only when every
+   * work key is identical: a session-count change accompanied by any work change is
+   * still a violation, because then it is not packaging.
+   *
+   * What is deliberately NOT here any more is the exception list. An allow-list of
+   * two shapes could only ever grow, and it made the law un-checkable for those two
+   * shapes in every domain at once — including the ones the packaging rule does not
+   * excuse.
+   */
+  const PACKAGING_KEY = 'prescribedSessions';
+  const workDifferences = differences.filter((entry) => !entry.includes(` ${PACKAGING_KEY} `));
+  ok(`no week's required WORK changes with capacity (${weekShapes().length} shapes)`,
+    workDifferences.length === 0, workDifferences.slice(0, 25));
+
+  // The packaging differences that remain are reported, not asserted away: a
+  // reviewer should see how often the fallback fires, because Sam's expectation is
+  // on record that it should be rare ("you should be able to find room"), and a
+  // week that regularly reaches it is evidence of an allocator bug.
+  const packagingDifferences = differences.filter((entry) => entry.includes(` ${PACKAGING_KEY} `));
+  console.log(`      packaging-only differences (permitted, ${packagingDifferences.length}):`);
+  for (const entry of packagingDifferences.slice(0, 10)) console.log(`        ${entry}`);
+;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
