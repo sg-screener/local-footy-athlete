@@ -90,3 +90,39 @@ The original Task-7 crash evidence (shrunk history not reproducing alone)
 is now best explained as the same class as everything else found today: an
 artifact of instrument/arrangement, not proven state leakage — recorded
 honestly as "not reproducible" rather than "fixed".
+
+---
+
+## HANDOVER (context exhausted — next session continues the shift)
+
+**Merged to main this shift, in order:** `45d717a` (rollover interim),
+`d2aea03` (card identity), `190795f` (LR-27 divergence gate), `ba5fb04`
+(contamination closed + order probe). Every merge --no-ff, ancestor-verified,
+pointer deleted; `test:bible` EXIT=0 before each. Working tree clean; branch:
+main.
+
+**Queue position:** units 1-6 done (2 and 3 as docs, code parked on Sam).
+NEXT = the census by rank. Sam's standing ruling (memory:
+legacy-reckoning-census-ratchet): **LR-1 + LR-2 next** — the raw
+program-write primitive and the ten unowned stores. Both are LARGE; read
+`docs/LEGACY_RECKONING_CENSUS_2026-07-30.md` §LR-1/LR-2 before starting, and
+note LR-24 (action-log coverage) is folded into them by the census's own
+terms. Ground rules unchanged: scratch branch per unit, merge only on a green
+bible, log here, park Sam-things in `docs/PARKED_QUESTIONS_2026-08-01.md`.
+
+**Open with Sam (parked, five entries):** §1 Batch 8 signatures (rollover
+sentence + "Try again"); §2 schedule-fact reassessment approval + "how short
+is short?"; §3 team-night sheet strings + two choices; §4 icon live pick;
+§5 the LR-27 routing table (incl. the possible `quadricep` sheet typo).
+
+**Standing hazards the next session should know:** `test:block-state` is
+non-bible and red on clean main (pre-existing equipment-fixture rot — rot
+sweep's, not any unit's); the `getCoachRevisionTemplateContext` singleton is
+a declared cross-walk carrier if coach-door vocabulary ever joins the
+walker; the order probe's documented usage is `> file 2>&1` (pipes lie).
+
+**The shift's recurring lesson, three units running:** the instrument is
+part of the claim. A stale declared red from truncated walks, a vacuous
+mutation probe caught by its own activity check, and a false-divergence
+sweep from a trailing comma — each found because a gate checked the
+CHECKER. Keep doing that.
