@@ -278,12 +278,34 @@ run('an add-on rides with the day — position, never kind', () => {
   // This is NOT a recovery exception: the cell above proves a standalone recovery
   // session is fully capable. It is the position that answers.
   world();
+  // RE-POINTED 2026-08-01: generation no longer PLACES add-ons (the deleted-type
+  // retirement — placement of optional work is athlete-only), so a generated
+  // world carries none and this cell went honestly vacuous. The population the
+  // law governs still exists: add-ons already STORED on devices (legacy, and
+  // the canonicaliser's row-preserving block). The cell now grafts exactly that
+  // shape onto a generated day, so the position law keeps a real subject.
   const days = projected(WEEK).concat(projected('2026-08-03'));
+  const host = days.find((candidate) => candidate.workout);
+  assert(host?.workout, 'no workout day to carry the grafted add-on');
+  host.workout = {
+    ...host.workout,
+    recoveryAddons: [{
+      id: 'legacy-addon-1',
+      title: 'Optional Mobility Add-on',
+      label: 'Mobility',
+      kind: 'mobility',
+      focusArea: 'General recovery',
+      optional: true,
+      skipPolicy: 'no_penalty',
+      durationMinutes: 5,
+      exercises: [{ id: 'legacy-addon-1-0', name: 'Foam Roll', prescription: '2 min', source: 'local' }],
+    }],
+  } as never;
   const parts = projectParts({ week: days, weekStart: WEEK }).days.flatMap((d) => d.parts);
   const addons = parts.filter((part) => part.id.endsWith(':recovery_addon'));
   assert(addons.length > 0,
-    'no recovery add-on in his week — this cell has nothing to say and would pass '
-    + 'vacuously');
+    'no recovery add-on part projected for a day whose workout carries one — '
+    + 'the grafted legacy shape stopped producing its component');
   for (const addon of addons) {
     assert(!addon.capabilities.canMove && !addon.capabilities.canRemove &&
       !addon.capabilities.canSwap && !addon.capabilities.canEditRows,

@@ -459,6 +459,24 @@ merge gate remains the combined device pass below.
    (`sessionResolver.ts:397`) hardcodes `'Game'`, and the pre-season
    practice-match fixture resolves through that same stub. Small, named so it
    is not mistaken for a defect of this pass — see checklist item 2d below.
+   **PULLED INTO THE MERGE GATE, 2026-08-01:** Sam failed the combined pass
+   on this line (the card still reading "Game Day" on his practice-match
+   Saturday), so the producer ships with the naming-class fixes rather than
+   post-merge. Recorded here so the queue's history stays honest.
+
+10. **Team-night movability (RULED BY SAM, 2026-08-01 — recorded, not
+    built).** Team training nights become movable/swappable through the day
+    door, with a typed ask: "just this once, or permanent?" (public
+    holidays, training camps, TT weekends). One-off = a dated schedule
+    fact; permanent = a schedule change through program setup's owner. Own
+    unit, queued behind the merge WITH block rollover (item 1) and the
+    schedule-fact ownership collision (item 2), because its one-off half
+    lands on the same fact machinery declared reds 8-9 say is dead. Full
+    record: `docs/TEAM_NIGHT_MOVABILITY_RULING_2026-08-01.md`.
+
+11. **Icon-picking session (Sam, 2026-08-01).** Terminal proposes 2-3 glyph
+    candidates per flagged row, Sam picks live. Imagery is judged on glass
+    (§6-II-h), so this is a session, not a sheet.
 
 ## NOT-COVERED
 
@@ -702,13 +720,14 @@ merge condition: this checklist passes in ONE session, start to finish.
       title.
    c. Open a plain strength day and confirm the exercise count matches what
       is actually numbered on screen (not a stale four-branch classification).
-   d. A practice-match / pre-season fixture day still reads "Game Day" today
-      — NOT a defect of this pass. The signed word "Practice Match"
-      (`day.headline.practice_match`) is registered and wired at every render
-      site; it turns on when the producer ships the workoutType. Seam:
-      `createGameStub` (`sessionResolver.ts:397`) hardcodes `workoutType:
-      'Game'`, so no route in the app produces `'Practice Match'` yet. See
-      post-merge queue item 9.
+   d. RE-POINTED 2026-08-01 (fix round): a practice-match / pre-season fixture
+      day now MUST read "Practice Match" on the card, the day-detail title and
+      the away-day picker. The producer shipped: `createGameStub` stamps a
+      typed `fixtureVariant` from the season phase (`canonicalFixtureKind`'s
+      resolved-phase form, `rules/fixtureConditionedAvailability.ts` — the
+      app's one phase→fixture-identity expression, same as the §18 week mode), `workoutType` stays
+      `'Game'` (label only, per ruling 6-IV-4). "Game Day" in that slot is now
+      a DEFECT. In-season fixtures still read "Game Day".
 
 3. NEW WEEK-SCREEN BUTTONS (ruling 2-4, 6):
    a. "Short on time today" — tap it, confirm an acknowledgment sentence

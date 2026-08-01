@@ -784,3 +784,59 @@ Full trace, file:line, and reproduction recipe (plain strength day,
 behaviourally (current behaviour, not a proposed fix) in
 `planChangeMoveScopingTests.ts`. Combined device pass checklist item 4f asks
 Sam to look at exactly this flow live.
+
+## Batch 7 — device-pass fix round (2026-08-01): PROPOSED
+
+Sam's combined device pass (7/11) failed three cells in one class — the
+projection's naming layer lagging the session-type charter — and ruled the
+charter-type headline work into the merge gate. Every string below ships
+PROPOSED and comes to Sam for signing at the re-run. **All entries are prose,
+not table rows, deliberately**: every one lives in `src/rules/projectionCopy.ts`
+or `src/utils/workoutCanonicalisation.ts`, which the binder's SOURCES scan
+cannot see (the same recorded gap as 6-II-a/6-II-e; boundary report
+NOT-COVERED, "the binder's `src/rules/` blind spot").
+
+**7-a. Charter optional-type part headlines** (`part.headline.optional.<kind>`,
+`projectionCopy.ts`) — selected by the workout's typed `composedOptionalKind`,
+which the builder now stamps (`sessionBuilder.finaliseDerivedSession`) and
+every placing route carries. No word is invented: each reuses the signed
+Add-menu label for the door the athlete tapped.
+
+1. `part.headline.optional.gunshow` — "Gunshow" (reuses Batch 5
+   `CATEGORY_COPY.gunshow.label`). Replaces the generic "Strength" Sam saw on
+   his G-1 Gunshow card (fail 2).
+2. `part.headline.optional.prehab` — "Accessories" (reuses ruling 6-IV-1's
+   fifth-row word; the CATEGORY ID stays `prehab`). An added Accessories
+   session's strength part read "Strength" (fail 2); its trunk rows still
+   classify `support` and keep "Midline Work" — the part-composition question
+   is AUDITED in the fix-round notes, not silently re-answered here.
+3. `part.headline.optional.mobility` — "Mobility" (reuses Batch 5
+   `CATEGORY_COPY.mobility.label`). Also retires a deleted-type word: an
+   athlete-added Mobility session rendered "Recovery" (fail 3's class).
+
+**7-b. The `part.headline.recovery` entry is REWORDED: "Recovery" →
+"Mobility".** Recovery is a charter-deleted type and its authored contents ARE
+the ten mobility flows, so the `recovery`-KIND parts that still exist (attached
+add-ons; athlete-placed legacy recovery sessions no deriver may rebuild) render
+the word for what their rows are. The part KIND and every capability are
+unchanged — a word, not a re-typing. The old word "Recovery" is RETIRED from
+the projection's vocabulary entirely; walker law `L-P7 DELETED VOCABULARY`
+(armed in `test:bible`) reds any day or part headline that ever says it again.
+
+**7-c. The canonicaliser's add-on block words** (`workoutCanonicalisation.ts`):
+title "Optional Recovery Add-on" → **"Optional Mobility Add-on"**, label
+"Recovery" → **"Mobility"**. The block's own `kind` field has always been
+`'mobility'`; the words now say what the rows are. RETIRED: "Optional Recovery
+Add-on", "Recovery" (as an add-on label).
+
+**7-d. Producer notes, no new words.** `day.headline.practice_match`
+("Practice Match", SIGNED 6-IV-4) now has its producer: `createGameStub` stamps
+a typed `fixtureVariant` from the season phase
+(`canonicalFixtureKindForResolvedPhase`, `rules/fixtureConditionedAvailability.ts`
+— the app's one phase→fixture-identity expression, same as the §18 week mode), so the 6-II-a item 1b seam note is
+CLOSED — a pre-season fixture reads the signed word on device. The G+1
+protection and the recovery-template rebuild now materialise MOBILITY sessions
+(`buildDerivedSession('mobility')`), so the derived names "Post-game recovery"
+and "Scheduled recovery - active" are RETIRED from the resolver; the generation
+recovery-add-on placement pass is retired outright (charter: placement of
+optional work is athlete-only).

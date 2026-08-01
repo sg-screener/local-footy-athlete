@@ -84,7 +84,12 @@ import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { getProgramBlockRolloverStatus } from '../utils/programBlockState';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
-import { isComposedPrescriptionRow, project, projectParts } from '../rules/projectVisibleWeek';
+import {
+  dayIsPracticeMatch,
+  isComposedPrescriptionRow,
+  project,
+  projectParts,
+} from '../rules/projectVisibleWeek';
 import { buildSessionTemplate, type SessionTemplateItem } from '../utils/sessionTemplate';
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleWeek } from '../rules/visibleProjection';
@@ -1099,6 +1104,78 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
           `${day.date}: ${composedRows.length} rows on this day carry names the builder `
           + `composed, so the projection can name none of them — e.g. "${example}".`);
       }
+
+      // ── THE NAMING LAWS (L-P5/L-P6/L-P7), 2026-08-01 ──────────────────────
+      //
+      // Sam's combined device pass failed three cells that differ only by
+      // SURFACE COORDINATE — a fixture variant, a charter-type part, a deleted
+      // type's word — which is L11's stop condition verbatim: the space gets
+      // enumerated before any single cell gets fixed. All three are claims
+      // about the WORDS the projection resolves, asserted from the branded
+      // `SignedCopy` text, never from a surface reading its own composition.
+
+      // L-P5 THE FIXTURE WORD MATCHES THE SEASON. Sam's ruling 6-IV-4 signed
+      // "Practice Match" for a practice/trial fixture; the typed predicate for
+      // "this fixture is a practice match" is the engine's own
+      // (`coachingEngine.section18ModeAndSubphase`: Pre-season + a fixture =
+      // practice_match_week). A pre-season fixture rendering "Game Day" is the
+      // producer failing to ship the typed variant the signed label reads —
+      // device-pass fail 1. The day's own typed variant outranks the phase
+      // (a hand-built 'Practice Match' workout reads its word in any season,
+      // `projectionOwnershipTests` pins that); the phase decides what the
+      // producer should have stamped when the variant channel is empty.
+      if (visibleDay.kind === 'game') {
+        const phase = quiet(() => buildScheduleStateImperative().seasonPhase);
+        const expectedFixtureWord = dayIsPracticeMatch(mirror) || phase === 'Pre-season'
+          ? 'Practice Match'
+          : 'Game Day';
+        if (String(visibleDay.headline) !== expectedFixtureWord) {
+          offend('L-P5 FIXTURE VARIANT',
+            `${day.date}: a ${phase ?? 'unknown-phase'} fixture reads `
+            + `"${String(visibleDay.headline)}" — the signed word for this world is `
+            + `"${expectedFixtureWord}" (ruling 6-IV-4).`);
+        }
+      }
+
+      // L-P6 A CHARTER TYPE NAMES ITSELF. A workout carrying the typed
+      // `composedOptionalKind` marker is a Gunshow / Accessories / Mobility
+      // session by construction, and one of its parts must carry the charter
+      // word — never only the generic kind fallback. Vacuously green until the
+      // producer ships the marker; the deterministic cells below carry the
+      // pre-producer red so this law cannot be satisfied by deleting the field.
+      const optionalKind = (mirror.workout as unknown as {
+        composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility';
+      } | null)?.composedOptionalKind;
+      if (optionalKind) {
+        const charterWord = (
+          { gunshow: 'Gunshow', prehab: 'Accessories', mobility: 'Mobility' } as const
+        )[optionalKind];
+        const partWords = visibleDay.parts.map((part) => String(part.headline));
+        if (!partWords.includes(charterWord)) {
+          offend('L-P6 CHARTER TYPE NAMES ITSELF',
+            `${day.date}: a typed ${optionalKind} session renders `
+            + `${JSON.stringify(partWords)} — the charter word "${charterWord}" is `
+            + 'missing (device-pass fail 2: the honest-generic fallback shown to an '
+            + 'athlete who tapped a named door).');
+        }
+      }
+
+      // L-P7 THE DELETED TYPE'S WORD NEVER RENDERS. Recovery is not an
+      // athlete-facing session type (session-type charter; design ruling 9
+      // "(type deleted)"; the G+1 Rest ruling closed on the same ground). No
+      // door offers it, no menu can act on it — so a day or part headline
+      // reading "Recovery" is the projection rendering a type the athlete
+      // cannot reach: device-pass fail 3, whichever producer emitted it.
+      const renderedWords = [
+        String(visibleDay.headline),
+        ...visibleDay.parts.map((part) => String(part.headline)),
+      ];
+      if (renderedWords.includes('Recovery')) {
+        offend('L-P7 DELETED VOCABULARY',
+          `${day.date}: renders "Recovery" (${JSON.stringify(renderedWords)}) — a `
+          + 'charter-deleted type on the athlete\'s glass; the producer that emitted '
+          + 'it is the defect, not the label.');
+      }
     }
 
     // L-P4 THE MENU AND THE PROJECTION AGREE ABOUT WHAT IS ON THE DAY.
@@ -1380,6 +1457,15 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'session list, whatever else is on the day.',
     redsIn: 'both',
   },
+  // `conditioning_attached_to_a_composed_optional_day_hides_its_part` (L-P6)
+  // — declared and PAID within one session, 2026-08-01. The shape (a typed
+  // mobility/prehab day rendering only "Conditioning") was the composed-
+  // optional marker LEAKING onto combined days through `stackTemplate`'s base
+  // spread; clearing the marker at that composition site removed every
+  // reachable instance, and this list's own stale-debt law forced the
+  // deletion. The recovery-as-last-resort classifier the shape exposed is
+  // still the D13/sessionComponents family's — see
+  // `session_list_calls_a_conditioning_day_recovery` below.
   {
     id: 'session_list_calls_a_conditioning_day_recovery',
     law: 'L-P3 TEMPLATE = PROJECTION',
@@ -1403,6 +1489,11 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'not carry.',
     redsIn: 'deep',
   },
+  // NOTE 2026-08-01: this entry was briefly deleted as stale and RESTORED the
+  // same day — the run that reported it un-reproducing had its deep walks
+  // truncated by then-undeclared L-P6 violations, so the seeds never reached
+  // this entry's world. A stale-report from a run with undeclared reds in it
+  // is not evidence.
   {
     id: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
     law: 'L-P3 TEMPLATE = PROJECTION',
@@ -1516,6 +1607,11 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // that named the PROJECTION as wrong all came from the same defect: two owners
   // answering one question.
 
+  // NOTE 2026-08-01: briefly deleted as stale and RESTORED the same day — the
+  // same truncated-walk artifact as the entry above. The rollover still fails
+  // at depth (DEEP seed 1 confirmed after the L-P6 declaration let the walk
+  // reach it), and Sam's ruling stands: this stays red until the interim unit
+  // lands.
   {
     id: 'block_rollover_fails_silently_and_the_program_stops',
     law: 'L6 THE BLOCK ROLLS OVER',
@@ -1700,6 +1796,90 @@ async function walkTheScheduleDoors(): Promise<void> {
     });
   };
 
+  // ── THE TAPE'S WORLD (device-export-2026-08-01) — the ack at DEPTH ──────
+  //
+  // Sam tapped "Short on time today" during the combined pass and got NOTHING
+  // — not even the refusal sentence `readinessAcknowledgment.ts` builds for a
+  // refused tap. The pass above walks this door three actions from install;
+  // his device held a Pre-season profile, a marked Saturday game, and an
+  // ACTIVE week-scoped busy_week fact ALREADY covering today (the tape's
+  // `temporary-source-fact:v1:schedule:week:2026-07-27:busy_week`, the
+  // legacy-migration shape) with its scoped-regen overlay authored. L13: the
+  // bounded world proves the sentence is BUILT; only this world can prove the
+  // tap still ANSWERS where Sam actually tapped it.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'mark_calendar', date: addDaysISO(weekStart, 5), mark: 'game' });
+  // THE TAP'S OWN COORDINATE: Sam's marked game is dated the day he tapped —
+  // "Short on time today" was tapped ON the fixture day (tape: markedDays
+  // { 2026-08-01: game }, captured 2026-08-01). A today-scoped busy fact
+  // landing on a fixture is a combination no bounded world reaches.
+  performAction({ kind: 'advance_time', days: 5 });
+  {
+    // The pre-existing WEEK-scoped busy fact, published the way the
+    // state-reacher publishes (the real creator, the real compatibility
+    // composer) — the state a landed legacy-migrated fact leaves behind.
+    const fact = createTemporaryScheduleFact({
+      observedDate: todayISO,
+      scope: scheduleFactScopeForAction({
+        type: 'set_schedule_modifier',
+        source: { screen: 'program_tab', surface: 'busy_this_week', initiatedBy: 'tap' },
+        scope: 'current_week',
+        payload: { date: todayISO, todayISO },
+        requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+      } as never),
+      scheduleKind: 'busy_week',
+      unavailableDates: [],
+      sourceActor: 'athlete',
+      sourceSurface: 'busy_this_week',
+    });
+    const accepted = useProgramStore.getState().acceptedMaterialContext;
+    const facts = [...accepted.temporarySourceFacts, fact];
+    const compatibility = quiet(() => composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: facts,
+      activeConstraints: accepted.activeConstraints,
+      readinessSignalsByDate: accepted.readinessSignalsByDate,
+    }));
+    useProgramStore.setState({
+      acceptedMaterialContext: {
+        ...accepted,
+        temporarySourceFacts: facts,
+        activeConstraints: compatibility.activeConstraints,
+        revision: accepted.revision + 1,
+        lastTransaction: 'walker:tape_world_busy_week',
+      },
+    } as never);
+  }
+
+  const beforeTapeTap = worldFingerprint();
+  let tapeResult: { ok?: boolean; message?: string | null };
+  try {
+    tapeResult = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_schedule_modifier',
+      source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { date: todayISO, todayISO },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    } as never, { visibleWeek: visibleWeek(), todayISO }));
+  } catch (error) {
+    throw new Error('L1 NO CRASH — the tape-world short-on-time tap THREW instead of '
+      + 'answering (a rejected promise above this layer is exactly the silence Sam '
+      + `saw): ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const tapeAck = buildScheduleAcknowledgment(tapeResult, 'short_on_time');
+  assert(tapeAck.message.trim().length > 0,
+    'tape world: the tap is acknowledged with nothing');
+  assert(tapeAck.tone === (tapeResult.ok ? 'success' : 'error'),
+    'tape world: the acknowledgment disagrees with the result');
+  assert(!RAW_CODE.test(tapeAck.message),
+    `tape world: a raw code reached the athlete: "${tapeAck.message}"`);
+  if (!tapeResult.ok) {
+    assert(worldFingerprint() === beforeTapeTap,
+      'tape world: a refused tap changed the world anyway');
+  }
+
   for (const door of ['short_on_time_today', 'away_this_week'] as const) {
     freshInstall();
     performAction({ kind: 'answer_onboarding', profile: profileFor(makeRng(11)) });
@@ -1778,6 +1958,7 @@ async function walkTheScheduleDoors(): Promise<void> {
       throw new Error(`${broken.law} after ${door} — ${broken.detail}`);
     }
   }
+
 }
 
 run('freshInstall is total — the two resets it was missing are covered', () => {
@@ -1833,6 +2014,89 @@ run('the walker actually explores — its vocabulary is not stuck on one action'
   assert(directRoutedChanges > 0,
     'every plan change went through the wrapper — the sheet sends adds and swaps '
     + 'straight to the producer, so a harness where nothing does is not the sheet');
+});
+
+// ── THE DEVICE-PASS RED CELLS (2026-08-01) — the tape's world, by acting ──
+//
+// Sam's combined pass failed three cells in one class (projection naming
+// lagging the charter). Each cell below reaches the failing world through the
+// real doors — never a seed — and asserts the SIGNED word. They are the
+// pre-producer reds for laws L-P5/L-P6 above: the laws read typed fields the
+// producers do not ship yet, so without these cells the laws could be
+// satisfied by never shipping the field.
+
+/** Sam's tape profile shape, deterministic: Pre-season, no usual game day. */
+function tapeWorldProfile(overrides?: Partial<Record<string, unknown>>): OnboardingData {
+  const profile = {
+    ...profileFor(makeRng(11)),
+    seasonPhase: 'Pre-season',
+    ...overrides,
+  } as Record<string, unknown>;
+  delete profile.usualGameDay;
+  delete profile.gameDay;
+  return profile as unknown as OnboardingData;
+}
+
+run('a walked pre-season fixture reads "Practice Match" (device-pass fail 1)', () => {
+  // The tape: Pre-season profile, markedDays { <Saturday>: 'game' }. Sam's
+  // Saturday card read "Game Day" — ruling 6-IV-4 signed "Practice Match", and
+  // the engine's own typed predicate (Pre-season + fixture = practice match)
+  // has known it since Batch 5. The producer owes the label its typed variant.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  const saturday = addDaysISO(weekStart, 5);
+  performAction({ kind: 'mark_calendar', date: saturday, mark: 'game' });
+  const week = quiet(() => project({ week: projectedWeek(), weekStart }));
+  const day = week.days.find((candidate) => candidate.date === saturday);
+  assert(day, 'the marked Saturday is not in the projected week');
+  assert(day.kind === 'game', `the marked Saturday resolved kind "${day.kind}", not a fixture`);
+  assert(String(day.headline) === 'Practice Match',
+    `the tape's world (Pre-season profile, marked Saturday game) reads `
+    + `"${String(day.headline)}" on the card — Sam signed "Practice Match" (6-IV-4) `
+    + 'and failed the combined pass on this day');
+});
+
+run('a door-added charter session names itself (device-pass fail 2)', () => {
+  // Sam added Accessories through the five-row menu and the day read
+  // "Strength + Midline Work"; his Gunshow read "Strength". The charter types
+  // carry their own signed words; the generic strength word is the
+  // honest-generic fallback the athlete must never see over a NAMED door's
+  // session. Mobility is the same defect wearing the deleted type's word: an
+  // added Mobility session renders "Recovery" today.
+  const cases = [
+    { category: 'gunshow', word: 'Gunshow' },
+    { category: 'prehab', word: 'Accessories' },
+    { category: 'mobility', word: 'Mobility' },
+  ] as const;
+  const offences: string[] = [];
+  for (const { category, word } of cases) {
+    freshInstall();
+    performAction({
+      kind: 'answer_onboarding',
+      profile: tapeWorldProfile({ seasonPhase: 'In-season' }),
+    });
+    performAction({ kind: 'generate_program' });
+    const target = addDaysISO(weekStart, 5);
+    const result = performAction({
+      kind: 'plan_change',
+      change: { kind: 'add_category', category, date: target } as PlanChange,
+    });
+    assert(result.outcome === 'applied',
+      `${category}: the add door refused (${result.outcome}${
+        result.message ? ` — ${result.message}` : ''}) — this cell needs the add to land`);
+    const week = quiet(() => project({ week: projectedWeek(), weekStart }));
+    const day = week.days.find((candidate) => candidate.date === target);
+    assert(day, `${category}: the target day vanished from the projection`);
+    const words = day.parts.map((part) => String(part.headline));
+    if (!words.includes(word)) {
+      offences.push(`${category}: renders ${JSON.stringify(words)} — the charter word `
+        + `"${word}" is missing`);
+    }
+  }
+  assert(offences.length === 0,
+    `charter sessions render generic vocabulary over a named door's session:\n    ${
+      offences.join('\n    ')}`);
 });
 
 // ── Conformance: can the vocabulary REACH Sam's device? ───────────────────

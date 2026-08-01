@@ -273,8 +273,12 @@ interface DisplacementSite {
 
 const SITES: DisplacementSite[] = [
   {
-    id: 'g_plus_1_recovery',
-    anchor: 'Post-game recovery',
+    // Was `g_plus_1_recovery` / anchor 'Post-game recovery' until 2026-08-01:
+    // the deleted-type retirement (device-pass fail 3) re-materialised the G+1
+    // protection as a MOBILITY session. Same site, same stamp question, new
+    // word — the row follows the literal so the completeness pin stays honest.
+    id: 'g_plus_1_mobility',
+    anchor: "'Post-game'",
     answer: 'consults',
     // Sunday, the day after Saturday's game.
     dayOfWeek: 0,
@@ -316,7 +320,9 @@ const SITES: DisplacementSite[] = [
   },
   {
     id: 'recovery_template_rebuild',
-    anchor: 'Scheduled recovery - active',
+    // Anchor follows the 2026-08-01 deleted-type retirement: the rebuild now
+    // materialises a MOBILITY session (the contents recovery always was).
+    anchor: 'Scheduled mobility',
     answer: 'consults',
     // Wednesday: an ordinary mid-week day, no fixture proximity.
     dayOfWeek: 3,

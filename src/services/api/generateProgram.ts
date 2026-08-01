@@ -34,7 +34,6 @@ import {
   type GenerationConstraintContext,
 } from '../../utils/generationConstraints';
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
-import { attachRecoveryAddonsToWeek } from '../../utils/recoveryAddonBuilder';
 import type { ReadinessSignal } from '../../utils/readiness';
 import type { EquipmentTag } from '../../data/exercisePools';
 import {
@@ -559,8 +558,20 @@ export function buildGeneratedMicrocycles(args: {
       ];
     };
     const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] => {
-      const built = attachRecoveryAddonsToWeek({
-        workouts: buildWorkoutsFromCoach(
+      // RECOVERY ADD-ONS ARE NOT PLACED BY GENERATION ANY MORE (2026-08-01,
+      // device-pass fail 3). `attachRecoveryAddonsToWeek` put 2-4 generator-
+      // chosen add-ons on every generated week — including team nights, which
+      // is exactly Sam's "TT + Recovery" card — and recovery is a
+      // charter-deleted type whose placement is ATHLETE-ONLY (the charter's
+      // rest law: the generator stops placing optional work uninvited). The
+      // builder module stays for its classifier exports; the placement pass is
+      // retired here. Add-ons ALREADY STORED on devices are not stripped at
+      // hydration in this round — they render the mobility vocabulary their
+      // rows always were (`part.headline.recovery` → "Mobility"), and content
+      // removal from §18-verified stored surfaces is its own unit (recorded in
+      // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
+      // as the pattern to follow).
+      const built = buildWorkoutsFromCoach(
           source,
           microcycleId,
           weekPlan.weeklyPlan,
@@ -579,11 +590,7 @@ export function buildGeneratedMicrocycles(args: {
             availableEquipment: equipment.tags,
             conditioningModalities: equipment.conditioningModalities,
           },
-        ),
-        profile,
-        weekKind: effectiveWeekKind,
-        generationConstraints,
-      });
+        );
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
         constraint.type === 'equipment' ||
         (constraint.type === 'schedule' &&

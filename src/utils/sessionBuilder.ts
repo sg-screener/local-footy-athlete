@@ -545,7 +545,7 @@ export function buildDerivedSession(
       );
       order += 1;
     }
-    return finaliseDerivedSession({ meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+    return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
   }
 
   const slots = SESSION_SLOTS[type];
@@ -590,7 +590,7 @@ export function buildDerivedSession(
     slotIndex++;
   }
 
-  return finaliseDerivedSession({ meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+  return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
 }
 
 /**
@@ -600,7 +600,25 @@ export function buildDerivedSession(
  * same Workout is how the door and the generator would eventually disagree about a
  * field nobody was looking at.
  */
+/**
+ * The typed charter identity a derived optional session carries to the
+ * projection (2026-08-01, device-pass fail 2). The plan entry's
+ * `composedOptionalKind` used to die here — the builder consumed the type and
+ * emitted name-only identity, so a Gunshow reached the athlete's card as the
+ * generic word "Strength". Stamped from the `DerivedSessionType` the builder
+ * already receives; the recovery variants stamp nothing (recovery is a
+ * charter-deleted type — nothing may carry its identity forward).
+ */
+const COMPOSED_OPTIONAL_KIND_BY_TYPE: Partial<
+  Record<DerivedSessionType, NonNullable<Workout['composedOptionalKind']>>
+> = {
+  arms_pump: 'gunshow',
+  prehab_accessories: 'prehab',
+  mobility: 'mobility',
+};
+
 function finaliseDerivedSession(args: {
+  type: DerivedSessionType;
   meta: (typeof SESSION_META)[DerivedSessionType];
   workoutId: string;
   microcycleId: string;
@@ -609,7 +627,7 @@ function finaliseDerivedSession(args: {
   athlete: AthleteContext;
   exercises: WorkoutExercise[];
 }): Workout {
-  const { meta, workoutId, microcycleId, dateStr, reason, athlete, exercises } = args;
+  const { type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises } = args;
   // Apply intelligent load estimates for exercises that should have weight
   // (e.g. arms_pump curls, tricep pushdowns) if onboarding data is available.
   const finalExercises = athlete.onboardingData
@@ -629,6 +647,9 @@ function finaliseDerivedSession(args: {
     intensity: meta.intensity,
     workoutType: meta.workoutType,
     sessionTier: meta.sessionTier,
+    ...(COMPOSED_OPTIONAL_KIND_BY_TYPE[type]
+      ? { composedOptionalKind: COMPOSED_OPTIONAL_KIND_BY_TYPE[type] }
+      : {}),
     exercises: finalExercises,
     createdAt: now,
     updatedAt: now,

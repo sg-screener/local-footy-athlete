@@ -158,7 +158,16 @@ const FIXTURE_WORKOUT_TYPES: ReadonlySet<string> = new Set(['Game', PRACTICE_MAT
  * a known seam rather than a surprise.
  */
 export function dayIsPracticeMatch(day: ResolvedDay): boolean {
-  return String(day.workout?.workoutType ?? '') === PRACTICE_MATCH_WORKOUT_TYPE;
+  // THE PRODUCER SHIPS THE VARIANT NOW (2026-08-01, device-pass fail 1):
+  // `createGameStub` stamps `fixtureVariant: 'practice_match'` from the season
+  // phase — the app's one phase→fixture-identity expression
+  // (`canonicalFixtureKind`, `rules/fixtureConditionedAvailability.ts`), the
+  // same one the engine's week mode uses. The `workoutType` read stays for hand-built
+  // and legacy workouts that carry the word as their type; the variant field
+  // only ever exists on a workout whose type is already in the fixture set, so
+  // this still NARROWS `dayIsFixture` by construction.
+  return day.workout?.fixtureVariant === 'practice_match'
+    || String(day.workout?.workoutType ?? '') === PRACTICE_MATCH_WORKOUT_TYPE;
 }
 
 /**
@@ -642,6 +651,20 @@ function partHeadline(
   workout: Workout | null | undefined,
   rows: readonly VisibleRow[],
 ): SignedCopy {
+  // A CHARTER OPTIONAL TYPE NAMES ITSELF (2026-08-01, device-pass fail 2).
+  // The typed `composedOptionalKind` the builder now stamps outranks both the
+  // strength resolution and the generic kind fallback: an athlete who tapped
+  // the Gunshow / Accessories / Mobility door reads that door's word on the
+  // part, never "Strength" (the honest-generic fallback) and never "Recovery"
+  // (the deleted type a mobility session's `workoutType` still wears).
+  // Scoped to the CONTENT part kinds a composed optional session produces —
+  // its trunk rows still classify `support` and keep "Midline Work" (the
+  // part-composition question is audited, not silently re-answered here), and
+  // a `team_training` part on a combined day is never the optional session.
+  const optional = workout?.composedOptionalKind;
+  if (optional && (kind === 'strength' || kind === 'recovery')) {
+    return signedCopy(`part.headline.optional.${optional}`);
+  }
   if (kind === 'strength') {
     // `focus`/`name` are deliberately NOT passed. `resolveSessionDisplayName`'s
     // last-resort precedence step is a cleaned pass-through of exactly those

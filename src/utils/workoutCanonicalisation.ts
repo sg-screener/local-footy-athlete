@@ -904,8 +904,13 @@ export function finaliseWorkoutAfterMutation(
   const generatedRecoveryAddon = recoveryAddonRows.length > 0
     ? {
         id: `canonical-recovery-${workout.id}`,
-        title: 'Optional Recovery Add-on',
-        label: 'Recovery',
+        // MOBILITY VOCABULARY (2026-08-01, device-pass fail 3): recovery is a
+        // charter-deleted type; these rows have always been typed
+        // `kind: 'mobility'` one line down, and the athlete-visible words now
+        // say what the rows are. The id prefix is identity, not vocabulary —
+        // it stays, so nothing keyed on it moves.
+        title: 'Optional Mobility Add-on',
+        label: 'Mobility',
         kind: 'mobility' as const,
         focusArea: 'General recovery',
         optional: true as const,

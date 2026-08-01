@@ -47,8 +47,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -108,8 +107,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -157,8 +155,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -270,8 +267,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -331,8 +327,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -380,8 +375,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -499,8 +493,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -579,8 +572,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -656,8 +648,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -689,8 +680,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -795,8 +785,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -875,8 +864,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -952,8 +940,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -985,8 +972,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1151,8 +1137,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1236,8 +1221,7 @@
                 "power",
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1313,8 +1297,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -1346,8 +1329,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1452,8 +1434,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1537,8 +1518,7 @@
                 "power",
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1614,8 +1594,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -1647,8 +1626,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -1830,8 +1808,7 @@
               ],
               "components": [
                 "power",
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -1930,8 +1907,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2034,8 +2010,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2119,8 +2094,7 @@
                 "power",
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2196,8 +2170,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2229,8 +2202,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2389,8 +2361,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -2450,8 +2421,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2499,8 +2469,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2612,8 +2581,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -2673,8 +2641,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2722,8 +2689,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2839,8 +2805,7 @@
               "components": [
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2897,8 +2862,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -2953,8 +2917,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -2986,8 +2949,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3083,8 +3045,7 @@
               "components": [
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3141,8 +3102,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3197,8 +3157,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -3230,8 +3189,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3330,8 +3288,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3392,8 +3349,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -3441,8 +3397,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 4,
@@ -3555,8 +3510,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3617,8 +3571,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -3666,8 +3619,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 4,
@@ -3786,8 +3738,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3866,8 +3817,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -3943,8 +3893,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -3976,8 +3925,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4081,8 +4029,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4155,8 +4102,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4232,8 +4178,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -4265,8 +4210,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4424,8 +4368,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -4484,8 +4427,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -4533,8 +4475,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -4646,8 +4587,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 4,
@@ -4706,8 +4646,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -4755,8 +4694,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -4874,8 +4812,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -4953,8 +4890,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5030,8 +4966,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -5063,8 +4998,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5169,8 +5103,7 @@
                 "power",
                 "speed",
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5248,8 +5181,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5325,8 +5257,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -5358,8 +5289,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5513,8 +5443,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5649,8 +5578,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -5682,8 +5610,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5773,8 +5700,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -5909,8 +5835,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -5942,8 +5867,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -6033,8 +5957,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 5,
@@ -6169,8 +6092,7 @@
               ],
               "components": [
                 "strength",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
@@ -6202,8 +6124,7 @@
               "components": [
                 "strength",
                 "support",
-                "conditioning",
-                "recovery_addon"
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 5,
@@ -6292,8 +6213,7 @@
               ],
               "components": [
                 "power",
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -6450,8 +6370,7 @@
                 }
               ],
               "components": [
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 3,
@@ -6592,8 +6511,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -6644,8 +6562,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -6782,8 +6699,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -6834,8 +6750,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -6984,8 +6899,7 @@
               "components": [
                 "power",
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7036,8 +6950,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -7210,8 +7123,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7237,8 +7149,7 @@
               ],
               "components": [
                 "power",
-                "strength",
-                "recovery_addon"
+                "strength"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7422,8 +7333,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7453,8 +7363,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -7626,8 +7535,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7657,8 +7565,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -7830,8 +7737,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -7861,8 +7767,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,
@@ -8033,8 +7938,7 @@
               ],
               "components": [
                 "strength",
-                "support",
-                "recovery_addon"
+                "support"
               ],
               "countedRows": {
                 "strength": 2,
@@ -8064,8 +7968,7 @@
               ],
               "components": [
                 "strength",
-                "team_training",
-                "recovery_addon"
+                "team_training"
               ],
               "countedRows": {
                 "strength": 3,

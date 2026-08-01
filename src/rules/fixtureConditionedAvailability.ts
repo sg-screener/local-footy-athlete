@@ -34,7 +34,27 @@ export interface TargetWeekFixture {
 export function canonicalFixtureKind(
   ownedPhase: OwnedSeasonPhase,
 ): FixtureAvailabilityKind {
-  return ownedPhase.phase === 'Pre-season' ? 'practice_match' : 'game';
+  return canonicalFixtureKindForResolvedPhase(ownedPhase.phase);
+}
+
+/**
+ * The same ONE expression, for a caller whose phase was already resolved
+ * upstream and travels as a plain value — `ScheduleState.seasonPhase` at the
+ * resolver's game-stub factories, `CoachingInputs.seasonPhase` at the §18
+ * mode decider (2026-08-01, device-pass fail 1: the practice-match label
+ * needed a producer, and the producer's only phase is the state's).
+ *
+ * PREFER `canonicalFixtureKind`. The owned-phase form is the guard against
+ * the two-phase-values mismatch this module's header describes; this form
+ * exists because those two call sites hold a resolved value, not the owner's
+ * object, and re-deriving ownership there would mint a second phase author.
+ * The ternary below is the only one in src/ —
+ * `seasonPhaseOwnershipTests`' source gate holds it to this file.
+ */
+export function canonicalFixtureKindForResolvedPhase(
+  seasonPhase: string | null | undefined,
+): FixtureAvailabilityKind {
+  return seasonPhase === 'Pre-season' ? 'practice_match' : 'game';
 }
 
 export interface EffectiveAvailabilityDay {

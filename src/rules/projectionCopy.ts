@@ -39,14 +39,19 @@
  * nothing typed on a `Workout` reliably says "this conditioning session is the
  * light-flush kind" versus "the hard-interval kind" without inventing a new
  * classifier — which is exactly the fourth-naming-authority failure this unit
- * exists to prevent. Standalone strength-door variants (gunshow/prehab/mobility)
- * DO resolve correctly through the strength path below, because
- * `resolveSessionDisplayName` — the existing single naming authority — already
- * passes their own template name through untouched (`sessionNaming.ts:314-320`)
- * rather than mis-naming them as a squat/hinge/push/pull session; that name just
- * will not match one of the seven pinned labels, so it falls through to the
- * generic "Strength" fallback here. Conditioning gets the same honest, generic
- * treatment. Recorded as a deviation in the task report, not silently narrowed.
+ * exists to prevent.
+ *
+ * CORRECTED 2026-08-01 (the confident-comment lesson, again): this header used
+ * to claim gunshow/prehab/mobility "resolve correctly through the strength
+ * path" via `resolveSessionDisplayName`'s name pass-through. Measured false —
+ * `partHeadline` deliberately omits `name`/`focus` and hardcodes
+ * `tier: 'core'`, so the pass-through guards can never fire from `project()`
+ * and all three rendered the generic kind fallback, which is exactly what Sam
+ * saw on the combined device pass (fail 2). The honest resolution is TYPED:
+ * the builder stamps `composedOptionalKind` and the
+ * `part.headline.optional.<kind>` entries below carry the charter words.
+ * Conditioning keeps the honest, generic treatment until Stage B wires the 55
+ * signed doses.
  */
 
 import {
@@ -168,8 +173,13 @@ export function registerProjectionCopy(): void {
     {
       id: 'part.headline.recovery',
       source: 'sam_ruling',
-      provenance: 'NEW — proposed, Batch 6, Task 2.',
-      text: 'Recovery',
+      provenance: 'REWORDED — Batch 7 (device-pass fix round, 2026-08-01). Was '
+        + '"Recovery" (Batch 6, Task 2). Recovery is a charter-deleted type and its '
+        + 'authored contents ARE the mobility flows, so the `recovery`-KIND parts '
+        + 'that still exist (attached add-ons; athlete-placed legacy recovery '
+        + 'sessions no deriver may rebuild) render the word for what their rows '
+        + 'are. The part KIND is unchanged — this is a word, not a re-typing.',
+      text: 'Mobility',
     },
     {
       id: 'part.headline.power',
@@ -197,6 +207,36 @@ export function registerProjectionCopy(): void {
         + '`partKind` now converts a fixture\'s last-resort `session` placeholder, so '
         + 'a game day\'s part is named for what it is instead of reading "Strength".',
       text: 'Game Day',
+    },
+    // ── Charter optional-type part headlines (Batch 7, PROPOSED 2026-08-01). ──
+    //
+    // Selected by the workout's typed `composedOptionalKind` (stamped by
+    // `sessionBuilder.finaliseDerivedSession`), never by name. The words are
+    // the Add-menu's own signed labels (Batch 5 `CATEGORY_COPY` "Gunshow" /
+    // "Mobility"; ruling 6-IV-1 "Accessories") — a part named for the door the
+    // athlete tapped, no invention.
+    {
+      id: 'part.headline.optional.gunshow',
+      source: 'sam_ruling',
+      provenance: 'PROPOSED — Batch 7 (device-pass fix round, 2026-08-01). Reuses the '
+        + 'signed Add-menu label (CATEGORY_COPY.gunshow, Batch 5).',
+      text: 'Gunshow',
+    },
+    {
+      id: 'part.headline.optional.prehab',
+      source: 'sam_ruling',
+      provenance: 'PROPOSED — Batch 7 (device-pass fix round, 2026-08-01). Reuses the '
+        + 'fifth-row label Sam signed 2026-07-31 (ruling 6-IV-1): the CATEGORY ID '
+        + 'stays `prehab`, the athlete\'s word is "Accessories".',
+      text: 'Accessories',
+    },
+    {
+      id: 'part.headline.optional.mobility',
+      source: 'sam_ruling',
+      provenance: 'PROPOSED — Batch 7 (device-pass fix round, 2026-08-01). Reuses the '
+        + 'signed Add-menu label (CATEGORY_COPY.mobility, Batch 5). Also retires a '
+        + 'deleted-type word: an added Mobility session used to read "Recovery".',
+      text: 'Mobility',
     },
     {
       id: 'part.headline.team_training',

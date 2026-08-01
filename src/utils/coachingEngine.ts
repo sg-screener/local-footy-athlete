@@ -55,6 +55,7 @@ import {
 import type { StressContext } from '../rules/stressClassification';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
+import { canonicalFixtureKindForResolvedPhase } from '../rules/fixtureConditionedAvailability';
 import { injurySeverityReducesAffectedWork } from '../rules/injurySeverityBands';
 import {
   capacityFor,
@@ -614,7 +615,11 @@ function section18ModeAndSubphase(
     );
     return { ...underlying, mode: 'optional_week' };
   }
-  if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
+  // ONE PREDICATE with the athlete-facing fixture word: `canonicalFixtureKind`
+  // (the app's one phase→fixture-identity expression) is what the resolver's
+  // game stub stamps, so the week mode and the label the athlete reads cannot
+  // come to disagree about what a pre-season fixture is.
+  if (canonicalFixtureKindForResolvedPhase(inputs.seasonPhase) === 'practice_match' && inputs.hasGame) {
     return {
       mode: 'practice_match_week',
       declaredSubphase: 'practice_match_week',

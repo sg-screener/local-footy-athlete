@@ -356,6 +356,11 @@ export function placeSessionForRoute(args: {
       intensity: pump.intensity,
       workoutType: pump.workoutType,
       sessionTier: pump.sessionTier,
+      // The typed charter identity travels with the content it identifies —
+      // this route erases even the row-id channel (the landing workout keeps
+      // its own id), so without this field the placed Gunshow is name-only and
+      // the projection falls back to the generic strength word.
+      composedOptionalKind: pump.composedOptionalKind,
       exercises: pump.exercises.map((exercise, index) => ({
         ...exercise,
         workoutId: args.landingWorkout.id,
@@ -440,6 +445,7 @@ function accessoriesOnlySession(args: {
       intensity: pump.intensity,
       workoutType: pump.workoutType,
       sessionTier: pump.sessionTier,
+      composedOptionalKind: pump.composedOptionalKind,
       exercises: pump.exercises.map((exercise, index) => ({
         ...exercise,
         workoutId: args.landingWorkout.id,

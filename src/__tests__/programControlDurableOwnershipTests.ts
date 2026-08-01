@@ -603,13 +603,25 @@ async function main(): Promise<void> {
     // back without failing anything else.
     const screen = fs.readFileSync(
       `${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
-    assert(/const result = await handleApplyShortOnTimeToday\(\);\s*\n\s*setScheduleAck\(/
+    // RE-PINNED 2026-08-01 (device-pass ack bug): the tap now binds the ack it
+    // is about to render AND records the presentation into the athlete action
+    // log (`recordScheduleAckPresented` — the Release-alive witness for the
+    // render layer no harness here can mount). The pin covers the whole chain:
+    // result → ack built from it → state set → presentation recorded.
+    assert(/const result = await handleApplyShortOnTimeToday\(\);\s*\n\s*const ack = buildScheduleAcknowledgment\(result, 'short_on_time'\);\s*\n\s*setScheduleAck\(ack\);/
       .test(screen),
       'the short-on-time tap does not acknowledge its result — it is discarded, '
       + 'which is the silence this unit exists to remove');
-    assert(/const result = await handleApplyAwayDays\(dates\);[\s\S]{0,200}?setScheduleAck\(/
+    assert(/const result = await handleApplyAwayDays\(dates\);[\s\S]{0,300}?setScheduleAck\(ack\);/
       .test(screen),
       'the away commit does not acknowledge its result');
+    for (const surface of ['short_on_time_today', 'away_this_week'] as const) {
+      assert(new RegExp(
+        `recordScheduleAckPresented\\(\\{\\s*\\n?\\s*traceId: result\\?\\.traceId, surface: '${surface}', tone: ack\\.tone,`,
+      ).test(screen),
+        `${surface}: the ack presentation is not recorded on the tape — Sam's `
+        + '2026-08-01 silence would be undiagnosable again');
+    }
     assert(/if \(result\?\.ok\) setAwayDaysVisible\(false\);/.test(screen),
       'the away sheet closes without checking `ok` — closing IS the confirmation, '
       + 'so an unconditional close reports a success that did not happen');

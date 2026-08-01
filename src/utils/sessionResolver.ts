@@ -62,6 +62,10 @@ import {
 import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
 import type { SessionFeedback } from '../store/programStore';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import {
+  canonicalFixtureKindForResolvedPhase,
+  type FixtureAvailabilityKind,
+} from '../rules/fixtureConditionedAvailability';
 import { logger } from './logger';
 import {
   getProgramBlockStateForDate,
@@ -394,7 +398,11 @@ export function canReplaceSession(
   return true;
 }
 
-function createGameStub(dateStr: string, dow: number): Workout {
+function createGameStub(
+  dateStr: string,
+  dow: number,
+  variant: FixtureAvailabilityKind = 'game',
+): Workout {
   const now = new Date().toISOString();
   return {
     id: `calendar-game-${dateStr}`,
@@ -404,7 +412,11 @@ function createGameStub(dateStr: string, dow: number): Workout {
     description: 'Match day',
     durationMinutes: 120,
     intensity: 'High',
+    // LABEL ONLY (ruling 6-IV-4): the variant is a WORD channel for
+    // `dayIsPracticeMatch`, never a second workoutType — every `=== 'Game'`
+    // comparison (locks, invariants, proximity) keeps meaning what it means.
     workoutType: 'Game',
+    ...(variant === 'practice_match' ? { fixtureVariant: 'practice_match' as const } : {}),
     sessionTier: 'core',
     exercises: [],
     createdAt: now,
@@ -712,15 +724,25 @@ function applyGameProximity(
           );
         }
       } else {
-        const recovery = buildDerivedSession(
-          'recovery',
+        // THE DELETED TYPE IS NOT MATERIALISED (2026-08-01, device-pass
+        // fail 3). This used to build a `recovery` session named "Post-game
+        // recovery" — recovery is charter-deleted, and its authored contents
+        // ARE the mobility flows (the charter's own row: "the 10 mobility
+        // flow templates"). The Bible's G+1 protection stands — planned
+        // displaceable work is still replaced with easy movement the day
+        // after a game — but what lands is a MOBILITY session that names
+        // itself, not a type no door offers. The planned-work-on-G+1
+        // disjunction itself stays the charter's declared debt; this changes
+        // which WORD and which authored composition the protection uses.
+        const flush = buildDerivedSession(
+          'mobility',
           date,
           microcycleId,
-          'Post-game recovery',
+          'Post-game',
           athlete,
         );
         return {
-          ...recovery,
+          ...flush,
           derivedSessionProvenance: [fixtureDependency({
             origin: 'fixture_recovery',
             fixtureDate: previousDate,
@@ -948,7 +970,15 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, null, 'rest');
   }
   if (mark === 'game') {
-    return buildDay(date, dow, today, createGameStub(date, dow), 'game');
+    // A calendar mark carries no variant of its own — the SEASON decides which
+    // word the fixture wears (`calendarStore` routes an in-season game and a
+    // pre-season practice match through the same mark). One predicate, shared
+    // with the engine's week mode.
+    return buildDay(
+      date, dow, today,
+      createGameStub(date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase)),
+      'game',
+    );
   }
   // 'noGame' is handled below during virtual-game injection: it suppresses
   // the virtual game on its own date but does not, by itself, block template
@@ -1072,11 +1102,26 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   if (
     templateWorkout &&
     resolverMayDisplace(templateWorkout) &&
-    (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery')
+    (templateWorkout.sessionTier === 'recovery' || templateWorkout.workoutType === 'Recovery') &&
+    // A TYPED COMPOSED OPTIONAL SESSION IS NOT A LEGACY TEMPLATE (2026-08-01).
+    // This branch exists because AI-generated recovery templates lack
+    // structured prescription fields; a session `buildDerivedSession` composed
+    // (a mobility top-up, an athlete's Mobility add) already has them, and
+    // rebuilding it re-rolled its composition on every read — worse, the
+    // rebuilt id collided with the stored top-up's id in the bake-back pass,
+    // so a `sessionTier: 'optional'` top-up was silently re-stored at tier
+    // `recovery` (found by the absolutely-cooked bible cell). The typed marker
+    // is the boundary: carried, never inferred, and never rebuilt over.
+    !templateWorkout.composedOptionalKind
   ) {
+    // Recovery-tier templates are LEGACY ingress now (generation stopped
+    // minting the athlete-visible 'Recovery Session'; the allocator's safety
+    // demotions materialise as Mobility). Whatever recovery-shaped template
+    // still arrives is rebuilt as the thing its contents are — a mobility
+    // flow that names itself — never as the charter-deleted type's word.
     return buildDay(
       date, dow, today,
-      buildDerivedSession('recovery', date, templateMicrocycleId, 'Scheduled recovery - active', state.athleteContext),
+      buildDerivedSession('mobility', date, templateMicrocycleId, 'Scheduled mobility', state.athleteContext),
       'template',
     );
   }

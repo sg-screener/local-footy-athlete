@@ -802,8 +802,14 @@ run('20 a routeless ADD onto G-1 answers with the ask and applies nothing', () =
   assert(preview.appliedDates.length === 0,
     `the ask applied ${preview.appliedDates.join(', ')}`);
   assert(storeFingerprint() === before, 'raising the ask mutated accepted state');
-  assert(preview.g1Ask.keptSessionName === recovery.name,
-    `route (a) would keep "${preview.g1Ask.keptSessionName}", not the day's ${recovery.name}`);
+  // RE-POINTED 2026-08-01 (deleted-type retirement): the planted workout is
+  // deliberately LEGACY-shaped ('Recovery Session'), and the resolver now
+  // rebuilds a displaceable recovery-shaped template as the mobility flow its
+  // contents are — so the session the athlete SEES, and the ask must name, is
+  // "Mobility". The cell's law is unchanged: the ask names what the day keeps.
+  assert(preview.g1Ask.keptSessionName === 'Mobility',
+    `route (a) would keep "${preview.g1Ask.keptSessionName}" — the visible session on `
+    + 'the day is the rebuilt "Mobility" flow (deleted-type retirement, 2026-08-01)');
 });
 
 run('21 an EMPTY G-1 raises the ask with nothing to keep', () => {
@@ -1045,11 +1051,18 @@ run('27 the card names BOTH what the day held and what the athlete added', () =>
 
   const title = visibleWeek(weekStart)
     .find((day) => day.date === friday)?.workout?.name ?? '';
-  assert(title.includes(held.name),
-    `the title "${title}" no longer names the ${held.name} that is still on the day`);
-  assert(title.replace(held.name, '').trim().length > 0,
+  // RE-POINTED 2026-08-01 (deleted-type retirement): the planted 'Recovery
+  // Session' is legacy-shaped on purpose, and the visible session it resolves
+  // to is now the rebuilt "Mobility" flow — so the word the title must keep is
+  // the one the athlete actually sees. The cell's law is unchanged: the card
+  // names BOTH what the day held and what was added.
+  const heldVisibleName = 'Mobility';
+  assert(title.includes(heldVisibleName),
+    `the title "${title}" no longer names the ${heldVisibleName} session (rebuilt from `
+    + `the planted legacy ${held.name}) that is still on the day`);
+  assert(title.replace(heldVisibleName, '').trim().length > 0,
     `the title "${title}" names only what was already there, not what was added`);
-  assert(title.startsWith(`${held.name} + `),
+  assert(title.startsWith(`${heldVisibleName} + `),
     `the title "${title}" does not use the team-combo join`);
 });
 

@@ -211,6 +211,42 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
   return traceStack[traceStack.length - 1];
 }
 
+/**
+ * THE GLASS ACK, ON THE TAPE (2026-08-01, combined device pass). Sam tapped
+ * "Short on time today" and saw nothing — not even the refusal sentence — while
+ * the executor layer proved green at the tape's own depth (the walker's
+ * tape-world cell drives the identical action against the identical world). So
+ * the dark layer is the screen's tap → state → render path, which no harness in
+ * this repo can mount. This is that layer's instrument, alive on Release
+ * because it rides `emitAthleteActionEvent`'s log-before-enabled-check: the
+ * screen calls it at the moment it SETS the acknowledgment it is about to
+ * render. The next tape then answers what four reconstructions could not — a
+ * completed schedule action with no `athlete_ui_outcome_shown` beside it names
+ * the break as "between the executor's return and the screen's setState", and
+ * one WITH it moves the break into render, each without another guess.
+ *
+ * Called after the executor's trace has closed, so it builds a presentation
+ * span from the result's own traceId rather than reading the (empty) stack.
+ */
+export function recordScheduleAckPresented(args: {
+  traceId?: string | null;
+  surface: 'short_on_time_today' | 'away_this_week';
+  tone: 'success' | 'error';
+}): void {
+  emitAthleteActionEvent({
+    traceId: args.traceId ?? 'ack-without-trace',
+    spanId: 'ack-presentation',
+    source: 'tap',
+    actionType: 'program_change',
+    startedAt: now().toISOString(),
+    route: `ack_presentation:${args.surface}`,
+  } as AthleteActionTraceContext, 'athlete_ui_outcome_shown', {
+    internalResultCode: `schedule_ack_${args.tone}`,
+    ackSurface: args.surface,
+    ackTone: args.tone,
+  });
+}
+
 /** First production entry owns the trace; nested entries reuse it. */
 export function beginAthleteActionTrace(
   input: Omit<AthleteActionTraceContext, 'traceId' | 'spanId' | 'startedAt'>,

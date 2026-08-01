@@ -797,6 +797,29 @@ export interface Workout {
    * `splitAcceptedSessionForAthleteMove`.
    */
   isTeamDay?: boolean;
+  /**
+   * WHICH WORD THIS FIXTURE WEARS. Stamped by the resolver's game-stub
+   * factories from the season phase (`canonicalFixtureKind`,
+   * `rules/fixtureConditionedAvailability.ts` — the app's ONE
+   * phase→fixture-identity expression, the same one the §18 week mode uses,
+   * so the label and the mode cannot disagree). LABEL ONLY, by ruling
+   * 6-IV-4: `workoutType` stays `'Game'` and every `=== 'Game'` comparison
+   * with it — the ~99 sites that decide week shape, locks and invariants are
+   * untouched by construction. Read by `dayIsPracticeMatch` alone.
+   */
+  fixtureVariant?: 'practice_match';
+  /**
+   * WHICH CHARTER OPTIONAL TYPE THIS SESSION IS. The plan entry has carried
+   * `composedOptionalKind` since the charter unit; the builder consumed and
+   * discarded it, so a Gunshow reached the projection as name-only and the
+   * signed part headline had nothing typed to read (combined device pass
+   * 2026-08-01, fail 2). Stamped by `sessionBuilder.finaliseDerivedSession`
+   * from the `DerivedSessionType` it already receives — one site, every
+   * route (generator, athlete door, resolver derivation) funnels through it.
+   * Carried, never inferred: a canonicalisation pass must not re-derive it
+   * from names.
+   */
+  composedOptionalKind?: 'gunshow' | 'prehab' | 'mobility';
   /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
   derivedSessionProvenance?: DerivedSessionProvenance[];
   /**

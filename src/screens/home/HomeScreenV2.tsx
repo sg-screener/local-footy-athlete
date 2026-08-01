@@ -36,6 +36,7 @@ import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
 import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
@@ -621,7 +622,14 @@ export default function HomeScreenV2() {
               // doing nothing at all.
               setScheduleAck(null);
               const result = await handleApplyShortOnTimeToday();
-              setScheduleAck(buildScheduleAcknowledgment(result, 'short_on_time'));
+              const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+              setScheduleAck(ack);
+              // The tape's witness that the ack layer RAN — Sam's 2026-08-01
+              // silence could not be reproduced below this line, so this line
+              // reports itself. See recordScheduleAckPresented.
+              recordScheduleAckPresented({
+                traceId: result?.traceId, surface: 'short_on_time_today', tone: ack.tone,
+              });
             }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
             testID="home-short-on-time-entry"
@@ -908,7 +916,11 @@ export default function HomeScreenV2() {
           // refused commit read as "done" — the athlete watched the sheet
           // dismiss and believed their days were cleared.
           const result = await handleApplyAwayDays(dates);
-          setScheduleAck(buildScheduleAcknowledgment(result, 'away'));
+          const ack = buildScheduleAcknowledgment(result, 'away');
+          setScheduleAck(ack);
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
           if (result?.ok) setAwayDaysVisible(false);
         }}
       />

@@ -211,6 +211,15 @@ function stackTemplate(args: {
       ...(args.base.recoveryAddons ?? []),
       ...(args.template.recoveryAddons ?? []),
     ],
+    // A STACKED DAY IS NOT A COMPOSED OPTIONAL SESSION (2026-08-01). The
+    // marker means "this workout IS one composed Gunshow/Accessories/Mobility
+    // session"; spreading the base carried it onto combined days, where the
+    // projection then named an added conditioning part with the optional
+    // word's claim standing beside it (deep walker, L-P6, seeds 1 and 3 —
+    // a typed mobility day + conditioning add rendered no "Mobility" at all).
+    // The parts of a combined day name themselves by content; the marker dies
+    // with the purity it describes.
+    composedOptionalKind: undefined,
     derivedSessionProvenance: undefined,
   } as Workout;
 }
