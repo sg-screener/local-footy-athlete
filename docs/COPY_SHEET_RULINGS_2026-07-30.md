@@ -863,3 +863,30 @@ clears it the moment a day combines — so a combined day still names both of
 its things (7-e governs the composed session's own card word, never the
 team-combo join). The walker's charter cell now asserts the EXACT one-word
 part list for all three door-added types.
+
+## Batch 8 — block-rollover interim (2026-08-01): PROPOSED
+
+The interim half of Sam's block-rollover ruling (2026-07-31, TOP of the
+post-merge queue): the rollover succeeds, or refuses honestly with a
+sentence. Two strings, both PROPOSED — parked for Sam's signature in
+`docs/PARKED_QUESTIONS_2026-08-01.md`; per this file's transitional rule a
+string may ship PROPOSED and may never ship unlisted.
+
+**8-a. The refusal sentence** (prose, not a table row — it lives in
+`utils/readinessAcknowledgment.ts`, `buildRolloverAcknowledgment`, outside
+the binder's scan like every ack sentence before it; recorded gap):
+
+- "Your next training block couldn't be built — your current weeks are
+  unchanged. Try again in a moment." — error tone, shown on the week screen
+  whenever the lifecycle boundary refuses; claims only what is true (the
+  rebuild candidate is validated whole and never committed on failure, so
+  the current weeks really are unchanged; retry is offered, not promised).
+  The engine's typed refusal code never reaches the athlete — it stays on
+  the action-log tape.
+
+**8-b. The retry affordance** (table row — it renders in `HomeScreenV2.tsx`,
+which the binder scans):
+
+| Row | String | Where it appears (HEAD) |
+|---|---|---|
+| Rollover retry | "Try again" | `HomeScreenV2.tsx` rollover-refusal card |

@@ -74,7 +74,10 @@ import {
   programControlActionForPlanChange,
   scheduleFactScopeForAction,
 } from '../utils/programControlActions';
-import { buildScheduleAcknowledgment } from '../utils/readinessAcknowledgment';
+import {
+  buildRolloverAcknowledgment,
+  buildScheduleAcknowledgment,
+} from '../utils/readinessAcknowledgment';
 import {
   composeTemporarySourceFactCompatibility,
   createTemporaryScheduleFact,
@@ -624,17 +627,31 @@ function performAction(action: WalkerAction): WalkerStepResult {
         });
         if (!status.needsRollover) break;
         try {
-          quiet(() => rolloverProgramBlock({
+          // THE BOUNDARY REFUSES TYPED NOW (Sam's interim ruling, 2026-07-31;
+          // built 2026-08-01). A refusal is L6-LEGAL exactly when the athlete
+          // is told: the ack owner must produce the sentence, in the
+          // athlete's words, with no raw code in it. Silence — a refusal the
+          // ack owner answers with nothing — is the defect the ruling
+          // retires, and a THROW is the boundary breaking its own contract.
+          const rolled = quiet(() => rolloverProgramBlock({
             baseProfile: useProfileStore.getState().onboardingData,
             targetDateISO: todayISO,
           }));
+          if (rolled.refusal) {
+            const ack = buildRolloverAcknowledgment(rolled);
+            if (!ack || ack.tone !== 'error' || ack.message.trim().length === 0) {
+              rolloverFailure = 'the rollover refused and the ack owner said '
+                + `NOTHING — code ${rolled.refusal.code}`;
+            } else if (RAW_CODE.test(ack.message) ||
+              ack.message.includes(rolled.refusal.code)) {
+              rolloverFailure = `a raw code reached the athlete: "${ack.message}"`;
+            }
+            rolloverFailedThisWalk = true;
+            break;
+          }
         } catch (error) {
-          // THE SCREEN CATCHES, SO THE DOOR CATCHES. `useHomeScreen.ts:346-348`
-          // wraps this call in try/catch and logs — an athlete whose rollover
-          // fails sees no crash, he sees a program that stopped. Letting it
-          // throw here would report a crash he never gets and would hide the
-          // failure he does. It is recorded as its own law instead: L6.
-          rolloverFailure = error instanceof Error ? error.message : String(error);
+          rolloverFailure = 'the rollover THREW instead of refusing typed — '
+            + (error instanceof Error ? error.message : String(error));
           rolloverFailedThisWalk = true;
           break;
         }
@@ -880,15 +897,17 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
     broken.push({ law, detail });
   };
 
-  // L6 THE BLOCK ROLLS OVER — an athlete who keeps opening the app keeps
-  // having a program.
+  // L6 THE BLOCK ROLLS OVER, OR REFUSES TO THE ATHLETE'S FACE — re-pointed
+  // 2026-08-01 to Sam's interim ruling (2026-07-31): "the existing rollover
+  // must SUCCEED, or REFUSE HONESTLY with a sentence. The silent stop IS the
+  // defect — not the failure."
   //
   // Only the DEEP tier can reach this: the generated block is four microcycles
   // wide, so nothing shallower than four weeks of clock ever asks the lifecycle
-  // boundary to do its job. When it refuses, the screen logs and moves on and
-  // the athlete is left standing on the last week of a spent block, every day
-  // `outside_horizon`, with no crash and no sentence. That silence is the defect,
-  // which is why it is a law here and not a swallowed catch.
+  // boundary to do its job. An honest typed refusal (the ack owner's sentence,
+  // no raw code) is now L6-LEGAL; what offends is a THROW, or a refusal the
+  // athlete would read as nothing. `rolloverFailure` is set by the clock door
+  // ONLY for those two shapes.
   if (rolloverFailure) {
     const failure = rolloverFailure;
     rolloverFailure = null;
@@ -1614,48 +1633,15 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // that named the PROJECTION as wrong all came from the same defect: two owners
   // answering one question.
 
-  // NOTE 2026-08-01: briefly deleted as stale and RESTORED the same day — the
-  // same truncated-walk artifact as the entry above. The rollover still fails
-  // at depth (DEEP seed 1 confirmed after the L-P6 declaration let the walk
-  // reach it), and Sam's ruling stands: this stays red until the interim unit
-  // lands.
-  {
-    id: 'block_rollover_fails_silently_and_the_program_stops',
-    law: 'L6 THE BLOCK ROLLS OVER',
-    matches: /Accepted-state ledger mismatch/,
-    why: 'ONLY DEPTH REACHES THIS, which is the whole argument for the tier. Four '
-      + 'weeks after install the block must roll; `rebuildLocalWeek` re-evaluates '
-      + 'the accepted-state ledger, finds blockers (planner_selected_target_miss, '
-      + 'required_minimum_shortfall, pattern_restore_failure) and throws. '
-      + '`useHomeScreen` catches and logs, so the athlete gets no crash and no '
-      + 'sentence — he gets a program that stopped, every day outside the edit '
-      + 'horizon. NOT A HARNESS ARTIFACT: review\'s first suspicion was this file\'s '
-      + 'own generate door writing `currentProgram` with a raw `setState` and '
-      + 'leaving the ledger null. That door now publishes through '
-      + '`commitRebuiltProgram` -> `commitAcceptedStateTransaction`, the same accept '
-      + 'boundary the rollover itself uses, and THE RED SURVIVED UNCHANGED. '
-      + 'Reproduce: DEEP seed 1, rolling into 2026-08-10. Not a surface defect and '
-      + 'no task in this unit pays it.',
-    paidBy: 'RULED BY SAM, 2026-07-31, and it is the TOP of the post-merge queue. '
-      + 'END STATE (Stage B): a rolling horizon of ~TWO TRAINING BLOCKS derived on '
-      + 'demand — no stored future blocks, and therefore no rollover EVENT that can '
-      + 'fail; later weeks derive as they enter the horizon from the freshest logged '
-      + 'reality (estimate -> measured). That is the north star applied to the block '
-      + 'lifecycle: the rollover is not a decision, so it is not stored. INTERIM, and '
-      + 'the unit that goes first: the existing rollover must SUCCEED or REFUSE '
-      + 'HONESTLY with a sentence. THE SILENT STOP IS THE DEFECT, not the failure — '
-      + 'whichever way it lands, the athlete is told. Owner: the program-block '
-      + 'lifecycle owner (`weekRebuild.rebuildLocalWeek` scope:block + '
-      + '`acceptedStateTransaction` validation). Still NOT a buttons/UI task.',
-    expiresWhen: 'THIS ENTRY STAYS RED AND STAYS DECLARED until the interim unit '
-      + 'above lands — a ruling is not a fix, and the athlete is still told nothing '
-      + 'today. Delete it when the rollover either succeeds or refuses with a '
-      + 'sentence the athlete can read. If instead a deep walk simply stops crossing '
-      + 'a block boundary without `rolloverProgramBlock` throwing, the cause was '
-      + 'upstream and this entry must be deleted rather than left as a promise '
-      + 'nobody owes.',
-    redsIn: 'deep',
-  },
+  // `block_rollover_fails_silently_and_the_program_stops` — PAID 2026-08-01
+  // by the block-rollover INTERIM unit (Sam's ruling, TOP of the post-merge
+  // queue): the boundary now refuses TYPED instead of throwing, the ack owner
+  // (`buildRolloverAcknowledgment`) produces the sentence, `useHomeScreen`
+  // renders it with a retry instead of swallowing, and the clock door above
+  // holds L6 to the ruling's exact terms — a refusal with no sentence, a raw
+  // code in the sentence, or a THROW still reds. The Stage B end state (a
+  // rolling ~two-block horizon derived on demand, no rollover event at all)
+  // remains queued and is NOT this payment.
 ];
 
 const declaredRedHits = new Set<string>();

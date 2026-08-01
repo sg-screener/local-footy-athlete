@@ -54,6 +54,10 @@ import {
 } from '../../utils/programBlockState';
 import { rolloverProgramBlock } from '../../utils/programBlockRollover';
 import {
+  buildRolloverAcknowledgment,
+  type ReadinessAcknowledgment,
+} from '../../utils/readinessAcknowledgment';
+import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
   NEXT_PHASE,
@@ -237,6 +241,14 @@ export function useHomeScreen() {
   const [rebuildMsgIdx, setRebuildMsgIdx] = useState(0);
   const rebuildMsgOpacity = useRef(new Animated.Value(1)).current;
   const rolloverAttemptRef = useRef<string | null>(null);
+  // THE ROLLOVER IS NEVER SILENT (Sam's interim ruling, 2026-07-31). A failed
+  // rollover used to be caught and logged here, leaving the athlete a program
+  // that stopped outside the edit horizon with no sentence. The typed refusal
+  // now lands in this state and the week screen renders it, with a retry that
+  // clears the attempt key so the effect runs again.
+  const [rolloverRefusal, setRolloverRefusal] =
+    useState<ReadinessAcknowledgment | null>(null);
+  const [rolloverRetryNonce, setRolloverRetryNonce] = useState(0);
 
   // Profile store
   const onboardingData = useProfileStore((s) => s.onboardingData);
@@ -335,17 +347,27 @@ export function useHomeScreen() {
       currentProgram?.id ?? 'no-program',
       status.currentBlockEnd ?? 'no-end',
       rolloverTargetDateISO,
+      String(rolloverRetryNonce),
     ].join(':');
     if (rolloverAttemptRef.current === attemptKey) return;
     rolloverAttemptRef.current = attemptKey;
 
     try {
-      rolloverProgramBlock({
+      const result = rolloverProgramBlock({
         baseProfile: onboardingData,
         targetDateISO: rolloverTargetDateISO,
       });
+      // The boundary refuses typed now; the athlete reads the ack owner's
+      // sentence, never the engine's code (which stays on the tape).
+      setRolloverRefusal(buildRolloverAcknowledgment(result));
+      if (result.refusal) {
+        logger.error('[programBlockRollover] rollover refused', result.refusal.code);
+      }
     } catch (error) {
+      // Belt for an unexpected throw — the contract says the boundary never
+      // throws, and if that contract breaks the athlete is STILL told.
       logger.error('[programBlockRollover] automatic rollover failed', error);
+      setRolloverRefusal(buildRolloverAcknowledgment({ refusal: { code: 'threw' } }));
     }
   }, [
     blockState,
@@ -353,8 +375,17 @@ export function useHomeScreen() {
     isOnboardingComplete,
     isRebuilding,
     onboardingData,
+    rolloverRetryNonce,
     rolloverTargetDateISO,
   ]);
+
+  /** "Try again" on the rollover-refusal card: clear the sentence and the
+   *  attempt key so the lifecycle effect runs the same boundary once more. */
+  const handleRetryRollover = useCallback(() => {
+    setRolloverRefusal(null);
+    rolloverAttemptRef.current = null;
+    setRolloverRetryNonce((nonce) => nonce + 1);
+  }, []);
   const visibleWeekStart = weekDays[0]?.date;
   const visibleWeekEnd = weekDays[weekDays.length - 1]?.date ?? visibleWeekStart;
   const visibleReversibleAdjustments = useMemo(() => reversibleAdjustments
@@ -1989,6 +2020,10 @@ export function useHomeScreen() {
 
     // Short on time / away + missed sessions (vocab groups 5 + 2)
     handleApplyShortOnTimeToday,
+
+    // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
+    rolloverRefusal,
+    handleRetryRollover,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
