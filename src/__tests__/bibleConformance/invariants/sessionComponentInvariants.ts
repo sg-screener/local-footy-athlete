@@ -231,32 +231,41 @@ function checkTrunkNotConditioning(trace: ComponentScenarioTrace): InvariantChec
   const failures: InvariantFailure[] = [];
   for (const stage of ['generated_fallback', 'visible_week', 'visible_detail'] as const) {
     const observed = target(trace, stage);
-    const missingSupport = difference(componentRule.expectation.supportRows, observed?.supportRowNames ?? []);
+    // RE-POINTED 2026-08-01 (Sam's CARD IDENTITY ruling, copy sheet 7-f):
+    // trunk rows inside a strength session are CONTENTS of that session, not
+    // a component of their own — so on this strength day the Pallof row must
+    // live in the STRENGTH rows (conserved, re-homed not lost) and a
+    // `trunk_support` component must NOT exist beside strength ("Midline
+    // Work" survives only as sole-content identity). The invariant's causal
+    // half is unchanged: trunk rows must never manufacture a conditioning
+    // component.
+    const missingSupport = difference(componentRule.expectation.supportRows, observed?.strengthRowNames ?? []);
     const falseConditioningRows = (observed?.conditioningRowNames ?? []).filter((name) =>
       componentRule.expectation.supportRows.includes(name));
-    // A real typed conditioning component may independently share the same
-    // constrained full-body day. The invariant is causal: trunk rows must not
-    // be the rows manufacturing that component.
     const falseConditioning = observed?.components.includes('conditioning') === true &&
       (observed?.conditioningRowNames.length ?? 0) === 0;
-    if (!observed?.components.includes('trunk_support') || missingSupport.length > 0 || falseConditioning || falseConditioningRows.length > 0) {
+    const strayedSupportComponent = observed?.components.includes('trunk_support') === true;
+    if (!observed || strayedSupportComponent || missingSupport.length > 0 || falseConditioning || falseConditioningRows.length > 0) {
       failures.push(failure({
         trace,
         invariantId,
         ruleId: componentRule.id,
         stage,
         expected: {
-          component: 'trunk_support',
+          component: 'no trunk_support beside strength (ruling 7-f)',
           rows: componentRule.expectation.supportRows,
+          rowsHome: 'strength',
           conditioningRowsExclude: componentRule.expectation.supportRows,
         },
         actual: observed ? {
           components: observed.components,
+          strengthRows: observed.strengthRowNames,
           supportRows: observed.supportRowNames,
           conditioningRows: observed.conditioningRowNames,
         } : null,
         missing: missingSupport,
-        extra: [...(falseConditioning ? ['conditioning'] : []), ...falseConditioningRows],
+        extra: [...(strayedSupportComponent ? ['trunk_support'] : []),
+          ...(falseConditioning ? ['conditioning'] : []), ...falseConditioningRows],
         row: observed,
       }));
     }

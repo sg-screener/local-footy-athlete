@@ -207,9 +207,14 @@ function editCanonical(trace: Slice4ScenarioTrace): InvariantCheckResult {
     ? workout.components.includes('conditioning') && workout.conditioning.some((entry) => entry.modality === 'bike') && !workout.strengthRows.some((row) => /bike/i.test(row))
     : trace.scenario.id === 'coach-remove-contrast-lift'
       ? workout.power.kind !== 'contrast'
-      : workout.supportRows.includes('Pallof Press') && !workout.components.includes('conditioning') && same(workout.effectivePatterns, ['push']);
+      // RE-POINTED 2026-08-01 (CARD IDENTITY ruling, copy sheet 7-f): a Pallof
+      // added to a strength day is CONTENTS of that day's strength session —
+      // conserved in `strengthRows`, never a `trunk_support` component beside
+      // strength and never a conditioning credit. The conservation claim is
+      // unchanged; only the row's home moved with the ruling.
+      : workout.strengthRows.includes('Pallof Press') && !workout.components.includes('trunk_support') && !workout.components.includes('conditioning') && same(workout.effectivePatterns, ['push']);
   const missing = trace.scenario.id === 'coach-add-bike-zone2' && !workout.components.includes('conditioning') ? ['conditioning']
-    : trace.scenario.id === 'direct-add-pallof' && !workout.supportRows.includes('Pallof Press') ? ['Pallof Press'] : [];
+    : trace.scenario.id === 'direct-add-pallof' && !workout.strengthRows.includes('Pallof Press') ? ['Pallof Press'] : [];
   const extra = workout.power.kind === 'contrast' ? ['stale_contrast']
     : workout.strengthRows.filter((row) => /bike/i.test(row));
   return check(id, trace, applied, valid, () => failure({

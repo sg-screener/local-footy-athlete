@@ -108,13 +108,21 @@ function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_bod
         };
       });
     } else if (mutationId === 'trunk_as_conditioning') {
+      // RE-POINTED 2026-08-01 (CARD IDENTITY ruling, 7-f): trunk rows on a
+      // strength day live in `strengthRows` now, so the simulated defect —
+      // trunk work classified as conditioning — moves the Pallof from there.
+      // The old injection (supportRows → conditioning) became a no-op the day
+      // the baseline stopped carrying supportRows, and this probe's own
+      // activity check caught exactly that.
       moduleValue[exportName] = (workout: any) => {
         const rows = original(workout);
         if (workout?.planEntryId !== 'w1:monday:none:strength') return rows;
+        const isPallof = (row: any) =>
+          /pallof/i.test(String(row?.exercise?.name ?? row?.name ?? ''));
         return {
           ...rows,
-          supportRows: [],
-          conditioningRows: [...rows.conditioningRows, ...rows.supportRows],
+          strengthRows: rows.strengthRows.filter((row: any) => !isPallof(row)),
+          conditioningRows: [...rows.conditioningRows, ...rows.strengthRows.filter(isPallof)],
         };
       };
     } else {
@@ -145,7 +153,7 @@ function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_bod
       : mutationId === 'drop_team_strength'
         ? baseline.components.includes('strength') && !mutant.components.includes('strength') && mutant.effectivePatterns.length === 0
         : mutationId === 'trunk_as_conditioning'
-          ? baseline.supportRowNames.includes('Pallof Press') && mutant.conditioningRowNames.includes('Pallof Press')
+          ? baseline.strengthRowNames.includes('Pallof Press') && mutant.conditioningRowNames.includes('Pallof Press')
           : baseline.effectivePatterns.length === 0 && mutant.effectivePatterns.includes('push');
     if (!mutationActive) throw new Error(`${mutationId} mutation was not active in observed output`);
 
