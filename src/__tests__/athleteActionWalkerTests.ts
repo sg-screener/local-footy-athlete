@@ -1186,6 +1186,28 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
         }
       }
 
+      // L-P8 CARD IDENTITY, ONE NAME (Sam, 2026-08-01 — the queue addition
+      // extending ruling 7-e to ALL sessions). Support/midline rows inside a
+      // strength or conditioning session are CONTENTS, not card vocabulary: a
+      // lower day reads "Lower Body Strength", never "+ Midline Work". A
+      // support part may exist ONLY as the identity of a day whose sole
+      // content is trunk work — so a support part beside a strength or
+      // conditioning part on the same day is the defect, whatever the words.
+      // (Team-combo joins are untouched: team_training is an anchor part, not
+      // content this law counts. Power rides beside a sole-trunk day
+      // unchanged — folding trunk into an invented "Strength" word would be
+      // the opposite defect.)
+      {
+        const kinds = visibleDay.parts.map((part) => String(part.kind));
+        if (kinds.includes('support') &&
+          (kinds.includes('strength') || kinds.includes('conditioning'))) {
+          offend('L-P8 CARD IDENTITY',
+            `${day.date}: a support part rides beside content parts `
+            + `(${JSON.stringify(kinds)}) — midline rows are contents of the `
+            + 'session they are in, not card vocabulary (Sam, 2026-08-01).');
+        }
+      }
+
       // L-P7 THE DELETED TYPE'S WORD NEVER RENDERS. Recovery is not an
       // athlete-facing session type (session-type charter; design ruling 9
       // "(type deleted)"; the G+1 Rest ruling closed on the same ground). No

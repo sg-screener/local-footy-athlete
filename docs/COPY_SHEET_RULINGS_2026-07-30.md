@@ -890,3 +890,24 @@ which the binder scans):
 | Row | String | Where it appears (HEAD) |
 |---|---|---|
 | Rollover retry | "Try again" | `HomeScreenV2.tsx` rollover-refusal card |
+
+**7-f. RULED: CARD IDENTITY, ONE NAME — 7-e extends to ALL sessions (Sam,
+2026-08-01, queue addition).**
+
+> Support/midline rows inside a strength session are CONTENTS, not card
+> vocabulary — a lower day reads "Lower Body Strength", never "+ Midline
+> Work". "Midline Work" survives only as the identity of a day whose sole
+> content is trunk work. Team-combo joins unchanged (a team night still
+> names both its things).
+
+Landed at the same one owner as 7-e (`getSessionComponentRows`): the trunk
+split happens exactly when trunk rows are ALL the content rows there are —
+otherwise they flow into the session's own bucket (strength days keep them
+in the strength part, standalone conditioning in the conditioning part),
+rows conserved, re-homed not lost (golden re-pin verified: zero `total`
+deltas). Power rides beside a sole-trunk day unchanged — folding trunk
+under an invented "Strength" word would be the opposite defect. Walker law
+`L-P8 CARD IDENTITY` (both tiers, every action) reds any support part that
+rides beside a strength or conditioning part. The "Midline Work" entry
+(`part.headline.support`) STAYS registered — it is the sole-content
+identity, not a retired word.

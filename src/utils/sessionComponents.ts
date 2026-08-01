@@ -635,17 +635,29 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     ? new Set<string>()
     : legacyConditioningTailIds(workout, renderableRows);
   const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds]);
-  // ONE WORD FOR A COMPOSED OPTIONAL SESSION (Sam's ruling, 2026-08-01,
-  // signed with Batch 7): an athlete-added Gunshow / Accessories / Mobility
-  // session reads its door's name ALONE — its rows are contents, visible
-  // inside, never card vocabulary. So the trunk-row split that used to carve
-  // a "Midline Work" part out of an Accessories session does not apply to a
-  // workout carrying the typed marker: the marker means the whole session IS
-  // one composed thing (`stackTemplate` clears it the moment the day
-  // combines, so purity is guaranteed by construction, not re-inferred).
-  const supportRows = isRecoveryWorkout(workout) || (workout as Workout).composedOptionalKind
+  // CARD IDENTITY, ONE NAME (Sam, 2026-08-01 — extending ruling 7-e from
+  // composed optional sessions to ALL sessions). Support/midline rows inside
+  // a strength or conditioning session are CONTENTS, visible inside the
+  // session, never card vocabulary: a lower day reads "Lower Body Strength",
+  // never "+ Midline Work". "Midline Work" survives ONLY as the identity of
+  // a day whose sole content is trunk work — so the trunk split happens
+  // exactly when trunk rows are ALL the content rows there are (power rides
+  // beside a sole-trunk day unchanged: folding trunk under an invented
+  // "Strength" word would be the opposite defect; team anchors are not
+  // content). A recovery workout and a marker-carrying composed optional
+  // session never split (7-e); everywhere else trunk rows flow into the
+  // session's own bucket — strength days keep them in `strengthRows`,
+  // standalone conditioning keeps them in `conditioningRows` — so the rows
+  // are conserved, re-homed not lost.
+  const trunkRows = isRecoveryWorkout(workout) || (workout as Workout).composedOptionalKind
     ? []
     : renderableRows.filter(isTrunkSupportRow);
+  const trunkIds = new Set(trunkRows.map((row) => row?.id).filter(Boolean));
+  const trunkIsSoleContent = trunkRows.length > 0 &&
+    !isStandaloneConditioningWorkout(workout) &&
+    conditioningIds.size === 0 &&
+    renderableRows.every((row) => trunkIds.has(row?.id));
+  const supportRows = trunkIsSoleContent ? trunkRows : [];
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
 
   const conditioningRows = isStandaloneConditioningWorkout(workout)
