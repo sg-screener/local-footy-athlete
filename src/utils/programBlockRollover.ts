@@ -44,6 +44,18 @@ export interface ProgramBlockRolloverResult {
   sweep?: OverrideSweepDecision;
   preservedOverlayWeeks: string[];
   removedOverlayWeeks: string[];
+  /**
+   * THE HONEST REFUSAL (Sam's interim ruling, 2026-07-31; built 2026-08-01).
+   * The rollover used to THROW here and `useHomeScreen` caught and logged, so
+   * the athlete got a program that silently stopped outside the edit horizon —
+   * the silent stop was the defect, not the failure. A failed rollover is now
+   * a typed refusal: the store is untouched (the rebuild candidate was never
+   * committed), the code names the first failing boundary for the tape, and
+   * `buildRolloverAcknowledgment` (`utils/readinessAcknowledgment.ts` — the
+   * owner of what the athlete is told when a thing does not land) turns it
+   * into the sentence every caller shows. Present ONLY on a failure.
+   */
+  refusal?: { code: string };
 }
 
 /** Keep only exact-week overlays that have not expired before the new block. */
@@ -187,8 +199,8 @@ export function rolloverProgramBlock(args: {
     } catch (error) {
       const rejectionCode = athleteActionErrorCode(error, 'program_rollover_unknown_error');
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
-        outcome: 'threw',
-        internalResultCode: 'program_rollover_failed',
+        outcome: 'refused',
+        internalResultCode: 'program_rollover_refused',
         originalRejectionCode: rejectionCode,
         rejectionCodes: [rejectionCode],
         firstFailingBoundary: 'rolloverProgramBlock',
@@ -197,7 +209,32 @@ export function rolloverProgramBlock(args: {
         previousStateRestored: true,
         terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
       });
-      throw error;
+      // THE REFUSAL IS TYPED, NOT THROWN (Sam's interim ruling, 2026-07-31).
+      // Rethrowing here is how the athlete came to be told nothing: every
+      // caller wrapped this in try/catch-and-log, and a caller added tomorrow
+      // would too. The store was never touched (`commitRebuiltProgram`
+      // validates the whole candidate before publishing), so the truthful
+      // answer is a result: the old block stands, and here is why the new one
+      // could not be built. The tape witness rides beside it.
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'home_program_projection',
+        uiOutcome: 'refused',
+        internalResultCode: 'program_rollover_refused',
+        finalUiMessageKey: 'program_rollover_refused',
+      });
+      const before = useProgramStore.getState();
+      return {
+        rolledOver: false,
+        status: getProgramBlockRolloverStatus({
+          program: before.currentProgram,
+          dateISO: targetDateISO,
+          blockState: before.blockState,
+        }),
+        program: before.currentProgram,
+        preservedOverlayWeeks: Object.keys(before.weekScopedOverlays).sort(),
+        removedOverlayWeeks: [],
+        refusal: { code: rejectionCode },
+      };
     }
   });
 }

@@ -95,3 +95,26 @@ export function buildScheduleAcknowledgment(
     message: "That didn't save — your week is unchanged. Give it another go in a moment.",
   };
 }
+
+/**
+ * The block-rollover refusal, in the athlete's words (Sam's interim ruling,
+ * 2026-07-31, built 2026-08-01 — "the existing rollover must SUCCEED, or
+ * REFUSE HONESTLY with a sentence"; the silent stop IS the defect).
+ *
+ * Null for a rollover that succeeded or was not needed — nothing to say.
+ * Never null for a refusal: silence here is the exact defect this pays. The
+ * sentence claims only what is true — the current weeks stand untouched
+ * (the rebuild candidate is validated whole and was never committed) and a
+ * retry is offered, not promised. It never forwards an engine code; the
+ * typed `refusal.code` stays on the tape where it belongs.
+ */
+export function buildRolloverAcknowledgment(
+  result: { rolledOver?: boolean; refusal?: { code: string } } | null | undefined,
+): ReadinessAcknowledgment | null {
+  if (!result?.refusal) return null;
+  return {
+    tone: 'error',
+    message: "Your next training block couldn't be built — your current weeks are "
+      + 'unchanged. Try again in a moment.',
+  };
+}

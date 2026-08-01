@@ -143,6 +143,8 @@ export default function HomeScreenV2() {
     isRebuilding,
     rebuildError,
     rebuildErrorCanRetry,
+    rolloverRefusal,
+    handleRetryRollover,
     rebuildMsgIdx,
     rebuildMsgOpacity,
     handleCancelRebuild,
@@ -605,6 +607,27 @@ export default function HomeScreenV2() {
                 </View>
                 <Text style={styles.addGameText}>No game this week - add one</Text>
               </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── Block-rollover honest refusal (Sam's interim ruling, 2026-07-31) ──
+            NOT gated on isNormal: a program that stopped must say so whatever
+            mode the screen is in. The sentence is the ack owner's
+            (`buildRolloverAcknowledgment`); tapping retries the same boundary. */}
+        {rolloverRefusal && (
+          <Pressable
+            onPress={handleRetryRollover}
+            testID="home-rollover-refusal"
+            accessibilityRole="button"
+            accessibilityLabel={rolloverRefusal.message}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <Text style={[styles.busyAwayText, styles.scheduleAckError]}>
+                {rolloverRefusal.message}
+              </Text>
+              <Text style={styles.busyAwayText}>Try again</Text>
             </Card>
           </Pressable>
         )}
