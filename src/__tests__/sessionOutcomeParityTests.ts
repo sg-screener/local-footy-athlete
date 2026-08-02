@@ -299,8 +299,8 @@ async function resetFixture(): Promise<void> {
     activeInjury: null,
     dismissedCoachNoteIds: [],
   });
-  useCoachMutationHistoryStore.setState({ entries: [] });
-  useCoachPreferencesStore.setState({ modalityPreferences: {} });
+  useCoachMutationHistoryStore.getState().clearAll();
+  useCoachPreferencesStore.getState().clearAllModalityPreferences();
   useProgramStore.setState({
     currentProgram: clone(PROGRAM),
     currentMicrocycle: clone(MICROCYCLE),

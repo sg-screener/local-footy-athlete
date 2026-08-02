@@ -319,16 +319,10 @@ async function main(): Promise<void> {
         entries: [{ id: 'unexpected-stale-history' } as any,
           ...useCoachMutationHistoryStore.getState().entries],
       });
-      useCoachPreferencesStore.setState({
-        modalityPreferences: {
-          ...useCoachPreferencesStore.getState().modalityPreferences,
-          'unexpected-stale-preference': {
-            from: 'row',
-            to: 'bike',
-            createdAt: 1,
-          },
-        },
-      });
+      useCoachPreferencesStore.getState().setModalityPreference(
+        'unexpected-stale-preference',
+        { from: 'row', to: 'bike' },
+      );
       return { applied: true };
     },
     didApply: (value) => value.applied,

@@ -19,8 +19,18 @@ import {
   restoreCoachUpdatesCompatibilityMirror,
   useCoachUpdatesStore,
 } from './coachUpdatesStore';
-import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
-import { useCoachPreferencesStore } from './coachPreferencesStore';
+import {
+  useCoachMutationHistoryStore,
+  applyCoachMutationHistoryWrite,
+  beginCoachMutationHistoryResetAction,
+  endCoachMutationHistoryResetAction,
+} from './coachMutationHistoryStore';
+import {
+  useCoachPreferencesStore,
+  applyCoachModalityPrefsWrite,
+  beginCoachModalityPrefsResetAction,
+  endCoachModalityPrefsResetAction,
+} from './coachPreferencesStore';
 import {
   restoreAcceptedProfileCompatibilityMirror,
   useProfileStore,
@@ -615,8 +625,36 @@ function restoreAcceptedInMemory(
     activeInjury: clone(mirrors.activeInjury),
     dismissedCoachNoteIds: clone(mirrors.dismissedCoachNoteIds),
   });
-  useCoachMutationHistoryStore.setState({ entries: clone(mirrors.mutationHistoryEntries) });
-  useCoachPreferencesStore.setState({ modalityPreferences: clone(mirrors.modalityPreferences) });
+  // Through the mutation-history owner. A rollback restoring "no history yet"
+  // is a legitimate erasure — it removes the failed transaction's own record —
+  // so it runs under a reset act rather than around the door (recipe lesson 2).
+  {
+    const historyResetActionId = beginCoachMutationHistoryResetAction('coach_mutation_rollback');
+    try {
+      applyCoachMutationHistoryWrite({
+        next: clone(mirrors.mutationHistoryEntries),
+        writer: 'coach_mutation_rollback',
+        resetActionId: historyResetActionId,
+      });
+    } finally {
+      endCoachMutationHistoryResetAction(historyResetActionId);
+    }
+  }
+  // Through the coach-prefs owner. A rollback restoring "no preferences yet"
+  // is a legitimate erasure — it removes the failed transaction's own writes —
+  // so it runs under a reset act rather than around the door (recipe lesson 2).
+  {
+    const prefsResetActionId = beginCoachModalityPrefsResetAction('coach_mutation_rollback');
+    try {
+      applyCoachModalityPrefsWrite({
+        next: clone(mirrors.modalityPreferences),
+        writer: 'coach_mutation_rollback',
+        resetActionId: prefsResetActionId,
+      });
+    } finally {
+      endCoachModalityPrefsResetAction(prefsResetActionId);
+    }
+  }
   restoreAcceptedProfileCompatibilityMirror({
     onboardingData: clone(mirrors.onboardingData),
     isOnboardingComplete: mirrors.isOnboardingComplete,

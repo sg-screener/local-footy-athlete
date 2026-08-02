@@ -61,13 +61,19 @@ import { useCalendarStore, applyCalendarMarkedDaysWrite } from '../store/calenda
 import { athleteActionLogEntries } from '../utils/athleteActionLog';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
+import {
+  useCoachMutationHistoryStore,
+  applyCoachMutationHistoryWrite,
+} from '../store/coachMutationHistoryStore';
 import {
   useAthletePreferencesStore,
   applyAthletePrefsWrite,
   INITIAL_ATHLETE_PREFS,
 } from '../store/athletePreferencesStore';
-import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
+import {
+  useCoachPreferencesStore,
+  applyCoachModalityPrefsWrite,
+} from '../store/coachPreferencesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -290,7 +296,7 @@ function freshInstall(): void {
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
+  useCoachMutationHistoryStore.getState().clearAll();
   // A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL.
   //
   // These two were missing, and the gap is not theoretical: adding two doors to
@@ -300,10 +306,10 @@ function freshInstall(): void {
   // difference was preference state an earlier walk had left behind, which the
   // generator reads. A reset that leaves a door open makes every reproduction in
   // this file a coin toss, and the shrinker's minimal history a lie.
-  // Through the store's own reset door — the armour refuses a raw default
-  // write over answered prefs, and freshInstall must not bypass the owner.
+  // Through the stores' own reset doors — the armour refuses a raw default
+  // write over answered prefs, and freshInstall must not bypass the owners.
   useAthletePreferencesStore.getState().clear();
-  useCoachPreferencesStore.setState({ modalityPreferences: {} } as never);
+  useCoachPreferencesStore.getState().clearAllModalityPreferences();
   // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
   // today's vocabulary cannot vary them (nine targets byte-identical solo vs
   // pre-walked, carrier columns constant) — but they demonstrably survive
@@ -2074,9 +2080,10 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
   // acting is the only kind freshInstall owes a reset for.
   useAthletePreferencesStore.getState().addExclusion('Back Squat');
   useAthletePreferencesStore.getState().addPinned('Bicep Curl (Barbell)');
-  useCoachPreferencesStore.setState({
-    modalityPreferences: { 'Easy Zone 2 Bike': { from: 'bike', to: 'row' } },
-  } as never);
+  useCoachPreferencesStore.getState().setModalityPreference('Easy Zone 2 Bike', {
+    from: 'bike',
+    to: 'row',
+  });
   const clarifierStore = require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore;
   const contextStore = require('../store/coachContextStateStore').useCoachContextStateStore;
   clarifierStore.setState({ pending: { probe: true } } as never);
@@ -2152,6 +2159,79 @@ run('the prefs door refuses the wipe against a walked world', () => {
     `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
   assert(JSON.stringify(useAthletePreferencesStore.getState().prefs) === prefsBefore,
     'the refused wipe changed the walked prefs anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the coach prefs door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY, fleet phase (docs/STORE_ARMOUR_RECIPE_2026-08-03
+  // §6). The world is reached by acting through host.perform; the preference
+  // is then ACTED through the store's own action — the walker's vocabulary has
+  // NO coach-door action, and under the LR-6 standing STOP this unit may not
+  // add one (a coach action changes what the walk exercises in the coach
+  // pipeline). That gap is DECLARED here, not hidden: when LR-6 lifts, the
+  // vocabulary gains the coach doors and this cell's act-in line becomes a
+  // walked action. Shallow tier, depth stated per L13: 3 actions, 3 days.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useCoachPreferencesStore.getState().setModalityPreference('Easy Aerobic Flush', {
+    from: 'row',
+    to: 'bike',
+  });
+  const prefsBefore = JSON.stringify(useCoachPreferencesStore.getState().modalityPreferences);
+  assert(Object.keys(useCoachPreferencesStore.getState().modalityPreferences).length >= 1,
+    'precondition: the acted-in preference must exist to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'coach_prefs_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCoachModalityPrefsWrite({ next: {}, writer: 'coach_pipeline' });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_preferences',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCoachPreferencesStore.getState().modalityPreferences) === prefsBefore,
+    'the refused wipe changed the walked preferences anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the mutation history door refuses the wipe against a walked world', () => {
+  // Same replay for coachMutationHistoryStore — the record AGENTS.md requires
+  // for follow-up target resolution. The entry is ACTED through the store's
+  // own `recordMutation` action for the same declared reason as above: the
+  // walker has no coach vocabulary, and LR-6 forbids adding one in this unit.
+  // Shallow tier, depth stated per L13: 3 actions, 3 days.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useCoachMutationHistoryStore.getState().recordMutation({
+    operation: 'swap_conditioning_modality_once',
+    mutationKind: 'modality_swap_once',
+    userMessage: 'swap my Tuesday row for a bike',
+    appliedReply: 'Done — Tuesday is on the bike this week.',
+    affectedDates: [addDaysISO(weekStart, 1)],
+    scope: 'one_off',
+    revertPlan: { kind: 'restore_snapshot', dateOverrides: [] },
+  });
+  const entriesBefore = JSON.stringify(useCoachMutationHistoryStore.getState().entries);
+  assert(useCoachMutationHistoryStore.getState().entries.length >= 1,
+    'precondition: the acted-in history entry must exist to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'coach_mutation_history_write'
+      && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCoachMutationHistoryWrite({ next: [], writer: 'undo_engine' });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_history',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCoachMutationHistoryStore.getState().entries) === entriesBefore,
+    'the refused wipe changed the walked history anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
 });
