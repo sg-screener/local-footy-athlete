@@ -864,13 +864,14 @@ its things (7-e governs the composed session's own card word, never the
 team-combo join). The walker's charter cell now asserts the EXACT one-word
 part list for all three door-added types.
 
-## Batch 8 — block-rollover interim (2026-08-01): PROPOSED
+## Batch 8 — block-rollover interim (2026-08-01): SIGNED (Sam, 2026-08-02)
 
 The interim half of Sam's block-rollover ruling (2026-07-31, TOP of the
 post-merge queue): the rollover succeeds, or refuses honestly with a
-sentence. Two strings, both PROPOSED — parked for Sam's signature in
-`docs/PARKED_QUESTIONS_2026-08-01.md`; per this file's transitional rule a
-string may ship PROPOSED and may never ship unlisted.
+sentence. Two strings, shipped PROPOSED on 2026-08-01 per this file's
+transitional rule (a string may ship PROPOSED and may never ship unlisted),
+**SIGNED AS PROPOSED by Sam on 2026-08-02** (recorded in
+`docs/PARKED_QUESTIONS_2026-08-01.md` §1) — both strings stand verbatim.
 
 **8-a. The refusal sentence** (prose, not a table row — it lives in
 `utils/readinessAcknowledgment.ts`, `buildRolloverAcknowledgment`, outside
