@@ -20,6 +20,18 @@
  *   - deactivateCoachUpdate(weekStartISO)       — athlete dismissed it
  *     OR a follow-up turn replaces the prior entry
  *   - clearAllCoachUpdates                       — nuke (test/reset use)
+ *
+ * ARMOURED 2026-08-03 (`docs/STORE_ARMOUR_RECIPE_2026-08-03.md`): update
+ * cards, active constraints and the legacy activeInjury alias are the
+ * athlete's record of WHY their week changed, so every write of them goes
+ * through `applyCoachUpdatesWrite` — one door, typed refusals of the wipe
+ * shape, every writer on the tape, and a quarantine boundary at the
+ * persistence writer. `coachUpdatesOwnershipTests` fails the build on a
+ * product writer around the owner. LR-6: no coach path changes WHAT it does —
+ * the mirror publish, the rollback restore and the constraint-transaction
+ * commits are named writers under named reset acts (a constraint set that
+ * empties when the last injury resolves is a common real state), behaviour
+ * identical. The refusal guards the bare-wipe class.
  */
 
 import { create } from 'zustand';
@@ -37,6 +49,13 @@ import type {
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
 import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
+import {
+  decideQuarantinedWrite,
+  quarantineRefusedPayload,
+  registerQuarantineBoundary,
+  releaseQuarantine,
+} from './refusedPayloadQuarantine';
+import { logger } from '../utils/logger';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -479,6 +498,67 @@ interface CoachUpdatesState {
 
 let safetyProjectionInProgress = false;
 
+export const COACH_UPDATES_PERSISTENCE_KEY = 'coach-updates';
+
+/**
+ * THE STORE'S WRITER BOUNDARY, declared once. A payload carries the athlete's
+ * material when any part of the record survives in it — one update card, one
+ * active constraint, or the legacy activeInjury alias. Unreadable bytes prove
+ * nothing and answer no.
+ */
+registerQuarantineBoundary(COACH_UPDATES_PERSISTENCE_KEY, {
+  carriesMaterial: (envelope) => {
+    try {
+      const state = (JSON.parse(envelope) as {
+        state?: {
+          updatesByWeek?: Record<string, CoachUpdate>;
+          activeConstraints?: ActiveConstraint[];
+          activeInjury?: InjuryState | null;
+        };
+      }).state;
+      return Object.keys(state?.updatesByWeek ?? {}).length > 0
+        || (state?.activeConstraints ?? []).length > 0
+        || (state?.activeInjury ?? null) !== null;
+    } catch {
+      return false;
+    }
+  },
+});
+
+/**
+ * The single persistence writer. A REFUSAL MUST NEVER PERSIST THE STATE IT
+ * REFUSED INTO (Sam, 2026-07-30): while a refused material payload is held,
+ * a bare payload does not travel; a material one always passes and releases
+ * the hold. Exported for the ownership suite, which proves this store's
+ * boundary rather than trusting the law's fixture cell.
+ */
+export const coachUpdatesGuardedStorage = {
+  getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
+  setItem: async (name: string, value: string): Promise<void> => {
+    const decision = decideQuarantinedWrite(name, value);
+    if (!decision.allowed) {
+      emitAthleteActionEvent(beginAthleteActionTrace({
+        source: 'system',
+        actionType: 'program_change',
+        route: 'coachUpdatesGuardedStorage.setItem',
+      }, undefined, { forceRoot: true }), 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: decision.reason,
+        rejectingBoundary: 'coachUpdatesGuardedStorage.setItem.quarantine',
+        failureCategory: 'persistence_failure',
+      });
+      logger.error('[coachUpdatesStore] refused to persist over a quarantined payload.',
+        { store: name, reason: decision.reason });
+      return;
+    }
+    releaseQuarantine(name);
+    await asyncStorageCompat.setItem(name, value);
+  },
+  removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
+};
+
 function legacyInjuryForConstraints(
   constraints: readonly ActiveConstraint[],
   history: readonly InjuryHistoryEntry[] = [],
@@ -594,7 +674,19 @@ function commitConstraintProgramTransaction(
         getAcceptedInjuryHistory(),
       ),
       });
-      commitConstraintState();
+      // The commit is a write of accepted truth, and it may legitimately
+      // empty the store (the last constraint resolved, clearAll). It runs
+      // under a reset act so the door admits and NAMES it — the calendar
+      // transaction precedent (recipe lesson 1: the write happens deep
+      // inside the commit, so the door falls back to the act in flight).
+      {
+        const resetActionId = beginCoachUpdatesResetAction('constraint_transaction_commit');
+        try {
+          commitConstraintState();
+        } finally {
+          endCoachUpdatesResetAction(resetActionId);
+        }
+      }
       emitAthleteActionEvent(trace, 'athlete_action_completed', {
         outcome: 'constraint_state_committed',
         internalResultCode: 'constraint_update_accepted',
@@ -720,23 +812,26 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           createdAt: new Date().toISOString(),
           active: true,
         };
-        set((state) => ({
-          updatesByWeek: { ...state.updatesByWeek, [weekStartISO]: update },
-        }));
+        applyCoachUpdatesWrite({
+          next: { updatesByWeek: { ...get().updatesByWeek, [weekStartISO]: update } },
+          writer: 'update_card',
+        });
         return update;
       },
 
-      deactivateCoachUpdate: (weekStartISO) =>
-        set((state) => {
-          const existing = state.updatesByWeek[weekStartISO];
-          if (!existing) return state;
-          return {
+      deactivateCoachUpdate: (weekStartISO) => {
+        const existing = get().updatesByWeek[weekStartISO];
+        if (!existing) return;
+        applyCoachUpdatesWrite({
+          next: {
             updatesByWeek: {
-              ...state.updatesByWeek,
+              ...get().updatesByWeek,
               [weekStartISO]: { ...existing, active: false },
             },
-          };
-        }),
+          },
+          writer: 'update_card',
+        });
+      },
 
       clearAllCoachUpdates: () =>
         commitConstraintProgramTransaction(
@@ -744,13 +839,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
             ? canonicalTemporaryFactCompatibilityConstraints()
             : canonicalInjuryCompatibilityConstraints(),
           () =>
-          set({
-            updatesByWeek: {},
-            activeInjury: hasCanonicalInjuryOwnership() ? get().activeInjury : null,
-            activeConstraints: hasCanonicalTemporaryFactOwnership()
-              ? canonicalTemporaryFactCompatibilityConstraints()
-              : canonicalInjuryCompatibilityConstraints(),
-            dismissedCoachNoteIds: [],
+          applyCoachUpdatesWrite({
+            next: {
+              updatesByWeek: {},
+              activeInjury: hasCanonicalInjuryOwnership() ? get().activeInjury : null,
+              activeConstraints: hasCanonicalTemporaryFactOwnership()
+                ? canonicalTemporaryFactCompatibilityConstraints()
+                : canonicalInjuryCompatibilityConstraints(),
+              dismissedCoachNoteIds: [],
+            },
+            writer: 'reset',
           })),
 
       setActiveInjury: (state) => {
@@ -774,7 +872,10 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
             get().activeInjury?.history,
           );
           commitConstraintProgramTransaction(remaining, () =>
-            set({ activeInjury: nextActiveInjury, activeConstraints: remaining }));
+            applyCoachUpdatesWrite({
+              next: { activeInjury: nextActiveInjury, activeConstraints: remaining },
+              writer: 'constraint_transaction',
+            }));
           return;
         }
         const id = `injury-${(state.bucket || state.bodyPart || 'unknown').toLowerCase()}`;
@@ -816,7 +917,10 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         const existing = get().activeConstraints.filter((c) => c.id !== id);
         const nextConstraints = [...existing, next];
         commitConstraintProgramTransaction(nextConstraints, () =>
-          set({ activeInjury: stateWithPrior, activeConstraints: nextConstraints }));
+          applyCoachUpdatesWrite({
+            next: { activeInjury: stateWithPrior, activeConstraints: nextConstraints },
+            writer: 'constraint_transaction',
+          }));
       },
 
       upsertActiveConstraint: (c) => {
@@ -849,10 +953,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
             get().activeInjury?.history,
           );
           commitConstraintProgramTransaction(nextConstraints, () =>
-            set({ activeConstraints: nextConstraints, activeInjury: legacy }));
+            applyCoachUpdatesWrite({
+              next: { activeConstraints: nextConstraints, activeInjury: legacy },
+              writer: 'constraint_transaction',
+            }));
         } else {
           commitConstraintProgramTransaction(nextConstraints, () =>
-            set({ activeConstraints: nextConstraints }));
+            applyCoachUpdatesWrite({
+              next: { activeConstraints: nextConstraints },
+              writer: 'constraint_transaction',
+            }));
         }
       },
 
@@ -880,10 +990,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         if (removed?.type === 'injury') {
           const legacy = legacyInjuryForConstraints(remaining);
           commitConstraintProgramTransaction(remaining, () =>
-            set({ activeConstraints: remaining, activeInjury: legacy }));
+            applyCoachUpdatesWrite({
+              next: { activeConstraints: remaining, activeInjury: legacy },
+              writer: 'constraint_transaction',
+            }));
         } else {
           commitConstraintProgramTransaction(remaining, () =>
-            set({ activeConstraints: remaining }));
+            applyCoachUpdatesWrite({
+              next: { activeConstraints: remaining },
+              writer: 'constraint_transaction',
+            }));
         }
       },
 
@@ -905,7 +1021,10 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           get().activeInjury?.history,
         );
         commitConstraintProgramTransaction(nextConstraints, () =>
-          set({ activeConstraints: [...nextConstraints], activeInjury: legacy }));
+          applyCoachUpdatesWrite({
+            next: { activeConstraints: [...nextConstraints], activeInjury: legacy },
+            writer: 'constraint_transaction',
+          }));
       },
 
       transitionInjuryStatus: ({ toStatus, severity, note, timestamp }) => {
@@ -950,13 +1069,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
               }
             : constraint);
         commitConstraintProgramTransaction(nextConstraints, () =>
-          set({ activeInjury: next, activeConstraints: nextConstraints }));
+          applyCoachUpdatesWrite({
+            next: { activeInjury: next, activeConstraints: nextConstraints },
+            writer: 'constraint_transaction',
+          }));
         return next;
       },
     }),
     {
-      name: 'coach-updates',
-      storage: createJSONStorage(() => asyncStorageCompat),
+      name: COACH_UPDATES_PERSISTENCE_KEY,
+      storage: createJSONStorage(() => coachUpdatesGuardedStorage),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<CoachUpdatesState> | undefined) ?? {};
         const context = normalizeAcceptedMaterialContext({
@@ -979,15 +1101,26 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   ),
 );
 
+/**
+ * Both mirror writers project state that is authoritative UPSTREAM of this
+ * store — the accepted context, or the pre-transaction snapshot a rollback
+ * restores — and either may legitimately be empty. Each therefore writes
+ * through the door under its named reset act (recipe lesson 2: a rollback
+ * restore is a legitimate erasure, under a reset act), with the projection
+ * flag held so the constraint subscriber does not re-enter.
+ */
 function setCoachUpdatesCompatibilityMirror(
-  patch: Partial<Pick<CoachUpdatesState,
-    'updatesByWeek' | 'activeConstraints' | 'activeInjury' | 'dismissedCoachNoteIds'>>,
+  patch: CoachUpdatesMaterialPatch,
+  writer: CoachUpdatesWriterId,
+  resetSource: string,
 ): void {
   const alreadyProjecting = safetyProjectionInProgress;
   safetyProjectionInProgress = true;
+  const resetActionId = beginCoachUpdatesResetAction(resetSource);
   try {
-    useCoachUpdatesStore.setState(patch);
+    applyCoachUpdatesWrite({ next: patch, writer, resetActionId });
   } finally {
+    endCoachUpdatesResetAction(resetActionId);
     safetyProjectionInProgress = alreadyProjecting;
   }
 }
@@ -998,7 +1131,7 @@ export function publishAcceptedCoachUpdatesCompatibilityMirror(args: {
   activeConstraints: ActiveConstraint[];
   activeInjury: InjuryState | null;
 }): void {
-  setCoachUpdatesCompatibilityMirror(args);
+  setCoachUpdatesCompatibilityMirror(args, 'accepted_mirror', 'accepted_mirror_publish');
 }
 
 /** Exact transaction rollback mirror restore. */
@@ -1008,7 +1141,7 @@ export function restoreCoachUpdatesCompatibilityMirror(args: {
   activeInjury: InjuryState | null;
   dismissedCoachNoteIds: string[];
 }): void {
-  setCoachUpdatesCompatibilityMirror(args);
+  setCoachUpdatesCompatibilityMirror(args, 'coach_mutation_mirror', 'coach_mutation_rollback');
 }
 
 useCoachUpdatesStore.subscribe((state, previous) => {
@@ -1040,4 +1173,163 @@ export function getActiveCoachUpdate(weekStartISO: string): CoachUpdate | null {
   const update = useCoachUpdatesStore.getState().updatesByWeek[weekStartISO];
   if (!update || !update.active) return null;
   return update;
+}
+
+/* ══ THE COACH UPDATES WRITE OWNER ══
+ *
+ * The profile door's shape (`applyProfileOnboardingWrite`), applied by recipe
+ * (`docs/STORE_ARMOUR_RECIPE_2026-08-03.md`):
+ *
+ *   1. ONE DOOR. Every write of the material slices — update cards, active
+ *      constraints, the legacy activeInjury alias — goes through here. The
+ *      card actions, the constraint-transaction commits, the accepted mirror
+ *      publish and the rollback restore are its writers, not exceptions.
+ *   2. THE DEFAULT IS NOT A VALUE. A patch whose EFFECTIVE result is the
+ *      bare default (no cards, no constraints, no injury) over material
+ *      state is refused, unless a reset action is IN FLIGHT. A REDUCED
+ *      state is not the wipe — a resolved injury legitimately empties the
+ *      constraint list, and refusing reduction would refuse the athlete.
+ *   3. AN IN-FLIGHT RESET, NOT A RESET THAT HAPPENED. A stale id is refused.
+ *      Writers inside the constraint transaction may not know the act that
+ *      opened them, so the door falls back to the act currently in flight.
+ *   4. EVERYTHING IS ON THE TAPE. Applied or refused, every write names its
+ *      writer and the material counts either side. Counts only — a card's
+ *      reason, a rule, a body part and any date are answers, and answers
+ *      never leave the device.
+ */
+
+export type CoachUpdatesWriterId =
+  | 'update_card'
+  | 'constraint_transaction'
+  | 'accepted_mirror'
+  | 'coach_mutation_mirror'
+  | 'reset';
+
+/**
+ * A PARTIAL patch: only the keys a writer carries are written, because the
+ * accepted mirror publishes constraints WITHOUT touching the cards. The
+ * wipe decision is made on the EFFECTIVE state (patch over current).
+ * `dismissedCoachNoteIds` is a NON-MATERIAL rider — presentation-only
+ * dismissals travel with a rollback restore but never count toward the
+ * wipe decision.
+ */
+export interface CoachUpdatesMaterialPatch {
+  updatesByWeek?: Record<string, CoachUpdate>;
+  activeConstraints?: ActiveConstraint[];
+  activeInjury?: InjuryState | null;
+  dismissedCoachNoteIds?: string[];
+}
+
+export interface CoachUpdatesWriteOutcome {
+  ok: boolean;
+  reason?: 'default_over_answered_updates' | 'reset_action_not_in_flight';
+}
+
+const resetActionsInFlight = new Set<string>();
+let nextResetActionId = 1;
+
+/**
+ * Open a reset. The id is only good while the reset is running, which is what
+ * makes a deferred write belonging to a finished reset refusable.
+ */
+export function beginCoachUpdatesResetAction(source: string): string {
+  const id = `coach-updates-reset:${source}:${nextResetActionId++}`;
+  resetActionsInFlight.add(id);
+  return id;
+}
+
+export function endCoachUpdatesResetAction(id: string): void {
+  resetActionsInFlight.delete(id);
+}
+
+/** The reset act currently in flight, if exactly one writer opened it. */
+function activeCoachUpdatesResetActionId(): string | undefined {
+  for (const id of resetActionsInFlight) return id;
+  return undefined;
+}
+
+function materialCounts(state: {
+  updatesByWeek: Record<string, CoachUpdate>;
+  activeConstraints: ActiveConstraint[];
+  activeInjury: InjuryState | null;
+}): { updates: number; constraints: number; injury: number } {
+  return {
+    updates: Object.keys(state.updatesByWeek).length,
+    constraints: state.activeConstraints.length,
+    injury: state.activeInjury ? 1 : 0,
+  };
+}
+
+export function applyCoachUpdatesWrite(args: {
+  next: CoachUpdatesMaterialPatch;
+  writer: CoachUpdatesWriterId;
+  resetActionId?: string;
+}): CoachUpdatesWriteOutcome {
+  const current = useCoachUpdatesStore.getState();
+  const before = materialCounts(current);
+  const record = (outcome: 'applied' | 'refused', reason?: string, resetActionId?: string) => {
+    const after = materialCounts(useCoachUpdatesStore.getState());
+    emitAthleteActionEvent(beginAthleteActionTrace({
+      source: args.writer === 'update_card' ? 'coach' : 'system',
+      actionType: 'program_change',
+      route: 'applyCoachUpdatesWrite',
+    }, undefined, { forceRoot: true }), 'coach_updates_write', {
+      writer: args.writer,
+      outcome,
+      updateCountBefore: before.updates,
+      updateCountAfter: after.updates,
+      constraintCountBefore: before.constraints,
+      constraintCountAfter: after.constraints,
+      activeInjuryCountBefore: before.injury,
+      activeInjuryCountAfter: after.injury,
+      ...(reason ? { internalResultCode: reason } : {}),
+      ...(resetActionId ? { resetActionId } : {}),
+    });
+  };
+
+  const effective = materialCounts({
+    updatesByWeek: args.next.updatesByWeek ?? current.updatesByWeek,
+    activeConstraints: args.next.activeConstraints ?? current.activeConstraints,
+    activeInjury: args.next.activeInjury !== undefined
+      ? args.next.activeInjury
+      : current.activeInjury,
+  });
+  const nextIsTheDefault = effective.updates + effective.constraints + effective.injury === 0;
+  const beforeIsMaterial = before.updates + before.constraints + before.injury > 0;
+  const effectiveResetActionId = args.resetActionId ?? activeCoachUpdatesResetActionId();
+  if (nextIsTheDefault && beforeIsMaterial) {
+    if (!effectiveResetActionId) {
+      quarantineDiskCopyBestEffort();
+      record('refused', 'default_over_answered_updates');
+      return { ok: false, reason: 'default_over_answered_updates' };
+    }
+    if (!resetActionsInFlight.has(effectiveResetActionId)) {
+      quarantineDiskCopyBestEffort();
+      record('refused', 'reset_action_not_in_flight');
+      return { ok: false, reason: 'reset_action_not_in_flight' };
+    }
+  }
+
+  const patch: Partial<CoachUpdatesState> = {};
+  if (args.next.updatesByWeek !== undefined) patch.updatesByWeek = args.next.updatesByWeek;
+  if (args.next.activeConstraints !== undefined) {
+    patch.activeConstraints = args.next.activeConstraints;
+  }
+  if (args.next.activeInjury !== undefined) patch.activeInjury = args.next.activeInjury;
+  if (args.next.dismissedCoachNoteIds !== undefined) {
+    patch.dismissedCoachNoteIds = args.next.dismissedCoachNoteIds;
+  }
+  useCoachUpdatesStore.setState(patch);
+  record('applied', undefined, effectiveResetActionId);
+  return { ok: true };
+}
+
+/**
+ * The DISK copy, not the in-memory one — memory survives a refusal by
+ * construction; the envelope on disk is what a later writer can destroy.
+ */
+function quarantineDiskCopyBestEffort(): void {
+  void asyncStorageCompat.getItem(COACH_UPDATES_PERSISTENCE_KEY)
+    .then((envelope) => quarantineRefusedPayload(COACH_UPDATES_PERSISTENCE_KEY, envelope))
+    .catch(() => {});
 }

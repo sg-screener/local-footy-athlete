@@ -60,7 +60,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, applyCalendarMarkedDaysWrite } from '../store/calendarStore';
 import { athleteActionLogEntries } from '../utils/athleteActionLog';
 import { useReadinessStore, applyReadinessSignalsWrite } from '../store/readinessStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { useCoachUpdatesStore, applyCoachUpdatesWrite } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import {
   useAthletePreferencesStore,
@@ -2185,6 +2185,45 @@ run('the readiness door refuses the wipe against a walked world', () => {
     `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
   assert(JSON.stringify(useReadinessStore.getState().signalsByDate) === signalsBefore,
     'the refused wipe changed the walked signals anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the coach-updates door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY, application 4 (docs/STORE_ARMOUR_RECIPE_
+  // 2026-08-03.md §6): the world is REACHED through host.perform; the update
+  // card is then ACTED through the store's own action (the walker's
+  // vocabulary has no coach-update action yet — a declared gap, recorded in
+  // the unit's boundary report, not hidden; `upsertCoachUpdate` never enters
+  // the constraint transaction, so the act is cheap and real). Depth stated
+  // per L13: SHALLOW tier (3 actions + one card, 3 days crossed).
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useCoachUpdatesStore.getState().upsertCoachUpdate(weekStart, {
+    source: 'coach',
+    reason: 'Hamstring flared up at training',
+    rules: ['No sprinting or high-speed running'],
+    changes: ['Tuesday Lower swapped to upper pull'],
+  });
+  const cardsBefore = JSON.stringify(useCoachUpdatesStore.getState().updatesByWeek);
+  assert(Object.keys(useCoachUpdatesStore.getState().updatesByWeek).length >= 1,
+    'precondition: the walk must leave a card to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'coach_updates_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCoachUpdatesWrite({
+    next: { updatesByWeek: {}, activeConstraints: [], activeInjury: null },
+    writer: 'accepted_mirror',
+  });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_updates',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCoachUpdatesStore.getState().updatesByWeek) === cardsBefore,
+    'the refused wipe changed the walked cards anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
 });

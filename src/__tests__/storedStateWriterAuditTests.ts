@@ -116,7 +116,6 @@ const UNPROTECTED_STORES_DEBT: readonly string[] = [
   'coach-memory-store',
   'coach-mutation-history-store',
   'coach-preferences-store',
-  'coach-updates',
   'ui-store',
   'auth-store',
 ];
