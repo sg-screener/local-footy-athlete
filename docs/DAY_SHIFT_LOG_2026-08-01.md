@@ -146,6 +146,41 @@ worktree, not inherited: `fixtureMutationTransactionTests` (1/13, equipment
 `ProgramGenError` — the same rot family as `test:block-state`) and
 `programControlActionsTests` (orphan suite, LR-14's lane).
 
+## Icon picks — 2026-08-03
+
+Sam's 11 icon rulings (parked §4) shipped as ONE commit, two files
+(`HomeScreenV2.tsx`, `PlanChangeSheet.tsx`): 1 stopwatch (was hourglass) ·
+2 thermometer (was pulse) · 3 plaster KEPT · 4 dumbbell-with-slash (was
+plain MCI dumbbell, redrawn in the surface's inline-SVG idiom) · 5 two
+arrows circling (was straight pair — now the SAME mark the day screen's
+`SwapIcon` and `RowIcon`'s 'refresh' already draw) · 6 plus KEPT · 7 arrow
+INTO calendar day (arrow used to LEAVE) · 8 minus-in-circle (was a bin;
+the retired verb retired in imagery; propagates through `binScopeIcon`
+`whole_day` and both blocked steps — a repo sweep found no other bin glyph
+anywhere) · 9 flexed arm KEPT (current already the ruled glyph) · 10 figure
+stretching KEPT (ditto) · 11 rollover retry confirmed NO ICON, text stands.
+KEEP-unless-vetoed confirmed untouched: shield / globe / the three
+WeekReadinessSheet fixes.
+
+**The gate was MANUAL:** ruling 10's adjacency check has no automated home
+— it shipped as "imagery, no per-icon signing" (§6-II-h) and no test pins
+a shape (`planChangeProducerTests` pins only that each row CARRIES its
+icon). Per-surface row-order + glyph listing is in the commit message
+(`037be1f`); no adjacent pair shares a glyph on any of the six surfaces.
+No new source-parsing gate invented — a shape-coupled gate is the
+AGENTS.md de-duplication trap.
+
+**Convergence:** neutral-to-toward — no new stored state, no new
+representations; three cross-surface glyph vocabularies (swap, remove,
+sick) CONVERGED to one mark per meaning.
+
+**NOT-COVERED:** imagery is judged on glass — Sam eyeballs all 11 on his
+next device build, no dedicated pass. Move DESTINATION rows still repeat
+the swap mark on consecutive occupied days (pre-existing occupancy-status
+semantics, unchanged, flagged in the commit). The `equipmentIconFor`
+per-item glyphs and coach surfaces untouched (not in the ruling; LR-6
+STOP respected).
+
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
 All five parked questions ANSWERED; recorded in full in
