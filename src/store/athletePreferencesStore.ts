@@ -147,9 +147,9 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
 
       removeExclusion: (exerciseName) => {
         const prefs = getAthletePrefs();
-        applyAthletePrefsWrite({
+        applyRemovalThroughDoor({
           next: { ...prefs, excluded: prefs.excluded.filter((n) => n !== exerciseName) },
-          writer: 'preference_control',
+          source: 'remove_exclusion',
         });
       },
 
@@ -164,17 +164,17 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
 
       removePinned: (exerciseName) => {
         const prefs = getAthletePrefs();
-        applyAthletePrefsWrite({
+        applyRemovalThroughDoor({
           next: { ...prefs, pinned: prefs.pinned.filter((n) => n !== exerciseName) },
-          writer: 'preference_control',
+          source: 'remove_pinned',
         });
       },
 
       setActiveInjuries: (keys) => {
         const prefs = getAthletePrefs();
-        applyAthletePrefsWrite({
+        applyRemovalThroughDoor({
           next: { ...prefs, activeInjuries: [...keys] },
-          writer: 'preference_control',
+          source: 'set_active_injuries',
         });
       },
 
@@ -191,9 +191,9 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       removeActiveInjury: (key) => {
         const prefs = getAthletePrefs();
         const current = prefs.activeInjuries ?? [];
-        applyAthletePrefsWrite({
+        applyRemovalThroughDoor({
           next: { ...prefs, activeInjuries: current.filter((k) => k !== key) },
-          writer: 'preference_control',
+          source: 'remove_active_injury',
         });
       },
 
@@ -297,7 +297,10 @@ export function applyAthletePrefsWrite(args: {
       activeInjuryCountBefore: before.activeInjuries,
       activeInjuryCountAfter: after.activeInjuries,
       ...(reason ? { internalResultCode: reason } : {}),
-      ...(args.resetActionId ? { resetActionId: args.resetActionId } : {}),
+      // `erasureActId`, not `resetActionId`: the diagnostics forbidden-key
+      // filter drops any key containing "set" (recipe lesson 12), so the
+      // reset act's name must travel under a filter-safe key or not at all.
+      ...(args.resetActionId ? { erasureActId: args.resetActionId } : {}),
     });
   };
 
@@ -318,6 +321,35 @@ export function applyAthletePrefsWrite(args: {
   useAthletePreferencesStore.setState({ prefs: args.next });
   record('applied');
   return { ok: true };
+}
+
+/**
+ * REMOVING THE LAST ANSWER IS THE ATHLETE'S CHANGE, NOT THE WIPE (found by
+ * the coach-store application, 2026-08-03 — recipe lesson 11). A remove
+ * action whose result happens to be the empty default is an attributed,
+ * athlete-initiated erasure; refusing it would strand the athlete with an
+ * exclusion they cannot take back. The action declares the erasure with its
+ * own named reset act, so it lands AND says so on the tape — the refusal
+ * stays aimed at what it was built for: an UNATTRIBUTED default write.
+ */
+function applyRemovalThroughDoor(args: {
+  next: AthletePoolPrefs;
+  source: string;
+}): void {
+  if (!isTheBuiltInDefault(args.next)) {
+    applyAthletePrefsWrite({ next: args.next, writer: 'preference_control' });
+    return;
+  }
+  const resetActionId = beginAthletePrefsResetAction(args.source);
+  try {
+    applyAthletePrefsWrite({
+      next: args.next,
+      writer: 'preference_control',
+      resetActionId,
+    });
+  } finally {
+    endAthletePrefsResetAction(resetActionId);
+  }
 }
 
 /**

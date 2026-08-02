@@ -1,0 +1,775 @@
+{
+  "capturedAt": "2026-07-31T22:16:45.080Z",
+  "profileStore": {
+    "isOnboardingComplete": true,
+    "onboardingData": {
+      "firstName": "Sam",
+      "heightCm": 184,
+      "weightKg": 90,
+      "position": "inside_mid",
+      "goals": [
+        "dominate_level",
+        "fresh_on_game_day"
+      ],
+      "seasonPhase": "Pre-season",
+      "teamTrainingDaysPerWeek": 2,
+      "teamTrainingDays": [
+        "Monday",
+        "Wednesday"
+      ],
+      "teamTrainingIntensity": "Hard",
+      "trainingDaysPerWeek": 6,
+      "trainingDaysUnsure": false,
+      "preferredTrainingDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+      ],
+      "equipmentAnswer": {
+        "tags": {
+          "dumbbells": "have",
+          "barbell": "have",
+          "cables": "have",
+          "bands": "have",
+          "bench": "have",
+          "machine": "have",
+          "pullup_bar": "have",
+          "foam_roller": "have",
+          "kettlebell": "have",
+          "plyo_box": "have"
+        },
+        "modalities": {
+          "bike_erg": "have",
+          "row": "have",
+          "air_bike": "have",
+          "treadmill": "have"
+        },
+        "answeredOn": "2026-08-01"
+      },
+      "trainingLocation": "Commercial gym",
+      "experienceLevel": "5+ years",
+      "squatStrength": "1.5x bodyweight",
+      "benchStrength": "1.5x bodyweight+",
+      "twoKmTimeTrial": {
+        "seconds": 420,
+        "recordedOn": "2026-08-01",
+        "source": "onboarding"
+      },
+      "conditioningLevel": "Elite",
+      "sprintExposure": "2+ times per week",
+      "recentTrainingLoad": "Very consistent",
+      "injuries": []
+    },
+    "onboardingAnswerCount": 22
+  },
+  "programStore": {
+    "hasProgram": true,
+    "programId": "prog-ai-1",
+    "microcycleCount": 4,
+    "acceptedRevision": 11,
+    "lastTransaction": "temporary_source_fact:hydrate",
+    "acceptedProfileSnapshot": {
+      "protocolVersion": 1,
+      "capturedAt": "2026-07-31T22:01:03.326Z",
+      "updatedAt": "2026-07-31T22:01:03.326Z",
+      "sourceRevision": 1,
+      "onboardingData": {
+        "firstName": "Sam",
+        "heightCm": 184,
+        "weightKg": 90,
+        "position": "inside_mid",
+        "goals": [
+          "dominate_level",
+          "fresh_on_game_day"
+        ],
+        "seasonPhase": "Pre-season",
+        "teamTrainingDaysPerWeek": 2,
+        "teamTrainingDays": [
+          "Monday",
+          "Wednesday"
+        ],
+        "teamTrainingIntensity": "Hard",
+        "trainingDaysPerWeek": 6,
+        "trainingDaysUnsure": false,
+        "preferredTrainingDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday"
+        ],
+        "equipmentAnswer": {
+          "tags": {
+            "dumbbells": "have",
+            "barbell": "have",
+            "cables": "have",
+            "bands": "have",
+            "bench": "have",
+            "machine": "have",
+            "pullup_bar": "have",
+            "foam_roller": "have",
+            "kettlebell": "have",
+            "plyo_box": "have"
+          },
+          "modalities": {
+            "bike_erg": "have",
+            "row": "have",
+            "air_bike": "have",
+            "treadmill": "have"
+          },
+          "answeredOn": "2026-08-01"
+        },
+        "trainingLocation": "Commercial gym",
+        "experienceLevel": "5+ years",
+        "squatStrength": "1.5x bodyweight",
+        "benchStrength": "1.5x bodyweight+",
+        "twoKmTimeTrial": {
+          "seconds": 420,
+          "recordedOn": "2026-08-01",
+          "source": "onboarding"
+        },
+        "conditioningLevel": "Elite",
+        "sprintExposure": "2+ times per week",
+        "recentTrainingLoad": "Very consistent",
+        "injuries": []
+      }
+    },
+    "acceptedProfileSnapshotAnswerCount": 22,
+    "markedDays": {
+      "2026-08-01": "game"
+    },
+    "userRemovalConstraintCount": 2,
+    "dateOverrideDates": [],
+    "weekScopedOverlayWeeks": [
+      "2026-07-27"
+    ]
+  },
+  "profileMirrorRefusals": [],
+  "athleteActionLog": [
+    {
+      "at": "2026-07-31T22:15:41.578Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.578Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.594Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-28d791558fb66f44cd1d640e",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "profile_store_rehydrate",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.594Z",
+      "event": "profile_rehydrated",
+      "traceId": "aa-v2-28d791558fb66f44cd1d640e",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "profile_store_rehydrate",
+      "persistedAnswerCount": 22,
+      "liveAnswerCount": 0,
+      "mergedAnswerCount": 22,
+      "persistedOnboardingComplete": true
+    },
+    {
+      "at": "2026-07-31T22:15:41.594Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-bde0d16165534e718f3f976b",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.594Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-bde0d16165534e718f3f976b",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "answerCountBefore": 21,
+      "answerCountAfter": 21
+    },
+    {
+      "at": "2026-07-31T22:15:41.600Z",
+      "event": "persistence_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "persistenceOperation": "read",
+      "persistenceStore": "program-store",
+      "persistenceSucceeded": true,
+      "persistedPayloadHash": "diagnostics-disabled"
+    },
+    {
+      "at": "2026-07-31T22:15:41.704Z",
+      "event": "hydrated_state_checked",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "hydrationSucceeded": true,
+      "acceptedStateVersion": 9,
+      "hydratedStateHash": "diagnostics-disabled",
+      "visibleWeekCount": 1,
+      "activeRemovalConstraintCount": 2
+    },
+    {
+      "at": "2026-07-31T22:15:41.722Z",
+      "event": "athlete_action_route_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "selectedRoute": "accepted_state_transaction",
+      "transactionReason": "program:hydration_acceptance"
+    },
+    {
+      "at": "2026-07-31T22:15:41.767Z",
+      "event": "repair_candidate_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "candidateId": "diagnostics-disabled",
+      "candidateIndex": 0,
+      "candidateScore": {
+        "blockingCount": 0,
+        "depth": 0
+      },
+      "preservationCost": 0,
+      "affectedWeek": "2026-07-27",
+      "boundary": "section18AcceptedWeekGateway",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.767Z",
+      "event": "accepted_week_gateway_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "weekId": "2026-07-27",
+      "gatewayStatus": "repaired",
+      "candidatePath": "primary",
+      "candidateCount": 1,
+      "rejectionCodes": [],
+      "gatewayViolations": [],
+      "typedReductionCreated": true,
+      "outcome": "repaired",
+      "rejectingBoundary": null,
+      "failureSignature": null
+    },
+    {
+      "at": "2026-07-31T22:15:41.772Z",
+      "event": "repair_candidate_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "candidateId": "diagnostics-disabled",
+      "candidateIndex": 0,
+      "candidateScore": {
+        "blockingCount": 0,
+        "depth": 0
+      },
+      "preservationCost": 0,
+      "affectedWeek": "2026-08-03",
+      "boundary": "section18AcceptedWeekGateway",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.772Z",
+      "event": "accepted_week_gateway_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "weekId": "2026-08-03",
+      "gatewayStatus": "repaired",
+      "candidatePath": "primary",
+      "candidateCount": 1,
+      "rejectionCodes": [],
+      "gatewayViolations": [],
+      "typedReductionCreated": false,
+      "outcome": "repaired",
+      "rejectingBoundary": null,
+      "failureSignature": null
+    },
+    {
+      "at": "2026-07-31T22:15:41.778Z",
+      "event": "repair_candidate_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "candidateId": "diagnostics-disabled",
+      "candidateIndex": 0,
+      "candidateScore": {
+        "blockingCount": 0,
+        "depth": 0
+      },
+      "preservationCost": 0,
+      "affectedWeek": "2026-08-10",
+      "boundary": "section18AcceptedWeekGateway",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.778Z",
+      "event": "accepted_week_gateway_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "weekId": "2026-08-10",
+      "gatewayStatus": "repaired",
+      "candidatePath": "primary",
+      "candidateCount": 1,
+      "rejectionCodes": [],
+      "gatewayViolations": [],
+      "typedReductionCreated": false,
+      "outcome": "repaired",
+      "rejectingBoundary": null,
+      "failureSignature": null
+    },
+    {
+      "at": "2026-07-31T22:15:41.786Z",
+      "event": "repair_candidate_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "candidateId": "diagnostics-disabled",
+      "candidateIndex": 0,
+      "candidateScore": {
+        "blockingCount": 0,
+        "depth": 0
+      },
+      "preservationCost": 0,
+      "affectedWeek": "2026-08-17",
+      "boundary": "section18AcceptedWeekGateway",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.786Z",
+      "event": "accepted_week_gateway_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "weekId": "2026-08-17",
+      "gatewayStatus": "repaired",
+      "candidatePath": "primary",
+      "candidateCount": 1,
+      "rejectionCodes": [],
+      "gatewayViolations": [],
+      "typedReductionCreated": false,
+      "outcome": "repaired",
+      "rejectingBoundary": null,
+      "failureSignature": null
+    },
+    {
+      "at": "2026-07-31T22:15:41.821Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 10,
+      "weekId": "2026-07-27",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.823Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 10,
+      "weekId": "2026-08-03",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.824Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 10,
+      "weekId": "2026-08-10",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.825Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 10,
+      "weekId": "2026-08-17",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.825Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 10,
+      "dependencyWeeksSelected": [
+        "2026-07-27",
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17"
+      ],
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "projectionSummary": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.825Z",
+      "event": "transaction_verification_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "verified": true,
+      "acceptedStateVersion": 10,
+      "dependencyWeeksSelected": [
+        "2026-07-27",
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17"
+      ]
+    },
+    {
+      "at": "2026-07-31T22:15:41.844Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-5a07fed5105395e9912d9f8e",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.844Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-5a07fed5105395e9912d9f8e",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "answerCountBefore": 21,
+      "answerCountAfter": 21
+    },
+    {
+      "at": "2026-07-31T22:15:41.844Z",
+      "event": "accepted_state_publication_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "published": true,
+      "atomicRollback": false,
+      "previousStateRestored": false,
+      "acceptedStateVersion": 10,
+      "afterStateHash": "diagnostics-disabled",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:41.844Z",
+      "event": "transaction_publish_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "published": true,
+      "persistenceResult": "queued",
+      "previousStateRestored": false,
+      "acceptedStateVersion": 10,
+      "afterStateHash": "diagnostics-disabled",
+      "internalResultCode": "accepted_state_published"
+    },
+    {
+      "at": "2026-07-31T22:15:41.853Z",
+      "event": "athlete_action_parsed",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "parsedMutationType": "temporary_source_fact:hydrate",
+      "sourceFactId": null,
+      "sourceSurface": "hydration_migration"
+    },
+    {
+      "at": "2026-07-31T22:15:41.974Z",
+      "event": "persistence_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "persistenceOperation": "write",
+      "persistenceStore": "program-store",
+      "persistenceSucceeded": true,
+      "persistedPayloadHash": "diagnostics-disabled"
+    },
+    {
+      "at": "2026-07-31T22:15:41.987Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-79996e2695bd92a7bbc454de",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:41.987Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-79996e2695bd92a7bbc454de",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "coach_rollback_restore",
+      "outcome": "applied",
+      "answerCountBefore": 21,
+      "answerCountAfter": 21
+    },
+    {
+      "at": "2026-07-31T22:15:42.018Z",
+      "event": "athlete_action_route_selected",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "selectedRoute": "accepted_state_transaction",
+      "transactionReason": "temporary_source_fact:hydrate"
+    },
+    {
+      "at": "2026-07-31T22:15:42.111Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 11,
+      "weekId": "2026-07-27",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.113Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 11,
+      "weekId": "2026-08-03",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.114Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 11,
+      "weekId": "2026-08-10",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.115Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 11,
+      "weekId": "2026-08-17",
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.115Z",
+      "event": "visible_projection_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "acceptedStateVersion": 11,
+      "dependencyWeeksSelected": [
+        "2026-07-27",
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17"
+      ],
+      "visibleStateHash": "diagnostics-disabled",
+      "visibleEqualsAcceptedState": true,
+      "projectionSummary": true,
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.115Z",
+      "event": "transaction_verification_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "verified": true,
+      "acceptedStateVersion": 11,
+      "dependencyWeeksSelected": [
+        "2026-07-27",
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17"
+      ]
+    },
+    {
+      "at": "2026-07-31T22:15:42.123Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-f6164a660170e97a3e520fbf",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:42.123Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-f6164a660170e97a3e520fbf",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "answerCountBefore": 21,
+      "answerCountAfter": 21
+    },
+    {
+      "at": "2026-07-31T22:15:42.123Z",
+      "event": "accepted_state_publication_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "published": true,
+      "atomicRollback": false,
+      "previousStateRestored": false,
+      "acceptedStateVersion": 11,
+      "afterStateHash": "diagnostics-disabled",
+      "outcome": "accepted"
+    },
+    {
+      "at": "2026-07-31T22:15:42.123Z",
+      "event": "transaction_publish_result",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "published": true,
+      "persistenceResult": "queued",
+      "previousStateRestored": false,
+      "acceptedStateVersion": 11,
+      "afterStateHash": "diagnostics-disabled",
+      "internalResultCode": "accepted_state_published"
+    },
+    {
+      "at": "2026-07-31T22:15:42.342Z",
+      "event": "mutation_constraint_created",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "constraintType": "temporary_source_fact",
+      "constraintId": "temporary-source-fact:v1:schedule:week:2026-07-27:busy_week",
+      "constraintStatus": "active",
+      "factOperation": "hydrate",
+      "changedProgram": false,
+      "sourceSurface": "hydration_migration"
+    },
+    {
+      "at": "2026-07-31T22:15:42.342Z",
+      "event": "athlete_action_completed",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "outcome": "accepted_no_change",
+      "internalResultCode": "temporary_source_fact_hydrated_no_program_change",
+      "factId": "temporary-source-fact:v1:schedule:week:2026-07-27:busy_week"
+    },
+    {
+      "at": "2026-07-31T22:15:42.351Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-863be4be0bcebdc69d5ad0a7",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-07-31T22:15:42.351Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-863be4be0bcebdc69d5ad0a7",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "compatibility_mirror",
+      "outcome": "applied",
+      "answerCountBefore": 21,
+      "answerCountAfter": 21
+    },
+    {
+      "at": "2026-07-31T22:15:42.383Z",
+      "event": "athlete_action_completed",
+      "traceId": "aa-v2-bb4433b2eedee8cf056da4b8",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "outcome": "accepted",
+      "internalResultCode": "hydration_accepted"
+    }
+  ]
+}

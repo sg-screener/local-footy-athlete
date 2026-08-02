@@ -242,6 +242,19 @@ recipe THEN this list:
 10. **The census pays in the same commit as the second store**, or the
     tree crosses a red gate between commits: `declared` and
     `LEGACY_DEBT_BASELINE` move together (directions 1 and 3).
+11. **Removing the last answer is the athlete's change, not the wipe**
+    (found by the coach-store application). A remove/clear action whose
+    result happens to be the empty default is an attributed erasure —
+    refusing it strands the athlete with an answer they cannot take back.
+    The action declares the erasure with its own named reset act
+    (`applyRemovalThroughDoor` in the prefs store is the template), and a
+    cell pins it. The refusal stays aimed at UNATTRIBUTED default writes.
+12. **`resetActionId` never reaches the tape** — the diagnostics
+    forbidden-key filter (`FORBIDDEN_EVENT_KEYS`) drops any field whose
+    key contains "set", and "re**set**ActionId" does. Emit the act's name
+    under the filter-safe key **`erasureActId`**. (The profile door's
+    `resetActionId` field has been silently stripped since it shipped;
+    known, not repaired here.)
 
 ## The five mutations, and who caught them (this unit's pass)
 

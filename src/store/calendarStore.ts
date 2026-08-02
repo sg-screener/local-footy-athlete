@@ -329,7 +329,9 @@ export function applyCalendarMarkedDaysWrite(args: {
       markCountBefore,
       markCountAfter: Object.keys(useCalendarStore.getState().markedDays).length,
       ...(reason ? { internalResultCode: reason } : {}),
-      ...(resetActionId ? { resetActionId } : {}),
+      // `erasureActId`, not `resetActionId` — the diagnostics forbidden-key
+      // filter drops any key containing "set" (recipe lesson 12).
+      ...(resetActionId ? { erasureActId: resetActionId } : {}),
     });
   };
 

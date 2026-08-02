@@ -171,6 +171,30 @@ run('every prefs write is on the tape, refused or not — counts, never answers'
     `an answer VALUE reached the tape: ${serialised}`);
 });
 
+run('removing the last answer is the athlete\'s change, not the wipe', () => {
+  // Found by the coach-store application (recipe lesson 11): a remove action
+  // whose result happens to be the empty default is an attributed erasure —
+  // refusing it strands the athlete with an exclusion they cannot take back.
+  resetPrefs();
+  useAthletePreferencesStore.getState().addExclusion('Back Squat');
+  const from = athleteActionLogEntries().length;
+  useAthletePreferencesStore.getState().removeExclusion('Back Squat');
+  assert(useAthletePreferencesStore.getState().prefs.excluded.length === 0,
+    'removing the last exclusion was refused — the athlete is stranded');
+  const writes = athleteActionLogEntries().slice(from)
+    .filter((entry) => entry.event === 'athlete_prefs_write');
+  assert(writes.length === 1 && writes[0]!.outcome === 'applied'
+    && typeof writes[0]!.erasureActId === 'string'
+    && String(writes[0]!.erasureActId).includes('remove_exclusion'),
+    `the last-answer removal is not a named erasure on the tape: ${JSON.stringify(writes)}`);
+
+  // And the same shape for the last active injury.
+  useAthletePreferencesStore.getState().addActiveInjury('hamstring');
+  useAthletePreferencesStore.getState().removeActiveInjury('hamstring');
+  assert((useAthletePreferencesStore.getState().prefs.activeInjuries ?? []).length === 0,
+    'removing the last active injury was refused');
+});
+
 run('no writer can reach prefs around the owner', () => {
   const srcRoot = path.resolve(__dirname, '..');
   const storeSource = fs.readFileSync(
