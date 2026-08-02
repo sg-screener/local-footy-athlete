@@ -547,33 +547,15 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     whyNotDetectable: 'Line count is not a law violation. It must be decomposed into owned '
       + 'units before anything about it can be counted honestly.',
   },
-  {
-    id: 'LR-27',
-    title: 'One body-part vocabulary, every door',
-    tier: 2,
-    laws: ['L-A1', 'L-B3'],
-    blastRadius: 'visible_week',
-    founding: 'docs/INJURY_OTHER_PATH_TRACE_2026-07-30.md: three phrase maps answer one '
-      + 'question with different coverage. `guidedInjuryControl.guidedInjuryBucketForArea` '
-      + '(11 patterns) does not know `shin`; `sessionBuilder.INJURY_BODY_AREA_MAP` (~30 '
-      + 'keys) does; `programAdjustmentEngine.BODY_PART_TO_BUCKET` says in its own comment '
-      + 'that it mirrors a fourth map in `injuryAdjustmentEngine`. Same word, same '
-      + 'athlete, different answers depending on which door they used.',
-    size: 'M',
-    status: 'scheduled',
-    detector: null,
-    whyNotDetectable: 'The subject is DISAGREEMENT between maps, not a shape in any one '
-      + 'of them. Each map is individually plausible; the defect is only visible by '
-      + 'asking all of them the same word, which is the unit itself.',
-    // ADDED BY RULING, which is the only way this list may grow — and the founding count
-    // below rises by exactly one in the same commit, with the ruling cited, so the
-    // headroom is attributable rather than manufactured.
-    //
-    // Sam, 2026-07-30, ruling on the injury "Other" path: "Option 2 (collapse the two
-    // phrase maps to ONE owner so every door speaks one body-part vocabulary) is QUEUED
-    // on the census as its own unit — the convergent fix, 'shin' must mean the same thing
-    // at every door." The trace then found a THIRD map, and a fourth named by comment.
-  },
+  // LR-27 ("One body-part vocabulary, every door") PAID AND DELETED 2026-08-03.
+  // Tracked-only units die the ordinary way when their work lands (the rule two
+  // screens down, and [3] in the gate). Sam ruled the divergence table on
+  // 2026-08-02 (PARKED_QUESTIONS_2026-08-01 §5: the owner's sheet wins every
+  // row; shin ADDED -> calf; quadricep typo corrected) and all four doors
+  // converged onto `data/injuryRegions.ts`. What holds the line now is not this
+  // census: `test:injury-routing-divergence` stays in `test:bible`, asks every
+  // door behaviourally, pins each at ZERO divergence from the owner, and pins
+  // the retired literals gone — so the surface cannot return unobserved.
   {
     id: 'LR-13',
     title: 'The visible week has one projection',
