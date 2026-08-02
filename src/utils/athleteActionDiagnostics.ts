@@ -73,6 +73,12 @@ export type AthleteActionEventName =
   // only — a marked date, an exercise name and an injury key are answers.
   | 'calendar_write'
   | 'athlete_prefs_write'
+  // The coach-store armour doors, added 2026-08-03 (STORE_ARMOUR_RECIPE fleet
+  // phase): every write of modality preferences and mutation history, applied
+  // or refused, named on the tape. Counts only — a session name, a modality
+  // key, the athlete's words and an affected date are answers.
+  | 'coach_prefs_write'
+  | 'coach_mutation_history_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

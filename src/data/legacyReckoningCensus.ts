@@ -133,15 +133,21 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   {
     file: 'store/coachMutationHistoryStore.ts',
     persistKey: 'coach-mutation-history-store',
-    owner: null,
-    taped: false,
-    caveat: 'AGENTS.md requires mutation history for follow-up target resolution.',
+    owner: 'applyCoachMutationHistoryWrite',
+    taped: true,
+    caveat: 'AGENTS.md requires mutation history for follow-up target resolution — '
+      + 'which is why losing `entries` silently was Tier-1 debt. Armoured 2026-08-03 '
+      + '(store-armour fleet); store-ownership work only (LR-6): what the executor '
+      + 'records and the undo engine reverts is unchanged.',
   },
   {
     file: 'store/coachPreferencesStore.ts',
     persistKey: 'coach-preferences-store',
-    owner: null,
-    taped: false,
+    owner: 'applyCoachModalityPrefsWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet). Store-ownership work only '
+      + '(LR-6): the door owns HOW the map is written; what any coach path decides '
+      + 'is unchanged.',
   },
   {
     file: 'store/athletePreferencesStore.ts',
@@ -372,7 +378,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 9,
+    declared: 7,
     foundingCount: 11,
   },
   {
@@ -762,7 +768,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 11 + 4 + 72.
+ * The sum of every declared count: 27 + 7 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -772,7 +778,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * transaction store, one in the Explorer production bindings' now-excluded
  * action case) went with it.
  */
-export const LEGACY_DEBT_BASELINE = 112;
+export const LEGACY_DEBT_BASELINE = 110;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

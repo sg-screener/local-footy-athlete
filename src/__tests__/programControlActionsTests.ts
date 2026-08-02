@@ -54,7 +54,7 @@ function resetStores() {
   // Through the store's own reset door — the armour refuses a raw default
   // write over answered prefs.
   useAthletePreferencesStore.getState().clear();
-  useCoachPreferencesStore.setState({ modalityPreferences: {} } as any);
+  useCoachPreferencesStore.getState().clearAllModalityPreferences();
   useReadinessStore.setState({ signalsByDate: {} } as any);
   useProfileStore.setState({
     onboardingData: { trainingLocation: 'Commercial gym' },
