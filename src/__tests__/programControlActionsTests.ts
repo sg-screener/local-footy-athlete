@@ -51,9 +51,9 @@ function resetStores() {
     activeInjury: null,
     activeConstraints: [],
   } as any);
-  useAthletePreferencesStore.setState({
-    prefs: { excluded: [], pinned: [], activeInjuries: [] },
-  } as any);
+  // Through the store's own reset door — the armour refuses a raw default
+  // write over answered prefs.
+  useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.setState({ modalityPreferences: {} } as any);
   useReadinessStore.setState({ signalsByDate: {} } as any);
   useProfileStore.setState({

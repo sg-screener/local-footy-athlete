@@ -57,11 +57,16 @@ import type { PlanChange } from '../utils/planChangeTypes';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
-import { useCalendarStore } from '../store/calendarStore';
+import { useCalendarStore, applyCalendarMarkedDaysWrite } from '../store/calendarStore';
+import { athleteActionLogEntries } from '../utils/athleteActionLog';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
-import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
+import {
+  useAthletePreferencesStore,
+  applyAthletePrefsWrite,
+  INITIAL_ATHLETE_PREFS,
+} from '../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -295,7 +300,9 @@ function freshInstall(): void {
   // difference was preference state an earlier walk had left behind, which the
   // generator reads. A reset that leaves a door open makes every reproduction in
   // this file a coin toss, and the shrinker's minimal history a lie.
-  useAthletePreferencesStore.setState({ prefs: { excluded: [], pinned: [] } } as never);
+  // Through the store's own reset door — the armour refuses a raw default
+  // write over answered prefs, and freshInstall must not bypass the owner.
+  useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.setState({ modalityPreferences: {} } as never);
   // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
   // today's vocabulary cannot vary them (nine targets byte-identical solo vs
@@ -2063,9 +2070,10 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
   // (`getAthletePrefs()`) and by the projection (modality preferences), so a
   // walk that leaves either dirty hands the next walk a different athlete.
   freshInstall();
-  useAthletePreferencesStore.setState({
-    prefs: { excluded: ['Back Squat'], pinned: ['Bicep Curl (Barbell)'] },
-  } as never);
+  // Acted through the real preference doors, not seeded — a state reached by
+  // acting is the only kind freshInstall owes a reset for.
+  useAthletePreferencesStore.getState().addExclusion('Back Squat');
+  useAthletePreferencesStore.getState().addPinned('Bicep Curl (Barbell)');
   useCoachPreferencesStore.setState({
     modalityPreferences: { 'Easy Zone 2 Bike': { from: 'bike', to: 'row' } },
   } as never);
@@ -2084,6 +2092,68 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
     'freshInstall left a pending coach clarifier behind');
   assert(contextStore.getState() != null,
     'coach context store unreadable after freshInstall');
+});
+
+run('the calendar door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY (docs/STORE_ARMOUR_RECIPE_2026-08-03.md §6): the
+  // state under attack is REACHED BY ACTING through host.perform — onboard,
+  // generate, two calendar marks, a week of time — never seeded. Depth stated
+  // per L13: this is a SHALLOW-TIER cell (5 actions, one week crossed); the
+  // deep tier's block-crossing walks exercise the same door on every mark.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'mark_calendar', date: addDaysISO(weekStart, 5), mark: 'game' });
+  performAction({ kind: 'mark_calendar', date: addDaysISO(weekStart, 2), mark: 'rest' });
+  performAction({ kind: 'advance_time', days: 7 });
+  const marksBefore = JSON.stringify(useCalendarStore.getState().markedDays);
+  assert(Object.keys(useCalendarStore.getState().markedDays).length >= 2,
+    'precondition: the walk must leave marks to protect');
+  // COUNT, not index-slice: a walked world has flooded the 200-entry ring to
+  // its cap, where append+trim keeps the length constant and an index taken
+  // "before" points past every later entry.
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'calendar_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCalendarMarkedDaysWrite({ next: {}, writer: 'accepted_transaction' });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_marks',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCalendarStore.getState().markedDays) === marksBefore,
+    'the refused wipe changed the walked marks anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the prefs door refuses the wipe against a walked world', () => {
+  // Same replay for athletePreferencesStore. The walk reaches the world; the
+  // prefs are then ACTED through the store's real doors (the walker's own
+  // vocabulary has no preference action yet — a declared gap, recorded in the
+  // unit's boundary report, not hidden). Shallow tier, depth stated.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useAthletePreferencesStore.getState().addExclusion('Back Squat');
+  useAthletePreferencesStore.getState().addActiveInjury('hamstring');
+  const prefsBefore = JSON.stringify(useAthletePreferencesStore.getState().prefs);
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'athlete_prefs_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyAthletePrefsWrite({
+    next: INITIAL_ATHLETE_PREFS,
+    writer: 'preference_control',
+  });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_prefs',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useAthletePreferencesStore.getState().prefs) === prefsBefore,
+    'the refused wipe changed the walked prefs anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {

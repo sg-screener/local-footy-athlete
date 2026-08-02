@@ -8,7 +8,12 @@ import {
   useProgramStore,
   type ProgramPersistenceStageToken,
 } from './programStore';
-import { useCalendarStore } from './calendarStore';
+import {
+  useCalendarStore,
+  applyCalendarMarkedDaysWrite,
+  beginCalendarResetAction,
+  endCalendarResetAction,
+} from './calendarStore';
 import { useReadinessStore } from './readinessStore';
 import {
   restoreCoachUpdatesCompatibilityMirror,
@@ -587,7 +592,22 @@ function restoreAcceptedInMemory(
   program: AcceptedProgramStateSnapshot,
   mirrors: AcceptedMirrorSnapshot,
 ): void {
-  useCalendarStore.setState({ markedDays: clone(mirrors.markedDays) });
+  // Through the calendar owner. A rollback restoring "no marks yet" is a
+  // legitimate erasure — it removes the failed transaction's own marks — so
+  // it runs under a reset act rather than around the door. Unlike the profile
+  // default, an empty calendar is a common real state.
+  {
+    const calendarResetActionId = beginCalendarResetAction('coach_mutation_rollback');
+    try {
+      applyCalendarMarkedDaysWrite({
+        next: clone(mirrors.markedDays),
+        writer: 'coach_mutation_mirror',
+        resetActionId: calendarResetActionId,
+      });
+    } finally {
+      endCalendarResetAction(calendarResetActionId);
+    }
+  }
   useReadinessStore.setState({ signalsByDate: clone(mirrors.readinessSignalsByDate) });
   restoreCoachUpdatesCompatibilityMirror({
     updatesByWeek: clone(mirrors.coachUpdatesByWeek),

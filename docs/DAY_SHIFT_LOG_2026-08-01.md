@@ -93,6 +93,74 @@ honestly as "not reproducible" rather than "fixed".
 
 ---
 
+# Store armour unit — 2026-08-03 (LR-1+LR-2 opening)
+
+## The unit — recipe proven on the two highest-risk stores
+
+`docs/STORE_ARMOUR_RECIPE_2026-08-03.md` distils the profile/program stores'
+four protections (one door + typed refusals · every write on the tape ·
+refused-payload quarantine at the persistence writer · build failure on a
+second writer) into a cold-followable recipe, then proves it on
+**calendarStore** (`applyCalendarMarkedDaysWrite` — the accepted-state
+publish and the coach-mutation rollback are now WRITERS of the door, not
+exceptions; the COMPATIBILITY-ONLY writers terminate in one owner) and
+**athletePreferencesStore** (`applyAthletePrefsWrite` — exclusions, pins and
+active injuries are refusable answers). Two new bible suites
+(`test:calendar-ownership` 7 cells, `test:athlete-prefs-ownership` 6 cells);
+`calendar_write` / `athlete_prefs_write` join the tape's typed vocabulary
+and its decision-event survivor set.
+
+**Ratchets paid, same commits:** writer-audit debt 11 → 9 (both stores left
+`UNPROTECTED_STORES_DEBT` the commit their boundary registered); census LR-2
+`declared` 11 → 9, `LEGACY_DEBT_BASELINE` 114 → 112, both registry entries
+owned+taped (309/309).
+
+**Walker:** two refusal-replay cells — the wipe attempted against a WALKED
+world (shallow tier, depth stated per L13: 5 actions, one week crossed),
+typed refusal, byte-identical survival, tape witness COUNTED not
+index-sliced (a walked ring sits at cap where append+trim keeps length
+constant — the shift's instrument lesson, again). Walker 10/10.
+
+**Mutations: five applied, five caught** (door bypass → sweep; refusal
+deleted → 3 cells; tape silenced → taped-either-way; boundary unregistered →
+writer audit; census un-paid → four census cells). Table in the recipe doc.
+
+**L12 — what catches the NEXT one:** a new persisted store is caught twice
+over (audit's registry enumeration + census's unowned-by-default); a new
+writer around either door is a build failure; the next store to armour
+follows the recipe + its ten recorded lessons, so the class's fix is now a
+procedure, not an investigation.
+
+**Convergence (north star):** toward. No new stored state; two stores of
+INPUTS became refusable, taped, quarantined ledger-shaped stores.
+
+**NOT-COVERED:** nine stores still on the recipe's fleet table (the
+parallelize-across-worktrees phase, next session); LR-1 proper
+(`setManualOverride`, 27 refs) untouched; the two hand-maintained registries
+(appHydrationGate 12 handles / resetCoach 22 clears) not yet collapsed —
+LR-2's remainder; the walker vocabulary has NO preference action (declared
+in the cell — prefs state is acted in cells, not proposed in walks); the
+calendar sweep is product-code scoped (31 seeding suites are the walker's
+arc, declared in the cell). Pre-existing reds proven at `main` in a detached
+worktree, not inherited: `fixtureMutationTransactionTests` (1/13, equipment
+`ProgramGenError` — the same rot family as `test:block-state`) and
+`programControlActionsTests` (orphan suite, LR-14's lane).
+
+## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
+
+All five parked questions ANSWERED; recorded in full in
+`docs/PARKED_QUESTIONS_2026-08-01.md` (kept as the record). Build queue
+after this unit, by size ascending: **§4 icon commit** (one commit,
+icon-rule gate re-run) → **§1 Batch 8 PROPOSED→SIGNED flip** → **§5 LR-27
+convergence** (owner's sheet wins every row; shin added; quadricep typo;
+each ruled row drops its pin in the converging commit) → **§2 schedule-fact
+lanes** (option 2 approved; dead lane retired; short-on-time = compressed
+session under the 35-minute time-cap owner) → **§3 team-night build**
+(behind §2's lanes; MOVE asks, SWAP stays refused; permanent confirms
+inline).
+
+---
+
 ## HANDOVER (context exhausted — next session continues the shift)
 
 **Merged to main this shift, in order:** `45d717a` (rollover interim),

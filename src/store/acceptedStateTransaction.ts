@@ -24,7 +24,7 @@ import {
   type ProgramState,
   useProgramStore,
 } from './programStore';
-import { useCalendarStore } from './calendarStore';
+import { useCalendarStore, applyCalendarMarkedDaysWrite } from './calendarStore';
 import { useReadinessStore } from './readinessStore';
 import {
   publishAcceptedCoachUpdatesCompatibilityMirror,
@@ -803,7 +803,13 @@ export function commitAcceptedStateTransaction(
     ...staged.program,
     acceptedMaterialContext: staged.context,
   });
-  useCalendarStore.setState({ markedDays: staged.context.markedDays });
+  // Through the calendar owner: the transaction is a WRITER of markedDays,
+  // not an exception to its door. A clear() opens a reset act around this
+  // commit, which is what admits the one legitimate erasure.
+  applyCalendarMarkedDaysWrite({
+    next: staged.context.markedDays,
+    writer: 'accepted_transaction',
+  });
   useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
   if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {

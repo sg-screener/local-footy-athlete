@@ -5,6 +5,50 @@ moves on. One entry per question; each names the unit that parked it, what is
 blocked on the answer, and what shipped meanwhile. Nothing in this file is a
 proposal Sam has accepted — parked means UNANSWERED.
 
+---
+
+## ALL FIVE ANSWERED — Sam, 2026-08-02/03 (recorded 2026-08-03; file kept as the record)
+
+**§1 Batch 8 — SIGNED as proposed** (2026-08-02): the rollover refusal
+sentence and "Try again" both stand. → Build: flip PROPOSED → SIGNED in the
+copy sheet.
+
+**§2 Schedule-fact reassessment — option 2 APPROVED as written**
+(2026-08-02): the fact's RULED EFFECT owns its commit lane; unruled facts
+commit INERT and honest (busy/away doors alive as record-only); the dead
+always-refusing lane is RETIRED, zero guards. **"How short is short" RULED:**
+short-on-time builds the COMPRESSED session — main lift kept, cut to
+essentials, under the existing 35-minute time-cap owner. The two §6-II-f
+success sentences re-sign with their effect clause when the deriving lane
+lands. → Unblocks declared reds 8-9.
+
+**§3 Team-night movability — SIGNED** (2026-08-02): all seven strings as
+proposed. Choice 1: MOVE raises the ask; SWAP on a team night stays refused
+with its signed sentence — the club's session is not a type to trade.
+Choice 2: the permanent route confirms INLINE in the ask; `teamTrainingDays`
+still writes through its one setup owner. Build queues behind §2's approved
+lanes as designed; walker laws as pre-committed in the sheet.
+
+**§4 Icons — RULED, all rows** (2026-08-03): 1 short-on-time = STOPWATCH ·
+2 sick/flat = THERMOMETER · 3 injured = plaster (keep) · 4 missing equipment
+= DUMBBELL-WITH-SLASH · 5 swap = two arrows circling · 6 add = plus (keep) ·
+7 move = ARROW INTO CALENDAR DAY · 8 remove = MINUS-IN-CIRCLE (never a bin —
+the retired verb stays retired in imagery too) · 9 gunshow = flexed arm ·
+10 mobility = figure stretching · 11 rollover retry = NO ICON, text stands.
+One commit; icon-rule gate re-run (no adjacent glyph collisions);
+KEEP-unless-vetoed rows confirmed kept. Sam eyeballs on his next device
+build — it rides the next pass, no dedicated one.
+
+**§5 LR-27 divergence table — RULED: the owner's sheet wins every row**
+(2026-08-02): glute→hip · hip→hip · neck→neck · quad→quad · upper back→
+shoulder · achilles→calf (single-target) · SHIN ADDED to the ruling sheet
+→calf (single-target; regenerate the owner) · `quadricep` singular corrected
+to quad (sheet typo). → Converge all three copies onto
+`data/injuryRegions.ts`; each ruled row drops its divergence pin in the
+converging commit.
+
+The original questions follow, unedited, as the record of what was asked.
+
 ## 1. Batch 8 signatures — the rollover refusal sentence + retry label
 
 **Parked by:** Unit 1 (block-rollover interim), 2026-08-01.

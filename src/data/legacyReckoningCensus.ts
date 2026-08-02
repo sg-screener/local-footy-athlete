@@ -122,9 +122,11 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   {
     file: 'store/calendarStore.ts',
     persistKey: 'calendar-storage',
-    owner: null,
-    taped: false,
-    caveat: 'Six writers marked COMPATIBILITY-ONLY in their own JSDoc, with three live callers.',
+    owner: 'applyCalendarMarkedDaysWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour recipe). The COMPATIBILITY-ONLY '
+      + 'writers still exist but now terminate in the one door; retiring them is '
+      + "LR-2's remainder, not a write-ownership gap.",
   },
   { file: 'store/readinessStore.ts', persistKey: 'readiness-store', owner: null, taped: false },
   { file: 'store/coachUpdatesStore.ts', persistKey: 'coach-updates', owner: null, taped: true },
@@ -144,8 +146,8 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   {
     file: 'store/athletePreferencesStore.ts',
     persistKey: 'athlete-preferences-store',
-    owner: null,
-    taped: false,
+    owner: 'applyAthletePrefsWrite',
+    taped: true,
   },
   { file: 'store/coachStore.ts', persistKey: 'coach-store', owner: null, taped: false },
   { file: 'store/coachMemoryStore.ts', persistKey: 'coach-memory-store', owner: null, taped: false },
@@ -370,7 +372,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 11,
+    declared: 9,
     foundingCount: 11,
   },
   {
@@ -770,7 +772,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * transaction store, one in the Explorer production bindings' now-excluded
  * action case) went with it.
  */
-export const LEGACY_DEBT_BASELINE = 114;
+export const LEGACY_DEBT_BASELINE = 112;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
