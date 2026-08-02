@@ -41,6 +41,7 @@ import {
 import { resolveInjuryBucket } from '../utils/programAdjustmentEngine';
 import { extractInjuryContext } from '../utils/injuryAdjustmentEngine';
 import { BODY_PARTS } from '../utils/injuryClarificationGuard';
+import { buildSorenessConstraintFromIntent } from '../utils/coachConstraintProducers';
 
 let passed = 0;
 let failed = 0;
@@ -132,8 +133,16 @@ function tagDivergences(map: Record<string, string[]>): DoorDivergence[] {
   return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
 }
 
-const ccpMap = extractStringMap(read('utils/coachConstraintProducers.ts'), 'BODY_PART_TO_BUCKET');
 const tagMap = extractTagMap(read('utils/sessionBuilder.ts'));
+
+/** coachConstraintProducers' door, asked through its exported producer. */
+function sorenessBucketFor(phrase: string): string | null {
+  const constraint = buildSorenessConstraintFromIntent(
+    { payload: { bodyPart: phrase, severity: 5 } } as never,
+    '2026-08-03T09:00:00.000Z',
+  );
+  return constraint?.bucket ?? null;
+}
 
 /**
  * A CONVERGED door: its copy is deleted and its resolver delegates to the
@@ -194,7 +203,11 @@ function injuryAdjustmentEngineDivergences(): DoorDivergence[] {
 }
 
 run('the converged doors hold no body-part copy of their own', () => {
-  for (const file of ['utils/programAdjustmentEngine.ts', 'utils/injuryAdjustmentEngine.ts']) {
+  for (const file of [
+    'utils/programAdjustmentEngine.ts',
+    'utils/injuryAdjustmentEngine.ts',
+    'utils/coachConstraintProducers.ts',
+  ]) {
     assert(!/BODY_PART_TO_BUCKET\s*[:=]/.test(read(file)),
       `${file} holds a BODY_PART_TO_BUCKET literal again — the copy was retired `
       + 'onto data/injuryRegions.ts (LR-27, Sam 2026-08-02) and must not regrow');
@@ -213,11 +226,9 @@ run('the owner routes exactly the ruled phrase set', () => {
 // ── Direction 1: each surviving copy's vocabulary, pinned by size. ──
 run('the surviving copies hold exactly their pinned vocabularies', () => {
   const sizes = {
-    coachConstraintProducers: Object.keys(ccpMap).length,
     sessionBuilderTags: Object.keys(tagMap).length,
   };
   const pinned = {
-    coachConstraintProducers: 42,
     sessionBuilderTags: 29,
   };
   assert(JSON.stringify(sizes) === JSON.stringify(pinned),
@@ -244,14 +255,14 @@ run('the surviving copies hold exactly their pinned vocabularies', () => {
 const DIVERGENCE_PINS: Readonly<Record<string, number>> = {
   programAdjustmentEngine: 0,
   injuryAdjustmentEngine: 0,
-  coachConstraintProducers: 12,
+  coachConstraintProducers: 0,
   sessionBuilderTags: 3,
 };
 
 const allDivergences = [
   ...convergedDoorDivergences('programAdjustmentEngine', resolveInjuryBucket),
   ...injuryAdjustmentEngineDivergences(),
-  ...bucketDivergences('coachConstraintProducers', ccpMap),
+  ...convergedDoorDivergences('coachConstraintProducers', sorenessBucketFor),
   ...tagDivergences(tagMap),
 ];
 

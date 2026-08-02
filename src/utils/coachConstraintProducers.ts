@@ -31,73 +31,26 @@ import type {
   ActiveMissedSessionConstraint,
 } from '../store/coachUpdatesStore';
 import type { InjuryBucket } from './programAdjustmentEngine';
+import { resolveInjuryRegion, routableBodyParts } from '../data/injuryRegions';
 import type { ConstraintRegion } from './exposureEngine';
 import { todayISOLocal } from './appDate';
 
 // ─── Body-part → InjuryBucket (soreness uses the same canonicalisation) ─
+//
+// LR-27 convergence (Sam's ruling, 2026-08-02): the owner's sheet wins every
+// row, so soreness routes through `data/injuryRegions.ts` — the single owner —
+// and this producer holds no body-part vocabulary of its own.
 
-const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
-  hamstring: 'hamstring',
-  hamstrings: 'hamstring',
-  hammy: 'hamstring',
-  hammies: 'hamstring',
-  glute: 'hamstring',
-  glutes: 'hamstring',
-
-  knee: 'knee',
-  knees: 'knee',
-  quad: 'knee',
-  quads: 'knee',
-  quadricep: 'knee',
-  quadriceps: 'knee',
-
-  calf: 'calf',
-  calves: 'calf',
-  achilles: 'calf',
-
-  'ankle/foot': 'ankle/foot',
-  ankles: 'ankle/foot',
-  foot: 'ankle/foot',
-  feet: 'ankle/foot',
-
-  groin: 'groin',
-  adductors: 'groin',
-  hip: 'groin',
-  hips: 'groin',
-
-  back: 'lowerBack',
-  'lower back': 'lowerBack',
-  'upper back': 'lowerBack',
-
-  shoulder: 'shoulder',
-  shoulders: 'shoulder',
-  pec: 'shoulder',
-  pecs: 'shoulder',
-  chest: 'shoulder',
-  neck: 'shoulder',
-
-  elbow: 'elbow',
-  elbows: 'elbow',
-  bicep: 'elbow',
-  biceps: 'elbow',
-  tricep: 'elbow',
-  triceps: 'elbow',
-  forearm: 'elbow',
-  forearms: 'elbow',
-
-  'wrist/hand': 'wrist/hand',
-  wrists: 'wrist/hand',
-};
-
-/** Lower-cased prefix-match against the body-part dictionary. */
 function bodyPartToBucket(raw: string | undefined): InjuryBucket | null {
   if (!raw) return null;
-  const norm = raw.trim().toLowerCase();
-  if (BODY_PART_TO_BUCKET[norm]) return BODY_PART_TO_BUCKET[norm];
-  // Try to find a body-part word INSIDE the raw string (free-text)
-  for (const key of Object.keys(BODY_PART_TO_BUCKET)) {
-    const re = new RegExp(`\\b${key}\\b`, 'i');
-    if (re.test(norm)) return BODY_PART_TO_BUCKET[key];
+  const direct = resolveInjuryRegion(raw);
+  if (direct) return direct;
+  // Try to find a routable body-part word INSIDE the raw string (free-text).
+  for (const phrase of routableBodyParts()) {
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`\\b${escaped}\\b`, 'i').test(raw)) {
+      return resolveInjuryRegion(phrase);
+    }
   }
   return null;
 }
