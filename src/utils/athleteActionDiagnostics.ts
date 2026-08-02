@@ -68,6 +68,11 @@ export type AthleteActionEventName =
   | 'onboarding_completion_result'
   | 'profile_mirror_publication_refused'
   | 'profile_write'
+  // The store-armour doors, added 2026-08-03 (STORE_ARMOUR_RECIPE): every
+  // write of marks and prefs, applied or refused, named on the tape. Counts
+  // only — a marked date, an exercise name and an injury key are answers.
+  | 'calendar_write'
+  | 'athlete_prefs_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

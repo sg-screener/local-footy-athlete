@@ -1,9 +1,10 @@
 # The Store Armour Recipe — 2026-08-03
 
-> **DRAFT — being proven against `calendarStore` and `athletePreferencesStore`.**
-> The final version of this document carries a "What the two applications
-> taught" section and drops this banner. Until then, treat every step as
-> stated-but-unproven.
+> **PROVEN 2026-08-03** against `calendarStore` and `athletePreferencesStore`
+> (branch `feat/store-armour-calendar-prefs`). Every deviation the two
+> applications forced is recorded in "What the two applications taught" at the
+> bottom — read that section before armouring the next store; it is the part
+> a fresh agent cannot derive from the recipe alone.
 
 **What this is.** The transferable form of the protections the profile-wipe
 saga (`docs/LOST_ONBOARDING_DIAGNOSIS_2026-07-30.md`) and the hydration wipe
@@ -187,3 +188,67 @@ survival, and the refused entry on the tape. State the depth the walk reached
 Coach-store doors are LR-2 store-ownership work and allowed under Sam's
 sequencing ruling; changing what any coach path DOES stays behind the LR-6
 STOP.
+
+---
+
+## What the two applications taught (2026-08-03)
+
+Deviations and discoveries, each with its reason — a fresh agent follows the
+recipe THEN this list:
+
+1. **A transaction-written store needs a reset-act fallback at the door.**
+   `calendarStore.clear()` erases through `commitCalendarStateTransaction`,
+   and the door's write happens deep inside the commit, which cannot thread
+   an id without changing the transaction's API. The door therefore falls
+   back to `activeCalendarResetActionId()` — the act currently in flight —
+   when no id is passed. The property that matters (a write belonging to a
+   FINISHED reset is refused) survives, because the fallback also finds
+   nothing once the act ends.
+2. **A rollback restore is a legitimate erasure — under a reset act.** The
+   coach-mutation rollback may restore "no marks yet" over the failed
+   transaction's own marks. Unlike the profile default (a state that was
+   almost certainly a wipe), an empty calendar is a common real state, so
+   the restore opens a reset act (`coach_mutation_rollback`) rather than
+   being refused. The profile door refuses its rollback-to-default instead;
+   both choices are deliberate and the difference is the store's default.
+3. **Reduction is not the wipe.** `clearAllGames` writes FEWER marks (rest
+   marks survive a phase change). The refusal fires only on the bare
+   default over material state. Refusing reduction would refuse the athlete.
+4. **The sweep's scope is a per-store decision, declared in the cell.**
+   Prefs: repo-wide including tests (3 seeding sites converted to doors —
+   cheap, and the fixture law prefers it). Calendar: product-code only,
+   because 31 established suites seed `markedDays` as fixture state and
+   converting them is the walker's arc. The asymmetry is stated in the
+   cell's comment, never silent.
+5. **Tape witnesses are COUNTED, not index-sliced.** A walked world floods
+   the 200-entry ring to its cap, where append+trim keeps the length
+   constant and an index taken "before" points past every later entry.
+6. **The suite's own sweep matches its own literals.** A repo-wide sweep
+   finds the search string in the suite that performs it; self-exempt the
+   suite file as the law statement (the writer-audit precedent).
+7. **The raw-`AsyncStorage` base moves to `asyncStorageCompat`** when
+   wrapping (prefs had the raw import). Compat is what every armoured store
+   uses: durable-write tracking (`flushPendingStorageWrites`, which the
+   quarantine cells need to await) and the node fallback for plain suites.
+8. **Check the neighbours, and prove pre-existing reds at `main`.** The
+   fixture-mutation suite (13 fails, equipment `ProgramGenError`) and
+   `programControlActionsTests` fail IDENTICALLY on a clean detached
+   worktree of `main` — recorded, not inherited silently. Method:
+   `git worktree add --detach <scratch> main` + symlinked `node_modules`.
+9. **The audit's stale-check schedules the debt paydown for you.** The
+   moment the boundary registers, `test:stored-state-writer-audit` fails
+   until the store leaves `UNPROTECTED_STORES_DEBT` — do it in the same
+   commit as the boundary.
+10. **The census pays in the same commit as the second store**, or the
+    tree crosses a red gate between commits: `declared` and
+    `LEGACY_DEBT_BASELINE` move together (directions 1 and 3).
+
+## The five mutations, and who caught them (this unit's pass)
+
+| # | Mutation | Caught by |
+|---|---|---|
+| 1 | Raw `useCalendarStore.setState` in `acceptedStateTransaction` | calendar sweep cell |
+| 2 | Prefs refusal check deleted | 3 cells: refusal, stale-id, tape |
+| 3 | Calendar refusal tape silenced | taped-either-way cell |
+| 4 | Prefs quarantine boundary unregistered | writer audit (protected-or-declared) |
+| 5 | Census un-paid (`declared` 9→11) | 4 census cells (directions 1/2/3 + detector completeness) |
