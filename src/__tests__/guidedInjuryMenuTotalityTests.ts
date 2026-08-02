@@ -197,8 +197,8 @@ console.log('\n[4] THE SHEET refuses at the point of answering');
 
 console.log(`\nGuided injury menu totality: ${passed} passed, ${failures.length} failed`);
 console.log('  DEPTH (L13): 0 — a pure predicate over an authored menu.');
-console.log('  This door now routes through data/injuryRegions.ts — Sam\'s 13 authored');
-console.log('  regions. NOT COVERED (census LR-27): programAdjustmentEngine and');
-console.log('  sessionBuilder still carry their own copies, so other doors can still');
-console.log('  disagree with the owner about a word.');
+console.log('  This door routes through data/injuryRegions.ts — Sam\'s 13 authored');
+console.log('  regions. Since the LR-27 convergence (2026-08-03) EVERY door does: the');
+console.log('  last copies retired and test:injury-routing-divergence pins each door');
+console.log('  equal to the owner at zero divergence.');
 if (failures.length > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }
