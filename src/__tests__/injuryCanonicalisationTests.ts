@@ -87,26 +87,34 @@ section('[1] Pending "hammy" → "6/10" → resolved bucket=hamstring (THE BUG)'
 // ─────────────────────────────────────────────────────────────────────
 section('[2] Known aliases canonicalise (no null buckets)');
 {
+  // Expectations pin the OWNER's ruled routes (data/injuryRegions.ts).
+  // LR-27 convergence, Sam's ruling 2026-08-02 (PARKED_QUESTIONS_2026-08-01
+  // §5): the owner's sheet wins every row — glute → hip (not the hamstring
+  // proxy), quad/quads → quad (not the knee proxy), hip → hip.
+  // The ankle/adductor rows below expected a pre-region bucket vocabulary
+  // ('ankle', 'adductor') that resolveInjuryBucket NEVER produced — they were
+  // red on main before the convergence; they now pin the owner's answers
+  // ('ankle/foot', 'groin').
   const cases: Array<[string, string]> = [
     ['hammy', 'hamstring'],
     ['hammie', 'hamstring'],         // misspelling-route
     ['hamstring', 'hamstring'],
     ['hamstrings', 'hamstring'],
     ['hammies', 'hamstring'],
-    ['glute', 'hamstring'],          // proxy
-    ['quad', 'knee'],                // proxy
-    ['quads', 'knee'],
+    ['glute', 'hip'],                // Sam 2026-08-02: hip profile protects a glute strain
+    ['quad', 'quad'],                // Sam 2026-08-02: quad has its own column
+    ['quads', 'quad'],
     ['knee', 'knee'],
     ['knees', 'knee'],
     ['calf', 'calf'],
     ['calves', 'calf'],
     ['achilles', 'calf'],
-    ['ankle', 'ankle'],
-    ['ankles', 'ankle'],
-    ['groin', 'adductor'],
-    ['adductor', 'adductor'],
-    ['adductors', 'adductor'],
-    ['hip', 'adductor'],             // lower-limb/groin proxy
+    ['ankle', 'ankle/foot'],
+    ['ankles', 'ankle/foot'],
+    ['groin', 'groin'],
+    ['adductor', 'groin'],
+    ['adductors', 'groin'],
+    ['hip', 'hip'],                  // Sam 2026-08-02: hip profile, not the groin proxy
     ['back', 'lowerBack'],
     ['lower back', 'lowerBack'],
     ['lower-back', 'lowerBack'],

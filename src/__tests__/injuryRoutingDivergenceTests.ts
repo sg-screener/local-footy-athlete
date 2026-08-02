@@ -38,6 +38,7 @@ import {
   routableBodyParts,
   type InjuryRegion,
 } from '../data/injuryRegions';
+import { resolveInjuryBucket } from '../utils/programAdjustmentEngine';
 
 let passed = 0;
 let failed = 0;
@@ -129,10 +130,44 @@ function tagDivergences(map: Record<string, string[]>): DoorDivergence[] {
   return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
 }
 
-const paeMap = extractStringMap(read('utils/programAdjustmentEngine.ts'), 'BODY_PART_TO_BUCKET');
 const iaeMap = extractStringMap(read('utils/injuryAdjustmentEngine.ts'), 'BODY_PART_TO_BUCKET');
 const ccpMap = extractStringMap(read('utils/coachConstraintProducers.ts'), 'BODY_PART_TO_BUCKET');
 const tagMap = extractTagMap(read('utils/sessionBuilder.ts'));
+
+/**
+ * A CONVERGED door: its copy is deleted and its resolver delegates to the
+ * owner. Divergence is computed BEHAVIOURALLY (ask the door every routable
+ * phrase and a sample of unroutable ones) so the pin holds at zero by
+ * measurement, not by construction; and the retired literal is pinned GONE so
+ * a re-grown copy is a red, not a drift.
+ */
+function convergedDoorDivergences(
+  door: string,
+  resolve: (phrase: string) => string | null,
+): DoorDivergence[] {
+  const out: DoorDivergence[] = [];
+  for (const phrase of routableBodyParts()) {
+    const answer = resolve(phrase);
+    const region = resolveInjuryRegion(phrase);
+    if (answer !== region) {
+      out.push({ phrase, door, copyAnswer: String(answer), ownerRegion: String(region) });
+    }
+  }
+  for (const phrase of ['torso', 'spleen', 'left everything', '']) {
+    if (resolve(phrase) !== null) {
+      out.push({ phrase, door, copyAnswer: String(resolve(phrase)), ownerRegion: 'UNROUTABLE' });
+    }
+  }
+  return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
+}
+
+run('the converged doors hold no body-part copy of their own', () => {
+  for (const file of ['utils/programAdjustmentEngine.ts']) {
+    assert(!/BODY_PART_TO_BUCKET\s*[:=]/.test(read(file)),
+      `${file} holds a BODY_PART_TO_BUCKET literal again — the copy was retired `
+      + 'onto data/injuryRegions.ts (LR-27, Sam 2026-08-02) and must not regrow');
+  }
+});
 
 // ── Direction 3: the owner's routable set, pinned. ──
 run('the owner routes exactly the ruled phrase set', () => {
@@ -143,16 +178,14 @@ run('the owner routes exactly the ruled phrase set', () => {
     + 'generated file changed; re-pin deliberately with the ruling that changed it');
 });
 
-// ── Direction 1: each copy's vocabulary, pinned by size. ──
-run('the four copies hold exactly their pinned vocabularies', () => {
+// ── Direction 1: each surviving copy's vocabulary, pinned by size. ──
+run('the surviving copies hold exactly their pinned vocabularies', () => {
   const sizes = {
-    programAdjustmentEngine: Object.keys(paeMap).length,
     injuryAdjustmentEngine: Object.keys(iaeMap).length,
     coachConstraintProducers: Object.keys(ccpMap).length,
     sessionBuilderTags: Object.keys(tagMap).length,
   };
   const pinned = {
-    programAdjustmentEngine: 49,
     injuryAdjustmentEngine: 41,
     coachConstraintProducers: 42,
     sessionBuilderTags: 29,
@@ -174,15 +207,19 @@ run('the four copies hold exactly their pinned vocabularies', () => {
 // owner's `quadricep` (singular) knee route to quad — a sheet typo — so the
 // copies' knee proxy for it became VISIBLE divergence. It converges with the
 // rest of each copy and this pin drops in that same commit.
+//
+// 12 -> 0 as each door converges (Sam's §5 ruling, 2026-08-02: the owner's
+// sheet wins every row): a converged door is measured behaviourally and holds
+// at zero forever.
 const DIVERGENCE_PINS: Readonly<Record<string, number>> = {
-  programAdjustmentEngine: 12,
+  programAdjustmentEngine: 0,
   injuryAdjustmentEngine: 12,
   coachConstraintProducers: 12,
   sessionBuilderTags: 3,
 };
 
 const allDivergences = [
-  ...bucketDivergences('programAdjustmentEngine', paeMap),
+  ...convergedDoorDivergences('programAdjustmentEngine', resolveInjuryBucket),
   ...bucketDivergences('injuryAdjustmentEngine', iaeMap),
   ...bucketDivergences('coachConstraintProducers', ccpMap),
   ...tagDivergences(tagMap),

@@ -143,15 +143,20 @@ console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never st
     GUIDED_INJURY_AREA_HINT.length > 0);
 
   ok('a programmable area passes the predicate', guidedInjuryAreaIsProgrammable('hamstring'));
-  // THIS LIST HAS BEEN CORRECTED TWICE BY ITS OWN RUNS, which is worth recording because
-  // both corrections were the harness being wrong about the app. "rib cage thing" routes
-  // (ribs is a region). "tricep" routes to ELBOW — Sam's map covers it. What is left is
-  // genuinely unroutable, and the shortness of the list is itself the finding: his
-  // authored routing covers far more free text than the copy did.
-  for (const unprogrammable of ['jaw', 'shin', 'dunno', 'everything']) {
+  // THIS LIST HAS BEEN CORRECTED THREE TIMES BY ITS OWN RUNS, which is worth recording
+  // because every correction was the harness being wrong about the app. "rib cage thing"
+  // routes (ribs is a region). "tricep" routes to ELBOW — Sam's map covers it. And "shin"
+  // left the list on 2026-08-03: Sam's LR-27 ruling (2026-08-02, parked §5) ADDED
+  // shin -> calf to the ruling sheet, so it routes now. What is left is genuinely
+  // unroutable, and the shortness of the list is itself the finding: his authored
+  // routing covers far more free text than the copy did.
+  for (const unprogrammable of ['jaw', 'dunno', 'everything']) {
     ok(`"${unprogrammable}" is refused rather than accepted`,
       !guidedInjuryAreaIsProgrammable(unprogrammable));
   }
+  // The ruled addition, pinned from the accepting side: shin means calf at this door.
+  ok('"shin" is accepted since Sam ruled it to calf (2026-08-02)',
+    guidedInjuryAreaIsProgrammable('shin'));
 
   // UNREPRESENTABLE, not merely refused upstream. The builder is the writer, and a UI
   // convention the next caller can bypass is not a boundary.
