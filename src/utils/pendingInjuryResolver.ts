@@ -177,12 +177,12 @@ export function resolveInjuryFromMessage(
   // on, and next week kept showing Deadlifts/Nordics for hamstring.
   const canonicalBucket = resolveInjuryBucket(pending.bodyPart);
   if (!canonicalBucket && pending.bodyPart && pending.bodyPart !== 'unknown') {
-    // Loud dev signal: a known body-part alias should never resolve
-    // to a null bucket. If you hit this, add the alias to
-    // BODY_PART_TO_BUCKET in programAdjustmentEngine.ts.
+    // Loud dev signal: a known body-part alias should never resolve to a
+    // null bucket. Routing is owned by data/injuryRegions.ts (LR-27): a
+    // genuinely new alias is a ruling-sheet amendment, never a local map.
     logger.warn('[injury-context] canonicalization_failed', {
       rawBodyPart: pending.bodyPart,
-      reason: 'unknown alias — add to BODY_PART_TO_BUCKET',
+      reason: 'unknown alias — amend the ruling sheet and regenerate the owner',
     });
   }
   logger.debug('[injury-context] canonicalized', {
