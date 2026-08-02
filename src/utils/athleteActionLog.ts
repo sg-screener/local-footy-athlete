@@ -135,6 +135,8 @@ const DECISION_EVENTS: ReadonlySet<string> = new Set([
   'onboarding_step_committed',
   'onboarding_completion_result',
   'profile_write',
+  'athlete_prefs_write',
+  'calendar_write',
   'profile_rehydrated',
   'profile_mirror_publication_refused',
   'profile_snapshot_repaired',

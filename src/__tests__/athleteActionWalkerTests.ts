@@ -295,7 +295,9 @@ function freshInstall(): void {
   // difference was preference state an earlier walk had left behind, which the
   // generator reads. A reset that leaves a door open makes every reproduction in
   // this file a coin toss, and the shrinker's minimal history a lie.
-  useAthletePreferencesStore.setState({ prefs: { excluded: [], pinned: [] } } as never);
+  // Through the store's own reset door — the armour refuses a raw default
+  // write over answered prefs, and freshInstall must not bypass the owner.
+  useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.setState({ modalityPreferences: {} } as never);
   // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
   // today's vocabulary cannot vary them (nine targets byte-identical solo vs
@@ -2063,9 +2065,10 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
   // (`getAthletePrefs()`) and by the projection (modality preferences), so a
   // walk that leaves either dirty hands the next walk a different athlete.
   freshInstall();
-  useAthletePreferencesStore.setState({
-    prefs: { excluded: ['Back Squat'], pinned: ['Bicep Curl (Barbell)'] },
-  } as never);
+  // Acted through the real preference doors, not seeded — a state reached by
+  // acting is the only kind freshInstall owes a reset for.
+  useAthletePreferencesStore.getState().addExclusion('Back Squat');
+  useAthletePreferencesStore.getState().addPinned('Bicep Curl (Barbell)');
   useCoachPreferencesStore.setState({
     modalityPreferences: { 'Easy Zone 2 Bike': { from: 'bike', to: 'row' } },
   } as never);

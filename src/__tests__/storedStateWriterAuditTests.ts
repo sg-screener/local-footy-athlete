@@ -119,7 +119,6 @@ const UNPROTECTED_STORES_DEBT: readonly string[] = [
   'coach-mutation-history-store',
   'coach-preferences-store',
   'coach-updates',
-  'athlete-preferences-store',
   'ui-store',
   'auth-store',
 ];
