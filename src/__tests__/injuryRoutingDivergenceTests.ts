@@ -39,6 +39,8 @@ import {
   type InjuryRegion,
 } from '../data/injuryRegions';
 import { resolveInjuryBucket } from '../utils/programAdjustmentEngine';
+import { extractInjuryContext } from '../utils/injuryAdjustmentEngine';
+import { BODY_PARTS } from '../utils/injuryClarificationGuard';
 
 let passed = 0;
 let failed = 0;
@@ -130,7 +132,6 @@ function tagDivergences(map: Record<string, string[]>): DoorDivergence[] {
   return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
 }
 
-const iaeMap = extractStringMap(read('utils/injuryAdjustmentEngine.ts'), 'BODY_PART_TO_BUCKET');
 const ccpMap = extractStringMap(read('utils/coachConstraintProducers.ts'), 'BODY_PART_TO_BUCKET');
 const tagMap = extractTagMap(read('utils/sessionBuilder.ts'));
 
@@ -161,8 +162,39 @@ function convergedDoorDivergences(
   return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
 }
 
+/**
+ * injuryAdjustmentEngine's door, measured END TO END: its extraction
+ * vocabulary is BODY_PARTS, and every extracted token's bucket must be the
+ * owner's answer. This asks the real message path, not a map.
+ */
+function injuryAdjustmentEngineDivergences(): DoorDivergence[] {
+  const out: DoorDivergence[] = [];
+  // "is sore", not "hurts": "chest hurts" trips the RED-FLAG guard (a cardiac
+  // symptom is refused upstream of routing, by design) and would read as a
+  // false divergence. The probe measures routing, not the medical guard.
+  for (const part of BODY_PARTS) {
+    const context = extractInjuryContext(`my ${part} is sore 6/10`);
+    const answer = context?.bucket ?? null;
+    const region = resolveInjuryRegion(part);
+    if (answer !== region) {
+      out.push({
+        phrase: part, door: 'injuryAdjustmentEngine',
+        copyAnswer: String(answer), ownerRegion: String(region),
+      });
+    }
+  }
+  const refused = extractInjuryContext('my torso is sore 6/10');
+  if ((refused?.bucket ?? null) !== null) {
+    out.push({
+      phrase: 'torso', door: 'injuryAdjustmentEngine',
+      copyAnswer: String(refused?.bucket), ownerRegion: 'UNROUTABLE',
+    });
+  }
+  return out.sort((a, b) => a.phrase.localeCompare(b.phrase));
+}
+
 run('the converged doors hold no body-part copy of their own', () => {
-  for (const file of ['utils/programAdjustmentEngine.ts']) {
+  for (const file of ['utils/programAdjustmentEngine.ts', 'utils/injuryAdjustmentEngine.ts']) {
     assert(!/BODY_PART_TO_BUCKET\s*[:=]/.test(read(file)),
       `${file} holds a BODY_PART_TO_BUCKET literal again — the copy was retired `
       + 'onto data/injuryRegions.ts (LR-27, Sam 2026-08-02) and must not regrow');
@@ -181,12 +213,10 @@ run('the owner routes exactly the ruled phrase set', () => {
 // ── Direction 1: each surviving copy's vocabulary, pinned by size. ──
 run('the surviving copies hold exactly their pinned vocabularies', () => {
   const sizes = {
-    injuryAdjustmentEngine: Object.keys(iaeMap).length,
     coachConstraintProducers: Object.keys(ccpMap).length,
     sessionBuilderTags: Object.keys(tagMap).length,
   };
   const pinned = {
-    injuryAdjustmentEngine: 41,
     coachConstraintProducers: 42,
     sessionBuilderTags: 29,
   };
@@ -213,14 +243,14 @@ run('the surviving copies hold exactly their pinned vocabularies', () => {
 // at zero forever.
 const DIVERGENCE_PINS: Readonly<Record<string, number>> = {
   programAdjustmentEngine: 0,
-  injuryAdjustmentEngine: 12,
+  injuryAdjustmentEngine: 0,
   coachConstraintProducers: 12,
   sessionBuilderTags: 3,
 };
 
 const allDivergences = [
   ...convergedDoorDivergences('programAdjustmentEngine', resolveInjuryBucket),
-  ...bucketDivergences('injuryAdjustmentEngine', iaeMap),
+  ...injuryAdjustmentEngineDivergences(),
   ...bucketDivergences('coachConstraintProducers', ccpMap),
   ...tagDivergences(tagMap),
 ];
