@@ -73,6 +73,11 @@ export type AthleteActionEventName =
   // only — a marked date, an exercise name and an injury key are answers.
   | 'calendar_write'
   | 'athlete_prefs_write'
+  // The store-armour fleet, 2026-08-03: the readiness mirror and the coach
+  // updates store get their doors. Counts only — a check-in date, how the
+  // athlete felt, and an injury's body part are answers.
+  | 'readiness_write'
+  | 'coach_updates_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

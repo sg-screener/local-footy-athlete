@@ -128,7 +128,16 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'writers still exist but now terminate in the one door; retiring them is '
       + "LR-2's remainder, not a write-ownership gap.",
   },
-  { file: 'store/readinessStore.ts', persistKey: 'readiness-store', owner: null, taped: false },
+  {
+    file: 'store/readinessStore.ts',
+    persistKey: 'readiness-store',
+    owner: 'applyReadinessSignalsWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour recipe). Every product writer '
+      + 'projects the accepted canonical context and runs under a named reset '
+      + 'act — the refusal guards the bare-wipe class; retiring the mirror '
+      + "itself is LR-2's remainder, not a write-ownership gap.",
+  },
   { file: 'store/coachUpdatesStore.ts', persistKey: 'coach-updates', owner: null, taped: true },
   {
     file: 'store/coachMutationHistoryStore.ts',
@@ -372,7 +381,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 9,
+    declared: 8,
     foundingCount: 11,
   },
   {
@@ -762,7 +771,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 11 + 4 + 72.
+ * The sum of every declared count: 27 + 8 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -770,9 +779,11 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * deleted entirely (HOME_SCREEN_REDESIGN ruling 1, 2026-07-31): its two
  * `useProfileStore` single-expression reads (one in the reversible-adjustment
  * transaction store, one in the Explorer production bindings' now-excluded
- * action case) went with it.
+ * action case) went with it. LR-2 paid down 11 → 9 with the store-armour
+ * recipe's two proving applications (prefs + calendar, 2026-08-03) and 9 → 8
+ * when the readiness store took its door in the fleet phase.
  */
-export const LEGACY_DEBT_BASELINE = 112;
+export const LEGACY_DEBT_BASELINE = 111;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

@@ -14,7 +14,12 @@ import {
   beginCalendarResetAction,
   endCalendarResetAction,
 } from './calendarStore';
-import { useReadinessStore } from './readinessStore';
+import {
+  useReadinessStore,
+  applyReadinessSignalsWrite,
+  beginReadinessResetAction,
+  endReadinessResetAction,
+} from './readinessStore';
 import {
   restoreCoachUpdatesCompatibilityMirror,
   useCoachUpdatesStore,
@@ -608,7 +613,23 @@ function restoreAcceptedInMemory(
       endCalendarResetAction(calendarResetActionId);
     }
   }
-  useReadinessStore.setState({ signalsByDate: clone(mirrors.readinessSignalsByDate) });
+  // Through the readiness owner. A rollback restoring "no signals yet" is a
+  // legitimate erasure — it removes the failed transaction's own signals — so
+  // it runs under a reset act rather than around the door (the calendar
+  // restore above sets the precedent; an empty signal map is a common real
+  // state).
+  {
+    const readinessResetActionId = beginReadinessResetAction('coach_mutation_rollback');
+    try {
+      applyReadinessSignalsWrite({
+        next: clone(mirrors.readinessSignalsByDate),
+        writer: 'coach_mutation_mirror',
+        resetActionId: readinessResetActionId,
+      });
+    } finally {
+      endReadinessResetAction(readinessResetActionId);
+    }
+  }
   restoreCoachUpdatesCompatibilityMirror({
     updatesByWeek: clone(mirrors.coachUpdatesByWeek),
     activeConstraints: clone(mirrors.activeConstraints),

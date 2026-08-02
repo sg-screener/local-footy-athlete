@@ -25,7 +25,12 @@ import {
   useProgramStore,
 } from './programStore';
 import { useCalendarStore, applyCalendarMarkedDaysWrite } from './calendarStore';
-import { useReadinessStore } from './readinessStore';
+import {
+  useReadinessStore,
+  applyReadinessSignalsWrite,
+  beginReadinessResetAction,
+  endReadinessResetAction,
+} from './readinessStore';
 import {
   publishAcceptedCoachUpdatesCompatibilityMirror,
   useCoachUpdatesStore,
@@ -810,7 +815,22 @@ export function commitAcceptedStateTransaction(
     next: staged.context.markedDays,
     writer: 'accepted_transaction',
   });
-  useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
+  // Through the readiness owner. The accepted context is the canonical
+  // publisher and an empty map is a common real state (a cleared signal, a
+  // pruned week), so the publish is a legitimate erasure under a reset act
+  // rather than a write around the door.
+  {
+    const readinessResetActionId = beginReadinessResetAction('accepted_state_publish');
+    try {
+      applyReadinessSignalsWrite({
+        next: staged.context.readinessSignalsByDate,
+        writer: 'accepted_transaction',
+        resetActionId: readinessResetActionId,
+      });
+    } finally {
+      endReadinessResetAction(readinessResetActionId);
+    }
+  }
   if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
