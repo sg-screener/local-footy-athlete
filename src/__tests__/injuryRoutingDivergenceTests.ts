@@ -136,8 +136,10 @@ const tagMap = extractTagMap(read('utils/sessionBuilder.ts'));
 
 // ── Direction 3: the owner's routable set, pinned. ──
 run('the owner routes exactly the ruled phrase set', () => {
-  assert(routableBodyParts().length === 61,
-    `the owner routes ${routableBodyParts().length} phrases, pin says 61 — the `
+  // 61 -> 63 on 2026-08-03: Sam's LR-27 ruling (2026-08-02, parked §5) added
+  // shin/shins -> calf to the sheet and the owner regenerated.
+  assert(routableBodyParts().length === 63,
+    `the owner routes ${routableBodyParts().length} phrases, pin says 63 — the `
     + 'generated file changed; re-pin deliberately with the ruling that changed it');
 });
 
@@ -168,10 +170,14 @@ run('the four copies hold exactly their pinned vocabularies', () => {
 // door carries 3 (multi-tag achilles; shin/shins routable nowhere else).
 // The `ankle/foot` / `wrist/hand` rows are bucket-identity keys the owner
 // reads as free text — part of the visible table on purpose.
+// 11 -> 12 per bucket door on 2026-08-03: Sam's LR-27 ruling corrected the
+// owner's `quadricep` (singular) knee route to quad — a sheet typo — so the
+// copies' knee proxy for it became VISIBLE divergence. It converges with the
+// rest of each copy and this pin drops in that same commit.
 const DIVERGENCE_PINS: Readonly<Record<string, number>> = {
-  programAdjustmentEngine: 11,
-  injuryAdjustmentEngine: 11,
-  coachConstraintProducers: 11,
+  programAdjustmentEngine: 12,
+  injuryAdjustmentEngine: 12,
+  coachConstraintProducers: 12,
   sessionBuilderTags: 3,
 };
 

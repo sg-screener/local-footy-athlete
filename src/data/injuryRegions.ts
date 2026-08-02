@@ -72,6 +72,7 @@ const BODY_PART_TO_REGION: Readonly<Record<string, InjuryRegion>> = {
 
   // -> quad
   quad: 'quad',
+  quadricep: 'quad',
   quadriceps: 'quad',
   quads: 'quad',
 
@@ -89,12 +90,13 @@ const BODY_PART_TO_REGION: Readonly<Record<string, InjuryRegion>> = {
   // -> knee
   knee: 'knee',
   knees: 'knee',
-  quadricep: 'knee',
 
   // -> calf
   achilles: 'calf',
   calf: 'calf',
   calves: 'calf',
+  shin: 'calf',
+  shins: 'calf',
 
   // -> ankle/foot
   ankle: 'ankle/foot',
