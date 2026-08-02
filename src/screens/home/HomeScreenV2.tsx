@@ -12,7 +12,7 @@ import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
@@ -662,12 +662,14 @@ export default function HomeScreenV2() {
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
                 <View style={styles.busyAwayIcon}>
-                  {/* Hourglass — time running out on ONE day. The clock this
-                      replaced is now nobody's, so no two rows share a glyph. */}
+                  {/* Stopwatch — Sam's pick, 2026-08-03 icon ruling row 1
+                      (replacing the hourglass): time being COUNTED on one day.
+                      The hourglass it replaces is now nobody's, so no two rows
+                      share a glyph. */}
                   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M5 2h14" /><Path d="M5 22h14" />
-                    <Path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" />
-                    <Path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22" />
+                    <Path d="M10 2h4" />
+                    <Circle cx="12" cy="14" r="8" />
+                    <Path d="M12 14l3-3" />
                   </Svg>
                 </View>
                 <Text style={styles.busyAwayText}>Short on time today</Text>
@@ -738,8 +740,13 @@ export default function HomeScreenV2() {
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
                 <View style={[styles.busyAwayIcon, styles.readinessIconTint]}>
+                  {/* Thermometer — Sam's pick, 2026-08-03 icon ruling row 2
+                      (replacing the pulse line): being sick, not a heartbeat.
+                      Same shape the readiness sheet's "Sick" bucket draws —
+                      one meaning, one mark. The sheet's own "Update" row keeps
+                      the pulse, which is now this surface's nobody-else's. */}
                   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M22 12h-4l-3 8-6-16-3 8H2" />
+                    <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />
                   </Svg>
                 </View>
                 <Text style={styles.busyAwayText}>
@@ -801,7 +808,17 @@ export default function HomeScreenV2() {
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
                 <View style={[styles.busyAwayIcon, styles.equipmentIconTint]}>
-                  <MaterialCommunityIcons name="dumbbell" size={14} color="#C6FF6B" />
+                  {/* Dumbbell struck through — Sam's pick, 2026-08-03 icon
+                      ruling row 4 (replacing the plain dumbbell): equipment
+                      MISSING, not equipment. Same visual family as the day
+                      screen's "No equipment" swap reason, redrawn in this
+                      surface's inline-SVG idiom. */}
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C6FF6B" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Circle cx="5.5" cy="12" r="2.3" />
+                    <Circle cx="18.5" cy="12" r="2.3" />
+                    <Path d="M8 12h8" />
+                    <Path d="M3 3l18 18" />
+                  </Svg>
                 </View>
                 <Text style={styles.busyAwayText}>Missing equipment?</Text>
               </View>
