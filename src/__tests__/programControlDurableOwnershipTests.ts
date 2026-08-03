@@ -62,9 +62,10 @@ import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStar
 import {
   composeTemporarySourceFactCompatibility,
   createTemporaryScheduleFact,
+  isInjurySourceFact,
   type TemporaryScheduleFact,
 } from '../rules/temporarySourceFact';
-import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -395,13 +396,19 @@ async function main(): Promise<void> {
   });
 
   // ────────────────────────────────────────────────────────────────────────
-  // "SHORT ON TIME TODAY" IS TODAY-SCOPED, BECAUSE THE COPY SAYS SO.
+  // THE LANES (Sam approved option 2 verbatim, 2026-08-02 —
+  // docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md).
   //
-  // Sam's ruling 2 (2026-07-31) split "Busy or away this week?" and named the
-  // busy half "Short on time today". The fact behind it was week-scoped: one
-  // rushed Tuesday reduced the whole week, silently, under copy that promised
-  // one day. `scope: 'today_only'` is now honoured by the executor, and these
-  // three cells are what "honoured" has to mean.
+  // The fact's RULED EFFECT owns its commit lane. An UNRULED fact (busy/away)
+  // commits INERT and honest: recorded, program byte-unchanged, off the §18
+  // mutation gate, no overlay, no adjustment. A RULED fact derives via scoped
+  // regen, the illness precedent — and "Short on time today" is now RULED:
+  // the door mints a time-cap fact at the existing 35-minute owner
+  // (`SHORT_ON_TIME_MINUTES`) and today's session is COMPRESSED — main lift
+  // kept, cut to essentials. The third, always-refusing lane is RETIRED.
+  //
+  // "SHORT ON TIME TODAY" IS TODAY-SCOPED, BECAUSE THE COPY SAYS SO (Sam's
+  // ruling 2, 2026-07-31) — the scope cells below hold that half unchanged.
   // ────────────────────────────────────────────────────────────────────────
 
   /** The one door, with the scope the button declares. */
@@ -415,34 +422,61 @@ async function main(): Promise<void> {
     oneOffOnly: false,
   } as ProgramControlAction);
 
-  /** The fact the door builds, built by the door's own scope owner. */
-  const shortOnTimeFact = (scope: 'today_only' | 'current_week'): TemporaryScheduleFact =>
+  /** The away door's action, field for field what `useHomeScreen` builds. */
+  const awayAction = (dates: string[]): ProgramControlAction => ({
+    type: 'set_schedule_modifier',
+    source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: {
+      date: [...dates].sort()[0] ?? TODAY,
+      todayISO: TODAY,
+      planChange: { kind: 'clear_days', dates },
+    },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  } as ProgramControlAction);
+
+  /** A week-scoped busy fact — the UNRULED shape (legacy migration / coach). */
+  const weekBusyFact = (): TemporaryScheduleFact =>
     createTemporaryScheduleFact({
       observedDate: TODAY,
-      scope: scheduleFactScopeForAction(
-        shortOnTimeAction(scope) as Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
-      ),
+      scope: scheduleFactScopeForAction({
+        type: 'set_schedule_modifier',
+        source: { screen: 'program_tab', surface: 'busy_this_week', initiatedBy: 'tap' },
+        scope: 'current_week',
+        payload: { date: TODAY, todayISO: TODAY },
+        requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+      } as Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>),
       scheduleKind: 'busy_week',
       sourceActor: 'athlete',
-      sourceSurface: 'short_on_time_today',
+      sourceSurface: 'busy_this_week',
     });
 
-  await run('the door gives a "today" request a one-day horizon and a week request a week', async () => {
-    // THE DECISION THIS TASK OWNS, asserted on the function that makes it rather
-    // than on a downstream shadow of it.
-    const today = shortOnTimeFact('today_only');
-    assert(today.scope.kind === 'date',
-      `a today_only request took a "${today.scope.kind}" horizon under copy that says "today"`);
-    assert(today.effectiveFrom === TODAY && today.effectiveUntil === TODAY,
-      `the horizon spans ${today.effectiveFrom}..${today.effectiveUntil}, not ${TODAY}`);
-
-    const week = shortOnTimeFact('current_week');
-    assert(week.scope.kind === 'week',
-      `a current_week request took a "${week.scope.kind}" horizon`);
-    assert(week.effectiveFrom === WEEK && week.effectiveUntil !== TODAY,
-      `the week horizon is ${week.effectiveFrom}..${week.effectiveUntil}`);
-    assert(today.factId !== week.factId,
-      'the two horizons mint the SAME fact id — one would silently supersede the other');
+  await run('the door gives a "today" request a one-day horizon, at the ruled 35-minute cap', async () => {
+    // THE DECISION THIS DOOR OWNS, asserted through the real executor: the fact
+    // it commits IS the ruling — a time-cap fact, dates [today], capped by the
+    // one 35-minute owner. Building the fact by hand here would let the door
+    // drift from the cell that pins it.
+    reachHisWorldByActing();
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
+    const facts = normalizeAcceptedMaterialContext(
+      useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
+    const fact = facts.find((candidate) => !isInjurySourceFact(candidate) &&
+      candidate.factKind === 'time_cap');
+    assert(fact && !isInjurySourceFact(fact) && fact.factKind === 'time_cap',
+      `the door committed no time-cap fact — facts: ${JSON.stringify(facts.map((f) =>
+        isInjurySourceFact(f) ? 'injury' : f.factKind))}`);
+    assert(fact.maxSessionMinutes === SHORT_ON_TIME_MINUTES,
+      `the door invented its own minutes (${fact.maxSessionMinutes}) instead of the `
+      + `ruled owner's ${SHORT_ON_TIME_MINUTES}`);
+    assert(fact.scope.kind === 'date' && fact.effectiveFrom === TODAY && fact.effectiveUntil === TODAY,
+      `a today_only request took a ${fact.scope.kind} horizon `
+      + `${fact.effectiveFrom}..${fact.effectiveUntil} under copy that says "today"`);
+    assert(fact.targetKind === 'dates' && fact.dates.length === 1 && fact.dates[0] === TODAY,
+      `the cap targets ${JSON.stringify(fact.dates)} (${fact.targetKind}), not today alone`);
   });
 
   /**
@@ -458,11 +492,14 @@ async function main(): Promise<void> {
       buildScheduleStateImperative().activeConstraints ?? [], date,
     ).some((constraint: { id?: string }) => constraint.id === constraintId));
 
-  await run('a today-scoped schedule fact reaches today and no other day', async () => {
+  await run('a today-scoped time-cap fact reaches today and no other day', async () => {
     reachHisWorldByActing();
-    const fact = shortOnTimeFact('today_only');
-    publishScheduleFactDirectly(fact);
-    const reached = daysReachedBy(`source-fact:schedule:${fact.factId}`);
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
+    const factId = result.createdModifierIds?.[0];
+    assert(factId, 'the door reported ok with no created fact id');
+    const reached = daysReachedBy(`source-fact:time-cap:${factId}`);
     assert(reached.length === 1 && reached[0] === TODAY,
       `a fact that says "today" is offered to ${reached.length} day(s): ${reached.join(', ')}`);
   });
@@ -472,7 +509,7 @@ async function main(): Promise<void> {
     // week-scoped fact reached one day too, the cell above would be passing on a
     // gate that ignores scope, and the ruling would be "implemented" by accident.
     reachHisWorldByActing();
-    const fact = shortOnTimeFact('current_week');
+    const fact = weekBusyFact();
     publishScheduleFactDirectly(fact);
     const reached = daysReachedBy(`source-fact:schedule:${fact.factId}`);
     assert(reached.length === 7,
@@ -480,86 +517,129 @@ async function main(): Promise<void> {
   });
 
   // ────────────────────────────────────────────────────────────────────────
-  // DECLARED RED — THE DOOR ITSELF DOES NOT COMMIT, AND HAS NOT FOR SOME TIME.
-  //
-  // Found while building the three cells above: against a REAL
-  // `acceptedCompositionBase` — which is what every device has, and what
-  // `derivingSourceFactDeviceCommitTests` exists to seed — the schedule fact
-  // transaction is REFUSED, whatever its scope. So "Short on time today" and
-  // "Away this week?" both report a failure sentence and change nothing.
-  //
-  // WHY. `temporarySourceFactTransaction` sends a projection-delivered fact
-  // (equipment / schedule / time_cap) down the RE-CANONICALISING path on
-  // purpose — `preserveExactAcceptedWorkouts` is left undefined for anything
-  // that is not inert or a scoped-regen restore, and its own comment says "the
-  // re-canonicalising path stays for projection-delivered facts". Two lines
-  // later `verifyCandidate` rejects ANY change to the accepted composition base
-  // that is not a scoped regen, with
-  // `accepted_composition_base_changed_by_temporary_fact`. The writer and the
-  // verifier disagree about the same commit, so the commit cannot happen.
-  //
-  // WHY IT WAS NEVER SEEN. `equipmentScheduleFactTransactionTests` — the suite
-  // that owns this fact — runs with `currentProgram: null`, so
-  // re-canonicalisation is a no-op, the base never moves and the guard never
-  // fires. `illnessClearGameWeekResolveTests` asserts
-  // `!(ok === true && changedProgram === false)`, which a REFUSAL satisfies.
-  // Green suites, dead door: the shape AGENTS.md calls the harness entering
-  // below the door.
-  //
-  // NOT FIXED HERE, ON PURPOSE. Choosing between "the fact preserves the base"
-  // and "the verifier permits a projection fact to re-canonicalise" is an
-  // accepted-state ownership ruling, and CLAUDE.md's escalation rule says a
-  // later layer blocking a correctly-typed intent stops implementation and
-  // earns a reassessment rather than another guard. This cell holds the
-  // reproduction until that ruling exists.
-  //
-  // WHEN IT IS FIXED THIS CELL FAILS, and whoever fixed it promotes the three
-  // cells above to drive `executeProgramControlActionDurably` end to end.
+  // DECLARED RED 1 IS PAID (2026-08-03). The dead third lane — re-canonicalise
+  // then refuse, the writer and verifier disagreeing about one commit — is
+  // RETIRED per the approved reassessment: an unruled fact commits INERT, a
+  // ruled fact DERIVES, and there is no third path. The cells below assert
+  // what each door DOES; the old reproduction cell is deleted as paid.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('DECLARED RED 1: the schedule door is refused, whatever its scope', async () => {
+  await run('the away door commits inert: recorded, honest, program byte-unchanged', async () => {
+    // DECLARED RED 1's payment, unruled half. Away has no ruled effect yet, so
+    // the fact commits RECORD-ONLY: the fact and its constraint land, the
+    // program bytes do not move, no overlay or adjustment is minted, and the
+    // §18 mutation gate is not re-run (a contextual signal is not a program
+    // mutation). The door is alive AND honest.
     reachHisWorldByActing();
     const before = dayFingerprints(projectedWeek());
+    const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {});
+    const ledgerBefore = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length;
+    const awayDates = ['2026-08-01', '2026-08-02'];
 
-    const raw = await quietAsync(() => transactTemporarySourceFact({
-      operation: 'create',
-      fact: shortOnTimeFact('today_only'),
-      todayISO: TODAY,
-      sourceActor: 'athlete',
-      sourceSurface: 'short_on_time_today',
-    })) as { outcome: string; reason?: string };
-    assert(raw.outcome === 'safely_rejected',
-      `the schedule fact transaction now answers "${raw.outcome}" — the declared red `
-      + 'is paid. Delete this cell and promote the scope cells above to drive '
-      + '`executeProgramControlActionDurably` end to end.');
-    // TWO WORLDS, TWO BLOCKERS, ONE DEAD DOOR. This world's generated week also
-    // fails its own §18 re-evaluation (`planner_selected_target_miss`,
-    // `pattern_restore_failure`), so the ledger guard fires before the base
-    // guard does. On the dev-E2E device-exact install the base guard fires
-    // instead. Both are recorded because fixing either one alone leaves the door
-    // shut, and a cell that pins only one would go green over a still-dead door.
-    assert(/accepted_composition_base_changed_by_temporary_fact|Accepted-state ledger mismatch/
-      .test(String(raw.reason)),
-      `the refusal reason moved to "${raw.reason}" — the reproduction this cell holds `
-      + 'is stale and the finding needs re-tracing before it is reported again');
-
-    // L3 CONSERVATION: a refusal changes nothing. Whatever else is wrong here,
-    // the athlete is not left with half a commit.
     const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
-    assert(result.ok === false, 'the executor disagrees with the transaction it awaits');
+      executeProgramControlActionDurably(awayAction(awayDates), { todayISO: TODAY }));
+    assert(result.ok === true, `the away door is still refused: "${result.message}"`);
+    assert(result.changedProgram === false,
+      'an unruled away fact claims a program change — record-only must be honest about it');
+
+    const accepted = normalizeAcceptedMaterialContext(
+      useProgramStore.getState().acceptedMaterialContext);
+    const fact = accepted.temporarySourceFacts.find((candidate) =>
+      !isInjurySourceFact(candidate) && candidate.factKind === 'schedule' &&
+      candidate.scheduleKind === 'travel');
+    assert(fact && !isInjurySourceFact(fact) &&
+      JSON.stringify(fact.unavailableDates) === JSON.stringify(awayDates),
+      'the away fact did not land with the days the athlete ticked');
+    assert(accepted.activeConstraints.some((constraint) =>
+      constraint.type === 'schedule' && constraint.scheduleKind === 'travel'),
+      'the away fact composed no constraint — nothing would reach future generation');
+
     const after = dayFingerprints(projectedWeek());
     assert(JSON.stringify(before) === JSON.stringify(after),
-      'a refused schedule tap changed the week anyway');
+      'a record-only away fact changed the visible week');
+    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
+      'a record-only away fact authored a week overlay');
+    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,
+      'a record-only away fact minted a reversible adjustment');
+  });
 
-    // THE ENGINE SENTENCE IS THE PROOF THE REAL BRANCH RAN. Delete the
-    // executor's `set_schedule_modifier` branch and the request falls through to
-    // the synchronous core, which also answers `ok: false` — so `ok === false`
-    // alone would keep this cell green over a door that no longer builds a fact
-    // at all. This exact sentence comes from `temporarySourceFactTransaction`
-    // and nowhere else.
-    assert(result.message === ENGINE_REFUSAL_SENTENCE,
-      `the refusal no longer comes from the fact transaction: "${result.message}"`);
+  await run('a deriving short-on-time commit compresses today and touches no other day', async () => {
+    // DECLARED RED 2's payment, ruled half — "the real law: today lightens, the
+    // other six days are untouched", exactly as the old cell said it must be
+    // written when the red paid. The ruled effect (Sam 2026-08-02): the
+    // COMPRESSED session — main lift kept, cut to essentials, under the
+    // existing 35-minute owner — delivered by scoped regen, the illness
+    // precedent, with a fact-linked adjustment for the undo half below.
+    reachHisWorldByActing();
+    const before = dayFingerprints(projectedWeek());
+    assert(before[TODAY] !== undefined && before[TODAY] !== 'REST',
+      `today (${TODAY}) holds nothing — this cell would be vacuous`);
+    const mainLiftBefore = (projectedWeek().find((day) => day.date === TODAY)?.workout
+      ?.exercises ?? [])[0]?.exercise?.name ?? null;
+
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+    assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
+    assert(result.changedProgram === true,
+      'the ruled door reported no program change over an occupied today — the '
+      + 'compressed session never landed');
+
+    const todayAfter = projectedWeek().find((day) => day.date === TODAY);
+    assert(todayAfter?.workout, 'the compressed day lost its session entirely');
+    assert((todayAfter.workout.durationMinutes ?? 0) <= SHORT_ON_TIME_MINUTES,
+      `today still runs ${todayAfter.workout.durationMinutes} minutes against the `
+      + `${SHORT_ON_TIME_MINUTES}-minute cap`);
+    const after = dayFingerprints(projectedWeek());
+    assert(after[TODAY] !== before[TODAY],
+      'today reads byte-identical — the cap changed a number and cut nothing');
+    for (const date of Object.keys(before)) {
+      if (date === TODAY) continue;
+      assert(before[date] === after[date],
+        `a today-scoped fact changed ${date}: "${before[date]}" -> "${after[date]}"`);
+    }
+    if (mainLiftBefore) {
+      const namesAfter = (todayAfter.workout.exercises ?? [])
+        .map((row) => row.exercise?.name ?? '');
+      assert(namesAfter.includes(mainLiftBefore),
+        `the main lift ("${mainLiftBefore}") did not survive the compression — `
+        + `rows after: ${namesAfter.join(', ')}`);
+    }
+
+    // The deriving lane's ledger half: the adjustment is fact-linked, so the
+    // clear cell below cascade-reverts through the generic sourceFactId path.
+    const factId = result.createdModifierIds?.[0];
+    assert(factId, 'the door reported ok with no created fact id');
+    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
+      (adjustment) => adjustment.kind === 'deriving_source_fact' &&
+        adjustment.sourceFactId === factId && adjustment.status === 'active'),
+      'the deriving commit minted no fact-linked adjustment — nothing owns the undo');
+  });
+
+  await run('clearing the short-on-time fact restores today byte-exact', async () => {
+    // The illness precedent's other half: fact-linked undo. Clearing the fact
+    // cascade-reverts the overlay through the stored prior state, never a
+    // re-derivation.
+    reachHisWorldByActing();
+    const before = dayFingerprints(projectedWeek());
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+    assert(result.ok === true && result.createdModifierIds?.[0],
+      `precondition: the deriving commit landed (ok=${result.ok})`);
+    const factId = result.createdModifierIds[0];
+    assert(JSON.stringify(dayFingerprints(projectedWeek())) !== JSON.stringify(before),
+      'precondition: the commit changed the week');
+
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { modifierId: factId, date: TODAY },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as ProgramControlAction, { todayISO: TODAY }));
+    assert(cleared.ok === true, `the clear was refused: "${cleared.message}"`);
+    const after = dayFingerprints(projectedWeek());
+    assert(JSON.stringify(before) === JSON.stringify(after),
+      'clearing the fact did not restore the week byte-exact');
   });
 
   await run('a refused schedule tap is acknowledged to the athlete, in the athlete\'s words', async () => {
@@ -594,6 +674,26 @@ async function main(): Promise<void> {
       assert(landed.message !== refused.message,
         `${door}: success and failure say the same sentence`);
     }
+
+    // THE EFFECT CLAUSE IS SELECTED BY THE COMMITTED RESULT, never by the door
+    // alone (a signed sentence must not claim a state-dependent outcome). A
+    // short-on-time commit that compressed today says so; one that changed
+    // nothing (rest day, already short) keeps the plain logged sentence.
+    const compressed = buildScheduleAcknowledgment(
+      { ok: true, changedProgram: true }, 'short_on_time');
+    assert(/compressed|main lift/i.test(compressed.message),
+      'a deriving short-on-time commit is acknowledged without its effect clause: '
+      + `"${compressed.message}"`);
+    const recordedOnly = buildScheduleAcknowledgment(
+      { ok: true, changedProgram: false }, 'short_on_time');
+    assert(!/compressed|main lift/i.test(recordedOnly.message),
+      'a no-change commit claims a compression that did not happen: '
+      + `"${recordedOnly.message}"`);
+    const awayLanded = buildScheduleAcknowledgment(
+      { ok: true, changedProgram: false }, 'away');
+    assert(/stays as planned/i.test(awayLanded.message),
+      'the away ack no longer carries its honest record-only clause: '
+      + `"${awayLanded.message}"`);
   });
 
   await run('the screen wires both schedule doors to that acknowledgment', async () => {
@@ -656,38 +756,26 @@ async function main(): Promise<void> {
   });
 
   // ────────────────────────────────────────────────────────────────────────
-  // DECLARED RED 2 — AND IF IT DID COMMIT, IT WOULD CHANGE NOTHING.
-  //
-  // Found immediately after the first: compose the constraint by hand (the cells
-  // above prove it reaches exactly the right days) and project every week of the
-  // generated program with it — and not one row, dose, or note moves anywhere.
-  //
-  // WHY. `buildScheduleConstraint` at severity 5 blocks `max_effort_strength`
-  // and limits `hard_erg` / `high_volume_accessory` / `heavy_lower_strength`.
-  // The sessions this generator actually emits carry none of those exposures, so
-  // the exposure engine has nothing to act on. "Go lighter" is expressed as a
-  // set of exposures the program does not use.
-  //
-  // NOT FIXED HERE, ON PURPOSE. What "short on time" should DO to a session is a
-  // programming answer — Sam's own note on the time-cap path is that a session
-  // "shrinks to fit" and what it KEEPS is authored content — and inventing one
-  // in a buttons unit would be a fourth naming authority for session content.
-  // Recorded so the door is not called finished.
+  // DECLARED RED 2 IS PAID (2026-08-03), in two halves. The RULED half — what
+  // "short on time" DOES — is the deriving cell above: the compressed session
+  // under the 35-minute owner. The UNRULED half is no longer a red at all: a
+  // busy_week constraint changing nothing visible is now the LAW (record-only
+  // by ruling, Sam 2026-08-02), asserted below so a future "helpful" effect
+  // cannot arrive without a ruling.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('DECLARED RED 2: the constraint reaches today and lightens nothing', async () => {
+  await run('an unruled busy constraint reaches today and changes nothing, BY RULING', async () => {
     reachHisWorldByActing();
     const before = dayFingerprints(projectedWeek());
     assert(before[TODAY] !== undefined && before[TODAY] !== 'REST',
       `today (${TODAY}) holds nothing — this cell would be vacuous`);
 
-    publishScheduleFactDirectly(shortOnTimeFact('today_only'));
+    publishScheduleFactDirectly(weekBusyFact());
     const after = dayFingerprints(projectedWeek());
     assert(JSON.stringify(before) === JSON.stringify(after),
-      'the short-on-time constraint now changes the projected week — the declared '
-      + 'red is paid. Replace this cell with the real law: today lightens, the '
-      + `other six days are untouched.\n        before: ${before[TODAY]}\n`
-      + `        after:  ${after[TODAY]}`);
+      'an UNRULED busy constraint changed the projected week — no ruling gave '
+      + `busy an effect. If Sam has ruled one, rewrite this cell to assert it.\n`
+      + `        before: ${before[TODAY]}\n        after:  ${after[TODAY]}`);
   });
 
   await run('the wrapper answers the coach exactly as it answers a tap', async () => {
