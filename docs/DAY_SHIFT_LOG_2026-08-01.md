@@ -426,3 +426,54 @@ exits 0 without running, a probe that reads empty output as a verdict, a
 census counter that merges cleanly into a lie, an armour wrapper whose
 rejection nobody handles — each looked exactly like health. Every one was
 found by checking the checker. Keep doing that; it is now four for four.
+
+---
+
+# LR-1 — THE LAST STORE DOOR (2026-08-03)
+
+`docs/LR1_PROGRAM_DOOR_BOUNDARY_2026-08-03.md`. Branch
+`feat/lr1-program-store-door` from `cef886f`.
+
+**The raw override primitive is RETIRED.** `programStore.setManualOverride`
+described itself as a "raw storage primitive" and 27 references across 13
+files reached it — a screen, a dev seed and eleven pipeline modules, on the
+surface that holds every move, bin, swap and lighten the athlete ever
+performed. All 27 now route through `applyProgramOverrideWrite`, whose
+`ProgramOverrideWriterId` is a CLOSED union: **an unnamed writer is a compile
+error, not a gate finding.** Two typed refusals, both erasures declared under
+named acts, every write on the tape (`program_override_write`, in
+`DECISION_EVENTS`) applied or refused, counts and labels only. The door owns
+the DECISION; `commitAcceptedStateTransaction` still owns the PUBLICATION.
+
+Coach-path refs are NAMED, never touched — identical behaviour, LR-6 holds.
+The dev seam writes as `dev_seed` and the 70 test seeding sites as `harness`,
+an id cell 6 sweeps out of product code entirely.
+
+**Census: LR-1 27 → 0, LR-2 1 → 0, baseline 104 → 76. Both entries `retired`.
+Every persisted store in this app now has a write owner** — the count that
+opened at eleven ends at none.
+
+**WHAT THE WALKER CELL FOUND, and it is the point of the unit:** the cell was
+written to bin a session and went red with `{}`. **No walked athlete tap door
+writes `dateOverrides` any more.** Removals record a `UserRemovalConstraint`;
+adds and swaps land in `weekScopedOverlays`. That is the §18 migration having
+worked — the tap doors were moved off the raw surface one unit at a time and
+nobody had asked what was left on it. What is left: the coach pipeline, the
+lighter-day transaction, and LR-3's residuals. So the surface the census calls
+"the athlete's decision surface" may now be a stored-OUTPUT surface wearing a
+decision surface's name. **PARKED FOR SAM** — the door is correct either way,
+but Stage B derives over these surfaces and the answer changes what it derives
+from.
+
+Gates: `programOverrideOwnershipTests` 7/7 (in the chain, totals-or-red armed),
+walker 17/17 with the new wipe-replay cell (SHALLOW tier declared: 3 walked
+actions, 10 days, one authored decision). Seven mutations, seven caught —
+including a coach writer re-opening the raw path, caught independently by the
+sweep AND by three census cells.
+
+Recipe gains lessons 13-16; **16 is the transferable one — the §6 walker cell
+is an INSTRUMENT, not a formality: write it before assuming you know who
+writes the slice, and read a red precondition as a measurement.**
+
+**cwd compliance:** own worktree, `pwd` echoed before every destructive step,
+`node_modules` symlink untouched, staged by name and never `git add -A`.
