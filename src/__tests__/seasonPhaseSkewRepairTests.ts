@@ -32,6 +32,9 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
@@ -511,6 +514,7 @@ skewSection().then(() => {
   console.log(`\n— Summary —`);
   console.log(`  Pass: ${pass}`);
   console.log(`  Fail: ${fail}`);
+  totalsPrinted(fail);
   if (fail > 0) {
     console.log(`\n— Failures —`);
     for (const f of failures) console.log(`  • ${f}`);

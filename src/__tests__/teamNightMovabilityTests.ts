@@ -24,6 +24,10 @@
  * come from `TEAM_DAY_SETS` profiles.
  */
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
@@ -409,6 +413,7 @@ async function main(): Promise<void> {
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
   if (failed > 0) {
     console.error(failures.map((failure) => `  FAIL ${failure}`).join('\n'));
     process.exit(1);

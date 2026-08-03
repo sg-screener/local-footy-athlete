@@ -1,6 +1,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
@@ -884,5 +888,6 @@ for (const mode of ALL_WEEK_MODES) {
 }
 
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 console.log(`SECTION18_V2_TOTALS scenarios=12 rules=12 properties=${propertyCount} mutations=${mutationCount}`);
 if (fail > 0) process.exit(1);
