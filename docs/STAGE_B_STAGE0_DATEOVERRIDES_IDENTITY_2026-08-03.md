@@ -1,5 +1,25 @@
 # The dateOverrides identity question — Stage B stage 0 deliverable, 2026-08-03
 
+## RULED — Sam, 2026-08-03: OPTION C
+
+> dateOverrides = OPTION C. Re-classified tonight as a stored-output surface —
+> the census name was wrong and the measurement says so. Stage B retires the
+> two athlete routes (occupied-day stack adds, no-template swaps — paying
+> LR-3) and the lighter-day trim as part of the build; coach writers stay
+> declared under the LR-6 STOP for the coach units, which retire the surface
+> entirely. The precedence divergence between live and accepted resolvers is
+> Stage B's to fix in the same motion — one ordering, one owner.
+
+Recorded in the census: the `programStore` registry caveat carries the
+re-classification, and LR-3's `sequence` carries the Stage B assignment with
+the coach-owned call sites split off to the coach units. The precedence
+unification (§3 below) is now IN Stage B scope — one ordering, one owner —
+alongside the two athlete-route conversions and the lighter-day derivation.
+
+---
+
+**The original submission, as ruled on, follows unchanged.**
+
 **For Sam's ruling tonight.** Addendum §4 NEW: LR-1's walker cell proved no
 walked athlete tap door writes `dateOverrides`; the census still calls it "the
 athlete's decision surface"; Stage B derives over these surfaces, so the answer

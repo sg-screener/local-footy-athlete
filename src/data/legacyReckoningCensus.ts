@@ -123,7 +123,16 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'owns the PUBLICATION. CAVEAT, measured not assumed: no walked athlete tap door '
       + 'writes `dateOverrides` any more (adds/swaps land in weekScopedOverlays, deletions '
       + 'in userRemovalConstraints) — the surviving writers are the coach pipeline, the '
-      + "lighter-day transaction and LR-3's residuals.",
+      + "lighter-day transaction and LR-3's residuals. "
+      + 'RULED (Sam, 2026-08-03, Stage B stage 0): `dateOverrides` is a STORED-OUTPUT '
+      + 'surface, not a decision ledger — the old "athlete\'s decision surface" name was '
+      + 'wrong and the measurement says so '
+      + '(docs/STAGE_B_STAGE0_DATEOVERRIDES_IDENTITY_2026-08-03.md). Retirement is by '
+      + 'ownership lane: Stage B retires the two athlete routes (occupied-day stack adds, '
+      + 'no-template swaps — paying LR-3) and the lighter-day trim, and unifies the '
+      + 'live/accepted resolver precedence to ONE ordering with ONE owner in the same '
+      + 'motion; the coach writers stay declared under the LR-6 STOP and retire with the '
+      + 'coach units.',
   },
   {
     file: 'store/calendarStore.ts',
@@ -448,6 +457,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'retirement ledger since 2026-07-22 and re-verified open 2026-07-30.',
     size: 'M',
     status: 'scheduled',
+    sequence: 'ASSIGNED (Sam, 2026-08-03, the dateOverrides ruling): Stage B pays this '
+      + 'unit. The athlete routes that still reach the legacy writer (occupied-day stack '
+      + 'adds and no-template swaps, via ADD/SWAP_DEFERS_TO_LEGACY) convert to typed '
+      + 'transactions as assembler placement work; the coachTurnController call sites are '
+      + "coach-owned and retire with the coach units under LR-6's boundary. See "
+      + 'docs/STAGE_B_STAGE0_DATEOVERRIDES_IDENTITY_2026-08-03.md §4 Option C.',
     detector: 'legacyOverrideWriterRefs',
     declared: 4,
     foundingCount: 4,
