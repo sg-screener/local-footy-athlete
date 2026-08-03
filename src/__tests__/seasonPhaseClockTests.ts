@@ -9,6 +9,10 @@ process.env.TZ = 'Australia/Melbourne';
   },
 };
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import {
   ensureProgramSeasonPhaseClock,
@@ -415,6 +419,13 @@ console.log(`  Fixed scenarios/observer/path checks: ${fixedPass} passed, ${fixe
 console.log(`  Required fixed scenarios:             19/19 evaluated`);
 console.log(`  Property checks:                      ${propertyPass}/36`);
 console.log(`  Mutation witnesses:                   ${mutationPass}/6 killed`);
+// The summary is a BLOCK, so the clear is anchored to its last line — the first
+// line alone would clear on a run that died between the two. The count carries
+// the whole verdict: shortfalls in the property and mutation tiers are failures
+// this suite reports as counts, not as entries in `failures`.
+totalsPrinted(
+  fixedFail + failures.length + (propertyPass !== 36 ? 1 : 0) + (mutationPass !== 6 ? 1 : 0),
+);
 
 if (fixedFail > 0 || propertyPass !== 36 || mutationPass !== 6 || failures.length > 0) {
   console.error(failures.join('\n'));

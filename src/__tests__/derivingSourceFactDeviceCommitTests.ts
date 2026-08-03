@@ -48,6 +48,9 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
@@ -365,6 +368,7 @@ async function main(): Promise<void> {
   });
 
   console.log(`\nDeriving source-fact device-commit invariants: ${passes} passing, ${failures.length} failing`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) {
     console.log('Currently RED (pins the diagnosed bug; green after the approved fix):');
     for (const name of failures) console.log(`  - ${name}`);

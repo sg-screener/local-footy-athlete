@@ -36,6 +36,11 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+// This file runs as BOTH the forking parent and each forked child, so both
+// paths carry their own clear — see runOne and main below.
+armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
@@ -293,6 +298,9 @@ async function runOne(id: string): Promise<void> {
   const target = scenarios.find((entry) => entry.id === id);
   if (!target) { console.error(`unknown scenario id: ${id}`); process.exit(2); }
   await run(target.name, target.body);
+  // A child's REPORT is the `PASS/FAIL [invariant]` verdict line `run` printed —
+  // that is the line the parent greps, so it is this process's totals line.
+  totalsPrinted(failures.length);
   if (failures.length > 0) process.exit(1);
 }
 
@@ -306,6 +314,12 @@ async function main(): Promise<void> {
     envVar: 'INJURY_ONLY',
     filename: __filename,
   });
+  // The parent's totals line is printed inside `runScenariosForked` (shared
+  // support, not this suite's to edit). That helper prints unconditionally and
+  // then exits 1 on any failure, so RETURNING from it is reachable only by way
+  // of the print and only with zero failures — the clear is anchored to the
+  // report, not to the guard.
+  totalsPrinted(0);
 }
 
 main().catch((error) => { console.error(error); process.exit(1); });

@@ -17,6 +17,10 @@
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type {
   OnboardingData,
   TrainingProgram,
@@ -1563,6 +1567,7 @@ run('regression', 'a partial Bin names the survivor from ITS OWN rows, never the
 
 console.warn = originalWarn;
 console.log(`\nAthlete session deletion totals: regressions=${regressions}/24 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
+totalsPrinted(failures.length);
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;
