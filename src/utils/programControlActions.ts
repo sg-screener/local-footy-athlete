@@ -17,6 +17,7 @@ import {
   type PlanChangeMoveScopeId,
   type PlanChangeCategoryId,
 } from './planChangeProducer';
+import type { TeamNightMoveRouteId } from './planChangeTypes';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
 import { getActiveProgramModifiers } from './activeProgramModifiers';
@@ -80,11 +81,18 @@ import {
   transactTemporarySourceFact,
 } from '../store/temporarySourceFactTransaction';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
+import {
+  TEAM_NIGHT_MOVE_ASK,
+  teamNightMoveAskContext,
+  teamNightPermanentPatch,
+} from '../rules/teamNightMoveAsk';
 
 export type ProgramControlActionType =
   | 'swap_session'
   | 'add_to_day'
   | 'move_session'
+  | 'move_team_night'
   | 'bin_session'
   | 'swap_exercise'
   | 'add_exercise'
@@ -170,6 +178,21 @@ export type ProgramControlAction =
       fromDate: string;
       toDate: string;
       scope?: PlanChangeMoveScopeId;
+    }>
+  /**
+   * A team night leaving its day, WITH the athlete's answer to the typed ask
+   * (Sam, signed 2026-08-02). `this_week_only` = a dated `team_night_move`
+   * schedule fact through the deriving lane; `permanent` = a
+   * `teamTrainingDays` answer through the ONE setup owner
+   * (`commitProfileProgramTransaction`), confirmed inline — never a second
+   * writer. A routeless change never reaches this door: the producer's
+   * preview raises the ask instead.
+   */
+  | ProgramControlActionBase<'move_team_night', {
+      fromDate: string;
+      toDate: string;
+      todayISO?: string;
+      route: TeamNightMoveRouteId;
     }>
   | ProgramControlActionBase<'bin_session', { date: string; scope?: PlanChangeBinScopeId }>
   | ProgramControlActionBase<'swap_exercise', {
@@ -488,6 +511,20 @@ export function programControlActionForPlanChange(
       ...shared,
       type: 'bin_session',
       payload: { date: change.date, scope: change.scope },
+    } as ProgramControlAction;
+  }
+  // Only an ANSWERED team-night move enters the door; a routeless change is
+  // the producer's to answer with the ask, and mapping it here would let a
+  // commit path skip the question.
+  if (change.kind === 'move_team_night' && change.teamNightRoute) {
+    return {
+      ...shared,
+      type: 'move_team_night',
+      payload: {
+        fromDate: change.fromDate,
+        toDate: change.toDate,
+        route: change.teamNightRoute,
+      },
     } as ProgramControlAction;
   }
   return null;
@@ -896,7 +933,7 @@ function diagnosticActionType(action: ProgramControlAction): AthleteActionType {
       : 'delete_session';
   }
   if (action.type === 'remove_exercise') return 'delete_component';
-  if (action.type === 'move_session') return 'move_session';
+  if (action.type === 'move_session' || action.type === 'move_team_night') return 'move_session';
   if (action.type === 'add_to_day' || action.type === 'add_exercise') return 'add_session';
   if (action.type === 'update_game_day') return 'game_day_change';
   if (action.type === 'set_injury_modifier' || action.type === 'clear_injury_modifier') {
@@ -914,7 +951,9 @@ function diagnosticActionType(action: ProgramControlAction): AthleteActionType {
 }
 
 function diagnosticActionDate(action: ProgramControlAction): string | undefined {
-  if (action.type === 'move_session') return action.payload.fromDate;
+  if (action.type === 'move_session' || action.type === 'move_team_night') {
+    return action.payload.fromDate;
+  }
   const payload = action.payload as Record<string, unknown>;
   return typeof payload.date === 'string' ? payload.date : undefined;
 }
@@ -1276,6 +1315,68 @@ async function executeProgramControlActionDurablyWithinTrace(
       requiresRebuild: false,
       createdModifierIds: ok ? [fact.factId] : undefined,
       message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'move_team_night') {
+    const fromDate = action.payload.fromDate.slice(0, 10);
+    const toDate = action.payload.toDate.slice(0, 10);
+    const todayISO = action.payload.todayISO ?? context.todayISO ?? fromDate;
+    const sourceSurface = action.source.surface ?? action.source.screen;
+    const context_ = teamNightMoveAskContext({ fromDate, toDate });
+    if (action.payload.route === 'permanent') {
+      // THE ONE SETUP OWNER. The patch is the whole input; the owner writes
+      // the profile through its armoured door and regenerates forward per its
+      // own rules. Confirmed INLINE — the signed success sentence is the ack.
+      const profile = useProfileStore.getState().onboardingData;
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: teamNightPermanentPatch(profile ?? { teamTrainingDays: [] }, context_),
+        },
+        todayISO,
+        sourceSurface: `team_night_move:${sourceSurface}`,
+      });
+      return {
+        ok: result.ok,
+        changedProgram: result.changedProgram,
+        requiresRebuild: false,
+        message: result.ok
+          ? TEAM_NIGHT_MOVE_ASK.successMessage('permanent', context_)
+          : result.message,
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    // ONE-OFF: a dated schedule fact through the approved deriving lane. The
+    // week re-derives around it (anchor relocation; doubling law) and
+    // resolving the fact undoes it clean via the fact-linked adjustment.
+    const fact = createTemporaryScheduleFact({
+      observedDate: todayISO,
+      scope: temporaryFactScope({ kind: 'week', date: fromDate }),
+      scheduleKind: 'team_night_move',
+      teamNightFromDate: fromDate,
+      teamNightToDate: toDate,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface,
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create',
+      fact,
+      todayISO,
+      sourceActor: fact.sourceActor,
+      sourceSurface,
+    });
+    const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: result.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok ? [fact.factId] : undefined,
+      message: ok
+        ? TEAM_NIGHT_MOVE_ASK.successMessage('this_week_only', context_)
+        : result.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

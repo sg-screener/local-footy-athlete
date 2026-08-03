@@ -377,8 +377,15 @@ renders the producer's own TYPED refusal sentence. Two of those changed.
 
 | Refusal | String | Where it appears (HEAD) | Why it changed |
 |---|---|---|---|
-| `anchored_day` | "Team training is fixed to this day, so it can't be moved from here." | `planChangeProducer.ts:416` | Used to continue with a clause offering to swap or bin the gym work on the day — two faults: the retired verb (Remove, not Bin), and a claim about state it cannot see (a team night with no gym work has none to swap). |
 | `nothing_movable` (NEW reason) | "Nothing on this day can be moved to another day." | `planChangeProducer.ts:418` | NEW. `anchored_day` used to cover two causes with one sentence, so a Club Session day told the athlete team training was fixed to a day with no team training. The reason is now split by the projection's part kinds; neither sentence can show about the wrong day. |
+
+The `anchored_day` row that stood above `nothing_movable` — "Team training is
+fixed to this day, so it can't be moved from here." (signed in this batch,
+2026-07-31) — is RETIRED by the team-night movability unit (Batch 10, Sam's
+2026-08-01 ruling signed 2026-08-02): a team anchor no longer refuses a move,
+so the sentence has no reachable cause. Recorded in prose, per §6-III's
+convention: the binder asserts quoted table strings PRESENT, and this one is
+deliberately gone from the producer.
 
 **6-II-c. Reused, not new [Task 4]** — the Gunshow, Mobility and Accessories
 rows render `CATEGORY_COPY`'s existing labels and sub-lines verbatim: "Gunshow"
@@ -963,3 +970,53 @@ identical, accessory sets halved, hard finisher dropped), so the sentence
 is true. The week-scoped busy wording is unchanged and still ships for a
 week-scoped busy fact (which is record-only BY RULING until Sam rules
 busy/away effects).
+
+## Batch 10 — team-night movability (2026-08-03): SIGNED (Sam, 2026-08-02) + three PROPOSED riders
+
+**STATUS: the seven ask strings are SIGNED BY SAM, 2026-08-02** — the
+team-night movability sheet was signed whole
+(`docs/TEAM_NIGHT_MOVABILITY_SHEET_2026-08-01.md`;
+`docs/PARKED_QUESTIONS_2026-08-01.md` §3: "all seven strings as proposed").
+Choice 1: MOVE raises the ask; SWAP on a team night stays refused with its
+already-signed sentence ("Nothing on this day can be swapped.", 6-II-b) — the
+club's session is not a type to trade. Choice 2: the permanent route confirms
+INLINE in the ask; `teamTrainingDays` still writes through its one setup
+owner.
+
+All seven entries are PROSE, unquoted-in-table, on purpose: every sentence
+lives in `src/rules/teamNightMoveAsk.ts` (registered via `registerSignedCopy`,
+provenance `Sam, 2026-08-02`), which the binder's SOURCES scan cannot see —
+the same recorded binder gap as 6-II-e/f and Batch 9. The registry IS the
+enforcement: the sheet renders them only through `signedCopy`/the registered
+templates.
+
+**10-a. The seven signed strings** (placeholders render from the change's own
+dates):
+- Ask title: "Move team training?"
+- Ask body: "Is this a one-off, or has your club changed nights?"
+- Route, once: "Just this week — training's moved for the week of {date}"
+- Route, permanent: "Permanent — my team now trains {day}s"
+- Back: "Go back — leave it where it is"
+- One-off success: "Got it — team training is on {day} this week only."
+- Permanent success: "Got it — your team nights are updated and your program follows."
+
+**10-b. RETIRED with the unit**: "Team training is fixed to this day, so it
+can't be moved from here." (`anchored_day`, signed 6-II-b) — the ask replaces
+the refusal, the reason has no reachable cause, the string is deleted from
+`planChangeProducer.ts` and its 6-II-b table row converted to prose above.
+`teamNightMovabilityTests` TN-5 pins its absence from the producer.
+
+**10-c. PROPOSED, NOT SIGNED (parked §8)** — three riders shipped per this
+file's transitional rule (a string may ship PROPOSED and may never ship
+unlisted):
+- Move scope row for the anchor (in `planChangeProducer.ts`
+  `MOVE_SCOPE_COPY.team`): label "Team training", sub "Pick the night it's on
+  — we'll ask if it's permanent".
+- Destination sub-line for a team move onto an occupied day
+  (`PlanChangeSheet.tsx`, multi-line ternary — extractor-invisible): "Joins
+  {session} on this day" (the doubling law lands COMBINED; "Swap with …"
+  would promise a trade the door will not do).
+- The fact's modifier card (`src/rules/temporarySourceFact.ts`,
+  `scheduleProjection`): reasonLabel "Team training moved", title "Team
+  training moved this week", body "Team training is on {target day} instead
+  of {usual day} this week only."

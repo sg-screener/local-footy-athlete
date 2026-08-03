@@ -63,6 +63,10 @@ import {
   finaliseWorkoutAfterMutation,
 } from './workoutCanonicalisation';
 import { isG1RoutedChange } from './planChangeTypes';
+import {
+  TEAM_NIGHT_MOVE_ASK,
+  teamNightMoveAskContext,
+} from '../rules/teamNightMoveAsk';
 import type {
   G1LandingRouteId,
   PlanChange,
@@ -348,8 +352,13 @@ export interface PlanChangeMoveDestination {
 export type PlanChangeMoveRefusalReason =
   /** Nothing on the day to move. */
   | 'no_session'
-  /** A TEAM ANCHOR holds the day. The sentence may name team training. */
-  | 'anchored_day'
+  /**
+   * `anchored_day` RETIRED (team-night movability, Sam signed 2026-08-02):
+   * a team anchor no longer refuses a move — the day offers the `team` scope
+   * and the typed ask decides once-or-permanent. The signed sentence "Team
+   * training is fixed to this day, so it can't be moved from here." retires
+   * with it (copy sheet Batch 10); SWAP keeps its own signed refusal.
+   */
   /**
    * The day holds work, and none of it can leave on its own — a club
    * commitment, a recovery add-on that rides with the day. SPLIT OUT of
@@ -410,16 +419,6 @@ export function planChangeMoveOptionsAreConsistent(move: PlanChangeMoveOptions):
 
 const MOVE_REFUSAL_COPY: Record<PlanChangeMoveRefusalReason, string> = {
   no_session: "There's nothing on this day to move.",
-  // TWO PROBLEMS, ONE REWRITE (Batch 6, 2026-07-31). It read "…You can still
-  // swap or bin the gym work on it." That second clause used the retired verb
-  // (batch 3: Remove everywhere, not Bin) AND it made a claim about state it
-  // cannot see — on a team night with no gym work beside it, and now that the
-  // four-action menu renders this sentence inline under a disabled Move row
-  // rather than only after a tap, it would sit next to a Swap row that is also
-  // off. Batch 3's principle is that a signed sentence must never be able to
-  // lie, so the clause that can lie is gone rather than qualified.
-  anchored_day:
-    "Team training is fixed to this day, so it can't be moved from here.",
   nothing_movable:
     "Nothing on this day can be moved to another day.",
   no_destination:
@@ -431,6 +430,10 @@ const MOVE_SCOPE_COPY: Record<PlanChangeMoveScopeId, { label: string; sub: strin
   strength: { label: 'Just the gym session', sub: 'Team training stays on this day' },
   conditioning: { label: 'Just the conditioning', sub: 'The rest of the day stays' },
   recovery: { label: 'Just the recovery work', sub: 'The rest of the day stays' },
+  // PROPOSED (Batch 10 table; parked §8): the scope row for the anchor itself.
+  // Picking a destination for this scope raises the typed team-night ask —
+  // the row promises the question, not the move.
+  team: { label: 'Team training', sub: "Pick the night it's on — we'll ask if it's permanent" },
 };
 
 /**
@@ -680,13 +683,13 @@ function moveOptionsForDay(args: {
   // decide for itself, from `snapshot.workout` and the section kinds, and got a
   // different answer on a team night carrying a recovery add-on.
   //
-  // WHICH refusal is decided by a typed fact the projection already carries —
-  // does this day hold a team anchor? — never by guessing from the reason code.
+  // WHICH answer is decided by a typed fact the projection already carries —
+  // does this day hold a team anchor? Under the team-night movability ruling
+  // (signed 2026-08-02) that anchor no longer refuses: the day offers the
+  // `team` scope, and picking a destination raises the typed ask.
   const holdsTeamAnchor = args.projected.parts.some((part) => part.kind === 'team_training');
-  const refuseImmovable = (): PlanChangeMoveOptions =>
-    refuse(holdsTeamAnchor ? 'anchored_day' : 'nothing_movable');
-  if (!args.projected.capabilities.canMoveWholeDay) {
-    return args.projected.parts.length === 0 ? refuse('no_session') : refuseImmovable();
+  if (!args.projected.capabilities.canMoveWholeDay && !holdsTeamAnchor) {
+    return args.projected.parts.length === 0 ? refuse('no_session') : refuse('nothing_movable');
   }
 
   // A team night IS a destination (Sam's doubling law, 2026-07-30): the session
@@ -746,8 +749,14 @@ function moveOptionsForDay(args: {
   // about what its rows are called, so it is decided here from the kind and the
   // anchor is left to mean what it means.
   const visibleKinds = visibleSessionKindsForSnapshot(args.snapshot);
-  const componentScopes = MOVABLE_COMPONENT_SCOPES.filter((scope) =>
-    visibleKinds.includes(MOVE_SCOPE_SECTION_KIND[scope]));
+  const componentScopes: PlanChangeMoveScopeId[] = [
+    ...MOVABLE_COMPONENT_SCOPES.filter((scope) =>
+      visibleKinds.includes(MOVE_SCOPE_SECTION_KIND[scope])),
+    // The anchor itself, LAST — keyed on the projection's typed anchor fact,
+    // never on the 'session' section kind (a "Club Session" commitment is a
+    // 'session' section with no team anchor and stays immovable).
+    ...(holdsTeamAnchor ? (['team'] as const) : []),
+  ];
   // Content the athlete cannot reschedule: a commitment is a fixed appointment,
   // binnable for one date (`binScopesForSnapshot` offers exactly that) but not
   // movable to another day. Its presence is what makes a whole-day move wrong —
@@ -774,7 +783,7 @@ function moveOptionsForDay(args: {
     : componentScopes.length > 1
       ? ['whole_day', ...componentScopes]
       : ['whole_day'];
-  if (offered.length === 0) return refuseImmovable();
+  if (offered.length === 0) return refuse('nothing_movable');
 
   const scopes = offered
     .map((id) => ({ id, ...MOVE_SCOPE_COPY[id], destinations: destinationsFor(id) }))
@@ -783,12 +792,14 @@ function moveOptionsForDay(args: {
   return { scopes, refusal: null };
 }
 
-/** Component scopes a Move may take off a day, in the order the sheet shows. */
-const MOVABLE_COMPONENT_SCOPES: readonly Exclude<PlanChangeMoveScopeId, 'whole_day'>[] =
+/** Component scopes a Move may take off a day, in the order the sheet shows.
+ *  `team` is deliberately absent: the anchor scope is keyed on the projection's
+ *  typed team anchor, not on a section kind (see `moveOptionsForDay`). */
+const MOVABLE_COMPONENT_SCOPES: readonly Exclude<PlanChangeMoveScopeId, 'whole_day' | 'team'>[] =
   ['strength', 'conditioning', 'recovery'] as const;
 
 const MOVE_SCOPE_SECTION_KIND: Record<
-  Exclude<PlanChangeMoveScopeId, 'whole_day'>,
+  Exclude<PlanChangeMoveScopeId, 'whole_day' | 'team'>,
   CoachRevisionSectionKind
 > = {
   strength: 'strength',
@@ -1294,6 +1305,12 @@ export function buildPlanChangeProposal(
         explanation: 'Sheet: away - clear the chosen days',
       });
     }
+    case 'move_team_night': {
+      // Never a revision proposal: the one-off route is a dated schedule fact
+      // through the deriving lane, the permanent route a profile answer
+      // through the setup owner. The durable door owns both commits.
+      return { error: 'team_night_move_requires_durable_door' };
+    }
     case 'move_session': {
       const source = daySnap(change.fromDate);
       const destination = daySnap(change.toDate);
@@ -1363,6 +1380,13 @@ export interface PlanChangeRiskPreviewResult {
    * or, for "keep the Gunshow", issue nothing at all.
    */
   g1Ask?: G1LandingAskContext | null;
+  /**
+   * Present when the athlete is moving a TEAM NIGHT and has not yet answered
+   * "just this once, or permanent?". NOTHING has been applied. The caller
+   * shows the two routes (+ back) and re-issues the change with
+   * `teamNightRoute` set; the commit rides the durable program-control door.
+   */
+  teamNightAsk?: import('../rules/teamNightMoveAsk').TeamNightMoveAskContext | null;
   /** Correlation context reused by the real commit door. */
   trace: AthleteActionTraceContext;
 }
@@ -2144,6 +2168,54 @@ export function previewPlanChangeRisk(args: {
       return { ...result, trace };
     };
 
+    // THE TEAM-NIGHT ASK (Sam, signed 2026-08-02). The ask appears on a team
+    // night EXACTLY — a `move_team_night` change whose source day carries no
+    // team anchor is refused, never asked about — and an unanswered route is
+    // not a refusal: nothing is applied, the athlete simply has not answered
+    // yet (the same absence-raises-the-ask shape as G-1 below). A change WITH
+    // a route never commits here: both routes ride the durable
+    // program-control door (`move_team_night`), which owns the fact commit
+    // and the one setup owner.
+    if (args.change.kind === 'move_team_night') {
+      const projected = (() => {
+        const day = args.visibleWeek.find((candidate) =>
+          candidate.date === (args.change as { fromDate: string }).fromDate);
+        return day ? projectedDay(day) : null;
+      })();
+      const holdsAnchor = !!projected?.parts.some((part) => part.kind === 'team_training');
+      if (!holdsAnchor) {
+        return finish({
+          ok: false,
+          message: MOVE_REFUSAL_COPY.nothing_movable,
+          appliedDates: [],
+          rejected: [{
+            date: args.change.fromDate,
+            code: 'not_a_team_night',
+            reason: 'move_team_night requires a team anchor on the source day',
+          }],
+          proposedWeek: args.visibleWeek,
+          assessment: emptyAssessment,
+        }, { internalResultCode: 'not_a_team_night' });
+      }
+      const context = teamNightMoveAskContext({
+        fromDate: args.change.fromDate,
+        toDate: args.change.toDate,
+      });
+      return finish({
+        ok: true,
+        message: TEAM_NIGHT_MOVE_ASK.title(),
+        appliedDates: [],
+        rejected: [],
+        proposedWeek: args.visibleWeek,
+        assessment: emptyAssessment,
+        teamNightAsk: args.change.teamNightRoute ? null : context,
+      }, {
+        internalResultCode: args.change.teamNightRoute
+          ? 'team_night_route_answered'
+          : 'team_night_route_required',
+      });
+    }
+
     // Operation-scoped ownership: athlete move/delete resolves and stages
     // directly from the accepted visible snapshot. This branch is before
     // proposal construction, template-policy construction and the legacy
@@ -2376,17 +2448,19 @@ function diagnosticActionType(change: PlanChange): AthleteActionType {
   if (change.kind === 'remove_session') {
     return change.scope && change.scope !== 'whole_day' ? 'delete_component' : 'delete_session';
   }
-  if (change.kind === 'move_session') return 'move_session';
+  if (change.kind === 'move_session' || change.kind === 'move_team_night') return 'move_session';
   if (change.kind === 'add_template' || change.kind === 'add_category') return 'add_session';
   return 'program_change';
 }
 
 function sourceDate(change: PlanChange): string | undefined {
-  return change.kind === 'move_session' ? change.fromDate : 'date' in change ? change.date : undefined;
+  return change.kind === 'move_session' || change.kind === 'move_team_night'
+    ? change.fromDate : 'date' in change ? change.date : undefined;
 }
 
 function targetDate(change: PlanChange): string | undefined {
-  return change.kind === 'move_session' ? change.toDate : 'date' in change ? change.date : undefined;
+  return change.kind === 'move_session' || change.kind === 'move_team_night'
+    ? change.toDate : 'date' in change ? change.date : undefined;
 }
 
 export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResult {

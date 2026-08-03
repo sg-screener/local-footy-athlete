@@ -51,6 +51,10 @@ import {
 } from '../rules/temporarySourceFact';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import {
+  buildTeamNightMoveWeekOverlay,
+  isTeamNightMoveFact,
+} from '../rules/teamNightMoveDerivation';
+import {
   athleteActionTerminalReasonChain,
   classifyAthleteActionFailure,
   currentAthleteActionTrace,
@@ -365,6 +369,51 @@ function buildDerivingSourceFactAdjustment(args: {
 /** One owner of the Monday-first weekday-to-date rule. */
 const dateForWeekday = isoDateForWeekday;
 
+/**
+ * Step 3 of the deriving lane, shared by BOTH overlay authors (generation and
+ * the team-night relocation): reconcile the overlay's contract with the week
+ * the athlete will ACTUALLY have and iterate to a fixpoint, re-authoring any
+ * athlete removals against the finalised visible week. Bounded + monotonic,
+ * mirroring the accepted-week deletion path (fixtureMinimalReplan).
+ */
+function reconcileOverlayContract(args: {
+  overlay: WeekScopedWorkoutOverlay;
+  weekStart: string;
+  nextOverlays: Record<string, WeekScopedWorkoutOverlay>;
+  state: ReturnType<typeof useProgramStore.getState>;
+  profile: ReturnType<typeof acceptedProfileForContext>;
+}): WeekScopedWorkoutOverlay {
+  let overlay = args.overlay;
+  if (!overlay.exposureContractV2) return overlay;
+  const activeRemovals = activeUserRemovalConstraintsForWeek(
+    args.state.userRemovalConstraints, args.weekStart);
+  let contract = overlay.exposureContractV2;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const trial: WeekScopedWorkoutOverlay = { ...overlay, exposureContractV2: contract };
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: {
+        ...args.state,
+        weekScopedOverlays: { ...args.nextOverlays, [args.weekStart]: trial },
+      } as never,
+      weekStart: args.weekStart,
+      profile: args.profile,
+      markedDays: args.state.acceptedMaterialContext.markedDays,
+    });
+    const finalised = rebased.evaluation.contract;
+    const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
+    if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
+    let next = finalised;
+    for (const constraint of activeRemovals) {
+      next = applyAthleteRemovalTypedReduction({
+        contract: next, workouts: rebased.visibleWorkouts, weekStart: args.weekStart, constraint,
+      });
+    }
+    if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
+    contract = next;
+  }
+  return { ...overlay, exposureContractV2: contract };
+}
+
 function commitDerivingSourceFactScopedRegen(args: {
   compositionBase: AcceptedCompositionBaseV1;
   normalizedFacts: TemporarySourceFact[];
@@ -392,6 +441,41 @@ function commitDerivingSourceFactScopedRegen(args: {
   const adjustments: ReversibleAdjustmentRecord[] = [];
 
   for (const weekStart of args.weekStarts) {
+    // TEAM-NIGHT MOVE (Sam, signed 2026-08-02): the fact's ruled effect is an
+    // ANCHOR RELOCATION within the week the athlete actually has — not a
+    // regeneration. The overlay author is rules/teamNightMoveDerivation
+    // (sparse two-date overlay: landing day combined per the doubling law,
+    // vacated day re-derived, every other day conserved byte-for-byte by
+    // construction). The lane below is unchanged: same contract fixpoint,
+    // same fact-linked adjustment, same atomic §18-gated commit — so
+    // resolving the fact cascade-reverts exactly like every deriving fact.
+    if (isTeamNightMoveFact(args.fact)) {
+      const effective = rebaseAcceptedEffectiveWeek({
+        surfaces: { ...state, weekScopedOverlays: nextOverlays } as never,
+        weekStart,
+        profile,
+        markedDays: state.acceptedMaterialContext.markedDays,
+      });
+      const built = buildTeamNightMoveWeekOverlay({
+        fact: args.fact,
+        weekStart,
+        effectiveWorkoutsByDate: new Map(effective.visibleWorkouts.map((workout) =>
+          [dateForWeekday(weekStart, workout.dayOfWeek), workout as never])),
+        now: args.now,
+      });
+      if (built.ok === false) throw new Error(`team_night_move_${built.code}`);
+      const overlay = built.overlay;
+      adjustments.push(buildDerivingSourceFactAdjustment({
+        sourceFactId: args.sourceFactId,
+        weekStart,
+        beforeOverlay: state.weekScopedOverlays[weekStart] ?? null,
+        afterOverlay: overlay,
+        acceptedRevision: state.acceptedMaterialContext.revision + 1,
+        createdAt: args.now,
+      }));
+      nextOverlays[weekStart] = overlay;
+      continue;
+    }
     // 0. The governed boundary for THIS week: days before it are history the
     //    fact may not shape (T4/L6 — a session the athlete already did cannot
     //    be re-prescribed retrospectively). When the boundary falls inside the
@@ -456,34 +540,8 @@ function commitDerivingSourceFactScopedRegen(args: {
     //    finaliser's contract and re-authors any removals against the finalised
     //    visible week. Bounded + monotonic, mirroring the accepted-week deletion
     //    path (fixtureMinimalReplan).
-    const activeRemovals = activeUserRemovalConstraintsForWeek(
-      state.userRemovalConstraints, weekStart);
     if (overlay.exposureContractV2) {
-      let contract = overlay.exposureContractV2;
-      for (let attempt = 0; attempt < 6; attempt += 1) {
-        const trial: WeekScopedWorkoutOverlay = { ...overlay, exposureContractV2: contract };
-        const rebased = rebaseAcceptedEffectiveWeek({
-          surfaces: {
-            ...state,
-            weekScopedOverlays: { ...nextOverlays, [weekStart]: trial },
-          } as never,
-          weekStart,
-          profile,
-          markedDays: state.acceptedMaterialContext.markedDays,
-        });
-        const finalised = rebased.evaluation.contract;
-        const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
-        if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
-        let next = finalised;
-        for (const constraint of activeRemovals) {
-          next = applyAthleteRemovalTypedReduction({
-            contract: next, workouts: rebased.visibleWorkouts, weekStart, constraint,
-          });
-        }
-        if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
-        contract = next;
-      }
-      overlay = { ...overlay, exposureContractV2: contract };
+      overlay = reconcileOverlayContract({ overlay, weekStart, nextOverlays, state, profile });
     }
     // 4. Fact-linked reversible adjustment with the byte-exact prior overlay.
     //    One per reached week: `clear_fatigue_status` already reverts EVERY
@@ -598,7 +656,12 @@ export async function commitTemporarySourceFactSet(
   }): boolean =>
     isTemporarySourceFactConstraint(constraint as never) &&
     (constraint.type === 'fatigue' || constraint.type === 'injury' ||
-      (constraint.type === 'schedule' && constraint.scheduleKind === 'time_cap'));
+      (constraint.type === 'schedule' &&
+        (constraint.scheduleKind === 'time_cap' ||
+          // Team-night movability (Sam, signed 2026-08-02): the one-off fact's
+          // ruled effect relocates the team anchor within its week — an
+          // authoring event, so it derives. See rules/teamNightMoveDerivation.
+          constraint.scheduleKind === 'team_night_move')));
   const derivingSignature = (constraints: readonly unknown[]): string =>
     JSON.stringify((constraints as Array<{ id?: string; type?: string; severity?: number; scheduleKind?: string }>)
       .filter(isRuledDerivingConstraint)
