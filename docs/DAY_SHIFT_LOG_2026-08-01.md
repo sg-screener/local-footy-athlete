@@ -204,8 +204,8 @@ adjacency manual per surface — no automated glyph gate exists, recorded).
 LR-27: 8/8 rows converged, shin→calf added (owner 61→63), quadricep typo
 fixed, three BODY_PART_TO_BUCKET maps deleted, divergence gate behavioural
 at 0/0/0/0, census entry deleted per the tracked-only rule. Combined-tree
-bible running at time of writing; its EXIT line lands in this log before
-any further merge claim.
+bible (wave 1a + LR-27 merges together, hand-resolved conflicts included):
+**EXIT=0** — both merges are claimed green.
 
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
