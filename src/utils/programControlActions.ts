@@ -79,6 +79,7 @@ import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
   transactTemporarySourceFact,
+  type TemporarySourceFactInertReason,
 } from '../store/temporarySourceFactTransaction';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
@@ -343,6 +344,13 @@ export interface ProgramControlActionResult {
   outcome?: PlanChangeOutcome;
   /** Development-only explicit token correlation for the render observer. */
   traceId?: string;
+  /**
+   * WHY an inert fact commit changed nothing, typed, from the COMMITTED
+   * transaction result (Sam's §7 answer, 2026-08-03: a time-cap fact whose
+   * every target date is a fixture day records inert — nothing to shorten).
+   * The acknowledgment owner selects its clause from this, never the door.
+   */
+  inertReason?: TemporarySourceFactInertReason;
 }
 
 const SETUP_ACTIONS = new Set<ProgramControlActionType>([
@@ -1435,6 +1443,9 @@ async function executeProgramControlActionDurablyWithinTrace(
       message: result.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
+      // The typed WHY of an inert commit (fixture day — §7) flows through so
+      // the ack owner reads it off the committed result.
+      inertReason: result.inertReason,
     };
   }
   if (action.type === 'set_illness_status') {

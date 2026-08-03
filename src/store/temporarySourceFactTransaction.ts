@@ -50,6 +50,9 @@ import {
   type TemporarySourceFactStatus,
 } from '../rules/temporarySourceFact';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
+import { targetWeekFixtures } from '../rules/fixtureConditionedAvailability';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
+import { liveAthleteContext } from '../utils/liveAthleteContext';
 import {
   buildTeamNightMoveWeekOverlay,
   isTeamNightMoveFact,
@@ -107,12 +110,22 @@ export interface TemporarySourceFactTransactionInput {
   testHooks?: TemporarySourceFactTransactionTestHooks;
 }
 
+/**
+ * WHY an inert commit changed nothing, typed — so the acknowledgment owner can
+ * select its clause from the COMMITTED result, never from the door or the date
+ * alone. 'fixture_day' is Sam's §7 answer (2026-08-03): a time-cap fact whose
+ * every target date is a fixture day has nothing to shorten, records inert,
+ * and the athlete is told the game-day truth.
+ */
+export type TemporarySourceFactInertReason = 'fixture_day';
+
 export interface TemporarySourceFactTransactionResult {
   outcome: TemporarySourceFactTransactionOutcome;
   factId: string | null;
   changedProgram: boolean;
   message: string;
   reason?: string;
+  inertReason?: TemporarySourceFactInertReason;
 }
 
 interface CanonicalFactOwnership {
@@ -144,6 +157,7 @@ export interface CommitTemporarySourceFactSetResult {
   changedWeekStarts?: string[];
   reason?: string;
   route?: string;
+  inertReason?: TemporarySourceFactInertReason;
 }
 
 function clone<T>(value: T): T {
@@ -650,14 +664,63 @@ export async function commitTemporarySourceFactSet(
   // Sam 2026-07-22) — and delivers, if anywhere, through projection and future
   // generation. See docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_
   // 2026-07-23.md and docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+  // ── GAME DAY: NOTHING TO SHORTEN (Sam's §7 answer, 2026-08-03) ──────────
+  // "It's game day — there's nothing to shorten. Go play." The fact stays a
+  // time_cap fact — the athlete's statement is true whatever the day — but the
+  // lane follows the fact's RULED EFFECT, and on a fixture day the ruled
+  // compression has no purchase: a game day holds no trainable session to
+  // compress (anchors are never content-cut, by law). A time_cap constraint
+  // whose EVERY target date is a fixture day therefore has no ruled
+  // re-authoring effect and takes the INERT lane: recorded, honest, program
+  // byte-unchanged, the constraint still visible to the coach and to future
+  // generation. Fixture identity is asked of the one fixture owner
+  // (`targetWeekFixtures`: marked games, the virtual usual-game-day fixture,
+  // bye/rest suppression) over the ACCEPTED context this transaction already
+  // holds — the accepted profile snapshot and markedDays — never a raw mirror
+  // read (the cold-start fallback goes through `liveAthleteContext`, LR-4's
+  // own migration direction) and never a re-derived inline copy of
+  // virtual-game logic.
+  const acceptedProfile = acceptedProfileForContext(
+    ownership.context,
+    liveAthleteContext().onboardingData ?? ({} as never),
+  );
+  const acceptedOwnedPhase = ownSeasonPhase({
+    program: compositionBase.surfaces.currentProgram,
+    profile: acceptedProfile,
+  });
+  const fixtureDatesByWeek = new Map<string, ReadonlySet<string>>();
+  const isFixtureDay = (date: string): boolean => {
+    const weekStart = mondayFor(date);
+    let fixtureDates = fixtureDatesByWeek.get(weekStart);
+    if (!fixtureDates) {
+      fixtureDates = new Set(targetWeekFixtures({
+        profile: acceptedProfile,
+        weekStart,
+        markedDays: ownership.context.markedDays,
+        ownedPhase: acceptedOwnedPhase,
+      }).map((fixture) => fixture.date));
+      fixtureDatesByWeek.set(weekStart, fixtureDates);
+    }
+    return fixtureDates.has(date);
+  };
+  const timeCapAllFixtureDays = (constraint: {
+    timeCapDates?: readonly string[];
+  }): boolean =>
+    (constraint.timeCapDates?.length ?? 0) > 0 &&
+    (constraint.timeCapDates ?? []).every(isFixtureDay);
   const isRuledDerivingConstraint = (constraint: {
     type?: string;
     scheduleKind?: string;
+    timeCapDates?: readonly string[];
   }): boolean =>
     isTemporarySourceFactConstraint(constraint as never) &&
     (constraint.type === 'fatigue' || constraint.type === 'injury' ||
       (constraint.type === 'schedule' &&
-        (constraint.scheduleKind === 'time_cap' ||
+        ((constraint.scheduleKind === 'time_cap' &&
+          // Sam's §7 answer: a cap aimed only at fixture days is INERT —
+          // there is nothing to shorten. Mixed or plain-day caps keep
+          // deriving the compressed session.
+          !timeCapAllFixtureDays(constraint)) ||
           // Team-night movability (Sam, signed 2026-08-02): the one-off fact's
           // ruled effect relocates the team anchor within its week — an
           // authoring event, so it derives. See rules/teamNightMoveDerivation.
@@ -692,6 +755,17 @@ export async function commitTemporarySourceFactSet(
   // and clearing it cascades back over all of them.
   const targetFact = normalizedFacts.find((fact) =>
     temporarySourceFactId(fact) === args.targetFactId) ?? null;
+  // WHY nothing changed, typed. When the target fact is an active time-cap
+  // whose every target date the fixture owner calls a fixture day, the commit
+  // is inert BY THE §7 RULING, and the result says so — so the acknowledgment
+  // owner selects the signed game-day sentence from the COMMITTED result,
+  // keeping its documented contract (clause by result, never by the door).
+  const inertReason: TemporarySourceFactInertReason | undefined =
+    !derivingCompositionChanged && targetFact && !isInjurySourceFact(targetFact) &&
+    targetFact.factKind === 'time_cap' && targetFact.status === 'active' &&
+    timeCapAllFixtureDays({ timeCapDates: targetFact.dates })
+      ? 'fixture_day'
+      : undefined;
   const candidateRegenWeeks = Array.from(new Set([
     mondayFor(args.todayISO),
     ...(useProgramStore.getState().currentProgram?.microcycles ?? [])
@@ -858,6 +932,7 @@ export async function commitTemporarySourceFactSet(
       visibleProgramChanged: transaction.diff.hasProgrammingChange,
       changedProgram: transaction.diff.hasProgrammingChange,
       changedWeekStarts: scopedRegenChangedWeeks ?? undefined,
+      inertReason,
     };
   }
   return {
@@ -1097,6 +1172,7 @@ async function transactTemporarySourceFactWithinTrace(
     outcome: `${prefix}_${persisted.changedProgram ? 'and_recomposed' : 'no_program_change'}` as TemporarySourceFactTransactionOutcome,
     factId: targetFactId,
     changedProgram: persisted.changedProgram,
+    inertReason: persisted.inertReason,
     message: severeIllnessLanding
       ? "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose." +
         (laterWeeksChanged

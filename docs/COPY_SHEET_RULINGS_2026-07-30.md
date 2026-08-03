@@ -992,6 +992,25 @@ the same recorded binder gap as 6-II-e/f and Batch 9. The registry IS the
 enforcement: the sheet renders them only through `signedCopy`/the registered
 templates.
 
+**9-d. Success, short on time on a FIXTURE day — the game-day truth**
+(SIGNED verbatim — Sam 2026-08-03, parked §7 answer, option (a); recorded in
+`docs/PARKED_QUESTIONS_2026-08-01.md`):
+
+- "It's game day — there's nothing to shorten. Go play." —
+  `readinessAcknowledgment.ts`, `buildScheduleAcknowledgment`, selected by the
+  COMMITTED result's typed `inertReason: 'fixture_day'`
+  (`temporarySourceFactTransaction`'s lane owner, date-aware through the one
+  fixture owner `fixtureConditionedAvailability`) — never by the door or the
+  date alone. The fact records inert; the coach keeps the context; the athlete
+  gets the truth. Same recorded binder gap as 9-a/9-b (the binder's SOURCES
+  scan does not see `readinessAcknowledgment.ts`); the behavioural selection
+  IS pinned: `programControlDurableOwnershipTests` (marked + virtual game-day
+  cells, the plain-day honesty pin) and the walker's tape-world coordinate
+  assert the sentence appears exactly when the committed result says
+  `fixture_day`, and never otherwise. NOTE: on a Pre-season fixture the day's
+  card reads "Practice Match" (6-IV-4) while this sentence says "game day" —
+  built as signed; the wording tension is parked at §9.
+
 **10-a. The seven signed strings** (placeholders render from the change's own
 dates):
 - Ask title: "Move team training?"
