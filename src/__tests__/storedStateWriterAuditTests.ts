@@ -112,10 +112,8 @@ function read(relativePath: string): string {
  */
 const UNPROTECTED_STORES_DEBT: readonly string[] = [
   'profile-store',
-  'readiness-store',
   'coach-store',
   'coach-memory-store',
-  'coach-updates',
   'ui-store',
   'auth-store',
 ];
