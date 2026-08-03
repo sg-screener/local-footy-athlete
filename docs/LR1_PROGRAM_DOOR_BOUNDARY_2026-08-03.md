@@ -275,3 +275,28 @@ finding above, and it needs a ruling, not a gate.
 > The door is correct either way; it refuses the wipe on whatever the surface
 > holds. But Stage B builds the derivation function over these surfaces, and
 > the answer changes what it derives FROM. Worth ruling before it starts.
+
+---
+
+## RATIFIED — the LR-6 boundary, 2026-08-03
+
+Sam, on this unit's scope question:
+
+> "Name at the door, don't change what they do" was the intent — identical
+> call, context and transaction through the named owner is not LR-6 work. The
+> census payment stands as full.
+
+So the boundary is now stated rather than inferred, and is recorded in the
+census's own LR-6 `sequence` string where the next agent will read it before
+deciding what is blocked:
+
+- **NOT held by the STOP:** routing a coach caller through an owned store door.
+  Name at the door; the call, the context and the transaction stay identical.
+  That is store-ownership work.
+- **HELD by the STOP:** changing what a coach path DECIDES.
+- **The test is behaviour.** If the coach path would produce a different write,
+  it is LR-6 work and it stops.
+
+This matters beyond LR-1: LR-3's residuals and the remaining store-ownership
+units all sit in coach-owned files, and without this line each of them would
+have to re-litigate the same question.

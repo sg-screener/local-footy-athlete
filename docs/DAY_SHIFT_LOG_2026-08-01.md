@@ -477,3 +477,11 @@ writes the slice, and read a red precondition as a measurement.**
 
 **cwd compliance:** own worktree, `pwd` echoed before every destructive step,
 `node_modules` symlink untouched, staged by name and never `git add -A`.
+
+**RATIFIED same day (Sam):** "name at the door, don't change what they do" was
+the intent — identical call, context and transaction through the named owner is
+NOT LR-6 work; the census payment stands as FULL. Recorded in the census's own
+LR-6 `sequence` string, because LR-3's residuals and every remaining
+store-ownership unit sit in coach-owned files and would otherwise re-litigate
+it one at a time. **The test is behaviour: if the coach path would produce a
+different write, it is LR-6 work and it stops.**

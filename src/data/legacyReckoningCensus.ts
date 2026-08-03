@@ -502,7 +502,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     sequence: 'Sam, 2026-07-30: a standing STOP. No coach-pipeline work of any kind — no '
       + 'new resolver, guard, fallback, compatibility branch, phrase handler or finaliser '
       + 'patch — before this reassessment is written and approved. CLAUDE.md\'s seven '
-      + 'questions are the form it takes.',
+      + 'questions are the form it takes. '
+      + 'RATIFIED BOUNDARY (Sam, 2026-08-03, on LR-1): routing a coach caller through an '
+      + 'owned store door — NAME AT THE DOOR, identical call, identical context, identical '
+      + 'transaction — is STORE-OWNERSHIP work and is NOT held by this STOP. What is held '
+      + 'is changing what a coach path DECIDES. The test is behaviour: if the coach path '
+      + 'would produce a different write, it is LR-6 work and it stops.',
     detector: null,
     whyNotDetectable: 'Counting exported type names would count vocabulary, not '
       + 'representations, and would go green on a rename. The finding is an architectural '
