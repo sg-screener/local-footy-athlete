@@ -520,5 +520,8 @@ skewSection().then(() => {
     for (const f of failures) console.log(`  • ${f}`);
     process.exit(1);
   }
-  process.exit(0);
+  // No `process.exit(0)` softener. An unconditional zero exit OVERRIDES
+  // `process.exitCode` and so overrides TOTALS-OR-RED: with it here, deleting
+  // the summary print above still exited 0 — the mutation survived on
+  // 2026-08-03. The green verdict now comes from the report and nothing else.
 }).catch((error) => { console.error(error); process.exit(1); });
