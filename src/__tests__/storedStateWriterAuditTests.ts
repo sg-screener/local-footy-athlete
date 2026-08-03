@@ -111,7 +111,6 @@ function read(relativePath: string): string {
  * `program-store` is deliberately absent: it is the store this unit protected.
  */
 const UNPROTECTED_STORES_DEBT: readonly string[] = [
-  'profile-store',
   'coach-store',
   'coach-memory-store',
   'ui-store',

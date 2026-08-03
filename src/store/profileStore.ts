@@ -17,6 +17,12 @@ import {
   onboardingIncompleteMessage,
 } from '../utils/onboardingCompleteness';
 import { asyncStorageCompat } from './asyncStorageCompat';
+import {
+  decideQuarantinedWrite,
+  quarantineRefusedPayload,
+  registerQuarantineBoundary,
+  releaseQuarantine,
+} from './refusedPayloadQuarantine';
 
 /**
  * Completion is an outcome with a reason, never a bare flag flip (ruling #3).
@@ -52,6 +58,75 @@ interface ProfileState {
 const initialOnboardingData: OnboardingData = {};
 
 let acceptedProfileMirrorPublicationInProgress = false;
+
+export const PROFILE_STORE_PERSISTENCE_KEY = 'profile-store';
+
+/**
+ * THE STORE'S WRITER BOUNDARY, declared once (store-armour recipe §3 —
+ * the quarantine was the one protection this store still lacked; the door,
+ * tape and sweep have existed since the profile-wipe unit). A payload carries
+ * the athlete's material when at least one answered field survives in it —
+ * the same answered-count semantics the door's refusal already uses.
+ * Unreadable bytes prove nothing and answer no.
+ */
+registerQuarantineBoundary(PROFILE_STORE_PERSISTENCE_KEY, {
+  carriesMaterial: (envelope) => {
+    try {
+      const state = (JSON.parse(envelope) as {
+        state?: { onboardingData?: OnboardingData };
+      }).state;
+      return answeredCount(state?.onboardingData) > 0;
+    } catch {
+      return false;
+    }
+  },
+});
+
+/**
+ * The single persistence writer. A REFUSAL MUST NEVER PERSIST THE STATE IT
+ * REFUSED INTO (Sam, 2026-07-30): while a refused material payload is held,
+ * a bare payload does not travel; a material one always passes and releases
+ * the hold. Exported for `profileStoreQuarantineTests`, which proves this
+ * store's boundary rather than trusting the law's fixture cell.
+ */
+export const profileGuardedStorage = {
+  getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
+  setItem: async (name: string, value: string): Promise<void> => {
+    const decision = decideQuarantinedWrite(name, value);
+    if (!decision.allowed) {
+      emitAthleteActionEvent(beginAthleteActionTrace({
+        source: 'system',
+        actionType: 'program_change',
+        route: 'profileGuardedStorage.setItem',
+      }, undefined, { forceRoot: true }), 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: decision.reason,
+        rejectingBoundary: 'profileGuardedStorage.setItem.quarantine',
+        failureCategory: 'persistence_failure',
+      });
+      logger.error('[profileStore] refused to persist over a quarantined payload.',
+        { store: name, reason: decision.reason });
+      return;
+    }
+    releaseQuarantine(name);
+    await asyncStorageCompat.setItem(name, value);
+  },
+  removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
+};
+
+/**
+ * The DISK copy, not the in-memory one — memory survives a refusal by
+ * construction; the envelope on disk is what a later writer can destroy.
+ * Best-effort and async: a quarantine that crashed the refusal it protects
+ * would be worse than no quarantine.
+ */
+function quarantineDiskCopyBestEffort(): void {
+  void asyncStorageCompat.getItem(PROFILE_STORE_PERSISTENCE_KEY)
+    .then((envelope) => quarantineRefusedPayload(PROFILE_STORE_PERSISTENCE_KEY, envelope))
+    .catch(() => {});
+}
 
 export const useProfileStore = create<ProfileState>()(
   persist(
@@ -176,8 +251,8 @@ export const useProfileStore = create<ProfileState>()(
       },
     }),
     {
-      name: 'profile-store',
-      storage: createJSONStorage(() => asyncStorageCompat),
+      name: PROFILE_STORE_PERSISTENCE_KEY,
+      storage: createJSONStorage(() => profileGuardedStorage),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<ProfileState> | undefined;
         const merged = normalizeOnboardingRole({
@@ -349,10 +424,12 @@ export function applyProfileOnboardingWrite(args: {
 
   if (isTheBuiltInDefault(args.next) && answerCountBefore > answeredCount(initialOnboardingData)) {
     if (!args.resetActionId) {
+      quarantineDiskCopyBestEffort();
       record('refused', 'default_over_answered_profile');
       return { ok: false, reason: 'default_over_answered_profile' };
     }
     if (!resetActionsInFlight.has(args.resetActionId)) {
+      quarantineDiskCopyBestEffort();
       record('refused', 'reset_action_not_in_flight');
       return { ok: false, reason: 'reset_action_not_in_flight' };
     }
