@@ -53,7 +53,28 @@ seven strings signed (Batch 10); three riders PROPOSED and parked (§8).
 
 ## §5.4 — `test:bible` EXIT=0 on main, declared reds listed
 
-**PASS, and this is the first honest green of the shift.**
+**PASS — and STRENGTHENED after this report was first written.** Sam's §9
+answer (2026-08-03) made TOTALS-OR-RED law for the whole chain, and the
+rollout is complete: **all 120 chain suites are armed and gated**
+(`test:totals-or-red-law`, itself in the chain). A suite can no longer exit 0
+without reporting, so the class of unknown that this section originally had to
+disclose is now structurally closed rather than merely repaired in one suite.
+Final run at `1920d4e`: **EXIT=0**.
+
+Three things the rollout found, none of which existed as knowledge when §5.4
+was first assessed:
+- **A second silent suite, worse in kind**: `durableFactHorizonTests` forks a
+  child per scenario and trusts the child's exit code; each child returned
+  past its only clear, so armed, all 14 came back RED while printing PASS.
+  Parent verdict and child output had been disagreeing outright.
+- **The law had a bypass**: `process.exit(0)` hard-overrides
+  `process.exitCode` — proven by a mutation that SURVIVED. Fourteen suites
+  carried the construct; all are deleted and the gate bans it.
+- **The chain's FIRST LINK was never armed**: `runSlice1` runs by direct
+  invocation rather than an npm script, so every script-enumerating sweep was
+  blind to it. The gate found it on its first run.
+
+**The original §5.4 assessment, kept as the record:**
 
 - `test:bible` **EXIT=0** at `fb5ca25`, zero failures across the whole chain.
 - **The asterisk is removed.** `onboardingReliabilityTests` had been exiting
