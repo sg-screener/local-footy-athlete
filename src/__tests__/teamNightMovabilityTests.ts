@@ -224,6 +224,18 @@ async function main(): Promise<void> {
     assert(!refused.teamNightAsk, 'a plain day must never see the ask');
   });
 
+  await cell('TN-1b a ROUTELESS change never maps through the commit door', () => {
+    // The ask's gate at the COMMIT boundary (found by mutation M3, 2026-08-03:
+    // widening the mapping to routeless changes survived every other cell —
+    // the sheet would still ask, but any other caller could commit unasked).
+    seedStores();
+    const mapped = programControlActionForPlanChange({
+      kind: 'move_team_night', fromDate: TEAM_NIGHT, toDate: addDaysISO(WEEK, 2),
+    });
+    assert(mapped === null,
+      'an unanswered team-night move must not map to a program-control action');
+  });
+
   await cell('TN-5 the menu offers the team scope; the retired refusal sentence is gone', () => {
     seedStores();
     const options = quiet(() => listPlanChangeOptionsForDay({
