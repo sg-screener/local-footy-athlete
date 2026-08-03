@@ -46,7 +46,12 @@ const durable = new Map<string, string>();
 
 import fs from 'fs';
 import path from 'path';
-import { PERSISTED_STORE_HYDRATION_REGISTRY } from '../store/appHydrationGate';
+import {
+  PERSISTED_STORE_HYDRATION_REGISTRY,
+  RETIRED_STORE_PERSIST_KEYS,
+  removeRetiredStoreEnvelopes,
+} from '../store/appHydrationGate';
+import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 import {
   clearAllQuarantines,
   decideQuarantinedWrite,
@@ -208,10 +213,87 @@ run('repeat-week has no writer and no surface (HOME_SCREEN_REDESIGN ruling 1)', 
   assert(offenders.length === 0, `repeat-week survives in: ${offenders.join(', ')}`);
 });
 
-console.log(`\nStored-state writer audit totals: ${passed} passed, ${failed} failed`);
-console.log(`  protected: ${JSON.stringify(quarantineBoundaryKeys())}`);
-console.log(`  declared debt: ${UNPROTECTED_STORES_DEBT.length} store(s) still wipeable`);
-if (failed > 0) {
-  console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
-  process.exit(1);
+/* ── The shell retirement (Sam's §6 ruling, 2026-08-03) ──────────────────────
+ *
+ * authStore and uiStore retired WHOLE: both persisted only never-written
+ * defaults (no reachable screen ever wrote either, verified back to the MVP
+ * commit) — stored non-decisions under the north star. The L15 read-ingress
+ * lift for a shape that never carried a value is DELETION at boot
+ * (`removeRetiredStoreEnvelopes` in appHydrationGate).
+ *
+ * These pins live HERE and not only in `onboardingReliabilityTests` D1b
+ * because that suite silently exits 0 after its B1 cell on clean main (a
+ * pre-existing LR-14 silent-suite defect, A/B-proven in a detached worktree
+ * on 2026-08-03 and parked as §9) — a pin in a dead block holds nothing.
+ * This suite runs, is in `test:bible`, and already audits the boot registry.
+ */
+
+run('the retired shells stay retired — gone from src, gone from the registry', () => {
+  assert(
+    RETIRED_STORE_PERSIST_KEYS.length === 2
+      && RETIRED_STORE_PERSIST_KEYS.includes('auth-store')
+      && RETIRED_STORE_PERSIST_KEYS.includes('ui-store'),
+    `the retired-key list drifted: ${JSON.stringify(RETIRED_STORE_PERSIST_KEYS)}. `
+    + 'Shrinking it is a rebuild landing (fine, with the store re-registered '
+    + 'armoured); growing it is a NEW retirement that needs its own ruling.');
+  const registered = new Set(PERSISTED_STORE_HYDRATION_REGISTRY.map((s) => s.key));
+  const cameBack = RETIRED_STORE_PERSIST_KEYS.filter((key) => registered.has(key));
+  assert(cameBack.length === 0,
+    `retired key(s) re-registered while still on the retired list: `
+    + `${JSON.stringify(cameBack)}. A rebuilt store leaves `
+    + 'RETIRED_STORE_PERSIST_KEYS in the same commit it registers, or boot '
+    + 'eats its state.');
+  const survivors = walkSrc().filter((f) =>
+    f === 'store/authStore.ts' || f === 'store/uiStore.ts');
+  assert(survivors.length === 0,
+    `retired store file(s) back in src: ${survivors.join(', ')} — a rebuild `
+    + 'arrives armoured (STORE_ARMOUR_RECIPE) and registered, not as the shell');
+});
+
+run('boot removes the retired envelopes before the app settles (static pin)', () => {
+  // Shape-coupled by design (a tripwire, not the proof — the behavioural cell
+  // below is the proof the remover removes; this one pins that BOOT calls it).
+  const gate = read('store/appHydrationGate.ts');
+  const settleIdx = gate.indexOf('settlement = (async () => {');
+  const cleanupIdx = gate.indexOf('await removeRetiredStoreEnvelopes()');
+  const outcomesIdx = gate.indexOf('const outcomes = await Promise.all(');
+  assert(settleIdx >= 0, 'awaitAppHydration settlement block not found — the pin needs re-aiming');
+  assert(cleanupIdx > settleIdx && (outcomesIdx === -1 || cleanupIdx < outcomesIdx),
+    'awaitAppHydration no longer awaits removeRetiredStoreEnvelopes() before '
+    + 'settling — a stale retired envelope would be readable again, which L15 forbids');
+});
+
+async function runRetiredEnvelopeCell(): Promise<void> {
+  const name = 'a stale retired envelope does not survive the remover';
+  try {
+    for (const key of RETIRED_STORE_PERSIST_KEYS) {
+      durable.set(key, JSON.stringify({ state: {}, version: 0 }));
+    }
+    await removeRetiredStoreEnvelopes();
+    await flushPendingStorageWrites();
+    const survivors = RETIRED_STORE_PERSIST_KEYS.filter((key) => durable.has(key));
+    assert(survivors.length === 0,
+      `retired envelope(s) survived the remover: ${survivors.join(', ')}`);
+    passed += 1;
+    console.log(`  PASS ${name}`);
+  } catch (error) {
+    failed += 1;
+    failures.push(name);
+    console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+  }
 }
+
+// A dropped or hanging tail must NOT read as green: the process is red until
+// the totals actually print (the exact silent-exit-0 shape found in
+// onboardingReliabilityTests on 2026-08-03, parked as §9).
+process.exitCode = 1;
+void runRetiredEnvelopeCell().then(() => {
+  console.log(`\nStored-state writer audit totals: ${passed} passed, ${failed} failed`);
+  console.log(`  protected: ${JSON.stringify(quarantineBoundaryKeys())}`);
+  console.log(`  declared debt: ${UNPROTECTED_STORES_DEBT.length} store(s) still wipeable`);
+  if (failed > 0) {
+    console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
+    process.exit(1);
+  }
+  process.exitCode = 0;
+});

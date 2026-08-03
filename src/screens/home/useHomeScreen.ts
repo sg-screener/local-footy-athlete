@@ -113,7 +113,7 @@ const targetStatusModifierKind = (
  *
  * ## Why a hook, not a context provider
  * There is exactly one Home screen on screen at a time (Classic XOR V2,
- * gated by `useUIStore.designVersion`). Nothing else in the app needs to
+ * gated by HomeScreen's DESIGN_VERSION constant). Nothing else in the app needs to
  * reach into this state, so a hook keeps the graph flat and side-effect-
  * free for unrelated surfaces.
  *

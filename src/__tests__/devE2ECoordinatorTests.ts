@@ -372,7 +372,8 @@ async function main() {
     'clearAll()',
     'clearAllModalityPreferences()',
     'useAthletePreferencesStore.getState().clear()',
-    'useUIStore.getState().clear()',
+    // 'useUIStore.getState().clear()' RETIRED with the store (Sam's §6,
+    // 2026-08-03) — the seed has no ui-store to clear any more.
     'useProfileStore.getState().clear()',
   ];
   ok('ProgramStore clears after every old domain',
@@ -400,7 +401,7 @@ async function main() {
     'coach-preferences-store',
     'coach-updates',
     'athlete-preferences-store',
-    'ui-store',
+    // 'ui-store' RETIRED with its store (Sam's §6, 2026-08-03).
   ]) {
     ok(`hydration/persistence includes ${storageKey}`, persistenceSource.includes(`key: '${storageKey}'`));
   }

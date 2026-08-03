@@ -9,7 +9,6 @@ import { useCoachMutationHistoryStore } from '../../store/coachMutationHistorySt
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
-import { useUIStore } from '../../store/uiStore';
 import { semanticFingerprint } from './semanticFingerprint';
 import {
   clearDevE2ECheckpointRecord,
@@ -133,16 +132,7 @@ const semanticStores: SemanticStoreDescriptor[] = [
     store: useAthletePreferencesStore as unknown as PersistedStore,
     select: (state) => ({ prefs: state.prefs ?? { excluded: [], pinned: [] } }),
   },
-  {
-    key: 'ui-store',
-    store: useUIStore as unknown as PersistedStore,
-    select: (state) => ({
-      isOnline: state.isOnline,
-      activeTab: state.activeTab,
-      theme: state.theme,
-      designVersion: state.designVersion,
-    }),
-  },
+  // ui-store RETIRED with its store (Sam's §6 ruling, 2026-08-03).
 ];
 
 const LEGACY_DEV_E2E_CHECKPOINT_STORAGE_KEY = 'dev-e2e-checkpoint-v1';

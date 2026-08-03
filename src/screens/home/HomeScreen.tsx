@@ -20,7 +20,6 @@ import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import { weeklyPlanSecondaryLabel, weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
-import type { DesignVersion } from '../../store/uiStore';
 import HomeScreenV2 from './HomeScreenV2';
 import { useHomeScreen } from './useHomeScreen';
 import { PlanChangeSheet } from './PlanChangeSheet';
@@ -45,10 +44,11 @@ const ScheduleDebugPanel = __DEV__
 // Hardcoded to 'v2' so the app opens directly into the redesigned Home
 // during the V2 rollout. Flip to 'classic' to swap back.
 //
-// When we're ready to let users toggle at runtime again, restore:
-//   const designVersion = useUIStore((s) => s.designVersion);
-// The store + Profile → Preferences → Experimental toggle are still wired;
-// the hardcoded constant below just shadows them for now.
+// uiStore is RETIRED (Sam's §6 ruling, 2026-08-03): its persisted
+// designVersion was never written by any reachable screen, so this constant
+// was never shadowing a real choice. A runtime toggle, if it ever ships,
+// rebuilds an armoured store under docs/STORE_ARMOUR_RECIPE_2026-08-03.md.
+type DesignVersion = 'classic' | 'v2';
 const DESIGN_VERSION: DesignVersion = 'v2';
 
 export default function HomeScreen() {

@@ -8,8 +8,7 @@ import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import { useCoachUpdatesStore } from './coachUpdatesStore';
 import { useAthletePreferencesStore } from './athletePreferencesStore';
-import { useUIStore } from './uiStore';
-import { useAuthStore } from './authStore';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import { logger } from '../utils/logger';
 
 /**
@@ -76,9 +75,36 @@ export const PERSISTED_STORE_HYDRATION_REGISTRY: readonly PersistedStoreHandle[]
   handle('coach-preferences-store', useCoachPreferencesStore),
   handle('coach-updates', useCoachUpdatesStore),
   handle('athlete-preferences-store', useAthletePreferencesStore),
-  handle('ui-store', useUIStore),
-  handle('auth-store', useAuthStore),
 ];
+
+/**
+ * Persist keys of RETIRED stores (Sam's §6 ruling, 2026-08-03 — the shell
+ * retirement). `auth-store` and `ui-store` persisted only never-written
+ * defaults: no product writer ever existed on a reachable screen (the MVP
+ * sign-in screens and the design-version toggle were dead code from birth to
+ * the Phase 1.6 purge), so any device envelope under these keys holds only
+ * the built-in defaults. The L15 read-ingress lift for a shape that never
+ * carried a value is DELETION: removing the envelope at boot means the
+ * retired shape can never be read back by anything.
+ *
+ * A future sign-in flow or UI store rebuilds armoured under
+ * docs/STORE_ARMOUR_RECIPE_2026-08-03.md — and takes its key OFF this list
+ * in the same commit it registers here, or boot would eat its state.
+ */
+export const RETIRED_STORE_PERSIST_KEYS: readonly string[] = [
+  'auth-store',
+  'ui-store',
+];
+
+/**
+ * Remove the retired stores' stale persist envelopes. Best-effort per key —
+ * a storage layer that cannot delete must not block boot; the next boot
+ * retries by construction.
+ */
+export async function removeRetiredStoreEnvelopes(): Promise<void> {
+  await Promise.all(RETIRED_STORE_PERSIST_KEYS.map((key) =>
+    asyncStorageCompat.removeItem(key).catch(() => undefined)));
+}
 
 /**
  * A store that neither finishes nor rejects (a storage layer that never
@@ -133,6 +159,9 @@ async function settleStore(store: PersistedStoreHandle): Promise<boolean> {
 export function awaitAppHydration(): Promise<AppHydrationState> {
   if (settlement) return settlement;
   settlement = (async () => {
+    // The retired shells' stale envelopes leave before the app settles —
+    // deletion is their read-ingress lift (see RETIRED_STORE_PERSIST_KEYS).
+    await removeRetiredStoreEnvelopes();
     const outcomes = await Promise.all(
       PERSISTED_STORE_HYDRATION_REGISTRY.map(async (store) => ({
         key: store.key,
