@@ -207,6 +207,22 @@ at 0/0/0/0, census entry deleted per the tracked-only rule. Combined-tree
 bible (wave 1a + LR-27 merges together, hand-resolved conflicts included):
 **EXIT=0** — both merges are claimed green.
 
+## THE FLEET COMPLETES — writer-audit debt ZERO (2026-08-03, `2a5b529` + `84249a6`)
+
+Wave 2a (coachStore + coachMemory) and the tail (auth + ui + the profile
+quarantine) merged; full bible EXIT=0 on the final tree. **The 2026-07-30
+declared debt — "Eleven stores are still wipeable" — is paid to the empty
+list.** Eleven of twelve stores owned/taped/quarantined; `programStore`'s
+raw primitive is the census's last LR-2 count (declared 1, baseline 104) and
+is LR-1's unit. Walker: NINE wipe-replay cells, 17/17. Recipe carries 13
+lessons (12b: `field:` sweeps are blind to ES6 shorthand). Second silent
+census auto-merge caught by the gate, same as the first — direction 1 has
+now paid for itself twice in one day. Parked §6: auth/ui have NO product
+writers at all — retire-or-wire is Sam's call. Fleet honesty finds worth
+reading in the agents' unit docs: chat history ruled material (AGENTS.md
+names it a follow-up-resolution input); `addNote`'s Date.now() id collides
+within a millisecond (recorded, LR-6-held).
+
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
 All five parked questions ANSWERED; recorded in full in
