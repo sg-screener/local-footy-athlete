@@ -16,6 +16,9 @@
 
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import {
   detectMissedSessions,
   mostRecentMissedSession,
@@ -99,6 +102,7 @@ const TODAY_FRIDAY = '2026-07-24';
 }
 
 console.log(`\nMissed-session signup boundary: ${pass} passing, ${fail} failing`);
+totalsPrinted(fail);
 if (fail > 0) {
   for (const name of failures) console.log(`  FAIL ${name}`);
   process.exit(1);

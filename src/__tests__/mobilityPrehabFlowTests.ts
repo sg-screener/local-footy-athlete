@@ -32,6 +32,10 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -526,4 +530,5 @@ console.log('\n[6] Collapsed at the top, tap to expand, cosmetic tick only');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exit(1);

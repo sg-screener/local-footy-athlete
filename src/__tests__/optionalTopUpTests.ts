@@ -30,6 +30,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { Workout } from '../types/domain';
 import { applyOptionalTopUps } from '../utils/optionalTopUpPlacement';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
@@ -609,6 +613,7 @@ run('R7. FINDING — rest-slot conditioning does NOT come from the 55 signed tem
 });
 
 console.log(`\nOptional top-up totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log('  WIRED after requireSection18AcceptedWeek — a top-up is incapable of');
 console.log('  affecting compliance because the contract was satisfied before it existed.');
 console.log('  DEPTH (L13): 0 — a pure decision and a pure application of it.');

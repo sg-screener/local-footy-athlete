@@ -14,6 +14,10 @@
  * Run: npm run test:coach-failure-copy
  */
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 import {
@@ -64,4 +68,5 @@ console.log('\n[coach failure copy] no raw developer diagnostics reach the athle
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exit(1);

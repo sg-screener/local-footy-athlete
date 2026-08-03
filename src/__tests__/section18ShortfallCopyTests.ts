@@ -17,6 +17,10 @@
 
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import {
@@ -197,6 +201,7 @@ run('no caller reads an achieved tally off a stored contract', () => {
 });
 
 console.log(`\nShortfall copy totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
   process.exit(1);

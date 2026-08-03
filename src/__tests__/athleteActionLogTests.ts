@@ -32,6 +32,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
@@ -415,6 +419,7 @@ await run('clearing the log clears the disk too', async () => {
 });
 
 console.log(`\nOn-device action log totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
   process.exit(1);
