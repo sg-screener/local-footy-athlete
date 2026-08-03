@@ -1009,7 +1009,23 @@ templates.
   assert the sentence appears exactly when the committed result says
   `fixture_day`, and never otherwise. NOTE: on a Pre-season fixture the day's
   card reads "Practice Match" (6-IV-4) while this sentence says "game day" —
-  built as signed; the wording tension is parked at §9.
+  built as signed, and the tension is RULED: §10 (Sam, 2026-08-03) signs a
+  PRACTICE-MATCH variant — see 9-e.
+
+**9-e. Success, short on time on a PRACTICE-MATCH day — the same truth in
+the fixture's own words** (SIGNED verbatim — Sam 2026-08-03, parked §10
+answer):
+
+- "It's a practice match — nothing to shorten. Go play." —
+  `readinessAcknowledgment.ts`, `buildScheduleAcknowledgment`, selected by the
+  committed result's `inertFixtureVariant === 'practice_match'`. The variant is
+  the SAME `FixtureAvailabilityKind` that picks the day's card label (6-IV-4,
+  `canonicalFixtureKind`), threaded from the lane owner with the fixture's date
+  — so the card and the sentence cannot disagree about what the day is, which
+  was the tension 9-d shipped with and this pays. Both variants are pinned
+  behaviourally in `programControlDurableOwnershipTests` (in-season MARKED →
+  game day; pre-season fixture → practice match; the plain-day honesty pin
+  unchanged). Same recorded binder gap as 9-a/9-b/9-d.
 
 **10-a. The seven signed strings** (placeholders render from the change's own
 dates):
@@ -1027,9 +1043,9 @@ the refusal, the reason has no reachable cause, the string is deleted from
 `planChangeProducer.ts` and its 6-II-b table row converted to prose above.
 `teamNightMovabilityTests` TN-5 pins its absence from the producer.
 
-**10-c. PROPOSED, NOT SIGNED (parked §8)** — three riders shipped per this
-file's transitional rule (a string may ship PROPOSED and may never ship
-unlisted):
+**10-c. SIGNED (Sam, 2026-08-03 — parked §8 answer: "all three riders SIGNED
+as proposed")** — shipped PROPOSED with the unit on 2026-08-03 per this
+file's transitional rule, signed the same day, all three verbatim:
 - Move scope row for the anchor (in `planChangeProducer.ts`
   `MOVE_SCOPE_COPY.team`): label "Team training", sub "Pick the night it's on
   — we'll ask if it's permanent".

@@ -36,6 +36,9 @@ interface ReadinessResultLike {
   /** WHY an inert commit changed nothing, typed by the transaction
    *  (`TemporarySourceFactInertReason`) — the committed result's own word. */
   inertReason?: string;
+  /** The fixture's own kind, from the one owner that also picks the card
+   *  label (`FixtureAvailabilityKind`) — selects the §10 sentence variant. */
+  inertFixtureVariant?: string;
 }
 
 /**
@@ -98,14 +101,21 @@ export function buildScheduleAcknowledgment(
       };
     }
     if (result.inertReason === 'fixture_day') {
-      // Sam's §7 answer, sentence SIGNED verbatim (2026-08-03, copy sheet
-      // Batch 9-d): a fixture-day tap records the fact inert — a game day has
-      // no trainable session to compress — and the athlete gets the truth.
-      // Selected by the COMMITTED result's typed `inertReason`, never by the
+      // Sam's §7 answer, both sentences SIGNED verbatim (2026-08-03, copy
+      // sheet 9-d and 9-e): a fixture-day tap records the fact inert — a
+      // fixture has no trainable session to compress — and the athlete gets
+      // the truth in the fixture's OWN words. Selected by the COMMITTED
+      // result's typed `inertReason` plus the fixture's kind, never by the
       // door or the date alone, per this module's contract.
+      //
+      // §10 (Sam, 2026-08-03): the variant is the SAME
+      // `FixtureAvailabilityKind` that picks the day's card label (6-IV-4),
+      // so the card and the sentence cannot disagree about what the day is.
       return {
         tone: 'success',
-        message: "It's game day — there's nothing to shorten. Go play.",
+        message: result.inertFixtureVariant === 'practice_match'
+          ? "It's a practice match — nothing to shorten. Go play."
+          : "It's game day — there's nothing to shorten. Go play.",
       };
     }
     return {

@@ -7,6 +7,22 @@ proposal Sam has accepted — parked means UNANSWERED.
 
 ---
 
+## §8, §9, §10 ANSWERED — Sam, 2026-08-03 (third batch); THE FILE IS EMPTY
+
+**§8 team-night riders — all three SIGNED as proposed.** Copy sheet 10-c
+flipped; the strings ship unchanged.
+
+**§9 TOTALS-OR-RED IS LAW** for every suite in `test:bible`: the exit code is
+armed RED at module top and cleared only by the printed totals line. Rolling
+through the chain as its own unit — a suite that exits without reporting is
+now a build failure, not a silent green.
+
+**§10 the practice-match variant — SIGNED verbatim:** "It's a practice match
+— nothing to shorten. Go play." Selected by the same `fixtureVariant` that
+picks the card label (`canonicalFixtureKind`), so the card and the sentence
+can never disagree. Recorded as copy sheet 9-e; both variants pinned
+behaviourally.
+
 ## §6, §7 + BATCH 9 ANSWERED — Sam, 2026-08-03 (second batch)
 
 **§6 auth/ui shells — RETIRE BOTH.** Never-written state retires under the

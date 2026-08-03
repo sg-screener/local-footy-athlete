@@ -50,7 +50,10 @@ import {
   type TemporarySourceFactStatus,
 } from '../rules/temporarySourceFact';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
-import { targetWeekFixtures } from '../rules/fixtureConditionedAvailability';
+import {
+  targetWeekFixtures,
+  type FixtureAvailabilityKind,
+} from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { liveAthleteContext } from '../utils/liveAthleteContext';
 import {
@@ -126,6 +129,8 @@ export interface TemporarySourceFactTransactionResult {
   message: string;
   reason?: string;
   inertReason?: TemporarySourceFactInertReason;
+  /** The fixture's own kind — picks the signed sentence's variant (§10). */
+  inertFixtureVariant?: FixtureAvailabilityKind;
 }
 
 interface CanonicalFactOwnership {
@@ -158,6 +163,8 @@ export interface CommitTemporarySourceFactSetResult {
   reason?: string;
   route?: string;
   inertReason?: TemporarySourceFactInertReason;
+  /** The fixture's own kind — picks the signed sentence's variant (§10). */
+  inertFixtureVariant?: FixtureAvailabilityKind;
 }
 
 function clone<T>(value: T): T {
@@ -688,21 +695,28 @@ export async function commitTemporarySourceFactSet(
     program: compositionBase.surfaces.currentProgram,
     profile: acceptedProfile,
   });
-  const fixtureDatesByWeek = new Map<string, ReadonlySet<string>>();
-  const isFixtureDay = (date: string): boolean => {
+  // The fixture's own KIND travels with its date (Sam's §10 ruling,
+  // 2026-08-03): the sentence variant is selected by the SAME
+  // `FixtureAvailabilityKind` that picks the day's card label (6-IV-4,
+  // `canonicalFixtureKind`) — never by a second phase read here, which would
+  // mint the parallel author `fixtureConditionedAvailability`'s header exists
+  // to prevent.
+  const fixturesByWeek = new Map<string, ReadonlyMap<string, FixtureAvailabilityKind>>();
+  const fixtureKindOn = (date: string): FixtureAvailabilityKind | null => {
     const weekStart = mondayFor(date);
-    let fixtureDates = fixtureDatesByWeek.get(weekStart);
-    if (!fixtureDates) {
-      fixtureDates = new Set(targetWeekFixtures({
+    let fixtures = fixturesByWeek.get(weekStart);
+    if (!fixtures) {
+      fixtures = new Map(targetWeekFixtures({
         profile: acceptedProfile,
         weekStart,
         markedDays: ownership.context.markedDays,
         ownedPhase: acceptedOwnedPhase,
-      }).map((fixture) => fixture.date));
-      fixtureDatesByWeek.set(weekStart, fixtureDates);
+      }).map((fixture) => [fixture.date, fixture.kind] as const));
+      fixturesByWeek.set(weekStart, fixtures);
     }
-    return fixtureDates.has(date);
+    return fixtures.get(date) ?? null;
   };
+  const isFixtureDay = (date: string): boolean => fixtureKindOn(date) !== null;
   const timeCapAllFixtureDays = (constraint: {
     timeCapDates?: readonly string[];
   }): boolean =>
@@ -760,11 +774,27 @@ export async function commitTemporarySourceFactSet(
   // is inert BY THE §7 RULING, and the result says so — so the acknowledgment
   // owner selects the signed game-day sentence from the COMMITTED result,
   // keeping its documented contract (clause by result, never by the door).
-  const inertReason: TemporarySourceFactInertReason | undefined =
-    !derivingCompositionChanged && targetFact && !isInjurySourceFact(targetFact) &&
-    targetFact.factKind === 'time_cap' && targetFact.status === 'active' &&
+  //
+  // §10 (Sam, 2026-08-03): the reason is the same — it is a fixture day — and
+  // the fixture's own KIND rides with it, so a Pre-season fixture gets the
+  // practice-match variant instead of "game day". One selector, two signed
+  // sentences; the card label and the sentence can never disagree because
+  // both read `canonicalFixtureKind`'s answer.
+  const inertFixtureDates = !derivingCompositionChanged && targetFact &&
+    !isInjurySourceFact(targetFact) && targetFact.factKind === 'time_cap' &&
+    targetFact.status === 'active' &&
     timeCapAllFixtureDays({ timeCapDates: targetFact.dates })
-      ? 'fixture_day'
+    ? targetFact.dates ?? []
+    : [];
+  const inertReason: TemporarySourceFactInertReason | undefined =
+    inertFixtureDates.length > 0 ? 'fixture_day' : undefined;
+  // Every date is a fixture (that is what `timeCapAllFixtureDays` proved); the
+  // variant is the first one's kind. A same-day mix cannot exist — one date is
+  // one fixture — and a multi-date cap spanning both kinds would be a horizon
+  // the time-cap door cannot produce today (today-scoped, ruled).
+  const inertFixtureVariant: FixtureAvailabilityKind | undefined =
+    inertFixtureDates.length > 0
+      ? fixtureKindOn(inertFixtureDates[0]) ?? undefined
       : undefined;
   const candidateRegenWeeks = Array.from(new Set([
     mondayFor(args.todayISO),
@@ -933,6 +963,7 @@ export async function commitTemporarySourceFactSet(
       changedProgram: transaction.diff.hasProgrammingChange,
       changedWeekStarts: scopedRegenChangedWeeks ?? undefined,
       inertReason,
+      inertFixtureVariant,
     };
   }
   return {
@@ -1173,6 +1204,7 @@ async function transactTemporarySourceFactWithinTrace(
     factId: targetFactId,
     changedProgram: persisted.changedProgram,
     inertReason: persisted.inertReason,
+    inertFixtureVariant: persisted.inertFixtureVariant,
     message: severeIllnessLanding
       ? "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose." +
         (laterWeeksChanged

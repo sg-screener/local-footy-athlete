@@ -75,6 +75,7 @@ import {
   type TemporarySourceFactScope,
 } from '../rules/temporarySourceFact';
 import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
+import type { FixtureAvailabilityKind } from '../rules/fixtureConditionedAvailability';
 import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
@@ -351,6 +352,8 @@ export interface ProgramControlActionResult {
    * The acknowledgment owner selects its clause from this, never the door.
    */
   inertReason?: TemporarySourceFactInertReason;
+  /** The fixture's kind — picks the §10 sentence variant. */
+  inertFixtureVariant?: FixtureAvailabilityKind;
 }
 
 const SETUP_ACTIONS = new Set<ProgramControlActionType>([
@@ -1446,6 +1449,7 @@ async function executeProgramControlActionDurablyWithinTrace(
       // The typed WHY of an inert commit (fixture day — §7) flows through so
       // the ack owner reads it off the committed result.
       inertReason: result.inertReason,
+      inertFixtureVariant: result.inertFixtureVariant,
     };
   }
   if (action.type === 'set_illness_status') {
