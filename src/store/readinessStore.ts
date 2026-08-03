@@ -5,6 +5,7 @@ import type { ReadinessSignal } from '../utils/readiness';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 import {
   decideQuarantinedWrite,
+  guardedDurableWrite,
   quarantineRefusedPayload,
   registerQuarantineBoundary,
   releaseQuarantine,
@@ -79,28 +80,30 @@ registerQuarantineBoundary(READINESS_PERSISTENCE_KEY, {
  */
 export const readinessGuardedStorage = {
   getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
-  setItem: async (name: string, value: string): Promise<void> => {
-    const decision = decideQuarantinedWrite(name, value);
-    if (!decision.allowed) {
-      emitAthleteActionEvent(beginAthleteActionTrace({
-        source: 'system',
-        actionType: 'program_change',
-        route: 'readinessGuardedStorage.setItem',
-      }, undefined, { forceRoot: true }), 'persistence_result', {
-        persistenceOperation: 'write',
-        persistenceStore: name,
-        persistenceSucceeded: false,
-        originalRejectionCode: decision.reason,
-        rejectingBoundary: 'readinessGuardedStorage.setItem.quarantine',
-        failureCategory: 'persistence_failure',
-      });
-      logger.error('[readinessStore] refused to persist over a quarantined payload.',
-        { store: name, reason: decision.reason });
-      return;
-    }
-    releaseQuarantine(name);
-    await asyncStorageCompat.setItem(name, value);
-  },
+  setItem: (name: string, value: string): Promise<void> =>
+    // Not async — zustand voids this call; guardedDurableWrite returns the
+    // base write's own (handled) promise. See refusedPayloadQuarantine.ts.
+    guardedDurableWrite({
+      storeKey: name,
+      envelope: value,
+      base: asyncStorageCompat,
+      onRefused: (reason) => {
+        emitAthleteActionEvent(beginAthleteActionTrace({
+          source: 'system',
+          actionType: 'program_change',
+          route: 'readinessGuardedStorage.setItem',
+        }, undefined, { forceRoot: true }), 'persistence_result', {
+          persistenceOperation: 'write',
+          persistenceStore: name,
+          persistenceSucceeded: false,
+          originalRejectionCode: reason,
+          rejectingBoundary: 'readinessGuardedStorage.setItem.quarantine',
+          failureCategory: 'persistence_failure',
+        });
+        logger.error('[readinessStore] refused to persist over a quarantined payload.',
+          { store: name, reason: reason });
+      },
+    }),
   removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
 };
 
