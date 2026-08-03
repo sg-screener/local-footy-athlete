@@ -199,3 +199,19 @@ sheet's transitional rule; the seven ask strings themselves are SIGNED (§3).
 **Shipped meanwhile:** the whole unit — MOVE asks (seven signed strings),
 SWAP stays refused, one-off fact through the deriving lane with clean
 cascade undo, permanent through the one setup owner confirmed inline.
+
+## 9. The signed game-day sentence on a PRACTICE-MATCH day
+
+**Parked by:** the game-day short-on-time unit, 2026-08-03.
+**Blocked on the answer:** nothing — the §7 build shipped with the sentence
+verbatim on EVERY fixture day, both kinds.
+**The ask:** the fixture owner calls a Pre-season fixture a practice match,
+and ruling 6-IV-4 signed "Practice Match" for the day's card — but the §7
+sentence says "It's game day — there's nothing to shorten. Go play." on that
+same day (Sam's own 2026-08-01 tape tap was this exact Pre-season
+coordinate, so the sentence was signed over it — this is a veto check, not a
+redesign). Keep verbatim on practice-match days, or sign a practice-match
+variant (e.g. "It's match day — …")?
+**Shipped meanwhile:** the signed sentence verbatim on all fixture days; the
+inert lane and typed `inertReason: 'fixture_day'` are wording-independent,
+so a variant is a one-line ack-owner change plus one cell.

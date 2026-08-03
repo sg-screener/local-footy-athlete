@@ -237,9 +237,27 @@ function publishScheduleFactDirectly(fact: TemporaryScheduleFact): void {
  * re-evaluation"). That is the fixture world's pre-existing state, not the
  * lanes'; the lane's behaviour in a §18-broken world is the honest refusal
  * the ack cells cover. */
-function reachHisWorldByActing(options?: { withMarks?: boolean }): void {
+function reachHisWorldByActing(options?: {
+  withMarks?: boolean;
+  /** His answers with a stated variation (e.g. an In-season usualGameDay for
+   *  the virtual-fixture cell) — still every step through a real door. */
+  profile?: ReturnType<typeof samExport8Profile>;
+  selectedPhase?: 'Pre-season' | 'In-season';
+}): void {
   localStorageData.clear();
-  const profile = samExport8Profile();
+  const profile = options?.profile ?? samExport8Profile();
+  // A fresh install holds no accepted state, so drop the PREVIOUS cell's
+  // accepted profile snapshot BEFORE the profile write. The post-acceptance
+  // mirror fence (profileStore subscription) otherwise replays that stale
+  // snapshot over this cell's live answers the moment the profile changes —
+  // found when the virtual-fixture cell's committed snapshot (usualGameDay)
+  // leaked into the busy cell's world and gave it a virtual Saturday game.
+  useProgramStore.setState({
+    acceptedMaterialContext: {
+      ...useProgramStore.getState().acceptedMaterialContext,
+      acceptedProfileSnapshot: null,
+    },
+  } as never);
   useProfileStore.setState({ onboardingData: profile, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
@@ -248,7 +266,9 @@ function reachHisWorldByActing(options?: { withMarks?: boolean }): void {
   const program = quiet(() => generateProgramLocally(profile, {
     todayISO: '2026-07-13', previousProgram: null,
     seasonPhaseClock: {
-      protocolVersion: 1, selectedPhase: 'Pre-season', phaseEntryWeekStartISO: '2026-07-13',
+      protocolVersion: 1,
+      selectedPhase: options?.selectedPhase ?? 'Pre-season',
+      phaseEntryWeekStartISO: '2026-07-13',
       originProvenance: 'explicit_user_phase_change',
       persistenceProvenance: 'preserved_persisted_state',
     },
@@ -603,6 +623,11 @@ async function main(): Promise<void> {
     assert(result.changedProgram === true,
       'the ruled door reported no program change over an occupied today — the '
       + 'compressed session never landed');
+    // §7's mixed-case honesty pin: a PLAIN day keeps deriving the compressed
+    // session and never carries the fixture-day inert reason.
+    assert(result.inertReason === undefined,
+      `a plain-day tap carries inertReason "${String(result.inertReason)}" — `
+      + 'the fixture-day rule is over-reaching');
 
     const todayAfter = projectedWeek(WEEK, tapDay).find((day) => day.date === tapDay);
     assert(todayAfter?.workout, 'the compressed day lost its session entirely');
@@ -725,6 +750,104 @@ async function main(): Promise<void> {
       'clearing the fact did not restore the week byte-exact');
   });
 
+  // ────────────────────────────────────────────────────────────────────────
+  // GAME DAY: NOTHING TO SHORTEN (Sam's §7 answer, 2026-08-03 — sentence
+  // SIGNED verbatim: "It's game day — there's nothing to shorten. Go play.").
+  // The fact stays a time_cap fact; what changes on a fixture day is its RULED
+  // EFFECT — nothing to shorten, so the LANE OWNER (the transaction's
+  // classifier, date-aware through the one fixture owner) routes it INERT.
+  // The fact records; the coach keeps the context; the athlete gets the truth.
+  // ────────────────────────────────────────────────────────────────────────
+
+  await run('short on time on a MARKED game day commits inert: fact recorded, program byte-unchanged, the game-day truth', async () => {
+    // Sam's 2026-08-01 tape tap was exactly this coordinate: "Short on time
+    // today" ON the fixture day. Before the §7 answer, the deriving regen of
+    // this marked world refused honestly; now the classifier reads the date
+    // through the fixture owner and the commit is inert BY RULING.
+    reachHisWorldByActing();
+    const gameDay = '2026-08-01';
+    assert(SAM_EXPORT_8_MARKED_DAYS[gameDay] === 'game',
+      'precondition: 2026-08-01 is no longer his marked game — this cell targets the wrong day');
+    const before = dayFingerprints(projectedWeek(WEEK, gameDay));
+    const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {});
+    const ledgerBefore = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length;
+
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(shortOnTimeAction('today_only', gameDay), { todayISO: gameDay }));
+    assert(result.ok === true,
+      `the fixture-day tap is still refused ("${result.message}") — the §7 inert lane never landed`);
+    assert(result.changedProgram === false,
+      'a fixture-day cap claims a program change — there is nothing to shorten');
+    assert(result.inertReason === 'fixture_day',
+      `the committed result does not say WHY nothing changed (inertReason: ${
+        String(result.inertReason)}) — the ack owner would have to guess from the door`);
+
+    // The fact + constraint land where inert schedule facts already surface —
+    // the coach keeps the context (the existing inert lane's own property).
+    const accepted = normalizeAcceptedMaterialContext(
+      useProgramStore.getState().acceptedMaterialContext);
+    const fact = accepted.temporarySourceFacts.find((candidate) =>
+      !isInjurySourceFact(candidate) && candidate.factKind === 'time_cap');
+    assert(fact && !isInjurySourceFact(fact) && fact.factKind === 'time_cap' &&
+      fact.dates.length === 1 && fact.dates[0] === gameDay,
+      'the fixture-day time-cap fact did not land in the accepted context');
+    assert(accepted.activeConstraints.some((constraint) =>
+      constraint.type === 'schedule' &&
+      (constraint as { scheduleKind?: string }).scheduleKind === 'time_cap'),
+      'the inert fact composed no constraint — the coach lost the context');
+
+    const after = dayFingerprints(projectedWeek(WEEK, gameDay));
+    assert(JSON.stringify(before) === JSON.stringify(after),
+      'a fixture-day inert cap changed the visible week');
+    assert(after[gameDay] === before[gameDay],
+      'the fixture day itself changed — the anchor law broke');
+    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
+      'a fixture-day inert cap authored a week overlay');
+    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,
+      'a fixture-day inert cap minted a reversible adjustment');
+
+    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+    assert(ack.tone === 'success' &&
+      ack.message === "It's game day — there's nothing to shorten. Go play.",
+      `the athlete does not hear Sam's signed game-day sentence — got "${ack.message}"`);
+  });
+
+  await run('short on time on a VIRTUAL game day (in-season usualGameDay, no marks) takes the same inert lane', async () => {
+    // The fixture owner resolves virtual fixtures too — an in-season athlete
+    // with a usualGameDay and no calendar marks still has a game on Saturday.
+    // The classifier must ask the owner, never re-derive virtual-game logic.
+    reachHisWorldByActing({
+      withMarks: false,
+      profile: {
+        ...samExport8Profile(),
+        seasonPhase: 'In-season',
+        usualGameDay: 'Saturday',
+        gameDay: 'Saturday',
+      } as ReturnType<typeof samExport8Profile>,
+      selectedPhase: 'In-season',
+    });
+    const virtualGameDay = '2026-08-01'; // the Saturday of his week, unmarked
+    assert(Object.keys(useCalendarStore.getState().markedDays ?? {}).length === 0,
+      'precondition: this world must hold NO calendar marks — the fixture is virtual');
+    const before = dayFingerprints(projectedWeek(WEEK, virtualGameDay));
+
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(
+        shortOnTimeAction('today_only', virtualGameDay), { todayISO: virtualGameDay }));
+    assert(result.ok === true,
+      `the virtual-fixture tap was refused ("${result.message}")`);
+    assert(result.changedProgram === false && result.inertReason === 'fixture_day',
+      `the virtual game day did not take the inert lane (changedProgram=${
+        result.changedProgram}, inertReason=${String(result.inertReason)}) — the `
+      + 'classifier is not asking the fixture owner about virtual fixtures');
+    const after = dayFingerprints(projectedWeek(WEEK, virtualGameDay));
+    assert(JSON.stringify(before) === JSON.stringify(after),
+      'a virtual-fixture inert cap changed the visible week');
+    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+    assert(ack.message === "It's game day — there's nothing to shorten. Go play.",
+      `virtual game day: the athlete does not hear the signed sentence — got "${ack.message}"`);
+  });
+
   await run('a refused schedule tap is acknowledged to the athlete, in the athlete\'s words', async () => {
     // THE LAW THE FIRST DRAFT OF THIS FILE ASSERTED ONE LAYER TOO LOW.
     //
@@ -777,6 +900,19 @@ async function main(): Promise<void> {
     assert(/stays as planned/i.test(awayLanded.message),
       'the away ack no longer carries its honest record-only clause: '
       + `"${awayLanded.message}"`);
+
+    // THE THIRD CLAUSE (Sam's §7 answer): selected by the committed result's
+    // typed inertReason — verbatim, and never for the away door, whose facts
+    // can never be fixture-inert.
+    const gameDayAck = buildScheduleAcknowledgment(
+      { ok: true, changedProgram: false, inertReason: 'fixture_day' }, 'short_on_time');
+    assert(gameDayAck.tone === 'success' &&
+      gameDayAck.message === "It's game day — there's nothing to shorten. Go play.",
+      `the fixture-day clause is not Sam's signed sentence verbatim: "${gameDayAck.message}"`);
+    const awayNeverGameDay = buildScheduleAcknowledgment(
+      { ok: true, changedProgram: false, inertReason: 'fixture_day' }, 'away');
+    assert(/stays as planned/i.test(awayNeverGameDay.message),
+      `the away door borrowed the game-day sentence: "${awayNeverGameDay.message}"`);
   });
 
   await run('the screen wires both schedule doors to that acknowledgment', async () => {

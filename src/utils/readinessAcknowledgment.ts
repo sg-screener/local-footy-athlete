@@ -33,6 +33,9 @@ interface ReadinessResultLike {
   ok?: boolean;
   changedProgram?: boolean;
   message?: string;
+  /** WHY an inert commit changed nothing, typed by the transaction
+   *  (`TemporarySourceFactInertReason`) — the committed result's own word. */
+  inertReason?: string;
 }
 
 /**
@@ -78,7 +81,10 @@ export type ScheduleDoor = 'short_on_time' | 'away';
  * commit that compressed today says so; one that changed nothing (rest day,
  * already short) keeps the plain logged sentence, because a signed sentence
  * must never claim a state-dependent outcome. Away is record-only by ruling
- * (its effect is unruled), so its clause states exactly that.
+ * (its effect is unruled), so its clause states exactly that. A commit the
+ * transaction marked inert FOR THE FIXTURE DAY (`inertReason: 'fixture_day'`,
+ * Sam's §7 answer 2026-08-03) gets the signed game-day sentence — the third
+ * clause, still selected by the committed result.
  */
 export function buildScheduleAcknowledgment(
   result: ReadinessResultLike | null | undefined,
@@ -89,6 +95,17 @@ export function buildScheduleAcknowledgment(
       return {
         tone: 'success',
         message: "Got it — logged the days you're away. Your program stays as planned for now.",
+      };
+    }
+    if (result.inertReason === 'fixture_day') {
+      // Sam's §7 answer, sentence SIGNED verbatim (2026-08-03, copy sheet
+      // Batch 9-d): a fixture-day tap records the fact inert — a game day has
+      // no trainable session to compress — and the athlete gets the truth.
+      // Selected by the COMMITTED result's typed `inertReason`, never by the
+      // door or the date alone, per this module's contract.
+      return {
+        tone: 'success',
+        message: "It's game day — there's nothing to shorten. Go play.",
       };
     }
     return {
