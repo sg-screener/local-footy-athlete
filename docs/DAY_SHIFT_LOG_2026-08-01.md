@@ -455,3 +455,97 @@ failures (same A/B method, identical at main; also not in the bible);
 coach free-text time_cap facts now derive when a program exists — coach
 files untouched (LR-6 STOP respected; the coach path enters the same one
 boundary).
+
+
+# Team-night movability — 2026-08-03
+
+## The unit — the ask replaces the refusal; both routes ride existing owners
+
+Sam's §3 answers built as signed (`feat/team-night-movability`): MOVE on a
+team night raises the typed ask ("Move team training?" / "Is this a one-off,
+or has your club changed nights?") — two routes + back, G-1 ask chrome, all
+seven signed strings registered in `src/rules/teamNightMoveAsk.ts` via
+`registerSignedCopy` (extraction ceiling untouched; copy sheet Batch 10).
+SWAP on a team night is UNCHANGED — its own signed refusal stands. The
+`anchored_day` sentence is RETIRED (no reachable cause; deleted from the
+producer, 6-II-b row converted to prose, TN-5 pins its absence).
+
+**One-off** = a dated `team_night_move` schedule fact (week scope, the dated
+pair on the fact) through the approved deriving lane. Its ruled effect is an
+ANCHOR RELOCATION (`rules/teamNightMoveDerivation.ts`): a sparse TWO-DATE
+overlay over the week the athlete actually has — landing day COMBINED per the
+doubling law (`stackSessionOntoTeamAnchor`), vacated day the split remainder
+(`splitAcceptedSessionForAthleteMove`, `team_component`), every other day
+falling through to untouched stored state by construction. Deliberately NO
+contract on the overlay: attaching the finalised evaluation contract made the
+rebase re-author planner-derived rows on untouched days. The lane is
+otherwise the illness precedent unchanged — fact-linked adjustment, atomic
+forward_decision commit, undo = the generic `clear_fatigue_status` cascade
+(reverts by `sourceFactId`, byte-exact, no team-night special case).
+
+**Permanent** = `teamNightPermanentPatch` (pure `Partial<OnboardingData>`) →
+`commitProfileProgramTransaction({kind:'profile_setup'})` — the ONE setup
+owner writes `teamTrainingDays` through the profile store's armoured door and
+regenerates forward; confirmed INLINE in the ask (signed success sentence as
+the result-step ack, no deep-link). No second writer exists; TN-3's source
+gate pins the door's only path is the owner.
+
+Both routes enter through `programControlActionForPlanChange` →
+`executeProgramControlActionDurably` (`type: 'move_team_night'`) — the same
+one door the sheet and harness share. A ROUTELESS change never maps (TN-1b).
+
+## Gates (the sheet's pre-commits) — `test:team-night-movability`, in `test:bible`
+
+TN-1 ask on a team night exactly (plain day refuses `not_a_team_night`, no
+ask) · TN-1b routeless never commits · TN-2 one-off conserves every other
+day byte-for-byte at the stored boundary (overlay carries exactly two dates;
+base program byte-identical) and undoes clean through the cascade · TN-4
+doubling law on occupied AND empty landing days · TN-3 permanent updates the
+one owner + the no-second-writer source gate · TN-5 team scope offered +
+retired sentence absent. Depth stated per L13: shallow tier, seeded world,
+1-2 actions per cell; accumulated-life coverage rides the walker's worlds
+(team nights come from `TEAM_DAY_SETS` profiles; `plan_change` move
+vocabulary reaches them — the proposer was NOT extended: promoting
+`move_team_night` into the random band is a vocabulary decision that
+reshuffles every seed's world, the same NOT-COVERED ruling the schedule
+doors recorded).
+
+## Mutations: three applied, three caught — one only after it taught us
+
+anchor condition dropped from the preview gate (TN-1) · `team_night_move`
+dropped from the deriving set (TN-2 end-to-end) · the mapping widened to
+routeless changes — SURVIVED the original six cells (the sheet still asked;
+any other caller could commit unasked), so the commit boundary got its own
+cell (TN-1b); re-run under the same mutation: caught.
+
+## L12 — what catches the next one
+
+The class was "a refusal standing in for a question": the gate is now typed
+at THREE boundaries (preview raises the ask, the mapping refuses routeless
+changes, the executor takes only answered routes), and each boundary has a
+cell that reds alone. A new anchor-guarding door copies the shape or fails
+TN-1's pattern.
+
+## Convergence (north star): toward
+
+No new stored state: the one-off is a typed dated life-fact (an input); the
+permanent change is a profile answer through its owner; the visible move is
+DERIVED (overlay from fact, cascade-reverted on resolve). One representation
+of "team training moved" — the fact — and the retired refusal sentence took
+a dead branch of the move vocabulary with it (`anchored_day` deleted from
+the reason union).
+
+## NOT-COVERED, stated honestly
+
+The walker proposer does not draw `move_team_night` in the random band (see
+above — a vocabulary decision, parked with the schedule doors' identical
+ruling); door-matrix grid rows were not added — the route × occupied/empty
+coordinates live in the dedicated suite's cells instead; the three Batch
+10-c rider strings (scope row, occupied-landing sub-line, modifier card) are
+PROPOSED and parked §8; fixture-adjacent landing days (G-1/G+1) accept the
+anchor but the game-proximity derivation re-dresses those days at render —
+behaviour observed and left to the existing G-1/G+1 owners, not ruled here;
+conservation is asserted at the STORED boundary — resolver-owned derivations
+(G-1 gunshow, planner optionals, read-time conditioning placement) re-derive
+around the week's new shape by design, which is the sheet's own "the week
+re-derives around it".
