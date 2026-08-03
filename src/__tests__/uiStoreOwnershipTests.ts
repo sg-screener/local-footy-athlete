@@ -137,9 +137,11 @@ run('no writer can reach the settings slice around the owner', () => {
     + `(${ownerStart}..${ownerEnd})`);
 
   // The zustand actions may keep a bare `set` only for activeTab/isOnline.
+  // WORD match, not `field:` — `set({ theme })` shorthand carries no colon,
+  // and this unit's own mutation pass proved the colon form blind to it.
   for (const match of storeSource.matchAll(/\bset\(\{[^}]*\}/g)) {
     for (const field of ['theme', 'designVersion']) {
-      assert(!new RegExp(`\\b${field}\\s*:`).test(match[0]),
+      assert(!new RegExp(`\\b${field}\\b`).test(match[0]),
         `a store action assigns ${field} directly: ${match[0].slice(0, 80)}`);
     }
   }

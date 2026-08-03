@@ -182,9 +182,11 @@ run('no writer can reach the session slice around the owner', () => {
     + `(${ownerStart}..${ownerEnd})`);
 
   // The zustand actions may keep a bare `set` only for isLoading/error.
+  // WORD match, not `field:` — `set({ session })` shorthand carries no colon,
+  // and the ui sweep's mutation pass proved the colon form blind to it.
   for (const match of storeSource.matchAll(/\bset\(\{[^}]*\}/g)) {
     for (const field of ['user', 'session', 'isAuthenticated']) {
-      assert(!new RegExp(`\\b${field}\\s*:`).test(match[0]),
+      assert(!new RegExp(`\\b${field}\\b`).test(match[0]),
         `a store action assigns ${field} directly: ${match[0].slice(0, 80)}`);
     }
   }
