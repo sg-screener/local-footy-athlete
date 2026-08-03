@@ -93,6 +93,9 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { PlanChange } from '../utils/planChangeTypes';
@@ -706,6 +709,7 @@ if (staleGaps.length > 0) {
 
 console.log(`\nSurface agreement totals: ${passed} passed, ${gapped} declared gap(s), `
   + `${failed} failed`);
+totalsPrinted(failed);
 // ARMED IN TASK 6. This suite is in `test:bible` and a failure exits 1 — the
 // process ruling was that the surface laws enter the gate IN THEIR GREEN COMMIT,
 // and this is it: the surfaces moved onto `project()` and the L-P1/L-P3 cells

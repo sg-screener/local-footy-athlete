@@ -30,6 +30,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -297,6 +301,7 @@ console.log('\n[5] Ruling 0 — the power lean reaches its TWO real consumers');
 }
 
 console.log(`\nWeak-point focus: ${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 console.log('  DEPTH (L13): 0-1 — pure mapping, pure bias, authored phase tables.');
 console.log('  Power & explosiveness is RULED as its own category (Sam, 2026-07-30).');
 if (failures.length > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

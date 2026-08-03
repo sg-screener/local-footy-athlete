@@ -45,6 +45,10 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
@@ -646,7 +650,12 @@ async function runOne(id: string): Promise<void> {
     console.error(`unknown scenario id: ${id}`);
     process.exit(2);
   }
+  // `run` has just printed this child's whole report — its one PASS/FAIL
+  // [invariant] line. That print is the child's totals, so it clears here.
+  // The parent reads `child.status`, so without this every forked scenario
+  // would come back red however it went.
   await run(target.name, target.body);
+  totalsPrinted(failures.length);
   if (failures.length > 0) process.exit(1);
 }
 
@@ -680,6 +689,7 @@ function runAllForked(): void {
     if (child.status !== 0) failed += 1;
   }
   console.log(`\n${scenarios.length - failed} passed, ${failed} failed`);
+totalsPrinted(failed);
   if (failed > 0) process.exit(1);
 }
 

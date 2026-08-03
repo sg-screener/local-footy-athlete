@@ -51,6 +51,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
@@ -338,6 +342,7 @@ run('E3. the generator\'s names are the set\'s names', () => {
 });
 
 console.log(`\nStrength session variants: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`  seven variants, ${strengthTemplates.length} registry templates, `
   + `${STRENGTH_DOOR_IDS.length} doors, ${generatedStrength.length} generated strength sessions observed`);
 console.log('  DEPTH (L13): 1-2 — generate, then build each template once. Whether a');

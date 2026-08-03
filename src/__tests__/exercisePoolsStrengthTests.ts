@@ -16,6 +16,9 @@
  *     is passed (and leaves names untouched when it isn't)
  */
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import {
   STRENGTH_POOLS,
   classifyPoolSlot,
@@ -1032,6 +1035,7 @@ section('14. Athlete overrides (prefs filter / bias)');
 // ─────────────────────────────────────────────────────────────────
 console.log(`\n${'='.repeat(60)}`);
 console.log(`Results: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`\nFailures:`);
   failures.forEach(f => console.log(`  - ${f}`));

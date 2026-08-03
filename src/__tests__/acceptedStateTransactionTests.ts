@@ -25,6 +25,10 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { readFileSync } from 'fs';
 import path from 'path';
 import type {
@@ -1131,6 +1135,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/23 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+totalsPrinted(failures.length);
   if (regressionPass !== 23 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
     console.error(`Failures: ${failures.join(', ')}`);
     process.exit(1);

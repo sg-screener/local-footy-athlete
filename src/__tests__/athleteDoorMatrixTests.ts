@@ -54,6 +54,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -1391,6 +1395,7 @@ for (const scenario of PLACEMENT_SCENARIOS) {
 console.log(`\nAthlete door matrix: ${cells} cells × 2 attempts over ${WORLDS.length} worlds`);
 console.log(`  plus placement × domain: ${PLACEMENT_SCENARIOS.length} scenarios × ${CONTRACT_DOMAINS.length} domains`);
 console.log(`Athlete door matrix totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) {
   console.error(`\nRED CELLS:\n  ${failures.join('\n  ')}`);
   process.exit(1);

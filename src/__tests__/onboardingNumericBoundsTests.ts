@@ -30,6 +30,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -213,6 +217,7 @@ console.log('\n[9] Height stays OFF the load path');
 
 const total = passed + failures.length;
 console.log(`\nOnboarding numeric bounds: passed=${passed}/${total} failures=${failures.length}`);
+totalsPrinted(failures.length);
 if (failures.length > 0) {
   console.error(`Failing: ${failures.join(', ')}`);
   process.exit(1);

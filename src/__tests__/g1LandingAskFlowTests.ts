@@ -32,6 +32,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
@@ -1216,6 +1220,7 @@ run('18 every athlete-facing string is filed in Sam\'s design document', () => {
 });
 
 console.log(`\nG-1 landing ask-flow totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failures.length > 0) {
   console.error('Failing:', failures.join(', '));
   process.exit(1);

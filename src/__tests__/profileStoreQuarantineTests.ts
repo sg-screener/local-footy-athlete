@@ -28,6 +28,10 @@ const durable = new Map<string, string>();
   throw new Error('NETWORK DISABLED');
 };
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import {
   PROFILE_STORE_PERSISTENCE_KEY,
   applyProfileOnboardingWrite,
@@ -206,6 +210,7 @@ void (async () => {
     }
   }
   console.log(`\nProfile store quarantine totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
   if (failed > 0) {
     console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
     process.exit(1);

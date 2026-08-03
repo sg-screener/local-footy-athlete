@@ -16,6 +16,10 @@
  * Run: npm run test:video-modal-fill
  */
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -72,4 +76,5 @@ console.log('\n[video modal] the player frame is a true aspect-locked box');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exit(1);
