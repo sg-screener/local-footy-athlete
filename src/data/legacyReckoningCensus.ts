@@ -193,8 +193,32 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'pipeline decides to remember is unchanged. Removing the last note is a '
       + 'named erasure, not the wipe (recipe lesson 11).',
   },
-  { file: 'store/uiStore.ts', persistKey: 'ui-store', owner: null, taped: false },
-  { file: 'store/authStore.ts', persistKey: 'auth-store', owner: null, taped: false },
+  {
+    file: 'store/uiStore.ts',
+    persistKey: 'ui-store',
+    owner: 'applyUiSettingsWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail) at the honest '
+      + 'MINIMUM: presentation only, no athlete answer exists. The door owns '
+      + 'theme/designVersion and tapes its writers, but has NO wipe refusal '
+      + '(the defaults are a legitimate chosen state — refusing them would '
+      + 'refuse the athlete\'s own resets), so the registered quarantine '
+      + 'boundary can never arm today. activeTab/isOnline are runtime '
+      + 'convenience outside the door and off the tape (ring-flood, export 6). '
+      + 'All three absences are pinned as decisions in uiStoreOwnershipTests.',
+  },
+  {
+    file: 'store/authStore.ts',
+    persistKey: 'auth-store',
+    owner: 'applyAuthSessionWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail). Session identity is '
+      + 'the material slice — losing a login strands the athlete outside their '
+      + 'data. Tape privacy is absolute here: flags and counts only, never a '
+      + 'token, email or id; signOut is the athlete\'s own erasure under a named '
+      + 'reset act (recipe lesson 11). NOTE: no product sign-in flow writes this '
+      + 'store yet — the armour precedes the flow; retire-or-wire is parked.',
+  },
 ];
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -414,7 +438,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 3,
+    declared: 1,
     foundingCount: 11,
   },
   {
@@ -797,10 +821,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * action case) went with it. LR-2 paid down 11 → 9 with the store-armour
  * recipe's two proving applications (prefs + calendar, 2026-08-03), 9 → 7
  * when the readiness and coach-updates stores took their doors in the fleet
- * phase, and 7 → 5 when the coach chat and coach memory stores took theirs
- * (fleet wave 2a, 2026-08-03).
+ * phase, 7 -> 5 when the coach-preferences and coach-mutation-history
+ * stores took theirs, 5 -> 3 with the coach chat + coach memory pair
+ * (wave 2a) and the auth + ui tail, landing at 1: `programStore` alone
+ * remains, and it is LR-1's, not LR-2's (2026-08-03).
  */
-export const LEGACY_DEBT_BASELINE = 106;
+export const LEGACY_DEBT_BASELINE = 104;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

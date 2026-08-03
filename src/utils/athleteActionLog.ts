@@ -143,6 +143,8 @@ const DECISION_EVENTS: ReadonlySet<string> = new Set([
   'coach_updates_write',
   'coach_store_write',
   'coach_memory_write',
+  'auth_write',
+  'ui_store_write',
   'profile_rehydrated',
   'profile_mirror_publication_refused',
   'profile_snapshot_repaired',

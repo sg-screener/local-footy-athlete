@@ -111,9 +111,6 @@ function read(relativePath: string): string {
  * `program-store` is deliberately absent: it is the store this unit protected.
  */
 const UNPROTECTED_STORES_DEBT: readonly string[] = [
-  'profile-store',
-  'ui-store',
-  'auth-store',
 ];
 
 console.log('\n-- Stored-state writer audit (L12) --');

@@ -89,6 +89,11 @@ export type AthleteActionEventName =
   // words, the coach's replies and what the coach remembers are answers.
   | 'coach_store_write'
   | 'coach_memory_write'
+  // The store-armour fleet tail, 2026-08-03: the auth and UI stores get their
+  // doors. Auth is FLAGS ONLY — a token, an email and an id are identity
+  // values and never travel. UI carries booleans about presentation settings.
+  | 'auth_write'
+  | 'ui_store_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

@@ -249,6 +249,9 @@ recipe THEN this list:
     The action declares the erasure with its own named reset act
     (`applyRemovalThroughDoor` in the prefs store is the template), and a
     cell pins it. The refusal stays aimed at UNATTRIBUTED default writes.
+12b. **A `field:` regex sweep is blind to ES6 shorthand** (found by the
+    tail's mutation 6): `set({ theme })` has no colon, so a sweep matching
+    `theme:` never sees it. Sweep on the word, not the `word:` form.
 12. **`resetActionId` never reaches the tape** — the diagnostics
     forbidden-key filter (`FORBIDDEN_EVENT_KEYS`) drops any field whose
     key contains "set", and "re**set**ActionId" does. Emit the act's name

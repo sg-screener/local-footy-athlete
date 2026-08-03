@@ -76,6 +76,11 @@ import {
 } from '../store/coachPreferencesStore';
 import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
 import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
+import {
+  useAuthStore,
+  applyAuthSessionWrite,
+  INITIAL_AUTH_SESSION,
+} from '../store/authStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -2397,6 +2402,49 @@ run('the coach memory door refuses the wipe against a walked world', () => {
     'the refused wipe changed the walked notes anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
+});
+
+run('the auth door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY, fleet tail (docs/STORE_ARMOUR_RECIPE_2026-08-03
+  // §6). The world is REACHED through host.perform; the session is then ACTED
+  // through the store's own actions — the walker's vocabulary has no sign-in
+  // action because no product sign-in flow exists yet (the store's own
+  // honesty note; retire-or-wire is parked). That gap is DECLARED here, not
+  // hidden. Depth stated per L13: SHALLOW tier (3 actions, 3 days crossed).
+  // uiStore has NO cell by decision: its door has no refusal to replay —
+  // nothing in it is an athlete answer (see the fleet-tail unit log).
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useAuthStore.getState().setUser({ id: 'walker-athlete', email: 'walker@example.com' });
+  useAuthStore.getState().setSession({ accessToken: 'walk-access', refreshToken: 'walk-refresh' });
+  useAuthStore.getState().setAuthenticated(true);
+  const sessionBefore = JSON.stringify({
+    user: useAuthStore.getState().user,
+    session: useAuthStore.getState().session,
+    isAuthenticated: useAuthStore.getState().isAuthenticated,
+  });
+  assert(useAuthStore.getState().session !== null,
+    'precondition: the acted-in session must exist to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'auth_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyAuthSessionWrite({ next: INITIAL_AUTH_SESSION, writer: 'auth_flow' });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_session',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify({
+    user: useAuthStore.getState().user,
+    session: useAuthStore.getState().session,
+    isAuthenticated: useAuthStore.getState().isAuthenticated,
+  }) === sessionBefore,
+    'the refused wipe changed the walked session anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+  useAuthStore.getState().signOut();
 });
 
 run('the walker actually explores — its vocabulary is not stuck on one action', () => {

@@ -119,3 +119,26 @@ a ruled row converges and drops its pin in the same commit.
 Also note: the owner's own `quadricep` (singular) routes to `knee` while
 `quadriceps`/`quads` route to `quad` — flagged in case it is a sheet typo
 rather than a ruling.
+
+## 6. Auth + UI stores: retire, wire, or keep as armoured shells?
+
+**Parked by:** store-armour fleet tail (wave 2b), 2026-08-03.
+**Blocked on the answer:** nothing — both stores are armoured minimally and
+the fleet's debt work is done either way. This is a should-they-exist ruling.
+**The finding:** neither store has a single product writer. `authStore`'s
+`setUser`/`setSession`/`setAuthenticated` have ZERO callers — no sign-in flow
+exists, so no athlete has ever had a session this store could lose;
+`uiStore`'s `setTheme`/`setDesignVersion`/`setActiveTab`/`setOnline` likewise
+have zero callers (`designVersion` is read only from a commented-out line in
+`HomeScreen.tsx`). Their only live callers are `clear()` (resetCoach + dev
+seed). Under the north star, persisted state nothing writes and nothing reads
+is stored non-decisions.
+**The ask:** (a) retire `authStore` until a real sign-in flow lands, or keep
+the armoured shell so the flow inherits the door? (b) retire `uiStore`'s
+never-written fields (`activeTab`, `isOnline`) and/or the whole store, or
+keep it for the V2 design toggle's arrival?
+**Shipped meanwhile (per fleet instruction: armour, never retire):** both
+stores armoured at their honest size — auth with the full recipe (session
+identity is material; tape carries flags only, never a token/email/id), ui at
+the decided minimum (door + tape, NO wipe refusal — nothing is an athlete
+answer; absences pinned in `uiStoreOwnershipTests`).
