@@ -1,4 +1,8 @@
 node_modules/
+# The bare form too: a SYMLINK named node_modules is not a directory, so the
+# trailing-slash pattern misses it. A worktree agent committed its symlink,
+# and checkout then clobbered the ignored real tree with it (2026-08-03).
+node_modules
 .expo/
 .claude/
 dist/
