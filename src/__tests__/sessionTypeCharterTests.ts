@@ -69,6 +69,9 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -951,6 +954,7 @@ run('F5. no (type, question) is declared twice', () => {
 });
 
 console.log(`\nSession type charter totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`  declared debt: ${CHARTER_DEBT.length} across ${SESSION_TYPE_IDS.length} types`);
 console.log(`  observed deviations: ${observedDeviations.length}`);
 console.log('  DEPTH (L13): 1-2 — generate, then evaluate single-session weeks. The');

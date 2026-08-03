@@ -31,6 +31,9 @@
  *     the athlete changes their completion answer, and nothing would have reported it.
  */
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { SessionFeedback } from '../store/programStore';
 import type { TeamTrainingIntensity } from '../types/domain';
 import {
@@ -305,6 +308,7 @@ console.log('\n[7] DURATION STOPS BEING ASKED');
 }
 
 console.log(`\nteamNightSizeTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 console.log('  DEPTH (L13): 0 — a unit sweep over the read, the form owner and the '
   + 'registry. It does NOT walk an athlete through logging three real team nights.');
 console.log('  NOT COVERED: no CONSUMER reads the derived size yet — see the boundary '

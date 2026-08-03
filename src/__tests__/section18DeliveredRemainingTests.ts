@@ -32,6 +32,9 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { Workout, WorkoutExercise } from '../types/domain';
 import {
   buildSection18WeeklyExposureContractV2,
@@ -309,4 +312,5 @@ run('D6 an authorised reduction is evaluated against app-authored prescribed exp
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) process.exit(1);

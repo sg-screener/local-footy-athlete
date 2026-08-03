@@ -30,6 +30,9 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData } from '../types/domain';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -1096,6 +1099,7 @@ async function main(): Promise<void> {
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');
     for (const name of failures) console.log(`  - ${name}`);

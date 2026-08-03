@@ -15,6 +15,9 @@
  * Run: npm run test:athlete-safe-refusal
  */
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { athleteSafeRefusal } from '../utils/planChangeRefusalCopy';
 
 let passed = 0;
@@ -82,4 +85,5 @@ console.log('\n[athlete-safe refusal] raw internal reasons never reach the athle
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exit(1);

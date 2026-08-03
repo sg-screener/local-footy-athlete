@@ -38,6 +38,9 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -634,4 +637,5 @@ run('the projection cannot reach the name channel (source contract)', () => {
 });
 
 console.log(`\nProjection ownership totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }
