@@ -110,8 +110,27 @@ because a bare substring check catches shorthand too; the colon-regex variant
 this unit first wrote does not. The next armour application should use word
 match from the start.
 
-## Pre-existing reds at main
+## Verification
 
-Proven on a clean detached worktree of `main` before this unit's changes ran
-(see final report section for the method and output): recorded in the report;
-this unit's own suites and every neighbour it touched are green.
+Full `npm run test:bible` from THIS worktree, cwd recorded as the log's first
+line (the wave-1 shared-checkout mistake not repeated):
+
+```
+/Users/samgeurts/Documents/local-footy-athlete/.claude/worktrees/agent-aa8cbabdcb81a3ed9
+BIBLE EXIT=0
+```
+
+Zero `FAIL` lines in the whole log (107 suite totals, all "0 failed").
+`test:action-walker:deep` additionally run standalone: 15/15. Because every
+suite this unit runs is green, there are NO pre-existing reds to attribute —
+the detached-main comparison (recipe lesson 8) was not needed this time.
+
+## L12 — what catches the next defect of this class
+
+Three answers, one per layer: (1) a NEW persisted store cannot join quietly —
+the audit enumerates the boot registry and fails on an undeclared store, and
+the census counts any store its registry has not heard of; (2) the next
+BLIND SWEEP of this family is named above (shorthand-vs-colon) with the word-
+match form the next application must start from; (3) the next store whose
+armour is judged "not worth it" now has a precedent for the honest minimum —
+decided absences pinned in cells, never silent omissions.
