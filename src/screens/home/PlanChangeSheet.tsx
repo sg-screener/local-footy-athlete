@@ -32,6 +32,11 @@ import {
   g1LandingRoutesFor,
   type G1LandingAskContext,
 } from '../../rules/g1LandingAsk';
+import {
+  TEAM_NIGHT_MOVE_ASK,
+  TEAM_NIGHT_MOVE_ROUTE_IDS,
+  type TeamNightMoveAskContext,
+} from '../../rules/teamNightMoveAsk';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 import {
   observeRenderedAthleteActionOutcome,
@@ -125,6 +130,16 @@ type Step =
       kind: 'g1_deload_confirm';
       change: G1RoutedChange;
       context: G1LandingAskContext;
+      backStep: Step;
+    }
+  | {
+      // Sam's team-night ask (signed 2026-08-02): moving a team night asks
+      // "just this once, or permanent?" — two routes + back, warning-register
+      // chrome, all copy from rules/teamNightMoveAsk. One-off = a dated
+      // schedule fact; permanent = the setup owner, confirmed INLINE here.
+      kind: 'team_night_ask';
+      change: Extract<PlanChange, { kind: 'move_team_night' }>;
+      context: TeamNightMoveAskContext;
       backStep: Step;
     }
   | { kind: 'pick_move_scope' }
@@ -330,6 +345,13 @@ export function PlanChangeSheet({
     // their game and has not been asked yet. Nothing has been applied.
     if (preview.g1Ask && isG1RoutedChange(change)) {
       setStep({ kind: 'g1_ask', change, context: preview.g1Ask, backStep });
+      return;
+    }
+    // The team-night ask (Sam, signed 2026-08-02): moving a team night asks
+    // "just this once, or permanent?" before anything commits. Same shape as
+    // the G-1 ask — an unanswered route is a question, not a refusal.
+    if (preview.teamNightAsk && change.kind === 'move_team_night') {
+      setStep({ kind: 'team_night_ask', change, context: preview.teamNightAsk, backStep });
       return;
     }
     if (preview.assessment.decision === 'block') {
@@ -885,6 +907,32 @@ export function PlanChangeSheet({
         </View>
       )}
 
+      {step.kind === 'team_night_ask' && (
+        <View>
+          <Text style={styles.blockingTitle}>{TEAM_NIGHT_MOVE_ASK.title()}</Text>
+          <Text style={styles.confirmText}>{TEAM_NIGHT_MOVE_ASK.body()}</Text>
+          {TEAM_NIGHT_MOVE_ROUTE_IDS.map((routeId) => (
+            <MenuOption
+              key={routeId}
+              label={TEAM_NIGHT_MOVE_ASK.routeLabel(routeId, step.context)}
+              testID={`team-night-route-${routeId}`}
+              onPress={() => apply(
+                { ...step.change, teamNightRoute: routeId },
+                // Both routes confirm INLINE (Sam's choice 2): the result step
+                // renders the signed success sentence in the sheet — never a
+                // deep-link to program setup.
+                { backStep: step.backStep },
+              )}
+            />
+          ))}
+          <MenuOption
+            label={TEAM_NIGHT_MOVE_ASK.backLabel()}
+            testID="team-night-route-back"
+            onPress={() => setStep(step.backStep)}
+          />
+        </View>
+      )}
+
       {options && !options.move.refusal && step.kind === 'pick_move_scope' && (
         <View>
           <Text style={styles.sectionLabel}>Move what?</Text>
@@ -926,7 +974,12 @@ export function PlanChangeSheet({
                 key={destination.date}
                 label={weekdayLabel(destination.date)}
                 sub={destination.occupiedBy
-                  ? `Swap with ${destination.occupiedBy}`
+                  // The team-night move never trades places: the anchor lands
+                  // COMBINED beside what's there (doubling law) — the sub-line
+                  // must not promise a swap the door will not do.
+                  ? scope.id === 'team'
+                    ? `Joins ${destination.occupiedBy} on this day`
+                    : `Swap with ${destination.occupiedBy}`
                   : 'Currently a rest day'}
                 // Calendar/day glyph family (carry-forward from Task 4): an
                 // occupied destination gets the swap glyph — landing there
@@ -934,12 +987,17 @@ export function PlanChangeSheet({
                 // an empty destination gets a blank calendar day.
                 icon={destination.occupiedBy ? swapIcon(ACCENT) : dayIcon(ACCENT)}
                 testID={explorerTestId.sessionMoveDestination(destination.date)}
-                onPress={() => apply({
-                  kind: 'move_session',
-                  fromDate: date,
-                  toDate: destination.date,
-                  ...(scope.id === 'whole_day' ? {} : { scope: scope.id }),
-                })}
+                onPress={() => apply(scope.id === 'team'
+                  // The anchor's own move: the typed ask decides once-or-
+                  // permanent before anything commits (route travels back on
+                  // the change; absent route raises the ask).
+                  ? { kind: 'move_team_night', fromDate: date, toDate: destination.date }
+                  : {
+                      kind: 'move_session',
+                      fromDate: date,
+                      toDate: destination.date,
+                      ...(scope.id === 'whole_day' ? {} : { scope: scope.id }),
+                    })}
               />
             ))}
             <BackRow onPress={() => setStep(
@@ -1201,6 +1259,7 @@ function moveScopeIcon(id: PlanChangeMoveScopeId, color: string): React.ReactNod
   if (id === 'strength') return strengthIcon(color);
   if (id === 'conditioning') return conditioningIcon(color);
   if (id === 'recovery') return recoveryIcon(color);
+  if (id === 'team') return teamIcon(color);
   return moveIcon(color);
 }
 /**

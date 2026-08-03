@@ -993,7 +993,10 @@ export interface WeekScopedWorkoutOverlay {
    * docs/DERIVED_OVERRIDE_MATERIALISATION_REASSESSMENT_2026-07-30.md.
    */
   reason: 'one_off_game' | 'one_off_no_game' | 'readiness_reduction'
-    | 'accepted_week_repair';
+    | 'accepted_week_repair'
+    /** One `team_night_move` fact's ruled effect: the anchor relocated within
+     *  its week (sparse two-date overlay; every other day falls through). */
+    | 'team_night_move';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
   /** Parallel Section 18 policy contract for observational evaluation. */
