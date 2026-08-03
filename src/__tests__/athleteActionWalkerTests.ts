@@ -2522,6 +2522,82 @@ run('the override door refuses the wipe against a walked world', () => {
     'the refusal left no witness on the tape');
 });
 
+run('a re-add onto a binned day restores through the typed lane, never the override surface', () => {
+  // STAGE B STAGE 1 (Option C item 3, measured): the LAST athlete route into
+  // the legacy override writer is the active-removal re-add. Binning a whole
+  // day records an active whole-session constraint with no remainingWorkout;
+  // adding onto that day then deferred (`add_defers_to_legacy_stack`) to
+  // `applyCoachRevisionDateOverrides`, whose write un-pinned the removal as a
+  // side effect (`applyProgramOverrideWrite`) and left a materialised Workout
+  // on `dateOverrides` under the athlete's own writer.
+  //
+  // The typed lane owns both halves now: the bin flips to
+  // restored/'explicit_re_add' (the decision survives, superseded), the new
+  // session pins as a constraint, and the override surface is untouched.
+  //
+  // Depth stated per L13: shallow tier — walked onboarding + generation +
+  // 3 days of clock, then two authored decisions on one day.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  const week = visibleWeek();
+  const occupied = week.filter((day) => !!day.workout);
+  assert(occupied.length > 0, 'precondition: the generated week must hold a session');
+  let binnedDate: string | null = null;
+  for (const day of occupied) {
+    const binned = performAction({ kind: 'plan_change', change: {
+      kind: 'remove_session', date: day.date, scope: 'whole_day',
+    } as PlanChange });
+    if (binned.outcome === 'applied') { binnedDate = day.date; break; }
+  }
+  assert(!!binnedDate, 'precondition: at least one occupied day must accept a whole-day bin');
+  const activeBin = useProgramStore.getState().userRemovalConstraints.find((entry) =>
+    entry.status === 'active' && entry.targetDate === binnedDate &&
+    entry.scope === 'whole_session' && !entry.remainingWorkout);
+  assert(!!activeBin,
+    'precondition: the bin must record an active whole-session constraint with no remainder');
+  // COUNT, not index-slice — the walked ring can be at cap (see the calendar cell).
+  const decisionsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'mutation_constraint_created').length;
+  const decisionsBefore = decisionsOnTape();
+
+  // Direct `applyPlanChange`, exactly the route the sheet takes for an add
+  // (`programControlActionForPlanChange` returns null for add/swap kinds) —
+  // called directly so the assert can name the rejection codes.
+  const readd = quiet(() => applyPlanChange({
+    change: {
+      kind: 'add_category', date: binnedDate!, category: 'strength_full',
+    } as PlanChange,
+    visibleWeek: visibleWeek(),
+    todayISO,
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout as never, context as never),
+  }));
+
+  assert(readd.outcome === 'applied',
+    `the re-add did not land: ${String(readd.outcome)} — ${String(readd.message)}`
+    + ` — rejected ${JSON.stringify(readd.rejected)}`);
+  const constraints = useProgramStore.getState().userRemovalConstraints;
+  const flipped = constraints.find((entry) => entry.id === activeBin!.id);
+  assert(!!flipped && flipped.status === 'restored' &&
+    flipped.restorationReason === 'explicit_re_add',
+    'the bin decision must survive as restored/explicit_re_add — got '
+    + JSON.stringify(flipped
+      ? { status: flipped.status, reason: flipped.restorationReason }
+      : null));
+  assert(constraints.some((entry) => entry.status === 'active' &&
+    entry.targetDate === binnedDate && !!entry.remainingWorkout),
+    'the re-added session must pin as an active constraint (remainingWorkout)');
+  const dayAfter = visibleWeek().find((day) => day.date === binnedDate);
+  assert(!!dayAfter?.workout, 'the day must show the re-added session');
+  assert(!Object.prototype.hasOwnProperty.call(
+    useProgramStore.getState().dateOverrides, binnedDate!),
+    'the re-add must not touch the override surface — dateOverrides carries the date');
+  assert(decisionsOnTape() >= decisionsBefore + 1,
+    'the re-add left no constraint decision witness on the tape');
+});
+
 // The auth refusal-replay cell RETIRED with authStore (Sam's §6 ruling,
 // 2026-08-03): the store it replayed persisted only never-written defaults —
 // no sign-in flow ever existed on a reachable screen. A rebuilt auth store

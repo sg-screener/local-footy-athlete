@@ -2549,6 +2549,16 @@ function stageAthleteMutationConstraint(args: {
   /** Override the derived reversible-ledger kind (e.g. an addition uses the
    *  removal machinery to pin its remainingWorkout, but records `session_add`). */
   adjustmentKind?: ReversibleAdjustmentKind;
+  /**
+   * Active constraints this mutation SUPERSEDES rather than conflicts with —
+   * the re-add restoration (Stage B stage 1, Option C item 3). The conflict
+   * filter below would silently DROP an active same-date constraint, erasing
+   * the athlete's bin decision while its ledger adjustment still points at it.
+   * A restoration instead flips the decision to restored/'explicit_re_add' —
+   * the same semantics the retired legacy writer applied as a side effect
+   * (`applyProgramOverrideWrite`), now staged in the same typed proposal.
+   */
+  restoreConstraintIds?: readonly string[];
 }): AthleteMutationTransactionStage {
   const state = useProgramStore.getState();
   const profile = useProfileStore.getState().onboardingData;
@@ -2556,8 +2566,21 @@ function stageAthleteMutationConstraint(args: {
     throw new Error('Athlete mutation requires an accepted program and profile');
   }
   const prior = materialContext(state);
+  const restoreIds = new Set(args.restoreConstraintIds ?? []);
+  const restoredAt = new Date().toISOString();
+  const priorConstraints = restoreIds.size === 0
+    ? state.userRemovalConstraints
+    : state.userRemovalConstraints.map((candidate) =>
+        restoreIds.has(candidate.id) && candidate.status === 'active'
+          ? {
+              ...candidate,
+              status: 'restored' as const,
+              restoredAt,
+              restorationReason: 'explicit_re_add' as const,
+            }
+          : candidate);
   const userRemovalConstraints = [
-    ...state.userRemovalConstraints.filter((candidate) =>
+    ...priorConstraints.filter((candidate) =>
       candidate.id !== args.constraint.id && !(
         candidate.status === 'active' &&
         candidate.targetDate === args.constraint.targetDate &&
@@ -3116,6 +3139,28 @@ export function stageAthleteSessionAdditionTransaction(
         dayOfWeek,
       };
   const addedWorkout = cloneWorkoutForDate(args.addedWorkout, date);
+  // THE RE-ADD RESTORATION (Stage B stage 1, Option C item 3 — the measured
+  // LR-3 residual). A whole-session bin with nothing left behind suppresses
+  // the day through its active constraint. An add onto that day is a
+  // RESTORATION: the emptiness decision is superseded, not deleted — flipped
+  // to restored/'explicit_re_add' inside this same staged proposal, exactly
+  // the semantics the retired legacy override writer applied as a side
+  // effect. Add/swap pins carry a remainingWorkout and are never flipped.
+  const restoreConstraintIds = state.userRemovalConstraints
+    .filter((candidate) => candidate.status === 'active' &&
+      candidate.targetDate === date &&
+      candidate.scope === 'whole_session' &&
+      !candidate.remainingWorkout)
+    .map((candidate) => candidate.id);
+  for (const constraintId of restoreConstraintIds) {
+    emitAthleteActionEvent(currentAthleteActionTrace(), 'mutation_constraint_created', {
+      constraintType: 'restoration_flip',
+      constraintId,
+      constraintStatus: 'restored',
+      restorationReason: 'explicit_re_add',
+      targetDate: date,
+    });
+  }
   const id = userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder });
   const existing = state.userRemovalConstraints.find((constraint) =>
     constraint.id === id && constraint.status === 'active');
@@ -3179,6 +3224,7 @@ export function stageAthleteSessionAdditionTransaction(
     markedDays,
     stagePurpose: options.purpose ?? 'preview',
     adjustmentKind: 'session_add',
+    restoreConstraintIds,
   });
 }
 

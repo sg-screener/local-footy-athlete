@@ -451,20 +451,24 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     tier: 1,
     laws: ['L-A1', 'L-A2', 'L-A3', 'L-C1'],
     blastRadius: 'accepted_content',
-    founding: 'planChangeProducer.ts:1365,1583,1594,1596 defer occupied-day stack adds, '
-      + 'active-removal re-adds and no-template swaps to applyCoachRevisionDateOverrides; '
-      + 'coachTurnController.ts:2343,2429 calls it directly. Tracked in the §18 '
-      + 'retirement ledger since 2026-07-22 and re-verified open 2026-07-30.',
+    founding: 'FOUNDING (2026-07-30, line receipts long drifted): four producer defer '
+      + 'sites plus coachTurnController.ts calling applyCoachRevisionDateOverrides '
+      + 'directly. Tracked in the §18 retirement ledger since 2026-07-22. CORRECTED BY '
+      + 'MEASUREMENT (Stage B stage 1, 2026-08-03): the occupied-day stack add had '
+      + 'already come home to the typed path, and no_template_for_category was a no-op '
+      + 'double refusal; the one real athlete residual was the active-removal re-add '
+      + '(restoration), whose un-pinning only the legacy writer knew how to do.',
     size: 'M',
     status: 'scheduled',
-    sequence: 'ASSIGNED (Sam, 2026-08-03, the dateOverrides ruling): Stage B pays this '
-      + 'unit. The athlete routes that still reach the legacy writer (occupied-day stack '
-      + 'adds and no-template swaps, via ADD/SWAP_DEFERS_TO_LEGACY) convert to typed '
-      + 'transactions as assembler placement work; the coachTurnController call sites are '
-      + "coach-owned and retire with the coach units under LR-6's boundary. See "
+    sequence: 'ATHLETE SHARE PAID (Stage B stage 1, 2026-08-03): the re-add restoration '
+      + 'is typed (stageAthleteSessionAdditionTransaction flips the bin to '
+      + "restored/'explicit_re_add' in the staged proposal), the defer-sets and both "
+      + 'planChangeProducer call sites are deleted, and no athlete surface reaches the '
+      + 'legacy writer. The two coachTurnController call sites remain: coach-owned, '
+      + "retire with the coach units under LR-6's boundary. See "
       + 'docs/STAGE_B_STAGE0_DATEOVERRIDES_IDENTITY_2026-08-03.md §4 Option C.',
     detector: 'legacyOverrideWriterRefs',
-    declared: 4,
+    declared: 2,
     foundingCount: 4,
   },
   {
@@ -850,7 +854,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * 0 and LR-2's last count — the program store itself — goes 1 -> 0. Baseline
  * 104 -> 76. Every persisted store in this app now has a write owner.
  */
-export const LEGACY_DEBT_BASELINE = 76;
+export const LEGACY_DEBT_BASELINE = 74;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

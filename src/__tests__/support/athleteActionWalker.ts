@@ -171,6 +171,16 @@ function signatureOf(violation: { law: string; detail: string }): string {
     .slice(0, 160)}`;
 }
 function shrink(host: WalkerHost, violation: WalkerViolation): WalkerViolation {
+  // Diagnosis seam: shrinking replays up to 200 sub-histories, each a full
+  // re-walk with program generations — minutes of work and real memory. When a
+  // deep walk dies INSIDE the shrink (2026-08-03: heap exhaustion at 12GB
+  // before the shrunk result ever printed), the violation that started it is
+  // the evidence that never got reported. Print it first, behind an env flag,
+  // so a dying shrink still names its defect.
+  if (process.env.WALKER_LOG_PRESHRINK === '1') {
+    console.error(`[walker] pre-shrink violation at step ${violation.atStep}: `
+      + `${violation.law} — ${violation.detail}`);
+  }
   let best = violation;
   let improved = true;
   let guard = 0;
