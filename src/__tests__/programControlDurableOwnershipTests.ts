@@ -636,6 +636,67 @@ async function main(): Promise<void> {
       'the deriving commit minted no fact-linked adjustment — nothing owns the undo');
   });
 
+  await run('the cap owner CUTS the session, not just the number (main lift kept, essentials only)', async () => {
+    // THE COMPRESSION LAW AT ITS OWNER, over deterministic input — the
+    // end-to-end cell above proves the lane delivers a changed day, but a
+    // regenerated week can differ from the base for its own reasons, so only
+    // this cell can catch the trim being deleted while the cap keeps stamping
+    // durations (found by mutation testing: that exact mutation survived the
+    // end-to-end cell). Shape per Sam's ruling via the Bible §9 authored trim:
+    // main lift byte-identical, accessory sets halved, hard finisher dropped,
+    // duration states the cap.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { validateWorkoutAgainstActiveConstraints } =
+      require('../utils/postGenerationConstraintValidation') as
+        typeof import('../utils/postGenerationConstraintValidation');
+    const capConstraint = {
+      id: 'source-fact:time-cap:cell', type: 'schedule' as const, severity: 5,
+      status: 'active' as const, startDate: TODAY, lastUpdatedAt: TODAY,
+      reasonLabel: 'Temporary 35-minute cap', source: 'tap' as const,
+      temporarySourceFactIds: ['cell-fact'], scheduleKind: 'time_cap' as const,
+      maxSessionMinutes: SHORT_ON_TIME_MINUTES, timeCapDates: [TODAY],
+      rules: [], safeFocus: [], advice: [],
+    };
+    const workout = {
+      id: 'cap-cell-workout', microcycleId: 'cap-cell-week', dayOfWeek: 3,
+      name: 'Lower Squat', description: '', durationMinutes: 0,
+      intensity: 'Moderate', workoutType: 'Strength', sessionTier: 'core',
+      hasCombinedConditioning: true,
+      conditioningBlock: { attachedKind: 'finisher', intent: 'high-intensity' },
+      exercises: [
+        { id: 'r1', workoutId: 'cap-cell-workout', exerciseId: 'back-squat', orderIndex: 0,
+          prescribedSets: 4, prescribedReps: '5', prescribedWeightKg: 100,
+          exercise: { id: 'back-squat', name: 'Back Squat' } },
+        { id: 'r2', workoutId: 'cap-cell-workout', exerciseId: 'split-squat', orderIndex: 1,
+          prescribedSets: 4, prescribedReps: '8',
+          exercise: { id: 'split-squat', name: 'Split Squat' } },
+        { id: 'r3', workoutId: 'cap-cell-workout', exerciseId: 'leg-curl', orderIndex: 2,
+          prescribedSets: 3, prescribedReps: '10',
+          exercise: { id: 'leg-curl', name: 'Leg Curl' } },
+      ],
+      createdAt: '', updatedAt: '',
+    };
+    const validated = quiet(() => validateWorkoutAgainstActiveConstraints({
+      workout: workout as never,
+      date: TODAY,
+      todayISO: TODAY,
+      activeConstraints: [capConstraint as never],
+      profile: samExport8Profile(),
+    })).workout;
+    assert(validated, 'the cap collapsed the session to rest');
+    assert(validated.durationMinutes === SHORT_ON_TIME_MINUTES,
+      `the capped session states ${validated.durationMinutes} minutes, not the cap`);
+    const rows = Object.fromEntries((validated.exercises ?? []).map((row) =>
+      [row.exercise?.name ?? row.exerciseId, row.prescribedSets]));
+    assert(rows['Back Squat'] === 4,
+      `the main lift moved (${rows['Back Squat']} sets) — it must be kept byte-identical`);
+    assert((rows['Split Squat'] ?? 0) < 4 || (rows['Leg Curl'] ?? 0) < 3,
+      'no accessory was cut — the compression changed a number and nothing else '
+      + `(rows: ${JSON.stringify(rows)})`);
+    assert(!validated.conditioningBlock,
+      'the hard finisher survived the compression');
+  });
+
   await run('clearing the short-on-time fact restores today byte-exact', async () => {
     // The illness precedent's other half: fact-linked undo. Clearing the fact
     // cascade-reverts the overlay through the stored prior state, never a
