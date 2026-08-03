@@ -44,6 +44,9 @@ const durable = new Map<string, string>();
   throw new Error('NETWORK DISABLED');
 };
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 import {
@@ -285,15 +288,15 @@ async function runRetiredEnvelopeCell(): Promise<void> {
 
 // A dropped or hanging tail must NOT read as green: the process is red until
 // the totals actually print (the exact silent-exit-0 shape found in
-// onboardingReliabilityTests on 2026-08-03, parked as §9).
-process.exitCode = 1;
+// onboardingReliabilityTests on 2026-08-03, parked as §9). The arm itself now
+// lives at module top, under the shared TOTALS-OR-RED owner.
 void runRetiredEnvelopeCell().then(() => {
   console.log(`\nStored-state writer audit totals: ${passed} passed, ${failed} failed`);
+  totalsPrinted(failed);
   console.log(`  protected: ${JSON.stringify(quarantineBoundaryKeys())}`);
   console.log(`  declared debt: ${UNPROTECTED_STORES_DEBT.length} store(s) still wipeable`);
   if (failed > 0) {
     console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
     process.exit(1);
   }
-  process.exitCode = 0;
 });

@@ -25,6 +25,9 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import {
   handleCoachTurn,
   type CoachTurnDebug,
@@ -234,6 +237,7 @@ async function main() {
   await runReportedTranscriptRegression();
 
   console.log(`\n${pass} passed, ${fail} failed`);
+  totalsPrinted(fail);
   if (fail > 0) {
     console.log('\nFailures:');
     for (const f of failures) console.log(`  ✗ ${f}`);

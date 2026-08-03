@@ -15,10 +15,9 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
-// ARMED RED until the totals line prints (see the bottom of main). A suite
-// whose event loop drains mid-run exits 0 by default, and this one did.
-process.exitCode = 1;
-
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -691,16 +690,11 @@ async function main(): Promise<void> {
   });
 
   console.log(`\nOnboarding reliability totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) {
     console.error(`Failing: ${failures.join(', ')}`);
     process.exit(1);
   }
-  // TOTALS-OR-RED (the storedStateWriterAuditTests precedent, made law here by
-  // the 2026-08-03 finding): this suite exited 0 HALF-RUN for five days — a
-  // drained event loop is exit 0 unless someone says otherwise, and a bible
-  // chain reads exit 0 as green. The exitCode set at module top stays 1 until
-  // this line runs; a silent early exit is now a loud red.
-  process.exitCode = 0;
 }
 
 main().catch((error) => {

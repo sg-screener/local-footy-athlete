@@ -1,5 +1,8 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { Workout } from '../types/domain';
 import {
   buildDerivedSessionExpiryCandidates,
@@ -273,4 +276,5 @@ check('all mutation paths receive path-equivalent typed search results',
   pathResults.every((result) => JSON.stringify(result) === JSON.stringify(pathResults[0])));
 
 console.log(`\nWhole-week repair totals: passed=${passed}/${passed + failed} failures=${failed}`);
+totalsPrinted(failed);
 if (failed > 0) process.exitCode = 1;

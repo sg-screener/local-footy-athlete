@@ -35,6 +35,9 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
@@ -196,6 +199,7 @@ console.log('\n[4] THE SHEET refuses at the point of answering');
 }
 
 console.log(`\nGuided injury menu totality: ${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 console.log('  DEPTH (L13): 0 — a pure predicate over an authored menu.');
 console.log('  This door routes through data/injuryRegions.ts — Sam\'s 13 authored');
 console.log('  regions. Since the LR-27 convergence (2026-08-03) EVERY door does: the');

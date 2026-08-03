@@ -1,6 +1,9 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -659,6 +662,15 @@ try {
 
 console.log(`\nsection18PhasePlannerTests: scenarios ${scenarioPass}/${scenarioPass + scenarioFail}, properties ${propertyPass}/${propertyPass + propertyFail}, mutations ${mutationPass}/${mutationPass + mutationFail}`);
 console.log(`SECTION18_PHASE_PLANNER_TOTALS scenarios=${scenarioPass + scenarioFail} properties=${propertyPass + propertyFail} mutations=${mutationPass + mutationFail}`);
-if (scenarioPass !== 36 || scenarioFail > 0 || propertyPass !== 9 || propertyFail > 0 || mutationPass !== 10 || mutationFail > 0 || crossPathFail > 0) {
+// This suite has no single failure counter: a SHORTFALL against the declared
+// block sizes is a failure here exactly as a raised assertion is, so the count
+// handed to TOTALS-OR-RED must include both. Same predicate as the guard below.
+const plannerFailures =
+  scenarioFail + propertyFail + mutationFail + crossPathFail
+  + (scenarioPass === 36 ? 0 : 1)
+  + (propertyPass === 9 ? 0 : 1)
+  + (mutationPass === 10 ? 0 : 1);
+totalsPrinted(plannerFailures);
+if (plannerFailures > 0) {
   process.exit(1);
 }
