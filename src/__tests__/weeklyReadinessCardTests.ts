@@ -34,6 +34,7 @@ import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import { todayISOLocal } from '../utils/appDate';
 import { explorerTestId, stableTestIdToken } from '../utils/stableTestId';
 import type { OnboardingData } from '../types/domain';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { executeProgramControlAction, scheduleModifierIdForDate } =
@@ -263,7 +264,7 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
   } as never);
   let awayOverrideRejected = false;
   try {
-    useProgramStore.getState().setManualOverride(wk2Mon, {
+    seedManualOverride(wk2Mon, {
       id: 'away-mon', microcycleId: 'mc-ai-1', dayOfWeek: 1, name: 'Rest — away',
       description: '', durationMinutes: 0, intensity: 'Light', workoutType: 'Recovery',
       sessionTier: 'recovery', exercises: [], createdAt: '', updatedAt: '',

@@ -2,7 +2,7 @@
  * coachRevisionOverrideWriterTests — Stage 4A-3 date-level override writer.
  *
  * These tests apply approved CoachRevisionProposal snapshots through an
- * injected setManualOverride function only. There is no CoachScreen wiring.
+ * injected applyOverride function only. There is no CoachScreen wiring.
  *
  * Run: ./node_modules/.bin/sucrase-node src/__tests__/coachRevisionOverrideWriterTests.ts
  */
@@ -262,7 +262,7 @@ function apply(args: {
     proposal: args.proposal,
     visibleWeek: args.visibleWeek,
     todayISO: TODAY,
-    setManualOverride: args.proposal.kind === 'revision' && args.proposal.scope.dates.length === 1
+    applyOverride: args.proposal.kind === 'revision' && args.proposal.scope.dates.length === 1
       ? (date, workout, context) => { writes.push({ date, workout, context }); }
       : undefined,
   });

@@ -44,6 +44,7 @@ import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { asyncStorageDurable } from '../store/asyncStorageCompat';
 import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
@@ -173,8 +174,8 @@ await run('an athlete-facing tap is recorded end to end, on a release build', as
     change: { kind: 'add_category', date: friday, category: 'conditioning_hard' },
     visibleWeek: week,
     todayISO: weekStart,
-    setManualOverride: (date, workout, ctx) =>
-      useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) =>
+      seedManualOverride(date, workout, ctx),
   }));
   assert(!result.ok, 'this seed no longer refuses a routeless G-1 add');
 

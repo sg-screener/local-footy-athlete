@@ -41,6 +41,7 @@ import type { PlanChange } from '../utils/planChangeTypes';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -188,8 +189,8 @@ function tapThroughTheScreen(change: PlanChange) {
   if (!screenAction) {
     return quiet(() => applyPlanChange({
       change, visibleWeek: context.visibleWeek, todayISO: TODAY,
-      setManualOverride: (date, workout, ctx) =>
-        useProgramStore.getState().setManualOverride(date, workout, ctx),
+      applyOverride: (date, workout, ctx) =>
+        seedManualOverride(date, workout, ctx),
     }));
   }
   return quiet(() => executeProgramControlAction(screenAction, context));
@@ -200,8 +201,8 @@ function tap(change: PlanChange) {
     : (change as { date?: string }).date ?? TODAY;
   return quiet(() => applyPlanChange({
     change, visibleWeek: weekOf(anchorDate), todayISO: TODAY,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
   }));
 }
 

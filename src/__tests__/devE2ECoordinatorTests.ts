@@ -387,7 +387,7 @@ async function main() {
     !defaultCoordinatorSource.includes('useProgramStore.setState(') &&
       defaultCoordinatorSource.includes('commitAcceptedStateTransaction({') &&
       defaultCoordinatorSource.includes('preserveExactAcceptedWorkouts: true') &&
-      defaultCoordinatorSource.includes('setManualOverride(') &&
+      defaultCoordinatorSource.includes('applyOverride(') &&
       defaultCoordinatorSource.includes('createOrUpdateInjuryEpisode({') &&
       defaultCoordinatorSource.includes('commitSessionOutcomeTransaction(intent)'));
   for (const storageKey of [

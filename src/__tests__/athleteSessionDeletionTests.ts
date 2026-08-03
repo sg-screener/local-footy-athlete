@@ -49,6 +49,7 @@ import { reduceAcceptedSessionForAthleteRemoval } from '../utils/sessionComponen
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -275,7 +276,7 @@ function deleteThroughRealSheetDoor(
     visibleWeek: week,
     todayISO: WEEK,
     trace: preview.trace,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('athlete deletion must not use the single-date writer');
     },
   });
@@ -1225,7 +1226,7 @@ run('property', 'equivalent work may relocate but never to prohibited target', (
 run('property', 'explicit re-add restores typed ownership', () => {
   const seeded = seedExactSundayRegression();
   deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     SUNDAY,
     seeded.sunday,
     { intent: 'program_adjustment', label: 'explicit restore' },
@@ -1295,7 +1296,7 @@ run('regression', '21 conditioning component restoration preserves the stacked s
     change: { kind: 'remove_session', date, scope: 'conditioning' },
     visibleWeek: visibleWeek(),
     todayISO: WEEK,
-    setManualOverride: () => { throw new Error('component deletion used legacy override writer'); },
+    applyOverride: () => { throw new Error('component deletion used legacy override writer'); },
   });
   assert(result.ok, JSON.stringify(result.rejected));
   const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);

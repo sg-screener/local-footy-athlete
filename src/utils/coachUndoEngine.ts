@@ -10,7 +10,7 @@
  * ─── Contract ────────────────────────────────────────────────────────
  *
  *  1. `dateOverrides` snapshots: `workout: null` → `removeManualOverride`,
- *     non-null → `setManualOverride(date, workout, context)`. Order is
+ *     non-null → `applyOverride(date, workout, context)`. Order is
  *     irrelevant because writes are independent per date.
  *
  *  2. `modalityPreference` snapshot: `entry: null` → `clearModalityPreference`,
@@ -25,7 +25,7 @@
  *     caller can compose an honest reply (Done vs. "didn't land").
  */
 
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import {
   useCoachPreferencesStore,
@@ -85,8 +85,8 @@ export interface ApplyUndoPlanResult {
 }
 
 export interface ApplyUndoPlanDeps {
-  /** Replaces `programStore.setManualOverride`. */
-  setManualOverride?: (
+  /** Replaces `programStore.applyOverride`. */
+  applyOverride?: (
     date: string,
     workout: Workout,
     context?: OverrideContext,
@@ -123,7 +123,7 @@ export function applyUndoPlan(
   opts: { todayISO: string; deps?: ApplyUndoPlanDeps },
 ): ApplyUndoPlanResult {
   const deps = opts.deps ?? {};
-  const setOverride = deps.setManualOverride ?? defaultSetManualOverride;
+  const setOverride = deps.applyOverride ?? defaultApplyOverride;
   const removeOverride = deps.removeManualOverride ?? defaultRemoveManualOverride;
   const setPref = deps.setModalityPreference ?? defaultSetModalityPreference;
   const clearPref = deps.clearModalityPreference ?? defaultClearModalityPreference;
@@ -215,7 +215,7 @@ export function applyUndoPlan(
 
 function restoreDateOverride(
   snap: DateOverrideSnapshot,
-  setOverride: NonNullable<ApplyUndoPlanDeps['setManualOverride']>,
+  setOverride: NonNullable<ApplyUndoPlanDeps['applyOverride']>,
   removeOverride: NonNullable<ApplyUndoPlanDeps['removeManualOverride']>,
 ): void {
   if (snap.workout == null) {
@@ -337,12 +337,12 @@ function defaultVerifyPreference(snap: ModalityPreferenceSnapshot): boolean {
 
 // ─── Default mutators (live store writes) ───────────────────────────
 
-function defaultSetManualOverride(
+function defaultApplyOverride(
   date: string,
   workout: Workout,
   context?: OverrideContext,
 ): void {
-  useProgramStore.getState().setManualOverride(date, workout, context);
+  applyProgramOverrideWrite({ date, workout, context, writer: 'coach_undo' });
 }
 
 function defaultRemoveManualOverride(date: string): void {

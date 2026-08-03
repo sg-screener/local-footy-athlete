@@ -3,7 +3,7 @@
  *
  * Live-legacy census finding #1: the coach-chat "add a session" path
  * (`runAddSession` → `defaultApplyAddSession`) wrote the new session straight
- * through `setManualOverride` with NO `UserRemovalConstraint` pin — bypassing
+ * through `applyOverride` with NO `UserRemovalConstraint` pin — bypassing
  * `commitAthleteSessionAdditionTransaction`, the owner the *tap* door was
  * migrated onto in §18 stage 3. An unpinned add is not owned by the
  * accepted-state transaction, so a later §18 repair pass silently canonicalises
@@ -243,7 +243,7 @@ function wedOwnedByAdjustment(): boolean {
 
 console.log('\n-- coach-door add_session ownership + §18 survival --');
 
-// THE census #1 regression. The legacy path applied via `setManualOverride` with
+// THE census #1 regression. The legacy path applied via `applyOverride` with
 // no pin — a "Done" the athlete sees, then loses when a later §18 repair
 // canonicalises the unpinned day back to Rest (false-Done / silent content loss).
 // Post-migration the coach add is owned by the accepted-state transaction OR
@@ -299,8 +299,8 @@ run('defaultApplyAddSession writes through the addition-transaction owner (censu
   const body = src.slice(start, src.indexOf('\n}\n', start));
   assert(/commitAthleteSessionAdditionTransaction\(/.test(body),
     'defaultApplyAddSession must commit through commitAthleteSessionAdditionTransaction');
-  assert(!/setManualOverride\(/.test(body),
-    'defaultApplyAddSession must not write via a raw setManualOverride (the census #1 bypass)');
+  assert(!/applyOverride\(/.test(body),
+    'defaultApplyAddSession must not write via a raw applyOverride (the census #1 bypass)');
   assert(/finaliseWorkoutAfterMutation\(/.test(body),
     'the added workout must be finalised before the owner (its input contract)');
 });

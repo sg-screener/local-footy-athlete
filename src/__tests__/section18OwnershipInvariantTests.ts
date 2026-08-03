@@ -40,6 +40,7 @@ import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { executeProgramControlAction } from '../utils/programControlActions';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
@@ -300,7 +301,7 @@ run('3 local-legality: MON swap→Conditioning is not §18-rejected for the rest
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `legal Swap→Conditioning refused: "${result.message}"`);
   // If ever rejected, the rejection may only cite the requested day.
@@ -322,7 +323,7 @@ run('4 disclosed-repair: binning TUE strength names every day it changes', () =>
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `bin refused: "${result.message}"`);
   const after = acceptedByDay();
@@ -418,7 +419,7 @@ run('8a relocated-disclosure: strength-displacing Swap relocates the displaced s
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `strength-displacing Swap refused: "${result.message}"`);
   const sessionDays = acceptedSnapshot().evaluation.ledger.mainStrength.sessionDays;
@@ -455,7 +456,7 @@ run('8b disclosed-reduction: an unrelocatable strength-displacing Swap reduces t
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (d, workout, ctx) => useProgramStore.getState().setManualOverride(d, workout, ctx),
+    applyOverride: (d, workout, ctx) => seedManualOverride(d, workout, ctx),
   });
   assert(result.ok, `unrelocatable strength-displacing Swap refused: "${result.message}"`);
   const reductions = acceptedSnapshot().contract.authorisedReductions.filter(
@@ -471,7 +472,7 @@ run('8b disclosed-reduction: an unrelocatable strength-displacing Swap reduces t
 // transaction (not the legacy single-date override writer). Stage 3(a). RED
 // pre-migration: anchor swaps defer to the legacy writer
 // (`swap_defers_to_legacy_anchor`), which either refuses (section18) or writes
-// via setManualOverride with no reversible-ledger entry. Game day stays locked
+// via applyOverride with no reversible-ledger entry. Game day stays locked
 // (amendment 3): a game-day swap must be hard-blocked — that guard runs first so
 // a wrong game-lock baseline is distinguishable from the anchor-preservation RED.
 run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym component, transaction-owned', () => {
@@ -486,7 +487,7 @@ run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym 
     });
     const result = applyPlanChange({
       change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-      setManualOverride: (d, workout, ctx) => useProgramStore.getState().setManualOverride(d, workout, ctx),
+      applyOverride: (d, workout, ctx) => seedManualOverride(d, workout, ctx),
     });
     assert(!result.ok,
       `baseline: a game-day swap must be hard-blocked (amendment 3), but it applied: "${result.message}"`);
@@ -505,7 +506,7 @@ run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym 
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `anchor-day Swap refused: "${result.message}"`);
   const afterTue = acceptedByDay().get(2);
@@ -514,7 +515,7 @@ run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym 
     'Team Training anchor dropped/re-added by the anchor-day swap');
   assert(JSON.stringify(exerciseCells(beforeTue).sort()) !== JSON.stringify(exerciseCells(afterTue).sort()),
     'anchor-day swap left the gym component unchanged');
-  // Transaction-owned: legacy setManualOverride records no reversible adjustment.
+  // Transaction-owned: legacy applyOverride records no reversible adjustment.
   const owned = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
     (entry) => entry.affectedDates.includes(TUESDAY));
   assert(owned,
@@ -546,7 +547,7 @@ run('8c anchor-relocated-disclosure: an anchor-day strength-displacing Swap relo
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `anchor-day strength-displacing Swap refused: "${result.message}"`);
   const sessionDays = acceptedSnapshot().evaluation.ledger.mainStrength.sessionDays;
@@ -587,8 +588,8 @@ run('10 empty-day-add: add_category on a rest day routes through the transaction
       });
       applyPlanChange({
         change: removal, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-        setManualOverride: (date, workout, ctx) =>
-          useProgramStore.getState().setManualOverride(date, workout, ctx),
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
       });
     }
   }
@@ -604,7 +605,7 @@ run('10 empty-day-add: add_category on a rest day routes through the transaction
   });
   const result = applyPlanChange({
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
   });
   assert(result.ok, `empty-day add refused: "${result.message}"`);
   const afterWed = acceptedByDay().get(3);

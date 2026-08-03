@@ -1,5 +1,5 @@
 import { generateProgramFromProfile } from '../services/api/generateProgram';
-import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
@@ -2437,10 +2437,15 @@ async function applyDevActiveCoachRevision(args: {
           requireConfirmationForAdds: false,
         },
         deferWeekAcceptanceToTransaction: multiDate,
-        setManualOverride: multiDate
+        applyOverride: multiDate
           ? undefined
           : (date, workout, context) =>
-              useProgramStore.getState().setManualOverride(date, workout, context),
+              void applyProgramOverrideWrite({
+                date,
+                workout,
+                context,
+                writer: 'coach_turn_controller',
+              }),
       });
       if (multiDate && apply.applied.length > 0 && apply.rejected.length === 0) {
         const state = useProgramStore.getState();

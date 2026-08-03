@@ -3,19 +3,19 @@
  * helper (src/utils/applyAdjustmentEvents.ts).
  *
  * The helper translates a list of AdjustmentEvents into a single
- * setManualOverride write per touched date. It is the seam between the
+ * applyOverride write per touched date. It is the seam between the
  * deterministic UAE engine (which only emits events) and the Zustand
  * program store (which actually persists them).
  *
  * STRATEGY
- *   - Inject a stub `buildState`, `resolveWeek`, and `setManualOverride`
+ *   - Inject a stub `buildState`, `resolveWeek`, and `applyOverride`
  *     so the helper never reaches into real stores or the actual resolver.
  *   - Hand-build a fixture week with WED conditioning + THU strength + FRI
  *     strength so each event-handler scenario gets the workout shape it
  *     needs.
  *   - Assert on the captured override-call list rather than reading state
  *     back through a resolver — the helper's contract is "one
- *     setManualOverride per touched date with the final folded workout",
+ *     applyOverride per touched date with the final folded workout",
  *     and that's exactly what we verify here.
  *
  * Run: sucrase-node src/__tests__/applyAdjustmentEventsTests.ts
@@ -180,7 +180,7 @@ function makeSpy() {
   const calls: OverrideCall[] = [];
   return {
     calls,
-    setManualOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
+    applyOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
       calls.push({ date, workout, ctx });
     },
   };
@@ -191,7 +191,7 @@ function makeOpts(week: ResolvedDay[], spy: ReturnType<typeof makeSpy>): ApplyOp
     todayISO: FIXED_TODAY,
     buildState: () => emptyScheduleState(),
     resolveWeek: () => week,
-    setManualOverride: spy.setManualOverride,
+    applyOverride: spy.applyOverride,
   };
 }
 
@@ -732,7 +732,7 @@ section('[9] no-workout-on-date rejection');
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 10. Per-date folding — multiple events on same date → 1 setManualOverride
+// 10. Per-date folding — multiple events on same date → 1 applyOverride
 // ─────────────────────────────────────────────────────────────────────────
 
 section('[10] per-date folding');

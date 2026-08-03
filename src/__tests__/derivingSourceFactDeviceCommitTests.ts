@@ -49,6 +49,7 @@ const memory = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
@@ -321,7 +322,7 @@ async function main(): Promise<void> {
       const preview = previewPlanChangeRisk({ change, visibleWeek: week, todayISO: anchor,
         profile: useProfileStore.getState().onboardingData ?? undefined });
       applyPlanChange({ change, visibleWeek: week, todayISO: anchor, trace: preview.trace,
-        setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+        applyOverride: (d, w, c) => seedManualOverride(d, w, c) });
     }
     const factId = (commit as { createdModifierIds?: string[] }).createdModifierIds?.[0];
     await executeProgramControlActionDurably({
@@ -349,7 +350,7 @@ async function main(): Promise<void> {
     const preview = previewPlanChangeRisk({ change, visibleWeek: week0, todayISO: anchor,
       profile: useProfileStore.getState().onboardingData ?? undefined });
     const removed = applyPlanChange({ change, visibleWeek: week0, todayISO: anchor, trace: preview.trace,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+      applyOverride: (d, w, c) => seedManualOverride(d, w, c) });
     assert((removed as { ok?: boolean }).ok === true, `precondition removal failed: "${(removed as { message?: string }).message}"`);
     const removalConstraintsBefore = useProgramStore.getState().userRemovalConstraints.length;
     const commit = await commitSevereIllness(anchor);

@@ -324,7 +324,7 @@ function makeApplyHarness(week: ResolvedDay[]) {
       todayISO: FIXED_TODAY,
       buildState: () => emptyScheduleState(),
       resolveWeek: () => week,
-      setManualOverride: (date, workout, ctx) => {
+      applyOverride: (date, workout, ctx) => {
         writes.push({ date, workout, ctx });
         writeByDate.set(date, workout);
       },
@@ -512,7 +512,7 @@ ok('T2 outcome.applied = true', t2Outcome.applied === true);
 ok('T2 projectionShowsTo (bike) = true', t2Outcome.projectionShowsTo === true);
 ok('T2 projectionShowsFrom (row) = false', t2Outcome.projectionShowsFrom === false);
 ok(
-  'T2 at least one setManualOverride write on Wednesday',
+  'T2 at least one applyOverride write on Wednesday',
   writes.some((w) => w.date === WED_DATE),
   `writes=${JSON.stringify(writes.map((w) => w.date))}`,
 );

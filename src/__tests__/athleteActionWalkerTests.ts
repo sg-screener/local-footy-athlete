@@ -53,13 +53,14 @@ process.env.TZ = 'Australia/Melbourne';
 
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { PlanChange } from '../utils/planChangeTypes';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { useProgramStore } from '../store/programStore';
+import { useProgramStore, applyProgramOverrideSliceWrite } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, applyCalendarMarkedDaysWrite } from '../store/calendarStore';
 import { athleteActionLogEntries } from '../utils/athleteActionLog';
@@ -502,8 +503,8 @@ function performAction(action: WalkerAction): WalkerStepResult {
           change: action.change,
           visibleWeek: visibleWeek(),
           todayISO,
-          setManualOverride: (date, workout, context) =>
-            useProgramStore.getState().setManualOverride(date, workout, context),
+          applyOverride: (date, workout, context) =>
+            seedManualOverride(date, workout, context),
         }));
         return { ...base, outcome: direct.outcome, message: direct.message };
       }
@@ -511,8 +512,8 @@ function performAction(action: WalkerAction): WalkerStepResult {
       const result = quiet(() => executeProgramControlAction(screenAction, {
         visibleWeek: visibleWeek(),
         todayISO,
-        setManualOverride: (date, workout, context) =>
-          useProgramStore.getState().setManualOverride(date, workout, context),
+        applyOverride: (date, workout, context) =>
+          seedManualOverride(date, workout, context),
       }));
       // The wrapper answers in its own vocabulary. A landing ask is a QUESTION,
       // not a refusal, and must not be reported to the laws as one — that
@@ -2456,6 +2457,67 @@ run('the coach memory door refuses the wipe against a walked world', () => {
     `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
   assert(JSON.stringify(useCoachMemoryStore.getState().notes) === notesBefore,
     'the refused wipe changed the walked notes anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the override door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY for the LAST store (recipe §6, LR-1).
+  //
+  // WHAT THIS CELL FOUND ON ITS FIRST RUN, and it is the unit's most useful
+  // finding: **no walked athlete door writes `dateOverrides` any more.** The
+  // cell was written to bin a session and went red with `{}` — correctly. A
+  // whole-day removal records a `UserRemovalConstraint`; an add or a swap
+  // lands in `weekScopedOverlays`. That is the §18 ownership migration having
+  // WORKED: the tap doors were moved off the raw override surface one unit at
+  // a time, and nobody had asked what was left on it.
+  //
+  // What is left is the COACH pipeline (`coachActions`, the undo engine, the
+  // modality-swap orchestrator, the revision writer), the lighter-day
+  // transaction, and LR-3's §18 residuals. The walker has NO coach vocabulary
+  // and the LR-6 STOP forbids this unit adding one, so the decision is ACTED
+  // IN through the door itself after the walk — the same declared gap the
+  // coach-prefs and coach-memory cells carry, for the same reason. When LR-6
+  // lifts, the vocabulary gains the coach doors and this line becomes walked.
+  //
+  // Depth stated per L13: SHALLOW tier — 3 walked actions, 10 days crossed,
+  // one authored decision. The deep tier drives the same door with more banked.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  const week = visibleWeek();
+  const occupied = week.filter((day) => !!day.workout);
+  assert(occupied.length > 0, 'precondition: the generated week must hold a session');
+  const target = occupied[0]!;
+  seedManualOverride(
+    target.date,
+    { ...target.workout!, name: 'Assault Bike Sprints' } as never,
+    { intent: 'program_adjustment', label: 'Swapped session' } as never,
+  );
+  performAction({ kind: 'advance_time', days: 7 });
+
+  const overridesBefore = JSON.stringify(useProgramStore.getState().dateOverrides);
+  assert(Object.keys(useProgramStore.getState().dateOverrides).length >= 1,
+    'precondition: the walk must leave an authored decision to protect — '
+    + `it left ${overridesBefore}`);
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'program_override_write'
+      && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    next: { dateOverrides: {}, overrideContexts: {} },
+    writer: 'coach_action',
+    reason: 'walker:wipe_replay',
+    validateWeekStarts: [weekStart],
+  }));
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_overrides',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useProgramStore.getState().dateOverrides) === overridesBefore,
+    'the refused wipe changed the walked decisions anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
 });

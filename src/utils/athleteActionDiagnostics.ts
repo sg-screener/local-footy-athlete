@@ -89,6 +89,11 @@ export type AthleteActionEventName =
   // words, the coach's replies and what the coach remembers are answers.
   | 'coach_store_write'
   | 'coach_memory_write'
+  // LR-1, 2026-08-03: the LAST store door. Every write of the program store's
+  // override slice — the athlete's decision surface — applied or refused,
+  // with the writer named. Counts only: a date, a workout and its content are
+  // answers and stay on the device.
+  | 'program_override_write'
   // 'auth_write' / 'ui_store_write' RETIRED with their stores (Sam's §6
   // ruling, 2026-08-03): both shells persisted only never-written defaults.
   | 'profile_rehydrated'

@@ -2423,7 +2423,7 @@ export interface ApplyPlanChangeInput {
   change: PlanChange;
   visibleWeek: ResolvedDay[];
   todayISO: string;
-  setManualOverride: (
+  applyOverride: (
     date: string,
     workout: Workout | null,
     context?: OverrideContext,
@@ -3012,7 +3012,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
     validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO, args.change),
-    setManualOverride: args.setManualOverride,
+    applyOverride: args.applyOverride,
   });
 
   if (apply.applied.length === 0 || apply.rejected.length > 0) {

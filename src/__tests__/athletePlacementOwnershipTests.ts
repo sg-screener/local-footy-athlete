@@ -42,6 +42,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
@@ -305,8 +306,8 @@ function commit(weekStart: string, change: PlanChange) {
     change,
     visibleWeek: visibleWeek(weekStart),
     todayISO: weekStart,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
   }));
 }
 
@@ -541,8 +542,8 @@ run('a double-tapped swap reports no-change, not a second success', () => {
     change,
     visibleWeek: snapshot,
     todayISO: weekStart,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
   }));
 
   const first = tap();
@@ -602,8 +603,8 @@ run('a commit that does not reach the visible week is refused and rolled back', 
     change: { kind: 'swap_category', date: monday, category: 'conditioning_light' },
     visibleWeek: before,
     todayISO: weekStart,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
     readVisibleWeekAfterCommit: () => before,
   }));
 

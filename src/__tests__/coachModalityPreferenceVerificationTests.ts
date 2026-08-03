@@ -187,7 +187,7 @@ const outcome1 = orchestrateModalitySwap({
   setModalityPreferenceFn: (name, pref) =>
     useCoachPreferencesStore.getState().setModalityPreference(name, pref),
   resolveCurrentWeekFn: () => [],
-  setManualOverrideFn: () => {},
+  applyOverrideFn: () => {},
 });
 
 eq('outcome.kind = verification_failed', outcome1.kind, 'verification_failed');
@@ -268,7 +268,7 @@ const outcome4 = orchestrateModalitySwap({
   setModalityPreferenceFn: (name, pref) =>
     useCoachPreferencesStore.getState().setModalityPreference(name, pref),
   resolveCurrentWeekFn: () => [],
-  setManualOverrideFn: () => {},
+  applyOverrideFn: () => {},
 });
 ok(
   'failure reply mentions saving the bike preference',
@@ -438,7 +438,7 @@ const outcome8 = orchestrateModalitySwap({
   setModalityPreferenceFn: (name, pref) =>
     useCoachPreferencesStore.getState().setModalityPreference(name, pref),
   resolveCurrentWeekFn: makeLiveWeek,
-  setManualOverrideFn: (date, workout) =>
+  applyOverrideFn: (date, workout) =>
     eagerWrites.push({ date, workout: workout as Workout }),
 });
 

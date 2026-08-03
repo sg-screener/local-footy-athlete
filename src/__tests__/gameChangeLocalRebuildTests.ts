@@ -37,6 +37,7 @@ import {
   validatorDaysFromResolvedWeek,
 } from '../rules/weekStructureValidator';
 import type { DayOfWeek, OnboardingData, TrainingProgram } from '../types/domain';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -283,7 +284,7 @@ function makeAwayRestWorkout(date: string): Workout {
     useProgramStore.getState().dateOverrides[week2Monday] === undefined);
   // Plus a STALE override (no owner) that SHOULD be wiped by a rebuild.
   const staleDate = addDays(blockStart, 8);
-  useProgramStore.getState().setManualOverride(staleDate, makeAwayRestWorkout(staleDate), {
+  seedManualOverride(staleDate, makeAwayRestWorkout(staleDate), {
     intent: 'gameProximity', relatedGameDate: addDays(blockStart, 9),
   });
 
@@ -439,17 +440,16 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
     } as Workout;
   };
 
-  const ps = useProgramStore.getState();
   // Manual BIN (coachActions writes intent 'dismissed'): Monday cleared.
-  ps.setManualOverride(week2Monday,
+  seedManualOverride(week2Monday,
     mkOverride(week2Monday, 'Rest', { workoutType: 'Recovery', sessionTier: 'recovery' }),
     { intent: 'dismissed', label: 'Removed session' });
   // Manual SWAP (tap sheet / revision writer: 'program_adjustment'): Wednesday.
-  ps.setManualOverride(week2Wednesday,
+  seedManualOverride(week2Wednesday,
     mkOverride(week2Wednesday, 'Upper Pull (swapped)'),
     { intent: 'program_adjustment', label: 'coach_revision:swap:strength' });
   // Manually ADDED HARD session on G-1 Friday — conflicts with the game.
-  ps.setManualOverride(week2Friday,
+  seedManualOverride(week2Friday,
     mkOverride(week2Friday, 'Off-Feet MetCon', { workoutType: 'MetCon', intensity: 'High' }),
     { intent: 'dismissed', label: 'Added session' });
 
@@ -467,7 +467,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
     JSON.stringify(sweep.conflictsRemoved));
 
   // Light manual edit NEAR the game (gunshow swap on G-1) is Bible-legal → survives.
-  ps.setManualOverride(week2Friday,
+  seedManualOverride(week2Friday,
     mkOverride(week2Friday, 'Gunshow', { sessionTier: 'optional', intensity: 'Light' }),
     { intent: 'dismissed', label: 'Swapped session' });
   const sweep2 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates });
@@ -477,7 +477,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
   // Manual override sitting exactly ON the game date always conflicts
   // (manual overrides outrank the game mark and would hide the game).
   const week2Saturday = addDays(blockStart, 12);
-  ps.setManualOverride(week2Saturday,
+  seedManualOverride(week2Saturday,
     mkOverride(week2Saturday, 'Extra Session'),
     { intent: 'dismissed', label: 'Added session' });
   const sweep3 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates });
@@ -488,7 +488,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
   // the following Monday. Heavy user edits there are removed/reported;
   // light recovery edits survive.
   const oneOffSunday = addDays(blockStart, 6);
-  ps.setManualOverride(week2Monday,
+  seedManualOverride(week2Monday,
     mkOverride(week2Monday, 'Lower Body Strength', { intensity: 'High' }),
     { intent: 'dismissed', label: 'Added session' });
   const sweep4 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates: [oneOffSunday] });
@@ -497,7 +497,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
     sweep4.conflictsRemoved.some((c) => c.date === week2Monday),
     JSON.stringify(sweep4));
 
-  ps.setManualOverride(week2Monday,
+  seedManualOverride(week2Monday,
     mkOverride(week2Monday, 'Recovery Flow', { workoutType: 'Recovery', sessionTier: 'recovery', intensity: 'Light' }),
     { intent: 'dismissed', label: 'Swapped session' });
   const sweep5 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates: [oneOffSunday] });

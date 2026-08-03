@@ -56,6 +56,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
@@ -455,8 +456,8 @@ const DAY_STATES: DayState[] = [
         change: { kind: 'add_category', date: weekStart, category: 'conditioning_hard' },
         visibleWeek: visibleWeek(weekStart),
         todayISO: world.todayISO,
-        setManualOverride: (date, workout, ctx) =>
-          useProgramStore.getState().setManualOverride(date, workout, ctx),
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
       }));
       return { weekStart, date: weekStart };
     },
@@ -824,8 +825,8 @@ for (const dayState of DAY_STATES) {
           change,
           visibleWeek: visibleWeek(context.weekStart),
           todayISO: world.todayISO,
-          setManualOverride: (date, workout, ctx) =>
-            useProgramStore.getState().setManualOverride(date, workout, ctx),
+          applyOverride: (date, workout, ctx) =>
+            seedManualOverride(date, workout, ctx),
         }));
       } catch (error) {
         // L1 NO CRASH.
@@ -844,8 +845,8 @@ for (const dayState of DAY_STATES) {
           change,
           visibleWeek: visibleWeek(context.weekStart),
           todayISO: world.todayISO,
-          setManualOverride: (date, workout, ctx) =>
-            useProgramStore.getState().setManualOverride(date, workout, ctx),
+          applyOverride: (date, workout, ctx) =>
+            seedManualOverride(date, workout, ctx),
         }));
       } catch (error) {
         throw new Error(`L1 CRASH on repeat — ${
@@ -985,8 +986,8 @@ cell(`[${activeWorld.id}] every option the day OFFERS is one the door accepts or
         change: { kind: 'add_category', date: context.date, category } as PlanChange,
         visibleWeek: visibleWeek(context.weekStart),
         todayISO: world.todayISO,
-        setManualOverride: (date, workout, ctx) =>
-          useProgramStore.getState().setManualOverride(date, workout, ctx),
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
       }));
       if (result.outcome === 'applied') continue;
       // The G-1 ask is not a refusal — it is the funnel working. The athlete is
@@ -1049,8 +1050,8 @@ cell(`[${activeWorld.id}] every bin scope the menu offers is one the transaction
         change: { kind: 'remove_session', date: context.date, scope },
         visibleWeek: visibleWeek(context.weekStart),
         todayISO: world.todayISO,
-        setManualOverride: (date, workout, ctx) =>
-          useProgramStore.getState().setManualOverride(date, workout, ctx),
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
       }));
       if (result.outcome === 'applied') continue;
       broken.push(`${dayState.id}: the menu offered bin scope "${scope}", the door said `
@@ -1110,8 +1111,8 @@ cell(`[${activeWorld.id}] every session type the Add step offers is one the door
         change: { kind: 'add_category', date: context.date, category } as PlanChange,
         visibleWeek: visibleWeek(context.weekStart),
         todayISO: world.todayISO,
-        setManualOverride: (date, workout, ctx) =>
-          useProgramStore.getState().setManualOverride(date, workout, ctx),
+        applyOverride: (date, workout, ctx) =>
+          seedManualOverride(date, workout, ctx),
       }));
       if (result.outcome === 'applied') continue;
       // The G-1 ask is the funnel working, not a refusal — see the sibling law.
@@ -1159,8 +1160,8 @@ cell(`[${activeWorld.id}] athlete-placed content survives the resolver on every 
       },
       visibleWeek: visibleWeek(context.weekStart),
       todayISO: world.todayISO,
-      setManualOverride: (date, workout, ctx) =>
-        useProgramStore.getState().setManualOverride(date, workout, ctx),
+      applyOverride: (date, workout, ctx) =>
+        seedManualOverride(date, workout, ctx),
     }));
     if (result.outcome !== 'applied') continue;
     const day = dayOn(context.weekStart, context.date);

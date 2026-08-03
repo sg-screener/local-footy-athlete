@@ -13,7 +13,7 @@
  */
 
 import type { OverrideContext } from '../types/domain';
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import {
   captureAcceptedLoadEditLedgerBaseline,
   commitExplicitLoadEditLedgerFromBaseline,
@@ -76,7 +76,12 @@ export async function applyLighterDayForToday(args: {
 
   const baseline = captureAcceptedLoadEditLedgerBaseline();
   const overrideContext: OverrideContext = { intent: 'program_adjustment' } as OverrideContext;
-  useProgramStore.getState().setManualOverride(args.date, trimmed, overrideContext);
+  applyProgramOverrideWrite({
+    date: args.date,
+    workout: trimmed,
+    context: overrideContext,
+    writer: 'lighter_day',
+  });
 
   const record = commitExplicitLoadEditLedgerFromBaseline({
     baseline,

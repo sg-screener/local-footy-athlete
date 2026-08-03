@@ -78,7 +78,7 @@ import {
   type ApplyUndoPlanDeps,
 } from './coachUndoEngine';
 import type { ModalityPreference } from '../store/coachPreferencesStore';
-import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
 import type { Workout, OverrideContext } from '../types/domain';
@@ -4218,11 +4218,12 @@ function restoreRemoveSessionStores(snapshot: RemoveSessionRollbackSnapshot): vo
   restoreCalendarMark(snapshot.date, snapshot.calendarMark);
   const store = useProgramStore.getState();
   if (snapshot.overrideWorkout) {
-    store.setManualOverride(
-      snapshot.date,
-      snapshot.overrideWorkout,
-      snapshot.overrideContext ?? undefined,
-    );
+    applyProgramOverrideWrite({
+      date: snapshot.date,
+      workout: snapshot.overrideWorkout,
+      context: snapshot.overrideContext ?? undefined,
+      writer: 'coach_executor',
+    });
     return;
   }
   store.removeManualOverride(snapshot.date);

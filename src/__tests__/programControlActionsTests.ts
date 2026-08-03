@@ -24,6 +24,7 @@ import {
   resolveEquipmentAvailability,
   temporaryEquipmentConstraintIdForDate,
 } from '../utils/equipmentAvailability';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 let pass = 0;
 let fail = 0;
@@ -353,7 +354,7 @@ console.log('\n[5] clear recovery modifier removes linked program override');
     appliedDates: [todayISO],
     scope: 'day',
   });
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     todayISO,
     restWorkout(todayISO),
     withActiveProgramModifierContext(
@@ -1181,7 +1182,7 @@ console.log('\n[27] direct program-control plan changes block hard-stops before 
   ), {
     todayISO: '2026-07-06',
     visibleWeek,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   eq('G-1 lower move blocked', move.ok, false);
   ok('move block explains game proximity', /before.*game|G-1|day before/i.test(move.message ?? ''), move.message);
@@ -1194,7 +1195,7 @@ console.log('\n[27] direct program-control plan changes block hard-stops before 
   ), {
     todayISO: '2026-07-06',
     visibleWeek,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   eq('protected game removal blocked', removeGame.ok, false);
   ok('anchor block mentions protected/game', /protected|game/i.test(removeGame.message ?? ''), removeGame.message);

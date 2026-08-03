@@ -47,6 +47,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
@@ -215,9 +216,9 @@ run('the screen honours the rest mark the accepted week honours', () => {
  * through the constraint ingress rather than the override surface (see the
  * occupied-day add unit), so an add proves nothing about `dateOverrides` — the
  * first draft of these two tests asserted an add would land there and failed for
- * a reason that had nothing to do with the law. `setManualOverride` is the
+ * a reason that had nothing to do with the law. `applyOverride` is the
  * writer that surface actually has, and it is what the sheet hands every
- * producer as `setManualOverride`.
+ * producer as `applyOverride`.
  */
 /**
  * A date in the visible week that actually carries a session.
@@ -248,7 +249,7 @@ function authorAnOverride(date: string): Workout {
     id: `athlete-authored-${date}`,
     planEntryId: `athlete-authored-${date}`,
   };
-  quiet(() => useProgramStore.getState().setManualOverride(date, authored));
+  quiet(() => seedManualOverride(date, authored));
   return authored;
 }
 

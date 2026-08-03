@@ -48,6 +48,7 @@ import {
   createTemporaryFatigueFact,
   temporaryFactScope,
 } from '../rules/temporarySourceFact';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
@@ -313,7 +314,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'remove_session', date: wk2Mon },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
     ok(`[B] CORE bin accepted: ${res.message ?? ''}`,
       res.ok === true,
@@ -343,7 +344,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'swap_category', date: wk2Mon, category: 'recovery' },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
     ok(`[C] recovery swap accepted: ${res.message ?? ''}`,
       res.ok === true &&
@@ -370,7 +371,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'move_session', fromDate: wk2Mon, toDate: wk2Sun },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
     const moved = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
     ok(`[D] valid move accepted: ${res.message ?? ''}`,
@@ -404,7 +405,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'add_category', date: wk2Sun, category: 'conditioning_light' },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
     ok(`[E] safe add applied: ${resSafe.message ?? ''}`, resSafe.ok === true, JSON.stringify(resSafe.rejected));
     // Hard conditioning added onto Friday (will be G-1 once the game lands).
@@ -415,7 +416,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'add_category', date: wk2Fri, category: 'conditioning_hard' },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
 
     const rebuild = addSaturdayGame(profile, wk2Sat);
@@ -446,7 +447,7 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       change: { kind: 'remove_session', date: wk2Mon },
       visibleWeek,
       todayISO,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
+      applyOverride: (d, w, c) => seedManualOverride(d, w!, c),
     });
     addSaturdayGame(profile, wk2Sat);
     const second = addSaturdayGame(profile, wk2Sat); // "refresh" — rebuild again
@@ -487,7 +488,7 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
   // compensating replan.
   let awayWriteRejected = false;
   try {
-    useProgramStore.getState().setManualOverride(wk2Mon, {
+    seedManualOverride(wk2Mon, {
     id: `away-${wk2Mon}`,
     microcycleId: 'manual',
     dayOfWeek: 1,

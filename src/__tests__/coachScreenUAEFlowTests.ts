@@ -12,7 +12,7 @@
  *   4. result.reply is the assistant message shown to the athlete.
  *
  * The test asserts:
- *   - The screen path produces ≥1 setManualOverride write
+ *   - The screen path produces ≥1 applyOverride write
  *   - The override is on a future date in the resolved week
  *   - The reply is non-empty
  *   - The reply only mentions exercises that actually changed
@@ -66,7 +66,7 @@ let fetchCalls = 0;
 
 // programStore — capture overrides into our spy.
 (useProgramStore as any).getState = () => ({
-  setManualOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
+  applyOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
     dateOverrides[date] = workout;
     overrideCalls.push({ date, workout, ctx });
   },

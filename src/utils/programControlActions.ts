@@ -1,4 +1,4 @@
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
   type ActiveInjuryConstraint,
@@ -319,7 +319,7 @@ export interface ProgramControlRoutingDecision {
 export interface ProgramControlActionContext {
   todayISO?: string;
   visibleWeek?: ResolvedDay[];
-  setManualOverride?: (
+  applyOverride?: (
     date: string,
     workout: Workout | null,
     context?: OverrideContext,
@@ -414,13 +414,13 @@ function fallbackResult(
   };
 }
 
-function defaultSetManualOverride(
+function defaultApplyOverride(
   date: string,
   workout: Workout | null,
   context?: OverrideContext,
 ) {
   if (!workout) return;
-  useProgramStore.getState().setManualOverride(date, workout, context);
+  applyProgramOverrideWrite({ date, workout, context, writer: 'program_control' });
 }
 
 function addDaysISO(dateISO: string, days: number): string {
@@ -576,7 +576,7 @@ function executePlanChangeAction(
     change,
     visibleWeek: context.visibleWeek,
     todayISO: context.todayISO,
-    setManualOverride: context.setManualOverride ?? defaultSetManualOverride,
+    applyOverride: context.applyOverride ?? defaultApplyOverride,
     trace: risk.trace,
   });
   // THE WRAPPER ROUTES THE PRODUCER'S ANSWER. IT DOES NOT INTERPRET IT.
@@ -761,8 +761,8 @@ function executeProgramControlActionWithinTrace(
           change: action.payload.planChange,
           visibleWeek: context.visibleWeek,
           todayISO,
-          setManualOverride: (date, workout, overrideContext) =>
-            (context.setManualOverride ?? defaultSetManualOverride)(
+          applyOverride: (date, workout, overrideContext) =>
+            (context.applyOverride ?? defaultApplyOverride)(
               date,
               workout,
               withActiveProgramModifierContext(overrideContext, activeModifierId),

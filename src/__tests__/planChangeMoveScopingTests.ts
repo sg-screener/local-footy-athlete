@@ -42,6 +42,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -290,8 +291,8 @@ run('moving onto a team night lands a combined day, keeping the anchor', () => {
     change: { kind: 'move_session', fromDate: monday, toDate: teamDay },
     visibleWeek: visibleWeek(weekStart),
     todayISO: weekStart,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
   }));
   assert(result.ok,
     `the doubling law's own shape was refused: "${result.message}" `
@@ -357,8 +358,8 @@ run('moving the gym session off a combined day leaves team training behind', () 
     },
     visibleWeek: visibleWeek(weekStart),
     todayISO: weekStart,
-    setManualOverride: (overrideDate, workout, context) =>
-      useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+    applyOverride: (overrideDate, workout, context) =>
+      seedManualOverride(overrideDate, workout, context),
   }));
   assert(result.ok, `scoped move refused: ${result.message}`);
 
@@ -594,8 +595,8 @@ run('the row sub-line and the whole-day scope can still disagree on an '
     change: { kind: 'add_category', date: monday, category: 'conditioning_light' },
     visibleWeek: visibleWeek(weekStart),
     todayISO: weekStart,
-    setManualOverride: (overrideDate, workout, context) =>
-      useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+    applyOverride: (overrideDate, workout, context) =>
+      seedManualOverride(overrideDate, workout, context),
   }));
   assert(added.ok, `adding conditioning to the plain Monday day was refused: ${added.message}`);
 
