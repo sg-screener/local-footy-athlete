@@ -1998,8 +1998,13 @@ async function walkTheScheduleDoors(): Promise<void> {
     'tape world: the acknowledgment disagrees with the result');
   assert(!RAW_CODE.test(tapeAck.message),
     `tape world: a raw code reached the athlete: "${tapeAck.message}"`);
-  // SAM'S §7 ANSWER LANDED (2026-08-03, sentence SIGNED verbatim): "It's game
-  // day — there's nothing to shorten. Go play." This coordinate — the tap ON
+  // SAM'S §7 ANSWER LANDED (2026-08-03), and §10 gave it its second signed
+  // variant the same day. THIS WORLD IS SAM'S REAL EXPORT — PRE-SEASON — so
+  // its card reads "Practice Match" (6-IV-4) and the fixture's own kind
+  // selects "It's a practice match — nothing to shorten. Go play." The
+  // in-season MARKED counterpart (game-day wording) is pinned in
+  // `programControlDurableOwnershipTests`, so both variants stay covered.
+  // This coordinate — the tap ON
   // the fixture day, the exact tap from his 2026-08-01 tape — no longer rides
   // the pre-existing §18 refusal family: the lane owner is date-aware through
   // the fixture owner, so a time-cap fact whose every target date is a
@@ -2020,8 +2025,12 @@ async function walkTheScheduleDoors(): Promise<void> {
   assert(useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
     .some((fact) => 'factKind' in fact && fact.factKind === 'time_cap'),
     'tape world: the fixture-day fact did not record — the coach lost the context');
-  assert(tapeAck.message === "It's game day — there's nothing to shorten. Go play.",
-    `tape world: the athlete does not hear Sam's signed sentence — got "${tapeAck.message}"`);
+  assert((tapeResult as { inertFixtureVariant?: string }).inertFixtureVariant === 'practice_match',
+    'tape world: the fixture kind did not travel with the committed result — the '
+    + "sentence would be picked by something other than the card label's owner");
+  assert(tapeAck.message === "It's a practice match — nothing to shorten. Go play.",
+    `tape world: the athlete does not hear the signed sentence for THIS fixture's `
+    + `kind — got "${tapeAck.message}"`);
   void beforeTapeTap;
 
   for (const door of ['short_on_time_today', 'away_this_week'] as const) {
