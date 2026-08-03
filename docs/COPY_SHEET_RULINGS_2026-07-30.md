@@ -912,3 +912,54 @@ under an invented "Strength" word would be the opposite defect. Walker law
 rides beside a strength or conditioning part. The "Midline Work" entry
 (`part.headline.support`) STAYS registered — it is the sole-content
 identity, not a retired word.
+
+## Batch 9 — schedule-fact lanes (2026-08-03): PROPOSED, the §6-V re-signing
+
+Declared reds 1 and 2 (§6-V) are PAID by the approved schedule-fact lanes
+(`docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md` option 2, Sam
+2026-08-02): the away door commits record-only and honest; "Short on time
+today" derives the ruled COMPRESSED session — main lift kept, cut to
+essentials, under the existing 35-minute owner (`SHORT_ON_TIME_MINUTES`).
+§6-V's caveat said the two §6-II-f success sentences "come back for signing
+when that red is paid, because the effect clause they will need does not
+exist yet" — this batch is that return. Shipped PROPOSED per this file's
+transitional rule (a string may ship PROPOSED and may never ship unlisted).
+
+All entries are PROSE, unquoted-in-table, on purpose: every sentence below
+lives in `utils/readinessAcknowledgment.ts` or
+`src/rules/temporarySourceFact.ts`, neither of which
+`copyRulingsBindingTests` scans — the same recorded binder gap as 6-II-e/f.
+The behavioural selection IS pinned: `programControlDurableOwnershipTests`
+asserts the effect clause appears exactly when the committed result changed
+the program, and never otherwise.
+
+**9-a. Success, short on time — WITH its effect clause** (the 6-II-f
+sentence extended, selected by the COMMITTED result so it can never claim a
+state-dependent outcome):
+
+- When the commit compressed today: "Got it — logged that you're short on
+  time today. Today's session is compressed to fit — main lift kept, inside
+  35 minutes." — `readinessAcknowledgment.ts`, `buildScheduleAcknowledgment`.
+- When the commit changed nothing (rest day, session already short): the
+  already-signed 6-II-f sentence stands unchanged: "Got it — logged that
+  you're short on time today."
+
+**9-b. Success, away — WITH its honest record-only clause** (away's effect
+is UNRULED, so the clause states exactly that):
+
+- "Got it — logged the days you're away. Your program stays as planned for
+  now." — same owner. The refusal sentence for both doors is unchanged and
+  already signed.
+
+**9-c. The 6-II-e single-day strings MOVED to the fact the door now mints**
+(byte-identical, no new words): the door records a today-scoped time-cap
+fact rather than a busy fact, so "Short on time today" (modifier title),
+"Today's session drops the highest-cost work. The rest of your week is
+untouched." (modifier body) and "Short on time" (reason label) now ship
+from `timeCapProjection` for any single-day cap. **6-II-e's honesty note is
+PAID**: the body sentence described intended behaviour; the cap owner now
+builds the compressed session (Bible §9 authored trim — main lift byte-
+identical, accessory sets halved, hard finisher dropped), so the sentence
+is true. The week-scoped busy wording is unchanged and still ships for a
+week-scoped busy fact (which is record-only BY RULING until Sam rules
+busy/away effects).

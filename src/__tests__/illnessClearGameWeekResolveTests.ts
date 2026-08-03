@@ -243,13 +243,16 @@ function currentBaseSurfaces(): Record<string, unknown> {
       'the cooked fatigue fact stayed active after clear — the ownership base-preserve did not generalise');
   });
 
-  // ── P1 — regression pin (the risk found during design): a projection-delivered fact
-  //    (schedule / time_cap) must NOT be captured by the scoped-regen base-preserve, even
-  //    with an illness scoped-regen adjustment present in the ledger. The ownership link is
-  //    the whole condition: the deriving_source_fact adjustment belongs to the ILLNESS fact
-  //    only, and the projection fact takes the re-projection path — it is never a silent
-  //    base-preserved ok-no-op (that would be the old deriving-commit bug).
-  await run('P1 a projection-delivered fact is NOT captured by scoped-regen base-preserve', async () => {
+  // ── P1 — ownership-scoping pin, REWRITTEN 2026-08-03 for the approved schedule-fact
+  //    lanes (docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md option 2, Sam
+  //    2026-08-02). The original cell asserted an unruled schedule fact "must re-project,
+  //    never silently base-preserve" — that re-projecting third lane is the retired dead
+  //    lane (it re-canonicalised the base and the verifier refused every device commit).
+  //    Under the lanes an UNRULED (max_sessions) fact commits INERT and HONEST: ok, no
+  //    program change, base preserved. What this cell keeps — its real payload — is the
+  //    OWNERSHIP SCOPING: the illness fact's scoped-regen adjustment is never captured,
+  //    minted, or stolen by another fact's commit.
+  await run('P1 an unruled schedule fact commits record-only and never touches the illness adjustment', async () => {
     const anchor = seedDeviceExact(true);
     const illness = await commitSevereIllness(anchor);
     assert(illness.ok === true, `illness commit rejected: "${illness.message}"`);
@@ -258,21 +261,21 @@ function currentBaseSurfaces(): Record<string, unknown> {
     const owned = derivingAdjustmentSourceFactIds();
     assert(owned.length === 1 && owned[0] === illnessFactId,
       `expected exactly one scoped-regen adjustment owned by the illness fact, got ${JSON.stringify(owned)}`);
-    // A time_cap (max_sessions) schedule fact — a projection-delivered fact that owns no
-    // scoped-regen adjustment. It must re-project, never silently base-preserve.
+    // A max_sessions schedule fact — UNRULED, so record-only by the approved lanes.
     const sched = await executeProgramControlActionDurably({
       type: 'set_schedule_modifier',
       source: { screen: 'program_tab', surface: 'schedule_sheet', initiatedBy: 'tap' },
       scope: 'current_week', payload: { date: anchor, todayISO: anchor, maxSessionsThisWeek: 3 },
       requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
     } as never, { todayISO: anchor }) as { ok?: boolean; changedProgram?: boolean };
-    assert(!(sched.ok === true && sched.changedProgram === false),
-      'REGRESSION: the schedule fact silently succeeded with no program change — it was ' +
-      'base-preserved as a no-op instead of re-projecting through the non-inert branch');
-    // The illness fact still owns its adjustment; the projection fact minted none.
+    assert(sched.ok === true,
+      'the unruled schedule fact was refused — the inert lane regressed to the dead lane');
+    assert(sched.changedProgram === false,
+      'an unruled schedule fact claims a program change — record-only must be honest');
+    // The illness fact still owns its adjustment; the record-only fact minted none.
     const ownedAfter = derivingAdjustmentSourceFactIds();
     assert(ownedAfter.length === 1 && ownedAfter[0] === illnessFactId,
-      'the projection fact must not mint or steal a scoped-regen adjustment');
+      'the record-only fact must not mint or steal a scoped-regen adjustment');
   });
 
   // ── FIDELITY — the canonical fixture actually installs the witnessed game (the dimension

@@ -896,6 +896,13 @@ function scheduleProjection(
 function timeCapProjection(
   facts: readonly TemporaryTimeCapFact[],
 ): ActiveScheduleConstraint[] {
+  // A SINGLE-DAY cap is the "Short on time today" door's fact since the
+  // 2026-08-03 lanes (the ruled 35-minute compressed session), so it carries
+  // the sentences Sam signed for that door in 6-II-e — whose body ("drops the
+  // highest-cost work… rest of your week untouched") became TRUE when the cap
+  // owner started cutting to essentials. Multi-day/weekday caps keep the
+  // technical cap wording. One fact, one horizon, and the copy agrees with it
+  // — the same rule `scheduleFactIsSingleDay` documents above.
   return facts.map((fact): ActiveScheduleConstraint => ({
     id: `source-fact:time-cap:${fact.factId}`,
     type: 'schedule',
@@ -903,7 +910,9 @@ function timeCapProjection(
     status: 'active',
     startDate: fact.effectiveFrom,
     lastUpdatedAt: fact.updatedAt,
-    reasonLabel: `Temporary ${fact.maxSessionMinutes}-minute cap`,
+    reasonLabel: fact.scope.kind === 'date'
+      ? 'Short on time'
+      : `Temporary ${fact.maxSessionMinutes}-minute cap`,
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
@@ -914,8 +923,12 @@ function timeCapProjection(
     timeCapDates: [...fact.dates],
     timeCapWeekdays: [...fact.weekdays],
     timeCapAllSessions: fact.targetKind === 'all_sessions',
-    modifierTitle: `${fact.maxSessionMinutes}-minute session cap active`,
-    modifierBody: 'Every targeted session is capped deterministically within the effective window.',
+    modifierTitle: fact.scope.kind === 'date'
+      ? 'Short on time today'
+      : `${fact.maxSessionMinutes}-minute session cap active`,
+    modifierBody: fact.scope.kind === 'date'
+      ? "Today's session drops the highest-cost work. The rest of your week is untouched."
+      : 'Every targeted session is capped deterministically within the effective window.',
     modifierAffects: ['current_week', 'future_generation'],
     rules: [`maximum session duration ${fact.maxSessionMinutes} minutes`],
     safeFocus: ['Highest-priority session content'],

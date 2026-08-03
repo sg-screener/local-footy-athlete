@@ -369,9 +369,9 @@ function weekFingerprint(): string {
     .join(';');
 }
 
-/** The sentence `temporarySourceFactTransaction` refuses with, and nowhere else. */
-const ENGINE_REFUSAL_SENTENCE =
-  'The report was not applied because the visible program could not be verified.';
+// (The store-layer refusal sentence used to be pinned here to prove the real
+// branch refused; the schedule doors COMMIT since the 2026-08-03 lanes, so the
+// cells now pin what each door DOES instead.)
 
 async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
   const warn = console.warn; const error = console.error;
@@ -557,17 +557,20 @@ function performAction(action: WalkerAction): WalkerStepResult {
     // for the opposite job: putting the walker's world INTO the state a landed
     // schedule fact creates, so the other laws (L4b screen = domain, the
     // projection checks) run over a week that has one. They cannot be the door
-    // because `perform` is synchronous and the executor is awaited — and because
-    // the executor currently REFUSES every schedule fact against a real accepted
-    // base (declared red 1), so a walker that only entered there would never
-    // reach this state at all.
+    // because `perform` is synchronous and the executor is awaited.
     //
     // They use the real creator and the real scope owner
     // (`scheduleFactScopeForAction`) and the real compatibility composer, so the
     // state is the state, not a hand-drawn version of it. `declare_source_fact`
-    // above sets the same precedent for the readiness store. When declared red 1
-    // is paid, both of these collapse into the real transaction and this comment
-    // goes with them.
+    // above sets the same precedent for the readiness store.
+    //
+    // 2026-08-03, the paid lanes: these reachers mint the UNRULED record-only
+    // shapes (busy_week / travel), which since the approved lanes is exactly
+    // the state a landed inert commit leaves behind — fact + constraint, no
+    // program change — so the stand-in is now faithful by construction. The
+    // RULED short-on-time state (time-cap fact + scoped-regen overlay) cannot
+    // be minted synchronously without hand-drawing the overlay, so the real
+    // door is walked in `walkTheScheduleDoors`, end to end, instead.
     case 'short_on_time_today':
     case 'away_this_week': {
       const dates = action.kind === 'away_this_week' ? [...action.dates].sort() : [];
@@ -745,7 +748,10 @@ function proposeAction(rng: () => number, step: number): WalkerAction | null {
   // ORDER-PROBE BAND (unit 6, 2026-08-01): the Task-7 contamination was only
   // ever observed with the schedule doors in the RANDOM band, so the probe
   // needs a switch that puts them back there. Never on in the gate — the
-  // doors' gate home is the deterministic cell until declared red 1 is paid.
+  // doors' gate home is the deterministic `walkTheScheduleDoors` cell.
+  // (Declared red 1 paid 2026-08-03; promoting these reachers into the random
+  // band is a separate walker-vocabulary decision, recorded NOT-COVERED in the
+  // day log rather than smuggled in with the lanes.)
   if (process.env.WALKER_RANDOM_SCHEDULE_DOORS === '1' && roll < 0.24) {
     return rng() < 0.5
       ? { kind: 'short_on_time_today', date: pickFrom(rng, week).date }
@@ -1996,15 +2002,42 @@ async function walkTheScheduleDoors(): Promise<void> {
     'tape world: the acknowledgment disagrees with the result');
   assert(!RAW_CODE.test(tapeAck.message),
     `tape world: a raw code reached the athlete: "${tapeAck.message}"`);
+  // DECLARED RED 1 IS PAID (2026-08-03, the approved lanes): the dead
+  // always-refusing lane is retired and the two fresh-world cells below prove
+  // both doors COMMIT on their ruled lanes. What this depth coordinate still
+  // holds is a NARROWER, differently-caused refusal: the tap lands ON the
+  // fixture day, and the deriving regen of a game-marked week can fail its own
+  // §18 acceptance (`planner_selected_target_miss` — the same pre-existing
+  // family `programControlDurableOwnershipTests` documents for the marked
+  // samExport8 world, where even the established severe-illness lane refuses).
+  // A game day also has no trainable session for the ruled compression to cut,
+  // so what "short on time" should DO here is parked for Sam
+  // (docs/PARKED_QUESTIONS_2026-08-01.md §6). The LAWS this cell owns hold on
+  // BOTH branches: the tap ANSWERS honestly (asserted above), a refusal
+  // conserves the world byte-exact, and a commit never cuts the anchor.
   if (!tapeResult.ok) {
     assert(worldFingerprint() === beforeTapeTap,
       'tape world: a refused tap changed the world anyway');
+  } else {
+    const gameDay = visibleWeek().find((day) => day.date === todayISO);
+    assert(gameDay?.workout,
+      'tape world: the commit removed the fixture-day session — the anchor law broke');
   }
 
   for (const door of ['short_on_time_today', 'away_this_week'] as const) {
     freshInstall();
     performAction({ kind: 'answer_onboarding', profile: profileFor(makeRng(11)) });
     performAction({ kind: 'generate_program' });
+    // The short-on-time cell asserts TODAY's compression, so today must hold a
+    // session — walk the clock forward (a real athlete action) until it does.
+    if (door === 'short_on_time_today') {
+      for (let hop = 0; hop < 10; hop += 1) {
+        if (visibleWeek().find((day) => day.date === todayISO)?.workout) break;
+        performAction({ kind: 'advance_time', days: 1 });
+      }
+      assert(visibleWeek().find((day) => day.date === todayISO)?.workout,
+        `${door}: no occupied today within ten days — this cell would be vacuous`);
+    }
     fingerprintBefore = weekFingerprint();
 
     const occupied = visibleWeek().filter((day) => day.date >= todayISO && day.workout);
@@ -2033,7 +2066,6 @@ async function walkTheScheduleDoors(): Promise<void> {
           requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
         };
 
-    const before = worldFingerprint();
     let result: { ok?: boolean; message?: string | null };
     try {
       result = await quietAsync(() => executeProgramControlActionDurably(
@@ -2053,25 +2085,36 @@ async function walkTheScheduleDoors(): Promise<void> {
       `${door}: the acknowledgment disagrees with the result`);
     assert(!RAW_CODE.test(ack.message), `${door}: a raw code reached the athlete: "${ack.message}"`);
 
-    if (result.ok) {
-      // DECLARED RED 1 IS PAID. Do not let this cell go quietly green on a door
-      // that has started working — the laws it should now assert are different.
-      throw new Error(
-        `${door} now COMMITS. Declared red 1 in programControlDurableOwnershipTests `
-        + 'is paid: rewrite this cell to assert what the door DOES (today lightens / '
-        + 'the away days clear) instead of that it refuses conservatively.');
+    // DECLARED RED 1 IS PAID (2026-08-03): the doors COMMIT through the real
+    // executor, each on its ruled lane (approved reassessment, option 2).
+    assert(result.ok === true,
+      `${door}: the door is refused again ("${result.message}") — the paid lanes `
+      + 'regressed to the dead third lane');
+
+    if (door === 'away_this_week') {
+      // UNRULED → RECORD-ONLY, HONEST. The fact and constraint land; the
+      // program bytes do not move; no overlay, no adjustment.
+      assert(weekFingerprint() === fingerprintBefore,
+        `${door}: a record-only away fact changed the visible week`);
+      const accepted = useProgramStore.getState().acceptedMaterialContext;
+      assert(accepted.temporarySourceFacts.some((fact) =>
+        'factKind' in fact && fact.factKind === 'schedule'),
+        `${door}: the away fact did not land in the accepted context`);
+      assert(Object.keys(useProgramStore.getState().weekScopedOverlays ?? {}).length === 0,
+        `${door}: a record-only fact authored a week overlay`);
+    } else {
+      // RULED → DERIVING. Today's session is compressed under the 35-minute
+      // owner (Sam 2026-08-02: main lift kept, cut to essentials); the other
+      // days of the week are untouched; the adjustment is fact-linked.
+      const today = visibleWeek().find((day) => day.date === todayISO);
+      assert(today?.workout, `${door}: the compressed today lost its session entirely`);
+      assert((today.workout.durationMinutes ?? 0) <= 35,
+        `${door}: today still runs ${today.workout.durationMinutes} minutes over the cap`);
+      assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
+        (adjustment) => adjustment.kind === 'deriving_source_fact' &&
+          adjustment.status === 'active'),
+        `${door}: the deriving commit minted no fact-linked adjustment`);
     }
-
-    // The refusal came from the fact transaction, not from the synchronous core's
-    // "this type needs the durable path" — which is what a deleted executor
-    // branch would answer, also with ok:false.
-    assert(result.message === ENGINE_REFUSAL_SENTENCE,
-      `${door}: the refusal no longer comes from the fact transaction — "${result.message}". `
-      + 'If the executor branch was deleted, this is the cell that says so.');
-
-    // L3 CONSERVATION — the whole law for a refusal, asserted byte for byte.
-    assert(worldFingerprint() === before,
-      `${door}: a refused tap changed the world anyway`);
 
     // And every other law still holds over the untouched week.
     for (const broken of checkInvariants({ action: { kind: 'clear_source_facts' }, outcome: null, message: null, threw: null })) {

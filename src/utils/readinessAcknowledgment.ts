@@ -71,22 +71,31 @@ export type ScheduleDoor = 'short_on_time' | 'away';
  * Build an acknowledgment from a schedule-door result. Never null — a tap that
  * says nothing is the defect.
  *
- * THE SUCCESS SENTENCES CLAIM ONLY WHAT IS TRUE TODAY. Both doors currently
- * record a fact and change nothing an athlete can see (declared red 2,
- * `programControlDurableOwnershipTests`), so neither sentence promises a lighter
- * session or a cleared day. When that red is paid the sentences gain the effect
- * clause and Sam signs them again — that re-check is recorded in the copy sheet
- * beside them, so the wording cannot quietly outlive the behaviour.
+ * THE SUCCESS SENTENCES CLAIM ONLY WHAT IS TRUE, AND NOW CARRY THEIR EFFECT
+ * CLAUSE (declared reds 1-2 paid 2026-08-03; the re-signing the copy sheet's
+ * §6-V caveat required — PROPOSED as copy sheet Batch 9). The clause is
+ * selected by the COMMITTED result, never by the door alone: a short-on-time
+ * commit that compressed today says so; one that changed nothing (rest day,
+ * already short) keeps the plain logged sentence, because a signed sentence
+ * must never claim a state-dependent outcome. Away is record-only by ruling
+ * (its effect is unruled), so its clause states exactly that.
  */
 export function buildScheduleAcknowledgment(
   result: ReadinessResultLike | null | undefined,
   door: ScheduleDoor,
 ): ReadinessAcknowledgment {
   if (result?.ok) {
+    if (door === 'away') {
+      return {
+        tone: 'success',
+        message: "Got it — logged the days you're away. Your program stays as planned for now.",
+      };
+    }
     return {
       tone: 'success',
-      message: door === 'away'
-        ? "Got it — logged the days you're away."
+      message: result.changedProgram
+        ? "Got it — logged that you're short on time today. Today's session is "
+          + 'compressed to fit — main lift kept, inside 35 minutes.'
         : "Got it — logged that you're short on time today.",
     };
   }

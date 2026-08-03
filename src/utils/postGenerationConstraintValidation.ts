@@ -25,6 +25,7 @@ import { canScoreCapacity } from '../data/capacityRubric';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { applyLighterDayTrim } from './lighterDayTrim';
 import { applyInjuryFilterToWorkout } from './injuryWorkoutFilter';
 import {
   applyConstraintsToSession,
@@ -344,13 +345,44 @@ export function validateWorkoutAgainstActiveConstraints(
     };
   }
 
+  // THE COMPRESSED SESSION (Sam's minutes ruling, 2026-08-02): a session on a
+  // capped date is CUT TO ESSENTIALS, not relabelled — main lift kept
+  // byte-identical, accessory sets halved, hard finisher dropped, hard
+  // conditioning eased — via the Bible §9 authored trim (`applyLighterDayTrim`),
+  // so no fourth naming authority for session content is invented here.
+  //
+  // The old guard read `durationMinutes > timeCap` and generated core sessions
+  // carry `durationMinutes: 0`, so the cap NEVER fired on a real generated
+  // week — the machinery was vacuous on exactly the content it existed for
+  // (declared red 9's deeper shape). Zero is ABSENCE of duration evidence,
+  // not evidence of a short session: an unanchored session compresses unless
+  // its stated duration proves it already fits. After compression the session
+  // states the cap, which is also the idempotency guard — a capped session
+  // re-validated is not trimmed again.
+  //
+  // Anchored sessions (game / team night) are never content-cut and never
+  // have the cap stamped over an unstated duration — the club's night is not
+  // ours to shorten; they keep only the pre-existing over-cap alignment.
   const timeCap = scheduleTimeCap(active, input.date);
-  if (timeCap !== null && alignedWorkout.durationMinutes > timeCap) {
-    alignedWorkout = {
-      ...alignedWorkout,
-      durationMinutes: timeCap,
-    };
-    scheduleDurationChanged = true;
+  if (timeCap !== null) {
+    const capClassification = classifyVisibleSession(alignedWorkout);
+    const capAnchored = capClassification.anchors.game ||
+      capClassification.anchors.teamTraining;
+    const statedDuration = Number.isFinite(alignedWorkout.durationMinutes) &&
+      alignedWorkout.durationMinutes > 0;
+    if (!capAnchored && (!statedDuration || alignedWorkout.durationMinutes > timeCap)) {
+      alignedWorkout = {
+        ...applyLighterDayTrim(alignedWorkout).workout,
+        durationMinutes: timeCap,
+      };
+      scheduleDurationChanged = true;
+    } else if (capAnchored && statedDuration && alignedWorkout.durationMinutes > timeCap) {
+      alignedWorkout = {
+        ...alignedWorkout,
+        durationMinutes: timeCap,
+      };
+      scheduleDurationChanged = true;
+    }
   }
 
   if (isGlobalHardStop(active) && !isRecoveryWorkout(alignedWorkout)) {

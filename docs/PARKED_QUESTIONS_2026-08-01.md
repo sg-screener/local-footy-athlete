@@ -142,3 +142,27 @@ stores armoured at their honest size — auth with the full recipe (session
 identity is material; tape carries flags only, never a token/email/id), ui at
 the decided minimum (door + tape, NO wipe refusal — nothing is an athlete
 answer; absences pinned in `uiStoreOwnershipTests`).
+## 7. Short on time on a FIXTURE day: what should the tap do?
+
+**Parked by:** the schedule-fact lanes unit, 2026-08-03.
+**Blocked on the answer:** nothing — the lanes shipped; this is the one
+coordinate where the ruled effect has no purchase.
+**The ask:** Sam's minutes ruling gives "Short on time today" the compressed
+session — main lift kept, cut to essentials, under 35 minutes. A GAME day
+has no trainable session to compress (anchors are never content-cut, by
+law), and in a game-marked week the deriving regen can also fail its own
+§18 acceptance (`planner_selected_target_miss` — the same pre-existing
+family that refuses even the established severe-illness lane in the marked
+samExport8 world, recorded in `programControlDurableOwnershipTests`). Sam's
+2026-08-01 tape tap was exactly this coordinate: ON the fixture day. Today
+the athlete gets the honest typed refusal sentence ("That didn't save —
+your week is unchanged...") rather than the old silence; the walker's
+tape-world cell holds the coordinate and its laws (answer honestly, refuse
+conservatively, never cut the anchor).
+**Options to rule:** (a) a fixture-day tap records the fact inert with an
+honest "game day — nothing to compress" acknowledgment; (b) it compresses
+the rest of the week's... nothing (the fact is today-scoped) — i.e. it is
+simply a no-op worth saying so; (c) leave the refusal. The sentence for
+whichever option needs signing.
+**Shipped meanwhile:** both doors alive on their ruled lanes everywhere
+else; the game-day coordinate answers honestly instead of silently.

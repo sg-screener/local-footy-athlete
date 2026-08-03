@@ -361,3 +361,97 @@ imports the owner at all — the census completeness direction (a detector
 for `Record<string, Injury...>` literals outside `data/`) is the missing
 sweep, and it was not built here.
 
+
+# Schedule-fact deriving lanes — 2026-08-03
+
+## The unit — the fact's ruled effect owns its commit lane; the dead lane is gone
+
+Option 2 of `docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md`, built
+as Sam approved it verbatim (2026-08-02) on `feat/schedule-fact-lanes`,
+tests first (six cells red against the dead lane before a line of product
+code moved). Final shape:
+
+- **DERIVING (ruled effects):** fatigue, injury — and now `schedule/
+  time_cap` per the minutes ruling. "Short on time today" records a
+  today-scoped time-cap fact at the one 35-minute owner
+  (`SHORT_ON_TIME_MINUTES`) and scoped-regen delivers the COMPRESSED
+  session — main lift byte-identical, accessory sets halved, hard finisher
+  dropped, via the Bible §9 authored trim (`applyLighterDayTrim`), no new
+  content authority. Clear cascade-reverts byte-exact (illness precedent).
+- **INERT (unruled):** busy_week, travel, max_sessions, equipment through
+  this boundary — recorded and honest: fact + constraint land, program
+  byte-unchanged, off the whole-week §18 gate, no overlay, no adjustment.
+  The away door is alive as record-only; its ack says so.
+- **DELETED, not guarded:** the third lane — the re-canonicalising mutate
+  whose own verifier refused it on every device
+  (`accepted_composition_base_changed_by_temporary_fact`). Fact commits are
+  `forward_decision` at the accepted boundary: a pre-existing shortfall in
+  some week records and discloses, it does not refuse recording a fact.
+
+**Two standing lies paid beyond the lanes:** the cap owner's
+`durationMinutes > cap` guard NEVER fired on real generated weeks (core
+sessions state 0 minutes — the whole cap machinery was vacuous on exactly
+the content it existed for, declared red 9's deeper shape); and 6-II-e's
+modifier body ("drops the highest-cost work") is now TRUE and ships from
+`timeCapProjection` for the door's fact. Declared reds 1 and 2 in
+`programControlDurableOwnershipTests` and the walker's refuses-conservatively
+cells are DELETED as paid, rewritten as the lanes' laws. Copy: Batch 9
+PROPOSED (the §6-V re-signing — both success sentences with effect clauses,
+selected by the COMMITTED result). `illnessClearGameWeek` P1 rewritten to
+the lanes (its old premise WAS the dead lane); ownership-scoping payload
+kept.
+
+**Mutations: five applied, five caught — one only after it taught us.**
+time_cap dropped from the deriving set (deriving cell) · travel smuggled in
+(inert cell) · preserveExact flipped off, the dead lane's writer
+resurrected (two cells) · door regressed to minting busy (three cells) ·
+the trim deleted while the cap stamps durations — SURVIVED the end-to-end
+cell (regen variance satisfies "today changed" without any cut), so the
+compression law got an owner-level cell over deterministic input; re-run
+under the same mutation: caught.
+
+**L13 — depth reached:** the walker's schedule-door cells commit through
+the REAL executor (`executeProgramControlActionDurably`) in fresh walked
+worlds (onboard → generate → clock-hops until today holds a session, ≤13
+actions); the tape-world cell holds Sam's exact 2026-08-01 coordinate at
+depth (game marked ON the tap day + active week-scoped busy fact, 5+
+actions) — where the deriving regen refuses on the pre-existing
+game-marked-week §18 family (`planner_selected_target_miss`; the
+established severe-illness lane refuses identically there, probed) and the
+athlete now gets the honest typed refusal instead of the old silence.
+Parked §6: what "short on time" should DO on a fixture day. Deep tier
+unchanged (its walks exercise the state-reachers; the random-band promotion
+of the schedule doors is a separate vocabulary decision, below).
+
+**L12 — what catches the NEXT dead lane:** the class was "a writer and its
+verifier disagreeing about one commit, visible only on devices" — now (1)
+the commit site has exactly TWO shapes and the non-regen one is
+base-preserving by construction, so the contradiction is unrepresentable at
+this boundary; (2) the durable suite's lane cells assert each lane's whole
+signature (ok + changedProgram + base bytes + overlay/adjustment counts),
+so a lane change cannot hide behind a green `ok`; (3) the mutation round is
+recorded above so the next lane edit re-runs it. What this does NOT catch:
+a NEW transaction boundary (outside `commitTemporarySourceFactSet`) growing
+its own third lane — the census's writer-audit direction, not this unit's.
+
+**Convergence (north star):** toward. No new stored state (the compressed
+session is DERIVED at read from fact + cap owner, never stored); two of the
+five representations of "the athlete is short on time" died with the lane
+(the thrown-away re-canonicalised base; the ack's implicit false claim);
+the fact stored is the ruling's own answer (35, once, from the owner).
+
+**NOT-COVERED:** the legacy busy-week activeConstraint writers and the
+migration's week-scoped busy fact (reassessment Q6) are census work, sized
+small, untouched here per its own terms; the schedule doors stay OUT of the
+walker's random band (order-probe arrangement preserved — promoting them is
+a vocabulary decision that reshuffles every seed's world, not smuggled in
+with the lanes); busy/away EFFECTS remain unruled (record-only by ruling)
+— when Sam rules them they join the deriving set the same way; the
+fixture-day coordinate is parked (§6), answered honestly meanwhile;
+`equipmentScheduleFactTransactionTests` red is PRE-EXISTING at clean main
+(A/B in a detached worktree: identical FAIL + abort at the same line; not
+in the bible), as are `coachLivePathV2IntegrationTests`'s two Fri-collapse
+failures (same A/B method, identical at main; also not in the bible);
+coach free-text time_cap facts now derive when a program exists — coach
+files untouched (LR-6 STOP respected; the coach path enters the same one
+boundary).
