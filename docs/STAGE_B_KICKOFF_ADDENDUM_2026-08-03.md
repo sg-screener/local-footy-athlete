@@ -117,6 +117,18 @@ ruling exists; verify the composed form honours it), and any number the
 need computation or assembler wants that no sheet carries — STOP and ask,
 never invent (the provenance gates make invention a red anyway).
 
+**NEW (from LR-1, 2026-08-04): the dateOverrides identity question is a
+STAGE 0 DELIVERABLE.** LR-1's walker cell proved no athlete tap door writes
+dateOverrides any more — removals record UserRemovalConstraints, adds/swaps
+land in weekScopedOverlays; its remaining writers are the coach pipeline,
+the lighter-day transaction, and LR-3 residuals. The census calls it "the
+athlete's decision surface"; it may now be a stored-output surface wearing
+that name. Stage B derives over these surfaces, so stage 0 must map every
+writer with receipts and bring Sam the ruling options (retire toward
+decisions per the north star, or re-classify) BEFORE the assembler's
+derivation sources are fixed. Full trace: LR-1 boundary report, "Parked
+for Sam".
+
 ## §5 — Preconditions (all must be green before the first commit)
 
 1. Store armour recipe proven + the stores Stage B writes through armoured
