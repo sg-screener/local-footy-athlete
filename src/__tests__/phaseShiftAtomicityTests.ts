@@ -417,7 +417,10 @@ async function main(): Promise<void> {
     for (const f of failures) console.log(`  • ${f}`);
     process.exit(1);
   }
-  process.exit(0);
+// TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
+// `process.exit(0)` hard-overrides `process.exitCode`, so it silently
+// un-arms this suite — proven by a surviving mutation during the rollout.
+// `totalsPrinted(...)` above already set the correct code from the report.
 }
 
 main().catch((error) => {

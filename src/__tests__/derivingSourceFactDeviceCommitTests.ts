@@ -373,7 +373,10 @@ async function main(): Promise<void> {
     console.log('Currently RED (pins the diagnosed bug; green after the approved fix):');
     for (const name of failures) console.log(`  - ${name}`);
   }
-  process.exit(failures.length > 0 ? 1 : 0);
+// TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
+// `process.exit(0)` hard-overrides `process.exitCode`, so it silently
+// un-arms this suite — proven by a surviving mutation during the rollout.
+// `totalsPrinted(...)` above already set the correct code from the report.
 }
 
 main().catch((error) => { console.error('SUITE THREW:', error); process.exit(1); });

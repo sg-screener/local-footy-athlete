@@ -1,6 +1,13 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from '../support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+// THE CHAIN'S FIRST LINK, and it was the last to be armed — it runs via a
+// direct sucrase-node invocation rather than an `npm run` script, so a sweep
+// that enumerated scripts could not see it. The law's own gate found it.
+armTotalsOrRed();
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -494,6 +501,7 @@ function main(): void {
   if (totalMs > HARD_RUNTIME_MS) {
     fail(`Bible harness runtime ${totalMs.toFixed(1)}ms exceeds hard ceiling ${HARD_RUNTIME_MS}ms`);
   }
+  totalsPrinted(allFailures.length + (mutationTotal - totalMutationKills));
   if (allFailures.length > 0 || totalMutationKills !== mutationTotal) process.exit(1);
 }
 

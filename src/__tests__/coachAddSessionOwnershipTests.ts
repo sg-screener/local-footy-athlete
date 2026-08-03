@@ -307,4 +307,7 @@ run('defaultApplyAddSession writes through the addition-transaction owner (censu
 
 console.log(`\ncoach add_session ownership: ${passes} passing, ${failures.length} failing`);
 totalsPrinted(failures.length);
-process.exit(failures.length > 0 ? 1 : 0);
+// TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
+// `process.exit(0)` hard-overrides `process.exitCode`, so it silently
+// un-arms this suite — proven by a surviving mutation during the rollout.
+// `totalsPrinted(...)` above already set the correct code from the report.

@@ -835,4 +835,7 @@ console.log(`\n${'═'.repeat(60)}`);
 console.log(`rulesKernelTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (failures.length) console.log('Failures:\n  - ' + failures.join('\n  - '));
-process.exit(fail > 0 ? 1 : 0);
+// TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
+// `process.exit(0)` hard-overrides `process.exitCode`, so it silently
+// un-arms this suite — proven by a surviving mutation during the rollout.
+// `totalsPrinted(...)` above already set the correct code from the report.

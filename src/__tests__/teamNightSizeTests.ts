@@ -315,4 +315,7 @@ console.log('  NOT COVERED: no CONSUMER reads the derived size yet — see the b
   + 'report. Sam signed what the answer IS and how it is read; what it then influences '
   + '(§2.3 of the sheet) is a separate ruling and is deliberately not built.');
 if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);
-process.exit(fail > 0 ? 1 : 0);
+// TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
+// `process.exit(0)` hard-overrides `process.exitCode`, so it silently
+// un-arms this suite — proven by a surviving mutation during the rollout.
+// `totalsPrinted(...)` above already set the correct code from the report.
