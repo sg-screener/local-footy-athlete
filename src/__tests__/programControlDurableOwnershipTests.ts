@@ -759,7 +759,7 @@ async function main(): Promise<void> {
   // The fact records; the coach keeps the context; the athlete gets the truth.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('short on time on a MARKED game day commits inert: fact recorded, program byte-unchanged, the game-day truth', async () => {
+  await run('short on time on a MARKED fixture commits inert: fact recorded, program byte-unchanged, the fixture truth', async () => {
     // Sam's 2026-08-01 tape tap was exactly this coordinate: "Short on time
     // today" ON the fixture day. Before the §7 answer, the deriving regen of
     // this marked world refused honestly; now the classifier reads the date
@@ -808,8 +808,14 @@ async function main(): Promise<void> {
 
     const ack = buildScheduleAcknowledgment(result, 'short_on_time');
     assert(ack.tone === 'success' &&
-      ack.message === "It's game day — there's nothing to shorten. Go play.",
-      `the athlete does not hear Sam's signed game-day sentence — got "${ack.message}"`);
+      ack.message === "It's a practice match — nothing to shorten. Go play.",
+      // §10 RE-POINT (Sam, 2026-08-03): this world is Sam's real export —
+      // Pre-season — so its card reads "Practice Match" (6-IV-4) and the
+      // signed sentence is the practice-match variant. The cell asserted the
+      // game-day wording when only one sentence existed; the ruling changed
+      // the premise, not the behaviour under test. In-season marked coverage
+      // is the cell added directly below, so both variants stay pinned.
+      `the athlete does not hear the signed sentence for THIS fixture's kind — got "${ack.message}"`);
   });
 
   await run('short on time on a VIRTUAL game day (in-season usualGameDay, no marks) takes the same inert lane', async () => {
@@ -846,6 +852,71 @@ async function main(): Promise<void> {
     const ack = buildScheduleAcknowledgment(result, 'short_on_time');
     assert(ack.message === "It's game day — there's nothing to shorten. Go play.",
       `virtual game day: the athlete does not hear the signed sentence — got "${ack.message}"`);
+  });
+
+  await run('short on time on an IN-SEASON MARKED game says game day, not practice match', async () => {
+    // The other half of §10's pair, and the reason the marked cell above could
+    // be re-pointed honestly: a MARKED fixture in an IN-SEASON world is a game,
+    // its card says so, and the sentence must match. Without this cell the
+    // re-point would have traded coverage for agreement.
+    reachHisWorldByActing({
+      profile: {
+        ...samExport8Profile(),
+        seasonPhase: 'In-season',
+        usualGameDay: 'Saturday',
+        gameDay: 'Saturday',
+      } as ReturnType<typeof samExport8Profile>,
+      selectedPhase: 'In-season',
+    });
+    const gameDay = '2026-08-01';
+    assert(SAM_EXPORT_8_MARKED_DAYS[gameDay] === 'game',
+      'precondition: this cell targets his marked fixture day');
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(
+        shortOnTimeAction('today_only', gameDay), { todayISO: gameDay }));
+    assert(result.ok === true, `the in-season marked tap was refused ("${result.message}")`);
+    assert(result.inertReason === 'fixture_day' && result.inertFixtureVariant === 'game',
+      `an in-season marked fixture is not a game to the owner (variant=${
+        String(result.inertFixtureVariant)})`);
+    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+    assert(ack.message === "It's game day — there's nothing to shorten. Go play.",
+      `in-season marked: the athlete hears the wrong signed sentence — got "${ack.message}"`);
+  });
+
+  await run('short on time on a PRE-SEASON fixture says practice match, not game day', async () => {
+    // §10 (Sam, 2026-08-03): the sentence variant is selected by the SAME
+    // `FixtureAvailabilityKind` that picks the day's card label (6-IV-4), so
+    // the card and the sentence can never disagree about what the day is. The
+    // same world as the virtual cell, one answer different: Pre-season.
+    reachHisWorldByActing({
+      withMarks: false,
+      profile: {
+        ...samExport8Profile(),
+        seasonPhase: 'Pre-season',
+        usualGameDay: 'Saturday',
+        gameDay: 'Saturday',
+      } as ReturnType<typeof samExport8Profile>,
+      selectedPhase: 'Pre-season',
+    });
+    const fixtureDay = '2026-08-01'; // the Saturday of his week, unmarked
+    const before = dayFingerprints(projectedWeek(WEEK, fixtureDay));
+
+    const result = await quietAsync(() =>
+      executeProgramControlActionDurably(
+        shortOnTimeAction('today_only', fixtureDay), { todayISO: fixtureDay }));
+    assert(result.ok === true, `the pre-season fixture tap was refused ("${result.message}")`);
+    assert(result.changedProgram === false && result.inertReason === 'fixture_day',
+      `a pre-season fixture did not take the inert lane (inertReason=${
+        String(result.inertReason)})`);
+    assert(result.inertFixtureVariant === 'practice_match',
+      `the fixture's own kind did not travel with the result — got ${
+        String(result.inertFixtureVariant)}; the card label owner says practice_match`);
+    const after = dayFingerprints(projectedWeek(WEEK, fixtureDay));
+    assert(JSON.stringify(before) === JSON.stringify(after),
+      'a practice-match inert cap changed the visible week');
+    const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+    assert(ack.message === "It's a practice match — nothing to shorten. Go play.",
+      `pre-season: the athlete hears the wrong signed sentence — got "${ack.message}"`);
   });
 
   await run('a refused schedule tap is acknowledged to the athlete, in the athlete\'s words', async () => {
