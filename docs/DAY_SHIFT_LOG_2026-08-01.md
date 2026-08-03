@@ -181,6 +181,32 @@ semantics, unchanged, flagged in the commit). The `equipmentIconFor`
 per-item glyphs and coach surfaces untouched (not in the ruling; LR-6
 STOP respected).
 
+## Fleet wave 1 + fix round — MERGED (2026-08-03)
+
+Wave 1b `b5340a2` (coachPreferences + coachMutationHistory, agent-built per
+the recipe, bible EXIT=0 on identical base). Fix round `c2b60e2`: the second
+application found two defects in the FIRST — removing the last
+exclusion/pin/injury was refused (the athlete could not take an answer
+back; now a named erasure via `applyRemovalThroughDoor`), and
+`resetActionId` never reached the tape ANYWHERE (the diagnostics filter
+eats keys containing "set" — doors now emit `erasureActId`; the profile
+door's stripped field recorded as known). Recipe lessons 11+12. Full bible
+EXIT=0. Wave 1a `232259c` (readiness + coachUpdates): census counters
+auto-merged WRONG (both waves paid from one base — textually identical,
+cumulatively false); reset to truth declared 5 / baseline 108, census gate
+309/309 — the ratchet catching a silent bad merge is the ratchet working.
+Walker: SIX refusal-replay cells, 14/14. Audit debt: 5 stores wipeable.
+
+## Icons `dfcd09e` + LR-27 convergence merged (2026-08-03)
+
+All 11 icon rows per Sam's ruling (bin retired from imagery everywhere;
+adjacency manual per surface — no automated glyph gate exists, recorded).
+LR-27: 8/8 rows converged, shin→calf added (owner 61→63), quadricep typo
+fixed, three BODY_PART_TO_BUCKET maps deleted, divergence gate behavioural
+at 0/0/0/0, census entry deleted per the tracked-only rule. Combined-tree
+bible running at time of writing; its EXIT line lands in this log before
+any further merge claim.
+
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
 All five parked questions ANSWERED; recorded in full in
