@@ -568,3 +568,66 @@ conservation is asserted at the STORED boundary — resolver-owned derivations
 (G-1 gunshow, planner optionals, read-time conditioning placement) re-derive
 around the week's new shape by design, which is the sheet's own "the week
 re-derives around it".
+
+## Shell retirement — 2026-08-03
+
+Branch `feat/retire-auth-ui-shells`. Sam's §6 ruling executed: authStore and
+uiStore RETIRED WHOLE. Investigation before deletion confirmed the ruling's
+premise and sharpened it: git history DOES contain writers for both stores
+(SignIn/SignUpScreen wrote the auth session; PreferencesScreen wrote
+designVersion) — but all were dead code from birth: AuthNavigator was never
+mounted by RootNavigator in any commit, PreferencesScreen was never
+registered in any navigator, and all died in the Phase 1.6 purge. No
+reachable screen ever wrote either store, so no device envelope can hold
+anything but defaults. The STOP condition ("evidence a real value could have
+been written") was checked and does not fire; the check is on the record.
+
+**What died:** both store files whole (doors, tapes, reset acts, quarantine
+registrations, guarded storages), both ownership suites + their package.json
+scripts + their `test:bible` entries, the walker's auth refusal-replay cell
+(suite now 16 cells, stated), the `auth_write`/`ui_store_write` names in
+DECISION_EVENTS and AthleteActionEventName, the two hydration-registry
+handles, the store-index exports + clearAllStores lines, the dev-seed clear,
+the dev-E2E ui-store descriptor and its coordinator-test pins.
+
+**What was kept, per field:** nothing — `activeTab`/`isOnline` (the runtime
+conveniences) had ZERO live readers and zero writers outside the store
+itself, so there was no live runtime state to relocate; HomeScreen's
+`DesignVersion` type is now a local two-literal type beside the hardcoded
+constant that was already shadowing the store.
+
+**The boot cleanup (L15):** `RETIRED_STORE_PERSIST_KEYS` +
+`removeRetiredStoreEnvelopes()` beside the hydration registry;
+`awaitAppHydration()` awaits it before settling. Deletion IS the read-ingress
+lift for a shape that never carried a value.
+
+**Census:** zero counter edits — both stores were already owned (LR-2
+declared stays 1 = programStore, baseline stays 104); entries deleted with
+their files, narration corrected (27+1+4+72), retirement noted. D1 in
+onboardingReliabilityTests re-pinned >=10 with the retirement cited.
+
+**Mutations (all caught):** remover no-ops → behavioural cell; boot stops
+calling it → static pin; retired key re-registered → stay-retired cell AND
+the audit's enumeration cell (bonus catch: a re-registered shell has no
+boundary).
+
+**L12 — the next defect of this class:** a suite that dies mid-run with exit
+0 is green to an exit-code gate. The audit suite now holds the process red
+until its totals line prints; §9 asks Sam to make that pattern law.
+
+**NOT-COVERED:** `onboardingReliabilityTests` blocks B2-G are DEAD on clean
+main (silent exit 0 after B1; A/B-proven, mechanism traced, parked §9) — the
+new D1b cell is correct but inert there; the load-bearing pins live in
+`storedStateWriterAuditTests`. The B1/B2 harness repair is deliberately NOT
+attempted here (two defects deep, touches commit/flush pump + profile armour
+write path). `clearAllStores` in store/index.ts has zero callers — dead code
+kept as-is, not this unit's surface. Device pass not run (no visible surface
+changed; the deleted state was invisible by construction).
+
+**North star: TOWARD — this unit DELETES stored state.** Two persisted
+stores that only ever held their own defaults are gone, and what that
+proves: the recipe + writer-audit ratchet made retirement safe — any future
+sign-in flow or UI store must arrive through the audit's enumeration,
+armoured, and must take its key off the retired list in the same commit.
+Stored non-decisions died; the machinery that prevents their silent return
+is the part that survives.

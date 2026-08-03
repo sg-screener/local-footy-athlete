@@ -147,6 +147,7 @@ import {
 } from '../utils/onboardingCompleteness';
 import {
   PERSISTED_STORE_HYDRATION_REGISTRY,
+  RETIRED_STORE_PERSIST_KEYS,
   getAppHydrationState,
   awaitAppHydration,
 } from '../store/appHydrationGate';
@@ -501,11 +502,31 @@ async function main(): Promise<void> {
       assert(name, `could not read the persist name for ${file}`);
       persistedNames.push(name);
     }
-    assert(persistedNames.length >= 12,
-      `expected at least 12 persisted stores, found ${persistedNames.length}`);
+    // 12 became 10 on 2026-08-03: authStore and uiStore RETIRED under Sam's
+    // §6 ruling (never-written persisted defaults are stored non-decisions).
+    // The registry SHRANK — the pin's purpose survives: a new persisted store
+    // still cannot escape the boot gate, because the coverage assertion below
+    // compares the live store directory against the registry.
+    assert(persistedNames.length >= 10,
+      `expected at least 10 persisted stores, found ${persistedNames.length}`);
     const registered = new Set(PERSISTED_STORE_HYDRATION_REGISTRY.map((entry) => entry.key));
     const missing = persistedNames.filter((name) => !registered.has(name));
     assert(missing.length === 0, `stores absent from the boot hydration gate: ${missing.join(', ')}`);
+  });
+
+  await run('D1b boot removes the retired shells\' stale persist envelopes', async () => {
+    // The shell retirement's read-ingress lift (Sam's §6 ruling, 2026-08-03,
+    // per L15): auth-store and ui-store never carried a real value — no
+    // reachable screen ever wrote them — so their envelopes can only hold
+    // defaults, and the honest lift is deletion at boot. A stale key that
+    // SURVIVES boot is a readable retired shape, which L15 forbids.
+    for (const key of RETIRED_STORE_PERSIST_KEYS) {
+      disk.set(key, JSON.stringify({ state: {}, version: 0 }));
+    }
+    await whileReleasingWrites(async () => { await awaitAppHydration(); });
+    const survivors = RETIRED_STORE_PERSIST_KEYS.filter((key) => disk.has(key));
+    assert(survivors.length === 0,
+      `retired persist envelope(s) survived boot: ${survivors.join(', ')}`);
   });
 
   await run('D2 the gate reports ready only once every store has hydrated', async () => {

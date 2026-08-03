@@ -11,7 +11,6 @@ import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useWorkoutLogStore } from '../../store/workoutLogStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
-import { useUIStore } from '../../store/uiStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import {
   composeTemporarySourceFactCompatibility,
@@ -96,7 +95,7 @@ function clearLocalStateThroughPublicAPIs(): void {
   useCoachMutationHistoryStore.getState().clearAll();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
   useAthletePreferencesStore.getState().clear();
-  useUIStore.getState().clear();
+  // uiStore/authStore clears RETIRED with their stores (Sam's §6, 2026-08-03).
   useProfileStore.getState().clear();
   // ProgramStore is last so no legacy mirror can republish old material.
   useProgramStore.getState().clear();

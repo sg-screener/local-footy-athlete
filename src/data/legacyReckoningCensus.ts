@@ -193,32 +193,16 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'pipeline decides to remember is unchanged. Removing the last note is a '
       + 'named erasure, not the wipe (recipe lesson 11).',
   },
-  {
-    file: 'store/uiStore.ts',
-    persistKey: 'ui-store',
-    owner: 'applyUiSettingsWrite',
-    taped: true,
-    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail) at the honest '
-      + 'MINIMUM: presentation only, no athlete answer exists. The door owns '
-      + 'theme/designVersion and tapes its writers, but has NO wipe refusal '
-      + '(the defaults are a legitimate chosen state — refusing them would '
-      + 'refuse the athlete\'s own resets), so the registered quarantine '
-      + 'boundary can never arm today. activeTab/isOnline are runtime '
-      + 'convenience outside the door and off the tape (ring-flood, export 6). '
-      + 'All three absences are pinned as decisions in uiStoreOwnershipTests.',
-  },
-  {
-    file: 'store/authStore.ts',
-    persistKey: 'auth-store',
-    owner: 'applyAuthSessionWrite',
-    taped: true,
-    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail). Session identity is '
-      + 'the material slice — losing a login strands the athlete outside their '
-      + 'data. Tape privacy is absolute here: flags and counts only, never a '
-      + 'token, email or id; signOut is the athlete\'s own erasure under a named '
-      + 'reset act (recipe lesson 11). NOTE: no product sign-in flow writes this '
-      + 'store yet — the armour precedes the flow; retire-or-wire is parked.',
-  },
+  // store/uiStore.ts and store/authStore.ts RETIRED WHOLE 2026-08-03 (Sam's
+  // §6 ruling, PARKED_QUESTIONS_2026-08-01): both persisted only never-written
+  // defaults — no reachable screen ever wrote either store, verified back to
+  // the initial MVP commit — which is stored non-decisions under the north
+  // star. Their entries leave WITH their files, so the registry stays the
+  // truth: a store this list has never heard of still counts as unowned by
+  // default, which is the property that makes a rebuilt auth/ui store fail
+  // the gate until it re-registers here, armoured (STORE_ARMOUR_RECIPE §5).
+  // The boot-time envelope removal lives in appHydrationGate
+  // (RETIRED_STORE_PERSIST_KEYS), pinned by onboardingReliabilityTests D1b.
 ];
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -810,7 +794,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 3 + 4 + 72.
+ * The sum of every declared count: 27 + 1 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -824,7 +808,10 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * phase, 7 -> 5 when the coach-preferences and coach-mutation-history
  * stores took theirs, 5 -> 3 with the coach chat + coach memory pair
  * (wave 2a) and the auth + ui tail, landing at 1: `programStore` alone
- * remains, and it is LR-1's, not LR-2's (2026-08-03).
+ * remains, and it is LR-1's, not LR-2's (2026-08-03). The auth + ui shells
+ * then RETIRED WHOLE (Sam's §6 ruling, 2026-08-03) — no counter moves,
+ * because both were already owned; a deleted store is simply no longer a
+ * persisted store the detector can see.
  */
 export const LEGACY_DEBT_BASELINE = 104;
 

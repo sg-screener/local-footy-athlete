@@ -199,3 +199,34 @@ sheet's transitional rule; the seven ask strings themselves are SIGNED (§3).
 **Shipped meanwhile:** the whole unit — MOVE asks (seven signed strings),
 SWAP stays refused, one-off fact through the deriving lane with clean
 cascade undo, permanent through the one setup owner confirmed inline.
+
+## 9. onboardingReliabilityTests silently exits 0 after B1 — blocks B-G are dead on main
+
+**Parked by:** the shell-retirement unit (§6 build), 2026-08-03.
+**Blocked on the answer:** nothing in the retirement — its load-bearing pins
+were moved to a suite that runs (below). Blocked FOR the repo: every
+assertion in blocks B2-G of `onboardingReliabilityTests` — including D1
+(the hydration-registry completeness pin), D2 and D3 — is currently not
+running on ANY branch, while `test:bible` reads the suite's exit 0 as green.
+**The finding (A/B-proven at clean main `3c9e6fc`, detached worktree):**
+the suite prints through "[B] commitOnboardingStep" and exits 0 mid-run.
+Mechanism: B1 `await commit` waits on `flushPendingStorageWrites()`; a
+follow-on persist write lands in the harness queue on a macrotask AFTER
+`releaseWrites()` has returned, nobody pumps again, the event loop drains,
+and node exits 0 with the suite half-run — the LR-14 silent-suite shape,
+passing on exit code alone. Pump-fixing B1 (`whileReleasingWrites`)
+immediately surfaces a second pre-existing crash: B2's `disk_full`
+injection now dies as an unhandled rejection through the profile
+guarded-storage chain. So the repair is at least two defects deep and
+touches the commit/flush pump semantics and the profile armour write path —
+not a rider on the retirement.
+**The ask:** (a) schedule the suite's repair as its own unit (it is LR-14's
+largest bible-resident instance — a silent GREEN, worse than the 49 red
+ones); (b) rule whether bible suites must adopt the totals-or-red pattern
+(process.exitCode = 1 until the totals line actually prints — now precedent
+in `storedStateWriterAuditTests`), which turns this whole defect class from
+silent green to loud red.
+**Shipped meanwhile:** the retirement's D1 pin update (>=10, cited) and the
+new D1b boot-cleanup cell are in the suite, correct but inert until it is
+repaired; the LOAD-BEARING pins live in `storedStateWriterAuditTests`
+(static + behavioural + stay-retired), each proven by a mutation.

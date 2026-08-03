@@ -143,8 +143,8 @@ const DECISION_EVENTS: ReadonlySet<string> = new Set([
   'coach_updates_write',
   'coach_store_write',
   'coach_memory_write',
-  'auth_write',
-  'ui_store_write',
+  // 'auth_write' and 'ui_store_write' RETIRED with their stores
+  // (Sam's §6 ruling, 2026-08-03) — no writer emits them any more.
   'profile_rehydrated',
   'profile_mirror_publication_refused',
   'profile_snapshot_repaired',
