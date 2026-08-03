@@ -408,6 +408,8 @@ with the lanes); busy/away EFFECTS remain unruled (record-only by ruling)
 fixture-day coordinate is parked (§6), answered honestly meanwhile;
 `equipmentScheduleFactTransactionTests` red is PRE-EXISTING at clean main
 (A/B in a detached worktree: identical FAIL + abort at the same line; not
-in the bible); coach free-text time_cap facts now derive when a program
-exists — coach files untouched (LR-6 STOP respected; the coach path enters
-the same one boundary).
+in the bible), as are `coachLivePathV2IntegrationTests`'s two Fri-collapse
+failures (same A/B method, identical at main; also not in the bible);
+coach free-text time_cap facts now derive when a program exists — coach
+files untouched (LR-6 STOP respected; the coach path enters the same one
+boundary).
