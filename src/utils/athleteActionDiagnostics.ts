@@ -84,6 +84,11 @@ export type AthleteActionEventName =
   // athlete felt, and an injury's body part are answers.
   | 'readiness_write'
   | 'coach_updates_write'
+  // The store-armour fleet tail, 2026-08-03: the auth and UI stores get their
+  // doors. Auth is FLAGS ONLY — a token, an email and an id are identity
+  // values and never travel. UI carries booleans about presentation settings.
+  | 'auth_write'
+  | 'ui_store_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

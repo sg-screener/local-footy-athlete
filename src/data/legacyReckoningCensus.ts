@@ -176,7 +176,18 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   { file: 'store/coachStore.ts', persistKey: 'coach-store', owner: null, taped: false },
   { file: 'store/coachMemoryStore.ts', persistKey: 'coach-memory-store', owner: null, taped: false },
   { file: 'store/uiStore.ts', persistKey: 'ui-store', owner: null, taped: false },
-  { file: 'store/authStore.ts', persistKey: 'auth-store', owner: null, taped: false },
+  {
+    file: 'store/authStore.ts',
+    persistKey: 'auth-store',
+    owner: 'applyAuthSessionWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail). Session identity is '
+      + 'the material slice — losing a login strands the athlete outside their '
+      + 'data. Tape privacy is absolute here: flags and counts only, never a '
+      + 'token, email or id; signOut is the athlete\'s own erasure under a named '
+      + 'reset act (recipe lesson 11). NOTE: no product sign-in flow writes this '
+      + 'store yet — the armour precedes the flow; retire-or-wire is parked.',
+  },
 ];
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -396,7 +407,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 5,
+    declared: 4,
     foundingCount: 11,
   },
   {
@@ -781,7 +792,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * when the readiness and coach-updates stores took their doors in the fleet
  * phase.
  */
-export const LEGACY_DEBT_BASELINE = 108;
+export const LEGACY_DEBT_BASELINE = 107;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
