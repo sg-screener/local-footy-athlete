@@ -44,6 +44,11 @@ import {
   type InjuryTag,
 } from '../data/exercisePools';
 import { getAllTaggedExercises, EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
+import {
+  resolveInjuryRegion,
+  routableBodyParts,
+  type InjuryRegion,
+} from '../data/injuryRegions';
 import { applyHardFilters, buildFilterContext, type FilterContext } from './exerciseFilter';
 import { selectExercises, buildIntent, findSubstitute } from './exerciseScorer';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
@@ -240,54 +245,58 @@ const SESSION_META: Record<DerivedSessionType, {
 };
 
 // ─── Injury Mapping ───
-// Maps onboarding bodyArea strings to our InjuryTag system.
+//
+// LR-27 convergence (Sam's ruling, 2026-08-02): the owner's sheet wins every
+// row, so body areas route through `data/injuryRegions.ts` — the single
+// owner — and this builder holds no body-part vocabulary of its own. Routing
+// is SINGLE-TARGET by the same ruling: achilles means calf (not ankle+calf),
+// shin means calf (added to the sheet by the ruling).
+//
+// What remains here is only the RENAME: the pool filter's InjuryTag
+// vocabulary spells three regions differently ('ankle/foot' -> 'ankle',
+// lowerBack -> 'lower_back', 'wrist/hand' -> 'wrist'). The record is total
+// over InjuryRegion so a new region fails the build rather than silently
+// filtering nothing.
 
-const INJURY_BODY_AREA_MAP: Record<string, InjuryTag[]> = {
-  'shoulder':     ['shoulder'],
-  'shoulders':    ['shoulder'],
-  'knee':         ['knee'],
-  'knees':        ['knee'],
-  'ankle':        ['ankle'],
-  'ankles':       ['ankle'],
-  'lower back':   ['lower_back'],
-  'back':         ['lower_back'],
-  'hip':          ['hip'],
-  'hips':         ['hip'],
-  'groin':        ['groin'],
-  'hamstring':    ['hamstring'],
-  'hamstrings':   ['hamstring'],
-  'wrist':        ['wrist'],
-  'wrists':       ['wrist'],
-  'elbow':        ['elbow'],
-  'elbows':       ['elbow'],
-  'quad':         ['quad'],
-  'quads':        ['quad'],
-  'calf':         ['calf'],
-  'calves':       ['calf'],
-  'neck':         ['neck'],
-  'achilles':     ['ankle', 'calf'],
-  'shin':         ['calf', 'ankle'],
-  'shins':        ['calf', 'ankle'],
-  'adductor':     ['groin'],
-  'adductors':    ['groin'],
-  'glute':        ['hip'],
-  'glutes':       ['hip'],
+const REGION_TO_INJURY_TAG: Readonly<Record<InjuryRegion, InjuryTag>> = {
+  groin: 'groin',
+  hip: 'hip',
+  quad: 'quad',
+  hamstring: 'hamstring',
+  knee: 'knee',
+  calf: 'calf',
+  'ankle/foot': 'ankle',
+  ribs: 'ribs',
+  lowerBack: 'lower_back',
+  neck: 'neck',
+  shoulder: 'shoulder',
+  elbow: 'elbow',
+  'wrist/hand': 'wrist',
 };
+
+/**
+ * The owner's answer for one body area, renamed into the pool filter's tag
+ * vocabulary. Exported so the divergence gate can pin this door equal to the
+ * owner behaviourally.
+ */
+export function injuryTagsForBodyArea(area: string): InjuryTag[] {
+  const region = resolveInjuryRegion(area);
+  return region === null ? [] : [REGION_TO_INJURY_TAG[region]];
+}
 
 /** Convert athlete injuries to a set of InjuryTags for filtering. */
 function injuriesToTags(injuries: OnboardingInjury[]): Set<InjuryTag> {
   const tags = new Set<InjuryTag>();
   for (const injury of injuries) {
-    const area = injury.bodyArea.toLowerCase().trim();
-    const mapped = INJURY_BODY_AREA_MAP[area];
-    if (mapped) {
-      mapped.forEach(t => tags.add(t));
-    }
-    // Also check description for keywords
+    for (const tag of injuryTagsForBodyArea(injury.bodyArea)) tags.add(tag);
+    // Also check the description for routable body-part words (word-bounded,
+    // so 'dribbling' does not read as a rib complaint).
     const desc = (injury.description || '').toLowerCase();
-    for (const [keyword, injuryTags] of Object.entries(INJURY_BODY_AREA_MAP)) {
-      if (desc.includes(keyword)) {
-        injuryTags.forEach(t => tags.add(t));
+    if (!desc) continue;
+    for (const phrase of routableBodyParts()) {
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escaped}\\b`).test(desc)) {
+        for (const tag of injuryTagsForBodyArea(phrase)) tags.add(tag);
       }
     }
   }

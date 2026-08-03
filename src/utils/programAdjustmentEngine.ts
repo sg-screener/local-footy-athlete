@@ -56,6 +56,7 @@ import {
   getConditioningMeta,
   type InjuryKey,
 } from '../data/exerciseTags';
+import { resolveInjuryRegion as resolveOwnedInjuryRegion } from '../data/injuryRegions';
 import { logger } from './logger';
 import {
   injurySeverityAvoidsExactTriggers,
@@ -430,115 +431,45 @@ export type InjuryBucket = InjuryKey;
 /** Region classification used to drive coarse week-wide rules. */
 export type InjuryRegion = 'lower' | 'upper' | 'back';
 
-/**
- * Body-part free-text → InjuryBucket. Mirrors the mapping in
- * `injuryAdjustmentEngine.ts` so behaviour is consistent while the two
- * engines run in parallel. Comments mark proxy mappings (e.g. quad → knee).
- */
-const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
-  // posterior chain / hamstring family
-  hamstring: 'hamstring',
-  hamstrings: 'hamstring',
-  hammy: 'hamstring',
-  hammies: 'hamstring',
-  hammie: 'hamstring',          // common misspelling — keep mapped
-  hamy: 'hamstring',
-  hamie: 'hamstring',
-  hamstrng: 'hamstring',
-  hammstring: 'hamstring',
-  glute: 'hamstring',
-  glutes: 'hamstring',
-
-  // knee / quad
-  knee: 'knee',
-  knees: 'knee',
-  quad: 'knee',
-  quads: 'knee',
-  quadricep: 'knee',
-  quadriceps: 'knee',
-
-  // calf / achilles
-  calf: 'calf',
-  calves: 'calf',
-  achilles: 'calf',
-
-  // ankle / foot
-  'ankle/foot': 'ankle/foot',
-  ankles: 'ankle/foot',
-  foot: 'ankle/foot',
-  feet: 'ankle/foot',
-
-  // groin / hip
-  groin: 'groin',
-  adductors: 'groin',
-  hip: 'groin',
-  hips: 'groin',
-
-  // back
-  back: 'lowerBack',
-  'lower back': 'lowerBack',
-  'upper back': 'lowerBack',
-  'lower-back': 'lowerBack',
-  lowerback: 'lowerBack',
-
-  // shoulder & adjacents
-  shoulder: 'shoulder',
-  shoulders: 'shoulder',
-  pec: 'shoulder',
-  pecs: 'shoulder',
-  chest: 'shoulder',
-  neck: 'shoulder',
-
-  // elbow / arm
-  elbow: 'elbow',
-  elbows: 'elbow',
-  bicep: 'elbow',
-  biceps: 'elbow',
-  tricep: 'elbow',
-  triceps: 'elbow',
-  forearm: 'elbow',
-  forearms: 'elbow',
-
-  // wrist
-  'wrist/hand': 'wrist/hand',
-  wrists: 'wrist/hand',
-};
-
 const LOWER_BUCKETS = new Set<InjuryBucket>([
   'hamstring',
   'knee',
   'calf',
   'ankle/foot',
   'groin',
+  // Reachable since the LR-27 convergence (Sam's ruling 2026-08-02: glute and
+  // hip complaints take the HIP profile, quad complaints the QUAD profile).
+  'hip',
+  'quad',
 ]);
-const UPPER_BUCKETS = new Set<InjuryBucket>(['shoulder', 'elbow', 'wrist/hand']);
+const UPPER_BUCKETS = new Set<InjuryBucket>([
+  'shoulder',
+  'elbow',
+  'wrist/hand',
+  // Reachable since the LR-27 convergence (neck stopped proxying to shoulder);
+  // classified upper as the shoulder proxy classified before it.
+  'neck',
+]);
 const BACK_BUCKETS = new Set<InjuryBucket>(['lowerBack']);
 
 function classifyRegion(bucket: InjuryBucket): InjuryRegion {
   if (LOWER_BUCKETS.has(bucket)) return 'lower';
   if (UPPER_BUCKETS.has(bucket)) return 'upper';
   if (BACK_BUCKETS.has(bucket)) return 'back';
-  // pubalgia is the only remaining bucket — group with back for safety.
+  // ribs is the only remaining bucket — group with back for safety.
   return 'back';
 }
 
-function normalizePart(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
 /**
- * Resolve a free-text body-part token to an InjuryBucket. Returns null
- * when no mapping is known.
+ * Resolve a free-text body-part token to an InjuryBucket.
+ *
+ * LR-27 convergence (Sam's ruling, 2026-08-02): the owner's sheet wins every
+ * row, so this is a straight delegation to `data/injuryRegions.ts` — the
+ * engine holds no body-part vocabulary of its own. Returns null when the
+ * owner cannot route the phrase.
  */
 export function resolveInjuryBucket(bodyPart: string): InjuryBucket | null {
-  const norm = normalizePart(bodyPart);
-  if (BODY_PART_TO_BUCKET[norm]) return BODY_PART_TO_BUCKET[norm];
-  // Try multi-word hyphen / no-space fallbacks.
-  const collapsed = norm.replace(/[\s-]+/g, '');
-  for (const [k, v] of Object.entries(BODY_PART_TO_BUCKET)) {
-    if (k.replace(/[\s-]+/g, '') === collapsed) return v;
-  }
-  return null;
+  return resolveOwnedInjuryRegion(bodyPart);
 }
 
 /**

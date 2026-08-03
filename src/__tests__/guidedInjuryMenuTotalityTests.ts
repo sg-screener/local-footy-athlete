@@ -143,15 +143,20 @@ console.log('\n[3] THE REFUSAL — unprogrammable free text is refused, never st
     GUIDED_INJURY_AREA_HINT.length > 0);
 
   ok('a programmable area passes the predicate', guidedInjuryAreaIsProgrammable('hamstring'));
-  // THIS LIST HAS BEEN CORRECTED TWICE BY ITS OWN RUNS, which is worth recording because
-  // both corrections were the harness being wrong about the app. "rib cage thing" routes
-  // (ribs is a region). "tricep" routes to ELBOW — Sam's map covers it. What is left is
-  // genuinely unroutable, and the shortness of the list is itself the finding: his
-  // authored routing covers far more free text than the copy did.
-  for (const unprogrammable of ['jaw', 'shin', 'dunno', 'everything']) {
+  // THIS LIST HAS BEEN CORRECTED THREE TIMES BY ITS OWN RUNS, which is worth recording
+  // because every correction was the harness being wrong about the app. "rib cage thing"
+  // routes (ribs is a region). "tricep" routes to ELBOW — Sam's map covers it. And "shin"
+  // left the list on 2026-08-03: Sam's LR-27 ruling (2026-08-02, parked §5) ADDED
+  // shin -> calf to the ruling sheet, so it routes now. What is left is genuinely
+  // unroutable, and the shortness of the list is itself the finding: his authored
+  // routing covers far more free text than the copy did.
+  for (const unprogrammable of ['jaw', 'dunno', 'everything']) {
     ok(`"${unprogrammable}" is refused rather than accepted`,
       !guidedInjuryAreaIsProgrammable(unprogrammable));
   }
+  // The ruled addition, pinned from the accepting side: shin means calf at this door.
+  ok('"shin" is accepted since Sam ruled it to calf (2026-08-02)',
+    guidedInjuryAreaIsProgrammable('shin'));
 
   // UNREPRESENTABLE, not merely refused upstream. The builder is the writer, and a UI
   // convention the next caller can bypass is not a boundary.
@@ -192,8 +197,8 @@ console.log('\n[4] THE SHEET refuses at the point of answering');
 
 console.log(`\nGuided injury menu totality: ${passed} passed, ${failures.length} failed`);
 console.log('  DEPTH (L13): 0 — a pure predicate over an authored menu.');
-console.log('  This door now routes through data/injuryRegions.ts — Sam\'s 13 authored');
-console.log('  regions. NOT COVERED (census LR-27): programAdjustmentEngine and');
-console.log('  sessionBuilder still carry their own copies, so other doors can still');
-console.log('  disagree with the owner about a word.');
+console.log('  This door routes through data/injuryRegions.ts — Sam\'s 13 authored');
+console.log('  regions. Since the LR-27 convergence (2026-08-03) EVERY door does: the');
+console.log('  last copies retired and test:injury-routing-divergence pins each door');
+console.log('  equal to the owner at zero divergence.');
 if (failures.length > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

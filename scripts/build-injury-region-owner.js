@@ -4,7 +4,7 @@
  *
  *   node scripts/build-injury-region-owner.js docs/INJURY_MATRIX_RULINGS_2026-07-28.json
  *
- * The five it retires:
+ * The five it retired:
  *   1. utils/programAdjustmentEngine.ts   BODY_PART_TO_BUCKET
  *   2. utils/injuryAdjustmentEngine.ts    BODY_PART_TO_BUCKET   (no wrist/elbow/neck)
  *   3. utils/guidedInjuryControl.ts       guidedInjuryBucketForArea (regex)
@@ -16,9 +16,12 @@
  * `rib` to shoulder when ribs is now its own region. Five copies is why nobody
  * could see that.
  *
- * Phrases Sam did not re-rule keep their existing target, renamed onto the 13.
- * Sam's ruled routes override. Every disagreement between the old copies is
- * reported rather than silently resolved.
+ * INHERITANCE IS FROZEN (LR-27 convergence, 2026-08-03). This script used to
+ * read the live copies out of the tree to merge their phrase coverage; the
+ * copies are retired, so the coverage they contributed is a SNAPSHOT below —
+ * taken from the owner as generated on the day the copies converged onto it.
+ * Sam's ruled routes in the ruling file override anything inherited, so the
+ * sheet stays the source of truth and every override is reported.
  */
 const fs = require('fs');
 const path = require('path');
@@ -28,49 +31,82 @@ const OUT = path.join(REPO_ROOT, 'src', 'data', 'injuryRegions.ts');
 const ruling = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const REGIONS = ruling.regions;
 
-/** Old bucket key -> Sam's region. `pubalgia` merged into groin. */
-const OLD_TO_NEW = {
-  adductor: 'groin', pubalgia: 'groin', lowerBack: 'lowerBack', knee: 'knee',
-  hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot', shoulder: 'shoulder',
-  elbow: 'elbow', wrist: 'wrist/hand',
+/**
+ * Phrase coverage inherited from the five retired copies, frozen at their
+ * retirement. Already renamed onto Sam's 13 regions (the old bucket -> region
+ * translation happened when this snapshot was cut). Where a phrase here
+ * disagrees with a ruled route, the RULING wins and the override is printed.
+ */
+const INHERITED_PHRASE_TO_REGION = {
+  adductor: 'groin',
+  adductors: 'groin',
+  groin: 'groin',
+  'osteitis pubis': 'groin',
+  pubalgia: 'groin',
+  'sports hernia': 'groin',
+  glute: 'hip',
+  glutes: 'hip',
+  hip: 'hip',
+  'hip flexor': 'hip',
+  hips: 'hip',
+  quad: 'quad',
+  quadriceps: 'quad',
+  quads: 'quad',
+  hamie: 'hamstring',
+  hammie: 'hamstring',
+  hammies: 'hamstring',
+  hammstring: 'hamstring',
+  hammy: 'hamstring',
+  hamstring: 'hamstring',
+  hamstrings: 'hamstring',
+  hamstrng: 'hamstring',
+  hamy: 'hamstring',
+  knee: 'knee',
+  knees: 'knee',
+  // The copies' knee proxy for the singular; Sam ruled it a sheet typo on
+  // 2026-08-02 — the ruling file routes `quadricep` to quad and overrides this.
+  quadricep: 'knee',
+  achilles: 'calf',
+  calf: 'calf',
+  calves: 'calf',
+  ankle: 'ankle/foot',
+  ankles: 'ankle/foot',
+  feet: 'ankle/foot',
+  foot: 'ankle/foot',
+  rib: 'ribs',
+  ribs: 'ribs',
+  back: 'lowerBack',
+  'lower back': 'lowerBack',
+  'lower-back': 'lowerBack',
+  'lower_back': 'lowerBack',
+  lowerback: 'lowerBack',
+  neck: 'neck',
+  chest: 'shoulder',
+  pec: 'shoulder',
+  pecs: 'shoulder',
+  shoulder: 'shoulder',
+  shoulders: 'shoulder',
+  'upper back': 'shoulder',
+  bicep: 'elbow',
+  biceps: 'elbow',
+  elbow: 'elbow',
+  elbows: 'elbow',
+  forearm: 'elbow',
+  forearms: 'elbow',
+  tricep: 'elbow',
+  triceps: 'elbow',
+  fingers: 'wrist/hand',
+  hand: 'wrist/hand',
+  hands: 'wrist/hand',
+  thumb: 'wrist/hand',
+  wrist: 'wrist/hand',
+  wrists: 'wrist/hand',
 };
 
-/** Pull `phrase: 'bucket'` pairs out of one of the legacy object maps. */
-function readMap(file, marker) {
-  const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-  const start = text.indexOf(marker);
-  if (start < 0) throw new Error(`${marker} not found in ${file}`);
-  const open = text.indexOf('{', start);
-  const close = text.indexOf('\n};', open);
-  const block = text.slice(open, close);
-  const out = {};
-  for (const m of block.matchAll(/^\s*'?([a-z_ -]+)'?:\s*'([a-zA-Z]+)'/gm)) {
-    out[m[1].trim()] = m[2];
-  }
-  return out;
-}
-
-const sources = {
-  programAdjustmentEngine: readMap('src/utils/programAdjustmentEngine.ts', 'const BODY_PART_TO_BUCKET'),
-  injuryAdjustmentEngine: readMap('src/utils/injuryAdjustmentEngine.ts', 'const BODY_PART_TO_BUCKET'),
-  exerciseFilter: readMap('src/utils/exerciseFilter.ts', 'const INJURY_AREA_MAP'),
-  coachConstraintProducers: readMap('src/utils/coachConstraintProducers.ts', 'const BODY_PART_TO_BUCKET'),
-};
-
-// Union every phrase, translated onto the 13, recording disagreements.
 const merged = {};
-const disagreements = [];
-for (const [origin, map] of Object.entries(sources)) {
-  for (const [phrase, bucket] of Object.entries(map)) {
-    const region = OLD_TO_NEW[bucket];
-    if (!region) continue;                       // not an injury bucket
-    if (merged[phrase] && merged[phrase].region !== region) {
-      disagreements.push(`"${phrase}": ${merged[phrase].region} (${merged[phrase].origin}) `
-        + `vs ${region} (${origin})`);
-      continue;                                  // first one wins; Sam's ruling may override
-    }
-    merged[phrase] = { region, origin };
-  }
+for (const [phrase, region] of Object.entries(INHERITED_PHRASE_TO_REGION)) {
+  if (!REGIONS.includes(region)) throw new Error(`inherited phrase "${phrase}" targets unknown region "${region}"`);
+  merged[phrase] = { region, origin: 'inherited' };
 }
 
 // Sam's ruled routes override anything inherited.
@@ -177,11 +213,7 @@ export function routableBodyParts(): readonly string[] {
 fs.writeFileSync(OUT, file);
 
 console.log(`wrote ${path.relative(REPO_ROOT, OUT)} — ${phrases.length} phrases -> ${REGIONS.length} regions`);
-console.log(`sources merged: ${Object.keys(sources).join(', ')}`);
-if (disagreements.length > 0) {
-  console.log(`\nDISAGREEMENTS between the retired copies (${disagreements.length}):`);
-  disagreements.forEach((d) => console.log(`  ${d}`));
-}
+console.log('inheritance: frozen snapshot (the five copies are retired)');
 if (ruledOverrides.length > 0) {
   console.log(`\nSAM'S RULING OVERRODE (${ruledOverrides.length}):`);
   ruledOverrides.forEach((d) => console.log(`  ${d}`));

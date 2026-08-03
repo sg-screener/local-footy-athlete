@@ -249,11 +249,16 @@ console.log('\n[2] extractBodyPart');
 
 console.log('\n[3] extractInjuryContext — bucket mapping for 7 body parts');
 {
+  // Buckets pin the OWNER's answers (data/injuryRegions.ts) since the LR-27
+  // convergence — Sam's ruling 2026-08-02: the owner's sheet wins every row.
+  // The groin/ankle rows previously expected a pre-region vocabulary
+  // ('adductor', 'ankle') this engine never produced — red on main before
+  // the convergence; they now pin the owner's regions.
   const cases: Array<[string, string, number, string]> = [
     ['Hamstring 6/10', 'tweaked my hamstring 6/10', 6, 'hamstring'],
     ['Knee 6/10', 'sore knee 6/10', 6, 'knee'],
-    ['Groin 6/10', 'pulled my groin 6/10', 6, 'adductor'],
-    ['Ankle 6/10', 'tweaked my ankle 6/10', 6, 'ankle'],
+    ['Groin 6/10', 'pulled my groin 6/10', 6, 'groin'],
+    ['Ankle 6/10', 'tweaked my ankle 6/10', 6, 'ankle/foot'],
     ['Shoulder 6/10', 'shoulder pain 6/10', 6, 'shoulder'],
     ['Lower back 6/10', 'lower back hurts 6/10', 6, 'lowerBack'],
     ['Calf 6/10', 'calf strain 6/10', 6, 'calf'],
@@ -268,18 +273,18 @@ console.log('\n[3] extractInjuryContext — bucket mapping for 7 body parts');
   }
 }
 
-console.log('\n[3b] extractInjuryContext — proxy mappings');
+console.log('\n[3b] extractInjuryContext — ruled routes (LR-27, Sam 2026-08-02)');
 {
-  // Quad → knee (closest InjuryProfile key)
-  eq('quad → knee', extractInjuryContext('quad strain 6/10')?.bucket, 'knee');
-  // Glute → hamstring (posterior chain proxy)
-  eq('glute → hamstring', extractInjuryContext('glute strain 6/10')?.bucket, 'hamstring');
-  // Hip → adductor (lower-limb/groin proxy)
-  eq('hip → adductor', extractInjuryContext('hip pain 6/10')?.bucket, 'adductor');
-  // Pec → shoulder
+  // Quad has its own authored column — the knee proxy is retired by ruling.
+  eq('quad → quad', extractInjuryContext('quad strain 6/10')?.bucket, 'quad');
+  // The HIP profile protects a glute strain — the hamstring proxy is retired.
+  eq('glute → hip', extractInjuryContext('glute strain 6/10')?.bucket, 'hip');
+  // Hip complaints take the hip profile, not a groin/adductor proxy.
+  eq('hip → hip', extractInjuryContext('hip pain 6/10')?.bucket, 'hip');
+  // Pec → shoulder (inherited route, unchanged by the ruling)
   eq('pec → shoulder', extractInjuryContext('pec strain 6/10')?.bucket, 'shoulder');
-  // Foot → ankle
-  eq('foot → ankle', extractInjuryContext('foot pain 6/10')?.bucket, 'ankle');
+  // Foot → the owner's ankle/foot region (the bare-'ankle' bucket never existed)
+  eq('foot → ankle/foot', extractInjuryContext('foot pain 6/10')?.bucket, 'ankle/foot');
   // Bicep → elbow
   eq('bicep → elbow', extractInjuryContext('bicep tweak 6/10')?.bucket, 'elbow');
 }

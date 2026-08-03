@@ -229,3 +229,93 @@ part of the claim. A stale declared red from truncated walks, a vacuous
 mutation probe caught by its own activity check, and a false-divergence
 sweep from a trailing comma — each found because a gate checked the
 CHECKER. Keep doing that.
+
+---
+
+# LR-27 convergence — 2026-08-03
+
+## The unit — Sam ruled the table, every copy converged, every pin is zero
+
+Sam answered parked §5 on 2026-08-02: **the owner's sheet wins every row**
+(glute→hip · hip→hip · neck→neck · quad→quad · upper back→shoulder ·
+achilles→calf single-target · shin ADDED →calf · `quadricep` singular
+corrected to quad, a sheet typo). Built on `feat/lr27-convergence`, five
+commits, each convergence dropping its divergence pins in the same commit:
+
+1. **The sheet, then the owner** — shin/shins→calf and the quadricep
+   correction land in `INJURY_MATRIX_RULINGS_2026-07-28.json` with the
+   ruling cited; the generator's inheritance is FROZEN as a snapshot
+   (verified byte-identical before amending — it used to read the five
+   copies live from the tree, which regeneration can no longer depend on);
+   owner regenerated 61→63 phrases.
+2. **programAdjustmentEngine** — `BODY_PART_TO_BUCKET` deleted;
+   `resolveInjuryBucket` delegates to the owner (pendingInjuryResolver
+   converges transitively); hip/quad classify lower, neck upper, ribs to
+   the back default; exposure/replacement tables fall back as documented
+   rather than growing unsigned copy.
+3. **injuryAdjustmentEngine** — the mirrored map deleted; detected tokens
+   route through the owner; measured END TO END by the gate through
+   `extractInjuryContext` over its whole extraction vocabulary.
+4. **coachConstraintProducers** — map deleted; soreness resolves direct
+   then inner-word over the owner's routable phrases (the old
+   'ankle/foot'/'wrist/hand' identity keys still land via the scan).
+5. **sessionBuilder** — `INJURY_BODY_AREA_MAP` deleted; what remains is
+   only the tag RENAME (total over `InjuryRegion`, build-failing on a new
+   region) and `injuryTagsForBodyArea` deriving ONE tag from the owner —
+   single-target per the ruling, so achilles means calf and shin means
+   calf; description scanning word-bounded so 'dribbling' is not a rib.
+
+**The gate's end state** (`test:injury-routing-divergence`, in the bible):
+all four doors asked BEHAVIOURALLY through exported surfaces — pins
+programAdjustmentEngine **0**, injuryAdjustmentEngine **0**,
+coachConstraintProducers **0**, sessionBuilderTags **0**; owner routable
+pinned 63; retired literals pinned GONE. Zero is where the pins end: a
+divergence reappearing is a defect, never new debt.
+
+**Census:** LR-27 entry DELETED (tracked-only units die when their work
+lands, the census's own rule [3]); a tombstone comment names the ruling and
+the gate that holds the surface at zero. `test:legacy-census` 299/299.
+Baselines untouched — LR-27 was never detector-backed.
+
+**North star:** toward. Four stored copies of one routing answer became one
+authored owner plus three pure derivations; the divergence class is now
+unrepresentable at these doors, not merely tested away.
+
+**Suites updated to the ruled routing** (each cites the ruling inline):
+`guidedInjuryMenuTotalityTests` (shin accepted, leaves the unroutable
+list; trailer updated), `injuryCanonicalisationTests` (glute→hip,
+quad→quad, hip→hip), `injuryAdjustmentEngineTests` (same three),
+`injurySeverityBandTests` (both hip rows). In those suites the
+groin/ankle/adductor/foot rows expected a pre-region vocabulary
+('adductor', 'ankle') no engine ever produced — **verified red on main by
+A/B against the pre-change engines** — and now pin the owner's answers.
+
+**Pre-existing reds, verified by A/B against pre-convergence engines
+(identical fail before and after; none in the bible; NOT this unit's):**
+- `injuryCanonicalisationTests` "severity 6 may retain a safe
+  affected-area alternative" (replacement pool, hardcoded hamstring);
+- `injuryAdjustmentEngineTests` ×2 Back Squat rows (same family);
+- `trainAroundEngineTests` "Goblet Squat preserved";
+- `coachInjuryIntegrationTests` "store: Goblet Squat preserved";
+- `injuryEpisodeCommandTests` TraceV2 root reuse;
+- `injuryEpisodeTransactionTests` "unrelated fact has its own visible
+  program effect";
+- `injuryReadinessCoachNotesTests` ×2 (hamstring/shoulder note copy);
+- `tapSwapHierarchyTests` crashes in `capacityRubric.scoreCapacity`.
+
+**NOT-COVERED:** the walker was not extended with an injury-door action
+that speaks the new rows (glute/shin through a real door at depth — the
+gate asks resolvers, not walked athletes); the free-text inner-word scans
+(coachConstraintProducers, sessionBuilder descriptions) are pinned only at
+phrase granularity, not against adversarial sentences; the BUCKET_EXPOSURE
+/ avoid-bullet fallbacks for the newly reachable buckets (hip, quad, neck,
+ribs) render the generic severity copy — whether Sam wants authored
+exposure rows for them is HIS call and was not asked; the eight
+pre-existing reds above are recorded, not diagnosed. **L12 — what catches
+the next one of this class:** the gate now measures behaviour through
+exported doors, so the next divergence cannot hide in a literal a parser
+stopped matching; what it would NOT catch is a fifth door that never
+imports the owner at all — the census completeness direction (a detector
+for `Record<string, Injury...>` literals outside `data/`) is the missing
+sweep, and it was not built here.
+

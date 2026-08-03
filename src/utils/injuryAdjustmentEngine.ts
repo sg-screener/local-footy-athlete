@@ -36,6 +36,7 @@ import {
   BODY_PARTS,
 } from './injuryClarificationGuard';
 import type { ExerciseTag } from '../data/exerciseTags';
+import { resolveInjuryRegion } from '../data/injuryRegions';
 import {
   applyCoachAction,
   type CoachAction,
@@ -98,82 +99,12 @@ export interface InjuryAdjustmentResult {
 
 // ─── Body-part → InjuryBucket mapping ───
 //
-// Keys are entries from injuryClarificationGuard.BODY_PARTS (already
-// normalized via normalizeText, so "hammy" / "hammies" / "hamstring" all
-// route through this list after normalization). Values are the InjuryProfile
-// key whose ratings best protect that body part.
-//
-// Where there's no exact match in InjuryProfile (e.g. "quad", "glute",
-// "neck", "foot", "bicep", "pec") we map to the closest neighbour whose
-// risk profile is the best functional proxy. Documented per entry below.
-
-const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
-  // ─ Posterior chain / lower limb ─
-  hamstring: 'hamstring',
-  hamstrings: 'hamstring',
-  hammy: 'hamstring',
-  hammies: 'hamstring',
-  // glute injuries protect hinge/posterior-chain → use hamstring profile
-  glute: 'hamstring',
-  glutes: 'hamstring',
-
-  // ─ Knee / quad ─
-  knee: 'knee',
-  knees: 'knee',
-  // quad strains hate heavy knee-dominant loading → knee profile is the proxy
-  quad: 'knee',
-  quads: 'knee',
-  quadricep: 'knee',
-  quadriceps: 'knee',
-
-  // ─ Calf / achilles ─
-  calf: 'calf',
-  calves: 'calf',
-  achilles: 'calf',
-
-  // ─ Ankle / foot ─
-  'ankle/foot': 'ankle/foot',
-  ankles: 'ankle/foot',
-  // feet strains avoid high-impact loading → ankle is the closest proxy
-  foot: 'ankle/foot',
-  feet: 'ankle/foot',
-
-  // ─ Groin / adductor ─
-  groin: 'groin',
-  // hip/groin sits closer to adductor restrictions than lower-back loading.
-  hip: 'groin',
-  hips: 'groin',
-
-  // ─ Back ─
-  back: 'lowerBack',
-  'lower back': 'lowerBack',
-  'upper back': 'lowerBack',
-
-  // ─ Shoulder & upper-body adjacency ─
-  shoulder: 'shoulder',
-  shoulders: 'shoulder',
-  // pec / chest / neck strains all share the overhead-press / heavy-press
-  // restriction that the shoulder profile already encodes
-  pec: 'shoulder',
-  pecs: 'shoulder',
-  chest: 'shoulder',
-  neck: 'shoulder',
-
-  // ─ Elbow / arm ─
-  elbow: 'elbow',
-  elbows: 'elbow',
-  // bicep/tricep/forearm strains share the elbow-loading restrictions
-  bicep: 'elbow',
-  biceps: 'elbow',
-  tricep: 'elbow',
-  triceps: 'elbow',
-  forearm: 'elbow',
-  forearms: 'elbow',
-
-  // ─ Wrist ─
-  'wrist/hand': 'wrist/hand',
-  wrists: 'wrist/hand',
-};
+// LR-27 convergence (Sam's ruling, 2026-08-02): the owner's sheet wins every
+// row, so this engine holds no body-part vocabulary of its own. Detected
+// tokens (from injuryClarificationGuard.BODY_PARTS, already normalized via
+// normalizeText) route through `data/injuryRegions.ts` — the single owner —
+// so "glute" means the HIP profile at this door exactly as it does at every
+// other door.
 
 const LOWER_LIMB_BUCKETS = new Set<InjuryBucket>([
   'hamstring',
@@ -182,12 +113,19 @@ const LOWER_LIMB_BUCKETS = new Set<InjuryBucket>([
   'ankle/foot',
   'groin',
   'lowerBack',
+  // Reachable since the LR-27 convergence (Sam 2026-08-02: glute/hip take the
+  // hip profile, quad complaints the quad profile).
+  'hip',
+  'quad',
 ]);
 
 const UPPER_LIMB_BUCKETS = new Set<InjuryBucket>([
   'shoulder',
   'elbow',
   'wrist/hand',
+  // Reachable since the LR-27 convergence (neck stopped proxying to shoulder);
+  // classified upper as the shoulder proxy classified before it.
+  'neck',
 ]);
 
 // ─── Severity parsing ───
@@ -256,7 +194,7 @@ export function extractInjuryContext(text: string): InjuryContext | null {
   const detectedBodyPart = extractBodyPart(text);
   const bodyPart = detectedBodyPart ?? 'unknown';
   const bucket: InjuryBucket | null = detectedBodyPart
-    ? BODY_PART_TO_BUCKET[detectedBodyPart] ?? null
+    ? resolveInjuryRegion(detectedBodyPart)
     : null;
   return {
     bodyPart,

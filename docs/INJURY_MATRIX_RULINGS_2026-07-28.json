@@ -85,9 +85,9 @@
   },
 
   "routing": {
-    "_": "Ruling 4 + amendment. Free text -> region. Entries with two targets are BLOCKED: the resolver is single-target in the mechanism, so they are recorded as ruled but NOT implemented, per Sam's own stop condition.",
+    "_": "Ruling 4 + amendment. Free text -> region. Entries with two targets are BLOCKED: the resolver is single-target in the mechanism, so they are recorded as ruled but NOT implemented, per Sam's own stop condition. Amended 2026-08-02 (Sam, LR-27 divergence table, PARKED_QUESTIONS_2026-08-01 §5): shin/shins -> calf ADDED (single-target), and quadricep (singular) corrected to quad — the knee route was a sheet typo.",
     "single": {
-      "quad / quads / quadriceps": "quad",
+      "quad / quads / quadriceps / quadricep": "quad",
       "hip / hips": "hip",
       "neck": "neck",
       "hand / hands / fingers / thumb": "wrist/hand",
@@ -97,6 +97,7 @@
       "rib / ribs": "ribs",
       "hip flexor": "hip",
       "achilles": "calf",
+      "shin / shins": "calf",
       "upper back": "shoulder"
     },
     "dual": {

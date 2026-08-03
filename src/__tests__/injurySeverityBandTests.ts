@@ -211,8 +211,12 @@ eq('exposure 6/10 tier', exposureSeverityToTier(6), 'limiting');
 eq('exposure 9/10 tier', exposureSeverityToTier(9), 'severe');
 eq('train-around 6/10 tier', trainAroundSeverityToTier(6), 'moderate');
 eq('train-around 9/10 tier', trainAroundSeverityToTier(9), 'severe');
-eq('program hip bucket uses lower-limb proxy', resolveInjuryBucket('hip'), 'adductor');
-eq('guided hip bucket uses lower-limb proxy', guidedInjuryBucketForArea('Hip / groin'), 'adductor');
+// LR-27 convergence (Sam's ruling 2026-08-02): hip complaints take the HIP
+// profile at every door — the owner's sheet wins every row. (These two rows
+// previously expected an 'adductor' bucket no engine ever produced — they
+// were red on main before the convergence.)
+eq('program hip routes to the hip profile', resolveInjuryBucket('hip'), 'hip');
+eq('guided hip routes to the hip profile', guidedInjuryBucketForArea('Hip / groin'), 'hip');
 
 {
   const c6 = buildInjuryConstraint({ region: 'shoulder', severity: 6 });
