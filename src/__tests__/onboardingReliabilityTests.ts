@@ -15,6 +15,9 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
+// ARMED RED until the totals line prints (see the bottom of main). A suite
+// whose event loop drains mid-run exits 0 by default, and this one did.
+process.exitCode = 1;
 
 import fs from 'fs';
 import path from 'path';
@@ -150,6 +153,7 @@ import {
   RETIRED_STORE_PERSIST_KEYS,
   getAppHydrationState,
   awaitAppHydration,
+  retryAppHydration,
 } from '../store/appHydrationGate';
 import { generationSeasonPhaseOrThrow } from '../services/api/generateProgram';
 
@@ -235,6 +239,20 @@ const COMPLETE_IN_SEASON_PROFILE: OnboardingData = {
   injuries: [],
   trainingLocation: 'Commercial gym',
   equipment: ['barbell', 'dumbbells'],
+  // Equipment became a REQUIRED onboarding answer on 2026-07-31 (Sam's ruling
+  // 4, the equipment unit) — this fixture predates it and went un-updated
+  // while the suite's silent exit hid blocks E and F. A "complete" profile
+  // without the answer correctly resumes at Equipment; the fixture now
+  // answers it (the walker's canonical shape).
+  equipmentAnswer: {
+    tags: {
+      barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+      bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+      foam_roller: 'have', plyo_box: 'have',
+    },
+    modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+    answeredOn: '2026-07-29',
+  },
 } as unknown as OnboardingData;
 
 async function main(): Promise<void> {
@@ -407,8 +425,12 @@ async function main(): Promise<void> {
     void commit.then(() => { resolved = true; });
     await Promise.resolve();
     assert(!resolved, 'commit resolved before the profile write reached disk');
-    await releaseWrites();
-    await commit;
+    // PUMPED, not single-released (2026-08-03): the armoured profile write now
+    // cascades — the action-log ring persists behind it on a macrotask that
+    // lands AFTER a single releaseWrites() returns. Awaiting the commit with
+    // the queue unpumped hangs forever, the event loop drains, and node exits
+    // 0 mid-suite. That silent exit is what hid blocks B2-G for five days.
+    await whileReleasingWrites(() => commit);
     const envelope = JSON.parse(disk.get('profile-store') ?? '{}');
     assert(envelope?.state?.onboardingData?.firstName === 'Sam',
       `commit resolved without the answer on disk: ${disk.get('profile-store') ?? 'nothing'}`);
@@ -419,7 +441,10 @@ async function main(): Promise<void> {
     failingWriteKeys.add('profile-store');
     try {
       let thrown: unknown = null;
-      await commitOnboardingStep({ firstName: 'Blocked' }).catch((error) => { thrown = error; });
+      // Pumped for the same reason as B1: the armoured write cascades, and the
+      // action-log follow-on needs the queue released past one generation.
+      await whileReleasingWrites(() =>
+        commitOnboardingStep({ firstName: 'Blocked' }).catch((error) => { thrown = error; }));
       assert(thrown instanceof OnboardingStepCommitError,
         `commit resolved successfully on a failed write: ${String(thrown)}`);
     } finally {
@@ -523,7 +548,12 @@ async function main(): Promise<void> {
     for (const key of RETIRED_STORE_PERSIST_KEYS) {
       disk.set(key, JSON.stringify({ state: {}, version: 0 }));
     }
-    await whileReleasingWrites(async () => { await awaitAppHydration(); });
+    // Through the product's own fresh-settlement door: `awaitAppHydration` is
+    // memoized, and an earlier cell has already settled it — the cache hit
+    // never re-runs the remover. `retryAppHydration` is the boot path that
+    // clears the settlement (the error screen's Try Again), which is exactly
+    // the relaunch this cell simulates.
+    await whileReleasingWrites(async () => { await retryAppHydration(); });
     const survivors = RETIRED_STORE_PERSIST_KEYS.filter((key) => disk.has(key));
     assert(survivors.length === 0,
       `retired persist envelope(s) survived boot: ${survivors.join(', ')}`);
@@ -660,11 +690,17 @@ async function main(): Promise<void> {
       'generateProgram keeps a second, independent list of required profile fields');
   });
 
-  console.log(`\nOnboarding reliability totals: passed=${passed}/23 failures=${failures.length}`);
+  console.log(`\nOnboarding reliability totals: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
   if (failures.length > 0) {
     console.error(`Failing: ${failures.join(', ')}`);
     process.exit(1);
   }
+  // TOTALS-OR-RED (the storedStateWriterAuditTests precedent, made law here by
+  // the 2026-08-03 finding): this suite exited 0 HALF-RUN for five days — a
+  // drained event loop is exit 0 unless someone says otherwise, and a bible
+  // chain reads exit 0 as green. The exitCode set at module top stays 1 until
+  // this line runs; a silent early exit is now a loud red.
+  process.exitCode = 0;
 }
 
 main().catch((error) => {

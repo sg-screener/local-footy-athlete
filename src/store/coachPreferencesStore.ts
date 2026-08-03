@@ -50,6 +50,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   decideQuarantinedWrite,
+  guardedDurableWrite,
   quarantineRefusedPayload,
   registerQuarantineBoundary,
   releaseQuarantine,
@@ -296,28 +297,30 @@ registerQuarantineBoundary(COACH_PREFS_PERSISTENCE_KEY, {
  */
 export const coachModalityPrefsGuardedStorage = {
   getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
-  setItem: async (name: string, value: string): Promise<void> => {
-    const decision = decideQuarantinedWrite(name, value);
-    if (!decision.allowed) {
-      emitAthleteActionEvent(beginAthleteActionTrace({
-        source: 'system',
-        actionType: 'program_change',
-        route: 'coachModalityPrefsGuardedStorage.setItem',
-      }, undefined, { forceRoot: true }), 'persistence_result', {
-        persistenceOperation: 'write',
-        persistenceStore: name,
-        persistenceSucceeded: false,
-        originalRejectionCode: decision.reason,
-        rejectingBoundary: 'coachModalityPrefsGuardedStorage.setItem.quarantine',
-        failureCategory: 'persistence_failure',
-      });
-      logger.error('[coachPreferencesStore] refused to persist over a quarantined payload.',
-        { store: name, reason: decision.reason });
-      return;
-    }
-    releaseQuarantine(name);
-    await asyncStorageCompat.setItem(name, value);
-  },
+  setItem: (name: string, value: string): Promise<void> =>
+    // Not async — zustand voids this call; guardedDurableWrite returns the
+    // base write's own (handled) promise. See refusedPayloadQuarantine.ts.
+    guardedDurableWrite({
+      storeKey: name,
+      envelope: value,
+      base: asyncStorageCompat,
+      onRefused: (reason) => {
+        emitAthleteActionEvent(beginAthleteActionTrace({
+          source: 'system',
+          actionType: 'program_change',
+          route: 'coachModalityPrefsGuardedStorage.setItem',
+        }, undefined, { forceRoot: true }), 'persistence_result', {
+          persistenceOperation: 'write',
+          persistenceStore: name,
+          persistenceSucceeded: false,
+          originalRejectionCode: reason,
+          rejectingBoundary: 'coachModalityPrefsGuardedStorage.setItem.quarantine',
+          failureCategory: 'persistence_failure',
+        });
+        logger.error('[coachPreferencesStore] refused to persist over a quarantined payload.',
+          { store: name, reason: reason });
+      },
+    }),
   removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
 };
 

@@ -110,6 +110,36 @@ export interface QuarantineWriteDecision {
 }
 
 /**
+ * The guarded persistence write, shared by every armoured store's storage
+ * wrapper (2026-08-03, found by onboardingReliabilityTests B2 the day its
+ * silent exit was repaired).
+ *
+ * WHY THIS IS NOT async/await: zustand's persist middleware fire-and-forgets
+ * (`void setItem(...)`). An `async` wrapper returns a NEW promise nobody
+ * handles, so a failing device write became an UNHANDLED REJECTION — a crash
+ * on the exact path the armour exists to protect. Returning the base write's
+ * own promise keeps the compat layer's handling semantics (its tracked chain
+ * is already caught, and `flushPendingStorageWrites` still re-raises for
+ * callers who await durability). Nine stores carried nine copies of the
+ * async wrapper; this is the one owner that replaces them.
+ */
+export function guardedDurableWrite(args: {
+  storeKey: string;
+  envelope: string;
+  base: { setItem(name: string, value: string): Promise<void> };
+  /** Tape + log the refusal; the write itself resolves without travelling. */
+  onRefused: (reason: string) => void;
+}): Promise<void> {
+  const decision = decideQuarantinedWrite(args.storeKey, args.envelope);
+  if (!decision.allowed) {
+    args.onRefused(decision.reason ?? `refused_payload_quarantined:${args.storeKey}`);
+    return Promise.resolve();
+  }
+  releaseQuarantine(args.storeKey);
+  return args.base.setItem(args.storeKey, args.envelope);
+}
+
+/**
  * The one question every registered writer boundary asks before it writes.
  *
  * Refuses exactly one thing: a payload with no material, while a payload WITH
