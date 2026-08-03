@@ -1122,23 +1122,31 @@ const glyph = (color: string, children: React.ReactNode) => (
   </Svg>
 );
 
-/** Swap — two arrows going opposite ways: this for that. */
+/** Swap — two arrows circling: this for that (Sam's pick, 2026-08-03 icon
+ *  ruling row 5, replacing the two straight arrows). Same shape the day
+ *  screen's per-row swap and the week screen's 'refresh' row kind already
+ *  draw — one mark for "trade", wherever a swap door appears. */
 const swapIcon = (color: string) => glyph(color, (
-  <><Path d="M4 8h13l-3-3" /><Path d="M20 16H7l3 3" /></>
+  <><Path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" /><Path d="M4 4v4h4" />
+    <Path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" /><Path d="M20 20v-4h-4" /></>
 ));
 /** Add — a plus. */
 const addIcon = (color: string) => glyph(color, (
   <><Path d="M12 5v14" /><Path d="M5 12h14" /></>
 ));
-/** Move — a calendar with an arrow leaving it: same session, another day. */
+/** Move — an arrow INTO a calendar day: the session landing somewhere (Sam's
+ *  pick, 2026-08-03 icon ruling row 7; the arrow used to LEAVE the calendar,
+ *  which read as the session going away rather than arriving). */
 const moveIcon = (color: string) => glyph(color, (
-  <><Path d="M11 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9" /><Path d="M8 2v4" />
-    <Path d="M15 12h7" /><Path d="M19 9l3 3-3 3" /></>
+  <><Path d="M13 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-6" /><Path d="M16 2v4" />
+    <Path d="M2 12h13" /><Path d="M12 9l3 3-3 3" /></>
 ));
-/** Remove — a bin. Danger-tinted at the call site. */
+/** Remove — a minus in a circle (Sam's pick, 2026-08-03 icon ruling row 8,
+ *  replacing the bin: the retired "bin" verb stays retired in imagery too).
+ *  Same mark the day screen's per-row remove draws. Danger-tinted at the
+ *  call site. */
 const removeIcon = (color: string) => glyph(color, (
-  <><Path d="M4 7h16" /><Path d="M10 11v6" /><Path d="M14 11v6" />
-    <Path d="M6 7l1 13h10l1-13" /><Path d="M9 7V4h6v3" /></>
+  <><Circle cx="12" cy="12" r="9" /><Path d="M8 12h8" /></>
 ));
 /** Strength — a barbell. */
 const strengthIcon = (color: string) => glyph(color, (
@@ -1197,7 +1205,8 @@ function moveScopeIcon(id: PlanChangeMoveScopeId, color: string): React.ReactNod
 }
 /**
  * "Remove what?" scope rows (carry-forward from Task 4) — the remove/danger
- * family per Sam's brief. `whole_day` gets the literal bin in full danger
+ * family per Sam's brief. `whole_day` gets the remove mark (a minus in a
+ * circle — never a bin, Sam 2026-08-03) in full danger
  * red (everything goes); a partial scope shows what content is going, tinted
  * the same softer coral the row's own danger styling already uses, so the
  * glyph names the casualty instead of repeating the same bin four times.
