@@ -28,6 +28,9 @@
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore, canonicaliseAcceptedStateCandidate } from '../store/programStore';
@@ -615,6 +618,7 @@ run('10 empty-day-add: add_category on a rest day routes through the transaction
 });
 
 console.log(`\n§18 ownership invariants: ${passes} passing, ${failures.length} failing`);
+totalsPrinted(failures.length);
 if (failures.length > 0) {
   console.log('Currently RED (expected pre-migration):');
   for (const name of failures) console.log(`  - ${name}`);

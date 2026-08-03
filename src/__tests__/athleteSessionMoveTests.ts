@@ -18,6 +18,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
@@ -1157,6 +1161,7 @@ async function finish(): Promise<void> {
   });
 
   console.log(`\nAthlete session move totals: ${passed} passed, ${failed} failed`);
+  totalsPrinted(failed);
   if (failed > 0) {
     console.log(`Failures: ${failures.join(', ')}`);
     process.exit(1);

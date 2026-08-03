@@ -8,6 +8,10 @@
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type {
   Microcycle,
   OnboardingData,
@@ -1515,6 +1519,7 @@ for (const [name, condition] of finalBoundaryMutations) check(name, condition);
 
 console.log(`\nsection18AcceptedWeekGatewayTests: ${pass} passed, ${fail} failed`);
 console.log('SECTION18_ACCEPTED_WEEK_TOTALS scenarios=52 properties=19 mutations=19 cross_paths=1');
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`Failures:\n${failures.map((failure) => `  - ${failure}`).join('\n')}`);
   process.exit(1);

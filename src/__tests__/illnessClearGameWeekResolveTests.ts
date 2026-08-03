@@ -46,6 +46,9 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
@@ -291,5 +294,6 @@ function currentBaseSurfaces(): Record<string, unknown> {
 
   teardownDeviceExactSeed();
   console.log(`\nFinding #4 illness-clear game-week diagnosis: ${passes} passing, ${failures.length} failing\n`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) process.exitCode = 1;
 })();

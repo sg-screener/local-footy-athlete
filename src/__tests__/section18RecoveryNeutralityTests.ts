@@ -89,6 +89,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -341,6 +345,7 @@ run('the projection agrees with the ledger about what counts', () => {
 });
 
 console.log(`\nSection 18 recovery neutrality totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log('  DEPTH (L13): 2-3 — generate, then add/remove recovery. Ledger');
 console.log('  neutrality is per-week arithmetic; the promotion\'s RENDERING claims');
 console.log('  still owe a long-life walk and are recorded as not covered.');

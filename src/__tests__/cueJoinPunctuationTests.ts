@@ -12,6 +12,10 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 
 let passed = 0;
@@ -70,4 +74,5 @@ console.log('\n[cue join] primary + secondary read as two sentences');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 if (failures.length > 0) process.exit(1);

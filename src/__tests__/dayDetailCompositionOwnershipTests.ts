@@ -26,6 +26,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import { composeDayDetail } from '../utils/dayDetailComposition';
@@ -123,6 +127,7 @@ run('a null day composes an empty detail rather than throwing', () => {
 });
 
 console.log(`\nDay detail composition ownership totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
   process.exit(1);

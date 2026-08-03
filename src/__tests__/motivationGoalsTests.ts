@@ -31,6 +31,10 @@
  * Plus L15's own direction: NOTHING WRITES `motivation` ANY MORE.
  */
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { MotivationGoal, OnboardingData } from '../types/domain';
 import {
   MAX_MOTIVATION_GOALS,
@@ -349,5 +353,6 @@ console.log('\n[7] THE STEP REGISTRY AGREES WITH THE DOOR — the near-miss this
 }
 
 console.log(`\nmotivationGoalsTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);
 process.exit(fail > 0 ? 1 : 0);
