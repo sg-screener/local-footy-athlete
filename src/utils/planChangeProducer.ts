@@ -685,10 +685,12 @@ function moveOptionsForDay(args: {
   //
   // WHICH answer is decided by a typed fact the projection already carries —
   // does this day hold a team anchor? Under the team-night movability ruling
-  // (signed 2026-08-02) that anchor no longer refuses: the day offers the
-  // `team` scope, and picking a destination raises the typed ask.
+  // (signed 2026-08-02) the anchor is movable (the projection's own
+  // `team_training` part capability says so — one owner), so a team night
+  // passes this gate and offers the `team` scope; picking a destination
+  // raises the typed ask.
   const holdsTeamAnchor = args.projected.parts.some((part) => part.kind === 'team_training');
-  if (!args.projected.capabilities.canMoveWholeDay && !holdsTeamAnchor) {
+  if (!args.projected.capabilities.canMoveWholeDay) {
     return args.projected.parts.length === 0 ? refuse('no_session') : refuse('nothing_movable');
   }
 
