@@ -559,11 +559,11 @@ async function main(): Promise<void> {
 
     const accepted = normalizeAcceptedMaterialContext(
       useProgramStore.getState().acceptedMaterialContext);
-    const fact = accepted.temporarySourceFacts.find((candidate) =>
-      !isInjurySourceFact(candidate) && candidate.factKind === 'schedule' &&
-      candidate.scheduleKind === 'travel');
-    assert(fact && !isInjurySourceFact(fact) &&
-      JSON.stringify(fact.unavailableDates) === JSON.stringify(awayDates),
+    const fact = accepted.temporarySourceFacts.find(
+      (candidate): candidate is TemporaryScheduleFact =>
+        !isInjurySourceFact(candidate) && candidate.factKind === 'schedule' &&
+        candidate.scheduleKind === 'travel');
+    assert(fact && JSON.stringify(fact.unavailableDates) === JSON.stringify(awayDates),
       'the away fact did not land with the days the athlete ticked');
     assert(accepted.activeConstraints.some((constraint) =>
       constraint.type === 'schedule' && constraint.scheduleKind === 'travel'),
