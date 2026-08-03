@@ -113,7 +113,6 @@ function read(relativePath: string): string {
 const UNPROTECTED_STORES_DEBT: readonly string[] = [
   'coach-store',
   'coach-memory-store',
-  'ui-store',
 ];
 
 console.log('\n-- Stored-state writer audit (L12) --');

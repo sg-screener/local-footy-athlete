@@ -175,7 +175,20 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   },
   { file: 'store/coachStore.ts', persistKey: 'coach-store', owner: null, taped: false },
   { file: 'store/coachMemoryStore.ts', persistKey: 'coach-memory-store', owner: null, taped: false },
-  { file: 'store/uiStore.ts', persistKey: 'ui-store', owner: null, taped: false },
+  {
+    file: 'store/uiStore.ts',
+    persistKey: 'ui-store',
+    owner: 'applyUiSettingsWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, tail) at the honest '
+      + 'MINIMUM: presentation only, no athlete answer exists. The door owns '
+      + 'theme/designVersion and tapes its writers, but has NO wipe refusal '
+      + '(the defaults are a legitimate chosen state — refusing them would '
+      + 'refuse the athlete\'s own resets), so the registered quarantine '
+      + 'boundary can never arm today. activeTab/isOnline are runtime '
+      + 'convenience outside the door and off the tape (ring-flood, export 6). '
+      + 'All three absences are pinned as decisions in uiStoreOwnershipTests.',
+  },
   {
     file: 'store/authStore.ts',
     persistKey: 'auth-store',
@@ -407,7 +420,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 4,
+    declared: 3,
     foundingCount: 11,
   },
   {
@@ -779,7 +792,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 7 + 4 + 72.
+ * The sum of every declared count: 27 + 3 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -788,11 +801,14 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * `useProfileStore` single-expression reads (one in the reversible-adjustment
  * transaction store, one in the Explorer production bindings' now-excluded
  * action case) went with it. LR-2 paid down 11 → 9 with the store-armour
- * recipe's two proving applications (prefs + calendar, 2026-08-03) and 9 → 7
+ * recipe's two proving applications (prefs + calendar, 2026-08-03), 9 → 7
  * when the readiness and coach-updates stores took their doors in the fleet
- * phase.
+ * phase, 7 → 5 when the coach-preferences and coach-mutation-history stores
+ * took theirs, and 5 → 3 when the fleet tail armoured the auth and ui stores
+ * (2026-08-03) — leaving coach-store and coach-memory-store as LR-2's
+ * remainder.
  */
-export const LEGACY_DEBT_BASELINE = 107;
+export const LEGACY_DEBT_BASELINE = 106;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
