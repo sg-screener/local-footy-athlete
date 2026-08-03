@@ -509,6 +509,11 @@ function commitDerivingSourceFactScopedRegen(args: {
   //    overlay carries its reduced contract, validated by validateWeekStarts.
   return commitAcceptedStateTransaction({
     reason: args.reason,
+    // The athlete declared a life-fact and the reduced week is being authored
+    // forward — accept-and-reduce (Sam, 2026-07-29): a pre-existing shortfall
+    // elsewhere in the program is recorded and disclosed, never grounds to
+    // refuse recording the fact.
+    operation: 'forward_decision',
     program: {
       weekScopedOverlays: nextOverlays,
       reversibleAdjustmentLedger: {
@@ -565,44 +570,56 @@ export async function commitTemporarySourceFactSet(
     activeConstraints: ownership.context.activeConstraints,
     readinessSignalsByDate: ownership.context.readinessSignalsByDate,
   });
-  // A fact commit that composes NO change to the exposure-affecting (source-fact)
-  // constraints is INERT: it changes no visible program, so it must NOT re-run the
-  // whole-week §18 MUTATION gate. A contextual signal is not a program mutation —
-  // it commits off that boundary (Q4/Q5; Sam 2026-07-22). Deriving facts (which
-  // add or remove a source-fact constraint, e.g. severe fatigue / injury) still run
-  // the gate. This is the fix for the whole-week §18 gateway firing on a record-only
-  // fact commit. See docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
-  const sourceFactConstraintSignature = (constraints: readonly unknown[]): string =>
-    JSON.stringify((constraints as Array<{ id?: string; type?: string; severity?: number }>)
-      .filter((constraint) => isTemporarySourceFactConstraint(constraint as never))
+  // ── THE FACT'S RULED EFFECT OWNS ITS COMMIT LANE ─────────────────────────
+  // (Sam approved option 2 of docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_
+  // 2026-08-01.md verbatim, 2026-08-02.) Every source fact is either INERT or
+  // DERIVING; the third lane — re-canonicalise the accepted base and then have
+  // the verifier refuse the change — is RETIRED, not guarded.
+  //
+  // DERIVING = the composed constraint has a RULED effect that must be
+  // re-authored into the week (an AUTHORING event with no projection home):
+  //   - 'fatigue'  → readiness reduction / illness_recovery week mode
+  //                  (severe illness and cooked fatigue compose here);
+  //   - 'injury'   → the restriction (I6: the athlete must SEE the week stop
+  //                  prescribing the affected work);
+  //   - 'schedule' scheduleKind 'time_cap' → the COMPRESSED session under the
+  //                  35-minute owner (Sam's minutes ruling, 2026-08-02: main
+  //                  lift kept, cut to essentials — "Short on time today").
+  // Everything else a fact composes (busy_week / travel / max_sessions /
+  // unavailable_* / equipment) has NO ruled re-authoring effect: it commits
+  // INERT — recorded and honest, program byte-unchanged, off the whole-week
+  // §18 MUTATION gate (a contextual signal is not a program mutation; Q4/Q5,
+  // Sam 2026-07-22) — and delivers, if anywhere, through projection and future
+  // generation. See docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_
+  // 2026-07-23.md and docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+  const isRuledDerivingConstraint = (constraint: {
+    type?: string;
+    scheduleKind?: string;
+  }): boolean =>
+    isTemporarySourceFactConstraint(constraint as never) &&
+    (constraint.type === 'fatigue' || constraint.type === 'injury' ||
+      (constraint.type === 'schedule' && constraint.scheduleKind === 'time_cap'));
+  const derivingSignature = (constraints: readonly unknown[]): string =>
+    JSON.stringify((constraints as Array<{ id?: string; type?: string; severity?: number; scheduleKind?: string }>)
+      .filter(isRuledDerivingConstraint)
       .map((constraint) => ({ id: constraint.id, type: constraint.type, severity: constraint.severity }))
       .sort((left, right) => String(left.id).localeCompare(String(right.id))));
-  const inertComposition = sourceFactConstraintSignature(ownership.context.activeConstraints)
-    === sourceFactConstraintSignature(compatibility.activeConstraints);
-  // A DERIVING fact (severe illness → illness_recovery, cooked fatigue →
-  // readiness reduction, an injury restriction) is an AUTHORING event with no
-  // projection home: the mode/reduction/prohibition lives only in generation.
-  // When a NEW auto-protect ('fatigue') or injury source-fact constraint
-  // appears, route it through a scoped regeneration committed as a week
-  // overlay + fact-linked adjustment, rather than the overlay-preserving inert
-  // path (a silent no-op) or the base-immutability guard (a reject).
-  // Equipment/schedule/time-cap facts deliver via projection and stay on their
-  // existing path — the rider-1 materialisation table names one owner per
-  // effect, and injury's owner is THIS one (I6: the athlete must SEE the week
-  // stop prescribing the affected work). See
-  // docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_2026-07-23.md and
-  // docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md §3.
+  // The commit is a deriving one exactly when the RULED-EFFECT constraint set
+  // changed. Unruled compositions — however much they change the projection
+  // set — are record-only and take the inert lane.
+  const derivingCompositionChanged =
+    derivingSignature(ownership.context.activeConstraints)
+      !== derivingSignature(compatibility.activeConstraints);
   const derivingSourceFactIds = (constraints: readonly unknown[]): Set<string> =>
-    new Set((constraints as Array<{ id?: string; type?: string }>)
-      .filter((constraint) => (constraint.type === 'fatigue' || constraint.type === 'injury') &&
-        isTemporarySourceFactConstraint(constraint as never))
+    new Set((constraints as Array<{ id?: string; type?: string; scheduleKind?: string }>)
+      .filter(isRuledDerivingConstraint)
       .map((constraint) => String(constraint.id)));
   const priorDerivingIds = derivingSourceFactIds(ownership.context.activeConstraints);
   // Materialisation needs a program to materialise into; without one (cold
-  // start, synthetic bases) the fact still commits via the projection path.
+  // start, synthetic bases) the fact still commits — inert, base-preserving.
   const canScopedRegen =
     (useProgramStore.getState().currentProgram?.microcycles?.length ?? 0) > 0;
-  const scopedRegen = !inertComposition && canScopedRegen &&
+  const scopedRegen = canScopedRegen &&
     Array.from(derivingSourceFactIds(compatibility.activeConstraints))
       .some((id) => !priorDerivingIds.has(id));
   // Stage 1: which weeks a deriving fact re-authors is the FACT's business, not
@@ -635,7 +652,7 @@ export async function commitTemporarySourceFactSet(
     .reversibleAdjustmentLedger.adjustments
     .some((adjustment) => adjustment.kind === 'deriving_source_fact' &&
       adjustment.sourceFactId === args.targetFactId);
-  const scopedRegenRestore = !inertComposition && !scopedRegen && ownsScopedRegenAdjustment;
+  const scopedRegenRestore = derivingCompositionChanged && !scopedRegen && ownsScopedRegenAdjustment;
   const horizon = affectedHorizon(args.todayISO, normalizedFacts);
   const baseFingerprint = semanticFingerprint(compositionBase.surfaces);
   const ledgerFingerprint = semanticFingerprint(compositionBase.surfaces.reversibleAdjustmentLedger);
@@ -657,10 +674,24 @@ export async function commitTemporarySourceFactSet(
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
       });
-      if (!inertComposition) {
+      // TWO LANES, NO THIRD. A DERIVING change still runs the §18 gate (the
+      // fact stays gated — R9/R14): a new deriving constraint re-authors its
+      // weeks via scoped regen; a deriving change with no program to regen
+      // (cold start, synthetic base) or with no new constraint (an update, a
+      // resolve without an owned adjustment) validates the composed candidate
+      // and then commits BASE-PRESERVING. A scoped-regen RESTORE re-validates
+      // nothing: the cascade revert already restored the stored prior base
+      // (re-deriving it here is the finding-#4 half-apply). An INERT commit —
+      // which since the 2026-08-03 lanes includes every unruled fact, however
+      // it changes the projection set — never touches the gate at all.
+      //
+      // The commit below is ALWAYS base-preserving. The old third lane —
+      // re-canonicalise the base for a "projection-delivered" fact and then
+      // have `verifyCandidate` refuse the base change it just made
+      // (`accepted_composition_base_changed_by_temporary_fact`, the on-device
+      // refusal behind declared red 1) — is retired, not guarded.
+      if (derivingCompositionChanged) {
         args.testHooks?.beforeEffectiveValidation?.();
-        // A deriving fact still runs the §18 gate (the fact stays gated — R9/R14),
-        // but its effective week is the RE-AUTHORED reduced week, not the base.
         if (scopedRegen && targetFact) {
           return commitDerivingSourceFactScopedRegen({
             compositionBase,
@@ -676,9 +707,6 @@ export async function commitTemporarySourceFactSet(
             },
           });
         }
-        // A scoped-regen RESTORE re-authors nothing: the cascade revert already restored
-        // the stored prior base, and the commit below preserves it exactly. Its effective
-        // week is that restored (previously validated) base, re-gated by validateWeekStarts.
         if (!scopedRegenRestore) {
           validateEffectiveComposition({
             base: compositionBase,
@@ -689,6 +717,10 @@ export async function commitTemporarySourceFactSet(
       }
       return commitAcceptedStateTransaction({
         reason: args.reason,
+        // The athlete declared a life-fact. Forward — the base is preserved
+        // byte-exact, so nothing here is a restoration, and a pre-existing
+        // shortfall in some week must not refuse a record-only fact.
+        operation: 'forward_decision',
         program: compositionBase.surfaces,
         temporarySourceFacts: normalizedFacts,
         injuryEpisodes: compatibility.injuryEpisodes,
@@ -696,15 +728,14 @@ export async function commitTemporarySourceFactSet(
         activeInjury: compatibility.activeInjury,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
-        // Inert facts commit off the mutation boundary: no whole-week §18 re-gate,
-        // AND the exact accepted program surfaces are preserved (no re-canonicalise).
-        // Re-canonicalising a record-only fact mutates `acceptedCompositionBase.surfaces`,
-        // which `verifyCandidate` rejects with
-        // `accepted_composition_base_changed_by_temporary_fact` (the on-device failure).
-        validateWeekStarts: inertComposition ? [] : horizon.weeks,
-        // Base-preserving for inert facts AND scoped-regen restores (both own no base
-        // change); the re-canonicalising path stays for projection-delivered facts.
-        preserveExactAcceptedWorkouts: (inertComposition || scopedRegenRestore) ? true : undefined,
+        // Off the whole-week §18 re-gate: a deriving change was already gated
+        // above (scoped regen validates its own weekStarts), and an inert
+        // commit is record-only by ruling.
+        validateWeekStarts: [],
+        // The exact accepted program surfaces are preserved, always — the one
+        // writer that re-authors them is the scoped regen, which returned
+        // above with its own base-change authority.
+        preserveExactAcceptedWorkouts: true,
         skipConstraintProjection: true,
       });
     },

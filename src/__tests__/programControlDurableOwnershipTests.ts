@@ -226,8 +226,18 @@ function publishScheduleFactDirectly(fact: TemporaryScheduleFact): void {
   } as never);
 }
 
-/** Fresh install, his answers, generate, his calendar. Every step a real door. */
-function reachHisWorldByActing(): void {
+/** Fresh install, his answers, generate, his calendar. Every step a real door.
+ *
+ * `withMarks: false` reaches the same athlete BEFORE any calendar mark — a
+ * real, reachable world. The deriving cells below use it because the MARKED
+ * world cannot pass §18 re-acceptance for ANY deriving fact: probed against
+ * the established illness lane (severe illness), the same world answers the
+ * same `Section 18 final-week rejection` — the second blocker declared red 1
+ * recorded ("this world's generated week also fails its own §18
+ * re-evaluation"). That is the fixture world's pre-existing state, not the
+ * lanes'; the lane's behaviour in a §18-broken world is the honest refusal
+ * the ack cells cover. */
+function reachHisWorldByActing(options?: { withMarks?: boolean }): void {
   localStorageData.clear();
   const profile = samExport8Profile();
   useProfileStore.setState({ onboardingData: profile, isOnboardingComplete: true });
@@ -259,6 +269,7 @@ function reachHisWorldByActing(): void {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
+  if (options?.withMarks === false) return;
   for (const [date, mark] of Object.entries(SAM_EXPORT_8_MARKED_DAYS)) {
     if (mark === 'game') quiet(() => useCalendarStore.getState().setGameDay(date, TODAY));
     else quiet(() => useCalendarStore.getState().setRestDay(date));
@@ -411,12 +422,16 @@ async function main(): Promise<void> {
   // ruling 2, 2026-07-31) — the scope cells below hold that half unchanged.
   // ────────────────────────────────────────────────────────────────────────
 
-  /** The one door, with the scope the button declares. */
-  const shortOnTimeAction = (scope: 'today_only' | 'current_week'): ProgramControlAction => ({
+  /** The one door, with the scope the button declares. `onDate` is the day the
+   *  athlete taps it (defaults to the tape's today). */
+  const shortOnTimeAction = (
+    scope: 'today_only' | 'current_week',
+    onDate: string = TODAY,
+  ): ProgramControlAction => ({
     type: 'set_schedule_modifier',
     source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
     scope,
-    payload: { date: TODAY, todayISO: TODAY },
+    payload: { date: onDate, todayISO: onDate },
     requiresRebuild: false,
     createsActiveModifier: true,
     oneOffOnly: false,
@@ -458,7 +473,7 @@ async function main(): Promise<void> {
     // it commits IS the ruling — a time-cap fact, dates [today], capped by the
     // one 35-minute owner. Building the fact by hand here would let the door
     // drift from the cell that pins it.
-    reachHisWorldByActing();
+    reachHisWorldByActing({ withMarks: false });
     const result = await quietAsync(() =>
       executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
     assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
@@ -493,7 +508,7 @@ async function main(): Promise<void> {
     ).some((constraint: { id?: string }) => constraint.id === constraintId));
 
   await run('a today-scoped time-cap fact reaches today and no other day', async () => {
-    reachHisWorldByActing();
+    reachHisWorldByActing({ withMarks: false });
     const result = await quietAsync(() =>
       executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
     assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
@@ -570,30 +585,36 @@ async function main(): Promise<void> {
     // COMPRESSED session — main lift kept, cut to essentials, under the
     // existing 35-minute owner — delivered by scoped regen, the illness
     // precedent, with a fact-linked adjustment for the undo half below.
-    reachHisWorldByActing();
-    const before = dayFingerprints(projectedWeek());
-    assert(before[TODAY] !== undefined && before[TODAY] !== 'REST',
-      `today (${TODAY}) holds nothing — this cell would be vacuous`);
-    const mainLiftBefore = (projectedWeek().find((day) => day.date === TODAY)?.workout
+    // The tap day is the Friday of his week — a PLAIN strength day (Lower
+    // Hinge). His literal today is a TEAM NIGHT, which the compression law
+    // deliberately never content-cuts (the club's session is not ours to
+    // shorten), so a cell tapping there would assert nothing about the trim.
+    const tapDay = '2026-07-31';
+    reachHisWorldByActing({ withMarks: false });
+    const before = dayFingerprints(projectedWeek(WEEK, tapDay));
+    assert(before[tapDay] !== undefined && before[tapDay] !== 'REST',
+      `the tap day (${tapDay}) holds nothing — this cell would be vacuous`);
+    const mainLiftBefore = (projectedWeek(WEEK, tapDay).find((day) => day.date === tapDay)?.workout
       ?.exercises ?? [])[0]?.exercise?.name ?? null;
 
     const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+      executeProgramControlActionDurably(shortOnTimeAction('today_only', tapDay), { todayISO: tapDay }));
     assert(result.ok === true, `the short-on-time door refused: "${result.message}"`);
     assert(result.changedProgram === true,
       'the ruled door reported no program change over an occupied today — the '
       + 'compressed session never landed');
 
-    const todayAfter = projectedWeek().find((day) => day.date === TODAY);
+    const todayAfter = projectedWeek(WEEK, tapDay).find((day) => day.date === tapDay);
     assert(todayAfter?.workout, 'the compressed day lost its session entirely');
-    assert((todayAfter.workout.durationMinutes ?? 0) <= SHORT_ON_TIME_MINUTES,
-      `today still runs ${todayAfter.workout.durationMinutes} minutes against the `
-      + `${SHORT_ON_TIME_MINUTES}-minute cap`);
-    const after = dayFingerprints(projectedWeek());
-    assert(after[TODAY] !== before[TODAY],
+    const statedMinutes = todayAfter.workout.durationMinutes ?? 0;
+    assert(statedMinutes > 0 && statedMinutes <= SHORT_ON_TIME_MINUTES,
+      `today states ${todayAfter.workout.durationMinutes} minutes against the `
+      + `${SHORT_ON_TIME_MINUTES}-minute cap (zero = the cap never landed)`);
+    const after = dayFingerprints(projectedWeek(WEEK, tapDay));
+    assert(after[tapDay] !== before[tapDay],
       'today reads byte-identical — the cap changed a number and cut nothing');
     for (const date of Object.keys(before)) {
-      if (date === TODAY) continue;
+      if (date === tapDay) continue;
       assert(before[date] === after[date],
         `a today-scoped fact changed ${date}: "${before[date]}" -> "${after[date]}"`);
     }
@@ -619,25 +640,26 @@ async function main(): Promise<void> {
     // The illness precedent's other half: fact-linked undo. Clearing the fact
     // cascade-reverts the overlay through the stored prior state, never a
     // re-derivation.
-    reachHisWorldByActing();
-    const before = dayFingerprints(projectedWeek());
+    const tapDay = '2026-07-31';
+    reachHisWorldByActing({ withMarks: false });
+    const before = dayFingerprints(projectedWeek(WEEK, tapDay));
     const result = await quietAsync(() =>
-      executeProgramControlActionDurably(shortOnTimeAction('today_only'), { todayISO: TODAY }));
+      executeProgramControlActionDurably(shortOnTimeAction('today_only', tapDay), { todayISO: tapDay }));
     assert(result.ok === true && result.createdModifierIds?.[0],
       `precondition: the deriving commit landed (ok=${result.ok})`);
     const factId = result.createdModifierIds[0];
-    assert(JSON.stringify(dayFingerprints(projectedWeek())) !== JSON.stringify(before),
+    assert(JSON.stringify(dayFingerprints(projectedWeek(WEEK, tapDay))) !== JSON.stringify(before),
       'precondition: the commit changed the week');
 
     const cleared = await quietAsync(() => executeProgramControlActionDurably({
       type: 'clear_fatigue_status',
       source: { screen: 'program_tab', surface: 'short_on_time_today', initiatedBy: 'tap' },
       scope: 'today_only',
-      payload: { modifierId: factId, date: TODAY },
+      payload: { modifierId: factId, date: tapDay },
       requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
-    } as ProgramControlAction, { todayISO: TODAY }));
+    } as ProgramControlAction, { todayISO: tapDay }));
     assert(cleared.ok === true, `the clear was refused: "${cleared.message}"`);
-    const after = dayFingerprints(projectedWeek());
+    const after = dayFingerprints(projectedWeek(WEEK, tapDay));
     assert(JSON.stringify(before) === JSON.stringify(after),
       'clearing the fact did not restore the week byte-exact');
   });

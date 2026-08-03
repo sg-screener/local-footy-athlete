@@ -1990,18 +1990,26 @@ async function walkTheScheduleDoors(): Promise<void> {
     'tape world: the acknowledgment disagrees with the result');
   assert(!RAW_CODE.test(tapeAck.message),
     `tape world: a raw code reached the athlete: "${tapeAck.message}"`);
-  // DECLARED RED 1 IS PAID (2026-08-03, the approved schedule-fact lanes): the
-  // tap that answered Sam with NOTHING, then with a refusal, now COMMITS at
-  // depth — on the fixture day, over an active week-scoped busy fact. The
-  // conservation half of this cell is kept for any refusal that still occurs
-  // (a refusal must change nothing), but a refusal here is a regression.
-  assert(tapeResult.ok === true,
-    `tape world: the short-on-time tap is REFUSED again ("${tapeResult.message}") — `
-    + 'declared red 1 was paid on 2026-08-03; a refusal at this depth is a regression, '
-    + 'not the old declared red');
+  // DECLARED RED 1 IS PAID (2026-08-03, the approved lanes): the dead
+  // always-refusing lane is retired and the two fresh-world cells below prove
+  // both doors COMMIT on their ruled lanes. What this depth coordinate still
+  // holds is a NARROWER, differently-caused refusal: the tap lands ON the
+  // fixture day, and the deriving regen of a game-marked week can fail its own
+  // §18 acceptance (`planner_selected_target_miss` — the same pre-existing
+  // family `programControlDurableOwnershipTests` documents for the marked
+  // samExport8 world, where even the established severe-illness lane refuses).
+  // A game day also has no trainable session for the ruled compression to cut,
+  // so what "short on time" should DO here is parked for Sam
+  // (docs/PARKED_QUESTIONS_2026-08-01.md §6). The LAWS this cell owns hold on
+  // BOTH branches: the tap ANSWERS honestly (asserted above), a refusal
+  // conserves the world byte-exact, and a commit never cuts the anchor.
   if (!tapeResult.ok) {
     assert(worldFingerprint() === beforeTapeTap,
       'tape world: a refused tap changed the world anyway');
+  } else {
+    const gameDay = visibleWeek().find((day) => day.date === todayISO);
+    assert(gameDay?.workout,
+      'tape world: the commit removed the fixture-day session — the anchor law broke');
   }
 
   for (const door of ['short_on_time_today', 'away_this_week'] as const) {

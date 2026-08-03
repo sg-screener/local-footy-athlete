@@ -65,6 +65,7 @@ import {
   createTemporaryPoorSleepFact,
   createTemporaryScheduleFact,
   createTemporarySorenessFact,
+  createTemporaryTimeCapFact,
   isTemporaryEquipmentFact,
   isInjurySourceFact,
   isNonInjuryTemporarySourceFact,
@@ -72,6 +73,7 @@ import {
   temporarySourceFactId,
   type TemporarySourceFactScope,
 } from '../rules/temporarySourceFact';
+import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
@@ -1283,17 +1285,36 @@ async function executeProgramControlActionDurablyWithinTrace(
     const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
     const sourceSurface = action.source.surface ?? action.source.screen;
     const awayDates = scheduleModifierAwayDates(action);
-    const fact = createTemporaryScheduleFact({
-      observedDate: date,
-      scope: scheduleFactScopeForAction(action),
-      scheduleKind: awayDates.length > 0
-        ? 'travel'
-        : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
-      unavailableDates: awayDates,
-      maxSessions: action.payload.maxSessionsThisWeek,
-      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
-      sourceSurface,
-    });
+    // "Short on time today" is RULED (Sam, 2026-08-02): the fact this door
+    // records IS the ruling's answer to "how short is short" — a today-scoped
+    // time cap at the one 35-minute owner (`SHORT_ON_TIME_MINUTES`), whose
+    // deriving lane builds the compressed session (main lift kept, cut to
+    // essentials). Away and max-sessions requests stay UNRULED schedule facts
+    // and commit record-only through the inert lane.
+    const shortOnTimeToday = awayDates.length === 0 &&
+      action.payload.maxSessionsThisWeek === undefined &&
+      action.scope === 'today_only';
+    const fact = shortOnTimeToday
+      ? createTemporaryTimeCapFact({
+          observedDate: date,
+          scope: scheduleFactScopeForAction(action),
+          targetKind: 'dates',
+          dates: [date],
+          maxSessionMinutes: SHORT_ON_TIME_MINUTES,
+          sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+          sourceSurface,
+        })
+      : createTemporaryScheduleFact({
+          observedDate: date,
+          scope: scheduleFactScopeForAction(action),
+          scheduleKind: awayDates.length > 0
+            ? 'travel'
+            : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
+          unavailableDates: awayDates,
+          maxSessions: action.payload.maxSessionsThisWeek,
+          sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+          sourceSurface,
+        });
     const result = await transactTemporarySourceFact({
       operation: 'create',
       fact,
