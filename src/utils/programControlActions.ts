@@ -82,6 +82,7 @@ import {
 } from '../store/temporarySourceFactTransaction';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
+import { liveAthleteContext } from './liveAthleteContext';
 import {
   TEAM_NIGHT_MOVE_ASK,
   teamNightMoveAskContext,
@@ -1329,7 +1330,9 @@ async function executeProgramControlActionDurablyWithinTrace(
       // THE ONE SETUP OWNER. The patch is the whole input; the owner writes
       // the profile through its armoured door and regenerates forward per its
       // own rules. Confirmed INLINE — the signed success sentence is the ack.
-      const profile = useProfileStore.getState().onboardingData;
+      // The current team days are read through `liveAthleteContext` — LR-4's
+      // own migration direction — never as a raw mirror read.
+      const profile = liveAthleteContext().onboardingData;
       const result = await commitProfileProgramTransaction({
         change: {
           kind: 'profile_setup',

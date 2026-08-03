@@ -7,19 +7,19 @@ Bible conformance harness — Slices 1–4 programming, write-path and persisten
 Reference date: 2026-03-23 | Timezone: Australia/Melbourne
   PASS preseason-exposure-first-six-day (typed contract, final ledger, edge/fallback)
   PASS year-round-exposure-contract (35 scenarios, 10 properties, 4 mutations)
-  PASS is-healthy-5d-tt2-game-sat (12.7ms)
+  PASS is-healthy-5d-tt2-game-sat (12.2ms)
   PASS is-low-availability-full-body (5.3ms)
-  PASS is-display-copy-non-authoritative (9.4ms)
-  PASS mixed-strength-aerobic (8.4ms)
+  PASS is-display-copy-non-authoritative (8.5ms)
+  PASS mixed-strength-aerobic (10.1ms)
   PASS team-training-plus-strength (8.2ms)
-  PASS strength-plus-trunk-support (4.3ms)
-  PASS strength-plus-recovery-addon (8.8ms)
-  PASS accessory-gunshow-only (1.0ms)
-  PASS early-offseason-healthy (1.9ms)
-  PASS mid-offseason-primer (0.9ms)
-  PASS late-offseason-valid-contrast (0.8ms)
-  PASS late-offseason-invalid-contrast (0.9ms)
-  PASS inseason-game-sat-g2-lower (1.0ms)
+  PASS strength-plus-trunk-support (4.5ms)
+  PASS strength-plus-recovery-addon (10.3ms)
+  PASS accessory-gunshow-only (1.1ms)
+  PASS early-offseason-healthy (2.0ms)
+  PASS mid-offseason-primer (1.0ms)
+  PASS late-offseason-valid-contrast (1.0ms)
+  PASS late-offseason-invalid-contrast (1.0ms)
+  PASS inseason-game-sat-g2-lower (1.4ms)
 [conditioning-visible-identity] canonical_structured_fallback {
   workoutId: 'accounting-mixed',
   planEntryId: 'slice3:accounting-mixed',
@@ -55,23 +55,23 @@ Reference date: 2026-03-23 | Timezone: Australia/Melbourne
 }
   PASS low-readiness-downgrade (1.0ms)
   PASS multi-modality-conditioning (1.0ms)
-  PASS early-offseason-legacy-commercial (8.3ms)
-  PASS early-offseason-modern-full-gym (7.0ms)
-  PASS early-offseason-explicit-no-cardio (7.5ms)
-  PASS early-offseason-row-only (6.8ms)
-  PASS generation-ai-fallback-equivalence (1.8ms; deterministic_generation:0.2ms, ai_fixture_normalisation:1.5ms)
-  PASS noop-inseason-week-rebuild (32.2ms; no_op_week_rebuild:17.2ms, no_op_week_rebuild:14.6ms)
-  PASS week-overlay-copy-rich-week (1.8ms; week_overlay_copy:0.0ms, week_overlay_copy:1.6ms)
-  PASS block-rollover-contract (28.4ms; block_rollover:0.0ms, block_rollover:16.3ms)
-  PASS coach-add-bike-zone2 (3.8ms; conditioning_edit:0.0ms, conditioning_edit:2.4ms)
+  PASS early-offseason-legacy-commercial (8.0ms)
+  PASS early-offseason-modern-full-gym (7.3ms)
+  PASS early-offseason-explicit-no-cardio (7.6ms)
+  PASS early-offseason-row-only (7.7ms)
+  PASS generation-ai-fallback-equivalence (1.8ms; deterministic_generation:0.2ms, ai_fixture_normalisation:1.6ms)
+  PASS noop-inseason-week-rebuild (33.8ms; no_op_week_rebuild:17.7ms, no_op_week_rebuild:15.6ms)
+  PASS week-overlay-copy-rich-week (2.1ms; week_overlay_copy:0.0ms, week_overlay_copy:1.8ms)
+  PASS block-rollover-contract (29.1ms; block_rollover:0.0ms, block_rollover:16.3ms)
+  PASS coach-add-bike-zone2 (3.9ms; conditioning_edit:0.0ms, conditioning_edit:2.5ms)
   PASS coach-remove-contrast-lift (2.1ms; coach_revision:0.0ms, coach_revision:1.3ms)
-  PASS direct-add-pallof (1.6ms; direct_exercise_edit:0.0ms, direct_exercise_edit:0.9ms)
-  PASS move-combined-lower (2.5ms; workout_move:0.0ms, workout_move:1.7ms)
-  PASS swap-upper-and-lower (3.6ms; workout_swap:0.0ms, workout_swap:2.3ms)
-  PASS canonical-program-rehydrate (283.3ms; store_rehydrate:0.0ms, store_rehydrate:141.6ms, store_rehydrate:141.6ms)
-  PASS legacy-program-rehydrate (283.5ms; legacy_store_rehydrate:0.0ms, legacy_store_rehydrate:141.7ms, legacy_store_rehydrate:141.7ms)
-  PASS post-rehydrate-edit-rebuild (353.9ms; store_rehydrate:0.0ms, store_rehydrate:177.0ms, store_rehydrate:177.0ms, conditioning_edit:0.0ms, conditioning_edit:0.0ms, no_op_week_rebuild:0.0ms, no_op_week_rebuild:0.0ms)
-  PASS standalone-conditioning-ownership (2.4ms; deterministic_generation:0.6ms, ai_fixture_normalisation:1.7ms)
+  PASS direct-add-pallof (1.6ms; direct_exercise_edit:0.0ms, direct_exercise_edit:1.0ms)
+  PASS move-combined-lower (2.6ms; workout_move:0.0ms, workout_move:1.8ms)
+  PASS swap-upper-and-lower (3.1ms; workout_swap:0.0ms, workout_swap:2.3ms)
+  PASS canonical-program-rehydrate (277.7ms; store_rehydrate:0.0ms, store_rehydrate:138.8ms, store_rehydrate:138.8ms)
+  PASS legacy-program-rehydrate (276.5ms; legacy_store_rehydrate:0.0ms, legacy_store_rehydrate:138.2ms, legacy_store_rehydrate:138.2ms)
+  PASS post-rehydrate-edit-rebuild (346.5ms; store_rehydrate:0.0ms, store_rehydrate:173.3ms, store_rehydrate:173.3ms, conditioning_edit:0.0ms, conditioning_edit:0.0ms, no_op_week_rebuild:0.0ms, no_op_week_rebuild:0.0ms)
+  PASS standalone-conditioning-ownership (2.2ms; deterministic_generation:0.5ms, ai_fixture_normalisation:1.6ms)
   PASS mutation composite_lower_single_winner killed at allocation
   PASS mutation drop_mixed_conditioning killed at generated_fallback
   PASS mutation drop_team_strength killed at generated_fallback
@@ -156,7 +156,7 @@ Summary
   Exposure properties:10/10
   Mutations:         63 injected, 63 active, 63/63 killed
   Boundary:   10 expectation file(s), 0 forbidden imports
-  Runtime:    19869.3ms (target <12000ms)
+  Runtime:    19724.6ms (target <12000ms)
   Deferred:   Team Training rendering log-button/startFinished baseline remains outside the executable harness
 
 Mutation first-divergence proofs
@@ -720,7 +720,7 @@ MUTATION exposure_reduction_loses_typed_reason
 STATUS unauthorised
 EXPECTED true
 ACTUAL false
-Bible harness runtime warning: 19869.3ms exceeds 18000ms
+Bible harness runtime warning: 19724.6ms exceeds 18000ms
 
 > local-footy-athlete@1.0.0 test:section18-planner
 > TZ=Australia/Melbourne sucrase-node src/__tests__/section18PhasePlannerTests.ts
@@ -9438,7 +9438,7 @@ Athlete placement ownership totals: 22 passed, 0 failed
 
 -- Plan-change move scoping and refusal --
   PASS a combined day never offers an empty destination list
-  FAIL the gym session on a combined day IS movable, and team training is not team training was offered as movable; it is an anchor
+  PASS the gym session on a combined day IS movable — and so is the anchor, through the ask
   PASS a team night is offered as a move destination
   PASS game day is still never a destination
   PASS moving onto a team night lands a combined day, keeping the anchor
@@ -9454,7 +9454,381 @@ Athlete placement ownership totals: 22 passed, 0 failed
   PASS the fifth Add/Swap row reads "Accessories"
   PASS the row sub-line and the whole-day scope can still disagree on an unanchored multi-kind day (PINNED, copy sheet §6-VI, unruled)
 
-Move scoping totals: 15 passed, 1 failed
-FAILURES:
-  the gym session on a combined day IS movable, and team training is not
+Move scoping totals: 16 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:displacement-sweep
+> TZ=Australia/Melbourne sucrase-node src/__tests__/resolverDisplacementSweepTests.ts
+
+
+-- Resolver displacement sweep --
+  PASS g_plus_1_mobility: displaces content the athlete did not place
+  PASS g_plus_1_mobility: leaves content the athlete DID place alone
+  PASS g_minus_1_gunshow: displaces content the athlete did not place
+  PASS g_minus_1_gunshow: leaves content the athlete DID place alone
+  PASS g_minus_2_downgrade: displaces content the athlete did not place
+  PASS g_minus_2_downgrade: leaves content the athlete DID place alone
+  PASS recovery_template_rebuild: displaces content the athlete did not place
+  PASS recovery_template_rebuild: leaves content the athlete DID place alone
+  PASS freed_game_slot: displaces content the athlete did not place
+  PASS freed_game_slot: leaves content the athlete DID place alone
+  PASS every derived-session site in the resolver has a row in this table
+  PASS the displacement question has exactly one owner
+
+Resolver displacement sweep totals: 12 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:action-log
+> TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionLogTests.ts
+
+
+-- On-device action log --
+  PASS records on a release build, where the dev trace channel stays off
+  PASS an athlete-facing tap is recorded end to end, on a release build
+  PASS keeps the most recent 200 and drops the oldest
+  PASS one action's engine chatter cannot evict the athlete's own steps
+  PASS what was recorded is on disk, not only in memory
+  PASS a relaunch reads back what the last run recorded, oldest first
+  PASS Export stored state carries the log
+  PASS athlete content never reaches the log
+  PASS every onboarding answer is on the tape
+  PASS a mirror refusal survives the relaunch that hides it
+  PASS the export is reachable without completing onboarding
+  PASS clearing the log clears the disk too
+
+On-device action log totals: 12 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:deletion-calendar-ownership
+> TZ=Australia/Melbourne sucrase-node src/__tests__/deletionCalendarOwnershipTests.ts
+
+
+-- Deletion calendar ownership --
+  PASS binning a session writes no calendar mark
+  PASS the day is still empty afterwards — the bin still bins
+  PASS THE DEVICE CASE: a binned day still takes an add afterwards
+  PASS a mark the ATHLETE set is untouched by a bin
+
+Deletion calendar ownership totals: 4 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:legacy-census
+> TZ=Australia/Melbourne sucrase-node src/__tests__/legacyReckoningCensusTests.ts
+
+
+[1] The ruling is attributed and still says what the census enforces
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the ruling appears verbatim in the attributed document
+  PASS the ruling states that old surface may be declared
+  PASS the ruling states that new surface may only be fixed
+
+[2] Every unit is typed: id, laws, blast radius, founding evidence, size
+  PASS LR-1: has a well-formed id
+  PASS LR-1: is declared once
+  PASS LR-1: has a title
+  PASS LR-1: names at least one law it must land under
+  PASS LR-1: every law it names exists in the law book
+  PASS LR-1: carries founding evidence
+  PASS LR-1: is sized
+  PASS LR-1: has a status
+  PASS LR-1: is in a tier
+  PASS LR-2: has a well-formed id
+  PASS LR-2: is declared once
+  PASS LR-2: has a title
+  PASS LR-2: names at least one law it must land under
+  PASS LR-2: every law it names exists in the law book
+  PASS LR-2: carries founding evidence
+  PASS LR-2: is sized
+  PASS LR-2: has a status
+  PASS LR-2: is in a tier
+  PASS LR-3: has a well-formed id
+  PASS LR-3: is declared once
+  PASS LR-3: has a title
+  PASS LR-3: names at least one law it must land under
+  PASS LR-3: every law it names exists in the law book
+  PASS LR-3: carries founding evidence
+  PASS LR-3: is sized
+  PASS LR-3: has a status
+  PASS LR-3: is in a tier
+  PASS LR-4: has a well-formed id
+  PASS LR-4: is declared once
+  PASS LR-4: has a title
+  PASS LR-4: names at least one law it must land under
+  PASS LR-4: every law it names exists in the law book
+  PASS LR-4: carries founding evidence
+  PASS LR-4: is sized
+  PASS LR-4: has a status
+  PASS LR-4: is in a tier
+  PASS LR-5: has a well-formed id
+  PASS LR-5: is declared once
+  PASS LR-5: has a title
+  PASS LR-5: names at least one law it must land under
+  PASS LR-5: every law it names exists in the law book
+  PASS LR-5: carries founding evidence
+  PASS LR-5: is sized
+  PASS LR-5: has a status
+  PASS LR-5: is in a tier
+  PASS LR-6: has a well-formed id
+  PASS LR-6: is declared once
+  PASS LR-6: has a title
+  PASS LR-6: names at least one law it must land under
+  PASS LR-6: every law it names exists in the law book
+  PASS LR-6: carries founding evidence
+  PASS LR-6: is sized
+  PASS LR-6: has a status
+  PASS LR-6: is in a tier
+  PASS LR-7: has a well-formed id
+  PASS LR-7: is declared once
+  PASS LR-7: has a title
+  PASS LR-7: names at least one law it must land under
+  PASS LR-7: every law it names exists in the law book
+  PASS LR-7: carries founding evidence
+  PASS LR-7: is sized
+  PASS LR-7: has a status
+  PASS LR-7: is in a tier
+  PASS LR-8: has a well-formed id
+  PASS LR-8: is declared once
+  PASS LR-8: has a title
+  PASS LR-8: names at least one law it must land under
+  PASS LR-8: every law it names exists in the law book
+  PASS LR-8: carries founding evidence
+  PASS LR-8: is sized
+  PASS LR-8: has a status
+  PASS LR-8: is in a tier
+  PASS LR-9: has a well-formed id
+  PASS LR-9: is declared once
+  PASS LR-9: has a title
+  PASS LR-9: names at least one law it must land under
+  PASS LR-9: every law it names exists in the law book
+  PASS LR-9: carries founding evidence
+  PASS LR-9: is sized
+  PASS LR-9: has a status
+  PASS LR-9: is in a tier
+  PASS LR-10: has a well-formed id
+  PASS LR-10: is declared once
+  PASS LR-10: has a title
+  PASS LR-10: names at least one law it must land under
+  PASS LR-10: every law it names exists in the law book
+  PASS LR-10: carries founding evidence
+  PASS LR-10: is sized
+  PASS LR-10: has a status
+  PASS LR-10: is in a tier
+  PASS LR-11: has a well-formed id
+  PASS LR-11: is declared once
+  PASS LR-11: has a title
+  PASS LR-11: names at least one law it must land under
+  PASS LR-11: every law it names exists in the law book
+  PASS LR-11: carries founding evidence
+  PASS LR-11: is sized
+  PASS LR-11: has a status
+  PASS LR-11: is in a tier
+  PASS LR-12: has a well-formed id
+  PASS LR-12: is declared once
+  PASS LR-12: has a title
+  PASS LR-12: names at least one law it must land under
+  PASS LR-12: every law it names exists in the law book
+  PASS LR-12: carries founding evidence
+  PASS LR-12: is sized
+  PASS LR-12: has a status
+  PASS LR-12: is in a tier
+  PASS LR-13: has a well-formed id
+  PASS LR-13: is declared once
+  PASS LR-13: has a title
+  PASS LR-13: names at least one law it must land under
+  PASS LR-13: every law it names exists in the law book
+  PASS LR-13: carries founding evidence
+  PASS LR-13: is sized
+  PASS LR-13: has a status
+  PASS LR-13: is in a tier
+  PASS LR-14: has a well-formed id
+  PASS LR-14: is declared once
+  PASS LR-14: has a title
+  PASS LR-14: names at least one law it must land under
+  PASS LR-14: every law it names exists in the law book
+  PASS LR-14: carries founding evidence
+  PASS LR-14: is sized
+  PASS LR-14: has a status
+  PASS LR-14: is in a tier
+  PASS LR-15: has a well-formed id
+  PASS LR-15: is declared once
+  PASS LR-15: has a title
+  PASS LR-15: names at least one law it must land under
+  PASS LR-15: every law it names exists in the law book
+  PASS LR-15: carries founding evidence
+  PASS LR-15: is sized
+  PASS LR-15: has a status
+  PASS LR-15: is in a tier
+  PASS LR-16: has a well-formed id
+  PASS LR-16: is declared once
+  PASS LR-16: has a title
+  PASS LR-16: names at least one law it must land under
+  PASS LR-16: every law it names exists in the law book
+  PASS LR-16: carries founding evidence
+  PASS LR-16: is sized
+  PASS LR-16: has a status
+  PASS LR-16: is in a tier
+  PASS LR-17: has a well-formed id
+  PASS LR-17: is declared once
+  PASS LR-17: has a title
+  PASS LR-17: names at least one law it must land under
+  PASS LR-17: every law it names exists in the law book
+  PASS LR-17: carries founding evidence
+  PASS LR-17: is sized
+  PASS LR-17: has a status
+  PASS LR-17: is in a tier
+  PASS LR-18: has a well-formed id
+  PASS LR-18: is declared once
+  PASS LR-18: has a title
+  PASS LR-18: names at least one law it must land under
+  PASS LR-18: every law it names exists in the law book
+  PASS LR-18: carries founding evidence
+  PASS LR-18: is sized
+  PASS LR-18: has a status
+  PASS LR-18: is in a tier
+  PASS LR-19: has a well-formed id
+  PASS LR-19: is declared once
+  PASS LR-19: has a title
+  PASS LR-19: names at least one law it must land under
+  PASS LR-19: every law it names exists in the law book
+  PASS LR-19: carries founding evidence
+  PASS LR-19: is sized
+  PASS LR-19: has a status
+  PASS LR-19: is in a tier
+  PASS LR-20: has a well-formed id
+  PASS LR-20: is declared once
+  PASS LR-20: has a title
+  PASS LR-20: names at least one law it must land under
+  PASS LR-20: every law it names exists in the law book
+  PASS LR-20: carries founding evidence
+  PASS LR-20: is sized
+  PASS LR-20: has a status
+  PASS LR-20: is in a tier
+  PASS LR-21: has a well-formed id
+  PASS LR-21: is declared once
+  PASS LR-21: has a title
+  PASS LR-21: names at least one law it must land under
+  PASS LR-21: every law it names exists in the law book
+  PASS LR-21: carries founding evidence
+  PASS LR-21: is sized
+  PASS LR-21: has a status
+  PASS LR-21: is in a tier
+  PASS LR-22: has a well-formed id
+  PASS LR-22: is declared once
+  PASS LR-22: has a title
+  PASS LR-22: names at least one law it must land under
+  PASS LR-22: every law it names exists in the law book
+  PASS LR-22: carries founding evidence
+  PASS LR-22: is sized
+  PASS LR-22: has a status
+  PASS LR-22: is in a tier
+  PASS LR-23: has a well-formed id
+  PASS LR-23: is declared once
+  PASS LR-23: has a title
+  PASS LR-23: names at least one law it must land under
+  PASS LR-23: every law it names exists in the law book
+  PASS LR-23: carries founding evidence
+  PASS LR-23: is sized
+  PASS LR-23: has a status
+  PASS LR-23: is in a tier
+  PASS LR-24: has a well-formed id
+  PASS LR-24: is declared once
+  PASS LR-24: has a title
+  PASS LR-24: names at least one law it must land under
+  PASS LR-24: every law it names exists in the law book
+  PASS LR-24: carries founding evidence
+  PASS LR-24: is sized
+  PASS LR-24: has a status
+  PASS LR-24: is in a tier
+  PASS the census is not empty
+
+[3] DIRECTION 1 — every detector-backed unit declares its actual count
+  PASS LR-1: declares a count
+  PASS LR-1: declared count matches the detector (27)
+  PASS LR-1: still has something to count
+  PASS LR-2: declares a count
+  PASS LR-2: declared count matches the detector (1)
+  PASS LR-2: still has something to count
+  PASS LR-3: declares a count
+  PASS LR-3: declared count matches the detector (4)
+  PASS LR-3: still has something to count
+  PASS LR-4: declares a count
+  FAIL LR-4: declared count matches the detector (73)
+      declared 72, found 73 — fix the violation or, if it is genuinely pre-existing surface that moved, reclassify it. Do not retune the number.
+  PASS LR-4: still has something to count
+
+[4] THE RATCHET — four directions
+  PASS total declared debt (104) is at or below the baseline (104)
+  PASS the baseline is tightened to the current debt (104)
+  PASS the baseline (104) never exceeds the founding baseline (116)
+  PASS LR-1: declares a founding count
+  PASS LR-1: declared (27) never exceeds its founding count (27)
+  PASS LR-2: declares a founding count
+  PASS LR-2: declared (1) never exceeds its founding count (11)
+  PASS LR-3: declares a founding count
+  PASS LR-3: declared (4) never exceeds its founding count (4)
+  PASS LR-4: declares a founding count
+  PASS LR-4: declared (72) never exceeds its founding count (74)
+  PASS the founding baseline (116) is the sum of the per-unit founding counts (116)
+  PASS the census holds no more units than it was founded with (24 of 25)
+
+[5] COMPLETENESS — no detector hit is outside a declared unit
+  PASS detector 'rawProgramWriteRefs': every hit in src/ is declared (27)
+  PASS detector 'unownedPersistedStores': every hit in src/ is declared (1)
+  PASS detector 'legacyOverrideWriterRefs': every hit in src/ is declared (4)
+  FAIL detector 'mirrorDecisionReads': every hit in src/ is declared (73)
+      73 hits across src/, 72 declared — an undeclared hit means a new violation, not a miscount
+  PASS every shipped detector is claimed by a unit
+
+[6] HONEST COVERAGE — a unit with no detector says why
+  PASS LR-5: explains why it cannot be counted
+  PASS LR-6: explains why it cannot be counted
+  PASS LR-7: explains why it cannot be counted
+  PASS LR-8: explains why it cannot be counted
+  PASS LR-9: explains why it cannot be counted
+  PASS LR-10: explains why it cannot be counted
+  PASS LR-11: explains why it cannot be counted
+  PASS LR-12: explains why it cannot be counted
+  PASS LR-13: explains why it cannot be counted
+  PASS LR-14: explains why it cannot be counted
+  PASS LR-15: explains why it cannot be counted
+  PASS LR-16: explains why it cannot be counted
+  PASS LR-17: explains why it cannot be counted
+  PASS LR-18: explains why it cannot be counted
+  PASS LR-19: explains why it cannot be counted
+  PASS LR-20: explains why it cannot be counted
+  PASS LR-21: explains why it cannot be counted
+  PASS LR-22: explains why it cannot be counted
+  PASS LR-23: explains why it cannot be counted
+  PASS LR-24: explains why it cannot be counted
+  PASS at least one unit is actually ratcheted
+
+[7] The detectors count what they claim to count
+  PASS rawProgramWriteRefs: counts a direct call
+  PASS rawProgramWriteRefs: counts a captured reference once, not twice (the coachActions shape)
+  PASS rawProgramWriteRefs: counts the reference inside an injected callback
+  PASS rawProgramWriteRefs: does not count a parameter of the same name
+  PASS rawProgramWriteRefs: ignores comments
+  PASS rawProgramWriteRefs: ignores a longer identifier that contains it
+  PASS rawProgramWriteRefs: ignores an unrelated write
+  PASS mirrorDecisionReads: counts a getState read
+  PASS mirrorDecisionReads: counts a selector read
+  PASS mirrorDecisionReads: ignores comments
+  PASS mirrorDecisionReads: ignores an onboardingData field on something else
+  PASS mirrorDecisionReads: ignores a profile-store read of another field
+  PASS mirrorDecisionReads: does NOT see a two-step read (declared limitation)
+  PASS legacyOverrideWriterRefs: counts a call
+  PASS legacyOverrideWriterRefs: does not count the writer defining itself
+  PASS legacyOverrideWriterRefs: ignores comments
+  PASS legacyOverrideWriterRefs: ignores an import
+  PASS unownedPersistedStores: an undeclared persisted store counts as unowned
+  PASS unownedPersistedStores: a store the registry gives an owner does not count
+  PASS unownedPersistedStores: ignores a store with no persistence
+  PASS unownedPersistedStores: ignores files outside src/store
+
+[8] The census records the sequencing Sam ruled
+  PASS LR-1 and LR-2 are both present
+  PASS LR-1 and LR-2 carry the same sequencing note
+  PASS LR-6 is a standing STOP
+  PASS LR-6 says what the stop blocks
+  PASS in-flight units are marked so they are not double-scheduled
+
+Legacy reckoning census: passed=297/299 failures=2
+Failing: LR-4: declared count matches the detector (73), detector 'mirrorDecisionReads': every hit in src/ is declared (73)
 BIBLE_EXIT=1
