@@ -65,7 +65,24 @@ export type PlanChangeMoveScopeId =
   | 'whole_day'
   | 'strength'
   | 'conditioning'
-  | 'recovery';
+  | 'recovery'
+  /**
+   * The team night itself (Sam's team-night movability ruling, 2026-08-01;
+   * signed 2026-08-02). Offered ONLY on a day whose projection carries a
+   * `team_training` anchor, and it never commits directly: picking a
+   * destination raises the typed team-night ask ("just this once, or
+   * permanent?") and the answer travels as `move_team_night.teamNightRoute`.
+   */
+  | 'team';
+
+/**
+ * The two committing answers to the team-night ask. ABSENT on the change means
+ * the athlete has not been asked yet, and the producer answers with the ask
+ * instead of applying anything — the same absence-raises-the-ask shape as
+ * `g1Route`. Behaviour and the seven signed strings live in
+ * `rules/teamNightMoveAsk.ts`.
+ */
+export type TeamNightMoveRouteId = 'this_week_only' | 'permanent';
 
 export type PlanChangeBinScopeId =
   | 'whole_day'
@@ -108,7 +125,19 @@ export type PlanChange =
       scope?: PlanChangeMoveScopeId;
     } & G1RoutedPlanChange)
   | { kind: 'shutdown_week'; date: string }
-  | { kind: 'clear_days'; dates: string[] };
+  | { kind: 'clear_days'; dates: string[] }
+  /**
+   * A team night leaving its day (movability ruling, signed 2026-08-02).
+   * NOT a `move_session`: the one-off route is a dated schedule fact through
+   * the deriving lane, the permanent route is a `teamTrainingDays` answer
+   * through the program-setup owner — neither is an accepted-state move.
+   */
+  | {
+      kind: 'move_team_night';
+      fromDate: string;
+      toDate: string;
+      teamNightRoute?: TeamNightMoveRouteId;
+    };
 
 export type TemplatePlanChange = Extract<
   PlanChange,

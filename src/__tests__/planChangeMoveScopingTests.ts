@@ -216,7 +216,13 @@ run('a combined day never offers an empty destination list', () => {
   }
 });
 
-run('the gym session on a combined day IS movable, and team training is not', () => {
+run('the gym session on a combined day IS movable — and so is the anchor, through the ask', () => {
+  // RE-POINTED by the team-night movability unit (Sam's 2026-08-01 ruling,
+  // signed 2026-08-02): the anchor is no longer immovable — the `team` scope
+  // is offered, and picking a destination raises the typed once-or-permanent
+  // ask (`teamNightMovabilityTests` owns that gate). What still holds from
+  // the old cell: whole_day is withheld (a whole-day move would silently
+  // take the anchor), and the gym session moves on its own.
   const weekStart = seed();
   const { date } = combinedDay(weekStart);
   const move = optionsFor(weekStart, date).move;
@@ -226,8 +232,8 @@ run('the gym session on a combined day IS movable, and team training is not', ()
     `no strength scope offered on a combined day; got ${JSON.stringify(ids)}`);
   assert(!ids.includes('whole_day'),
     'whole-day move offered on an anchored day — that would take team training with it');
-  assert(!ids.some((id) => String(id) === 'team'),
-    'team training was offered as movable; it is an anchor');
+  assert(ids.some((id) => String(id) === 'team'),
+    `the team scope must be offered on a team night (signed ruling); got ${JSON.stringify(ids)}`);
 });
 
 // ── Sam's doubling law (2026-07-30): a team night is a legal destination ──

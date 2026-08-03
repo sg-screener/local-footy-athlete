@@ -287,7 +287,17 @@ function partCapabilities(
 ): PartCapabilities {
   if (onDay === 'game' || kind === 'game') return NOTHING_MAY_BE_DONE;
   if (ATTACHED_COMPONENTS.has(componentId)) return NOTHING_MAY_BE_DONE;
-  if (APPOINTMENT_COMPONENTS.has(componentId) || kind === 'team_training') {
+  if (kind === 'team_training') {
+    // TEAM-NIGHT MOVABILITY (Sam's 2026-08-01 ruling, signed 2026-08-02): the
+    // team anchor is the athlete's to MOVE — through the typed once-or-
+    // permanent ask, never silently — so the projection now says so. It is
+    // still not a type to TRADE (swap stays refused with its signed sentence)
+    // and its rows are the club's, not the athlete's, to edit.
+    return { canSwap: false, canMove: true, canRemove: true, canEditRows: false };
+  }
+  if (APPOINTMENT_COMPONENTS.has(componentId)) {
+    // A non-team appointment ("Club Session") keeps position 2 whole: it does
+    // not travel, does not trade, and can be dropped for one date.
     return { canSwap: false, canMove: false, canRemove: true, canEditRows: false };
   }
   return { canSwap: true, canMove: true, canRemove: true, canEditRows: true };

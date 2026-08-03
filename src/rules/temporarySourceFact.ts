@@ -144,13 +144,24 @@ export type TemporaryScheduleFactKind =
   | 'unavailable_weekdays'
   | 'busy_week'
   | 'travel'
-  | 'max_sessions';
+  | 'max_sessions'
+  /**
+   * "Team training is on <target day> instead of <usual day>, for the week of
+   * <date>" — the one-off half of Sam's team-night movability ruling (signed
+   * 2026-08-02). A DERIVING fact: its ruled effect relocates the team anchor
+   * within its week (doubling law: the anchor lands COMBINED on an occupied
+   * day; the vacated day re-derives) and resolving it cascade-reverts clean.
+   */
+  | 'team_night_move';
 
 export interface TemporaryScheduleFact extends TemporarySourceFactBase<'schedule'> {
   scheduleKind: TemporaryScheduleFactKind;
   unavailableDates: string[];
   unavailableWeekdays: DayOfWeek[];
   maxSessions: number | null;
+  /** `team_night_move` only: the dated pair the fact states. Null otherwise. */
+  teamNightFromDate: string | null;
+  teamNightToDate: string | null;
 }
 
 export interface TemporaryTimeCapFact extends TemporarySourceFactBase<'time_cap'> {
@@ -452,12 +463,20 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
       value.scheduleKind === 'unavailable_weekdays' ||
       value.scheduleKind === 'busy_week' ||
       value.scheduleKind === 'travel' ||
-      value.scheduleKind === 'max_sessions'
+      value.scheduleKind === 'max_sessions' ||
+      value.scheduleKind === 'team_night_move'
         ? value.scheduleKind
         : 'unavailable_dates';
     const rawMax = typeof value.maxSessions === 'number' && Number.isFinite(value.maxSessions)
       ? Math.max(0, Math.min(14, Math.trunc(value.maxSessions)))
       : null;
+    const teamNightFromDate = isoDate(value.teamNightFromDate);
+    const teamNightToDate = isoDate(value.teamNightToDate);
+    // A team-night move without its dated pair states nothing — a corrupt
+    // hydration must never derive an anchor relocation, so it does not exist.
+    if (scheduleKind === 'team_night_move' && (!teamNightFromDate || !teamNightToDate)) {
+      return null;
+    }
     return {
       ...base,
       factKind: 'schedule',
@@ -465,6 +484,8 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
       unavailableDates: normalizeDates(value.unavailableDates),
       unavailableWeekdays: normalizeWeekdays(value.unavailableWeekdays),
       maxSessions: rawMax,
+      teamNightFromDate: scheduleKind === 'team_night_move' ? teamNightFromDate : null,
+      teamNightToDate: scheduleKind === 'team_night_move' ? teamNightToDate : null,
     };
   }
   if (value.factKind === 'time_cap') {
@@ -843,6 +864,13 @@ function scheduleFactIsSingleDay(fact: TemporaryScheduleFact): boolean {
   return fact.scope.kind === 'date';
 }
 
+/** Weekday name for the team-night modifier copy — display only. */
+function weekdayNameFor(dateISO: string): string {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+    new Date(`${dateISO.slice(0, 10)}T12:00:00`).getDay()
+  ];
+}
+
 function scheduleProjection(
   facts: readonly TemporaryScheduleFact[],
 ): ActiveScheduleConstraint[] {
@@ -856,7 +884,9 @@ function scheduleProjection(
     reasonLabel: fact.scheduleKind === 'travel' ? 'Away / travel' :
       fact.scheduleKind === 'busy_week'
         ? (scheduleFactIsSingleDay(fact) ? 'Short on time' : 'Busy week')
-        : 'Temporary availability',
+        : fact.scheduleKind === 'team_night_move'
+          ? 'Team training moved'
+          : 'Temporary availability',
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
@@ -866,18 +896,26 @@ function scheduleProjection(
     unavailableDates: [...fact.unavailableDates],
     unavailableWeekdays: [...fact.unavailableWeekdays],
     maxSessionsThisWeek: fact.maxSessions ?? undefined,
+    teamNightFromDate: fact.teamNightFromDate ?? undefined,
+    teamNightToDate: fact.teamNightToDate ?? undefined,
     modifierTitle: fact.scheduleKind === 'travel'
       ? 'Away / travel period active'
       : fact.scheduleKind === 'busy_week'
         ? (scheduleFactIsSingleDay(fact) ? 'Short on time today' : 'Busy week active')
-        : 'Temporary availability active',
+        : fact.scheduleKind === 'team_night_move'
+          ? 'Team training moved this week'
+          : 'Temporary availability active',
     modifierBody: fact.scheduleKind === 'travel'
       ? 'Your program is avoiding the dates you are away.'
       : fact.scheduleKind === 'busy_week'
         ? (scheduleFactIsSingleDay(fact)
             ? "Today's session drops the highest-cost work. The rest of your week is untouched."
             : 'Your bounded week is being kept within the session limit you set.')
-        : 'Your program is avoiding the dates or weekdays you marked unavailable.',
+        : fact.scheduleKind === 'team_night_move'
+          // PROPOSED (Batch 10 prose; parked §8): the modifier names the fact's
+          // own dated pair; clearing the fact is the undo.
+          ? `Team training is on ${weekdayNameFor(fact.teamNightToDate ?? fact.effectiveFrom)} instead of ${weekdayNameFor(fact.teamNightFromDate ?? fact.effectiveFrom)} this week only.`
+          : 'Your program is avoiding the dates or weekdays you marked unavailable.',
     modifierAffects: ['current_week', 'future_generation'],
     rules: [
       ...(fact.unavailableDates.length > 0
@@ -1290,6 +1328,9 @@ export function createTemporaryScheduleFact(args: {
   unavailableDates?: readonly string[];
   unavailableWeekdays?: readonly DayOfWeek[];
   maxSessions?: number | null;
+  /** Required when scheduleKind is 'team_night_move'; ignored otherwise. */
+  teamNightFromDate?: string | null;
+  teamNightToDate?: string | null;
   sourceActor?: TemporarySourceFactActor;
   sourceSurface: TemporarySourceFactSurface;
   now?: string;
@@ -1297,6 +1338,10 @@ export function createTemporaryScheduleFact(args: {
 }): TemporaryScheduleFact {
   const now = args.now ?? new Date().toISOString();
   const actor = args.sourceActor ?? 'athlete';
+  if (args.scheduleKind === 'team_night_move' &&
+    (!isoDate(args.teamNightFromDate) || !isoDate(args.teamNightToDate))) {
+    throw new Error('team_night_move_requires_dated_pair');
+  }
   return {
     protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
     factId: args.factId ?? stableTemporarySourceFactId({
@@ -1317,6 +1362,12 @@ export function createTemporaryScheduleFact(args: {
     unavailableWeekdays: normalizeWeekdays(args.unavailableWeekdays ?? []),
     maxSessions: typeof args.maxSessions === 'number'
       ? Math.max(0, Math.min(14, Math.trunc(args.maxSessions)))
+      : null,
+    teamNightFromDate: args.scheduleKind === 'team_night_move'
+      ? isoDate(args.teamNightFromDate)
+      : null,
+    teamNightToDate: args.scheduleKind === 'team_night_move'
+      ? isoDate(args.teamNightToDate)
       : null,
     createdAt: now,
     updatedAt: now,

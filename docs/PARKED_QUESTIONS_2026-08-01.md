@@ -181,3 +181,21 @@ simply a no-op worth saying so; (c) leave the refusal. The sentence for
 whichever option needs signing.
 **Shipped meanwhile:** both doors alive on their ruled lanes everywhere
 else; the game-day coordinate answers honestly instead of silently.
+
+## 8. Team-night movability: sign the three PROPOSED riders (Batch 10-c)
+
+**Parked by:** the team-night movability build, 2026-08-03.
+**Blocked on the answer:** nothing — all three shipped PROPOSED per the copy
+sheet's transitional rule; the seven ask strings themselves are SIGNED (§3).
+**The ask:** sign or reword copy sheet Batch 10-c:
+1. The Move scope row for the anchor — label "Team training", sub "Pick the
+   night it's on — we'll ask if it's permanent".
+2. The destination sub-line when the anchor lands on an occupied day —
+   "Joins <session> on this day" (the doubling law lands COMBINED; the
+   generic "Swap with …" would promise a trade the door will not do).
+3. The one-off fact's modifier card — reasonLabel "Team training moved",
+   title "Team training moved this week", body "Team training is on
+   <target day> instead of <usual day> this week only."
+**Shipped meanwhile:** the whole unit — MOVE asks (seven signed strings),
+SWAP stays refused, one-off fact through the deriving lane with clean
+cascade undo, permanent through the one setup owner confirmed inline.
