@@ -17,7 +17,7 @@
  *     Coach Notes.
  *
  * WHY date overrides instead of microcycle edits:
- *   `setManualOverride(date, workout)` is the resolver's Priority-1 short
+ *   `writeCoachOverride(date, workout)` is the resolver's Priority-1 short
  *   circuit (sessionResolver.ts:734). The override fully replaces the day
  *   without touching the underlying template. When the coach lightens
  *   Wednesday or moves Friday's session to Saturday, only those specific
@@ -31,7 +31,7 @@
  *       in the AI's reply pipeline.
  */
 
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import {
   useCoachUpdatesStore,
@@ -47,7 +47,7 @@ import { resolveExerciseName } from './loadEstimation';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 
 // ─── Types ───
 
@@ -231,11 +231,21 @@ function finitePositiveNumber(value: unknown, fallback: number): number {
  * "real changes" for the athlete and would otherwise force every action
  * to write a noisy override.
  *
- * Used by every action handler to short-circuit BEFORE calling
- * setManualOverride. If the proposed workout is equivalent to the resolved
+ * Used by every action handler to short-circuit BEFORE writing an override.
+ * If the proposed workout is equivalent to the resolved
  * current one, the action returns success: false (or simply skips for
  * weekly batch ops) and the day stays template-driven.
  */
+/**
+ * Every override this module writes is the coach acting on the athlete's
+ * behalf, so the module names itself once at the door rather than eight times
+ * at the call sites (LR-1). Behaviour is the retired primitive's, unchanged —
+ * this is store ownership, not a coach-pipeline change (LR-6).
+ */
+function writeCoachOverride(date: string, workout: Workout, context?: OverrideContext): void {
+  applyProgramOverrideWrite({ date, workout, context, writer: 'coach_action' });
+}
+
 function workoutsAreEquivalent(a: Workout, b: Workout): boolean {
   if (a.name !== b.name) return false;
   if (a.workoutType !== b.workoutType) return false;
@@ -417,7 +427,6 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
     return { success: false, reason: `No session on ${date} to lighten.` };
   }
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
 
   if (level === 'recovery') {
     const recoveryShell: Workout = cloneWorkout(current, {
@@ -434,7 +443,7 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
     }
     const blocked = blockedByHardStopRisk([{ date, workout: recoveryShell }], date);
     if (blocked) return blocked;
-    setManualOverride(date, recoveryShell, { intent: 'dismissed', label: 'Coach-lightened' });
+    writeCoachOverride(date, recoveryShell, { intent: 'dismissed', label: 'Coach-lightened' });
     return { success: true };
   }
 
@@ -452,7 +461,7 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
   }
   const blocked = blockedByHardStopRisk([{ date, workout: lightened }], date);
   if (blocked) return blocked;
-  setManualOverride(date, lightened, { intent: 'dismissed', label: 'Coach-lightened' });
+  writeCoachOverride(date, lightened, { intent: 'dismissed', label: 'Coach-lightened' });
   return { success: true };
 }
 
@@ -472,7 +481,6 @@ export function moveSession(input: MoveSessionInput): ActionResult {
   }
   const toWorkout = resolveDateWorkout(toDate);
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const removeManualOverride = useProgramStore.getState().removeManualOverride;
 
   // Move the from-workout to its new date (with new dayOfWeek for resolver)
@@ -498,9 +506,9 @@ export function moveSession(input: MoveSessionInput): ActionResult {
   const blocked = blockedByHardStopRisk(riskWrites, [fromDate, toDate].sort()[0]);
   if (blocked) return blocked;
 
-  setManualOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' });
+  writeCoachOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' });
   if (swappedIn) {
-    setManualOverride(fromDate, swappedIn, { intent: 'dismissed', label: 'Swapped session' });
+    writeCoachOverride(fromDate, swappedIn, { intent: 'dismissed', label: 'Swapped session' });
   } else {
     // Empty target → just clear the source so the resolver's default applies
     // (which will likely be the same template workout that's about to be
@@ -520,14 +528,13 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
   if (current.sessionTier === 'optional') {
     return { success: false, reason: `${date} is already optional.` };
   }
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const optional = cloneWorkout(current, {
     sessionTier: 'optional',
     description: (current.description || '').trim() + ' [Marked optional]',
   });
   const blocked = blockedByHardStopRisk([{ date, workout: optional }], date);
   if (blocked) return blocked;
-  setManualOverride(date, optional, { intent: 'dismissed', label: 'Marked optional' });
+  writeCoachOverride(date, optional, { intent: 'dismissed', label: 'Marked optional' });
   return { success: true };
 }
 
@@ -612,7 +619,6 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     } as any,
   };
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const newWorkout = cloneWorkout(current, {
     exercises: current.exercises.map((ex) =>
       ex === found ? replacement : ex,
@@ -630,7 +636,7 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });
+  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });
   return { success: true };
 }
 
@@ -649,7 +655,6 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
         .some((candidate) => String(candidate) === id),
     );
     if (foundById) {
-      const setManualOverride = useProgramStore.getState().setManualOverride;
       const newWorkout = cloneWorkout(current, {
         exercises: current.exercises.filter((ex) => ex !== foundById),
       });
@@ -662,7 +667,7 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
       }
       const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
       if (blocked) return blocked;
-      setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+      writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
       return { success: true };
     }
   }
@@ -679,7 +684,6 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   }
   const found = matchResult.match;
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const newWorkout = cloneWorkout(current, {
     exercises: current.exercises.filter((ex) => ex !== found),
   });
@@ -695,7 +699,7 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
   return { success: true };
 }
 
@@ -760,7 +764,6 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
     updatedAt: now,
   };
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const newWorkout = cloneWorkout(current, {
     exercises: [...current.exercises, added],
   });
@@ -776,7 +779,7 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' });
+  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' });
   return { success: true };
 }
 
@@ -797,7 +800,6 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
   const { rule } = input;
   const monday = getMondayStr(0);
 
-  const setManualOverride = useProgramStore.getState().setManualOverride;
   const removeManualOverride = useProgramStore.getState().removeManualOverride;
 
   const LOWER_PATTERN = /(squat|hinge|deadlift|rdl|lunge|split squat|hip thrust|leg press|jump|broad jump|box jump)/i;
@@ -889,7 +891,7 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
     // Proposal is identical to current state → skip the write so the day
     // stays template-driven and no new override is recorded.
     if (workoutsAreEquivalent(current, next)) continue;
-    setManualOverride(date, next, { intent: 'dismissed', label: `Weekly: ${rule}` });
+    writeCoachOverride(date, next, { intent: 'dismissed', label: `Weekly: ${rule}` });
     touched++;
   }
 

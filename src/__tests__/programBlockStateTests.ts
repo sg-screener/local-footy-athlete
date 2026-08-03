@@ -31,6 +31,7 @@ import {
 } from '../utils/programBlockState';
 import { buildProgressionContext } from '../utils/strengthProgressionIntegration';
 import type { OnboardingData } from '../types/domain';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 const PROFILE: Partial<OnboardingData> = {
   seasonPhase: 'Off-season',
@@ -199,8 +200,8 @@ console.log('\n-- Rebuilds and plan edits preserve block state --');
     change: { kind: 'remove_session', date: '2026-07-06' },
     visibleWeek,
     todayISO: '2026-07-06',
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout!, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout!, context),
   });
   ok('plan edit applies in test harness', result.ok === true, JSON.stringify(result));
   ok('plan edit does not reset block state',

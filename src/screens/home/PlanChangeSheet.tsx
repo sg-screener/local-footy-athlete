@@ -4,6 +4,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
 import { useProgramStore } from '../../store';
+import { applyProgramOverrideWrite } from '../../store/programStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { todayISOLocal } from '../../utils/appDate';
@@ -266,8 +267,15 @@ export function PlanChangeSheet({
           change,
           visibleWeek: weekDays,
           todayISO,
-          setManualOverride: (overrideDate, workout, context) =>
-            useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+          // The athlete's own tap. LR-11: the screen no longer injects a raw
+          // store primitive into the producer — it names itself at the door.
+          applyOverride: (overrideDate, workout, context) =>
+            void applyProgramOverrideWrite({
+              date: overrideDate,
+              workout,
+              context,
+              writer: 'athlete_tap',
+            }),
           trace,
         });
     const canonicalResult = selectedWorkout && (

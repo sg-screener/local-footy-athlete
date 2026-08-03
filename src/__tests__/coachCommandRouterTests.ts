@@ -2217,7 +2217,7 @@ function fakeWorkout(exerciseNames: string[]): any {
 // ── Real-store seam for the replace_exercise WRITE tests. ─────────────
 // The write is now owned by replaceExerciseAtDate (the tap-door owner), which
 // reads the live store via resolveDateWithConditioning and writes through
-// setManualOverride. These helpers seed a real fixture the owner resolves and
+// applyOverride. These helpers seed a real fixture the owner resolves and
 // capture the override it writes — the same module-stub pattern coachActionsTests
 // uses. The seam is INERT unless a fixture is set, so the DI-based tests
 // elsewhere in this file are untouched.
@@ -2233,7 +2233,7 @@ const _origResolveDate = (sessionResolver as any).resolveDateWithConditioning;
   if (!swapSeamActive()) return real;
   return {
     ...real,
-    setManualOverride: (date: string, workout: Workout) => {
+    applyOverride: (date: string, workout: Workout) => {
       swapOverrideCalls.push({ date, workout });
     },
   };
@@ -2280,7 +2280,7 @@ ok('legacy blocked', !canFallbackToLegacy(swap1Cmd));
 // Migrated to the real owner: seed the fixture the owner resolves, drop the
 // retired AdjustmentEvent apply/verify stubs, and trust the owner's result (as
 // the tap door does — no separate name-only verifier). The write is asserted
-// via the captured setManualOverride.
+// via the captured applyOverride.
 const swap1Stages: string[] = [];
 seedSwapFixture(REP_MONDAY, ['Bench Press', 'Pull-Ups']);
 const swap1Exec = executeCoachCommand({

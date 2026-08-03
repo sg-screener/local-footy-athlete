@@ -1,5 +1,5 @@
 import { useProfileStore } from '../../store/profileStore';
-import { useProgramStore } from '../../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -299,9 +299,14 @@ async function applyAuxiliaryState(
         throw new Error(`removable_component_override_missing_workout:${item.date}`);
       }
       const componentId = 'dev-e2e-removable-band-pull-apart';
-      useProgramStore.getState().setManualOverride(
-        item.date,
-        {
+      // DEV SEAM, DECLARED (LR-1). This is a dev-E2E seed writing product
+      // state, and it says so at the door: `writer: 'dev_seed'` puts every
+      // seeded override on the tape under a name no athlete path can wear,
+      // so a seeded world is distinguishable from a lived one in the log.
+      applyProgramOverrideWrite({
+        writer: 'dev_seed',
+        date: item.date,
+        workout: {
           ...baseWorkout,
           id: `${baseWorkout.id}:dev-e2e-removable-component`,
           exercises: [
@@ -332,11 +337,11 @@ async function applyAuxiliaryState(
             ...baseWorkout.exercises,
           ],
         },
-        {
+        context: {
           intent: 'program_adjustment',
           label: 'Dev E2E removable component',
         },
-      );
+      });
       continue;
     }
     const target = resolveSessionOutcomeTarget(item.date, item.date);

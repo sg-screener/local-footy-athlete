@@ -573,7 +573,7 @@ console.log('planChangeProducerTests');
     change: { kind: 'add_template', date: SAT, templateId: 'metcon_offlegs' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout, context) => writes.push({ date, workout, context }),
+    applyOverride: (date, workout, context) => writes.push({ date, workout, context }),
   });
   ok('[7] applied ok', result.ok, result);
   eq('[7] one write on the target date', writes.map((w) => w.date), [SAT]);
@@ -594,7 +594,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     change: { kind: 'move_session', fromDate: THU, toDate: SAT },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('move must not use the single-date override writer');
     },
     commitAthleteMove: (input) => transactions.push(input),
@@ -610,7 +610,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     change: { kind: 'remove_session', date: SAT }, // SAT is empty
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date) => writes.push(date),
+    applyOverride: (date) => writes.push(date),
   });
   ok('[8] refused', !result.ok, result);
   eq('[8] nothing written', writes, []);
@@ -1081,14 +1081,14 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 
   // swap_category is owned by the typed accepted-state transaction (a swap is a
   // whole-session removal whose remainingWorkout is the new session), NOT the
-  // legacy single-date override writer — so it never calls setManualOverride.
+  // legacy single-date override writer — so it never calls applyOverride.
   const writes: Array<{ date: string; workout: Workout | null }> = [];
   const swapInputs: Array<import('../store/acceptedStateTransaction').AthleteSessionDeletionTransactionInput> = [];
   const swapResult = applyPlanChange({
     change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
     commitAthleteRemoval: (input) => { swapInputs.push(input); return {} as any; },
   });
   ok('[10] swap_category applies', swapResult.ok, swapResult);
@@ -1106,7 +1106,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     change: { kind: 'add_category', date: SAT, category: 'recovery' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => recoveryWrites.push({ date, workout }),
+    applyOverride: (date, workout) => recoveryWrites.push({ date, workout }),
   });
   ok('[10] add_category recovery applies', addResult.ok, addResult);
   eq('[10] recovery workout materializes as Recovery Flow',
@@ -1127,7 +1127,7 @@ withAcceptedStores(() => {
     change: { kind: 'move_session', fromDate: THU, toDate: MON },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('move must not use the single-date override writer');
     },
     commitAthleteMove: (input) => transactions.push(input),
@@ -1148,7 +1148,7 @@ withAcceptedStores(() => {
     change: { kind: 'move_session', fromDate: THU, toDate: SAT },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('move must not use the single-date override writer');
     },
     commitAthleteMove: (input) => moveTransactions.push(input),
@@ -1231,7 +1231,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: '2026-06-30', scope: 'team' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    applyOverride: () => { throw new Error('removal must use the accepted-state owner'); },
     commitAthleteRemoval: (input) => teamWrites.push(input),
   });
   ok('[12] bin team-only applies', teamResult.ok, teamResult);
@@ -1249,7 +1249,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: '2026-06-30', scope: 'strength' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    applyOverride: () => { throw new Error('removal must use the accepted-state owner'); },
     commitAthleteRemoval: (input) => gymWrites.push(input),
   });
   ok('[12] bin gym-only applies', gymResult.ok, gymResult);
@@ -1262,7 +1262,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: TODAY, scope: 'conditioning' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    applyOverride: () => { throw new Error('removal must use the accepted-state owner'); },
     commitAthleteRemoval: (input) => condWrites.push(input),
   });
   ok('[12] bin conditioning-only applies', condResult.ok, condResult);
@@ -1277,7 +1277,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: TODAY, scope: 'strength' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    applyOverride: () => { throw new Error('removal must use the accepted-state owner'); },
     commitAthleteRemoval: (input) => strWrites.push(input),
   });
   ok('[12] bin strength-only applies', strResult.ok, strResult);
@@ -1291,7 +1291,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: MON, scope: 'team' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[12] scope not on day refuses without writing', !badResult.ok, badResult);
 
@@ -1301,7 +1301,7 @@ withAcceptedStores(() => {
     change: { kind: 'remove_session', date: MON },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    applyOverride: () => { throw new Error('removal must use the accepted-state owner'); },
     commitAthleteRemoval: (input) => wholeWrites.push(input),
   });
   ok('[12] whole-day bin still works', wholeResult.ok, wholeResult);
@@ -1333,7 +1333,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: MON, category: 'conditioning_light' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   ok('[13] stack applies', result.ok, result);
   eq('[13] one write', writes.length, 1);
@@ -1373,7 +1373,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: '2026-06-30', category: 'strength_upper' },
     visibleWeek: conditioningOnlyWeek,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => strengthWrites.push({ date, workout }),
+    applyOverride: (date, workout) => strengthWrites.push({ date, workout }),
   });
   ok('[13] strength can stack onto conditioning when under the limit',
     strengthAdd.ok, strengthAdd);
@@ -1387,7 +1387,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: '2026-06-30', category: 'conditioning_light' },
     visibleWeek: conditioningOnlyWeek,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[13] duplicate conditioning refused with specific reason',
     !duplicateConditioning.ok &&
@@ -1420,7 +1420,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: '2026-06-30', category: 'conditioning_light' },
     visibleWeek: scWeek,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[13] direct call cannot create a third visible session',
     !already.ok && already.message.includes('max_sessions_exceeded'),
@@ -1431,7 +1431,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: MON, category: 'recovery' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[13] recovery stack refused', !recoveryStack.ok, recoveryStack);
 }
@@ -1470,7 +1470,7 @@ withAcceptedStores(() => {
     change: { kind: 'swap_category', date: THU, category: 'strength_lower' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
     commitAthleteRemoval: (input) => { swapInputs.push(input); return {} as any; },
   });
   ok('[14] engine strength swap applies', result.ok, result);
@@ -1496,7 +1496,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: SAT, category: 'prehab' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => accWrites.push({ date, workout }),
+    applyOverride: (date, workout) => accWrites.push({ date, workout }),
   });
   ok('[14] accessory add applies', accResult.ok, accResult);
   ok('[14] accessory session has content',
@@ -1508,7 +1508,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: MON, category: 'strength_upper' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[14] duplicate strength stack refused with specific reason',
     !stack.ok && stack.message.includes('day_already_has_strength'),
@@ -1526,7 +1526,7 @@ withAcceptedStores(() => {
     change: { kind: 'shutdown_week', date: TODAY },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   ok('[15] shutdown applies', result.ok, result);
   eq('[15] only the future session cleared', writes.map((w) => w.date), [THU]);
@@ -1539,7 +1539,7 @@ withAcceptedStores(() => {
     change: { kind: 'shutdown_week', date: '2026-07-06' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => gameWeekWrites.push({ date, workout }),
+    applyOverride: (date, workout) => gameWeekWrites.push({ date, workout }),
   });
   ok('[15] next-week shutdown applies', gameWeekResult.ok, gameWeekResult);
   eq('[15] only the training session cleared', gameWeekWrites.map((w) => w.date), ['2026-07-07']);
@@ -1556,7 +1556,7 @@ withAcceptedStores(() => {
     change: { kind: 'shutdown_week', date: TODAY },
     visibleWeek: emptyWeek,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[15] nothing to clear refuses', !nothing.ok, nothing);
 }
@@ -1572,7 +1572,7 @@ withAcceptedStores(() => {
     change: { kind: 'clear_days', dates: [THU] },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   ok('[16] clear applies', result.ok, result);
   eq('[16] only the chosen day cleared', writes.map((w) => w.date), [THU]);
@@ -1585,7 +1585,7 @@ withAcceptedStores(() => {
     change: { kind: 'clear_days', dates: ['2026-07-07', NEXT_SAT] },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => gameWrites.push({ date, workout }),
+    applyOverride: (date, workout) => gameWrites.push({ date, workout }),
   });
   ok('[16] mixed list applies', gameResult.ok, gameResult);
   ok('[16] game day never cleared', gameWrites.every((w) => w.date !== NEXT_SAT), gameWrites);
@@ -1595,7 +1595,7 @@ withAcceptedStores(() => {
     change: { kind: 'clear_days', dates: ['1999-01-01'] },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: () => { throw new Error('must not write'); },
+    applyOverride: () => { throw new Error('must not write'); },
   });
   ok('[16] no matching days refuses', !nothing.ok, nothing);
 }
@@ -1658,7 +1658,7 @@ withAcceptedStores(() => {
     change: { kind: 'swap_template', date: teamDate, templateId: 'easy_zone2_bike' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    applyOverride: (date, workout) => writes.push({ date, workout }),
   });
   ok('[17] team-day swap applies', swapResult.ok, swapResult);
   const projected = buildCoachRevisionWeekSnapshotFromProjectedDays([
@@ -1717,7 +1717,7 @@ withAcceptedStores(() => {
     change: { kind: 'clear_days', dates: [teamDate, sourceDate, gameDate] },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => clearWrites.push({ date, workout }),
+    applyOverride: (date, workout) => clearWrites.push({ date, workout }),
   });
   ok('[17] clear_days skips anchors and clears normal sessions',
     clearResult.ok && clearWrites.map((write) => write.date).join(',') === sourceDate,
@@ -1744,7 +1744,7 @@ withAcceptedStores(() => {
     change: { kind: 'add_category', date: THU, category: 'conditioning_light' },
     visibleWeek: safeWeek,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => safeWrites.push({ date, workout }),
+    applyOverride: (date, workout) => safeWrites.push({ date, workout }),
   });
   ok('[18] safe tap edit commits normally',
     safeApply.ok && safeWrites.length === 1 && safeWrites[0].date === THU,
@@ -1763,14 +1763,14 @@ withAcceptedStores(() => {
       confirmPreview.assessment.decision === 'confirm' &&
       confirmPreview.assessment.findings.some((finding) => finding.ruleId === 'g_plus1_hard_work'),
     confirmPreview.assessment);
-  ok('[18] preview does not call setManualOverride before confirmation',
+  ok('[18] preview does not call applyOverride before confirmation',
     confirmWrites.length === 0,
     confirmWrites);
   const confirmedApply = applyPlanChange({
     change: { kind: 'add_category', date: '2026-07-12', category: 'conditioning_hard' },
     visibleWeek: gPlusOneWeek,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => confirmWrites.push({ date, workout }),
+    applyOverride: (date, workout) => confirmWrites.push({ date, workout }),
   });
   ok('[18] confirming applies the risky edit',
     confirmedApply.ok && confirmWrites.length === 1 && confirmWrites[0].date === '2026-07-12',
@@ -1869,7 +1869,7 @@ withAcceptedStores(() => {
     change: lowerChange,
     visibleWeek: lowerWeek,
     todayISO: TODAY,
-    setManualOverride: (_date, workout) => {
+    applyOverride: (_date, workout) => {
       if (workout) lowerWrites.push(workout);
     },
   });
@@ -1941,7 +1941,7 @@ withAcceptedStores(() => {
     change: upperChange,
     visibleWeek: conditioningWeek,
     todayISO: TODAY,
-    setManualOverride: (_date, workout) => {
+    applyOverride: (_date, workout) => {
       if (workout) upperWrites.push(workout);
     },
   });
@@ -1980,7 +1980,7 @@ withAcceptedStores(() => {
     change: teamChange,
     visibleWeek: teamWeek,
     todayISO: TODAY,
-    setManualOverride: (_date, workout) => {
+    applyOverride: (_date, workout) => {
       if (workout) teamWrites.push(workout);
     },
   });
@@ -2045,7 +2045,7 @@ withAcceptedStores(() => {
         change: { kind: 'add_category', date: scenario.date, category: category.id },
         visibleWeek: scenario.week,
         todayISO: TODAY,
-        setManualOverride: (_date, workout) => {
+        applyOverride: (_date, workout) => {
           if (workout) writes.push(workout);
         },
       });
@@ -2075,7 +2075,7 @@ withAcceptedStores(() => {
     change: chainedChange,
     visibleWeek: lowerWeek,
     todayISO: TODAY,
-    setManualOverride: (_date, workout) => {
+    applyOverride: (_date, workout) => {
       if (workout) chainedWrites.push(workout);
     },
   });
@@ -2083,7 +2083,7 @@ withAcceptedStores(() => {
     change: directChange,
     visibleWeek: lowerWeek,
     todayISO: TODAY,
-    setManualOverride: (_date, workout) => {
+    applyOverride: (_date, workout) => {
       if (workout) directWrites.push(workout);
     },
   });
@@ -2117,7 +2117,7 @@ withAcceptedStores(() => {
         ...coachRevisionValidationPolicyForWeek(lowerWeek, TODAY),
         requireConfirmationForAdds: false,
       },
-      setManualOverride: (_date, workout) => mismatchWrites.push(workout),
+      applyOverride: (_date, workout) => mismatchWrites.push(workout),
     });
     ok('[19] genuine semantic mismatch publishes nothing',
       mismatch.applied.length === 0 &&

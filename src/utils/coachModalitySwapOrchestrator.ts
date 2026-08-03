@@ -19,7 +19,7 @@
  *   6. Compose a reply ONLY when verification passes; otherwise reply
  *      honestly that the change couldn't be applied.
  *
- * Pure side-effect surface: writes a single setManualOverride entry.
+ * Pure side-effect surface: writes a single applyOverride entry.
  */
 
 import { applyAdjustmentEvents } from './applyAdjustmentEvents';
@@ -28,7 +28,7 @@ import {
   buildProgramTabProjectedWeek,
   buildDayWorkoutProjectedDay,
 } from './visibleProgramReadModel';
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import {
   useCoachPreferencesStore,
@@ -118,9 +118,9 @@ export interface OrchestrateInput {
   /**
    * Test seam — direct path the orchestrator uses to push a future-this-week
    * rewrite to the override store after recording the recurring preference.
-   * Defaults to programStore.setManualOverride.
+   * Defaults to programStore.applyOverride.
    */
-  setManualOverrideFn?: (
+  applyOverrideFn?: (
     date: string,
     workout: any,
     ctx?: { intent?: string; reason?: string },
@@ -480,7 +480,7 @@ interface RecurringPathArgs {
 /**
  * Write a recurring modality preference for the resolved session name.
  * Eagerly rewrite the target date plus any future-this-week matching
- * sessions via the same setManualOverride pathway the per-date applier
+ * sessions via the same applyOverride pathway the per-date applier
  * uses, then VERIFY the change actually landed in the visible projection
  * (Program tab + the DayWorkout view) before claiming success. The
  * recurring preference remains the source of truth for future weeks.
@@ -518,7 +518,7 @@ function runRecurringPreferencePath(
   // so the DayWorkout screen shows the update immediately —
   // projectVisibleDay excludes past dates from preference projection.
   const resolveWeek = input.resolveCurrentWeekFn ?? defaultResolveCurrentWeek;
-  const setOverride = input.setManualOverrideFn ?? defaultSetManualOverride;
+  const setOverride = input.applyOverrideFn ?? defaultApplyOverride;
   const targetKey = canonicalSessionKey(args.targetSessionName);
   let eagerWrites = 0;
   let firstFutureMatchDate: string | null = null;
@@ -717,8 +717,8 @@ function defaultResolveCurrentWeek(): Array<{
   return resolveWeekWithConditioning(monday, state);
 }
 
-function defaultSetManualOverride(date: string, workout: any, ctx?: any): void {
-  useProgramStore.getState().setManualOverride(date, workout, ctx);
+function defaultApplyOverride(date: string, workout: any, ctx?: any): void {
+  applyProgramOverrideWrite({ date, workout, context: ctx, writer: 'coach_modality_swap' });
 }
 
 function composeRecurringPreferenceReply(args: {

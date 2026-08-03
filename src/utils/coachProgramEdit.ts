@@ -60,7 +60,7 @@ import {
 } from './visibleProgramReadModel';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 import { clearManualOverridesPreservingActiveModifiers } from './activeProgramModifiers';
 import {
@@ -2390,7 +2390,12 @@ function rollbackProgramEditVisibleFailure(args: {
     } else {
       const store = useProgramStore.getState();
       if (restore.workout) {
-        store.setManualOverride(edit.targetDate, restore.workout, restore.context ?? undefined);
+        applyProgramOverrideWrite({
+          date: edit.targetDate,
+          workout: restore.workout,
+          context: restore.context ?? undefined,
+          writer: 'coach_program_edit',
+        });
       } else {
         store.removeManualOverride(edit.targetDate);
       }

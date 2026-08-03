@@ -3,14 +3,14 @@
  *
  * The engine (programAdjustmentEngine.ts) emits a list of AdjustmentEvents
  * describing structural changes to make. This helper translates those events
- * into REAL store writes via the existing `setManualOverride` pathway, so
+ * into REAL store writes via the existing `applyOverride` pathway, so
  * the change is visible in the Program tab and persists on disk.
  *
  * CONTRACT
  *   Input:  events: AdjustmentEvent[]   (already validated by the engine)
  *           opts:   { todayISO, getNow? }
  *   Effect: writes / removes overrides on `useProgramStore`
- *           (one setManualOverride call per touched date — multiple events
+ *           (one applyOverride call per touched date — multiple events
  *           on the same date are folded into a single override).
  *   Output: { applied: AppliedAdjustment[], rejected: RejectedAdjustment[] }
  *
@@ -23,7 +23,7 @@
  *       resolved week, but we surface that mismatch instead of silently
  *       constructing fake state).
  *   R3. Multiple events on the same date are applied in event order to the
- *       same working workout, and a SINGLE setManualOverride call writes
+ *       same working workout, and a SINGLE applyOverride call writes
  *       the final state. Earlier events are not lost.
  *   R4. set_session_recovery is terminal for that date — any later events
  *       on the same date are rejected as redundant ("session is now
@@ -35,7 +35,7 @@
  *       todayISO must be supplied by the caller.
  */
 
-import { useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import {
   resolveWeekWithConditioning,
   getMondayStr,
@@ -91,7 +91,7 @@ export interface ApplyOptions {
    * Optional override writer. Defaults to the live store. Tests inject a
    * stub so the test harness can capture writes without touching zustand.
    */
-  setManualOverride?: (
+  applyOverride?: (
     date: string,
     workout: Workout,
     context?: OverrideContext,
@@ -313,7 +313,7 @@ function addDaysISO(iso: string, n: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
-function defaultSetManualOverride(
+function defaultApplyOverride(
   date: string,
   workout: Workout,
   context?: OverrideContext,
@@ -321,7 +321,7 @@ function defaultSetManualOverride(
   // Runtime log: confirms the actual store write happened, with the
   // values we're committing. Pair this with [pipeline] traces in
   // CoachScreen + the [pipeline] resolver post-write check.
-  logger.debug('[pipeline] setManualOverride', {
+  logger.debug('[pipeline] applyOverride', {
     date,
     name: workout.name,
     workoutType: workout.workoutType,
@@ -330,7 +330,7 @@ function defaultSetManualOverride(
     descriptionHasNote: /\[/.test(workout.description ?? ''),
     contextIntent: context?.intent ?? null,
   });
-  useProgramStore.getState().setManualOverride(date, workout, context);
+  applyProgramOverrideWrite({ date, workout, context, writer: 'adjustment_events' });
   // Read-back: confirm the override actually landed in the store.
   const after = useProgramStore.getState().dateOverrides[date];
   logger.debug('[pipeline] dateOverrides after write', {
@@ -1503,7 +1503,7 @@ void ({} as ParsedModalitySwap);
  *      whether the day has been turned into a recovery shell — once it has,
  *      reject any subsequent same-date events as redundant.
  *   3. Once all events for the date are processed, write the final working
- *      workout via setManualOverride (single write per date).
+ *      workout via applyOverride (single write per date).
  */
 function applyAdjustmentEventsWithinTrace(
   events: AdjustmentEvent[],
@@ -1512,7 +1512,7 @@ function applyAdjustmentEventsWithinTrace(
   const { todayISO } = opts;
   const buildState = opts.buildState || defaultBuildState;
   const resolveWeek = opts.resolveWeek || resolveWeekWithConditioning;
-  const setOverride = opts.setManualOverride || defaultSetManualOverride;
+  const setOverride = opts.applyOverride || defaultApplyOverride;
 
   const applied: AppliedAdjustment[] = [];
   const rejected: RejectedAdjustment[] = [];
@@ -1972,7 +1972,7 @@ export function applyMoveSession(
   const { todayISO } = opts;
   const buildState = opts.buildState || defaultBuildState;
   const resolveWeek = opts.resolveWeek || resolveWeekWithConditioning;
-  const setOverride = opts.setManualOverride || defaultSetManualOverride;
+  const setOverride = opts.applyOverride || defaultApplyOverride;
 
   const applied: AppliedAdjustment[] = [];
   const rejected: RejectedAdjustment[] = [];

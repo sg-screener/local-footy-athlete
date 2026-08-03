@@ -49,6 +49,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 let pass = 0;
 let fail = 0;
@@ -252,22 +253,22 @@ console.log('\n-- Deterministic next-block state and persistence --');
   };
   useCoachUpdatesStore.getState().setActiveConstraints([liveConstraint]);
 
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     '2026-08-03',
     makeOverride(sourceWorkout, '2026-08-03', 'Athlete-edited Monday'),
     { intent: 'program_adjustment' },
   );
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     '2026-08-04',
     makeOverride(sourceTuesdayWorkout, '2026-08-04', 'Constraint-owned Tuesday'),
     { intent: 'program_adjustment', activeModifierId: liveConstraint.id },
   );
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     '2026-08-05',
     makeOverride(sourceWorkout, '2026-08-05', 'Cleared-constraint leftover'),
     { intent: 'program_adjustment', activeModifierId: 'cleared-constraint' },
   );
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     '2026-08-06',
     makeOverride(safeThursdayWorkout, '2026-08-06', 'Legacy system leftover'),
   );

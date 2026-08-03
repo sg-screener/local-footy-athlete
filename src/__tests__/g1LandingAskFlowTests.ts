@@ -42,6 +42,7 @@ import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -624,7 +625,7 @@ run('14 route (b) through the real door lands accessories on G-1', () => {
   assert(preview.ok, `routed preview refused: ${preview.message}`);
   const commit = quiet(() => applyPlanChange({
     change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('athlete move must not use the single-date writer');
     },
   }));
@@ -649,7 +650,7 @@ run('15 route (c) through the real door lands the DELOAD_LAW dose on G-1', () =>
   const { change, week, preview } = previewMove(weekStart, 1, 5, 'deloaded');
   const commit = quiet(() => applyPlanChange({
     change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
-    setManualOverride: () => { throw new Error('single-date writer'); },
+    applyOverride: () => { throw new Error('single-date writer'); },
   }));
   assert(commit.ok, `route (c) commit failed: ${JSON.stringify(commit.rejected)}`);
 
@@ -685,7 +686,7 @@ run('17 committing a routeless G-1 move refuses rather than applying it', () => 
   // not get a silent full-session placement on the day before a game.
   const commit = quiet(() => applyPlanChange({
     change, visibleWeek: week, todayISO: CURRENT_WEEK, trace: preview.trace,
-    setManualOverride: () => { throw new Error('single-date writer'); },
+    applyOverride: () => { throw new Error('single-date writer'); },
   }));
   assert(!commit.ok, 'a routeless G-1 move committed without the athlete answering');
   assert(commit.appliedDates.length === 0,
@@ -761,8 +762,8 @@ function commitChange(weekStart: string, change: PlanChange) {
     change,
     visibleWeek: week,
     todayISO: CURRENT_WEEK,
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    applyOverride: (date, workout, context) =>
+      seedManualOverride(date, workout, context),
   }));
 }
 

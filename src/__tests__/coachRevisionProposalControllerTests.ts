@@ -34,6 +34,7 @@ import { buildCoachRevisionTemplateSection } from '../utils/coachRevisionTemplat
 import {
   getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 const TODAY = '2026-07-01';
 const PAST_MONDAY = '2026-06-29';
@@ -450,7 +451,7 @@ function seedThursdayLowerGameProgram() {
   };
   useProgramStore.getState().setCurrentProgram(program);
   useProgramStore.getState().setCurrentMicrocycle(microcycle);
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     SATURDAY,
     gameWorkout('manual-g1-sat-game'),
     { intent: 'program_adjustment', label: 'test:g1_game_anchor' },
@@ -1849,7 +1850,7 @@ async function run() {
       !first.dateOverrides[FRIDAY],
       first.dateOverrides);
 
-    useProgramStore.getState().setManualOverride(
+    seedManualOverride(
       SATURDAY,
       gameWorkout('manual-sat-game'),
       { intent: 'program_adjustment', label: 'test:add_game_before_confirm' },

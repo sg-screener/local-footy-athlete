@@ -156,7 +156,7 @@ async function main(): Promise<void> {
     change: { kind: 'remove_session', date: SOURCE },
     visibleWeek: visibleWeek(),
     todayISO: TODAY,
-    setManualOverride: () => undefined,
+    applyOverride: () => undefined,
     commitAthleteRemoval: () => simpleAcceptedCommit('diagnostic:tap_delete'),
   });
   const tapDeleteEvents = getAthleteActionDiagnosticEvents(tapDelete.traceId);
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
     change: { kind: 'move_session', fromDate: SOURCE, toDate: TARGET },
     visibleWeek: visibleWeek(),
     todayISO: TODAY,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('tap move must not use the single-date writer');
     },
     commitAthleteMove: () => simpleAcceptedCommit('diagnostic:tap_move'),

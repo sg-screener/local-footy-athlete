@@ -49,7 +49,7 @@ export interface ApplyCoachRevisionOverridesInput {
   validationPolicy?: CoachRevisionValidationPolicy;
   /** The caller will publish this candidate through an atomic week owner. */
   deferWeekAcceptanceToTransaction?: boolean;
-  setManualOverride?: (
+  applyOverride?: (
     date: string,
     workout: Workout,
     context?: OverrideContext,
@@ -180,7 +180,7 @@ export function applyCoachRevisionDateOverrides(
   if (rejected.length > 0) {
     return { applied: [], rejected };
   }
-  if (built.length > 1 && input.setManualOverride) {
+  if (built.length > 1 && input.applyOverride) {
     return {
       applied: [],
       rejected: [{
@@ -190,14 +190,14 @@ export function applyCoachRevisionDateOverrides(
     };
   }
   for (const write of built) {
-    input.setManualOverride?.(write.date, write.workout, write.context);
+    input.applyOverride?.(write.date, write.workout, write.context);
   }
 
   // Phase 2 rules kernel — LOG-ONLY weekly-structure validation of the
   // post-apply visible week (both coach-chat and tap-sheet doors funnel
   // through this writer). logWeekValidation is throw-proof and has no
   // side effects; it cannot change or block this result.
-  if (built.length > 0 && input.setManualOverride) {
+  if (built.length > 0 && input.applyOverride) {
     const overrideByDate = new Map(built.map((w) => [w.date, w.workout]));
     logWeekValidation(
       {

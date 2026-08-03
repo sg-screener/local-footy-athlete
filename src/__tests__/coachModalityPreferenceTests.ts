@@ -216,7 +216,7 @@ const outcome1 = orchestrateModalitySwap({
     useCoachPreferencesStore.getState().setModalityPreference(name, pref);
   },
   resolveCurrentWeekFn: makeWeekWithPastWed,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 eq('outcome.kind', outcome1.kind, 'applied_preference');
@@ -371,7 +371,7 @@ const outcome6 = orchestrateModalitySwap({
     prefSetCalls.push({ name, from: pref.from, to: pref.to });
   },
   resolveCurrentWeekFn: makeWeekWithPastWed,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 ok('per-date applyEvents WAS invoked when scoped to "just this session"', appliedEventsCalled6);
@@ -408,7 +408,7 @@ const outcome7 = orchestrateModalitySwap({
     prefSetCalls.push({ name, from: pref.from, to: pref.to });
   },
   resolveCurrentWeekFn: makeWeekWithPastWed,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 eq('outcome.kind', outcome7.kind, 'ambiguous');
@@ -444,7 +444,7 @@ const outcome8 = orchestrateModalitySwap({
     prefSetCalls.push({ name, from: pref.from, to: pref.to });
   },
   resolveCurrentWeekFn: makeWeekWithPastWed,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 void legacyCoachChat;
 ok('legacy /coach-chat not called', legacyCalled === false);
@@ -489,7 +489,7 @@ const outcomeBonus = orchestrateModalitySwap({
     prefSetCalls.push({ name, from: pref.from, to: pref.to });
   },
   resolveCurrentWeekFn: makeWeekWithPastWed,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 ok('future-target: per-date applyEvents WAS invoked', futureApplyCalled);
@@ -605,7 +605,7 @@ const outcomeLabelPast = orchestrateModalitySwap({
     useCoachPreferencesStore.getState().setModalityPreference(name, pref);
   },
   resolveCurrentWeekFn: makeWeekWithFutureEasyBike,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 ok('label-only past: per-date applyEvents NOT called (preference path)', labelFixApplyCalled === false);
@@ -665,7 +665,7 @@ const outcomeLabelFuture = orchestrateModalitySwap({
     useCoachPreferencesStore.getState().setModalityPreference(name, pref);
   },
   resolveCurrentWeekFn: makeWeekWithFutureEasyBike,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 ok(
@@ -707,7 +707,7 @@ const outcomeLabelVerify = orchestrateModalitySwap({
     prefSetCalls.push({ name, from: pref.from, to: pref.to });
   },
   resolveCurrentWeekFn: makeWeekWithFutureEasyBike,
-  setManualOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
+  applyOverrideFn: (date, workout, ctx) => writes.push({ date, workout, ctx }),
 });
 
 ok(

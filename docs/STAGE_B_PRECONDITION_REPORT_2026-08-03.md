@@ -9,6 +9,41 @@ Source of the criteria: `docs/STAGE_B_KICKOFF_ADDENDUM_2026-08-03.md` §5.
 
 ---
 
+## RE-RUN AFTER LR-1 MERGED — the runway reads zero-asterisk
+
+**Re-checked 2026-08-03 against the finished tree** (`feat/lr1-program-store-door`
+merged; `docs/LR1_PROGRAM_DOOR_BOUNDARY_2026-08-03.md`). All four preconditions
+still PASS, and the one carried caveat is GONE:
+
+- **§5.1's carry is PAID.** LR-1 proper is built. The 27 `.setManualOverride`
+  references are zero; `programStore` has a door
+  (`applyProgramOverrideSliceWrite`), two typed refusals, every writer named on
+  the tape, and a closed writer union that makes an anonymous write a COMPILE
+  error. Census LR-1 27 → 0 and LR-2 1 → 0, baseline 104 → 76, both entries
+  `retired`. **Twelve of twelve persisted stores are now owned, taped and
+  quarantined, or retired.** §5.1 no longer relies on the addendum's narrowing:
+  it passes on the STRICTER reading the original NOT-COVERED section flagged.
+- **§5.4 re-run on the finished tree: `test:bible` EXIT=0**, every one of the
+  74 suite totals reporting zero failures, with the new
+  `test:program-override-ownership` (7 cells) inside the chain and the deep
+  walker tier green (3 walks × 90 actions, ≥4 weeks of clock per walk, 17/17).
+- §5.2 and §5.3 are unchanged and still merged.
+
+**ONE THING STAGE B'S FIRST SESSION MUST READ BEFORE ITS FIRST COMMIT**, and it
+is new knowledge that did not exist when this report was first written:
+
+> **No walked athlete tap door writes `dateOverrides` any more.** Adds and swaps
+> land in `weekScopedOverlays`; deletions record a `UserRemovalConstraint`. The
+> surviving writers of the surface the census calls "the athlete's decision
+> surface" are the coach pipeline, the lighter-day transaction and LR-3's §18
+> residuals. Whether `dateOverrides` is still a decision ledger or has become a
+> stored-OUTPUT surface is **PARKED FOR SAM** — and Stage B derives over these
+> surfaces, so the answer changes what it derives FROM.
+
+Stage B is still NOT started. Sam fires it.
+
+---
+
 ## §5.1 — Store armour proven + the stores Stage B writes through armoured
 
 **PASS.**

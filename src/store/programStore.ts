@@ -74,6 +74,7 @@ import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstrain
 import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
   athleteActionDiagnosticHash,
+  beginAthleteActionTrace,
   clearProgramHydrationTrace,
   currentAthleteActionTrace,
   emitAthleteActionEvent,
@@ -1596,8 +1597,9 @@ export interface ProgramState {
     newExercise: WorkoutExercise,
   ) => boolean;
 
-  /** Set a manual override for a specific date (human/coach edit only) */
-  setManualOverride: (date: string, workout: Workout, context?: OverrideContext) => void;
+  // SETTING an override is NOT a store action (LR-1, 2026-08-03). The raw
+  // `setManualOverride` primitive is retired: a single-date write goes through
+  // `applyProgramOverrideWrite`, which requires the writer to name itself.
   /** Remove a manual override for a specific date */
   removeManualOverride: (date: string) => void;
   /** Clear all manual overrides (called on full program regeneration) */
@@ -1763,66 +1765,11 @@ export const useProgramStore = create<ProgramState>()(
 
       setError: (error) => set({ error }),
 
-      setManualOverride: (date, workout, context?) => {
-        // Raw storage primitive. User-facing tap/coach edit paths must run
-        // pre-commit risk checks before reaching this; undo/rebuild/system
-        // cleanup paths intentionally keep direct access. The final active-
-        // constraint validator still runs here so no producer can reintroduce
-        // unsafe work after its own checks.
-        const validatedWorkout = {
-          ...postValidateWorkout(date, workout, {
-          // A manual override is the explicit edited result. Preserve planned
-          // intent for diagnostics, but never resurrect content the edit
-          // deliberately removed.
-            restoreMissingPlanPatterns: false,
-          }),
-          dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
-        };
-        const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
-        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
-        const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
-          constraint.status === 'active' && constraint.targetDate === date);
-        const restoredAt = new Date().toISOString();
-        const userRemovalConstraints = state.userRemovalConstraints.map((constraint) =>
-          constraint.status === 'active' && constraint.targetDate === date
-            ? {
-                ...constraint,
-                status: 'restored' as const,
-                restoredAt,
-                restorationReason: 'explicit_re_add' as const,
-              }
-            : constraint);
-        const acceptedContext = normalizeAcceptedMaterialContext(
-          useProgramStore.getState().acceptedMaterialContext,
-        );
-        const markedDays = { ...acceptedContext.markedDays };
-        if (activeRemovals.some((constraint) => constraint.wholeDayRestOwned) &&
-          markedDays[date] === 'rest') {
-          delete markedDays[date];
-        }
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          // An athlete placing content on a day is a decision they stated.
-          operation: 'forward_decision',
-          reason: `override:set:${date}`,
-          program: {
-            dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
-            exposureContractsByWeek: exposureResolution
-              ? {
-                  ...state.exposureContractsByWeek,
-                  [exposureResolution.weekStart]: exposureResolution.contract,
-                }
-              : state.exposureContractsByWeek,
-            overrideContexts: context
-              ? { ...state.overrideContexts, [date]: context }
-              : state.overrideContexts,
-            userRemovalConstraints,
-          },
-          markedDays,
-          validateWeekStarts: [mondayForDate(date)],
-        });
-      },
-
+      // REMOVING THE LAST OVERRIDE IS THE ATHLETE'S CHANGE, NOT THE WIPE
+      // (recipe lesson 11). A removal whose result happens to be the empty
+      // default is an attributed erasure, so it declares itself with a named
+      // act and LANDS — refusing it would strand the athlete with an edit they
+      // could not take back. The refusal stays aimed at UNATTRIBUTED defaults.
       removeManualOverride: (date) => {
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         if (!Object.prototype.hasOwnProperty.call(state.dateOverrides, date)) return;
@@ -1834,33 +1781,51 @@ export const useProgramStore = create<ProgramState>()(
         const exposureContractsByWeek = { ...state.exposureContractsByWeek };
         if (!Object.keys(updatedOverrides).some((candidate) =>
           mondayForDate(candidate) === weekStart)) delete exposureContractsByWeek[weekStart];
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          reason: `override:remove:${date}`,
-          program: {
-            dateOverrides: updatedOverrides,
-            overrideContexts: updatedContexts,
-            exposureContractsByWeek,
-          },
-          validateWeekStarts: [weekStart],
-        });
+        const emptiesTheSlice = Object.keys(updatedOverrides).length === 0;
+        const resetActionId = emptiesTheSlice
+          ? beginProgramOverrideResetAction(`override_remove:${date}`)
+          : undefined;
+        try {
+          applyProgramOverrideSliceWrite({
+            writer: 'store_action',
+            reason: `override:remove:${date}`,
+            next: {
+              dateOverrides: updatedOverrides,
+              overrideContexts: updatedContexts,
+              exposureContractsByWeek,
+            },
+            validateWeekStarts: [weekStart],
+            ...(resetActionId ? { resetActionId } : {}),
+          });
+        } finally {
+          if (resetActionId) endProgramOverrideResetAction(resetActionId);
+        }
       },
 
+      // The EXPLICIT fresh slate (onboarding completion, program create,
+      // profile reset). Erasure is the one write that may empty the slice, and
+      // it says so: a named act, on the tape, writer `reset`.
       clearManualOverrides: (todayISO) => {
         const effectiveTodayISO = todayISO ?? todayISOLocal();
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const affectedWeeks = Array.from(new Set(Object.keys(state.dateOverrides).map(mondayForDate)));
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          reason: 'override:clear_all',
-          todayISO: effectiveTodayISO,
-          program: {
-            dateOverrides: {},
-            overrideContexts: {},
-            exposureContractsByWeek: {},
-          },
-          validateWeekStarts: affectedWeeks,
-        });
+        const resetActionId = beginProgramOverrideResetAction('override_clear_all');
+        try {
+          applyProgramOverrideSliceWrite({
+            writer: 'reset',
+            reason: 'override:clear_all',
+            todayISO: effectiveTodayISO,
+            next: {
+              dateOverrides: {},
+              overrideContexts: {},
+              exposureContractsByWeek: {},
+            },
+            validateWeekStarts: affectedWeeks,
+            resetActionId,
+          });
+        } finally {
+          endProgramOverrideResetAction(resetActionId);
+        }
       },
 
       removeSessionFeedback: (date) =>
@@ -2035,8 +2000,18 @@ export const useProgramStore = create<ProgramState>()(
         return true;
       },
 
+      // THE TOTAL ERASURE. This is the one write that may empty the store, and
+      // it says so: a named act is opened around it and the erasure lands on
+      // the tape as `writer: 'reset'`. It is the ONLY raw slice write left in
+      // this file — the whole-state reset cannot route through the accepted-
+      // state transaction, because the transaction validates against a program
+      // this very call is removing. Declared, pinned by
+      // `programOverrideOwnershipTests` cell 3, never silent.
       clear: () => {
-        set({
+        const before = overrideMaterialCounts(useProgramStore.getState());
+        const resetActionId = beginProgramOverrideResetAction('program_store_clear');
+        try {
+          set({
           currentProgram: null,
           currentMicrocycle: null,
           todayWorkout: null,
@@ -2053,7 +2028,16 @@ export const useProgramStore = create<ProgramState>()(
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
-        });
+          });
+          recordProgramOverrideWrite({
+            writer: 'reset',
+            outcome: 'applied',
+            before,
+            resetActionId,
+          });
+        } finally {
+          endProgramOverrideResetAction(resetActionId);
+        }
       },
     }),
     {
@@ -2550,6 +2534,290 @@ useProgramStore.persist.rehydrate = () => {
 
 useProgramStore.persist.hasHydrated = () =>
   rawProgramStoreHasHydrated() && programHydrationAccepted;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * THE OVERRIDE DOOR — LR-1
+ *
+ * `setManualOverride` used to describe itself as a "raw storage primitive" and
+ * twenty-seven references across thirteen files reached it. That is the profile
+ * store's shape on 2026-07-28 — the day before the wipe fix — with thirteen
+ * writers instead of two. This is the counter-shape, by the store-armour recipe
+ * (`docs/STORE_ARMOUR_RECIPE_2026-08-03.md`), applied to the last store:
+ *
+ *   1. ONE DOOR. Every write of the override slice goes through
+ *      `applyProgramOverrideSliceWrite`. The single-date write every caller
+ *      actually wants is `applyProgramOverrideWrite`, a thin builder over it.
+ *   2. EVERY WRITER IS NAMED. `ProgramOverrideWriterId` is a closed union, so
+ *      an unnamed writer is a COMPILE error rather than an anonymous write.
+ *   3. THE DEFAULT IS NOT A VALUE. Emptying an override map that holds the
+ *      athlete's decisions is refused unless the write carries a reset action
+ *      that is IN FLIGHT. A reduction is not the wipe (recipe lesson 3), and
+ *      an attributed erasure is the athlete's own change (lesson 11) — both
+ *      land; only the UNATTRIBUTED bare default is refused.
+ *   4. AN IN-FLIGHT RESET, NOT A RESET THAT HAPPENED. A stale id is refused.
+ *   5. EVERYTHING IS ON THE TAPE. Applied or refused, every write names its
+ *      writer and the material COUNTS either side. Counts and labels only —
+ *      dates, exercise names and workout content are answers and stay off it.
+ *
+ * The physical write still belongs to `commitAcceptedStateTransaction`: the
+ * door decides and records, the transaction validates and publishes. That is
+ * one owner for the DECISION above one owner for the PUBLICATION, not two
+ * owners of the same thing.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Every writer of the program store's override slice, named.
+ *
+ * `harness` is the one id no product file may use: test suites seed override
+ * state through it, and `programOverrideOwnershipTests` cell 5 sweeps `src/`
+ * outside `__tests__` for it. A seeded fixture is declared debt under the
+ * fixture law, not a hidden writer.
+ */
+export type ProgramOverrideWriterId =
+  | 'athlete_tap'
+  | 'plan_change_producer'
+  | 'program_control'
+  | 'adjustment_events'
+  | 'lighter_day'
+  | 'coach_action'
+  | 'coach_executor'
+  | 'coach_program_edit'
+  | 'coach_turn_controller'
+  | 'coach_undo'
+  | 'coach_revision_writer'
+  | 'coach_modality_swap'
+  | 'store_action'
+  | 'reset'
+  | 'dev_seed'
+  | 'harness';
+
+export type ProgramOverrideRefusalReason =
+  | 'default_over_answered_overrides'
+  | 'reset_action_not_in_flight';
+
+export interface ProgramOverrideWriteOutcome {
+  ok: boolean;
+  reason?: ProgramOverrideRefusalReason;
+}
+
+/** The material slice this door owns — the athlete's decision surface. */
+export interface ProgramOverrideSlice {
+  dateOverrides: Record<string, Workout>;
+  overrideContexts: Record<string, OverrideContext>;
+  exposureContractsByWeek?: Record<string, WeeklyExposureContract>;
+  userRemovalConstraints?: UserRemovalConstraint[];
+}
+
+const overrideResetActionsInFlight = new Set<string>();
+let nextOverrideResetActionId = 1;
+
+/**
+ * Open an erasure. The id is only good while the erasure is running, which is
+ * what makes a deferred write belonging to a FINISHED reset refusable — the
+ * shape the profile loss is still best explained by.
+ */
+export function beginProgramOverrideResetAction(source: string): string {
+  const id = `program-override-reset:${source}:${nextOverrideResetActionId++}`;
+  overrideResetActionsInFlight.add(id);
+  return id;
+}
+
+export function endProgramOverrideResetAction(id: string): void {
+  overrideResetActionsInFlight.delete(id);
+}
+
+/** Test-visible only so a cell can prove the set empties; never a product read. */
+export function activeProgramOverrideResetActionCount(): number {
+  return overrideResetActionsInFlight.size;
+}
+
+function overrideMaterialCounts(state: ProgramState): {
+  overrides: number; contexts: number; constraints: number;
+} {
+  return {
+    overrides: Object.keys(state.dateOverrides ?? {}).length,
+    contexts: Object.keys(state.overrideContexts ?? {}).length,
+    constraints: (state.userRemovalConstraints ?? []).length,
+  };
+}
+
+/**
+ * The DISK copy, not the in-memory one — memory survives a refusal by
+ * construction; the envelope on disk is what a later writer can destroy.
+ * Best-effort and async: a quarantine that crashed the refusal it protects
+ * would be worse than no quarantine.
+ */
+function quarantineProgramDiskCopyBestEffort(): void {
+  void readDurableProgramStoreEnvelope()
+    .then((value) => quarantineRefusedPayload(PROGRAM_STORE_PERSISTENCE_KEY, value))
+    .catch(() => {});
+}
+
+/**
+ * ONE RECORDER for the whole slice. The door and the store's total erasure
+ * (`clear()`) both report through here, so a write that is decided in two
+ * places is still described in one — counts and labels only, never an answer.
+ */
+function recordProgramOverrideWrite(args: {
+  writer: ProgramOverrideWriterId;
+  outcome: 'applied' | 'refused';
+  before: { overrides: number; contexts: number; constraints: number };
+  reason?: ProgramOverrideRefusalReason;
+  resetActionId?: string;
+}): void {
+  const after = overrideMaterialCounts(useProgramStore.getState());
+  emitAthleteActionEvent(beginAthleteActionTrace({
+    source: args.writer === 'athlete_tap' ? 'tap' : 'system',
+    actionType: 'program_change',
+    route: 'applyProgramOverrideSliceWrite',
+  }, undefined, { forceRoot: true }), 'program_override_write', {
+    writer: args.writer,
+    outcome: args.outcome,
+    overrideCountBefore: args.before.overrides,
+    overrideCountAfter: after.overrides,
+    overrideContextCountBefore: args.before.contexts,
+    overrideContextCountAfter: after.contexts,
+    removalConstraintCountBefore: args.before.constraints,
+    removalConstraintCountAfter: after.constraints,
+    ...(args.reason ? { internalResultCode: args.reason } : {}),
+    // `erasureActId`, not `resetActionId`: the diagnostics forbidden-key
+    // filter drops any key containing "set" (recipe lesson 12).
+    ...(args.resetActionId ? { erasureActId: args.resetActionId } : {}),
+  });
+}
+
+/**
+ * THE DOOR. Every write of the override slice — set, remove, clear, erase —
+ * arrives here, names itself, and is recorded whether it lands or not.
+ */
+export function applyProgramOverrideSliceWrite(args: {
+  next: ProgramOverrideSlice;
+  writer: ProgramOverrideWriterId;
+  /** Passed through to the accepted-state transaction as its reason. */
+  reason: string;
+  validateWeekStarts: string[];
+  markedDays?: Record<string, CalendarDayType>;
+  operation?: 'forward_decision';
+  todayISO?: string;
+  resetActionId?: string;
+}): ProgramOverrideWriteOutcome {
+  const before = overrideMaterialCounts(useProgramStore.getState());
+  const record = (
+    outcome: 'applied' | 'refused',
+    reason?: ProgramOverrideRefusalReason,
+  ): void => recordProgramOverrideWrite({
+    writer: args.writer,
+    outcome,
+    before,
+    ...(reason ? { reason } : {}),
+    ...(args.resetActionId ? { resetActionId: args.resetActionId } : {}),
+  });
+
+  // THE DEFAULT IS NOT A VALUE. An empty override map written over one that
+  // holds decisions is the wipe shape; a map with FEWER entries is the athlete
+  // editing (lesson 3) and is never refused.
+  const nextIsBareDefault = Object.keys(args.next.dateOverrides).length === 0;
+  if (nextIsBareDefault && before.overrides > 0) {
+    if (!args.resetActionId) {
+      quarantineProgramDiskCopyBestEffort();
+      record('refused', 'default_over_answered_overrides');
+      return { ok: false, reason: 'default_over_answered_overrides' };
+    }
+    if (!overrideResetActionsInFlight.has(args.resetActionId)) {
+      quarantineProgramDiskCopyBestEffort();
+      record('refused', 'reset_action_not_in_flight');
+      return { ok: false, reason: 'reset_action_not_in_flight' };
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+    ...(args.operation ? { operation: args.operation } : {}),
+    reason: args.reason,
+    ...(args.todayISO ? { todayISO: args.todayISO } : {}),
+    program: {
+      dateOverrides: args.next.dateOverrides,
+      overrideContexts: args.next.overrideContexts,
+      ...(args.next.exposureContractsByWeek
+        ? { exposureContractsByWeek: args.next.exposureContractsByWeek }
+        : {}),
+      ...(args.next.userRemovalConstraints
+        ? { userRemovalConstraints: args.next.userRemovalConstraints }
+        : {}),
+    },
+    ...(args.markedDays ? { markedDays: args.markedDays } : {}),
+    validateWeekStarts: args.validateWeekStarts,
+  });
+  record('applied');
+  return { ok: true };
+}
+
+/**
+ * The single-date write — what every caller of the retired raw primitive
+ * wants, with the writer named. The body is the primitive's own, unchanged:
+ * the final active-constraint validation still runs here so no producer can
+ * reintroduce unsafe work after its own checks.
+ */
+export function applyProgramOverrideWrite(args: {
+  date: string;
+  workout: Workout;
+  context?: OverrideContext;
+  writer: ProgramOverrideWriterId;
+}): ProgramOverrideWriteOutcome {
+  const { date, workout, context } = args;
+  const validatedWorkout = {
+    ...postValidateWorkout(date, workout, {
+      // A manual override is the explicit edited result. Preserve planned
+      // intent for diagnostics, but never resurrect content the edit
+      // deliberately removed.
+      restoreMissingPlanPatterns: false,
+    }),
+    dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
+  };
+  const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
+  const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
+  const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
+    constraint.status === 'active' && constraint.targetDate === date);
+  const restoredAt = new Date().toISOString();
+  const userRemovalConstraints = state.userRemovalConstraints.map((constraint) =>
+    constraint.status === 'active' && constraint.targetDate === date
+      ? {
+          ...constraint,
+          status: 'restored' as const,
+          restoredAt,
+          restorationReason: 'explicit_re_add' as const,
+        }
+      : constraint);
+  const acceptedContext = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  const markedDays = { ...acceptedContext.markedDays };
+  if (activeRemovals.some((constraint) => constraint.wholeDayRestOwned) &&
+    markedDays[date] === 'rest') {
+    delete markedDays[date];
+  }
+  return applyProgramOverrideSliceWrite({
+    writer: args.writer,
+    // An athlete placing content on a day is a decision they stated.
+    operation: 'forward_decision',
+    reason: `override:set:${date}`,
+    next: {
+      dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
+      overrideContexts: context
+        ? { ...state.overrideContexts, [date]: context }
+        : state.overrideContexts,
+      exposureContractsByWeek: exposureResolution
+        ? {
+            ...state.exposureContractsByWeek,
+            [exposureResolution.weekStart]: exposureResolution.contract,
+          }
+        : state.exposureContractsByWeek,
+      userRemovalConstraints,
+    },
+    markedDays,
+    validateWeekStarts: [mondayForDate(date)],
+  });
+}
 
 export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
   const state = useProgramStore.getState();

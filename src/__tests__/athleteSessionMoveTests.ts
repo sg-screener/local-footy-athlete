@@ -275,7 +275,7 @@ function realDoor(change: PlanChange, weekStart: string) {
     visibleWeek: week,
     todayISO: CURRENT_WEEK,
     trace: preview.trace,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('athlete move/delete must not use the single-date writer');
     },
   });
@@ -304,7 +304,7 @@ function clearGeneratedOptionalDay(weekStart: string, dayOfWeek: number): void {
     change: { kind: 'remove_session', date: dateForDay(weekStart, dayOfWeek) },
     visibleWeek: visibleWeek(weekStart),
     todayISO: CURRENT_WEEK,
-    setManualOverride: () => {
+    applyOverride: () => {
       throw new Error('clearing a day must not use the single-date writer');
     },
   });
@@ -458,7 +458,7 @@ run('5 preview and commit publishability and accepted candidate agree', () => {
     visibleWeek: week,
     todayISO: CURRENT_WEEK,
     trace: preview.trace,
-    setManualOverride: () => { throw new Error('unexpected single-date write'); },
+    applyOverride: () => { throw new Error('unexpected single-date write'); },
   });
   const commitSemantic = visibleWeek(FUTURE_WEEK)
     .map((day) => `${day.date}:${day.workout?.workoutType === 'Game'
@@ -544,7 +544,7 @@ run('8 failed preview and failed commit share the identity rejection family', ()
     visibleWeek: tampered,
     todayISO: CURRENT_WEEK,
     trace: preview.trace,
-    setManualOverride: () => { throw new Error('unexpected single-date write'); },
+    applyOverride: () => { throw new Error('unexpected single-date write'); },
   });
   assert(!preview.ok && !commit.ok, 'identity mismatch did not reject both paths');
   assert(/identity/i.test(preview.rejected[0]?.reason ?? '') &&

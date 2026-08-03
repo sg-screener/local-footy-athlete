@@ -40,6 +40,7 @@ import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
@@ -422,7 +423,7 @@ async function main(): Promise<void> {
     assert(monVisible, 'precondition: MON visible workout present');
     const trimmed = applyLighterDayTrim(monVisible as never);
     assert(trimmed.changes.length > 0, 'precondition: the trim actually changed today');
-    useProgramStore.getState().setManualOverride(WEEK, trimmed.workout as never, {
+    seedManualOverride(WEEK, trimmed.workout as never, {
       intent: 'program_adjustment',
     } as never);
 
@@ -709,7 +710,7 @@ async function main(): Promise<void> {
     const preview = previewPlanChangeRisk({ change, visibleWeek: week, todayISO: WEEK,
       profile: useProfileStore.getState().onboardingData ?? undefined });
     applyPlanChange({ change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
-      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+      applyOverride: (d, w, c) => seedManualOverride(d, w, c) });
     const unlinked = ledger().find((a) => a.affectedDates.includes(WEDNESDAY) && a.status === 'active');
     assert(!!unlinked, 'precondition: an unrelated WED adjustment exists');
     assert(!(unlinked as { sourceFactId?: string }).sourceFactId, 'the WED adjustment is not fact-linked');

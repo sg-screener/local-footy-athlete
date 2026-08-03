@@ -56,6 +56,7 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { seedManualOverride } from './support/programOverrideHarness';
 import { buildCoachRevisionTemplateWorkout } from '../utils/coachRevisionTemplates';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -376,7 +377,7 @@ function installOverrideDependency(value: ReturnType<typeof program>): { extraDa
   const base = firstWeek(value);
   const source = coreConditioningWorkout(value);
   const extraDate = dateForWeekDay(base.startDate.slice(0, 10), 3);
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     extraDate,
     additionalCoreConditioning(source, 3, 'manual-fourth-core'),
     { intent: 'program_adjustment' },
@@ -454,7 +455,7 @@ function installOverlayDependency(value: ReturnType<typeof program>): { weekStar
     updatedAt: NOW,
   });
   const sourceDate = dateForWeekDay(weekStart, source.dayOfWeek);
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     sourceDate,
     removeConditioningFromWorkout(source, 'manual-without-core'),
     { intent: 'program_adjustment' },
@@ -825,7 +826,7 @@ check('21 generation cannot store a blocking final-visible violation',
     workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength'))!;
   const date = `${WEEK_START.slice(0, 8)}${String(12 + strength.dayOfWeek).padStart(2, '0')}`;
   coachWriteRejected = rejected(() =>
-    useProgramStore.getState().setManualOverride(date, restStub(strength), { intent: 'coach_adjustment' }));
+    seedManualOverride(date, restStub(strength), { intent: 'coach_adjustment' }));
   check('25 Coach edit cannot store a blocking violation', coachWriteRejected);
   check('26 explicit user override cannot bypass the same gateway',
     !useProgramStore.getState().dateOverrides[date]);
@@ -1129,7 +1130,7 @@ let hydrationParticipationStable = false;
   const victim = futureWeek.workouts.find((workout) =>
     workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength'))!;
   const futureDate = dateForWeekDay(futureWeek.startDate.slice(0, 10), victim.dayOfWeek);
-  useProgramStore.getState().setManualOverride(
+  seedManualOverride(
     futureDate,
     restStub(victim),
     { intent: 'program_adjustment' },

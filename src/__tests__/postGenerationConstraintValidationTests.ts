@@ -46,6 +46,7 @@ import {
 import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { seedManualOverride } from './support/programOverrideHarness';
 
 const TODAY = '2099-01-01';
 const MON = '2099-01-05';
@@ -571,7 +572,7 @@ section('[7] final ProgramStore boundary covers rebuild, manual and overlay writ
     !names(rebuilt).includes('Deadlift') && !names(rebuilt).includes('10m Sprint'), names(rebuilt));
 
   const sprintOnly = workout('Sprint Only', 1, [exercise('10m Sprint')]);
-  useProgramStore.getState().setManualOverride(MON, sprintOnly, { intent: 'program_adjustment' });
+  seedManualOverride(MON, sprintOnly, { intent: 'program_adjustment' });
   const manual = useProgramStore.getState().dateOverrides[MON];
   ok('manual write cannot reintroduce affected work',
     !names(manual).includes('Deadlift') && !names(manual).includes('10m Sprint'), names(manual));
@@ -621,8 +622,8 @@ section('[8] equipment refresh and coach revision writes pass through the same b
     proposal,
     visibleWeek,
     todayISO: TODAY,
-    setManualOverride: (date, value, context) =>
-      useProgramStore.getState().setManualOverride(date, value, context),
+    applyOverride: (date, value, context) =>
+      seedManualOverride(date, value, context),
   });
   ok('coach revision proposal is rejected when canonical safety changes its accepted shape',
     revision.applied.length === 0 && revision.rejected.some((item) =>
@@ -635,7 +636,7 @@ section('[9] architectural guard keeps the validator at the final store boundary
 {
   const storeSource = fs.readFileSync(path.resolve(__dirname, '../store/programStore.ts'), 'utf8');
   ok('program setter validates', /setCurrentProgram[\s\S]{0,500}postValidateProgram/.test(storeSource));
-  ok('manual override setter validates', /setManualOverride[\s\S]{0,700}postValidateWorkout/.test(storeSource));
+  ok('manual override setter validates', /applyOverride[\s\S]{0,700}postValidateWorkout/.test(storeSource));
   ok('week overlay setter validates', /setWeekScopedOverlay[\s\S]{0,400}postValidateWeekOverlay/.test(storeSource));
 }
 

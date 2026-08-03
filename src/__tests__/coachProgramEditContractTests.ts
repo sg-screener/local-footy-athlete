@@ -221,7 +221,7 @@ function runConditioningProgramEdit(edit: ProgramEdit, beforeWorkout: any) {
             indicator: 'none',
             workout: beforeWorkout,
           }] as any,
-          setManualOverride: (_date: string, workout: any) => {
+          applyOverride: (_date: string, workout: any) => {
             written = workout;
           },
           allowFutureWeeks: true,
@@ -306,7 +306,7 @@ function runStrengthBlockProgramEdit(
             indicator: 'none',
             workout: beforeWorkout,
           }] as any,
-          setManualOverride: (_date: string, workout: any) => {
+          applyOverride: (_date: string, workout: any) => {
             written = workout;
           },
           allowFutureWeeks: true,

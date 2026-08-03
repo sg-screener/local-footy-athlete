@@ -94,6 +94,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
@@ -320,8 +321,8 @@ function tap(change: PlanChange) {
     ?? (change as { fromDate?: string }).fromDate ?? TODAY;
   return quiet(() => applyPlanChange({
     change, visibleWeek: cardWeek(mondayFor(date)), todayISO: TODAY,
-    setManualOverride: (target, workout, context) =>
-      useProgramStore.getState().setManualOverride(target, workout, context),
+    applyOverride: (target, workout, context) =>
+      seedManualOverride(target, workout, context),
   }));
 }
 

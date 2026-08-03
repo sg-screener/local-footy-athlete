@@ -49,7 +49,7 @@ function resetSpies() {
 }
 
 (useProgramStore as any).getState = () => ({
-  setManualOverride: (date: string, workout: Workout, ctx?: any) => {
+  applyOverride: (date: string, workout: Workout, ctx?: any) => {
     dateOverrides[date] = workout;
     overrideCalls.push({ date, workout, ctx });
   },

@@ -17,7 +17,7 @@
  * + applyAdjustmentEvents + orchestrateModalitySwap. The only stubs are:
  *
  *   - `applyEvents` — uses the real applier with an injected resolveWeek
- *     and setManualOverride spy so we can read back the mutated workout.
+ *     and applyOverride spy so we can read back the mutated workout.
  *   - `verifyProjectionsFn` — runs the real `dayHasModality` against the
  *     workout the spy captured (since we don't spin up Zustand stores
  *     for the visible-projection layer).
@@ -221,7 +221,7 @@ useCoachContextStateStore.getState().clearCoachContext();
 const week = buildBaseWeek();
 
 // Spy that captures whatever applyAdjustmentEvents writes via
-// setManualOverride, plus serves the projection verifier.
+// applyOverride, plus serves the projection verifier.
 interface OverrideCall {
   date: string;
   workout: Workout;
@@ -235,7 +235,7 @@ function makeApplyOptions(): ApplyOptions {
     todayISO: FIXED_TODAY,
     buildState: () => emptyScheduleState(),
     resolveWeek: () => week,
-    setManualOverride: (date, workout, ctx) => {
+    applyOverride: (date, workout, ctx) => {
       writes.push({ date, workout, ctx });
       writeByDate.set(date, workout);
     },
@@ -383,7 +383,7 @@ eq('outcome.route', outcome.route, 'modality_swap_applied');
 eq('outcome.targetDate', outcome.targetDate, WED_DATE);
 
 // Touchstone 3 — exactly one override write, on Wednesday.
-eq('exactly one setManualOverride call', writes.length, 1);
+eq('exactly one applyOverride call', writes.length, 1);
 eq('write date = Wednesday', writes[0].date, WED_DATE);
 
 const written = writes[0].workout;

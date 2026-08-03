@@ -8,7 +8,7 @@
  *   - pendingInjuryResolverTests:   the two-turn handshake helper
  *
  * NONE of them confirmed that:
- *   1. setManualOverride is actually called with the right shape
+ *   1. applyOverride is actually called with the right shape
  *   2. dateOverrides ends up holding the modified workout
  *   3. resolveWeekWithConditioning returns the modified workout
  *   4. The modified workout carries `coachNotes` so the UI can render
@@ -89,6 +89,7 @@ function workout(name: string, opts: { exercises?: any[]; workoutType?: string; 
 // ─── Stub the resolver so we have a deterministic week ──────────────────
 
 import * as sessionResolver from '../utils/sessionResolver';
+import { seedManualOverride } from './support/programOverrideHarness';
 import type { ResolvedDay } from '../utils/sessionResolver';
 
 const SHORT = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -417,7 +418,7 @@ section('[4] Manual override wins over template in resolver');
     coachNotes: ['no sprinting / no high-speed running'],
     description: ' [no sprinting / no high-speed running]',
   };
-  useProgramStore.getState().setManualOverride('2026-04-30', modified, {
+  seedManualOverride('2026-04-30', modified, {
     intent: 'injury',
     label: 'manual test',
   });

@@ -183,7 +183,7 @@ function makeSpy() {
   const calls: OverrideCall[] = [];
   return {
     calls,
-    setManualOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
+    applyOverride: (date: string, workout: Workout, ctx?: OverrideContext) => {
       calls.push({ date, workout, ctx });
     },
   };
@@ -194,7 +194,7 @@ function makeOpts(week: ResolvedDay[], spy: ReturnType<typeof makeSpy>): ApplyOp
     todayISO: FIXED_TODAY,
     buildState: () => emptyScheduleState(),
     resolveWeek: () => week,
-    setManualOverride: spy.setManualOverride,
+    applyOverride: spy.applyOverride,
     allowFutureWeeks: true,
   };
 }

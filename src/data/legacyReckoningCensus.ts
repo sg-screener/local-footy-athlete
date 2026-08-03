@@ -113,11 +113,17 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
   {
     file: 'store/programStore.ts',
     persistKey: 'program-store',
-    owner: null,
-    taped: false,
-    caveat: 'Accepted state is owned by commitAcceptedStateTransaction. '
-      + '`setManualOverride` is a self-described "raw storage primitive" with no owner, '
-      + 'no refusal and no writer on the tape — see LR-1.',
+    owner: 'applyProgramOverrideSliceWrite',
+    taped: true,
+    caveat: 'LR-1 PAID 2026-08-03 (store-armour recipe, the last store). The raw '
+      + '`setManualOverride` primitive is RETIRED: the override slice has one door with '
+      + 'two typed refusals, every write names its writer on the tape applied or refused, '
+      + 'and the erasures that are legal declare a named act. Accepted state stays owned '
+      + 'by commitAcceptedStateTransaction — the door owns the DECISION, the transaction '
+      + 'owns the PUBLICATION. CAVEAT, measured not assumed: no walked athlete tap door '
+      + 'writes `dateOverrides` any more (adds/swaps land in weekScopedOverlays, deletions '
+      + 'in userRemovalConstraints) — the surviving writers are the coach pipeline, the '
+      + "lighter-day transaction and LR-3's residuals.",
   },
   {
     file: 'store/calendarStore.ts',
@@ -401,10 +407,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'and a dev seed. This is the profile store\'s shape on 2026-07-28 — the day '
       + 'before the fix — with thirteen writers instead of two.',
     size: 'L',
-    status: 'scheduled',
+    // PAID 2026-08-03. The entry STAYS and its detector holds zero forever —
+    // what is left of a paid unit is the ban that keeps it paid.
+    status: 'retired',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'rawProgramWriteRefs',
-    declared: 27,
+    declared: 0,
     foundingCount: 27,
   },
   {
@@ -419,10 +427,13 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + '(appHydrationGate\'s 12 handles, resetCoach\'s 22 clears) must agree about this '
       + 'set and nothing checks that they do.',
     size: 'L',
-    status: 'scheduled',
+    // PAID 2026-08-03: eleven stores armoured or retired across the fleet, and
+    // programStore — the last one, and the one holding the visible week — took
+    // its door with LR-1. Eleven to none.
+    status: 'retired',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 1,
+    declared: 0,
     foundingCount: 11,
   },
   {
@@ -794,7 +805,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 1 + 4 + 72.
+ * The sum of every declared count: 0 + 0 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -812,8 +823,14 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * then RETIRED WHOLE (Sam's §6 ruling, 2026-08-03) — no counter moves,
  * because both were already owned; a deleted store is simply no longer a
  * persisted store the detector can see.
+ *
+ * Then LR-1 and LR-2 PAID TOGETHER, 2026-08-03, as Sam's sequencing ruled they
+ * would: the program store's raw `setManualOverride` primitive is retired and
+ * its twenty-seven references route through one named door, so LR-1 goes 27 ->
+ * 0 and LR-2's last count — the program store itself — goes 1 -> 0. Baseline
+ * 104 -> 76. Every persisted store in this app now has a write owner.
  */
-export const LEGACY_DEBT_BASELINE = 104;
+export const LEGACY_DEBT_BASELINE = 76;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

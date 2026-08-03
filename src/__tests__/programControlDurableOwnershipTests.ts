@@ -42,6 +42,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import * as fs from 'fs';
@@ -304,8 +305,8 @@ function tapAdd(date: string, category: string): void {
   const result = quiet(() => applyPlanChange({
     change: { kind: 'add_category', date, category } as PlanChange,
     visibleWeek: weekOf(date), todayISO: TODAY,
-    setManualOverride: (target, workout, context) =>
-      useProgramStore.getState().setManualOverride(target, workout, context),
+    applyOverride: (target, workout, context) =>
+      seedManualOverride(target, workout, context),
   }));
   assert(result.outcome === 'applied',
     `could not reach the state by acting — add ${category} on ${date} was `

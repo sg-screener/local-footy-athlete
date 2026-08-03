@@ -259,6 +259,45 @@ recipe THEN this list:
     `resetActionId` field has been silently stripped since it shipped;
     known, not repaired here.)
 
+## What the LAST store taught (LR-1, 2026-08-03)
+
+`programStore`'s override slice — `docs/LR1_PROGRAM_DOOR_BOUNDARY_2026-08-03.md`.
+Four more lessons, and the fourth is the one to read:
+
+13. **A slice published by a TRANSACTION cannot use the §4.5 setState sweep.**
+    The program store's writes go through `commitAcceptedStateTransaction`, so
+    "exactly one `setState`, inside the owner" is not the shape to match. Sweep
+    the RETIRED PRIMITIVE'S NAME instead, plus the harness id — and say so in
+    the cell. The door owns the DECISION, the transaction owns the
+    PUBLICATION; that is one owner above one owner, not two owners of one
+    thing, and the cell should state that too.
+14. **A sweep must strip comments the way the census detector does.** The first
+    run of the LR-1 sweep reported six offenders, every one of them a JSDoc
+    NARRATING the retirement — including the store's own. A comment cannot
+    write to a store. Strip block comments, line comments and trailing comments
+    (the census's `code()` is the reference implementation), or the recipe
+    forces every retirement to be undocumented in order to pass.
+15. **With many heterogeneous callers, the writer id names the MODULE.** Prefs
+    had four category ids for a handful of callers; the program store had 27
+    references across 13 files, and a category id would have made the tape say
+    "coach" thirteen times without saying which coach path. One id per calling
+    module. And add a **test-only `harness` id, swept out of product code**:
+    seeding suites are the largest population of any retired primitive's
+    callers, and a named harness writer converts 70 invisible fixture writes
+    into declared, countable debt — the precondition for the walker ever
+    converting them.
+16. **THE WALKER CELL IS AN INSTRUMENT, NOT A FORMALITY — let it tell you
+    whether the surface is still reachable by acting.** LR-1's cell was written
+    to bin a session and went red with `{}`, and it was right: no walked
+    athlete tap door writes `dateOverrides` any more — adds and swaps land in
+    `weekScopedOverlays`, deletions in `userRemovalConstraints`. The §18
+    migration had moved every tap door off the surface one unit at a time and
+    nobody had asked what was left on it (the coach pipeline, the lighter-day
+    transaction, LR-3's residuals). **Write §6's cell BEFORE assuming you know
+    who writes the slice, and treat a red precondition as a measurement rather
+    than as a broken test.** It is the cheapest audit of a surface's real
+    owners that exists in this repo.
+
 ## The five mutations, and who caught them (this unit's pass)
 
 | # | Mutation | Caught by |
