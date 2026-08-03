@@ -84,6 +84,11 @@ export type AthleteActionEventName =
   // athlete felt, and an injury's body part are answers.
   | 'readiness_write'
   | 'coach_updates_write'
+  // The store-armour fleet wave 2a, 2026-08-03: the coach chat history and
+  // the coach memory notes get their doors. Counts only — the athlete's
+  // words, the coach's replies and what the coach remembers are answers.
+  | 'coach_store_write'
+  | 'coach_memory_write'
   | 'profile_rehydrated'
   | 'profile_snapshot_repaired'
   | 'diagnostic_snapshot';

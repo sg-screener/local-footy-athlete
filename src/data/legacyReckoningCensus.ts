@@ -173,8 +173,26 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
     owner: 'applyAthletePrefsWrite',
     taped: true,
   },
-  { file: 'store/coachStore.ts', persistKey: 'coach-store', owner: null, taped: false },
-  { file: 'store/coachMemoryStore.ts', persistKey: 'coach-memory-store', owner: null, taped: false },
+  {
+    file: 'store/coachStore.ts',
+    persistKey: 'coach-store',
+    owner: 'applyCoachStoreWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, wave 2a). Store-ownership '
+      + 'work only (LR-6): the door owns HOW the chat history is written; what '
+      + 'any coach path says or decides is unchanged. `activeConversation` rides '
+      + 'through the door but is presentation, never material.',
+  },
+  {
+    file: 'store/coachMemoryStore.ts',
+    persistKey: 'coach-memory-store',
+    owner: 'applyCoachMemoryWrite',
+    taped: true,
+    caveat: 'Armoured 2026-08-03 (store-armour fleet, wave 2a). Store-ownership '
+      + 'work only (LR-6): the door owns HOW the notes are written; what the '
+      + 'pipeline decides to remember is unchanged. Removing the last note is a '
+      + 'named erasure, not the wipe (recipe lesson 11).',
+  },
   { file: 'store/uiStore.ts', persistKey: 'ui-store', owner: null, taped: false },
   { file: 'store/authStore.ts', persistKey: 'auth-store', owner: null, taped: false },
 ];
@@ -396,7 +414,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     status: 'scheduled',
     sequence: LR1_LR2_SEQUENCE,
     detector: 'unownedPersistedStores',
-    declared: 5,
+    declared: 3,
     foundingCount: 11,
   },
   {
@@ -768,7 +786,7 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
 ];
 
 /**
- * The sum of every declared count: 27 + 7 + 4 + 72.
+ * The sum of every declared count: 27 + 3 + 4 + 72.
  *
  * Direction 3 keeps this equal to the live total, so paying debt down tightens
  * the ratchet rather than leaving slack somebody can spend later. LR-4 paid
@@ -777,11 +795,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * `useProfileStore` single-expression reads (one in the reversible-adjustment
  * transaction store, one in the Explorer production bindings' now-excluded
  * action case) went with it. LR-2 paid down 11 → 9 with the store-armour
- * recipe's two proving applications (prefs + calendar, 2026-08-03) and 9 → 7
+ * recipe's two proving applications (prefs + calendar, 2026-08-03), 9 → 7
  * when the readiness and coach-updates stores took their doors in the fleet
- * phase.
+ * phase, and 7 → 5 when the coach chat and coach memory stores took theirs
+ * (fleet wave 2a, 2026-08-03).
  */
-export const LEGACY_DEBT_BASELINE = 108;
+export const LEGACY_DEBT_BASELINE = 106;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

@@ -74,6 +74,8 @@ import {
   useCoachPreferencesStore,
   applyCoachModalityPrefsWrite,
 } from '../store/coachPreferencesStore';
+import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
+import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -310,6 +312,11 @@ function freshInstall(): void {
   // write over answered prefs, and freshInstall must not bypass the owners.
   useAthletePreferencesStore.getState().clear();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
+  // The wave-2a stores (2026-08-03): chat history and coach notes, reset
+  // through their own doors — clear()/clearNotes() open named reset acts, so
+  // the armour sees an attributed erasure, never a bare default write.
+  useCoachStore.getState().clear();
+  useCoachMemoryStore.getState().clearNotes();
   // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
   // today's vocabulary cannot vary them (nine targets byte-identical solo vs
   // pre-walked, carrier columns constant) — but they demonstrably survive
@@ -2087,6 +2094,14 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
   const clarifierStore = require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore;
   const contextStore = require('../store/coachContextStateStore').useCoachContextStateStore;
   clarifierStore.setState({ pending: { probe: true } } as never);
+  // The wave-2a stores, acted through their own doors so the reset lines in
+  // freshInstall cannot be deleted unnoticed.
+  useCoachStore.getState().addMessage({
+    id: 'totality-m1', conversationId: 'totality-conv', role: 'user',
+    content: 'leftover chat the next walk must never see',
+    createdAt: new Date().toISOString(),
+  });
+  useCoachMemoryStore.getState().addNote('leftover note the next walk must never see');
   freshInstall();
   const prefs = useAthletePreferencesStore.getState().prefs;
   assert(prefs.excluded.length === 0 && prefs.pinned.length === 0,
@@ -2099,6 +2114,11 @@ run('freshInstall is total — the two resets it was missing are covered', () =>
     'freshInstall left a pending coach clarifier behind');
   assert(contextStore.getState() != null,
     'coach context store unreadable after freshInstall');
+  assert(useCoachStore.getState().messages.length === 0
+    && useCoachStore.getState().conversations.length === 0,
+    'freshInstall left coach chat history behind');
+  assert(useCoachMemoryStore.getState().notes.length === 0,
+    'freshInstall left coach memory notes behind');
 });
 
 run('the calendar door refuses the wipe against a walked world', () => {
@@ -2304,6 +2324,77 @@ run('the coach-updates door refuses the wipe against a walked world', () => {
     `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
   assert(JSON.stringify(useCoachUpdatesStore.getState().updatesByWeek) === cardsBefore,
     'the refused wipe changed the walked cards anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the coach chat door refuses the wipe against a walked world', () => {
+  // THE STORE-ARMOUR REPLAY, fleet wave 2a (docs/STORE_ARMOUR_RECIPE_
+  // 2026-08-03.md §6). The world is REACHED through host.perform; the chat is
+  // then ACTED through the store's own actions — the walker's vocabulary has
+  // NO coach action, and under the LR-6 standing STOP this unit may not add
+  // one. That gap is DECLARED here, not hidden: when LR-6 lifts, the
+  // vocabulary gains the coach doors and these act-in lines become walked
+  // actions. Shallow tier, depth stated per L13: 3 actions, 3 days.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useCoachStore.getState().addMessage({
+    id: 'walk-m1', conversationId: 'walk-conv', role: 'user',
+    content: 'my hamstring is tight, can Tuesday be easier?',
+    createdAt: new Date().toISOString(),
+  });
+  useCoachStore.getState().addMessage({
+    id: 'walk-m2', conversationId: 'walk-conv', role: 'assistant',
+    content: 'Done — Tuesday is now an easy movement day.',
+    createdAt: new Date().toISOString(),
+  });
+  const chatBefore = JSON.stringify(useCoachStore.getState().messages);
+  assert(useCoachStore.getState().messages.length >= 2,
+    'precondition: the acted-in chat must exist to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'coach_store_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCoachStoreWrite({
+    next: { conversations: [], activeConversation: null, messages: [] },
+    writer: 'coach_screen',
+  });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_chat',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCoachStore.getState().messages) === chatBefore,
+    'the refused wipe changed the walked chat anyway');
+  assert(refusalsOnTape() === refusalsBefore + 1,
+    'the refusal left no witness on the tape');
+});
+
+run('the coach memory door refuses the wipe against a walked world', () => {
+  // Same replay for coachMemoryStore — the note is ACTED through the store's
+  // own `addNote` for the same declared reason as above: the walker has no
+  // coach vocabulary, and LR-6 forbids adding one in this unit. Shallow tier,
+  // depth stated per L13: 3 actions, 3 days.
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+  useCoachMemoryStore.getState().addNote('hamstring niggle — keep sprint volume low this week');
+  const notesBefore = JSON.stringify(useCoachMemoryStore.getState().notes);
+  assert(useCoachMemoryStore.getState().notes.length >= 1,
+    'precondition: the acted-in note must exist to protect');
+  // COUNT, not index-slice — the walked ring is at cap (see the calendar cell).
+  const refusalsOnTape = () => athleteActionLogEntries()
+    .filter((entry) => entry.event === 'coach_memory_write' && entry.outcome === 'refused').length;
+  const refusalsBefore = refusalsOnTape();
+
+  const outcome = applyCoachMemoryWrite({ next: [], writer: 'coach_screen' });
+
+  assert(!outcome.ok && outcome.reason === 'default_over_answered_notes',
+    `the wipe shape was not refused against a walked world: ${JSON.stringify(outcome)}`);
+  assert(JSON.stringify(useCoachMemoryStore.getState().notes) === notesBefore,
+    'the refused wipe changed the walked notes anyway');
   assert(refusalsOnTape() === refusalsBefore + 1,
     'the refusal left no witness on the tape');
 });
