@@ -7,13 +7,13 @@ Bible conformance harness — Slices 1–4 programming, write-path and persisten
 Reference date: 2026-03-23 | Timezone: Australia/Melbourne
   PASS preseason-exposure-first-six-day (typed contract, final ledger, edge/fallback)
   PASS year-round-exposure-contract (35 scenarios, 10 properties, 4 mutations)
-  PASS is-healthy-5d-tt2-game-sat (12.3ms)
-  PASS is-low-availability-full-body (5.1ms)
-  PASS is-display-copy-non-authoritative (8.8ms)
+  PASS is-healthy-5d-tt2-game-sat (12.7ms)
+  PASS is-low-availability-full-body (5.3ms)
+  PASS is-display-copy-non-authoritative (9.4ms)
   PASS mixed-strength-aerobic (8.4ms)
-  PASS team-training-plus-strength (8.4ms)
+  PASS team-training-plus-strength (8.2ms)
   PASS strength-plus-trunk-support (4.3ms)
-  PASS strength-plus-recovery-addon (9.0ms)
+  PASS strength-plus-recovery-addon (8.8ms)
   PASS accessory-gunshow-only (1.0ms)
   PASS early-offseason-healthy (1.9ms)
   PASS mid-offseason-primer (0.9ms)
@@ -41,7 +41,7 @@ Reference date: 2026-03-23 | Timezone: Australia/Melbourne
   planEntryId: 'slice3:hamstring-mixed',
   rowIds: [ 'hamstring-mixed:row:2' ]
 }
-  PASS hamstring-restriction-mixed (2.2ms)
+  PASS hamstring-restriction-mixed (2.3ms)
   PASS equipment-no-barbell-lower (0.9ms)
 [conditioning-visible-identity] canonical_structured_fallback {
   workoutId: 'readiness-mixed',
@@ -55,23 +55,23 @@ Reference date: 2026-03-23 | Timezone: Australia/Melbourne
 }
   PASS low-readiness-downgrade (1.0ms)
   PASS multi-modality-conditioning (1.0ms)
-  PASS early-offseason-legacy-commercial (8.5ms)
-  PASS early-offseason-modern-full-gym (6.8ms)
-  PASS early-offseason-explicit-no-cardio (6.9ms)
-  PASS early-offseason-row-only (6.7ms)
+  PASS early-offseason-legacy-commercial (8.3ms)
+  PASS early-offseason-modern-full-gym (7.0ms)
+  PASS early-offseason-explicit-no-cardio (7.5ms)
+  PASS early-offseason-row-only (6.8ms)
   PASS generation-ai-fallback-equivalence (1.8ms; deterministic_generation:0.2ms, ai_fixture_normalisation:1.5ms)
-  PASS noop-inseason-week-rebuild (31.8ms; no_op_week_rebuild:17.2ms, no_op_week_rebuild:14.1ms)
-  PASS week-overlay-copy-rich-week (1.9ms; week_overlay_copy:0.0ms, week_overlay_copy:1.6ms)
-  PASS block-rollover-contract (27.6ms; block_rollover:0.0ms, block_rollover:15.4ms)
-  PASS coach-add-bike-zone2 (3.6ms; conditioning_edit:0.0ms, conditioning_edit:2.3ms)
-  PASS coach-remove-contrast-lift (1.9ms; coach_revision:0.0ms, coach_revision:1.2ms)
-  PASS direct-add-pallof (2.1ms; direct_exercise_edit:0.0ms, direct_exercise_edit:1.0ms)
+  PASS noop-inseason-week-rebuild (32.2ms; no_op_week_rebuild:17.2ms, no_op_week_rebuild:14.6ms)
+  PASS week-overlay-copy-rich-week (1.8ms; week_overlay_copy:0.0ms, week_overlay_copy:1.6ms)
+  PASS block-rollover-contract (28.4ms; block_rollover:0.0ms, block_rollover:16.3ms)
+  PASS coach-add-bike-zone2 (3.8ms; conditioning_edit:0.0ms, conditioning_edit:2.4ms)
+  PASS coach-remove-contrast-lift (2.1ms; coach_revision:0.0ms, coach_revision:1.3ms)
+  PASS direct-add-pallof (1.6ms; direct_exercise_edit:0.0ms, direct_exercise_edit:0.9ms)
   PASS move-combined-lower (2.5ms; workout_move:0.0ms, workout_move:1.7ms)
-  PASS swap-upper-and-lower (2.9ms; workout_swap:0.0ms, workout_swap:2.1ms)
-  PASS canonical-program-rehydrate (275.1ms; store_rehydrate:0.0ms, store_rehydrate:137.5ms, store_rehydrate:137.5ms)
-  PASS legacy-program-rehydrate (273.3ms; legacy_store_rehydrate:0.0ms, legacy_store_rehydrate:136.6ms, legacy_store_rehydrate:136.6ms)
-  PASS post-rehydrate-edit-rebuild (341.2ms; store_rehydrate:0.0ms, store_rehydrate:170.6ms, store_rehydrate:170.6ms, conditioning_edit:0.0ms, conditioning_edit:0.0ms, no_op_week_rebuild:0.0ms, no_op_week_rebuild:0.0ms)
-  PASS standalone-conditioning-ownership (2.5ms; deterministic_generation:0.7ms, ai_fixture_normalisation:1.7ms)
+  PASS swap-upper-and-lower (3.6ms; workout_swap:0.0ms, workout_swap:2.3ms)
+  PASS canonical-program-rehydrate (283.3ms; store_rehydrate:0.0ms, store_rehydrate:141.6ms, store_rehydrate:141.6ms)
+  PASS legacy-program-rehydrate (283.5ms; legacy_store_rehydrate:0.0ms, legacy_store_rehydrate:141.7ms, legacy_store_rehydrate:141.7ms)
+  PASS post-rehydrate-edit-rebuild (353.9ms; store_rehydrate:0.0ms, store_rehydrate:177.0ms, store_rehydrate:177.0ms, conditioning_edit:0.0ms, conditioning_edit:0.0ms, no_op_week_rebuild:0.0ms, no_op_week_rebuild:0.0ms)
+  PASS standalone-conditioning-ownership (2.4ms; deterministic_generation:0.6ms, ai_fixture_normalisation:1.7ms)
   PASS mutation composite_lower_single_winner killed at allocation
   PASS mutation drop_mixed_conditioning killed at generated_fallback
   PASS mutation drop_team_strength killed at generated_fallback
@@ -156,7 +156,7 @@ Summary
   Exposure properties:10/10
   Mutations:         63 injected, 63 active, 63/63 killed
   Boundary:   10 expectation file(s), 0 forbidden imports
-  Runtime:    19438.2ms (target <12000ms)
+  Runtime:    19869.3ms (target <12000ms)
   Deferred:   Team Training rendering log-button/startFinished baseline remains outside the executable harness
 
 Mutation first-divergence proofs
@@ -720,7 +720,7 @@ MUTATION exposure_reduction_loses_typed_reason
 STATUS unauthorised
 EXPECTED true
 ACTUAL false
-Bible harness runtime warning: 19438.2ms exceeds 18000ms
+Bible harness runtime warning: 19869.3ms exceeds 18000ms
 
 > local-footy-athlete@1.0.0 test:section18-planner
 > TZ=Australia/Melbourne sucrase-node src/__tests__/section18PhasePlannerTests.ts
@@ -6473,3 +6473,2988 @@ Muscle + experience equality: passed=91/91 failures=0
   ✓ other roles map to themselves
 
 ── 8. Live sample — generated in-season week (read-only count) ──
+
+  Generated week (Sat game, Tue/Thu team training):
+    Mon 2026-03-23  HARD  lower_strength[high]  (Lower body strength (squat + hinge))
+    Tue 2026-03-24  HARD  team_training[high/running] + upper_strength[medium]  (Team training + Upper body - pull emphasis)
+    Wed 2026-03-25  HARD  hard_conditioning[high/mixed]  (Long Run)
+    Thu 2026-03-26  HARD  team_training[high/running] + upper_strength[medium]  (Team training + Upper body - push emphasis (moderate intensi)
+    Fri 2026-03-27        gunshow[low]  (Gunshow)
+    Sat 2026-03-28  HARD  game[high/running]  (Game Day)
+    Sun 2026-03-29        rest  
+
+  Counts: {
+    "hardExposures": 5,
+    "hardDays": 5,
+    "mainStrength": 3,
+    "conditioning": 4,
+    "extraConditioning": 1,
+    "running": 4,
+    "sprintCod": 3,
+    "byCategory": {
+      "lower_strength": 1,
+      "team_training": 2,
+      "upper_strength": 2,
+      "hard_conditioning": 1,
+      "gunshow": 1,
+      "game": 1
+    }
+  }
+
+  Cap findings (informational — no enforcement in Phase 1):
+    [over] 5 hard days (Bible max 4)
+  ✓ live pipeline returns 7 resolved days
+  ✓ live week counts exactly 1 game
+  ✓ live week counts 2 team trainings
+  ✓ no unclassified (other) units in live week
+
+════════════════════════════════════════════════════════════
+rulesKernelTests: 113 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:deload-law
+> TZ=Australia/Melbourne sucrase-node src/__tests__/deloadLawTests.ts
+
+
+[1] THE LAW — Sam's authored values, as data
+  PASS main lifts halve their sets
+  PASS every set sits at RPE 5-6
+  PASS accessories cut to at most 3
+  PASS accessories also halve — whichever is LESS
+  PASS conditioning halves its total work
+  PASS at most one quality conditioning exposure survives
+  PASS power is KEPT, not removed
+  PASS the law is recorded in the Bible
+
+[2] MAIN LIFTS — half the sets, weight held, RPE 5-6
+  PASS 4 sets become 2 — half, not "one fewer"
+  PASS 3 sets round to 2, never below the 1-set floor
+  PASS a single set stays a set — halving never reaches zero
+  PASS the deload note carries RPE 5-6, not the old 6-7
+  PASS the note no longer says RPE 6-7
+  PASS weight is HELD by default on a deload
+  PASS weight drops only SLIGHTLY when the athlete is beat up
+
+[3] ACCESSORIES — 2-3, or half, whichever is less
+  PASS 8 accessories cut to 3 — the cap beats the half
+  PASS 4 accessories cut to 2 — the half beats the cap
+  PASS a main lift is never removed as an accessory
+
+[4] CONDITIONING — half the work, one quality exposure max (NEW LAW)
+  PASS total conditioning work halves (was untouched before this law)
+  PASS at most ONE quality exposure survives
+  PASS the others become easy aerobic rather than disappearing
+
+[5] POWER — kept as a small sharp dose, not removed
+  PASS power survives a deload
+  PASS the dose is SMALLER than the full one
+  PASS power keeps at least one working set
+  PASS reps stay few — the dose stays sharp
+
+[6] SEPARATION — the law is the transformation, not the trigger
+  PASS a scheduled deload resolves in off-season
+  PASS a scheduled deload resolves in pre-season
+  PASS no SCHEDULED deload in-season (D16 — games and byes self-regulate)
+  PASS a normal week resolves no deload
+  PASS the law is exported independently of any trigger
+
+[5] THE DOORS — one transformation, and only ONE phase gate
+  PASS the SCHEDULED door opens in Off-season
+  PASS the SCHEDULED door opens in Pre-season
+  PASS the SCHEDULED door is CLOSED in-season (D16: no scheduled in-season deloads)
+  PASS the readiness door deloads in Off-season
+  PASS the readiness door in Off-season carries the law's transformation, not its own
+  PASS the readiness door deloads in Pre-season
+  PASS the readiness door in Pre-season carries the law's transformation, not its own
+  PASS the readiness door deloads in In-season
+  PASS the readiness door in In-season carries the law's transformation, not its own
+  PASS the illness door deloads in Off-season
+  PASS the illness door in Off-season carries the law's transformation, not its own
+  PASS the illness door deloads in Pre-season
+  PASS the illness door in Pre-season carries the law's transformation, not its own
+  PASS the illness door deloads in In-season
+  PASS the illness door in In-season carries the law's transformation, not its own
+  PASS an in-season door deload HOLDS the weight
+
+[7] STRUCTURE HOLDS — a deloaded dose cannot demote a main lift
+  PASS the planned hinge lift IS a main-strength exposure at full dose
+  PASS it is STILL a main-strength exposure after the deload
+  PASS the deload never TRIMS a planned main lift as if it were an accessory
+  PASS and the alias-named lift is still counted as a main-strength exposure
+
+Deload law: passed=50/50 failures=0
+
+> local-footy-athlete@1.0.0 test:readiness-illness-law
+> TZ=Australia/Melbourne sucrase-node src/__tests__/readinessIllnessLawTests.ts
+
+
+[1] THE READINESS WINDOW — rolling 7 days, not remainder-of-week
+  PASS the window is 7 days
+  PASS a low-readiness declaration produces a deload
+  PASS the window starts on the declaration day
+  PASS the window ends 7 days later, on the following Thursday
+  PASS Friday (declaration day) is inside the window
+  PASS Saturday is inside the window
+  PASS Sunday — old behaviour stopped here is inside the window
+  PASS Monday of the NEXT week is inside the window
+  PASS Wednesday of the next week is inside the window
+  PASS Thursday — last day of the window is inside the window
+  PASS the 8th day is OUTSIDE the window
+  PASS the day before the declaration is outside the window
+  PASS normal readiness produces no deload
+
+[2] NO TIERS — readiness says deloaded-or-not, and nothing else
+  PASS readiness exposes only a window, never a magnitude
+
+[2b] STRUCTURAL — the retired tiers cannot return
+  PASS no production file names a retired readiness tier
+  PASS the contract builders never read readiness to cut a strength count
+  PASS the frequency metrics a count reduction would use are typed and present
+
+[2c] INV_LOW_READINESS_MAKES_NO_COUNT_REDUCTION — both acting tiers
+  PASS wrecked: authors NO frequency reduction
+  PASS wrecked: authors no reduction citing low_readiness at all
+  PASS wrecked: main strength keeps the healthy week's required minimum
+  PASS wrecked: main strength keeps the healthy week's permitted maximum
+  PASS wrecked: conditioning keeps the healthy week's required minimum
+  PASS wrecked: conditioning keeps the healthy week's permitted maximum
+  PASS wrecked: sprint/high-speed keeps the healthy week's required minimum
+  PASS wrecked: sprint/high-speed keeps the healthy week's permitted maximum
+  PASS wrecked: the week is still marked for a lighter dose
+  PASS wrecked: power survives — a deload is not a reason to lose sharpness
+  PASS absolutely cooked: authors NO frequency reduction
+  PASS absolutely cooked: authors no reduction citing low_readiness at all
+  PASS absolutely cooked: main strength keeps the healthy week's required minimum
+  PASS absolutely cooked: main strength keeps the healthy week's permitted maximum
+  PASS absolutely cooked: conditioning keeps the healthy week's required minimum
+  PASS absolutely cooked: conditioning keeps the healthy week's permitted maximum
+  PASS absolutely cooked: sprint/high-speed keeps the healthy week's required minimum
+  PASS absolutely cooked: sprint/high-speed keeps the healthy week's permitted maximum
+  PASS absolutely cooked: the week is still marked for a lighter dose
+  PASS absolutely cooked: power survives — a deload is not a reason to lose sharpness
+
+[3] THE ILLNESS LAW — three tiers, exactly two decisions
+  PASS exactly three illness tiers exist
+  PASS MILD does not deload
+  PASS MILD does not make sessions optional
+  PASS MODERATE deloads
+  PASS MODERATE does not make sessions optional
+  PASS SEVERE deloads
+  PASS SEVERE makes every session optional
+  PASS severity decides EXACTLY two things and carries no other numbers
+  PASS illness does NOT use the readiness 7-day window
+
+[4] AUTHORED — both laws recorded
+  PASS the readiness law is in the Bible
+  PASS the illness law is in the Bible
+  PASS the Bible states there is no full pause
+  PASS the Bible states readiness never removes sessions
+
+[5] ONE severity vocabulary — the fact store speaks the law's tiers
+  PASS a moderate illness fact can be created and keeps its tier
+  PASS mild is inert on the shared threshold
+  PASS moderate DERIVES on the shared threshold
+  PASS severe DERIVES on the shared threshold
+  PASS a stored legacy `minor` hydrates as MILD
+  PASS a stored legacy `severe` hydrates as SEVERE — never downgraded to moderate
+  PASS an unrecognised stored severity falls back to the inert tier
+
+[6] THE THREE SICK DOORS — Sam's labels, authored
+  PASS the three sick doors are in the Bible
+  PASS the Bible records the door "A bit off"
+  PASS the Bible records the door "Properly sick"
+  PASS the Bible records the door "Can't get out of bed"
+  PASS the Bible records that this supersedes the R16 two-option ruling
+  PASS the Bible records the day-granular owner
+
+[7] THE THREE SICK DOORS — wired to the three tiers
+  PASS the illness_mild door writes a mild illness fact
+  PASS the illness_moderate door writes a moderate illness fact
+  PASS the illness_severe door writes a severe illness fact
+  PASS the mild door is today-scoped
+  PASS the illness_moderate door is week-scoped, not a single day
+  PASS the illness_severe door is week-scoped, not a single day
+
+[8] SAM'S LABELS — athlete-facing copy, exactly as authored
+  PASS the sheet offers "A bit off"
+  PASS the sheet offers "Properly sick"
+  PASS the sheet offers "Can't get out of bed"
+  PASS the superseded "Coming down with something" label is gone
+
+[9] OPTIONAL WEEK — nothing required, everything still offered
+  PASS In-season: the optional week is minted
+  PASS In-season: strength requires nothing
+  PASS In-season: strength still OFFERS the week's real session count
+  PASS In-season: conditioning requires nothing
+  PASS In-season: conditioning still OFFERS the week's real session count
+  PASS In-season: sprint/COD requires nothing
+  PASS In-season: sprint/COD still OFFERS the week's real session count
+  PASS Pre-season: the optional week is minted
+  PASS Pre-season: strength requires nothing
+  PASS Pre-season: strength still OFFERS the week's real session count
+  PASS Pre-season: conditioning requires nothing
+  PASS Pre-season: conditioning still OFFERS the week's real session count
+  PASS Pre-season: sprint/COD requires nothing
+  PASS Pre-season: sprint/COD still OFFERS the week's real session count
+  PASS Off-season: the optional week is minted
+  PASS Off-season: strength requires nothing
+  PASS Off-season: strength still OFFERS the week's real session count
+  PASS Off-season: conditioning requires nothing
+  PASS Off-season: conditioning still OFFERS the week's real session count
+  PASS Off-season: sprint/COD requires nothing
+  PASS Off-season: sprint/COD still OFFERS the week's real session count
+  PASS In-season: strength commits to nothing — selection is optional
+  PASS In-season: strength carries no enforceable core target
+  PASS In-season: conditioning commits to nothing — selection is optional
+  PASS In-season: conditioning carries no enforceable core target
+  PASS In-season: sprint/high-speed commits to nothing — selection is optional
+  PASS In-season: sprint/high-speed carries no enforceable core target
+  PASS Pre-season: strength commits to nothing — selection is optional
+  PASS Pre-season: strength carries no enforceable core target
+  PASS Pre-season: conditioning commits to nothing — selection is optional
+  PASS Pre-season: conditioning carries no enforceable core target
+  PASS Pre-season: sprint/high-speed commits to nothing — selection is optional
+  PASS Pre-season: sprint/high-speed carries no enforceable core target
+  PASS Off-season: strength commits to nothing — selection is optional
+  PASS Off-season: strength carries no enforceable core target
+  PASS Off-season: conditioning commits to nothing — selection is optional
+  PASS Off-season: conditioning carries no enforceable core target
+  PASS Off-season: sprint/high-speed commits to nothing — selection is optional
+  PASS Off-season: sprint/high-speed carries no enforceable core target
+
+Readiness + illness law: passed=112/112 failures=0
+
+> local-footy-athlete@1.0.0 test:power-pool
+> TZ=Australia/Melbourne sucrase-node src/__tests__/powerExercisePoolTests.ts
+
+
+[1] THE POOL — Sam's entries, as data
+  PASS the pool is non-empty
+  PASS the pool holds exactly Sam's seven entries
+  PASS Vertical Jump is lower family
+  PASS Vertical Jump min training age = none
+  PASS Vertical Jump requires equipment []
+  PASS Pogo Hops is lower family
+  PASS Pogo Hops min training age = none
+  PASS Pogo Hops requires equipment []
+  PASS Explosive Push-up is upper family
+  PASS Explosive Push-up min training age = none
+  PASS Explosive Push-up requires equipment []
+  PASS Depth Jumps is lower family
+  PASS Depth Jumps min training age = developing
+  PASS Depth Jumps requires equipment [Box]
+  PASS Lateral Jump is lower family
+  PASS Lateral Jump min training age = none
+  PASS Lateral Jump requires equipment []
+  PASS Lateral Bounds is lower family
+  PASS Lateral Bounds min training age = developing
+  PASS Lateral Bounds requires equipment []
+  PASS Kneeling Jump is lower family
+  PASS Kneeling Jump min training age = consistent
+  PASS Kneeling Jump requires equipment []
+  PASS no pool entry carries sets or reps — dose stays with the policy
+  PASS the med-ball family is absent (retired by the locked list)
+  PASS no entry names a sled (NO SLEDS anywhere)
+
+[2] P1 — experience and phase gating
+  PASS a `new` athlete never sees Depth / Bounds / Kneeling
+  PASS a `developing` athlete never sees Kneeling Jump
+  PASS a `developing` athlete DOES see Depth Jumps and Lateral Bounds
+  PASS a `consistent` athlete sees Kneeling Jump
+  PASS the in-season lower pool is Vertical Jump + Lateral Jump only
+  PASS the off/pre-season-only entries are absent in-season even for advanced athletes
+  PASS pre-season admits the harder entries for an advanced athlete
+
+[3] P2 — reduced (niggle) hands the slot to Pogo Hops
+  PASS the takeover exercise is Pogo Hops
+  PASS reduced + new + Off-season -> Pogo Hops
+  PASS reduced + new + Pre-season -> Pogo Hops
+  PASS reduced + new + In-season -> Pogo Hops
+  PASS reduced + developing + Off-season -> Pogo Hops
+  PASS reduced + developing + Pre-season -> Pogo Hops
+  PASS reduced + developing + In-season -> Pogo Hops
+  PASS reduced + consistent + Off-season -> Pogo Hops
+  PASS reduced + consistent + Pre-season -> Pogo Hops
+  PASS reduced + consistent + In-season -> Pogo Hops
+  PASS reduced + advanced + Off-season -> Pogo Hops
+  PASS reduced + advanced + Pre-season -> Pogo Hops
+  PASS reduced + advanced + In-season -> Pogo Hops
+  PASS reduced does not hijack the UPPER slot
+
+[4] P3 — block-stable, deterministic, rotates at rollover
+  PASS the same block yields the same pick every time it is asked
+  PASS the pick is independent of anything but the declared context
+  PASS the selector reads no clock and no randomness — determinism is structural
+  PASS picks rotate across blocks so lateral / vertical / depth all get trained
+  PASS every rotated pick is an eligible entry
+
+[5] P4 — equipment substitutes, never forces
+  PASS a no-box athlete never receives Depth Jumps
+  PASS a no-box athlete still gets a pick
+  PASS every (family, phase, experience) cell has a zero-equipment option
+
+[6] P5 — the selector never invents a dose
+  PASS selectPowerExercise returns identity only, no dose fields
+
+[7] P7 — contrast draws from the same pool, same pick
+  PASS contrast and primer agree for new (no separate contrast preference)
+  PASS contrast and primer agree for developing (no separate contrast preference)
+  PASS contrast and primer agree for consistent (no separate contrast preference)
+  PASS contrast and primer agree for advanced (no separate contrast preference)
+
+[8] WIRED — the pool is now a real selectability source
+  PASS every pool name is a real curated exercise name
+  PASS every pool entry is selectable — the pool is a selectability source
+  PASS no placed entry still claims the power_pool_pending exemption
+  PASS every pool entry has a curated cue — the block can be cued like any row
+  PASS every pool entry resolves a demo video
+  PASS no pool entry carries ANY content exemption
+
+[9] P6 — the counting fence is untouched
+  PASS the power row is authored role:power — the fence in its new form
+  PASS the power row stamps power Section 18 evidence, never a name-classified one
+  PASS buildPowerRow stamps the dose from the policy spec, not the pool
+
+Power exercise pool: passed=69/69 failures=0
+
+> local-footy-athlete@1.0.0 test:power-counting
+> TZ=Australia/Melbourne sucrase-node src/__tests__/powerCountingDifferentialTests.ts
+
+
+Power counting differential
+
+  PASS the snapshot is deterministic — two builds are byte-identical
+  PASS the matrix produces power work to compare
+  PASS the over-budget probe reaches the §18 weekly power strip
+  PASS the §18 selector never keeps more power days than the budget
+  PASS every recorded power exercise is a pool entry
+  PASS every power row is authored role:power and counted by nothing
+  PASS every power row leads its session
+  PASS power alone never supplies a main-strength classification
+  PASS the trap baseline classifies as gunshow, not strength
+  PASS adding Explosive Push-up power does not change the taxonomy
+  PASS adding Explosive Push-up power changes no weekly count
+  PASS the trap session really does carry projected power
+  PASS every recorded count reproduces the committed golden byte for byte
+
+Power counting differential: passed=13/13 failures=0
+
+> local-footy-athlete@1.0.0 test:row-counting
+> TZ=Australia/Melbourne sucrase-node src/__tests__/sessionRowCountingTests.ts
+
+
+[1] The filter removes rows, and only exempt ones
+  PASS every exempt role is a real role in the shared vocabulary
+  PASS power is exempt
+  PASS no other role is exempt yet — only power migrates
+  PASS a row with no authored role participates
+  PASS a row with a non-exempt role participates
+  PASS a power row does not participate
+  PASS countingRows drops exactly the exempt row
+  PASS the exercise budget reads the same fence — one ruling, one filter
+
+[2] The Explosive Push-up trap — role filters before any name probe
+  PASS the baseline is gunshow, not strength
+  PASS a role:power Explosive Push-up row changes nothing
+  PASS the SAME row without the role does flip the session to strength
+  PASS and no weekly count moves
+
+[3] Every pool entry is fenced, not just the dangerous one
+  PASS no power-pool entry changes the taxonomy when carried as a power row
+
+[4] STRUCTURAL — the taxonomy has no un-filtered row iteration
+  PASS sessionTaxonomy reads workout.exercises exactly once
+  PASS the single raw read is the rest-stub emptiness check
+  PASS sessionTaxonomy imports the choke point
+  PASS every classifying probe goes through it
+  PASS the choke point reads no exercise name
+  PASS the choke point classifies nothing — it only reads the authored role
+
+[5] The role vocabularies map 1:1, in both directions
+  PASS every SessionRole has a Section 18 spelling
+  PASS the mapping is injective — no two roles share a Section 18 spelling
+  PASS every Section18RowRole is either mapped or a declared exception
+  PASS the only unmapped Section 18 role is the legacy ingress sentinel
+  PASS the progression classifier's vocabulary is disjoint from SessionRole
+  PASS the progression classifier answers eligibility, not identity (null is a valid answer)
+
+[6] STRUCTURAL — no second strip path survives
+  PASS no production file strips power by deleting the field
+  PASS the write detector catches an object-literal write
+  PASS the write detector catches a property assignment
+  PASS the write detector allows a plain read
+  PASS the write detector allows destructuring removal
+  PASS nothing writes the legacy powerBlock field — it is a reader-only door
+
+Session row counting: passed=31/31 failures=0
+
+> local-footy-athlete@1.0.0 test:power-migration
+> TZ=Australia/Melbourne sucrase-node src/__tests__/legacyPowerBlockMigrationTests.ts
+
+
+[1] The migration runs at read ingress, above every branch
+  PASS hydration migrates before the accepted_canonical branch
+  PASS the migration covers currentProgram
+  PASS the migration covers currentMicrocycle
+  PASS the migration covers todayWorkout
+  PASS the migration covers dateOverrides
+  PASS the migration covers weekScopedOverlays
+  PASS publishing a program still carrying a block is refused at the write boundary
+  PASS the exported program ingress migrates the legacy field away
+  PASS and the migration itself produced the row the gateway then judged
+
+[2] Idempotent, and the degenerate case is loud
+  PASS the block is gone after migration
+  PASS the power row leads the list
+  PASS the strength row survives untouched
+  PASS identity is lifted verbatim
+  PASS dose is lifted verbatim
+  PASS family and kind are lifted verbatim
+  PASS the row carries power Section 18 evidence, not a name-classified one
+  PASS re-migrating is a strict no-op
+  PASS a post-Stage-3 workout is returned unchanged, by identity
+  PASS a list with nothing to migrate keeps its array identity
+  PASS a workout with BOTH a block and power rows throws
+  PASS the throw names the conflict rather than a generic failure
+  PASS the throw is typed
+
+[3] Unmappable legacy content fails loud
+  PASS no options at all throws rather than dropping the work
+  PASS an option with no name throws rather than dropping the work
+  PASS an option with no usable dose throws rather than dropping the work
+  PASS an unknown family throws rather than dropping the work
+  PASS an unknown kind throws rather than dropping the work
+  PASS the write-boundary detector sees an unmigrated workout
+  PASS …and passes a migrated one
+
+[4] PARITY — a migrated legacy program counts like a fresh one
+  PASS offseason-solo-consistent w1: the stored fixture really is legacy-shaped
+  PASS offseason-solo-consistent w2: the stored fixture really is legacy-shaped
+  PASS offseason-solo-consistent w3: the stored fixture really is legacy-shaped
+  PASS offseason-solo-consistent w4: the stored fixture really is legacy-shaped
+  PASS offseason-solo-advanced-late w1: the stored fixture really is legacy-shaped
+  PASS offseason-solo-advanced-late w2: the stored fixture really is legacy-shaped
+  PASS offseason-solo-advanced-late w3: the stored fixture really is legacy-shaped
+  PASS offseason-solo-advanced-late w4: the stored fixture really is legacy-shaped
+  PASS offseason-beginner w1: the stored fixture really is legacy-shaped
+  PASS offseason-beginner w2: the stored fixture really is legacy-shaped
+  PASS offseason-beginner w3: the stored fixture really is legacy-shaped
+  PASS offseason-beginner w4: the stored fixture really is legacy-shaped
+  PASS offseason-no-equipment w1: the stored fixture really is legacy-shaped
+  PASS offseason-no-equipment w2: the stored fixture really is legacy-shaped
+  PASS offseason-no-equipment w3: the stored fixture really is legacy-shaped
+  PASS offseason-no-equipment w4: the stored fixture really is legacy-shaped
+  PASS offseason-lower-niggle w1: the stored fixture really is legacy-shaped
+  PASS offseason-lower-niggle w2: the stored fixture really is legacy-shaped
+  PASS offseason-lower-niggle w3: the stored fixture really is legacy-shaped
+  PASS offseason-lower-niggle w4: the stored fixture really is legacy-shaped
+  PASS preseason-two-team-days w1: the stored fixture really is legacy-shaped
+  PASS preseason-two-team-days w2: the stored fixture really is legacy-shaped
+  PASS preseason-two-team-days w3: the stored fixture really is legacy-shaped
+  PASS preseason-two-team-days w4: the stored fixture really is legacy-shaped
+  PASS preseason-team-and-game w1: the stored fixture really is legacy-shaped
+  PASS preseason-team-and-game w2: the stored fixture really is legacy-shaped
+  PASS preseason-team-and-game w3: the stored fixture really is legacy-shaped
+  PASS preseason-team-and-game w4: the stored fixture really is legacy-shaped
+  PASS inseason-two-team-and-game w1: the stored fixture really is legacy-shaped
+  PASS inseason-two-team-and-game w2: the stored fixture really is legacy-shaped
+  PASS inseason-two-team-and-game w3: the stored fixture really is legacy-shaped
+  PASS inseason-two-team-and-game w4: the stored fixture really is legacy-shaped
+  PASS the parity sweep actually compared weeks
+  PASS and weeks that carry power
+  PASS every migrated legacy week counts identically to the fresh one
+
+Legacy power-block migration: passed=64/64 failures=0
+
+> local-footy-athlete@1.0.0 test:exercise-canonicalisation
+> TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseNameCanonicalisationTests.ts
+
+
+[1] Vocabulary-closure — every prescribable name lands on a curated cue key
+  PASS every prescribable exercise canonicalises to a curated cue key
+
+[2] No-generic-in-product — the generic cue is unreachable for prescribable exercises
+  PASS no prescribable exercise renders the generic fallback cue
+  PASS buildCueText never renders the generic filler (curated cue or none)
+
+[3] Anchor-resolves — every loaded exercise keeps a load profile
+  PASS every loaded exercise resolves a load authority
+
+[4] Ownership — the curated cue is the ONLY source of a row's coaching text
+  PASS the strength/recovery cards no longer render generator per-exercise notes
+  PASS the cue is collapsed behind a "Form cues" disclosure, not always visible
+  PASS the superseded note-gated CueToggle is retired, not left beside the new one
+  PASS one shared disclosure owns the behaviour — strength, recovery and add-on rows alike
+  PASS buildCueText canonicalises before lookup
+
+[5] "Farmers Carry" regression fixture (the AI-backend spelling)
+  PASS canonicalExerciseName("Farmers Carry") === "Farmer Carry"
+  PASS the possessive form resolves too
+  PASS "Farmers Carry" has a curated cue (not generic)
+  PASS buildCueText("Farmers Carry") equals the curated Farmer Carry cue
+  PASS resolveExerciseName("Farmers Carry") keeps the curated load anchor
+
+[6] Token-order & abbreviation variants resolve (run-3 cue coverage hole)
+  PASS the reported variant resolves to the curated key
+  PASS ...and therefore has a curated cue (never a silent cueless card)
+  PASS ...and buildCueText matches the canonical cue
+  PASS variant "Single Arm Half Kneeling Overhead Press" resolves to the curated key
+  PASS variant "half-kneeling SA OHP" resolves to the curated key
+  PASS variant "Press Overhead Single-Arm Half-Kneeling" resolves to the curated key
+  PASS every curated key resolves from a word-order permutation of itself
+
+[7] Generation contract — an unresolved name is loud, never a silent cueless card
+  PASS a genuinely unknown name is reported unresolved
+  PASS a resolved (even reordered/abbreviated) name is NOT reported
+  PASS assertCuratedExerciseCues throws ExerciseVocabularyViolation on an unresolved name
+  PASS assertCuratedExerciseCues passes clean input
+  PASS no pool exercise trips the contract
+
+[8] Runtime invariant — scoped to the render truth (cued strength cards only)
+  PASS a cueless strength card is flagged; cued (incl. reordered/abbrev) are not
+  PASS conditioning freeform text is exempt by render path (no strength rows)
+  PASS recovery freeform text is exempt by render path (no strength rows)
+[GenerationContract] unit: 1 exercise name(s) with no curated cue — Some Made Up Move. The curated layer owns every athlete-visible word (Stage 3): add a curated cue or an alias so the name resolves at the canonicalisation boundary. { unresolved: [ 'Some Made Up Move' ] }
+  PASS enforceCuratedCueContract THROWS on a cueless strength card (enforced, not observed)
+[GenerationContract] unit: 1 exercise name(s) with no curated cue — Some Made Up Move. The curated layer owns every athlete-visible word (Stage 3): add a curated cue or an alias so the name resolves at the canonicalisation boundary. { unresolved: [ 'Some Made Up Move' ] }
+  PASS ...and the violation names the offending exercise
+  PASS a fully-cued week passes acceptance untouched
+
+[9] Plural normalisation — a pluralised spelling is the same movement
+  PASS the reported name resolves
+  PASS "Barbell Rows" resolves to "Barbell Row"
+  PASS "Single-Arm DB Rows" resolves to "Single-Arm DB Row"
+  PASS "Goblet Squats" resolves to "Goblet Squat"
+  PASS "Nordic Lowers" resolves to "Nordic Lower"
+  PASS an -ss word is not mangled into a false singular
+  PASS every curated key still resolves when pluralised
+
+[10] Bounded superset matching — equipment/position qualifiers are droppable
+  PASS "Single Arm Half Kneeling OHP (DB)" resolves (equipment qualifier dropped)
+  PASS "Incline DB Row (Chest Supported)" resolves to the DB row, not the generic row
+  PASS ...all three run-5 device names now carry a cue
+  PASS a non-qualifier superset does NOT match (bounded)
+  PASS dropping qualifiers off an unknown movement still refuses
+  PASS a contradictory equipment decoration refuses rather than guessing
+  PASS a contradictory position decoration refuses rather than guessing
+  PASS every implement-free curated key survives an appended equipment qualifier
+  PASS every position-free curated key survives a prepended position qualifier
+
+[11] The builder-inline text class — add-on and flow rows source from EXERCISE_CUES
+  PASS the found instance is gone
+  PASS the builder's exercise() helper can no longer carry a note argument
+  PASS RecoveryAddonExercise has no notes field left to populate
+  PASS the flow-bundle module is gone, and with it notes and localMeta
+  PASS every composable mobility movement resolves a curated cue
+  PASS the enumerator actually reaches the builder's content
+  PASS every add-on exercise the builder can emit resolves a curated cue
+
+[12] The invariant extends to add-on rows — the class cannot return
+  PASS a cueless add-on row is a violation
+  PASS a cued add-on row is not
+[GenerationContract] unit: 1 exercise name(s) with no curated cue — Some Made Up Move. The curated layer owns every athlete-visible word (Stage 3): add a curated cue or an alias so the name resolves at the canonicalisation boundary. { unresolved: [ 'Some Made Up Move' ] }
+  PASS and it is ENFORCED — a cueless add-on refuses the week, it does not ship blank
+  PASS the attach-stage gate does NOT re-judge strength rows
+  PASS a recovery-type day's add-on rows are checked too — they render on that branch
+
+exercise canonicalisation: 60 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:generation-vocabulary
+> TZ=Australia/Melbourne sucrase-node src/__tests__/generationVocabularyContractTests.ts
+
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+
+[1] The generator loses naming rights — the prompt carries the vocabulary
+  PASS the AI vocabulary IS selectable pool membership, exactly
+  PASS nothing the generator is offered is unprescribable
+  PASS nothing prescribable is withheld from the generator
+  PASS every selectable exercise name appears verbatim in the generation prompt
+  PASS the prompt groups the vocabulary by the pool slot that owns each name
+  PASS the second, hand-copied vocabulary is gone from the edge prompt
+  PASS the prompt names the vocabulary as authoritative and selection-only
+  PASS the prompt forbids the run-5 drift classes by name (invent / abbreviate / plural / qualifier)
+
+[2] Acceptance refuses a cueless program — enforced, not observed
+[WorkoutCanonicalisation] Generated workout finalised {
+  microcycleId: 'mc-vocab-test',
+  dayOfWeek: 1,
+  planEntryId: null,
+  actions: [
+    {
+      kind: 'name_changed',
+      item: 'Lower Squat',
+      reason: 'final_content_owns_name'
+    }
+  ]
+}
+[GenerationContract] buildWorkoutsFromCoach(mc-vocab-test): 1 exercise name(s) with no curated cue — Zerg Rush Deadlift. The curated layer owns every athlete-visible word (Stage 3): add a curated cue or an alias so the name resolves at the canonicalisation boundary. { unresolved: [ 'Zerg Rush Deadlift' ] }
+  PASS buildWorkoutsFromCoach REFUSES a workout carrying a cueless strength card
+  PASS ...and the refusal names the offending exercise
+[WorkoutCanonicalisation] Generated workout finalised {
+  microcycleId: 'mc-vocab-superset',
+  dayOfWeek: 1,
+  planEntryId: null,
+  actions: [
+    {
+      kind: 'effective_pattern_removed',
+      item: 'push',
+      reason: 'planned_pattern_absent_from_final_main_content'
+    }
+  ]
+}
+  PASS the three run-5 device names now pass acceptance (they resolve at ingress)
+
+[3] The refusal is honest and retryable, and leaks no internals
+  PASS the refusal is a ProgramGenError
+  PASS the athlete is offered a retry
+  PASS the refusal is classified as a bad generation response
+  PASS the athlete-facing copy is honest about withholding the program
+  PASS the athlete-facing copy leaks no internal identifiers or raw names
+  PASS the developer diagnostic DOES name every offender
+
+[4] The generation path is wired to the refusal, not to the generic copy
+  PASS the acceptance catch maps ExerciseVocabularyViolation to its own refusal
+
+generation vocabulary contract: 18 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:cue-join
+> sucrase-node src/__tests__/cueJoinPunctuationTests.ts
+
+
+[cue join] primary + secondary read as two sentences
+  PASS a primary without terminal punctuation gets a sentence stop before the secondary
+  PASS a primary that already ends in a full stop is left intact
+  PASS a primary ending in ! or ? keeps its own terminal mark
+  PASS a dangling comma/semicolon on the primary is promoted to a full stop
+  PASS the join never produces a double space or double stop
+  PASS a single present clause is returned unchanged (no trailing separator)
+
+6 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:athlete-safe-refusal
+> sucrase-node src/__tests__/athleteSafeRefusalTests.ts
+
+
+[athlete-safe refusal] raw internal reasons never reach the athlete
+  PASS an undefined reason yields the safe fallback
+  PASS an empty/whitespace reason yields the safe fallback
+  PASS the deterministic-executor diagnostic is replaced
+  PASS the accepted-state candidate diagnostic is replaced
+  PASS the presentation/programming-field diagnostic is replaced
+  PASS a snake_case route code is replaced
+  PASS a durable-transaction developer message is replaced
+  PASS a raw §18 rejection string is replaced
+  PASS an embedded snake_case diagnostic token is replaced
+  PASS a game-day refusal sentence passes through unchanged
+  PASS a cap sentence passes through unchanged
+  PASS the fallback itself is athlete-safe (idempotent)
+
+12 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:video-modal-fill
+> sucrase-node src/__tests__/exerciseVideoModalFillTests.ts
+
+
+[video modal] the player frame is a true aspect-locked box
+  PASS playerFrame style block exists
+  PASS playerFrame keeps a 9:16 aspect ratio
+  PASS playerFrame does not pin an explicit width against the aspect ratio
+  PASS playerFrame does not use maxHeight to clamp the aspect box
+  PASS playerFrame drives its size from a definite dimension + aspectRatio
+  PASS playerFrame centres itself rather than stretching
+  PASS the WebView still fills the frame
+
+7 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:session-template
+> TZ=Australia/Melbourne sucrase-node src/__tests__/sessionTemplateOneListTests.ts
+
+
+[1] Exactly six roles, with a source-grounded mapping rule
+  PASS the role set is exactly D13's six, in D2 order
+  PASS an anchor pattern-slot entry is Main Lift
+  PASS a second anchor reuses Main Lift
+  PASS an accessory pattern-slot entry is Accessory
+  PASS an arms/pump pool entry is Accessory
+  PASS a delts pool entry is Accessory
+  PASS a trunk_anti_rotation pool entry is Midline
+  PASS a core-tagged row is Midline
+  PASS a lower_prehab entry is Prehab
+  PASS a shoulder_health entry is Prehab
+  PASS a groin_adductors entry is Prehab
+  PASS a calves entry is Prehab
+  PASS a hamstring_light entry is Prehab
+  PASS a name in both the pump and prehab pools resolves deterministically to Prehab
+  PASS an unrecognised name falls back to Accessory rather than throwing
+
+[2] One list in D2 order — power → main → accessory → midline → prehab → conditioning
+  PASS a strength day builds a badged list
+  PASS every exercise is a flat list row — no nested section groupings
+  PASS the list is ordered power → main → main → accessory → accessory → midline → prehab
+  PASS the two anchors keep their authored relative order (stable sort)
+  PASS Midline and Prehab sit after Accessory (§6 item 5)
+
+[3] Supersets stay contiguous and keep their pairing indicator
+  PASS both superset members are present
+  PASS superset members are adjacent in the flat list
+  PASS each superset member carries the pairing indicator, not a badge of its own
+  PASS the pairing indicator names its group and position
+  PASS a superset still gets an ordinary role badge per member
+
+[4] A cross-tier superset keeps its members together
+  PASS the pair is contiguous even though its members rank into different tiers
+  PASS the group sorts at its highest-ranked member (the main lift leads)
+  PASS each member still shows its OWN role badge
+
+[5] Conditioning — combined-day picker and conditioning-only phase order
+[conditioning-visible-identity] canonical_structured_fallback { workoutId: 'w1', planEntryId: undefined, rowIds: [ 'c1' ] }
+  PASS the "choose one" picker is ONE conditioning-badged list item, not a box
+  PASS the picker item carries both options for in-place expansion
+  PASS conditioning sits last, after the strength content
+  PASS a conditioning-only day is still a badged list
+  PASS conditioning-only days follow phase order, not D2 order (§6 item 4)
+  PASS the phases render in the order the conditioning content already carries
+  PASS each phase is Conditioning-badged
+
+[6] Team training renders by construction, on every applicable day type
+  PASS team training renders on a strength day
+  PASS team training ALSO renders on a conditioning day — the spec's found bug
+  PASS team training carries NO role badge (§6 item 2 — inline banner)
+  PASS team training sits at the end of the list
+  PASS a team-only day is just the banner
+
+[7] The Recovery Add-on box splits into ordinary badged rows
+  PASS no add-on exercise is lost when the box dies
+  PASS add-on rows get ordinary role badges
+  PASS add-on rows stay marked optional — the no-penalty meaning survives the move
+  PASS session-prescribed rows are NOT marked optional
+
+[8] Recovery-type days are the deliberate exception (§6 item 3)
+  PASS a recovery day reports the recovery template mode
+  PASS the recovery template emits no badged rows — the screen keeps what it had
+  PASS a recovery SESSION TIER also takes the recovery template
+
+[9] DayWorkoutScreenV2 renders one list from the composition owner
+  PASS the screen consumes the composition owner
+  PASS the Power Primer box is gone from the screen entirely
+  PASS the screen has no power-specific renderer — power uses the ordinary row path
+  PASS the Trunk / Support box is gone
+  PASS the "Strength" section header is gone
+  PASS the combined-day "Choose one:" box header is gone
+  PASS the three mutually-exclusive branches are gone
+  PASS team training is no longer mounted from inside the strength branch
+  PASS no role badge text is rendered on a row
+  PASS the numeric index is back in the row header
+
+[10] Rows are numbered 1 / 1a / 2 again (Sam, 2026-07-27)
+  PASS a standalone row, then a superset pair, then the next row reads 1 / 2a / 2b / 3
+  PASS a leading superset takes slot 1, lettered a/b
+  PASS power, add-on and team-training rows carry no number
+  PASS the one numbered row is the strength row, numbered 1
+
+[11] Optional work is ONE contiguous cluster at the end of the list
+[conditioning-visible-identity] canonical_structured_fallback { workoutId: 'w1', planEntryId: undefined, rowIds: [ 'c1' ] }
+  PASS the optional rows are contiguous — nothing prescribed sits between them
+  PASS every prescribed row sorts ABOVE the cluster, conditioning finisher included
+  PASS the team-training banner stays absolute last — it is context, not work
+  PASS a midline add-on no longer interleaves with prescribed midline work
+  PASS D2 order still applies within the cluster
+
+[12] The screen renders one "Optional work" header, and no per-row label
+  PASS the per-row "Optional" marker is gone from the add-on row
+  PASS the recovery branch no longer prints a per-card "Optional" pill
+  PASS one shared header component carries the words
+  PASS the header reads "Optional work", and the old section label is gone
+
+70 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:mobility-flow
+> TZ=Australia/Melbourne sucrase-node src/__tests__/mobilityPrehabFlowTests.ts
+
+
+[1] Sam's D17 menus — the counts are law, the app picks which
+  PASS an upper day takes the upper menu
+  PASS a squat-dominant lower day takes the squat menu
+  PASS a hinge day takes the hinge menu — Sam's precedence is hinge > squat > general
+  PASS a day carrying both a hinge and a squat still takes the HINGE menu
+  PASS a full-body day takes the full-body menu
+  PASS the lower_general menu is authored at four items
+  PASS the lower_squat menu is authored at four items
+  PASS the lower_hinge menu is authored at four items
+  PASS the upper menu is authored at four items
+  PASS the full_body menu is authored at four items
+  PASS the upper flow fills every authored slot
+  PASS the lower_squat flow fills every authored slot
+  PASS the lower_hinge flow fills every authored slot
+  PASS the full_body flow fills every authored slot
+  PASS the upper flow's categories are exactly the menu's
+  PASS the lower_squat flow's categories are exactly the menu's
+  PASS the lower_hinge flow's categories are exactly the menu's
+  PASS the full_body flow's categories are exactly the menu's
+  PASS every movement is in its slot's authored pool AND muscle group
+  PASS the dosing rule still says curated wins
+  PASS every dose is the one authored on the curated pool entry
+  PASS composition is deterministic — the same session and date fill the same flow
+  PASS a different date rotates which entries fill the slots
+  PASS no movement is ever repeated inside one flow
+
+[2] Filtered like every other pool draw — and it SHRINKS, never pads
+  PASS a knee-and-ankle athlete is offered none of the movements those rule out
+  PASS an Outdoor athlete is never offered the bar-hang or the pullover
+  PASS a shoulder injury shrinks the upper menu rather than substituting a category
+
+[3] MOBILITY_FLOW_TEMPLATES no longer exists, and D17 is wired
+  PASS the flow-bundle module is deleted
+  PASS the flow selector reads no template catalog at all
+  PASS and it composes through D17 — the authored source for THIS surface
+  PASS every pool D17 names is one of the authored muscle-sheet pools
+  PASS every authored slot category has candidates to draw from
+
+[4] Days that get no flow at all
+  PASS no flow on a conditioning-only day (§6 item 8)
+  PASS no flow on a recovery day (§6 item 3)
+  PASS no flow on a recovery-TIER day
+  PASS no flow on a team-training-only day
+  PASS no flow without a workout
+  PASS no flow on a strength day with no classifiable movement
+
+[5] The flow is never counted, never gates, never logged
+  PASS the fixture actually has a flow to test against
+  PASS the flow adds no session component
+  PASS no flow movement leaks into the counted component rows
+  PASS no flow movement appears as a badged list row either
+  PASS sessionComponents.ts still knows nothing about the flow
+  PASS the post-session feedback panel never asks about the flow
+
+[6] Collapsed at the top, tap to expand, cosmetic tick only
+  PASS the flow section exists
+  PASS it starts collapsed
+  PASS tapping toggles it open and shut
+  PASS the collapsed header summarises the movement count
+  PASS and it no longer promises a duration
+  PASS the completion tick is local component state only
+  PASS the tick never writes to a store
+  PASS the tick is labelled as carrying no consequence
+  PASS the screen mounts the flow above the session list
+  PASS the flow is not rendered on the recovery-template branch
+  PASS the flow never gates the Finish action
+
+55 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:midline
+> TZ=Australia/Melbourne sucrase-node src/__tests__/midlineTerminologyTests.ts
+
+
+[1] Athlete-facing copy says midline
+  PASS the session still resolves a midline component
+  PASS its label says midline
+  PASS the post-session question says midline
+  PASS the skip-reason sentence says midline
+  PASS the Add-exercise sheet offers "Midline", not "Core"
+  PASS the pool group display name says Midline
+  PASS the recovery add-on focus-area label says Midline
+
+[2] Sweep — no rendered literal still says trunk
+  PASS no athlete-facing literal still uses the body-region word "trunk"
+  PASS the Dead Bug note no longer says "core"
+  PASS the coach-note card no longer says "core work"
+  PASS the injury keep-line no longer says "Unaffected core work"
+
+[3] The SessionTier homonym survives the rename (§6 item 10)
+  PASS SessionTier still has its 'core' value
+  PASS SessionTierBadge still renders the literal "CORE" chip
+  PASS HomeScreenV2's day-row accent key still reads the 'core' tier
+
+[4] Internal type keys keep their ids
+  PASS the pool key stays 'trunk_anti_rotation'
+  PASS the MovementPattern enum keeps its 'core' value
+  PASS the focus-area key stays 'trunk_core'
+
+[5] Renamed cues land in the changeset doc first (§5.4)
+  PASS the changeset doc no longer carries a trunk cue
+  PASS the cue library matches, with no trunk cue left
+  PASS midline is used in its place
+
+20 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:recovery-template
+> TZ=Australia/Melbourne sucrase-node src/__tests__/recoverySimpleTemplateTests.ts
+
+
+[1] Recovery days route to their own template
+  PASS workoutType Recovery takes the recovery mode
+  PASS sessionTier recovery takes it too, whatever the workoutType says
+  PASS a non-recovery day does NOT get the recovery template
+
+[2] No badges and no flow on a recovery day
+  PASS the recovery template emits no badged items
+  PASS no flow is offered
+  PASS the screen renders the plain RecoveryBlock on this branch
+  PASS the recovery rows carry no role badge
+
+[3] Nothing a recovery day used to render was lost
+  PASS the recovery branch was located in the source
+  PASS the recovery exercise rows still render
+  PASS the optional add-on box still renders
+  PASS the component owner returns no trunk/support rows for a recovery day
+  PASS and it returns no strength rows either
+
+[4] The power primer is gone from recovery days (Sam, 2026-07-27)
+  PASS the screen no longer renders a power primer anywhere
+  PASS a recovery day stays a recovery template — no items, power or otherwise
+
+14 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:coach-add-session-ownership
+> TZ=Australia/Melbourne sucrase-node src/__tests__/coachAddSessionOwnershipTests.ts
+
+
+-- coach-door add_session ownership + §18 survival --
+  PASS coach add is never applied without §18 ownership (no false-Done)
+  PASS an owned coach add survives a §18 repair pass byte-intact
+  PASS a coach add refusal never leaks a raw internal reason
+  PASS defaultApplyAddSession writes through the addition-transaction owner (census #1)
+
+coach add_session ownership: 4 passing, 0 failing
+
+> local-footy-athlete@1.0.0 test:coach-failure-copy
+> sucrase-node src/__tests__/coachFailureCopyContractTests.ts
+
+
+[coach failure copy] no raw developer diagnostics reach the athlete
+  PASS CoachScreen no longer reads a developer TODO to the athlete
+  PASS CoachScreen sources its apply-failure copy from the copy owner
+  PASS the adjustment-undo Alert routes its reason through athleteSafeRefusal
+  PASS COACH_NO_OVERRIDE_FALLBACK is athlete-safe
+  PASS COACH_NO_VISIBLE_DIFF_FALLBACK is athlete-safe
+  PASS neither carries an "Investigate" TODO
+
+6 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:coach-clarifier-advance
+> TZ=Australia/Melbourne sucrase-node src/__tests__/coachClarifierAdvanceTests.ts
+
+
+[A] Q7 add-session clarifier advances field by field
+[pending-clarifier-set] {
+  operation: 'add_session',
+  scope: 'one_off',
+  missingFields: [ 'targetDate' ],
+  partialPayload: {
+    operation: 'add_session',
+    sourceDate: '2026-06-29',
+    sourceSessionName: 'Lower Body Strength',
+    targetSessionName: 'Lower Body Strength'
+  },
+  targetStatus: 'date',
+  askedQuestion: 'Wednesday 2026-07-01 is in the past. Do you mean next Wednesday instead?',
+  source: 'program_edit_stale_target_date'
+}
+  ✓ A1.1 past-Wednesday add asks the which-Wednesday date question
+  ✓ A1.2 a pending clarifier is stored for the add
+  ✓ A2.1 accepting next Wednesday advances to the add-type question
+  ✓ A2.2 the date question is never re-asked once answered
+  ✓ A2.3 no bare "one more detail" freeze reply
+  ✓ A2.4 the pending clarifier advanced off the answered date field
+[pending-schedule-transaction-resume] {
+  transactionKind: 'add_to_date_transaction',
+  operation: 'add_conditioning',
+  legacyBlocked: true,
+  ageMs: 7
+}
+  ✓ A3.1 the add-type answer is never met with a re-ask of an answered field
+  ✓ A3.2 the completed transaction either applies the add or refuses honestly
+  ✓ INV.1 no clarifier reply after the date answer equals the date question
+  ✓ INV.2 askedQuestion history never re-emits an answered field verbatim
+
+[REG] reported transcript: "Yes" then "what detail" never loops the date question
+[pending-clarifier-set] {
+  operation: 'add_session',
+  scope: 'one_off',
+  missingFields: [ 'targetDate' ],
+  partialPayload: {
+    operation: 'add_session',
+    sourceDate: '2026-06-29',
+    sourceSessionName: 'Lower Body Strength',
+    targetSessionName: 'Lower Body Strength'
+  },
+  targetStatus: 'date',
+  askedQuestion: 'Wednesday 2026-07-01 is in the past. Do you mean next Wednesday instead?',
+  source: 'program_edit_stale_target_date'
+}
+  ✓ REG.1 the date question appears exactly once across the transcript
+  ✓ REG.2 "what detail" gets a concrete outstanding-field answer, not the frozen slot
+
+12 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:compile
+> node scripts/typecheck-gate.js
+
+product     36 error(s)  — product src (ships to athletes)
+devtools    52 error(s)  — dev/E2E harness (never ships; gates device acceptance)
+tests      375 error(s)  — test harness (runs untyped via sucrase-node)
+TOTAL      463 error(s) against baseline
+
+Typecheck gate PASSED — no file regressed against the baseline.
+
+> local-footy-athlete@1.0.0 test:pools
+> sucrase-node src/__tests__/exercisePoolsStrengthTests.ts
+
+
+=== 1. Classification ===
+
+=== 2. Pool integrity ===
+
+=== 3. Anchor rotation cadence ===
+
+=== 4. Accessory rotation cadence ===
+
+=== 5. Load normalization across siblings ===
+
+=== 6. Within-session avoidance ===
+
+=== 7. applyPoolRotation ===
+
+=== 8. buildWorkoutsFromCoach integration ===
+
+=== 9. Anchor stable across block weeks; accessory varies ===
+[WorkoutCanonicalisation] Generated workout finalised {
+  microcycleId: 'mc-test',
+  dayOfWeek: 1,
+  planEntryId: null,
+  actions: [
+    {
+      kind: 'name_changed',
+      item: 'Upper Push',
+      reason: 'final_content_owns_name'
+    }
+  ]
+}
+
+=== 10. Expansion slot rotation ===
+
+=== 11. applyPoolRotation for expansion slots ===
+
+=== 12. Isolation_lower (accessory-only slot) ===
+
+=== 13. Upper sub-slot split (h_push / v_push / h_pull / v_pull) ===
+
+=== 14. Athlete overrides (prefs filter / bias) ===
+
+============================================================
+Results: 456 passed, 0 failed
+All exercisePoolsStrength tests passed.
+
+> local-footy-athlete@1.0.0 test:content-reconciliation
+> TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseContentReconciliationTests.ts
+
+
+[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed
+  PASS zero selectable exercises carry a pending/awaiting exemption
+  PASS no exemption kind exists outside the authorised set
+  PASS no authorised kind was silently deleted
+  PASS every exemption kind states a ruling
+  PASS every exemption kind names Sam as the ruling authority
+  PASS no selectable exercise lacks a cue for an unexplained reason
+  PASS no selectable exercise lacks a video for an unexplained reason
+  PASS every selectable exercise has muscle/experience metadata
+
+[1] Pool → cue / video / load / tags (typed exemptions only)
+  PASS every selectable entry has an authored cue
+  PASS every demoable selectable entry resolves a video
+  PASS every selectable entry has defined load handling, or a Sam-pending ruling
+  PASS every selectable entry is tagged (mobility / conditioning / zone-1 exempt)
+
+[2] Cue → something that can prescribe it
+  PASS every curated cue is prescribable (typed exemptions only)
+
+[3] Video → something that uses it
+  PASS every video entry is prescribable (typed exemptions only)
+
+[4] Alias integrity — no dangling pointers
+  PASS every video alias points at a name in the video map
+  PASS every load alias points at a known exercise
+
+[5] The exemptions themselves stay honest
+  PASS no power-staged exercise has quietly been pooled
+  PASS every exemption resolves to a declared kind
+  PASS every kind waives at least one field
+  PASS every kind records the ruling that created it
+
+Content reconciliation: passed=20/20 failures=0
+
+> local-footy-athlete@1.0.0 test:locked-list
+> TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseLockedListTests.ts
+
+
+[0] The document parsed cleanly
+  PASS removals parsed
+  PASS merges parsed
+  PASS additions parsed
+  PASS the final-name table covers every addition
+  PASS the power staging table parsed
+  PASS the ruled-load table parsed
+
+[1] REMOVALS — gone from every content surface
+  PASS no removed exercise is an entry in any content surface
+  PASS no alias resolves to a removed exercise
+
+[2] REMOVALS — gone from the live generation prompt vocabulary
+  PASS the hand-copied MOVEMENT PATTERNS exercise list is deleted from coach-chat
+  PASS the prompt-only removals are gone from the coach-chat prompt
+
+[3] MERGES — one canonical entry, variants resolve onto it
+  PASS every merged variant canonicalises to its single surviving entry
+  PASS no merged variant survives as a second entry
+
+[4] CUE EDIT — the Pull-Ups weight line
+  PASS the cue edit parsed
+  PASS Pull-Ups carries the appended secondary line
+
+[5] ADDITIONS — cue verbatim, video, pool, display name
+  PASS every addition ships under its final canonical name
+  PASS every authored cue ships verbatim (no rewording)
+  PASS every authored video URL is applied verbatim
+  PASS every addition landed in the pool Sam named
+
+[6] POWER — staged with pointers, never invented placement
+  PASS the staged set matches the document exactly (code → doc)
+  PASS the staged set matches the document exactly (doc → code)
+  PASS no staged power exercise was quietly given a pool slot
+  PASS no staged power exercise leaks into the AI vocabulary
+
+[7] VOCABULARY SWITCH — one circle, both directions fail the build
+  PASS the AI vocabulary IS selectable pool membership, exactly
+  PASS pool → cue: every selectable entry has a cue (typed exemptions only)
+  PASS pool → video: every selectable entry resolves a video (typed exemptions only)
+  PASS cue → pool: every curated cue is prescribable (typed exemptions only)
+  PASS every exemption is a TYPED kind, never a bare name
+
+[8] LOAD HANDLING — Sam's rulings applied, queue empty
+  PASS every unruled addition lands in a no-load class
+  PASS nothing is parked awaiting a load ruling
+  PASS the empty queue is a RECORDED ruling, not an unworked list
+  PASS no exercise still claims the load exemption
+  PASS every ruled loadRatio ships exactly
+  PASS every ruled starting-weight profile ships exactly
+
+Locked list: passed=33/33 failures=0
+
+> local-footy-athlete@1.0.0 test:exercise-name-lock
+> TZ=Australia/Melbourne sucrase-node src/__tests__/hardcodedExerciseNameLockTests.ts
+
+
+[1] The sweep actually swept
+  PASS the sweep found exercise-name literals across the codebase
+  PASS the sweep reaches the program builder
+  PASS the sweep reaches the live session screen
+
+[2] THE LOCK — every hardcoded name resolves, or is typed
+  PASS no hardcoded exercise name is unaccounted for
+
+[3] The exemption list stays honest
+  PASS no exemption covers a name that already resolves
+  PASS no exemption is stale (every one is still found by the sweep)
+  PASS every kind records the ruling that created it
+
+[4] `awaiting_sam_ruling` is a LOUD park, not a quiet one
+  PASS nothing is parked awaiting a ruling
+  PASS every parked name genuinely renders no cue today
+  PASS every parked name is listed in the report for Sam
+
+Hardcoded exercise-name lock: passed=10/10 failures=0
+
+> local-footy-athlete@1.0.0 test:render-truth
+> TZ=Australia/Melbourne sucrase-node src/__tests__/renderTruthLoadLabelTests.ts
+
+
+[1] Every selectable exercise resolves a NAMED authority
+  PASS the vocabulary is non-trivial
+  PASS every exercise resolves to a known authority kind
+  PASS every AUTHORED authority names its source
+
+[2] THE LOCK — no load claim is inferred from a category or a name
+  PASS no authority is sourced outside the authored sets
+
+[3] Absence renders as absence — never "BW", never a number
+      (30 exercises currently carry no authored load source)
+  PASS no unauthored exercise reports itself as bodyweight
+  PASS no unauthored exercise receives an estimated weight
+  PASS no unauthored exercise renders a load label
+
+[4] The render seam formats from the AUTHORITY, not from a weight
+  PASS an authored bodyweight exercise reads BW
+  PASS an authored bodyweight exercise with added load reads BW + Xkg
+  PASS an athlete-chosen load never reads BW, even with no weight entered
+  PASS an athlete-chosen load renders the athlete's own number verbatim
+  PASS an unauthored exercise never reads BW even when a weight exists
+
+[5] The invention channels are GONE from the module
+  PASS the name-pattern shadow load map is deleted
+  PASS the tag-category weight heuristic is deleted
+  PASS no tag category can still promote a name to bodyweight
+
+[6] The authored sets still hold their own members
+  PASS every TRUE_BODYWEIGHT member resolves as bodyweight
+  PASS every ATHLETE_CHOSEN member resolves as athlete-chosen
+  PASS every EXERCISE_LOAD_MAP entry resolves as prescribed or bodyweight
+  PASS Dumbbell Pullovers is still athlete-chosen (the original ruling)
+
+Render-truth load label: passed=19/19 failures=0
+
+> local-footy-athlete@1.0.0 test:pending-lists
+> TZ=Australia/Melbourne sucrase-node src/__tests__/provenancePendingListTests.ts
+
+
+[1] No pending list is silently empty
+  PASS there are pending lists to check
+  PASS no pending list is in the never_populated state
+
+[2] "Ruled empty" requires attribution that RESOLVES
+  PASS every ruled_empty list carries a resolvable attribution
+
+[3] The Stage B pin is real while Stage B is unlanded
+      (Stage B landed: false)
+  PASS the pin names doomed symbols
+  PASS no pin is stale (every pinned symbol still exists)
+
+[4] Stage B landing retires the pin
+  PASS Stage B is unlanded, so the pin stays live (checked in [3])
+
+[5] Every pinned decision names why it is doomed
+  PASS every pin cites the authored template that supersedes it
+  PASS every named replacement exists in the authored templates
+
+Pending-list honesty + Stage B pin: passed=8/8 failures=0
+
+> local-footy-athlete@1.0.0 test:single-estimation-owner
+> TZ=Australia/Melbourne sucrase-node src/__tests__/singleLoadEstimationOwnerTests.ts
+
+
+[1] The owner applies Sam's beginner multiplier
+  PASS the raw estimate is a real number
+  PASS a beginner receives less than the raw estimate
+  PASS the beginner weight lands on a loadable increment
+
+[2] Everyone else is unchanged
+  PASS a 1-2 years athlete gets exactly the raw estimate
+  PASS their multiplier really is 1 (so [1] is testing something)
+
+[3] Nothing authored, nothing invented
+  PASS an authored-bodyweight exercise stays null
+  PASS an unknown exercise stays null
+
+[4] THE OWNERSHIP BOUNDARY — one reader of the multiplier
+  PASS only the owner applies the beginner multiplier
+  PASS the render path calls the owner
+  PASS the render path no longer calls the raw estimator
+  PASS the generation path calls the owner
+
+[5] Both paths would now answer identically
+  PASS Back Squat: the owner is deterministic for one athlete
+  PASS Bench Press: the owner is deterministic for one athlete
+  PASS Barbell Row: the owner is deterministic for one athlete
+
+Single load-estimation owner: passed=14/14 failures=0
+
+> local-footy-athlete@1.0.0 test:nonstrength-tripwire
+> TZ=Australia/Melbourne sucrase-node src/__tests__/nonStrengthContextLoadTripwireTests.ts
+
+
+[1] The tripwire is watching something real
+  PASS the recovery-context pools are non-empty
+  PASS the detector recognises a prescribed-load exercise
+  PASS the detector does not fire on bodyweight
+
+[2] THE TRIPWIRE — no prescribed load on a WEIGHT-BEARING non-strength surface
+  PASS no weight-bearing non-strength surface offers a prescribed-load exercise
+
+[3] The recovery-addon carve-out, and the reason it holds
+  PASS the carve-out is still about the two known names
+  PASS the recovery-addon builder still assigns no weight
+  PASS RecoveryAddonExercise still carries no weight field
+
+Non-strength context load tripwire: passed=7/7 failures=0
+
+> local-footy-athlete@1.0.0 test:onboarding-bounds
+> TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingNumericBoundsTests.ts
+
+
+[1] The ruled ranges, exactly
+  PASS bodyweight is 30-200 kg
+  PASS height is 100-230 cm
+
+[2] REFUSAL in both directions, for both fields
+  PASS weightKg=29.9 is refused (just below the floor)
+  PASS weightKg=3 is refused (the value that used to be clamped to a 20 kg card)
+  PASS weightKg=200.1 is refused (just above the ceiling)
+  PASS weightKg=5000 is refused (the value that used to produce a 4100 kg card)
+  PASS weightKg=800 is refused (the one-keystroke typo for 80)
+  PASS heightCm=99 is refused (just below the floor)
+  PASS heightCm=231 is refused (just above the ceiling)
+
+[3] Valid answers, including the exact endpoints
+  PASS weightKg=30 is accepted
+  PASS weightKg=80 is accepted
+  PASS weightKg=200 is accepted
+  PASS heightCm=100 is accepted
+  PASS heightCm=184 is accepted
+  PASS heightCm=230 is accepted
+
+[4] Non-numeric and empty are refused, not coerced to 0
+  PASS weightKg=NaN is refused
+  PASS weightKg=Infinity is refused
+  PASS weightKg=-Infinity is refused
+
+[5] The refusal REACHES the athlete, in plain words
+  PASS a refusal carries a message
+  PASS the message names the accepted range
+  PASS the message is plain — no field names, no jargon
+
+[6] NEVER CLAMPED — the screen refuses rather than substituting
+  PASS the screen validates through the authored bounds
+  PASS the screen no longer gates on a bare > 0
+  PASS the screen never clamps a measurement
+  PASS the ruled numbers are not duplicated into the screen
+
+[7] A refused answer never becomes a card
+  PASS bodyweight 3 is refused before it can prescribe 20kg
+  PASS bodyweight 5000 is refused before it can prescribe 4000kg
+
+[8] PROVENANCE — the ranges trace to Sam's ruling
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the anchor appears verbatim in the attributed document
+  PASS the anchor actually states the numbers it is cited for
+  PASS weightKg: the anchor states the shipped floor (30)
+  PASS weightKg: the anchor states the shipped ceiling (200)
+  PASS weightKg: the anchor is present in the ruling document
+  PASS heightCm: the anchor states the shipped floor (100)
+  PASS heightCm: the anchor states the shipped ceiling (230)
+  PASS heightCm: the anchor is present in the ruling document
+  PASS twoKmSeconds: the anchor states the shipped floor (300)
+  PASS twoKmSeconds: the anchor states the shipped ceiling (900)
+  PASS twoKmSeconds: the anchor is present in the ruling document
+
+[9] Height stays OFF the load path
+  PASS load estimation does not read height
+
+Onboarding numeric bounds: passed=41/41 failures=0
+
+> local-footy-athlete@1.0.0 test:onboarding-presentation
+> TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingAnswerPresentationTests.ts
+
+
+[1] A refusal is not spoken while the athlete is still typing
+  PASS the bound does refuse 9 kg
+  PASS nothing is shown before Continue
+  PASS the refusal is shown after Continue
+
+[2] An accepted answer is never given a message
+  PASS 90 kg carries no refusal (revealed=false)
+  PASS 90 kg carries no refusal (revealed=true)
+
+[3] An absent answer is not a refused one
+  PASS an untouched field shows nothing even after Continue
+  PASS an untouched field leaves Continue disabled
+  PASS an untouched field is not accepted
+
+[4] Continue is disabled for ABSENCE, never for refusal
+  PASS a refused answer leaves Continue PRESSABLE
+  PASS a refused answer is not accepted
+  PASS one answered field and one empty still disables Continue
+
+[5] Every field is judged, not just the first
+  PASS both refusals are shown at once
+  PASS a good answer beside a bad one stays silent
+  PASS the bad one still speaks
+  PASS one refused answer is enough to withhold acceptance
+
+[6] The 2km time rides the same law
+  PASS a secondsonly entry is refused, not coerced
+  PASS and it says nothing until Continue
+  PASS and it speaks on Continue
+  PASS 7:15 is accepted
+  PASS 7:15 carries no refusal
+
+[7] Every screen that refuses a number uses the owner
+  PASS BodyMeasurementsScreen.tsx calls the owner
+  PASS BodyMeasurementsScreen.tsx never reads a refusal message off a validation
+  PASS BodyMeasurementsScreen.tsx still validates through the authored bound
+  PASS BodyMeasurementsScreen.tsx takes its advance gate from the owner
+  PASS BodyMeasurementsScreen.tsx withdraws a refusal when the answer is edited
+  PASS TwoKmTimeTrialScreen.tsx calls the owner
+  PASS TwoKmTimeTrialScreen.tsx never reads a refusal message off a validation
+  PASS TwoKmTimeTrialScreen.tsx still validates through the authored bound
+  PASS TwoKmTimeTrialScreen.tsx takes its advance gate from the owner
+  PASS TwoKmTimeTrialScreen.tsx withdraws a refusal when the answer is edited
+  PASS ProfileScreen.tsx calls the owner
+  PASS ProfileScreen.tsx never reads a refusal message off a validation
+  PASS ProfileScreen.tsx still validates through the authored bound
+  PASS ProfileScreen.tsx takes its advance gate from the owner
+  PASS ProfileScreen.tsx withdraws a refusal when the answer is edited
+
+[8] Every step the athlete was ASKED has a row that routes back to it
+  PASS complete in-season: no asked step is missing from Review
+  PASS complete-beginner off-season: no asked step is missing from Review
+
+[9] Review never shows a question the athlete was not asked
+  PASS the beginner off-season profile shows no unasked step
+
+[10] Every row names a real step
+  PASS no row points at a step that does not exist
+  PASS no row points at Review itself
+
+[11] The 2km row speaks all three of its states
+  PASS a measured time is shown as the athlete said it
+  PASS "haven't tested" is shown as an ANSWER, not as a gap
+  PASS an unanswered time reads as not provided
+  PASS the 2km row sits in the Physical section
+
+[12] The Review screen renders the owner rather than a second list
+  PASS the screen builds its sections from the owner
+  PASS the screen no longer carries its own value formatters
+  PASS the 2km answer is reachable from Review
+
+Onboarding answer presentation: passed=47/47 failures=0
+
+> local-footy-athlete@1.0.0 test:no-rebuild-affordance
+> sucrase-node src/__tests__/weekRebuildAffordanceTests.ts
+
+
+[1] The button is gone from every home render
+  PASS HomeScreenV2.tsx has no rebuild icon button
+  PASS HomeScreenV2.tsx has no "Rebuild this week" control
+  PASS HomeScreenV2.tsx carries no rebuild testID
+  PASS HomeScreenV2.tsx does not call the opener
+  PASS HomeScreen.tsx has no rebuild icon button
+  PASS HomeScreen.tsx has no "Rebuild this week" control
+  PASS HomeScreen.tsx carries no rebuild testID
+  PASS HomeScreen.tsx does not call the opener
+
+[2] The handler is gone from the hook, not merely unreferenced
+  PASS useHomeScreen no longer defines handleOpenRebuild
+
+[3] Nothing else in the app opens a rebuild
+  PASS no source file offers a whole-week rebuild door
+
+[4] The rebuild machinery the athlete DID ask for still exists
+  PASS a rebuild can still run
+  PASS a rebuild failure is still classified for the athlete
+  PASS the progress sheet still has state to render
+  PASS the progress sheet is still mounted
+
+Week rebuild affordance: passed=14/14 failures=0
+
+> local-footy-athlete@1.0.0 test:time-trial
+> TZ=Australia/Melbourne sucrase-node src/__tests__/twoKmTimeTrialTests.ts
+
+
+[1] The ruled range, exactly — and it lives in the ONE bounds registry
+  PASS the bound exists in the onboarding bounds registry
+  PASS the 2km range is 300-900 seconds (5:00-15:00)
+
+[2] REFUSAL in both directions
+  PASS 299s is refused (one second below the floor)
+  PASS 240s is refused (a 4:00 2km — faster than the world record pace for the distance)
+  PASS 0s is refused (the value a bare `> 0` check used to be the only guard against)
+  PASS 901s is refused (one second above the ceiling)
+  PASS 1200s is refused (a 20:00 2km — a walk, or a mistyped 12:00)
+  PASS 45s is refused (a mistyped minutes-only entry)
+
+[3] Valid answers, including the exact endpoints
+  PASS 300s (5:00) is accepted
+  PASS 390s (6:30) is accepted
+  PASS 435s (7:15) is accepted
+  PASS 480s (8:00) is accepted
+  PASS 525s (8:45) is accepted
+  PASS 900s (15:00) is accepted
+
+[4] Non-numeric is refused, not coerced
+  PASS twoKmSeconds=NaN is refused
+  PASS twoKmSeconds=Infinity is refused
+  PASS twoKmSeconds=-Infinity is refused
+
+[5] The refusal speaks MIN:SEC — the athlete never sees raw seconds
+  PASS a refusal carries a message
+  PASS the message names the accepted range in min:sec
+  PASS the message never leaks raw seconds at the athlete
+  PASS the message is plain — no field names, no jargon
+
+[6] MAS derivation — Sam's one authored constant
+  PASS the multiplier is the ruled 1.00
+  PASS 5:00 derives 24 km/h (fastest accepted)
+  PASS 6:30 derives 18.46 km/h (5+ years default)
+  PASS 7:15 derives 16.55 km/h (2-5 years default)
+  PASS 8:00 derives 15 km/h (1-2 years default)
+  PASS 8:45 derives 13.71 km/h (Complete beginner default)
+  PASS 15:00 derives 8 km/h (slowest accepted)
+
+[7] The four skip defaults, 1:1 with ExperienceLevel
+  PASS 5+ years defaults to 6:30
+  PASS 2-5 years defaults to 7:15
+  PASS 1-2 years defaults to 8:00
+  PASS Complete beginner defaults to 8:45
+  PASS every experience level has a ruled default, and no extras
+  PASS the defaults get slower as experience drops
+  PASS the 5+ years default is inside the accepted range
+  PASS the 2-5 years default is inside the accepted range
+  PASS the 1-2 years default is inside the accepted range
+  PASS the Complete beginner default is inside the accepted range
+
+[8] Defaults are applied AT DERIVATION, never written into storage
+  PASS a skipped answer still derives a MAS
+  PASS a skipped answer is tagged as an estimate
+  PASS the estimate uses the ruled default for that level
+  PASS the same skipped answer tracks a later experience-level change
+  PASS a real time is tagged as measured
+  PASS a real time beats the experience default
+  PASS a missing answer still derives from the experience default
+
+[9] MAS is DERIVED, never stored — the structural guarantee
+  PASS the stored answer interface was found to inspect
+  PASS the stored answer has no MAS field
+
+[10] ONE INGRESS — every producer routes through the same refusal
+  PASS a valid time is accepted
+  PASS the accepted answer records the seconds
+  PASS the accepted answer records when
+  PASS the accepted answer records who produced it
+  PASS the ingress refuses an out-of-range time
+  PASS the ingress writes nothing when it refuses
+  PASS the ingress refusal carries the same message the screen shows
+  PASS null — "haven't tested" — is accepted as an answer
+  PASS the skipped answer stores null, not a default
+  PASS onboarding is refused by the same bound
+  PASS profile_edit is refused by the same bound
+  PASS session_log is refused by the same bound
+
+[11] NEVER CLAMPED — the ingress refuses rather than substituting
+  PASS the owner never clamps a time
+  PASS a refusal does not hand back a corrected value
+
+[12] PROVENANCE — every number traces to Sam's ruling
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the range anchor appears verbatim in the ruling document
+  PASS the range anchor states the shipped floor
+  PASS the range anchor states the shipped ceiling
+
+[13] The onboarding step is in the ONE registry, in the ruled position
+  PASS TwoKmTimeTrial is a registered step
+  PASS it sits directly after BenchStrength
+  PASS it sits directly before ConditioningLevel
+  PASS it collects the time-trial answer
+  PASS it is shown to complete beginners too
+
+[14] SKIPPING IS ANSWERING — an interrupted flow resumes correctly
+  PASS an unanswered step is not satisfied
+  PASS a recorded time satisfies the step
+  PASS a SKIPPED step is satisfied — "haven't tested" is an answer
+  PASS an athlete who has not reached the step resumes onto it
+  PASS an athlete who SKIPPED it resumes past it, not back onto it
+  PASS an unanswered time trial is reported as missing
+  PASS a skipped time trial is NOT reported as missing
+
+[15] The screen refuses through the owner — it does not carry the numbers
+  PASS the screen validates through the authored bound
+  PASS the screen commits through the one ingress
+  PASS the screen never clamps a time
+  PASS the ruled numbers are not duplicated into the screen
+  PASS the screen offers the skip as an ANSWER, not an escape
+
+[16] The screen is reachable — both routes into it, and out
+  PASS the navigator registers the screen
+  PASS BenchStrength routes into it
+  PASS the complete-beginner path routes into it too
+  PASS it routes on to ConditioningLevel
+
+[17] masCopy holds NO second derivation of the athlete's pace
+  PASS the duplicate derivation is gone from masCopy
+  PASS the duplicate km/h conversion is gone
+  PASS the self-contradictory justification is gone
+  PASS masCopy keeps the intensity rule it owns
+
+[18] NAMING — the time trial never shares a token with Team Training
+  PASS src/data/twoKmTimeTrial.ts uses no bare "TT" token
+  PASS src/screens/onboarding/TwoKmTimeTrialScreen.tsx uses no bare "TT" token
+
+[19] CHANGE IT LATER — the same ingress, without re-onboarding
+  PASS the profile editor has a time-trial step
+  PASS the profile editor commits through the one ingress
+  PASS the profile editor validates through the authored bound
+  PASS the profile editor records itself as the producer
+  PASS the ruled numbers are not duplicated into the profile editor
+
+[20] THE SESSION — a test, not a dose
+  PASS the exercise exists in the vocabulary
+  PASS it carries Sam's authored cue
+  PASS it has NO conditioning-templates row
+  PASS the session prescribes the named exercise
+
+[21] It counts as a RUN — the existing gates need no change
+  PASS a time-trial day counts as one running exposure
+  PASS it counts as conditioning, not strength
+  PASS a time trial is a HARD exposure, not easy aerobic work
+  PASS and the day is marked hard
+  PASS it classifies as hard conditioning specifically
+  PASS five of them breach the 4-run cap
+
+[22] LOGGING A RESULT — the athlete's real run beats their answer
+  PASS a logged result is accepted
+  PASS it is attributed to the session, not to onboarding
+  PASS it records the date it was run
+  PASS logging a faster run moves the derived MAS
+  PASS and it is still tagged measured, not an estimate
+  PASS an impossible logged time is refused, not stored
+
+2km time trial + MAS: passed=114/114 failures=0
+
+> local-footy-athlete@1.0.0 test:anchor-multipliers
+> TZ=Australia/Melbourne sucrase-node src/__tests__/anchorMultiplierTests.ts
+
+
+[1] The ruled squat ladder, exactly
+  PASS squat "I don't squat" = 0.5
+  PASS squat "Less than bodyweight" = 0.75
+  PASS squat "Around bodyweight" = 1
+  PASS squat "1.5x bodyweight" = 1.5
+  PASS squat "2x bodyweight+" = 2
+  PASS squat "Not sure" = 0.75
+  PASS the squat ladder has exactly the six onboarding answers
+
+[2] The ruled bench ladder, exactly
+  PASS bench "I don't bench" = 0.5
+  PASS bench "Less than bodyweight" = 0.75
+  PASS bench "Around bodyweight" = 1
+  PASS bench "1.25x bodyweight" = 1.25
+  PASS bench "1.5x bodyweight+" = 1.5
+  PASS bench "Not sure" = 0.75
+  PASS the bench ladder has exactly the six onboarding answers
+
+[3] THE TIE IS STRUCTURAL — "Not sure" is derived, never written
+  PASS "Not sure" is not assigned a numeric literal
+  PASS both ladders currently agree with their tied source
+
+[4] FAIL LOUD — no bodyweight, no anchor, no prescription
+  PASS estimateAnchors refuses without a bodyweight
+  PASS no weight is prescribed without a bodyweight
+  PASS the 82 kg "average AFL player" default is gone
+  PASS a recorded bodyweight still resolves anchors
+
+[5] The ruled values reach the card
+  PASS squat "Not sure" resolves through the tie (80 × 0.75 = 60)
+  PASS bench "Less than bodyweight" resolves to the ruled 0.75 (80 × 0.75 = 60)
+  PASS the Bench Press card reflects the ruled anchor (60 × 0.8 → 47.5kg)
+
+[6] PROVENANCE — the ladders trace to Sam's ruling
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the squat anchor appears verbatim in the ruling document
+  PASS the bench anchor appears verbatim in the ruling document
+  PASS the fallback anchor appears verbatim in the ruling document
+  PASS the squat anchor states I don't squat = 0.5
+  PASS the squat anchor states Less than bodyweight = 0.75
+  PASS the squat anchor states Around bodyweight = 1
+  PASS the squat anchor states 1.5x bodyweight = 1.5
+  PASS the squat anchor states 2x bodyweight+ = 2
+  PASS the bench anchor states I don't bench = 0.5
+  PASS the bench anchor states Less than bodyweight = 0.75
+  PASS the bench anchor states Around bodyweight = 1
+  PASS the bench anchor states 1.25x bodyweight = 1.25
+  PASS the bench anchor states 1.5x bodyweight+ = 1.5
+
+Anchor multipliers: passed=38/38 failures=0
+
+> local-footy-athlete@1.0.0 test:load-ratio-rulings
+> TZ=Australia/Melbourne sucrase-node src/__tests__/loadRatioRulingTests.ts
+
+
+[1] Every ruled ratio ships exactly
+  PASS every ruled ratio matches the shipped value
+  PASS High Box Squat is 1.2 x Box Squat (Sam, 2026-07-25 relationship kept)
+
+[2] THE FLOOR-OUT FOUR are a typed authority, not ratios
+  PASS none of the four is still a ratio in EXERCISE_LOAD_MAP
+  PASS each of the four resolves as an equipment-minimum prescription
+  PASS the barbell curl prescribes 20 kg
+  PASS the bottoms-up KB press prescribes 8 kg
+  PASS every equipment-minimum exercise names its equipment
+
+[3] THE TWINS collapse to one exercise
+  PASS only the curated spelling is a load-map key
+  PASS the retired spelling still resolves to the surviving key
+  PASS the retired spelling resolves through the canonicaliser too
+  PASS no two load-map keys are spelling twins
+  PASS every alias points at an exercise that still resolves
+
+[4] EQUIPMENT LATTICES — always down, to something loadable
+  PASS barbell rounds down to 2.5
+  PASS cable rounds down to 2.5
+  PASS machine rounds down to 2.5
+  PASS kettlebell rounds down to 4
+  PASS dumbbell 7.9 -> 7 (1 kg steps below 10)
+  PASS dumbbell 11.9 -> 10 (no 11 or 12 kg rung)
+  PASS dumbbell 13.7 -> 12.5 (2.5 kg steps above 10)
+  PASS dumbbell 10 -> 10 exactly
+  PASS no lattice ever rounds a weight UP
+  PASS the minimum still applies after rounding down
+
+[5] ONE OWNER for minimums and increments
+  PASS loadEstimation no longer defines its own increments
+  PASS loadEstimation no longer defines its own minimums
+  PASS defaultProgram no longer carries a copied minimums table
+  PASS nothing reads equipment off the raw load map
+
+[6] The lattice bounds the ESTIMATE, never the athlete
+  PASS the display path never snaps a stored or overridden weight
+
+[7] PROVENANCE — lattices trace to Sam's ruling
+  PASS the ruling is dated
+  PASS the lattice anchor appears verbatim in the ruling document
+  PASS the athlete-weight anchor appears verbatim in the ruling document
+  PASS the anchor states the 2.5 kg step it is cited for
+  PASS the anchor states the 4 kg kettlebell step it is cited for
+
+[8] EVERY equipment kind is ruled, and the empty queue says why
+  PASS barbell minimum is 20 kg
+  PASS cable minimum is 2.5 kg
+  PASS machine minimum is 10 kg
+  PASS kettlebell minimum is 8 kg
+  PASS dumbbell minimum is 1 kg
+  PASS bodyweight minimum is 0 kg
+  PASS no equipment kind is left inherited
+  PASS the dumbbell minimum now agrees with its lattice start
+  PASS MINIMUMS_PENDING is empty
+  PASS the empty queue is a RECORDED ruling, not an unworked list
+
+[9] THE PHASE 2 GATE — workbook and code agree, both directions
+  PASS the authored workbook is present
+  PASS the workbook carries ratios to compare
+  PASS every workbook ratio ships exactly (sheet -> code)
+  PASS every shipped ratio is in the workbook (code -> sheet)
+  PASS the equipment-minimum tab matches the code (both directions)
+
+Load ratio rulings: passed=47/47 failures=0
+
+> local-footy-athlete@1.0.0 test:bible-anchors
+> TZ=Australia/Melbourne sucrase-node src/__tests__/bibleThresholdAnchorTests.ts
+
+
+[1] The registry is populated and internally well-formed
+  PASS there is at least one anchor
+  PASS anchor ids are unique
+  PASS last_high_stress_g3: names a Bible section
+  PASS last_high_stress_g3: carries a non-empty quote
+  PASS last_high_stress_g3: governs at least one code site
+  PASS last_high_stress_g3: explains what the number means
+  PASS lower_strength_g3: names a Bible section
+  PASS lower_strength_g3: carries a non-empty quote
+  PASS lower_strength_g3: governs at least one code site
+  PASS lower_strength_g3: explains what the number means
+  PASS g_minus_2_no_heavy_lower_or_speed: names a Bible section
+  PASS g_minus_2_no_heavy_lower_or_speed: carries a non-empty quote
+  PASS g_minus_2_no_heavy_lower_or_speed: governs at least one code site
+  PASS g_minus_2_no_heavy_lower_or_speed: explains what the number means
+  PASS injury_severity_bands: names a Bible section
+  PASS injury_severity_bands: carries a non-empty quote
+  PASS injury_severity_bands: governs at least one code site
+  PASS injury_severity_bands: explains what the number means
+  PASS g_minus_1_optional_only: names a Bible section
+  PASS g_minus_1_optional_only: carries a non-empty quote
+  PASS g_minus_1_optional_only: governs at least one code site
+  PASS g_minus_1_optional_only: explains what the number means
+  PASS game_day_no_programmed_sessions: names a Bible section
+  PASS game_day_no_programmed_sessions: carries a non-empty quote
+  PASS game_day_no_programmed_sessions: governs at least one code site
+  PASS game_day_no_programmed_sessions: explains what the number means
+  PASS g_plus_1_rest_or_recovery: names a Bible section
+  PASS g_plus_1_rest_or_recovery: carries a non-empty quote
+  PASS g_plus_1_rest_or_recovery: governs at least one code site
+  PASS g_plus_1_rest_or_recovery: explains what the number means
+  PASS offseason_first_four_weeks_no_deload: names a Bible section
+  PASS offseason_first_four_weeks_no_deload: carries a non-empty quote
+  PASS offseason_first_four_weeks_no_deload: governs at least one code site
+  PASS offseason_first_four_weeks_no_deload: explains what the number means
+  PASS capacity_rubric_ladders: names a Bible section
+  PASS capacity_rubric_ladders: carries a non-empty quote
+  PASS capacity_rubric_ladders: governs at least one code site
+  PASS capacity_rubric_ladders: explains what the number means
+  PASS capacity_rubric_bands: names a Bible section
+  PASS capacity_rubric_bands: carries a non-empty quote
+  PASS capacity_rubric_bands: governs at least one code site
+  PASS capacity_rubric_bands: explains what the number means
+  PASS deload_block_length_weeks: names a Bible section
+  PASS deload_block_length_weeks: carries a non-empty quote
+  PASS deload_block_length_weeks: governs at least one code site
+  PASS deload_block_length_weeks: explains what the number means
+  PASS optional_placement_five_conditions: names a Bible section
+  PASS optional_placement_five_conditions: carries a non-empty quote
+  PASS optional_placement_five_conditions: governs at least one code site
+  PASS optional_placement_five_conditions: explains what the number means
+  PASS rest_quota_counts_no_required_work: names a Bible section
+  PASS rest_quota_counts_no_required_work: carries a non-empty quote
+  PASS rest_quota_counts_no_required_work: governs at least one code site
+  PASS rest_quota_counts_no_required_work: explains what the number means
+  PASS gunshow_two_two_two: names a Bible section
+  PASS gunshow_two_two_two: carries a non-empty quote
+  PASS gunshow_two_two_two: governs at least one code site
+  PASS gunshow_two_two_two: explains what the number means
+  PASS mobility_composed_from_pool: names a Bible section
+  PASS mobility_composed_from_pool: carries a non-empty quote
+  PASS mobility_composed_from_pool: governs at least one code site
+  PASS mobility_composed_from_pool: explains what the number means
+  PASS seven_strength_sessions: names a Bible section
+  PASS seven_strength_sessions: carries a non-empty quote
+  PASS seven_strength_sessions: governs at least one code site
+  PASS seven_strength_sessions: explains what the number means
+  PASS four_questions_signed_rule: names a Bible section
+  PASS four_questions_signed_rule: carries a non-empty quote
+  PASS four_questions_signed_rule: governs at least one code site
+  PASS four_questions_signed_rule: explains what the number means
+  PASS weak_point_off_season_focus: names a Bible section
+  PASS weak_point_off_season_focus: carries a non-empty quote
+  PASS weak_point_off_season_focus: governs at least one code site
+  PASS weak_point_off_season_focus: explains what the number means
+
+[2] Bible -> registry: every quote is still there, verbatim
+  PASS the Bible exists at the attributed path
+  PASS last_high_stress_g3: quote appears verbatim in the Bible
+  PASS lower_strength_g3: quote appears verbatim in the Bible
+  PASS g_minus_2_no_heavy_lower_or_speed: quote appears verbatim in the Bible
+  PASS injury_severity_bands: quote appears verbatim in the Bible
+  PASS g_minus_1_optional_only: quote appears verbatim in the Bible
+  PASS game_day_no_programmed_sessions: quote appears verbatim in the Bible
+  PASS g_plus_1_rest_or_recovery: quote appears verbatim in the Bible
+  PASS offseason_first_four_weeks_no_deload: quote appears verbatim in the Bible
+  PASS capacity_rubric_ladders: quote appears verbatim in the Bible
+  PASS capacity_rubric_bands: quote appears verbatim in the Bible
+  PASS deload_block_length_weeks: quote appears verbatim in the Bible
+  PASS optional_placement_five_conditions: quote appears verbatim in the Bible
+  PASS rest_quota_counts_no_required_work: quote appears verbatim in the Bible
+  PASS gunshow_two_two_two: quote appears verbatim in the Bible
+  PASS mobility_composed_from_pool: quote appears verbatim in the Bible
+  PASS seven_strength_sessions: quote appears verbatim in the Bible
+  PASS four_questions_signed_rule: quote appears verbatim in the Bible
+  PASS weak_point_off_season_focus: quote appears verbatim in the Bible
+
+[3] THE BINDING: the quote states the numbers it is cited for
+  PASS last_high_stress_g3: declares the numbers it licenses
+  PASS last_high_stress_g3: quote states 2 as a whole number
+  PASS last_high_stress_g3: quote states 3 as a whole number
+  PASS lower_strength_g3: declares the numbers it licenses
+  PASS lower_strength_g3: quote states 3 as a whole number
+  PASS lower_strength_g3: quote states 2 as a whole number
+  PASS g_minus_2_no_heavy_lower_or_speed: declares the numbers it licenses
+  PASS g_minus_2_no_heavy_lower_or_speed: quote states 2 as a whole number
+  PASS injury_severity_bands: declares the numbers it licenses
+  PASS injury_severity_bands: quote states 1 as a whole number
+  PASS injury_severity_bands: quote states 3 as a whole number
+  PASS g_minus_1_optional_only: declares the numbers it licenses
+  PASS g_minus_1_optional_only: quote states 1 as a whole number
+  PASS game_day_no_programmed_sessions: categorical anchor gives a reason
+  PASS game_day_no_programmed_sessions: categorical anchor declares no numbers
+  PASS g_plus_1_rest_or_recovery: declares the numbers it licenses
+  PASS g_plus_1_rest_or_recovery: quote states 1 as a whole number
+  PASS offseason_first_four_weeks_no_deload: declares the numbers it licenses
+  PASS offseason_first_four_weeks_no_deload: quote states 1 as a whole number
+  PASS offseason_first_four_weeks_no_deload: quote states 2 as a whole number
+  PASS offseason_first_four_weeks_no_deload: quote states 3 as a whole number
+  PASS offseason_first_four_weeks_no_deload: quote states 4 as a whole number
+  PASS offseason_first_four_weeks_no_deload: quote states 5 as a whole number
+  PASS capacity_rubric_ladders: declares the numbers it licenses
+  PASS capacity_rubric_ladders: quote states 3 as a whole number
+  PASS capacity_rubric_ladders: quote states 2 as a whole number
+  PASS capacity_rubric_ladders: quote states 1 as a whole number
+  PASS capacity_rubric_ladders: quote states 0 as a whole number
+  PASS capacity_rubric_bands: declares the numbers it licenses
+  PASS capacity_rubric_bands: quote states 0 as a whole number
+  PASS capacity_rubric_bands: quote states 6 as a whole number
+  PASS capacity_rubric_bands: quote states 2 as a whole number
+  PASS capacity_rubric_bands: quote states 3 as a whole number
+  PASS capacity_rubric_bands: quote states 4 as a whole number
+  PASS capacity_rubric_bands: quote states 5 as a whole number
+  PASS deload_block_length_weeks: declares the numbers it licenses
+  PASS deload_block_length_weeks: quote states 3 as a whole number
+  PASS deload_block_length_weeks: quote states 4 as a whole number
+  PASS optional_placement_five_conditions: declares the numbers it licenses
+  PASS optional_placement_five_conditions: quote states 5 as a whole number
+  PASS rest_quota_counts_no_required_work: categorical anchor gives a reason
+  PASS rest_quota_counts_no_required_work: categorical anchor declares no numbers
+  PASS gunshow_two_two_two: declares the numbers it licenses
+  PASS gunshow_two_two_two: quote states 2 as a whole number
+  PASS gunshow_two_two_two: quote states 3 as a whole number
+  PASS mobility_composed_from_pool: declares the numbers it licenses
+  PASS mobility_composed_from_pool: quote states 5 as a whole number
+  PASS mobility_composed_from_pool: quote states 8 as a whole number
+  PASS seven_strength_sessions: declares the numbers it licenses
+  PASS seven_strength_sessions: quote states 7 as a whole number
+  PASS four_questions_signed_rule: declares the numbers it licenses
+  PASS four_questions_signed_rule: quote states 4 as a whole number
+  PASS weak_point_off_season_focus: categorical anchor gives a reason
+  PASS weak_point_off_season_focus: categorical anchor declares no numbers
+
+[4] registry -> code: the cited site exists and names its anchor
+  PASS last_high_stress_g3: utils/coachingEngine.ts exists
+  PASS last_high_stress_g3: utils/coachingEngine.ts still defines gOffset
+  PASS last_high_stress_g3: utils/coachingEngine.ts carries the anchor marker
+  PASS last_high_stress_g3: utils/postGenerationConstraintValidation.ts exists
+  PASS last_high_stress_g3: utils/postGenerationConstraintValidation.ts still defines distanceBeforeFixture
+  PASS last_high_stress_g3: utils/postGenerationConstraintValidation.ts carries the anchor marker
+  PASS last_high_stress_g3: utils/sessionExplanation.ts exists
+  PASS last_high_stress_g3: utils/sessionExplanation.ts still defines buildUpperPushSentence
+  PASS last_high_stress_g3: utils/sessionExplanation.ts carries the anchor marker
+  PASS lower_strength_g3: utils/coachingEngine.ts exists
+  PASS lower_strength_g3: utils/coachingEngine.ts still defines midWeek
+  PASS lower_strength_g3: utils/coachingEngine.ts carries the anchor marker
+  PASS g_minus_2_no_heavy_lower_or_speed: rules/weeklyExposureContractBuilders.ts exists
+  PASS g_minus_2_no_heavy_lower_or_speed: rules/weeklyExposureContractBuilders.ts still defines sprintPlacementDays
+  PASS g_minus_2_no_heavy_lower_or_speed: rules/weeklyExposureContractBuilders.ts carries the anchor marker
+  PASS g_minus_2_no_heavy_lower_or_speed: utils/coachingEngine.ts exists
+  PASS g_minus_2_no_heavy_lower_or_speed: utils/coachingEngine.ts still defines lateWeek
+  PASS g_minus_2_no_heavy_lower_or_speed: utils/coachingEngine.ts carries the anchor marker
+  PASS injury_severity_bands: rules/injurySeverityBands.ts exists
+  PASS injury_severity_bands: rules/injurySeverityBands.ts still defines BIBLE_INJURY_SEVERITY_BANDS
+  PASS injury_severity_bands: rules/injurySeverityBands.ts carries the anchor marker
+  PASS injury_severity_bands: utils/activeProgramModifiers.ts exists
+  PASS injury_severity_bands: utils/activeProgramModifiers.ts still defines severityIsLimiting
+  PASS injury_severity_bands: utils/activeProgramModifiers.ts carries the anchor marker
+  PASS g_minus_1_optional_only: rules/weeklyExposureContractBuilders.ts exists
+  PASS g_minus_1_optional_only: rules/weeklyExposureContractBuilders.ts still defines conditioningPlacementDays
+  PASS g_minus_1_optional_only: rules/weeklyExposureContractBuilders.ts carries the anchor marker
+  PASS g_minus_1_optional_only: utils/coachingEngine.ts exists
+  PASS g_minus_1_optional_only: utils/coachingEngine.ts still defines preGame
+  PASS g_minus_1_optional_only: utils/coachingEngine.ts carries the anchor marker
+  PASS game_day_no_programmed_sessions: rules/weeklyExposureContractBuilders.ts exists
+  PASS game_day_no_programmed_sessions: rules/weeklyExposureContractBuilders.ts still defines safeStrengthCapacity
+  PASS game_day_no_programmed_sessions: rules/weeklyExposureContractBuilders.ts carries the anchor marker
+  PASS g_plus_1_rest_or_recovery: utils/coachingEngine.ts exists
+  PASS g_plus_1_rest_or_recovery: utils/coachingEngine.ts still defines postGame
+  PASS g_plus_1_rest_or_recovery: utils/coachingEngine.ts carries the anchor marker
+  PASS offseason_first_four_weeks_no_deload: rules/section18EffectiveWeekEvaluator.ts exists
+  PASS offseason_first_four_weeks_no_deload: rules/section18EffectiveWeekEvaluator.ts still defines illegal_first_offseason_deload
+  PASS offseason_first_four_weeks_no_deload: rules/section18EffectiveWeekEvaluator.ts carries the anchor marker
+  PASS capacity_rubric_ladders: data/capacityRubric.ts exists
+  PASS capacity_rubric_ladders: data/capacityRubric.ts still defines CONSISTENCY_SCORES
+  PASS capacity_rubric_ladders: data/capacityRubric.ts carries the anchor marker
+  PASS capacity_rubric_bands: data/capacityRubric.ts exists
+  PASS capacity_rubric_bands: data/capacityRubric.ts still defines CAPACITY_BANDS
+  PASS capacity_rubric_bands: data/capacityRubric.ts carries the anchor marker
+  PASS deload_block_length_weeks: utils/postGenerationConstraintValidation.ts exists
+  PASS deload_block_length_weeks: utils/postGenerationConstraintValidation.ts still defines weekInBlock
+  PASS deload_block_length_weeks: utils/postGenerationConstraintValidation.ts carries the anchor marker
+  PASS optional_placement_five_conditions: rules/sessionTypeCharter.ts exists
+  PASS optional_placement_five_conditions: rules/sessionTypeCharter.ts still defines PlacementAuthority
+  PASS optional_placement_five_conditions: rules/sessionTypeCharter.ts carries the anchor marker
+  PASS optional_placement_five_conditions: rules/optionalTopUp.ts exists
+  PASS optional_placement_five_conditions: rules/optionalTopUp.ts still defines computeOptionalTopUps
+  PASS optional_placement_five_conditions: rules/optionalTopUp.ts carries the anchor marker
+  PASS optional_placement_five_conditions: utils/optionalTopUpPlacement.ts exists
+  PASS optional_placement_five_conditions: utils/optionalTopUpPlacement.ts still defines applyOptionalTopUps
+  PASS optional_placement_five_conditions: utils/optionalTopUpPlacement.ts carries the anchor marker
+  PASS optional_placement_five_conditions: utils/sessionResolver.ts exists
+  PASS optional_placement_five_conditions: utils/sessionResolver.ts still defines resolveWeekWithConditioning
+  PASS optional_placement_five_conditions: utils/sessionResolver.ts carries the anchor marker
+  PASS rest_quota_counts_no_required_work: rules/section18EffectiveWeekEvaluator.ts exists
+  PASS rest_quota_counts_no_required_work: rules/section18EffectiveWeekEvaluator.ts still defines trueRestDays
+  PASS rest_quota_counts_no_required_work: rules/section18EffectiveWeekEvaluator.ts carries the anchor marker
+  PASS gunshow_two_two_two: utils/sessionBuilder.ts exists
+  PASS gunshow_two_two_two: utils/sessionBuilder.ts still defines SESSION_SLOTS
+  PASS gunshow_two_two_two: utils/sessionBuilder.ts carries the anchor marker
+  PASS mobility_composed_from_pool: rules/mobilitySessionComposition.ts exists
+  PASS mobility_composed_from_pool: rules/mobilitySessionComposition.ts still defines composeMobilitySession
+  PASS mobility_composed_from_pool: rules/mobilitySessionComposition.ts carries the anchor marker
+  PASS seven_strength_sessions: data/strengthSessionVariants.ts exists
+  PASS seven_strength_sessions: data/strengthSessionVariants.ts still defines STRENGTH_SESSION_VARIANTS
+  PASS seven_strength_sessions: data/strengthSessionVariants.ts carries the anchor marker
+  PASS four_questions_signed_rule: rules/sessionTypeCharter.ts exists
+  PASS four_questions_signed_rule: rules/sessionTypeCharter.ts still defines SESSION_TYPE_CHARTER
+  PASS four_questions_signed_rule: rules/sessionTypeCharter.ts carries the anchor marker
+  PASS weak_point_off_season_focus: rules/weakPointFocus.ts exists
+  PASS weak_point_off_season_focus: rules/weakPointFocus.ts still defines WEAK_POINT_FOCUS_BY_ANSWER
+  PASS weak_point_off_season_focus: rules/weakPointFocus.ts carries the anchor marker
+  PASS weak_point_off_season_focus: rules/testingBias.ts exists
+  PASS weak_point_off_season_focus: rules/testingBias.ts still defines computeTestingBias
+  PASS weak_point_off_season_focus: rules/testingBias.ts carries the anchor marker
+
+[5] Every marker in the codebase resolves to a real anchor
+  PASS no marker names an unknown anchor
+
+[6] Injury severity numbers live in ONE owner
+  PASS the consumer list is populated
+  PASS rules/weeklyExposureContractBuilders.ts exists
+  PASS rules/weeklyExposureContractBuilders.ts: no numeric injury-severity threshold of its own
+  PASS rules/weeklyExposureContractBuilders.ts: reads the severity-band owner
+  PASS rules/conditioningFeasibility.ts exists
+  PASS rules/conditioningFeasibility.ts: no numeric injury-severity threshold of its own
+  PASS rules/conditioningFeasibility.ts: reads the severity-band owner
+  PASS screens/home/DayWorkoutScreenV2.tsx exists
+  PASS screens/home/DayWorkoutScreenV2.tsx: no numeric injury-severity threshold of its own
+  PASS screens/home/DayWorkoutScreenV2.tsx: reads the severity-band owner
+  PASS utils/generationConstraints.ts exists
+  PASS utils/generationConstraints.ts: no numeric injury-severity threshold of its own
+  PASS utils/generationConstraints.ts: reads the severity-band owner
+  PASS utils/coachingEngine.ts exists
+  PASS utils/coachingEngine.ts: no numeric injury-severity threshold of its own
+  PASS utils/coachingEngine.ts: reads the severity-band owner
+  PASS utils/activeProgramModifiers.ts exists
+  PASS utils/activeProgramModifiers.ts: no numeric injury-severity threshold of its own
+  PASS utils/activeProgramModifiers.ts: reads the severity-band owner
+  PASS rules/temporarySourceFact.ts exists
+  PASS rules/temporarySourceFact.ts: no numeric injury-severity threshold of its own
+  PASS rules/temporarySourceFact.ts: reads the severity-band owner
+  PASS utils/constraintPlan.ts exists
+  PASS utils/constraintPlan.ts: no numeric injury-severity threshold of its own
+  PASS utils/constraintPlan.ts: reads the severity-band owner
+  PASS utils/programEditRiskAssessment.ts exists
+  PASS utils/programEditRiskAssessment.ts: no numeric injury-severity threshold of its own
+  PASS utils/programEditRiskAssessment.ts: reads the severity-band owner
+  PASS utils/tapSwapHierarchy.ts exists
+  PASS utils/tapSwapHierarchy.ts: no numeric injury-severity threshold of its own
+  PASS utils/tapSwapHierarchy.ts: reads the severity-band owner
+
+[7] What is NOT fixed says so, and says which batch owns it
+  PASS the merged-scale debt is paid
+
+[8] No injury-band literal escapes both lists
+  PASS every injury-band literal is either collapsed or declared deferred
+
+[9] The owner still says what the consumers now depend on
+  PASS 6 still removes risky work (was the `< 6` literal)
+  PASS 8 still opens the pause band (was the `>= 8` literal)
+  PASS 4 still opens the reduce band (was the `>= 4` literal)
+
+Bible threshold anchors: passed=265/265 failures=0
+
+> local-footy-athlete@1.0.0 test:readiness-structure-law
+> TZ=Australia/Melbourne sucrase-node src/__tests__/readinessStructureCensusTests.ts
+
+
+[1] The ruling is attributed and still says what the census enforces
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the ruling appears verbatim in the attributed document
+  PASS the ruling states that readiness affects dose
+  PASS the ruling states that readiness never sets structure
+
+[2] Every declared file exists and carries the edges it claims
+  PASS utils/progressionRules.ts: exists
+  PASS utils/progressionRules.ts: declares its actual edge count (9)
+  PASS utils/progressionRules.ts: still has at least one edge
+  PASS utils/conditioningProgressionRules.ts: exists
+  PASS utils/conditioningProgressionRules.ts: declares its actual edge count (3)
+  PASS utils/conditioningProgressionRules.ts: still has at least one edge
+  PASS utils/recoveryRules.ts: exists
+  PASS utils/recoveryRules.ts: declares its actual edge count (2)
+  PASS utils/recoveryRules.ts: still has at least one edge
+  PASS rules/recoveryAddonCoverage.ts: exists
+  PASS rules/recoveryAddonCoverage.ts: declares its actual edge count (1)
+  PASS rules/recoveryAddonCoverage.ts: still has at least one edge
+  PASS utils/tapSwapHierarchy.ts: exists
+  PASS utils/tapSwapHierarchy.ts: declares its actual edge count (1)
+  PASS utils/tapSwapHierarchy.ts: still has at least one edge
+  PASS components/dev/ScheduleDebugPanel.tsx: exists
+  PASS components/dev/ScheduleDebugPanel.tsx: declares its actual edge count (1)
+  PASS components/dev/ScheduleDebugPanel.tsx: still has at least one edge
+  PASS utils/coachingEngine.ts: exists
+  PASS utils/coachingEngine.ts: declares its actual edge count (8)
+  PASS utils/coachingEngine.ts: still has at least one edge
+  PASS rules/powerPrimerPolicy.ts: exists
+  PASS rules/powerPrimerPolicy.ts: declares its actual edge count (3)
+  PASS rules/powerPrimerPolicy.ts: still has at least one edge
+  PASS rules/offseasonSubphasePolicy.ts: exists
+  PASS rules/offseasonSubphasePolicy.ts: declares its actual edge count (1)
+  PASS rules/offseasonSubphasePolicy.ts: still has at least one edge
+  PASS rules/preseasonSubphasePolicy.ts: exists
+  PASS rules/preseasonSubphasePolicy.ts: declares its actual edge count (1)
+  PASS rules/preseasonSubphasePolicy.ts: still has at least one edge
+
+[3] Every entry is typed: verdict, reason, and an owner for the debt
+  PASS utils/progressionRules.ts: has a verdict
+  PASS utils/progressionRules.ts: says what readiness decides there
+  PASS utils/progressionRules.ts: says what happens to it
+  PASS utils/conditioningProgressionRules.ts: has a verdict
+  PASS utils/conditioningProgressionRules.ts: says what readiness decides there
+  PASS utils/conditioningProgressionRules.ts: says what happens to it
+  PASS utils/recoveryRules.ts: has a verdict
+  PASS utils/recoveryRules.ts: says what readiness decides there
+  PASS utils/recoveryRules.ts: says what happens to it
+  PASS rules/recoveryAddonCoverage.ts: has a verdict
+  PASS rules/recoveryAddonCoverage.ts: says what readiness decides there
+  PASS rules/recoveryAddonCoverage.ts: says what happens to it
+  PASS utils/tapSwapHierarchy.ts: has a verdict
+  PASS utils/tapSwapHierarchy.ts: says what readiness decides there
+  PASS utils/tapSwapHierarchy.ts: says what happens to it
+  PASS components/dev/ScheduleDebugPanel.tsx: has a verdict
+  PASS components/dev/ScheduleDebugPanel.tsx: says what readiness decides there
+  PASS components/dev/ScheduleDebugPanel.tsx: says what happens to it
+  PASS utils/coachingEngine.ts: has a verdict
+  PASS utils/coachingEngine.ts: says what readiness decides there
+  PASS utils/coachingEngine.ts: says what happens to it
+  PASS rules/powerPrimerPolicy.ts: has a verdict
+  PASS rules/powerPrimerPolicy.ts: says what readiness decides there
+  PASS rules/powerPrimerPolicy.ts: says what happens to it
+  PASS rules/offseasonSubphasePolicy.ts: has a verdict
+  PASS rules/offseasonSubphasePolicy.ts: says what readiness decides there
+  PASS rules/offseasonSubphasePolicy.ts: says what happens to it
+  PASS rules/preseasonSubphasePolicy.ts: has a verdict
+  PASS rules/preseasonSubphasePolicy.ts: says what readiness decides there
+  PASS rules/preseasonSubphasePolicy.ts: says what happens to it
+  PASS the census records at least one surviving dose consumer
+  PASS the census can still declare a structure violation
+  PASS an all-dose census is only honest at a zero baseline
+
+[4] THE RATCHET — structure debt may shrink, never grow
+  PASS structure debt (0) is at or below the baseline (0)
+  PASS the baseline is tightened to the current debt (0)
+  PASS the baseline (0) never exceeds the founding ceiling (0)
+
+[5] COMPLETENESS — no readiness edge is undeclared
+  PASS every file with a readiness edge is in the census
+
+[6] The superseded exemption comments are gone
+  PASS rules/weeklyExposureContractBuilders.ts: exists
+  PASS rules/weeklyExposureContractBuilders.ts: no longer claims the capacity-score exemption
+  PASS utils/workoutCanonicalisation.ts: exists
+  PASS utils/workoutCanonicalisation.ts: no longer claims the capacity-score exemption
+  PASS rules/powerPrimerPolicy.ts: exists
+  PASS rules/powerPrimerPolicy.ts: no longer claims the capacity-score exemption
+  PASS rules/powerPrimerPolicy.ts: exists
+  PASS rules/powerPrimerPolicy.ts: no longer claims the capacity-score exemption
+
+[7] The detector counts what it claims to count
+  PASS counts an equality test against a level
+  PASS counts a negated test against a level
+  PASS counts a qualified reference
+  PASS ignores comments
+  PASS ignores an unrelated identifier
+  PASS ignores a readiness reference with no level comparison
+
+Readiness structure census: passed=86/86 failures=0
+
+> local-footy-athlete@1.0.0 test:readiness-dose-sweep
+> TZ=Australia/Melbourne sucrase-node src/__tests__/readinessDoseSweepTests.ts
+
+
+[1] Power survives low capacity as a shrunk sharp primer
+  PASS low capacity still returns a power spec
+  PASS the medium-capacity spec is the reference dose
+  PASS the low-capacity dose is the deload power dose of the medium one
+  PASS the shrunk primer is smaller than the reference
+  PASS the reps stay sharp
+  PASS the reason says the capacity shrunk it, not that a gate fired
+  PASS G-2 keeps its tiny neural primer at high capacity
+  PASS G-2 below high capacity keeps a primer rather than nothing
+  PASS the G-2 primer below high capacity is the shrunk dose
+  PASS contrast still needs high capacity
+  PASS game day still removes power
+  PASS early off-season still removes power
+  PASS a moderate same-region injury still removes power
+
+[2] Canonicalisation no longer removes power for capacity
+  PASS the finaliser has no readiness input left
+  PASS the finaliser has no low-readiness removal reason left
+  PASS the power row survives a low-capacity week
+  PASS no power_removed action is emitted for capacity
+  PASS G-2 keeps the power row for an experienced athlete at any capacity
+  PASS early off-season still removes power
+  PASS game day still removes power
+
+[3] Nothing denies a sprint exposure for readiness
+  PASS the sprint gate has no readiness input left
+  PASS the sprint gate has no readiness_denied verdict left
+  PASS the engine has no sprint_readiness refusal left
+  PASS early_preseason: low capacity does not move the sprint target
+  PASS mid_preseason: low capacity does not move the sprint target
+  PASS late_preseason: low capacity does not move the sprint target
+  PASS a week with no sprint exposure yet still allows the standalone top-up
+
+[4] Low capacity moves the dose fields and nothing else
+  PASS early_offseason: the hard-session cap is unmoved
+  PASS early_offseason: running permission is unmoved
+  PASS early_offseason: sprint permission is unmoved
+  PASS early_offseason: the core-session bias is unmoved
+  PASS early_offseason: combined-day policy is unmoved
+  PASS early_offseason: no policy string claims readiness blocked anything
+  PASS early_offseason: the RPE ceiling still drops
+  PASS early_offseason: the modality still biases off-feet
+  PASS early_offseason: conditioning still defaults to easy aerobic
+  PASS early_offseason: optional support work still widens
+  PASS mid_offseason: the hard-session cap is unmoved
+  PASS mid_offseason: running permission is unmoved
+  PASS mid_offseason: sprint permission is unmoved
+  PASS mid_offseason: the core-session bias is unmoved
+  PASS mid_offseason: combined-day policy is unmoved
+  PASS mid_offseason: no policy string claims readiness blocked anything
+  PASS mid_offseason: the RPE ceiling still drops
+  PASS mid_offseason: the modality still biases off-feet
+  PASS mid_offseason: conditioning still defaults to easy aerobic
+  PASS mid_offseason: optional support work still widens
+  PASS late_offseason: the hard-session cap is unmoved
+  PASS late_offseason: running permission is unmoved
+  PASS late_offseason: sprint permission is unmoved
+  PASS late_offseason: the core-session bias is unmoved
+  PASS late_offseason: combined-day policy is unmoved
+  PASS late_offseason: no policy string claims readiness blocked anything
+  PASS late_offseason: the RPE ceiling still drops
+  PASS late_offseason: the modality still biases off-feet
+  PASS late_offseason: conditioning still defaults to easy aerobic
+  PASS late_offseason: optional support work still widens
+  PASS early_preseason: the strength core cap is unmoved
+  PASS early_preseason: the conditioning target cap is unmoved
+  PASS early_preseason: the app conditioning floor is unmoved
+  PASS early_preseason: the hard-session cap is unmoved
+  PASS early_preseason: combined-day policy is unmoved
+  PASS early_preseason: the hard dose still reduces
+  PASS early_preseason: the strength volume bias still controls
+  PASS early_preseason: conditioning still prioritises easy aerobic
+  PASS mid_preseason: the strength core cap is unmoved
+  PASS mid_preseason: the conditioning target cap is unmoved
+  PASS mid_preseason: the app conditioning floor is unmoved
+  PASS mid_preseason: the hard-session cap is unmoved
+  PASS mid_preseason: combined-day policy is unmoved
+  PASS mid_preseason: the hard dose still reduces
+  PASS mid_preseason: the strength volume bias still controls
+  PASS mid_preseason: conditioning still prioritises easy aerobic
+  PASS late_preseason: the strength core cap is unmoved
+  PASS late_preseason: the conditioning target cap is unmoved
+  PASS late_preseason: the app conditioning floor is unmoved
+  PASS late_preseason: the hard-session cap is unmoved
+  PASS late_preseason: combined-day policy is unmoved
+  PASS late_preseason: the hard dose still reduces
+  PASS late_preseason: the strength volume bias still controls
+  PASS late_preseason: conditioning still prioritises easy aerobic
+
+[5] Bye recovery is schedule-triggered, and only the mode decides the caps
+  PASS a bye week defaults to the build mode
+  PASS low capacity does not switch the bye into recovery
+  PASS an injury does not switch the bye into recovery
+  PASS a scheduled deload does not switch the bye into recovery either
+  PASS the athlete's answer is the only thing that selects recovery
+  PASS the athlete can also answer build explicitly
+  PASS low capacity does not cut the bye week's strength target
+  PASS a build bye keeps its tier-A unlock at low capacity
+  PASS a recovery bye is the one that restricts the tiers
+  PASS the weekly caps take neither an injury nor a freshness input
+
+[6] The same week at low capacity has the same structure
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+  PASS no week's required WORK changes with capacity (140 shapes)
+      packaging-only differences (permitted, 2):
+        Pre-season/mid_preseason/team=1/days=5/game @low: prescribedSessions 3 -> 4
+        Pre-season/mid_preseason/team=1/days=6/game @low: prescribedSessions 3 -> 4
+
+[7] Low capacity still shrinks the work it is allowed to shrink
+  PASS low capacity resolves to the low readiness band
+  PASS high capacity resolves to the high readiness band
+  PASS low capacity still moderates the conditioning dose
+  PASS low capacity still asks for a ramp-up
+  PASS low capacity still sends aerobic conditioning off-feet
+  PASS low capacity no longer refuses to add speed
+
+[8] The shrink used for low capacity is the authored one
+  PASS the deload law still keeps power
+  PASS the power shrink has an authored floor
+  PASS the authored shrink halves the sets and keeps the reps
+
+Readiness dose sweep: passed=101/101 failures=0
+
+> local-footy-athlete@1.0.0 test:capacity-rubric
+> TZ=Australia/Melbourne sucrase-node src/__tests__/capacityRubricTests.ts
+
+
+[1] The two ladders, exactly as ruled
+  PASS Very consistent scores 3
+  PASS Pretty consistent scores 2
+  PASS A bit scores 1
+  PASS Hardly at all scores 0
+  PASS Elite scores 3
+  PASS Good scores 2
+  PASS Average scores 1
+  PASS Poor scores 0
+  PASS the ladders carry equal weight
+
+[2] The score runs 0-6 and nothing else feeds it
+  PASS the floor is 0
+  PASS the ceiling is 6
+  PASS the ladders add
+  PASS the score depends on nothing but the two answers
+  PASS all 16 combinations score within 0-6
+  PASS no score is fractional — the half-point is gone
+
+[3] The bands, including the edge Sam called out by name
+  PASS 0 is low
+  PASS 2 is low
+  PASS 3 is medium
+  PASS 4 is medium
+  PASS 5 is high
+  PASS 6 is high
+  PASS "A bit" + "Average" is low, as ruled
+  PASS the bands cover 0-6 with no gap
+
+[4] FAIL LOUD — a missing answer is refused, never scored
+  PASS refuses when consistency missing
+  PASS refuses when conditioning missing
+  PASS refuses when both missing
+  PASS refuses an unrecognised answer
+  PASS the refusal names the missing fields
+
+[5] The deleted terms are GONE from the engine, not merely bypassed
+  PASS the sprint +0.5 capacity modifier is gone
+  PASS the in-season -1 capacity modifier is gone
+  PASS the injury penalty is gone from the rubric
+  PASS the engine no longer switches on recentTrainingLoad to score
+  PASS the engine no longer switches on conditioningLevel to score
+  PASS the engine reads the authored rubric
+
+[6] No seam silently substitutes an answer
+  PASS programStore does not default recentTrainingLoad
+  PASS programStore does not default conditioningLevel
+  PASS deriveProfileReadiness does not swallow the refusal
+  PASS post-generation does not infer capacity from the week it built
+
+[7] PROVENANCE — the rubric traces to the Bible section that states it
+  PASS the anchor names a Bible section
+  PASS the ruling is dated
+  PASS the Bible exists at the attributed path
+  PASS the anchor appears verbatim: "* Recent training consistency: Very consiste..."
+  PASS the anchor appears verbatim: "* Current conditioning level: Elite 3, Good ..."
+  PASS the anchor appears verbatim: "Total runs 0-6. Bands: 0-2 low, 3-4 medium, ..."
+  PASS the Bible states the ladder value 0
+  PASS the Bible states the ladder value 1
+  PASS the Bible states the ladder value 2
+  PASS the Bible states the ladder value 3
+  PASS the Bible states the band value 4
+  PASS the Bible states the band value 5
+  PASS the Bible states the band value 6
+  PASS the Bible records that sprint does not score into capacity
+  PASS the Bible records that phase does not score into capacity
+  PASS the Bible records that injury does not adjust capacity
+  PASS the Bible records the fail-loud requirement
+
+Capacity rubric: passed=55/55 failures=0
+
+> local-footy-athlete@1.0.0 test:capacity-render-safety
+> TZ=Australia/Melbourne sucrase-node src/__tests__/capacityRenderSafetyTests.ts
+
+
+-- Capacity at the render seam --
+  PASS the render accessor answers null, never throws (no conditioning answer)
+  PASS the render accessor answers null, never throws (no training-load answer)
+  PASS the render accessor answers null, never throws (neither answer)
+  PASS the render accessor answers null, never throws (no profile at all)
+  PASS the render accessor answers null, never throws (a display label stored as the value)
+  PASS a scoreable profile still gets its real band from the render accessor
+  PASS the schedule state builds for an unscoreable profile instead of throwing
+  PASS the store's own initial profile does not crash the render seam
+  PASS scoreCapacity still refuses — the fail-loud moved seam, it did not soften
+  PASS capacityFor still refuses, so prescribers cannot silently get a tier
+  PASS deriveProfileReadiness — the generation-side accessor — still refuses
+  PASS the gap names the two questions in plain language, never a field name
+  PASS a scoreable profile reports no gap
+  PASS the repair routes the athlete at the step that owns the missing answer
+  PASS the repair routes to the training-load step when that is the gap
+  PASS no surface offers a capacity repair while repair can still cost answers
+
+Capacity render safety totals: 16 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:profile-mirror-narrowing
+> TZ=Australia/Melbourne sucrase-node src/__tests__/profileMirrorNarrowingTests.ts
+
+
+-- Profile mirror narrowing --
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+  PASS an ordinary edit against an impoverished snapshot does not wipe the profile
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+  PASS the refusal is recorded, not silent
+  PASS the mirror still publishes when the snapshot is equally complete
+  PASS a snapshot that only CHANGES answers is not a refusal
+  PASS the rule names exactly the answers a snapshot would drop
+  PASS the rule permits an identical snapshot and a value-changed one
+  PASS an EMPTY answer does not count as an answer the snapshot must keep
+  PASS completion refuses when the profile cannot be scored
+  PASS completion closes for a generation-ready profile
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+  PASS THE WHOLE LOOP: gap -> answer -> gap gone -> profile survives completion
+  PASS the fixture is the HISTORICAL default, and the live default is honestly empty
+  PASS a snapshot is never minted from a profile that has not completed onboarding
+  PASS the hydration mint site asks the rule
+  PASS publishing narrows at the FUNCTION, so no caller can bypass it
+  PASS the athlete removing an answer on purpose is not a wipe
+  PASS a publication that does not widen the gap still lands
+  PASS the stored-state export is reachable on a Release build
+  PASS writing the DEFAULT over a real profile is refused
+  PASS a reset writes the default, because that is what a reset IS
+  PASS a stale reset id cannot wipe a profile answered after it
+  PASS every profile write is on the tape, refused or not
+  PASS no writer can reach the profile around the owner
+  PASS the rule spots a snapshot that is poorer than the live profile
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+[profile-mirror] publication refused — snapshot would un-answer {
+  droppedAnswers: [
+    'benchStrength',
+    'biggestFrustration',
+    'biggestLimitation',
+    'conditioningLevel',
+    'equipmentSelectionCompleteness',
+    'experienceLevel',
+    'firstName',
+    'gameDay',
+    'goals',
+    'heightCm',
+    'position',
+    'preferredTrainingDays',
+    'recentTrainingLoad',
+    'seasonPhase',
+    'sprintExposure',
+    'squatStrength',
+    'successVision',
+    'teamTrainingDays',
+    'teamTrainingDaysPerWeek',
+    'teamTrainingDuration',
+    'teamTrainingIntensity',
+    'trainingDaysPerWeek',
+    'twoKmTimeTrial',
+    'usualGameDay',
+    'weightKg'
+  ]
+}
+  PASS an ordinary transaction re-mints a snapshot poorer than the profile
+
+Profile mirror narrowing totals: 24 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:exposure-contract-equality
+> TZ=Australia/Melbourne sucrase-node scripts/verify-exposure-contract-sheet.ts
+
+
+[1] The repo's own reader can parse it
+  PASS five tabs
+  PASS tab "How to use" is present
+  PASS tab "Contract V2 first cells" is present
+  PASS tab "Base numbers" is present
+  PASS tab "Schedule columns" is present
+  PASS tab "Open questions" is present
+  PASS tab "How to use" has rows
+  PASS tab "How to use" has no blank rows
+  PASS tab "Contract V2 first cells" has rows
+  PASS tab "Contract V2 first cells" has no blank rows
+  PASS tab "Base numbers" has rows
+  PASS tab "Base numbers" has no blank rows
+  PASS tab "Schedule columns" has rows
+  PASS tab "Schedule columns" has no blank rows
+  PASS tab "Open questions" has rows
+  PASS tab "Open questions" has no blank rows
+
+[2] The cell counts, after Q1 collapsed the pre-season rows
+  PASS 98 base cells
+  PASS 49 schedule cells
+  PASS 147 authored cells total
+
+[3] Every row is AUTHORED: a ruled value, a flag, and a ruling date
+  PASS the base tab has the expected columns
+  PASS every base row carries a ruled value
+  PASS every base row carries a flag
+  PASS every base row is marked ruled
+
+[4] THE ROUND TRIP — prefilled values equal what actually ships
+  PASS exactly the expected rows parse inline
+  PASS every authored row is covered by one route or the other
+  PASS every prefilled literal equals the shipped value
+  PASS every parsed source value has a row in the sheet
+  PASS GAME_WEEK_TARGETS is readable
+  PASS the game-week row has all 14 slots
+  PASS the authored game-week row equals GAME_WEEK_TARGETS
+  PASS the pre-season fixture week routes to the one fixture builder
+  PASS PRE_SEASON_TARGETS is readable
+  PASS the pre-season row has all 14 slots
+  PASS the authored pre-season row equals PRE_SEASON_TARGETS
+
+[4b] The practice-match ruling is attributed on the sheet's face
+  PASS the sheet states the practice-match ruling
+  PASS the sheet explains why there is no practice-match row
+  PASS the sheet records that identity is unchanged
+  PASS the game-week row says it also governs the fixture week
+  PASS the pre-season row says it excludes fixture weeks
+
+[5] The three Contract V2 cells are present and unauthored
+  PASS the sheet names strongByeBuild
+  PASS the sheet names unconstrainedStrength
+  PASS the sheet names optional
+  PASS it states the ruling that puts them first
+
+[6] The three-identical-pre-season-rows question is on the sheet's face
+  PASS the identical pre-season rows are questioned
+  PASS the conditioning base ambiguity is questioned
+  PASS the hard-day max conflict is questioned
+  PASS phaseWeek is recorded as deliberately absent
+  PASS there is exactly one authored pre-season row
+  PASS the code has a single pre-season target object
+  PASS early_preseason references the one authored row
+  PASS mid_preseason references the one authored row
+  PASS late_preseason references the one authored row
+
+Exposure contract sheet: passed=52/52 failures=0
+
+> local-footy-athlete@1.0.0 test:weekly-dose-ownership
+> TZ=Australia/Melbourne sucrase-node src/__tests__/weeklyDoseOwnershipTests.ts
+
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body
+
+[1] The engine holds no strength-session target of its own
+  PASS coachingEngine declares no a phase x readiness core-session table (\bgetCoreSessionCount\b)
+  PASS coachingEngine declares no a phase x readiness hard-exposure cap (\bgetHardExposureCap\b)
+  PASS coachingEngine declares no a second hard-day counter (\bcountTeamHardExposures\b)
+  PASS coachingEngine declares no the H-PRE-8 override floor (\bshouldTarget4Strength\b)
+  PASS coachingEngine declares no the H-IS-3 override floor (\bshouldTarget3Strength\b)
+  PASS coachingEngine declares no the B3 override floor (\bshouldTarget3StrengthPreSeasonGame\b)
+  PASS coachingEngine declares no the un-budgeted +1 moderate core session (\bmoderateCoreBonus\b)
+  PASS coachingEngine declares no the eight-rewrite core range (\bcoreRange\b)
+  PASS coachingEngine declares no the budget-clamped heavy core cap (\bheavyCoreCap\b)
+  PASS coachingEngine contains no { min, max } session-count literal
+
+[2] Every planned core count is a value the contract declared
+  PASS all 423 matrix weeks plan a declared count
+
+[3] No path reduces the week by assignment
+  PASS every week at or above its target, or explained by a typed reduction
+  PASS the contract records every target it lowers
+  PASS the recording assertion is exercised (78 genuine shrinks in the matrix)
+
+[4] The weeks the deleted floors existed to protect are unchanged
+  PASS H-PRE-8  pre-season, 2 team days, no game, 5 days, high capacity -> 4 strength
+  PASS H-PRE-8  the same week at medium capacity -> 4 strength
+  PASS H-IS-3   in-season, game, 2 team days, 5 days, high capacity -> 3 strength
+  PASS B3       pre-season, game, 2 team days, 5 days, high capacity -> 3 strength
+  PASS the safety rail the floors deliberately did not raise: low capacity in-season game week -> 3 strength
+
+[5] The engine builds against the number Section 18 judges against
+  PASS the built, contracted and judged hard-day maxima are one number
+  PASS a club training day the athlete did not select: counted from the contract, not the raw profile
+  PASS an off-season profile carrying a stale onboarding game day: counted from the contract, not the raw profile
+  PASS committed hard days are counted from the contract anchors
+
+PASS — 23 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:severity-scale
+> TZ=Australia/Melbourne sucrase-node src/__tests__/severityScaleOwnershipTests.ts
+
+severityScaleOwnershipTests
+
+[1] The ruling is attributed and the bands are the Bible's
+  PASS the ruling is dated
+  PASS the attributed document exists
+  PASS the bands are 1-3 / 4-5 / 6-7 / 8-10
+  PASS the recorded band string matches the bands
+
+[2] Every cut point sits on a band edge, for BOTH kinds of fact
+  PASS severity 1: record-only=true moderate=false limiting=false pause=false
+  PASS severity 3: record-only=true moderate=false limiting=false pause=false
+  PASS severity 4: record-only=false moderate=true limiting=false pause=false
+  PASS severity 5: record-only=false moderate=true limiting=false pause=false
+  PASS severity 6: record-only=false moderate=true limiting=true pause=false
+  PASS severity 7: record-only=false moderate=true limiting=true pause=false
+  PASS severity 8: record-only=false moderate=true limiting=true pause=true
+  PASS severity 10: record-only=false moderate=true limiting=true pause=true
+  PASS 6 and 7 are indistinguishable — no cut point may sit inside a band
+
+[3] The eleven fatigue readers hold no severity numbers of their own
+  PASS utils/activeProgramModifiers.ts compares severity against no literal
+  PASS rules/temporarySourceFact.ts compares severity against no literal
+  PASS utils/constraintPlan.ts compares severity against no literal
+  PASS utils/programEditRiskAssessment.ts compares severity against no literal
+  PASS utils/tapSwapHierarchy.ts compares severity against no literal
+
+[4] Time caps are OFF the severity ladder
+  PASS there is one authored short-on-time threshold
+  PASS utils/readinessConstraints.ts does not convert minutes into a severity
+  PASS utils/readinessConstraints.ts holds no second short-on-time literal
+  PASS utils/readiness.ts does not convert minutes into a severity
+  PASS utils/readiness.ts holds no second short-on-time literal
+  PASS utils/coachReadinessAdapter.ts does not convert minutes into a severity
+  PASS utils/coachReadinessAdapter.ts holds no second short-on-time literal
+
+[5] Batch 6 — the display numbers have one owner each
+  PASS the impact bands are authored once
+  PASS the substitute tolerance is authored once
+  PASS utils/exposureEngine.ts holds no impact-band literal
+  PASS utils/trainAroundEngine.ts holds no impact-band literal
+  PASS the 0.75 program cut point survives in exposureEngine
+  PASS utils/exerciseSubstitutes.ts holds no load-tolerance literal
+  PASS the 0.75 program cut point stays out of the label owner
+
+[6] The consecutive core/team day boundaries — re-ruled with their true meaning
+  PASS the soft preference boundary is 4
+  PASS the hard permission is 5
+  PASS the preference bites before the permission
+  PASS a run of 4 crosses the preference but not the permission
+  PASS a run of 5 is still permitted
+  PASS a run of 6 is not permitted
+  PASS it is declared a ruling anchor, not a Bible anchor
+  PASS it does not claim a Bible anchor marker
+  PASS the scorer holds no consecutive-day literal of its own
+
+PASS — 41 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:practice-match-week
+> TZ=Australia/Melbourne sucrase-node src/__tests__/practiceMatchWeekShapeTests.ts
+
+practiceMatchWeekShapeTests
+
+[1] A pre-season fixture week carries the GAME WEEK's authored numbers
+  PASS strength.required equals the in-season game week on the same schedule
+  PASS strength.preferred equals the in-season game week on the same schedule
+  PASS sprintCod.required equals the in-season game week on the same schedule
+  PASS sprintCod.preferred equals the in-season game week on the same schedule
+  PASS fullRest.required equals the in-season game week on the same schedule
+  PASS fullRest.preferred equals the in-season game week on the same schedule
+  PASS hardDays.preferredCount equals the in-season game week on the same schedule
+  PASS hardDays.permittedCount equals the in-season game week on the same schedule
+  PASS conditioning.required equals the in-season game week on the same schedule
+  PASS conditioning.preferred equals the in-season game week on the same schedule
+
+[2] And is NOT the generic pre-season row
+  PASS the generic pre-season row differs from the game-week row
+  PASS the fixture week does not take the pre-season strength range
+  PASS the fixture week does not take the pre-season full-rest requirement
+
+[3] The ruling is about SHAPE — the week still sits in pre-season
+  PASS the fixture week keeps its pre-season phase
+  PASS the fixture week keeps its pre-season subphase
+  PASS the in-season game week is unaffected
+
+[4] Contract V2 selects the same numbers for both modes
+  PASS V2 selection agrees at team=0 days=3
+  PASS V2 selection agrees at team=0 days=4
+  PASS V2 selection agrees at team=0 days=5
+  PASS V2 selection agrees at team=0 days=6
+  PASS V2 selection agrees at team=1 days=3
+  PASS V2 selection agrees at team=1 days=4
+  PASS V2 selection agrees at team=1 days=5
+  PASS V2 selection agrees at team=1 days=6
+  PASS V2 selection agrees at team=2 days=3
+  PASS V2 selection agrees at team=2 days=4
+  PASS V2 selection agrees at team=2 days=5
+  PASS V2 selection agrees at team=2 days=6
+  PASS V2 selection agrees at team=3 days=3
+  PASS V2 selection agrees at team=3 days=4
+  PASS V2 selection agrees at team=3 days=5
+  PASS V2 selection agrees at team=3 days=6
+
+[5] There is ONE authored game-week row, not two
+  PASS the game-week shape is a single named authored object
+  PASS no other row restates the game-week strength triple
+  PASS the authored row is spread in exactly one place
+  PASS the in-season game week delegates to the fixture builder
+  PASS the pre-season fixture week delegates to the same builder
+
+[6] The ruling is attributed where the numbers live
+  PASS the builder cites the ruling date
+  PASS the builder states the ruling in words
+
+PASS — 39 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:placement-ownership
+> TZ=Australia/Melbourne sucrase-node src/__tests__/athletePlacementOwnershipTests.ts
+
+
+-- Athlete placement ownership --
+  PASS SWAP onto G-1 is refused until the athlete answers (virtual game day)
+  PASS SWAP onto G-1 survives the resolver once routed (virtual game day)
+  PASS ADD onto an empty G-1 is refused until the athlete answers (virtual game day)
+  PASS ADD onto an empty G-1 survives the resolver once routed (virtual game day)
+  PASS MOVE onto G-1 is refused until the athlete answers (virtual game day)
+  PASS MOVE onto G-1 survives the resolver once routed (virtual game day)
+  PASS SWAP onto G-1 is refused until the athlete answers (explicit practice match)
+  PASS SWAP onto G-1 survives the resolver once routed (explicit practice match)
+  PASS ADD onto an empty G-1 is refused until the athlete answers (explicit practice match)
+  PASS ADD onto an empty G-1 survives the resolver once routed (explicit practice match)
+  PASS MOVE onto G-1 is refused until the athlete answers (explicit practice match)
+  PASS MOVE onto G-1 survives the resolver once routed (explicit practice match)
+  PASS an untouched engine-planned core exposure on G-1 is treated identically by both fixture kinds
+  PASS an untouched G-1 still belongs to the derived filler, unstamped
+  PASS days the athlete never touched are never stamped
+  PASS a double-tapped swap reports no-change, not a second success
+  PASS a DIFFERENT swap on an already-swapped day never claims a session it did not place
+  PASS a commit that does not reach the visible week is refused and rolled back
+  PASS a real commit still passes visible verification
+  PASS an added session reads the same in the accepted week as on the screen, every day
+  PASS a day the athlete owns carries the stamp into the accepted week
+  PASS a template day the athlete never touched is NOT stamped
+
+Athlete placement ownership totals: 22 passed, 0 failed
+
+> local-footy-athlete@1.0.0 test:move-scoping
+> TZ=Australia/Melbourne sucrase-node src/__tests__/planChangeMoveScopingTests.ts
+
+
+-- Plan-change move scoping and refusal --
+  PASS a combined day never offers an empty destination list
+  FAIL the gym session on a combined day IS movable, and team training is not team training was offered as movable; it is an anchor
+  PASS a team night is offered as a move destination
+  PASS game day is still never a destination
+  PASS moving onto a team night lands a combined day, keeping the anchor
+  PASS a plain day still offers the whole-day move it always did
+  PASS a rest day refuses in plain language rather than offering an empty picker
+  PASS moving the gym session off a combined day leaves team training behind
+  PASS every day in the week either offers a usable move or refuses with a reason
+  PASS emptiness and refusal are the same fact, both directions, on every day
+  PASS the sheet has no path that renders a destination list without its refusal
+  PASS the sheet never commits a move scope the athlete was never shown
+  PASS one predicate decides whether removing this day empties it
+  PASS the row sub-line and the remove confirmation cannot disagree
+  PASS the fifth Add/Swap row reads "Accessories"
+  PASS the row sub-line and the whole-day scope can still disagree on an unanchored multi-kind day (PINNED, copy sheet §6-VI, unruled)
+
+Move scoping totals: 15 passed, 1 failed
+FAILURES:
+  the gym session on a combined day IS movable, and team training is not
+BIBLE_EXIT=1
