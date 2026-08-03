@@ -223,6 +223,25 @@ reading in the agents' unit docs: chat history ruled material (AGENTS.md
 names it a follow-up-resolution input); `addNote`'s Date.now() id collides
 within a millisecond (recorded, LR-6-held).
 
+## Team-night MERGED `ce8ad9a` + the environment incident (2026-08-03)
+
+The anchor moves through the ask (one-off on the deriving lane, permanent
+through the one setup owner, SWAP stays refused); its census red was fixed
+by LR-4's own migration (liveAthleteContext), not declared; the re-point at
+`f36804a` inverts exactly the assertion whose premise the ruling changed —
+scrutinized and approved. Gate owned at TOP LEVEL per Sam's new standing
+rule (a sleeping agent waiting on a finished shell stalled three times
+before the rule; the rule is now memory + this log). Bible EXIT=0 on the
+branch; merge delta docs-only, docs gates + census + compile green on the
+merged tree. **Environment incident:** an agent's node_modules "cleanup" ran
+with its cwd in the PRIMARY checkout — the real node_modules deleted, a
+self-loop symlink left behind; recovered with `npm ci` (5s, cache); the
+retirement agent was wrongly suspected and exonerated by its own
+cd-prefixed command log, which is now the mandated standard for every
+worktree agent. FOUR cwd-class incidents this shift; every future agent
+brief carries the pwd-guard. Parked §8 (three rider strings). Batch 9
+SIGNED (`743b715`).
+
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
 All five parked questions ANSWERED; recorded in full in
