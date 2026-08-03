@@ -242,6 +242,54 @@ worktree agent. FOUR cwd-class incidents this shift; every future agent
 brief carries the pwd-guard. Parked §8 (three rider strings). Batch 9
 SIGNED (`743b715`).
 
+## The silent bible suite — DIAGNOSED, FIXED, and what it hid (2026-08-03)
+
+**Sam's priority insertion, and it earned its place.**
+`onboardingReliabilityTests` exited **0 half-run** from `ea2dba3`
+(2026-08-01) until today — three days in which `test:bible` read a drained
+event loop as green, and blocks B2–G (including the D1 hydration-registry
+pin) ran on no branch at all. Mechanism: B1 awaited a commit whose armoured
+write now cascades a persist onto a later macrotask; a single
+`releaseWrites()` never pumps it, the loop drains, node exits 0.
+
+**Fixed, in order:** totals-or-red (`process.exitCode = 1` armed at module
+top, cleared only by the totals line — now the pattern §9 proposed as law);
+B1/B2 pumped via `whileReleasingWrites`; D1b boots through
+`retryAppHydration` (the memoized settlement made the remover a cache hit);
+the "complete profile" fixture answers the 07-31 required-equipment ruling
+(three cells were pinning a pre-ruling profile); denominator counted, not
+asserted. Suite: **24/24, honest exit.**
+
+**WHAT THE SILENCE MASKED — the real defect:** every armoured store's
+guarded storage wrapped its write `async`. Zustand fire-and-forget-`void`s
+`setItem`, so an `async` wrapper's rejected promise had no handler: a
+failing device write became an **UNHANDLED REJECTION on the exact path the
+armour exists to protect**. Nine stores carried nine copies. Fixed at ONE
+owner — `guardedDurableWrite` in `refusedPayloadQuarantine.ts`, returning
+the compat layer's already-handled promise; B2 is its regression gate. The
+fleet shipped that hole in every store and the only suite that would have
+caught it was the one that had gone quiet.
+
+**The bisect's own instrument lied first** (the shift's fourth): the probe
+used `timeout`, absent on macOS, so every probe returned empty and read as
+SILENT — including commits that were fine. Checked the checker, re-ran,
+bounded the silence to `ea2dba3` with `49c8579` proven clean.
+
+**Environment, twice:** `node_modules` was destroyed a second time — a
+worktree agent's `git add -A` had COMMITTED its node_modules **symlink**
+(`.gitignore`'s `node_modules/` matches directories, not symlinks), so
+every `git checkout` of main clobbered the real tree with a self-loop.
+Untracked, ignore hardened with the bare form and the mechanism documented,
+`npm ci` restored (5s).
+
+## Stage B §5 preconditions — REPORT ONLY, all four PASS
+
+`docs/STAGE_B_PRECONDITION_REPORT_2026-08-03.md`. §5.1 armour (11 stores
+owned, debt list empty, generation path writes only through the accepted
+transaction; LR-1's 27 refs carried per the addendum's own narrowing), §5.2
+lanes merged, §5.3 team-night merged, §5.4 **bible EXIT=0 with the
+asterisk removed**. **Stage B is NOT started — Sam fires it himself.**
+
 ## Sam's five answers landed mid-shift (2026-08-02/03) — queue re-formed
 
 All five parked questions ANSWERED; recorded in full in
@@ -257,377 +305,80 @@ inline).
 
 ---
 
-## HANDOVER (context exhausted — next session continues the shift)
+# HANDOVER — end of the 2026-08-03 shift
 
-**Merged to main this shift, in order:** `45d717a` (rollover interim),
-`d2aea03` (card identity), `190795f` (LR-27 divergence gate), `ba5fb04`
-(contamination closed + order probe). Every merge --no-ff, ancestor-verified,
-pointer deleted; `test:bible` EXIT=0 before each. Working tree clean; branch:
-main.
+**Main is `fb5ca25`. `test:bible` EXIT=0, zero failures, and for the first
+time this week that green has no known liar in it** (the silent suite is
+repaired and runs 24/24 inside the chain). Working tree clean; every merge
+`--no-ff`, ancestor-verified, branch pointer deleted; all agent worktrees
+removed.
 
-**Queue position:** units 1-6 done (2 and 3 as docs, code parked on Sam).
-NEXT = the census by rank. Sam's standing ruling (memory:
-legacy-reckoning-census-ratchet): **LR-1 + LR-2 next** — the raw
-program-write primitive and the ten unowned stores. Both are LARGE; read
-`docs/LEGACY_RECKONING_CENSUS_2026-07-30.md` §LR-1/LR-2 before starting, and
-note LR-24 (action-log coverage) is folded into them by the census's own
-terms. Ground rules unchanged: scratch branch per unit, merge only on a green
-bible, log here, park Sam-things in `docs/PARKED_QUESTIONS_2026-08-01.md`.
+## What landed (22 first-parent merges/commits since `8f25c33`)
 
-**Open with Sam (parked, five entries):** §1 Batch 8 signatures (rollover
-sentence + "Try again"); §2 schedule-fact reassessment approval + "how short
-is short?"; §3 team-night sheet strings + two choices; §4 icon live pick;
-§5 the LR-27 routing table (incl. the possible `quadricep` sheet typo).
+**The store armour fleet — LR-2 PAID.** `docs/STORE_ARMOUR_RECIPE_2026-08-03.md`
+(13 lessons) distilled from the profile/program protections, then applied to
+every persisted store: calendar, athlete prefs, readiness, coach updates,
+coach preferences, coach mutation history, coach chat, coach memory, plus
+the profile quarantine — **eleven owned, taped, quarantined**; auth and ui
+RETIRED under Sam's §6 ruling with a boot-time stale-key remover (L15).
+`UNPROTECTED_STORES_DEBT` is the **empty list**. Census LR-2 `declared`
+11→1, baseline 114→104; the remaining 1 is `programStore` = **LR-1, the
+next major unit**.
 
-**Standing hazards the next session should know:** `test:block-state` is
-non-bible and red on clean main (pre-existing equipment-fixture rot — rot
-sweep's, not any unit's); the `getCoachRevisionTemplateContext` singleton is
-a declared cross-walk carrier if coach-door vocabulary ever joins the
-walker; the order probe's documented usage is `> file 2>&1` (pipes lie).
+**Sam's rulings, all built:** Batch 8 + Batch 9 SIGNED; 11 icon rows
+(`dfcd09e`, bin retired from imagery); LR-27 convergence (`8/8` rows, shin
+added, three maps deleted, divergence pins 0/0/0/0); schedule-fact deriving
+lanes (`667e3a3`, dead lane DELETED, compressed session under the 35-minute
+owner); game-day inert + signed sentence (`b2fc742`); team-night movability
+(`ce8ad9a`, MOVE asks / SWAP refused / permanent inline); shell retirement
+(`3546c12`).
 
-**The shift's recurring lesson, three units running:** the instrument is
-part of the claim. A stale declared red from truncated walks, a vacuous
-mutation probe caught by its own activity check, and a false-divergence
-sweep from a trailing comma — each found because a gate checked the
-CHECKER. Keep doing that.
+**The gate repair** (`005fd11`): see the section above — three days silent,
+and it hid an unhandled-rejection crash in all nine armour wrappers.
 
----
+## Open with Sam (parked, three)
 
-# LR-27 convergence — 2026-08-03
+- **§8** — three PROPOSED team-night rider strings (Batch 10-c).
+- **§9** — rule whether bible suites must adopt totals-or-red as LAW (the
+  pattern is now precedent in two suites); and schedule LR-14's largest
+  instance if more silent suites exist — nothing has swept for them.
+- **§10** — the signed game-day sentence on a PRACTICE-MATCH day ("It's game
+  day" vs ruling 6-IV-4's "Practice Match").
 
-## The unit — Sam ruled the table, every copy converged, every pin is zero
+## Next by rank
 
-Sam answered parked §5 on 2026-08-02: **the owner's sheet wins every row**
-(glute→hip · hip→hip · neck→neck · quad→quad · upper back→shoulder ·
-achilles→calf single-target · shin ADDED →calf · `quadricep` singular
-corrected to quad, a sheet typo). Built on `feat/lr27-convergence`, five
-commits, each convergence dropping its divergence pins in the same commit:
+1. **LR-1** — one door to the program store. 27 `.setManualOverride` refs
+   across 12 files, 20 of them in `coachActions.ts`. **Read the LR-6 STOP
+   first**: most of that surface is the coach pipeline, so the door lands as
+   store ownership only, never as behaviour change.
+2. **Stage B** — all four §5 preconditions PASS
+   (`docs/STAGE_B_PRECONDITION_REPORT_2026-08-03.md`). **Sam fires it; it is
+   not started.**
+3. **LR-14** — the non-bible rot, now with a proven detection pattern.
 
-1. **The sheet, then the owner** — shin/shins→calf and the quadricep
-   correction land in `INJURY_MATRIX_RULINGS_2026-07-28.json` with the
-   ruling cited; the generator's inheritance is FROZEN as a snapshot
-   (verified byte-identical before amending — it used to read the five
-   copies live from the tree, which regeneration can no longer depend on);
-   owner regenerated 61→63 phrases.
-2. **programAdjustmentEngine** — `BODY_PART_TO_BUCKET` deleted;
-   `resolveInjuryBucket` delegates to the owner (pendingInjuryResolver
-   converges transitively); hip/quad classify lower, neck upper, ribs to
-   the back default; exposure/replacement tables fall back as documented
-   rather than growing unsigned copy.
-3. **injuryAdjustmentEngine** — the mirrored map deleted; detected tokens
-   route through the owner; measured END TO END by the gate through
-   `extractInjuryContext` over its whole extraction vocabulary.
-4. **coachConstraintProducers** — map deleted; soreness resolves direct
-   then inner-word over the owner's routable phrases (the old
-   'ankle/foot'/'wrist/hand' identity keys still land via the scan).
-5. **sessionBuilder** — `INJURY_BODY_AREA_MAP` deleted; what remains is
-   only the tag RENAME (total over `InjuryRegion`, build-failing on a new
-   region) and `injuryTagsForBodyArea` deriving ONE tag from the owner —
-   single-target per the ruling, so achilles means calf and shin means
-   calf; description scanning word-bounded so 'dribbling' is not a rib.
+## Standing hazards the next session must know
 
-**The gate's end state** (`test:injury-routing-divergence`, in the bible):
-all four doors asked BEHAVIOURALLY through exported surfaces — pins
-programAdjustmentEngine **0**, injuryAdjustmentEngine **0**,
-coachConstraintProducers **0**, sessionBuilderTags **0**; owner routable
-pinned 63; retired literals pinned GONE. Zero is where the pins end: a
-divergence reappearing is a defect, never new debt.
+- **A worktree agent's `git add -A` can commit its node_modules symlink**
+  and every later checkout of main clobbers the real tree. Ignore hardened
+  (`fb5ca25`); recovery is `rm node_modules && npm ci` (~5s).
+- **Agents lose their cwd** — four incidents. Every agent brief must demand
+  `cd <abs worktree> &&` on every command and a `pwd` guard before any
+  destructive step.
+- **Never let an agent sleep on its own running gate** (Sam's standing rule,
+  three stalls): foreground the gate in the agent, or the orchestrator owns
+  the watcher and merges on the exit line.
+- **Parallel agents paying the same census from one base auto-merge to a
+  textually-identical, cumulatively-FALSE counter.** Caught twice by census
+  direction 1; resolve to cumulative truth at every fleet merge.
+- Pre-existing non-bible reds, each A/B-proven at clean main, none this
+  shift's: `test:block-state`, `fixtureMutationTransactionTests`,
+  `programControlActionsTests`, `devE2EDefaultSeedInstallationTests`.
 
-**Census:** LR-27 entry DELETED (tracked-only units die when their work
-lands, the census's own rule [3]); a tombstone comment names the ruling and
-the gate that holds the surface at zero. `test:legacy-census` 299/299.
-Baselines untouched — LR-27 was never detector-backed.
+## The shift's lesson, four instruments deep
 
-**North star:** toward. Four stored copies of one routing answer became one
-authored owner plus three pure derivations; the divergence class is now
-unrepresentable at these doors, not merely tested away.
-
-**Suites updated to the ruled routing** (each cites the ruling inline):
-`guidedInjuryMenuTotalityTests` (shin accepted, leaves the unroutable
-list; trailer updated), `injuryCanonicalisationTests` (glute→hip,
-quad→quad, hip→hip), `injuryAdjustmentEngineTests` (same three),
-`injurySeverityBandTests` (both hip rows). In those suites the
-groin/ankle/adductor/foot rows expected a pre-region vocabulary
-('adductor', 'ankle') no engine ever produced — **verified red on main by
-A/B against the pre-change engines** — and now pin the owner's answers.
-
-**Pre-existing reds, verified by A/B against pre-convergence engines
-(identical fail before and after; none in the bible; NOT this unit's):**
-- `injuryCanonicalisationTests` "severity 6 may retain a safe
-  affected-area alternative" (replacement pool, hardcoded hamstring);
-- `injuryAdjustmentEngineTests` ×2 Back Squat rows (same family);
-- `trainAroundEngineTests` "Goblet Squat preserved";
-- `coachInjuryIntegrationTests` "store: Goblet Squat preserved";
-- `injuryEpisodeCommandTests` TraceV2 root reuse;
-- `injuryEpisodeTransactionTests` "unrelated fact has its own visible
-  program effect";
-- `injuryReadinessCoachNotesTests` ×2 (hamstring/shoulder note copy);
-- `tapSwapHierarchyTests` crashes in `capacityRubric.scoreCapacity`.
-
-**NOT-COVERED:** the walker was not extended with an injury-door action
-that speaks the new rows (glute/shin through a real door at depth — the
-gate asks resolvers, not walked athletes); the free-text inner-word scans
-(coachConstraintProducers, sessionBuilder descriptions) are pinned only at
-phrase granularity, not against adversarial sentences; the BUCKET_EXPOSURE
-/ avoid-bullet fallbacks for the newly reachable buckets (hip, quad, neck,
-ribs) render the generic severity copy — whether Sam wants authored
-exposure rows for them is HIS call and was not asked; the eight
-pre-existing reds above are recorded, not diagnosed. **L12 — what catches
-the next one of this class:** the gate now measures behaviour through
-exported doors, so the next divergence cannot hide in a literal a parser
-stopped matching; what it would NOT catch is a fifth door that never
-imports the owner at all — the census completeness direction (a detector
-for `Record<string, Injury...>` literals outside `data/`) is the missing
-sweep, and it was not built here.
-
-
-# Schedule-fact deriving lanes — 2026-08-03
-
-## The unit — the fact's ruled effect owns its commit lane; the dead lane is gone
-
-Option 2 of `docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md`, built
-as Sam approved it verbatim (2026-08-02) on `feat/schedule-fact-lanes`,
-tests first (six cells red against the dead lane before a line of product
-code moved). Final shape:
-
-- **DERIVING (ruled effects):** fatigue, injury — and now `schedule/
-  time_cap` per the minutes ruling. "Short on time today" records a
-  today-scoped time-cap fact at the one 35-minute owner
-  (`SHORT_ON_TIME_MINUTES`) and scoped-regen delivers the COMPRESSED
-  session — main lift byte-identical, accessory sets halved, hard finisher
-  dropped, via the Bible §9 authored trim (`applyLighterDayTrim`), no new
-  content authority. Clear cascade-reverts byte-exact (illness precedent).
-- **INERT (unruled):** busy_week, travel, max_sessions, equipment through
-  this boundary — recorded and honest: fact + constraint land, program
-  byte-unchanged, off the whole-week §18 gate, no overlay, no adjustment.
-  The away door is alive as record-only; its ack says so.
-- **DELETED, not guarded:** the third lane — the re-canonicalising mutate
-  whose own verifier refused it on every device
-  (`accepted_composition_base_changed_by_temporary_fact`). Fact commits are
-  `forward_decision` at the accepted boundary: a pre-existing shortfall in
-  some week records and discloses, it does not refuse recording a fact.
-
-**Two standing lies paid beyond the lanes:** the cap owner's
-`durationMinutes > cap` guard NEVER fired on real generated weeks (core
-sessions state 0 minutes — the whole cap machinery was vacuous on exactly
-the content it existed for, declared red 9's deeper shape); and 6-II-e's
-modifier body ("drops the highest-cost work") is now TRUE and ships from
-`timeCapProjection` for the door's fact. Declared reds 1 and 2 in
-`programControlDurableOwnershipTests` and the walker's refuses-conservatively
-cells are DELETED as paid, rewritten as the lanes' laws. Copy: Batch 9
-PROPOSED (the §6-V re-signing — both success sentences with effect clauses,
-selected by the COMMITTED result). `illnessClearGameWeek` P1 rewritten to
-the lanes (its old premise WAS the dead lane); ownership-scoping payload
-kept.
-
-**Mutations: five applied, five caught — one only after it taught us.**
-time_cap dropped from the deriving set (deriving cell) · travel smuggled in
-(inert cell) · preserveExact flipped off, the dead lane's writer
-resurrected (two cells) · door regressed to minting busy (three cells) ·
-the trim deleted while the cap stamps durations — SURVIVED the end-to-end
-cell (regen variance satisfies "today changed" without any cut), so the
-compression law got an owner-level cell over deterministic input; re-run
-under the same mutation: caught.
-
-**L13 — depth reached:** the walker's schedule-door cells commit through
-the REAL executor (`executeProgramControlActionDurably`) in fresh walked
-worlds (onboard → generate → clock-hops until today holds a session, ≤13
-actions); the tape-world cell holds Sam's exact 2026-08-01 coordinate at
-depth (game marked ON the tap day + active week-scoped busy fact, 5+
-actions) — where the deriving regen refuses on the pre-existing
-game-marked-week §18 family (`planner_selected_target_miss`; the
-established severe-illness lane refuses identically there, probed) and the
-athlete now gets the honest typed refusal instead of the old silence.
-Parked §6: what "short on time" should DO on a fixture day. Deep tier
-unchanged (its walks exercise the state-reachers; the random-band promotion
-of the schedule doors is a separate vocabulary decision, below).
-
-**L12 — what catches the NEXT dead lane:** the class was "a writer and its
-verifier disagreeing about one commit, visible only on devices" — now (1)
-the commit site has exactly TWO shapes and the non-regen one is
-base-preserving by construction, so the contradiction is unrepresentable at
-this boundary; (2) the durable suite's lane cells assert each lane's whole
-signature (ok + changedProgram + base bytes + overlay/adjustment counts),
-so a lane change cannot hide behind a green `ok`; (3) the mutation round is
-recorded above so the next lane edit re-runs it. What this does NOT catch:
-a NEW transaction boundary (outside `commitTemporarySourceFactSet`) growing
-its own third lane — the census's writer-audit direction, not this unit's.
-
-**Convergence (north star):** toward. No new stored state (the compressed
-session is DERIVED at read from fact + cap owner, never stored); two of the
-five representations of "the athlete is short on time" died with the lane
-(the thrown-away re-canonicalised base; the ack's implicit false claim);
-the fact stored is the ruling's own answer (35, once, from the owner).
-
-**NOT-COVERED:** the legacy busy-week activeConstraint writers and the
-migration's week-scoped busy fact (reassessment Q6) are census work, sized
-small, untouched here per its own terms; the schedule doors stay OUT of the
-walker's random band (order-probe arrangement preserved — promoting them is
-a vocabulary decision that reshuffles every seed's world, not smuggled in
-with the lanes); busy/away EFFECTS remain unruled (record-only by ruling)
-— when Sam rules them they join the deriving set the same way; the
-fixture-day coordinate is parked (§6), answered honestly meanwhile;
-`equipmentScheduleFactTransactionTests` red is PRE-EXISTING at clean main
-(A/B in a detached worktree: identical FAIL + abort at the same line; not
-in the bible), as are `coachLivePathV2IntegrationTests`'s two Fri-collapse
-failures (same A/B method, identical at main; also not in the bible);
-coach free-text time_cap facts now derive when a program exists — coach
-files untouched (LR-6 STOP respected; the coach path enters the same one
-boundary).
-
-
-# Team-night movability — 2026-08-03
-
-## The unit — the ask replaces the refusal; both routes ride existing owners
-
-Sam's §3 answers built as signed (`feat/team-night-movability`): MOVE on a
-team night raises the typed ask ("Move team training?" / "Is this a one-off,
-or has your club changed nights?") — two routes + back, G-1 ask chrome, all
-seven signed strings registered in `src/rules/teamNightMoveAsk.ts` via
-`registerSignedCopy` (extraction ceiling untouched; copy sheet Batch 10).
-SWAP on a team night is UNCHANGED — its own signed refusal stands. The
-`anchored_day` sentence is RETIRED (no reachable cause; deleted from the
-producer, 6-II-b row converted to prose, TN-5 pins its absence).
-
-**One-off** = a dated `team_night_move` schedule fact (week scope, the dated
-pair on the fact) through the approved deriving lane. Its ruled effect is an
-ANCHOR RELOCATION (`rules/teamNightMoveDerivation.ts`): a sparse TWO-DATE
-overlay over the week the athlete actually has — landing day COMBINED per the
-doubling law (`stackSessionOntoTeamAnchor`), vacated day the split remainder
-(`splitAcceptedSessionForAthleteMove`, `team_component`), every other day
-falling through to untouched stored state by construction. Deliberately NO
-contract on the overlay: attaching the finalised evaluation contract made the
-rebase re-author planner-derived rows on untouched days. The lane is
-otherwise the illness precedent unchanged — fact-linked adjustment, atomic
-forward_decision commit, undo = the generic `clear_fatigue_status` cascade
-(reverts by `sourceFactId`, byte-exact, no team-night special case).
-
-**Permanent** = `teamNightPermanentPatch` (pure `Partial<OnboardingData>`) →
-`commitProfileProgramTransaction({kind:'profile_setup'})` — the ONE setup
-owner writes `teamTrainingDays` through the profile store's armoured door and
-regenerates forward; confirmed INLINE in the ask (signed success sentence as
-the result-step ack, no deep-link). No second writer exists; TN-3's source
-gate pins the door's only path is the owner.
-
-Both routes enter through `programControlActionForPlanChange` →
-`executeProgramControlActionDurably` (`type: 'move_team_night'`) — the same
-one door the sheet and harness share. A ROUTELESS change never maps (TN-1b).
-
-## Gates (the sheet's pre-commits) — `test:team-night-movability`, in `test:bible`
-
-TN-1 ask on a team night exactly (plain day refuses `not_a_team_night`, no
-ask) · TN-1b routeless never commits · TN-2 one-off conserves every other
-day byte-for-byte at the stored boundary (overlay carries exactly two dates;
-base program byte-identical) and undoes clean through the cascade · TN-4
-doubling law on occupied AND empty landing days · TN-3 permanent updates the
-one owner + the no-second-writer source gate · TN-5 team scope offered +
-retired sentence absent. Depth stated per L13: shallow tier, seeded world,
-1-2 actions per cell; accumulated-life coverage rides the walker's worlds
-(team nights come from `TEAM_DAY_SETS` profiles; `plan_change` move
-vocabulary reaches them — the proposer was NOT extended: promoting
-`move_team_night` into the random band is a vocabulary decision that
-reshuffles every seed's world, the same NOT-COVERED ruling the schedule
-doors recorded).
-
-## Mutations: three applied, three caught — one only after it taught us
-
-anchor condition dropped from the preview gate (TN-1) · `team_night_move`
-dropped from the deriving set (TN-2 end-to-end) · the mapping widened to
-routeless changes — SURVIVED the original six cells (the sheet still asked;
-any other caller could commit unasked), so the commit boundary got its own
-cell (TN-1b); re-run under the same mutation: caught.
-
-## L12 — what catches the next one
-
-The class was "a refusal standing in for a question": the gate is now typed
-at THREE boundaries (preview raises the ask, the mapping refuses routeless
-changes, the executor takes only answered routes), and each boundary has a
-cell that reds alone. A new anchor-guarding door copies the shape or fails
-TN-1's pattern.
-
-## Convergence (north star): toward
-
-No new stored state: the one-off is a typed dated life-fact (an input); the
-permanent change is a profile answer through its owner; the visible move is
-DERIVED (overlay from fact, cascade-reverted on resolve). One representation
-of "team training moved" — the fact — and the retired refusal sentence took
-a dead branch of the move vocabulary with it (`anchored_day` deleted from
-the reason union).
-
-## NOT-COVERED, stated honestly
-
-The walker proposer does not draw `move_team_night` in the random band (see
-above — a vocabulary decision, parked with the schedule doors' identical
-ruling); door-matrix grid rows were not added — the route × occupied/empty
-coordinates live in the dedicated suite's cells instead; the three Batch
-10-c rider strings (scope row, occupied-landing sub-line, modifier card) are
-PROPOSED and parked §8; fixture-adjacent landing days (G-1/G+1) accept the
-anchor but the game-proximity derivation re-dresses those days at render —
-behaviour observed and left to the existing G-1/G+1 owners, not ruled here;
-conservation is asserted at the STORED boundary — resolver-owned derivations
-(G-1 gunshow, planner optionals, read-time conditioning placement) re-derive
-around the week's new shape by design, which is the sheet's own "the week
-re-derives around it".
-
-## Shell retirement — 2026-08-03
-
-Branch `feat/retire-auth-ui-shells`. Sam's §6 ruling executed: authStore and
-uiStore RETIRED WHOLE. Investigation before deletion confirmed the ruling's
-premise and sharpened it: git history DOES contain writers for both stores
-(SignIn/SignUpScreen wrote the auth session; PreferencesScreen wrote
-designVersion) — but all were dead code from birth: AuthNavigator was never
-mounted by RootNavigator in any commit, PreferencesScreen was never
-registered in any navigator, and all died in the Phase 1.6 purge. No
-reachable screen ever wrote either store, so no device envelope can hold
-anything but defaults. The STOP condition ("evidence a real value could have
-been written") was checked and does not fire; the check is on the record.
-
-**What died:** both store files whole (doors, tapes, reset acts, quarantine
-registrations, guarded storages), both ownership suites + their package.json
-scripts + their `test:bible` entries, the walker's auth refusal-replay cell
-(suite now 16 cells, stated), the `auth_write`/`ui_store_write` names in
-DECISION_EVENTS and AthleteActionEventName, the two hydration-registry
-handles, the store-index exports + clearAllStores lines, the dev-seed clear,
-the dev-E2E ui-store descriptor and its coordinator-test pins.
-
-**What was kept, per field:** nothing — `activeTab`/`isOnline` (the runtime
-conveniences) had ZERO live readers and zero writers outside the store
-itself, so there was no live runtime state to relocate; HomeScreen's
-`DesignVersion` type is now a local two-literal type beside the hardcoded
-constant that was already shadowing the store.
-
-**The boot cleanup (L15):** `RETIRED_STORE_PERSIST_KEYS` +
-`removeRetiredStoreEnvelopes()` beside the hydration registry;
-`awaitAppHydration()` awaits it before settling. Deletion IS the read-ingress
-lift for a shape that never carried a value.
-
-**Census:** zero counter edits — both stores were already owned (LR-2
-declared stays 1 = programStore, baseline stays 104); entries deleted with
-their files, narration corrected (27+1+4+72), retirement noted. D1 in
-onboardingReliabilityTests re-pinned >=10 with the retirement cited.
-
-**Mutations (all caught):** remover no-ops → behavioural cell; boot stops
-calling it → static pin; retired key re-registered → stay-retired cell AND
-the audit's enumeration cell (bonus catch: a re-registered shell has no
-boundary).
-
-**L12 — the next defect of this class:** a suite that dies mid-run with exit
-0 is green to an exit-code gate. The audit suite now holds the process red
-until its totals line prints; §9 asks Sam to make that pattern law.
-
-**NOT-COVERED:** `onboardingReliabilityTests` blocks B2-G are DEAD on clean
-main (silent exit 0 after B1; A/B-proven, mechanism traced, parked §9) — the
-new D1b cell is correct but inert there; the load-bearing pins live in
-`storedStateWriterAuditTests`. The B1/B2 harness repair is deliberately NOT
-attempted here (two defects deep, touches commit/flush pump + profile armour
-write path). `clearAllStores` in store/index.ts has zero callers — dead code
-kept as-is, not this unit's surface. Device pass not run (no visible surface
-changed; the deleted state was invisible by construction).
-
-**North star: TOWARD — this unit DELETES stored state.** Two persisted
-stores that only ever held their own defaults are gone, and what that
-proves: the recipe + writer-audit ratchet made retirement safe — any future
-sign-in flow or UI store must arrive through the audit's enumeration,
-armoured, and must take its key off the retired list in the same commit.
-Stored non-decisions died; the machinery that prevents their silent return
-is the part that survives.
+Yesterday's lesson was "the instrument is part of the claim." Today it went
+further: **a green gate is a claim about the instrument too.** A suite that
+exits 0 without running, a probe that reads empty output as a verdict, a
+census counter that merges cleanly into a lie, an armour wrapper whose
+rejection nobody handles — each looked exactly like health. Every one was
+found by checking the checker. Keep doing that; it is now four for four.

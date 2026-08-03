@@ -1,0 +1,109 @@
+# Stage B §5 preconditions — report, 2026-08-03
+
+**Read-only. Stage B is NOT started; Sam fires it himself** (standing order,
+and the addendum's own §5 header: "Do not start until the preconditions in §5
+are green"). This report states pass/fail per precondition against main at
+`fb5ca25`, and nothing in it authorises a first commit.
+
+Source of the criteria: `docs/STAGE_B_KICKOFF_ADDENDUM_2026-08-03.md` §5.
+
+---
+
+## §5.1 — Store armour proven + the stores Stage B writes through armoured
+
+**PASS.**
+
+- The recipe exists, is proven, and carries 13 numbered lessons:
+  `docs/STORE_ARMOUR_RECIPE_2026-08-03.md`.
+- **Eleven of twelve persisted stores are owned, taped and quarantined.**
+  `UNPROTECTED_STORES_DEBT` is the **empty list** — the 2026-07-30 declared
+  debt ("eleven stores are still wipeable") is paid to zero. Two of the
+  twelve were RETIRED rather than armoured (auth, ui — Sam's §6 ruling), so
+  the audit now enumerates ten live stores, all protected.
+- The generation/rebuild path Stage B builds on writes **only** through
+  `commitAcceptedStateTransaction` (`weekRebuild.ts:714/809/822`); it never
+  touches the raw primitive. Verified by grep, not assumed.
+- `athletePreferencesStore` (named in the addendum) is armoured, including
+  the last-answer-removal correction (lesson 11).
+
+**Carried, not blocking (the addendum narrows §5.1 to exclude it):** LR-1
+proper is unbuilt — 27 `.setManualOverride` references survive across 12
+files, concentrated in the coach pipeline (`coachActions.ts` 20,
+`applyAdjustmentEvents.ts` 9, `coachUndoEngine.ts` 6,
+`coachModalitySwapOrchestrator.ts` 6) plus one screen
+(`PlanChangeSheet.tsx`) and the dev seed. Census LR-2 stands at
+`declared: 1` — that single count IS the program store, and it is LR-1's
+unit.
+
+## §5.2 — Schedule-fact deriving-lane build MERGED
+
+**PASS.** `667e3a3`. The ruled effect owns the commit lane; the dead
+always-refusing third lane is DELETED (zero guards); short-on-time derives
+the compressed session under the existing 35-minute owner; busy/travel/
+max_sessions/equipment commit inert and honest. Sam's §7 addendum merged at
+`b2fc742`: on a fixture day the fact records inert and the athlete gets the
+signed sentence. Copy Batch 9 SIGNED.
+
+## §5.3 — Team-night movability MERGED
+
+**PASS.** `ce8ad9a`. MOVE raises the typed once-or-permanent ask (routeless
+never commits); SWAP stays refused; the one-off rides the approved deriving
+lane, the permanent route rides the single setup owner confirmed inline. All
+seven strings signed (Batch 10); three riders PROPOSED and parked (§8).
+
+## §5.4 — `test:bible` EXIT=0 on main, declared reds listed
+
+**PASS, and this is the first honest green of the shift.**
+
+- `test:bible` **EXIT=0** at `fb5ca25`, zero failures across the whole chain.
+- **The asterisk is removed.** `onboardingReliabilityTests` had been exiting
+  0 **half-run** since `ea2dba3` (2026-08-01) — three days in which the
+  bible read a drained event loop as green. Bisected, repaired, and now
+  runs 24/24 INSIDE this chain. Every EXIT=0 claimed between 08-01 and the
+  fix carried that unknown; this run does not.
+- **What the silence masked, and it was real:** every armoured store's
+  guarded storage wrapped its write `async`, and zustand fire-and-forget
+  `void`s `setItem` — so a failing device write became an **unhandled
+  rejection on the exact path the armour exists to protect**. Fixed at one
+  owner (`guardedDurableWrite`), nine wrappers delegate, B2 is the
+  regression gate.
+
+**Declared reds standing on main:** none in the bible chain. The two
+schedule-fact declared reds (1 and 2) were PAID by §5.2's build and deleted
+as paid. Non-bible reds carried, each proven pre-existing at clean main in a
+detached worktree, none owned by this shift: `test:block-state` (equipment
+fixture rot), `fixtureMutationTransactionTests` (13 fails, equipment
+`ProgramGenError`), `programControlActionsTests` (orphan suite, no script),
+`devE2EDefaultSeedInstallationTests` (seed witness). All belong to LR-14.
+
+---
+
+## Verdict
+
+**All four §5 preconditions PASS.** Stage B is unblocked by its own terms.
+
+It is NOT started, and this report does not start it. What Stage B's first
+session should read before its first commit: the addendum whole (its §3
+narrowing, §4 open questions Sam must rule, §6 acceptance bar), the north
+star, and `docs/STORE_ARMOUR_RECIPE_2026-08-03.md` (Stage B writes through
+armoured doors — the recipe explains what those doors refuse and why).
+
+## NOT COVERED
+
+- **No device pass.** Every finding here is source-and-gate evidence. Per L4
+  the device is arbiter and per L10 nothing is "done" until Sam's phone says
+  so — including the eleven armoured stores and both signed builds.
+- **The §5 criteria are read as written.** Where the addendum narrowed a
+  draft precondition (LR-1/LR-2 → "the stores Stage B writes through"), this
+  report follows the narrowing rather than the draft; if Sam intended the
+  stricter form, §5.1 is a FAIL on LR-1 and Stage B waits.
+- **The bisect bounded the silence to `ea2dba3`** by first-parent probing,
+  not by testing all 16 commits in the range — the earlier boundary
+  (`49c8579` prints totals) and the merge itself are proven; a finer cause
+  inside that mega-merge was not isolated.
+- **The armour's device behaviour under real write failure is untested on a
+  phone.** B2 proves the code path in a harness with injected `disk_full`.
+- Four cwd-class incidents and two node_modules destructions happened during
+  this shift's parallel work; the ignore hardening closes the mechanism, but
+  no gate proves an agent cannot damage a shared checkout — that is process,
+  not code.
