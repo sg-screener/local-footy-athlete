@@ -303,6 +303,44 @@ session under the 35-minute time-cap owner) → **§3 team-night build**
 (behind §2's lanes; MOVE asks, SWAP stays refused; permanent confirms
 inline).
 
+## §8/§9/§10 — Sam's third answer batch, all built (2026-08-03)
+
+**§8** Batch 10-c riders SIGNED verbatim. **§10** the practice-match variant:
+the fixture's own `FixtureAvailabilityKind` rides from the lane owner to the
+ack owner, so the sentence and the day's card label are picked by ONE
+expression and cannot disagree; both variants pinned behaviourally.
+*My defect, found by a shard agent:* I changed a signed string and re-pointed
+only the two cells in front of me — the walker's tape world (Sam's real
+PRE-SEASON export) kept asserting the game-day wording and went red. The
+agent A/B-proved it against main and correctly refused to own it. **When a
+signed string changes, sweep the repo for every assertion of it.**
+
+**§9 — TOTALS-OR-RED IS LAW, rolled through all 120 chain suites and GATED**
+(`test:totals-or-red-law`, in the chain, derives its list from the chain
+itself so enrolment is automatic). One owner, not 120 copies. Bible EXIT=0
+fully armed at `1920d4e`.
+
+**What the rollout FOUND — the point of the unit:**
+1. **A second silent suite, worse in kind.** `durableFactHorizonTests` forks a
+   child per scenario and trusts the child's EXIT CODE; each child returned
+   past its only clear, so armed, all 14 came back RED **while printing
+   PASS**. Parent verdict and child output had been disagreeing outright.
+2. **The law had a BYPASS, proven by a mutation that SURVIVED.**
+   `process.exit(0)` hard-overrides `process.exitCode` — a suite ending by
+   asserting its own success cannot be armed at all. Fourteen suites carried
+   it; all deleted, and the gate bans the construct.
+3. **The chain's FIRST LINK was never armed.** `runSlice1` runs by direct
+   invocation, not an npm script, so every script-enumerating sweep — mine
+   and all four shards' — was blind to it. The gate found it on its first run.
+
+**Three more instruments lied before telling the truth**, consistent with the
+day: my recipe's first version anchored the clear to the exit-guard BESIDE
+the print (passed a mutation that skipped the print — the law not holding);
+the helper script read the failure variable from the template's literal WORD
+(emitting an undefined `failed` where the counter is `fail` — caught
+independently by three shards); and the gate's own first scan reported 14
+violations that were its own comments quoting the banned call.
+
 ---
 
 # HANDOVER — end of the 2026-08-03 shift
@@ -336,7 +374,13 @@ owner); game-day inert + signed sentence (`b2fc742`); team-night movability
 **The gate repair** (`005fd11`): see the section above — three days silent,
 and it hid an unhandled-rejection crash in all nine armour wrappers.
 
-## Open with Sam (parked, three)
+## Open with Sam (parked: NONE — the file is empty)
+
+All ten parked questions are answered and built. §8/§9/§10 landed in the
+final hour; the previous three-item list is superseded and kept below only as
+the record of what was asked.
+
+### (superseded) Open with Sam (parked, three)
 
 - **§8** — three PROPOSED team-night rider strings (Batch 10-c).
 - **§9** — rule whether bible suites must adopt totals-or-red as LAW (the
