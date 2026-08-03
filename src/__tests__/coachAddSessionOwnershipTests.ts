@@ -28,6 +28,9 @@
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 import type { OnboardingData, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
@@ -303,4 +306,5 @@ run('defaultApplyAddSession writes through the addition-transaction owner (censu
 });
 
 console.log(`\ncoach add_session ownership: ${passes} passing, ${failures.length} failing`);
+totalsPrinted(failures.length);
 process.exit(failures.length > 0 ? 1 : 0);

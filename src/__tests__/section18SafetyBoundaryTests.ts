@@ -1,6 +1,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { Microcycle, Workout, WorkoutExercise } from '../types/domain';
 import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
@@ -725,5 +729,6 @@ run('property', 'P9 an early off-season safety transformation still removes powe
 });
 
 console.log(`\nsection18SafetyBoundaryTests: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`SECTION18_SAFETY_TOTALS scenarios=${scenarios} rules=6 properties=${properties} mutations=${mutations}`);
 if (failed > 0) process.exit(1);

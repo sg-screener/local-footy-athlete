@@ -33,6 +33,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import path from 'path';
@@ -243,6 +247,7 @@ console.log('\n[5] A retired answer is retired ON THE RECORD, never merely forgo
 }
 
 console.log(`\nOnboarding field influence: ${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
 console.log('  DEPTH (L13): 0 — a static sweep over declared fields and the source tree.');
 console.log('  NOT COVERED: whether a programming consumer USES the value meaningfully.');
 console.log('  A field read once and ignored still counts as consumed here.');

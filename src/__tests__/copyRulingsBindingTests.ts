@@ -39,6 +39,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -265,6 +269,7 @@ run('every athlete-visible string in the NEW surfaces is proposed', () => {
 });
 
 console.log(`\nCopy rulings binding totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`  proposed strings bound: ${PROPOSED.length}`);
 console.log(`  replacement rulings bound: ${RULED.length}`);
 if (failed > 0) { console.error(`FAILURES:\n  ${failures.join('\n  ')}`); process.exit(1); }

@@ -41,6 +41,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -356,6 +360,7 @@ run('the athlete-visible gap count only goes down', () => {
 });
 
 console.log(`\nSigned copy extraction totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`  athlete-visible strings found: ${extracted.length} (ceiling ${ATHLETE_VISIBLE_GAP_CEILING})`);
 console.log(`  signed so far: ${signedCopyRegistrySize()}`);
 if (failed > 0) {

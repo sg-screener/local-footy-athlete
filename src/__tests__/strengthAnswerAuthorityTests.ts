@@ -36,6 +36,10 @@
  * where the old gap-lean was strongest (phase scale 1.0).
  */
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type {
   BenchStrength,
   OnboardingData,
@@ -356,5 +360,6 @@ console.log('\n[6] THE FINDING THE DELETION EXPOSED — `:105`\'s accessory lean
 }
 
 console.log(`\nstrengthAnswerAuthorityTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);
 process.exit(fail > 0 ? 1 : 0);

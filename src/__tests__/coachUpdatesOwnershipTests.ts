@@ -42,6 +42,10 @@ const durable = new Map<string, string>();
   throw new Error('NETWORK DISABLED');
 };
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 import {
@@ -347,6 +351,7 @@ run('the writer boundary refuses a bare payload over a held one', async () => {
 
 void Promise.all(pendingAsync).then(() => {
   console.log(`\nCoach updates ownership totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
   if (failed > 0) {
     console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
     process.exit(1);

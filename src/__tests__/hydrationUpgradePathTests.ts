@@ -71,6 +71,10 @@ const durable = new Map<string, string>();
   throw new Error('NETWORK DISABLED — the upgrade path runs entirely on-device');
 };
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import { classifyProgramHydrationIngress } from '../store/programHydrationIngress';
@@ -277,6 +281,7 @@ async function main(): Promise<void> {
     + 'does not make it refuse, so the\n        quarantine law is guarded, not '
     + 'proven. See docs/HYDRATION_WIPE_DIAGNOSIS_2026-07-30.md.');
   console.log(`\nHydration upgrade path totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
   if (failed > 0) {
     console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
     process.exit(1);

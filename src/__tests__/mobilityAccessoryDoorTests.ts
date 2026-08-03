@@ -54,6 +54,10 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
@@ -396,6 +400,7 @@ run('D2. NON-VACUITY — a real strength session still does all three', () => {
 });
 
 console.log(`\nMobility and Accessories doors: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 console.log(`  the Mobility door composes from ${mobilityPool().length} authored movements`);
 console.log('  DEPTH (L13): 1 — build each door\'s session and evaluate it. Whether the');
 console.log('  doors keep working on a well-worn week is NOT covered.');

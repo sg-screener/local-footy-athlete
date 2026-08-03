@@ -43,6 +43,9 @@ const localStorageData = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
@@ -466,6 +469,7 @@ run('the displacement question has exactly one owner', () => {
 });
 
 console.log(`\nResolver displacement sweep totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
   process.exit(1);
