@@ -7,6 +7,21 @@ proposal Sam has accepted — parked means UNANSWERED.
 
 ---
 
+## §6, §7 + BATCH 9 ANSWERED — Sam, 2026-08-03 (second batch)
+
+**§6 auth/ui shells — RETIRE BOTH.** Never-written state retires under the
+north star (stored non-decisions). The 13-lesson recipe + the writer-audit
+ratchet guarantee any future sign-in flow or UI store arrives armoured —
+rebuild-on-real-need beats empty shells. Read-ingress lifts per L15 where
+any device carries the shapes.
+
+**§7 short-on-time on a fixture day — option (a), sentence SIGNED
+verbatim:** "It's game day — there's nothing to shorten. Go play." The
+fact records inert; the coach keeps the context; the athlete gets the
+truth.
+
+**Batch 9 — SIGNED as proposed** (9-a both variants, 9-b, 9-c moves).
+
 ## ALL FIVE ANSWERED — Sam, 2026-08-02/03 (recorded 2026-08-03; file kept as the record)
 
 **§1 Batch 8 — SIGNED as proposed** (2026-08-02): the rollover refusal

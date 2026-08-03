@@ -913,7 +913,7 @@ rides beside a strength or conditioning part. The "Midline Work" entry
 (`part.headline.support`) STAYS registered — it is the sole-content
 identity, not a retired word.
 
-## Batch 9 — schedule-fact lanes (2026-08-03): PROPOSED, the §6-V re-signing
+## Batch 9 — schedule-fact lanes (2026-08-03): SIGNED (Sam, 2026-08-03)
 
 Declared reds 1 and 2 (§6-V) are PAID by the approved schedule-fact lanes
 (`docs/SCHEDULE_FACT_OWNERSHIP_REASSESSMENT_2026-08-01.md` option 2, Sam
@@ -922,8 +922,10 @@ today" derives the ruled COMPRESSED session — main lift kept, cut to
 essentials, under the existing 35-minute owner (`SHORT_ON_TIME_MINUTES`).
 §6-V's caveat said the two §6-II-f success sentences "come back for signing
 when that red is paid, because the effect clause they will need does not
-exist yet" — this batch is that return. Shipped PROPOSED per this file's
-transitional rule (a string may ship PROPOSED and may never ship unlisted).
+exist yet" — this batch is that return. Shipped PROPOSED per the
+transitional rule on 2026-08-03; **SIGNED AS PROPOSED by Sam the same day —
+9-a both variants, 9-b, and 9-c's moves** (recorded with §6/§7's answers in
+`docs/PARKED_QUESTIONS_2026-08-01.md`).
 
 All entries are PROSE, unquoted-in-table, on purpose: every sentence below
 lives in `utils/readinessAcknowledgment.ts` or
