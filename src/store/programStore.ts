@@ -1215,6 +1215,28 @@ function canonicaliseAcceptedBoundaryState(
       const after = acceptedByDay.get(dayOfWeek) ?? null;
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
+        // D-2 PROBE (Sam's ruling: measure first, LR-27 method). An INSTRUMENT,
+        // not a gate: it prints only under D2_PROBE=1 and is inert otherwise.
+        // What it answers is the parked question — does this branch overwrite
+        // content the athlete authored, how often, and with what?
+        if (process.env.D2_PROBE === '1') {
+          const stored = (dateOverrides as Record<string, unknown>)[date] as
+            { id?: string; name?: string; exercises?: unknown[] } | null;
+          const replacement = after as
+            { id?: string; name?: string; exercises?: unknown[] } | null;
+          // eslint-disable-next-line no-console
+          console.log('[D2_PROBE] in_place_repair', JSON.stringify({
+            date,
+            action: after ? 'overwrite' : 'delete',
+            storedName: stored?.name ?? null,
+            storedRows: (stored?.exercises ?? []).length,
+            storedBytes: JSON.stringify(stored ?? null).length,
+            replacementName: replacement?.name ?? null,
+            replacementRows: (replacement?.exercises ?? []).length,
+            replacementBytes: JSON.stringify(replacement ?? null).length,
+            sameId: !!stored?.id && stored.id === replacement?.id,
+          }));
+        }
         if (after) dateOverrides[date] = after;
         else delete dateOverrides[date];
       } else {

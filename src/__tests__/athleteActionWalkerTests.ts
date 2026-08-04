@@ -3037,6 +3037,115 @@ async function walkTheLighterDayDoor(): Promise<void> {
  * slice's depth, and it is SHALLOW on purpose: this cell proves the loop
  * CLOSES. The deep tier proves it closes in a worn world, and both tiers run it.
  */
+/**
+ * THE D-2 WORN-WORLD PROBE — an INSTRUMENT, not a gate (D2_PROBE=1).
+ *
+ * Sam's D-2 ruling, 2026-08-05: "measure first, LR-27 method. No
+ * implementation, no redirect, no reorder until a probe on a WORN acted world
+ * (long life, overrides authored, hydrate + accepted-commit cycles) brings
+ * back receipts on what the hydration-repair in-place branch actually does and
+ * stamps."
+ *
+ * The gap this fills, named by the Priority D survey: the branch at
+ * `programStore.ts` (in-place repair of an athlete-authored `dateOverrides`
+ * entry) is reached constantly and asserted NOWHERE, and the only
+ * relaunch-proof world in the repo — `walkTheL16Slice` — never authors an
+ * override, so its `hasOwnProperty` guard is never true across a relaunch.
+ * Nobody knows whether the branch churns, grows, or is a no-op on a worn phone.
+ *
+ * IT ASSERTS NOTHING, deliberately. Receipts go back to Sam before any D-2
+ * ruling; a probe that failed a build would be the implementation he declined.
+ */
+async function probeTheWornWorld(): Promise<void> {
+  const relaunch = async (): Promise<void> => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await flushPendingStorageWrites().catch(() => undefined);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (pendingStorageWriteCount() === 0) break;
+    }
+    const disk = new Map(localStorageData);
+    useProgramStore.setState({
+      currentProgram: null, currentMicrocycle: null, todayWorkout: null,
+      dateOverrides: {}, overrideContexts: {}, weekScopedOverlays: {},
+      userRemovalConstraints: [], exposureContractsByWeek: {},
+      blockState: null,
+    } as never);
+    useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    localStorageData.clear();
+    for (const [key, value] of disk) localStorageData.set(key, value);
+    await useProgramStore.persist.rehydrate();
+    await useCalendarStore.persist.rehydrate();
+    await useProfileStore.persist.rehydrate();
+    await useCoachUpdatesStore.persist.rehydrate();
+  };
+
+  const overrideReceipt = (): {
+    keys: string[]; bytes: number; fingerprints: Record<string, string>;
+  } => {
+    const overrides = (useProgramStore.getState().dateOverrides ?? {}) as Record<string, unknown>;
+    const fingerprints: Record<string, string> = {};
+    for (const [date, value] of Object.entries(overrides)) {
+      const workout = value as { name?: string; exercises?: unknown[] } | null;
+      fingerprints[date] = `${workout?.name ?? 'null'}/${(workout?.exercises ?? []).length}`
+        + `/${JSON.stringify(value ?? null).length}b`;
+    }
+    return {
+      keys: Object.keys(overrides).sort(),
+      bytes: JSON.stringify(overrides).length,
+      fingerprints,
+    };
+  };
+
+  console.log('\n=== D-2 WORN-WORLD PROBE (receipts only, asserts nothing) ===');
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+
+  // WEAR THE WORLD IN. Author overrides through the real doors, mark a fixture,
+  // and let time pass — the three things the L16 slice never does together.
+  const week = visibleWeek();
+  const targets = week.filter((day) => (day.workout?.exercises ?? []).length > 0).slice(0, 3);
+  for (const day of targets) {
+    performAction({ kind: 'plan_change', change: {
+      kind: 'add_category', date: day.date, category: 'conditioning_light',
+    } as never });
+  }
+  const saturday = week.find((day) => day.date.length === 10 && new Date(`${day.date}T12:00:00`).getDay() === 6);
+  if (saturday) performAction({ kind: 'mark_calendar', date: saturday.date, mark: 'game' });
+  performAction({ kind: 'advance_time', days: 3 });
+
+  const authored = overrideReceipt();
+  console.log(`  after wearing in: ${authored.keys.length} override(s), `
+    + `${authored.bytes} bytes`);
+  console.log(`    ${JSON.stringify(authored.fingerprints)}`);
+  if (authored.keys.length === 0) {
+    console.log('  NO OVERRIDES AUTHORED — the probe cannot reach the branch from this '
+      + 'world, and that is itself a receipt: the door the walker drives does not '
+      + 'write `dateOverrides`. Report it as such rather than as a clean result.');
+  }
+
+  // FIVE RELAUNCH + ACCEPTED-COMMIT CYCLES. LR-27 doubled per launch; if this
+  // branch churns or grows, five is enough to see the shape.
+  let previous = authored;
+  for (let cycle = 1; cycle <= 5; cycle += 1) {
+    await relaunch();
+    const now = overrideReceipt();
+    const changedKeys = now.keys.join('|') !== previous.keys.join('|');
+    const changedContent = Object.entries(now.fingerprints)
+      .filter(([date, print]) => previous.fingerprints[date] !== print)
+      .map(([date, print]) => `${date}: ${previous.fingerprints[date] ?? 'ABSENT'} -> ${print}`);
+    console.log(`  relaunch ${cycle}: ${now.keys.length} override(s), ${now.bytes} bytes`
+      + ` (${now.bytes - previous.bytes >= 0 ? '+' : ''}${now.bytes - previous.bytes})`
+      + `${changedKeys ? ' KEYS CHANGED' : ''}`);
+    if (changedContent.length > 0) {
+      console.log(`    CONTENT CHANGED: ${changedContent.join(' ; ')}`);
+    }
+    previous = now;
+  }
+  console.log('=== END D-2 PROBE — no assertions were made ===\n');
+}
+
 async function walkTheL16Slice(): Promise<void> {
   const relaunch = async (): Promise<void> => {
     // 1. PERSIST — drain, do not assume. Cross-store persist cascades queue
@@ -3298,6 +3407,10 @@ void (async () => {
     // which made longer probe runs read as empty and the first sweep report
     // false divergence on every seed. The instrument must be able to observe:
     // let the event loop drain and the process end itself.
+    return;
+  }
+  if (process.env.D2_PROBE === '1') {
+    await probeTheWornWorld();
     return;
   }
   await runAsync('the two schedule doors are walkable through the REAL door, and the laws hold',
