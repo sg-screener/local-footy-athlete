@@ -43,9 +43,17 @@ sub-stages, one commit each:
 | **C** | Unified precedence — one ordering, one owner | **NOT STARTED — deliberately reserved** |
 | **D** | L16 relaunch-identical walker proof + L14 prefs injection + boundary report | **NOT STARTED** |
 
-**Task C is reserved for the next Fable session by Sam's instruction
+~~**Task C is reserved for the next Fable session by Sam's instruction
 (2026-08-04): it is the novel core of the slice and must not be split across
-two models mid-build.** Do not start it opportunistically.
+two models mid-build.** Do not start it opportunistically.~~
+
+**STALE — corrected 2026-08-04 (evening).** That reservation was about not
+splitting one build across two models *mid-flight*, not about which model owns
+Task C. Task C is still entirely untouched — nothing to split — so the
+constraint it protected does not apply. **Task C belongs to whoever picks stage
+1 up next, to be done WHOLE in one session.** It remains the novel core of the
+slice, so the rule that survives is: do not start it opportunistically beside
+something else, and do not hand it over half-built.
 
 ### What Task A actually changed (all in `0221d4d`)
 
@@ -411,7 +419,7 @@ branch is now GREEN on both walker tiers.** Nothing new was started.
 
 1. **Lighter-day: DO NOT BUILD tonight**, either branch. "It needs two tests
    converting plus new walker vocabulary under L11 — that's a unit, not filler,
-   and it's tomorrow's Task D." The branch question is moot. Scouting written up
+   and it's tomorrow's Task B." The branch question is moot. Scouting written up
    instead (§9d).
 2. **Legacy tail deletion: out of scope tonight. Own unit, own ruling. Record it
    in the census, don't smuggle it in."** → filed as **LR-25**.
@@ -476,7 +484,7 @@ warning coming true from outside).
 | Document | What it carries |
 |---|---|
 | `docs/PRECEDENCE_OWNERSHIP_REASSESSMENT_2026-08-04.md` | **Task C's map.** Six copies with file+function; the truthy-vs-`hasOwnProperty` divergence and what an explicit `null` means at each site; the §18 gateway re-entry with both override surfaces blanked and why that defeats a two-stack edit; the duplicated `microcycleForWeek`/Monday helpers; the existing agreement oracle; the tests that pin the old ordering; an honest scope estimate. **A map, not a plan.** |
-| `docs/LIGHTER_DAY_DERIVATION_UNIT_SHEET_2026-08-04.md` | Ready-to-execute Task D sheet: the pure trim and its existing time-cap caller, the fact + unread ledger entry, the lane's `fatigue` admission and the team-night sparse-overlay precedent, the target shape, the four R-cells and the override-ownership cell that convert, the walker vocabulary L11 obliges, predicted differential movement (**zero**), and three deliberately-open questions. |
+| `docs/LIGHTER_DAY_DERIVATION_UNIT_SHEET_2026-08-04.md` | Ready-to-execute **Task B** sheet: the pure trim and its existing time-cap caller, the fact + unread ledger entry, the lane's `fatigue` admission and the team-night sparse-overlay precedent, the target shape, the four R-cells and the override-ownership cell that convert, the walker vocabulary L11 obliges, predicted differential movement (**zero**), and three deliberately-open questions. |
 | `docs/MAS_RANGE_VS_BINARY_DECISION_SHEET_2026-08-04.md` | Options + consequences + recommendation, **not a decision**. Carries one measurement that was not in the draft: the template `intensity` strings are **equality-gated** to Sam's signed xlsx (`conditioningTemplateEqualityTests.ts:172,233`) while the binary has **no anchor** anywhere. Recommends Option C (range owns; a band renders as a pace band) falling back to A, and names the one answer that would change it. |
 
 ### 9e. Branch state at handover
@@ -508,6 +516,17 @@ on `feat/stage-b-stage1-l16-slice`, base `main` `936bbf7` (untouched).
    *narrowed*, not closed: the combination is declared and the matrix names the
    coordinate space, but **the classifier owners are still unpaid and the third
    axis is unbuilt.**
+
+   **Provenance of that narrowing, recorded 2026-08-04 so it is not misread as
+   settled:** §6.1 offered two resolutions — (i) declare per-part, (ii) fix the
+   classifier owners. **Option (i) was chosen by the REVIEW SEAT, not ruled by
+   Sam.** It was answered conservatively — declare what is observed, change no
+   classifier, widen no regex — precisely because it was not his to skip. **The
+   question stays open and stays his:** the declared combination red is
+   containment, not payment, and whether the classifier family (D13 /
+   `sessionComponents`) gets fixed — which would pay declared reds #1 and #3
+   outright — has never been put to him. Anything built on top of stage 1 is
+   built over an unnamed defect until it is.
 5. ~~The scratch `main` worktree~~ — **removed 2026-08-04**, `git worktree list`
    is clean of it. (Kept in the list so the earlier §1 note is not read as
    outstanding.)
@@ -517,6 +536,14 @@ on `feat/stage-b-stage1-l16-slice`, base `main` `936bbf7` (untouched).
 1. Read §9 and `docs/PRECEDENCE_OWNERSHIP_REASSESSMENT_2026-08-04.md`.
 2. **Task C — the unified precedence ordering.** Untouched by design; the map is
    written so it starts from terrain, not re-scouting.
-3. Task D (lighter-day) has its sheet and can follow, but §8's sequencing note
-   holds: the walker is Task D's own acceptance instrument.
+3. **Task B** (lighter-day) has its sheet and can follow, but §8's sequencing
+   note holds: the walker is Task B's own acceptance instrument.
+
+**Task-label correction, 2026-08-04.** §9d and §9g above originally called
+lighter-day "Task D", contradicting this document's own §2 table. The plan
+(`docs/STAGE_B_STAGE1_PLAN_2026-08-03.md:168`) is authoritative and unchanged:
+**Task B = lighter-day → deriving lane; Task D = the L16 slice proof + L14
+prefs injection + boundary report.** The §9 text is corrected in place; the
+plan is NOT renumbered. (§5d's "Task D's core" was always correct — it refers
+to the L16 relaunch hop.)
 4. Run `test:bible` end-to-end before claiming any of stage 1 done.

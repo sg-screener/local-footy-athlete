@@ -7,7 +7,10 @@ derivation)."*
 
 **Status:** scouted, not started. Sam ruled 2026-08-04 that it is **a unit, not
 filler** — two test conversions plus new walker vocabulary under L11 — and
-assigned it to Stage B stage 1 Task D rather than tonight.
+assigned it to Stage B stage 1 **Task B** rather than tonight. (Corrected
+2026-08-04: this sheet and the checkpoint's §9 both said "Task D"; the plan —
+`docs/STAGE_B_STAGE1_PLAN_2026-08-03.md:168` — has always had lighter-day as
+Task B and the L16 slice proof as Task D. The plan's numbering stands.)
 
 **This sheet exists so the executing session does not re-scout.** Every receipt
 below was read this session on `main` `936bbf7`.
