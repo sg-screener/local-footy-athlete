@@ -508,8 +508,9 @@ on `feat/stage-b-stage1-l16-slice`, base `main` `936bbf7` (untouched).
    *narrowed*, not closed: the combination is declared and the matrix names the
    coordinate space, but **the classifier owners are still unpaid and the third
    axis is unbuilt.**
-5. The scratch `main` worktree under the session scratchpad still wants
-   `git worktree remove`.
+5. ~~The scratch `main` worktree~~ — **removed 2026-08-04**, `git worktree list`
+   is clean of it. (Kept in the list so the earlier §1 note is not read as
+   outstanding.)
 
 ### 9g. First actions on resume (Fable, Wednesday)
 
