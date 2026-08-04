@@ -111,7 +111,13 @@ import {
   project,
   projectParts,
 } from '../rules/projectVisibleWeek';
-import { buildSessionTemplate, type SessionTemplateItem } from '../utils/sessionTemplate';
+import { resetStoresToFreshInstall } from './support/freshInstallStores';
+import {
+  sessionTemplateKinds as sessionTemplateKindsOwned,
+  projectionContentKinds,
+  templateProjectionDisagreement,
+  templateProjectionOffence,
+} from './support/sessionListKinds';
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleWeek } from '../rules/visibleProjection';
 import {
@@ -299,54 +305,14 @@ function freshInstall(): void {
   rolloverFailure = null;
   rolloverFailedThisWalk = false;
   localStorageData.clear();
-  useProfileStore.setState({ onboardingData: {} as OnboardingData, isOnboardingComplete: false });
-  useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
-  useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.getState().clearAll();
   // A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL.
   //
-  // These two were missing, and the gap is not theoretical: adding two doors to
-  // the vocabulary on 2026-07-31 re-aimed which walk hit which state, and a walk
-  // whose shrunk history was `[answer onboarding, generate]` crashed inside
-  // generation — while the SAME two actions replayed on their own did not. The
-  // difference was preference state an earlier walk had left behind, which the
-  // generator reads. A reset that leaves a door open makes every reproduction in
-  // this file a coin toss, and the shrinker's minimal history a lie.
-  // Through the stores' own reset doors — the armour refuses a raw default
-  // write over answered prefs, and freshInstall must not bypass the owners.
-  useAthletePreferencesStore.getState().clear();
-  useCoachPreferencesStore.getState().clearAllModalityPreferences();
-  // The wave-2a stores (2026-08-03): chat history and coach notes, reset
-  // through their own doors — clear()/clearNotes() open named reset acts, so
-  // the armour sees an attributed erasure, never a bare default write.
-  useCoachStore.getState().clear();
-  useCoachMemoryStore.getState().clearNotes();
-  // THE LR-23 IN-MEMORY STORES (unit 6, 2026-08-01). The order probe proved
-  // today's vocabulary cannot vary them (nine targets byte-identical solo vs
-  // pre-walked, carrier columns constant) — but they demonstrably survive
-  // this reset, and the first COACH-door action added to the vocabulary would
-  // inherit that hazard silently. Reset through their own actions; the
-  // totality cell below CHECKS both, so the next tidy-up cannot delete these
-  // lines unnoticed. (The `getCoachRevisionTemplateContext` module singleton
-  // is the third confirmed carrier — no reset API, re-set per materialisation
-  // from live state; DECLARED in the day-shift log rather than reset here.)
-  require('../store/pendingCoachClarifierStore').usePendingCoachClarifierStore.getState().reset();
-  require('../store/coachContextStateStore').useCoachContextStateStore.getState().clearCoachContext();
-  useProgramStore.setState({
-    currentProgram: null, currentMicrocycle: null, todayWorkout: null,
-    isGenerating: false, isLoading: false, error: null, blockState: null,
-    acceptedMaterialContext: {
-      markedDays: {}, readinessSignalsByDate: {}, activeConstraints: [], activeInjury: null,
-      revision: 0, lastTransaction: 'walker:fresh-install',
-      injuryEpisodes: [], temporarySourceFacts: [],
-      acceptedCompositionBase: null, acceptedProfileSnapshot: null,
-    },
-    dateOverrides: {}, overrideContexts: {}, weekScopedOverlays: {},
-    userRemovalConstraints: [],
-    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
-    exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
-  } as never);
+  // The store list moved to `./support/freshInstallStores` on 2026-08-04 when a
+  // second suite needed the same reset — see that module's header for the full
+  // reasoning, including the 2026-07-31 walk whose shrunk history was a lie
+  // because preference state survived. The totality cell below still CHECKS
+  // this, so a door left open by the shared owner reds here.
+  resetStoresToFreshInstall('walker:fresh-install');
 }
 
 function visibleWeek(): ResolvedDay[] {
@@ -1100,18 +1066,13 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
       // fail — and it is the successor to the three deleted `L-P3 DETAIL =
       // PROJECTION` entries, which named exactly this defect class one composition
       // earlier. See `sessionTemplateKinds` for the enumerated mapping.
-      const templateKinds = sessionTemplateKinds(mirror.workout);
-      const contentKinds = Array.from(new Set(visibleDay.parts
-        .map((part) => String(part.kind))
-        .filter((kind) => !TITLE_ONLY_PART_KINDS.has(kind)))).sort();
-      if (JSON.stringify(templateKinds) !== JSON.stringify(contentKinds)) {
-        const omits = contentKinds.filter((kind) => !templateKinds.includes(kind));
-        const invents = templateKinds.filter((kind) => !contentKinds.includes(kind));
+      const disagreement = templateProjectionDisagreement(
+        sessionTemplateKinds(mirror.workout),
+        projectionContentKinds(visibleDay.parts),
+      );
+      if (disagreement) {
         offend('L-P3 TEMPLATE = PROJECTION',
-          `${day.date}: the session list omits ${JSON.stringify(omits)} and invents `
-          + `${JSON.stringify(invents)} — template ${JSON.stringify(templateKinds)} / `
-          + `projection ${JSON.stringify(contentKinds)}. The list the athlete reads `
-          + 'and the projection tell one story or neither is the projection.');
+          templateProjectionOffence(day.date, disagreement));
       }
 
       // L-P3 ROWS CONSERVATION — a part the projection carries must carry its work.
@@ -1381,52 +1342,14 @@ function partIds(workout: unknown): string[] {
  * `visibleDayLeadHeadline`). This is not a hole — a fixture day carrying real
  * components projects those as real kinds, and they are compared like any other.
  */
-const TEMPLATE_ITEM_KIND: Record<string, string> = {
-  // A conditioning choice block, and a conditioning phase row on a
-  // conditioning-only day, are both the day's conditioning work.
-  conditioning_choice: 'conditioning',
-  conditioning_phase: 'conditioning',
-  // Add-on rows: `recoveryAddons`, rendered as ordinary optional rows since D13.
-  addon: 'recovery',
-  // The team-training banner.
-  team_training: 'team_training',
-};
-
-const STRENGTH_ROLE_KIND: Record<string, string> = {
-  power: 'power',
-  midline: 'support',
-  main_lift: 'strength',
-  accessory: 'strength',
-  prehab: 'strength',
-  conditioning: 'conditioning',
-};
-
-/** Part kinds the day-detail CONTENT list does not carry — see the header above. */
-const TITLE_ONLY_PART_KINDS: ReadonlySet<string> = new Set(['game']);
-
+/**
+ * The kind mapping and the offence format moved to
+ * `./support/sessionListKinds` on 2026-08-04, when the day-type × domains
+ * matrix became a second consumer. The DECLARED_RED regexes below match the
+ * offence string that module now owns.
+ */
 function sessionTemplateKinds(workout: unknown): string[] {
-  const template = quiet(() => buildSessionTemplate((workout ?? null) as never));
-  const kinds = new Set<string>();
-  if (template.mode === 'recovery') {
-    // Sam's §6 item 3 exception: a recovery day keeps its own simple template —
-    // `RecoveryBlock` over the workout's rows plus `RecoveryAddonSection`. No
-    // items, and the whole day is recovery work.
-    kinds.add('recovery');
-    return [...kinds].sort();
-  }
-  for (const item of template.items as SessionTemplateItem[]) {
-    if (item.kind === 'team_training') { kinds.add(TEMPLATE_ITEM_KIND.team_training); continue; }
-    if (item.kind === 'conditioning_choice') {
-      kinds.add(TEMPLATE_ITEM_KIND.conditioning_choice);
-      continue;
-    }
-    if (item.presentation === 'strength') {
-      kinds.add(STRENGTH_ROLE_KIND[String(item.role)] ?? `unmapped_role:${String(item.role)}`);
-      continue;
-    }
-    kinds.add(TEMPLATE_ITEM_KIND[item.presentation] ?? `unmapped:${String(item.presentation)}`);
-  }
-  return [...kinds].sort();
+  return quiet(() => sessionTemplateKindsOwned(workout));
 }
 
 const host: WalkerHost = {
@@ -1693,6 +1616,55 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'one list, applied to the block it missed.',
     expiresWhen: 'a projected `speed` part appears in the session list.',
     redsIn: 'bounded',
+  },
+
+  // ── THE FIFTH SHAPE IS A COMBINATION, AND THAT IS THE POINT (2026-08-04) ──
+  //
+  // The four entries above each pin ONE shape. This one pins a day that
+  // exhibits TWO AT ONCE, which is why it matched none of them: the offence
+  // string names the whole disagreement per day, so a day dropping
+  // conditioning AND badging support produces a string no single-shape regex
+  // can match. That is a gap in how this list is written, not only a gap in
+  // the classifiers — a combination is reachable long before anyone declares
+  // it, and the walker found this one the first time a re-add put strength
+  // onto a team night already carrying conditioning.
+  //
+  // The matrix that enumerates this coordinate space is
+  // `sessionListCombinationMatrixTests` (day type × domains carried), added
+  // with this entry. L11's rule is the reason both exist: the moment two
+  // defects differ only by their combination coordinates, the space needs
+  // enumerating rather than another single fix.
+  {
+    id: 'session_list_drops_a_team_night_stack_and_badges_support',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \["conditioning","strength"\] and invents \["support"\]/,
+    why: 'A TEAM NIGHT CARRYING BOTH GYM DOMAINS RENDERS AS NEITHER. The '
+      + 'projection carries `conditioning`, `strength` and `team_training`; the '
+      + 'session list shows `support` and `team_training` — so the athlete opens '
+      + 'a day holding a conditioning piece and a strength piece and reads '
+      + 'neither, plus a badge for work the projection has no part for. '
+      + 'DECOMPOSES, by inspection, into two entries already on this list: '
+      + '`session_list_drops_conditioning_attached_to_an_appointment` (the '
+      + 'team-night conditioning arms) and '
+      + '`session_list_badges_a_midline_row_the_projection_has_no_part_for` (the '
+      + 'trunk/support name-classifier split, which here also swallows the '
+      + 'strength rows it reclassified). INFERENCE, NOT MEASUREMENT: the change '
+      + 'that surfaced it (Stage B stage 1 Task A, the typed re-add '
+      + 'restoration) touches constraint status and the addition transaction '
+      + 'and NO classifier — `buildSessionTemplate`, `getSessionComponents`, '
+      + '`getSessionComponentRows` and `classifyExerciseRole` are all '
+      + 'untouched — so the defect is very likely pre-existing and merely newly '
+      + 'REACHABLE. That has not been proven, and this entry does not claim it. '
+      + 'DEEP ONLY, by survey. Reproduce: deep, step 63, 2026-08-19 — template '
+      + '["support","team_training"] / projection '
+      + '["conditioning","strength","team_training"].',
+    paidBy: 'the D13 session-template owner with `sessionComponents` — the same '
+      + 'two owners named by the two entries this decomposes into. Paying '
+      + 'either one alone does NOT retire this entry, which is what makes it '
+      + 'worth declaring separately rather than widening either regex.',
+    expiresWhen: 'a day carrying team training plus both gym domains lists both '
+      + 'of them, and badges nothing the projection has no part for.',
+    redsIn: 'deep',
   },
 
   {
