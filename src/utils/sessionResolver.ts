@@ -84,7 +84,10 @@ import {
   attachPrescriptionEffectEvidence,
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
-import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
+import {
+  createDerivedSessionProvenance,
+  isResolverOwnedDerivedSession,
+} from '../rules/derivedSessionProvenance';
 import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
@@ -662,43 +665,72 @@ function applyGameProximity(
     fixtureDate: string;
     relation: 'g_plus_1' | 'g_minus_1' | 'g_minus_2';
     creditMetric: 'safe_session_content' | 'hard_day_distribution';
-  }) => createDerivedSessionProvenance({
-    origin: args.origin,
-    scope: 'session',
-    triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
-    credit: { metric: args.creditMetric, amount: 1 },
-    originatingDate: date,
-    originatingFixtureDate: args.fixtureDate,
-    sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-    validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
-    invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
-    dependency: {
-      kind: 'fixture_to_session',
-      source: {
-        date: args.fixtureDate,
-        weekStart: getMondayForDate(args.fixtureDate),
+  }) => {
+    // ── LR-27: A FILLER HAS NOTHING UNDERNEATH IT TO RESTORE ─────────────────
+    //
+    // MEASURED 2026-08-05 (stage 2 priority B, `LR27_PROBE=1` on the deep
+    // walker): in every acted-world invocation the "displaced session" snapshot
+    // was a copy of THE VERY WORKOUT CARRYING IT — carrier and snapshot shared
+    // one id (`derived-arms_pump-…:week-overlay:…`), and the record carried no
+    // `sourcePlanEntryId` at all. That is the doubling, caught in the act.
+    //
+    // The mechanism: this resolver derives a G-1 Gunshow / G+1 flush over the
+    // day, `materialiseVisibleSystemWork` persists it into the week overlay,
+    // and on the NEXT resolve that stored filler arrives back here as
+    // `templateWorkout`. `resolverMayDisplace` says only "the athlete did not
+    // place it", which is true, so the filler was snapshotted into its own
+    // successor — provenance depth +1, payload ×2, every launch, on disk.
+    //
+    // A resolver-owned filler is not an accepted session. There is no
+    // prescription underneath it that a returning fixture must give back; the
+    // resolver simply stops synthesising it. So the dependency records the
+    // reference and NO snapshot, and the recursion becomes structurally
+    // unrepresentable rather than bounded by a cap.
+    //
+    // `isResolverOwnedDerivedSession` is the existing owner of exactly this
+    // question (system-authored game-proximity provenance + no backing plan
+    // entry) — asked here rather than re-answered, so this site cannot drift
+    // from the five others that already consult it.
+    const displaced = isResolverOwnedDerivedSession(templateWorkout)
+      ? null
+      : templateWorkout;
+    const snapshot = (): Workout | null => displaced
+      ? JSON.parse(JSON.stringify(displaced)) as Workout
+      : null;
+    return createDerivedSessionProvenance({
+      origin: args.origin,
+      scope: 'session',
+      triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
+      credit: { metric: args.creditMetric, amount: 1 },
+      originatingDate: date,
+      originatingFixtureDate: args.fixtureDate,
+      sourcePlanEntryId: displaced?.planEntryId ?? null,
+      validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
+      invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
+      dependency: {
+        kind: 'fixture_to_session',
+        source: {
+          date: args.fixtureDate,
+          weekStart: getMondayForDate(args.fixtureDate),
+        },
+        target: {
+          date,
+          weekStart: getMondayForDate(date),
+        },
+        crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
+        displacedSession: {
+          targetDate: date,
+          sourcePlanEntryId: displaced?.planEntryId ?? null,
+          workout: snapshot(),
+        },
+        restoration: {
+          targetDate: date,
+          sourcePlanEntryId: displaced?.planEntryId ?? null,
+          workout: snapshot(),
+        },
       },
-      target: {
-        date,
-        weekStart: getMondayForDate(date),
-      },
-      crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
-      displacedSession: {
-        targetDate: date,
-        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-        workout: templateWorkout
-          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
-          : null,
-      },
-      restoration: {
-        targetDate: date,
-        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-        workout: templateWorkout
-          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
-          : null,
-      },
-    },
-  });
+    });
+  };
 
   // G+1: the day after a game.
   //

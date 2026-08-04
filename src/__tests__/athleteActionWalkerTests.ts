@@ -3128,19 +3128,26 @@ async function walkTheL16Slice(): Promise<void> {
       .map((day) => provenanceDepth(day.workout));
     const afterDepths = (projectedWeek() as unknown as { workout?: unknown }[])
       .map((day) => provenanceDepth(day.workout));
+    // ── LR-27, PAID 2026-08-05 — the pin reverses direction ─────────────────
+    //
+    // This pin used to REQUIRE the chain to grow (a declared red, contained so
+    // it could not get worse). The defect is now fixed at its root: a
+    // resolver-owned filler is no longer snapshotted into its own successor
+    // (`sessionResolver.applyGameProximity`), so the chain cannot deepen across
+    // a relaunch at all. The assertion therefore flips from "grows by exactly
+    // one" to "does not grow", in the same commit that pays the census entry —
+    // the ratchet's own rule.
+    //
+    // ZERO, not "small". A cap would have accepted the premise that a workout
+    // belongs inside its own provenance; Sam's ruling is that it does not.
     for (let index = 0; index < afterDepths.length; index += 1) {
       const grew = afterDepths[index]! - beforeDepths[index]!;
-      assert(grew <= 1,
-        `${loop.mode}: LR-27 got WORSE — day ${index}'s displaced-session provenance `
+      assert(grew <= 0,
+        `${loop.mode}: LR-27 REGRESSED — day ${index}'s displaced-session provenance `
         + `chain grew by ${grew} across one relaunch (${beforeDepths[index]} -> `
-        + `${afterDepths[index]}). The declared defect is one level per relaunch.`);
+        + `${afterDepths[index]}). A derived filler is being snapshotted into its own `
+        + 'successor again; the chain must not deepen across a process boundary.');
     }
-    assert(afterDepths.some((depth, index) => depth > beforeDepths[index]!)
-      || loop.mode.startsWith('off-season'),
-      `${loop.mode}: LR-27 no longer reproduces — the provenance chain stopped growing `
-      + '(' + JSON.stringify(beforeDepths) + ' -> ' + JSON.stringify(afterDepths) + '). '
-      + 'If it was FIXED, pay the census entry and delete this pin; stale debt fails, '
-      + 'it does not expire quietly.');
     // ── THE OVERLAYS, and the second thing this cell found ──────────────────
     //
     // `weekScopedOverlays` is PERSISTED state, so a relaunch should read it
