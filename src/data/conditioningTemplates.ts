@@ -76,7 +76,13 @@ export type TemplateProperty =
   /** The athlete may rotate modality between rounds inside one session. Flush only. */
   | 'mid_session_mixing_flush_only'
   /** Ski and Row cannot spin the flywheel up inside a sub-10-second effort. */
-  | 'no_ski_row_flywheel';
+  | 'no_ski_row_flywheel'
+  /**
+   * A warm-up dose rides on a session the athlete is already doing; it is
+   * never prescribed as a session in its own right (Sam's ruling 5,
+   * `docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md`).
+   */
+  | 'warmup_rider_only';
 
 /**
  * The authored wording each property kind was recognised from, retained so the
@@ -90,6 +96,7 @@ export const TEMPLATE_PROPERTY_SOURCE_TEXT: Readonly<Record<TemplateProperty, st
   availability_gate_no_team_training: 'AVAILABILITY GATE',
   mid_session_mixing_flush_only: 'MID-SESSION MIXING ALLOWED (flush-only)',
   no_ski_row_flywheel: 'NO SKI / ROW (flywheel spin-up)',
+  warmup_rider_only: 'WARM-UP RIDER ONLY (never a standalone session)',
 };
 
 /* ── A template ── */
@@ -433,7 +440,7 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
     intensity: '95–100% maximal, short',
     workToRest: '1:22 (approx)',
     totalSessionTime: '≈4–5 min, inside the TT warm-up',
-    properties: [],
+    properties: ['warmup_rider_only'],
     effortCue: 'Piggyback this on the warm-up you\'re already doing — don\'t add a separate session for it.',
     baseUnit: 'distance',
     modalityNotes: 'Run-only (field sprint/cutting mechanics; rule 4). No machine rendering.',
@@ -882,7 +889,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
     workPeriod: '2 min hard',
     restPeriod: '2 min easy',
     setsRounds: '6–8 reps',
-    intensity: '≈100% MAS (>30 s work = 100% MAS per src/utils/masCopy.ts)',
+    // Re-signed plain by Sam 2026-08-05 (ruling 1,
+    // docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md): same shape and reasoning
+    // as the 15:15 cell — no function citation in a signed cell.
+    intensity: '≈100% MAS',
     workToRest: '1:1',
     totalSessionTime: '24–32 min (hard work 12–16 min)',
     properties: [],

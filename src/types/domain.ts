@@ -1143,6 +1143,22 @@ export interface WorkoutExercise {
    *   - 'distance': repsMin/repsMax are metres
    */
   prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
+
+  /**
+   * WHO NAMED THIS ROW — the emitter's own marker, set at build time.
+   *
+   * `'authored'` means every athlete-facing word on the row traces to a signed
+   * source: an authored template name, or a sentence on the copy sheet. The
+   * visible projection carries such a row; it refuses rows whose names a
+   * builder composed out of planner nouns and numbers
+   * (`isComposedPrescriptionRow`). Absent means "not claimed", which is the
+   * honest default for every legacy and coach-authored row.
+   *
+   * A MARKER, NOT A LOOKUP: the projection must never decide what to carry by
+   * asking whether the words happen to be registered — that makes the copy
+   * sheet the authority over content. This says how the row was BUILT.
+   */
+  nameProvenance?: 'authored';
   /** True if prescription is per side (e.g. "30s per side", "8 reps per side"). */
   perSide?: boolean;
 

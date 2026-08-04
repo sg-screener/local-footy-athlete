@@ -1702,44 +1702,18 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     redsIn: 'deep',
   },
 
-  {
-    id: 'generated_conditioning_rows_have_no_authored_name',
-    law: 'L-P2 SIGNED WORDS',
-    matches: /rows on this day carry names the builder composed/,
-    why: 'THE SUCCESSOR TO `projection_row_names_are_planner_text`, and it names the '
-      + 'debt where the debt actually is. That entry said `project()` threw '
-      + '`UnsignedCopyError` on row names from real generated weeks. Task 6 traced '
-      + 'the whole population and it splits in two. HALF was authored and simply '
-      + 'unregistered — every row the add menu places carries a name from '
-      + '`coachRevisionTemplates.ts`, "the ONLY source of addable content ... '
-      + 'template-derived, never free-form" — and that half is PAID: '
-      + '`projectionCopy.ts` registers the set, derived from the registry\'s own '
-      + 'emitter. The other half is not a registration gap at all: a generated '
-      + 'conditioning row\'s name is COMPOSED by `sessionBuilder.ts` out of planner '
-      + 'nouns and numbers ("Aerobic conditioning component (3 x 8min zone 2 Mixed '
-      + 'Erg Block)", "Assault Bike warm-up", "Quality speed warm-up (short)") — '
-      + 'defect 3 (`surfaceAgreementTests` cell 3) one layer down. Signing those '
-      + 'would launder planner scratch into `SignedCopy`, which is the one thing '
-      + 'this projection exists to make impossible, and the old entry said so '
-      + 'itself: "the sheet cannot contain them and must not be made to". So '
-      + '`project()` no longer carries a composed prescription row '
-      + '(`isComposedPrescriptionRow`), and the gap is stated as what it is rather '
-      + 'than as a throw — a throw being, now that the card and the detail both '
-      + 'render from `project()`, a CRASH on his phone rather than a red in a '
-      + 'harness. NOT a conditioning-only shape, which is why the predicate is the '
-      + 'row\'s own type and not its bucket: the row that exposed it was a sprint '
-      + 'micro-dose warm-up the keyword-tail classifier had put in `strengthRows`. '
-      + 'Reproduce: bounded seed 4, 2 actions — answer onboarding (Pre-season), '
-      + 'generate; also every combined or standalone conditioning day in every seed.',
-    paidBy: 'the conditioning-generation owner — `data/conditioningTemplates.ts` is '
-      + 'Sam\'s 55 signed doses and its own header says "NOT WIRED YET ... Stage B '
-      + 'switches selection onto it". When a conditioning row is named by the '
-      + 'authored template it came from, this projection can carry it. NOT a '
-      + 'buttons/UI task.',
-    expiresWhen: 'a generated conditioning row carries an authored name, so '
-      + '`rowsForKind` can return conditioning rows without composing a word.',
-    redsIn: 'both',
-  },
+  // RETIRED 2026-08-05 — `generated_conditioning_rows_have_no_authored_name`.
+  //
+  // Its own `expiresWhen` was "a generated conditioning row carries an authored
+  // name, so `rowsForKind` can return conditioning rows without composing a
+  // word", and its `paidBy` named the owner: "`data/conditioningTemplates.ts`
+  // is Sam's 55 signed doses ... Stage B switches selection onto it". Stage B
+  // did (`149cc4d`): the headline row carries the authored template name and
+  // the warm-up carries Sam's signed sentence (ruling 4,
+  // docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md). Both are marked
+  // `nameProvenance: 'authored'` by the emitter, so `project()` carries them
+  // and the offence no longer reproduces. Deleted rather than left to rot —
+  // the ratchet cell below fails a declared red that has stopped reding.
 
   // ── L-P3 DETAIL: THREE ENTRIES, PAID IN FULL BY TASK 6, 2026-07-31 ───
   // `detail_has_no_row_surface_for_recovery_power_speed`,

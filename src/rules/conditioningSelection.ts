@@ -247,6 +247,11 @@ export function selectConditioningTemplate(
   const pool = poolForCategory(args.category);
 
   const filters: Array<(template: ConditioningTemplate) => boolean> = [
+    // Sam's ruling 5 (2026-08-05): a warm-up dose rides on a session the
+    // athlete is already doing and is never a session in its own right. The
+    // gate is the SHEET's authored property, read here — not a name filter.
+    (template) =>
+      !template.properties.includes('warmup_rider_only') || role !== 'standalone',
     (template) =>
       !template.properties.includes('finisher_role_only') || role === 'finisher',
     (template) =>
@@ -341,6 +346,13 @@ function conditioningRow(
   const now = nowISO();
   return {
     id,
+    // THE EMITTER'S OWN MARKER (Stage B, rulings 4 + the switchover).
+    // `isComposedPrescriptionRow` asks how a row was BUILT, never whether its
+    // words happen to be registered — that would make the copy sheet the
+    // authority over content. Every row this owner emits is named by an
+    // authored source: the headline carries Sam's template name verbatim, the
+    // warm-up carries his signed sentence. So the owner says so, once, here.
+    nameProvenance: 'authored',
     workoutId: '',
     exerciseId: id,
     exerciseOrder: order,
@@ -386,6 +398,25 @@ function joinNotes(...lines: Array<string | false | null | undefined>): string {
     .join('\n');
 }
 
+/**
+ * THE WARM-UP SENTENCE — Sam's signed words, 2026-08-05 (ruling 4,
+ * `docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md`).
+ *
+ * The switchover shipped a bare `Warm-up` row with no copy, and said so: the
+ * walker's `L-P2 SIGNED WORDS` red stood over exactly this row. Sam authored
+ * the sentence; it lives HERE, at the emitter, and `rules/projectionCopy.ts`
+ * imports it to register — the same shape `CONDITIONING_SUBSTITUTION_ROW_NAMES`
+ * uses, so the words exist once and the sheet cannot drift from what ships.
+ */
+export const CONDITIONING_WARMUP_COPY_ID = 'part.row.conditioning.warmup';
+
+/** The warm-up row's name — the first word of the sentence Sam signed. */
+export const CONDITIONING_WARMUP_ROW_NAME = 'Warm-up';
+
+export const CONDITIONING_WARMUP_COPY =
+  'Warm-up — 5–10 min: start easy, raise the heart rate, then build into the '
+  + 'movements you\'re about to train.';
+
 export interface ComposeOptions {
   readonly idPrefix?: string;
   readonly orderBase?: number;
@@ -408,7 +439,10 @@ export function composeConditioningRows(
   const base = opts.orderBase ?? 1;
   const rows: WorkoutExercise[] = [];
   if (!opts.omitWarmup) {
-    rows.push(conditioningRow(`${prefix}-warmup`, 'Warm-up', base, 1, 0));
+    rows.push(conditioningRow(
+      `${prefix}-warmup`, CONDITIONING_WARMUP_ROW_NAME, base, 1, 0,
+      CONDITIONING_WARMUP_COPY,
+    ));
   }
   rows.push(
     conditioningRow(
