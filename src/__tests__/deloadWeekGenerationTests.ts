@@ -59,21 +59,37 @@ const DECLARED_GAPS: readonly DeclaredGap[] = [
     cells: ['Off-season day '],
     matches: /keeps main lift/,
     why:
-      'BLOCK 2, WEEK 3 -> WEEK 4 (measured 2026-08-05, this suite\'s own '
-      + 'fixture): the deload week does not shrink the build week, it RESHAPES '
-      + 'it. Day 2 goes from "Lower Body Strength" carrying Front Squat + Trap '
-      + 'Bar Deadlift to "Lower Hinge" carrying NO anchor lift at all; the '
-      + 'Upper Pull session moves from day 4 to day 5 and Lower Squat takes '
-      + 'day 4. Sam\'s deload law is "same week, same days; the structure '
-      + 'doesn\'t change, the work shrinks", and the same law forbids halving '
-      + 'from ever removing a lift. Block 1 is clean — its week 3 and week 4 '
-      + 'are structurally identical, so this is specific to a block generated '
-      + 'from a previousProgram. NOT caused by Stage B: this suite has been '
-      + 'CRASHING at module scope since the equipment door landed, so these '
-      + 'cells have not run at all, and unchaining it is what surfaced them.',
-    owner: 'the deload/placement owner — needs a Sam ruling before code',
+      'OFF-SEASON BLOCK 2, WEEK 3 -> WEEK 4 (measured 2026-08-05): the deload '
+      + 'week RESHAPES the build week instead of shrinking it. Weeks 1-3 of the '
+      + 'block are byte-identical in structure, so this is not rotation. In the '
+      + 'deload week the Upper Pull session moves from day 4 to day 5, Lower '
+      + 'Squat takes day 4, and the single combined lower session carrying '
+      + 'squat + hinge SPLITS into two. Sam\'s deload law: "same week, same '
+      + 'days; the structure doesn\'t change, the load does." '
+      + 'ROOT, MEASURED 2026-08-05 (docs/DELOAD_SHAPE_PREDICTION_2026-08-05.md '
+      + 'and its falsification): the contract\'s deload branch cuts the '
+      + 'conditioning exposure COUNT (~4 -> 2), and under the reduced count the '
+      + 'OFF-SEASON allocator lays the strength sessions out differently. The '
+      + 'count cut itself is NOT the defect and must not simply be deleted — '
+      + 'PRE-SEASON takes the identical cut and keeps its day layout and every '
+      + 'session name, dropping only the conditioning attachments, which is the '
+      + 'law satisfied. Deleting the cut was tried and REVERTED: it makes '
+      + 'pre-season generation THROW (Section18WeekAcceptanceError, '
+      + 'planner_selected_target_miss:conditioning:3). The owner to fix is the '
+      + 'OFF-SEASON allocation path, which must hold strength placement '
+      + 'invariant to the conditioning count the way pre-season already does. '
+      + 'CORRECTION to this entry\'s first version: it claimed day 2 loses its '
+      + 'anchor lift entirely. FALSE — the session carries Romanian Deadlift '
+      + '3x6-10. That reading came from `classifyPoolSlot(\'Romanian '
+      + 'Deadlift\')` returning NULL (the pool registry spells it `RDLs`) while '
+      + '`classifyGeneratedWorkoutRow` calls the same row strength_main/hinge — '
+      + 'a SEPARATE defect: two owners of "is this an anchor" disagreeing by '
+      + 'name spelling.',
+    owner: 'the off-season allocation path — strength placement must not depend '
+      + 'on the conditioning exposure count',
     expiresWhen:
-      'block 2 week 4 keeps block 2 week 3\'s day layout and every anchor lift',
+      'off-season block 2 week 4 keeps block 2 week 3\'s day layout and session '
+      + 'composition, with only the load reduced',
   },
 ];
 
