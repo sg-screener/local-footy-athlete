@@ -118,6 +118,7 @@ import {
   projectionContentKinds,
   templateProjectionDisagreement,
   templateProjectionOffence,
+  rowCompositionCoordinate,
 } from './support/sessionListKinds';
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleWeek } from '../rules/visibleProjection';
@@ -1072,6 +1073,28 @@ function checkInvariants(last: WalkerStepResult): { law: string; detail: string 
         projectionContentKinds(visibleDay.parts),
       );
       if (disagreement) {
+        // WALKER_LOG_LP3=1 — the row-level coordinate of every template =
+        // projection disagreement, printed BEFORE the offence is filtered
+        // against the declared reds. This is stage 2 priority A's instrument:
+        // the declared combination red's coordinates (day type × domains) do
+        // not characterise it, and this seam is how its TRUE coordinates (row
+        // roles carried, conditioning wiring) get measured rather than
+        // inferred. Env-gated, inert on green runs and on unflagged red runs.
+        if (process.env.WALKER_LOG_LP3 === '1') {
+          const workoutRows = (mirror.workout as { exercises?: unknown[] } | null)?.exercises ?? [];
+          const rowLines = (workoutRows as Array<{
+            exercise?: { name?: unknown }; name?: unknown; role?: unknown;
+          }>).map((row) => {
+            const name = String(row?.exercise?.name ?? row?.name ?? '').trim();
+            return `        row "${name}" authoredRole=${
+              row?.role === undefined ? 'NONE' : JSON.stringify(row.role)}`;
+          });
+          console.log(`      [lp3] ${day.date} ${rowCompositionCoordinate(mirror.workout)}\n`
+            + `        workoutType=${JSON.stringify((mirror.workout as {
+              workoutType?: unknown } | null)?.workoutType)} template=${
+              JSON.stringify(disagreement.templateKinds)} projection=${
+              JSON.stringify(disagreement.contentKinds)}\n${rowLines.join('\n')}`);
+        }
         offend('L-P3 TEMPLATE = PROJECTION',
           templateProjectionOffence(day.date, disagreement));
       }
@@ -1644,21 +1667,32 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'session list shows `support` and `team_training` — so the athlete opens '
       + 'a day holding a conditioning piece and a strength piece and reads '
       + 'neither, plus a badge for work the projection has no part for. '
-      + 'DECOMPOSES, by inspection, into two entries already on this list: '
-      + '`session_list_drops_conditioning_attached_to_an_appointment` (the '
-      + 'team-night conditioning arms) and '
-      + '`session_list_badges_a_midline_row_the_projection_has_no_part_for` (the '
-      + 'trunk/support name-classifier split, which here also swallows the '
-      + 'strength rows it reclassified). INFERENCE, NOT MEASUREMENT: the change '
-      + 'that surfaced it (Stage B stage 1 Task A, the typed re-add '
-      + 'restoration) touches constraint status and the addition transaction '
-      + 'and NO classifier — `buildSessionTemplate`, `getSessionComponents`, '
-      + '`getSessionComponentRows` and `classifyExerciseRole` are all '
-      + 'untouched — so the defect is very likely pre-existing and merely newly '
-      + 'REACHABLE. That has not been proven, and this entry does not claim it. '
-      + 'DEEP ONLY, by survey. Reproduce: deep, step 63, 2026-08-19 — template '
-      + '["support","team_training"] / projection '
-      + '["conditioning","strength","team_training"].',
+      + 'MEASURED 2026-08-05 (stage 2 priority A, `WALKER_LOG_LP3=1`): the '
+      + 'failing day is `roles=[midline] buckets=[conditioning,strength] '
+      + 'cond=block_no_flag` — rows ["Dragon Flag" (no authored role), '
+      + '"Erg EMOM - 10-15 cal"], workoutType "Team Training". Two mechanisms, '
+      + 'one day, and each is an entry already on this list: (1) the '
+      + 'conditioning is wired `conditioningBlock`-without-'
+      + '`hasCombinedConditioning` — the shape `stackTemplate` builds when a '
+      + 'session stacks onto a team anchor with no strength owner '
+      + '(`canonicalPlanChangeCandidateMaterializer.ts:198`) — and the template '
+      + 'emits conditioning off the FLAG (`sessionTemplate.ts:257`) while the '
+      + 'component owner reads the BLOCK ids, so the list drops it '
+      + '(`session_list_drops_conditioning_attached_to_an_appointment`). '
+      + '(2) with conditioning present the sole trunk row is not sole content '
+      + '(`sessionComponents.ts:658`), so it buckets `strength` for the '
+      + 'projection while the template\'s name classifier badges it `midline` → '
+      + '`support` (`session_list_badges_a_midline_row_the_projection_has_no_'
+      + 'part_for`) — and being the ONLY gym row, `strength` vanishes from the '
+      + 'template entirely. The defect is PRE-EXISTING composition code on both '
+      + 'sides; stage 1 Task A only made the world reachable. The combination '
+      + 'matrix carries this as its one blind spot with the same composition '
+      + 'string, held by its cells [5] and [6]. DEEP ONLY: the composition '
+      + 'needs a worn world (bye-week work-capacity stacked onto a team night '
+      + 'whose gym half is down to one trunk row). Reproduce: deep, step 63, '
+      + '2026-08-19 — template ["support","team_training"] / projection '
+      + '["conditioning","strength","team_training"]; `WALKER_LOG_LP3=1` prints '
+      + 'the row-level coordinate.',
     paidBy: 'the D13 session-template owner with `sessionComponents` — the same '
       + 'two owners named by the two entries this decomposes into. Paying '
       + 'either one alone does NOT retire this entry, which is what makes it '

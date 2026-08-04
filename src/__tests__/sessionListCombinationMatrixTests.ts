@@ -61,6 +61,7 @@ import {
   projectionContentKinds,
   templateProjectionDisagreement,
   templateProjectionOffence,
+  rowCompositionCoordinate,
 } from './support/sessionListKinds';
 import type { OnboardingData } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
@@ -323,6 +324,14 @@ const CONTAINED: readonly ContainedCoordinate[] = [
 interface BlindSpot {
   declaredRed: string;
   coordinate: string;
+  /**
+   * The THIRD-AXIS coordinate (`rowCompositionCoordinate`) the defect actually
+   * lives at — measured, not inferred. The non-vacuity contract below holds
+   * this honest: while the matrix cannot build this composition the entry is a
+   * blind spot; the moment it builds it, the entry must either promote to
+   * CONTAINED (it disagrees, cell [5]) or be re-measured (it agrees, cell [6]).
+   */
+  failingComposition: string;
   why: string;
 }
 
@@ -330,15 +339,26 @@ const BLIND_SPOTS: readonly BlindSpot[] = [
   {
     declaredRed: 'session_list_drops_a_team_night_stack_and_badges_support',
     coordinate: 'team_night × [conditioning,strength]',
-    why: 'THE MATRIX REACHED THIS COORDINATE SIX TIMES AND IT AGREED EVERY '
-      + 'TIME — while the deep walker reds on it (step 63, 2026-08-19). So the '
-      + 'coordinate is NECESSARY BUT NOT SUFFICIENT: the failing instance needs '
-      + 'something these axes do not capture — on the evidence, the row-level '
-      + 'composition inside the domains (which rows the conditioning arms can '
-      + 'see on an appointment day, and whether a midline row is present to be '
-      + 'reclassified). A THIRD AXIS (row roles carried, not just domains) is '
-      + 'what would name it. Recorded rather than forced: declaring a '
-      + 'coordinate that passes here would be a containment asserting nothing.',
+    failingComposition: 'roles=[midline] buckets=[conditioning,strength] cond=block_no_flag',
+    why: 'MEASURED 2026-08-05 (stage 2 priority A, `WALKER_LOG_LP3=1` on the '
+      + 'deep tier): the failing instance is a team night whose ONLY '
+      + 'non-conditioning row is a trunk row with no authored role, and whose '
+      + 'conditioning is wired `block_no_flag` — a `conditioningBlock` names '
+      + 'the rows but `hasCombinedConditioning` is off, the shape '
+      + '`stackTemplate` builds when a session stacks onto a team anchor with '
+      + 'no strength owner (`canonicalPlanChangeCandidateMaterializer.ts:198`). '
+      + 'The template keys conditioning emission off the FLAG '
+      + '(`sessionTemplate.ts:257`) so it drops the conditioning; the component '
+      + 'owner keys off the BLOCK ids so the projection carries it. And with '
+      + 'conditioning present the sole trunk row is not sole content '
+      + '(`sessionComponents.ts:658`), so it buckets `strength` for the '
+      + 'projection while the template\'s name classifier badges it `support`. '
+      + 'The six observations that AGREE here all carry real strength rows and '
+      + 'flagged (or absent) conditioning — reaching the failing composition '
+      + 'needs a worn world (bye-week work-capacity stack onto a team night '
+      + 'whose gym half is down to one trunk row), which one add from a fresh '
+      + 'generation cannot build. The walker owns the reproduction (deep, step '
+      + '63, 2026-08-19).',
   },
 ];
 
@@ -346,6 +366,8 @@ interface Observation {
   world: string;
   date: string;
   coordinate: string;
+  /** The third axis — `rowCompositionCoordinate` of the day's resolved workout. */
+  composition: string;
   offence: string | null;
 }
 
@@ -369,6 +391,7 @@ function observeWorld(world: WorldSpec): void {
       world: world.id,
       date: day.date,
       coordinate: coordinateOf(dayType, domains),
+      composition: quiet(() => rowCompositionCoordinate(day.workout)),
       offence: disagreement ? templateProjectionOffence(day.date, disagreement) : null,
     });
   }
@@ -417,6 +440,7 @@ function widenByStacking(world: WorldSpec): void {
           dayTypeOf(visibleDay.parts, day.date, gameDate),
           domainsOf(visibleDay.parts),
         ),
+        composition: quiet(() => rowCompositionCoordinate(resolved.workout)),
         offence: disagreement ? templateProjectionOffence(day.date, disagreement) : null,
       });
     }
@@ -498,6 +522,30 @@ run('[5] a blind spot is a coordinate that AGREES here — not a silent failure'
     + nowReachable.join('; '));
 });
 
+run('[6] a blind spot states the composition it cannot build — and is held to it', () => {
+  // THE NON-VACUITY CONTRACT (stage 1 report §4a proposal 2, implemented
+  // stage 2). A blind spot is only honest while the world this matrix builds
+  // genuinely cannot exhibit the defect. Each entry now states the MEASURED
+  // third-axis composition its defect lives at, and this cell checks the claim
+  // against the world actually built: if the failing composition was reached
+  // and AGREED, the blind spot's characterisation is falsified — re-measure it
+  // (the walker seam is `WALKER_LOG_LP3=1`), do not leave a stale claim
+  // standing. (Reached-and-disagreeing is cell [5]'s promotion.)
+  const falsified = BLIND_SPOTS
+    .filter((entry) => (reached.get(entry.coordinate) ?? []).some((seen) =>
+      seen.composition === entry.failingComposition && !seen.offence))
+    .map((entry) => `${entry.coordinate} @ ${entry.failingComposition}`);
+  assert(falsified.length === 0,
+    'a blind spot\'s declared failing composition was reached here and AGREED — '
+    + `the characterisation is stale, re-measure it: ${falsified.join('; ')}`);
+  // And the claim must be a real third-axis coordinate, not free prose.
+  const malformed = BLIND_SPOTS
+    .filter((entry) => !/^roles=\[.*\] buckets=\[.*\] cond=\w+$/.test(entry.failingComposition))
+    .map((entry) => entry.coordinate);
+  assert(malformed.length === 0,
+    `a blind spot's failingComposition is not a rowCompositionCoordinate: ${malformed.join('; ')}`);
+});
+
 run('[4] the matrix actually reached a spread of coordinates', () => {
   // Non-vacuity. A matrix that reached one day type proves nothing about a
   // combination space.
@@ -530,10 +578,18 @@ if (declaredButUnreached.length > 0) {
     declaredButUnreached.join('; ')}`);
 }
 
-console.log('\n  BLIND SPOTS — declared defects these axes cannot isolate:');
+console.log('\n  BLIND SPOTS — declared defects whose composition this matrix cannot build:');
 for (const spot of BLIND_SPOTS) {
-  const seen = reached.get(spot.coordinate)?.length ?? 0;
-  console.log(`    ${spot.coordinate} (${seen} obs, all agreeing) → ${spot.declaredRed}`);
+  const entries = reached.get(spot.coordinate) ?? [];
+  console.log(`    ${spot.coordinate} (${entries.length} obs, all agreeing) → ${spot.declaredRed}`);
+  console.log(`      defect lives at: ${spot.failingComposition}`);
+  const compositions = new Map<string, number>();
+  for (const entry of entries) {
+    compositions.set(entry.composition, (compositions.get(entry.composition) ?? 0) + 1);
+  }
+  for (const [composition, count] of [...compositions.entries()].sort()) {
+    console.log(`      reached instead: ${composition}  (${count} obs)`);
+  }
 }
 
 console.log('\n  NOT COVERED: this matrix reaches day types and domain sets that '

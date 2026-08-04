@@ -14,6 +14,7 @@
  * deciding what a disagreement means, belong to the callers.
  */
 import { buildSessionTemplate, type SessionTemplateItem } from '../../utils/sessionTemplate';
+import { getSessionComponentRows } from '../../utils/sessionComponents';
 
 /** Template item presentation/kind → the domain the athlete reads it as. */
 export const TEMPLATE_ITEM_KIND: Record<string, string> = {
@@ -94,6 +95,74 @@ export function templateProjectionDisagreement(
     templateKinds,
     contentKinds,
   };
+}
+
+/**
+ * THE THIRD AXIS — row-level composition (stage 2 priority A, 2026-08-05).
+ *
+ * `day type × domains carried` could not distinguish the six agreeing
+ * `team_night × [conditioning,strength]` observations from the one the deep
+ * walker reds on — the blind spot the stage 1 report declared. The missing
+ * coordinates are ROW-level: which roles the session list would badge the
+ * day's rows with, and how the day's conditioning is WIRED (the template only
+ * emits conditioning when `hasCombinedConditioning` is set, while the
+ * component owner also accepts `conditioningBlock` ids without it — two
+ * different questions that the domain axis collapses into one "conditioning").
+ *
+ * One owner, here, because the walker's diagnostic and the matrix must speak
+ * the same coordinate vocabulary or the comparison is two answers again.
+ */
+export interface RowComposition {
+  /** Sorted unique roles the TEMPLATE badges its strength-presentation rows with. */
+  templateRoles: string[];
+  /** Non-empty `getSessionComponentRows` buckets, sorted. */
+  buckets: string[];
+  /**
+   * How the day's conditioning is wired, if any is attached:
+   * - `none`             — no conditioning rows in the component owner's bucket
+   * - `flagged`          — rows attached and `hasCombinedConditioning` is set
+   * - `block_no_flag`    — a `conditioningBlock` names rows but the flag is off:
+   *                        the component owner sees them, the template does not
+   * - `rows_no_wiring`   — rows in the bucket with neither flag nor block
+   *                        (standalone conditioning days land here)
+   */
+  conditioningWiring: 'none' | 'flagged' | 'block_no_flag' | 'rows_no_wiring';
+}
+
+export function rowComposition(workout: unknown): RowComposition {
+  const template = buildSessionTemplate((workout ?? null) as never);
+  const templateRoles = [...new Set(
+    (template.items as SessionTemplateItem[])
+      .filter((item) => item.kind === 'exercise' && item.presentation === 'strength')
+      .map((item) => String((item as { role: unknown }).role)),
+  )].sort();
+
+  const rows = getSessionComponentRows((workout ?? null) as never);
+  const buckets = (Object.entries(rows) as [string, unknown[]][])
+    .filter(([, bucket]) => bucket.length > 0)
+    .map(([name]) => name.replace(/Rows$/, ''))
+    .sort();
+
+  const hasConditioningRows = rows.conditioningRows.length > 0;
+  const flag = !!(workout as { hasCombinedConditioning?: unknown } | null)?.hasCombinedConditioning;
+  const block = !!((workout as { conditioningBlock?: { options?: unknown[] } } | null)
+    ?.conditioningBlock?.options?.length);
+  const conditioningWiring: RowComposition['conditioningWiring'] = !hasConditioningRows
+    ? 'none'
+    : flag
+      ? 'flagged'
+      : block
+        ? 'block_no_flag'
+        : 'rows_no_wiring';
+
+  return { templateRoles, buckets, conditioningWiring };
+}
+
+/** The compact third-axis coordinate string. */
+export function rowCompositionCoordinate(workout: unknown): string {
+  const facts = rowComposition(workout);
+  return `roles=[${facts.templateRoles.join(',')}] buckets=[${facts.buckets.join(',')}] `
+    + `cond=${facts.conditioningWiring}`;
 }
 
 /**
