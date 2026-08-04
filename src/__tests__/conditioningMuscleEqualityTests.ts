@@ -36,6 +36,7 @@ import {
 import { MUSCLE_GROUPS } from '../data/muscleExperienceMetadata';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { EXPERIENCE_GATES } from '../rules/experienceCrosswalk';
+import type { ConditioningOption } from '../types/domain';
 import { readSheetRecords, readXlsx } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -87,24 +88,32 @@ console.log('\n[1] THE SHEET — it still reads as Sam signed it');
     templateRows.filter((row) => !/^SIGNED/.test(row.Status ?? ''))
       .map((row) => `${row.Exercise}: status "${row.Status ?? ''}"`));
 
-  okEmpty('every machine row in the modality map is SIGNED',
+  okEmpty('every muscle-carrying row in the modality map is SIGNED',
     mapRows.filter((row) => row.Modality !== 'Run')
       .filter((row) => !/^SIGNED/.test(row.Status ?? ''))
       .map((row) => `${row.Modality}: status "${row.Status ?? ''}"`));
 }
 
-console.log('\n[2] THE MODALITY MAP — four machines, and Run still defers');
+console.log('\n[2] THE MODALITY MAP — four machines + Sam\'s rotating row, and Run still defers');
 {
-  ok('the map ships all four machines',
-    MODALITY_MUSCLE_MAP.length === 4, `found ${MODALITY_MUSCLE_MAP.length}`);
+  // Four machines, plus `Mixed — rotating` (Sam's ruling 2026-08-05, "3a
+  // whole-body"). The rotating row is authored for exactly the reason the
+  // machines are: a session that rotates has ONE answer, and it is his, not a
+  // caller's union of two machine rows.
+  ok('the map ships the four machines and the rotating row',
+    MODALITY_MUSCLE_MAP.length === 5, `found ${MODALITY_MUSCLE_MAP.length}`);
 
-  const sheetMachines = mapRows.filter((row) => row.Modality !== 'Run');
-  ok('the sheet carries the same four machines',
-    sheetMachines.length === MODALITY_MUSCLE_MAP.length,
-    `sheet ${sheetMachines.length} vs module ${MODALITY_MUSCLE_MAP.length}`);
+  ok('the rotating row is keyed `mixed`, the word a generated option uses',
+    MODALITY_MUSCLE_MAP.some((entry) =>
+      entry.modality === 'mixed' && entry.label === 'Mixed — rotating'));
+
+  const sheetMuscleRows = mapRows.filter((row) => row.Modality !== 'Run');
+  ok('the sheet carries the same rows',
+    sheetMuscleRows.length === MODALITY_MUSCLE_MAP.length,
+    `sheet ${sheetMuscleRows.length} vs module ${MODALITY_MUSCLE_MAP.length}`);
 
   const mismatches: string[] = [];
-  for (const row of sheetMachines) {
+  for (const row of sheetMuscleRows) {
     const entry = MODALITY_MUSCLE_MAP.find((candidate) => candidate.label === row.Modality);
     if (!entry) { mismatches.push(`${row.Modality}: missing from the module`); continue; }
     const pairs: Array<[string, readonly string[], string]> = [
@@ -122,7 +131,7 @@ console.log('\n[2] THE MODALITY MAP — four machines, and Run still defers');
       mismatches.push(`${row.Modality} · note differs`);
     }
   }
-  okEmpty('every machine ships its authored muscles and note verbatim', mismatches);
+  okEmpty('every map row ships its authored muscles and note verbatim', mismatches);
 
   // RUN IS NOT A MACHINE ROW, and the sheet says so in words. If Run ever
   // gained muscles here it would be a SECOND answer beside the 26 run
@@ -226,23 +235,50 @@ console.log('\n[4] ARCHITECTURE — one answer per question');
   ok('an unknown session returns null',
     conditioningSessionMuscles({ exercise: 'Not A Session', modality: 'bike' }) === null);
 
-  // THE SEAM TO THE GENERATOR, STATED HONESTLY. A generated session carries a
-  // typed `ConditioningOption.modality`, and that vocabulary is NOT this one:
-  // it adds 'running' and 'mixed' and has no 'air_bike'. Sam authored four
-  // MACHINES, so 'mixed' — a session that rotates machines by design — has no
-  // single row to derive from, and this owner returns null rather than picking
-  // one. Pinned so the gap is visible to whoever builds the render surface;
-  // whether a mixed session shows the union of its machines, the first, or
-  // nothing at all is Sam's to rule, not a caller's to invent.
-  const MAPPED = ['bike', 'row', 'ski'] as const;
-  okEmpty('every machine the block can name resolves in the map',
-    MAPPED.filter((modality) =>
+  // THE SEAM TO THE GENERATOR. A generated session carries a typed
+  // `ConditioningOption.modality`, whose vocabulary spells two things
+  // differently from the sheet's: 'running' for run, and no 'air_bike' (an air
+  // bike stamps as 'bike'). The owner takes both spellings, so these cells pass
+  // the generator's OWN words — no cast, which is what made the old pin here
+  // possible to write while nothing could actually call it.
+  const RENDERED: ReadonlyArray<NonNullable<ConditioningOption['modality']>> =
+    ['bike', 'row', 'ski', 'mixed'];
+  okEmpty('every rendering a generated option can name resolves in the map',
+    RENDERED.filter((modality) =>
       conditioningSessionMuscles({
         exercise: derivedRow.exercise, modality,
       })?.source !== 'modality_map'));
-  ok('a mixed-modality session derives NO muscles rather than guessing one machine',
-    conditioningSessionMuscles({ exercise: derivedRow.exercise, modality: 'mixed' as never })
-      === null);
+
+  // SAM'S RULING 2026-08-05 ("3a whole-body") CLOSED THIS GAP BY AUTHORSHIP.
+  // The old pin here said a rotating session derives NO muscles, because four
+  // machine rows had no answer for one. The answer is now a fifth AUTHORED row
+  // — not a union, not a first-machine pick, not a fallback — so the cell that
+  // pinned the gap becomes the cell that holds the ruling.
+  const mixed = conditioningSessionMuscles({
+    exercise: derivedRow.exercise, modality: 'mixed',
+  });
+  ok('a rotating session answers from Sam\'s authored whole-body row',
+    mixed?.source === 'modality_map'
+      && [...(mixed?.primary ?? [])].join('|') === 'Quads|Glutes|Midline',
+    JSON.stringify(mixed));
+
+  // The other half of the ruling: it closed by AUTHORSHIP. If the code ever
+  // starts composing the rotating answer out of the machine rows, this catches
+  // it — the whole-body row is not any union of them.
+  const machineUnion = new Set(
+    MODALITY_MUSCLE_MAP.filter((entry) => entry.modality !== 'mixed')
+      .flatMap((entry) => [...entry.primary]));
+  ok('the rotating row is authored, not composed from the machines',
+    [...(mixed?.primary ?? [])].some((muscle) => !machineUnion.has(muscle))
+      || [...machineUnion].some((muscle) => !(mixed?.primary ?? []).includes(muscle)),
+    `mixed primary ${JSON.stringify(mixed?.primary)} vs machine-primary union `
+      + `${JSON.stringify([...machineUnion])}`);
+
+  // A RUN rendering still defers. The sheet says "(per template row)" and the
+  // owner must not answer from the map for it, in either spelling.
+  okEmpty('a run rendering defers to the per-template rows, in either spelling',
+    (['run', 'running'] as const).filter((modality) =>
+      conditioningSessionMuscles({ exercise: derivedRow.exercise, modality }) !== null));
 }
 
 console.log('\n[5] VOCABULARY — the sheet uses only signed words');

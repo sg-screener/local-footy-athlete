@@ -16,9 +16,10 @@
  * session loads the MACHINE's muscles, not the template's — so the workbook has
  * two authored surfaces and this module has two exports:
  *
- *   1. `MODALITY_MUSCLE_MAP` — one authored row per machine (Bike, Air Bike,
- *      Row, Ski). A machine-rendered session DERIVES its muscles from the
- *      modality that renders it. Stored once, derived everywhere.
+ *   1. `MODALITY_MUSCLE_MAP` — one authored row per rendering (Bike, Air Bike,
+ *      Row, Ski, and `Mixed — rotating`). A machine-rendered session DERIVES
+ *      its muscles from the modality that renders it. Stored once, derived
+ *      everywhere.
  *   2. `CONDITIONING_MUSCLE_METADATA` — the 53 template rows. The 26 run-based
  *      templates carry their own muscles, because running load varies with the
  *      quality (top-end is hamstring-dominant, acceleration is glute/quad). The
@@ -40,13 +41,47 @@
 import type { MuscleGroup } from './muscleExperienceMetadata';
 import type { ExperienceGate } from '../rules/experienceCrosswalk';
 import type { ConditioningModality } from './conditioningTemplates';
+import type { ConditioningOption } from '../types/domain';
 
 /* ── The modality map ── */
 
+/**
+ * The vocabulary the map is KEYED BY — one key per authored map row that
+ * carries muscles. It is the template vocabulary's machines plus `mixed`.
+ *
+ * `mixed` is here because Sam ruled it there (2026-08-05, "3a whole-body"): a
+ * session that rotates machines by design has no single machine row, and the
+ * answer he chose was one more AUTHORED row, not a code fallback that picks
+ * a machine or unions two. `run` is absent for the same reason it is absent
+ * from the sheet — running load lives on the per-template rows.
+ */
+export type MuscleMapModality = Exclude<ConditioningModality, 'run'> | 'mixed';
+
+/**
+ * What a GENERATED session says its conditioning rendered on
+ * (`ConditioningOption.modality`, stamped by the switchover). It spells two
+ * things differently from the template vocabulary — `running` for `run`, and
+ * no `air_bike` (an air bike stamps as `bike`) — so this owner takes both
+ * spellings at its door and normalises once, rather than letting each caller
+ * cast.
+ */
+type OptionModality = NonNullable<ConditioningOption['modality']>;
+
+/**
+ * BUILD-FAILING BIND: every rendering a generated option can carry must either
+ * key a map row or be the run spelling that defers to the per-template rows.
+ * If `ConditioningOption.modality` ever gains a word, this stops compiling
+ * until the sheet answers for it — which is Sam's authorship, not a fallback.
+ */
+type _EveryOptionRenderingIsAnswered =
+  Exclude<OptionModality, MuscleMapModality | 'running'> extends never ? true : never;
+const _optionRenderingsAnswered: _EveryOptionRenderingIsAnswered = true;
+void _optionRenderingsAnswered;
+
 export interface ModalityMuscleEntry {
-  /** The typed modality, as `ConditioningModality` spells it. */
-  readonly modality: Exclude<ConditioningModality, 'run'>;
-  /** The sheet's own word for the machine. */
+  /** The typed modality key. */
+  readonly modality: MuscleMapModality;
+  /** The sheet's own word for the row. */
   readonly label: string;
   readonly primary: readonly MuscleGroup[];
   readonly secondary: readonly MuscleGroup[];
@@ -55,7 +90,7 @@ export interface ModalityMuscleEntry {
 }
 
 /**
- * One authored row per machine. `Run` is deliberately absent: the sheet's Run
+ * One authored row per rendering. `Run` is deliberately absent: the sheet's Run
  * row says "(per template row)" because running load varies by quality, so run
  * templates keep their own muscles on the first tab.
  */
@@ -87,6 +122,13 @@ export const MODALITY_MUSCLE_MAP: readonly ModalityMuscleEntry[] = [
     primary: ['Lats', 'Triceps', 'Midline'],
     secondary: ['Shoulders', 'Low back', 'Grip'],
     note: 'Ski erg pull-down: trunk drives every stroke (Midline primary per Sam 2026-08-05); sustained handle grip like Row.',
+  },
+  {
+    modality: 'mixed',
+    label: 'Mixed — rotating',
+    primary: ['Quads', 'Glutes', 'Midline'],
+    secondary: ['Hamstrings', 'Calves', 'Shoulders', 'Upper back', 'Low back'],
+    note: 'Sam\'s ruling 2026-08-05: whole-body — a rotating session loads everything; vocabulary rendering by the review seat, Sam-authorized (\'3a whole-body\').',
   },
 ];
 
@@ -718,6 +760,17 @@ const byModality = new Map<string, ModalityMuscleEntry>(
   MODALITY_MUSCLE_MAP.map((entry) => [entry.modality, entry]),
 );
 
+/**
+ * The one place the two spellings meet. `running` is the generated option's
+ * word for the sheet's Run row, which defers — so it normalises to `run` and
+ * is answered by deferral, never by a map lookup.
+ */
+function toMapKey(
+  modality: ConditioningModality | OptionModality,
+): MuscleMapModality | 'run' {
+  return modality === 'running' ? 'run' : modality;
+}
+
 /** The signed row for a conditioning template, or null when the sheet has none. */
 export function conditioningMuscleEntry(
   exercise: string,
@@ -733,22 +786,33 @@ export function conditioningMuscleEntry(
  * the modality map. No surface composes its own answer, and nothing stores the
  * derived one.
  *
+ * A ROTATING session answers from Sam's authored `Mixed — rotating` row
+ * (ruling 2026-08-05). It is a map row like any other: nothing here unions two
+ * machines or picks one, because that would be a code answer to a question the
+ * sheet now answers.
+ *
  * `null` means the sheet does not cover this session — the honest answer for
  * legacy names and for the two rows signed on the exercise master sheet. A
  * machine-agnostic template asked WITHOUT a modality also returns null: its
- * muscles are not knowable until the rendering modality is.
+ * muscles are not knowable until the rendering modality is. So does one asked
+ * with a RUN rendering, which the sheet defers to the per-template rows.
+ *
+ * Takes either spelling — the template vocabulary's or the generated option's
+ * — and normalises once, so no caller has to cast at this door.
  */
 export function conditioningSessionMuscles(args: {
   readonly exercise: string;
-  readonly modality?: ConditioningModality | null;
+  readonly modality?: ConditioningModality | OptionModality | null;
 }): SessionMuscles | null {
   const entry = byExercise.get(args.exercise);
   if (!entry) return null;
   if (!entry.derivesFromModality) {
     return { primary: entry.primary, secondary: entry.secondary, source: 'template_row' };
   }
-  if (!args.modality || args.modality === 'run') return null;
-  const mapped = byModality.get(args.modality);
+  if (!args.modality) return null;
+  const key = toMapKey(args.modality);
+  if (key === 'run') return null;
+  const mapped = byModality.get(key);
   if (!mapped) return null;
   return { primary: mapped.primary, secondary: mapped.secondary, source: 'modality_map' };
 }
