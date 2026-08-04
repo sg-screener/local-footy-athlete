@@ -310,6 +310,49 @@ it can be sized.
 | **LR-25** | **Snapshot-based undo is the mirror-wipe shape.** `displacedOriginalState` stores a derived output and republishes it later, which is the class that wiped the profile. Convergent form: **undo = remove the decision from the ledger and re-derive.** That deletes the corrupt-snapshot class entirely, and with it the reason the accepted-state boundary needs a `restoration` operation kind at all. | Sam's forward-only ruling, 2026-07-29 — regression 23 corrupts a stored snapshot to `requiredMinimum: 99` and the boundary must refuse it, because nobody ever stated that number | L-A2, north star | **L** — queued, NOT built |
 | **LR-26** | **One week's contract has THREE homes.** `microcycle.exposureContractV2`, `weekScopedOverlays[week].exposureContractV2` and `exposureContractsByWeek[week]` are three stores of one week's contract, and a door that refreshed one left the others stale. The derived COUNTS were collapsed by Sam's derive-at-read ruling (2026-07-29) and no longer go stale; what remains is the AUTHORED targets, which are inputs and legitimately stored — but stored three times. Collapse to one home. **No sync job and no fourth writer, under any version.** | Walker seed 1: move a session off a day, add one back, mark a game — the move refreshed the overlay's contract, the add wrote only a date override | L-A1, L-A2, north star | **M** — queued, NOT built |
 
+> ## BOOKKEEPING RECONCILIATION — 2026-08-05
+>
+> **This document is the FOUNDING census of 2026-07-30. It is not the live
+> ledger.** The live ledger is `src/data/legacyReckoningCensus.ts`, which is
+> typed, gated by `test:legacy-census` in `test:bible`, and carries the
+> ratchet. Where the two disagree, the code is authoritative and this
+> document is history. Read the numbering below before quoting an LR id.
+>
+> **The live ledger carries 29 units (LR-1 … LR-29).** Three were added after
+> this document was written, all by ruling, all during Stage B:
+>
+> | Live id | Unit | Filed |
+> |---|---|---|
+> | **LR-27** | `derivedSessionProvenance` nests a full displaced-session snapshot, and it GROWS on every relaunch — measured 3→4 chain depth and 66,947→139,331 bytes across ONE relaunch | 2026-08-04, ruled; PAID at its root `92484f3` |
+> | **LR-28** | The displaced-ACCEPTED-session restoration still stores a workout copy — LR-27's residue, separated so a paid unit cannot claim an unpaid surface | 2026-08-05, ruling 1 |
+> | **LR-29** | Undo restores from stored before-state instead of replaying decisions — LR-26's before side, kept by ruling until undo is rebuilt | 2026-08-05, ruling 2 |
+>
+> **IDS WERE RECYCLED, so this document's numbering is not the live one.**
+> Two divergences, both real:
+>
+> - **This document's LR-27** ("Every door routes through the owner that
+>   already exists" — the body-part vocabulary) was **PAID and DELETED on
+>   2026-08-03**, and the id was reused for the provenance unit above. What
+>   holds that line now is behavioural, not a census row:
+>   `test:injury-routing-divergence` pins every door at zero divergence from
+>   `data/injuryRegions.ts`.
+> - **This document's LR-25 and LR-26 are NOT the live LR-25 and LR-26.** The
+>   live entries under those numbers are the plan-change producer's legacy
+>   tail, and the reversible-adjustment ledger's snapshots.
+>
+> **AND ONE UNIT DECLARED HERE WAS NEVER TYPED INTO THE LEDGER AT ALL:**
+> this document's **LR-26, "One week's contract has THREE homes"**. It was not
+> paid — `git log -S` finds it has never appeared in
+> `src/data/legacyReckoningCensus.ts` in any form. It was dropped in the
+> transcription from this document to code, and stayed dropped for six days
+> while its subject went on being true. Refiled 2026-08-05 as a live unit by
+> the Priority D batch (`docs/PRIORITY_D_RULINGS_2026-08-05.md`, D-1), which
+> is also paying the contained half of it.
+>
+> The lesson is the census's own: a ledger that lives in two places has two
+> answers, and the one nobody gates is the one that rots. This block exists so
+> that reading this file cannot mislead again.
+
 **26 units — the ~25 stop-rule is now exceeded by one; LR-25 and LR-26 are
 the same family (stored derivations) and schedule together.** They do, however,
 consolidate naturally into **five families**, which is the better unit of
