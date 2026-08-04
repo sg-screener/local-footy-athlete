@@ -34,8 +34,10 @@ import type {
   GameDay,
   WeekScopedWorkoutOverlay,
   LoggedWorkout,
+  UserRemovalConstraint,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
+import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import {
   buildDerivedSession,
   buildConditioningSession,
@@ -97,6 +99,20 @@ export interface ScheduleState {
   manualOverrides: Record<string, Workout>;
   /** System-authored selected-week overlays; manual overrides still outrank these. */
   weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
+  /**
+   * The athlete's removal decisions — bins, and the remainders they leave.
+   *
+   * ADDED 2026-08-04 by the precedence unification. This is the surface that
+   * makes a deletion survive §18, and until now it was not a field here at all:
+   * `rebaseAcceptedEffectiveWeek` applied it and the live resolver could not
+   * see it, so a binned day the accepted week held empty went on showing
+   * whatever else occupied it. Both adapters
+   * (`hooks/useSchedule.ts`, `utils/coachWeekDiff.ts`) feed it; the §18 gateway
+   * passes it explicitly and then blanks it, because by the time the gateway
+   * re-enters, constraints have already been applied to the composed content
+   * and applying them twice would re-remove a remainder.
+   */
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
   markedDays: Record<string, CalendarDayType>;
   /** Athlete profile context for adaptive derived sessions. */
   athleteContext: AthleteContext;
@@ -939,14 +955,28 @@ function applyInjuryFilterPass(
 /**
  * resolveDate — Single source of truth for any date's workout.
  *
- * Resolution priority:
- *   1. Manual override (human/coach)
- *   2. Calendar rest mark → null
- *   3. Calendar game mark → game stub
- *   4. Template says game but no calendar mark → freed slot (optional session)
- *   5. Template + game proximity rules
- *   6. Unmodified template
- *   7. No workout
+ * Resolution priority — THE ordering, owned by `rules/dayPrecedence.ts`:
+ *   1. Emptying decisions: calendar rest mark → null; calendar game mark →
+ *      game stub; an active removal constraint → its remainder or nothing.
+ *   2. Composed content: manual override > week overlay > base microcycle.
+ *   3. Template says game but no calendar mark → freed slot (optional session)
+ *   4. Template + game proximity rules
+ *   5. Unmodified template
+ *   6. No workout
+ *
+ * THE MANUAL OVERRIDE USED TO SIT AT PRIORITY 1, ABOVE THE MARK. That single
+ * exception was the whole live/accepted divergence: the accepted stack reaches
+ * this same function through the §18 gateway with `manualOverrides: {}`
+ * (`section18AcceptedWeekGateway.ts:248-250`), because by then the override has
+ * already been composed into the candidate microcycle — so Priority 1 never
+ * fired there and the mark won. One ordering, two answers, decided by whether
+ * the surface happened to still be populated.
+ *
+ * Sam recorded the consequence himself at `programStore.ts:1187-1196`: the
+ * screen prescribed Lower Squat on a day he had marked rest "while the accepted
+ * week correctly held nothing". The accepted answer is the one his note calls
+ * correct, so the live path converges onto it and the accepted stack does not
+ * move. See `rules/dayPrecedence.ts` for the full reasoning.
  */
 function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const { currentProgram, manualOverrides, markedDays } = state;
@@ -959,12 +989,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const today = todayISOLocal();
   const inBlock = isInBlock(date, currentProgram);
 
-  // ── Priority 1: Manual override (human/coach authored) ──
-  if (manualOverrides && manualOverrides[date]) {
-    return buildDay(date, dow, today, manualOverrides[date], 'manual');
-  }
-
-  // ── Priority 2: Calendar marks (game / rest / noGame) ──
+  // ── Priority 1: Calendar marks (game / rest / noGame) ──
   const mark = markedDays ? markedDays[date] : undefined;
   if (mark === 'rest') {
     return buildDay(date, dow, today, null, 'rest');
@@ -1013,9 +1038,42 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, null, 'none');
   }
 
-  const templateWorkout = overlayTemplate.hasOverlay
-    ? overlayTemplate.workout
-    : currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null;
+  // ── Priority 2: composed content — override > overlay > base ──
+  //
+  // ONE statement of the ordering (`rules/dayPrecedence.ts`), the same call the
+  // accepted stack makes. Overlay SELECTION stays here because this site
+  // range-checks the overlay's own `weekStart`/`weekEnd` and the others key
+  // straight off the Monday; only the ordering is shared.
+  const composed = composeDaySurfaces({
+    date,
+    dayOfWeek: dow,
+    dateOverrides: manualOverrides,
+    overlay: overlayTemplate.hasOverlay
+      ? { workoutsByDate: { [date]: overlayTemplate.workout } }
+      : null,
+    base: currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null,
+  });
+
+  // ── Priority 1, constraint half: the athlete emptied or trimmed this day ──
+  //
+  // `userRemovalConstraints` was not a field on `ScheduleState` and appeared
+  // nowhere in this file, so the live path could not order what it could not
+  // see: a bin the accepted week honoured was invisible to the screen the
+  // moment anything else occupied the day. Applied AFTER compose and BELOW the
+  // marks, which is where the accepted stack applies it
+  // (`acceptedEffectiveWeek.ts:144-157`, before the gateway's own resolver
+  // pass). The result then continues down the normal derivation path so
+  // proximity, conditioning and recovery treat it exactly as they do there.
+  const constrained = removalConstraintForComposedDay({
+    composed,
+    constraints: state.userRemovalConstraints,
+  });
+
+  if (!constrained && composed.owner === 'date_override' && composed.workout) {
+    return buildDay(date, dow, today, composed.workout, 'manual');
+  }
+
+  const templateWorkout = constrained ? constrained.workout : composed.workout;
   const templateMicrocycleId = overlayTemplate.overlay?.id ?? currentMicrocycle?.id ?? 'derived';
 
   // ── Priority 4: Game proximity rules (G+1 recovery, G-1 Gunshow, G-2 moderate) ──

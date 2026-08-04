@@ -247,8 +247,27 @@ export function resolveFinalVisibleSection18Week(args: {
   ));
 
   const state: ScheduleState = {
+    // THE THREE BLANKS, and why they are correct rather than a divergence to
+    // retire (`rules/dayPrecedence.ts` carries the full reasoning).
+    //
+    // By the time this runs, all three surfaces have ALREADY been folded into
+    // `constrainedWorkouts` above: overrides and overlays by
+    // `rebaseAcceptedEffectiveWeek`'s compose loop, removals by
+    // `applyUserRemovalConstraintsToWeek`. Re-feeding them would apply each
+    // twice — and for removals that is not merely redundant, it would re-remove
+    // the `remainingWorkout` remainder a bin left behind.
+    //
+    // The map that preceded the unification read the two override blanks as the
+    // "genuine unknown" that might force a larger unit, because blanking loses
+    // the `owner` distinction. It does not need to survive: under THE ordering
+    // an emptying decision outranks composed content whoever composed it, so
+    // there is nothing here for ownership to change. `userRemovalConstraints`
+    // is blanked explicitly from 2026-08-04 — the resolver gained the field in
+    // the same unit, and `...args.scheduleState` below could otherwise
+    // reintroduce it silently.
     manualOverrides: {},
     weekScopedOverlays: {},
+    userRemovalConstraints: [],
     athleteContext: athleteContext(args.profile),
     seasonPhase: args.contract.identity.seasonPhase,
     usualGameDay: args.profile?.usualGameDay,

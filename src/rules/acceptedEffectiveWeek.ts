@@ -17,8 +17,11 @@ import {
 } from './section18EffectiveWeekEvaluator';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import { athletePlacementForDateOverride } from './athletePlacement';
+import { composeDaySurfaces } from './dayPrecedence';
+import type { DaySurfaceOwner } from './dayPrecedence';
 
-export type AcceptedWeekSurfaceOwner = 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
+/** Alias, not a second declaration — the owner set is `dayPrecedence`'s. */
+export type AcceptedWeekSurfaceOwner = DaySurfaceOwner;
 
 export interface AcceptedEffectiveWeekSurfaces {
   currentProgram: TrainingProgram | null;
@@ -105,25 +108,13 @@ export function rebaseAcceptedEffectiveWeek(args: {
   for (let offset = 0; offset < 7; offset++) {
     const date = addDays(weekStart, offset);
     const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-    const manual = args.surfaces.dateOverrides[date];
-    const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
-      overlay.workoutsByDate,
-      date,
-    );
+    // Tier 2 of THE ordering, stated once in `rules/dayPrecedence.ts`. This
+    // loop WAS the definition — the owner module was written from it verbatim,
+    // so delegating here is behaviour-preserving by construction and every
+    // accepted-state suite stays green untouched.
     const base = baseMicrocycle?.workouts.find((candidate) =>
       candidate.dayOfWeek === dayOfWeek) ?? null;
-    dates.push(manual
-      ? { date, dayOfWeek, owner: 'date_override', workout: manual }
-      : hasOverlayEntry
-        ? {
-            date,
-            dayOfWeek,
-            owner: 'week_overlay',
-            workout: overlay!.workoutsByDate[date] ?? null,
-          }
-        : base
-          ? { date, dayOfWeek, owner: 'base_microcycle', workout: base }
-          : { date, dayOfWeek, owner: 'empty', workout: null });
+    dates.push(composeDaySurfaces({ date, dayOfWeek, dateOverrides: args.surfaces.dateOverrides, overlay, base }));
   }
 
   // OWNERSHIP TRAVELS WITH THE CONTENT, or the derivers downstream cannot ask.

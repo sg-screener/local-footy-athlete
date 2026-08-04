@@ -21,6 +21,7 @@ import {
   type SessionComponentKind,
 } from '../../utils/sessionComponents';
 import { dayOfWeekForISODate } from '../../utils/appDate';
+import { composeDaySurfaces } from '../../rules/dayPrecedence';
 import {
   DEV_E2E_DATE_ANCHORS,
   devE2EWeekStartForSeed,
@@ -438,6 +439,16 @@ function underlyingWorkoutForDate(
     workout.dayOfWeek === dayOfWeekForISODate(date)) ?? null;
 }
 
+/**
+ * Tier 2 of THE ordering — `rules/dayPrecedence.ts`.
+ *
+ * THIS COPY WAS THE ONE THAT DISAGREED. It tested the override surface with
+ * `hasOwnProperty`, where every product reader tests truthiness, so an explicit
+ * `null` override meant "this day is empty" HERE and meant nothing everywhere
+ * else. A witness built on that semantic can assert a state no product reader
+ * would ever produce — the fixture-fidelity law (AGENTS.md) at the precedence
+ * layer. Delegating deletes the divergence rather than documenting it.
+ */
 function effectiveWorkoutForDate(
   state: Pick<
     DevE2EWitnessState,
@@ -445,14 +456,12 @@ function effectiveWorkoutForDate(
   >,
   date: string,
 ): Workout | null {
-  if (Object.prototype.hasOwnProperty.call(state.dateOverrides ?? {}, date)) {
-    return state.dateOverrides?.[date] ?? null;
-  }
-  const overlay = state.weekScopedOverlays?.[mondayForDate(date)];
-  if (overlay && Object.prototype.hasOwnProperty.call(overlay.workoutsByDate, date)) {
-    return overlay.workoutsByDate[date] ?? null;
-  }
-  return underlyingWorkoutForDate(state.program, date);
+  return composeDaySurfaces({
+    date,
+    dateOverrides: state.dateOverrides,
+    overlay: state.weekScopedOverlays?.[mondayForDate(date)] ?? null,
+    base: underlyingWorkoutForDate(state.program, date),
+  }).workout;
 }
 
 function contractSignatureForWeek(

@@ -51,6 +51,7 @@ import {
 } from './workoutContent';
 import { todayISOLocal } from './appDate';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
+import { composeDaySurfaces } from '../rules/dayPrecedence';
 import {
   finaliseWorkoutAfterMutation,
   type WorkoutCanonicalisationContext,
@@ -726,17 +727,18 @@ function resolveLiveDateMutationExposure(args: {
   for (let offset = 0; offset < 7; offset++) {
     const date = addDaysISO(weekStart, offset);
     const dow = new Date(`${date}T12:00:00`).getDay();
-    const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
-      overlay.workoutsByDate,
-      date,
-    );
+    // Tier 2 of THE ordering — `rules/dayPrecedence.ts`. The candidate date
+    // keeps its own answer: this loop is composing the week AROUND an edit
+    // under validation, not resolving it.
     const workout = date === args.date
       ? args.workout
-      : state.dateOverrides?.[date] ?? (
-          hasOverlayEntry
-            ? overlay!.workoutsByDate[date]
-            : microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
-        );
+      : composeDaySurfaces({
+          date,
+          dayOfWeek: dow,
+          dateOverrides: state.dateOverrides,
+          overlay,
+          base: microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null,
+        }).workout;
     if (workout) workouts.push(workout);
   }
   const editedDay = new Date(`${args.date}T12:00:00`).getDay();
@@ -1526,17 +1528,15 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
   for (let offset = 0; offset < 7; offset++) {
     const date = addDaysISO(weekStart, offset);
     if (date === args.date) continue;
-    const manual = state.dateOverrides?.[date] as Workout | undefined;
-    const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
-      overlay.workoutsByDate,
-      date,
-    );
     const dow = new Date(`${date}T12:00:00`).getDay();
-    const workout = manual ?? (
-      hasOverlayEntry
-        ? overlay!.workoutsByDate[date]
-        : microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
-    );
+    // Tier 2 of THE ordering — `rules/dayPrecedence.ts`.
+    const workout = composeDaySurfaces({
+      date,
+      dayOfWeek: dow,
+      dateOverrides: state.dateOverrides,
+      overlay,
+      base: microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null,
+    }).workout;
     if (workout) workouts.push(workout);
   }
   // The candidate is deliberately last: an explicit edit may not displace
@@ -1711,14 +1711,19 @@ export function validateLiveWeekOverlayWrite(
   let effectiveWorkouts: Workout[] = [];
   for (let offset = 0; offset < 7; offset++) {
     const date = addDaysISO(overlay.weekStart, offset);
-    const manual = state.dateOverrides?.[date] as Workout | undefined;
-    const hasOverlayEntry = Object.prototype.hasOwnProperty.call(workoutsByDate, date);
     const dow = new Date(`${date}T12:00:00`).getDay();
-    const workout = manual ?? (
-      hasOverlayEntry
-        ? workoutsByDate[date]
-        : baseMicrocycle?.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
-    );
+    // Tier 2 of THE ordering — `rules/dayPrecedence.ts`. NOTE the overlay here
+    // is the LOCALLY VALIDATED `workoutsByDate`, not the stored one: this
+    // function is validating an overlay write before it lands, so the entry it
+    // must compose against is the candidate. Selection stays with the caller
+    // for exactly this reason.
+    const workout = composeDaySurfaces({
+      date,
+      dayOfWeek: dow,
+      dateOverrides: state.dateOverrides,
+      overlay: { workoutsByDate },
+      base: baseMicrocycle?.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null,
+    }).workout;
     if (workout) effectiveWorkouts.push(workout);
   }
   let exposureContractV2 = persistedExposureContractV2 ?? (

@@ -190,6 +190,10 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
     currentMicrocycle: programState.currentMicrocycle,
     manualOverrides: programState.dateOverrides || {},
     weekScopedOverlays: programState.weekScopedOverlays || {},
+    // The athlete's bins. Fed from 2026-08-04 (precedence unification): this
+    // adapter and `useSchedule` both omitted it, so the live resolver had no
+    // way to honour a removal the accepted week honours.
+    userRemovalConstraints: programState.userRemovalConstraints || [],
     markedDays: acceptedOwnsMaterialState
       ? acceptedContext.markedDays
       : calendarState.markedDays || {},

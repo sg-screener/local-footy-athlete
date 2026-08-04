@@ -100,6 +100,10 @@ function useScheduleState(): ScheduleState & {
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   const manualOverrides = useProgramStore((s) => s.dateOverrides);
   const weekScopedOverlays = useProgramStore((s) => s.weekScopedOverlays);
+  // The athlete's bins. Subscribed from 2026-08-04 (precedence unification) —
+  // this adapter omitted the surface entirely, so the screen could not honour a
+  // removal the accepted week honours.
+  const userRemovalConstraints = useProgramStore((s) => s.userRemovalConstraints);
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
@@ -195,6 +199,7 @@ function useScheduleState(): ScheduleState & {
     currentMicrocycle,
     manualOverrides: manualOverrides || {},
     weekScopedOverlays: weekScopedOverlays || {},
+    userRemovalConstraints: userRemovalConstraints || [],
     markedDays: markedDays || {},
     athleteContext,
     seasonPhase,
