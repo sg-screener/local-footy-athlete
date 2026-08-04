@@ -217,7 +217,16 @@ export function buildWeekScopedWorkoutOverlay(args: {
     weekEnd: addDays(args.weekStart, 6),
     anchorDate: args.anchorDate,
     reason: args.reason,
-    exposureContract: sourceMicrocycle.exposureContract,
+    // NO v1 CONTRACT ON A NEW OVERLAY (L15, Sam's D-1 ruling 2026-08-05).
+    // This copied `sourceMicrocycle.exposureContract` verbatim, and because
+    // hydrate re-materialises fixture-mark overlays through here, a superseded
+    // shape was written on launches — L15's subject exactly ("superseded
+    // formats are never written again, by anything, ever"). The V2 lift below
+    // is a READ-INGRESS lift, which is the sanctioned direction: it migrates a
+    // legacy microcycle's v1 into the current shape on the way in. Nothing
+    // reads an overlay's v1 field — every consumer falls back to the
+    // microcycle's — so the copy bought nothing but a stale second home.
+    // The microcycle-level writer is what remains, and it is filed as LR-30.
     exposureContractV2: sourceMicrocycle.exposureContractV2 ?? (
       sourceMicrocycle.exposureContract
         ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {

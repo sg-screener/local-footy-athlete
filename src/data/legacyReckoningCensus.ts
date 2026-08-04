@@ -1025,6 +1025,47 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'symbol. A detector counting beforeWorkout references would count the restore '
       + 'machinery this unit exists to replace.',
   },
+  {
+    id: 'LR-30',
+    title: 'One week\'s contract still has more than one home — the legacy v1 contract is still written',
+    tier: 3,
+    laws: ['L-A1'],
+    blastRadius: 'honesty',
+    founding: 'REFILED 2026-08-05, and the refiling is the finding. Sam\'s FOUNDING '
+      + 'census of 2026-07-30 declared this unit — "One week\'s contract has THREE '
+      + 'homes" (docs/LEGACY_RECKONING_CENSUS_2026-07-30.md, its LR-26) — and it was '
+      + 'NEVER TYPED INTO THIS FILE. `git log -S` finds no occurrence of it in this '
+      + 'module in any commit, ever. It was not paid; it was dropped in the '
+      + 'transcription from the document to code and stayed dropped for six days. '
+      + 'The Priority D survey (2026-08-05) then rediscovered its subject from the '
+      + 'other end, and measured it: FIVE writers of the v1 `exposureContract` shape, '
+      + 'of which `generateProgram.ts:692,767` mints one onto EVERY freshly generated '
+      + 'microcycle — so this is not legacy residue sitting still, it is a superseded '
+      + 'shape still being authored today. L15 is unconditional: "superseded formats '
+      + 'are never written again, by anything, ever. A writer of a retired shape is a '
+      + 'red-gate defect, not a compatibility feature."',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, D-1 option a): the CONTAINED CUT LANDED in the '
+      + 'same batch as this filing — the two overlay writers (`weekRebuild.ts:220` '
+      + 'verbatim copy, reachable from hydrate via fixture-mark materialisation, and '
+      + 'the re-derived attach in `postGenerationConstraintValidation.ts`) no longer '
+      + 'write v1, so the overlay home is gone and three homes became two. WHAT THIS '
+      + 'UNIT STILL OWNS: the generation-time writer and its readers — the V2-less '
+      + 'acceptance throw (`generateProgram.ts:697-713`), '
+      + '`assertEffectiveMicrocycleExposure`, the bye-mode fallback '
+      + '(`sessionResolver.ts:1690`, dead on any V2 install), the date-mutation '
+      + 'reconciliation, and ~7 test files. Sam\'s reason for filing rather than '
+      + 'sweeping: `domain.ts:665-667` records that v1 "runs alongside the legacy '
+      + 'acceptance contract UNTIL THE FINAL COMMIT-GATEWAY SLICE IS APPROVED" — a '
+      + 'staged retirement whose gate nobody owns. Filing gives that gate an owner by '
+      + 'RATCHET rather than by memory, which is the whole argument.',
+    detector: null,
+    whyNotDetectable: 'Its subject is a SHAPE still being written, not a symbol that '
+      + 'should not exist. A detector counting `exposureContract` references would '
+      + 'count every read-ingress lift — the sanctioned direction L15 explicitly '
+      + 'allows — and go green the moment the field were renamed.',
+  },
 ];
 
 /**
@@ -1133,7 +1174,28 @@ export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
  * made, and that ruling's own premise was corrected by them. Filing them is
  * scope declared, not debt discovered.
  */
-export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 29;
+/**
+ * 29 -> 30 on 2026-08-05, BY RULING — `docs/PRIORITY_D_RULINGS_2026-08-05.md`,
+ * D-1: "Generation still minting v1 on every fresh microcycle is FILED as its
+ * own census unit ... the staged 'until the commit-gateway slice is approved'
+ * gate gets an owner by being ratcheted, not by memory."
+ *
+ * THE SWEEP THAT MISSED IT, as the gate demands — and the answer is worse than
+ * a sweep missing it. NOTHING missed it. Sam's FOUNDING census of 2026-07-30
+ * declared this exact unit in its own words: "One week's contract has THREE
+ * homes ... Collapse to one home. No sync job and no fourth writer, under any
+ * version" (`docs/LEGACY_RECKONING_CENSUS_2026-07-30.md`, its LR-26). It was
+ * never transcribed into this file — `git log -S` finds it in no commit, ever
+ * — so the ledger the gate reads has been one unit short of the ledger Sam
+ * signed since the day this module was written, and the missing one went on
+ * being true for six days.
+ *
+ * That is why this raise is not headroom. LR-30 restores a founding unit to
+ * the count it should always have had; the number 29 was itself the error.
+ * Recorded in the founding document too (its own reconciliation block), so
+ * neither file can be read as the whole ledger again.
+ */
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 30;
 
 /**
  * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.

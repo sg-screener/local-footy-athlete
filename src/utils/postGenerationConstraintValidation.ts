@@ -1835,10 +1835,14 @@ export function validateLiveWeekOverlayWrite(
       exposureContract: resolvedContract,
     });
   }
-  validatedOverlay = {
-    ...validatedOverlay,
-    exposureContract: resolvedContract,
-  };
+  // THE RE-RESOLVED v1 CONTRACT IS NOT STORED (L15, Sam's D-1 ruling
+  // 2026-08-05). It is still DERIVED above, and it still does its job: the
+  // acceptance check just ran on it, and `assertEffectiveMicrocycleExposure`
+  // throws on it when the week is unacceptable. What stops is the WRITE — the
+  // overlay used to keep a copy, giving one week's contract a second home in
+  // a superseded shape, which is the founding census's "One week's contract
+  // has THREE homes" (refiled as LR-30). This branch only runs when no V2
+  // exists anywhere for the week, and nothing reads the overlay's v1 field.
   return validatedOverlay;
 }
 
