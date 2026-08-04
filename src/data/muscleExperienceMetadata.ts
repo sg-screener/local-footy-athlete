@@ -110,6 +110,7 @@ export {
 } from '../rules/experienceCrosswalk';
 
 import type { ExperienceGate } from '../rules/experienceCrosswalk';
+import { CONDITIONING_TEMPLATES } from './conditioningTemplates';
 
 /**
  * Spelling variants that WERE in the FINAL sheet and have been corrected.
@@ -188,15 +189,6 @@ export const MUSCLE_METADATA_POOLS: readonly string[] = [
 ];
 
 /* ── Reconciliation with the selectable vocabulary ── */
-
-/**
- * Selectable exercises the authored sheet gives no metadata for.
- *
- * EMPTY as of Sam's 2026-07-27 reconciliation: he ruled `Single-Arm Pulldown`
- * KEEP and authored its row, closing the only gap. The list and its gate stay so
- * a future selectable addition without metadata is caught rather than assumed.
- */
-export const SELECTABLE_WITHOUT_METADATA: readonly string[] = [];
 
 export interface MetadataWithoutSelectableExercise {
   readonly exercise: string;
@@ -2091,3 +2083,21 @@ export function exercisesTargeting(muscle: MuscleGroup): readonly ExerciseMuscle
 export function exercisesInMetadataPool(pool: string): readonly ExerciseMuscleEntry[] {
   return EXERCISE_MUSCLE_METADATA.filter((entry) => entry.pool === pool);
 }
+
+/**
+ * Selectable exercises the authored sheet gives no metadata for.
+ *
+ * EMPTY from Sam's 2026-07-27 reconciliation until the Stage B switchover
+ * (2026-08-05): the 55 signed conditioning templates are now selectable, and
+ * they are SESSIONS, not lifts — the muscle sheet's anatomy vocabulary has no
+ * row for a conditioning dose, the same way the cue/video contract exempts
+ * `conditioning_format`. Recorded by DERIVATION from the signed sheet (minus
+ * any name the muscle sheet does cover), so the gap list cannot drift from
+ * the vocabulary. Whether conditioning sessions ever get muscle rows is
+ * Sam's call on the master sheet; recording keeps the ledger honest.
+ */
+export const SELECTABLE_WITHOUT_METADATA: readonly string[] =
+  CONDITIONING_TEMPLATES
+    .map((template) => template.name)
+    .filter((name) =>
+      !EXERCISE_MUSCLE_METADATA.some((entry) => entry.exercise === name));

@@ -37,6 +37,8 @@ import type { MovementPattern } from './exerciseTags';
 
 // ─── Types ───
 
+import { resolveTemplateByName } from '../rules/conditioningSelection';
+
 export interface ExerciseCue {
   primaryCue: string;
   secondaryCue: string;
@@ -149,7 +151,17 @@ export function getExerciseCue(
     if (key.toLowerCase() === lower) return cue;
   }
 
-  // 3. The one pending pair — conditioning only, and not authored.
+  // 3. An authored conditioning template's own cue (Stage B landed,
+  // 2026-08-05). This is the supersession the pending-pair note above always
+  // promised: the 55 signed templates each carry Sam's `effortCue`, and both
+  // lines here are the workbook's fields VERBATIM, equality-gated to the
+  // sheet. Not a table copy — the workbook stays the one owner.
+  const template = resolveTemplateByName(exerciseName);
+  if (template) {
+    return { primaryCue: template.effortCue, secondaryCue: template.intensity };
+  }
+
+  // 3b. The one pending pair — legacy conditioning only, and not authored.
   if (movementPattern === 'conditioning') {
     return PENDING_CONDITIONING_CUE;
   }
@@ -874,3 +886,4 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: "Don't let the torso rotate.",
   },
 };
+

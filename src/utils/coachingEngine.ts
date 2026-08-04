@@ -91,6 +91,12 @@ import {
   type PowerInjuryInput,
 } from '../rules/powerPrimerPolicy';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
+import {
+  SPEED_FALLBACK_TEMPLATE,
+  speedTemplateByName,
+  templateDurationMinutes,
+  templatePrescriptionLine,
+} from '../rules/conditioningSelection';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
@@ -1651,19 +1657,24 @@ function gOffset(dayNum: number, gameDayNum: number | null): number {
   return diff;
 }
 
-function createQualitySpeedMicroDoseBlock(placement: SpeedBlockPlacement): SpeedBlock {
+/**
+ * The pre-season / default speed exposure. Stage B switchover: the invented
+ * "Quality Speed Micro-dose" (a code-authored prescription) is gone; the
+ * fallback is its pinned successor — the authored '20 m Acceleration Reps'
+ * template — rendered by name, doses from the signed sheet.
+ */
+function createFallbackSpeedBlock(placement: SpeedBlockPlacement): SpeedBlock {
+  const template = speedTemplateByName(SPEED_FALLBACK_TEMPLATE);
   return {
-    id: `preseason-quality-speed-micro-dose-${placement}`,
-    title: 'Quality Speed Micro-dose',
-    label: 'Speed Micro-dose',
+    id: `authored-speed-fallback-${placement}`,
+    title: template.name,
+    label: template.name,
     kind: 'true_speed',
     placement,
-    durationMinutes: 15,
-    prescription: '4-6 x 10-20m accelerations or build-ups, full walk-back rest',
-    notes: [
-      'Do this fresh before any fatigue work.',
-      'Stop if speed or mechanics drop.',
-    ],
+    durationMinutes: templateDurationMinutes(template),
+    prescription: templatePrescriptionLine(template),
+    notes: [template.effortCue],
+    templateName: template.name,
     counting: {
       hardExposure: true,
       mainStrength: false,
@@ -1688,7 +1699,7 @@ function createSpeedTopUpBlock(
     preferAcceleration: weakPointPrefersAcceleration(
       weakPointFocusFor(inputs.biggestLimitation),
     ),
-  }) ?? createQualitySpeedMicroDoseBlock(placement);
+  }) ?? createFallbackSpeedBlock(placement);
 }
 
 // ─── Weekly Plan Builder (Game-Day Relative) ───

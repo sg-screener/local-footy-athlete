@@ -48,10 +48,8 @@ import {
   weakPointPrefersAcceleration,
   type WeakPointFocus,
 } from '../rules/weakPointFocus';
-import {
-  LATE_OFFSEASON_SPEED_TEMPLATES,
-  selectLateOffseasonSpeedTemplate,
-} from '../rules/speedTemplates';
+import { selectLateOffseasonSpeedTemplate } from '../rules/speedTemplates';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { computeTestingBias } from '../rules/testingBias';
 import {
   ACCESSORY_REGION_THRESHOLD,
@@ -276,13 +274,15 @@ console.log('\n[5] Ruling 0 — the power lean reaches its TWO real consumers');
   };
   const normal = selectLateOffseasonSpeedTemplate(context);
   const power = selectLateOffseasonSpeedTemplate({ ...context, preferAcceleration: true });
-  ok('by default the progression reaches the build-up (toward top-speed)',
-    normal?.id === 'late_offseason_build_up_intro', normal?.id);
-  ok('a power weakness holds the ACCELERATION build instead',
-    power?.id === 'late_offseason_acceleration_build', power?.id);
+  // Stage B switchover: selection serves AUTHORED templates by name
+  // (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md).
+  ok('by default the progression reaches the flying reintroduction (toward top-speed)',
+    normal?.name === 'Off-Season Speed Reintroduction', normal?.name);
+  ok('a power weakness holds the ACCELERATION exposure instead',
+    power?.name === '20 m Acceleration Reps', power?.name);
   ok('and both are Sam-authored templates — the lean picks, it does not invent',
-    LATE_OFFSEASON_SPEED_TEMPLATES.some((template) => template.id === power?.id) &&
-    LATE_OFFSEASON_SPEED_TEMPLATES.some((template) => template.id === normal?.id));
+    CONDITIONING_TEMPLATES.some((template) => template.name === power?.name) &&
+    CONDITIONING_TEMPLATES.some((template) => template.name === normal?.name));
 
   // READING A's BOUNDARY, once more: only the position that LEAVES accelerations changes.
   // Position is `weekNumber - 3`, so weeks 4 and 5 are positions 1 and 2 — both already
@@ -293,10 +293,10 @@ console.log('\n[5] Ruling 0 — the power lean reaches its TWO real consumers');
     const earlyPower = selectLateOffseasonSpeedTemplate({
       ...context, weekNumber, preferAcceleration: true,
     });
-    ok(`late position ${position} is identical either way`, early?.id === earlyPower?.id,
-      { position, early: early?.id, earlyPower: earlyPower?.id });
+    ok(`late position ${position} is identical either way`, early?.name === earlyPower?.name,
+      { position, early: early?.name, earlyPower: earlyPower?.name });
     ok(`late position ${position} is already an acceleration template`,
-      /acceleration/.test(early?.id ?? ''), early?.id);
+      /acceleration/i.test(early?.name ?? ''), early?.name);
   }
 }
 

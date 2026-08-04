@@ -34,6 +34,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { resolveTemplateByName } from '../rules/conditioningSelection';
 import { selectableExerciseNames, isExempt } from '../data/selectableExerciseVocabulary';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
@@ -449,8 +450,16 @@ function main(): void {
      * with no gate able to notice. Deriving from `selectableExerciseNames()`
      * closes the hiding place: if an athlete can be given it, it is covered.
      */
+    // STAGE B LANDED (2026-08-05): the 55 signed conditioning templates are
+    // selectable and their cue is AUTHORED — Sam's own `effortCue`, served
+    // verbatim from the workbook via `getExerciseCue` step 3, equality-gated
+    // by `conditioningTemplateEqualityTests`. A name that resolves to a
+    // template is covered by that second authored source, not by this sheet
+    // (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md).
     const uncovered = selectableExerciseNames().filter(
-      (name) => !EXERCISE_CUES[name] && !authoredCues.get(name)?.pending,
+      (name) => !EXERCISE_CUES[name]
+        && !authoredCues.get(name)?.pending
+        && !resolveTemplateByName(name),
     );
     ok('every selectable exercise is authored or explicitly PENDING',
       uncovered.length === 0,

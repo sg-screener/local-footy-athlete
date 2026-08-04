@@ -167,6 +167,21 @@ function conditioningCategoryFromFields(workout: Workout): SessionCategory | nul
  * exercise-name classifier so running detection has ONE home.
  */
 function detectModality(workout: Workout, fallbackCategory: SessionCategory): SessionModality {
+  // TYPED FIRST (Stage B switchover, 2026-08-05): authored template names
+  // carry no machine word ('Continuous Aerobic Run' can render on a bike), so
+  // name classification cannot answer modality for them. The conditioning
+  // block's typed `modality` — stamped by the generator from the resolved
+  // rendering — is the authority when present; everything below survives as
+  // the legacy fallback for stored content.
+  const typedModalities = (workout.conditioningBlock?.options ?? [])
+    .map((option) => option.modality)
+    .filter((modality): modality is NonNullable<typeof modality> => !!modality);
+  if (typedModalities.length > 0) {
+    if (typedModalities.every((modality) => modality === 'running')) return 'running';
+    if (typedModalities.some((modality) => modality === 'running')) return 'mixed';
+    return 'off_feet';
+  }
+
   let sawRunning = false;
   let sawErg = false;
 

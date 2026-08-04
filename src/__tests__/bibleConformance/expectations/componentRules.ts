@@ -50,9 +50,13 @@ export const COMPONENT_BIBLE_RULES: readonly BibleComponentRule[] = [
     anchorQuote: 'A conditioning component is proper planned conditioning work that may sit on the same day as strength.',
     statement: 'Conditioning prescriptions remain separate from ordinary strength rows.',
     applicableScenarios: ['mixed-strength-aerobic'],
+    // Stage B switchover (2026-08-05): the composed "Easy Aerobic Flush
+    // (2 x 10min easy Mixed Erg Block)" vocabulary retired; the deterministic
+    // pick for this scenario is now the authored template row
+    // (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md).
     expectation: {
       kind: 'conditioning_section',
-      conditioningRows: ['Easy Aerobic Flush (2 x 10min easy Mixed Erg Block)'],
+      conditioningRows: ['Continuous Aerobic Run'],
     },
   },
   {

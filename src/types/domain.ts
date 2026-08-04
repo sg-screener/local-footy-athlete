@@ -432,6 +432,12 @@ export interface SpeedBlock {
   notes?: string[];
   exerciseIds?: string[];
   counting: SpeedBlockCountingFence;
+  /**
+   * The authored conditioning template this block renders (Stage B
+   * switchover). Rows derive from the template by name — never from
+   * string-prefix matching on `id`, which is the coupling this replaced.
+   */
+  templateName?: string;
 }
 
 /**
@@ -1031,6 +1037,12 @@ export interface ConditioningOption {
   durationMinutes?: number;
   /** Typed accepted option intensity when it differs from the workout default. */
   intensity?: IntensityLevel;
+  /**
+   * The modality this option resolved to (Stage B switchover). Authored
+   * template names never carry a machine name, so readers must never
+   * keyword-guess the modality from the title — this field is the answer.
+   */
+  modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed';
 }
 
 /**

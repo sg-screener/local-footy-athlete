@@ -899,7 +899,10 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
     workPeriod: '15 s hard',
     restPeriod: '15 s easy',
     setsRounds: '8 rounds × 2–3 blocks, 2 min between blocks',
-    intensity: '110% MAS (15 s work per masIntensityForWorkSeconds, src/utils/masCopy.ts)',
+    // Re-signed plain by Sam 2026-08-05 (docs/MAS_CELL_RESIGN_RULING_2026-08-05.md):
+    // no function citation; a POINT value, not a range, so per-athlete
+    // distance derives exactly at render when MAS wiring lands.
+    intensity: '110% MAS',
     workToRest: '1:1',
     totalSessionTime: '≈12–19 min (hard work 4–6 min)',
     properties: ['set_length_max_4_5_min'],

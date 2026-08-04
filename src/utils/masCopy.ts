@@ -114,8 +114,13 @@ export function masIntensityBlock(
 //
 // WHAT STAYS HERE: the INTENSITY rule — what percentage of MAS a work
 // interval asks for. That is a different fact from what the athlete's MAS
-// is, two conditioning template rows cite it by name, and it is not the
-// owner's business.
+// is, and it is not the owner's business. Since the Stage B switchover
+// (2026-08-05) this binary has ZERO product callers — the sessionBuilder
+// dose library that consumed it was deleted — and the one workbook cell
+// that cited the function by name was re-signed plain by Sam
+// (docs/MAS_CELL_RESIGN_RULING_2026-08-05.md). One template row still cites
+// this FILE for the >30 s = 100% wording ('Two-Minute Repeats'); that cell
+// is Sam's to re-sign, not this module's to edit.
 //
 // OPEN, FOR STAGE B: the fifteen %MAS template rows carry RANGES
 // ('90–100% MAS'), while `masIntensityForWorkSeconds` above is a BINARY

@@ -28,11 +28,14 @@
 
 import {
   buildConditioningTemplate,
-  conditioningCategoryToExerciseName,
   conditioningDateHash,
   DEFAULT_ATHLETE_CONTEXT,
   selectDefaultAerobicErgModalityFromHash,
 } from '../utils/sessionBuilder';
+import {
+  selectConditioningTemplate,
+  type AthleteConditioningCategory,
+} from '../rules/conditioningSelection';
 import {
   resolveWeekWithConditioning,
   type ScheduleState,
@@ -63,27 +66,81 @@ function section(title: string): void {
   console.log(`\n=== ${title} ===`);
 }
 
-// Mirror the builder's knowledge of each category's template pool.
-// If these arrays drift from sessionBuilder.ts the tests fail loudly,
-// which is intentional — the rotation contract depends on the pool
-// shape staying in sync.
-type Cat = 'aerobic_base' | 'sprint' | 'vo2' | 'glycolytic';
+// STAGE B SWITCHOVER PORT (2026-08-05): selection now serves Sam's authored
+// templates (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md). These
+// arrays mirror the selection owner's candidate pools IN ORDER (quality tabs
+// in sheet order; the standalone role excludes finisher-only and
+// fallback-only rows). If they drift from `conditioningSelection.ts` the
+// tests fail loudly, which is intentional — the rotation contract depends on
+// the pool shape staying in sync.
+type Cat = 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
 const POOL: Record<Cat, string[]> = {
-  aerobic_base: ['Long Nasal Run'],
-  sprint: [
-    'Free Sprint Session',
-    'Flying Sprints',
-    'Max Effort Sprint Accumulation',
+  aerobic_base: [
+    'Continuous Aerobic Run',
+    'Steady Blocks (3×8 min or 4×6 min)',
+    'Long Aerobic Intervals',
+    'Controlled 10–20 min Blocks',
+    'Steady 5 min Blocks',
   ],
-  vo2: ['4x4 VO2', '1km Repeat Intervals'],
-  glycolytic: [
+  tempo: [
+    '30:30 Controlled Tempo Blocks',
+    '1 min On / 1 min Easy Tempo',
+    '2 min On / 1 min Easy',
+    'Extensive Tempo (100 m repeats)',
+    'Aerobic Shuttles',
+  ],
+  sprint: [
+    '10 m Acceleration Reps',
+    '20 m Acceleration Reps',
+    '30 m Acceleration Reps',
+    'Hill Acceleration',
+    'Air Bike Accelerations',
+    'Team-Training Warm-Up Dose',
+    'Return-to-Speed Ladder',
+    'Fly 20 (20+20)',
+    'Fly 30 (30+30)',
+    'Progressive Sprint Exposure',
+    'Off-Season Speed Reintroduction',
+    '20 m Shuttle Repeats',
+    '30 m Repeats',
+    'Sprint Sets (3×5×6 s)',
+    '10 s Max Sprint Repeats',
+    '10 s Repeat Efforts',
+  ],
+  vo2: [
+    'Classic 4×4',
+    'Three-Minute Intervals',
+    'Two-Minute Repeats',
     'MAS 15:15 Blocks',
-    '200m/400m Repeat Runs',
-    'Tabata Intervals',
-    'Inverse Tabata',
-    'Footy Fartlek',
+    '30:30 Hard Intermittent',
+    'Footy Shuttles',
+    '1 km Repeats',
+    '400 m Repeats',
+    'Erg EMOM',
+  ],
+  glycolytic: [
+    '20 s Max Sprint — Small Dose',
+    'Erg Short-Burst Repeats (15–20 s)',
+    '30 s Very Hard Repeats',
+    '45 s Hard Repeats',
+    '60 s Max Sustained Effort',
+    '150–200 m Hard Repeats',
+    'Hill Repeats — hard sustained',
   ],
 };
+
+/** The ported contract surface: authored-template selection. */
+function conditioningCategoryToExerciseName(
+  cat: Cat,
+  dateStr: string,
+  miniCycleNumber?: number,
+): string {
+  return selectConditioningTemplate({
+    category: cat as AthleteConditioningCategory,
+    dateStr,
+    miniCycleNumber,
+  }).name;
+}
 
 // A small set of spread-out dateStrs — stability assertions must hold
 // regardless of which date feeds in, because the mc-path ignores it.
@@ -171,22 +228,22 @@ section('4. Rotation picks entries in pool order');
   }
 }
 
+// Section 5: aerobic_base rotates its authored pool (the 1:1 'Long Nasal
+// Run' era ended with the Stage B switchover)
 // ─────────────────────────────────────────────────────────────────
-// Section 5: aerobic_base always Long Nasal Run
-// ─────────────────────────────────────────────────────────────────
-section('5. aerobic_base is 1:1');
+section('5. aerobic_base rotates its authored capacity pool');
 {
-  for (let mc = 1; mc <= 6; mc++) {
-    for (const d of DATES) {
-      const name = conditioningCategoryToExerciseName('aerobic_base', d, mc);
-      assert(
-        name === 'Long Nasal Run',
-        `aerobic_base mc=${mc} date=${d} → ${name} (expected Long Nasal Run)`,
-      );
-    }
+  const seen = new Set<string>();
+  for (let mc = 1; mc <= POOL.aerobic_base.length; mc++) {
+    seen.add(conditioningCategoryToExerciseName('aerobic_base', DATES[0], mc));
   }
+  assert(
+    seen.size === POOL.aerobic_base.length,
+    `aerobic_base walks its full authored pool (saw ${seen.size})`,
+  );
 }
 
+// ─────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────
 // Section 5b: default aerobic modality is a deterministic weighted
 // 10-bucket policy. Explicit modalities are tested again at the program
@@ -211,53 +268,10 @@ section('5b. aerobic modality defaults are weighted and deterministic');
     'same hash always returns the same aerobic modality',
   );
 
-  const firstSeedFor = (wanted: 'bike' | 'mixed' | 'row' | 'ski'): string => {
-    for (let i = 0; i < 100; i++) {
-      const seed = `aerobic-default-${i}`;
-      if (selectDefaultAerobicErgModalityFromHash(conditioningDateHash(seed)) === wanted) {
-        return seed;
-      }
-    }
-    throw new Error(`No deterministic seed found for ${wanted}`);
-  };
-  const textOf = (rows: ReturnType<typeof buildConditioningTemplate>): string =>
-    rows.map((row) => `${row.exercise?.name ?? ''}\n${row.notes ?? ''}`).join('\n');
-
-  const bikeText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('bike')));
-  const mixedSeed = firstSeedFor('mixed');
-  const mixedText = textOf(buildConditioningTemplate('Long Nasal Run', mixedSeed));
-  const rowText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('row')));
-  const skiText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('ski')));
-  assert(/Assault Bike/i.test(bikeText), `bike bucket builds bike zone 2 (got "${bikeText}")`);
-  assert(
-    /Mixed Erg Block/i.test(mixedText) && /Bike and Rower\/SkiErg/i.test(mixedText),
-    `mixed bucket builds bike + row/ski blocks (got "${mixedText}")`,
-  );
-  assert(/Rower/i.test(rowText), `row bucket builds RowErg intervals (got "${rowText}")`);
-  assert(/SkiErg/i.test(skiText), `ski bucket builds SkiErg intervals (got "${skiText}")`);
-  assert(
-    mixedText === textOf(buildConditioningTemplate('Long Nasal Run', mixedSeed)),
-    'same aerobic template inputs produce identical modality and prescription',
-  );
-
-  for (const [label, text] of [
-    ['mixed', mixedText],
-    ['row', rowText],
-    ['ski', skiText],
-  ] as const) {
-    assert(
-      !/\b(?:1[1-9]|[2-9]\d)min zone 2 on (?:Rower|SkiErg)/i.test(text),
-      `${label} default has no continuous Row/Ski block longer than 10min`,
-    );
-    assert(
-      /2min complete rest between blocks/i.test(text),
-      `${label} default uses complete rest between aerobic blocks (got "${text}")`,
-    );
-    assert(
-      !/easy between blocks/i.test(text),
-      `${label} default does not prescribe easy work during between-block rest`,
-    );
-  }
+  // The per-modality prescription texts this section used to assert were
+  // authored by the retired builder (`buildConditioningTemplate('Long Nasal
+  // Run', ...)`). Stage B retired that dose library; modality guidance is now
+  // the authored template's own `modalityNotes`, equality-gated to the sheet.
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -384,79 +398,13 @@ section('7. buildWorkoutsFromCoach threads miniCycleNumber into template pick');
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Section 8: Combined lower + aerobic-base copy is concise and
-// athlete-facing. This is copy-only: duration, zone, intensity, and
-// modality flexibility stay on the same builder path.
-// ─────────────────────────────────────────────────────────────────
-section('8. combined lower + aerobic-base copy');
-{
-  const out = buildConditioningTemplate('Long Nasal Run', '2026-06-01', {
-    combined: true,
-    strengthRegion: 'lower',
-    ergModality: 'bike',
-  });
-  const primary = out.find((ex) => ex.exercise?.name?.includes('zone 2'));
-  const title = primary?.exercise?.name ?? '';
-  const notes = primary?.notes ?? '';
+// Sections 8 and 8b tested the retired combined-aerobic copy and explicit
+// erg-modality rendering of the pre-switchover dose library. Both subjects
+// were deleted by the Stage B switchover
+// (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md): combined blocks
+// now compose from the authored template, and modality guidance is the
+// authored `modalityNotes` string, equality-gated to Sam's sheet.
 
-  assert(
-    title === '25min zone 2 bike',
-    `combined aerobic title is concise (got "${title}")`,
-  );
-  assert(
-    notes.includes('Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min complete rest.'),
-    'combined aerobic notes mention machine options clearly',
-  );
-  assert(
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on (?:Rower|SkiErg)/i.test(notes),
-    `combined aerobic notes do not prescribe long continuous row/ski (got "${notes}")`,
-  );
-  assert(
-    notes.includes('5-6/10 effort'),
-    'combined aerobic notes keep the existing intensity prescription',
-  );
-  assert(
-    notes.includes('Machine-based conditioning keeps running load down today.'),
-    'combined aerobic notes give the short lower-day reason',
-  );
-  assert(
-    !/Combined S\+C day|abbreviated conditioning dose|Can also be completed|Intensity:/i.test(notes),
-    `combined aerobic notes avoid technical/duplicate copy (got "${notes}")`,
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Section 8b: explicit plan modality wins before weighted defaults.
-// ─────────────────────────────────────────────────────────────────
-section('8b. explicit aerobic modality remains authoritative');
-{
-  const explicitPlan: SessionAllocation[] = [{
-    tier: 'core',
-    focus: 'Lower strength + easy aerobic finisher',
-    dayOfWeek: 'Monday',
-    isHardExposure: false,
-    strengthPattern: 'lower',
-    hasCombinedConditioning: true,
-    attachedConditioningKind: 'finisher',
-    conditioningFlavour: 'aerobic',
-    conditioningCategory: 'aerobic_base',
-    ergModality: 'ski',
-  }];
-  const [workout] = buildWorkoutsFromCoach([], 'mc-explicit-aerobic-modality', explicitPlan, undefined, {
-    miniCycleNumber: 1,
-    weekInBlock: 1,
-    weekStartISO: '2026-06-01',
-  });
-  const text = workout.exercises
-    .map((row) => `${row.exercise?.name ?? ''}\n${row.notes ?? ''}`)
-    .join('\n');
-  assert(/SkiErg/i.test(text), `explicit SkiErg survives weekly default selection (got "${text}")`);
-  assert(
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg/i.test(text),
-    'explicit SkiErg remains intervalised for longer zone-2 work',
-  );
-  assert(/2min complete rest between blocks/i.test(text), 'explicit SkiErg uses complete rest');
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Section 9: Conditioning prescriptions stay glanceable across

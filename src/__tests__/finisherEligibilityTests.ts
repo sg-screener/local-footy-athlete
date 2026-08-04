@@ -451,146 +451,80 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
 
   ok("flavourToCategory('tempo') is TRUE tempo — never vo2",
     sb.flavourToCategory('tempo') === 'tempo', String(sb.flavourToCategory('tempo')));
-  ok("categoryToFlavour('vo2') is high-intensity — never tempo",
-    sb.categoryToFlavour('vo2') === 'high-intensity', String(sb.categoryToFlavour('vo2')));
-  ok("categoryToFlavour('tempo') round-trips to tempo",
-    sb.categoryToFlavour('tempo') === 'tempo');
-  ok('CATEGORY_INTENSITY.tempo speaks 6-7/10',
-    /6-7\/10/.test(sb.CATEGORY_INTENSITY.tempo), sb.CATEGORY_INTENSITY.tempo);
+  // STAGE B SWITCHOVER (2026-08-05, docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md):
+  // the legacy tempo name pool, TEMPLATE_CATEGORY, the code-authored
+  // finisher/component builders and the off-feet dose library are RETIRED.
+  // The properties they carried are asserted against the new owner: the
+  // tempo category is only ever served by authored Aerobic Capacity tempo
+  // rows, never by a hard row; combined blocks compose from the authored
+  // template; the off-feet conversion stays inside the authored sheet.
+  const selection = require('../rules/conditioningSelection') as
+    typeof import('../rules/conditioningSelection');
+  const { CONDITIONING_TEMPLATES: SIGNED_TEMPLATES } =
+    require('../data/conditioningTemplates') as typeof import('../data/conditioningTemplates');
 
-  const TEMPO_TEMPLATES = [
-    '30:30 Tempo Blocks',
-    'Tempo Intervals (1min on / 1min easy)',
-    'Bike/Row/Ski Tempo Intervals',
-    'Cruise Intervals',
-  ];
-  for (const t of TEMPO_TEMPLATES) {
-    ok(`TEMPLATE_CATEGORY['${t}'] === tempo`,
-      sb.TEMPLATE_CATEGORY[t] === 'tempo', String(sb.TEMPLATE_CATEGORY[t]));
-  }
-  // Hard templates must NEVER be classified (or served) as tempo.
-  for (const hard of ['1km Repeat Intervals', '4x4 VO2', '200m/400m Repeat Runs', 'MAS 15:15 Blocks']) {
-    ok(`hard template '${hard}' is not classified tempo`,
-      sb.TEMPLATE_CATEGORY[hard] !== 'tempo', String(sb.TEMPLATE_CATEGORY[hard]));
-  }
-  // Category → template rotation only serves true tempo templates.
+  const tempoNames = new Set<string>();
   for (const mc of [1, 2, 3, 4, 5]) {
-    const name = sb.conditioningCategoryToExerciseName('tempo', '2026-07-06', mc);
-    ok(`tempo rotation mc=${mc} serves a true tempo template (${name})`,
-      TEMPO_TEMPLATES.includes(name), name);
+    tempoNames.add(selection.selectConditioningTemplate({
+      category: 'tempo', dateStr: '2026-07-06', miniCycleNumber: mc,
+    }).name);
   }
-  // Flavour path (legacy callers) also only serves true tempo templates.
+  ok('tempo selection serves only authored Aerobic Capacity templates',
+    [...tempoNames].every((name) =>
+      SIGNED_TEMPLATES.find((t) => t.name === name)?.quality === 'aerobic_capacity'),
+    [...tempoNames].join(', '));
+  const hardNames = new Set(SIGNED_TEMPLATES
+    .filter((t) => t.quality === 'aerobic_power' || t.quality === 'anaerobic')
+    .map((t) => t.name));
+  ok('tempo selection never serves a hard (aerobic-power/anaerobic) template',
+    [...tempoNames].every((name) => !hardNames.has(name)), [...tempoNames].join(', '));
+  // Flavour path (legacy callers) routes through the same owner.
   for (const d of ['2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09']) {
-    const name = sb.conditioningFlavourToExerciseName('tempo', d);
-    ok(`tempo flavour path serves a true tempo template (${name})`,
-      TEMPO_TEMPLATES.includes(name), name);
+    const picked = selection.selectConditioningTemplate({
+      category: sb.flavourToCategory('tempo'), dateStr: d,
+    });
+    ok(`tempo flavour path serves an authored capacity template (${picked.name})`,
+      picked.quality === 'aerobic_capacity', picked.name);
   }
 
-  const textOfRows = (rows: ReturnType<typeof sb.buildConditioningTemplate>) =>
-    rows.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
-
-  // Combined tempo finisher: small (≤2 rows), 6-7/10 language, erg-based.
-  const finisher = sb.buildCombinedConditioningTemplate('tempo', '2026-07-06', 'upper', undefined, 'row');
-  ok('combined tempo finisher builds rows', finisher.length >= 1 && finisher.length <= 2,
-    `rows=${finisher.length}`);
-  const finText = finisher.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
-  ok('combined tempo finisher speaks 6-7/10 controlled language',
-    /6-7\/10/.test(finText), finText.slice(0, 160));
-  ok('combined tempo finisher is not VO2/hard-labelled',
-    !/vo2|8-9\/10|9\/10/i.test(finText), finText.slice(0, 160));
-
-  const templateFinisher = sb.buildConditioningTemplate('Bike/Row/Ski Tempo Intervals', '2026-07-06', {
+  // Combined tempo finisher: the authored row, no structural warm-up (the
+  // lift warmed the athlete up), authored intensity verbatim in the notes.
+  const tempoPick = selection.selectConditioningTemplate({
+    category: 'tempo', dateStr: '2026-07-06', role: 'finisher',
+  });
+  const finisher = sb.buildConditioningTemplate(tempoPick.name, '2026-07-06', {
     combined: true,
     attachedConditioningKind: 'finisher',
-    strengthRegion: 'upper',
-    feel: 'grindy',
-    ergModality: 'row',
   });
-  const templateFinisherText = textOfRows(templateFinisher);
-  ok('attachedConditioningKind=finisher builds compact finisher-scale rows',
-    /(?:5|6|7) x \(1min on \/ 1min easy\)/.test(templateFinisherText) &&
-      /1min on \/ 1min easy/.test(templateFinisherText) &&
-      !/conditioning component|20-24min|20-30min/i.test(templateFinisherText),
-    templateFinisherText.slice(0, 220));
+  ok('combined tempo finisher is the authored block alone',
+    finisher.length === 1 && finisher[0].exercise?.name === tempoPick.name,
+    finisher.map((e) => e.exercise?.name).join(', '));
+  ok('combined tempo finisher carries the authored intensity verbatim',
+    (finisher[0].notes ?? '').includes(tempoPick.intensity),
+    (finisher[0].notes ?? '').slice(0, 160));
+  ok('combined tempo finisher is not VO2/hard-labelled',
+    !/vo2|8-9\/10|9\/10/i.test(`${finisher[0].exercise?.name} ${finisher[0].notes}`),
+    (finisher[0].notes ?? '').slice(0, 160));
 
-  const templateComponent = sb.buildConditioningTemplate('Bike/Row/Ski Tempo Intervals', '2026-07-06', {
-    combined: true,
-    attachedConditioningKind: 'component',
-    strengthRegion: 'upper',
-    feel: 'grindy',
-    ergModality: 'row',
-  });
-  const templateComponentText = textOfRows(templateComponent);
-  ok('attachedConditioningKind=component builds component-scale rows',
-    templateComponent.length >= 2 &&
-      /conditioning component/i.test(templateComponentText) &&
-      /20-24min|20-30min/i.test(templateComponentText),
-    templateComponentText.slice(0, 220));
-
-  const tempoComponent = sb.buildAttachedConditioningComponentTemplate('tempo', '2026-07-06', 'upper', 'grindy', 'row');
-  const tempoComponentText = textOfRows(tempoComponent);
-  ok('attached tempo component is larger than the compact finisher',
-    tempoComponent.length >= 2 && /20-24min|20-30min|component/i.test(tempoComponentText),
-    tempoComponentText.slice(0, 220));
-  ok('attached tempo component uses component wording',
-    /conditioning component/i.test(tempoComponentText),
-    tempoComponentText.slice(0, 220));
-
-  const vo2Component = sb.buildAttachedConditioningComponentTemplate('vo2', '2026-07-06', 'upper', 'grindy', 'bike');
-  const vo2ComponentText = textOfRows(vo2Component);
-  ok('attached VO2 component has honest component label',
-    /VO2 conditioning component/i.test(vo2ComponentText) && /8-9\/10/.test(vo2ComponentText),
-    vo2ComponentText.slice(0, 220));
-  ok('attached VO2 component is bigger than a finisher dose',
-    /20-30min component|4 x 3min|5 x 2min/i.test(vo2ComponentText),
-    vo2ComponentText.slice(0, 220));
-
-  // Standalone templates all build; off-feet erg template honours modality.
-  for (const t of TEMPO_TEMPLATES) {
-    const rows = sb.buildConditioningTemplate(t, '2026-07-06');
-    ok(`standalone template '${t}' builds exercises`, rows.length >= 1, String(rows.length));
-    const text = rows.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
-    ok(`standalone template '${t}' speaks 6-7/10`, /6-7\/10/.test(text), text.slice(0, 160));
+  // Standalone tempo templates compose with a structural warm-up + the
+  // authored headline; the authored words ride the notes verbatim.
+  for (const name of tempoNames) {
+    const template = SIGNED_TEMPLATES.find((t) => t.name === name)!;
+    const rows = sb.buildConditioningTemplate(name, '2026-07-06');
+    ok(`standalone '${name}' composes warm-up + authored headline`,
+      rows.length === 2 && rows[1].exercise?.name === name, String(rows.length));
+    ok(`standalone '${name}' carries the authored intensity verbatim`,
+      (rows[1].notes ?? '').includes(template.intensity), (rows[1].notes ?? '').slice(0, 160));
   }
-  // Run-based tempo templates convert off-feet with stimulus preserved.
-  for (const t of ['30:30 Tempo Blocks', 'Tempo Intervals (1min on / 1min easy)', 'Cruise Intervals']) {
-    ok(`'${t}' is running-based (run-load machinery sees it)`,
-      sb.isRunningBasedConditioning(t));
-    const conv = sb.switchToOffFeetModality(t, '2026-07-06');
-    const convText = (conv ?? []).map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
-    ok(`'${t}' converts off-feet keeping 6-7/10 tempo character`,
-      !!conv && conv.length >= 1 && /6-7\/10/.test(convText), convText.slice(0, 160));
-  }
-  ok("'Bike/Row/Ski Tempo Intervals' is NOT running-based",
-    !sb.isRunningBasedConditioning('Bike/Row/Ski Tempo Intervals'));
 
-  const combinedBike = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'bike');
-  const combinedRow = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'row');
-  const combinedSki = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'ski');
-  const longBike = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'bike' });
-  const longRow = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'row' });
-  const longSki = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'ski' });
-  const bikeText = textOfRows([...combinedBike, ...longBike]);
-  ok('bike can still be prescribed as 20+ minutes steady',
-    /\b(?:2[0-9]|3[0-9]|4[0-9])min zone 2 on Assault Bike\b/i.test(bikeText) &&
-    !/\d+\s*x\s*\d+min zone 2 on Assault Bike/i.test(bikeText),
-    bikeText.slice(0, 220));
-  ok('combined row aerobic over 10min is intervalised',
-    /\d+\s*x\s*(?:8|10)min zone 2 on Rower/i.test(textOfRows(combinedRow)) &&
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on Rower\b/i.test(textOfRows(combinedRow)),
-    textOfRows(combinedRow));
-  ok('combined ski aerobic over 10min is intervalised',
-    /\d+\s*x\s*(?:8|10)min zone 2 on SkiErg/i.test(textOfRows(combinedSki)) &&
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg\b/i.test(textOfRows(combinedSki)),
-    textOfRows(combinedSki));
-  ok('standalone long row aerobic is intervalised',
-    /\d+\s*x\s*(?:8|10)min zone 2 on Rower/i.test(textOfRows(longRow)) &&
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on Rower\b/i.test(textOfRows(longRow)),
-    textOfRows(longRow));
-  ok('standalone long ski aerobic is intervalised',
-    /\d+\s*x\s*(?:8|10)min zone 2 on SkiErg/i.test(textOfRows(longSki)) &&
-    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg\b/i.test(textOfRows(longSki)),
-    textOfRows(longSki));
+  // Off-feet conversion stays inside the authored sheet: same quality,
+  // machine-renderable.
+  for (const name of tempoNames) {
+    const alt = selection.offFeetAlternative(name, '2026-07-06');
+    ok(`'${name}' has an off-feet alternative in its own quality`,
+      !!alt && alt.quality === 'aerobic_capacity' && selection.rendersOffFeet(alt),
+      alt?.name ?? 'null');
+  }
 
   // Kernel classification: tempo category → tempo_conditioning, medium.
   const taxonomy = require('../rules/sessionTaxonomy') as typeof import('../rules/sessionTaxonomy');

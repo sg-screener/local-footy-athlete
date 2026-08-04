@@ -22,6 +22,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { resolveTemplateByName } from '../rules/conditioningSelection';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import fs from 'fs';
@@ -320,8 +321,15 @@ function main(): void {
     // an ENTRY, while "Single-Arm DB Floor Press" (a different, surviving
     // movement) is untouched. Substring bans cannot express that difference and
     // would either miss removals or ban survivors.
+    // A removal RE-AUTHORED by a LATER signed source is not a survivor. Sam's
+    // locked list (2026-07-24) removed 'Up-Back Shuttle'; his conditioning
+    // workbook (AUTHORED FINAL, 2026-07-25/27) authors a COD template row of
+    // that name, and the Stage B switchover (2026-08-05) made the 55 template
+    // names selectable vocabulary. The workbook row is equality-gated in both
+    // directions, so this exclusion cannot cover a name Sam did not sign.
     const survivors: string[] = [];
     for (const name of removals) {
+      if (resolveTemplateByName(name)) continue;
       for (const { surface, has } of SURFACES) {
         if (has(name)) survivors.push(`${name} — still in ${surface}`);
       }

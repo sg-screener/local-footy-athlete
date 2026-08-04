@@ -27,7 +27,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXERCISE_CUES } from '../data/exerciseCues';
-import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
+import { SELECTABLE_WITHOUT_METADATA, muscleMetadataFor } from '../data/muscleExperienceMetadata';
 import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVideoService';
@@ -143,9 +143,16 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
   ok('no selectable exercise lacks a video for an unexplained reason',
     selectable.filter((n) => !lookupExerciseDemo(n).url && !isExempt(n, 'video')));
 
-  // Metadata is waived by NO exemption kind, so coverage is unconditional.
+  // Metadata is waived by NO exemption kind. The one recorded gap class is
+  // the Stage B switchover's (2026-08-05): the 53 signed conditioning
+  // templates without a master-sheet row — SESSIONS, not lifts. The gap list
+  // is DERIVED from the signed sheet and pinned in BOTH directions by
+  // `muscleExperienceEqualityTests` [5], so it cannot hide a new lift.
+  // Whether the master sheet grows conditioning rows is parked for Sam
+  // (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md).
   ok('every selectable exercise has muscle/experience metadata',
-    selectable.filter((n) => !muscleMetadataFor(n)));
+    selectable.filter((n) =>
+      !muscleMetadataFor(n) && !SELECTABLE_WITHOUT_METADATA.includes(n)));
 }
 
 console.log('\n[1] Pool → cue / video / load / tags (typed exemptions only)');

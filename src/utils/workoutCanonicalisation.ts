@@ -597,16 +597,36 @@ export function finaliseWorkoutAfterMutation(
     exercises: [...(inputWorkout.exercises ?? [])],
   };
   const originalConditioningIds = linkedConditioningIds(workout);
+  // SPEED-BLOCK MEMBERSHIP VETOES CONDITIONING CLASSIFICATION (Stage B
+  // switchover). Speed rows now carry AUTHORED template names shared with the
+  // conditioning vocabulary ('20 m Acceleration Reps'), so a name classifier
+  // cannot tell a speed exposure from a conditioning one — but the SpeedBlock's
+  // typed counting fence already says `conditioningCredit: 'none'`, and block
+  // membership is the typed authority. Without this veto, canonicalisation
+  // promoted a pre-lift speed dose into a combined VO2 conditioning block and
+  // handed a deload week a third core conditioning exposure.
+  const speedRowIds = new Set(workout.speedBlock?.exerciseIds ?? []);
   // Position among COUNTED work, not among array slots. Power leads the list and
   // counts toward nothing, so it must not renumber the lifts behind it — see
   // `countingIndices`.
   const classifyIndices = countingIndices(workout.exercises);
-  const classified: ClassifiedRow[] = workout.exercises.map((row, index) => ({
-    row,
-    index,
-    classification: classifyRow(row, classifyIndices[index]),
-    linkedConditioning: originalConditioningIds.has(row.id),
-  }));
+  const classified: ClassifiedRow[] = workout.exercises.map((row, index) => {
+    let classification = classifyRow(row, classifyIndices[index]);
+    if (classification.kind === 'conditioning' && speedRowIds.has(row.id)) {
+      classification = {
+        ...classification,
+        kind: 'strength_accessory',
+        conditioningModality: null,
+        hardConditioning: false,
+      };
+    }
+    return {
+      row,
+      index,
+      classification,
+      linkedConditioning: originalConditioningIds.has(row.id),
+    };
+  });
 
   const planIntentValid = context.planIntentValid ?? !!workout.planEntryId;
   const prohibitedPatterns = new Set(context.prohibitedStrengthPatterns ?? []);

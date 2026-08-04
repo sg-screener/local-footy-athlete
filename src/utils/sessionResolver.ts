@@ -42,10 +42,10 @@ import {
   buildDerivedSession,
   buildConditioningSession,
   isRunningBasedConditioning,
-  switchToOffFeetModality,
   type AthleteContext,
   DEFAULT_ATHLETE_CONTEXT,
 } from './sessionBuilder';
+import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
 import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
 import type { WeekLog } from './conditioningRules';
 import { resolveRecovery } from './recoveryRules';
@@ -1818,7 +1818,10 @@ export function resolveWeekWithConditioning(
       const isFlyingSprints = condWorkout.name === 'Flying Sprints';
 
       if (isRunning && !isFlyingSprints && runningSessionCount >= MAX_RUNNING_SESSIONS) {
-        const offFeet = switchToOffFeetModality(condWorkout.name, day.date);
+        const offFeetTemplate = offFeetAlternative(condWorkout.name, day.date);
+        const offFeet = offFeetTemplate
+          ? composeConditioningRows(offFeetTemplate, day.date)
+          : null;
         if (offFeet) {
           for (const ex of offFeet) { ex.workoutId = condWorkout.id; }
           condWorkout.exercises = offFeet;

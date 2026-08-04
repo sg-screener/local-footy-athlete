@@ -3,7 +3,7 @@ import type {
   WeekKind,
   WorkoutExercise,
 } from '../types/domain';
-import { EXERCISE_TAGS } from '../data/exerciseTags';
+import { CONDITIONING_META, EXERCISE_TAGS } from '../data/exerciseTags';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
@@ -172,6 +172,10 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
   const name = exercise.exercise?.name ?? '';
   const tags = EXERCISE_TAGS[name];
   if (tags?.movement === 'conditioning') return true;
+  // Registry consult, not regex widening (LR-9 forbids widening): the 55
+  // authored template names answer from CONDITIONING_META — the same
+  // registry-first shape as the EXERCISE_TAGS line above.
+  if (CONDITIONING_META[name]) return true;
   return /\b(conditioning|sprint|tempo|aerobic|interval|run|bike|row|ski|swim|vo2|mas|cool-?down|warm-?up)\b/i
     .test(`${name} ${exercise.notes ?? ''}`);
 }
