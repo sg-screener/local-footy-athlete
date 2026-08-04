@@ -5,7 +5,30 @@
  *   1. MAS-based work-interval intensity prescription
  *   2. Athlete-facing MAS fallback explanation
  *
- * Rule (MAS intensity by work-interval length):
+ * ⚠️ THE BINARY RULE BELOW IS ACCRETED CODE, NOT AUTHORED LAW.
+ *
+ * SAM RULED, 2026-08-06: he does NOT remember authoring "≤30s → 110% MAS".
+ * It has no anchor anywhere — the 55 conditioning templates' `intensity`
+ * strings are equality-gated to his signed workbook
+ * (`conditioningTemplateEqualityTests`), and this binary is gated to nothing.
+ * It reads like a ruling and is not one.
+ *
+ * **THE 55 SIGNED TEMPLATES' RANGES OWN CONDITIONING INTENSITY.** Where the
+ * two disagree — 'Classic 4×4' is the measured case, ranges say '90–100% MAS'
+ * and this binary says 110% — the authored range wins, because it is the thing
+ * Sam signed.
+ *
+ * **THIS FUNCTION DIES WHEN MAS WIRING LANDS** (Sam's ruling 4). It survives
+ * only because the conflict is still latent: both representations are display
+ * STRINGS today and `deriveMas` has zero generation-path consumers, so nothing
+ * breaks yet. The moment MAS becomes a real number in the generation path,
+ * these are two representations of one intensity and this one goes. Anything
+ * athlete-visible that came from it returns through the copy sheet.
+ *
+ * DO NOT add a caller. A new consumer of this binary is a new site to unpick
+ * when the wiring lands, and it would be citing a rule nobody authored.
+ *
+ * The accreted rule, recorded so the deletion can be checked against it:
  *   • Work interval ≤ 30s  → 110% MAS
  *   • Work interval  > 30s → 100% MAS
  *
