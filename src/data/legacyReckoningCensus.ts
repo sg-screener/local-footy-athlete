@@ -826,6 +826,63 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'which those units\' detectors already count. A third count of the same '
       + 'references would corrupt the baseline.',
   },
+  {
+    id: 'LR-25',
+    title: 'The plan-change producer\'s legacy tail — deleted ahead of its ruling',
+    tier: 2,
+    laws: ['L-A1', 'L-C1'],
+    blastRadius: 'accepted_content',
+    founding: 'Stage B stage 1 Task A (2026-08-04) removed BOTH '
+      + 'applyCoachRevisionDateOverrides call sites from planChangeProducer, not only '
+      + 'the two athlete routes Sam\'s Option C ruling named. The reachability was '
+      + 'verified — the six athlete-owned kinds return from the typed branch above it; '
+      + 'shutdown_week has no product constructor at all; clear_days is constructed '
+      + '(useHomeScreen) but only as payload METADATA on a set_schedule_modifier '
+      + 'action, whose non-durable case refuses outright and whose durable lane never '
+      + 'calls applyPlanChange; move_team_night is durable-door owned and its refusal '
+      + 'sentence is byte-identical because both codes collapse through '
+      + 'athleteSafeRefusal. Behaviour delta: the tape\'s internalResultCode and '
+      + 'firstFailingBoundary for a tail refusal.',
+    size: 'S',
+    status: 'scheduled',
+    sequence: 'RECORDED, NOT RULED (Sam, 2026-08-04): "out of scope tonight — own unit, '
+      + 'own ruling. Record it in the census, don\'t smuggle it in." The deletion is '
+      + 'currently PRESENT in the stage 1 branch commit 0221d4d and is separable: '
+      + 'restoring the tail is mechanical, and the restoration capability plus the '
+      + 'defer-set deletion (what Option C actually ordered) stand without it. Sam '
+      + 'rules whether it stays, reverts, or lands as its own unit.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the ABSENCE of the two call sites LR-3 already '
+      + 'counts. LR-3\'s declared count fell 4 -> 2 in the same commit, so a second '
+      + 'detector over the same references would double-count the same payment.',
+  },
+  {
+    id: 'LR-26',
+    title: 'The reversible-adjustment ledger stores workout snapshots it never reads back',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-04 (Stage B stage 1, scratch probe): a bin -> re-add '
+      + 'cycle grows reversibleAdjustmentLedger by ~227 KB — two adjustments at ~113 KB '
+      + 'each, because displacedOriginalState.ownedDays carries full before/after '
+      + 'Workouts including beforeDateOverride/afterDateOverride '
+      + '(acceptedStateTransaction.ts:1386-1401). Uncapped: 20 cycles ~ 4.9 MB of store '
+      + 'state. It is what exhausted a 12 GB heap when the walker\'s shrinker replayed '
+      + 'a deep walk 200 times.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-04): capping or compressing the snapshot is REJECTED '
+      + '— both accept the premise that the snapshot belongs there, and it does not. '
+      + 'Full workout snapshots are stored OUTPUT sitting inside a decision record, and '
+      + 'nothing reads them back. The north star answer is DELETE the snapshot, keep '
+      + 'the decision, and re-derive the restored state at read. Not implemented '
+      + '2026-08-04; own unit.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the SIZE and reachability of a field, not the '
+      + 'presence of a symbol. A detector counting displacedOriginalState references '
+      + 'would count the restore machinery that legitimately reads the decision, and '
+      + 'go green the moment the field was renamed.',
+  },
 ];
 
 /**
@@ -888,8 +945,32 @@ export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
  * missed it and get it ruled, do not file it in quietly" — and the sweep that missed it
  * is the founding sweep, which counted stores and writers rather than asking two phrase
  * maps the same word.
+ *
+ * 25 -> 27 on 2026-08-04, both by RULING, both during Stage B stage 1. Sam:
+ *
+ *   LR-25 — "Legacy tail deletion: out of scope tonight. Own unit, own ruling.
+ *   Record it in the census, don't smuggle it in."
+ *   LR-26 — "Cap and compress both accept the premise that the snapshot belongs
+ *   there. It doesn't … The north star answer is DELETE the snapshot, keep the
+ *   decision, re-derive at read. Record it as a ruled unit."
+ *
+ * THE SWEEP THAT MISSED THEM, named as the gate demands — and they are missed
+ * differently, which matters:
+ *
+ *   LR-25 was not missed at all. It is a surface this repo CREATED on 2026-08-04,
+ *   when Task A deleted more of the producer than Option C ordered. A census entry
+ *   for a change made hours earlier is not debt discovered; it is scope declared so
+ *   it cannot ride along inside another unit's payment. If Sam rules the deletion
+ *   in, the entry retires with it.
+ *
+ *   LR-26 WAS missed, by the same blind spot as LR-27: the founding sweep counted
+ *   STORES AND WRITERS — shapes present in the source — and never asked what a
+ *   legitimately-owned store puts INSIDE a record it owns. A decision ledger is a
+ *   correct thing to have; a decision ledger carrying full workout snapshots nobody
+ *   reads back is stored output wearing a decision's name, and no detector built to
+ *   count writers could see it. It took a heap exhaustion to surface.
  */
-export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 25;
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 27;
 
 /**
  * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.

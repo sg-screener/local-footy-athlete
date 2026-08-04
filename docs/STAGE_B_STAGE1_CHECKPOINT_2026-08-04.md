@@ -398,5 +398,124 @@ ordered.
 7. Then `git log --oneline main..feat/stage-b-stage1-l16-slice` and the diff of
    `0221d4d`.
 
-**First action on resume: settle §4.** Everything else in stage 1 is blocked
-behind a green deep tier, because every later task's proof is the walker.
+**First action on resume: read §9.** §4's red is SETTLED — see below.
+
+---
+
+## 9. HANDOVER — the second half of 2026-08-04
+
+Sam ruled at the checkpoint and a revised, deliberately narrow step 2 ran. **The
+branch is now GREEN on both walker tiers.** Nothing new was started.
+
+### 9a. Sam's rulings (2026-08-04, after reading §1–§8)
+
+1. **Lighter-day: DO NOT BUILD tonight**, either branch. "It needs two tests
+   converting plus new walker vocabulary under L11 — that's a unit, not filler,
+   and it's tomorrow's Task D." The branch question is moot. Scouting written up
+   instead (§9d).
+2. **Legacy tail deletion: out of scope tonight. Own unit, own ruling. Record it
+   in the census, don't smuggle it in."** → filed as **LR-25**.
+3. **Ledger growth: both offered options REJECTED.** "Cap and compress both
+   accept the premise that the snapshot belongs there. It doesn't — full workout
+   snapshots are stored output, and nothing reads them. The north star answer is
+   DELETE the snapshot, keep the decision, re-derive at read." → filed as
+   **LR-26**, ruled, not implemented.
+4. **Precedence: still hands off.** "Your six-copies finding makes that MORE
+   true, not less."
+
+### 9b. The §4 red is settled — declared, contained, and its cause named
+
+`0221d4d`'s deep-walker red is resolved **by declaration, not by a fix**. No
+classifier changed; no regex widened; L13 stands.
+
+- **New declared red** `session_list_drops_a_team_night_stack_and_badges_support`
+  in `athleteActionWalkerTests.ts`, stated as what it is: a **combination**
+  defect matching no single-shape entry, decomposing by inspection into declared
+  #1 and #3. The pre-existing-defect reading is written **as inference, not
+  measurement**, exactly as §4 had it.
+- **The OOM was a symptom and is gone.** `shrink()` only runs on an undeclared
+  violation; with the shape declared the deep walk never enters it.
+  `test:action-walker:deep` now **18 passed, 0 failed, exit 0**.
+- A permanent diagnostic seam survives: `WALKER_LOG_PRESHRINK=1` prints the
+  violation *before* shrinking, so a shrink that dies still names its defect.
+  That is how this one was identified at all.
+
+### 9c. The combination matrix (new, gated)
+
+`src/__tests__/sessionListCombinationMatrixTests.ts`, script
+`test:session-list-combinations`, wired into `test:bible` immediately before
+`test:action-walker`. **5 cells, all passing.** Every world reached **by acting**
+(real onboarding → generation → accept boundary → real `applyPlanChange`), per
+the fixture law.
+
+**Two products, and the second is the more valuable:**
+
+1. **The support-badge defect spans SIX coordinates and 56 observations**, where
+   its declared red recorded a single deep-tier reproduction. Its "DEEP ONLY, by
+   survey" note describes the *walker's* reachability, not the defect's — a
+   bounded suite hits it trivially on plain strength days (26 observations).
+2. **The axes are insufficient, and that is now recorded rather than
+   discovered twice.** `team_night × [conditioning,strength]` — the coordinate
+   the new declared red is about — **AGREES here in all 6 observations** while
+   the deep walker reds on it. So the coordinate is *necessary but not
+   sufficient*: the failing instance needs something these axes do not capture
+   (row-level composition — which rows the conditioning arms can see on an
+   appointment day, and whether a midline row is present to be reclassified). It
+   is filed as a **BLIND SPOT** with cell `[5]` failing if it ever becomes
+   reachable here. **A third axis (row roles carried) is what would name it.**
+
+Two shared owners were extracted rather than copied, both because a second copy
+was about to drift: `support/sessionListKinds.ts` (the kind mapping **and the
+offence string the declared-red regexes match**) and
+`support/freshInstallStores.ts` (the total store reset — a weaker second copy
+immediately threw `AcceptedStateLedgerMismatchError`, which is the walker's own
+warning coming true from outside).
+
+### 9d. Documents written tonight
+
+| Document | What it carries |
+|---|---|
+| `docs/PRECEDENCE_OWNERSHIP_REASSESSMENT_2026-08-04.md` | **Task C's map.** Six copies with file+function; the truthy-vs-`hasOwnProperty` divergence and what an explicit `null` means at each site; the §18 gateway re-entry with both override surfaces blanked and why that defeats a two-stack edit; the duplicated `microcycleForWeek`/Monday helpers; the existing agreement oracle; the tests that pin the old ordering; an honest scope estimate. **A map, not a plan.** |
+| `docs/LIGHTER_DAY_DERIVATION_UNIT_SHEET_2026-08-04.md` | Ready-to-execute Task D sheet: the pure trim and its existing time-cap caller, the fact + unread ledger entry, the lane's `fatigue` admission and the team-night sparse-overlay precedent, the target shape, the four R-cells and the override-ownership cell that convert, the walker vocabulary L11 obliges, predicted differential movement (**zero**), and three deliberately-open questions. |
+| `docs/MAS_RANGE_VS_BINARY_DECISION_SHEET_2026-08-04.md` | Options + consequences + recommendation, **not a decision**. Carries one measurement that was not in the draft: the template `intensity` strings are **equality-gated** to Sam's signed xlsx (`conditioningTemplateEqualityTests.ts:172,233`) while the binary has **no anchor** anywhere. Recommends Option C (range owns; a band renders as a pace band) falling back to A, and names the one answer that would change it. |
+
+### 9e. Branch state at handover
+
+```
+5f35b08  docs: the checkpoint (§1–§8)
+af0c4c4  docs(precedence): the map
+5658038  test(l-p3): declare the combination red + the matrix
+<this>   docs: census units LR-25/LR-26, unit sheets, handover
+```
+on `feat/stage-b-stage1-l16-slice`, base `main` `936bbf7` (untouched).
+
+**Gates green at handover:** `test:action-walker` 18/18, `test:action-walker:deep`
+18/18, `test:session-list-combinations` 5/5, `test:legacy-census` 321/321,
+`test:totals-or-red-law` 4/4, `test:compile` PASS (no file regressed),
+`test:stage-b-generation-differential` 3/3 byte-identical with no regeneration.
+**`test:bible` end-to-end still NOT RUN** — the debt from §7 stands.
+
+### 9f. Open for Sam, carried forward
+
+1. **LR-25** — does the producer's legacy-tail deletion stay, revert, or land as
+   its own unit? **The code is currently IN `0221d4d`**; reverting is mechanical
+   and the restoration capability stands without it.
+2. **LR-26** — ruled (delete the snapshot, re-derive at read); unimplemented,
+   unscheduled.
+3. **%MAS** — the decision sheet awaits an answer, load-bearing question first:
+   *was the ≤30s→110% rule authored as programming law, or is it code?*
+4. Everything already parked in §6 items 1, 4, 5 — noting item 1 is now
+   *narrowed*, not closed: the combination is declared and the matrix names the
+   coordinate space, but **the classifier owners are still unpaid and the third
+   axis is unbuilt.**
+5. The scratch `main` worktree under the session scratchpad still wants
+   `git worktree remove`.
+
+### 9g. First actions on resume (Fable, Wednesday)
+
+1. Read §9 and `docs/PRECEDENCE_OWNERSHIP_REASSESSMENT_2026-08-04.md`.
+2. **Task C — the unified precedence ordering.** Untouched by design; the map is
+   written so it starts from terrain, not re-scouting.
+3. Task D (lighter-day) has its sheet and can follow, but §8's sequencing note
+   holds: the walker is Task D's own acceptance instrument.
+4. Run `test:bible` end-to-end before claiming any of stage 1 done.
