@@ -2843,11 +2843,22 @@ async function walkTheLighterDayDoor(): Promise<void> {
   const before = setsOn(date);
   const weekBefore = weekFingerprint();
 
+  // THE TAP IS THE DECISION (Sam's D-3 ruling, 2026-08-05). The door returns
+  // the id of the fact it just authored, and the offer carries it into the
+  // trim — so the walk passes it exactly as the screen does.
+  const tappedFactId = (declared as { createdModifierIds?: string[] })
+    .createdModifierIds?.[0];
+  assert(!!tappedFactId,
+    'the readiness door returned no fact id — there is no decision to carry, '
+    + 'and the trim would be back to guessing which fact owns the day');
+
   const applied = await quietAsync(() => (require('../utils/lighterDayTransaction') as {
-    applyLighterDayForToday: (a: { date: string; todayISO: string }) => Promise<{
+    applyLighterDayForToday: (a: {
+      date: string; todayISO: string; sourceFactId?: string;
+    }) => Promise<{
       ok: boolean; message: string; changes: string[]; adjustmentId?: string;
     }>;
-  }).applyLighterDayForToday({ date, todayISO: date }));
+  }).applyLighterDayForToday({ date, todayISO: date, sourceFactId: tappedFactId }));
 
   assert(applied.ok, `the lighter-day door refused a walked world: ${applied.message}`);
   assert(applied.changes.length > 0 && /\S/.test(applied.message),
@@ -2878,12 +2889,114 @@ async function walkTheLighterDayDoor(): Promise<void> {
     assert(false, `${broken.law}: ${broken.detail}`);
   }
 
+  // PIN (i), Sam's D-3 ruling: TAP -> factId -> DAY OWNERSHIP, end to end.
+  // The id the athlete's tap created must be the id the trim is linked by.
+  // Before the ruling this was re-derived from the date by taking the first
+  // match in an ALPHABETICALLY sorted array, so the link could name a fact the
+  // athlete never tapped — and nothing in the tree checked.
+  const ledgerAdjustments = ((useProgramStore.getState() as unknown as {
+    reversibleAdjustmentLedger?: { adjustments?: Array<{ id: string; sourceFactId?: string }> };
+  }).reversibleAdjustmentLedger?.adjustments) ?? [];
+  const trimRecord = ledgerAdjustments.find((entry) => entry.id === applied.adjustmentId);
+  assert(!!trimRecord,
+    `the trim recorded no ledger entry to own: ${applied.adjustmentId}`);
+  assert(trimRecord!.sourceFactId === tappedFactId,
+    'the trim is linked to a fact the athlete did not tap — '
+    + `tapped ${tappedFactId}, linked ${trimRecord!.sourceFactId}`);
+
   // THE PROMISE: clearing the fact puts today back, byte-identical.
   performAction({ kind: 'clear_source_facts' });
   assert(weekFingerprint() === weekBefore,
     'clearing the readiness fact did not restore the week byte-identical — '
     + 'the cascade-undo keys on `sourceFactId`, not on the surface, so the '
     + 'channel change must not have touched it');
+
+  // PIN (ii), Sam's D-3 ruling: the SAME world with TWO OVERLAPPING FACTS.
+  //
+  // This is the world the old code got wrong and no test built. An open
+  // fatigue window plus a today-scoped illness both cover today; the
+  // alphabetical order put `fatigue` first, so the trim linked to fatigue
+  // while the card's Clear button — which preferred the today-scoped fact —
+  // resolved the illness. The athlete cleared what they reported, read
+  // "Cleared — today's back to its original session", and the day stayed
+  // trimmed. Both surfaces now ask one owner, and the tap wins outright.
+  const weekBeforePair = weekFingerprint();
+  const setsBeforePair = setsOn(date);
+
+  const fatigueDeclared = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_fatigue_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: { date, todayISO: date, level: 'cooked' },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  } as never, { todayISO: date }));
+  const illnessDeclared = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_illness_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: { date, todayISO: date, tier: 'mild' },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  } as never, { todayISO: date }));
+
+  const illnessFactId = (illnessDeclared as { createdModifierIds?: string[] })
+    .createdModifierIds?.[0];
+
+  // Only meaningful if the world really does hold TWO distinct active facts
+  // covering the day. Read from the store rather than from either door's
+  // return: what matters is the WORLD's shape, and a door that updates an
+  // existing fact instead of adding one would otherwise pass this silently.
+  const activeReadinessFacts = (require('../rules/temporarySourceFact') as {
+    activeTemporarySourceFacts: (
+      f: readonly unknown[], d?: string,
+    ) => Array<{ factId?: string; factKind?: string }>;
+  }).activeTemporarySourceFacts(
+    (require('../store/acceptedStateColdStart') as {
+      normalizeAcceptedMaterialContext: (c: unknown) => { temporarySourceFacts: unknown[] };
+    }).normalizeAcceptedMaterialContext(
+      useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts,
+    date,
+  ).filter((fact) => fact.factKind && fact.factKind !== 'injury');
+
+  assert(activeReadinessFacts.length >= 2 && !!illnessFactId,
+    'the two-fact world did not materialise — this cell proves nothing without '
+    + `two overlapping facts: ${JSON.stringify(activeReadinessFacts.map((f) => f.factId))}`);
+  assert(activeReadinessFacts.some((fact) => fact.factId !== illnessFactId),
+    'both active facts are the tapped one — there is no competing fact to get wrong');
+
+  const pairApplied = await quietAsync(() => (require('../utils/lighterDayTransaction') as {
+    applyLighterDayForToday: (a: {
+      date: string; todayISO: string; sourceFactId?: string;
+    }) => Promise<{ ok: boolean; message: string; adjustmentId?: string }>;
+  }).applyLighterDayForToday({
+    date, todayISO: date, sourceFactId: illnessFactId,
+  }));
+
+  // WHICH BRANCH THIS TOOK IS PRINTED, not assumed. A refusal is legitimate on
+  // an already-light day, but a cell that silently took the refusal path proves
+  // less than it reads — so it says which one ran.
+  console.log(`      two-fact world: trim ${pairApplied.ok ? 'APPLIED' : 'refused'}`
+    + ` — ${pairApplied.message}`);
+  if (pairApplied.ok) {
+    assert(setsOn(date) < setsBeforePair,
+      'the two-fact trim reported success and the day did not get lighter');
+    // CLEARING THE FACT THE ATHLETE TAPPED restores the session. The old
+    // behaviour linked the trim to the OTHER fact, so this clear left the day
+    // trimmed while telling the athlete it had been put back.
+    performAction({ kind: 'clear_source_facts' });
+    assert(weekFingerprint() === weekBeforePair,
+      'clearing the tapped fact did not restore the original session in a world '
+      + 'that held two overlapping facts — the trim is owned by a fact the '
+      + 'athlete did not tap, which is the lie D-3 was ruled to kill');
+  } else {
+    // An already-light day is a legitimate refusal, not a pass to hide behind.
+    assert(/already light/i.test(pairApplied.message),
+      `the two-fact world refused for an unexpected reason: ${pairApplied.message}`);
+    performAction({ kind: 'clear_source_facts' });
+  }
 }
 
 

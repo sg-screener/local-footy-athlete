@@ -53,8 +53,7 @@ import { resolveDateWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
-import { isInjurySourceFact } from '../rules/temporarySourceFact';
-import { factHorizonCoversDate } from '../rules/durableFactHorizon';
+import { selectReadinessFactForDate } from '../rules/temporarySourceFact';
 
 export interface ApplyLighterDayResult {
   ok: boolean;
@@ -77,18 +76,31 @@ function discloseChanges(changes: string[]): string {
   return `Kept today's session but made it lighter: ${list}. You can undo this anytime by clearing "Not 100% today".`;
 }
 
-/** The active readiness (fatigue/soreness/poor-sleep) fact covering `date`, if any —
- *  the fact whose acceptance offered this lighter day, so the trim can be linked to
- *  it and cascade-reverted when the athlete clears it. */
-function activeReadinessFactIdForDate(date: string): string | undefined {
+/**
+ * The fact this trim links to, so clearing it cascade-reverts the trim.
+ *
+ * THE ATHLETE'S TAP IS THE DECISION (Sam's D-3 ruling, 2026-08-05). The
+ * readiness door returns the id of the fact it just authored and the offer
+ * carries it here, so the normal path STORES a decision rather than deriving
+ * one. This used to re-guess the fact from the date by taking the first match
+ * in an alphabetically-sorted array — an ordering nobody authored, deciding an
+ * athlete-visible undo link.
+ *
+ * The fallback is not that guess: it is `selectReadinessFactForDate`, the one
+ * owner the readiness card also asks, so the trim's link and the card's Clear
+ * button can never disagree about which fact is today's.
+ */
+function resolveSourceFactId(args: {
+  suppliedFactId?: string;
+  date: string;
+  todayISO: string;
+}): string | undefined {
+  if (args.suppliedFactId) return args.suppliedFactId;
   const facts = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
-  const match = facts.find((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
-    'factKind' in fact &&
-    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
-      fact.factKind === 'poor_sleep' || fact.factKind === 'illness') &&
-    factHorizonCoversDate(fact, date));
-  return match?.factId;
+  return selectReadinessFactForDate({
+    facts, dateISO: args.date, todayISO: args.todayISO,
+  })?.factId;
 }
 
 /**
@@ -100,6 +112,12 @@ function activeReadinessFactIdForDate(date: string): string | undefined {
 export async function applyLighterDayForToday(args: {
   date: string;
   todayISO: string;
+  /**
+   * The fact the athlete just authored, carried from the door that created it.
+   * Passing it is the whole of Sam's D-3 ruling: a stored decision, not a
+   * re-derivation. Omitted only by callers that have no tap in hand.
+   */
+  sourceFactId?: string;
 }): Promise<ApplyLighterDayResult> {
   const resolved = resolveDateWithConditioning(args.date, buildScheduleStateImperative());
   const workout = resolved?.workout;
@@ -150,7 +168,11 @@ export async function applyLighterDayForToday(args: {
     sourceSurface: 'program_tab',
     // Link the trim to the readiness fact that offered it, so clearing that fact
     // cascade-reverts this adjustment generically.
-    sourceFactId: activeReadinessFactIdForDate(args.date),
+    sourceFactId: resolveSourceFactId({
+      suppliedFactId: args.sourceFactId,
+      date: args.date,
+      todayISO: args.todayISO,
+    }),
   });
 
   return {

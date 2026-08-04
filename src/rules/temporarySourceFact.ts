@@ -573,8 +573,21 @@ export function normalizeTemporarySourceFacts(args: {
     .filter((fact): fact is NonInjuryTemporarySourceFact => !!fact);
   const byId = new Map<string, TemporarySourceFact>();
   for (const fact of [...injuries, ...nonInjuries]) byId.set(temporarySourceFactId(fact), fact);
-  return Array.from(byId.values()).sort((left, right) =>
-    temporarySourceFactId(left).localeCompare(temporarySourceFactId(right)));
+  // ORDER IS ARRIVAL ORDER, NOT ALPHABETICAL (Sam's D-3 ruling, 2026-08-05).
+  //
+  // This used to `.sort()` by `temporarySourceFactId`. Ids begin with the fact
+  // KIND, so that sort was a hidden ranking — fatigue before illness before
+  // poor_sleep before soreness — and `find()`-style readers downstream turned
+  // it into "which fact is the fact for this day". Nobody authored that
+  // ordering; it fell out of a string prefix chosen for id stability, and it
+  // decided an athlete-visible undo link. Sam: "the athlete's tap is the
+  // decision; the guess dies."
+  //
+  // A Map preserves insertion order, so the result is still fully
+  // deterministic — it is now the order the facts arrived in, which is the
+  // order the athlete authored them. NOTHING may read position as priority:
+  // `selectReadinessFactForDate` is the one owner of that question.
+  return Array.from(byId.values());
 }
 
 export function activeTemporarySourceFacts(
@@ -586,6 +599,60 @@ export function activeTemporarySourceFacts(
     if (fact.status !== 'active') return false;
     return !onDate || factHorizonCoversDate(fact, onDate);
   });
+}
+
+/** The readiness family: the kinds the "Not 100% today" sheet can author. */
+export const READINESS_FACT_KINDS: ReadonlySet<string> =
+  new Set(['fatigue', 'soreness', 'poor_sleep', 'illness']);
+
+/**
+ * WHICH READINESS FACT IS *THE* FACT FOR THIS DAY — the one owner.
+ *
+ * Sam's D-3 ruling, 2026-08-05. Two surfaces used to answer this differently:
+ * the lighter-day trim took the first match in an ALPHABETICALLY sorted array
+ * (so fatigue outranked illness by byte order), while the readiness card
+ * preferred a today-scoped fact and otherwise took position zero. With an open
+ * `cooked` window and today's `illness_mild` tap both active, the card's Clear
+ * resolved the illness while the trim was linked to the fatigue — so the
+ * athlete cleared what they reported, read "Cleared — today's back to its
+ * original session", and the day stayed trimmed. One owner, so that cannot
+ * happen.
+ *
+ * THE RULE, and every part of it is a decision the athlete made:
+ *   1. a TODAY-SCOPED fact wins — they said "today", and this is today;
+ *   2. otherwise the most recently UPDATED one — their latest word on it;
+ *   3. only for an exact timestamp tie, the id, purely so the answer is
+ *      total. That is a stability tie-break, NOT a priority: no kind outranks
+ *      another here, and Sam explicitly declined to author a kind ladder.
+ *
+ * NOT A REPLACEMENT FOR THE TAP. When the athlete has just authored a fact,
+ * that id travels with the offer and this function is not consulted at all —
+ * a stored decision always beats a derived one.
+ */
+export function selectReadinessFactForDate(args: {
+  readonly facts: readonly TemporarySourceFact[];
+  readonly dateISO: string;
+  /** When given, a fact scoped to exactly this date is preferred. */
+  readonly todayISO?: string;
+}): TemporarySourceFact | null {
+  const candidates = args.facts.filter((fact): fact is NonInjuryTemporarySourceFact =>
+    !isInjurySourceFact(fact)
+    && fact.status === 'active'
+    && 'factKind' in fact
+    && READINESS_FACT_KINDS.has((fact as { factKind: string }).factKind)
+    && factHorizonCoversDate(fact, args.dateISO));
+  if (candidates.length === 0) return null;
+
+  const isTodayScoped = (fact: NonInjuryTemporarySourceFact): boolean =>
+    !!args.todayISO && fact.scope.kind === 'date' && fact.scope.from === args.todayISO;
+
+  return [...candidates].sort((left, right) => {
+    const scoped = Number(isTodayScoped(right)) - Number(isTodayScoped(left));
+    if (scoped !== 0) return scoped;
+    const recency = String(right.updatedAt).localeCompare(String(left.updatedAt));
+    if (recency !== 0) return recency;
+    return temporarySourceFactId(left).localeCompare(temporarySourceFactId(right));
+  })[0] ?? null;
 }
 
 export function expireTemporarySourceFacts(

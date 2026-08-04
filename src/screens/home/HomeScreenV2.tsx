@@ -202,7 +202,11 @@ export default function HomeScreenV2() {
   const [readinessVisible, setReadinessVisible] = useState(false);
   const [readinessAck, setReadinessAck] = useState<ReadinessAcknowledgment | null>(null);
   // Opt-in "make today lighter" offer, shown after a today-scoped readiness report.
-  const [lighterDayOffer, setLighterDayOffer] = useState<{ date: string } | null>(null);
+  // The offer CARRIES the fact the athlete just authored (Sam's D-3 ruling,
+  // 2026-08-05). The door returns that id; dropping it here is what forced the
+  // transaction to re-guess which fact today's trim belonged to.
+  const [lighterDayOffer, setLighterDayOffer] =
+    useState<{ date: string; factId?: string } | null>(null);
   const [lighterDayBusy, setLighterDayBusy] = useState(false);
   const [readinessInjuryVisible, setReadinessInjuryVisible] = useState(false);
   const weekAnchorISO = weekDays[0]?.date ?? todayISOLocal();
@@ -905,12 +909,16 @@ export default function HomeScreenV2() {
           // Opt-in lighter-day / "soften today" offer after a today-scoped report.
           const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' ||
             kind === 'sore_today' || kind === 'illness_mild';
-          setLighterDayOffer(result?.ok && todayScoped ? { date: todayISOLocal() } : null);
+          setLighterDayOffer(result?.ok && todayScoped
+            ? { date: todayISOLocal(), factId: result.createdModifierIds?.[0] }
+            : null);
         }}
         onAcceptLighterDay={async (date) => {
           setLighterDayBusy(true);
           try {
-            const outcome = await applyLighterDayForToday({ date, todayISO: date });
+            const outcome = await applyLighterDayForToday({
+              date, todayISO: date, sourceFactId: lighterDayOffer?.factId,
+            });
             setLighterDayOffer(null);
             setReadinessAck(outcome.ok
               ? { tone: 'success', message: outcome.message }
@@ -2195,7 +2203,7 @@ interface WeekReadinessSheetProps {
   visible: boolean;
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
   acknowledgment: ReadinessAcknowledgment | null;
-  lighterDayOffer: { date: string } | null;
+  lighterDayOffer: { date: string; factId?: string } | null;
   lighterDayBusy: boolean;
   onClose: () => void;
   onApply: (kind: WeekReadinessAction) => void | Promise<void>;
