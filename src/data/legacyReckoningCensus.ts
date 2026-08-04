@@ -531,7 +531,27 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'owned store door — NAME AT THE DOOR, identical call, identical context, identical '
       + 'transaction — is STORE-OWNERSHIP work and is NOT held by this STOP. What is held '
       + 'is changing what a coach path DECIDES. The test is behaviour: if the coach path '
-      + 'would produce a different write, it is LR-6 work and it stops.',
+      + 'would produce a different write, it is LR-6 work and it stops. '
+      + 'D-2 SCOPE INHERITED (Sam, 2026-08-05, docs/DAY_CLOSE_RULINGS_2026-08-05.md '
+      + 'ruling 2, option a): the HYDRATION-REPAIR IN-PLACE BRANCH '
+      + '(`programStore.ts:1216-1219`, inside `canonicaliseAcceptedBoundaryState`) is '
+      + 'THIS UNIT\'S SCOPE. The branch overwrites a stored `dateOverrides` entry with '
+      + 'the gateway\'s repaired day, bypassing the door\'s tape, and the result is '
+      + 'later stamped `authorship: \'athlete\'`. The worn-world probe '
+      + '(docs/D2_WORN_WORLD_PROBE_2026-08-05.md) measured it: it fires and is NOT a '
+      + 'no-op (one hit — same session id re-derived, +116 bytes), but the '
+      + 'purpose-built worn world authored ZERO overrides across five relaunch cycles, '
+      + 'because no athlete tap door writes that surface any more (the LR-1 '
+      + 'measurement). Its entire surviving population is COACH writes and restores, '
+      + 'which is why it is filed HERE rather than as its own unit: the rebuild that '
+      + 'reaches those writers is the rebuild that owns this branch. NOTHING IS DONE TO '
+      + 'IT UNTIL THEN — no redirect (mechanically inert: `dayPrecedence.ts:151-160` '
+      + 'shadows an overlay-filed repair with the very override it repairs, so "just '
+      + 'move it" is secretly a precedence-reordering decision), no reorder, no '
+      + 'implementation. WHAT THE PROBE COULD NOT SETTLE, so that no rebuild reads this '
+      + 'as cleared: its behaviour on a coach-authored phone, whether the +116 bytes '
+      + 'accumulates over many cycles, and whether an authored override\'s CONTENT is '
+      + 'ever replaced by a materially different session — not observed, not excluded.',
     detector: null,
     whyNotDetectable: 'Counting exported type names would count vocabulary, not '
       + 'representations, and would go green on a rename. The finding is an architectural '
@@ -1194,6 +1214,26 @@ export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
  * the count it should always have had; the number 29 was itself the error.
  * Recorded in the founding document too (its own reconciliation block), so
  * neither file can be read as the whole ledger again.
+ */
+/**
+ * RATIFIED at 30 by Sam, 2026-08-05 — `docs/DAY_CLOSE_RULINGS_2026-08-05.md`
+ * ruling 1: "The rise restores the founding unit dropped in transcription;
+ * 29 was the error. The code ledger is the live ledger; the founding doc is
+ * history."
+ *
+ * So this constant is now a RULED number and not a raise waiting for one, and
+ * the ledger sits at exactly 30 of 30 — ZERO SLACK, deliberately.
+ *
+ * WHAT THAT COST, ON THE SAME DAY, so it is on the record rather than in
+ * someone's memory: D-2 (the hydration-repair in-place branch) was ruled
+ * "filed on the census, scoped to the coach rebuild" in ruling 2 of the same
+ * document. It was filed as SCOPE ON LR-6 — the coach-rebuild unit — and NOT
+ * as an LR-31, because a thirty-first unit would have required raising a
+ * ceiling Sam ratified three paragraphs earlier in the same breath. Direction
+ * 4 exists precisely so that raise cannot be quiet bookkeeping; taking it
+ * unasked would have been the move the tripwire is aimed at. If Sam meant a
+ * standalone unit, the ceiling is his to raise and the entry is a small
+ * follow-up — the scope text on LR-6 says everything an entry would say.
  */
 export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 30;
 

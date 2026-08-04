@@ -318,14 +318,30 @@ it can be sized.
 > ratchet. Where the two disagree, the code is authoritative and this
 > document is history. Read the numbering below before quoting an LR id.
 >
-> **The live ledger carries 29 units (LR-1 … LR-29).** Three were added after
-> this document was written, all by ruling, all during Stage B:
+> **The live ledger carries 30 units (LR-1 … LR-30), and 30 is the RATIFIED
+> ceiling** (Sam, 2026-08-05, `docs/DAY_CLOSE_RULINGS_2026-08-05.md` ruling 1).
+> Four were added after this document was written, all by ruling, all during
+> Stage B:
 >
 > | Live id | Unit | Filed |
 > |---|---|---|
 > | **LR-27** | `derivedSessionProvenance` nests a full displaced-session snapshot, and it GROWS on every relaunch — measured 3→4 chain depth and 66,947→139,331 bytes across ONE relaunch | 2026-08-04, ruled; PAID at its root `92484f3` |
 > | **LR-28** | The displaced-ACCEPTED-session restoration still stores a workout copy — LR-27's residue, separated so a paid unit cannot claim an unpaid surface | 2026-08-05, ruling 1 |
 > | **LR-29** | Undo restores from stored before-state instead of replaying decisions — LR-26's before side, kept by ruling until undo is rebuilt | 2026-08-05, ruling 2 |
+> | **LR-30** | One week's contract still has more than one home — the v1 `exposureContract` is still being MINTED onto every fresh microcycle. **This document's own LR-26, refiled**; see the paragraph below | 2026-08-05, Priority D ruling D-1 |
+>
+> **AND ONE UNIT WAS FILED AS SCOPE ON AN EXISTING ONE, not as a 31st.** Sam's
+> D-2 ruling of 2026-08-05 (`docs/DAY_CLOSE_RULINGS_2026-08-05.md` ruling 2,
+> option a) filed the **hydration-repair in-place branch**
+> (`programStore.ts:1216-1219`) on the census, *scoped to the coach rebuild*.
+> The worn-world probe (`docs/D2_WORN_WORLD_PROBE_2026-08-05.md`) had measured
+> that the branch guards a surface **athletes no longer write at all** — zero
+> `dateOverrides` across five relaunch cycles of a purpose-built worn world —
+> so its entire surviving population is coach writes and restores. It is
+> therefore recorded in **LR-6's** scope, held by that unit's standing STOP,
+> and pinned there by `test:legacy-census`. It is not an LR-31, because the
+> same document ratified the ceiling at 30 and the ledger is at 30 of 30: a
+> thirty-first unit needs Sam's word, not a bump taken while filing.
 >
 > **IDS WERE RECYCLED, so this document's numbering is not the live one.**
 > Two divergences, both real:

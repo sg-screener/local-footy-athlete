@@ -391,6 +391,25 @@ console.log('\n[8] The census records the sequencing Sam ruled');
     'no coach-pipeline work before its reassessment is written and approved');
   ok('LR-6 says what the stop blocks', !!lr6?.sequence && lr6.sequence.length > 0);
 
+  // SAM'S D-2 RULING, 2026-08-05 (docs/DAY_CLOSE_RULINGS_2026-08-05.md, ruling
+  // 2): the hydration-repair in-place branch is filed on the census, scoped to
+  // the coach rebuild — "ratcheted, not remembered". This cell is the ratchet.
+  // Without it the scope is a sentence in a string field that a later edit can
+  // drop the way the founding LR-26 was dropped for six days — which is the
+  // exact failure that cost this census a unit and forced the 29->30 raise.
+  const D2_SCOPE_MARKERS = [
+    'D-2 SCOPE INHERITED',
+    'canonicaliseAcceptedBoundaryState',
+    'DAY_CLOSE_RULINGS_2026-08-05.md',
+  ];
+  const missingScope = D2_SCOPE_MARKERS.filter(
+    (marker) => !(lr6?.sequence ?? '').includes(marker));
+  ok('LR-6 still carries the D-2 scope Sam filed on it',
+    missingScope.length === 0,
+    `missing: ${missingScope.join(', ')} — the coach rebuild inherits the `
+    + 'hydration-repair in-place branch; if that scope is being moved to a unit '
+    + 'of its own, the ceiling is Sam\'s to raise');
+
   const inFlight = LEGACY_UNIT_CENSUS.filter((u) => u.status === 'in_flight');
   ok('in-flight units are marked so they are not double-scheduled', inFlight.length > 0,
     'LR-10 was in the concurrent lane when the census landed');
