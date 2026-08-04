@@ -5,6 +5,10 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
 import type { Microcycle, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import {
   canonicalContextSubphase,
@@ -271,7 +275,36 @@ section('[6] deterministic plan intent rejects main drift but permits minor bala
   eq('hinge + pull contribution remains authoritative',
     drifted.workout.strengthPatternContributions, ['hinge', 'pull']);
 
+  // THE MINOR ROW HAS TO BE MINOR BY IDENTITY, not by dose. This cell used to
+  // use 'Chest Supported Row' at 2×10-12 and had been red since Sam's deload
+  // law landed (2026-07-27), which is written at the classifier's own site: "A
+  // ROW'S MAIN-LIFT IDENTITY IS NOT ITS DOSE ... `RDLs` is an anchor lift
+  // whether it is prescribed for five sets or one." Chest Supported Row is a
+  // registry ANCHOR, so trimming its sets never made it an accessory, and the
+  // drift guard was right to remove it. The fixture was asserting the rule the
+  // law replaced. 'Face Pull' is a registry pull ACCESSORY — a minor balancing
+  // row by identity — so the cell now exercises the exemption it is named for.
   const push = finaliseWorkoutAfterMutation(workout('Upper Push', [
+    row('Bench Press', 0),
+    row('Incline DB Press', 1),
+    row('Face Pull', 2, {
+      prescribedSets: 2,
+      prescribedRepsMin: 10,
+      prescribedRepsMax: 12,
+    }),
+  ], {
+    planEntryId: 'w1:wednesday:push:strength',
+    strengthPatternContributions: ['push'],
+  }), { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true });
+  ok('minor balancing row remains on Upper Push day',
+    push.workout.exercises.some((item) => /Face Pull/i.test(item.exercise?.name ?? '')),
+    push.workout.exercises.map((item) => item.exercise?.name ?? '').join(', '));
+  eq('minor pull accessory does not rename Upper Push', push.workout.name, 'Upper Push');
+
+  // THE OTHER HALF OF THE RULE, so the exemption cannot widen unnoticed: an
+  // ANCHOR of the wrong pattern is still main drift and still goes, at any
+  // dose. Without this, softening `isMinorCrossPatternAccessory` would pass.
+  const pushWithAnchorDrift = finaliseWorkoutAfterMutation(workout('Upper Push', [
     row('Bench Press', 0),
     row('Incline DB Press', 1),
     row('Chest Supported Row', 2, {
@@ -283,9 +316,10 @@ section('[6] deterministic plan intent rejects main drift but permits minor bala
     planEntryId: 'w1:wednesday:push:strength',
     strengthPatternContributions: ['push'],
   }), { offseasonSubphase: 'not_off_season', phase: 'Pre-season', planIntentValid: true });
-  ok('minor balancing row remains on Upper Push day',
-    push.workout.exercises.some((item) => /Chest Supported Row/i.test(item.exercise?.name ?? '')));
-  eq('minor pull accessory does not rename Upper Push', push.workout.name, 'Upper Push');
+  ok('a trimmed pull ANCHOR on a push day is still main drift',
+    !pushWithAnchorDrift.workout.exercises.some(
+      (item) => /Chest Supported Row/i.test(item.exercise?.name ?? '')),
+    pushWithAnchorDrift.workout.exercises.map((item) => item.exercise?.name ?? '').join(', '));
 }
 
 section('[7] stable plan identity moves with the workout, never the weekday');
@@ -491,6 +525,7 @@ section('[11] the off-season subphase is carried, never guessed');
 }
 
 console.log(`\nworkoutCanonicalisationTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`Failures:\n${failures.map((name) => `  - ${name}`).join('\n')}`);
   process.exit(1);

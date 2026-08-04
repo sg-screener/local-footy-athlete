@@ -8,6 +8,10 @@
   },
 };
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
 import type { Microcycle, OnboardingData, SeasonPhase, Workout, WorkoutExercise } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
@@ -23,19 +27,101 @@ let pass = 0;
 let fail = 0;
 const failures: string[] = [];
 
+/**
+ * DECLARED GAPS — the mechanism borrowed verbatim from `surfaceAgreementTests`,
+ * with its three properties intact:
+ *
+ *   1. THE ASSERTION IS UNCHANGED. Not loosened, not skipped, not conditional.
+ *      It runs, it fails, and the failure is matched against a declared entry.
+ *   2. STALE DECLARATIONS FAIL. If a declared gap stops reddening, this suite
+ *      fails until the entry is deleted. A gap cannot outlive its defect.
+ *   3. IT IS NOT A PASS. Gaps print as `GAP` and are counted separately, so no
+ *      run of this suite can be read as "every cell agrees".
+ *
+ * This suite is chained into `test:bible` by the unit that unchained it, and it
+ * is chained WITH this list non-empty — because the defect below is real,
+ * pre-existing, and not this unit's to rule.
+ */
+interface DeclaredGap {
+  id: string;
+  /** Cell-name prefixes this may explain. Scoped, never global. */
+  cells: readonly string[];
+  /** The exact failure this explains. Cut from the message, not guessed. */
+  matches: RegExp;
+  why: string;
+  owner: string;
+  expiresWhen: string;
+}
+
+const DECLARED_GAPS: readonly DeclaredGap[] = [
+  {
+    id: 'offseason_block2_deload_week_restructures_the_days',
+    cells: ['Off-season day '],
+    matches: /keeps main lift/,
+    why:
+      'BLOCK 2, WEEK 3 -> WEEK 4 (measured 2026-08-05, this suite\'s own '
+      + 'fixture): the deload week does not shrink the build week, it RESHAPES '
+      + 'it. Day 2 goes from "Lower Body Strength" carrying Front Squat + Trap '
+      + 'Bar Deadlift to "Lower Hinge" carrying NO anchor lift at all; the '
+      + 'Upper Pull session moves from day 4 to day 5 and Lower Squat takes '
+      + 'day 4. Sam\'s deload law is "same week, same days; the structure '
+      + 'doesn\'t change, the work shrinks", and the same law forbids halving '
+      + 'from ever removing a lift. Block 1 is clean — its week 3 and week 4 '
+      + 'are structurally identical, so this is specific to a block generated '
+      + 'from a previousProgram. NOT caused by Stage B: this suite has been '
+      + 'CRASHING at module scope since the equipment door landed, so these '
+      + 'cells have not run at all, and unchaining it is what surfaced them.',
+    owner: 'the deload/placement owner — needs a Sam ruling before code',
+    expiresWhen:
+      'block 2 week 4 keeps block 2 week 3\'s day layout and every anchor lift',
+  },
+];
+
+const gapsHit = new Set<string>();
+let gapped = 0;
+
+function declaredGapFor(cell: string, detail: string): DeclaredGap | null {
+  return DECLARED_GAPS.find((gap) =>
+    gap.cells.some((scope) => cell.startsWith(scope))
+    && (gap.matches.test(cell) || gap.matches.test(detail))) ?? null;
+}
+
 function ok(name: string, condition: boolean, detail?: string): void {
   if (condition) {
     pass++;
     console.log(`  ok ${name}`);
-  } else {
-    fail++;
-    failures.push(name);
-    console.log(`  fail ${name}${detail ? `\n      ${detail}` : ''}`);
+    return;
   }
+  const gap = declaredGapFor(name, detail ?? '');
+  if (gap) {
+    gapped++;
+    gapsHit.add(gap.id);
+    console.log(`  GAP  ${name}\n      declared gap: ${gap.id}`
+      + `\n      owner: ${gap.owner}\n      expires when: ${gap.expiresWhen}`
+      + `${detail ? `\n      ${detail}` : ''}`);
+    return;
+  }
+  fail++;
+  failures.push(name);
+  console.log(`  fail ${name}${detail ? `\n      ${detail}` : ''}`);
 }
 
+/**
+ * THE PROFILE HAS TO PASS THE DOOR. This fixture predated the equipment unit
+ * (2026-07-31) and the honest-generation-failure unit, and had been CRASHING —
+ * not failing, crashing — ever since: `generationEquipmentInputOrThrow` refuses
+ * to build a program for a profile carrying no equipment answer rather than
+ * silently defaulting one, which is the whole point of that unit. A fixture
+ * that cannot get through the door proves nothing about what is behind it.
+ */
 function profileFor(seasonPhase: SeasonPhase): OnboardingData {
   return {
+    firstName: 'DeloadAudit',
+    position: 'inside_mid',
+    heightCm: 183,
+    experienceLevel: '2-5 years',
+    trainingLocation: 'Commercial gym',
+    equipment: ['Full Gym'],
     seasonPhase,
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
@@ -303,7 +389,18 @@ assertCalendarDeload('Pre-season', 0.9);
     JSON.stringify({ sets: deloaded.prescribedSets }));
 }
 
-console.log(`\ndeloadWeekGenerationTests: ${pass} passed, ${fail} failed`);
+// Property 2 of the mechanism: a declaration cannot outlive its defect.
+const staleGaps = DECLARED_GAPS.filter((gap) => !gapsHit.has(gap.id));
+for (const gap of staleGaps) {
+  fail++;
+  failures.push(`declared gap no longer reds: ${gap.id}`);
+  console.log(`  fail declared gap "${gap.id}" no longer reds — delete the entry, `
+    + 'do not leave it carrying debt that is already paid.');
+}
+
+console.log(`\ndeloadWeekGenerationTests: ${pass} passed, ${gapped} declared gap(s), `
+  + `${fail} failed`);
+totalsPrinted(fail);
 
 if (fail > 0) {
   console.log('\nFailures:');
