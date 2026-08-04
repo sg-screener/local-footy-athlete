@@ -218,7 +218,7 @@
                       {
                         "identity": "cond-2026-07-13-main",
                         "exerciseId": "cond-2026-07-13-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -235,7 +235,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -320,7 +320,7 @@
                   {
                     "identity": "cond-2026-07-13-main",
                     "exerciseId": "cond-2026-07-13-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -339,7 +339,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -635,7 +635,7 @@
                       {
                         "identity": "cond-2026-07-15-main",
                         "exerciseId": "cond-2026-07-15-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -652,7 +652,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -709,7 +709,7 @@
                   {
                     "identity": "cond-2026-07-15-main",
                     "exerciseId": "cond-2026-07-15-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -728,7 +728,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -1555,7 +1555,7 @@
                       {
                         "identity": "cond-2026-07-20-main",
                         "exerciseId": "cond-2026-07-20-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -1572,7 +1572,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -1657,7 +1657,7 @@
                   {
                     "identity": "cond-2026-07-20-main",
                     "exerciseId": "cond-2026-07-20-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -1676,7 +1676,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -1973,7 +1973,7 @@
                       {
                         "identity": "cond-2026-07-22-main",
                         "exerciseId": "cond-2026-07-22-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -1990,7 +1990,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -2048,7 +2048,7 @@
                   {
                     "identity": "cond-2026-07-22-main",
                     "exerciseId": "cond-2026-07-22-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -2067,7 +2067,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -19198,7 +19198,7 @@
                       {
                         "identity": "cond-2026-07-13-main",
                         "exerciseId": "cond-2026-07-13-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -19215,7 +19215,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -19302,7 +19302,7 @@
                   {
                     "identity": "cond-2026-07-13-main",
                     "exerciseId": "cond-2026-07-13-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -19321,7 +19321,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -19615,7 +19615,7 @@
                       {
                         "identity": "cond-2026-07-15-main",
                         "exerciseId": "cond-2026-07-15-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -19632,7 +19632,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -19687,7 +19687,7 @@
                   {
                     "identity": "cond-2026-07-15-main",
                     "exerciseId": "cond-2026-07-15-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -19706,7 +19706,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -20529,7 +20529,7 @@
                       {
                         "identity": "cond-2026-07-20-main",
                         "exerciseId": "cond-2026-07-20-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -20546,7 +20546,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -20633,7 +20633,7 @@
                   {
                     "identity": "cond-2026-07-20-main",
                     "exerciseId": "cond-2026-07-20-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -20652,7 +20652,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -20944,7 +20944,7 @@
                       {
                         "identity": "cond-2026-07-22-main",
                         "exerciseId": "cond-2026-07-22-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -20961,7 +20961,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -21014,7 +21014,7 @@
                   {
                     "identity": "cond-2026-07-22-main",
                     "exerciseId": "cond-2026-07-22-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -21033,7 +21033,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -30992,7 +30992,7 @@
                       {
                         "identity": "cond-2026-07-13-main",
                         "exerciseId": "cond-2026-07-13-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -31009,7 +31009,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -31094,7 +31094,7 @@
                   {
                     "identity": "cond-2026-07-13-main",
                     "exerciseId": "cond-2026-07-13-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -31113,7 +31113,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -31378,7 +31378,7 @@
                       {
                         "identity": "cond-2026-07-15-main",
                         "exerciseId": "cond-2026-07-15-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -31395,7 +31395,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -31452,7 +31452,7 @@
                   {
                     "identity": "cond-2026-07-15-main",
                     "exerciseId": "cond-2026-07-15-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -31471,7 +31471,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -32298,7 +32298,7 @@
                       {
                         "identity": "cond-2026-07-20-main",
                         "exerciseId": "cond-2026-07-20-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 6,
                         "sets": 1,
                         "repsMin": 1,
@@ -32315,7 +32315,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -32400,7 +32400,7 @@
                   {
                     "identity": "cond-2026-07-20-main",
                     "exerciseId": "cond-2026-07-20-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 6,
                     "sets": 1,
                     "repsMin": 1,
@@ -32419,7 +32419,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
@@ -32685,7 +32685,7 @@
                       {
                         "identity": "cond-2026-07-22-main",
                         "exerciseId": "cond-2026-07-22-main",
-                        "name": "Continuous Aerobic Run",
+                        "name": "Short Flush",
                         "order": 4,
                         "sets": 1,
                         "repsMin": 1,
@@ -32702,7 +32702,7 @@
                       "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
+                      "title": "Short Flush"
                     }
                   }
                 ],
@@ -32760,7 +32760,7 @@
                   {
                     "identity": "cond-2026-07-22-main",
                     "exerciseId": "cond-2026-07-22-main",
-                    "name": "Continuous Aerobic Run",
+                    "name": "Short Flush",
                     "order": 4,
                     "sets": 1,
                     "repsMin": 1,
@@ -32779,7 +32779,7 @@
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": [
-                    "Continuous Aerobic Run"
+                    "Short Flush"
                   ]
                 }
               }
