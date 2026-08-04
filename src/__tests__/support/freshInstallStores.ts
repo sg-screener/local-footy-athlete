@@ -41,7 +41,6 @@ export function resetStoresToFreshInstall(reason: string): void {
   });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
   useCoachMutationHistoryStore.getState().clearAll();
   // Through the stores' own reset doors — the armour refuses a raw default
   // write over answered prefs, and a fresh install must not bypass the owners.
@@ -70,4 +69,40 @@ export function resetStoresToFreshInstall(reason: string): void {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
+
+  // ─── RESET THE SOURCE BEFORE THE MIRROR, OR THE MIRROR PUTS IT BACK ───────
+  //
+  // FOUND 2026-08-04 by the lighter-day walker cell, and it is the reason this
+  // reset moved down here from between the calendar and the mutation history.
+  //
+  // `coachUpdatesStore.activeConstraints` is a PROJECTION of the accepted
+  // material context — `publishAcceptedCoachUpdatesCompatibilityMirror`
+  // (`coachUpdatesStore.ts:1140`) re-derives it, and it is subscribed to the
+  // store's own writes. So clearing it while `acceptedMaterialContext` still
+  // held a fact re-published that fact IMMEDIATELY, inside the very setState
+  // meant to clear it: `activeConstraints` went 0 -> 1 before the next line ran.
+  //
+  // The reset LOOKED total and was not. Nothing failed for it either, until a
+  // SECOND async cell ran after `walkTheScheduleDoors` and inherited its active
+  // travel fact — generation then produced a week with no strength coverage and
+  // threw `Section 18 final-week rejection`, three doors away from the cause.
+  // A synchronous suite never saw it because every synchronous cell runs before
+  // the async tail, so the first async cell always got a genuinely clean world
+  // and the second one never existed until now.
+  //
+  // This is the PROFILE-MIRROR defect one store over (docs: the onboarding
+  // reliability unit, whose root cause was "the profile MIRROR, not the
+  // relaunch race"). A mirror is not state you can clear; it is state you clear
+  // the SOURCE of. Hence the order, and hence the check below — a reset that
+  // does not hold must say so rather than hand the next walk a different
+  // athlete.
+  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
+  const leaked = useCoachUpdatesStore.getState().activeConstraints;
+  if (leaked.length > 0 || useCoachUpdatesStore.getState().activeInjury) {
+    throw new Error(
+      `A FRESH INSTALL IS TOTAL OR IT IS NOT A FRESH INSTALL (${reason}): the `
+      + `coach-updates reset did not hold — ${leaked.length} constraint(s) `
+      + `survived it. Something re-published the mirror after its source was `
+      + `cleared; find the new source and reset that, do not clear twice.`);
+  }
 }

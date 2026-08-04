@@ -2444,9 +2444,16 @@ run('the override door refuses the wipe against a walked world', () => {
   // WORKED: the tap doors were moved off the raw override surface one unit at
   // a time, and nobody had asked what was left on it.
   //
-  // What is left is the COACH pipeline (`coachActions`, the undo engine, the
-  // modality-swap orchestrator, the revision writer), the lighter-day
-  // transaction, and LR-3's §18 residuals. The walker has NO coach vocabulary
+  // NARROWED 2026-08-04, and this is now the whole claim: what is left is the
+  // COACH pipeline (`coachActions`, the undo engine, the modality-swap
+  // orchestrator, the revision writer) and NOTHING ELSE. Stage B stage 1
+  // retired the last two non-coach writers — Task A took LR-3's athlete re-add
+  // residual into the typed constraint lane, and Task B moved the lighter-day
+  // trim onto the `readiness_reduction` week overlay and deleted
+  // `'lighter_day'` from the closed writer union. **No athlete-reachable door
+  // writes `dateOverrides` any more**, by construction rather than by
+  // convention: the union is closed and the ids that remain are coach ids.
+  // The walker has NO coach vocabulary
   // and the LR-6 STOP forbids this unit adding one, so the decision is ACTED
   // IN through the door itself after the walk — the same declared gap the
   // coach-prefs and coach-memory cells carry, for the same reason. When LR-6
@@ -2759,6 +2766,117 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
   console.log(`      ${describeConformanceShape()}`);
 });
 
+
+/**
+ * THE LIGHTER-DAY DOOR — L11's obligation for Stage B stage 1 Task B.
+ *
+ * The walker had NO lighter-day vocabulary at all: zero hits for "lighter"
+ * under `src/dev/e2e/`, no explorer binding for the accept button, no action
+ * kind. A state an athlete can reach that the walker cannot is a defect in the
+ * harness, not a gap in the app (L13).
+ *
+ * DETERMINISTIC RATHER THAN PROPOSABLE, and the unit sheet named this fallback
+ * in advance rather than discovering it: `applyLighterDayForToday` is AWAITED
+ * and `perform` is synchronous, exactly as with the two schedule doors — and
+ * the offer is gated on a COMMITTED today-scoped readiness fact, which the
+ * random proposer would reach so rarely that listing it in the non-vacuity
+ * required-proposals set would assert an action the proposer almost never
+ * emits. The same precedent `walkTheScheduleDoors` sets, for the same reason.
+ * Stated here rather than left for a reader to infer.
+ *
+ * WHAT IT PROVES, and the third assertion is the unit's whole point:
+ *   1. the door still works — today gets lighter, disclosed, with a reversible
+ *      adjustment id (the athlete's experience is unchanged by the conversion);
+ *   2. the trim lands on the `readiness_reduction` WEEK OVERLAY;
+ *   3. `dateOverrides` is untouched — with the athlete re-add routes retired by
+ *      Task A and `'lighter_day'` gone from the closed writer union, NO
+ *      athlete-reachable door writes that surface any more;
+ *   4. clearing the fact cascade-reverts it byte-identical, so R12's promise
+ *      ("Cleared — today's back to its original session") survives the channel
+ *      change;
+ *   5. every walker law still holds over the resulting world.
+ *
+ * Depth stated per L13: this is a walked world, not a seeded one — onboarding,
+ * generation and time advance through the real doors before the fact is
+ * declared, and the laws run over the result.
+ */
+async function walkTheLighterDayDoor(): Promise<void> {
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+  performAction({ kind: 'advance_time', days: 3 });
+
+  const dayWithASession = visibleWeek().find((day) => (day.workout?.exercises ?? []).length > 0);
+  if (!dayWithASession) {
+    // NOT a silent skip. A walked world with nothing to trim cannot exercise
+    // this door, and saying so is the honest outcome; a pass here would be the
+    // vacuous kind this suite exists to refuse.
+    throw new Error('the walked world holds no session with exercises to trim — '
+      + 'the lighter-day door is unreachable from it and this cell proves nothing');
+  }
+  const date = dayWithASession.date;
+
+  const declared = await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_fatigue_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: { date, todayISO: date, level: 'low_energy' },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  } as never, { todayISO: date }));
+  assert((declared as { ok?: boolean }).ok === true,
+    `precondition: the readiness fact must commit — ${JSON.stringify(declared)}`);
+
+  const setsOn = (target: string): number =>
+    ((visibleWeek().find((day) => day.date === target)?.workout?.exercises ?? []) as unknown[])
+      .reduce<number>((sum, row) => sum + Number((row as { prescribedSets?: number }).prescribedSets ?? 0), 0);
+  const before = setsOn(date);
+  const weekBefore = weekFingerprint();
+
+  const applied = await quietAsync(() => (require('../utils/lighterDayTransaction') as {
+    applyLighterDayForToday: (a: { date: string; todayISO: string }) => Promise<{
+      ok: boolean; message: string; changes: string[]; adjustmentId?: string;
+    }>;
+  }).applyLighterDayForToday({ date, todayISO: date }));
+
+  assert(applied.ok, `the lighter-day door refused a walked world: ${applied.message}`);
+  assert(applied.changes.length > 0 && /\S/.test(applied.message),
+    'the door applied a trim and disclosed nothing');
+  assert(!!applied.adjustmentId, 'the door recorded no reversible adjustment id');
+  assert(setsOn(date) < before,
+    `the door reported success and the day did not get lighter: ${before} -> ${setsOn(date)}`);
+
+  // THE CHANNEL.
+  const overlays = useProgramStore.getState().weekScopedOverlays ?? {};
+  const overlay = overlays[require('../rules/dayPrecedence').mondayForDate(date) as string];
+  assert(overlay && Object.prototype.hasOwnProperty.call(overlay.workoutsByDate, date),
+    `the trim did not land on the week overlay: ${JSON.stringify(Object.keys(overlays))}`);
+  assert(overlay!.reason === 'readiness_reduction',
+    `the overlay wears the wrong reason: ${overlay!.reason}`);
+
+  // THE SURFACE THAT MUST STAY EMPTY.
+  const overrides = useProgramStore.getState().dateOverrides ?? {};
+  assert(Object.keys(overrides).length === 0,
+    'a walked athlete door wrote `dateOverrides`: '
+    + `${JSON.stringify(Object.keys(overrides))}. After Task A and Task B the `
+    + 'surface is coach-pipeline-only, and the walker has no coach vocabulary.');
+
+  for (const broken of checkInvariants({
+    action: { kind: 'declare_source_fact', date, fact: 'poor_sleep' },
+    outcome: 'lighter_day_applied', message: applied.message, threw: null,
+  })) {
+    assert(false, `${broken.law}: ${broken.detail}`);
+  }
+
+  // THE PROMISE: clearing the fact puts today back, byte-identical.
+  performAction({ kind: 'clear_source_facts' });
+  assert(weekFingerprint() === weekBefore,
+    'clearing the readiness fact did not restore the week byte-identical — '
+    + 'the cascade-undo keys on `sourceFactId`, not on the surface, so the '
+    + 'channel change must not have touched it');
+}
+
 // THE ASYNC TAIL. Every cell above is synchronous and has already run by the
 // time this executes; the schedule doors are awaited, so they run here and the
 // totals wait for them. Printing the totals before an outstanding cell finished
@@ -2775,6 +2893,8 @@ void (async () => {
   }
   await runAsync('the two schedule doors are walkable through the REAL door, and the laws hold',
     walkTheScheduleDoors);
+  await runAsync('accepting a lighter day derives from the fact and never touches the athlete\'s surface',
+    walkTheLighterDayDoor);
 
   console.log(`\nAction walker totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);

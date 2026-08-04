@@ -2578,7 +2578,10 @@ export type ProgramOverrideWriterId =
   | 'plan_change_producer'
   | 'program_control'
   | 'adjustment_events'
-  | 'lighter_day'
+  // RETIRED 2026-08-04 (Option C item 4): `'lighter_day'`. The readiness trim
+  // is a derived effect of a recorded fact, so it authors a sparse
+  // `readiness_reduction` week overlay instead of the athlete's decision
+  // surface. A future lighter-day override write is now a COMPILE ERROR.
   | 'coach_action'
   | 'coach_executor'
   | 'coach_program_edit'

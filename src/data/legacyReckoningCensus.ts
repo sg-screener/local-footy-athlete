@@ -122,8 +122,13 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'by commitAcceptedStateTransaction — the door owns the DECISION, the transaction '
       + 'owns the PUBLICATION. CAVEAT, measured not assumed: no walked athlete tap door '
       + 'writes `dateOverrides` any more (adds/swaps land in weekScopedOverlays, deletions '
-      + 'in userRemovalConstraints) — the surviving writers are the coach pipeline, the '
-      + "lighter-day transaction and LR-3's residuals. "
+      + 'in userRemovalConstraints). NARROWED 2026-08-04 (Stage B stage 1): Task A took '
+      + "LR-3's athlete re-add residual into the typed constraint lane and Task B moved "
+      + 'the lighter-day trim onto a `readiness_reduction` week overlay, deleting '
+      + "'lighter_day' from the closed writer union. The surviving writers are the COACH "
+      + 'PIPELINE AND NOTHING ELSE — no athlete-reachable door writes the surface, by '
+      + 'construction rather than convention, since the union is closed and every '
+      + 'remaining id is a coach id. '
       + 'RULED (Sam, 2026-08-03, Stage B stage 0): `dateOverrides` is a STORED-OUTPUT '
       + 'surface, not a decision ledger — the old "athlete\'s decision surface" name was '
       + 'wrong and the measurement says so '
