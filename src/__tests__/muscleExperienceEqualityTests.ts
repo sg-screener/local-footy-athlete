@@ -597,7 +597,14 @@ console.log('\n[5] RECONCILIATION — metadata against the selectable vocabulary
 const selectable = new Set(selectableExerciseNames());
 const metadataNames = new Set(EXERCISE_MUSCLE_METADATA.map((entry) => entry.exercise));
 
-const unlistedGaps = [...selectable].filter((name) => !metadataNames.has(name));
+// ASKED OF THE OWNER, NOT OF ONE ARRAY (2026-08-05). Two signed sheets now
+// carry authored metadata — this workbook for lifts, Sam's conditioning
+// workbook for the 53 templates — and `muscleMetadataFor` is the one place
+// that answers "is this exercise covered". Re-implementing the lookup against
+// `EXERCISE_MUSCLE_METADATA` alone would give this suite a different answer
+// from the app's, which is the two-answers defect the owner exists to remove.
+// The cells below that ask about THIS sheet's own rows still read the array.
+const unlistedGaps = [...selectable].filter((name) => !muscleMetadataFor(name));
 ok(
   'every selectable exercise without metadata is a recorded gap',
   unlistedGaps.every((name) => SELECTABLE_WITHOUT_METADATA.includes(name)),
