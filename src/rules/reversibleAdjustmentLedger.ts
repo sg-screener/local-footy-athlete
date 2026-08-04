@@ -71,19 +71,36 @@ export interface ReversibleAdjustmentOwnedDayDelta {
   date: string;
   weekStart: string;
   beforeWorkout: Workout | null;
-  afterWorkout: Workout | null;
   /** Raw accepted surface rows are separate from visible semantic rows so a
    * progressed prescription is never fed through progression a second time. */
   beforeSurfaceOwner?: 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
   afterSurfaceOwner?: 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
   beforeSurfaceWorkout?: Workout | null;
-  afterSurfaceWorkout?: Workout | null;
   beforeDateOverride: Workout | null;
-  afterDateOverride: Workout | null;
   beforeOverrideContext: OverrideContext | null;
-  afterOverrideContext: OverrideContext | null;
   beforeFingerprint: string;
   afterFingerprint: string;
+
+  // ── THE AFTER SIDE IS A RECORD, NOT A COPY (LR-26, Sam's ruling 2, 2026-08-05)
+  //
+  // `afterWorkout`, `afterSurfaceWorkout`, `afterDateOverride` and
+  // `afterOverrideContext` used to store full `Workout`/`OverrideContext`
+  // objects here. MEASURED 2026-08-05: none of their CONTENT was ever read
+  // back. `afterSurfaceWorkout` had no reader at all; `afterWorkout` was read
+  // only for `planEntryId ?? id`; the other two only to compute a
+  // `semanticFingerprint` for the "has the world moved since?" check. So the
+  // stored copies were output, and the three fields below are what was
+  // actually being consumed — an identity and two fingerprints.
+  //
+  // The BEFORE side stays and is deliberately NOT symmetrical: it is read in
+  // full to restore (`reversibleAdjustmentTransaction.ts:511-553`), and Sam
+  // ruled it the decision's own content. Rebuilding undo as
+  // replay-from-decisions — which is what would make the before side derivable
+  // too — is its own queued census unit, not this one.
+  /** `planEntryId ?? id` of the accepted workout this decision produced. */
+  afterStableIdentity: string | null;
+  afterDateOverrideFingerprint: string;
+  afterOverrideContextFingerprint: string;
 }
 
 /** Contract ownership is kept separately from workouts so restoration never
@@ -293,13 +310,13 @@ function legacyOwnedDays(constraint: UserRemovalConstraint): ReversibleAdjustmen
     date: targetDate,
     weekStart: mondayForDate(targetDate),
     beforeWorkout: targetBefore,
-    afterWorkout: targetAfter,
     beforeDateOverride: null,
-    afterDateOverride: null,
     beforeOverrideContext: null,
-    afterOverrideContext: null,
     beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(targetDate, targetBefore),
     afterFingerprint: reversibleAdjustmentWorkoutFingerprint(targetDate, targetAfter),
+    afterStableIdentity: targetAfter?.planEntryId ?? targetAfter?.id ?? null,
+    afterDateOverrideFingerprint: semanticFingerprint(null),
+    afterOverrideContextFingerprint: semanticFingerprint(null),
   }];
   if (constraint.mutationKind === 'move' && constraint.moveTargetDate) {
     const moveDate = constraint.moveTargetDate.slice(0, 10);
@@ -309,13 +326,13 @@ function legacyOwnedDays(constraint: UserRemovalConstraint): ReversibleAdjustmen
       date: moveDate,
       weekStart: mondayForDate(moveDate),
       beforeWorkout: moveBefore,
-      afterWorkout: moveAfter,
       beforeDateOverride: null,
-      afterDateOverride: null,
       beforeOverrideContext: null,
-      afterOverrideContext: null,
       beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(moveDate, moveBefore),
       afterFingerprint: reversibleAdjustmentWorkoutFingerprint(moveDate, moveAfter),
+      afterStableIdentity: moveAfter?.planEntryId ?? moveAfter?.id ?? null,
+      afterDateOverrideFingerprint: semanticFingerprint(null),
+      afterOverrideContextFingerprint: semanticFingerprint(null),
     });
   }
   return owned;
@@ -425,6 +442,47 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/**
+ * READ-INGRESS LIFT for LR-26's after-side deletion (L15).
+ *
+ * A ledger already on the athlete's phone carries the superseded shape — full
+ * `afterWorkout` / `afterDateOverride` / `afterOverrideContext` objects and no
+ * identity or fingerprints. L15 says a superseded format lives on as a lift at
+ * the boundary and is never written again, so the old objects are converted
+ * here, once, on hydrate: the identity and the two fingerprints are exactly
+ * what the readers consumed, so a lifted record verifies identically to the
+ * record that produced it.
+ *
+ * The legacy keys are DROPPED rather than carried, which is what makes the
+ * payload cut real for existing installs and not only for new writes.
+ */
+function liftOwnedDayAfterSide(
+  owned: ReversibleAdjustmentOwnedDayDelta,
+): ReversibleAdjustmentOwnedDayDelta {
+  const legacy = owned as ReversibleAdjustmentOwnedDayDelta & {
+    afterWorkout?: Workout | null;
+    afterSurfaceWorkout?: Workout | null;
+    afterDateOverride?: Workout | null;
+    afterOverrideContext?: OverrideContext | null;
+  };
+  const lifted: ReversibleAdjustmentOwnedDayDelta = {
+    ...owned,
+    afterStableIdentity: owned.afterStableIdentity
+      ?? legacy.afterWorkout?.planEntryId
+      ?? legacy.afterWorkout?.id
+      ?? null,
+    afterDateOverrideFingerprint: owned.afterDateOverrideFingerprint
+      ?? semanticFingerprint(legacy.afterDateOverride ?? null),
+    afterOverrideContextFingerprint: owned.afterOverrideContextFingerprint
+      ?? semanticFingerprint(legacy.afterOverrideContext ?? null),
+  };
+  delete (lifted as { afterWorkout?: unknown }).afterWorkout;
+  delete (lifted as { afterSurfaceWorkout?: unknown }).afterSurfaceWorkout;
+  delete (lifted as { afterDateOverride?: unknown }).afterDateOverride;
+  delete (lifted as { afterOverrideContext?: unknown }).afterOverrideContext;
+  return lifted;
+}
+
 function validPersistedAdjustment(value: unknown): value is ReversibleAdjustmentRecord {
   if (!isRecord(value) || !isRecord(value.displacedOriginalState)) return false;
   return value.protocolVersion === REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION &&
@@ -449,6 +507,8 @@ export function normalizeReversibleAdjustmentLedger(args: {
         ...clone(adjustment),
         displacedOriginalState: {
           ...clone(adjustment.displacedOriginalState),
+          ownedDays: (adjustment.displacedOriginalState.ownedDays ?? [])
+            .map((owned) => liftOwnedDayAfterSide(clone(owned))),
           ownedWeeks: clone(adjustment.displacedOriginalState.ownedWeeks ?? []),
           weekOverlay: clone(adjustment.displacedOriginalState.weekOverlay ?? null),
           sweptOverrides: clone(adjustment.displacedOriginalState.sweptOverrides ?? []),

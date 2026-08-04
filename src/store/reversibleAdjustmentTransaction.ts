@@ -202,12 +202,16 @@ function currentMatchesAcceptedAfter(args: {
       if (reversibleAdjustmentWorkoutFingerprint(owned.date, current) !== owned.afterFingerprint) {
         return true;
       }
+      // LR-26: the recorded side is the FINGERPRINT the decision produced, not
+      // a copy of the state. This comparison is unchanged in meaning — it used
+      // to fingerprint a stored copy on the spot, and the copy was the only
+      // reason that copy existed.
       if (semanticFingerprint(args.surfaces.dateOverrides[owned.date] ?? null) !==
-        semanticFingerprint(owned.afterDateOverride ?? null)) {
+        owned.afterDateOverrideFingerprint) {
         return true;
       }
       if (semanticFingerprint(args.surfaces.overrideContexts[owned.date] ?? null) !==
-        semanticFingerprint(owned.afterOverrideContext ?? null)) {
+        owned.afterOverrideContextFingerprint) {
         return true;
       }
       return false;

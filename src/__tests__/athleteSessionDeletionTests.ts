@@ -60,6 +60,7 @@ import {
   normalizeReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
 import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 
 const WEEK = '2026-07-13';
 const FRIDAY = '2026-07-17';
@@ -1340,6 +1341,61 @@ run('regression', '22 Restore removes only its typed reduction and preserves an 
     candidate.linkedTypedReductions.some((entry) =>
       entry.deletionIdentity === owned.deletionIdentity)),
   'lossless migration did not link the existing typed reduction by deletion identity');
+
+  // ── LR-26's READ-INGRESS LIFT, on a record in the SUPERSEDED shape ────────
+  //
+  // A ledger already on the athlete's phone carries full afterWorkout /
+  // afterDateOverride / afterOverrideContext objects and none of the three
+  // fields that replaced them. L15 says the old shape survives only as a lift
+  // at the boundary, so this builds a record in that exact shape and hydrates
+  // it. Without this cell the lift is code nothing runs — the very failure the
+  // instrumentation rule names.
+  //
+  // BOTH DIRECTIONS: the lift must RECOVER what the readers consume (identity
+  // and the two fingerprints) and must DROP the legacy keys, or an existing
+  // install keeps paying the payload this unit deleted.
+  {
+    const legacyDay = {
+      date, weekStart: WEEK,
+      beforeWorkout: null,
+      afterWorkout: { id: 'legacy-after', planEntryId: 'legacy:plan:entry', exercises: [] },
+      beforeDateOverride: null,
+      afterDateOverride: { id: 'legacy-override', exercises: [] },
+      beforeOverrideContext: null,
+      afterOverrideContext: { intent: 'program_adjustment' },
+      beforeFingerprint: 'before', afterFingerprint: 'after',
+    };
+    const legacyRecord = {
+      ...clone(adjustment),
+      displacedOriginalState: {
+        ...clone(adjustment.displacedOriginalState),
+        ownedDays: [legacyDay],
+      },
+    };
+    const lifted = normalizeReversibleAdjustmentLedger({
+      value: { adjustments: [legacyRecord] } as never,
+      acceptedRevision: state.acceptedMaterialContext.revision,
+    });
+    const liftedDay = lifted.adjustments[0]?.displacedOriginalState.ownedDays[0] as
+      (typeof legacyDay & Record<string, unknown>) | undefined;
+    assert(!!liftedDay, 'the lift dropped the owned day entirely');
+    assert(liftedDay.afterStableIdentity === 'legacy:plan:entry',
+      'the lift did not recover the after identity the readers consume — a legacy '
+      + `record would lose its stable identity (got ${String(liftedDay.afterStableIdentity)})`);
+    assert(liftedDay.afterDateOverrideFingerprint ===
+      semanticFingerprint(legacyDay.afterDateOverride),
+    'the lift did not recover the afterDateOverride fingerprint, so undo verification '
+    + 'would refuse on an unchanged world');
+    assert(liftedDay.afterOverrideContextFingerprint ===
+      semanticFingerprint(legacyDay.afterOverrideContext),
+    'the lift did not recover the afterOverrideContext fingerprint');
+    for (const dead of
+      ['afterWorkout', 'afterSurfaceWorkout', 'afterDateOverride', 'afterOverrideContext']) {
+      assert(!(dead in liftedDay),
+        `the lift kept the superseded key "${dead}" — an existing install would go on `
+        + 'storing the copies this unit deleted');
+    }
+  }
   const program = clone(state.currentProgram);
   assert(program, 'accepted program missing');
   const unrelatedMicrocycle = program.microcycles.find((microcycle) =>

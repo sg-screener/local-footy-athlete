@@ -582,11 +582,24 @@ async function main(): Promise<void> {
     sourceActor: 'athlete',
     sourceSurface: 'coach_chat',
   });
+  // CONVERTED FOR LR-26 (2026-08-05). This cell used to read the trimmed
+  // duration back out of the ledger's own COPY of the after state
+  // (`ownedDays[0].afterWorkout.durationMinutes === 30`). That copy is deleted
+  // — it was stored output, and nothing but this assertion ever read its
+  // content. The cell now asserts the same two facts against the surfaces that
+  // actually own them: the BEFORE side (which the ledger legitimately holds,
+  // because undo restores from it) and the ACCEPTED WEEK (which is where the
+  // trimmed 30 really lives). That is a stronger claim than the original — a
+  // stale ledger copy could have said 30 while the athlete's week said
+  // anything at all.
   check('explicit go-lighter edit owns one exact reversible day delta',
     explicitLedgerRecord?.kind === 'explicit_load_edit' &&
     explicitLedgerRecord.displacedOriginalState.ownedDays.length === 1 &&
     explicitLedgerRecord.displacedOriginalState.ownedDays[0].beforeWorkout?.durationMinutes === 50 &&
-    explicitLedgerRecord.displacedOriginalState.ownedDays[0].afterWorkout?.durationMinutes === 30);
+    explicitLedgerRecord.displacedOriginalState.ownedDays[0].afterFingerprint !==
+      explicitLedgerRecord.displacedOriginalState.ownedDays[0].beforeFingerprint);
+  check('the go-lighter trim is 30 minutes on the accepted surface itself',
+    useProgramStore.getState().dateOverrides[date]?.durationMinutes === 30);
   const independentFatigue = createTemporaryFatigueFact({
     observedDate: date, scope: weekScope, athleteReportedLevel: 'moderate',
     sourceSurface: 'test', factId: 'test:independent-fatigue', now,

@@ -1116,22 +1116,21 @@ export function stageReversibleAdjustmentCreationTransaction(
       date,
       weekStart: mondayForDate(date),
       beforeWorkout,
-      afterWorkout,
       beforeSurfaceOwner: beforeSurface?.owner ?? 'empty',
       afterSurfaceOwner: afterSurface?.owner ?? 'empty',
       beforeSurfaceWorkout: beforeSurface?.workout ?? null,
-      afterSurfaceWorkout: afterSurface?.workout ?? null,
+      // LR-26: the after side is an identity and two fingerprints — the only
+      // things any reader ever consumed. See ReversibleAdjustmentOwnedDayDelta.
+      afterStableIdentity: afterWorkout?.planEntryId ?? afterWorkout?.id ?? null,
+      afterDateOverrideFingerprint: semanticFingerprint(
+        firstStage.program.dateOverrides[date] ?? null),
+      afterOverrideContextFingerprint: semanticFingerprint(
+        firstStage.program.overrideContexts[date] ?? null),
       beforeDateOverride: beforeProgram.dateOverrides[date]
         ? cloneAccepted(beforeProgram.dateOverrides[date])
         : null,
-      afterDateOverride: firstStage.program.dateOverrides[date]
-        ? cloneAccepted(firstStage.program.dateOverrides[date])
-        : null,
       beforeOverrideContext: beforeProgram.overrideContexts[date]
         ? cloneAccepted(beforeProgram.overrideContexts[date])
-        : null,
-      afterOverrideContext: firstStage.program.overrideContexts[date]
-        ? cloneAccepted(firstStage.program.overrideContexts[date])
         : null,
       beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, beforeWorkout),
       afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkout),
@@ -1190,7 +1189,7 @@ export function stageReversibleAdjustmentCreationTransaction(
     ...(input.restorationTarget?.stableIdentities ?? []),
     ...ownedDays.flatMap((entry) => [
       entry.beforeWorkout?.planEntryId ?? entry.beforeWorkout?.id,
-      entry.afterWorkout?.planEntryId ?? entry.afterWorkout?.id,
+      entry.afterStableIdentity,
     ].filter((value): value is string => !!value)),
   ])).sort();
   const adjustment: ReversibleAdjustmentRecord = {
@@ -1387,17 +1386,19 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
     date,
     weekStart: mondayForDate(date),
     beforeWorkout: cloneAccepted(beforeWorkouts.get(date) ?? null),
-    afterWorkout: cloneAccepted(afterWorkouts.get(date) ?? null),
     beforeSurfaceOwner: beforeSurfaceRows.get(date)?.owner ?? 'empty',
     afterSurfaceOwner: afterSurfaceRows.get(date)?.owner ?? 'empty',
     beforeSurfaceWorkout: cloneAccepted(beforeSurfaceRows.get(date)?.workout ?? null),
-    afterSurfaceWorkout: cloneAccepted(afterSurfaceRows.get(date)?.workout ?? null),
     beforeDateOverride: cloneAccepted(args.baseline.program.dateOverrides[date] ?? null),
-    afterDateOverride: cloneAccepted(afterProgram.dateOverrides[date] ?? null),
     beforeOverrideContext: cloneAccepted(args.baseline.program.overrideContexts[date] ?? null),
-    afterOverrideContext: cloneAccepted(afterProgram.overrideContexts[date] ?? null),
     beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, beforeWorkouts.get(date) ?? null),
     afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkouts.get(date) ?? null),
+    // LR-26: identity + fingerprints, never the after-state copies.
+    afterStableIdentity: afterWorkouts.get(date)?.planEntryId
+      ?? afterWorkouts.get(date)?.id ?? null,
+    afterDateOverrideFingerprint: semanticFingerprint(afterProgram.dateOverrides[date] ?? null),
+    afterOverrideContextFingerprint: semanticFingerprint(
+      afterProgram.overrideContexts[date] ?? null),
   }));
   const ownedWeeks: ReversibleAdjustmentOwnedWeekDelta[] = weeks.flatMap((weekStart) => {
     const before = contractForAcceptedWeek(args.baseline.program, weekStart) ?? null;
@@ -1455,7 +1456,7 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
       dates: changedDates,
       stableIdentities: Array.from(new Set(ownedDays.flatMap((entry) => [
         entry.beforeWorkout?.planEntryId ?? entry.beforeWorkout?.id,
-        entry.afterWorkout?.planEntryId ?? entry.afterWorkout?.id,
+        entry.afterStableIdentity,
       ].filter((value): value is string => !!value)))).sort(),
     },
     linkedConstraintIds: [],

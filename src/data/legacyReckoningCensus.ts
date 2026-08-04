@@ -875,13 +875,32 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'state. It is what exhausted a 12 GB heap when the walker\'s shrinker replayed '
       + 'a deep walk 200 times.',
     size: 'M',
+    // PAID IN PART 2026-08-05 — the after side is deleted. The entry STAYS
+    // because the before side survives by ruling, and LR-29 is what retires it.
     status: 'scheduled',
     sequence: 'RULED (Sam, 2026-08-04): capping or compressing the snapshot is REJECTED '
       + '— both accept the premise that the snapshot belongs there, and it does not. '
-      + 'Full workout snapshots are stored OUTPUT sitting inside a decision record, and '
-      + 'nothing reads them back. The north star answer is DELETE the snapshot, keep '
-      + 'the decision, and re-derive the restored state at read. Not implemented '
-      + '2026-08-04; own unit.',
+      + 'The north star answer is DELETE the snapshot, keep the decision, and re-derive '
+      + 'the restored state at read. '
+      + 'PREMISE CORRECTED BY MEASUREMENT 2026-08-05, and Sam re-ruled on the '
+      + 'correction (docs/LR26_LR27_RULINGS_2026-08-05.md, ruling 2). The founding '
+      + 'claim "nothing reads them back" is HALF wrong, and the halves are opposite: '
+      + 'the BEFORE side is read IN FULL by the undo restore path '
+      + '(reversibleAdjustmentTransaction.ts:511-553), while of the AFTER side nothing '
+      + 'read the content at all — afterSurfaceWorkout had no reader, afterWorkout was '
+      + 'read only for planEntryId ?? id, and afterDateOverride/afterOverrideContext '
+      + 'only to compute a semanticFingerprint. '
+      + 'AFTER SIDE DELETED 2026-08-05 (Sam, option a): the four stored objects are '
+      + 'replaced by afterStableIdentity + afterDateOverrideFingerprint + '
+      + 'afterOverrideContextFingerprint — exactly what the readers consumed, beside '
+      + 'the afterFingerprint that already existed. A hydrate-time read-ingress lift '
+      + '(liftOwnedDayAfterSide, L15) converts ledgers already on the phone and DROPS '
+      + 'the legacy keys, so the payload cut is real for existing installs and not '
+      + 'only for new writes. Zero behaviour change; whole bible green. '
+      + 'BEFORE SIDE STAYS, RE-CLASSIFIED (Sam, ruling 2): it is the undo '
+      + 'transaction\'s working data, not dead stored output — ruled the decision\'s '
+      + 'own content for now. It becomes derivable, and deletes, when undo is rebuilt '
+      + 'as replay-from-decisions: that is LR-29, filed rather than silently kept.',
     detector: null,
     whyNotDetectable: 'Its subject is the SIZE and reachability of a field, not the '
       + 'presence of a symbol. A detector counting displacedOriginalState references '
@@ -905,7 +924,6 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'phone launches many times. 3,056 projection leaves differed, only 404 of them '
       + 'timestamps.',
     size: 'M',
-    status: 'scheduled',
     sequence: 'RULED (Sam, 2026-08-06): LR-27 gets LR-26\'s ruling — delete the nested '
       + 'snapshot, keep the reference, re-derive at read; scheduled EARLY, because a '
       + 'record that doubles per launch is not a filing; builder verifies with receipts '
@@ -935,12 +953,77 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'no acted world the deep walker reaches produces it. So the only thing standing '
       + 'between this field and deletion is a fixture nothing reaches by acting — the '
       + 'mirror of the class named on 2026-08-04. Deleting on that evidence would be '
-      + 'guessing; keeping it silently would be the debt this census exists to stop.',
+      + 'guessing; keeping it silently would be the debt this census exists to stop. '
+      + 'CLOSED 2026-08-05 (Sam, ruling 1): the doubling — which is what this entry '
+      + 'measured and founded on — is PAID at its root, and the residue is separated '
+      + 'into LR-28 with its own entry gate rather than left riding inside a paid unit.',
+    status: 'retired',
     detector: null,
     whyNotDetectable: 'Its subject is the depth and size of a nested field across a '
       + 'process boundary, not the presence of a symbol. Only a relaunch comparison '
       + 'observes it — which is exactly why no suite had seen it before the L16 cell '
       + 'existed, and why the pin lives there rather than in a source sweep.',
+  },
+  {
+    id: 'LR-28',
+    title: 'The displaced-accepted-session restoration still stores a workout copy',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'LR-27\'s residue, separated from it 2026-08-05 so the paid part and the '
+      + 'unpaid part cannot be confused. When a derived session displaces a genuinely '
+      + 'ACCEPTED session, dependency.restoration.workout still stores a full Workout '
+      + '(sessionResolver.ts applyGameProximity, section18AcceptedWeekGateway.ts:582). '
+      + 'LR-27 paid the FILLER case — a resolver-owned filler snapshotted into its own '
+      + 'successor, which is what doubled per launch — and this is what is left.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, ruling 1 — docs/LR26_LR27_RULINGS_2026-08-05.md): '
+      + 'the BEHAVIOUR is real product behaviour. An expired G+1 recovery that displaced '
+      + 'a genuinely accepted session must give the athlete back what it displaced; the '
+      + 'athlete\'s acceptance is a decision and restoring it is the north star\'s own '
+      + 'sentence. So the snapshot STAYS for now — deleting on the current evidence '
+      + 'would be guessing. THE UNIT: replace the stored copy with reference + '
+      + 'derive-at-read, the same shape LR-27\'s filler fix used. '
+      + 'ENTRY GATE, and it is unusual on purpose (Sam, ruling 1): the receipts showed '
+      + 'the ONLY thing asserting this behaviour is a HAND-BUILT fixture — a whole-bible '
+      + 'mutation ignoring the snapshot reds exactly one cell '
+      + '(wholeWeekRepairEngineTests "expired G+1 recovery restores the exact displaced '
+      + 'Monday"), and no acted world the deep walker reaches builds that composition. '
+      + 'That is the mirror of the 2026-08-04 class. So this unit does not start until '
+      + 'the matrix or walker reaches displace-an-accepted-session BY ACTING (L11/L13). '
+      + 'No device pass and no deletion before then.',
+    detector: null,
+    whyNotDetectable: 'Its subject is whether a field holds a copy or a reference, and a '
+      + 'detector counting references to restoration.workout would count the legitimate '
+      + 'reader the unit exists to convert.',
+  },
+  {
+    id: 'LR-29',
+    title: 'Undo restores from stored before-state instead of replaying decisions',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-05 while paying LR-26\'s after side. '
+      + 'reversibleAdjustmentTransaction.ts:511-553 restores by writing stored '
+      + 'beforeWorkout / beforeSurfaceWorkout / beforeDateOverride / '
+      + 'beforeOverrideContext straight back onto dateOverrides and weekScopedOverlays. '
+      + 'Those are full Workout copies (~113 KB each; ~227 KB per bin/re-add cycle, '
+      + 'uncapped — the measurement that founded LR-26).',
+    size: 'L',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, ruling 2): the before side is the undo '
+      + 'transaction\'s WORKING DATA and is ruled the decision\'s own content for now — '
+      + 'it is read in full and it is not dead stored output, which is why LR-26 did '
+      + 'not delete it. THE UNIT: rebuild undo as replay-from-decisions, at which point '
+      + 'the before state is derivable and the stored copies delete. Explicitly NOT '
+      + 'part of Stage 2 and sized separately — it changes how undo works, not what it '
+      + 'stores, and the north star\'s "store only decisions" is the whole argument for '
+      + 'it. Filed rather than silently kept, per Sam.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the MECHANISM of undo, not the presence of a '
+      + 'symbol. A detector counting beforeWorkout references would count the restore '
+      + 'machinery this unit exists to replace.',
   },
 ];
 
@@ -1029,7 +1112,28 @@ export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
  *   reads back is stored output wearing a decision's name, and no detector built to
  *   count writers could see it. It took a heap exhaustion to surface.
  */
-export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 27;
+/**
+ * 27 -> 29 on 2026-08-05, BY RULING — `docs/LR26_LR27_RULINGS_2026-08-05.md`.
+ *
+ * Sam's two rulings each name a unit that must be filed rather than silently
+ * kept, and both are RESIDUES OF WORK PAID IN THE SAME SESSION rather than
+ * newly discovered debt — which is the honest reason the count rises while two
+ * defects were being paid:
+ *
+ *   LR-28 — ruling 1. LR-27's doubling is paid at its root; the
+ *   displaced-ACCEPTED-session copy is what is left. Separated so a paid unit
+ *   cannot go on claiming an unpaid surface.
+ *   LR-29 — ruling 2. LR-26's after side is deleted; the before side stays by
+ *   ruling as the undo transaction's working data, and retires only when undo
+ *   is rebuilt as replay-from-decisions.
+ *
+ * THE SWEEP THAT MISSED THEM, as the gate demands: neither was missed. Both
+ * were created by measurement on 2026-08-05 — the after/before split and the
+ * filler-self-copy finding did not exist when ruling 3 (2026-08-06 batch) was
+ * made, and that ruling's own premise was corrected by them. Filing them is
+ * scope declared, not debt discovered.
+ */
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 29;
 
 /**
  * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.
