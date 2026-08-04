@@ -47,7 +47,7 @@ import path from 'path';
 import {
   PENDING_LISTS,
   STAGE_B_DOOMED,
-  isStageBLanded,
+  isStageBPathLanded,
   pendingListProblems,
 } from '../data/provenancePendingLists';
 
@@ -91,49 +91,77 @@ console.log('\n[2] "Ruled empty" requires attribution that RESOLVES');
     'ruledOn must be an ISO date and `where` must name a file that exists');
 }
 
-console.log('\n[3] The Stage B pin is real while Stage B is unlanded');
+console.log('\n[3] The Stage B pin is real while its path is unlanded');
 {
-  const landed = isStageBLanded(src);
-  console.log(`      (Stage B landed: ${landed})`);
-
   ok('the pin names doomed symbols', STAGE_B_DOOMED.length > 0,
     'an empty pin would mean the cross-reference was never done');
 
-  if (!landed) {
+  // PER PATH (Sam's ruling, 2026-08-05). Each path answers for its own pins:
+  // an unlanded path must still hold every symbol it pinned.
+  for (const pinPath of ['athlete', 'coach'] as const) {
+    const landed = isStageBPathLanded(src, pinPath);
+    console.log(`      (Stage B ${pinPath} path landed: ${landed})`);
+    if (landed) continue;
     // Every pinned symbol must still be there. If one has already gone, the
     // pin is stale and must be removed — a pin for code that no longer exists
     // makes the list unreadable, exactly like a stale literal exemption.
-    const missing = STAGE_B_DOOMED.filter((d) => {
+    const missing = STAGE_B_DOOMED.filter((d) => d.path === pinPath).filter((d) => {
       const file = path.join(src, d.file);
       if (!fs.existsSync(file)) return true;
       return !new RegExp(`\\b${d.symbol}\\b`).test(fs.readFileSync(file, 'utf8'));
     }).map((d) => `${d.file}:${d.symbol}`);
-    okEmpty('no pin is stale (every pinned symbol still exists)', missing,
+    okEmpty(`no ${pinPath} pin is stale (every pinned symbol still exists)`, missing,
       'this symbol is already gone — delete the pin');
   }
 }
 
-console.log('\n[4] Stage B landing retires the pin');
+console.log('\n[4] A landed path retires its own pins');
 {
-  const landed = isStageBLanded(src);
-
   // The pin exists to keep doomed values out of Sam's ruling queue WHILE they
   // are doomed-but-alive. The moment selection moves onto the authored sheet,
   // a surviving pinned symbol is a second conditioning dose authority sitting
   // beside the equality-bound one — which is the exact defect the sheet exists
   // to remove.
-  if (landed) {
-    const survivors = STAGE_B_DOOMED.filter((d) => {
+  //
+  // SPLIT BY PATH, 2026-08-05, by Sam's ruling on
+  // `docs/STAGE_B_PRIORITY_C_BLOCKER_2026-08-05.md`. The all-or-nothing form
+  // could not be satisfied: five of the twenty pins are coach doses, and
+  // replacing them changes what the coach path WRITES, which LR-6's ratified
+  // stop test holds. The athlete path now answers for its fifteen, and the
+  // coach path stays pinned.
+  //
+  // THE COST, STATED RATHER THAN HIDDEN: while the athlete path is landed and
+  // the coach path is not, five coach doses KNOWINGLY survive as a second dose
+  // authority beside Sam's 55 signed templates. That is ruled, not accidental,
+  // and it ends when the coach rebuild lifts LR-6.
+  for (const pinPath of ['athlete', 'coach'] as const) {
+    if (!isStageBPathLanded(src, pinPath)) {
+      ok(`the ${pinPath} path is unlanded, so its pins stay live (checked in [3])`, true);
+      continue;
+    }
+    const survivors = STAGE_B_DOOMED.filter((d) => d.path === pinPath).filter((d) => {
       const file = path.join(src, d.file);
       return fs.existsSync(file)
         && new RegExp(`\\b${d.symbol}\\b`).test(fs.readFileSync(file, 'utf8'));
     }).map((d) => `${d.file}:${d.symbol}`);
-    okEmpty('Stage B has landed, so every pinned symbol is deleted', survivors,
-      'these were pinned as dying at Stage B. Stage B landed and they are '
+    okEmpty(`the ${pinPath} path has landed, so every pin it owns is deleted`, survivors,
+      'these were pinned as dying with this path. The path landed and they are '
       + 'still here, so they now compete with the authored templates');
-  } else {
-    ok('Stage B is unlanded, so the pin stays live (checked in [3])', true);
   }
+
+  // THE SPLIT MUST NOT BECOME A HIDING PLACE. A coach pin may only sit in a
+  // coach consumer file, and an athlete pin only in an athlete one — otherwise
+  // a symbol could be relabelled `coach` to escape the athlete path's landing
+  // while living in the code the athlete path just switched over.
+  const athleteFiles = new Set([
+    'utils/sessionBuilder.ts', 'data/defaultProgram.ts', 'utils/conditioningRules.ts',
+    'rules/speedTemplates.ts', 'utils/coachingEngine.ts',
+  ]);
+  const misfiled = STAGE_B_DOOMED
+    .filter((d) => (d.path === 'athlete') !== athleteFiles.has(d.file))
+    .map((d) => `${d.file}:${d.symbol} is labelled ${d.path}`);
+  okEmpty('every pin\'s path matches the file it lives in', misfiled,
+    'relabelling a pin is how a symbol would escape its path\'s landing');
 }
 
 console.log('\n[5] Every pinned decision names why it is doomed');
