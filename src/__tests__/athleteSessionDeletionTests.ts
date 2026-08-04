@@ -1377,7 +1377,11 @@ run('regression', '22 Restore removes only its typed reduction and preserves an 
       acceptedRevision: state.acceptedMaterialContext.revision,
     });
     const liftedDay = lifted.adjustments[0]?.displacedOriginalState.ownedDays[0] as
-      (typeof legacyDay & Record<string, unknown>) | undefined;
+      unknown as (Record<string, unknown> & {
+        afterStableIdentity?: string | null;
+        afterDateOverrideFingerprint?: string;
+        afterOverrideContextFingerprint?: string;
+      }) | undefined;
     assert(!!liftedDay, 'the lift dropped the owned day entirely');
     assert(liftedDay.afterStableIdentity === 'legacy:plan:entry',
       'the lift did not recover the after identity the readers consume — a legacy '
