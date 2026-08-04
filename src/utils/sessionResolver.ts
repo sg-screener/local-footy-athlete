@@ -1065,11 +1065,6 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
 
   const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
 
-  // ── No block data → nothing to resolve ──
-  if (!inBlock || (!currentMicrocycle && !overlayTemplate.hasOverlay)) {
-    return buildDay(date, dow, today, null, 'none');
-  }
-
   // ── Priority 2: composed content — override > overlay > base ──
   //
   // ONE statement of the ordering (`rules/dayPrecedence.ts`), the same call the
@@ -1101,8 +1096,23 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     constraints: state.userRemovalConstraints,
   });
 
+  // ── The date override answers WITHOUT needing block data ──
+  //
+  // A date override is stored content FOR THIS DATE. It is not derived from a
+  // block, so the "no block data" guard below — which governs TEMPLATE
+  // derivation — must not swallow it. Before the precedence unification the
+  // override returned above that guard as Priority 1 and this was free; moving
+  // it below the marks moved it below the guard too, and an override on any
+  // date outside `[program.startDate, program.endDate]` silently stopped
+  // rendering. Marks and removal constraints still outrank it: both are
+  // resolved above this line.
   if (!constrained && composed.owner === 'date_override' && composed.workout) {
     return buildDay(date, dow, today, composed.workout, 'manual');
+  }
+
+  // ── No block data → nothing to resolve ──
+  if (!inBlock || (!currentMicrocycle && !overlayTemplate.hasOverlay)) {
+    return buildDay(date, dow, today, null, 'none');
   }
 
   const templateWorkout = constrained ? constrained.workout : composed.workout;

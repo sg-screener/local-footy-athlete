@@ -197,7 +197,20 @@ function typedPurpose(workout: ConditioningIdentityWorkout):
   | 'hard'
   | 'tempo'
   | 'aerobic'
+  | 'flush'
   | null {
+  // THE RECOVERY DECISION IS TYPED, so read it before anything else. The §18
+  // role is stamped by the allocator that chose to make this session light;
+  // it is the same decision the flush regex below tries to recover from the
+  // athlete-visible copy. Reading the role first means an authored flush
+  // template that happens not to contain the word "flush" — 'Nasal-Paced
+  // Easy', 'Short Flush''s siblings — still reads as flush.
+  if (
+    workout.section18ConditioningRole === 'optional_recovery_aerobic'
+    || workout.section18ConditioningRole === 'optional_flush'
+  ) {
+    return 'flush';
+  }
   switch (workout.conditioningCategory) {
     case 'sprint': return 'speed';
     case 'vo2':
@@ -260,10 +273,13 @@ export function projectConditioningVisibleIdentity(
   if (purpose === 'speed') return identity('speed_conditioning', structure);
   if (purpose === 'hard') return identity('hard_intervals', structure);
   if (purpose === 'tempo') return identity('tempo_intervals', structure);
+  if (purpose === 'flush') return identity('aerobic_flush', structure);
 
-  // Flush/recovery are purpose distinctions not yet represented by the
-  // ConditioningBlock intent union. Read them only from the final owned work
-  // rows (or an explicit recovery session type), never from modality/name copy.
+  // Flush/recovery are purpose distinctions the ConditioningBlock intent union
+  // still does not represent, so a session carrying no §18 role falls back to
+  // reading them from the final owned work rows (or an explicit recovery
+  // session type) — never from modality or surrounding name copy. Generated
+  // sessions take the typed path above; this is for stored and coach content.
   if (EXPLICIT_FLUSH.test(purposeText)) {
     return identity('aerobic_flush', structure);
   }

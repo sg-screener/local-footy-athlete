@@ -52,6 +52,7 @@ import {
   SPEED_FALLBACK_TEMPLATE,
   composeConditioningRows,
   composeSpeedRows,
+  demandCategoryFor,
   offFeetAlternative,
   renderableModalities,
   rendersOffFeet,
@@ -1899,8 +1900,11 @@ export function buildWorkoutsFromCoach(
       !isCombined ? undefined
       : strengthRegionForPlanEntry(planEntry);
     const selectionCategory: AthleteConditioningCategory =
-      (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
-        ?? flavourToCategory(planEntry.conditioningFlavour);
+      demandCategoryFor(
+        (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+          ?? flavourToCategory(planEntry.conditioningFlavour),
+        planEntry.section18ConditioningRole,
+      )!;
     // Selection over the 55 signed templates (Stage B switchover). The
     // planner's category (or legacy flavour) names the demand; the engine's
     // off-feet ruling (typed field) and the standing combined-day policy are
@@ -2159,8 +2163,11 @@ export function buildWorkoutsFromCoach(
       const dateStr = syntheticDateStr(cw.dayOfWeek);
       const standaloneCategory: AthleteConditioningCategory | undefined = isStandaloneSpeed
         ? undefined
-        : (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
-          ?? flavourToCategory(planEntry.conditioningFlavour!);
+        : demandCategoryFor(
+            (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+              ?? flavourToCategory(planEntry.conditioningFlavour!),
+            planEntry.section18ConditioningRole,
+          );
       const exerciseName = isStandaloneSpeed
         ? (planEntry.speedBlock?.templateName ?? SPEED_FALLBACK_TEMPLATE)
         : resolved?.exerciseName
@@ -2473,8 +2480,11 @@ export function buildWorkoutsFromCoach(
       const resolved = conditioningByDow.get(cw.dayOfWeek);
       const condExName = resolved?.exerciseName
         ?? selectConditioningTemplate({
-          category: (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
-            ?? flavourToCategory(planEntry.conditioningFlavour),
+          category: demandCategoryFor(
+            (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+              ?? flavourToCategory(planEntry.conditioningFlavour),
+            planEntry.section18ConditioningRole,
+          )!,
           dateStr,
           miniCycleNumber: rotationContext?.miniCycleNumber,
           offFeet: planEntry.conditioningOffFeet === true || undefined,

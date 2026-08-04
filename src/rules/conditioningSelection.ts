@@ -39,16 +39,26 @@ import {
   parseConditioningDose,
 } from './conditioningDose';
 import type { WorkoutExercise, WorkoutType } from '../types/domain';
+import type { Section18ConditioningRole } from './weeklyExposureContractV2';
 
 /* ── The surviving demand vocabulary ── */
 
-/** The app's conditioning demand categories (allocation vocabulary). */
+/**
+ * The app's conditioning demand categories (allocation vocabulary).
+ *
+ * `recovery_flush` is the SELECTION module's word and is deliberately not a
+ * sixth member of the stored `Workout['conditioningCategory']`: the stored
+ * typed energy system of a recovery session is still aerobic. What is
+ * different is which of Sam's tabs serves it, and that is this module's
+ * question — see `demandCategoryFor`.
+ */
 export type AthleteConditioningCategory =
   | 'aerobic_base'
   | 'tempo'
   | 'sprint'
   | 'vo2'
-  | 'glycolytic';
+  | 'glycolytic'
+  | 'recovery_flush';
 
 /** Placement tier — the eligibility engine's vocabulary, unchanged. */
 export type ConditioningSelectionTier = 'A' | 'B-high' | 'B-low' | 'C';
@@ -129,7 +139,37 @@ function poolForCategory(category: AthleteConditioningCategory): ConditioningTem
       return templatesOfQuality('anaerobic');
     case 'sprint':
       return templatesOfQuality('acceleration', 'top_end_speed', 'repeat_sprint');
+    case 'recovery_flush':
+      return templatesOfQuality('flush');
   }
+}
+
+/**
+ * WHICH DEMAND A PLAN ENTRY IS ACTUALLY ASKING FOR — one owner.
+ *
+ * The allocator has already DECIDED that a session is recovery: it stamps a
+ * §18 role of `optional_recovery_aerobic` or `optional_flush`, drops the tier
+ * to optional and the stress to low. That decision has to reach selection,
+ * because Sam authored a whole quality tab for it — the switchover's own words
+ * were "no cool-down row: recovery is the Flush tab's job."
+ *
+ * Before this function the decision did not reach here. A recovery session
+ * asked for `aerobic_base`, drew from the steady aerobic-capacity pool, and
+ * the athlete got a 50-minute continuous run in a slot the planner had marked
+ * light. What used to hide it was the old code-authored name — 'Aerobic Flush'
+ * — which said recovery in a word while the typed demand said aerobic base.
+ * The authored names carry no such word, so the mismatch became visible.
+ * Same class as the switchover's two unpredicted movements: A NAME CARRYING A
+ * DECISION THAT SHOULD HAVE BEEN TYPED.
+ */
+export function demandCategoryFor(
+  base: AthleteConditioningCategory | undefined,
+  role: Section18ConditioningRole | undefined,
+): AthleteConditioningCategory | undefined {
+  if (role === 'optional_recovery_aerobic' || role === 'optional_flush') {
+    return 'recovery_flush';
+  }
+  return base;
 }
 
 /** The tier pools the eligibility engine selects from. */
@@ -475,6 +515,9 @@ export function workoutTypeForCategory(
     case 'sprint': return 'Sprint-Intervals';
     case 'tempo': return 'Tempo-Run';
     case 'aerobic_base': return 'Long-Run';
+    // Flush work is tier C by `TIER_FOR_QUALITY`; naming it here too means a
+    // caller that knows the demand but not the tier still gets the truth.
+    case 'recovery_flush': return 'Recovery';
     default: return 'Conditioning';
   }
 }
