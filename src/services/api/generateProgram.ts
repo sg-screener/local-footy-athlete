@@ -164,6 +164,20 @@ export interface GenerateProgramFromProfileOptions {
    * illness_recovery mode during a scoped-regen commit.
    */
   temporarySourceFacts?: readonly TemporarySourceFact[] | null;
+  /**
+   * The athlete's pool preferences (exclusions and pins).
+   *
+   * L14 PAYMENT (Sam ratified 2026-07-30, Stage B stage 1 Task D). Domain
+   * logic must be callable from a plain test with explicit inputs, and
+   * generation had NO injection point for this: it read the store
+   * unconditionally at both call sites below, so a caller could not generate a
+   * week for a stated athlete without first mutating global state.
+   *
+   * The store read survives only as the BOUNDARY DEFAULT — omitting the option
+   * is the same read the engine did before, which is why the stage-B generation
+   * differential predicted (and measured) ZERO golden movement for this change.
+   */
+  athletePrefs?: AthletePoolPrefsArg;
   /** Explicit continuity input for pure callers; normal app paths use the live persisted program. */
   previousProgram?: TrainingProgram | null;
   seasonPhaseClock?: SeasonPhaseClock | null;
@@ -852,7 +866,7 @@ export function generateProgramLocally(
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
-    athletePrefs: getAthletePrefs(),
+    athletePrefs: options.athletePrefs ?? getAthletePrefs(),
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
@@ -1671,7 +1685,7 @@ export async function generateProgramFromProfile(
       blockStartISO: blockStart,
       blockNumber: options.blockNumber ?? 1,
       seasonPhaseClock: phaseResolution.clock,
-      athletePrefs: getAthletePrefs(),
+      athletePrefs: options.athletePrefs ?? getAthletePrefs(),
       availableEquipmentTags: resolvedEquipmentTags,
       availableConditioningModalities: resolvedEquipment.conditioningModalities,
       generationConstraints,

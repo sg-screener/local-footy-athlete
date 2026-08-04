@@ -53,6 +53,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { flushPendingStorageWrites, pendingStorageWriteCount } from '../store/asyncStorageCompat';
 import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -2877,6 +2878,286 @@ async function walkTheLighterDayDoor(): Promise<void> {
     + 'channel change must not have touched it');
 }
 
+
+/**
+ * THE L16 SLICE, END TO END: load → display → change → repair → approve →
+ * persist → RELAUNCH-IDENTICAL.
+ *
+ * > L16 (Sam ratified 2026-07-30): "A rebuilt system proves one complete loop
+ * >  before anything else builds on it… Stage B is held to this shape
+ * >  explicitly: the engine's first acceptance is one clean slice through the
+ * >  walker, not breadth."
+ *
+ * WHY THIS CELL DID NOT EXIST. The last hop was proven NOWHERE. `freshInstall`
+ * CLEARS storage rather than reading it back, and this file had no hydrate call
+ * at all — so every cell above proves what the app does within one process and
+ * nothing about what it shows the athlete on the next launch. The precedent
+ * copied here is `simulateProcessRelaunch` in
+ * `onboardingReliabilityTests.ts:188-204`, whose unit found that a relaunch
+ * defect can hide behind a perfectly green in-process suite.
+ *
+ * THE RELAUNCH IS A REAL ONE, not a re-read of live memory:
+ *   1. every pending durable write is flushed and drained (the armoured stores
+ *      queue cross-store cascades on later turns, so the drain loops);
+ *   2. in-memory store state is reset — WITHOUT clearing the storage stub, the
+ *      one difference from `freshInstall` and the whole point;
+ *   3. the stores rehydrate from those persisted bytes via `persist.rehydrate()`.
+ * A snapshot that survived because the object was still in memory would prove
+ * nothing, so the reset is what makes the assertion mean anything.
+ *
+ * ONE MODE PER LOOP, NAMED — the slice's honest scope. Two seeds, two loops:
+ * an OFF-SEASON world and an IN-SEASON GAME-WEEK world. Every other week mode
+ * (bye, bye_recovery, deload, optional, illness_recovery, full pause) is
+ * NOT reached by this cell and is declared not-covered in the boundary report
+ * rather than implied by a passing gate.
+ *
+ * Depth stated per L13: onboarding → generation → accept boundary → a door
+ * change through the real dispatch → 10 days crossed → relaunch. That is the
+ * slice's depth, and it is SHALLOW on purpose: this cell proves the loop
+ * CLOSES. The deep tier proves it closes in a worn world, and both tiers run it.
+ */
+async function walkTheL16Slice(): Promise<void> {
+  const relaunch = async (): Promise<void> => {
+    // 1. PERSIST — drain, do not assume. Cross-store persist cascades queue
+    //    further writes on later turns (the onboarding-reliability precedent).
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await flushPendingStorageWrites().catch(() => undefined);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (pendingStorageWriteCount() === 0) break;
+    }
+    // 2. KILL MEMORY, KEEP DISK — and the disk must be the disk AS OF THE KILL.
+    //
+    //    A process that dies does not get to write on its way out. Zustand
+    //    persists on EVERY `setState`, so blanking the stores in step 2 wrote
+    //    the blanked state straight over the bytes step 1 had just flushed, and
+    //    step 3 then faithfully rehydrated the emptiness. The first draft of
+    //    this cell failed with "the program did not survive the relaunch at
+    //    all" for exactly that reason — the harness, not the app.
+    //
+    //    So the persisted bytes are photographed BEFORE memory is cleared and
+    //    restored after, which is what "the disk survives, the heap does not"
+    //    actually means.
+    const disk = new Map(localStorageData);
+    useProgramStore.setState({
+      currentProgram: null, currentMicrocycle: null, todayWorkout: null,
+      dateOverrides: {}, overrideContexts: {}, weekScopedOverlays: {},
+      userRemovalConstraints: [], exposureContractsByWeek: {},
+      blockState: null,
+    } as never);
+    useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    localStorageData.clear();
+    for (const [key, value] of disk) localStorageData.set(key, value);
+    // 3. HYDRATE from what was actually written.
+    await useProgramStore.persist.rehydrate();
+    await useCalendarStore.persist.rehydrate();
+    await useProfileStore.persist.rehydrate();
+    await useCoachUpdatesStore.persist.rehydrate();
+  };
+
+  const loops: { mode: string; drive: () => void }[] = [
+    {
+      mode: 'off-season / pre-season, no fixture marked',
+      drive: () => {
+        performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+        performAction({ kind: 'generate_program' });
+        performAction({ kind: 'advance_time', days: 3 });
+      },
+    },
+    {
+      mode: 'in-season game week (Saturday fixture marked through the calendar door)',
+      drive: () => {
+        performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+        performAction({ kind: 'generate_program' });
+        performAction({ kind: 'mark_calendar', date: addDaysISO(weekStart, 5), mark: 'game' });
+        performAction({ kind: 'advance_time', days: 3 });
+      },
+    },
+  ];
+
+  for (const loop of loops) {
+    freshInstall();
+    loop.drive();
+
+    // ── CHANGE — through the real dispatch, and it must actually land ──
+    const occupied = visibleWeek().filter((day) => !!day.workout);
+    assert(occupied.length > 0, `${loop.mode}: the loaded week holds no session to change`);
+    // Not every occupied day accepts a whole-day bin — §18 refuses one that
+    // would breach the week's contract, which is the contract working. Walk the
+    // days until one applies, exactly as the LR-3 cell above does.
+    const before = weekFingerprint();
+    let changedDate: string | null = null;
+    for (const day of occupied) {
+      const outcome = performAction({ kind: 'plan_change', change: {
+        kind: 'remove_session', date: day.date, scope: 'whole_day',
+      } as PlanChange });
+      if (outcome.outcome === 'applied') { changedDate = day.date; break; }
+    }
+    assert(!!changedDate,
+      `${loop.mode}: no occupied day accepted a bin, so the loop has no CHANGE step`);
+    assert(weekFingerprint() !== before,
+      `${loop.mode}: the door reported applied and the visible week did not move — this `
+      + 'cell would then be asserting that a relaunch preserves nothing');
+
+    // ── APPROVE + PERSIST are the door's own commit; capture what the athlete sees ──
+    const seenBefore = weekFingerprint();
+    const projectedBefore = JSON.stringify(projectedWeek());
+    const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays);
+    const constraintsBefore = JSON.stringify(useProgramStore.getState().userRemovalConstraints);
+    assert(seenBefore.length > 0 && projectedBefore.length > 2,
+      `${loop.mode}: nothing to compare — a vacuous relaunch proof is worse than none`);
+
+    await relaunch();
+
+    // ── RELAUNCH-IDENTICAL ──
+    assert(!!useProgramStore.getState().currentProgram,
+      `${loop.mode}: the program did not survive the relaunch at all — the loop is `
+      + 'broken at PERSIST, not at display');
+    assert(weekFingerprint() === seenBefore,
+      `${loop.mode}: the athlete sees a different week after relaunch.\n`
+      + `      before: ${seenBefore}\n      after:  ${weekFingerprint()}`);
+    // ── THE PROJECTION, with a DECLARED red carved out of it (LR-27) ────────
+    //
+    // WHAT THE FIRST RUN OF THIS CELL FOUND, and it is the argument for L16.
+    // The athlete-visible week survives byte-identical, but the projection does
+    // not: `derivedSessionProvenance[0].dependency.displacedSession.workout`
+    // carries a full `Workout`, which carries its OWN
+    // `derivedSessionProvenance`, recursively. Measured across ONE relaunch of
+    // the in-season Friday Gunshow: chain depth 3 -> 4, and that day's payload
+    // 66,947 -> 139,331 bytes. It roughly DOUBLES per launch, and a phone
+    // launches many times. 3,056 leaves differed; only 404 were timestamps.
+    //
+    // NOT FIXED HERE, and not quietly widened past either. It is LR-26's twin —
+    // a full workout snapshot stored inside a provenance record, which Sam has
+    // already ruled the principle for on the OTHER record (delete the snapshot,
+    // keep the reference, re-derive at read) but has NOT ruled for this one.
+    // Filed as census LR-27.
+    //
+    // So the assertion splits rather than loosens (L13: cells go red by walking
+    // further, never by asking less). Everything the athlete can see is still
+    // compared byte-for-byte; the declared field is compared for GROWTH, so the
+    // known defect cannot get worse — or spread to a second field, or be
+    // silently fixed while the declaration goes on claiming it — without this
+    // cell reding.
+    // TWO NORMALISATIONS, both measured before being applied rather than
+    // assumed, because a normaliser is how a relaunch proof goes vacuous:
+    //
+    //  - `derivedSessionProvenance` — the declared LR-27 red above.
+    //  - `createdAt`/`updatedAt` on a DERIVED session. A Gunshow is composed at
+    //    READ time, so its stamps are the moment of derivation, not content the
+    //    relaunch was meant to preserve; the two runs were 19 ms apart. (That
+    //    they exist at all is the L14 impurity noted in the stage-0 measurements
+    //    — `new Date().toISOString()` inside generation — and it is reported,
+    //    not fixed here.) Nothing else was excluded: with these two removed the
+    //    residual was measured at exactly ZERO differing leaves.
+    //
+    // Both sides are JSON round-tripped so the comparison is like-for-like: a
+    // live object carries explicitly-undefined keys that a parsed snapshot has
+    // dropped, and that is a harness artifact, not a divergence.
+    const semantic = (value: unknown): string => {
+      const walk = (node: unknown): unknown => {
+        if (Array.isArray(node)) return node.map(walk);
+        if (node && typeof node === 'object') {
+          const out: Record<string, unknown> = {};
+          for (const [key, entry] of Object.entries(node as object)) {
+            if (key === 'derivedSessionProvenance') continue;
+            if (key === 'createdAt' || key === 'updatedAt') continue;
+            out[key] = walk(entry);
+          }
+          return out;
+        }
+        return node;
+      };
+      return JSON.stringify(walk(JSON.parse(JSON.stringify(value))));
+    };
+    assert(semantic(projectedWeek()) === semantic(JSON.parse(projectedBefore)),
+      `${loop.mode}: the PROJECTION differs after relaunch in a field the athlete can `
+      + 'see, though the resolved week matches — two surfaces disagreeing across a '
+      + 'process boundary. This is NOT the declared LR-27 provenance nesting, which is '
+      + 'excluded above.');
+
+    const provenanceDepth = (workout: unknown): number => {
+      let depth = 0;
+      let node = workout as Record<string, unknown> | undefined;
+      while (node) {
+        const chain = node.derivedSessionProvenance as {
+          dependency?: { displacedSession?: { workout?: Record<string, unknown> } };
+        }[] | undefined;
+        const next = chain?.[0]?.dependency?.displacedSession?.workout;
+        if (!next) break;
+        depth += 1;
+        node = next;
+      }
+      return depth;
+    };
+    const beforeDepths = (JSON.parse(projectedBefore) as { workout?: unknown }[])
+      .map((day) => provenanceDepth(day.workout));
+    const afterDepths = (projectedWeek() as unknown as { workout?: unknown }[])
+      .map((day) => provenanceDepth(day.workout));
+    for (let index = 0; index < afterDepths.length; index += 1) {
+      const grew = afterDepths[index]! - beforeDepths[index]!;
+      assert(grew <= 1,
+        `${loop.mode}: LR-27 got WORSE — day ${index}'s displaced-session provenance `
+        + `chain grew by ${grew} across one relaunch (${beforeDepths[index]} -> `
+        + `${afterDepths[index]}). The declared defect is one level per relaunch.`);
+    }
+    assert(afterDepths.some((depth, index) => depth > beforeDepths[index]!)
+      || loop.mode.startsWith('off-season'),
+      `${loop.mode}: LR-27 no longer reproduces — the provenance chain stopped growing `
+      + '(' + JSON.stringify(beforeDepths) + ' -> ' + JSON.stringify(afterDepths) + '). '
+      + 'If it was FIXED, pay the census entry and delete this pin; stale debt fails, '
+      + 'it does not expire quietly.');
+    // ── THE OVERLAYS, and the second thing this cell found ──────────────────
+    //
+    // `weekScopedOverlays` is PERSISTED state, so a relaunch should read it
+    // back, not rebuild it. It rebuilds it. Two measured deltas, both from the
+    // hydration re-canonicalisation pass, neither fixed here:
+    //
+    //  1. LR-27 again, and WORSE than the projection reading suggested: the
+    //     provenance nesting is not merely a read-time artifact, it is written
+    //     to disk. The stored overlay's session gains a provenance level per
+    //     launch, so the growth is durable and compounds on the athlete's phone.
+    //  2. The stored overlay GAINS a legacy v1 `exposureContract` it did not
+    //     have in memory — 38 leaves, every one `undefined -> <value>`
+    //     (protocolVersion, identity.phase/subphase/mode/weekKind,
+    //     strength.requiredPatterns, targetCount…). `validateLiveWeekOverlayWrite`
+    //     attaches it (`exposureContractsByWeek[weekStart] ?? overlay.exposureContract
+    //     ?? baseMicrocycle.exposureContract`) and hydration runs that path. A
+    //     SUPERSEDED format being written on every launch is L15's subject —
+    //     "old formats exist only as read-ingress lifts at the boundary; a
+    //     writer of a retired shape is a red-gate defect, not a compatibility
+    //     feature". Reported for Sam with the hydration-repair in-place branch
+    //     already parked from stage 0 (`programStore.ts:1216-1219`), not
+    //     adjudicated inside a slice proof.
+    //
+    // What the slice DOES claim, and what is asserted: the content the athlete
+    // sees — `workoutsByDate` — survives byte-identical under the same two
+    // declared normalisations used for the projection.
+    const overlayContent = (value: string): string => {
+      const overlays = JSON.parse(value) as Record<string, { workoutsByDate?: unknown }>;
+      return semantic(Object.fromEntries(Object.entries(overlays)
+        .map(([week, overlay]) => [week, overlay.workoutsByDate ?? null])));
+    };
+    assert(overlayContent(JSON.stringify(useProgramStore.getState().weekScopedOverlays))
+      === overlayContent(overlaysBefore),
+      `${loop.mode}: the week overlays' CONTENT did not survive the relaunch — this is `
+      + 'not the declared provenance nesting or the legacy-contract materialisation, '
+      + 'both of which are normalised out above.');
+    assert(JSON.stringify(useProgramStore.getState().userRemovalConstraints) === constraintsBefore,
+      `${loop.mode}: the athlete's removal decisions did not survive the relaunch `
+      + 'byte-identical — a bin that does not outlive a relaunch is not a decision');
+
+    // ── And every law still holds on the hydrated world ──
+    for (const broken of checkInvariants({
+      action: { kind: 'advance_time', days: 0 }, outcome: null, message: null, threw: null,
+    })) {
+      if (declaredRedFor(broken.law, broken.detail)) continue;
+      throw new Error(`${loop.mode}: ${broken.law} after relaunch — ${broken.detail}`);
+    }
+    console.log(`      L16 loop closed — ${loop.mode}`);
+  }
+}
+
 // THE ASYNC TAIL. Every cell above is synchronous and has already run by the
 // time this executes; the schedule doors are awaited, so they run here and the
 // totals wait for them. Printing the totals before an outstanding cell finished
@@ -2895,6 +3176,8 @@ void (async () => {
     walkTheScheduleDoors);
   await runAsync('accepting a lighter day derives from the fact and never touches the athlete\'s surface',
     walkTheLighterDayDoor);
+  await runAsync('THE L16 SLICE: load, display, change, repair, approve, persist, relaunch-identical',
+    walkTheL16Slice);
 
   console.log(`\nAction walker totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);

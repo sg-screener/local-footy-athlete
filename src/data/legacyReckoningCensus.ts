@@ -888,6 +888,37 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'would count the restore machinery that legitimately reads the decision, and '
       + 'go green the moment the field was renamed.',
   },
+  {
+    id: 'LR-27',
+    title: 'derivedSessionProvenance nests a full displaced-session snapshot, and it GROWS on every relaunch',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-04 by the L16 relaunch-identical walker cell, on its '
+      + 'FIRST run — which is the whole argument for L16. In the in-season game-week '
+      + 'loop the athlete-visible week survives a process relaunch byte-identical '
+      + '(weekFingerprint and every visible field match), but the PROJECTION does not: '
+      + 'derivedSessionProvenance[0].dependency.displacedSession.workout carries a full '
+      + 'Workout, which carries its own derivedSessionProvenance, recursively. Measured '
+      + 'across ONE relaunch of the Friday Gunshow: chain depth 3 -> 4 and the projected '
+      + "day's payload 66,947 -> 139,331 bytes. It roughly DOUBLES per launch, and a "
+      + 'phone launches many times. 3,056 projection leaves differed, only 404 of them '
+      + 'timestamps.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'LR-26\'s TWIN, on a different record, and Sam has already ruled the '
+      + 'principle there (2026-08-04): a full workout snapshot inside a provenance or '
+      + 'decision record is stored OUTPUT — delete the snapshot, keep the reference, '
+      + 're-derive at read. NOT ruled for THIS record and NOT implemented: the two '
+      + 'records have different readers and the displaced-session chain may have a '
+      + 'consumer the ledger snapshot does not. Sam\'s to rule; own unit. Declared, '
+      + 'contained and pinned by the L16 cell so it cannot get worse quietly.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the depth and size of a nested field across a '
+      + 'process boundary, not the presence of a symbol. Only a relaunch comparison '
+      + 'observes it — which is exactly why no suite had seen it before the L16 cell '
+      + 'existed, and why the pin lives there rather than in a source sweep.',
+  },
 ];
 
 /**
