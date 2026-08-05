@@ -276,6 +276,7 @@
     "test:totals-or-red-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/totalsOrRedLawTests.ts",
     "test:athlete-prefs-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/athletePreferencesOwnershipTests.ts",
     "test:decision-ledger-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/decisionLedgerOwnershipTests.ts",
+    "test:derived-week-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/derivedWeekOwnershipTests.ts",
     "test:calendar-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/calendarOwnershipTests.ts",
     "test:coach-prefs-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachPreferencesOwnershipTests.ts",
     "test:coach-mutation-history-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachMutationHistoryOwnershipTests.ts",
