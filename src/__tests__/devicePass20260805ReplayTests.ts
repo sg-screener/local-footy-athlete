@@ -99,30 +99,26 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: 'finding-5b',
-    finding: 'Device finding 5 (illness half): cannot log an illness readiness fact.',
-    matches: /could not be verified/,
-    why: 'REPRODUCED FRESH. Logging illness_moderate triggers a week '
-      + 'recomposition; the deload-modified week fails the §18 final-week gate '
-      + '("Section 18 final-week rejection (pattern_imbalance:strength_patterns:'
-      + '{squat:2,hinge:0,push:0,pull:2})", PROBE_5B=1 to see it), and the '
-      + 'transaction rolls back — a stored athlete decision refused by a '
-      + 'derivation guard, the inverted shape the stage-2 checkpoint named.',
-    paidBy: 'the illness-law/§18 ownership owner — the reassessment doc carries '
-      + 'the 7-question architecture answers this class requires before any fix',
-  },
-  {
-    id: 'finding-worn-removals',
-    finding: 'The one-root-many-doors hypothesis, measured: after his five '
-      + 'removals, which recomposing doors die?',
-    matches: /1 of 4 recomposing doors refuse[\s\S]*illness/,
-    why: 'The answer is ONE (illness), not four — wearing the week by removals '
-      + 'does NOT spread the §18 refusal to fatigue, season-change or fixture '
-      + 'doors at this depth. Kept red as the measurement that FALSIFIED the '
-      + 'spread hypothesis; it goes green with the same fix as finding-5b.',
-    paidBy: 'same owner as finding-5b',
-  },
+  // finding-5b and finding-worn-removals were declared red here and RETIRED
+  // 2026-08-05 evening, both by ONE fix, and the ledger owes the correction it
+  // promised: THE DELOAD WAS INNOCENT. Their entries blamed "the
+  // deload-modified week", and measurement (recorded in
+  // docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-08-05.md §0) falsified that —
+  // regenerating the same week with no fact, no constraint and no deload
+  // produced the identical rejection.
+  //
+  // The measured root was that WEEK IDENTITY HAD TWO OWNERS. The scoped regen
+  // stated the block NUMBER from the stored anchor and let generation re-derive
+  // the block START from the date, so re-authoring the second week of a block
+  // planned the FIRST week's strength patterns onto it (the allocator
+  // alternates on `weekNumber % 2`). Pinned history covered pull/squat, the
+  // regenerated remainder covered pull/squat again, and hinge/push were never
+  // in the candidate at all — not removed, never reachable. §18 read the gap as
+  // `pattern_imbalance` and the athlete's stored fact was rolled back.
+  //
+  // One owner of week identity retired both cells: 5b lands, and the
+  // one-root-many-doors measurement now reports 0 of 4 doors refusing, which is
+  // what "one root" meant all along.
   {
     id: 'finding-6b-door',
     finding: 'Device finding 6b: "Deload:" note on a non-deload week.',
@@ -223,8 +219,22 @@ function reachHisWorldByActing(): void {
   const profile = samDevicePass20260805Profile();
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
+  // THE ACCEPTED STATE IS CLEARED FIRST, AND THAT IS NOT A STYLE CHOICE.
+  //
+  // `coachUpdatesStore` carries a COMPATIBILITY MIRROR of accepted state, kept
+  // by a subscriber: any write to `activeConstraints` makes it re-read
+  // `programStore.acceptedMaterialContext` and, while that context still holds
+  // facts or a non-zero revision, republish ITS constraints over whatever was
+  // just written. Emptying the mirror before its source therefore restored the
+  // previous cell's constraints instead of clearing them, and this "fresh
+  // install" started worn — carrying the prior cell's illness constraint into
+  // generation, which silently deloaded the week.
+  //
+  // It went unseen only because no earlier cell had ever committed an illness
+  // fact: the doors that leaked were the harmless ones. The §18 week-identity
+  // fix made the illness door land, and the leak became a deload sentence on a
+  // build week. Source first, mirrors after — then the mirror has nothing to
+  // copy back.
   useProgramStore.setState({
     currentProgram: null, currentMicrocycle: null,
     todayWorkout: null, isGenerating: false, isLoading: false, error: null, blockState: null,
@@ -239,6 +249,8 @@ function reachHisWorldByActing(): void {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {}, sessionFeedback: {}, weightOverrides: {},
   } as never);
+  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
+  useCoachMutationHistoryStore.setState({ entries: [] } as never);
 
   // Onboarding, through the profile door.
   useProfileStore.setState({ onboardingData: {}, isOnboardingComplete: false } as never);

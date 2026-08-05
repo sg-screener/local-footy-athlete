@@ -352,36 +352,65 @@ function withGatewayFailure(body: () => void): boolean {
   // simply no longer goes through. The injection follows the owner.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const originalRequire = gateway.requireSection18AcceptedWeek;
-  const originalRun = gateway.runSection18AcceptedWeekGateway;
-  const inject = () => { throw new Error('INJECTED_ACCEPTANCE_FAILURE'); };
-  gateway.requireSection18AcceptedWeek = inject;
-  gateway.runSection18AcceptedWeekGateway = inject;
+  const restore = injectGatewayFailure(gateway);
   try {
     body();
     return false;
   } catch (error) {
     return String(error).includes('INJECTED_ACCEPTANCE_FAILURE');
   } finally {
-    gateway.requireSection18AcceptedWeek = originalRequire;
-    gateway.runSection18AcceptedWeekGateway = originalRun;
+    restore();
   }
+}
+
+/**
+ * Stub EVERY gateway entry point, because the owner keeps moving and the
+ * injection must follow it. Twice now this helper has reported "the failure did
+ * not reach the gateway" when the failure reached fine and the GATEWAY had
+ * changed underneath it:
+ *
+ *   • Sam's ownership collapse (2026-07-29) moved the transaction owner off the
+ *     throwing wrapper onto `runSection18AcceptedWeekGateway`, so a rejected
+ *     week became a typed result it could accept-and-reduce.
+ *   • The §18 ownership reassessment (2026-08-05, D3) moved GENERATION onto
+ *     `acceptSection18Week`, which routes by operation: a restoration throws, a
+ *     forward athlete decision publishes the best achievable week. A gate must
+ *     never veto a fact.
+ *
+ * Stubbing all three keeps these regressions about what they claim to be about
+ * — ATOMICITY, that a failure anywhere in acceptance commits no surface — and
+ * not about which function currently holds the decision. The injected error is
+ * a plain `Error`, so it is fatal under every operation and the atomicity claim
+ * stays sharp regardless of who is asking.
+ */
+function injectGatewayFailure(
+  gateway: Record<string, unknown>,
+  onCall?: () => void,
+): () => void {
+  const names = [
+    'requireSection18AcceptedWeek',
+    'runSection18AcceptedWeekGateway',
+    'acceptSection18Week',
+  ] as const;
+  const originals = names.map((name) => [name, gateway[name]] as const);
+  const inject = () => {
+    onCall?.();
+    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
+  };
+  for (const name of names) gateway[name] = inject;
+  return () => { for (const [name, original] of originals) gateway[name] = original; };
 }
 
 async function withGatewayFailureAsync(body: () => Promise<void>): Promise<boolean> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const original = gateway.requireSection18AcceptedWeek;
   let called = false;
-  gateway.requireSection18AcceptedWeek = () => {
-    called = true;
-    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
-  };
+  const restore = injectGatewayFailure(gateway, () => { called = true; });
   try {
     await body();
     return called;
   } finally {
-    gateway.requireSection18AcceptedWeek = original;
+    restore();
   }
 }
 

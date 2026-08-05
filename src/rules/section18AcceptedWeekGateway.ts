@@ -40,6 +40,7 @@ import {
 } from './derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
 import type { CalendarDayType } from '../store/calendarStore';
+import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import {
   currentAthleteActionTrace,
@@ -904,12 +905,49 @@ export function runSection18AcceptedWeekGateway(
   return traced(primary, 'primary');
 }
 
+/**
+ * The gateway's verdict, delivered to whoever owns the acceptance decision.
+ *
+ * §18 OWNERSHIP REASSESSMENT (2026-08-05, defect D3; approved by Sam). The gate
+ * is a candidate-quality instrument: it may fail a candidate, it must never veto
+ * a FACT. Generation used to throw unconditionally here, which killed the one
+ * thing the athlete actually decided — "I'm sick" — because a week derived from
+ * that decision could not meet its own contract. That is the honest consequence
+ * of the fact, not a reason to discard it.
+ *
+ * So the verdict now routes by the operation, in the vocabulary
+ * `acceptedStateTransaction` already ratified for exactly this split:
+ *
+ *   • `restoration` — replaying state that was accepted once. A week it cannot
+ *     reproduce means the stored snapshot is corrupt, and publishing a reduced
+ *     version of a corrupt snapshot would merge a defect into accepted state.
+ *     It throws, as it always did.
+ *   • `forward_decision` — the athlete just stated something. The best
+ *     achievable week (the search's own selected candidate, carried on the
+ *     result even when `impossible`) is published, and the shortfall is
+ *     disclosed downstream by `assertAcceptedVisibleLedgerEquivalence`, which
+ *     owns accept-and-reduce and already re-evaluates the accepted week.
+ *
+ * No new mode and no per-kind branch: one distinction, already ruled, extended
+ * to the caller that lacked it.
+ */
+export function acceptSection18Week(
+  input: Section18AcceptedWeekGatewayInput & {
+    operation: AcceptedStateOperationKind;
+  },
+): Section18AcceptedWeekGatewayResult {
+  const result = runSection18AcceptedWeekGateway(input);
+  if (result.status === 'impossible' && input.operation === 'restoration') {
+    throw new Section18WeekAcceptanceError(result);
+  }
+  return result;
+}
+
+/** The strict door: `acceptSection18Week` under a restoration. */
 export function requireSection18AcceptedWeek(
   input: Section18AcceptedWeekGatewayInput,
 ): Section18AcceptedWeekGatewayResult {
-  const result = runSection18AcceptedWeekGateway(input);
-  if (result.status === 'impossible') throw new Section18WeekAcceptanceError(result);
-  return result;
+  return acceptSection18Week({ ...input, operation: 'restoration' });
 }
 
 export function section18BlockingSummary(findings: readonly Section18Finding[]): string {

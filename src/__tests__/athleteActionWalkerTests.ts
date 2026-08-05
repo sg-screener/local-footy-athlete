@@ -2803,6 +2803,42 @@ run('the action vocabulary can reach the shape of Sam\'s real device', () => {
  * generation and time advance through the real doors before the fact is
  * declared, and the laws run over the result.
  */
+/**
+ * Clear every active readiness fact THROUGH THE ATHLETE'S OWN DOOR.
+ *
+ * `clear_fatigue_status` is the door: it reverts the reversible adjustments
+ * linked by `sourceFactId` and then resolves the fact, which is what makes
+ * "Cleared — today's back to its original session" true. The walker's
+ * `clear_source_facts` move is a world reset, not that door — it empties the
+ * readiness SIGNAL store and drops schedule facts, and touches neither the
+ * cascade nor a readiness fact's status. Cells that pin the clear PROMISE have
+ * to use the promise's own door, or they pass on a world where nothing was
+ * authored to put back.
+ */
+async function clearEveryActiveReadinessFactThroughItsDoor(date: string): Promise<void> {
+  for (let guard = 0; guard < 8; guard += 1) {
+    const facts = (useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts ?? [])
+      .filter((fact) => 'factKind' in fact
+        && fact.factKind !== 'schedule'
+        && (fact as { status?: string }).status === 'active') as Array<{ factId?: string }>;
+    const factId = facts[0]?.factId;
+    if (!factId) return;
+    const result = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { date, modifierId: factId },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: false,
+    } as never, { todayISO: date }));
+    assert(result.ok,
+      `the clear door refused to resolve ${factId}: "${result.message}" — the athlete `
+      + 'cannot take back what they reported');
+  }
+  assert(false, 'the clear door never emptied the active readiness facts');
+}
+
 async function walkTheLighterDayDoor(): Promise<void> {
   freshInstall();
   performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
@@ -2899,7 +2935,7 @@ async function walkTheLighterDayDoor(): Promise<void> {
     + `tapped ${tappedFactId}, linked ${trimRecord!.sourceFactId}`);
 
   // THE PROMISE: clearing the fact puts today back, byte-identical.
-  performAction({ kind: 'clear_source_facts' });
+  await clearEveryActiveReadinessFactThroughItsDoor(date);
   assert(weekFingerprint() === weekBefore,
     'clearing the readiness fact did not restore the week byte-identical — '
     + 'the cascade-undo keys on `sourceFactId`, not on the surface, so the '
@@ -2980,7 +3016,17 @@ async function walkTheLighterDayDoor(): Promise<void> {
     // CLEARING THE FACT THE ATHLETE TAPPED restores the session. The old
     // behaviour linked the trim to the OTHER fact, so this clear left the day
     // trimmed while telling the athlete it had been put back.
-    performAction({ kind: 'clear_source_facts' });
+    //
+    // THROUGH THE REAL CLEAR DOOR, not the walker's world-reset move. This read
+    // `performAction({ kind: 'clear_source_facts' })`, which wipes the readiness
+    // SIGNAL store and drops schedule facts — it never resolves a readiness fact
+    // and so never runs the `sourceFactId` cascade this pin is named after. It
+    // agreed with the promise only because the fatigue door in this world was
+    // being REFUSED by the §18 gate, so there was no authored week to put back.
+    // Once that door landed (§18 ownership reassessment 2026-08-05, D3), the
+    // difference between the reset and the door became the whole question. The
+    // cell asks the door.
+    await clearEveryActiveReadinessFactThroughItsDoor(date);
     assert(weekFingerprint() === weekBeforePair,
       'clearing the tapped fact did not restore the original session in a world '
       + 'that held two overlapping facts — the trim is owned by a fact the '
@@ -2989,7 +3035,7 @@ async function walkTheLighterDayDoor(): Promise<void> {
     // An already-light day is a legitimate refusal, not a pass to hide behind.
     assert(/already light/i.test(pairApplied.message),
       `the two-fact world refused for an unexpected reason: ${pairApplied.message}`);
-    performAction({ kind: 'clear_source_facts' });
+    await clearEveryActiveReadinessFactThroughItsDoor(date);
   }
 }
 

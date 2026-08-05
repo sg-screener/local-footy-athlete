@@ -22,7 +22,8 @@ import {
 import {
   addDaysISO,
   deriveStoredBlockStateFromProgram,
-  getBlockNumberForDate,
+  resolveBlockGridPosition,
+  type BlockGridPosition,
   type StoredProgramBlockState,
 } from '../utils/programBlockState';
 import type { SessionComponentKind } from '../utils/sessionComponents';
@@ -2844,15 +2845,24 @@ export function applyProgramOverrideWrite(args: {
   });
 }
 
-export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
+/**
+ * The block position generation must be told, read from the one owner.
+ *
+ * §18 ownership reassessment (2026-08-05, D1). Callers used to hand generation
+ * the block NUMBER from this anchor and leave it to re-derive the block START
+ * from the date — two owners of one grid, which disagree for every date that is
+ * not itself a block start. There is now one read and it returns the position
+ * whole; `getCurrentBlockNumberForGeneration` is that same value projected, so
+ * the two readers cannot drift.
+ */
+export function getBlockPositionForGeneration(dateISO?: string): BlockGridPosition {
   const state = useProgramStore.getState();
   const blockState = state.blockState ?? state.ensureBlockState(dateISO);
-  const targetISO = dateISO ?? todayISOLocal();
-  return getBlockNumberForDate(
-    blockState.blockStartDate,
-    blockState.blockNumber,
-    targetISO,
-  );
+  return resolveBlockGridPosition(blockState, dateISO ?? todayISOLocal());
+}
+
+export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
+  return getBlockPositionForGeneration(dateISO).blockNumber;
 }
 
 /**
