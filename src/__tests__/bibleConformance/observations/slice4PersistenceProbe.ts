@@ -268,13 +268,40 @@ async function run(scenarioId: string) {
   };
   await storage.setItem('program-store', JSON.stringify(envelope));
 
+  // R1.3 (shell rebuild, ruling docs/SHELL_REBUILD_RULING_2026-08-05.md):
+  // rehydration restores NO outputs — an old-shape envelope parks for the R2
+  // migration and the world derives from inputs. The Bible-anchored
+  // semantics these scenarios hold (typed intent wins, one-shot legacy
+  // migration, scalar non-authority, merge idempotence) are properties of
+  // the CANONICALISER — exactly what the R2 migration reads an old envelope
+  // through — so the scenarios exercise it directly now, and additionally
+  // pin the new boot law.
   let mergeRuns = 0;
   const unsubscribe = useProgramStore.persist.onFinishHydration(() => { mergeRuns++; });
   await useProgramStore.persist.rehydrate();
-  const hydratedWorkouts = useProgramStore.getState().currentProgram?.microcycles?.[0]?.workouts ?? [];
+  if (useProgramStore.getState().currentProgram !== null) {
+    throw new Error('R1.3 boot law broken: an old envelope resurrected outputs through rehydrate');
+  }
+  const { canonicaliseHydratedState } = require('../../../store/programStore') as
+    typeof import('../../../store/programStore');
+  const canonicalisationOptions = {
+    ingressKind: (legacy ? 'legacy_precanonical' : 'accepted_canonical') as never,
+    profile: PATH_PROFILE as never,
+  };
+  const canonicalOnce = canonicaliseHydratedState(
+    envelope.state as never, canonicalisationOptions as never);
+  const hydratedWorkouts =
+    (canonicalOnce.currentProgram?.microcycles?.[0]?.workouts ?? []) as Workout[];
   const first = canonicalWeekLedger(hydratedWorkouts);
   await useProgramStore.persist.rehydrate();
-  const hydratedTwiceWorkouts = useProgramStore.getState().currentProgram?.microcycles?.[0]?.workouts ?? [];
+  // The first pass canonicalises; its output IS canonical, which is what the
+  // old second rehydrate reclassified it as. Idempotence means pass two
+  // changes nothing.
+  const canonicalTwice = canonicaliseHydratedState(
+    canonicalOnce as never,
+    { ...canonicalisationOptions, ingressKind: 'accepted_canonical' } as never);
+  const hydratedTwiceWorkouts =
+    (canonicalTwice.currentProgram?.microcycles?.[0]?.workouts ?? []) as Workout[];
   const twice = canonicalWeekLedger(hydratedTwiceWorkouts);
 
   const result: any = {

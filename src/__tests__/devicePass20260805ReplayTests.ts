@@ -381,27 +381,44 @@ const LEGACY_SCHEDULE_CONSTRAINT = {
   description: 'Busy week',
 };
 
-async function relaunchWithLegacyScheduleConstraint(): Promise<void> {
+/**
+ * R1.3 REWORK (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): the
+ * hydration-migration door this helper drove CEASED TO EXIST. Boot derives the
+ * world from inputs; an OLD-shape envelope — the only shape that can carry his
+ * legacy constraint — is PARKED byte-identical for R2's one-time migration and
+ * restores nothing. So the worn coordinate moves with the ruling: the old
+ * build's bytes (constraint included) must survive ON THE PARKED COPY, the
+ * DERIVED world must NOT carry the constraint (nothing enters below the door),
+ * and every finding's door must still land on the derived world. Legacy-lift
+ * semantics are R2's declared obligation, not this file's assertion.
+ */
+async function relaunchWithLegacyEnvelopeParked(): Promise<string> {
   // 1. PERSIST — drain, do not assume (walker relaunch precedent).
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await flushPendingStorageWrites().catch(() => undefined);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     if (pendingStorageWriteCount() === 0) break;
   }
-  // 2. THE OLD BUILD'S BYTES: the persisted program envelope, plus the legacy
-  //    constraint no current writer can produce.
-  const rawEnvelope = localStorageData.get('program-store');
-  assert(rawEnvelope, 'worn coordinate: no persisted program-store envelope to edit');
-  const envelope = JSON.parse(rawEnvelope) as {
-    state?: { acceptedMaterialContext?: { activeConstraints?: unknown[] } };
-  };
-  assert(envelope.state?.acceptedMaterialContext,
-    'worn coordinate: the persisted envelope has no acceptedMaterialContext');
-  envelope.state.acceptedMaterialContext.activeConstraints = [
-    ...(envelope.state.acceptedMaterialContext.activeConstraints ?? []),
-    LEGACY_SCHEDULE_CONSTRAINT,
-  ];
-  localStorageData.set('program-store', JSON.stringify(envelope));
+  // 2. THE OLD BUILD'S BYTES. The live envelope is inputs-shape now, so the
+  //    old build's disk is CONSTRUCTED the way his phone actually holds it:
+  //    a fat output envelope (acceptedMaterialContext + program, no `inputs`)
+  //    carrying the legacy constraint no current writer can produce.
+  const state = useProgramStore.getState();
+  const oldShapeEnvelope = JSON.stringify({
+    state: {
+      currentProgram: state.currentProgram,
+      acceptedMaterialContext: {
+        ...state.acceptedMaterialContext,
+        activeConstraints: [
+          ...(state.acceptedMaterialContext.activeConstraints ?? []),
+          LEGACY_SCHEDULE_CONSTRAINT,
+        ],
+      },
+    },
+    version: 0,
+  });
+  localStorageData.set('program-store', oldShapeEnvelope);
+  localStorageData.delete('program-store.pre-rebuild-envelope');
   // 3. KILL MEMORY, KEEP DISK — photograph AFTER the edit, because zustand
   //    persists on every setState and the blanking writes (walker lesson).
   const disk = new Map(localStorageData);
@@ -415,29 +432,39 @@ async function relaunchWithLegacyScheduleConstraint(): Promise<void> {
   await flushPendingStorageWrites().catch(() => undefined);
   localStorageData.clear();
   for (const [key, value] of disk) localStorageData.set(key, value);
-  // 4. HYDRATE from what was actually written — his launch, including the
-  //    `temporary_source_fact:hydrate` transaction his export recorded last.
+  // 4. HYDRATE, then THE QUIESCENT BOOT — the product's launch (R1.3): park
+  //    the old world, derive the new one from inputs.
   await quietAsync(async () => {
     await useProgramStore.persist.rehydrate();
     await useCalendarStore.persist.rehydrate();
     await useProfileStore.persist.rehydrate();
     await useCoachUpdatesStore.persist.rehydrate();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { runQuiescentBoot } = require('../store/quiescentBoot');
+    await runQuiescentBoot();
   });
-  // Give the post-hydration migration transaction a turn to run.
-  await new Promise<void>((resolve) => setTimeout(resolve, 20));
   // THE COORDINATE MUST BE REACHED, or the cell proves nothing (fixture-
-  // fidelity law). His export's launch shows the constraint surviving AND the
-  // busy_week fact minted from it — both must be observable here.
+  // fidelity law) — and under the boot law the coordinate is the PARKED copy.
+  const parked = localStorageData.get('program-store.pre-rebuild-envelope');
+  assert(parked === oldShapeEnvelope,
+    'worn coordinate NOT reached: the old build\'s envelope was not parked '
+    + 'byte-identical — R2\'s migration input is being corrupted or dropped');
+  assert(parked!.includes(LEGACY_SCHEDULE_CONSTRAINT.id),
+    'worn coordinate NOT reached: the parked envelope does not carry his '
+    + 'legacy constraint — the bytes R2 must migrate are gone');
   const context = (useProgramStore.getState() as unknown as {
     acceptedMaterialContext: {
       activeConstraints?: { id?: string; type?: string }[];
-      temporarySourceFacts?: { factId?: string; factKind?: string }[];
     };
   }).acceptedMaterialContext;
-  assert((context.activeConstraints ?? []).some(
+  assert(!(context.activeConstraints ?? []).some(
     (constraint) => constraint.id === LEGACY_SCHEDULE_CONSTRAINT.id),
-    'worn coordinate NOT reached: the legacy schedule constraint did not survive '
-    + 'hydration — this world is not his, and every worn cell would pass vacuously');
+    'R1.3 boot law broken: the legacy schedule constraint entered the DERIVED '
+    + 'world — hydration lifted an output below the door instead of parking it');
+  assert(!!useProgramStore.getState().currentProgram,
+    'the derived world has no program — the worn cells below would pass '
+    + 'vacuously on an empty world');
+  return parked!;
 }
 
 /** True once any transaction has re-minted his busy_week fact. */
@@ -620,10 +647,10 @@ const main = async () => {
         JSON.stringify(facts.map((fact) => fact.factKind ?? null))}`);
   });
 
-  // ── The worn coordinate: the same doors, on his hydrated world ───────
-  await run('finding-1-worn: season change still lands with his legacy schedule constraint hydrated', async () => {
+  // ── The worn coordinate: the same doors, after his old world is parked ──
+  await run('finding-1-worn: season change still lands after the legacy envelope is parked (R1.3)', async () => {
     reachHisWorldByActing();
-    await relaunchWithLegacyScheduleConstraint();
+    await relaunchWithLegacyEnvelopeParked();
     const decision = hisSetupDecision({ seasonPhase: 'Off-season' });
     assert(decision.canSave,
       `(1-worn) Save is blocked: blockedBy=${JSON.stringify(decision.blockedBy)}`);
@@ -643,9 +670,9 @@ const main = async () => {
       `(1-worn) ok reported but the OWNED phase is still ${owned.phase} (source=${owned.source})`);
   });
 
-  await run('finding-4-worn: a screen-door move still lands with his legacy schedule constraint hydrated', async () => {
+  await run('finding-4-worn: a screen-door move still lands after the legacy envelope is parked (R1.3)', async () => {
     reachHisWorldByActing();
-    await relaunchWithLegacyScheduleConstraint();
+    await relaunchWithLegacyEnvelopeParked();
     const week = visibleWeek();
     const withSession = week.filter((day) => day.workout
       && (day.date > TODAY)
@@ -667,9 +694,9 @@ const main = async () => {
       + `outcome=${result.outcome ?? 'none'} "${result.message}"`);
   });
 
-  await run('finding-5a-worn: "tired today" still lands with his legacy schedule constraint hydrated', async () => {
+  await run('finding-5a-worn: "tired today" still lands after the legacy envelope is parked (R1.3)', async () => {
     reachHisWorldByActing();
-    await relaunchWithLegacyScheduleConstraint();
+    await relaunchWithLegacyEnvelopeParked();
     const action = readinessActionForKind('tired_today', { anchorDateISO: WEEK, todayISO: TODAY });
     const result = await quietAsync(() => executeProgramControlActionDurably(action, {
       visibleWeek: visibleWeek(), todayISO: TODAY,
@@ -683,13 +710,15 @@ const main = async () => {
     assert(facts.some((fact) => fact.factKind === 'fatigue'),
       `(5a-worn) door reported ok but no fatigue fact landed — factKinds=${
         JSON.stringify(facts.map((fact) => fact.factKind ?? null))}`);
-    // The conformance check: his export's launch minted the stale busy_week
-    // fact from the constraint. If no transaction here re-minted it, the worn
-    // world is NOT conformant with his device and these passes say less.
-    assert(busyWeekFactMinted(),
-      '(5a-worn) the legacy constraint never re-minted his busy_week fact — the '
-      + 'worn world does not conform to the export, and the three worn passes '
-      + 'do not cover his device');
+    // R1.3 INVERSION (shell rebuild ruling): his export's launch showed the
+    // hydration migration re-minting the STALE busy_week fact for a week
+    // already over, on every launch, forever — the pair never expired. That
+    // door no longer exists: the constraint rides the parked envelope to R2
+    // and the derived world must NOT resurrect the stale fact. The direction
+    // of this assertion is the boot law working, not lost coverage.
+    assert(!busyWeekFactMinted(),
+      '(5a-worn) the STALE busy_week fact was re-minted on the derived world — '
+      + 'a hydration-migration lift is running below the quiescent boot');
   });
 
   // ── Finding 3: the athlete must be able to CHOOSE recovery ───────────

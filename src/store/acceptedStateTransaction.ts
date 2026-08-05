@@ -130,6 +130,10 @@ export type AcceptedProgramSurfaces = Pick<
   | 'userRemovalConstraints'
   | 'reversibleAdjustmentLedger'
   | 'exposureContractsByWeek'
+  // R1.3 (shell rebuild): the generation anchor rides the SAME publication
+  // as the program it anchors — a second setState would be a second
+  // publication (the rollover atomicity suite rightly refuses).
+  | 'generationAnchorISO'
 >;
 
 /**

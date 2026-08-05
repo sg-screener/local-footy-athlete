@@ -988,6 +988,8 @@ export function generateProgramLocally(
     primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
     microcycles,
+    // R1.3 (shell rebuild): generation records its own anchor input.
+    generationAnchorISO: effectiveTodayISO,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

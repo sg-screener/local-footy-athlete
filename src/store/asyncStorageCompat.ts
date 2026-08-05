@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ledgerReplayActive } from './ledgerReplayLatch';
 
 const nodeFallback = new Map<string, string>();
 let nextStageId = 1;
@@ -27,6 +28,10 @@ export const asyncStorageDurable = {
     }
   },
   async setItem(name: string, value: string): Promise<void> {
+    // R1.3 (shell rebuild): THE BOOT DOES NOT WRITE. While the replay latch
+    // is held, disk is already the truth of inputs and outputs are never
+    // persisted — every durable write drops at this one deepest boundary.
+    if (ledgerReplayActive()) return;
     try {
       await AsyncStorage.setItem(name, value);
     } catch (error) {
@@ -38,6 +43,7 @@ export const asyncStorageDurable = {
     }
   },
   async removeItem(name: string): Promise<void> {
+    if (ledgerReplayActive()) return;
     try {
       await AsyncStorage.removeItem(name);
     } catch (error) {
@@ -66,7 +72,7 @@ export const asyncStorageDurable = {
  */
 const pendingWrites = new Set<Promise<void>>();
 
-function trackDurableWrite(write: Promise<void>): Promise<void> {
+export function trackDurableWrite(write: Promise<void>): Promise<void> {
   // Swallow here only so an un-flushed caller cannot crash the app; the
   // rejection is re-raised to whoever awaits the flush.
   const tracked = write.finally(() => {

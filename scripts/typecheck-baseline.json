@@ -23,12 +23,12 @@
     "here so a future reader does not mistake a deletion for a fix, and so the",
     "product count dropping 63 -> 38 is attributable rather than mysterious."
   ],
-  "generatedAt": "2026-07-31",
+  "generatedAt": "2026-08-05",
   "scopes": {
     "product": {
       "label": "product src (ships to athletes)",
       "config": "tsconfig.compile.json",
-      "total": 36,
+      "total": 35,
       "files": {
         "src/dev/e2e/devE2EScenarioSession.ts": 1,
         "src/rules/illnessRecoveryWeekMode.ts": 1,
@@ -40,7 +40,6 @@
         "src/store/fixtureMutationTransaction.ts": 3,
         "src/store/injuryEpisodeCommand.ts": 1,
         "src/store/profileProgramTransaction.ts": 1,
-        "src/store/programStore.ts": 1,
         "src/utils/coachFixtureChange.ts": 2,
         "src/utils/coachTurnController.ts": 3,
         "src/utils/lighterDayTransaction.ts": 1,
@@ -53,7 +52,7 @@
     "devtools": {
       "label": "dev/E2E harness (never ships; gates device acceptance)",
       "config": "tsconfig.devtools.json",
-      "total": 52,
+      "total": 51,
       "files": {
         "src/dev/e2e/defaultDevE2ESeedCoordinator.ts": 1,
         "src/dev/e2e/devE2EScenarioManifestRegistry.ts": 1,
@@ -71,7 +70,6 @@
         "src/rules/temporarySourceFact.ts": 3,
         "src/store/fixtureMutationTransaction.ts": 3,
         "src/store/profileProgramTransaction.ts": 1,
-        "src/store/programStore.ts": 1,
         "src/utils/coachFixtureChange.ts": 2,
         "src/utils/coachTurnController.ts": 3,
         "src/utils/planChangeProducer.ts": 2
@@ -80,7 +78,7 @@
     "tests": {
       "label": "test harness (runs untyped via sucrase-node)",
       "config": "tsconfig.tests.json",
-      "total": 375,
+      "total": 374,
       "files": {
         "src/__tests__/acceptedStateTransactionTests.ts": 3,
         "src/__tests__/athleteSessionDeletionTests.ts": 5,
@@ -197,7 +195,6 @@
         "src/store/fixtureMutationTransaction.ts": 3,
         "src/store/injuryEpisodeCommand.ts": 1,
         "src/store/profileProgramTransaction.ts": 1,
-        "src/store/programStore.ts": 1,
         "src/utils/coachFixtureChange.ts": 2,
         "src/utils/coachTurnController.ts": 3,
         "src/utils/lighterDayTransaction.ts": 1,

@@ -1,4 +1,5 @@
 import { asyncStorageCompat, asyncStorageDurable } from '../store/asyncStorageCompat';
+import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 
 /**
  * THE ON-DEVICE ACTION LOG — MASTER_PLAN 5D.3.
@@ -192,6 +193,10 @@ export function recordAthleteActionLogEntry(event: {
   actionType: string;
   [field: string]: unknown;
 }): void {
+  // R1.3 (shell rebuild): a replayed interpreter is not the athlete acting.
+  // While the boot latch is held the ring stays quiet — the boot flood that
+  // evicted the athlete's own taps (evening-1) is unrepresentable.
+  if (ledgerReplayActive()) return;
   const { timestamp, ...rest } = event;
   entries.push({ at: timestamp, ...rest } as AthleteActionLogEntry);
   trimToCap();

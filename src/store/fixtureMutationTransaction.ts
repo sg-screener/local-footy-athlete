@@ -482,32 +482,51 @@ function deriveAcknowledgedCoachNote(args: {
   noteId: string | null;
   source: FixtureMutationSourceMetadata;
 } {
-  const source = acknowledgedSourceMetadata(args.result);
-  // Coach Notes are a target-week projection. The reversible ledger retains
-  // the complete rolling dependency horizon for restoration.
-  const weekStarts = [getMondayForDate(args.resolved.targetDate)];
-  const before = weekStarts.flatMap((weekStart) =>
-    args.beforeRowsByWeek.get(weekStart) ?? []);
-  const after = acceptedVisibleRows(args.profile, weekStarts);
-  const noteId = upsertGameChangeCoachNoteFromDiff({
-    action: gameChangeActionFromRebuild({
-      newGameDay: args.resolved.newGameDay,
-      clearOverlayDate: args.resolved.action === 'move'
-        ? args.resolved.sourceDate
-        : undefined,
-    }),
-    fixtureKind: args.resolved.fixtureKind,
-    targetDate: args.resolved.targetDate,
-    previousDate: args.resolved.sourceDate,
-    weekStartISO: getMondayForDate(args.resolved.targetDate),
-    before,
-    after,
-    todayISO: args.resolved.todayISO,
-    adjustmentId: args.result.reversibleAdjustmentId,
-    source,
-    traceId: args.trace.traceId,
-  });
-  return { noteId, source };
+  // A NOTE IS OUTPUT, NEVER EVIDENCE — and never a veto. This runs AFTER the
+  // athlete's fixture change has committed; the note upsert publishes through
+  // the coach-updates constraint transaction, whose accepted-state equivalence
+  // sweep covers EVERY materialised week and throws on shortfalls in weeks
+  // this mutation never touched (found by the walker's conformance cell on
+  // Sam's own device shape: a landed game add crashed on week-away
+  // `required_minimum_shortfall` blockers). The landed change stands; a note
+  // that cannot derive is a MISSING NOTE, disclosed on the tape.
+  try {
+    const source = acknowledgedSourceMetadata(args.result);
+    // Coach Notes are a target-week projection. The reversible ledger retains
+    // the complete rolling dependency horizon for restoration.
+    const weekStarts = [getMondayForDate(args.resolved.targetDate)];
+    const before = weekStarts.flatMap((weekStart) =>
+      args.beforeRowsByWeek.get(weekStart) ?? []);
+    const after = acceptedVisibleRows(args.profile, weekStarts);
+    const noteId = upsertGameChangeCoachNoteFromDiff({
+      action: gameChangeActionFromRebuild({
+        newGameDay: args.resolved.newGameDay,
+        clearOverlayDate: args.resolved.action === 'move'
+          ? args.resolved.sourceDate
+          : undefined,
+      }),
+      fixtureKind: args.resolved.fixtureKind,
+      targetDate: args.resolved.targetDate,
+      previousDate: args.resolved.sourceDate,
+      weekStartISO: getMondayForDate(args.resolved.targetDate),
+      before,
+      after,
+      todayISO: args.resolved.todayISO,
+      adjustmentId: args.result.reversibleAdjustmentId,
+      source,
+      traceId: args.trace.traceId,
+    });
+    return { noteId, source };
+  } catch (error) {
+    emitAthleteActionEvent(args.trace, 'coach_notes_result', {
+      noteIdentitiesDerived: [],
+      internalResultCode: athleteActionErrorCode(error, 'acknowledged_note_derivation_failed'),
+      originalRejectionCode: athleteActionErrorCode(error, 'acknowledged_note_derivation_failed'),
+      rejectingBoundary: 'deriveAcknowledgedCoachNote',
+      acknowledgedVisibleState: false,
+    });
+    return { noteId: null, source: args.resolved.source };
+  }
 }
 
 function emitRequestEvents(

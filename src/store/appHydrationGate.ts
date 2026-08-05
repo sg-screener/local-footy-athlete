@@ -176,6 +176,20 @@ export function awaitAppHydration(): Promise<AppHydrationState> {
     if (failedStores.length > 0) {
       logger.error('[boot][hydration] persisted stores did not hydrate', { failedStores });
     }
+    if (failedStores.length === 0) {
+      // R1.3 (shell rebuild): boot reads inputs and DERIVES. The old
+      // hydration-acceptance machinery is gone; the derived world is rebuilt
+      // in memory here, after every input store has settled.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { runQuiescentBoot } = require('./quiescentBoot');
+        await runQuiescentBoot();
+      } catch (error) {
+        logger.error('[boot][hydration] the derived-world rebuild failed', { error });
+        publish({ status: 'failed', failedStores: ['derived-world'] });
+        return state;
+      }
+    }
     publish({
       status: failedStores.length === 0 ? 'ready' : 'failed',
       failedStores,

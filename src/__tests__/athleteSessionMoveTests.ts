@@ -1099,21 +1099,42 @@ async function finish(): Promise<void> {
     assert(result.ok, JSON.stringify(result));
     const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
     assert(adjustment?.status === 'active', 'durable tap adjustment missing');
-    const creationEnvelope = await readDurableProgramStoreEnvelope();
-    assert(creationEnvelope && JSON.parse(creationEnvelope).state.reversibleAdjustmentLedger
-      .adjustments.some((candidate: { id: string }) => candidate.id === adjustment.id),
-    'creation returned before durable ledger acknowledgement');
+    // R1.3 (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): persisted
+    // state is INPUTS — the reversible-adjustment record is a derived output
+    // now, rebuilt at boot by replaying the ledger, so the durable
+    // acknowledgement this cell pins moved to the DECISION: the move's own
+    // ledger entry (R1.4a appends it in the same act that lands the change).
+    const creationLedger = await AsyncStorage.getItem('decision-ledger-store');
+    const ledgerEntries = (JSON.parse(creationLedger ?? '{}') as {
+      state?: { entries?: { decision?: { kind?: string; change?: {
+        kind?: string; fromDate?: string; toDate?: string;
+      } } }[] };
+    }).state?.entries ?? [];
+    assert(ledgerEntries.some((entry) =>
+      entry.decision?.kind === 'plan_change' &&
+      entry.decision.change?.kind === 'move_session' &&
+      entry.decision.change.fromDate === dateForDay(FUTURE_WEEK, 1) &&
+      entry.decision.change.toDate === dateForDay(FUTURE_WEEK, 3)),
+    'creation returned before the decision reached the durable ledger');
     const restored = await clearReversibleAdjustment(
       adjustment.id,
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
     assert(restored.outcome === 'restored', JSON.stringify(restored));
     assert(semantic(FUTURE_WEEK) === before, 'durable Restore did not restore the exact week');
-    const restoreEnvelope = await readDurableProgramStoreEnvelope();
-    assert(restoreEnvelope && JSON.parse(restoreEnvelope).state.reversibleAdjustmentLedger
-      .adjustments.some((candidate: { id: string; status: string }) =>
-        candidate.id === adjustment.id && candidate.status === 'cleared'),
-    'Restore returned before durable cleared status acknowledgement');
+    // R1.3, PINNED GAP: no reversal producer exists yet — the ledger declares
+    // reversal entries typed and INERT until LR-29's heir lands, so an undo
+    // has NO durable record and does not survive a relaunch. That is R1's
+    // declared scope, not this cell's to hide: the pin below reds the moment
+    // a reversal producer starts writing, and this cell then asserts the
+    // reversal's own durability instead.
+    const restoreLedger = await AsyncStorage.getItem('decision-ledger-store');
+    const entriesAfterRestore = (JSON.parse(restoreLedger ?? '{}') as {
+      state?: { entries?: { decision?: { kind?: string } }[] };
+    }).state?.entries ?? [];
+    assert(!entriesAfterRestore.some((entry) => entry.decision?.kind === 'reversal'),
+      'a reversal entry reached the ledger — the reversal producer has landed, '
+      + 'so this cell must now assert the reversal\'s durable acknowledgement');
   });
 
   await runAsync('22 injected restoration persistence failure rolls back exactly', async () => {

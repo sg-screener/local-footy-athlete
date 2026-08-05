@@ -337,7 +337,15 @@ interface BlindSpot {
 
 const BLIND_SPOTS: readonly BlindSpot[] = [
   {
-    declaredRed: 'session_list_drops_a_team_night_stack_and_badges_support',
+    // Repointed 2026-08-05: the walker's combination entry
+    // (`session_list_drops_a_team_night_stack_and_badges_support`) was
+    // deleted MOVED-NOT-PAID when the R1.3 world-fidelity fixes re-rolled
+    // both tiers off its reproduction. The composition decomposes into two
+    // mechanisms that remain declared; this blind spot now names the
+    // conditioning half (its sibling `support` half is
+    // `session_list_badges_a_midline_row_the_projection_has_no_part_for`,
+    // already containing six coordinates above).
+    declaredRed: 'session_list_drops_conditioning_attached_to_an_appointment',
     coordinate: 'team_night × [conditioning,strength]',
     failingComposition: 'roles=[midline] buckets=[conditioning,strength] cond=block_no_flag',
     why: 'MEASURED 2026-08-05 (stage 2 priority A, `WALKER_LOG_LP3=1` on the '

@@ -151,6 +151,13 @@ const resetActionsInFlight = new Set<string>();
 let nextResetActionId = 1;
 let nextEntrySequence = 1;
 
+// THE REPLAY LATCH (R1.3) lives in ledgerReplayLatch.ts (import-free, so the
+// storage compat layer and the action log consult it without cycles). While
+// held, appends no-op: REPLAY READS THE LEDGER, IT NEVER WRITES IT.
+export { beginLedgerReplay, endLedgerReplay, ledgerReplayActive } from './ledgerReplayLatch';
+// eslint-disable-next-line no-duplicate-imports
+import { ledgerReplayActive } from './ledgerReplayLatch';
+
 /**
  * Open a reset. The id is only good while the reset is running, which is what
  * makes a deferred write belonging to a finished reset refusable.
@@ -259,6 +266,7 @@ export function appendDecisionEntry(args: {
   writer: DecisionLedgerWriterId;
   occurredAt?: string;
 }): AppendDecisionOutcome {
+  if (ledgerReplayActive()) return { ok: true };
   const entry: DecisionLedgerEntry = {
     id: `dl-${nextEntrySequence++}`,
     occurredAt: args.occurredAt ?? new Date().toISOString(),

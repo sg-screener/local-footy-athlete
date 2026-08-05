@@ -500,8 +500,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'decision-feeding, not reconciliation, which is why that file is not exempt.',
     size: 'M',
     status: 'scheduled',
+    sequence: '72 -> 71 (R1.3, 2026-08-05): the quiescent-boot flip deleted the '
+      + 'programStore hydration-migration machinery, and one of its mirror reads '
+      + '(the persisted-profile fallback to the live store) went with it — a read '
+      + 'DELETED with its layer, not migrated.',
     detector: 'mirrorDecisionReads',
-    declared: 72,
+    declared: 71,
     foundingCount: 74,
   },
   {
@@ -1124,8 +1128,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * its twenty-seven references route through one named door, so LR-1 goes 27 ->
  * 0 and LR-2's last count — the program store itself — goes 1 -> 0. Baseline
  * 104 -> 76. Every persisted store in this app now has a write owner.
+ *
+ * 74 -> 73 (R1.3, 2026-08-05): the quiescent-boot flip deleted the program
+ * store's hydration-migration machinery and one LR-4 mirror read went with
+ * its layer (the persisted-profile fallback to the live store).
  */
-export const LEGACY_DEBT_BASELINE = 74;
+export const LEGACY_DEBT_BASELINE = 73;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.

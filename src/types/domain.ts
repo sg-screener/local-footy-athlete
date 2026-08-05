@@ -613,6 +613,14 @@ export interface TrainingProgram {
   /** Canonical persisted entry clock for the user-selected season phase. */
   seasonPhaseClock?: import('../rules/seasonPhaseClock').SeasonPhaseClock;
 
+  /**
+   * R1.3 (shell rebuild): the todayISO this program was GENERATED with — the
+   * generation records its own input, so the anchor can never drift from
+   * what actually ran. Persisted as an input; the quiescent boot regenerates
+   * with exactly this day.
+   */
+  generationAnchorISO?: string;
+
   // Duration
   startDate: string; // ISO date
   endDate: string;   // ISO date

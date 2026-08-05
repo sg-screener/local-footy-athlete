@@ -720,8 +720,26 @@ export function commitRebuiltProgram(
   } = {},
 ): void {
   const proposal = buildRebuiltProgramSurfaces(program, sweep, options);
+  // R1.3 (shell rebuild): the generation anchor is an input — the day this
+  // program was GENERATED with, recorded by generation itself so the anchor
+  // can never drift from what actually ran (a caller's selectedDate can —
+  // the walker's did). It rides the same publication as the program.
+  const anchor = program.generationAnchorISO ?? options.selectedDate;
+  if (anchor) {
+    (proposal as { generationAnchorISO?: string }).generationAnchorISO = anchor;
+  }
   commitAcceptedStateTransaction({
     reason: options.reason ?? 'week_rebuild:block',
+    // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). A rebuild publishes a
+    // NEW week around a fact or change the athlete stated — the founding case
+    // of accept-and-reduce, already classified this way at the calendar-mark
+    // owner. Left unstated, the equivalence gate's restoration default THREW
+    // on a repaired week's disclosed shortfall, and the walker's conformance
+    // cell measured the consequence on Sam's own device shape: a game add his
+    // real phone performed and kept came back "impossible". Restorations
+    // declare themselves at the adjustment ledger's own commit; nothing that
+    // reaches this owner is one.
+    operation: 'forward_decision',
     program: proposal,
     markedDays: options.markedDays,
     validateWeekStarts: [
@@ -805,6 +823,10 @@ function commitWeekScopedOverlay(
   ]);
   const proposal = {
     reason: 'week_rebuild:overlay',
+    // Forward decision, same law as commitRebuiltProgram above: an overlay
+    // commit carries an athlete-stated change forward; the RESTORE of a prior
+    // adjustment states 'restoration' at the adjustment ledger's own commit.
+    operation: 'forward_decision' as const,
     program: { weekScopedOverlays: overlays, dateOverrides, overrideContexts },
     markedDays: options?.markedDays,
     validateWeekStarts: Array.from(affectedWeeks),
@@ -830,6 +852,7 @@ export function clearWeekScopedOverlayForDate(args: {
   delete overlays[weekStart];
   commitAcceptedStateTransaction({
     reason: `week_rebuild:clear_overlay:${weekStart}`,
+    operation: 'forward_decision',
     program: { weekScopedOverlays: overlays },
     markedDays: args.markedDays,
     validateWeekStarts: [weekStart],

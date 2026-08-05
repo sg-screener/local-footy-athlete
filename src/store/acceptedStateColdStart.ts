@@ -61,6 +61,11 @@ export interface AcceptedProgramSurfaceSnapshot {
   userRemovalConstraints: UserRemovalConstraint[];
   reversibleAdjustmentLedger: ReversibleAdjustmentLedger;
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
+  /**
+   * R1.3 (shell rebuild): the day the program was generated for — an INPUT
+   * that rides the program surfaces so it publishes and persists with them.
+   */
+  generationAnchorISO?: string | null;
 }
 
 export const ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION = 1 as const;
@@ -228,6 +233,9 @@ export function normalizeAcceptedProgramSurfaces(
     exposureContractsByWeek: normalizeAcceptedKeyedMap<WeeklyExposureContract>(
       value?.exposureContractsByWeek,
     ),
+    generationAnchorISO: typeof value?.generationAnchorISO === 'string'
+      ? value.generationAnchorISO
+      : null,
   };
 }
 

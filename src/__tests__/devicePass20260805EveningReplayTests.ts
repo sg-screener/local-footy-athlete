@@ -131,59 +131,20 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: 'evening-0-boot-quiescence',
-    finding: 'The root: a relaunch with no new athlete decision mints accepted-state revisions',
-    matches: /minted \d+ accepted-state revisions? at boot/,
-    why: 'His tape: revision 25 -> 29 across one launch, three durable transactions, '
-      + '~31.5 s each on his phone, the accepted-mutation lock held ~63 s. Every tap '
-      + 'in that window waits behind the lock and then meets a moved revision. '
-      + 'Hydration is not a decision; the north star says a boot that stores nothing '
-      + 'new derives, it does not transact. This is the mechanism under findings '
-      + 'game-add and game-day-sheet, and the wait under season-change and delete.',
-    paidBy: 'either path: repair = the hydration migration completes its lift (L15) and boot '
-      + 'stops transacting; rebuild = the new shell hydrates by derivation only.',
-  },
-  {
-    id: 'evening-1-season-change-trace',
-    finding: 'Season change failed on device; its trace did not survive to the export',
-    matches: /tap trace .* evicted from the ring/,
-    why: 'The transaction layer lands at every coordinate acting can build (day suite '
-      + 'finding-1a/1b/1-worn, plus tonight\'s worn probes) — so the failing layer is '
-      + 'above it, and the ONE instrument that could name it loses the tap: boot '
-      + 'door-writes are decision events, each launch emits ~115 of them, and the '
-      + '200-entry ring evicts the athlete\'s own tap within two launches. His evening '
-      + 'export holds exactly one boot and zero taps. Fifth sighting of the '
-      + 'instrumentation-alive failure — this cell holds the gap open as a red '
-      + 'instead of a bullet point.',
-    paidBy: 'the ring preserves athlete-initiated traces across relaunches (athlete taps '
-      + 'never evicted by system boot events), or the rebuild\'s boot emits no '
-      + 'decision-event flood at all.',
-  },
-  {
-    id: 'evening-2-game-add',
-    finding: 'Cannot add a pre-season game (evening: the tap the visible world offered refused)',
-    matches: /refused as conflicted/,
-    why: 'The add tap carries expectedAcceptedRevision from the render '
-      + '(useHomeScreen.ts:1055). The world the athlete first sees after launch is '
-      + 'the persisted revision; boot then mints 3 more. His tap is refused '
-      + '`conflicted` ("The accepted program changed before the fixture mutation '
-      + 'could run") and the screen alerts "Couldn\'t update your week" '
-      + '(useHomeScreen.ts:1070-1121) — for a change nothing about his decision '
-      + 'conflicted with.',
-    paidBy: 'boot quiescence (evening-0) or a revision handshake that distinguishes '
-      + '"another DECISION landed" from "the same facts were re-transacted".',
-  },
-  {
-    id: 'evening-3-game-day-sheet',
-    finding: 'The game-day sheet\'s actions fail (evening)',
-    matches: /refused as conflicted/,
-    why: 'Same mechanism through the sheet: Move/Remove route rebuildForGameChange '
-      + 'with the render-time revision. The sheet OPENS (2026-08-01 resolves as a '
-      + 'Game row — asserted green in this cell) and both its actions then refuse '
-      + 'against the boot-minted revision.',
-    paidBy: 'same as evening-2.',
-  },
+  // ── PAID BY R1.3, DELETED 2026-08-05 (the ratchet's own rule) ────────────
+  //
+  // `evening-0-boot-quiescence`, `evening-1-season-change-trace`,
+  // `evening-2-game-add`, `evening-3-game-day-sheet` lived here. The quiescent
+  // boot (store/quiescentBoot.ts) paid all four in one mechanism — exactly the
+  // plan's R1 "Pays:" clause (docs/SHELL_REBUILD_PLAN_2026-08-05.md §3):
+  // boot PARKS the old envelope and DERIVES the world from inputs under the
+  // replay latch, so it mints no durable revisions (evening-0), emits no
+  // decision-event flood into the ring (evening-1), and the first-rendered
+  // world IS the world a tap's expectedAcceptedRevision meets — nothing for
+  // the fixture doors to conflict with (evening-2/-3, green ahead of R1.4b's
+  // retirement of the check itself). The cells stand, reworked onto the boot
+  // law in this same commit; a regression now FAILS plainly instead of
+  // wearing a declaration.
   {
     id: 'evening-4-slow-delete',
     finding: 'Deleting a session takes ~30 seconds on device',
@@ -313,29 +274,44 @@ const LEGACY_SCHEDULE_CONSTRAINT = {
   description: 'Busy week',
 };
 
-async function relaunchThroughHydration(): Promise<{ diskRevision: number }> {
+/**
+ * R1.3 REWORK (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): the
+ * hydration-migration ingress these cells drove CEASED TO EXIST — boot parks
+ * an old-shape envelope byte-identical for R2 and derives the world from
+ * inputs. The first relaunch here plants the old build's bytes (his legacy
+ * constraint riding a fat envelope) and asserts the park; later relaunches
+ * boot over the already-reduced disk. The first-rendered world the athlete
+ * taps against is now the DERIVED world, so the render revision the taps
+ * carry is the post-boot revision — there is no persisted one to diverge
+ * from it.
+ */
+async function relaunchThroughHydration(): Promise<{ renderRevision: number }> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await flushPendingStorageWrites().catch(() => undefined);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     if (pendingStorageWriteCount() === 0) break;
   }
-  const rawEnvelope = localStorageData.get('program-store');
-  assert(rawEnvelope, 'relaunch: no persisted program-store envelope');
-  const envelope = JSON.parse(rawEnvelope) as {
-    state?: {
-      acceptedMaterialContext?: { activeConstraints?: unknown[]; revision?: number };
-    };
-  };
-  assert(envelope.state?.acceptedMaterialContext,
-    'relaunch: the persisted envelope has no acceptedMaterialContext');
-  const diskRevision = Number(envelope.state.acceptedMaterialContext.revision ?? 0);
-  const constraints = envelope.state.acceptedMaterialContext.activeConstraints ?? [];
-  if (!constraints.some((constraint) =>
-    (constraint as { id?: string }).id === LEGACY_SCHEDULE_CONSTRAINT.id)) {
-    envelope.state.acceptedMaterialContext.activeConstraints = [
-      ...constraints, LEGACY_SCHEDULE_CONSTRAINT,
-    ];
-    localStorageData.set('program-store', JSON.stringify(envelope));
+  const alreadyParked = localStorageData.has('program-store.pre-rebuild-envelope');
+  let oldShapeEnvelope: string | null = null;
+  if (!alreadyParked) {
+    // The old build's disk, constructed the way his phone holds it: a fat
+    // output envelope (no `inputs`) carrying the legacy constraint no
+    // current writer can produce.
+    const state = useProgramStore.getState();
+    oldShapeEnvelope = JSON.stringify({
+      state: {
+        currentProgram: state.currentProgram,
+        acceptedMaterialContext: {
+          ...state.acceptedMaterialContext,
+          activeConstraints: [
+            ...(state.acceptedMaterialContext.activeConstraints ?? []),
+            LEGACY_SCHEDULE_CONSTRAINT,
+          ],
+        },
+      },
+      version: 0,
+    });
+    localStorageData.set('program-store', oldShapeEnvelope);
   }
   const disk = new Map(localStorageData);
   useProgramStore.setState({
@@ -352,18 +328,26 @@ async function relaunchThroughHydration(): Promise<{ diskRevision: number }> {
     await useCalendarStore.persist.rehydrate();
     await useProfileStore.persist.rehydrate();
     await useCoachUpdatesStore.persist.rehydrate();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { runQuiescentBoot } = require('../store/quiescentBoot');
+    await runQuiescentBoot();
   });
-  // Let boot's migration transactions settle — his phone spends 63 s here;
-  // Node spends milliseconds, which is the whole point of evening-4.
-  await new Promise<void>((resolve) => setTimeout(resolve, 600));
+  if (oldShapeEnvelope !== null) {
+    const parked = localStorageData.get('program-store.pre-rebuild-envelope');
+    assert(parked === oldShapeEnvelope,
+      'relaunch: the old build\'s envelope was not parked byte-identical — '
+      + 'R2\'s migration input is being corrupted or dropped');
+    assert(parked!.includes(LEGACY_SCHEDULE_CONSTRAINT.id),
+      'relaunch: the parked envelope lost his legacy constraint');
+  }
   const context = (useProgramStore.getState() as unknown as {
     acceptedMaterialContext: { activeConstraints?: { id?: string }[] };
   }).acceptedMaterialContext;
-  assert((context.activeConstraints ?? []).some(
+  assert(!(context.activeConstraints ?? []).some(
     (constraint) => constraint.id === LEGACY_SCHEDULE_CONSTRAINT.id),
-    'relaunch: the legacy schedule constraint did not survive hydration — '
-    + 'this world is not his, and the cell would pass vacuously');
-  return { diskRevision };
+    'R1.3 boot law broken: the legacy schedule constraint entered the DERIVED '
+    + 'world — a hydration lift is running below the quiescent boot');
+  return { renderRevision: currentRevision() };
 }
 
 function currentRevision(): number {
@@ -390,12 +374,19 @@ const main = async () => {
 
   // ── The root: boot is not quiescent ──────────────────────────────────
   await run('evening-0-boot-quiescence: a relaunch with no new decision leaves the revision alone', async () => {
+    // R1.3: revision is no longer persisted — boot DERIVES the world, so the
+    // heir of "disk revision == settled revision" is boot IDEMPOTENCE: two
+    // launches over the same inputs settle on the same revision. (Durable
+    // quiescence — every persisted key byte-identical within the write
+    // budget — is quiescentBootTests' own law.)
     reachHisWorldByActing();
-    const { diskRevision } = await relaunchThroughHydration();
+    await relaunchThroughHydration();
+    const first = currentRevision();
+    await relaunchThroughHydration();
     const settled = currentRevision();
-    assert(settled === diskRevision,
-      `(evening-0) the boot minted ${settled - diskRevision} accepted-state revisions at boot `
-      + `(disk carried revision ${diskRevision}, the settled world reads ${settled}) with `
+    assert(settled === first,
+      `(evening-0) the boot minted ${settled - first} accepted-state revisions at boot `
+      + `(first launch settled at revision ${first}, the second reads ${settled}) with `
       + `zero new athlete decisions — his tape shows the same shape at device cost: `
       + `25 -> 29 across one launch, ~31.5 s per transaction, the accepted-mutation `
       + `lock held ~63 s`);
@@ -468,15 +459,16 @@ const main = async () => {
   // ── Finding: game add (evening) ──────────────────────────────────────
   await run('evening-2-game-add: the add tap the first-rendered world offers is honoured', async () => {
     reachHisWorldByActing();
-    const { diskRevision } = await relaunchThroughHydration();
-    // The athlete's first render shows the persisted world; the tap carries
-    // that render's revision (useHomeScreen.ts:1055). Boot minted past it.
+    const { renderRevision } = await relaunchThroughHydration();
+    // The athlete's first render shows the derived world (R1.3: boot runs
+    // before render); the tap carries that render's revision
+    // (useHomeScreen.ts:1055).
     const tap = await quietAsync(() => executeFixtureMutationTransaction({
       action: 'add',
       fixtureKind: canonicalFixtureKind({ phase: 'Pre-season' } as never),
       targetDate: '2026-08-08',
-      expectedAcceptedRevision: diskRevision,
-      source: fixtureSource('add', '2026-08-08', diskRevision),
+      expectedAcceptedRevision: renderRevision,
+      source: fixtureSource('add', '2026-08-08', renderRevision),
       todayISO: TODAY,
     } as never)) as { outcome?: string; kind?: string; reason?: string; error?: unknown };
     const outcome = tap.outcome ?? tap.kind ?? 'unknown';
@@ -502,13 +494,13 @@ const main = async () => {
     assert(gameDay?.workout?.workoutType === 'Game',
       `(evening-3) his marked game day 2026-08-01 resolves as `
       + `${gameDay?.workout?.workoutType ?? 'EMPTY'} — the sheet never opens`);
-    const { diskRevision } = await relaunchThroughHydration();
+    const { renderRevision } = await relaunchThroughHydration();
     const tap = await quietAsync(() => executeFixtureMutationTransaction({
       action: 'remove',
       fixtureKind: canonicalFixtureKind({ phase: 'Pre-season' } as never),
       sourceDate: '2026-08-01',
-      expectedAcceptedRevision: diskRevision,
-      source: fixtureSource('remove', '2026-08-01', diskRevision),
+      expectedAcceptedRevision: renderRevision,
+      source: fixtureSource('remove', '2026-08-01', renderRevision),
       todayISO: TODAY,
     } as never)) as { outcome?: string; kind?: string; reason?: string; error?: unknown };
     const outcome = tap.outcome ?? tap.kind ?? 'unknown';
@@ -547,9 +539,13 @@ const main = async () => {
     await flushPendingStorageWrites().catch(() => undefined);
     storageStats.armed = false;
     assert(result.ok, '(evening-4) the delete itself failed — a different red than declared');
-    // The DECISION: one day left one store's program surface. The log may
-    // record it. Nothing else changed, so nothing else has a reason to write.
-    const decisionKeys = new Set(['program-store', 'lfa.athlete-action-log.v1']);
+    // The DECISION: one day binned. R1.4a made the decision's own record a
+    // LEDGER APPEND — that store is the decision's home, not overhead. The
+    // program envelope (inputs) and the always-on log may also write.
+    // Nothing else changed, so nothing else has a reason to write.
+    const decisionKeys = new Set([
+      'program-store', 'lfa.athlete-action-log.v1', 'decision-ledger-store',
+    ]);
     const beyondDecision = [...storageStats.setsByKey.entries()]
       .filter(([key]) => !decisionKeys.has(key));
     const envelopeWrites = storageStats.setsByKey.get('program-store') ?? 0;

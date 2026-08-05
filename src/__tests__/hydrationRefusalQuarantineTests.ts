@@ -50,6 +50,12 @@ armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
 import { useProgramStore } from '../store/programStore';
+import {
+  quarantineRefusedPayload,
+  decideQuarantinedWrite,
+  clearAllQuarantines,
+} from '../store/refusedPayloadQuarantine';
+import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 
 let passed = 0;
 let failed = 0;
@@ -130,65 +136,101 @@ async function main(): Promise<void> {
   console.log('\n-- Hydration refusal quarantine --');
 
   await run('the injected refusal actually refuses', async () => {
-    // NON-VACUITY. Every law below is about the aftermath of a refusal; if the
-    // injection stopped firing — a renamed reason, a changed call path — the
-    // cells would pass by never refusing at all. That is precisely how the
-    // upgrade-path suite next door is a guard rather than a proof, and it must
-    // not happen silently twice.
+    // NON-VACUITY, re-seated by the shell rebuild
+    // (docs/SHELL_REBUILD_RULING_2026-08-05.md): the hydration-acceptance
+    // transaction no longer runs at boot, so a refusal can no longer arise
+    // THERE — hydration restores no outputs and cannot refuse them. The
+    // surviving (and always-final) refusal seam is the WRITER BOUNDARY,
+    // which is where the 2026-07-29 wipe actually landed: the wipe was a
+    // persistence event. The cells below hold the same two laws at that
+    // boundary; this cell proves the boundary refuses at all.
     seedFromPreviousBuild();
-    const restore = injectAcceptanceRefusal();
+    const { threw } = await hydrate();
+    assert(!threw,
+      `hydration itself threw under the new boot: ${threw?.name} — ${threw?.message}`);
+    const material = durable.get('program-store');
+    assert(material, 'seeding put nothing on disk');
+    quarantineRefusedPayload('program-store', material);
     try {
-      const { threw } = await hydrate();
-      assert(threw, 'the injected refusal did not reach the hydration acceptance — '
+      const bare = JSON.stringify({ state: { inputs: {} }, version: 0 });
+      const decision = decideQuarantinedWrite('program-store', bare);
+      assert(!decision.allowed,
+        'the writer boundary allowed a bare payload over a quarantined one — '
         + 'the seam has moved and every cell below is vacuous');
-      assert(/ledger|mismatch|blocker/i.test(`${threw.name} ${threw.message}`),
-        `something other than the injected refusal threw: ${threw.name} — ${threw.message}`);
-    } finally { restore(); }
+    } finally {
+      clearAllQuarantines();
+    }
   });
 
   await run('a refused hydration leaves the refused payload untouched on disk', async () => {
-    // QUARANTINE, half one. The refused payload is held, not consumed and not
-    // destroyed — it is the athlete's program, and the only copy.
+    // QUARANTINE, half one, re-seated by the shell-rebuild ruling. The
+    // OLD fat envelope's protection is the PARK: hydrating a previous-build
+    // store writes back the reduced inputs shape, and the boundary parks the
+    // fat copy byte-identical BEFORE that overwrite can land — nothing the
+    // athlete had is destroyed, and R2 migrates from the parked copy.
     seedFromPreviousBuild();
-    const before = persistedProgramMicrocycleCount();
-    assert(before > 0, 'seeding put no program on disk');
-    const restore = injectAcceptanceRefusal();
-    try {
-      await hydrate();
-    } finally { restore(); }
-    assert(persistedProgramMicrocycleCount() === before,
-      `the refusal changed the persisted payload it refused — ${before} microcycles `
-      + `before, ${persistedProgramMicrocycleCount()} after. A refusal must never `
-      + 'persist the state it refused into.');
+    const fatEnvelope = durable.get('program-store');
+    assert(fatEnvelope && persistedProgramMicrocycleCount() > 0,
+      'seeding put no program on disk');
+    durable.delete('program-store.pre-rebuild-envelope');
+    await hydrate();
+    // Force a write-back through the real writer so the park is exercised
+    // deterministically rather than raced.
+    useProgramStore.setState({ isLoading: false } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    assert(durable.get('program-store.pre-rebuild-envelope') === fatEnvelope,
+      'the fat envelope was overwritten WITHOUT being parked — R2 has nothing '
+      + 'to migrate; a refusal (or reduction) must never destroy the state it '
+      + 'refused.');
   });
 
   await run('the bare fallback cannot overwrite a quarantined payload', async () => {
-    // QUARANTINE, half two — THE WIPE ITSELF.
-    //
-    // His second cycle hydrated an EMPTY baseline (v1, 0 weeks) and published it,
-    // and `persistence_result` recorded the write at 18:32:21.258. The refused
-    // payload was still the only copy of his program. So: while a refused payload
-    // is held, a publication that carries no program must not reach the disk.
-    //
-    // Modelled exactly as his second cycle was reached — the boot error screen's
-    // Try Again, which is `persist.rehydrate()` — with the store emptied first,
-    // because that is the state his second cycle started from.
+    // QUARANTINE, half two — THE WIPE ITSELF, at the surviving seam. The
+    // new shape's material is INPUTS (a result, a fact, an anchor). While a
+    // refused material payload is held, the bare fallback is unpersistable;
+    // the next MATERIAL write releases the hold. Same two laws as the wipe
+    // diagnosis, applied to what the store now persists.
     seedFromPreviousBuild();
-    const before = persistedProgramMicrocycleCount();
-    const restore = injectAcceptanceRefusal();
-    try {
-      await hydrate();
-    } finally { restore(); }
-
-    // The bare fallback: nothing in memory, and a hydration that now succeeds.
-    useProgramStore.setState({ currentProgram: null, currentMicrocycle: null } as never);
     await hydrate();
+    // Build a MATERIAL new-shape disk state through the real writer.
+    useProgramStore.setState({
+      sessionFeedback: {
+        'quarantine-probe-before': { completion: 'done' },
+      },
+    } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    const material = durable.get('program-store');
+    const materialParsed = (JSON.parse(material ?? '{}') as {
+      state?: { inputs?: { sessionFeedback?: Record<string, unknown> } };
+    }).state?.inputs;
+    assert(materialParsed?.sessionFeedback?.['quarantine-probe-before'],
+      'the material fixture write did not land — the cell would be vacuous');
+    quarantineRefusedPayload('program-store', material);
 
-    assert(persistedProgramMicrocycleCount() === before,
-      'THE WIPE: a bare fallback published over the refused payload. The '
-      + `persisted program went from ${before} microcycles to `
-      + `${persistedProgramMicrocycleCount()}. While a refused payload is `
-      + 'quarantined, a publication carrying no program must be unpersistable.');
+    // The bare fallback, through the real writer.
+    useProgramStore.setState({ sessionFeedback: {} } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    assert(durable.get('program-store') === material,
+      'THE WIPE: a bare fallback published over the refused payload. While a '
+      + 'refused payload is quarantined, a publication carrying no inputs '
+      + 'must be unpersistable.');
+
+    // The release: a material write passes and lifts the hold.
+    useProgramStore.setState({
+      sessionFeedback: {
+        'quarantine-probe-after': { completion: 'done' },
+      },
+    } as never);
+    await flushPendingStorageWrites().catch(() => undefined);
+    const released = durable.get('program-store');
+    assert(released && released !== material,
+      'a material input write was refused while quarantined — that strands the athlete');
+    const releasedInputs = (JSON.parse(released) as {
+      state?: { inputs?: { sessionFeedback?: Record<string, unknown> } };
+    }).state?.inputs;
+    assert(releasedInputs?.sessionFeedback?.['quarantine-probe-after'],
+      'the releasing write did not carry the material that released it');
+    clearAllQuarantines();
   });
 
   console.log(`\nHydration refusal quarantine totals: ${passed} passed, ${failed} failed`);

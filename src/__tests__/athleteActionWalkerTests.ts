@@ -230,10 +230,31 @@ const TEAM_DAY_SETS: readonly (readonly string[])[] = [
 const GAME_DAY_CHOICES: readonly (string | undefined)[] = [undefined, 'Saturday', 'Sunday'];
 
 function profileFor(rng: () => number): OnboardingData {
-  const teamDays = pickFrom(rng, TEAM_DAY_SETS);
-  const gameDay = pickFrom(rng, GAME_DAY_CHOICES);
+  const seasonPhase = pickFrom(rng, SEASON_PHASES);
+  // Product-reachable worlds only: the TeamTrainingDays step is visible in
+  // pre/in-season and requires at least one day; the no-team-nights world is
+  // real only off-season (the step is not asked). Found by R1.3 — the
+  // quiescent boot gates on a COMPLETED onboarding, and these worlds were
+  // silently failing completion while the old boot never looked.
+  const teamDays = seasonPhase === 'Off-season'
+    ? pickFrom(rng, TEAM_DAY_SETS)
+    : pickFrom(rng, TEAM_DAY_SETS.filter((set) => set.length > 0));
+  // A product-reachable world: In-season onboarding REQUIRES a game-day
+  // answer (the completion guard refuses without one, and the app never
+  // reaches the home screen on a refused completion). The no-game-day
+  // choice stays for the phases where it is a real world.
+  const gameDay = seasonPhase === 'In-season'
+    ? pickFrom(rng, GAME_DAY_CHOICES.filter((choice): choice is string => !!choice))
+    : pickFrom(rng, GAME_DAY_CHOICES);
   return {
-    seasonPhase: pickFrom(rng, SEASON_PHASES),
+    // The personal basics the completion guard requires — a walked athlete
+    // answered every step, or the world-builder is acting a world the product
+    // would refuse (found by R1.3: the quiescent boot gates on a COMPLETED
+    // onboarding, and the old boot never looked).
+    firstName: 'Walker',
+    heightCm: 184,
+    weightKg: 90,
+    seasonPhase,
     position: 'inside_mid',
     motivation: 'Dominate your level',
     trainingDaysPerWeek: 5,
@@ -399,6 +420,15 @@ function performAction(action: WalkerAction): WalkerStepResult {
     case 'answer_onboarding': {
       useProfileStore.getState().updateOnboardingData(action.profile);
       const outcome = useProfileStore.getState().completeOnboarding();
+      // A refused completion is a broken WORLD-BUILDER, not a world: the
+      // product gates the whole app (and now the quiescent boot) on a
+      // completed onboarding, so a walker world that failed completion would
+      // be acting below the door. Loud, not silent (found by R1.3).
+      if (outcome && typeof outcome === 'object' && (outcome as { ok?: boolean }).ok === false) {
+        throw new Error('walker world-builder: onboarding completion REFUSED — '
+          + JSON.stringify((outcome as { missingAnswers?: unknown }).missingAnswers
+            ?? (outcome as { message?: unknown }).message));
+      }
       onboarded = true;
       return { ...base, outcome: typeof outcome === 'object' && outcome
         ? String((outcome as { outcome?: string }).outcome ?? 'completed') : 'completed' };
@@ -497,8 +527,39 @@ function performAction(action: WalkerAction): WalkerStepResult {
     }
     case 'mark_calendar': {
       const calendar = useCalendarStore.getState();
-      if (action.mark === 'game') calendar.setGameDay(action.date, todayISO);
-      else if (action.mark === 'rest') calendar.setRestDay(action.date);
+      if (action.mark === 'game') {
+        // THE FIXTURE DOOR, NOT THE STORE PRIMITIVE UNDER IT (R1.3, plan §3
+        // R1 unit 4: "the fixture doors (add/remove game) rewired to append +
+        // re-derive"). `setGameDay` is declared COMPATIBILITY-ONLY in the
+        // calendar store itself; the live Home tap enters at the fixture
+        // mutation transaction, which catches the replan's
+        // RequiredCoreRelocationError and ANSWERS `impossible` — the walk
+        // crashing on that throw (SEED 2, off-season Sunday game) was the
+        // harness-enters-below-the-door shape, found for the fifth time. This
+        // is also the SAME interpreter the quiescent boot replays fixture
+        // decisions through, so act and replay walk one door.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { executeFixtureMutationInMemory } = require('../store/fixtureMutationTransaction');
+        const phase = (useProfileStore.getState().onboardingData as {
+          seasonPhase?: string;
+        }).seasonPhase;
+        const revision = useProgramStore.getState().acceptedMaterialContext.revision;
+        const result = quiet(() => executeFixtureMutationInMemory({
+          action: 'add',
+          fixtureKind: phase === 'Pre-season' ? 'practice_match' : 'game',
+          targetDate: action.date,
+          expectedAcceptedRevision: revision,
+          source: {
+            requestedBy: 'athlete',
+            producer: 'tap',
+            surface: 'program_tab',
+            commandId: `walker:mark-game:${action.date}:revision-${revision}`,
+          },
+          todayISO,
+        })) as { outcome: string; reason?: string };
+        return { ...base, outcome: result.outcome, message: result.reason ?? null };
+      }
+      if (action.mark === 'rest') calendar.setRestDay(action.date);
       else { calendar.removeGameDay(action.date); calendar.removeRestDay(action.date); }
       const marks = useCalendarStore.getState().markedDays ?? {};
       useProgramStore.setState({
@@ -1564,7 +1625,13 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
       + 'titling one. NOT paid by the detail-surface task.',
     expiresWhen: 'every conditioning part the projection carries appears in the '
       + 'session list, whatever else is on the day.',
-    redsIn: 'both',
+    // 'both' -> 'deep' 2026-08-05 (R1.3): the world-fidelity fixes (fixture
+    // marks through the real door, fresh-install ledger reset) re-rolled the
+    // bounded seeds off this coordinate; the deep tier still reaches it, and
+    // the combination MATRIX reaches it deterministically either way
+    // (team_night × [conditioning], 2 obs DISAGREES — its containment names
+    // this entry). Reachability moved; the defect did not.
+    redsIn: 'deep',
   },
   // `conditioning_attached_to_a_composed_optional_day_hides_its_part` (L-P6)
   // — declared and PAID within one session, 2026-08-01. The shape (a typed
@@ -1572,29 +1639,39 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // optional marker LEAKING onto combined days through `stackTemplate`'s base
   // spread; clearing the marker at that composition site removed every
   // reachable instance, and this list's own stale-debt law forced the
-  // deletion. The recovery-as-last-resort classifier the shape exposed is
-  // still the D13/sessionComponents family's — see
-  // `session_list_calls_a_conditioning_day_recovery` — ENTRY DELETED
-  // 2026-08-05, MOVED NOT PAID. The defect is OPEN: `buildSessionTemplate`
-  // still short-circuits to `mode: "recovery"` on `isRecoveryWorkout`
-  // (sessionTemplate.ts:248) while `getSessionComponents` can answer
-  // conditioning for the same workout — the athlete shown a recovery day
-  // over conditioning work. What changed is REACH, not the defect: adding
-  // 'recovery' to CATEGORIES (the 2026-08-05 choose-door ruling) shifted
-  // every seeded path, and neither tier now deterministically builds the
-  // tier/content-divergence coordinate (suspected: a G+1 derived-recovery
-  // replacement keeping attached conditioning — the athlete-door recovery
-  // add was probed and does NOT diverge: template and components both say
-  // recovery). Deletion is what the stale-debt cell demands of a VALID run
-  // (unlike the 2026-08-01 restore, no undeclared reds truncated these
-  // walks). Owner unchanged: the D13 session-template owner, with
-  // `sessionComponents` — the answer should come from the PARTS. Recorded in
-  // docs/RECOVERY_CHOOSE_DOOR_REPORT_2026-08-05.md.
-  // NOTE 2026-08-01: this entry was briefly deleted as stale and RESTORED the
-  // same day — the run that reported it un-reproducing had its deep walks
-  // truncated by then-undeclared L-P6 violations, so the seeds never reached
-  // this entry's world. A stale-report from a run with undeclared reds in it
-  // is not evidence.
+  // deletion.
+  {
+    // RESTORED 2026-08-05, SAME DAY IT WAS DELETED — reach came back, so the
+    // entry comes back, exactly as its own deletion note demanded. The entry
+    // was deleted (MOVED NOT PAID) when the choose-door ruling re-rolled every
+    // seeded path and neither tier deterministically built the coordinate; the
+    // deletion note SUSPECTED "a G+1 derived-recovery replacement keeping
+    // attached conditioning". The R1.3 world-fidelity fixes (fixture marks
+    // through the real door, fresh-install ledger reset) re-rolled the paths
+    // again and bounded SEED 8 now builds precisely the suspected coordinate:
+    // Thursday fixture marked, `conditioning_light` added on Friday — G+1 —
+    // via `keep_the_day`, and the day's list reads recovery over the
+    // projection's conditioning. Recorded in
+    // docs/RECOVERY_CHOOSE_DOOR_REPORT_2026-08-05.md.
+    // (NOTE 2026-08-01 carried forward: an earlier stale-report from a run
+    // with undeclared reds truncating its walks is not evidence.)
+    id: 'session_list_calls_a_conditioning_day_recovery',
+    law: 'L-P3 TEMPLATE = PROJECTION',
+    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
+    why: 'RECOVERY AS A MODE SHORT-CIRCUIT. `buildSessionTemplate` answers '
+      + '`mode: "recovery"` from `isRecoveryWorkout` (sessionTemplate.ts:248) '
+      + 'before its conditioning arms run, while `getSessionComponents` reads '
+      + 'the same workout\'s parts and answers conditioning — the athlete is '
+      + 'shown a recovery day over conditioning work. Reproduce: bounded SEED '
+      + '8, 4 actions — Pre-season, mark G, add conditioning_light on G+1 via '
+      + 'keep_the_day.',
+    paidBy: 'the D13 session-template owner, with `sessionComponents` — the '
+      + 'answer should come from the PARTS, not a name/type classifier that '
+      + 'outranks them.',
+    expiresWhen: 'the session list never renders recovery for a day whose '
+      + 'projection carries conditioning the list does not show.',
+    redsIn: 'bounded',
+  },
   {
     id: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
     law: 'L-P3 TEMPLATE = PROJECTION',
@@ -1652,47 +1729,43 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // with this entry. L11's rule is the reason both exist: the moment two
   // defects differ only by their combination coordinates, the space needs
   // enumerating rather than another single fix.
+  // `session_list_drops_a_team_night_stack_and_badges_support` — ENTRY
+  // DELETED 2026-08-05, MOVED NOT PAID (the same day's second reach loss).
+  // The combination shape (a team night carrying both gym domains rendering
+  // as neither, plus a `support` badge) stopped being deterministically
+  // reachable in EITHER tier after the R1.3 world-fidelity fixes re-rolled
+  // every seeded path. The defect is pre-existing composition code and its
+  // TWO constituent mechanisms remain declared on this list
+  // (`session_list_drops_conditioning_attached_to_an_appointment`,
+  // `session_list_badges_a_midline_row_the_projection_has_no_part_for`);
+  // the combination matrix still watches the composition itself as its one
+  // blind spot (cells [5]/[6], composition `roles=[midline]
+  // buckets=[conditioning,strength] cond=block_no_flag`), now pointed at the
+  // constituent entries. Owner unchanged: the D13 session-template owner
+  // with `sessionComponents`; paying one mechanism alone still leaves the
+  // matrix blind spot standing until the composition is re-measured.
   {
-    id: 'session_list_drops_a_team_night_stack_and_badges_support',
-    law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \["conditioning","strength"\] and invents \["support"\]/,
-    why: 'A TEAM NIGHT CARRYING BOTH GYM DOMAINS RENDERS AS NEITHER. The '
-      + 'projection carries `conditioning`, `strength` and `team_training`; the '
-      + 'session list shows `support` and `team_training` — so the athlete opens '
-      + 'a day holding a conditioning piece and a strength piece and reads '
-      + 'neither, plus a badge for work the projection has no part for. '
-      + 'MEASURED 2026-08-05 (stage 2 priority A, `WALKER_LOG_LP3=1`): the '
-      + 'failing day is `roles=[midline] buckets=[conditioning,strength] '
-      + 'cond=block_no_flag` — rows ["Dragon Flag" (no authored role), '
-      + '"Erg EMOM - 10-15 cal"], workoutType "Team Training". Two mechanisms, '
-      + 'one day, and each is an entry already on this list: (1) the '
-      + 'conditioning is wired `conditioningBlock`-without-'
-      + '`hasCombinedConditioning` — the shape `stackTemplate` builds when a '
-      + 'session stacks onto a team anchor with no strength owner '
-      + '(`canonicalPlanChangeCandidateMaterializer.ts:198`) — and the template '
-      + 'emits conditioning off the FLAG (`sessionTemplate.ts:257`) while the '
-      + 'component owner reads the BLOCK ids, so the list drops it '
-      + '(`session_list_drops_conditioning_attached_to_an_appointment`). '
-      + '(2) with conditioning present the sole trunk row is not sole content '
-      + '(`sessionComponents.ts:658`), so it buckets `strength` for the '
-      + 'projection while the template\'s name classifier badges it `midline` → '
-      + '`support` (`session_list_badges_a_midline_row_the_projection_has_no_'
-      + 'part_for`) — and being the ONLY gym row, `strength` vanishes from the '
-      + 'template entirely. The defect is PRE-EXISTING composition code on both '
-      + 'sides; stage 1 Task A only made the world reachable. The combination '
-      + 'matrix carries this as its one blind spot with the same composition '
-      + 'string, held by its cells [5] and [6]. DEEP ONLY: the composition '
-      + 'needs a worn world (bye-week work-capacity stacked onto a team night '
-      + 'whose gym half is down to one trunk row). Reproduce: deep, step 63, '
-      + '2026-08-19 — template ["support","team_training"] / projection '
-      + '["conditioning","strength","team_training"]; `WALKER_LOG_LP3=1` prints '
-      + 'the row-level coordinate.',
-    paidBy: 'the D13 session-template owner with `sessionComponents` — the same '
-      + 'two owners named by the two entries this decomposes into. Paying '
-      + 'either one alone does NOT retire this entry, which is what makes it '
-      + 'worth declaring separately rather than widening either regex.',
-    expiresWhen: 'a day carrying team training plus both gym domains lists both '
-      + 'of them, and badges nothing the projection has no part for.',
+    // DECLARED 2026-08-05 (R1.3 triage): the composed-optional MARKER
+    // SURVIVES onto a day carrying team training + conditioning, so the
+    // one-word law fires on a card that is genuinely three parts. Same
+    // family as the marker-leak paid 2026-08-01 ("stackTemplate's base
+    // spread"), reached at a site that payment did not clear — the walker
+    // reached it the first run after the R1.3 world-fidelity fixes let deep
+    // worlds mark fixtures through the real door. Reproduce: deep SEED 3,
+    // 67 actions, offending day 2026-10-12 — a typed gunshow session
+    // renders ["Gunshow","Conditioning","Team Training"].
+    id: 'composed_optional_marker_survives_a_stacked_combination',
+    law: 'L-P6 CHARTER TYPE NAMES ITSELF',
+    matches: /renders \["Gunshow","Conditioning","Team Training"\]/,
+    why: 'The `composedOptionalKind` marker guarantees ONE composed session '
+      + '(`stackTemplate` clears it on combining) — a marked workout on a day '
+      + 'whose parts include a team anchor and a conditioning part means a '
+      + 'combining site kept the marker it should have cleared, the exact '
+      + 'class the 2026-08-01 payment cleared at ONE site.',
+    paidBy: 'the D13 session-template/composition owner — clearing the marker '
+      + 'at every combining site, not the one the first payment found.',
+    expiresWhen: 'no workout carrying `composedOptionalKind` shares its day '
+      + 'with parts the marker\'s one-word law cannot admit.',
     redsIn: 'deep',
   },
 
@@ -2638,8 +2711,10 @@ function tapeWorldProfile(overrides?: Partial<Record<string, unknown>>): Onboard
     seasonPhase: 'Pre-season',
     ...overrides,
   } as Record<string, unknown>;
-  delete profile.usualGameDay;
-  delete profile.gameDay;
+  // The tape world has no game anchor — unless the caller's OVERRIDES supply
+  // one (an In-season charter world must, or completion refuses it).
+  if (!overrides || !('usualGameDay' in overrides)) delete profile.usualGameDay;
+  if (!overrides || !('gameDay' in overrides)) delete profile.gameDay;
   return profile as unknown as OnboardingData;
 }
 
@@ -2680,10 +2755,38 @@ run('a door-added charter session names itself (device-pass fail 2)', () => {
     freshInstall();
     performAction({
       kind: 'answer_onboarding',
-      profile: tapeWorldProfile({ seasonPhase: 'In-season' }),
+      profile: tapeWorldProfile({
+        seasonPhase: 'In-season',
+        usualGameDay: 'Saturday',
+        gameDay: 'Saturday',
+      }),
     });
     performAction({ kind: 'generate_program' });
-    const target = addDaysISO(weekStart, 5);
+    // A REACHABLE target, not a coordinate: the world-builder now honours the
+    // In-season game anchor (R1.3 world-fidelity), so Saturday IS the game day
+    // and the door rightly refuses adds there — and the game week composes
+    // with no empty day at all. The one-word assertion below needs the added
+    // session ALONE on the card, so the walk FREES a day first through the
+    // bin door (walking days until one applies, the L16 precedent), staying
+    // clear of the fixture and its neighbours where the G±1 routes turn an
+    // add into a guided ask. Two real door moves instead of one seeded
+    // coordinate.
+    const beforeAdd = quiet(() => project({ week: projectedWeek(), weekStart }));
+    const gameDate = beforeAdd.days.find((candidate) => candidate.kind === 'game')?.date;
+    const nearGame = new Set(gameDate
+      ? [gameDate, addDaysISO(gameDate, 1), addDaysISO(gameDate, -1)]
+      : []);
+    let target: string | null = null;
+    for (const day of visibleWeek()) {
+      if (!day.workout || nearGame.has(day.date)) continue;
+      const binned = performAction({ kind: 'plan_change', change: {
+        kind: 'remove_session', date: day.date, scope: 'whole_day',
+      } as PlanChange });
+      if (binned.outcome === 'applied') { target = day.date; break; }
+    }
+    assert(target,
+      `${category}: no day in the In-season game week could be freed for the add `
+      + '— the cell\'s world no longer reaches the tape\'s move');
     const result = performAction({
       kind: 'plan_change',
       change: { kind: 'add_category', category, date: target } as PlanChange,
@@ -3223,6 +3326,13 @@ async function walkTheL16Slice(): Promise<void> {
     await useCalendarStore.persist.rehydrate();
     await useProfileStore.persist.rehydrate();
     await useCoachUpdatesStore.persist.rehydrate();
+    // 4. THE QUIESCENT BOOT (R1.3, shell rebuild): the product's relaunch
+    // derives the world from inputs after hydration — persistence carries
+    // no outputs to restore. World-follows-product; the assertion above
+    // this line ("relaunch-identical") did not move.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { runQuiescentBoot } = require('../store/quiescentBoot');
+    await runQuiescentBoot();
   };
 
   const loops: { mode: string; drive: () => void }[] = [
@@ -3245,9 +3355,24 @@ async function walkTheL16Slice(): Promise<void> {
     },
   ];
 
+  // THE WORLD'S CLOCK IS THE APP'S CLOCK (found by R1.3). The walker's
+  // advance_time used to move a private variable while todayISOLocal() kept
+  // reading the machine — invisible while boot restored stored outputs, and
+  // exactly wrong once boot DERIVES for "today". The slice pins the app
+  // clock to the world's day, as the dev-E2E harness does, and clears it in
+  // finally so no other cell inherits a frozen 2026 clock.
+  const setWorldClock = (dayISO: string): void => {
+    (globalThis as { __LFA_DEV_E2E_CLOCK_RECEIPT__?: unknown }).__LFA_DEV_E2E_CLOCK_RECEIPT__ = {
+      anchorInstant: `${dayISO}T12:00:00+10:00`,
+      timezone: 'Australia/Melbourne',
+    };
+  };
+  try {
   for (const loop of loops) {
     freshInstall();
+    setWorldClock(todayISO);
     loop.drive();
+    setWorldClock(todayISO);
 
     // ── CHANGE — through the real dispatch, and it must actually land ──
     const occupied = visibleWeek().filter((day) => !!day.workout);
@@ -3274,6 +3399,9 @@ async function walkTheL16Slice(): Promise<void> {
     const projectedBefore = JSON.stringify(projectedWeek());
     const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays);
     const constraintsBefore = JSON.stringify(useProgramStore.getState().userRemovalConstraints);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { decisionLedgerEntries } = require('../store/decisionLedgerStore');
+    const ledgerBefore = JSON.stringify(decisionLedgerEntries());
     assert(seenBefore.length > 0 && projectedBefore.length > 2,
       `${loop.mode}: nothing to compare — a vacuous relaunch proof is worse than none`);
 
@@ -3420,9 +3548,23 @@ async function walkTheL16Slice(): Promise<void> {
       `${loop.mode}: the week overlays' CONTENT did not survive the relaunch — this is `
       + 'not the declared provenance nesting or the legacy-contract materialisation, '
       + 'both of which are normalised out above.');
-    assert(JSON.stringify(useProgramStore.getState().userRemovalConstraints) === constraintsBefore,
+    // R1.3 (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): the
+    // removal-constraint RECORD is a derived output now — boot recomposes it by
+    // replaying the ledger against the regenerated program, so the wall-clock
+    // stamps inside its workout snapshot (the L14 impurity already declared for
+    // the projection) can never round-trip byte-for-byte. What must outlive the
+    // relaunch byte-identical is the DECISION — the ledger entry — and it is
+    // asserted below. The record itself is held to the same two declared
+    // normalisations the projection and overlays use; nothing else may differ.
+    assert(semantic(useProgramStore.getState().userRemovalConstraints)
+      === semantic(JSON.parse(constraintsBefore)),
       `${loop.mode}: the athlete's removal decisions did not survive the relaunch `
-      + 'byte-identical — a bin that does not outlive a relaunch is not a decision');
+      + '— a bin that does not outlive a relaunch is not a decision. (Not the '
+      + 'declared timestamp/provenance normalisations, which are excluded.)');
+    assert(JSON.stringify(decisionLedgerEntries()) === ledgerBefore,
+      `${loop.mode}: the decision LEDGER did not survive the relaunch byte-identical `
+      + '— the one store that holds the athlete\'s decisions must round-trip exactly, '
+      + 'and replay must never append (the replay latch is the law under test here).');
 
     // ── And every law still holds on the hydrated world ──
     for (const broken of checkInvariants({
@@ -3432,6 +3574,9 @@ async function walkTheL16Slice(): Promise<void> {
       throw new Error(`${loop.mode}: ${broken.law} after relaunch — ${broken.detail}`);
     }
     console.log(`      L16 loop closed — ${loop.mode}`);
+  }
+  } finally {
+    delete (globalThis as { __LFA_DEV_E2E_CLOCK_RECEIPT__?: unknown }).__LFA_DEV_E2E_CLOCK_RECEIPT__;
   }
 }
 

@@ -55,6 +55,13 @@ export function resetStoresToFreshInstall(reason: string): void {
     .usePendingCoachClarifierStore.getState().reset();
   require('../../store/coachContextStateStore')
     .useCoachContextStateStore.getState().clearCoachContext();
+  // The decision ledger (R1.1) — a fresh install has recorded no decisions.
+  // FOUND 2026-08-05 by the L16 relaunch cell the day the quiescent boot began
+  // REPLAYING the ledger: every prior cell's landed decisions replayed into the
+  // L16 world at boot, recomposing a week whose own history was one delete.
+  // Through the store's own reset door, like every armoured store above.
+  require('../../store/decisionLedgerStore')
+    .useDecisionLedgerStore.getState().clear();
   useProgramStore.setState({
     currentProgram: null, currentMicrocycle: null, todayWorkout: null,
     isGenerating: false, isLoading: false, error: null, blockState: null,
