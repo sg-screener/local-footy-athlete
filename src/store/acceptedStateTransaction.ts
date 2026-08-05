@@ -24,7 +24,12 @@ import {
   type ProgramState,
   useProgramStore,
 } from './programStore';
-import { useCalendarStore, applyCalendarMarkedDaysWrite } from './calendarStore';
+import {
+  useCalendarStore,
+  applyCalendarMarkedDaysWrite,
+  beginCalendarResetAction,
+  endCalendarResetAction,
+} from './calendarStore';
 import {
   useReadinessStore,
   applyReadinessSignalsWrite,
@@ -813,12 +818,57 @@ export function commitAcceptedStateTransaction(
     acceptedMaterialContext: staged.context,
   });
   // Through the calendar owner: the transaction is a WRITER of markedDays,
-  // not an exception to its door. A clear() opens a reset act around this
-  // commit, which is what admits the one legitimate erasure.
-  applyCalendarMarkedDaysWrite({
-    next: staged.context.markedDays,
-    writer: 'accepted_transaction',
-  });
+  // not an exception to its door — and, exactly like the readiness publish
+  // below, an EMPTY map is a common real state here. Removing the last
+  // fixture of a world leaves no marks at all, and the athlete's own removal
+  // is the legitimate erasure the door's anti-wipe quarantine exists to
+  // distinguish from a default overwriting answered data.
+  //
+  // WHAT THIS FIXES (2026-08-05, found diagnosing the fixture identity law):
+  // this publish opened NO reset act, so the quarantine refused it as
+  // `default_over_answered_marks` and — because the outcome was discarded —
+  // refused it SILENTLY. Removing a game left the accepted mirror saying the
+  // fixture was gone while the persisted calendar life-fact still said
+  // `game`. The mirror is the copy that does not survive R5, so the athlete's
+  // removed fixture was set to come back the moment inputs became the truth.
+  // The comment that used to sit here described `calendarStore.clear()`'s own
+  // internal reset act, not this one, and read as if this path were covered.
+  //
+  // AND THE ACT IS NARROWED TO THE DECISION THAT EARNS IT. Only a proposal
+  // that DECLARES `markedDays` is publishing a marks decision; when it is
+  // absent the context inherited `priorContext.markedDays` (see the staging
+  // above), so an empty map there was never authored by anyone and must still
+  // meet the quarantine. Opening the act unconditionally would hand every
+  // accepted publish the power to wipe the calendar — the hydration
+  // refuse-then-overwrite shape, bought back at the one site that publishes
+  // most often. The narrowing costs nothing in the legitimate path: an
+  // inherited context cannot be empty while the live store has marks.
+  {
+    const authoredMarksDecision = proposal.markedDays !== undefined;
+    const calendarResetActionId = authoredMarksDecision
+      ? beginCalendarResetAction('accepted_state_publish')
+      : undefined;
+    try {
+      const published = applyCalendarMarkedDaysWrite({
+        next: staged.context.markedDays,
+        writer: 'accepted_transaction',
+        ...(calendarResetActionId ? { resetActionId: calendarResetActionId } : {}),
+      });
+      // NOT DISCARDED. Under the reset act the remaining refusal reasons are
+      // unreachable by construction, which is exactly why a refusal here is a
+      // breach rather than a condition: the accepted state has already been
+      // published to the program store one statement above, so a calendar the
+      // door would not accept means the two owners of markedDays have already
+      // diverged. Loud, not silent — the silence is what cost this defect.
+      if (!published.ok) {
+        throw new Error(
+          `accepted_state_calendar_publish_refused: ${published.reason}`,
+        );
+      }
+    } finally {
+      if (calendarResetActionId) endCalendarResetAction(calendarResetActionId);
+    }
+  }
   // Through the readiness owner. The accepted context is the canonical
   // publisher and an empty map is a common real state (a cleared signal, a
   // pruned week), so the publish is a legitimate erasure under a reset act

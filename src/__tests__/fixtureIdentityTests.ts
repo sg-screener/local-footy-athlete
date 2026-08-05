@@ -409,6 +409,36 @@ run('fixture-identity-3 a published week equals the week derived from the '
     + 'and cell 1 is what happens when a later decision rebases from it.');
 });
 
+// ── Cell 4: THE LIFE-FACT SURVIVES NOTHING IT SHOULD NOT ──────────────────
+
+run('fixture-identity-4 removing the last fixture clears the athlete\'s '
+  + 'calendar life-fact', () => {
+  freshWorld();
+  const saturday = addDaysISO(weekStart, 5);
+
+  const added = fixtureDoor('add', saturday);
+  assert(added.outcome !== 'impossible' && added.outcome !== 'no_change',
+    `the fixture ADD did not land (outcome "${added.outcome}") — a different red`);
+  assert(useCalendarStore.getState().markedDays?.[saturday] === 'game',
+    'the fixture add did not record the calendar life-fact at all, so this cell '
+    + 'cannot observe whether removing it clears it');
+
+  const removed = fixtureDoor('remove', saturday);
+  assert(removed.outcome !== 'impossible' && removed.outcome !== 'no_change',
+    `the fixture REMOVE did not land (outcome "${removed.outcome}") — a different red`);
+
+  // THE PERSISTED INPUT, not the accepted mirror. The mirror correctly says
+  // the fixture is gone; the calendar store is what survives to R2's migration
+  // and outlives the mirror at R5, so a stale mark here is the athlete's
+  // removed game coming back later.
+  const mark = useCalendarStore.getState().markedDays?.[saturday];
+  assert(mark === undefined,
+    `the athlete removed the fixture and the calendar life-fact still reads `
+    + `"${mark}" on ${saturday}. The accepted mirror says it is gone, so the two `
+    + 'owners of this fact disagree — and the mirror is the one that does not '
+    + 'survive R5.');
+});
+
 console.log(`\nFixture identity totals: ${passed} passed, ${failed} failed`);
 
 // THE RATCHET DIRECTION: a declared red that no longer reds is a cell that
