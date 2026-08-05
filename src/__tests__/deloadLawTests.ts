@@ -395,6 +395,75 @@ const describeRows = (workout: Workout): string =>
     describeRows(withSection18WorkoutEvidence(hingeSession(deloaded), 'infer')));
 }
 
+/* ── §12: what an athlete-CHOSEN deloaded day says (Sam, signed 2026-08-05) ──
+ *
+ * docs/METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md §2, option (b):
+ *
+ *   > Easy day: keep RPE 5-6; every rep fast and clean.
+ *
+ * Day-scoped, selected by the TYPED CAUSE per the copy law, with "Deload:"
+ * RESERVED for scheduled deload weeks. Device finding 6b: adding a session onto
+ * G-1 and answering "Deloaded" stamped week-deload words onto a standard week.
+ * The dose was the athlete's own choice and correct; the words described a week
+ * they were not in.
+ */
+{
+  const scheduled = resolveDeloadWeekPolicy('Off-season', 'deload')!;
+  const chosen = resolveDoorDeloadPolicy({ door: 'readiness', seasonPhase: 'In-season' })!;
+  const strengthRows = () => [row('Back Squat', 4), row('Bicep Curls', 3)];
+  const notesOf = (rows: WorkoutExercise[]) =>
+    rows.map((entry) => entry.notes ?? '').join(' ');
+
+  const scheduledNotes = notesOf(applyStrengthDeloadToExercises(strengthRows(), scheduled));
+  const chosenNotes = notesOf(applyStrengthDeloadToExercises(strengthRows(), chosen));
+
+  ok('a SCHEDULED deload week still says "Deload:" — the week really is one',
+    /Deload: keep RPE 5-6; every rep fast and clean, nowhere near failure\./.test(scheduledNotes),
+    scheduledNotes);
+
+  ok('an athlete-CHOSEN easy day says Sam\'s signed day-scoped sentence',
+    chosenNotes.includes('Easy day: keep RPE 5-6; every rep fast and clean.'),
+    chosenNotes);
+
+  ok('and it never says "Deload:" — that word is reserved for scheduled weeks',
+    !/Deload:/i.test(chosenNotes),
+    chosenNotes);
+
+  const conditioningRows = () => [
+    row('Easy Aerobic Bike', 1),
+    row('VO2 Intervals', 1),
+  ];
+  const chosenConditioning = notesOf(
+    applyConditioningDeloadToExercises(conditioningRows(), chosen));
+  ok('the conditioning rows of a chosen easy day carry no week-deload words either',
+    !/Deload:/i.test(chosenConditioning),
+    chosenConditioning);
+
+  // THE REPEAT GUARD, recorded alongside §12 and paid in the same unit. The
+  // guard matched "Deload week:" while the appended sentence began "Deload: ",
+  // so it never recognised its own output and a second application appended a
+  // duplicate. Notes persist, so a re-derived day could wear the sentence twice.
+  const once = applyStrengthDeloadToExercises(strengthRows(), scheduled);
+  const twice = applyStrengthDeloadToExercises(once, scheduled);
+  const occurrences = (text: string, needle: string) => text.split(needle).length - 1;
+  ok('applying the scheduled deload twice does not duplicate its sentence',
+    occurrences(notesOf(twice), 'Deload: keep RPE 5-6') === 1,
+    notesOf(twice));
+
+  const chosenOnce = applyStrengthDeloadToExercises(strengthRows(), chosen);
+  const chosenTwice = applyStrengthDeloadToExercises(chosenOnce, chosen);
+  ok('applying the chosen easy day twice does not duplicate its sentence',
+    occurrences(notesOf(chosenTwice), 'Easy day: keep RPE 5-6') === 1,
+    notesOf(chosenTwice));
+
+  // The typed cause is CARRIED, not inferred downstream from the words. A
+  // consumer that had to read the sentence to learn which door opened would be
+  // a second representation of the same fact.
+  ok('the policy carries the door that minted it',
+    scheduled.door === 'scheduled' && chosen.door === 'readiness',
+    `scheduled=${(scheduled as { door?: string }).door} chosen=${(chosen as { door?: string }).door}`);
+}
+
 /* ── Result ── */
 
 console.log(

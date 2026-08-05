@@ -7,6 +7,43 @@ proposal Sam has accepted — parked means UNANSWERED.
 
 ---
 
+## §11 + §12 ANSWERED — Sam, 2026-08-05 (evening signing session)
+
+Both recorded verbatim in `docs/METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md` and
+committed as authored. Superseding answers; nothing below is edited in place.
+
+**§12 — SIGNED, option (b).** An athlete-CHOSEN deloaded day says:
+
+> Easy day: keep RPE 5-6; every rep fast and clean.
+
+Day-scoped, selected by the TYPED CAUSE per the copy law, with "Deload:"
+RESERVED for scheduled deload weeks. SHIPPED: `DeloadWeekPolicy` now carries
+the `door` that minted it, and the strength note is selected from it; device
+cell `finding-6b-door` retired. The recorded repeat-guard mismatch was paid in
+the same unit — the guard matched `Deload week:` while appending `Deload: `,
+so it never recognised its own output; it now compares against the exact
+sentence.
+
+**§11 — SUPERSEDED by Sam's MetCon re-authoring**, which is a bigger change
+than a reworded sentence: the session is renamed "MetCon" (the off-legs
+identity is retired), the structure is 60 s work / 30 s rest, and both the
+category DEFINITION and the athlete DESCRIPTION are newly signed. The
+proposed reword parked here is withdrawn — it was never needed, because the
+signed description carries no ratio. Split of what applies now versus what
+pins to the coach rebuild: `docs/METCON_SPLIT_2026-08-05.md`.
+
+### NEWLY PARKED by the same unit
+
+**§13 — does an athlete-chosen easy day want CONDITIONING words of its own?**
+Sam signed one day-scoped sentence and it is the strength one. The two
+conditioning sentences both begin "Deload:", which §12 now reserves for
+scheduled weeks, so on the chosen route the conditioning rows ship with the
+correct halved DOSE and NO sentence (§12 option (c), applied only to the rows
+Sam has not worded). Composing one here would be inventing athlete-facing
+copy. Your call: word one, or let the dose speak for itself.
+
+---
+
 ## §8, §9, §10 ANSWERED — Sam, 2026-08-03 (third batch); THE FILE IS EMPTY
 
 **§8 team-night riders — all three SIGNED as proposed.** Copy sheet 10-c

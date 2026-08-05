@@ -119,24 +119,23 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // One owner of week identity retired both cells: 5b lands, and the
   // one-root-many-doors measurement now reports 0 of 4 doors refusing, which is
   // what "one root" meant all along.
-  {
-    id: 'finding-6b-door',
-    finding: 'Device finding 6b: "Deload:" note on a non-deload week.',
-    matches: /week-deload copy stamped on a standard week/,
-    why: 'REPRODUCED BY ACTING (2026-08-05 evening): an ADD onto the G-1 '
-      + 'Friday answered with the "deloaded" route stamps "Deload: keep RPE '
-      + '5-6; every rep fast and clean, nowhere near failure." onto a standard '
-      + 'week — resolveDoorDeloadPolicy reads no week kind, and the appliers '
-      + 'write persisted notes with no strip path. (A MOVE onto G-1 is refused '
-      + 'outright, which is why the first draft never reached this.) The DOSE '
-      + 'is the athlete\'s choice and correct; the words are the question. '
-      + 'Latent sibling recorded: appendDeloadNote\'s idempotence guard '
-      + 'matches /Deload week:/ while appending "Deload: ", so reapplication '
-      + 'can duplicate.',
-    paidBy: 'Sam\'s parked §12 answer (what an athlete-CHOSEN deloaded day '
-      + 'says — typed cause selects the sentence, per the copy law), then the '
-      + 'deload-copy unit; delete this entry in that commit',
-  },
+  // finding-6b-door was declared red here and RETIRED 2026-08-05 evening by
+  // Sam's §12 signing (docs/METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md §2,
+  // option b). The DOSE was always the athlete's own choice and correct; the
+  // WORDS were the question, and the answer is a day-scoped sentence selected
+  // by the TYPED CAUSE:
+  //
+  //   > Easy day: keep RPE 5-6; every rep fast and clean.
+  //
+  // "Deload:" is now reserved for the scheduled door — a week the block plan
+  // really laid down — so an athlete-chosen easy day can no longer describe a
+  // week the athlete is not in. `DeloadWeekPolicy` carries the door that minted
+  // it, which is what makes the selection typed rather than read back out of
+  // the words. The latent sibling recorded in that entry was paid in the same
+  // commit: the idempotence guard matched "Deload week:" while appending
+  // "Deload: ", so it never recognised its own output; it now compares against
+  // the exact sentence and cannot drift from it again.
+  //
   // finding-7 was declared red here and RETIRED 2026-08-05 evening: Sam's
   // display-times ruling re-scoped the sweep to rendered lines (names and
   // clock-times exempt, no workbook re-sign), and the two surviving reds were

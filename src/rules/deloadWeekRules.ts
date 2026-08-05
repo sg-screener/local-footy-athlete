@@ -69,6 +69,17 @@ export type DeloadDoor = 'scheduled' | 'readiness' | 'illness';
 export interface DeloadWeekPolicy {
   weekKind: 'deload';
   /**
+   * WHICH DOOR OPENED THIS — the typed cause, carried rather than re-inferred.
+   *
+   * Sam's §12 signing (2026-08-05) makes the day's SENTENCE depend on it: a
+   * scheduled deload week says "Deload:", an athlete-chosen easy day says the
+   * day-scoped sentence, and no consumer may read the words back to work out
+   * which door it was. Device finding 6b was exactly this fact going missing —
+   * the appliers knew only "deload", so an athlete's chosen easy day wore a
+   * week-deload note on a standard week.
+   */
+  door: DeloadDoor;
+  /**
    * In-season is reachable through the readiness and illness doors only; the
    * scheduled door never mints it (D16).
    */
@@ -115,6 +126,7 @@ export function resolveDeloadWeekPolicy(
   if (seasonPhase !== 'Off-season' && seasonPhase !== 'Pre-season') return null;
   return {
     weekKind: 'deload',
+    door: 'scheduled',
     seasonPhase,
     intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
   };
@@ -139,6 +151,7 @@ export function resolveDoorDeloadPolicy(args: {
   const seasonPhase = args.seasonPhase ?? 'In-season';
   return {
     weekKind: 'deload',
+    door: args.door,
     seasonPhase,
     intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, 'deload'),
     athleteIsBeatUp: args.athleteIsBeatUp,
@@ -203,13 +216,42 @@ function roundLoad(weightKg: number): number {
   return Math.round(weightKg * 2) / 2;
 }
 
-function appendDeloadNote(notes: string | undefined): string {
-  const note =
-    `Deload: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
-    + 'every rep fast and clean, nowhere near failure.';
+/**
+ * Append a signed sentence once, recognising ITS OWN output.
+ *
+ * The guard used to match `/Deload week:/i` while the sentence it appended
+ * began "Deload: ", so it never recognised what it had written and a second
+ * application appended a duplicate. Notes persist, so a re-derived day could
+ * wear the sentence twice. Comparing against the exact sentence removes the
+ * possibility: the guard cannot drift from the text again, because it IS the
+ * text.
+ */
+function appendSignedNote(notes: string | undefined, note: string | null): string | undefined {
+  if (!note) return notes;
   if (!notes) return note;
-  if (/Deload week:/i.test(notes)) return notes;
+  if (notes.includes(note)) return notes;
   return `${notes} ${note}`;
+}
+
+/**
+ * The day's strength sentence, SELECTED BY THE TYPED CAUSE.
+ *
+ * Sam's §12 signing (2026-08-05, docs/METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md
+ * §2, option b). Device finding 6b: an athlete who answered the G-1 landing ask
+ * with "Deloaded" got week-deload words stamped onto a standard week. The DOSE
+ * was theirs and correct; the WORDS described a week they were not in.
+ *
+ * So "Deload:" is reserved for the scheduled door — a week the block plan
+ * really did lay down as a deload — and the athlete-chosen route gets the
+ * day-scoped sentence Sam signed. Both are his words, verbatim; nothing here
+ * composes athlete-facing copy.
+ */
+function strengthDeloadNote(policy: DeloadWeekPolicy): string {
+  return policy.door === 'scheduled'
+    ? `Deload: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
+      + 'every rep fast and clean, nowhere near failure.'
+    : `Easy day: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
+      + 'every rep fast and clean.';
 }
 
 /**
@@ -265,7 +307,7 @@ export function applyStrengthDeloadToExercises(
         exerciseOrder: index + 1,
         prescribedSets: nextSets,
         prescribedWeightKg: nextWeight,
-        notes: appendDeloadNote(exercise.notes),
+        notes: appendSignedNote(exercise.notes, strengthDeloadNote(policy)),
       };
     });
 }
@@ -290,7 +332,7 @@ function isQualityConditioningRow(exercise: WorkoutExercise): boolean {
  */
 export function applyConditioningDeloadToExercises(
   exercises: WorkoutExercise[],
-  _policy: DeloadWeekPolicy,
+  policy: DeloadWeekPolicy,
 ): WorkoutExercise[] {
   let qualityKept = 0;
 
@@ -318,21 +360,33 @@ export function applyConditioningDeloadToExercises(
       exerciseOrder: index + 1,
       ...(typeof halved === 'number' ? { prescribedDurationMinutes: halved } : {}),
       deloadQualityExposure: keepAsQuality,
-      notes: appendConditioningDeloadNote(exercise.notes, keepAsQuality),
+      notes: appendSignedNote(exercise.notes, conditioningDeloadNote(policy, keepAsQuality)),
     } as WorkoutExercise;
   });
 }
 
-function appendConditioningDeloadNote(
-  notes: string | undefined,
+/**
+ * The conditioning sentence — SCHEDULED WEEKS ONLY, for now.
+ *
+ * Both of these sentences begin "Deload:", which Sam's §12 signing reserves for
+ * a week the plan really scheduled. He signed ONE day-scoped sentence for the
+ * athlete-chosen route, and it is the strength one; no conditioning wording for
+ * that route has been authored. Composing one here would be inventing
+ * athlete-facing copy, which is exactly what the signed-words law forbids — so
+ * the chosen route's conditioning rows carry the correct halved DOSE and no
+ * sentence at all (§12 option (c) applied to the rows Sam has not worded).
+ *
+ * PARKED for Sam: does an athlete-chosen easy day want conditioning words of
+ * its own, or does the halved dose speak for itself?
+ */
+function conditioningDeloadNote(
+  policy: DeloadWeekPolicy,
   keptAsQuality: boolean,
-): string {
-  const note = keptAsQuality
+): string | null {
+  if (policy.door !== 'scheduled') return null;
+  return keptAsQuality
     ? 'Deload: this is the week\'s one quality exposure — keep it sharp but short.'
     : 'Deload: easy aerobic only. Half the usual work.';
-  if (!notes) return note;
-  if (/^Deload:/m.test(notes) || /Deload:/.test(notes)) return notes;
-  return `${notes} ${note}`;
 }
 
 /** A power dose under the deload law: kept, but smaller and still sharp. */
