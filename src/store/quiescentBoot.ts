@@ -71,6 +71,8 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
       return [decision.date];
     case 'fixture_move':
       return [decision.fromDate, decision.toDate];
+    case 'migrated_day_placement':
+      return [decision.date];
     case 'reversal':
       return [];
   }
@@ -83,6 +85,21 @@ function replayEntry(entry: DecisionLedgerEntry): void {
   if (decision.kind === 'reversal') {
     // No reversal producer exists yet (undo door lands with LR-29's heir);
     // a reversal entry is declared, typed, and inert until then.
+    return;
+  }
+  if (decision.kind === 'migrated_day_placement') {
+    // R2: the old world's `dateOverrides`, replayed onto the surface they
+    // came from. This is the one decision that carries CONTENT rather than
+    // intent (see its note in types/decisionLedger.ts), so replay places the
+    // workout back rather than re-running a producer there is no intent for.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { applyProgramOverrideWrite } = require('./programStore');
+    applyProgramOverrideWrite({
+      date: decision.date,
+      workout: decision.workout,
+      context: undefined,
+      writer: 'program_control',
+    });
     return;
   }
   // Lazy requires: the interpreters live in utils and import stores — the

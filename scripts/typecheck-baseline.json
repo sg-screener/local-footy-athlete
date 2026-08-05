@@ -78,7 +78,7 @@
     "tests": {
       "label": "test harness (runs untyped via sucrase-node)",
       "config": "tsconfig.tests.json",
-      "total": 374,
+      "total": 373,
       "files": {
         "src/__tests__/acceptedStateTransactionTests.ts": 3,
         "src/__tests__/athleteSessionDeletionTests.ts": 5,
@@ -134,7 +134,7 @@
         "src/__tests__/explorerScenarioArtifactBundleTests.ts": 3,
         "src/__tests__/finisherEligibilityTests.ts": 1,
         "src/__tests__/fixtureConditionedReplanTests.ts": 3,
-        "src/__tests__/fixtureMutationTransactionTests.ts": 2,
+        "src/__tests__/fixtureMutationTransactionTests.ts": 1,
         "src/__tests__/generatedProgramNormalizerTests.ts": 3,
         "src/__tests__/generationClassificationAdapterTests.ts": 5,
         "src/__tests__/generationConstraintReentryTests.ts": 1,
