@@ -56038,10 +56038,10 @@
               "date": "2026-07-13",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -56140,9 +56140,42 @@
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-13-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-13-main",
+                        "exerciseId": "cond-2026-07-13-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
                     "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -56241,6 +56274,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-13-main",
+                    "exerciseId": "cond-2026-07-13-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -56248,7 +56296,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -56666,8 +56716,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -56675,6 +56725,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -56758,10 +56809,10 @@
               "date": "2026-07-20",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -56860,9 +56911,42 @@
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-20-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-20-main",
+                        "exerciseId": "cond-2026-07-20-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
                     "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -56961,6 +57045,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-20-main",
+                    "exerciseId": "cond-2026-07-20-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -56968,7 +57067,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -57518,8 +57619,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -57527,6 +57628,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -57611,10 +57713,10 @@
               "date": "2026-07-27",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -57713,9 +57815,42 @@
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-27-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-27-main",
+                        "exerciseId": "cond-2026-07-27-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
                     "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -57814,6 +57949,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-27-main",
+                    "exerciseId": "cond-2026-07-27-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -57821,7 +57971,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -58365,8 +58517,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -58374,6 +58526,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -58682,10 +58835,10 @@
               "date": "2026-08-05",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "Moderate",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "Moderate",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -58768,9 +58921,42 @@
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
+                    "intensity": "Moderate",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-05-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-08-05-main",
+                        "exerciseId": "cond-2026-08-05-main",
+                        "name": "Short Flush",
+                        "order": 3,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -58854,6 +59040,21 @@
                     "strengthIntensity": "Moderate",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-08-05-main",
+                    "exerciseId": "cond-2026-08-05-main",
+                    "name": "Short Flush",
+                    "order": 3,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -58861,7 +59062,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -58985,8 +59188,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -58994,6 +59197,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -59083,10 +59287,10 @@
               "date": "2026-07-13",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -59167,6 +59371,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-13-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-13-main",
+                        "exerciseId": "cond-2026-07-13-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -59217,6 +59454,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-13-main",
+                    "exerciseId": "cond-2026-07-13-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -59224,7 +59476,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -59944,8 +60198,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -59953,6 +60207,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -60036,10 +60291,10 @@
               "date": "2026-07-20",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -60120,6 +60375,39 @@
                         "primaryPattern": "hinge"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-20-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-20-main",
+                        "exerciseId": "cond-2026-07-20-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -60170,6 +60458,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-20-main",
+                    "exerciseId": "cond-2026-07-20-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -60177,7 +60480,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -60899,8 +61204,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -60908,6 +61213,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -60991,10 +61297,10 @@
               "date": "2026-07-27",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -61075,6 +61381,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-27-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-27-main",
+                        "exerciseId": "cond-2026-07-27-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -61125,6 +61464,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-27-main",
+                    "exerciseId": "cond-2026-07-27-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -61132,7 +61486,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -61817,8 +62173,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -61826,6 +62182,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -61909,10 +62266,10 @@
               "date": "2026-08-03",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -61990,6 +62347,39 @@
                         "primaryPattern": "hinge"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-03-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-08-03-main",
+                        "exerciseId": "cond-2026-08-03-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -62037,6 +62427,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-08-03-main",
+                    "exerciseId": "cond-2026-08-03-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -62044,7 +62449,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -62760,8 +63167,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -62769,6 +63176,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -63283,10 +63691,10 @@
               "date": "2026-07-15",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -63366,6 +63774,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-15-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-15-main",
+                        "exerciseId": "cond-2026-07-15-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -63418,6 +63859,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-15-main",
+                    "exerciseId": "cond-2026-07-15-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -63425,7 +63881,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -63849,8 +64307,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -63858,6 +64316,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 2,
@@ -64367,10 +64826,10 @@
               "date": "2026-07-22",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -64451,6 +64910,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-22-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-22-main",
+                        "exerciseId": "cond-2026-07-22-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -64504,6 +64996,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-22-main",
+                    "exerciseId": "cond-2026-07-22-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -64511,7 +65018,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -64935,8 +65444,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -64944,6 +65453,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 2,
@@ -65453,10 +65963,10 @@
               "date": "2026-07-29",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -65536,6 +66046,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-29-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-29-main",
+                        "exerciseId": "cond-2026-07-29-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -65588,6 +66131,21 @@
                     "equipment": [
                       "Machine"
                     ]
+                  },
+                  {
+                    "identity": "cond-2026-07-29-main",
+                    "exerciseId": "cond-2026-07-29-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -65595,7 +66153,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -65988,8 +66548,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -65997,6 +66557,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 2,
@@ -66500,10 +67061,10 @@
               "date": "2026-08-05",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -66581,6 +67142,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-05-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-08-05-main",
+                        "exerciseId": "cond-2026-08-05-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -66631,6 +67225,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-08-05-main",
+                    "exerciseId": "cond-2026-08-05-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -66638,7 +67247,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -67062,8 +67673,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -67071,6 +67682,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 2,
@@ -67161,10 +67773,10 @@
               "date": "2026-07-13",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -67245,6 +67857,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-13-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-13-main",
+                        "exerciseId": "cond-2026-07-13-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -67295,6 +67940,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-13-main",
+                    "exerciseId": "cond-2026-07-13-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -67302,7 +67962,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -68019,11 +68681,11 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 4,
+              "hardExposures": 5,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -68031,6 +68693,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -68114,10 +68777,10 @@
               "date": "2026-07-20",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -68198,6 +68861,39 @@
                         "primaryPattern": "hinge"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-20-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-20-main",
+                        "exerciseId": "cond-2026-07-20-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -68248,6 +68944,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-20-main",
+                    "exerciseId": "cond-2026-07-20-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -68255,7 +68966,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -68974,11 +69687,11 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 4,
+              "hardExposures": 5,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -68986,6 +69699,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -69069,10 +69783,10 @@
               "date": "2026-07-27",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -69153,6 +69867,39 @@
                         "primaryPattern": "squat"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-27-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-27-main",
+                        "exerciseId": "cond-2026-07-27-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -69203,6 +69950,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-27-main",
+                    "exerciseId": "cond-2026-07-27-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -69210,7 +69972,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -69892,11 +70656,11 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 4,
+              "hardExposures": 5,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -69904,6 +70668,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -69987,10 +70752,10 @@
               "date": "2026-08-03",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "High",
-                "conditioningIntensity": null,
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
@@ -70068,6 +70833,39 @@
                         "primaryPattern": "hinge"
                       }
                     }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-03-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-08-03-main",
+                        "exerciseId": "cond-2026-08-03-main",
+                        "name": "Short Flush",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Short Flush"
+                    }
                   }
                 ],
                 "exercises": [
@@ -70115,6 +70913,21 @@
                     "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-08-03-main",
+                    "exerciseId": "cond-2026-08-03-main",
+                    "name": "Short Flush",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
@@ -70122,7 +70935,9 @@
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Short Flush"
+                  ]
                 }
               }
             },
@@ -70835,11 +71650,11 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 4,
+              "hardExposures": 5,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -70847,6 +71662,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,

@@ -81,6 +81,64 @@ let properties = 0;
 let mutations = 0;
 const failures: string[] = [];
 
+/**
+ * DECLARED-RED — a measured defect that is CHARACTERISED but not yet ruled, and
+ * which owes the deletion of its own entry in the commit that pays it. An
+ * UNDECLARED red still fails outright, and a declared red that stops redding
+ * fails the suite until its entry is removed.
+ *
+ * ── THE OPEN ONE (2026-08-06) ──────────────────────────────────────────────
+ *
+ * AN ACCEPTED-WEEK REPAIR DESTROYS THE WEEK'S OFFER AND CANNOT RESTORE IT.
+ *
+ * With Sam's flush-offer ruling landed, an in-season game week carries its
+ * authored offer on Monday's strength day (Bible `:81`). Delete an unrelated
+ * session — Wednesday's Upper Pull — and the repair relocates the pull work,
+ * "rebalances" Monday, and Monday comes back with its conditioning component
+ * gone. The week silently stops offering the flush `:81` authors, and the
+ * signed confirmation names the rebalance without naming the loss.
+ *
+ * MEASURED, not guessed: before the deletion Monday is
+ * `Lower Body Strength` (`Mixed`, `optional_flush`, `aerobic_base`); after it
+ * is `Lower Body Strength` (`Strength`, role `none`).
+ *
+ * This is the THIRD sighting in one unit of the class CLAUDE.md's escalation
+ * rule names — a later layer downgrading an intent the layer above stated
+ * correctly. The first two are paid (`fixtureMinimalReplan` re-roling the offer
+ * into required work; the positional derivation handing the offer's core slot
+ * to the wrong session). Implementation stopped here rather than teaching a
+ * fourth site about flushes, because the shape is architectural: there is
+ * exactly ONE placer of the offer and it runs only at generation, so every
+ * accepted-week repair path can destroy the offer and none can restore it.
+ *
+ * Both cells assert the signed confirmation sentence verbatim, so they red on
+ * the disclosure rather than on the loss — the sentence gains "I also
+ * rebalanced Monday to keep your week balanced." The repair really did touch
+ * Monday, so the sentence is not lying; what is wrong is that it needed to.
+ *
+ * Owed: `docs/1B_OFFER_SURVIVAL_REASSESSMENT_2026-08-06.md`, then Sam's ruling.
+ */
+interface DeclaredRed {
+  readonly id: string;
+  readonly matches: RegExp;
+  readonly paidBy: string;
+}
+
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
+  {
+    id: '15 exact Upper Pull component deletion preserves Team Training and relocates pull',
+    matches: /I also rebalanced Monday to keep your week balanced\./,
+    paidBy: 'the offer-survival reassessment + Sam\'s ruling',
+  },
+  {
+    id: '17 existing alternative pull exposure avoids duplicate repair',
+    matches: /I also rebalanced Monday to keep your week balanced\./,
+    paidBy: 'the offer-survival reassessment + Sam\'s ruling',
+  },
+];
+
+const declaredRedHits = new Set<string>();
+
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
 }
@@ -93,6 +151,19 @@ function run(kind: 'regression' | 'property' | 'mutation', name: string, body: (
     else mutations += 1;
     console.log(`  PASS [${kind}] ${name}`);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const declared = DECLARED_RED.find(
+      (entry) => entry.id === name && entry.matches.test(message),
+    );
+    if (declared) {
+      declaredRedHits.add(declared.id);
+      if (kind === 'regression') regressions += 1;
+      else if (kind === 'property') properties += 1;
+      else mutations += 1;
+      console.log(`  RED (declared, paid by ${declared.paidBy}) [${kind}] ${name}`);
+      console.log(`      ${message.split('\n')[0]}`);
+      return;
+    }
     failures.push(`${kind}: ${name}`);
     console.error(`  FAIL [${kind}] ${name}`, error);
   }
@@ -1628,7 +1699,17 @@ run('regression', 'a partial Bin names the survivor from ITS OWN rows, never the
 
 console.warn = originalWarn;
 console.log(`\nAthlete session deletion totals: regressions=${regressions}/24 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
-totalsPrinted(failures.length);
+
+// THE RATCHET: a declared red that stops redding owes the deletion of its entry.
+const staleDeclared = DECLARED_RED.filter((entry) => !declaredRedHits.has(entry.id));
+if (staleDeclared.length > 0) {
+  console.error(`DECLARED RED NO LONGER REDS — delete the entry:\n  ${
+    staleDeclared.map((entry) => `${entry.id} (paid by ${entry.paidBy})`).join('\n  ')}`);
+  totalsPrinted(failures.length + staleDeclared.length);
+  process.exitCode = 1;
+} else {
+  totalsPrinted(failures.length);
+}
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

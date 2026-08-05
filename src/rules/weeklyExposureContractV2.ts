@@ -110,6 +110,15 @@ export type Section18ConditioningRole =
   | 'planner_selected_core'
   | 'optional_flush'
   | 'optional_recovery_aerobic'
+  /**
+   * Conditioning beyond everything the contract asks for: the core capacity is
+   * spent and the authored flush allowance is spent. The ledger has always
+   * counted it (`optionalNonCoreAchievedCount`), and the evaluator has always
+   * had a branch for it — reached through a `as string` cast, because the role
+   * it tests for was never in this union. Naming it is what lets the one owner
+   * DERIVE it instead of the branch staying unreachable.
+   */
+  | 'optional_noncore'
   /** Persisted Contract v2 data from before core ownership was split. */
   | 'core'
   | 'legacy_unknown'
@@ -837,7 +846,21 @@ function policyFor(input: Pick<
     case 'practice_match_week':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0,
+        // RULED (Sam, 2026-08-05): `optionalFlush` min 0 → 1. Bible :81's three
+        // ideal in-season structures all carry "optional flushout/ aerobic
+        // conditioning off-leg", and the ruling makes them conformance targets
+        // on this point rather than illustrations — so the week always OFFERS
+        // one. It stays `max: 1`, and it rides as an OPTIONAL: the flush is
+        // counted in `optionalFlushCount`, never `coreCount`, so :127's
+        // arithmetic is untouched — team training plus the game still satisfy
+        // the in-season conditioning target on their own.
+        //
+        // This row is shared with `practice_match_week` by the 2026-07-28 ruling
+        // above ("structurally an IN-SEASON GAME WEEK and carries its authored
+        // numbers"), so a pre-season practice-match week gains the offer too.
+        // That follows from the existing ruling rather than a new one, and is
+        // flagged in the boundary report for Sam.
+        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 1, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0,
           // RULED (Sam, 2026-07-29): in ANY fixture week the GAME carries the
           // hard conditioning exposure, so the contract never requires a hard
           // app-conditioning session on top of it — the app top-up is moderate
@@ -1095,7 +1118,28 @@ export function resolveSection18PhasePlannerSelection(
     coreConditioning,
     sprintHighSpeed,
     optionalMainStrength: earlyOffseason ? mainStrength : illnessOptionalStrength,
-    optionalFlush: 0,
+    // RULED (Sam, 2026-08-05): the optional flushout is a REQUIRED OFFER on an
+    // in-season week — the app always presents it, doing it is the athlete's
+    // choice. See docs/FLUSH_OFFER_RULING_2026-08-05.md.
+    //
+    // This used to be a flat `0`, which is what made `optionalFlush.min` INERT:
+    // the authored minimum was read by nothing, so a mode could author "offer at
+    // least one flush" and no week ever did. Only `.max` had an effect (as a
+    // placement cap), so the table's two numbers meant "cap" and "decoration".
+    //
+    // Declaring the authored minimum here is the whole of the "declare, then
+    // place" ownership (architecture reassessment
+    // docs/1B_FLUSH_OFFER_ARCHITECTURE_REASSESSMENT_2026-08-06.md, questions
+    // 4/5): the planner states what the week wants BEFORE the contract is built,
+    // the contract carries it, and the allocation's job is to place what was
+    // declared. The move this replaces — stamping a flush AFTER the contract was
+    // built — was invisible to the contract that then judged it, and failed for
+    // that reason on 2026-08-05.
+    //
+    // Modes whose `selectionKind` is `optional` never reach this field: the
+    // contract builder reads `plannerSelected.coreConditioning` for them
+    // instead, so early off-season's authored `{min:1,max:2}` is unaffected.
+    optionalFlush: policy.conditioning.optionalFlush.min,
     optionalRecoveryAerobic,
     // The fixture IS one of the week's conditioning exposures. Same fact the
     // intensity policy above reads, asked through the same predicate.

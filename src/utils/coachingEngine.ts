@@ -759,7 +759,16 @@ function buildParallelSection18Contract(args: {
         : weeklyPlan.filter((allocation) =>
             allocation.tier === 'optional' && !!allocation.strengthIntent?.plannedPatterns.length).length,
       coreConditioning: selectedCoreConditioning,
-      optionalFlush: optionalFlushSelected,
+      // DECLARE, THEN PLACE. `optionalFlushSelected` counts what the plan
+      // ALREADY carries, and on a fresh week that is zero — the flush role is
+      // stamped by `applySection18ConditioningAllocation`, which runs after this
+      // contract is built. So a count alone can only ever tell the contract
+      // "no flush", and any flush placed later is work the contract was never
+      // told about. Taking the planner's declaration alongside the count is what
+      // lets the contract carry the offer INTO the allocation instead of
+      // learning about it afterwards. Same shape as `optionalRecoveryAerobic`
+      // directly below, which has always done this.
+      optionalFlush: Math.max(selected.optionalFlush, optionalFlushSelected),
       optionalRecoveryAerobic: Math.max(
         selected.optionalRecoveryAerobic,
         optionalRecoveryAerobicSelected,
@@ -6955,9 +6964,28 @@ function applySection18ConditioningAllocation(
     contract.safety.lighterStrengthRequired;
   const protectedOptional = (session: SessionAllocation): boolean =>
     fixtureOffset(session) === -2 && session.conditioningCategory === 'aerobic_base';
+  // A TYPED FLUSH IS AN OFFER, NEVER A CORE CANDIDATE.
+  //
+  // The §18 evaluator has always said so — `core_flush_misclassification`, "A
+  // typed flush cannot satisfy the core-conditioning floor" — but this selection
+  // read any session CARRYING conditioning as available core, so the two layers
+  // disagreed. Nothing exposed the disagreement while no in-season week produced
+  // a flush; the moment one did, the promotion was immediate and measurable.
+  //
+  // Measured: a game week places its flush on Monday; remove the game and the
+  // rebuilt bye week picked that Monday flush up as `required_core`, which both
+  // laundered the athlete's OFFER into required work and cost the week the hard
+  // conditioning session it should have built on the freed Saturday.
+  //
+  // This is the ruling's other half (Sam, 2026-08-05): the flush "does not count
+  // toward :127's arithmetic". A flush that can be promoted into the core count
+  // on any later pass is that promise broken one layer down. Excluding it here
+  // makes the allocator agree with the evaluator rather than adding a third
+  // opinion — the core repair below already knows how to author what it needs.
   const existingEligible = plan
     .filter((session) => hasConditioning(session) && !session.isTeamDay &&
       fixtureSafe(session) && !protectedOptional(session) &&
+      session.section18ConditioningRole !== 'optional_flush' &&
       !(session.speedBlock && !hasStrength(session)))
     .sort(inTrainingOrder);
   const selectedCore: SessionAllocation[] = existingEligible.slice(0, selectedApp);
@@ -7001,25 +7029,89 @@ function applySection18ConditioningAllocation(
   });
 
   const selectedSet = new Set(selectedCore);
-  let optionalFlushes = 0;
-  for (const session of plan.filter((candidate) => hasConditioning(candidate) && !candidate.isTeamDay)) {
-    if (selectedSet.has(session)) continue;
+  // A flush may sit at G-3 or earlier, or at G-2 when it is the whole session's
+  // work and carries no strength or speed alongside it.
+  const flushFixtureSafe = (session: SessionAllocation): boolean => {
     const offset = fixtureOffset(session);
-    const optionalFixtureSafe = offset === null || offset <= -3 || (
+    return offset === null || offset <= -3 || (
       offset === -2 &&
       !hasStrength(session) &&
       !session.speedBlock
     );
+  };
+  // ONE OWNER for "this session IS the flush". Two routes reach it — the demote
+  // below, which downgrades conditioning the week already had, and the placement
+  // after it, which creates the offer the contract declared. They must not drift
+  // apart, so the stamp itself lives in one place.
+  const stampFlush = (session: SessionAllocation): void => {
+    session.section18ConditioningRole = 'optional_flush';
+    session.conditioningVariant = 'reduced';
+  };
+  const placeFlush = (session: SessionAllocation): void => {
+    const strength = hasStrength(session);
+    applyCategory(session, 'aerobic_base');
+    stampFlush(session);
+    // `applyCategory` promotes a conditioning-only day to `core`, which is right
+    // for a selected core session and wrong for an offer. A flush is the
+    // athlete's choice by ruling, so it renders optional and carries no hard
+    // exposure — the same correction `applyOptionalRecovery` makes above.
+    if (!strength) {
+      session.tier = 'optional';
+      session.isHardExposure = false;
+      session.stressLevel = 'low';
+    }
+  };
+
+  let optionalFlushes = 0;
+  for (const session of plan.filter((candidate) => hasConditioning(candidate) && !candidate.isTeamDay)) {
+    if (selectedSet.has(session)) continue;
     if (
       session.conditioningCategory === 'aerobic_base' &&
-      optionalFixtureSafe &&
+      flushFixtureSafe(session) &&
       optionalFlushes < contract.conditioning.optionalFlush.preferredRange.max
     ) {
-      session.section18ConditioningRole = 'optional_flush';
-      session.conditioningVariant = 'reduced';
+      stampFlush(session);
       optionalFlushes++;
     } else {
       clearConditioning(session);
+    }
+  }
+
+  // PLACE WHAT WAS DECLARED (Sam's flush-offer ruling, 2026-08-05).
+  //
+  // The loop above can only ever DEMOTE — it iterates sessions that already
+  // carry conditioning. In an in-season game week nothing does: two team
+  // trainings plus the game already satisfy the core target (`:127`), so
+  // `selectedApp` is 0, no candidate is sought, and the loop body never runs.
+  // That is why the week came back with zero conditioning components against
+  // Bible :81, and why an offer can never arrive by demotion alone.
+  //
+  // The contract has now been told the offer is wanted before it was built, so
+  // this places it rather than inventing it: the count comes from the contract,
+  // capped by the same authored maximum the demote respects.
+  const declaredFlush = contract.conditioning.optionalFlush.permitted
+    ? Math.min(
+      contract.conditioning.optionalFlush.plannerSelectedCount ?? 0,
+      contract.conditioning.optionalFlush.preferredRange.max,
+    )
+    : 0;
+  let unplacedFlush = Math.max(0, declaredFlush - optionalFlushes);
+  if (unplacedFlush > 0) {
+    // Bible :81 puts the flush on the STRENGTH days ("optional flushout/ aerobic
+    // conditioning off-leg"), so a strength day is preferred over an empty one —
+    // `applyCategory` attaches it off-feet as a component there. An empty day is
+    // taken only when no strength day can safely hold it.
+    const flushCandidates = plan
+      .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
+        !session.speedBlock && !selectedSet.has(session) && flushFixtureSafe(session))
+      .sort((left, right) =>
+        Number(!hasStrength(left)) - Number(!hasStrength(right)) ||
+        inTrainingOrder(left, right));
+    for (const session of flushCandidates) {
+      if (unplacedFlush <= 0) break;
+      placeFlush(session);
+      optionalFlushes++;
+      unplacedFlush--;
     }
   }
 

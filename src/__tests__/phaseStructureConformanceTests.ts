@@ -33,18 +33,28 @@
  * "optional flushout/ aerobic conditioning off-leg" on the strength days, and
  * all three end "sunday rest or recovery".
  *
- * NOT PAID — and the reason is now MEASURED rather than guessed. "Declare, then
- * place" was built as approved and it works: the week carries a visible, authored
+ * PAID 2026-08-06. "Declare, then place" gives the week a visible, authored
  * "Short Flush" on its strength day, typed `optional_flush` so `:127`'s
- * arithmetic is untouched. It is held on `fix/1b-flush-offer` because a SECOND
- * planner (`fixtureMinimalReplan`) re-roles that flush to `required_core` when
- * the week is rebuilt, laundering the athlete's offer into required work. See
- * `docs/1B_FLUSH_OFFER_ARCHITECTURE_REASSESSMENT_2026-08-06.md` and its addendum.
- * Sam's ruling: `docs/FLUSH_OFFER_RULING_2026-08-05.md`.
+ * arithmetic is untouched. It was held because a SECOND planner
+ * (`fixtureMinimalReplan`) re-roled that flush to `required_core` when the week
+ * was rebuilt, laundering the athlete's offer into required work — so it landed
+ * on top of Sam's two rulings rather than alone:
  *
- * So cells 5 and 7 stay DECLARED RED. Cell 7 is new and pins the half of the
- * ruling that must not regress when 1b does land — the offer must never move the
- * core count.
+ *   ruling 1 — ONE OWNER derives the §18 conditioning role from the contract
+ *     plus the week (`section18EffectiveWeekEvaluator`). Every other writer
+ *     stops deciding it.
+ *   ruling 2 — the offer does not survive a fixture change. The rebuilt week
+ *     re-derives clean.
+ *
+ * They are interdependent and could not land apart: with the flush content
+ * surviving, it is earlier in training order and takes the core slot ruling 1
+ * gives, so the freed day loses the hard session it should build — the same
+ * defect inverted. See `docs/1B_ONE_OWNER_DERIVATION_DESIGN_2026-08-06.md`,
+ * `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md` and
+ * `docs/FLUSH_OFFER_RULING_2026-08-05.md`.
+ *
+ * Cell 7 pins the half of the ruling that must not regress — the offer must
+ * never move the core count. Cell 8 pins both directions of ruling 2.
  *
  * Only ONE of the two 1b cells was a conditioning defect. The empty Sunday was
  * not: the resolver already returns a TYPED rest day (`source`/`indicator` both
@@ -112,9 +122,12 @@ const NEXT = addDaysISO(WEEK, 7);
 /**
  * DECLARED-RED (the evening suite's mechanism): a declared red that STOPS
  * redding owes the deletion of its entry in the greening commit; an UNDECLARED
- * red fails outright. 1a and 1b are separate commits by Sam's ordering, and 1b
- * is not written yet — so its two cells are declared here and their entries are
- * deleted by the commit that pays them.
+ * red fails outright.
+ *
+ * 1b's three entries (cells 5, 7 and 8) were deleted here on 2026-08-06 by the
+ * commit that paid them — Sam's rulings 1 and 2, built as one move. The list is
+ * empty and the mechanism stays armed: it is what makes the next declared red
+ * pay for itself too.
  */
 interface DeclaredRed {
   readonly id: string;
@@ -122,11 +135,7 @@ interface DeclaredRed {
   readonly paidBy: string;
 }
 
-const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  { id: '5', matches: /ZERO visible conditioning/, paidBy: 'finding 1b' },
-  { id: '7', matches: /ZERO sessions as `optional_flush`/, paidBy: 'finding 1b' },
-  { id: '8', matches: /session\(s\) typed `optional_flush`, not the single offer/, paidBy: 'ruling 1 + ruling 2' },
-];
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [];
 
 const declaredRedHits = new Set<string>();
 

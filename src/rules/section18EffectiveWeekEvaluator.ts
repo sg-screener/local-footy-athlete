@@ -258,13 +258,190 @@ function rowPatternCounts(workout: Workout): {
   return { counts, accessory, legacyFallback: false };
 }
 
-function workoutConditioning(workout: Workout): {
+/** Training order — Monday first, Sunday last. The week's own order, not the JS one. */
+const TRAINING_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
+
+/**
+ * Does this credit count toward the core-conditioning floor?
+ *
+ * `core` is the pre-split aggregate that persisted Contract v2 data still
+ * carries. The derivation below never emits it; the predicate keeps accepting
+ * it so a stored week from before the split is not silently decredited.
+ *
+ * One predicate because the copies had already drifted: `userRemovalConstraints`
+ * asks all three, and the intensity checks below asked only `core` — which was
+ * invisible while every app credit was flattened to `core` on the way in, and
+ * becomes a silent zero the moment the role is derived at full fidelity.
+ */
+function isCoreRole(role: Section18ConditioningRole): boolean {
+  return role === 'core' || role === 'required_core' || role === 'planner_selected_core';
+}
+
+/**
+ * What does this session's typed evidence STATE — before anything is derived?
+ *
+ * Three answers matter, and none of them is "which core slot it fills":
+ *
+ *   null            no conditioning here.
+ *   legacy_unknown  conditioning is present and its role was never typed. Not a
+ *                   role at all but a statement that the week predates typing;
+ *                   deriving one would silently promote unmigrated data into
+ *                   core credit and delete the `legacy_evidence_unknown`
+ *                   finding that exists to surface it.
+ *   offer           the PLACER marked this session as the week's optional
+ *                   flush or optional recovery aerobic.
+ *   present         ordinary conditioning.
+ */
+function conditioningPresence(
+  workout: Workout,
+): 'present' | 'offer' | 'legacy_unknown' | null {
+  const evidence = workout.section18Evidence;
+  if (!evidence || evidence.conditioningRole === 'none') return null;
+  if (evidence.conditioningRole === 'legacy_unknown') return 'legacy_unknown';
+  return evidence.conditioningRole === 'optional_flush' ||
+    evidence.conditioningRole === 'optional_recovery_aerobic'
+    ? 'offer'
+    : 'present';
+}
+
+/**
+ * ONE OWNER DERIVES THE §18 CONDITIONING ROLE (Sam's ruling 1, 2026-08-06 —
+ * `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md`).
+ *
+ * The role of a conditioning session — required core, planner-selected core,
+ * the athlete's optional flush — is a FUNCTION of the contract plus the week's
+ * content. By the north star it is derived, never stored and never re-stamped.
+ * It used to be stored on the allocation and re-authored independently by every
+ * repair path, and those writers demonstrably disagreed: the planner placed an
+ * OFFER, a fixture-change rebuild recomputed its own shortfall and stamped the
+ * same session `required_core`, and an offer the athlete was free to skip
+ * became work they owed (addendum, 2026-08-06).
+ *
+ * WHAT IS DERIVED, AND WHAT IS READ AS THE WEEK'S CONTENT.
+ *
+ * The contract says HOW MANY core sessions the week asks for and how many
+ * offers it permits. Which sessions fill the core slots is positional — the
+ * same rule the anchor block ten lines up already applies, continued by the
+ * app's sessions in TRAINING order: fill the required floor first, then the
+ * planner's target, and everything past that is optional. It is deliberately
+ * not ordered by content (say, preferring the hard session for core); that
+ * would be a second heuristic re-deciding what the contract already declares.
+ *
+ * WHICH session is the week's OFFER is not positional, and that was measured
+ * the hard way. The placer marks it — one placer, now that ruling 1 has retired
+ * the writers that re-decided the field — and the mark is CONTENT the week
+ * carries, not a competing derivation. Ruling 1's own words are "a function of
+ * the contract plus the week's content".
+ *
+ * A purely positional rule was built first and is wrong. It hands the core slot
+ * to whichever conditioning comes earliest in the week, and the placer puts the
+ * offer on a strength day that is usually early. Measured on a pre-season
+ * practice-match week (`acceptedStateTransactionTests` regression 6): an "Easy
+ * Aerobic Flush" on Monday took a core slot, its LIGHT stress then failed the
+ * mode's `requiredAppMediumHardMinimum`, the gateway repaired a week that was
+ * never broken, and the repair came back with no hinge lift at all — a blocking
+ * `pattern_restore_failure` two layers away from anything about conditioning.
+ * Meanwhile a real Wednesday VO2 session was labelled the athlete's optional
+ * flush. Both halves of that are the ruling inverted.
+ *
+ * So the offer mark is honoured, CAPPED by the contract's authored allowance:
+ * the week's content records which session was offered, the contract decides
+ * how many offers there may be, and any surplus falls through to the positional
+ * rule. Nothing here reads a stamped `required_core` / `planner_selected_core`,
+ * which is the field five writers disagreed about and which no longer decides
+ * anything.
+ */
+function deriveConditioningRoles(args: {
+  contract: WeeklyExposureContractV2;
+  workoutsByDay: ReadonlyMap<number, Workout[]>;
+  /** Core credit the anchors already took. The app's count continues it. */
+  anchorCoreCredits: number;
+}): Map<Workout, Section18ConditioningRole> {
+  const { contract, workoutsByDay, anchorCoreCredits } = args;
+  const requiredMinimum = contract.conditioning.core.requiredMinimum;
+  const plannerTarget = contract.conditioning.core.plannerSelectedTarget ?? requiredMinimum;
+  const appCoreCapacity = Math.max(
+    0,
+    Math.max(requiredMinimum, plannerTarget) - anchorCoreCredits,
+  );
+  const flushAllowance = contract.conditioning.optionalFlush.permitted
+    ? contract.conditioning.optionalFlush.preferredRange.max
+    : 0;
+
+  const derived = new Map<Workout, Section18ConditioningRole>();
+  let appCoreUsed = 0;
+  let flushUsed = 0;
+  for (const day of TRAINING_ORDER) {
+    for (const workout of workoutsByDay.get(day) ?? []) {
+      const presence = conditioningPresence(workout);
+      if (presence === null) continue;
+      if (presence === 'legacy_unknown') {
+        derived.set(workout, 'legacy_unknown');
+        continue;
+      }
+      // An explicit recovery session is never core, at any count. It is typed
+      // as recovery by the session it IS, not by what is left over.
+      if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') {
+        derived.set(workout, 'optional_recovery_aerobic');
+        continue;
+      }
+      // THE PLACER'S MARK, capped by the allowance the contract authored.
+      // Recovery aerobic is uncapped here for the same reason the explicit
+      // recovery branch above is: it is what the session IS. A flush beyond the
+      // authored allowance buys nothing and takes its positional turn below.
+      const offer = presence === 'offer'
+        ? workout.section18Evidence?.conditioningRole ?? null
+        : null;
+      if (offer === 'optional_recovery_aerobic') {
+        derived.set(workout, offer);
+        continue;
+      }
+      if (offer === 'optional_flush' && flushUsed < flushAllowance) {
+        derived.set(workout, offer);
+        flushUsed += 1;
+        continue;
+      }
+      if (appCoreUsed < appCoreCapacity) {
+        derived.set(workout, anchorCoreCredits + appCoreUsed < requiredMinimum
+          ? 'required_core'
+          : 'planner_selected_core');
+        appCoreUsed += 1;
+        continue;
+      }
+      if (flushUsed < flushAllowance) {
+        derived.set(workout, 'optional_flush');
+        flushUsed += 1;
+        continue;
+      }
+      derived.set(workout, 'optional_noncore');
+    }
+  }
+  return derived;
+}
+
+/**
+ * THE ROLE IS DERIVED; THE STRESS IS NOT, AND MUST NOT BE.
+ *
+ * Stress stays exactly where it was — the typed evidence, which reads the
+ * session's own content (its conditioning category and tier). Deriving it from
+ * the derived ROLE was tried and is wrong in Sam's own words: "intensity and
+ * prescribed volume must never feed identity" (2026-07-27) runs both ways, and
+ * a genuinely hard session that lands past the week's core capacity would have
+ * had its stress rewritten to `light` because the ledger decided it was
+ * surplus. Measured: `section18ContractV2Tests` 12 — six hard conditioning days
+ * stopped breaching the mode's hard-day maximum, because two of them had been
+ * relabelled as offers and offers are light by definition.
+ */
+function workoutConditioning(
+  workout: Workout,
+  derived: ReadonlyMap<Workout, Section18ConditioningRole>,
+): {
   role: Section18ConditioningRole;
   stress: Section18ConditioningStress;
 } | null {
-  const evidence = workout.section18Evidence;
-  if (!evidence || evidence.conditioningRole === 'none') return null;
-  return { role: evidence.conditioningRole, stress: evidence.conditioningStress };
+  const role = derived.get(workout);
+  if (role === undefined) return null;
+  return { role, stress: workout.section18Evidence?.conditioningStress ?? 'unknown' };
 }
 
 function normalParticipation(anchor: Section18AnchorContract): boolean {
@@ -391,6 +568,15 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     };
   });
 
+  // The anchors have taken their core credit above; the app's sessions continue
+  // that same count. Derived once, here, and read by the day loop below — which
+  // walks Sunday-first and so could never establish training order itself.
+  const derivedConditioningRoles = deriveConditioningRoles({
+    contract: input.contract,
+    workoutsByDay,
+    anchorCoreCredits: creditedAnchorIndex,
+  });
+
   for (let day = 0; day <= 6; day++) {
     const dayWorkouts = workoutsByDay.get(day) ?? [];
     const typedAnchorDeniesHardCredit = input.contract.anchors.some((anchor) =>
@@ -430,7 +616,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         dayAccessory = true;
       }
 
-      const conditioning = workoutConditioning(workout);
+      const conditioning = workoutConditioning(workout, derivedConditioningRoles);
       if (conditioning) {
         conditioningByStress[conditioning.stress] += 1;
         conditioningCredits.push({
@@ -439,10 +625,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
           stress: conditioning.stress,
           source: 'app',
         });
-        if (
-          conditioning.role === 'core' || conditioning.role === 'required_core' ||
-          conditioning.role === 'planner_selected_core'
-        ) {
+        if (isCoreRole(conditioning.role)) {
           coreConditioning += 1;
           appCore += 1;
           dayCoreConditioning = true;
@@ -452,17 +635,15 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         } else if (conditioning.role === 'optional_recovery_aerobic') {
           optionalRecoveryAerobic += 1;
           dayRecovery = true;
-        } else if ((conditioning.role as string) === 'optional_noncore') {
+        } else if (conditioning.role === 'optional_noncore') {
           optionalNonCore += 1;
         } else if (conditioning.role === 'legacy_unknown') {
           legacyUnknown += 1;
         }
         if (conditioning.stress === 'hard') dayHard = true;
-        else if (
-          (conditioning.role === 'core' || conditioning.role === 'required_core' ||
-            conditioning.role === 'planner_selected_core') &&
-          conditioning.stress === 'moderate'
-        ) dayModerate = true;
+        else if (isCoreRole(conditioning.role) && conditioning.stress === 'moderate') {
+          dayModerate = true;
+        }
       }
 
       if (workout.speedBlock?.kind === 'true_speed') {
@@ -557,9 +738,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     return { delivered, prescribed, appPrescribed };
   };
 
-  const coreCredits = conditioningCredits.filter((credit) =>
-    credit.role === 'core' || credit.role === 'required_core' ||
-    credit.role === 'planner_selected_core');
+  const coreCredits = conditioningCredits.filter((credit) => isCoreRole(credit.role));
   const conditioningSplit = splitDays(
     coreCredits.map((credit) => credit.dayOfWeek),
     coreCredits.map((credit) => credit.source === 'app'),
@@ -1089,10 +1268,10 @@ export function evaluateSection18EffectiveWeek(
   }
 
   const appMediumHard = ledger.conditioning.credits.filter((credit) =>
-    credit.source === 'app' && credit.role === 'core' &&
+    credit.source === 'app' && isCoreRole(credit.role) &&
     (credit.stress === 'moderate' || credit.stress === 'hard')).length;
   const appHard = ledger.conditioning.credits.filter((credit) =>
-    credit.source === 'app' && credit.role === 'core' && credit.stress === 'hard').length;
+    credit.source === 'app' && isCoreRole(credit.role) && credit.stress === 'hard').length;
   const allAppHard = ledger.conditioning.credits.filter((credit) =>
     credit.source === 'app' && credit.role !== 'legacy_unknown' && credit.stress === 'hard').length;
   const intensity = contract.conditioning.intensityPolicy;

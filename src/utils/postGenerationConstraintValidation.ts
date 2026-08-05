@@ -1009,12 +1009,26 @@ export function buildSection18ProductionFallbackCandidate(args: {
           conditioningCategory: source.conditioningCategory,
           conditioningFeasibility: source.conditioningFeasibility,
           conditioningBlock,
-          section18ConditioningRole: source.section18ConditioningRole ?? 'planner_selected_core',
+          // THE THIRD OPINION, RETIRED (Sam's ruling 1, 2026-08-06).
+          //
+          // This used to DEFAULT an untyped conditioning session to
+          // `planner_selected_core` — inventing core credit for content nobody
+          // had typed, in a legacy fallback clone, from a module that is not a
+          // planner. It was the third of at least four writers that disagreed
+          // about this field.
+          //
+          // The clone now carries what the source actually says and nothing
+          // more. Untyped content stays untyped: `legacy_unknown` is the typed
+          // name for "conditioning is present and its role was never stated",
+          // and it is the state the migration finding exists to surface rather
+          // than something to paper over here. Which role the session plays in
+          // the week is derived from the contract by the one owner.
+          section18ConditioningRole: source.section18ConditioningRole,
           section18Evidence: source.section18Evidence ?? {
             protocolVersion: 1,
-            conditioningRole: 'planner_selected_core',
-            conditioningStress: 'moderate',
-            provenance: 'planner_and_canonical_content',
+            conditioningRole: 'legacy_unknown',
+            conditioningStress: 'unknown',
+            provenance: 'legacy_unknown',
           },
         };
         return {

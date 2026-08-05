@@ -201,9 +201,25 @@ function stackTemplate(args: {
     conditioningCategory: conditioningOwner?.conditioningCategory,
     attachedConditioningKind: conditioningOwner?.attachedConditioningKind,
     coachAddedConditioningLabel: conditioningOwner?.coachAddedConditioningLabel,
-    section18Evidence: conditioningOwner?.section18Evidence ?? args.base.section18Evidence,
-    section18ConditioningRole:
-      conditioningOwner?.section18ConditioningRole ?? args.base.section18ConditioningRole,
+    // CONDITIONING IDENTITY TRAVELS WITH CONDITIONING CONTENT, OR NOT AT ALL.
+    //
+    // These two fell back to the BASE when no side of the stack carried
+    // conditioning — so a day that ended up with no conditioning block still
+    // announced a conditioning role and typed conditioning evidence. Harmless
+    // while the §18 role was a stamp nobody derived from; not harmless now that
+    // the one owner reads typed evidence as the statement that conditioning is
+    // PRESENT (Sam's ruling 1, 2026-08-06). A stale statement would hand the
+    // day a core slot for work it does not contain.
+    //
+    // The site still decides nothing: it carries the owner's declaration when
+    // there is an owner, and says `none` when there is none.
+    section18Evidence: conditioningOwner?.section18Evidence ?? {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
+    section18ConditioningRole: conditioningOwner?.section18ConditioningRole ?? 'none',
     strengthIntent: strengthOwner?.strengthIntent,
     strengthIntentDiagnostics: strengthOwner?.strengthIntentDiagnostics,
     strengthPatternContributions: strengthOwner?.strengthPatternContributions,

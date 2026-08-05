@@ -264,6 +264,39 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
   });
 }
 
+/**
+ * RULING 2 (Sam, 2026-08-06, "2a" — `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md`):
+ * A FLUSH DOES NOT SURVIVE A FIXTURE CHANGE.
+ *
+ * The flush is the planner's OFFER for the shape the week had — not an athlete
+ * decision and not a result. By the north star and the fixture identity law,
+ * decisions persist and derived content re-derives: on a fixture change the
+ * week comes back clean and a flush appears only if the REBUILT week's authored
+ * policy declares one. It is the same reason `weekScopedOverlays` were never
+ * migrated.
+ *
+ * MEASURED, and it is why this is not optional polish. Remove the game from an
+ * in-season week whose Tuesday carries the offer and the replan below picks
+ * Tuesday as its shortfall-repair day — the offer is not core, so nothing kept
+ * it out of the candidate set — stacks its own conditioning onto it, and
+ * overwrites the role with `required_core`. Two things break at once: the offer
+ * the athlete was free to skip becomes work they owe, and the freed Saturday
+ * never gets the hard conditioning the bye week should have built, because the
+ * laundered offer already satisfied the core floor.
+ *
+ * Carrying it forward stays wrong even with the role derived rather than
+ * stamped (Sam's ruling 1): the surviving Tuesday content is EARLIER in
+ * training order, so it takes the core slot and Saturday falls through to the
+ * offer — the same week inverted. The two rulings only hold together.
+ */
+function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
+  return workouts.flatMap((workout) => {
+    if (workout.section18ConditioningRole !== 'optional_flush') return [workout];
+    const stripped = stripConditioningComponent(workout);
+    return stripped ? [stripped] : [];
+  });
+}
+
 function visibleResolver(
   args: BuildFixtureMinimalReplanInput,
   contract = args.targetMicrocycle.exposureContractV2!,
@@ -1000,8 +1033,22 @@ function changedDaySets(source: readonly Workout[], target: readonly Workout[]) 
  * full generation remains its fallback rather than a fixture authority.
  */
 export function buildFixtureMinimalReplan(
-  args: BuildFixtureMinimalReplanInput,
+  input: BuildFixtureMinimalReplanInput,
 ): FixtureMinimalReplanResult {
+  // RULING 2 APPLIES TO THE WHOLE MODULE, NOT JUST THE CANDIDATE SEED.
+  //
+  // `sourceWorkouts` is read as two different things below: the material the
+  // candidates are built from, AND the baseline every candidate's edit cost and
+  // preservation set is measured against. The offer has to leave BOTH, or the
+  // second one silently re-decides the week: stripping the flush only from the
+  // seed left the day it sat on already counted as "changed", so attaching the
+  // shortfall repair there looked free while the released fixture day looked
+  // like a fresh edit — measured, and the bye week's Saturday lost its hard
+  // conditioning to the very Tuesday the ruling clears.
+  const args: BuildFixtureMinimalReplanInput = {
+    ...input,
+    sourceWorkouts: withoutPlannerOffers(input.sourceWorkouts),
+  };
   const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
@@ -1069,14 +1116,19 @@ export function buildFixtureMinimalReplan(
                 contract.conditioning.core.requiredMinimum) -
               baselineEvaluation.ledger.conditioning.coreCount);
           const sourceMap = byDay(strengthSource);
+          // READS THE DERIVATION, NEVER A STAMP (Sam's ruling 1, 2026-08-06).
+          //
+          // This used to answer "which days already hold core conditioning" by
+          // reading the role STORED on each workout — a field five writers set
+          // and disagreed about. It is the same question `baselineEvaluation`
+          // one line up already answers, from the contract plus the week, at the
+          // single layer that owns it. Asking twice is how this module became a
+          // second planner.
           const daysWithCoreConditioning = new Set(
-            strengthSource
-              .filter((workout) => {
-                const role = workout.section18Evidence?.conditioningRole ??
-                  workout.section18ConditioningRole;
-                return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
-              })
-              .map((workout) => workout.dayOfWeek),
+            baselineEvaluation.ledger.conditioning.credits
+              .filter((credit) => credit.role === 'required_core' ||
+                credit.role === 'planner_selected_core' || credit.role === 'core')
+              .map((credit) => credit.dayOfWeek),
           );
           const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
             if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
@@ -1088,10 +1140,18 @@ export function buildFixtureMinimalReplan(
           const displacedConditioning = displacedStandaloneConditioningTemplates(args, strengthSource);
           const daySets = shortfall === 0 ? [[]] : combinations(candidateDays, shortfall);
           for (const addedDays of daySets) {
-            const role = baselineEvaluation.ledger.conditioning.coreCount <
-              contract.conditioning.core.requiredMinimum
-              ? 'required_core'
-              : 'planner_selected_core';
+            // THE REPAIR DECLARES ITS PURPOSE; IT NO LONGER DERIVES A ROLE.
+            //
+            // What stood here was a second copy of the evaluator's own anchor
+            // rule — `coreCount < requiredMinimum ? 'required_core' :
+            // 'planner_selected_core'` — restated in a module that had no
+            // business owning it. Sam's ruling 1 retires it: which KIND of core
+            // a session is, is positional and belongs to the one derivation.
+            //
+            // The session this repair builds is core conditioning the contract
+            // is short of; that is not a derivation but a statement of what the
+            // repair IS, and it is the only thing the field still carries here.
+            const role = 'required_core' as const;
             let candidate = [...strengthSource];
             for (const dayNumber of addedDays) {
               const displaced = displacedConditioning[addedDays.indexOf(dayNumber)];
