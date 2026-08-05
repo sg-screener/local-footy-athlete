@@ -14,6 +14,7 @@ import type {
   WeekScopedWorkoutOverlay,
   Workout,
 } from '../types/domain';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import type {
   ActiveConstraint,
   ActiveInjuryConstraint,
@@ -996,16 +997,12 @@ export function buildSection18ProductionFallbackCandidate(args: {
               })),
             }
           : undefined;
-        return {
-          ...targetWorkout,
-          workoutType: targetWorkout.workoutType === 'Rest' ? source.workoutType : 'Mixed',
-          sessionTier: 'core',
-          intensity: targetWorkout.intensity === 'High' || targetWorkout.intensity === 'Maximal' ||
-            source.intensity === 'High' || source.intensity === 'Maximal'
-            ? 'High'
-            : 'Moderate',
-          durationMinutes: targetWorkout.durationMinutes + Math.max(15, source.durationMinutes),
-          exercises: [...(targetWorkout.exercises ?? []), ...clonedRows],
+        // The conditioning this day GAINS, named so the marker rule can read
+        // it — see `composedOptionalMarker`. A stack is the clone's twin: once
+        // a conditioning part lands, the day is no longer one composed
+        // Gunshow / Accessories / Mobility session (ruling 7-e), and the owner
+        // decides that from the very fields this merge is about to write.
+        const conditioningGain: Partial<Workout> = {
           hasCombinedConditioning: true,
           attachedConditioningKind: source.attachedConditioningKind ?? 'component',
           conditioningFlavour: source.conditioningFlavour,
@@ -1019,6 +1016,19 @@ export function buildSection18ProductionFallbackCandidate(args: {
             conditioningStress: 'moderate',
             provenance: 'planner_and_canonical_content',
           },
+        };
+        return {
+          ...targetWorkout,
+          workoutType: targetWorkout.workoutType === 'Rest' ? source.workoutType : 'Mixed',
+          sessionTier: 'core',
+          intensity: targetWorkout.intensity === 'High' || targetWorkout.intensity === 'Maximal' ||
+            source.intensity === 'High' || source.intensity === 'Maximal'
+            ? 'High'
+            : 'Moderate',
+          durationMinutes: targetWorkout.durationMinutes + Math.max(15, source.durationMinutes),
+          exercises: [...(targetWorkout.exercises ?? []), ...clonedRows],
+          ...conditioningGain,
+          ...composedOptionalClearingPatch(conditioningGain),
         };
       };
       const requiredAppCore = Math.max(
