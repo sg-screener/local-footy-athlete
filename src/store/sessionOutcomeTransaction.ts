@@ -184,8 +184,25 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
  */
 export async function commitSessionOutcomeTransaction(
   intent: RecordSessionOutcomeIntent,
+  todayISO: string = todayISOLocal(),
 ): Promise<SessionOutcomeTransactionResult> {
-  const commandTodayISO = todayISOLocal();
+  // THE DOOR'S CLOCK IS AN INPUT, like every other fact it reads.
+  //
+  // Its two siblings in this file — `resolveSessionOutcomeTarget` and
+  // `createRecordSessionOutcomeIntentFromFeedback` — already take `todayISO`
+  // with exactly this default. This one read the wall clock and could not be
+  // told otherwise, which made any world-based test of it depend on the day it
+  // was RUN rather than on the world it declares.
+  //
+  // That is not hypothetical: `sessionOutcomeControlOwnershipTests` cell 1 asks
+  // this door to refuse a future session in a world pinned to 2026-08-05. It
+  // passed while the wall clock agreed and went red the moment the date rolled
+  // over, because the session it calls "tomorrow" had become the real today.
+  // A suite that changes its answer overnight is not a gate.
+  //
+  // Production behaviour is unchanged — every caller that omits this argument
+  // still gets the athlete's real today.
+  const commandTodayISO = todayISO;
   const trace = beginAthleteActionTrace({
     source: intent.source.entryPoint,
     actionType: 'session_feedback',

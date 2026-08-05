@@ -180,6 +180,8 @@ const main = async () => {
         workout: target.workout,
         source: { entryPoint: 'tap', surface: 'session_feedback_panel' },
       } as never),
+      // The door is asked about THIS WORLD's today, not the day the suite runs.
+      TODAY,
     )) as { ok: boolean; code?: string };
     assert(!result.ok && result.code === 'future_session_outcome',
       `the door accepted a future session (ok=${result.ok}, code=${result.code}) — this `
@@ -276,6 +278,7 @@ const main = async () => {
         workout,
         source: { entryPoint: 'tap', surface: 'session_feedback_panel' },
       } as never),
+      TODAY,
     )) as { ok: boolean; code?: string };
     assert(result.ok, `logging today's session refused: ${result.code}`);
   });
