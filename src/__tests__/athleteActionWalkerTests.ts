@@ -379,15 +379,17 @@ async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
 // changes what the list MEANS. Recovery is not an athlete-facing session type at
 // all: an empty G+1 Sunday is REST, which is the ruled end state rather than a gap
 // awaiting a recovery unit (`surfaceAgreementTests` cells 2 and 4, re-pointed).
-// The walker still must not walk a recovery door, for the stronger reason that
-// there is no such door to walk. What survives — the `PLAN_CHANGE_CATEGORY_ID`,
-// the producer's `CATEGORY_COPY.recovery` row, the charter's recovery row, and
-// `applyGameProximity` replacing a PLANNED G+1 session with a derived recovery
-// one — is vocabulary the athlete cannot reach through any menu, recorded as
-// named follow-up debt in `docs/BUTTONS_UI_UNIT_BOUNDARY_2026-07-31.md` for the
-// charter's own unit, not paid here.
+//
+// AND THE CHOOSE DOOR CAME BACK ON 2026-08-05 (docs/DISPLAY_TIMES_RULING §1,
+// after device-pass finding 3): the charter still forbids the app PLACING
+// recovery uninvited — both halves above stand — but the ATHLETE choosing one
+// is the chartered grant the menu had lost ("you can always add a recovery or
+// mobility flow to any day as optional"). `PlanChangeSheet` now renders the
+// recovery row from `planChangeTypeMenu`, so there IS a door, and the walker
+// walks it like any other category.
 const CATEGORIES = ['conditioning_light', 'conditioning_hard', 'strength_upper',
-  'strength_lower', 'strength_full', 'gunshow', 'prehab', 'mobility'] as const;
+  'strength_lower', 'strength_full', 'gunshow', 'prehab', 'mobility',
+  'recovery'] as const;
 const G1_ROUTES = [undefined, 'keep_the_day', 'take_the_gunshow',
   'accessories_only', 'deloaded'] as const;
 
@@ -1572,30 +1574,22 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // reachable instance, and this list's own stale-debt law forced the
   // deletion. The recovery-as-last-resort classifier the shape exposed is
   // still the D13/sessionComponents family's — see
-  // `session_list_calls_a_conditioning_day_recovery` below.
-  {
-    id: 'session_list_calls_a_conditioning_day_recovery',
-    law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
-    why: 'THE ONLY SHAPE THAT INVENTS, and it is two classifiers disagreeing about '
-      + 'one day. `buildSessionTemplate` short-circuits to `mode: "recovery"` on '
-      + '`isRecoveryWorkout` (workoutType `Recovery` OR `sessionTier === '
-      + '"recovery"`), which renders `RecoveryBlock` and no items at all; '
-      + '`getSessionComponents` looked at the same workout and said conditioning. '
-      + 'So the athlete is shown a recovery day over conditioning work. DEEP ONLY: '
-      + 'it needs a day whose tier and whose content have come apart, which the '
-      + 'bounded tier\'s fourteen actions do not build. Reproduce: deep, '
-      + '2026-08-06 — template ["recovery"] / projection ["conditioning"].',
-    paidBy: 'the D13 session-template owner, with `sessionComponents` — one of the '
-      + 'two has to stop answering, and the answer should come from the PARTS. '
-      + "Sam's 2026-07-31 ruling sharpens this rather than closing it: recovery is "
-      + 'not an athlete-facing session type at all any more, so a template that '
-      + 'shows an athlete a recovery day over conditioning work is now showing them '
-      + 'a type no door offers and no menu can act on.',
-    expiresWhen: 'the session list never reports a kind of work the projection does '
-      + 'not carry.',
-    redsIn: 'deep',
-  },
+  // `session_list_calls_a_conditioning_day_recovery` — ENTRY DELETED
+  // 2026-08-05, MOVED NOT PAID. The defect is OPEN: `buildSessionTemplate`
+  // still short-circuits to `mode: "recovery"` on `isRecoveryWorkout`
+  // (sessionTemplate.ts:248) while `getSessionComponents` can answer
+  // conditioning for the same workout — the athlete shown a recovery day
+  // over conditioning work. What changed is REACH, not the defect: adding
+  // 'recovery' to CATEGORIES (the 2026-08-05 choose-door ruling) shifted
+  // every seeded path, and neither tier now deterministically builds the
+  // tier/content-divergence coordinate (suspected: a G+1 derived-recovery
+  // replacement keeping attached conditioning — the athlete-door recovery
+  // add was probed and does NOT diverge: template and components both say
+  // recovery). Deletion is what the stale-debt cell demands of a VALID run
+  // (unlike the 2026-08-01 restore, no undeclared reds truncated these
+  // walks). Owner unchanged: the D13 session-template owner, with
+  // `sessionComponents` — the answer should come from the PARTS. Recorded in
+  // docs/RECOVERY_CHOOSE_DOOR_REPORT_2026-08-05.md.
   // NOTE 2026-08-01: this entry was briefly deleted as stale and RESTORED the
   // same day — the run that reported it un-reproducing had its deep walks
   // truncated by then-undeclared L-P6 violations, so the seeds never reached

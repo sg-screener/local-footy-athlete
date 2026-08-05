@@ -677,6 +677,45 @@ const main = async () => {
       + 'do not cover his device');
   });
 
+  // ── Finding 3: the athlete must be able to CHOOSE recovery ───────────
+  //
+  // Sam's 2026-08-05 ruling (docs/DISPLAY_TIMES_RULING_2026-08-05.md §1): the
+  // 2026-07-31 charter ruling STANDS — the app never places recovery
+  // uninvited — and the defect is that no findable athlete door exists to
+  // CHOOSE a recovery session. The Bible grants the choice outright ("you can
+  // always add a recovery or mobility flow to any day as optional", cited at
+  // planChangeTypes.ts beside the chartered 'recovery' id). This cell asserts
+  // the CHOICE is offered somewhere in his week's add vocabulary.
+  await run('finding-3: every category the producer offers is findable in the type menu', async () => {
+    // The first draft of this cell asked the PRODUCER and passed — recovery
+    // was offered. The phone still had no door, because the SHEET's render
+    // vocabulary (five MenuOption rows) could not reach it: the same
+    // enters-below-the-door shape, one layer higher. The sheet now derives
+    // row visibility from `planChangeTypeMenu`, so this cell asserts
+    // findability against the model the sheet actually renders from.
+    const { menuReachableCategoryIds } = await import('../screens/home/planChangeTypeMenu');
+    const reachable = menuReachableCategoryIds();
+    reachHisWorldByActing();
+    const offered = new Set<string>();
+    for (const day of visibleWeek()) {
+      const options = quiet(() => listPlanChangeOptionsForDay({
+        visibleWeek: visibleWeek(), date: day.date, todayISO: TODAY,
+      })) as unknown as {
+        categories?: { id: string }[];
+        addOnTopCategories?: { id: string }[];
+      };
+      for (const category of options.categories ?? []) offered.add(category.id);
+      for (const category of options.addOnTopCategories ?? []) offered.add(category.id);
+    }
+    assert(offered.has('recovery'),
+      `(3) the producer no longer offers 'recovery' anywhere in his week — the `
+      + `chartered choice regressed below the menu. Offered: [${[...offered].sort().join(', ')}]`);
+    const unfindable = [...offered].filter((id) => !reachable.has(id as never));
+    assert(unfindable.length === 0,
+      `(3) producer-offered categories no menu row can reach — chartered `
+      + `choices invisible on the phone: [${unfindable.sort().join(', ')}]`);
+  });
+
   // ── The worn coordinate II: his five removals, then every door ───────
   //
   // The 5b probe named the refusing layer: "Section 18 final-week rejection
