@@ -127,9 +127,20 @@ const NEXT = addDaysISO(WEEK, 7);
  * red fails outright.
  *
  * 1b's three entries (cells 5, 7 and 8) were deleted here on 2026-08-06 by the
- * commit that paid them — Sam's rulings 1 and 2, built as one move. The list is
- * empty and the mechanism stays armed: it is what makes the next declared red
- * pay for itself too.
+ * commit that paid them — Sam's rulings 1 and 2, built as one move. The
+ * mechanism stays armed: it is what makes the next declared red pay for itself
+ * too.
+ *
+ * Cell 10 STAYS DECLARED, and its declaration is now a different, smaller
+ * claim than it was this morning. The ruled rule change was built, measured at
+ * both sites that state it, and REVERTED — not because it was wrong but
+ * because it is not sufficient on its own. See
+ * `docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md`: with the rule changed the
+ * injured week's contract becomes byte-identical to the healthy week's, and a
+ * PLACEMENT owner then spreads that identical demand over six working days
+ * instead of five, so the week loses a required full-rest day and §18 refuses
+ * it outright. That owner is a different layer, and CLAUDE.md's escalation
+ * rule says reassess before changing it.
  */
 interface DeclaredRed {
   readonly id: string;
@@ -141,7 +152,9 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   {
     id: '10',
     matches: /the injured week lost a session/,
-    paidBy: 'docs/FINDING_3_SUBSTITUTE_BEFORE_REDUCE_2026-08-06.md + Sam\'s ruling',
+    paidBy: 'docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md — the rule change is '
+      + 'proven and reverted; it lands with the placement owner that keeps the '
+      + 'week\'s required rest',
   },
 ];
 
@@ -268,6 +281,63 @@ function conditioningRoleOf(day: ResolvedDay): string | null {
     section18ConditioningRole?: string;
   }) | null }).workout;
   return workout?.section18ConditioningRole ?? null;
+}
+
+/**
+ * The week as the APP'S OWN OWNER reads it — never a contract and a week
+ * assembled by hand. The contract stored on the microcycle predates any injury
+ * recorded after generation, and pairing it with the resolved week reports
+ * three phantom blocking violations and an empty `prohibitedPatterns`
+ * (FINDING_3_SUBSTITUTE_BEFORE_REDUCE_2026-08-06.md, "a trap worth
+ * recording"). `rebaseAcceptedEffectiveWeek` rebases the contract first.
+ */
+function acceptedWeek(target: string = NEXT): {
+  contract: {
+    strengthPatterns: { prohibitedPatterns: string[]; requiredSafePatterns: string[] };
+    authorisedReductions: { metric: string; reducedTarget: number; reason: string }[];
+  };
+  evaluation: {
+    blockingViolations: unknown[];
+    ledger: { mainStrength: { achievedCount: number } };
+  };
+} {
+  return quiet(() => rebaseAcceptedEffectiveWeek({
+    surfaces: useProgramStore.getState(),
+    weekStart: target,
+    profile: useProfileStore.getState().onboardingData,
+    markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+  } as never)) as never;
+}
+
+/** Record an injury through the guided door the athlete actually uses. */
+async function recordInjury(args: {
+  id: string;
+  bodyPart: string;
+  bucket: string;
+  severity: number;
+  rules: string[];
+}): Promise<void> {
+  await quietAsync(() => createOrUpdateInjuryEpisode({
+    constraint: {
+      id: args.id,
+      type: 'injury',
+      bodyPart: args.bodyPart,
+      bucket: args.bucket,
+      severity: args.severity,
+      status: 'active',
+      startDate: TODAY,
+      lastUpdatedAt: `${TODAY}T09:00:00.000Z`,
+      source: 'guided_injury_flow',
+      rules: args.rules,
+      safeFocus: ['Pain-free work for unaffected regions'],
+      advice: [],
+      modifierAffects: ['current_week', 'future_generation'],
+      presentationOnlyDismiss: true,
+    },
+    sourceActor: 'athlete',
+    sourceSurface: 'guided_injury_flow',
+    todayISO: TODAY,
+  } as never));
 }
 
 /** Every component on the day — the stacked parts, not just the headline. */
@@ -587,39 +657,21 @@ const main = async () => {
     const beforeSessions = before.filter((day) =>
       !!(day as unknown as { workout?: Workout | null }).workout).length;
     assert(beforeSessions > 0, 'the uninjured week derived no sessions at all');
+    const beforeStrength = acceptedWeek().evaluation.ledger.mainStrength.achievedCount;
+    assert(beforeStrength > 0,
+      'the uninjured week carries no main strength at all, so the frequency assertion '
+      + 'below would pass vacuously');
 
-    await quietAsync(() => createOrUpdateInjuryEpisode({
-      constraint: {
-        id: 'injury-hamstring-phase-structure',
-        type: 'injury',
-        bodyPart: 'hamstring',
-        bucket: 'hamstring',
-        severity: 6,
-        status: 'active',
-        startDate: TODAY,
-        lastUpdatedAt: `${TODAY}T09:00:00.000Z`,
-        source: 'guided_injury_flow',
-        rules: ['No sprinting or high-speed running', 'No heavy hinge work'],
-        safeFocus: ['Pain-free work for unaffected regions'],
-        advice: [],
-        modifierAffects: ['current_week', 'future_generation'],
-        presentationOnlyDismiss: true,
-      },
-      sourceActor: 'athlete',
-      sourceSurface: 'guided_injury_flow',
-      todayISO: TODAY,
-    } as never));
+    await recordInjury({
+      id: 'injury-hamstring-phase-structure',
+      bodyPart: 'hamstring',
+      bucket: 'hamstring',
+      severity: 6,
+      rules: ['No sprinting or high-speed running', 'No heavy hinge work'],
+    });
 
     const after = week();
-    const accepted = quiet(() => rebaseAcceptedEffectiveWeek({
-      surfaces: useProgramStore.getState(),
-      weekStart: NEXT,
-      profile: useProfileStore.getState().onboardingData,
-      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
-    } as never)) as {
-      contract: { strengthPatterns: { prohibitedPatterns: string[] } };
-      evaluation: { blockingViolations: unknown[] };
-    };
+    const accepted = acceptedWeek();
 
     // WHAT MUST NOT MOVE — the injury is still doing its job.
     const prohibited = accepted.contract.strengthPatterns.prohibitedPatterns;
@@ -638,6 +690,81 @@ const main = async () => {
       + 'areas"; :93 — "get as much work as you can in around the injury". The frequency was '
       + 'reduced to the number of surviving PATTERNS instead, which is a constraint on '
       + `variety, not on how often the athlete may train. Injured week: ${shape(after)}`);
+
+    // THE RULING ITSELF, and not merely "a day still has something on it".
+    //
+    // The session-count assertion above passes with the frequency cap still in
+    // place at the Contract v2 policy — the capped days keep a workout, they
+    // just stop carrying main strength. Measured by mutation on 2026-08-06:
+    // reverting that site alone left this cell green. Frequency is what the
+    // ruling holds, so frequency is what the cell states.
+    const afterStrength = accepted.evaluation.ledger.mainStrength.achievedCount;
+    assert(afterStrength >= beforeStrength,
+      `the injured week lost main-strength FREQUENCY (${beforeStrength} → ${afterStrength} `
+      + 'sessions) while push and pull were both still safe. Ruled 2026-08-06 '
+      + '(docs/FINDING_3_RULING_2026-08-06.md) on Bible :4755: a restricted week HOLDS its '
+      + 'selected strength frequency and fills the freed days with safe work; the frequency '
+      + `falls only when NO safe pattern remains. Safe patterns here: ${
+        JSON.stringify(accepted.contract.strengthPatterns.requiredSafePatterns)}. Injured `
+      + `week: ${shape(after)}`);
+  });
+
+  /**
+   * THE OTHER SIDE OF THE SAME RULING — where reducing frequency IS correct.
+   *
+   * `:1913` 8-10/10: "pause affected training entirely; rest/recovery or
+   * clearly unaffected work only". With every main pattern restricted there is
+   * no safe substitution left to make, so the frequency reduction is the
+   * honest answer rather than an evasion of one — and it must not regress when
+   * the 6/10 cap above is removed.
+   *
+   * This cell is why the fix is `requiredSafe.length === 0` and not a deletion.
+   */
+  await run('11 a whole-body restriction still reduces the frequency (Bible :1913, ruled 2026-08-06)', async () => {
+    reachWorldByActing();
+    const beforeStrength = acceptedWeek().evaluation.ledger.mainStrength.achievedCount;
+    assert(beforeStrength > 0, 'the uninjured week carries no main strength at all');
+
+    // Two areas at the pause band leave no main pattern safe: a lower-body
+    // restriction takes squat and hinge, and an upper-body one at 8-10/10
+    // takes push AND pull (`resolveRestrictedMainStrengthPatterns`).
+    await recordInjury({
+      id: 'injury-hamstring-wholebody-phase-structure',
+      bodyPart: 'hamstring',
+      bucket: 'hamstring',
+      severity: 9,
+      rules: ['No sprinting or high-speed running', 'No hinge work'],
+    });
+    await recordInjury({
+      id: 'injury-shoulder-wholebody-phase-structure',
+      bodyPart: 'shoulder',
+      bucket: 'shoulder',
+      severity: 9,
+      rules: ['No pressing', 'No pulling'],
+    });
+
+    const accepted = acceptedWeek();
+    const patterns = accepted.contract.strengthPatterns;
+    assert(patterns.requiredSafePatterns.length === 0,
+      'this cell needs a week with NO safe main pattern, and the two pause-band injuries '
+      + `left ${JSON.stringify(patterns.requiredSafePatterns)} safe (prohibited: `
+      + `${JSON.stringify(patterns.prohibitedPatterns)}). It would otherwise assert the `
+      + 'reduction on a week the ruling says must KEEP its frequency.');
+
+    const reduction = accepted.contract.authorisedReductions.find((entry) =>
+      entry.metric === 'main_strength_frequency' && entry.reason === 'injury_restriction');
+    assert(reduction !== undefined && reduction.reducedTarget === 0,
+      'a whole-body restriction no longer records the main-strength frequency reduction. '
+      + 'Bible :1913 (8-10/10): "pause affected training entirely… clearly unaffected work '
+      + 'only" — with no safe pattern there is nothing to substitute, so the reduction is '
+      + `correct here and must survive the 6/10 fix. Reductions: ${JSON.stringify(
+        accepted.contract.authorisedReductions.map((entry) =>
+          `${entry.metric}->${entry.reducedTarget}(${entry.reason})`))}`);
+
+    const afterStrength = accepted.evaluation.ledger.mainStrength.achievedCount;
+    assert(afterStrength === 0,
+      `the week still prescribes ${afterStrength} main-strength session(s) with every `
+      + `pattern prohibited. Week: ${shape(week())}`);
   });
 
   console.log(`\n  phase structure conformance totals: ${passed} passed, ${failed} failed`);
