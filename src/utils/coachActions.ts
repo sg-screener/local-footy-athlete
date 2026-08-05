@@ -32,6 +32,7 @@
  */
 
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import {
   useCoachUpdatesStore,
@@ -394,6 +395,7 @@ function cloneWorkout(w: Workout, overrides: Partial<Workout> = {}): Workout {
     exercises: w.exercises.map((ex) => ({ ...ex })),
     ...overrides,
     updatedAt: new Date().toISOString(),
+    ...composedOptionalClearingPatch(overrides),
   };
 }
 

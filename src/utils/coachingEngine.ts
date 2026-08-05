@@ -5311,6 +5311,23 @@ function buildWeeklyPlan(
           conditioningFlavour: flavour,
           conditioningCategory: category,
           ...conditioningProps,
+          // A DAY THAT GAINS CONDITIONING IS NO LONGER ONE COMPOSED SESSION.
+          //
+          // This is the third site to learn the same lesson, and the last of
+          // the three that spreads an EXISTING session: `stackTemplate` clears
+          // it on combining ("the marker dies with the purity it describes"),
+          // and the §18 repair clears it when it promotes an accessory slot
+          // ("whoever repurposes a day owns clearing what the day WAS"). This
+          // one spread `...s` and attached conditioning on top, so a Gunshow
+          // day kept saying it was a pure Gunshow while carrying a conditioning
+          // part — the deep walker's L-P6 offence
+          // `renders ["Gunshow","Conditioning"]`, ruling 7-e.
+          //
+          // Cleared HERE, at the site that adds the content, rather than
+          // normalised at the projection: a projection that quietly repaired
+          // the marker would make L-P6 unfalsifiable and leave the leak in the
+          // domain with only its symptom gone.
+          composedOptionalKind: undefined,
         };
         st.condCount += attachedConditioningCredit(attachedKind);
         st.condFlavours[flavour]++;
@@ -7005,6 +7022,7 @@ function applySection18ConditioningAllocation(
       clearConditioning(session);
     }
   }
+
 
   // A genuine anchor already satisfies the sprint floor in these modes; the
   // sprint repair below only sees a shortfall when no such credit exists.

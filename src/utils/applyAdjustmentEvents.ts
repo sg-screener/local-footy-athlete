@@ -36,6 +36,7 @@
  */
 
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import {
   resolveWeekWithConditioning,
   getMondayStr,
@@ -196,6 +197,7 @@ function cloneWorkout(w: Workout, overrides: Partial<Workout> = {}): Workout {
     coachNotes: w.coachNotes ? [...w.coachNotes] : undefined,
     ...overrides,
     updatedAt: new Date().toISOString(),
+    ...composedOptionalClearingPatch(overrides),
   };
 }
 
