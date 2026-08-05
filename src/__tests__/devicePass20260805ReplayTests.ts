@@ -126,16 +126,20 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   {
     id: 'finding-6b-door',
     finding: 'Device finding 6b: "Deload:" note on a non-deload week.',
-    matches: /coordinate was not reached/,
-    why: 'NOT REPRODUCED — the coordinate is UNREACHED, and this entry is the '
-      + 'honest record of that (a silent pass would claim coverage that does '
-      + 'not exist). The G-1 protection refuses the move outright before the '
-      + 'landing ask can offer the deloaded route; the note his phone shows '
-      + 'most likely lives in STORED week-overlay content (his export carries '
-      + 'overlay keys for all four weeks, content unexported). No gate sweeps '
-      + 'hydrated overlay content for deload-copy agreement.',
-    paidBy: 'whoever reproduces 6b — either through the ask flow or a stored-'
-      + 'overlay sweep; delete this entry in that commit',
+    matches: /week-deload copy stamped on a standard week/,
+    why: 'REPRODUCED BY ACTING (2026-08-05 evening): an ADD onto the G-1 '
+      + 'Friday answered with the "deloaded" route stamps "Deload: keep RPE '
+      + '5-6; every rep fast and clean, nowhere near failure." onto a standard '
+      + 'week — resolveDoorDeloadPolicy reads no week kind, and the appliers '
+      + 'write persisted notes with no strip path. (A MOVE onto G-1 is refused '
+      + 'outright, which is why the first draft never reached this.) The DOSE '
+      + 'is the athlete\'s choice and correct; the words are the question. '
+      + 'Latent sibling recorded: appendDeloadNote\'s idempotence guard '
+      + 'matches /Deload week:/ while appending "Deload: ", so reapplication '
+      + 'can duplicate.',
+    paidBy: 'Sam\'s parked §12 answer (what an athlete-CHOSEN deloaded day '
+      + 'says — typed cause selects the sentence, per the copy law), then the '
+      + 'deload-copy unit; delete this entry in that commit',
   },
   // finding-7 was declared red here and RETIRED 2026-08-05 evening: Sam's
   // display-times ruling re-scoped the sweep to rendered lines (names and
@@ -929,39 +933,19 @@ const main = async () => {
       },
       todayISO: TODAY,
     } as never));
-    // Move any moveable session onto the G-1 Friday, answering 'deloaded'.
-    const week = visibleWeek();
-    let landed = false;
-    const attempts: string[] = [];
-    for (const day of week) {
-      if (!day.workout || day.date <= TODAY || day.date === '2026-08-07' || day.date === '2026-08-08') continue;
-      const options = quiet(() => listPlanChangeOptionsForDay({
-        visibleWeek: visibleWeek(), date: day.date, todayISO: TODAY,
-      }));
-      if (options.move.refusal) {
-        attempts.push(`${day.date}: move refused "${options.move.refusal.message}"`);
-        continue;
-      }
-      for (const scope of options.move.scopes) {
-        if (!scope.destinations.some((destination) => destination.date === '2026-08-07')) {
-          attempts.push(`${day.date} ${scope.id}: destinations=[${
-            scope.destinations.map((destination) => destination.date).join(', ')}]`);
-          continue;
-        }
-        const result = tapThroughTheScreen({
-          kind: 'move_session', fromDate: day.date, toDate: '2026-08-07',
-          scope: scope.id, g1Route: 'deloaded',
-        } as never as PlanChange);
-        if (result.ok ?? result.outcome === 'applied') { landed = true; break; }
-        attempts.push(`${day.date} ${scope.id} -> 2026-08-07: `
-          + `outcome=${result.outcome ?? 'none'} "${result.message}"`);
-      }
-      if (landed) break;
-    }
+    // ADD onto the G-1 Friday, answering the landing ask with 'deloaded' —
+    // the ask-flow suite's own route (its cell 24 proves the add door lands
+    // the DELOAD_LAW dose). A MOVE onto G-1 is refused outright ("Big session
+    // the day before your game"), which is why the first draft of this cell
+    // never reached the coordinate.
+    const result = tapThroughTheScreen({
+      kind: 'add_category', date: '2026-08-07', category: 'strength_full',
+      g1Route: 'deloaded',
+    } as never as PlanChange);
+    const landed = result.ok ?? result.outcome === 'applied';
     assert(landed,
-      '(6b-door) no session could land on the G-1 Friday via the deloaded route — '
-      + 'the coordinate was not reached, and this cell proves nothing. The space:'
-      + `\n    ${attempts.join('\n    ')}`);
+      `(6b-door) the deloaded G-1 add refused — the coordinate was not reached: `
+      + `outcome=${result.outcome ?? 'none'} "${result.message}"`);
     // The deloaded DOSE is the athlete's choice and correct. What must not
     // happen on a standard week is the "Deload:" WEEK copy appearing — the
     // signed sentences claim week semantics ("the week\'s one quality

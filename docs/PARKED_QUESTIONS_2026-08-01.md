@@ -277,3 +277,31 @@ athlete-rendered line, barred by your ruling. It now ships PROPOSED as:
 **Your question:** sign, reword, or drop the sentence. (The Rest-line case
 needed no words from you — "2 min (Sam's 1:2 ruling)" now renders "Rest:
 2 min" and the workbook cell is untouched.)
+
+---
+
+## §12 PARKED — what does an athlete-CHOSEN deloaded day say? (2026-08-05)
+
+**Unit:** device-pass finding 6b, reproduced by acting
+(`test:device-pass-2026-08-05`, `finding-6b-door`): adding a session onto
+G-1 and answering the landing ask with "Deloaded" stamps
+
+> "Deload: keep RPE 5-6; every rep fast and clean, nowhere near failure."
+
+onto a standard (non-deload) week, persisted with no strip path. The DOSE is
+correct — you chose it. The WORDS are the question: on your device this read
+as a deload-week note leaking onto a normal week.
+
+**Your options:**
+- (a) keep the sentence as-is on athlete-chosen deloaded days (it describes
+  the dose, not the week) — the cell then asserts it appears ONLY on days
+  the athlete deloaded;
+- (b — recommended) a day-scoped sentence for the chosen route (e.g. "Easy
+  day: keep RPE 5-6; every rep fast and clean." — yours to word), selected
+  by the typed cause per the copy law, with "Deload:" reserved for scheduled
+  deload weeks;
+- (c) no note at all on the chosen route — the dose speaks for itself.
+
+**Also recorded for the same unit:** `appendDeloadNote`'s repeat-guard
+matches "Deload week:" while it appends "Deload: " — reapplying can
+duplicate the sentence (latent; not yet red-celled).
