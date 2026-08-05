@@ -430,8 +430,8 @@ const describeRows = (workout: Workout): string =>
     chosenNotes);
 
   const conditioningRows = () => [
-    row('Easy Aerobic Bike', 1),
-    row('VO2 Intervals', 1),
+    row('Easy Aerobic Bike', 1, { prescribedDurationMinutes: 40 } as never),
+    row('VO2 Intervals', 1, { prescribedDurationMinutes: 20 } as never),
   ];
   const chosenConditioning = notesOf(
     applyConditioningDeloadToExercises(conditioningRows(), chosen));
@@ -462,6 +462,112 @@ const describeRows = (workout: Workout): string =>
   ok('the policy carries the door that minted it',
     scheduled.door === 'scheduled' && chosen.door === 'readiness',
     `scheduled=${(scheduled as { door?: string }).door} chosen=${(chosen as { door?: string }).door}`);
+
+  /* ── §13: the conditioning half, EQUALITY-BOUND TO THE SIGNED RECORD ──
+   *
+   * Sam signed the conditioning easy-day sentence on 2026-08-05
+   * (docs/EASY_DAY_CONDITIONING_COPY_2026-08-05.md), closing the §13 this unit
+   * parked: the chosen route shipped conditioning rows with the halved dose and
+   * NO sentence, because writing athlete-facing words is his alone.
+   *
+   * Bound the same way the shortfall sentence is (`test:shortfall-copy`, Sam's
+   * regime of 2026-07-29): the DOC is the authority, read at test time rather
+   * than transcribed, and equality runs BOTH directions. One direction alone is
+   * worthless — "the code contains what he signed" still permits the code to
+   * emit three other sentences he never saw.
+   */
+  const signedSentence = (docFile: string, startsWith: string): string => {
+    const text = fs.readFileSync(path.join(repoRoot, 'docs', docFile), 'utf8');
+    // Blockquoted, and it may wrap across lines: join the quote's lines back up.
+    const quoted = text
+      .split('\n')
+      .filter((line) => line.startsWith('>'))
+      .map((line) => line.replace(/^>\s?/, '').trim())
+      .join('\n');
+    const found = quoted
+      .split(/\n(?=[A-Z])/)
+      .map((block) => block.replace(/\s+/g, ' ').trim())
+      .find((block) => block.startsWith(startsWith));
+    if (!found) {
+      throw new Error(`no signed sentence starting "${startsWith}" in docs/${docFile}`);
+    }
+    return found;
+  };
+
+  const SIGNED_CONDITIONING = signedSentence(
+    'EASY_DAY_CONDITIONING_COPY_2026-08-05.md', 'Easy day:');
+  const SIGNED_STRENGTH = signedSentence(
+    'METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md', 'Easy day:');
+
+  const chosenConditioningNotes = notesOf(
+    applyConditioningDeloadToExercises(conditioningRows(), chosen));
+
+  ok('the chosen easy day says Sam\'s SIGNED conditioning sentence, verbatim',
+    chosenConditioningNotes.includes(SIGNED_CONDITIONING),
+    `signed: "${SIGNED_CONDITIONING}"\n      emitted: "${chosenConditioningNotes}"`);
+
+  // Every row of the chosen route carries it — the quality row and the easy
+  // one. Sam signed ONE conditioning sentence for this route, so a second
+  // wording for the quality exposure would be copy nobody authored.
+  const chosenConditioningRows = applyConditioningDeloadToExercises(
+    conditioningRows(), chosen);
+  ok('every conditioning row of a chosen easy day carries that one sentence',
+    chosenConditioningRows.every((entry) => (entry.notes ?? '').includes(SIGNED_CONDITIONING)),
+    chosenConditioningRows.map((entry) => `"${entry.notes ?? ''}"`).join(' | '));
+
+  // THE OTHER DIRECTION. Every sentence the chosen route can put in front of an
+  // athlete must be carried, verbatim, by a signed record. A sentence the docs
+  // do not show is copy that shipped without a signature.
+  const chosenEmitted = [
+    ...applyStrengthDeloadToExercises(strengthRows(), chosen),
+    ...chosenConditioningRows,
+  ].flatMap((entry) => (entry.notes ?? '').split(/(?<=\.)\s+(?=Easy day:|Deload:)/))
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+  const SIGNED = [SIGNED_STRENGTH, SIGNED_CONDITIONING];
+  ok('the chosen route emits NOTHING that is not in a signed record',
+    chosenEmitted.every((sentence) => SIGNED.includes(sentence)),
+    `emitted: ${JSON.stringify(chosenEmitted)}\n      signed: ${JSON.stringify(SIGNED)}`);
+
+  ok('and the signed conditioning sentence never appears on a SCHEDULED week',
+    !notesOf(applyConditioningDeloadToExercises(conditioningRows(), scheduled))
+      .includes(SIGNED_CONDITIONING),
+    notesOf(applyConditioningDeloadToExercises(conditioningRows(), scheduled)));
+
+  const condOnce = applyConditioningDeloadToExercises(conditioningRows(), chosen);
+  const condTwice = applyConditioningDeloadToExercises(condOnce, chosen);
+  ok('applying the chosen conditioning easy day twice does not duplicate it',
+    condTwice.every((entry) =>
+      occurrences(entry.notes ?? '', 'Easy day: smooth and controlled') === 1),
+    condTwice.map((entry) => `"${entry.notes ?? ''}"`).join(' | '));
+
+  // A NOTE IS OUTPUT, NEVER EVIDENCE.
+  //
+  // Found by wiring Sam's sentence: it contains the word "hard" ("stop well
+  // short of hard"), and `isQualityConditioningRow` regex-matches intensity
+  // words in `name + notes`. So one pass wrote the sentence and the NEXT pass
+  // read it back and reclassified an easy aerobic row as the week's quality
+  // exposure — halving its duration a second time. The classifier was reading
+  // the applier's own writing.
+  //
+  // The claim is about CLASSIFICATION, not the dose. Halving a duration twice
+  // halves it twice — that is arithmetic, and callers own not re-applying. What
+  // must never move is WHICH ROW the law calls the quality exposure, because
+  // that is a reading of the athlete's session and not of our own prose.
+  for (const [label, appliedPolicy] of [
+    ['chosen', chosen] as const,
+    ['scheduled', scheduled] as const,
+  ]) {
+    const first = applyConditioningDeloadToExercises(conditioningRows(), appliedPolicy);
+    const second = applyConditioningDeloadToExercises(first, appliedPolicy);
+    const quality = (rows: WorkoutExercise[]) => JSON.stringify(rows.map((entry) => [
+      entry.exercise?.name,
+      (entry as { deloadQualityExposure?: boolean }).deloadQualityExposure,
+    ]));
+    ok(`the ${label} deload's own note never reclassifies the row that wears it`,
+      quality(second) === quality(first),
+      `first:  ${quality(first)}\n      second: ${quality(second)}`);
+  }
 }
 
 /* ── Result ── */

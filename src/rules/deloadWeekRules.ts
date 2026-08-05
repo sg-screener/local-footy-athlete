@@ -190,7 +190,7 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
   // registry-first shape as the EXERCISE_TAGS line above.
   if (CONDITIONING_META[name]) return true;
   return /\b(conditioning|sprint|tempo|aerobic|interval|run|bike|row|ski|swim|vo2|mas|cool-?down|warm-?up)\b/i
-    .test(`${name} ${exercise.notes ?? ''}`);
+    .test(`${name} ${authoredNotesOnly(exercise.notes)}`);
 }
 
 export function isMainStrengthRow(exercise: WorkoutExercise): boolean {
@@ -248,10 +248,44 @@ function appendSignedNote(notes: string | undefined, note: string | null): strin
  */
 function strengthDeloadNote(policy: DeloadWeekPolicy): string {
   return policy.door === 'scheduled'
-    ? `Deload: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
-      + 'every rep fast and clean, nowhere near failure.'
-    : `Easy day: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
-      + 'every rep fast and clean.';
+    ? DELOAD_SENTENCES.scheduledStrength
+    : DELOAD_SENTENCES.chosenStrength;
+}
+
+/**
+ * A NOTE IS OUTPUT, NEVER EVIDENCE.
+ *
+ * Every sentence the deload appliers write, named once so the classifiers can
+ * refuse to read them back. Found by wiring Sam's §13 conditioning sentence:
+ * it contains the word "hard" ("stop well short of hard"), and
+ * `isQualityConditioningRow` matches intensity words across `name + notes`.
+ * One pass wrote the sentence; the NEXT pass read it and promoted an easy
+ * aerobic row to the week's one quality exposure — the app's own prose
+ * reclassifying the athlete's session.
+ *
+ * Stripping is deliberately narrow: it removes exactly these sentences and
+ * nothing else, so an intensity word the ATHLETE'S OWN authored note carries
+ * still classifies exactly as it always did.
+ */
+const DELOAD_SENTENCES = {
+  scheduledStrength: `Deload: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
+    + 'every rep fast and clean, nowhere near failure.',
+  chosenStrength: `Easy day: keep RPE ${DELOAD_LAW.rpeMin}-${DELOAD_LAW.rpeMax}; `
+    + 'every rep fast and clean.',
+  scheduledConditioningQuality:
+    'Deload: this is the week\'s one quality exposure — keep it sharp but short.',
+  scheduledConditioningEasy: 'Deload: easy aerobic only. Half the usual work.',
+  chosenConditioning:
+    'Easy day: smooth and controlled — comfortable pace, stop well short of hard.',
+} as const;
+
+/** The row's own words, with everything this module wrote removed. */
+function authoredNotesOnly(notes: string | undefined): string {
+  let text = notes ?? '';
+  for (const sentence of Object.values(DELOAD_SENTENCES)) {
+    if (text.includes(sentence)) text = text.split(sentence).join(' ');
+  }
+  return text;
 }
 
 /**
@@ -316,7 +350,7 @@ export function applyStrengthDeloadToExercises(
 function isQualityConditioningRow(exercise: WorkoutExercise): boolean {
   const name = exercise.exercise?.name ?? '';
   return /\b(vo2|mas|sprint|interval|repeat|hard|tempo|shuttle|fartlek|emom|tabata)\b/i
-    .test(`${name} ${exercise.notes ?? ''}`);
+    .test(`${name} ${authoredNotesOnly(exercise.notes)}`);
 }
 
 /**
@@ -366,27 +400,29 @@ export function applyConditioningDeloadToExercises(
 }
 
 /**
- * The conditioning sentence — SCHEDULED WEEKS ONLY, for now.
+ * The day's conditioning sentence, SELECTED BY THE SAME TYPED CAUSE.
  *
- * Both of these sentences begin "Deload:", which Sam's §12 signing reserves for
- * a week the plan really scheduled. He signed ONE day-scoped sentence for the
- * athlete-chosen route, and it is the strength one; no conditioning wording for
- * that route has been authored. Composing one here would be inventing
- * athlete-facing copy, which is exactly what the signed-words law forbids — so
- * the chosen route's conditioning rows carry the correct halved DOSE and no
- * sentence at all (§12 option (c) applied to the rows Sam has not worded).
+ * Sam signed the athlete-chosen wording on 2026-08-05
+ * (docs/EASY_DAY_CONDITIONING_COPY_2026-08-05.md), closing §13 — which this
+ * unit parked precisely because the chosen route had no authored conditioning
+ * words and composing some here would have been inventing athlete-facing copy.
  *
- * PARKED for Sam: does an athlete-chosen easy day want conditioning words of
- * its own, or does the halved dose speak for itself?
+ * ONE sentence covers both chosen-route cases. The scheduled week distinguishes
+ * its single quality exposure from the easy rest; Sam signed one sentence for
+ * the chosen route, so wording a second for the quality row would be copy
+ * nobody authored. "Deload:" stays reserved for the scheduled door.
+ *
+ * `test:deload-law` binds both sentences to their signed records, both
+ * directions — the code must say what Sam signed, and must emit nothing else.
  */
 function conditioningDeloadNote(
   policy: DeloadWeekPolicy,
   keptAsQuality: boolean,
 ): string | null {
-  if (policy.door !== 'scheduled') return null;
+  if (policy.door !== 'scheduled') return DELOAD_SENTENCES.chosenConditioning;
   return keptAsQuality
-    ? 'Deload: this is the week\'s one quality exposure — keep it sharp but short.'
-    : 'Deload: easy aerobic only. Half the usual work.';
+    ? DELOAD_SENTENCES.scheduledConditioningQuality
+    : DELOAD_SENTENCES.scheduledConditioningEasy;
 }
 
 /** A power dose under the deload law: kept, but smaller and still sharp. */

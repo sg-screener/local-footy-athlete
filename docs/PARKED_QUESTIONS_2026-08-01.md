@@ -32,15 +32,27 @@ proposed reword parked here is withdrawn — it was never needed, because the
 signed description carries no ratio. Split of what applies now versus what
 pins to the coach rebuild: `docs/METCON_SPLIT_2026-08-05.md`.
 
-### NEWLY PARKED by the same unit
+### §13 — ANSWERED same day, Sam signed the wording
 
-**§13 — does an athlete-chosen easy day want CONDITIONING words of its own?**
-Sam signed one day-scoped sentence and it is the strength one. The two
-conditioning sentences both begin "Deload:", which §12 now reserves for
-scheduled weeks, so on the chosen route the conditioning rows ship with the
-correct halved DOSE and NO sentence (§12 option (c), applied only to the rows
-Sam has not worded). Composing one here would be inventing athlete-facing
-copy. Your call: word one, or let the dose speak for itself.
+**SIGNED** (`docs/EASY_DAY_CONDITIONING_COPY_2026-08-05.md`), closing the gap
+this unit parked:
+
+> Easy day: smooth and controlled — comfortable pace, stop well short of hard.
+
+Selected by the same typed cause as the strength sentence, athlete-chosen
+route only; "Deload:" sentences stay reserved for scheduled deload weeks.
+SHIPPED and equality-bound both directions against the signed record
+(`test:deload-law`, the shortfall-copy regime), with the deload sentences added
+to the copy-sheet gate's authoring modules so a retirement cannot be missed.
+
+**One defect the wiring exposed and paid.** The signed sentence contains the
+word "hard" ("stop well short of hard"), and `isQualityConditioningRow`
+matched intensity words across `name + notes` — so one pass wrote the sentence
+and the NEXT pass read it back and promoted an easy aerobic row to the week's
+one quality exposure, halving its duration again. A note is OUTPUT, never
+evidence: the classifiers now strip this module's own sentences before
+reading, narrowly enough that an intensity word in the ATHLETE'S own note
+still classifies exactly as before.
 
 ---
 
