@@ -87,7 +87,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
-import { commitRebuiltProgram } from '../utils/weekRebuild';
+import { commitRebuiltProgram, rebuildLocalWeek } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
@@ -125,6 +125,7 @@ interface DeclaredRed {
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   { id: '5', matches: /ZERO visible conditioning/, paidBy: 'finding 1b' },
   { id: '7', matches: /ZERO sessions as `optional_flush`/, paidBy: 'finding 1b' },
+  { id: '8', matches: /session\(s\) typed `optional_flush`, not the single offer/, paidBy: 'ruling 1 + ruling 2' },
 ];
 
 const declaredRedHits = new Set<string>();
@@ -422,6 +423,64 @@ const main = async () => {
       + 'toward :127\'s in-season conditioning target arithmetic — TT + game still satisfy '
       + 'the target; the flush rides as the always-present optional". A flush that promoted '
       + `itself to core would be the ruling's other half broken. Derived week: ${shape(days)}`);
+  });
+
+  /**
+   * RULING 2 (Sam, 2026-08-06, "2a" — `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md`):
+   * the flush is the PLANNER'S OFFER, not an athlete decision, so it does not
+   * survive a fixture change. The week re-derives clean.
+   *
+   * Both halves are asserted here because they fail in opposite directions and
+   * a suite that only checked one would pass on the other's bug:
+   *
+   *   while the fixture stands — the flush is placed AND STAYS typed
+   *     `optional_flush`. This is the regression that held 1b: a second planner
+   *     re-roled it to `required_core`, laundering the athlete's offer into
+   *     required work.
+   *   after the game is removed — no flush anywhere, and the week equals the
+   *     measured no-1b baseline: Saturday carries the hard conditioning session
+   *     the freed day should build.
+   *
+   * The baseline in the assertion is MEASURED in this world, not assumed: before
+   * 1b, removing the game from this week yields `Sat Hard Conditioning`
+   * (`required_core`, glycolytic) with every other day unchanged.
+   */
+  await run('8 the offer never re-roles, and never survives a fixture change (ruling 2)', async () => {
+    reachWorldByActing();
+    await shiftTo('In-season');
+    const standing = week();
+    const flush = standing.filter((day) => conditioningRoleOf(day) === 'optional_flush');
+    assert(flush.length === 1,
+      `while the fixture stands the week carries ${flush.length} session(s) typed `
+      + '`optional_flush`, not the single offer the in-season policy declares. Roles: '
+      + `${standing.map((day) => `${day.date}=${conditioningRoleOf(day) ?? '-'}`).join(' ')}`);
+
+    const saturday = standing.find((day) => new Date(`${day.date}T12:00:00`).getDay() === 6);
+    assert(saturday, 'the derived week has no Saturday to clear');
+    quiet(() => rebuildLocalWeek({
+      baseProfile: useProfileStore.getState().onboardingData,
+      newGameDay: null,
+      scope: 'weekOverlay',
+      targetDate: saturday.date,
+      manageCalendarFixture: true,
+      todayISO: TODAY,
+    } as never));
+
+    const rebuilt = week();
+    const survivors = rebuilt.filter((day) => conditioningRoleOf(day) === 'optional_flush');
+    assert(survivors.length === 0,
+      `the flush SURVIVED the fixture-change rebuild on ${survivors.map((day) => day.date).join(', ')}. `
+      + 'Ruling 2: the flush is the planner\'s offer, not an athlete decision — the rebuilt '
+      + `week re-derives clean and bye-build's authored min is 0. Rebuilt week: ${shape(rebuilt)}`);
+
+    const freed = rebuilt.find((day) => day.date === saturday.date);
+    const freedRole = freed ? conditioningRoleOf(freed) : null;
+    assert(freedRole === 'required_core',
+      `the freed Saturday came back role=${freedRole ?? 'null'}, not the required core `
+      + 'conditioning the no-1b baseline builds there. Measured before 1b, removing this '
+      + 'game yields Sat "Hard Conditioning" (required_core, glycolytic) — a flush that '
+      + 'quietly satisfied the core floor is exactly how that session went missing. '
+      + `Rebuilt week: ${shape(rebuilt)}`);
   });
 
   console.log(`\n  phase structure conformance totals: ${passed} passed, ${failed} failed`);
