@@ -26,7 +26,11 @@
  *   equipment                 selection under the typed EquipmentAnswer
  *                             (addendum §1.7)
  *   injury                    selection filtering through the one owner
- *                             (addendum §1.11)
+ *                             (addendum §1.11) at Mild, AND pattern
+ *                             restriction at Severe — two different rule sets,
+ *                             and only the second reaches the restricted-week
+ *                             frequency rules. See the note above
+ *                             `offseason-severe-restriction`.
  *   training days 3 vs 6      density + placement under scarcity
  *   conditioning level        conditioning dose derivation (draft §Scope 2)
  *
@@ -208,5 +212,40 @@ export const STAGE_B_SCENARIOS: readonly StageBScenario[] = [
       benchStrength: 'Less than bodyweight',
       recentTrainingLoad: 'A bit',
     } as Partial<OnboardingData>),
+  },
+  // THE INJURY DIMENSION ABOVE DOES NOT REACH THE RESTRICTION RULES, measured.
+  //
+  // `offseason-lower-niggle` is a MILD profile injury, and
+  // `resolveRestrictedMainStrengthPatterns` restricts profile injuries only at
+  // SEVERE. Measured against the healthy control on the unfixed tree, every
+  // field matched: no prohibited patterns, no reductions, the same week shape.
+  // So the matrix's "injury" scenario was, for the pattern-restriction rules, a
+  // second copy of `offseason-early-solo` — coverage that reads as coverage and
+  // is not (`docs/FINDING_3_MATRIX_COVERAGE_PREDICTIONS_2026-08-06.md`).
+  //
+  // This scenario reaches BOTH sites that state the frequency rule, which is
+  // the property that matters: paying one alone left the world unchanged
+  // (`docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md` §1). Its baseline shows
+  // site 2's cap as `main_strength/weekly_exposure_count:3->2` and site 1's as
+  // `main_strength_frequency:3->2`.
+  //
+  // APPENDED LAST, deliberately. The golden's `scenarios` array follows this
+  // declaration order, so appending keeps the golden diff purely ADDITIVE —
+  // every existing scenario stays at its index, on its own lines. Declaring it
+  // beside `offseason-lower-niggle` would group better here and would shift
+  // every later scenario's byte position, destroying the one property the
+  // coverage diff needs to be able to prove.
+  {
+    id: 'offseason-severe-restriction',
+    description:
+      'Off-season with a SEVERE hamstring — squat and hinge prohibited, the '
+      + 'restricted-week frequency rules reached at both sites.',
+    profile: baseProfile({
+      injuries: [{
+        bodyArea: 'Hamstring',
+        description: 'Severe left hamstring strain',
+        severity: 'Severe',
+      }] as OnboardingData['injuries'],
+    }),
   },
 ];
