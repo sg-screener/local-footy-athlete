@@ -227,7 +227,11 @@ const main = async () => {
       `the fixture decision did not land typed: ${JSON.stringify(decision)}`);
   });
 
-  await run('a conflicted fixture tap appends nothing', async () => {
+  await run('a stale render revision still lands and appends (R1.4b)', async () => {
+    // The retirement's live pin in the chain: the revision handshake is gone
+    // (R1.4b), so a tap whose render went stale is still the athlete's
+    // decision about a date — it lands against current accepted state and
+    // its decision reaches the ledger. Re-adding the check reds here.
     reachWorldByActing();
     const tap = await quietAsync(() => executeFixtureMutationTransaction({
       action: 'add',
@@ -240,8 +244,36 @@ const main = async () => {
       },
       todayISO: TODAY,
     } as never)) as { outcome?: string };
-    assert(tap.outcome === 'conflicted',
-      `precondition: the stale-revision tap must conflict (got ${tap.outcome})`);
+    assert(tap.outcome === 'accepted' || tap.outcome === 'repaired'
+      || tap.outcome === 'regenerated' || tap.outcome === 'fallback',
+      `the stale-revision add did not land (${tap.outcome}) — the retired `
+      + 'revision handshake is refusing athlete decisions again');
+    const entries = decisionLedgerEntries();
+    assert(entries.length === 1 && entries[0]!.decision.kind === 'fixture_add',
+      `the landed stale-revision add left ${entries.length} ledger entries`);
+  });
+
+  await run('a refused fixture tap appends nothing', async () => {
+    // The refusal factory here used to be a stale expectedAcceptedRevision;
+    // R1.4b retired that handshake (a stale render no longer refuses the
+    // athlete's decision), so the cell manufactures its refusal with a
+    // genuinely impossible request instead: removing a fixture from a date
+    // that holds none. The LAW is unchanged — a tap that did not land never
+    // reaches the ledger.
+    reachWorldByActing();
+    const tap = await quietAsync(() => executeFixtureMutationTransaction({
+      action: 'remove',
+      fixtureKind: canonicalFixtureKind({ phase: 'Pre-season' } as never),
+      sourceDate: '2026-08-06',
+      expectedAcceptedRevision: currentRevision(),
+      source: {
+        requestedBy: 'athlete', producer: 'tap', surface: 'program_tab',
+        commandId: 'door-append:remove:2026-08-06:none:no-fixture-there',
+      },
+      todayISO: TODAY,
+    } as never)) as { outcome?: string };
+    assert(tap.outcome === 'no_change' || tap.outcome === 'impossible',
+      `precondition: removing a fixture that does not exist must refuse (got ${tap.outcome})`);
     assert(decisionLedgerEntries().length === 0,
       'a REFUSED tap reached the ledger — the ledger records decisions that landed');
   });

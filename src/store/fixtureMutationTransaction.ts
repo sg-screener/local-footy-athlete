@@ -41,6 +41,11 @@ export interface FixtureMutationTransactionInput {
   fixtureKind: FixtureMutationKind;
   sourceDate?: string;
   targetDate?: string;
+  /**
+   * The revision the producing render saw. PROVENANCE ONLY since R1.4b —
+   * it rides the tape and command ids; the retired conflict handshake no
+   * longer compares it (see resolveFixtureMutation).
+   */
   expectedAcceptedRevision: number;
   source: FixtureMutationSourceMetadata;
   todayISO?: string;
@@ -176,17 +181,15 @@ function resolveFixtureMutation(
       'The supplied TraceV2 token does not match the fixture producer.',
     );
   }
-  const currentRevision = useProgramStore.getState().acceptedMaterialContext.revision;
-  if (input.expectedAcceptedRevision !== currentRevision) {
-    return {
-      kind: 'conflicted',
-      reason: 'The accepted program changed before the fixture mutation could run.',
-      error: new FixtureMutationValidationError(
-        'accepted_revision_conflict',
-        'The accepted program changed before the fixture mutation could run.',
-      ),
-    };
-  }
+  // R1.4b (shell rebuild): the accepted-revision handshake is RETIRED. It
+  // existed because boot re-transacted the same facts and minted revisions
+  // past the athlete's first render, so a tap could "conflict" with a world
+  // nothing about its decision disagreed with — the evening-2/3 device
+  // findings, verbatim. The quiescent boot derives instead of transacting,
+  // so the first-rendered world IS the accepted world; a fixture tap is a
+  // decision about a DATE, resolved against current accepted state, never
+  // a compare-and-swap on a revision counter. `expectedAcceptedRevision`
+  // stays typed as render-provenance for the tape and command ids.
   // Redundant by construction now that every producer derives `fixtureKind`
   // from the same owner this reads. Kept as a loud invariant: reaching it
   // means a command was built outside the owner, which is a defect in the
@@ -360,17 +363,9 @@ function executeCandidate(args: {
   profile: OnboardingData;
   trace: AthleteActionTraceContext;
 }): CandidateResult {
-  const currentRevision = useProgramStore.getState().acceptedMaterialContext.revision;
-  if (args.input.expectedAcceptedRevision !== currentRevision) {
-    return {
-      kind: 'conflicted',
-      reason: 'The accepted program changed before publication.',
-      error: new FixtureMutationValidationError(
-        'accepted_revision_conflict',
-        'The accepted program changed before publication.',
-      ),
-    };
-  }
+  // R1.4b: the pre-publication expression of the retired revision handshake
+  // went with it — see resolveFixtureMutation. The candidate acts on current
+  // accepted state by construction.
   try {
     const result = rebuildLocalWeek({
       baseProfile: args.profile,

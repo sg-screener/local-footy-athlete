@@ -2,8 +2,9 @@
 
 Branch `feat/stage-b-stage2`. Plan approved as written with A fold / B none /
 C hidden (`docs/SHELL_REBUILD_PLAN_APPROVAL_2026-08-05.md`, `c81d576`).
-R1 units 1 and 2 are COMPLETE and committed on a genuinely green chain;
-units 3 and 4 are designed, surveyed, and NOT STARTED. Totals-or-red applies
+**R1 CODE COMPLETE: units 1–4 (including R1.4a/R1.4b) and the work-bill cell
+are committed on a genuinely green chain. R1 now waits on exactly one thing —
+Sam's fresh-install device pass — and STOPS there.** Totals-or-red applies
 to this document: what is not listed as done is not done.
 
 ## Done
@@ -43,47 +44,66 @@ composition.
   mirror read. Use the real domain type in new code; do not bump the
   declaration for a type-level mention.
 
-## R1.3 — quiescent boot (NEXT, not started)
+**R1.4a — every landed decision reaches the ledger (`c0a9ae0`).** Additive,
+before the boot flip: `applyPlanChange` appends the typed plan-change on ok;
+`executeFixtureMutationTransaction` appends the typed fixture decision (the
+durable door only — the in-memory twin is the parity/replay seam and never
+writes). Refusals never reach the ledger (`doorLedgerAppendTests`).
 
-The product flip. Coordinates (all surveyed this session):
+**R1.3 — the quiescent boot (`03318c0`).** The product flip, landed exactly
+as coordinated: persisted program state is INPUTS ONLY (`partialize`/`merge`
+flipped; `reduceProgramEnvelopeToInputs` converges every writer at the
+boundary; an old-shape envelope is PARKED byte-identical under
+`program-store.pre-rebuild-envelope` for R2 and restores nothing); boot =
+`runQuiescentBoot` (park → clean-slate derive at the recorded
+`generationAnchorISO` under the persisted phase clock → replay the decision
+ledger through the recording interpreters, under `ledgerReplayLatch` — no
+durable writes, no ring flood). `quiescentBootTests` holds the laws.
+Full triage record: `docs/SHELL_REBUILD_R13_HANDOVER_2026-08-05.md` (the L16
+root cause — the fresh-install reset never reset the R1.1 ledger — plus the
+two product defects the walker's light found and this commit fixed: a landed
+fixture add crashing on its own acknowledgement note, and the weekRebuild
+publications inheriting the equivalence gate's `restoration` default so a
+disclosed shortfall REFUSED an athlete's game add). evening-0/1/2/3 went
+green structurally and their declared-red entries are deleted; LR-4 paid
+72→71, census baseline 74→73.
 
-- `programStore.ts`: `onRehydrateStorage` :2216-2487 runs the boot mint chain
-  (accepted transaction + fact set + mirror republication + canonical
-  readback rewrite); `merge` :2077-2213 is the in-memory lift; the
-  `hasHydrated` monkeypatch :2535-2559 gates render on acceptance.
-  `temporarySourceFactTransaction.ts` :224-275 re-mints `busy_week` on EVERY
-  ownership load. Boot writes disk four ways (retired-key delete stays; the
-  other three go).
-- NEW BOOT: hydrate input stores → derive in memory → render. No
-  transactions, no revision mint, no readback rewrite. Persist `partialize`
-  stops carrying output surfaces; in memory they remain exactly as today so
-  screens and doors work unchanged. Fresh-install world only (R1's device
-  pass is fresh-install; an old envelope at boot is R2's migration).
-- RED FIRST: the boot-appends-nothing cell — relaunch, flush, byte-compare
-  every persisted key (evening-0's successor, permanent).
-- Suites that act through the persist envelope (`hydration-upgrade-path`,
-  `hydration-refusal-quarantine`, `program-control-durable`, both device-pass
-  suites) get the world-follows-product treatment: WORLD-BUILDING moves to
-  the new boot; ASSERTIONS DO NOT MOVE (the expectation-edited lesson).
-  evening-0's declared-red entry is deleted by the commit that greens it.
-- dev/e2e seed coordinators drive accepted transactions — keep them working
-  against the in-memory machinery or declare NOT-COVERED in the boundary
-  report.
+**R1.4b — the revision handshake retired (this commit).** Both `conflicted`
+branches in `fixtureMutationTransaction` are gone; `expectedAcceptedRevision`
+stays typed as render-provenance only. Pins: `doorLedgerAppendTests` ("a
+stale render revision still lands and appends"), `fixtureMutationTransaction-
+Tests` cell 7 (reversed to the retirement). The refusal-factory cell moved to
+a genuinely impossible request.
 
-## R1.4 — doors append + re-derive (after R1.3)
+**The work-bill cell (this commit).** `workBillTests` (chained) generalises
+evening-4 across the door vocabulary — delete / move / add / fixture-add /
+fixture-remove — in the law's RATCHET form: closed per-door write sets
+(decision stores + the DECLARED mirror bill), shrink-only mirror debt (an
+untouched entry is stale and fails), split byte ceilings (non-log ≤ 32 KB —
+measured 2–8 KB per door against the old ~1.1 MB pipeline; the 200-entry log
+ring bounded separately at 1 MB). R5's mirror deletion drains the declared
+set and leaves the strict law standing. evening-4's declared red stays in the
+evening suite on the original device coordinate until that bill empties.
 
-- Doors stay behaviourally identical (the proven interpreters); with outputs
-  no longer persisted, a door's only disk write is ONE ledger append (+ log).
-  The `conflicted` refusal dies with the revision check
-  (`fixtureMutationTransaction.ts:176-187`); `expectedAcceptedRevision`
-  callers: `useHomeScreen.ts:309→:1055` (render-captured — the failing
-  shape), `homeGameMutationController.ts:117` (fresh read),
-  `coachFixtureChange.ts:106` (out of beta, LR-6).
-- Every door body ends by appending its typed decision
-  (`appendDecisionEntry`, writers `program_control` / `fixture_door`).
-- The work-bill cell generalises evening-4 across the door vocabulary;
-  evening-1/2/3/4 declared-red entries are deleted by the commits that green
-  them.
+## Known residuals (declared, not hidden)
+
+- `fixtureMutationTransactionTests` is NOT in the bible chain; 11/14 after
+  this session's world fix (the profile now answers the equipment step).
+  The 3 pre-existing fails are recorded so they are never misattributed:
+  cell 4 (practice-match add answers `fixture_already_present` on this
+  world), cell 9 (restoration reads `markedDays` off the retired envelope
+  shape), cell 11 (TraceV2 roots=16). They predate R1.4b and belong to the
+  suite's own unit.
+- The `?? 'restoration'` DEFAULT at the two accepted-commit assert sites
+  contradicts the assert interface's "no default here" comment. R1.3
+  classified the weekRebuild owners explicitly; whether the default itself
+  should die is a ruling for Sam.
+- The durable door does not AWAIT the decision-ledger flush before returning
+  success (the persistence barrier predates the ledger). Small data-loss
+  window on process death in the same tick; work-bill/R2 candidate.
+- An undo has no durable record until the reversal producer lands (LR-29's
+  heir) — pinned in `athleteSessionMoveTests` cell 21 so the producer's
+  arrival forces the durability assertion.
 
 ## Standing gates for whoever continues
 
