@@ -119,6 +119,10 @@ function installAcceptedCalendarGame(date: string, fallbackProfile?: ReturnType<
     throw new Error(`dev_e2e_seed_calendar_context_missing:${date}`);
   }
   commitAcceptedStateTransaction({
+    // A dev seed INSTALLS a world; it never restores one, and a seed that
+    // refuses on a shortfall is a harness that cannot reach the coordinate it
+    // was written for.
+    operation: 'forward_decision',
     reason: `dev_e2e_seed:calendar_game:${date}`,
     markedDays: { ...accepted.markedDays, [date]: 'game' },
     profile,
@@ -139,6 +143,7 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
       setCurrentProgram: (program) => {
         if (!program) throw new Error('dev_e2e_seed_program_missing');
         commitAcceptedStateTransaction({
+          operation: 'forward_decision',
           reason: 'dev_e2e_seed:install_program',
           program: {
             currentProgram: program,
@@ -152,6 +157,7 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
         });
       },
       setCurrentMicrocycle: (microcycle) => commitAcceptedStateTransaction({
+        operation: 'forward_decision',
         reason: 'dev_e2e_seed:select_microcycle',
         program: { currentMicrocycle: microcycle },
         profile: seed.profile,
@@ -164,6 +170,7 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
       // Publish the selection as part of the exact accepted surfaces while
       // still gating the complete canonical week.
       setTodayWorkout: (workout) => commitAcceptedStateTransaction({
+        operation: 'forward_decision',
         reason: 'dev_e2e_seed:set_today_workout',
         program: { todayWorkout: workout },
         profile: seed.profile,
@@ -269,6 +276,7 @@ async function applyAuxiliaryState(
       // exact bodyweight-only profile. Publish the matching canonical fact at
       // the accepted-state boundary without recomposing that proven seed.
       commitAcceptedStateTransaction({
+        operation: 'forward_decision',
         reason: `dev_e2e_seed:temporary_equipment:${factId}`,
         temporarySourceFacts,
         activeConstraints: compatibility.activeConstraints,

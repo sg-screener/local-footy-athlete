@@ -183,6 +183,8 @@ function seed(athlete: OnboardingData = profile()): void {
   // Faithful acceptance — establishes acceptedCompositionBase + profile snapshot
   // exactly as programStore's `program:hydration_acceptance` does.
   quiet(() => commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'readiness-ownership-test:acceptance',
     profile: athlete,
     validateWeekStarts: [WEEK],
@@ -236,17 +238,23 @@ function seedDeviceExact(): string {
     todayISO: dseed.anchorDate,
     programStore: {
       setCurrentProgram: (program) => { commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-install',
         program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
           blockState: deriveStoredBlockStateFromProgram(program) },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts,
       } as never); },
       setCurrentMicrocycle: (m) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-mc', program: { currentMicrocycle: m },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [],
       } as never),
       setTodayWorkout: (w) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-today', program: { todayWorkout: w },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: [dseed.anchorDate],

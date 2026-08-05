@@ -699,6 +699,9 @@ export function useHomeScreen() {
   const runRebuild = async (profileOverride?: typeof onboardingData) => {
     const profile = profileOverride ?? onboardingData;
     const program = await generateProgramFromProfile(profile, {
+      // The athlete asked for this rebuild (onboarding, phase shift). A week
+      // that cannot meet its contract is disclosed downstream, not refused.
+      weekAcceptance: 'forward_decision',
       blockNumber: getCurrentBlockNumberForGeneration(),
     });
     const sweep = decideSweepForCurrentStores(program, profile);

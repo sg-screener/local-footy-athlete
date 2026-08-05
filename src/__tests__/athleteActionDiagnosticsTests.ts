@@ -143,7 +143,9 @@ function resetAcceptedState(): void {
 }
 
 function simpleAcceptedCommit(reason: string): void {
-  commitAcceptedStateTransaction({ reason, validateWeekStarts: [] });
+  commitAcceptedStateTransaction({
+// Harness seed: installs a world, never restores one.
+operation: 'forward_decision', reason, validateWeekStarts: [] });
 }
 
 async function main(): Promise<void> {
@@ -296,6 +298,8 @@ async function main(): Promise<void> {
   });
   try {
     runWithAthleteActionTrace(rollbackTrace, () => commitAcceptedStateTransaction({
+      // Harness seed: installs a world, never restores one.
+      operation: 'forward_decision',
       reason: 'diagnostic:forced_rollback',
       program: throwingPatch as never,
     }));
@@ -348,11 +352,15 @@ async function main(): Promise<void> {
   } as ActiveConstraint;
   runWithAthleteActionTrace(noteTrace, () => {
     commitAcceptedStateTransaction({
+      // Harness seed: installs a world, never restores one.
+      operation: 'forward_decision',
       reason: 'diagnostic:coach_note_created',
       activeConstraints: [scheduleConstraint],
       validateWeekStarts: [],
     });
     commitAcceptedStateTransaction({
+      // Harness seed: installs a world, never restores one.
+      operation: 'forward_decision',
       reason: 'diagnostic:coach_note_cleared',
       activeConstraints: [],
       validateWeekStarts: [],

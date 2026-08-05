@@ -230,6 +230,8 @@ export async function rebuildDerivedWorld(): Promise<void> {
       },
     } as never);
     const program = generateProgramLocally(profile, {
+      // A boot replays; it decides nothing (plan §2, "boot appends nothing").
+      weekAcceptance: 'restoration',
       todayISO: generationISO,
       previousProgram: null,
       ...(clock ? { seasonPhaseClock: clock } : {}),

@@ -672,6 +672,9 @@ function commitConstraintProgramTransaction(
         .stageLiveStoredProgramSafety(proposedConstraints);
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+      // Constraints are what an athlete just told the app about their body or
+      // their week. The gate informs; it does not veto a fact (§18 D3).
+      operation: 'forward_decision',
       reason: 'constraint:update',
       program: projection ?? undefined,
       activeConstraints: [...proposedConstraints],

@@ -201,6 +201,12 @@ function factFreeBase(args: {
   let surfaces = normalizeAcceptedProgramSurfaces(state);
   if (state.currentProgram) {
     const program = generateProgramLocally(args.profile, {
+      // The athlete just changed their season phase / profile. Generation may
+      // not veto that fact: unstated, this inherited `restoration` and THREW,
+      // and the transaction reported "The profile change could not build a
+      // valid accepted base, so nothing changed" for a week the athlete's own
+      // marks had made short. (Sam, 2026-07-29 accept-and-reduce; §18 D3.)
+      weekAcceptance: 'forward_decision',
       todayISO: args.todayISO,
       previousProgram: state.currentProgram,
       activeConstraints: [],
@@ -364,6 +370,14 @@ export async function commitProfileProgramTransaction(
     allowAcceptedStateOnlyChange: true,
     mutate: () => {
       const result = commitAcceptedStateTransaction({
+        // THE EVENING-1 SEASON-CHANGE FAILURE'S LAYER. A phase shift, an
+        // equipment answer, a training-day change — every one of them is the
+        // athlete stating something new. Unstated, this publication inherited
+        // `restoration`, and the equivalence gate threw on a shortfall the
+        // athlete had already caused, been told about, and accepted; the
+        // transaction rolled back with "the accepted result could not be
+        // verified". Pinned by publicationOperationOwnershipTests cell 1.
+        operation: 'forward_decision',
         reason: `profile_program:${input.change.kind}:${input.sourceSurface}`,
         program: base.surfaces,
         profile: nextProfile,

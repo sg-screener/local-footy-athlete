@@ -832,6 +832,10 @@ export function buildSection18ProductionFallbackCandidate(args: {
         gameDay: undefined,
       } : {}),
     }, {
+      // The conservative fallback, reached only after the primary candidate
+      // has already failed. Refusing here leaves the athlete with nothing,
+      // which is the outcome accept-and-reduce exists to prevent.
+      weekAcceptance: 'forward_decision',
       todayISO: blockStart,
       blockNumber: args.contract.identity.blockNumber ?? 1,
       activeConstraints: [...(args.activeConstraints ?? [])],
@@ -1917,6 +1921,8 @@ export function commitLiveStoredProgramSafetyProjection(
 ): void {
   if (!projection) return;
   require('../store/acceptedStateTransaction').commitAcceptedStateTransaction({
+    // The safety projection of a constraint the athlete just stated.
+    operation: 'forward_decision',
     reason: 'constraint:live_safety_projection',
     program: projection,
   });

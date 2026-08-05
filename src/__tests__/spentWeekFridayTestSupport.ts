@@ -90,6 +90,8 @@ export function seedSpentWeekFriday(): { anchor: string; weekStart: string } {
     programStore: {
       setCurrentProgram: (program) => {
         commitAcceptedStateTransaction({
+          // Harness seed: installs a world, never restores one.
+          operation: 'forward_decision',
           reason: 'spent-week-friday-support:install',
           program: {
             currentProgram: program,
@@ -103,6 +105,8 @@ export function seedSpentWeekFriday(): { anchor: string; weekStart: string } {
         } as never);
       },
       setCurrentMicrocycle: (microcycle) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'spent-week-friday-support:mc',
         program: { currentMicrocycle: microcycle },
         profile: seed.profile,
@@ -110,6 +114,8 @@ export function seedSpentWeekFriday(): { anchor: string; weekStart: string } {
         validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
       } as never),
       setTodayWorkout: (workout) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'spent-week-friday-support:today',
         program: { todayWorkout: workout },
         profile: seed.profile,
@@ -122,6 +128,8 @@ export function seedSpentWeekFriday(): { anchor: string; weekStart: string } {
         const accepted = getAcceptedMaterialContext();
         const program = useProgramStore.getState().currentProgram!;
         commitAcceptedStateTransaction({
+          // Harness seed: installs a world, never restores one.
+          operation: 'forward_decision',
           reason: `spent-week-friday-support:calendar_game:${date}`,
           markedDays: { ...accepted.markedDays, [date]: 'game' },
           profile: seed.profile,

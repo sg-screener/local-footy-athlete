@@ -413,6 +413,8 @@ async function main(): Promise<void> {
     todayISO: date,
     extraDates: [date, movedDate],
     mutate: () => commitAcceptedStateTransaction({
+      // Harness seed: installs a world, never restores one.
+      operation: 'forward_decision',
       reason: 'test:athlete_move_during_injury',
       program: {
         dateOverrides: { [movedDate]: movedWorkout },
@@ -657,6 +659,8 @@ async function main(): Promise<void> {
     history: [],
   };
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:legacy_injury_seed',
     activeConstraints: [legacyConstraint],
     activeInjury: legacyAlias,

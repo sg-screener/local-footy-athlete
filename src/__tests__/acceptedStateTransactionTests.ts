@@ -948,6 +948,8 @@ run('property', 'failed transactions preserve every prior state surface', () => 
   seed(profile('Pre-season'));
   const before = materialSignature();
   const failed = withGatewayFailure(() => commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'property:forced_failure',
     readinessSignalsByDate: {
       [WEDNESDAY]: {
@@ -1088,7 +1090,7 @@ run('mutation', 'contractless workouts cannot be canonicalised without weekly va
 });
 
 run('mutation', 'program and constraints cannot publish sequential material state', () => {
-  const coordinator = coachSource.indexOf("commitAcceptedStateTransaction({\n      reason: 'constraint:update'");
+  const coordinator = coachSource.indexOf("reason: 'constraint:update'");
   const mirror = coachSource.indexOf('commitConstraintState();', coordinator);
   assert(coordinator >= 0 && mirror > coordinator, 'constraint coordinator no longer precedes mirror');
 });

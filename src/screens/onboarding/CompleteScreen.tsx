@@ -300,6 +300,14 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
     // See docs/ONBOARDING_GENERATION_OWNERSHIP_REASSESSMENT_2026-07-25.md.
     const outcome = await runOnboardingProgramGeneration({
       generate: () => generateProgramFromProfile(onboardingData, {
+        // DECLARED strict, deliberately. A FIRST week that cannot meet its own
+        // contract is a generation defect, not a consequence of anything the
+        // athlete has done to their calendar yet — and the onboarding
+        // generation ruling (Sam, 2026-07-25) says this must fail HONESTLY
+        // rather than install something reduced. `runOnboardingProgramGeneration`
+        // owns the reporting. Stated so the reliance is visible.
+        // See docs/ONBOARDING_GENERATION_OWNERSHIP_REASSESSMENT_2026-07-25.md.
+        weekAcceptance: 'restoration',
         todayISO: effectiveTodayISO,
       }),
       onAttemptFailed: (failure, attempt) => {

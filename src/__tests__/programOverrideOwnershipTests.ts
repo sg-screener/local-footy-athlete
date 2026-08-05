@@ -206,6 +206,7 @@ run('the door refuses the bare default over authored overrides', () => {
   const before = JSON.stringify(useProgramStore.getState().dateOverrides);
 
   const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_action',
     reason: 'test:bare_default',
@@ -225,6 +226,7 @@ run('a stale erasure act is refused', () => {
   endProgramOverrideResetAction(id);
 
   const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'reset',
     reason: 'test:stale_act',
@@ -293,6 +295,7 @@ run('every override write is on the tape, refused or not — counts, never answe
   const from = athleteActionLogEntries().length;
 
   const refused = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_undo',
     reason: 'test:tape_refused',
@@ -397,6 +400,7 @@ run('the writer boundary is registered and the door\'s refusal arms it', async (
   authorOneOverride(WEEK);
 
   const refused = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_executor',
     reason: 'test:quarantine_arm',

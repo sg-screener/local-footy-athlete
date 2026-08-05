@@ -362,6 +362,8 @@ function deterministicProgram(
 ): TrainingProgram {
   const anchorDate = devE2EWeekStartForSeed(seedId);
   return stabilizeProgram(generateProgramLocally(profile, {
+    // A dev seed installs a world; it is never restoring one.
+    weekAcceptance: 'forward_decision',
     todayISO: anchorDate,
     blockNumber: 1,
     previousProgram: null,

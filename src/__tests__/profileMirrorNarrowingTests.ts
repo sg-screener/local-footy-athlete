@@ -599,6 +599,8 @@ run('an ordinary transaction re-mints a snapshot poorer than the profile', () =>
     'the fixture no longer starts from an impoverished snapshot');
 
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:ordinary_transaction_with_no_profile',
     source: 'tap',
   } as never);

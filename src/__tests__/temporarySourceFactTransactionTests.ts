@@ -503,6 +503,8 @@ async function main(): Promise<void> {
   await transactTemporarySourceFact({ operation: 'create', fact: movableFact, todayISO: date });
   const movedDate = '2026-07-21';
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:move_while_fact_active',
     program: { dateOverrides: { [movedDate]: { ...originalWorkout, dayOfWeek: 2 } } },
     validateWeekStarts: [],
@@ -517,6 +519,8 @@ async function main(): Promise<void> {
   });
   await transactTemporarySourceFact({ operation: 'create', fact: undoFact, todayISO: date });
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:undo_move_while_fact_active',
     program: { dateOverrides: { [date]: originalWorkout } },
     validateWeekStarts: [],
@@ -526,11 +530,15 @@ async function main(): Promise<void> {
     context.activeConstraints.some((constraint) =>
       constraint.type === 'fatigue' && constraint.temporarySourceFactIds?.includes(undoFact.factId)));
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:delete_while_fact_active',
     program: { dateOverrides: {} },
     validateWeekStarts: [],
   });
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:undo_delete_while_fact_active',
     program: { dateOverrides: { [date]: originalWorkout } },
     validateWeekStarts: [],
@@ -540,6 +548,8 @@ async function main(): Promise<void> {
     context.activeConstraints.some((constraint) =>
       constraint.type === 'fatigue' && constraint.temporarySourceFactIds?.includes(undoFact.factId)));
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:delete_again_while_fact_active',
     program: { dateOverrides: {} },
     validateWeekStarts: [],
@@ -561,12 +571,16 @@ async function main(): Promise<void> {
     } as any,
   });
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:seed_explicit_load_edit',
     program: { dateOverrides: { [date]: originalWorkout } },
     validateWeekStarts: [],
   });
   const loadEditBaseline = captureAcceptedLoadEditLedgerBaseline();
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:apply_explicit_load_edit',
     program: {
       dateOverrides: {

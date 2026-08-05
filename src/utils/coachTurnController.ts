@@ -2450,6 +2450,10 @@ async function applyDevActiveCoachRevision(args: {
       if (multiDate && apply.applied.length > 0 && apply.rejected.length === 0) {
         const state = useProgramStore.getState();
         commitAcceptedStateTransaction({
+          // A coach revision the athlete accepted is a forward decision made
+          // on their behalf — the same class the `coach` provenance carries
+          // through the decision ledger.
+          operation: 'forward_decision',
           reason: `coach_revision:${args.result.proposal.userIntent.intent}`,
           program: {
             dateOverrides: {
@@ -3454,6 +3458,9 @@ async function executeSetupEditInController(args: {
     getOnboardingData: () => useProfileStore.getState().onboardingData,
     updateOnboardingData: (patch) => useProfileStore.getState().updateOnboardingData(patch),
     generateProgramFromProfile: (profile, options) => generateProgramFromProfile(profile, {
+      // Pass-through: the setup edit above states the acceptance; this wrapper
+      // must not quietly re-decide it.
+      weekAcceptance: options?.weekAcceptance ?? 'forward_decision',
       ...options,
       blockNumber: options?.blockNumber ?? getCurrentBlockNumberForGeneration(options?.todayISO ?? input.todayISO),
     }),

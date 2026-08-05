@@ -589,6 +589,11 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
+    // The rebuild's own publication declares `forward_decision` (R1.3, and the
+    // long note at `commitRebuiltProgram`). The GENERATION that produces it is
+    // the same decision one layer earlier and must say so, or the strict
+    // verdict simply throws before the publication is ever reached.
+    weekAcceptance: 'forward_decision',
     todayISO: generationDate,
     blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
     previousProgram: persistedProgram,

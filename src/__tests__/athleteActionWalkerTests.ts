@@ -2563,6 +2563,7 @@ run('the override door refuses the wipe against a walked world', () => {
   const refusalsBefore = refusalsOnTape();
 
   const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_action',
     reason: 'walker:wipe_replay',

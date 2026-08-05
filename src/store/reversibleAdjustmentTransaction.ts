@@ -161,6 +161,10 @@ function stageStatusOnly(args: {
   const context = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
   const updated = updateAdjustmentStatus(args);
   const proposal: AcceptedStateTransactionProposal = {
+    // Replaying state accepted once — the one kind that must keep throwing.
+    // (Sam, forward-only, 2026-07-29; the assert at the clear commit says the
+    // same in full.)
+    operation: 'restoration',
     reason: `reversible_adjustment:${args.status}:${args.adjustment.id}`,
     preserveExactAcceptedWorkouts: true,
     program: {
@@ -293,6 +297,9 @@ function stageClearDerivingSourceFactAdjustment(args: {
   };
   const profile = useProfileStore.getState().onboardingData;
   const proposal: AcceptedStateTransactionProposal = {
+    // Undo replays a stored snapshot; a week it cannot reproduce means the
+    // snapshot is corrupt and is refused, never reduced into accepted state.
+    operation: 'restoration',
     reason: `reversible_adjustment:clear:${args.adjustment.id}`,
     profile,
     program: surfaces,
@@ -754,6 +761,8 @@ export function stageClearReversibleAdjustment(
     const activeConstraints = context.activeConstraints.filter((constraint) =>
       !adjustment.linkedConstraintIds.includes(constraint.id));
     const proposal: AcceptedStateTransactionProposal = {
+      // Same restoration this stage's own assert already declares below.
+      operation: 'restoration',
       reason: `reversible_adjustment:clear:${adjustment.id}`,
       program: {
         dateOverrides: restored.surfaces.dateOverrides,

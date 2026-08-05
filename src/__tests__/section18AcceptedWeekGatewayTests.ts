@@ -1170,6 +1170,8 @@ let pausedProgramSnapshot = '';
     injuryEpisodes,
   });
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:canonical-full-pause-source-fact',
     injuryEpisodes,
     activeConstraints: compatibility.activeConstraints,

@@ -1839,6 +1839,8 @@ export const useProgramStore = create<ProgramState>()(
         const validatedOverrideContexts = acceptedSurfaces?.overrideContexts ?? candidateOverrideContexts;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Installing a program the athlete just asked to be built.
+          operation: 'forward_decision',
           reason: 'program:replace',
           todayISO: effectiveTodayISO,
           program: {
@@ -1872,6 +1874,12 @@ export const useProgramStore = create<ProgramState>()(
         const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // A SELECTION publishes no new week content: the week it re-gates is
+          // the one already accepted, and it reproduces exactly. So a blocker
+          // here never means "the stored snapshot is corrupt" — it means the
+          // athlete is opening the reduced week they themselves asked for, and
+          // under the strict verdict they could not open it at all.
+          operation: 'forward_decision',
           reason: 'program:select_microcycle',
           todayISO: effectiveTodayISO,
           program: {
@@ -1887,6 +1895,8 @@ export const useProgramStore = create<ProgramState>()(
         const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Same family as the selection above.
+          operation: 'forward_decision',
           reason: 'program:set_today_workout',
           todayISO: effectiveTodayISO,
           program: {
@@ -1926,6 +1936,9 @@ export const useProgramStore = create<ProgramState>()(
         try {
           applyProgramOverrideSliceWrite({
             writer: 'store_action',
+            // The athlete taking their own content off a day is the same
+            // decision as putting it there, in the other direction.
+            operation: 'forward_decision',
             reason: `override:remove:${date}`,
             next: {
               dateOverrides: updatedOverrides,
@@ -1951,6 +1964,10 @@ export const useProgramStore = create<ProgramState>()(
         try {
           applyProgramOverrideSliceWrite({
             writer: 'reset',
+            // "A named act, on the tape, writer `reset`" — onboarding
+            // completion, program create, profile reset. Every one of them is
+            // something the athlete just did.
+            operation: 'forward_decision',
             reason: 'override:clear_all',
             todayISO: effectiveTodayISO,
             next: {
@@ -2012,6 +2029,10 @@ export const useProgramStore = create<ProgramState>()(
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // An overlay is DERIVED content (the fixture-identity law, 7d9d3ee7):
+          // republishing it replays no athlete decision, so it cannot be judged
+          // as a corrupt snapshot.
+          operation: 'forward_decision',
           reason: `overlay:set:${validatedOverlay.weekStart}`,
           program: {
             weekScopedOverlays: {
@@ -2030,6 +2051,8 @@ export const useProgramStore = create<ProgramState>()(
         delete updated[weekStart];
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Derived content again — see `setWeekScopedOverlay`.
+          operation: 'forward_decision',
           reason: `overlay:remove:${weekStart}`,
           program: { weekScopedOverlays: updated },
           validateWeekStarts: [weekStart],
@@ -2041,6 +2064,8 @@ export const useProgramStore = create<ProgramState>()(
         const affectedWeeks = Object.keys(state.weekScopedOverlays);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Derived content again — see `setWeekScopedOverlay`.
+          operation: 'forward_decision',
           reason: 'overlay:clear_all',
           program: { weekScopedOverlays: {} },
           validateWeekStarts: affectedWeeks,
@@ -2399,7 +2424,15 @@ export function applyProgramOverrideSliceWrite(args: {
   reason: string;
   validateWeekStarts: string[];
   markedDays?: Record<string, CalendarDayType>;
-  operation?: 'forward_decision';
+  /**
+   * REQUIRED, like the writer id above and for the same reason. Placing
+   * content already declared `forward_decision`; REMOVING it and the named
+   * erasure said nothing and inherited the strict verdict, so on a week the
+   * athlete had made short they could neither undo their own edit nor run the
+   * reset. Optional here meant "whichever the transaction happens to default
+   * to", which is the one thing a door must never leave to its callee.
+   */
+  operation: 'forward_decision' | 'restoration';
   todayISO?: string;
   resetActionId?: string;
 }): ProgramOverrideWriteOutcome {
@@ -2434,7 +2467,7 @@ export function applyProgramOverrideSliceWrite(args: {
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-    ...(args.operation ? { operation: args.operation } : {}),
+    operation: args.operation,
     reason: args.reason,
     ...(args.todayISO ? { todayISO: args.todayISO } : {}),
     program: {

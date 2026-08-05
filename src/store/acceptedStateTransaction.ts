@@ -154,17 +154,45 @@ export type AcceptedProgramSurfaces = Pick<
  * `preserveExactAcceptedWorkouts` is a storage-shape flag that happens to
  * correlate with restoration today — correlation is not the distinction.
  *
- * ABSENT MEANS `restoration`, i.e. STRICT. The permissive path is opted into,
- * so a caller added later that says nothing gets a refusal rather than silently
- * publishing an unmeetable week. Same reasoning as the profile mirror's
- * publication origin, where the gated reading is the default.
+ * NOTHING IS ABSENT ANY MORE (2026-08-05). The kind is REQUIRED on
+ * `AcceptedStateTransactionProposal`, on `assertAcceptedVisibleLedgerEquivalence`,
+ * and on the override door — a publication that names no operation is a compile
+ * error. "Absent means strict" read as a safe default and behaved as a silent
+ * one: on a week the athlete had legitimately made short, six athlete-visible
+ * doors inherited the refusal, including the season phase change. The strict
+ * path is still the strict path; it is now CHOSEN, at every site, by name.
+ *
+ * One documented absence remains, deliberately: generation's
+ * `GenerateProgramFromProfileOptions.weekAcceptance`, whose 110 harness call
+ * sites are not writers of accepted state. Every PRODUCT generation call
+ * declares it, enforced by `publicationOperationOwnershipTests` cell 8.
  */
 export type AcceptedStateOperationKind = 'forward_decision' | 'restoration';
 
 export interface AcceptedStateTransactionProposal {
   reason: string;
-  /** See `AcceptedStateOperationKind`. Absent = `restoration` (strict). */
-  operation?: AcceptedStateOperationKind;
+  /**
+   * REQUIRED. See `AcceptedStateOperationKind` for the two verdicts.
+   *
+   * It was optional until 2026-08-05, defaulting to `restoration` at the two
+   * commit-site asserts below — which contradicted the instruction on
+   * `assertAcceptedVisibleLedgerEquivalence`'s own interface ("there is no
+   * default here so a new call site cannot inherit accept-and-reduce by
+   * accident") in the opposite direction: a writer that said nothing inherited
+   * the STRICT verdict instead. On a week the athlete had legitimately made
+   * short — rest marks, accepted and disclosed under the same 2026-07-29
+   * ruling — six athlete-visible doors threw: the season phase change
+   * (evening-1's missing layer), the readiness answer, undoing your own edit,
+   * the named erasure, selecting another week, and republishing derived
+   * overlays.
+   *
+   * Now closed the way `ProgramOverrideWriterId` closed its door (LR-1): a
+   * publication that names no operation is a COMPILE error, never a silently
+   * strict one. The GATE's semantics are unchanged — `restoration` still
+   * throws, and the paths that replay a stored snapshot still declare it.
+   * `publicationOperationOwnershipTests` holds the law.
+   */
+  operation: AcceptedStateOperationKind;
   /** One explicit date owner for transactions that began before async work. */
   todayISO?: string;
   /** Development-only correlation context; never persisted. */
@@ -420,6 +448,22 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
    */
   operation: AcceptedStateOperationKind;
 }): void {
+  // NO SILENT DEFAULT IN EITHER DIRECTION. The type closes this for every
+  // writer the compiler can see, but this owner is also reached through
+  // `require(...)` from `programStore`, `coachUpdatesStore` and
+  // `postGenerationConstraintValidation`, where an omission is invisible to
+  // tsc — and with the `?? 'restoration'` gone, an omission would now fall
+  // through to the PERMISSIVE verdict. Swapping one silent default for its
+  // opposite is not a fix, so an unnamed operation is refused outright.
+  if (args.operation !== 'forward_decision' && args.operation !== 'restoration') {
+    throw new Error(
+      'accepted_state_operation_undeclared: a publication reached the visible-ledger '
+      + `equivalence gate without naming its operation (got ${JSON.stringify(args.operation)}). `
+      + 'State `forward_decision` (the athlete just decided something — publish the best '
+      + 'achievable week and disclose the shortfall) or `restoration` (replaying state '
+      + 'accepted once — an unreproducible week is a corrupt snapshot and is refused).',
+    );
+  }
   const surfaces = normalizeAcceptedProgramSurfaces(args.surfaces);
   const context = normalizeAcceptedMaterialContext(args.context);
   const profile = args.profile ?? useProfileStore.getState().onboardingData;
@@ -643,7 +687,7 @@ export function stageAcceptedStateTransaction(
       context,
       weekStarts: proposal.validateWeekStarts ?? [],
       profile,
-      operation: proposal.operation ?? 'restoration',
+      operation: proposal.operation,
       trace: proposal.trace,
     });
     return { program: candidate, context };
@@ -751,7 +795,7 @@ export function commitAcceptedStateTransaction(
   }
   try {
     assertAcceptedVisibleLedgerEquivalence({
-      operation: proposal.operation ?? 'restoration',
+      operation: proposal.operation,
       surfaces: staged.program,
       context: staged.context,
       weekStarts: Array.from(equivalenceWeeks),
@@ -1532,6 +1576,9 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
     laterIntentPolicy: 'newer_athlete_intent_wins',
   };
   commitAcceptedStateTransaction({
+    // The athlete just edited their load and this records the delta that edit
+    // produced. The decision is theirs and it is new.
+    operation: 'forward_decision',
     reason: 'explicit_load_edit:record_exact_delta',
     program: {
       reversibleAdjustmentLedger: {
@@ -1749,6 +1796,12 @@ export function buildFixtureProjection(args: {
   } else {
     try {
       target = generateProgramLocally(args.profile, {
+        // DECLARED, and the strictness is the point: the `catch` immediately
+        // below CONSUMES `Section18WeekAcceptanceError` as the signal that the
+        // repair owner — not target generation — must decide. Left unstated
+        // this relied on generation's default; stated, the reliance is visible
+        // to anyone changing either side.
+        weekAcceptance: 'restoration',
         todayISO: args.weekStart,
         previousProgram: args.program,
         seasonPhaseClock: args.program.seasonPhaseClock,
@@ -3413,6 +3466,10 @@ export function commitProgramSetupRebuildTransaction(args: {
   const todayDow = new Date(`${args.todayISO}T12:00:00`).getDay();
   const todayOverlay = overlays[weekStart]?.workoutsByDate[args.todayISO] ?? null;
   return commitAcceptedStateTransaction({
+    // Program setup publishes a week built FOR a profile the athlete just
+    // gave. If that week cannot meet its contract that is the consequence of
+    // their answers, disclosed — not a corrupt snapshot to refuse.
+    operation: 'forward_decision',
     reason: 'program_setup:accepted_rebuild',
     program: {
       currentProgram: args.program,
@@ -3486,6 +3543,11 @@ export function commitReadinessStateTransaction(args: {
     surfaces: state,
   });
   return commitAcceptedStateTransaction({
+    // Answering the readiness sheet is the athlete stating a fact about their
+    // body. The gate informs; it does not veto a fact (§18 ownership
+    // reassessment D3). Unstated, this door refused the answer outright on a
+    // week the athlete's own rest marks had already made short.
+    operation: 'forward_decision',
     reason: args.reason,
     readinessSignalsByDate: args.readinessSignalsByDate,
     validateWeekStarts: weekStarts,
