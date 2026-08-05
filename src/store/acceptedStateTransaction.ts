@@ -1589,6 +1589,18 @@ export function buildFixtureProjection(args: {
   activeConstraints?: readonly ActiveConstraint[];
   mutationIntent?: FixtureMutationIntent;
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * Is this projection APPLYING A NEW FIXTURE DECISION, or re-materialising
+   * the accepted week's existing fixture marks?
+   *
+   * They are different operations and only the first may not read the week's
+   * own published output — see the fixture identity law below. The candidate
+   * materialiser (`materialiseFixtureMarksForCandidate`) runs on EVERY
+   * accepted commit, deletions included, where that overlay is the state
+   * being MAINTAINED rather than a previous decision's product; it leaves
+   * this false and composes over it exactly as before.
+   */
+  appliesFixtureDecision?: boolean;
 }): {
   overlay: WeekScopedWorkoutOverlay;
   profile: OnboardingData;
@@ -1614,8 +1626,48 @@ export function buildFixtureProjection(args: {
     weekScopedOverlays: liveState.weekScopedOverlays,
     userRemovalConstraints: liveState.userRemovalConstraints,
   };
+  // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
+  // A FIXTURE DECISION NEVER REBASES FROM THE WEEK A PREVIOUS FIXTURE BUILT.
+  //
+  // `weekScopedOverlays[weekStart]` is this week's own PUBLISHED OUTPUT. Feed
+  // it back in here and a fixture mutation composes over the previous
+  // fixture's repair product, so the sequence becomes path-dependent: adding
+  // a game to a rest Saturday and removing it again did not restore the week,
+  // it RE-REPAIRED the week the add had built, and the carried-forward repair
+  // state filled the freed Saturday with a strength-and-conditioning day
+  // (Sam's R1 device pass, `fixtureIdentityTests` cell 1 — five of seven days
+  // differed, so it was never about Saturdays).
+  //
+  // Dropping it loses no athlete decision, and that is not a hope — it is
+  // what the precedence owner directly above `composedWorkouts` already
+  // states: "`date_override` is an athlete-owned surface; `week_overlay` is
+  // not — a scoped-regen overlay is authored by a source fact, not by the
+  // athlete". The athlete's decisions live in `dateOverrides` and
+  // `userRemovalConstraints`, both of which stay in `sourceSurfaces` and go on
+  // being conserved exactly as before. What the overlay holds is DERIVED
+  // content — fact-authored regen, and the last fixture's repair — and
+  // derived content is re-derived here from the facts and constraints this
+  // function already reads, never carried forward. That is the north star at
+  // one call site: conservation comes from the inputs, not from a stored
+  // output.
+  //
+  // Scoped to the week being projected, deliberately: adjacent weeks in the
+  // rolling horizon are each projected by their own call, which drops their
+  // own overlay and no one else's.
+  //
+  // AND SCOPED TO THE OPERATION THAT EARNS IT (`appliesFixtureDecision`). The
+  // first cut of this law dropped the overlay for every caller and broke two
+  // athlete-DELETION regressions — a Sunday conditioning deletion stopped
+  // relocating to Saturday, and conditioning stopped stacking onto Monday's
+  // strength. `materialiseFixtureMarksForCandidate` calls this on every
+  // accepted commit to keep the accepted week's fixture marks materialised,
+  // and there the week's overlay is the state being maintained, not a
+  // previous fixture's product. Applying a decision and maintaining a week
+  // are different operations; the caller says which.
+  const rebaseOverlays = { ...sourceSurfaces.weekScopedOverlays };
+  if (args.appliesFixtureDecision) delete rebaseOverlays[args.weekStart];
   const acceptedSource = rebaseAcceptedEffectiveWeek({
-    surfaces: sourceSurfaces,
+    surfaces: { ...sourceSurfaces, weekScopedOverlays: rebaseOverlays },
     weekStart: args.weekStart,
     profile: args.profile,
     markedDays: args.sourceMarkedDays ?? materialContext(liveState).markedDays,
@@ -1967,6 +2019,14 @@ export function stageRollingHorizonFixtureRepair(args: {
   primaryMutationIntent?: FixtureMutationIntent;
   dependentMutationIntent?: FixtureMutationIntent;
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * Set by the fixture door: this staging is APPLYING a fixture decision, so
+   * the PRIMARY weeks — the ones the decision is about — may not rebase from
+   * their own published output (the fixture identity law, in
+   * `buildFixtureProjection`). Dependent weeks are being repaired rather than
+   * decided, so they compose over their existing overlay as before.
+   */
+  appliesFixtureDecision?: boolean;
 }): RollingHorizonFixtureRepairResult {
   const trace = currentAthleteActionTrace();
   const primary = new Set(args.primaryWeekStarts.map((weekStart) => mondayForDate(weekStart)));
@@ -2017,6 +2077,7 @@ export function stageRollingHorizonFixtureRepair(args: {
       mutationIntent: primary.has(weekStart)
         ? args.primaryMutationIntent ?? 'fixture_transition'
         : args.dependentMutationIntent ?? 'remove_from_date',
+      appliesFixtureDecision: !!args.appliesFixtureDecision && primary.has(weekStart),
     }),
   }));
   const activeFixtureDates = effectiveFixtureDatesForWeeks({

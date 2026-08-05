@@ -92,34 +92,32 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: 'fixture-identity-1',
-    finding: 'Add a game to a rest Saturday, remove it, and the Saturday '
-      + 'comes back as a strength-and-conditioning day',
-    matches: /add-then-remove is not identity/,
-    why: 'The fixture door publishes a materialised week into '
-      + '`weekScopedOverlays`, and the next fixture mutation rebases from that '
-      + 'same overlay. The remove therefore re-repairs the week the add built '
-      + 'instead of restoring the week that preceded it, and the carried-'
-      + 'forward repair state fills the freed Saturday. Proven by isolation: '
-      + 'dropping the week\'s own prior overlay before the remove, changing '
-      + 'nothing else, returns the pre-add week byte for byte.',
-    paidBy: 'the ownership ruling on what a fixture mutation may rebase from — '
-      + 'the athlete\'s other decisions for that week must be conserved by '
-      + 'REPLAYING the decision ledger, not by rebasing a stored week. '
-      + 'docs/FIXTURE_IDENTITY_REASSESSMENT_2026-08-05.md.',
-  },
+  // ── PAID BY OPTION A, DELETED 2026-08-05 (the ratchet's own rule) ────────
+  //
+  // `fixture-identity-1` lived here — the finding itself. Sam ruled option A
+  // by existing law: a fixture decision never rebases from the week a
+  // previous fixture built, so `buildFixtureProjection` drops the target
+  // week's own published overlay from its rebase source. The feedback loop is
+  // gone and add-then-remove is identity by construction. The cell stands as
+  // a plain law now; a regression FAILS outright instead of wearing a
+  // declaration.
   {
     id: 'fixture-identity-3',
     finding: 'A published week disagrees with the week derived from the same inputs',
     matches: /published week disagrees with derivation/,
-    why: 'The general law behind cell 1. The add\'s published overlay and the '
-      + 'week derived from the same inputs disagree on days the fixture never '
-      + 'touched (the Monday session and the two team-night pairings), so the '
-      + 'stored week is already an unfaithful copy of derivation BEFORE any '
-      + 'second mutation compounds it.',
-    paidBy: 'the same ruling; structurally by R5, when derive() has no rivals '
-      + 'and there is no published week left to disagree.',
+    why: 'What option A did NOT pay, stated honestly rather than sized to fit. '
+      + 'A removed the FEEDBACK LOOP (cell 1), but the published week and the '
+      + 'derived week are still built by two different engines: the fixture '
+      + 'path publishes a materialised REPLAN, while derivation RESOLVES the '
+      + 'base microcycle against the fixture facts. On this world they agree '
+      + 'about the fixture and its freed day and disagree on three untouched '
+      + 'days — the Monday session\'s identity and size, and the two '
+      + 'team-night pairings. Two composition engines is a second truth even '
+      + 'when neither is wrong, and it is out of A\'s reach by construction: '
+      + 'no rebase input can make a replan equal a resolve.',
+    paidBy: 'R5, when derive() has no rivals and there is no published week '
+      + 'left to disagree — the plan\'s own switchover, not a further '
+      + 'adjustment to this door.',
   },
 ];
 
