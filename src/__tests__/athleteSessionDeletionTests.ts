@@ -87,36 +87,17 @@ const failures: string[] = [];
  * UNDECLARED red still fails outright, and a declared red that stops redding
  * fails the suite until its entry is removed.
  *
- * ── THE OPEN ONE (2026-08-06) ──────────────────────────────────────────────
+ * Regressions 15 and 17 were declared here on 2026-08-06 and PAID the same day:
+ * an accepted-week repair destroyed the week's offer and nothing could restore
+ * it, because there was exactly one placer and it ran only at generation. Sam's
+ * ruling (`docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`) made the offer a
+ * property of the week at all times, and the shared owner
+ * (`rules/section18OfferPlacement`) now presents it at the one point every path
+ * converges. Both cells green on their ORIGINAL signed sentences — the "I also
+ * rebalanced Monday" clause is gone because nothing needs rebalancing.
  *
- * AN ACCEPTED-WEEK REPAIR DESTROYS THE WEEK'S OFFER AND CANNOT RESTORE IT.
- *
- * With Sam's flush-offer ruling landed, an in-season game week carries its
- * authored offer on Monday's strength day (Bible `:81`). Delete an unrelated
- * session — Wednesday's Upper Pull — and the repair relocates the pull work,
- * "rebalances" Monday, and Monday comes back with its conditioning component
- * gone. The week silently stops offering the flush `:81` authors, and the
- * signed confirmation names the rebalance without naming the loss.
- *
- * MEASURED, not guessed: before the deletion Monday is
- * `Lower Body Strength` (`Mixed`, `optional_flush`, `aerobic_base`); after it
- * is `Lower Body Strength` (`Strength`, role `none`).
- *
- * This is the THIRD sighting in one unit of the class CLAUDE.md's escalation
- * rule names — a later layer downgrading an intent the layer above stated
- * correctly. The first two are paid (`fixtureMinimalReplan` re-roling the offer
- * into required work; the positional derivation handing the offer's core slot
- * to the wrong session). Implementation stopped here rather than teaching a
- * fourth site about flushes, because the shape is architectural: there is
- * exactly ONE placer of the offer and it runs only at generation, so every
- * accepted-week repair path can destroy the offer and none can restore it.
- *
- * Both cells assert the signed confirmation sentence verbatim, so they red on
- * the disclosure rather than on the loss — the sentence gains "I also
- * rebalanced Monday to keep your week balanced." The repair really did touch
- * Monday, so the sentence is not lying; what is wrong is that it needed to.
- *
- * Owed: `docs/1B_OFFER_SURVIVAL_REASSESSMENT_2026-08-06.md`, then Sam's ruling.
+ * The list is empty and the mechanism stays armed: it is what makes the next
+ * declared red pay for itself too.
  */
 interface DeclaredRed {
   readonly id: string;
@@ -124,18 +105,7 @@ interface DeclaredRed {
   readonly paidBy: string;
 }
 
-const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: '15 exact Upper Pull component deletion preserves Team Training and relocates pull',
-    matches: /I also rebalanced Monday to keep your week balanced\./,
-    paidBy: 'the offer-survival reassessment + Sam\'s ruling',
-  },
-  {
-    id: '17 existing alternative pull exposure avoids duplicate repair',
-    matches: /I also rebalanced Monday to keep your week balanced\./,
-    paidBy: 'the offer-survival reassessment + Sam\'s ruling',
-  },
-];
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [];
 
 const declaredRedHits = new Set<string>();
 

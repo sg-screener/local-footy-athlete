@@ -21,6 +21,7 @@ import {
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
 import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
+import { presentDeclaredOffer } from './section18OfferPlacement';
 import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
 import {
   contractOffseasonSubphase,
@@ -60,6 +61,8 @@ export type Section18WeekAcceptanceStatus =
 
 export type Section18WeekRepairKind =
   | 'weekly_power_budget'
+  /** The week was not presenting the offer its contract declares; it is now. */
+  | 'offer_presented'
   | 'obsolete_derived_work_expired'
   | 'optional_work_removed_for_rest'
   | 'core_work_stacked_on_existing_stress_day'
@@ -737,6 +740,36 @@ function resolveCandidate(args: {
       detail: `Weekly selector kept ${power.workouts.filter(hasPowerRow).length} primers within budget ${power.budget}.`,
     });
   }
+  // THE WEEK PRESENTS THE OFFER ITS CONTRACT DECLARES (Sam's ruling, 2026-08-06
+  // — `docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`).
+  //
+  // Here rather than in the repair search below, and that placement is the whole
+  // point. A missing offer is ADVISORY by the ruling — "doing it is the
+  // athlete's choice" — so it never produces a blocking violation, and the
+  // search only ever expands a candidate that has one. Restoring the offer is a
+  // normalisation of the accepted week, exactly like the safety finaliser and
+  // the power budget it stands beside, not a repair the week has to fail into.
+  //
+  // MEASURED: this gateway never destroys an offer (376 visible resolutions of
+  // a week carrying one, none lost) — the candidates simply ARRIVE without it,
+  // because the paths that build them do not run the placer. Every one of them
+  // converges here, which is why one call fixes deletion, relocation, coach
+  // edits and fixture moves at once without any of those paths learning what a
+  // flush is.
+  const offered = presentDeclaredOffer({
+    workouts: power.workouts,
+    contract: power.contract,
+    weekStart: args.input.weekStart,
+    profile: args.input.profile,
+    microcycleId: `section18-offer:${args.input.weekStart}`,
+    weekKind: power.contract.identity.weekKind,
+  });
+  if (offered.placedDays.length > 0) {
+    initialRepairs.push({
+      kind: 'offer_presented',
+      detail: `Presented the week's ${offered.placedDays.length} declared optional flush offer${offered.placedDays.length === 1 ? '' : 's'} on ${offered.placedDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
+    });
+  }
   const baseContract = power.contract;
   type CandidateState = { workouts: Workout[]; repairs: Section18WeekRepair[] };
   type CandidateEvaluation = {
@@ -745,7 +778,7 @@ function resolveCandidate(args: {
     evaluation: Section18EffectiveWeekEvaluation;
   };
   const search = searchWholeWeekRepairCandidates<CandidateState, CandidateEvaluation>({
-    initial: { workouts: power.workouts, repairs: initialRepairs },
+    initial: { workouts: offered.workouts, repairs: initialRepairs },
     maxCandidates,
     trace: args.input.trace ?? currentAthleteActionTrace(),
     diagnosticBoundary: 'section18AcceptedWeekGateway',

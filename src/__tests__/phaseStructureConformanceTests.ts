@@ -492,6 +492,61 @@ const main = async () => {
       + `Rebuilt week: ${shape(rebuilt)}`);
   });
 
+  /**
+   * THE OTHER FACE OF RULING 2, and the one no suite could see until the offer
+   * became repairable (Sam, 2026-08-06 —
+   * `docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`).
+   *
+   * Cell 8 removes the game, so the rebuilt week is a BYE build whose authored
+   * `optionalFlush.min` is 0 — it correctly comes back with no offer, and a
+   * week that simply stops offering looks identical to one that was never meant
+   * to. MOVING the fixture is the case that tells them apart: the week is still
+   * a game week, its policy still declares an offer, and ruling 2 clears the
+   * old one. If nothing re-presents it, the athlete loses the flush Bible `:81`
+   * authors for every remaining game week — silently, because it is optional.
+   *
+   * "The app always presents it" is a property of the WEEK at all times, not of
+   * the moment it was generated. This is that sentence as a test.
+   */
+  await run('9 moving the fixture leaves the week still offering (Sam 2026-08-06)', async () => {
+    reachWorldByActing();
+    await shiftTo('In-season');
+    const standing = week();
+    assert(standing.filter((day) => conditioningRoleOf(day) === 'optional_flush').length === 1,
+      'the standing week does not carry its single offer, so a move cannot be shown to '
+      + `preserve one. Roles: ${standing.map((day) => `${day.date}=${conditioningRoleOf(day) ?? '-'}`).join(' ')}`);
+    const saturday = standing.find((day) => new Date(`${day.date}T12:00:00`).getDay() === 6);
+    assert(saturday, 'the derived week has no Saturday fixture to move');
+    const friday = standing.find((day) => new Date(`${day.date}T12:00:00`).getDay() === 5);
+    assert(friday, 'the derived week has no Friday to move the fixture to');
+
+    quiet(() => rebuildLocalWeek({
+      baseProfile: useProfileStore.getState().onboardingData,
+      newGameDay: 'Friday',
+      scope: 'weekOverlay',
+      targetDate: friday.date,
+      clearOverlayDate: saturday.date,
+      manageCalendarFixture: true,
+      todayISO: TODAY,
+    } as never));
+
+    const moved = week();
+    const stillAGameWeek = moved.some((day) => {
+      const workout = (day as unknown as { workout?: Workout | null }).workout;
+      return workout?.workoutType === 'Game';
+    });
+    assert(stillAGameWeek,
+      `the move left the week with no fixture at all, so it is no longer the case this `
+      + `cell is about. Week: ${shape(moved)}`);
+    const offers = moved.filter((day) => conditioningRoleOf(day) === 'optional_flush');
+    assert(offers.length === 1,
+      `after moving the fixture the week presents ${offers.length} offer(s), not the one its `
+      + 'policy still declares. Sam 2026-08-05: "the app always presents it; doing it is the '
+      + 'athlete\'s choice" — ruled 2026-08-06 to be a property of the week at all times, not '
+      + `of the moment it was generated. Week: ${shape(moved)} roles: `
+      + `${moved.map((day) => `${day.date}=${conditioningRoleOf(day) ?? '-'}`).join(' ')}`);
+  });
+
   console.log(`\n  phase structure conformance totals: ${passed} passed, ${failed} failed`);
 
   const stale = DECLARED_RED.filter((entry) => !declaredRedHits.has(entry.id));

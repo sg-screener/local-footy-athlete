@@ -31,6 +31,13 @@ export type Section18FindingCode =
   | 'maximum_breach'
   | 'optional_work_replacing_required_work'
   | 'core_flush_misclassification'
+  /**
+   * The week is presenting fewer offers than its contract declares. ADVISORY by
+   * Sam's ruling (2026-08-06): "the app always presents it; doing it is the
+   * athlete's choice" — so a missing offer is repaired like any other
+   * shortfall, and never refuses the athlete's week.
+   */
+  | 'offer_not_presented'
   | 'conditioning_intensity_mismatch'
   | 'prohibited_pattern_breach'
   | 'pattern_restore_failure'
@@ -1253,6 +1260,33 @@ export function evaluateSection18EffectiveWeek(
       detail: 'A typed flush cannot satisfy the core-conditioning floor.',
       evidence: ledger.conditioning.credits.filter((credit) => credit.role === 'optional_flush')
         .map((credit) => dateForDay(input.weekStart, credit.dayOfWeek)),
+    });
+  }
+  // THE WEEK IS NOT PRESENTING WHAT IT DECLARES (Sam's ruling, 2026-08-06 —
+  // `docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`).
+  //
+  // "The app always presents it" is a property of the WEEK at all times, not of
+  // the moment it was generated, so a week that has stopped offering is out of
+  // conformance and the repair owner restores it. Nothing new is stored to say
+  // so: the ledger already counts the offers present and the contract already
+  // carries how many were declared.
+  //
+  // ADVISORY, NEVER BLOCKING — "doing it is the athlete's choice", so a week
+  // that cannot hold an offer is still the athlete's week and is never refused
+  // for it. The repair reads this; the gate does not.
+  const declaredOffers = contract.conditioning.optionalFlush.permitted
+    ? Math.max(0, Math.min(
+      contract.conditioning.optionalFlush.plannerSelectedCount ?? 0,
+      contract.conditioning.optionalFlush.preferredRange.max,
+    ))
+    : 0;
+  if (ledger.conditioning.optionalFlushCount < declaredOffers) {
+    addFinding(findings, {
+      code: 'offer_not_presented', severity: 'advisory', domain: 'conditioning',
+      expected: declaredOffers,
+      actual: ledger.conditioning.optionalFlushCount,
+      detail: 'The week presents fewer optional flush offers than its contract declares.',
+      evidence: [],
     });
   }
   if (ledger.conditioning.legacyUnknownCount > 0) {

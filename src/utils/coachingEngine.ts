@@ -129,6 +129,11 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import {
+  declaredOfferCount,
+  offerFixtureSafe,
+  selectOfferDays,
+} from '../rules/section18OfferPlacement';
+import {
   createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
   normalizeStrengthIntent,
@@ -7029,16 +7034,16 @@ function applySection18ConditioningAllocation(
   });
 
   const selectedSet = new Set(selectedCore);
-  // A flush may sit at G-3 or earlier, or at G-2 when it is the whole session's
-  // work and carries no strength or speed alongside it.
-  const flushFixtureSafe = (session: SessionAllocation): boolean => {
-    const offset = fixtureOffset(session);
-    return offset === null || offset <= -3 || (
-      offset === -2 &&
-      !hasStrength(session) &&
-      !session.speedBlock
-    );
-  };
+  // The demote path below asks the same fixture question the placement does, so
+  // it asks the same owner rather than keeping a local copy beside it.
+  const flushFixtureSafe = (session: SessionAllocation): boolean => offerFixtureSafe({
+    dayOfWeek: day(session),
+    isTeamDay: session.isTeamDay === true,
+    hasConditioning: hasConditioning(session),
+    hasStrength: hasStrength(session),
+    hasSpeed: !!session.speedBlock,
+    isSelectedCore: selectedSet.has(session),
+  }, fixtureDay);
   // ONE OWNER for "this session IS the flush". Two routes reach it — the demote
   // below, which downgrades conditioning the week already had, and the placement
   // after it, which creates the offer the contract declared. They must not drift
@@ -7089,29 +7094,34 @@ function applySection18ConditioningAllocation(
   // The contract has now been told the offer is wanted before it was built, so
   // this places it rather than inventing it: the count comes from the contract,
   // capped by the same authored maximum the demote respects.
-  const declaredFlush = contract.conditioning.optionalFlush.permitted
-    ? Math.min(
-      contract.conditioning.optionalFlush.plannerSelectedCount ?? 0,
-      contract.conditioning.optionalFlush.preferredRange.max,
-    )
-    : 0;
-  let unplacedFlush = Math.max(0, declaredFlush - optionalFlushes);
+  // WHICH DAY comes from the shared owner (`rules/section18OfferPlacement`), so
+  // generation and the accepted-week repair can never disagree about where the
+  // week's offer belongs. This module keeps only the ATTACHMENT, which is
+  // genuinely shape-specific: here the offer is placed on a plan ALLOCATION
+  // before any content exists, and `buildWorkoutsFromCoach` materialises it
+  // afterwards. Sam's ruling 2026-08-06:
+  // docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md.
+  const declaredFlush = declaredOfferCount(contract.conditioning);
+  const unplacedFlush = Math.max(0, declaredFlush - optionalFlushes);
   if (unplacedFlush > 0) {
-    // Bible :81 puts the flush on the STRENGTH days ("optional flushout/ aerobic
-    // conditioning off-leg"), so a strength day is preferred over an empty one —
-    // `applyCategory` attaches it off-feet as a component there. An empty day is
-    // taken only when no strength day can safely hold it.
-    const flushCandidates = plan
-      .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
-        !session.speedBlock && !selectedSet.has(session) && flushFixtureSafe(session))
-      .sort((left, right) =>
-        Number(!hasStrength(left)) - Number(!hasStrength(right)) ||
-        inTrainingOrder(left, right));
-    for (const session of flushCandidates) {
-      if (unplacedFlush <= 0) break;
+    const byDayNumber = new Map(plan.map((session) => [day(session), session]));
+    const offerDays = selectOfferDays({
+      candidates: plan.map((session) => ({
+        dayOfWeek: day(session),
+        isTeamDay: session.isTeamDay === true,
+        hasConditioning: hasConditioning(session),
+        hasStrength: hasStrength(session),
+        hasSpeed: !!session.speedBlock,
+        isSelectedCore: selectedSet.has(session),
+      })),
+      count: unplacedFlush,
+      fixtureDay,
+    });
+    for (const dayNumber of offerDays) {
+      const session = byDayNumber.get(dayNumber);
+      if (!session) continue;
       placeFlush(session);
       optionalFlushes++;
-      unplacedFlush--;
     }
   }
 
