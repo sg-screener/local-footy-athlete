@@ -188,6 +188,17 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'is unchanged.',
   },
   {
+    file: 'store/decisionLedgerStore.ts',
+    persistKey: 'decision-ledger-store',
+    owner: 'applyDecisionLedgerWrite',
+    taped: true,
+    caveat: 'BORN ARMOURED (shell rebuild R1.1, docs/SHELL_REBUILD_PLAN_2026-08-05.md, '
+      + 'approved 2026-08-05): the rebuild\'s one new persisted store — every athlete '
+      + 'edit is one appended typed decision; the visible week is derived, never stored. '
+      + 'Recipe applied at birth plus the ledger\'s own append-only refusal '
+      + '(`ledger_rewrite_without_reset`); undo appends a reversal (LR-29 by construction).',
+  },
+  {
     file: 'store/athletePreferencesStore.ts',
     persistKey: 'athlete-preferences-store',
     owner: 'applyAthletePrefsWrite',
