@@ -1,5 +1,39 @@
 # FIXTURE IDENTITY — architecture reassessment, 2026-08-05
 
+**Status: RULED AND LANDED — option A, `7d9d3ee7`.** Sam ruled A by existing
+law (NORTH_STAR.md answers it directly; no new ruling needed), C stays
+rejected as recorded below. Cell 1 is GREEN and its declared-red entry is
+deleted. The document is kept as the diagnosis of record.
+
+**Two things the landing changed about this document, recorded rather than
+edited away:**
+
+1. **Cell 3 did NOT go green by A, and cannot.** A removed the feedback loop.
+   What remains is that the published week is a materialised REPLAN and the
+   derived week is a RESOLVE — two engines, agreeing about the fixture and its
+   freed day, disagreeing on three untouched days. No rebase input makes a
+   replan equal a resolve. Cell 3 is re-declared against **R5's switchover**,
+   where derive() has no rivals and there is no published week left to
+   disagree. §7 below said "structurally by R5" and that half was right; the
+   "same ruling" half was not.
+2. **A was not purely subtractive.** Applied to every caller it broke two
+   athlete-DELETION regressions, because `materialiseFixtureMarksForCandidate`
+   uses the same projection on every accepted commit to MAINTAIN the accepted
+   week's fixture marks — there the overlay is the state being maintained, not
+   a previous decision's product. Applying a decision and maintaining a week
+   are different operations, so the caller declares which
+   (`appliesFixtureDecision`), and inside the rolling horizon the law holds
+   only for the PRIMARY weeks. The gate found this, not the reading of the
+   code — which is the §9 risk "a new shell will have new bugs" landing
+   exactly where it was said it would.
+
+The mutation witness: disabling the one line reds cell 1 and nothing else;
+restoring it greens it.
+
+---
+
+*Original document, as put to Sam, follows unchanged.*
+
 **Status: FOR SAM'S RULING. No fix rides with this document.** The red cell
 (`npm run test:fixture-identity`, chained into `test:bible`) ships with it;
 cells 1 and 3 are DECLARED RED and name this document as what pays them.
