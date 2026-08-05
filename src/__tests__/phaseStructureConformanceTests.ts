@@ -31,8 +31,27 @@
  *
  * Bible `:81` names THREE ideal in-season weekly structures. All three carry
  * "optional flushout/ aerobic conditioning off-leg" on the strength days, and
- * all three end "sunday rest or recovery". The derived week had neither: zero
- * conditioning components and an empty Sunday.
+ * all three end "sunday rest or recovery".
+ *
+ * NOT PAID — and the reason is now MEASURED rather than guessed. "Declare, then
+ * place" was built as approved and it works: the week carries a visible, authored
+ * "Short Flush" on its strength day, typed `optional_flush` so `:127`'s
+ * arithmetic is untouched. It is held on `fix/1b-flush-offer` because a SECOND
+ * planner (`fixtureMinimalReplan`) re-roles that flush to `required_core` when
+ * the week is rebuilt, laundering the athlete's offer into required work. See
+ * `docs/1B_FLUSH_OFFER_ARCHITECTURE_REASSESSMENT_2026-08-06.md` and its addendum.
+ * Sam's ruling: `docs/FLUSH_OFFER_RULING_2026-08-05.md`.
+ *
+ * So cells 5 and 7 stay DECLARED RED. Cell 7 is new and pins the half of the
+ * ruling that must not regress when 1b does land — the offer must never move the
+ * core count.
+ *
+ * Only ONE of the two 1b cells was a conditioning defect. The empty Sunday was
+ * not: the resolver already returns a TYPED rest day (`source`/`indicator` both
+ * `rest`), which `:81`'s "rest **or** recovery" permits. That cell reddened
+ * because its instrument read names, and a typed rest day has none. It is
+ * re-scoped to a control, and what remains of it is a SURFACE question carried
+ * to Sam as copy — never invented here.
  *
  * ── WHAT MUST NOT MOVE ─────────────────────────────────────────────────────
  *
@@ -73,6 +92,7 @@ import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
 import { isTeamTrainingSession } from '../utils/teamTraining';
+import { projectConditioningVisibleIdentity } from '../utils/conditioningVisibleIdentity';
 import { addDaysISO } from '../utils/programBlockState';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import {
@@ -103,8 +123,8 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  { id: '5', matches: /ZERO conditioning components/, paidBy: 'finding 1b' },
-  { id: '6', matches: /Sunday came back EMPTY/, paidBy: 'finding 1b' },
+  { id: '5', matches: /ZERO visible conditioning/, paidBy: 'finding 1b' },
+  { id: '7', matches: /ZERO sessions as `optional_flush`/, paidBy: 'finding 1b' },
 ];
 
 const declaredRedHits = new Set<string>();
@@ -224,6 +244,14 @@ function teamSessions(days: ResolvedDay[]): ResolvedDay[] {
   });
 }
 
+/** The §18 conditioning role the derived day actually carries, if any. */
+function conditioningRoleOf(day: ResolvedDay): string | null {
+  const workout = (day as unknown as { workout?: (Workout & {
+    section18ConditioningRole?: string;
+  }) | null }).workout;
+  return workout?.section18ConditioningRole ?? null;
+}
+
 /** Every component on the day — the stacked parts, not just the headline. */
 function componentsOf(day: ResolvedDay): string[] {
   const workout = (day as unknown as { workout?: Workout | null }).workout;
@@ -302,31 +330,98 @@ const main = async () => {
   });
 
   // ══ 1b ══════════════════════════════════════════════════════════════════
+  /**
+   * This cell used to look for a conditioning WORD in the day's headline name or
+   * its attached activities. That instrument could not see the shape Bible :81
+   * actually authors — "optional flushout/ aerobic conditioning off-leg" ON the
+   * strength days — because a flush attached to a strength day is composed as a
+   * PART inside the session (D13's composition model), and the day keeps its
+   * strength headline. It reported zero correctly only because the week genuinely
+   * had nothing.
+   *
+   * It now asks the app's own canonical owner of visible conditioning identity,
+   * `projectConditioningVisibleIdentity` — the same projection the athlete's
+   * screen reads. That is both stronger and narrower than the old regex, which
+   * would have been satisfied by an ordinary "Barbell Row" on an upper-pull day.
+   */
   await run('5 the in-season week carries its optional conditioning (Bible :81)', async () => {
     reachWorldByActing();
     await shiftTo('In-season');
     const days = week();
-    const conditioning = days.filter((day) => componentsOf(day).some((name) =>
-      /flush|aerobic|conditioning|erg|bike|run|row|ski/i.test(name)));
-    assert(conditioning.length > 0,
-      'the in-season week derived ZERO conditioning components. All three of Bible :81\'s '
+    const visible = days
+      .map((day) => ({
+        day,
+        identity: projectConditioningVisibleIdentity(
+          (day as unknown as { workout?: Workout | null }).workout),
+      }))
+      .filter((entry) => entry.identity !== null);
+    assert(visible.length > 0,
+      'the in-season week derived ZERO visible conditioning. All three of Bible :81\'s '
       + 'ideal structures carry "optional flushout/ aerobic conditioning off-leg" on the '
-      + `strength days, and :1242 — "In-season conditioning should support performance and `
+      + 'strength days, and :1242 — "In-season conditioning should support performance and '
       + `freshness". Derived week: ${shape(days)}`);
+    const flush = visible.filter((entry) => entry.identity?.structureFamily === 'aerobic_flush');
+    assert(flush.length > 0,
+      'the in-season week derived visible conditioning, but none of it reads as the FLUSH '
+      + `Bible :81 authors — got ${visible.map((entry) => entry.identity?.structureFamily).join(', ')}. `
+      + `Derived week: ${shape(days)}`);
   });
 
-  await run('6 the in-season week ends in rest or recovery, never empty (Bible :81)', async () => {
+  /**
+   * RE-SCOPED 2026-08-06, approved by Sam, and the re-scope is a MEASUREMENT not
+   * a concession. This cell used to demand a NAMED component on Sunday and was
+   * declared red as a 1b conditioning defect. It is not one: the derived Sunday
+   * already comes back `source: 'rest', indicator: 'rest'` — a TYPED rest day —
+   * and Bible `:81` says "sunday rest **or** recovery", so the typed rest day is
+   * conformant. The cell only ever reddened because `componentsOf` reads
+   * `workout.name` plus attached activity names, and a typed rest day carries a
+   * null workout and so contributes no NAME.
+   *
+   * So the derivation was right and the assertion was measuring the wrong thing.
+   * What remains is a SURFACE question — whether the athlete sees words saying
+   * the day is a rest day — which is a copy item, ships PROPOSED for Sam under
+   * the copy law, and is not invented here. See the boundary report.
+   *
+   * As a control this cell now pins the thing 1b must not break: the flush
+   * placement below must never consume Sunday or leave it untyped.
+   */
+  await run('6 the in-season week ends in a TYPED rest day, never an untyped gap (Bible :81)', async () => {
     reachWorldByActing();
     await shiftTo('In-season');
     const days = week();
     const sunday = days.find((day) => new Date(`${day.date}T12:00:00`).getDay() === 0);
     assert(sunday, 'the derived week has no Sunday at all');
-    const components = componentsOf(sunday);
-    assert(components.length > 0,
-      'Sunday came back EMPTY. All three of Bible :81\'s structures end "sunday rest or '
-      + 'recovery", and :79 — "What should happen the day after a game: rest or recovery '
-      + 'day". An empty day and an offered recovery day are not the same thing on the '
-      + `athlete's screen. Derived week: ${shape(days)}`);
+    const typed = sunday as unknown as { source?: string; indicator?: string };
+    assert(typed.source === 'rest' && typed.indicator === 'rest',
+      `Sunday came back typed source=${typed.source ?? 'null'} indicator=`
+      + `${typed.indicator ?? 'null'}, not the rest day Bible :81 ends on ("sunday rest or `
+      + 'recovery") and :79 names ("the day after a game: rest or recovery day"). An UNTYPED '
+      + 'gap and a typed rest day are not the same thing — only the typed day can be '
+      + `rendered as a decision. Derived week: ${shape(days)}`);
+  });
+
+  await run('7 the offer never counts toward the in-season target (Bible :127, Sam 2026-08-05)', async () => {
+    reachWorldByActing();
+    await shiftTo('In-season');
+    const days = week();
+    const flush = days.filter((day) => conditioningRoleOf(day) === 'optional_flush');
+    assert(flush.length > 0,
+      'the in-season week typed ZERO sessions as `optional_flush`. Sam\'s ruling '
+      + '(docs/FLUSH_OFFER_RULING_2026-08-05.md): "The optional flushout is a REQUIRED OFFER '
+      + 'on every in-season week: the app always presents it; doing it is the athlete\'s '
+      + `choice". Derived week: ${shape(days)}`);
+    const appCore = days.filter((day) => {
+      const role = conditioningRoleOf(day);
+      return role === 'required_core' || role === 'planner_selected_core';
+    });
+    assert(appCore.length === 0,
+      `the offer moved the :127 arithmetic — ${appCore.length} app session(s) came back typed `
+      + `as CORE conditioning (${appCore.map((day) => day.date).join(', ')}). Measured before `
+      + '1b, this week had zero: two team trainings plus the game already satisfy the '
+      + 'in-season conditioning target, and Sam\'s ruling says the flush "does not count '
+      + 'toward :127\'s in-season conditioning target arithmetic — TT + game still satisfy '
+      + 'the target; the flush rides as the always-present optional". A flush that promoted '
+      + `itself to core would be the ruling's other half broken. Derived week: ${shape(days)}`);
   });
 
   console.log(`\n  phase structure conformance totals: ${passed} passed, ${failed} failed`);
