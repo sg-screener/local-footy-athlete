@@ -276,13 +276,20 @@ interface ContainedCoordinate {
 }
 
 const CONTAINED: readonly ContainedCoordinate[] = [
-  {
-    coordinate: 'team_night × [conditioning]',
-    ownedBy: 'session_list_drops_conditioning_attached_to_an_appointment',
-    why: 'The team night carries a conditioning part the session list emits '
-      + 'nothing for — its conditioning arms are keyed off shapes an '
-      + 'appointment day does not present.',
-  },
+  // RETIRED 2026-08-06 — `team_night × [conditioning]`, owned by
+  // `session_list_drops_conditioning_attached_to_an_appointment`.
+  //
+  // The owning declared red was PAID and deleted by the D13 composition unit:
+  // `buildSessionTemplate` is driven by the day's PARTS rather than by two
+  // `workoutType` predicates, so a team night carrying conditioning emits its
+  // conditioning rows and `isCombinedDay` is gone. The coordinate now AGREES,
+  // and block [2] is precisely the ratchet that says so — a containment that
+  // stops being needed FAILS rather than lingering as false debt.
+  //
+  // Retired here one commit late: the payment deleted the walker entry and left
+  // its two dependants (this containment and the blind spot below) pointing at
+  // a red that no longer exists, which is what block [3] caught.
+
   // THE SUPPORT BADGE SPANS SIX COORDINATES, NOT THE ONE ITS ENTRY RECORDS.
   //
   // The walker's declared red for this shape carries a single reproduction
@@ -336,39 +343,22 @@ interface BlindSpot {
 }
 
 const BLIND_SPOTS: readonly BlindSpot[] = [
-  {
-    // Repointed 2026-08-05: the walker's combination entry
-    // (`session_list_drops_a_team_night_stack_and_badges_support`) was
-    // deleted MOVED-NOT-PAID when the R1.3 world-fidelity fixes re-rolled
-    // both tiers off its reproduction. The composition decomposes into two
-    // mechanisms that remain declared; this blind spot now names the
-    // conditioning half (its sibling `support` half is
-    // `session_list_badges_a_midline_row_the_projection_has_no_part_for`,
-    // already containing six coordinates above).
-    declaredRed: 'session_list_drops_conditioning_attached_to_an_appointment',
-    coordinate: 'team_night × [conditioning,strength]',
-    failingComposition: 'roles=[midline] buckets=[conditioning,strength] cond=block_no_flag',
-    why: 'MEASURED 2026-08-05 (stage 2 priority A, `WALKER_LOG_LP3=1` on the '
-      + 'deep tier): the failing instance is a team night whose ONLY '
-      + 'non-conditioning row is a trunk row with no authored role, and whose '
-      + 'conditioning is wired `block_no_flag` — a `conditioningBlock` names '
-      + 'the rows but `hasCombinedConditioning` is off, the shape '
-      + '`stackTemplate` builds when a session stacks onto a team anchor with '
-      + 'no strength owner (`canonicalPlanChangeCandidateMaterializer.ts:198`). '
-      + 'The template keys conditioning emission off the FLAG '
-      + '(`sessionTemplate.ts:257`) so it drops the conditioning; the component '
-      + 'owner keys off the BLOCK ids so the projection carries it. And with '
-      + 'conditioning present the sole trunk row is not sole content '
-      + '(`sessionComponents.ts:658`), so it buckets `strength` for the '
-      + 'projection while the template\'s name classifier badges it `support`. '
-      + 'The six observations that AGREE here all carry real strength rows and '
-      + 'flagged (or absent) conditioning — reaching the failing composition '
-      + 'needs a worn world (bye-week work-capacity stack onto a team night '
-      + 'whose gym half is down to one trunk row), which one add from a fresh '
-      + 'generation cannot build. The walker owns the reproduction (deep, step '
-      + '63, 2026-08-19).',
-  },
+  // RETIRED 2026-08-06 — `team_night × [conditioning,strength]`, which named
+  // `session_list_drops_conditioning_attached_to_an_appointment`.
+  //
+  // The blind spot described a `block_no_flag` team night: a `conditioningBlock`
+  // naming the rows while `hasCombinedConditioning` was off, which the template
+  // dropped because it keyed conditioning emission off the FLAG while the
+  // component owner keyed off the BLOCK ids. The D13 composition unit removed
+  // that divergence at its source — the template now reads the day's PARTS, so
+  // there is no flag-vs-block disagreement left for the composition to expose —
+  // and the declared red this entry pointed at was deleted with it.
+  //
+  // Nothing is being hidden by this deletion: the entry's sibling half (the
+  // `support` badge, `session_list_badges_a_midline_row_the_projection_has_no_
+  // part_for`) is still declared and still contains its six coordinates above.
 ];
+
 
 interface Observation {
   world: string;

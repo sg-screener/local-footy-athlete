@@ -147,6 +147,7 @@ import {
   type FixtureConditionedAvailability,
 } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from '../rules/seasonPhaseOwner';
+import { clubTrainingDaysForPhase } from '../rules/clubSeasonScope';
 import type {
   SeasonPhaseClock,
   SeasonPhaseClockResolutionProvenance,
@@ -5310,6 +5311,23 @@ function buildWeeklyPlan(
           conditioningFlavour: flavour,
           conditioningCategory: category,
           ...conditioningProps,
+          // A DAY THAT GAINS CONDITIONING IS NO LONGER ONE COMPOSED SESSION.
+          //
+          // This is the third site to learn the same lesson, and the last of
+          // the three that spreads an EXISTING session: `stackTemplate` clears
+          // it on combining ("the marker dies with the purity it describes"),
+          // and the §18 repair clears it when it promotes an accessory slot
+          // ("whoever repurposes a day owns clearing what the day WAS"). This
+          // one spread `...s` and attached conditioning on top, so a Gunshow
+          // day kept saying it was a pure Gunshow while carrying a conditioning
+          // part — the deep walker's L-P6 offence
+          // `renders ["Gunshow","Conditioning"]`, ruling 7-e.
+          //
+          // Cleared HERE, at the site that adds the content, rather than
+          // normalised at the projection: a projection that quietly repaired
+          // the marker would make L-P6 unfalsifiable and leave the leak in the
+          // domain with only its symptom gone.
+          composedOptionalKind: undefined,
         };
         st.condCount += attachedConditioningCredit(attachedKind);
         st.condFlavours[flavour]++;
@@ -7005,6 +7023,7 @@ function applySection18ConditioningAllocation(
     }
   }
 
+
   // A genuine anchor already satisfies the sprint floor in these modes; the
   // sprint repair below only sees a shortfall when no such credit exists.
   void inputs;
@@ -8367,7 +8386,14 @@ export function onboardingToCoachingInputs(
       ownedPhase: ownSeasonPhaseForGeneration(data),
     });
   const prefDays = targetWeekAvailability.effectiveAvailableDayNames as string[];
-  const teamDays = (data.teamTrainingDays || []) as string[];
+  // THE CLUB FACT IS PHASE-SCOPED HERE (finding 1a, Sam 2026-08-06). Off-season
+  // has no club season — Bible :107 "no team training or games means
+  // conditioning is controlled" — so derivation does not read the answer. The
+  // ANSWER is untouched, which is the whole point: coming back to pre-season
+  // restores the club fact with no write. Same boundary, same reasoning as the
+  // union below.
+  const ownedPhaseForClub = ownSeasonPhaseForGeneration(data).phase;
+  const teamDays = clubTrainingDaysForPhase(ownedPhaseForClub, data.teamTrainingDays);
   const selectedDays: string[] = [...prefDays];
   for (const td of teamDays) {
     if (!selectedDays.includes(td)) selectedDays.push(td);
@@ -8387,7 +8413,9 @@ export function onboardingToCoachingInputs(
     seasonPhase: data.seasonPhase || 'Pre-season',
     availableDays,
     selectedDays: selectedDays as any,
-    teamTrainingDaysPerWeek: data.teamTrainingDaysPerWeek || 0,
+    // Both come from the phase-scoped set above, never from the raw answer —
+    // a count that outlived the days it counts is the same defect one field on.
+    teamTrainingDaysPerWeek: teamDays.length,
     teamTrainingDays: teamDays as any,
     sprintExposure: data.sprintExposure,
     conditioningLevel: data.conditioningLevel,

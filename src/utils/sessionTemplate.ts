@@ -254,7 +254,6 @@ export function buildSessionTemplate(
   const isConditioningOnly =
     !teamState.isTeamTrainingOnly &&
     CONDITIONING_ONLY_TYPES.has(String(workout.workoutType ?? ''));
-  const isCombinedDay = !!(workout as any).hasCombinedConditioning && !isConditioningOnly;
 
   const items: SessionTemplateItem[] = [];
 
@@ -288,14 +287,33 @@ export function buildSessionTemplate(
     }
   }
 
-  if (isConditioningOnly) {
-    for (const row of componentRows.conditioningRows) {
-      items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
-    }
-  } else if (isCombinedDay) {
-    const options = resolveConditioningOptions(workout, componentRows.conditioningRows);
-    if (options.length > 0) {
-      items.push({ kind: 'conditioning_choice', role: 'conditioning', options });
+  // THE LIST IS DRIVEN BY THE DAY'S PARTS, NOT BY TWO workoutType PREDICATES.
+  //
+  // Every other population above reads `componentRows` — the day's parts.
+  // Conditioning alone was gated behind `isConditioningOnly` (a
+  // `CONDITIONING_ONLY_TYPES` workoutType) and `isCombinedDay`
+  // (`hasCombinedConditioning`), and A TEAM NIGHT CARRYING CONDITIONING IS
+  // NEITHER — so `resolveConditioningOptions` never ran and the rows never
+  // entered the one list. The athlete saw a team night with none of the
+  // conditioning the projection says is on it.
+  //
+  // That is the same shape D13 was written to fix with the two kinds swapped:
+  // "team training hid on conditioning days because `TeamTrainingBlock` only
+  // existed inside the strength branch" (spec §2 item 4c). Under the
+  // one-projection ruling the parts decide WHETHER rows appear; the workout's
+  // type decides only HOW they are presented — a phase list for a pure
+  // conditioning day, the choice box for a day that carries conditioning
+  // alongside anything else.
+  if (componentRows.conditioningRows.length > 0) {
+    if (isConditioningOnly) {
+      for (const row of componentRows.conditioningRows) {
+        items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
+      }
+    } else {
+      const options = resolveConditioningOptions(workout, componentRows.conditioningRows);
+      if (options.length > 0) {
+        items.push({ kind: 'conditioning_choice', role: 'conditioning', options });
+      }
     }
   }
 

@@ -1603,36 +1603,15 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // FOUR ENTRIES, NOT ONE. Task 3's review established the rule: a shared id lets
   // an owner fix one shape while the others keep the entry alive, so each notch
   // has to be releasable on its own.
-  {
-    id: 'session_list_drops_conditioning_attached_to_an_appointment',
-    law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \["conditioning"\] and invents \[\] — template \[[^\]]*"team_training"[^\]]*\]/,
-    why: 'A TEAM NIGHT CARRYING CONDITIONING SHOWS NONE OF IT. The projection '
-      + 'carries a `conditioning` part (the components say so), and '
-      + '`buildSessionTemplate` emits nothing for it: its conditioning arms are '
-      + '`isConditioningOnly` (a `CONDITIONING_ONLY_TYPES` workoutType) and '
-      + '`isCombinedDay` (`hasCombinedConditioning`), and a Team Training day with '
-      + 'attached conditioning is neither, so `resolveConditioningOptions` never '
-      + 'runs and the rows never enter the one list. This is the same shape as the '
-      + 'spec bug D13 was written to fix — "team training hid on conditioning days '
-      + 'because `TeamTrainingBlock` only existed inside the strength branch" '
-      + '(§2 item 4c) — with the two kinds swapped. Reproduce: bounded seed 5, 5 '
-      + 'actions, 2026-07-29; deep seeds reach 2026-08-19 and 2026-09-23.',
-    paidBy: 'the D13 session-template owner (`utils/sessionTemplate.ts`, spec '
-      + '`docs/SESSION_TEMPLATE_SPEC_2026-07-25.md`). Under the one-projection '
-      + 'ruling the list should be driven by the day\'s PARTS rather than by two '
-      + 'workoutType predicates; that is a composition-ownership change, not a '
-      + 'titling one. NOT paid by the detail-surface task.',
-    expiresWhen: 'every conditioning part the projection carries appears in the '
-      + 'session list, whatever else is on the day.',
-    // 'both' -> 'deep' 2026-08-05 (R1.3): the world-fidelity fixes (fixture
-    // marks through the real door, fresh-install ledger reset) re-rolled the
-    // bounded seeds off this coordinate; the deep tier still reaches it, and
-    // the combination MATRIX reaches it deterministically either way
-    // (team_night × [conditioning], 2 obs DISAGREES — its containment names
-    // this entry). Reachability moved; the defect did not.
-    redsIn: 'deep',
-  },
+  // PAID AND DELETED 2026-08-05 — `session_list_drops_conditioning_attached_to_an_appointment`.
+  //
+  // Its own `paidBy` named the fix and this is it: "the list should be driven
+  // by the day's PARTS rather than by two workoutType predicates".
+  // `buildSessionTemplate` now emits conditioning rows whenever
+  // `componentRows.conditioningRows` is non-empty; the workout's type decides
+  // only HOW they present (phase list for a pure conditioning day, the choice
+  // box otherwise), never WHETHER they appear. `isCombinedDay` — one of the two
+  // predicates the entry named — is deleted with it.
   // `conditioning_attached_to_a_composed_optional_day_hides_its_part` (L-P6)
   // — declared and PAID within one session, 2026-08-01. The shape (a typed
   // mobility/prehab day rendering only "Conditioning") was the composed-
@@ -1744,30 +1723,14 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // constituent entries. Owner unchanged: the D13 session-template owner
   // with `sessionComponents`; paying one mechanism alone still leaves the
   // matrix blind spot standing until the composition is re-measured.
-  {
-    // DECLARED 2026-08-05 (R1.3 triage): the composed-optional MARKER
-    // SURVIVES onto a day carrying team training + conditioning, so the
-    // one-word law fires on a card that is genuinely three parts. Same
-    // family as the marker-leak paid 2026-08-01 ("stackTemplate's base
-    // spread"), reached at a site that payment did not clear — the walker
-    // reached it the first run after the R1.3 world-fidelity fixes let deep
-    // worlds mark fixtures through the real door. Reproduce: deep SEED 3,
-    // 67 actions, offending day 2026-10-12 — a typed gunshow session
-    // renders ["Gunshow","Conditioning","Team Training"].
-    id: 'composed_optional_marker_survives_a_stacked_combination',
-    law: 'L-P6 CHARTER TYPE NAMES ITSELF',
-    matches: /renders \["Gunshow","Conditioning","Team Training"\]/,
-    why: 'The `composedOptionalKind` marker guarantees ONE composed session '
-      + '(`stackTemplate` clears it on combining) — a marked workout on a day '
-      + 'whose parts include a team anchor and a conditioning part means a '
-      + 'combining site kept the marker it should have cleared, the exact '
-      + 'class the 2026-08-01 payment cleared at ONE site.',
-    paidBy: 'the D13 session-template/composition owner — clearing the marker '
-      + 'at every combining site, not the one the first payment found.',
-    expiresWhen: 'no workout carrying `composedOptionalKind` shares its day '
-      + 'with parts the marker\'s one-word law cannot admit.',
-    redsIn: 'deep',
-  },
+  // PAID AND DELETED 2026-08-05 — `composed_optional_marker_survives_a_stacked_combination`.
+  //
+  // Its `paidBy` asked for "clearing the marker at every combining site, not the
+  // one the first payment found", and the deep walker had found three more: the
+  // engine's conditioning-attach spread and both adjustment-event attach sites.
+  // Rather than a fourth site-local fix the rule now has an OWNER —
+  // `utils/composedOptionalMarker.ts` — and every clone whose patch introduces
+  // conditioning drops the marker through it.
 
   // RETIRED 2026-08-05 — `generated_conditioning_rows_have_no_authored_name`.
   //

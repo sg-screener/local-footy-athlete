@@ -5,6 +5,7 @@ import type {
   UserRemovalConstraint,
   Workout,
 } from '../types/domain';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
@@ -440,6 +441,21 @@ function attachConditioningPreservingCore(target: Workout, conditioning: Workout
     workoutId: target.id,
     exerciseOrder: target.exercises.length + index + 1,
   }));
+  // The conditioning this day GAINS, named so the marker rule can read it —
+  // see `composedOptionalMarker`. A stack is the clone's twin: the day is no
+  // longer one composed Gunshow / Accessories / Mobility session once a
+  // conditioning part lands on it (ruling 7-e), and the owner decides that from
+  // the very fields this merge is about to write.
+  const conditioningGain: Partial<Workout> = {
+    hasCombinedConditioning: true,
+    attachedConditioningKind: conditioning.attachedConditioningKind,
+    conditioningFlavour: conditioning.conditioningFlavour,
+    conditioningCategory: conditioning.conditioningCategory,
+    conditioningFeasibility: conditioning.conditioningFeasibility,
+    conditioningBlock: conditioning.conditioningBlock,
+    section18ConditioningRole: conditioning.section18ConditioningRole,
+    section18Evidence: conditioning.section18Evidence,
+  };
   return {
     ...target,
     name: `${target.name} + ${conditioning.name}`,
@@ -449,14 +465,8 @@ function attachConditioningPreservingCore(target: Workout, conditioning: Workout
       : target.intensity,
     durationMinutes: target.durationMinutes + conditioning.durationMinutes,
     exercises: [...target.exercises, ...appendedRows],
-    hasCombinedConditioning: true,
-    attachedConditioningKind: conditioning.attachedConditioningKind,
-    conditioningFlavour: conditioning.conditioningFlavour,
-    conditioningCategory: conditioning.conditioningCategory,
-    conditioningFeasibility: conditioning.conditioningFeasibility,
-    conditioningBlock: conditioning.conditioningBlock,
-    section18ConditioningRole: conditioning.section18ConditioningRole,
-    section18Evidence: conditioning.section18Evidence,
+    ...conditioningGain,
+    ...composedOptionalClearingPatch(conditioningGain),
     derivedSessionProvenance: [
       ...(target.derivedSessionProvenance ?? []).filter((record) =>
         record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),

@@ -5,6 +5,7 @@ import type {
   UserRemovalConstraint,
   Workout,
 } from '../types/domain';
+import { composedOptionalClearingPatch } from '../utils/composedOptionalMarker';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import {
   DEFAULT_ATHLETE_CONTEXT,
@@ -493,6 +494,30 @@ function mergeCoreWork(source: Workout, target: Workout): Workout | null {
     ...(target.derivedSessionProvenance ?? []),
     ...sourceProvenance,
   ];
+  // THE CONDITIONING THE TARGET GAINS, NAMED so the marker rule can read it.
+  //
+  // A STACK IS THE CLONE'S TWIN, AND ONLY THE CLONE HAD LEARNED THE RULE.
+  // `composedOptionalMarker` owns "the marker dies where the day gains
+  // conditioning", but its only shape was a clone's `Partial<Workout>`
+  // overrides — so the three STACK sites (here, `postGenerationConstraint
+  // Validation`, `fixtureMinimalReplan`) could not reach it and each spread
+  // `...target` with the source's conditioning laid on top. A Gunshow that
+  // absorbed a conditioning session kept claiming it was one composed Gunshow:
+  // the deep walker's SEED 3 L-P6 offence, `renders ["Gunshow","Conditioning"]`.
+  //
+  // Naming the gain instead of inlining it means the site does not decide
+  // anything — it hands the owner exactly the fields it is about to write, and
+  // the owner answers. Nothing to remember, and no fourth copy of the rule.
+  const conditioningGain: Partial<Workout> = sourceConditioning && !targetConditioning ? {
+    hasCombinedConditioning: true,
+    attachedConditioningKind: source.attachedConditioningKind,
+    conditioningFlavour: source.conditioningFlavour,
+    conditioningCategory: source.conditioningCategory,
+    conditioningFeasibility: source.conditioningFeasibility,
+    conditioningBlock: source.conditioningBlock,
+    section18ConditioningRole: source.section18ConditioningRole,
+    section18Evidence: source.section18Evidence,
+  } : {};
   return {
     ...target,
     name: preserveTargetType ? target.name : `${target.name} + ${source.name}`,
@@ -511,16 +536,8 @@ function mergeCoreWork(source: Workout, target: Workout): Workout | null {
       : {}),
 
     ...(source.speedBlock && !target.speedBlock ? { speedBlock: source.speedBlock } : {}),
-    ...(sourceConditioning && !targetConditioning ? {
-      hasCombinedConditioning: true,
-      attachedConditioningKind: source.attachedConditioningKind,
-      conditioningFlavour: source.conditioningFlavour,
-      conditioningCategory: source.conditioningCategory,
-      conditioningFeasibility: source.conditioningFeasibility,
-      conditioningBlock: source.conditioningBlock,
-      section18ConditioningRole: source.section18ConditioningRole,
-      section18Evidence: source.section18Evidence,
-    } : {}),
+    ...conditioningGain,
+    ...composedOptionalClearingPatch(conditioningGain),
     recoveryAddons: [...(target.recoveryAddons ?? []), ...(source.recoveryAddons ?? [])],
     updatedAt: source.updatedAt > target.updatedAt ? source.updatedAt : target.updatedAt,
   };
