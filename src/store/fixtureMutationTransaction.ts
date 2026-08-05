@@ -31,6 +31,7 @@ import {
 } from '../utils/athleteActionDiagnostics';
 import { useProfileStore } from './profileStore';
 import { useProgramStore } from './programStore';
+import { appendDecisionEntry } from './decisionLedgerStore';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 
 type AppliedFixtureMutationOutcome = Exclude<WholeWeekRepairOutcome, 'impossible'>;
@@ -782,6 +783,23 @@ export async function executeFixtureMutationTransaction(
       outcome: candidate.outcome,
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
+    });
+    // R1.4a (shell rebuild): the landed fixture decision, appended verbatim.
+    // ONLY the durable door appends — the in-memory twin above is the parity
+    // and replay seam, and replay READS the ledger, it never writes it.
+    appendDecisionEntry({
+      decision: input.action === 'move'
+        ? {
+            kind: 'fixture_move',
+            fromDate: input.sourceDate ?? '',
+            toDate: input.targetDate ?? '',
+            fixtureKind: input.fixtureKind,
+          }
+        : input.action === 'add'
+          ? { kind: 'fixture_add', date: input.targetDate ?? '', fixtureKind: input.fixtureKind }
+          : { kind: 'fixture_remove', date: input.sourceDate ?? '', fixtureKind: input.fixtureKind },
+      provenance: input.source.requestedBy === 'athlete' ? 'athlete_tap' : 'coach',
+      writer: 'fixture_door',
     });
     return {
       outcome: candidate.outcome,

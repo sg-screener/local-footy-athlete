@@ -32,6 +32,7 @@ export type AthleteDecision =
   | { kind: 'plan_change'; change: PlanChange }
   | { kind: 'fixture_add'; date: string; fixtureKind: string }
   | { kind: 'fixture_remove'; date: string; fixtureKind: string }
+  | { kind: 'fixture_move'; fromDate: string; toDate: string; fixtureKind: string }
   /** Undo is a decision too: a reversal APPENDS, it never rewrites (LR-29). */
   | { kind: 'reversal'; reversedEntryId: string };
 

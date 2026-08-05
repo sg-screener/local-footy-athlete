@@ -2389,6 +2389,15 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
         ? 'plan_change_generic_unsafe'
         : 'plan_change_specific_failure';
     if (result.ok) {
+      // R1.4a (shell rebuild): a decision that LANDED is appended to the
+      // ledger, verbatim and typed, in the same act. Refusals never reach it.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { appendDecisionEntry } = require('../store/decisionLedgerStore');
+      appendDecisionEntry({
+        decision: { kind: 'plan_change', change: args.change },
+        provenance: 'athlete_tap',
+        writer: 'program_control',
+      });
       emitAthleteActionEvent(trace, 'athlete_action_completed', {
         outcome: 'accepted',
         appliedDates: result.appliedDates,
