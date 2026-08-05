@@ -101,6 +101,8 @@ import { commitRebuiltProgram, rebuildLocalWeek } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
+import { createOrUpdateInjuryEpisode } from '../store/injuryEpisodeTransaction';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { projectConditioningVisibleIdentity } from '../utils/conditioningVisibleIdentity';
 import { addDaysISO } from '../utils/programBlockState';
@@ -135,7 +137,13 @@ interface DeclaredRed {
   readonly paidBy: string;
 }
 
-const DECLARED_RED: ReadonlyArray<DeclaredRed> = [];
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
+  {
+    id: '10',
+    matches: /the injured week lost a session/,
+    paidBy: 'docs/FINDING_3_SUBSTITUTE_BEFORE_REDUCE_2026-08-06.md + Sam\'s ruling',
+  },
+];
 
 const declaredRedHits = new Set<string>();
 
@@ -545,6 +553,91 @@ const main = async () => {
       + 'athlete\'s choice" — ruled 2026-08-06 to be a property of the week at all times, not '
       + `of the moment it was generated. Week: ${shape(moved)} roles: `
       + `${moved.map((day) => `${day.date}=${conditioningRoleOf(day) ?? '-'}`).join(' ')}`);
+  });
+
+  /**
+   * FINDING 3 — THE INJURY PATH REDUCES WHERE THE BIBLE SAYS SUBSTITUTE.
+   *
+   * DECLARED RED. Measured, root-caused and specified in
+   * `docs/FINDING_3_SUBSTITUTE_BEFORE_REDUCE_2026-08-06.md`; not built, because
+   * the fix is one expression and validating it is a unit of its own (every
+   * injured week gains sessions, which moves both generation goldens).
+   *
+   * Bible `:4755` "Substitute before reducing frequency"; `:4688`'s repair
+   * order puts the typed reduction LAST, after relocate and substitute; `:72`
+   * and `:93` "continue to do work on unaffected areas… get as much work as you
+   * can in around the injury"; `:1917` "Keep unaffected work in where possible."
+   *
+   * `section18SafetyPolicy` caps `main_strength_frequency` at
+   * `requiredSafe.length` — the number of surviving PATTERNS. Prohibit squat
+   * and hinge and the week may hold at most two strength sessions, not because
+   * two is all the athlete can safely do but because two patterns remain.
+   * Pattern count constrains VARIETY; frequency is a different quantity.
+   *
+   * The cell asserts what the Bible asks for and NOT the mechanism, so it stays
+   * true whichever way Sam rules the fix: the week keeps its sessions, and no
+   * day is emptied. It deliberately also pins what must NOT move — squat and
+   * hinge stay prohibited, and the week stays §18-conformant — so a "fix" that
+   * simply stopped restricting the injured patterns would fail here rather than
+   * pass.
+   */
+  await run('10 an injury keeps unaffected work rather than reducing frequency (Bible :4755, :72, :93)', async () => {
+    reachWorldByActing();
+    const before = week();
+    const beforeSessions = before.filter((day) =>
+      !!(day as unknown as { workout?: Workout | null }).workout).length;
+    assert(beforeSessions > 0, 'the uninjured week derived no sessions at all');
+
+    await quietAsync(() => createOrUpdateInjuryEpisode({
+      constraint: {
+        id: 'injury-hamstring-phase-structure',
+        type: 'injury',
+        bodyPart: 'hamstring',
+        bucket: 'hamstring',
+        severity: 6,
+        status: 'active',
+        startDate: TODAY,
+        lastUpdatedAt: `${TODAY}T09:00:00.000Z`,
+        source: 'guided_injury_flow',
+        rules: ['No sprinting or high-speed running', 'No heavy hinge work'],
+        safeFocus: ['Pain-free work for unaffected regions'],
+        advice: [],
+        modifierAffects: ['current_week', 'future_generation'],
+        presentationOnlyDismiss: true,
+      },
+      sourceActor: 'athlete',
+      sourceSurface: 'guided_injury_flow',
+      todayISO: TODAY,
+    } as never));
+
+    const after = week();
+    const accepted = quiet(() => rebaseAcceptedEffectiveWeek({
+      surfaces: useProgramStore.getState(),
+      weekStart: NEXT,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    } as never)) as {
+      contract: { strengthPatterns: { prohibitedPatterns: string[] } };
+      evaluation: { blockingViolations: unknown[] };
+    };
+
+    // WHAT MUST NOT MOVE — the injury is still doing its job.
+    const prohibited = accepted.contract.strengthPatterns.prohibitedPatterns;
+    assert(prohibited.includes('squat') && prohibited.includes('hinge'),
+      'the hamstring injury no longer prohibits squat and hinge, so this cell would pass '
+      + `by not restricting the athlete at all. Prohibited: ${JSON.stringify(prohibited)}`);
+    assert(accepted.evaluation.blockingViolations.length === 0,
+      `the injured week carries ${accepted.evaluation.blockingViolations.length} blocking `
+      + 'violation(s) — keeping the work must not come at the cost of a week §18 refuses');
+
+    const afterSessions = after.filter((day) =>
+      !!(day as unknown as { workout?: Workout | null }).workout).length;
+    assert(afterSessions >= beforeSessions,
+      `the injured week lost a session (${beforeSessions} → ${afterSessions}). Bible :4755 — `
+      + '"Substitute before reducing frequency"; :72 — "continue to do work on unaffected '
+      + 'areas"; :93 — "get as much work as you can in around the injury". The frequency was '
+      + 'reduced to the number of surviving PATTERNS instead, which is a constraint on '
+      + `variety, not on how often the athlete may train. Injured week: ${shape(after)}`);
   });
 
   console.log(`\n  phase structure conformance totals: ${passed} passed, ${failed} failed`);
