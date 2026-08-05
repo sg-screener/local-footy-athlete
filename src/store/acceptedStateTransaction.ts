@@ -283,6 +283,26 @@ function materialContext(state: ProgramState): AcceptedMaterialContext {
     ),
     activeConstraints: normalizeAcceptedArray(useCoachUpdatesStore.getState().activeConstraints),
     activeInjury: useCoachUpdatesStore.getState().activeInjury ?? null,
+    // R3: THE LIFE-FACTS ARE INPUTS AND THIS BRANCH USED TO DROP THEM.
+    //
+    // Cold start composes the accepted context from the armoured input stores.
+    // It named three of them and forgot the two that live in the program
+    // store's own input slice — `temporarySourceFacts` and `injuryEpisodes`,
+    // both persisted by R1.3's `partialize` and both restored by `merge`.
+    // R1.3's boot re-derives at `revision: 0`, so EVERY launch took this
+    // branch, and the athlete's stated illness and injury were thrown away at
+    // the boundary that was supposed to read them (measured 2026-08-05:
+    // facts=1 after the door, 1 after rehydrate, 0 after the boot).
+    //
+    // It looked fine because `coachUpdatesStore`'s `activeConstraints` MIRROR
+    // separately persisted the constraint the fact had derived — a surface
+    // plan §1 deletes in R5. The fact carries itself now: the normaliser
+    // recomposes constraints, injury compatibility and readiness FROM these
+    // facts, so the mirror stops being the thing holding the athlete's illness
+    // together. Pinned by `factDoorInputOwnershipTests` with the mirror
+    // deliberately deleted before the relaunch.
+    temporarySourceFacts: accepted.temporarySourceFacts,
+    injuryEpisodes: accepted.injuryEpisodes,
     revision: 0,
     lastTransaction: null,
   });
