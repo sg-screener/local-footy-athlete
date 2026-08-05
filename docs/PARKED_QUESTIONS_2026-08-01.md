@@ -261,3 +261,19 @@ variant (e.g. "It's match day — …")?
 **Shipped meanwhile:** the signed sentence verbatim on all fixture days; the
 inert lane and typed `inertReason: 'fixture_day'` are wording-independent,
 so a variant is a one-line ack-owner change plus one cell.
+
+---
+
+## §11 PARKED — MetCon description reworded under the display-times rule (2026-08-05)
+
+**Unit:** finding-7 display rule (docs/DISPLAY_TIMES_RULING_2026-08-05.md).
+
+**What changed meanwhile:** the "MetCon - Off-Legs" coach-template
+description carried "Vary work:rest from 1:2 up to 3:1." — a ratio on an
+athlete-rendered line, barred by your ruling. It now ships PROPOSED as:
+
+> "Vary how hard you push and how long you recover between stations."
+
+**Your question:** sign, reword, or drop the sentence. (The Rest-line case
+needed no words from you — "2 min (Sam's 1:2 ruling)" now renders "Rest:
+2 min" and the workbook cell is untouched.)

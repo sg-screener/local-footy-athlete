@@ -138,8 +138,12 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'metcon_offlegs',
     label: 'MetCon - Off-Legs',
+    // PROPOSED (display-times rule, docs/DISPLAY_TIMES_RULING_2026-08-05.md):
+    // the signed sentence carried "Vary work:rest from 1:2 up to 3:1", which
+    // the rule bars from athlete-rendered lines. Reworded without the ratio;
+    // parked for Sam's next signing batch (docs/PARKED_QUESTIONS_2026-08-01.md).
     description:
-      '28min: 4 stations x 7 rounds - hard erg efforts (bike/row/ski/assault), carries and burpees. Vary work:rest from 1:2 up to 3:1. Mostly off legs.',
+      '28min: 4 stations x 7 rounds - hard erg efforts (bike/row/ski/assault), carries and burpees. Vary how hard you push and how long you recover between stations. Mostly off legs.',
     category: 'work_capacity',
     byeOnly: true,
     durationMinutes: 28,

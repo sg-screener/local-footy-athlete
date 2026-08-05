@@ -34,6 +34,8 @@ import {
   type ConditioningTemplate,
 } from '../data/conditioningTemplates';
 import {
+  containsWorkRestRatio,
+  doseDisplayText,
   doseMidpoint,
   doseSeconds,
   parseConditioningDose,
@@ -439,6 +441,23 @@ function joinNotes(...lines: Array<string | false | null | undefined>): string {
 }
 
 /**
+ * THE DISPLAY RULE (docs/DISPLAY_TIMES_RULING_2026-08-05.md): a rendered dose
+ * line spells the time; work:rest ratios never reach an athlete.
+ *
+ * The authored string is the athlete-visible truth and renders VERBATIM —
+ * except when it carries a ratio (coach annotation like "2 min (Sam's 1:2
+ * ruling)"), in which case the typed parse supplies the duration-spelled
+ * text ("2 min") and the annotation stays workbook-internal. The narrow
+ * condition is deliberate: deriving every line would collapse compound
+ * authored doses ("15 s on / 15 s easy") to their leading quantity.
+ */
+function doseLineForDisplay(authored: string): string {
+  if (!containsWorkRestRatio(authored)) return authored;
+  const parsed = parseConditioningDose(authored);
+  return parsed.ok ? doseDisplayText(parsed.quantity) : authored;
+}
+
+/**
  * THE WARM-UP SENTENCE — Sam's signed words, 2026-08-05 (ruling 4,
  * `docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md`).
  *
@@ -492,8 +511,8 @@ export function composeConditioningRows(
       headlineSets(template),
       headlineRest(template),
       joinNotes(
-        `Work: ${template.workPeriod}`,
-        `Rest: ${template.restPeriod}`,
+        `Work: ${doseLineForDisplay(template.workPeriod)}`,
+        `Rest: ${doseLineForDisplay(template.restPeriod)}`,
         `Sets: ${template.setsRounds}`,
         `Intensity: ${template.intensity}`,
         template.effortCue,

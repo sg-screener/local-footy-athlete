@@ -137,19 +137,12 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     paidBy: 'whoever reproduces 6b — either through the ask flow or a stored-'
       + 'overlay sweep; delete this entry in that commit',
   },
-  {
-    id: 'finding-7',
-    finding: 'Sam\'s new display rule: athletes never see work:rest ratios.',
-    matches: /ratio-shaped text in athlete-reaching template fields/,
-    why: 'REPRODUCED as a content law over the signed sheet: 13 offending '
-      + 'strings, including FIVE template NAMES ("MAS 15:15 Blocks", "30:30 '
-      + 'Hard Intermittent", "Flush Intervals 30:30/1:1/2:1") and one signed '
-      + 'cue carrying "(Sam)". Every one is workbook-equality-bound '
-      + '(conditioningTemplateEqualityTests), so NO code-only fix exists — '
-      + 'the rule contradicts the signed sheet and the re-sign is Sam\'s.',
-    paidBy: 'Sam\'s signing session (workbook + module in lockstep, the MAS-'
-      + 'cell precedent), then this entry deletes with the sweep going green',
-  },
+  // finding-7 was declared red here and RETIRED 2026-08-05 evening: Sam's
+  // display-times ruling re-scoped the sweep to rendered lines (names and
+  // clock-times exempt, no workbook re-sign), and the two surviving reds were
+  // paid in the same commit — the Rest-line derives duration-spelled text
+  // when the authored cell carries a ratio (doseLineForDisplay), and the
+  // MetCon description reworded (PROPOSED, parked for Sam).
 ];
 
 let passed = 0;
@@ -949,37 +942,79 @@ const main = async () => {
         offences.join('\n    ')}`);
   });
 
-  // ── Finding 7: athletes never see work:rest ratios (new signed rule) ─
-  await run('finding-7: no athlete-reaching template string carries a work:rest ratio', async () => {
-    // This is a CONTENT law over the signed source, not an acted-world sweep:
-    // whether the ratio reaches HIS week depends on which template generation
-    // selects, and the rule Sam signed is about every athlete, every week.
-    // Athlete-reaching fields per the composer (conditioningSelection.ts:487-503):
-    // name, workPeriod, restPeriod, sets, intensity (also the secondaryCue),
-    // effortCue, progression. `workToRest`, `frameworkCheck`, `source` are
-    // coach-side and exempt.
-    const RATIO = /(\bwork\s*:\s*rest\b|\bW\s*:\s*R\b|\b\d{1,2}\s*:\s*\d{1,2}\b)/i;
+  // ── Finding 7: athletes see times, never ratios ──────────────────────
+  //
+  // RE-SCOPED per docs/DISPLAY_TIMES_RULING_2026-08-05.md ("just show us the
+  // time — the app can handle logic behind the scenes"):
+  // - Ratios flag only on ATHLETE-RENDERED lines. The rendered inputs are the
+  //   composer's joinNotes fields (conditioningSelection.ts: Work/Rest/Sets/
+  //   intensity/effortCue/modalityNotes), cue text, coach-template
+  //   descriptions, and the acted world's rendered strings.
+  // - Colon forms that ARE times stay: clock times ("every 2:00", "1:40",
+  //   "15:15", "30:30" — two-digit right side) and TEMPLATE NAMES anywhere
+  //   they appear ("Flush Intervals 2:1 (2 min / 1 min)" — durations sit in
+  //   the name itself). Names are stripped before scanning.
+  // - `workToRest` stays workbook-internal and unrendered — a leak into any
+  //   rendered line is caught by this same sweep.
+  await run('finding-7: no athlete-rendered line carries a work:rest ratio', async () => {
+    const TEMPLATE_NAMES = CONDITIONING_TEMPLATES
+      .map((template) => (template as { name?: string }).name ?? '')
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    const withoutNames = (text: string): string => {
+      let out = text;
+      for (const name of TEMPLATE_NAMES) out = out.split(name).join(' ');
+      return out;
+    };
+    // One detector, owned by the dose module beside the parse — the render
+    // path (doseLineForDisplay) and this sweep read the same definition.
+    const { containsWorkRestRatio } = await import('../rules/conditioningDose');
+    const isRatioBearing = (text: string): boolean =>
+      containsWorkRestRatio(withoutNames(text));
     const offences: string[] = [];
+    const flag = (surface: string, text: string | null | undefined): void => {
+      if (text && isRatioBearing(text)) offences.push(`${surface}: "${text.slice(0, 90)}"`);
+    };
+
+    // 1. The RENDERED rows for all 55 templates, through the real composer —
+    //    what the athlete's conditioning row actually says, after the display
+    //    rule's dose-line derivation.
+    const { composeConditioningRows } = await import('../rules/conditioningSelection');
     for (const template of CONDITIONING_TEMPLATES) {
-      const reaching: Array<[string, string | undefined]> = [
-        ['name', (template as { name?: string }).name],
-        ['workPeriod', (template as { workPeriod?: string }).workPeriod],
-        ['restPeriod', (template as { restPeriod?: string }).restPeriod],
-        ['sets', String((template as { sets?: unknown }).sets ?? '')],
-        ['intensity', (template as { intensity?: string }).intensity],
-        ['effortCue', (template as { effortCue?: string }).effortCue],
-        ['progression', (template as { progression?: string }).progression],
-      ];
-      for (const [field, value] of reaching) {
-        if (value && RATIO.test(value)) {
-          offences.push(`"${(template as { name?: string }).name}".${field}: "${value}"`);
+      const name = (template as { name?: string }).name ?? '?';
+      for (const row of composeConditioningRows(template as never, TODAY)) {
+        flag(`template "${name}" rendered notes`, (row as { notes?: string }).notes);
+      }
+    }
+
+    // 2. Coach-template descriptions — rendered in four screen positions
+    //    (coachRevisionTemplates.ts: workout.description, option.description,
+    //    row notes, exercise.description).
+    const { listCoachRevisionTemplates } = await import('../utils/coachRevisionTemplates');
+    for (const def of listCoachRevisionTemplates()) {
+      const template = def as { templateId?: string; label?: string; description?: string };
+      flag(`coach template "${template.label ?? template.templateId}" description`,
+        template.description);
+    }
+
+    // 3. The acted world's rendered strings, every week.
+    reachHisWorldByActing();
+    const program = useProgramStore.getState().currentProgram as TrainingProgram | null;
+    assert(program, '(7) no program');
+    for (const cycle of program.microcycles) {
+      for (const day of visibleWeek(cycle.startDate.slice(0, 10))) {
+        const workout = day.workout as Workout | null | undefined;
+        if (!workout) continue;
+        flag(`${day.date} description`, workout.description);
+        for (const exercise of workout.exercises ?? []) {
+          flag(`${day.date} row notes`, (exercise as { notes?: string }).notes);
         }
       }
     }
+
     assert(offences.length === 0,
-      `(7) ratio-shaped text in athlete-reaching template fields (clock-times `
-      + `included on purpose — the triage of "2:00 is a duration" is Sam's, in the `
-      + `re-sign):\n    ${offences.join('\n    ')}`);
+      `(7) a ratio reaches an athlete-rendered line (times and template names `
+      + `are exempt per the 2026-08-05 ruling):\n    ${offences.join('\n    ')}`);
   });
 
   console.log(`\nDevice pass 2026-08-05 totals: ${passed} passed, ${failed} failed`);

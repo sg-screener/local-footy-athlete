@@ -185,3 +185,44 @@ export function doseSeconds(
 export function doseMidpoint(quantity: ConditioningDoseQuantity): number {
   return (quantity.min + quantity.max) / 2;
 }
+
+/**
+ * THE DISPLAY RULE'S DETECTOR — docs/DISPLAY_TIMES_RULING_2026-08-05.md,
+ * Sam verbatim: "just show us the time — the app can handle logic behind the
+ * scenes." Athletes see durations, never work:rest ratios.
+ *
+ * A ratio is `work:rest` / `W:R` spelled out, or a colon form whose right
+ * side is a SINGLE digit (`1:2`, `3:1`). Colon forms with a two-digit right
+ * side are TIMES (`2:00`, `1:40`, `15:15`, `30:30`) and are ruled to stay,
+ * as are template names carrying them. Owned here — beside the dose parse —
+ * so the render path and the sweep that gates it read one definition.
+ */
+export function containsWorkRestRatio(text: string | null | undefined): boolean {
+  const value = String(text ?? '');
+  return /\bwork\s*:\s*rest\b|\bW\s*:\s*R\b/i.test(value)
+    || /\b\d{1,2}\s*:\s*\d\b(?!\d)/.test(value);
+}
+
+const DOSE_UNIT_DISPLAY: Readonly<Record<ConditioningDoseUnit, string>> = {
+  seconds: 's',
+  minutes: 'min',
+  metres: 'm',
+  reps: 'reps',
+  rounds: 'rounds',
+  sets: 'sets',
+  blocks: 'blocks',
+  calories: 'cal',
+};
+
+/**
+ * The duration-spelled rendering of a parsed dose: "2 min", "90–98 s",
+ * "~20 s". Used by the display rule when an authored dose cell carries
+ * coach annotation an athlete must not see; everywhere else the authored
+ * string renders verbatim (`quantity.raw` is the athlete-visible truth).
+ */
+export function doseDisplayText(quantity: ConditioningDoseQuantity): string {
+  const range = quantity.min === quantity.max
+    ? String(quantity.min)
+    : `${quantity.min}–${quantity.max}`;
+  return `${quantity.approximate ? '~' : ''}${range} ${DOSE_UNIT_DISPLAY[quantity.unit]}`;
+}
