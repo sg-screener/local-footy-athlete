@@ -2,6 +2,7 @@ import type {
   ActiveConstraintModifierAffect,
 } from '../store/coachUpdatesStore';
 import type {
+  DeterministicCoachNoteEffectDetail,
   DeterministicCoachNoteEffectEvidence,
   DeterministicCoachNoteEffectReason,
   DeterministicCoachNoteEffectSeed,
@@ -221,8 +222,50 @@ function mondayFor(dateISO: string): string {
   return `${y}-${m}-${d}`;
 }
 
-function copyFor(reason: DeterministicCoachNoteEffectReason): { title: string; body: string } {
+/**
+ * SAM'S SIGNED G-2 SENTENCE, composed rather than dropped as a constant.
+ *
+ * Signed 2026-08-06 (`docs/G2_SIGNING_AND_LAST_RESORT_RULING_2026-08-06.md`):
+ *
+ *   "Your Thursday session is deliberately small this week: your shoulder is
+ *    paused and there is a game on Saturday, so it is a short, sharp lower
+ *    session instead of a full one."
+ *
+ * The wording is reproduced CHARACTER FOR CHARACTER; only the three specifics
+ * the sentence names — the session's day, the paused body part, the fixture's
+ * day — come from the decision that built the session, because all three vary
+ * and a fixed string would state the wrong body part the moment the athlete's
+ * injury is somewhere else. In the world the sentence was written for it renders
+ * byte-identical to the quote above, and `deterministicCoachNoteFactoryTests`
+ * pins exactly that.
+ *
+ * If a specific is missing the sentence DEGRADES rather than guesses: no day is
+ * invented, no body part is assumed. A note is output, never evidence.
+ */
+function g2QualityLowerCopy(
+  detail: DeterministicCoachNoteEffectDetail | undefined,
+): { title: string; body: string } {
+  const session = detail?.sessionDayName ? `Your ${detail.sessionDayName} session` : 'This session';
+  const paused = detail?.pausedBodyPart
+    ? `your ${detail.pausedBodyPart} is paused`
+    : 'the affected area is paused';
+  const fixture = detail?.fixtureDayName
+    ? `there is a game on ${detail.fixtureDayName}`
+    : 'there is a game coming up';
+  return {
+    title: 'Small session before your game',
+    body: `${session} is deliberately small this week: ${paused} and ${fixture}, `
+      + 'so it is a short, sharp lower session instead of a full one.',
+  };
+}
+
+function copyFor(
+  reason: DeterministicCoachNoteEffectReason,
+  detail?: DeterministicCoachNoteEffectDetail,
+): { title: string; body: string } {
   switch (reason) {
+    case 'g2_quality_lower':
+      return g2QualityLowerCopy(detail);
     case 'adaptation_reduced':
       return {
         title: 'Training adaptation active',
@@ -325,7 +368,7 @@ export function buildDeterministicCoachNoteDescriptors(
     }
   }
   return Array.from(byKind.values()).map((evidence) => {
-    const copy = copyFor(evidence.reason);
+    const copy = copyFor(evidence.reason, evidence.detail);
     const sourceId = `${evidence.kind}:${weekStart}`;
     return {
       sourceId,

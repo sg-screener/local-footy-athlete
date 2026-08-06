@@ -288,7 +288,14 @@ export type DeterministicCoachNoteEffectKind =
   | 'beginner_policy'
   | 'testing_bias'
   | 'subphase_policy'
-  | 'bye_week';
+  | 'bye_week'
+  // The G-2 quality-lower session (ruling 4a + the signing batch, Sam
+  // 2026-08-06). Its own kind because it is the INTERSECTION of two facts —
+  // a paused region and a fixture two days out — and neither alone produces
+  // it: `subphase_policy` is a phase decision and `bye_week` is a fixture
+  // absence, so folding it into either would let the note fire on a week
+  // that never built the session.
+  | 'injury_game_proximity';
 
 export type DeterministicCoachNoteEffectReason =
   | 'adaptation_reduced'
@@ -307,13 +314,39 @@ export type DeterministicCoachNoteEffectReason =
   | 'mid_preseason'
   | 'late_preseason'
   | 'bye_build'
-  | 'bye_recovery';
+  | 'bye_recovery'
+  | 'g2_quality_lower';
+
+/**
+ * The specifics a COMPOSED sentence needs, stated by whoever makes the decision.
+ *
+ * Sam's signed G-2 sentence names three things — the session's day, the paused
+ * body part and the fixture's day — and every one of them varies by world. A
+ * static string carrying "Thursday", "shoulder" and "Saturday" would be a note
+ * that LIES the moment the athlete's shoulder is a hamstring or the game moves,
+ * which is worse than no note. So the sentence is composed, and these are its
+ * inputs, resolved where the session is placed (the placer knows all three) and
+ * never re-derived downstream.
+ *
+ * Derived, never persisted: it rides on the allocation and then on the workout's
+ * `deterministicCoachNoteEvidence`, both of which are rebuilt every derive.
+ */
+export interface DeterministicCoachNoteEffectDetail {
+  /** Day the session sits on, e.g. 'Thursday'. */
+  sessionDayName?: string;
+  /** The paused body part as the ATHLETE named it, e.g. 'shoulder'. */
+  pausedBodyPart?: string;
+  /** Day the fixture sits on, e.g. 'Saturday'. */
+  fixtureDayName?: string;
+}
 
 export interface DeterministicCoachNoteEffectSeed {
   kind: DeterministicCoachNoteEffectKind;
   reason: DeterministicCoachNoteEffectReason;
   /** Stable decision owner, used for evidence replacement before week dedupe. */
   ownerKey: string;
+  /** Present only for reasons whose copy is composed rather than constant. */
+  detail?: DeterministicCoachNoteEffectDetail;
 }
 
 export type ConditioningFeasibilityReason =

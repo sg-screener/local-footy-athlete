@@ -55,6 +55,7 @@ import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coaching
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { looksLikeNeuralPrimer } from '../rules/weekStructureValidator';
 import { getSessionComponents } from '../utils/sessionComponents';
+import { buildDeterministicCoachNoteDescriptors } from '../utils/deterministicCoachNoteFactory';
 import { rebuildDerivedWorld } from '../store/quiescentBoot';
 import type { OnboardingData, Workout } from '../types/domain';
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
@@ -448,6 +449,26 @@ function registerScenarios(): void {
     assert(husks.length === 0,
       `${husks.length} session(s) ship a strength component with zero rows: `
       + husks.map((workout) => `d${workout.dayOfWeek}`).join(', '));
+
+    // SAM'S SIGNED COACH NOTE reaches the athlete, and it says what he SIGNED.
+    // The sentence is composed (the day, the body part and the fixture day all
+    // vary by world), so this pins the RENDERED result byte-for-byte against
+    // the quote in the signing doc — composition that drifts by one character
+    // is a reworded signed sentence, which is not this seat's to do.
+    const noteDays = rebased.visibleWorkouts.map((workout) => {
+      const date = new Date(`${SPENT_WEEK_1}T12:00:00`);
+      date.setDate(date.getDate() + (workout.dayOfWeek - 1));
+      return { date: date.toISOString().slice(0, 10), workout: workout as never };
+    });
+    const notes = buildDeterministicCoachNoteDescriptors(noteDays);
+    const g2Note = notes.find((note) => note.sourceId.startsWith('injury_game_proximity:'));
+    assert(!!g2Note, 'the G-2 quality-lower session ships no Coach Note. notes: '
+      + notes.map((note) => note.sourceId).join(', '));
+    const SIGNED = 'Your Thursday session is deliberately small this week: your shoulder '
+      + 'is paused and there is a game on Saturday, so it is a short, sharp lower session '
+      + 'instead of a full one.';
+    assert(g2Note!.body === SIGNED,
+      `the composed Coach Note is not Sam's signed sentence.\n  signed: ${SIGNED}\n  shipped: ${g2Note!.body}`);
 
     // THE COUNTING HALF IS NOT PINNED HERE, AND THIS CELL DOES NOT PRETEND IT
     // IS. An assertion on `contract.power.achievedPrimerCount` was written,

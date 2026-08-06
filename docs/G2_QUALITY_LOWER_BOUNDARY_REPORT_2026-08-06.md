@@ -369,6 +369,60 @@ byte-identical — the healthy week is untouched, as `budgetedPowerSession` and
 **NOT-COVERED:** no device pass. The `removed` bookkeeping and the repair-detail
 sentence are corrected but unwatched, as declared above.
 
+### 8.5 The signed Coach Note — SHIPPED, and it is COMPOSED rather than dropped
+
+**North star: toward it.** No stored state. The seed rides on the allocation and
+then on the workout's existing `deterministicCoachNoteEvidence`, both rebuilt
+every derive.
+
+Typed pair: `kind: 'injury_game_proximity'`, `reason: 'g2_quality_lower'`,
+`ownerKey: 'g2-quality-lower-session'`. Its own kind because the session is the
+INTERSECTION of a paused region and a fixture two days out, and neither alone
+builds it — folding it into `subphase_policy` (a phase decision) or `bye_week`
+(a fixture absence) would let the note fire on a week that never built the
+session.
+
+**The one interpretive call, flagged for Sam's veto.** His sentence names three
+things that VARY — the session's day, the body part, the fixture's day:
+
+> "Your **Thursday** session is deliberately small this week: your **shoulder**
+> is paused and there is a game on **Saturday** …"
+
+Shipped as a constant it would tell an athlete with a hamstring injury that
+their shoulder is paused, which is worse than shipping no note. So the wording
+is reproduced character-for-character and only those three specifics are filled,
+resolved at the placer — the one place that knows all three at once. **In the
+world the sentence was written for it renders byte-identical to the quote**, and
+G7 pins exactly that string; a one-word drift reds the cell (mutation-tested).
+Missing specifics DEGRADE ("the affected area", "a game coming up") rather than
+guess. If Sam would rather it stayed a fixed string, that is a one-line change.
+
+**The body part is read from the same facts as the restriction** — the injury
+that actually `pauseAffectedTraining`, not the first on file — so the sentence
+and the pause can never name different injuries.
+
+**Classifier check** (`a-note-is-output-never-evidence`): the body and title
+were grepped against every regex that reads the field they land in. Exactly one
+exists — `HomeScreenV2:1887` `/training paused/i` on `note.title` — and it
+misses, as do `coachActions`' `RUN_PATTERN`/`LOWER_PATTERN` (no word boundaries,
+still no match).
+
+**NOT DONE, and it is a real gap:** the sentence is **not** in the `signedCopy`
+registry. Two measured reasons, neither of which is "forgot":
+
+1. `signedCopyExtractionTests` walks `screens/home`, `screens/coach` and
+   `components` only — **not `utils/`** — so this copy is invisible to the
+   ceiling, which is why it stayed at exactly 141/141. That gap is already
+   declared at the ceiling's own comment.
+2. `SignedCopyParam` is `number | SignedCopy` **by design** — "placeholders take
+   numbers and already-signed copy, never arbitrary strings". This sentence's
+   three placeholders are a day name, a day name and a body part. Registering it
+   properly means signing those vocabularies too, which is a unit, not a
+   one-liner. Naming it rather than jamming a free-text placeholder through the
+   exact hole that module exists to close.
+
+Until then the byte-exact G7 pin is what guards the wording.
+
 ## §9 OPEN FOR SAM
 
 1. The §1 correction — the dose carrier instead of a fourth archetype and an
@@ -376,5 +430,9 @@ sentence are corrected but unwatched, as declared above.
 2. The three PROPOSED sentences in §5.
 3. §7's power-budget question is ANSWERED — ruling 4a, the jumps stay. The
    budget half is built; §8.3 carries what is still removing them.
-4. The signed Coach Note (§8.1) needs a typed `kind`/`reason` pair before it
-   can ship. Sam's sentence is signed and unshipped until then.
+4. ~~The signed Coach Note (§8.1) needs a typed `kind`/`reason` pair before it
+   can ship.~~ **SHIPPED — see §8.5.** Two things there are Sam's call: whether
+   the sentence should be COMPOSED (day / body part / fixture day filled) as
+   built, or stay a fixed string that names Thursday, shoulder and Saturday in
+   every world; and whether moving it onto the `signedCopy` registry is worth
+   the vocabulary-signing unit that would take.

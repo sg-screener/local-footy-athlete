@@ -1939,6 +1939,19 @@ function buildWeeklyPlan(
       restrictedPatterns.has('push') &&
       restrictedPatterns.has('pull') &&
       !restrictedPatterns.has('squat');
+    /**
+     * The body part Sam's signed sentence names, as the ATHLETE named it.
+     *
+     * Read from the same active-injury facts the restriction set above is
+     * resolved from — the one that actually PAUSES work, not merely the first
+     * on file, so the sentence and the restriction can never name different
+     * injuries. Undefined when no paused injury carries a body part, and the
+     * composed sentence degrades to "the affected area" rather than inventing
+     * one.
+     */
+    const pausedBodyPart = (inputs.generationConstraints?.injuries ?? [])
+      .find((injury) => injury.pauseAffectedTraining && !!injury.bodyPart)
+      ?.bodyPart?.toLowerCase();
     // SAM'S LAST-RESORT RULING, 2026-08-06, verbatim: "the app should not prefer
     // to do g-2 box jumps and vertical jump though, it should try and get it on
     // g-3 or earlier but as a last resort it's okay."
@@ -1988,6 +2001,22 @@ function buildWeeklyPlan(
         plannedPatterns: ['squat'],
       }),
       strengthVariant: 'quality_low_volume',
+      // SAM'S SIGNED COACH NOTE (2026-08-06 signing batch) — carried by the
+      // allocation that IS the decision, so both placement sites below get it
+      // without either of them knowing about copy. The sentence is composed in
+      // `deterministicCoachNoteFactory`; these are the three specifics it
+      // names, and they are resolved here because this is the only place that
+      // knows all three at once.
+      deterministicCoachNoteEffects: [{
+        kind: 'injury_game_proximity',
+        reason: 'g2_quality_lower',
+        ownerKey: 'g2-quality-lower-session',
+        detail: {
+          sessionDayName: slot.dayName,
+          pausedBodyPart,
+          fixtureDayName: inputs.gameDay,
+        },
+      }],
     });
 
     // ── STEP 1: Place PRIMARY CORE ──
