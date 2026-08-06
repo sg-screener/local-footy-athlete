@@ -32,7 +32,18 @@ import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
 } from '../utils/workoutCanonicalisation';
-import { hasPowerRow, powerRows, withoutPowerRows } from './sessionRowCounting';
+// NO `hasPowerRow` HERE, deliberately (ruling 4a, 2026-08-06). Every question
+// this module asks about power is a WEEKLY BUDGET question — what competes for
+// it, what is stripped for exceeding it, what is counted against it, what the
+// repair detail reports. `hasPowerRow` answers a different question ("is there
+// a power row at all"), and each of the four sites that used it here was a
+// separate copy of the budget rule that did not know about the G-2 exemption.
+// Not importing it is what keeps the copy from growing back.
+import {
+  budgetedPowerSession,
+  powerRows,
+  withoutPowerRows,
+} from './sessionRowCounting';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import {
@@ -363,8 +374,28 @@ function weeklyPowerBudget(args: {
         ? 1
         : 2;
   const fixtureDay = fixture?.dayOfWeek;
+  // RULING 4a (Sam, 2026-08-06) — THE THIRD READER.
+  //
+  // `budgetedPowerSession`, not `hasPowerRow`. This selector is the WEEKLY
+  // BUDGET owner, and the G-2 quality-lower session's authored jumps are
+  // outside that budget: the Bible prescription that names them ("2x3 box
+  // squats to high box + 2x3 vertical jumps") is game-aware BY DEFINITION,
+  // because it exists precisely because the day is two out from a fixture.
+  //
+  // It was the last owner still asking the question its own way, and it was
+  // the one that actually removed the jumps. Both of its exclusion terms fire
+  // on the G-2 day and neither can ever be satisfied: `tooCloseToFixture` is
+  // true for every day within two of the game (which is what G-2 MEANS), and
+  // `anchorDay` is true because the placer puts this session on a team day. So
+  // the session could not be kept at ANY budget — a week with no fixture at
+  // all was the only world where the authored half survived.
+  //
+  // The predicate's own header says a second copy of it is the bug. This is
+  // that copy retired: the finaliser decides what may be STRIPPED, the
+  // evaluator's primer ledger decides what is COUNTED, and this selector
+  // decides what COMPETES for the budget — three readers, one question.
   const candidates = args.workouts
-    .filter(hasPowerRow)
+    .filter(budgetedPowerSession)
     .map((workout, index) => ({
       workout,
       index,
@@ -396,7 +427,7 @@ function weeklyPowerBudget(args: {
   // owner, so identity and §18 evidence are re-derived from what actually
   // survives.
   const workouts = args.workouts.map((workout) => {
-    if (!hasPowerRow(workout) || keep.has(workout.id)) return { ...workout };
+    if (!budgetedPowerSession(workout) || keep.has(workout.id)) return { ...workout };
     return finaliseWorkoutAfterMutation(withoutPowerRows(workout), {
       phase: contract.identity.seasonPhase,
       offseasonSubphase: canonicalContextSubphase(
@@ -411,7 +442,11 @@ function weeklyPowerBudget(args: {
       restoreMissingPlanPatterns: false,
     }).workout;
   });
-  const achieved = workouts.filter(hasPowerRow).length;
+  // COUNTED, not merely present: the exempt session is outside the budget, so
+  // it must not be reported as consuming it. The evaluator's primer ledger
+  // reads the same predicate, which is what keeps the content and the verdict
+  // agreeing by construction rather than agreeing until an anchor changes.
+  const achieved = workouts.filter(budgetedPowerSession).length;
   contract.power.eligible = !ineligible;
   contract.power.plannerSelectedWeeklyBudget = budget;
   contract.power.achievedPrimerCount = achieved;
@@ -737,7 +772,10 @@ function resolveCandidate(args: {
   if (power.removed > 0 || power.budget < 2) {
     initialRepairs.push({
       kind: 'weekly_power_budget',
-      detail: `Weekly selector kept ${power.workouts.filter(hasPowerRow).length} primers within budget ${power.budget}.`,
+      // Counted the same way the budget is decided. Reading `hasPowerRow` here
+      // made the sentence contradict itself on the G-2 world — "kept 1 primers
+      // within budget 0" — by counting a session that is outside the budget.
+      detail: `Weekly selector kept ${power.workouts.filter(budgetedPowerSession).length} primers within budget ${power.budget}.`,
     });
   }
   // THE WEEK PRESENTS THE OFFER ITS CONTRACT DECLARES (Sam's ruling, 2026-08-06

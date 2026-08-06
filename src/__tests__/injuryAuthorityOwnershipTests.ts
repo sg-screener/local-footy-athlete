@@ -404,21 +404,40 @@ function registerScenarios(): void {
       `the week achieved ${exposure?.achievedCount} main-strength sessions against a `
       + `selected target of ${exposure?.plannerSelectedTarget}`);
 
-    // RULING 4a IS NOT YET DELIVERED, AND THIS CELL DOES NOT CLAIM IT IS.
+    // RULING 4a, DELIVERED — and this cell now asserts it BY NAME.
     //
-    // The budget half is built (`budgetedPowerSession`, read by both the
-    // finaliser and the primer ledger) and the allocation and the workout both
-    // carry `strengthVariant` — measured. The jump row is a real power row at
-    // composition time — measured: `Vertical Jump/role=power/power={"family":
-    // "lower","kind":"primer"}`. And it STILL does not reach the athlete here,
-    // so a THIRD owner removes it and that owner has not been identified.
+    // Sam, 2026-08-06: "The authored 2x3 Vertical Jump half is EXEMPT from the
+    // weekly power budget when it ships as part of the G-2 quality-lower
+    // session." Both halves of the authored prescription must reach the
+    // athlete: the squat AND the jump. Asserting the row COUNT would pass on a
+    // week that shipped two squats, so the assertion is on the movements by
+    // name — the same reason G4 names them (a mutation that satisfied the shape
+    // validator shipped a full-range Back Squat two days before a game).
     //
-    // Asserting the ruling here would be a gate that passes on coordinates the
-    // app does not build; asserting the opposite would pin the defect as if it
-    // were the law. So this cell asserts neither, and the boundary report
-    // carries the open item with the next measurement to take
-    // (`contract.safety.prohibitedPower` and the canonicalisation re-decide at
-    // `workoutCanonicalisation.ts:480/512` are the two named suspects).
+    // THE THIRD OWNER, found by instrumentation and now fixed at the owner:
+    // `section18AcceptedWeekGateway.weeklyPowerBudget`. Measured on this world
+    // before the fix — `budget=0` (a fixture plus two team trainings), and the
+    // G-2 day is a candidate with `tooClose=true` AND `anchorDay=true`, so it
+    // could never be kept and was stripped:
+    //
+    //   [gateway] budget=0 candidates=["d4/variant=quality_low_volume/
+    //             tooClose=true/anchorDay=true"] keep=0
+    //   [gateway] >>> STRIPPING d4 variant=quality_low_volume
+    //
+    // The two suspects the boundary report named were both REFUTED by probe:
+    // `contract.safety.prohibitedPower` is FALSE here (so neither finaliser
+    // site fires), and the canonicalisation re-decide never removes the row
+    // (`IN=1 OUT=1`, and `updatePowerForPhase`'s removal branch never fires —
+    // `gMinusTwoBlocked` is false for a 5+ years athlete). The gateway was a
+    // THIRD reader of the weekly-budget question with its own copy of it.
+    const g2Day = rebased.visibleWorkouts.find((workout) => workout.dayOfWeek === 4);
+    const g2Names = (g2Day?.exercises ?? []).map((row) =>
+      String((row as { exercise?: { name?: string } }).exercise?.name ?? row.exerciseId));
+    for (const movement of ['High Box Squat', 'Vertical Jump']) {
+      assert(g2Names.includes(movement),
+        `the G-2 quality-lower session does not ship "${movement}" to the athlete. `
+        + `d4 rows: [${g2Names.join(', ')}]`);
+    }
 
     // THE HUSK, as a standing law: no session may carry a strength component
     // while carrying no rows to put in it.
@@ -429,6 +448,22 @@ function registerScenarios(): void {
     assert(husks.length === 0,
       `${husks.length} session(s) ship a strength component with zero rows: `
       + husks.map((workout) => `d${workout.dayOfWeek}`).join(', '));
+
+    // THE COUNTING HALF IS NOT PINNED HERE, AND THIS CELL DOES NOT PRETEND IT
+    // IS. An assertion on `contract.power.achievedPrimerCount` was written,
+    // measured, and REMOVED as vacuous: the gateway's count is overwritten by
+    // `section18EffectiveWeekEvaluator:1027` from its own ledger, so the value
+    // this cell could read is the EVALUATOR's, never the gateway's. Mutating
+    // the gateway's count back to `hasPowerRow` leaves it green — and mutating
+    // the evaluator's ledger predicate is already caught by the
+    // blocking-violations assertion above (`reduction_contradiction:power:1`).
+    //
+    // So the gateway's three non-strip power sites (what competes for the
+    // budget, what is counted, what the repair detail reports) have NO
+    // observable surface from here. What enforces them instead is that
+    // `hasPowerRow` is no longer imported into that module at all — a compile
+    // gate, not a test. Declared rather than papered over: keeping the
+    // assertion would have been a cell passing on coordinates it never builds.
   });
 
   // ── I1 — the headline. An upper-body 8/10 must be RECORDED. Nothing about

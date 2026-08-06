@@ -257,7 +257,15 @@ This is the second time in this unit that a claim of "already covered" was
 false when measured ([[authored-source-already-exists]] was the first). Pinning
 the claim cost one cell and caught a real defect.
 
-### 8.3 Ruling 4a — the budget half is built; the ruling is NOT delivered
+### 8.3 Ruling 4a — DELIVERED. The third owner was the gateway, and BOTH named suspects were wrong
+
+**Superseded by §8.4 below.** The measurement §8.3 asked for was taken; it
+refuted both suspects and found the owner elsewhere. The original text is kept
+below the line because the refutation is the useful part of the record.
+
+---
+
+#### 8.3 (as written) — the budget half is built; the ruling is NOT delivered
 
 **Built and measured:** `budgetedPowerSession` is one predicate with two
 readers — `section18SafetyFinaliser` (what may be stripped) and
@@ -294,6 +302,72 @@ pin the defect as if it were the law. The cell says so in place.
 severe-upper world, then instrument the two `hasPowerRow` strip sites at
 `section18SafetyFinaliser:199` and `:368`. One of them fires, or
 canonicalisation does.
+
+### 8.4 THE MEASUREMENT — taken. Neither suspect fired; the owner is the GATEWAY
+
+**North star: toward it.** No stored state; one module stops keeping its own
+copy of a rule that already had an owner. A representation was REMOVED.
+
+The measurement §8.3 asked for was taken, and it refuted the whole suspect list:
+
+| suspect | verdict | evidence |
+|---|---|---|
+| `contract.safety.prohibitedPower` (`:199`/`:368`) | **REFUTED** | `prohibitedPower=false` on this world — neither site can fire |
+| canonicalisation re-decide (`:480`/`:512`) | **REFUTED** | `finaliseWorkoutAfterMutation` measured `IN=1 OUT=1` on every pass; `updatePowerForPhase`'s removal branch never fired (`gMinusTwoBlocked=false` — the athlete is `5+ years`) |
+| `alignPowerToFinalWorkoutContent` (my own next guess) | **REFUTED** | `sameFamily=1` — High Box Squat resolves `squat`→`lower`, matching the row |
+
+**The owner is `section18AcceptedWeekGateway.weeklyPowerBudget`** — the WEEKLY
+SELECTOR, which no one had named. Measured on the seeded world:
+
+```
+[gateway] budget=0 ineligible=false fixtureDay=6 teamCount=2
+          candidates=["d1/tooClose=false/anchorDay=false",
+                      "d2/tooClose=false/anchorDay=true",
+                      "d4/variant=quality_low_volume/tooClose=true/anchorDay=true"]
+          keep=0
+[gateway] >>> STRIPPING d4 variant=quality_low_volume
+```
+
+Both of its exclusion terms fire on the G-2 day and **neither can ever be
+satisfied**: `tooCloseToFixture` is true for every day within two of the game,
+which is what G-2 *means*, and `anchorDay` is true because the placer puts this
+session on a team day. The session was unkeepable at any budget — a week with
+no fixture at all was the only world where the authored half survived.
+
+**The fix, at the owner.** `budgetedPowerSession` had "ONE PREDICATE, TWO
+READERS" in its header and the warning that a second copy of it *is* the bug.
+The gateway held **four** such copies — what competes for the budget, what is
+stripped, what is counted, what the repair detail reports. All four now read the
+predicate, and `hasPowerRow` is **no longer imported into that module at all**,
+so the copy cannot grow back without someone re-adding the import past the
+comment that says why it is absent. No guard was added.
+
+**Mutation testing, and what it caught in my own work.** Each edit was killed on
+purpose:
+
+| mutation | result |
+|---|---|
+| strip guard back to `hasPowerRow` | **KILLED** — G7 reds, "does not ship Vertical Jump" |
+| `candidates` filter back to `hasPowerRow` | **SURVIVED** |
+| `achieved` count back to `hasPowerRow` | **SURVIVED** — all 91 gateway cells stay green |
+
+So two of the three edits are unwatched by any suite. A counting assertion was
+written to cover them, measured, and **REMOVED as vacuous**: the gateway's count
+is overwritten by `section18EffectiveWeekEvaluator:1027` from its own ledger, so
+a cell reading `achievedPrimerCount` reads the EVALUATOR's value and can never
+see the gateway's. Keeping it would have been my own instance of
+`gate-passing-on-coordinates-it-never-builds`. It is declared in place instead —
+the compile-time absence of the import is what enforces those three sites, not a
+test.
+
+**G7 now asserts the ruling by NAME**, both movements, and it was RED before the
+fix for exactly that reason. `test:bible` printed **`TRUE_EXIT=0`**, chain
+reached `test:stage-b-generation-differential` (3/3), differential golden
+byte-identical — the healthy week is untouched, as `budgetedPowerSession` and
+`hasPowerRow` differ only on a session no healthy week builds.
+
+**NOT-COVERED:** no device pass. The `removed` bookkeeping and the repair-detail
+sentence are corrected but unwatched, as declared above.
 
 ## §9 OPEN FOR SAM
 
