@@ -844,6 +844,22 @@ export interface Workout {
   athletePlacement?: AthletePlacement;
   /** Canonical planned/effective strength contract. Existing typed intent always wins. */
   strengthIntent?: StrengthIntent;
+  /**
+   * The allocation's main-strength DOSE variant, carried onto the built day.
+   * Mirrors `SessionAllocation.strengthVariant` and means the same thing.
+   *
+   * It rides this far for ONE reason: Sam's ruling 4a (2026-08-06) exempts the
+   * authored 2x3 Vertical Jump from the weekly power-primer budget *when it
+   * ships as part of the G-2 quality-lower session*. An exemption the CONTENT
+   * owner knows and the VERDICT owner does not is precisely the asymmetry
+   * `section18SafetyFinaliser` was written to kill ("content derived to match
+   * its budget cannot contradict it"), so both read this one field:
+   * `budgetedPowerSession` in the finaliser, and the primer ledger in
+   * `section18EffectiveWeekEvaluator`. Derived, never persisted.
+   *
+   * BIBLE_ANCHOR: lower_strength_g3
+   */
+  strengthVariant?: 'standard' | 'quality_low_volume';
   /** Development/audit proof for planned patterns absent after final filtering. */
   strengthIntentDiagnostics?: StrengthIntentDiagnostic[];
   /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */

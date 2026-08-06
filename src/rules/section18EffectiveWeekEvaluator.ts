@@ -20,7 +20,7 @@ import type {
   Section18SprintCreditSource,
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
-import { powerRows } from './sessionRowCounting';
+import { budgetedPowerSession, powerRows } from './sessionRowCounting';
 
 export type Section18FindingSeverity = 'blocking' | 'advisory';
 
@@ -659,8 +659,16 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         dayHard = true;
       }
       for (const row of powerRows(workout)) {
-        primerCount += 1;
-        primerSources.push({ dayOfWeek: day, family: row.power?.family as never });
+        // Ruling 4a (Sam, 2026-08-06): the G-2 quality-lower's authored jumps
+        // are exempt from the WEEKLY PRIMER BUDGET, so they must not be counted
+        // against it here either — `section18SafetyFinaliser` reads the same
+        // `budgetedPowerSession` predicate when deciding what may be stripped.
+        // The row is still real work and still owns the day's stress below;
+        // what it is not is a draw on the selector's weekly allowance.
+        if (budgetedPowerSession(workout)) {
+          primerCount += 1;
+          primerSources.push({ dayOfWeek: day, family: row.power?.family as never });
+        }
         dayPower = true;
       }
 

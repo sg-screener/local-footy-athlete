@@ -150,7 +150,10 @@ function currentWeekContract() {
 
 const G2_DAY = 'Thursday';   // G-2 for a Saturday game, and a team-training day
 
-function matrixProfile(gameDay: 'Saturday' | undefined): Partial<OnboardingData> {
+function matrixProfile(
+  gameDay: 'Saturday' | undefined,
+  overrides: Partial<OnboardingData> = {},
+): Partial<OnboardingData> {
   return {
     seasonPhase: 'In-season',
     trainingDaysPerWeek: 5,
@@ -165,6 +168,7 @@ function matrixProfile(gameDay: 'Saturday' | undefined): Partial<OnboardingData>
     motivation: 'Get stronger',
     gameDay,
     usualGameDay: gameDay,
+    ...overrides,
   };
 }
 
@@ -194,8 +198,9 @@ function injuryConstraints(
 function matrixWorld(args: {
   gameDay: 'Saturday' | undefined;
   restricted: ReadonlyArray<'upper_body' | 'lower_body'>;
+  profileOverrides?: Partial<OnboardingData>;
 }) {
-  const profile = matrixProfile(args.gameDay);
+  const profile = matrixProfile(args.gameDay, args.profileOverrides);
   const inputs = onboardingToCoachingInputs(profile as OnboardingData, {
     generationConstraints: args.restricted.length > 0
       ? injuryConstraints(args.restricted)
@@ -341,6 +346,33 @@ function registerScenarios(): void {
       + 'name only');
   });
 
+  // ── G8 — SAM'S LAST-RESORT RULING, PINNED (2026-08-06, verbatim):
+  //
+  //   "the app should not prefer to do g-2 box jumps and vertical jump though,
+  //    it should try and get it on g-3 or earlier but as a last resort it's okay"
+  //
+  // Same injury, same fixture as G2 — the ONLY difference is that Wednesday is
+  // available, and Wednesday is G-3, non-team, and legal for ordinary lower
+  // strength (`lower_strength_g3` state 3). An earlier eligible day exists, so
+  // the lower work belongs THERE and the G-2 quality session must not be built.
+  scenario('g8', 'G8 an earlier eligible day takes the lower work, and the G-2 quality session is NOT built', async () => {
+    const world = matrixWorld({
+      gameDay: 'Saturday',
+      restricted: ['upper_body'],
+      profileOverrides: {
+        trainingDaysPerWeek: 6,
+        preferredTrainingDays: [
+          'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+        ],
+      },
+    });
+    assert(world.qualityLowerDays.length === 0,
+      'an earlier eligible day (Wednesday, G-3, non-team) was free and the app built '
+      + `the G-2 quality session anyway, on [${world.qualityLowerDays.join(', ')}]. `
+      + 'Sam: it "should try and get it on g-3 or earlier"; G-2 is the LAST resort, '
+      + 'not the first choice.');
+  });
+
   // ── G7 — END TO END on the seeded world, through the same re-derivation boot
   // runs. This is the cell the R5.1 switchover makes the shipping path: before
   // the fix it threw `planner_selected_target_miss:main_strength:2` outright.
@@ -371,6 +403,22 @@ function registerScenarios(): void {
     assert(exposure?.achievedCount === exposure?.plannerSelectedTarget,
       `the week achieved ${exposure?.achievedCount} main-strength sessions against a `
       + `selected target of ${exposure?.plannerSelectedTarget}`);
+
+    // RULING 4a IS NOT YET DELIVERED, AND THIS CELL DOES NOT CLAIM IT IS.
+    //
+    // The budget half is built (`budgetedPowerSession`, read by both the
+    // finaliser and the primer ledger) and the allocation and the workout both
+    // carry `strengthVariant` — measured. The jump row is a real power row at
+    // composition time — measured: `Vertical Jump/role=power/power={"family":
+    // "lower","kind":"primer"}`. And it STILL does not reach the athlete here,
+    // so a THIRD owner removes it and that owner has not been identified.
+    //
+    // Asserting the ruling here would be a gate that passes on coordinates the
+    // app does not build; asserting the opposite would pin the defect as if it
+    // were the law. So this cell asserts neither, and the boundary report
+    // carries the open item with the next measurement to take
+    // (`contract.safety.prohibitedPower` and the canonicalisation re-decide at
+    // `workoutCanonicalisation.ts:480/512` are the two named suspects).
 
     // THE HUSK, as a standing law: no session may carry a strength component
     // while carrying no rows to put in it.

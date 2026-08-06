@@ -214,11 +214,93 @@ implements** — is still UNMEASURED. Named, not counted.
 - The `back_midline` region was not probed at the matrix layer; G1/G2/G5/G6 use
   `upper_body` and `lower_body`.
 
-## §8 OPEN FOR SAM
+## §8 SAM'S SIGNING BATCH, 2026-08-06 — what landed and what did NOT
+
+`docs/G2_SIGNING_AND_LAST_RESORT_RULING_2026-08-06.md`.
+
+### 8.1 Signed copy — 2 of 3 shipped
+
+The two row notes ship **verbatim, including the en dash** in the first: a
+signed sentence is signed as written, and normalising its punctuation is the
+same class of edit as rewording it. Both were grepped against every regex that
+reads the `notes` field before shipping (`a-note-is-output-never-evidence`):
+`deloadWeekRules`' conditioning and quality-conditioning patterns, and
+`coachActions.RUN_PATTERN`. All three miss — note that `RUN_PATTERN` has **no
+word boundaries**, and "Quality **reps**" still does not match `repeat`.
+
+**The Coach Note is NOT shipped.** Its channel is the typed
+`DeterministicCoachNoteEffectSeed` (`kind` + `reason` + `ownerKey`, with the
+sentence composed in `deterministicCoachNoteFactory`), so shipping it means a
+new `kind`/`reason` pair and a sentence site — not a string drop. Located, not
+built. The sentence is signed and waiting.
+
+### 8.2 The last-resort ruling — the doc's own claim was WRONG, and it is now built
+
+The signing doc records the preference as "already the built shape". **It was
+not.** Cell G8 was written to pin the claim and measured the opposite
+immediately:
+
+> an earlier eligible day (Wednesday, G-3, non-team) was free and the app built
+> the G-2 quality session anyway, on [Thursday]
+
+The cause is structural: the placer picks the G-2 **team** day for its upper
+slot FIRST, before any earlier day is considered, so the conversion happened
+before G-3 was ever looked at. Sam's ruling is therefore a behaviour change, and
+it is built: `earlierLowerSlotThan` tries G-3 first, then G-4/G-5, skipping team
+days (H-TEAM-LOWER bars heavy lower there, and what this places is an ORDINARY
+lower session, not the non-heavy exception). Only when no earlier day exists is
+the G-2 quality session built. G2 still passes — its 5-day world genuinely has
+no free earlier non-team day — so the two cells now separate "last resort" from
+"only resort", which is exactly Sam's distinction.
+
+This is the second time in this unit that a claim of "already covered" was
+false when measured ([[authored-source-already-exists]] was the first). Pinning
+the claim cost one cell and caught a real defect.
+
+### 8.3 Ruling 4a — the budget half is built; the ruling is NOT delivered
+
+**Built and measured:** `budgetedPowerSession` is one predicate with two
+readers — `section18SafetyFinaliser` (what may be stripped) and
+`section18EffectiveWeekEvaluator`'s primer ledger (what is counted). That
+symmetry is deliberate: an exemption the content owner knows and the verdict
+owner does not is the exact asymmetry the finaliser's own header calls "the
+whole defect". `strengthVariant` rides onto the `Workout` to carry it, derived
+and never persisted.
+
+**Not delivered:** the jump still does not reach the athlete. Measured at the
+composition layer:
+
+```
+ALLOC            Thursday:quality_low_volume
+WORKOUT d4       strengthVariant= quality_low_volume
+  rows           Vertical Jump/role=power/power={"family":"lower","kind":"primer"}
+                 | High Box Squat
+```
+
+So the allocation, the workout marker and the power row are all correct and a
+**third owner** removes it downstream. That owner is NOT identified, and I did
+not guess: the two named suspects are `contract.safety.prohibitedPower`
+(lines 199/368 of the finaliser strip every power row when it is set — and it
+reads `contract.power.eligible`, which is per-MODE and should be true here) and
+the canonicalisation re-decide at `workoutCanonicalisation.ts:480/512`, which
+its own comments say "shrinks the G-2 primer".
+
+**G7 asserts neither direction.** Asserting the ruling would be a gate passing
+on coordinates the app does not build; asserting the current behaviour would
+pin the defect as if it were the law. The cell says so in place.
+
+**Next measurement, for whoever picks it up:** print
+`contract.safety.prohibitedPower` and `contract.power.eligible` for the seeded
+severe-upper world, then instrument the two `hasPowerRow` strip sites at
+`section18SafetyFinaliser:199` and `:368`. One of them fires, or
+canonicalisation does.
+
+## §9 OPEN FOR SAM
 
 1. The §1 correction — the dose carrier instead of a fourth archetype and an
    eighth strength session. Ruled by the review seat per RULE-DON'T-ASK.
 2. The three PROPOSED sentences in §5.
-3. §7's power-budget question: should the authored G-2 jump half sit outside
-   the weekly power-primer budget, or is one squat row the whole exception when
-   the week is already carrying two team trainings and a game?
+3. §7's power-budget question is ANSWERED — ruling 4a, the jumps stay. The
+   budget half is built; §8.3 carries what is still removing them.
+4. The signed Coach Note (§8.1) needs a typed `kind`/`reason` pair before it
+   can ship. Sam's sentence is signed and unshipped until then.

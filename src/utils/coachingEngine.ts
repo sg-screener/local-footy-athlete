@@ -1939,6 +1939,39 @@ function buildWeeklyPlan(
       restrictedPatterns.has('push') &&
       restrictedPatterns.has('pull') &&
       !restrictedPatterns.has('squat');
+    // SAM'S LAST-RESORT RULING, 2026-08-06, verbatim: "the app should not prefer
+    // to do g-2 box jumps and vertical jump though, it should try and get it on
+    // g-3 or earlier but as a last resort it's okay."
+    //
+    // The signing doc recorded this as "already the built shape". It was NOT —
+    // cell G8 measured the opposite before this function existed: the placer
+    // picks the G-2 team day for its upper slot FIRST, so with a free Wednesday
+    // it still converted Thursday and left G-3 empty. The claim was checked
+    // rather than accepted, and the ruling is a behaviour change.
+    //
+    // "g-3 or earlier", in the anchor's own order: G-3 first (`lower_strength_g3`
+    // state 3 is the preferred home for lower strength), then G-4/G-5. Team days
+    // are excluded because H-TEAM-LOWER bars heavy lower on them in every phase —
+    // an ordinary lower session is exactly what this places, so it must respect
+    // the guard the quality shape is exempt from by not being heavy.
+    const earlierLowerSlotThan = (slot: typeof daySlots[0]) =>
+      [...midWeek, ...highLoad].find((day) =>
+        !assigned.has(day.dayName) &&
+        !day.isTeamDay &&
+        day.dayName !== slot.dayName);
+    /** An ORDINARY lower session on an earlier day. Not the exception. */
+    const earlierLowerAllocation = (slot: typeof daySlots[0]): SessionAllocation => ({
+      tier: 'core',
+      focus: 'Lower body strength (squat + hinge)',
+      dayOfWeek: slot.dayName,
+      isHardExposure: true,
+      strengthPattern: 'lower_combined',
+      strengthIntent: createStrengthIntent({
+        archetype: 'lower',
+        primaryPattern: 'squat',
+        plannedPatterns: ['squat', 'hinge'],
+      }),
+    });
     /** The authored G-2 exception as an allocation. Squat-family, low volume. */
     const g2QualityLowerAllocation = (slot: typeof daySlots[0]): SessionAllocation => ({
       tier: 'core',
@@ -2048,18 +2081,28 @@ function buildWeeklyPlan(
         // `g_minus_2_no_heavy_lower_or_speed` — the intersection that stranded
         // the day and left a husk (docs/UPPER_BODY_SEVERE_STRENGTH_MISS_
         // DIAGNOSIS_2026-08-06.md). The anchor's own state 2 fills it.
-        assigned.set(pushSlot3Core.dayName,
-          isLateWeekSlot && g2QualityLowerAvailable
-            ? g2QualityLowerAllocation(pushSlot3Core)
-            : {
-                tier: 'core',
-                focus: isModerate
-                  ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
-                  : 'Upper body - push emphasis',
-                dayOfWeek: pushSlot3Core.dayName,
-                isHardExposure: !isModerate,
-                strengthPattern: 'push',
-              });
+        const earlierForPush = isLateWeekSlot && g2QualityLowerAvailable
+          ? earlierLowerSlotThan(pushSlot3Core)
+          : undefined;
+        if (earlierForPush) {
+          // G-3 OR EARLIER WINS. The G-2 slot is simply not assigned: its upper
+          // work is prohibited and the lower work now has an earlier home, so
+          // the week keeps its count without spending the exception at all.
+          assigned.set(earlierForPush.dayName, earlierLowerAllocation(earlierForPush));
+        } else {
+          assigned.set(pushSlot3Core.dayName,
+            isLateWeekSlot && g2QualityLowerAvailable
+              ? g2QualityLowerAllocation(pushSlot3Core)
+              : {
+                  tier: 'core',
+                  focus: isModerate
+                    ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
+                    : 'Upper body - push emphasis',
+                  dayOfWeek: pushSlot3Core.dayName,
+                  isHardExposure: !isModerate,
+                  strengthPattern: 'push',
+                });
+        }
       }
 
       // Place PULL at G−4 (hard) — prefer a DIFFERENT team day from push.
@@ -2103,7 +2146,13 @@ function buildWeeklyPlan(
       // reflect slot position, while the secondary pattern remains meaningful.
       const isLateWeekSlot = upperSlot.offset === -2;
       const upperPrimary: MainStrengthPattern = isLateWeekSlot ? 'push' : 'pull';
-      if (isLateWeekSlot && g2QualityLowerAvailable) {
+      const earlierForUpper = isLateWeekSlot && g2QualityLowerAvailable
+        ? earlierLowerSlotThan(upperSlot)
+        : undefined;
+      if (earlierForUpper) {
+        // Sam's last-resort ruling in the 2-core shape: G-3 or earlier first.
+        assigned.set(earlierForUpper.dayName, earlierLowerAllocation(earlierForUpper));
+      } else if (isLateWeekSlot && g2QualityLowerAvailable) {
         // The same last resort, the same reason: a balanced upper slot whose
         // BOTH patterns are prohibited is the stranded day in its 2-core shape.
         assigned.set(upperSlot.dayName, g2QualityLowerAllocation(upperSlot));

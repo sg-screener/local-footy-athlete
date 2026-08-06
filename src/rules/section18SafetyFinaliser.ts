@@ -24,7 +24,12 @@ import {
   type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
 import type { MainStrengthPattern } from './strengthPatternContributions';
-import { hasPowerRow, powerRows, withoutPowerRows } from './sessionRowCounting';
+import {
+  budgetedPowerSession,
+  hasPowerRow,
+  powerRows,
+  withoutPowerRows,
+} from './sessionRowCounting';
 
 export type Section18SafetyAction =
   | 'prohibited_content_removed'
@@ -532,9 +537,13 @@ export function finaliseSection18SafetyWeek(args: {
   // the whole defect: content derived to match its budget cannot contradict it.
   // Nothing is guarded and nothing is clamped at the boundary — the week is
   // simply built to the number the contract authorises.
+  // Ruling 4a (Sam, 2026-08-06): `budgetedPowerSession`, not `hasPowerRow` —
+  // the G-2 quality-lower's authored jumps are outside the weekly budget, and
+  // the evaluator's primer ledger reads the SAME predicate so the content and
+  // the verdict still agree by construction.
   capSessions(
     authorisedPowerPrimerBudget(args.contract),
-    hasPowerRow,
+    budgetedPowerSession,
     withoutPowerRows,
     'power_removed',
   );

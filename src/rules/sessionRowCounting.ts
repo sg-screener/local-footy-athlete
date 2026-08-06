@@ -172,6 +172,37 @@ export function hasPowerRow(workout: Partial<Workout> | null | undefined): boole
 }
 
 /**
+ * RULING 4a (Sam, 2026-08-06): does this day's power count against the WEEKLY
+ * PRIMER BUDGET?
+ *
+ * It does, everywhere but one place. The G-2 quality-lower session's jumps are
+ * named by the Bible prescription itself — "2x3 box squats to high box + 2x3
+ * vertical jumps" — and that prescription is game-aware BY DEFINITION: it exists
+ * precisely because the day is two out from a fixture. Budgeting it against the
+ * weekly selector allowance meant a week already carrying two team trainings and
+ * a game derived a budget of 0 and stripped the authored half of a session the
+ * same Bible line had just licensed.
+ *
+ * THE EXEMPTION IS SCOPED TO THAT SESSION AND NOTHING ELSE. The budget governs
+ * every other day unchanged.
+ *
+ * ONE PREDICATE, TWO READERS, deliberately. `section18SafetyFinaliser` uses it to
+ * decide what may be stripped, and `section18EffectiveWeekEvaluator` uses it to
+ * decide what is COUNTED. An exemption known to only one of them is the exact
+ * asymmetry the finaliser's own header calls the whole defect: content derived to
+ * match its budget cannot be allowed to contradict it. If this predicate ever
+ * grows a second copy, that is the bug.
+ *
+ * BIBLE_ANCHOR: lower_strength_g3
+ */
+export function budgetedPowerSession(
+  workout: Partial<Workout> | null | undefined,
+): boolean {
+  if (!hasPowerRow(workout)) return false;
+  return workout?.strengthVariant !== 'quality_low_volume';
+}
+
+/**
  * Remove power from a day — the row-era replacement for `powerBlock: undefined`.
  *
  * Nine sites used to delete the field. A field delete is invisible to every

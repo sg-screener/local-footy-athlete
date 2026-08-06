@@ -1098,16 +1098,17 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   // Row count, sets and reps are all load-bearing — `looksLikeNeuralPrimer`
   // reads exactly them (≤2 lower/power exercises, ≤3 sets, ≤3 reps) and the
   // injury-authority suite asserts the produced session still satisfies it.
-  // COPY: these rows ship with NO note. Two sentences were drafted for them
-  // ("Low range of motion, high quality - stop well short of failure" and
-  // "Quality reps, full recovery between sets") and they are athlete-facing, so
-  // they are PROPOSED, NOT SIGNED — they go to Sam with the copy batch, recorded
-  // in docs/G2_QUALITY_LOWER_BOUNDARY_REPORT_2026-08-06.md §5. The dose carries
-  // the instruction on its own until then; an unsigned sentence does not ship.
+  // COPY: SIGNED by Sam 2026-08-06, shipped verbatim.
+  // `docs/G2_SIGNING_AND_LAST_RESORT_RULING_2026-08-06.md` §"Signed copy".
+  // Both sentences are quoted character-for-character, INCLUDING the en dash in
+  // the first — a signed sentence is signed as written, and silently
+  // normalising its punctuation is the same class of edit as rewording it.
   if (entry.strengthVariant === 'quality_low_volume') {
     return [
-      { name: 'High Box Squat', sets: 2, repsMin: 3, repsMax: 3 },
-      { name: 'Vertical Jump', sets: 2, repsMin: 3, repsMax: 3 },
+      { name: 'High Box Squat', sets: 2, repsMin: 3, repsMax: 3,
+        notes: 'Low range of motion, high quality – stop well short of failure' },
+      { name: 'Vertical Jump', sets: 2, repsMin: 3, repsMax: 3,
+        notes: 'Quality reps, full recovery between sets' },
     ];
   }
   // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
@@ -2672,6 +2673,12 @@ export function buildWorkoutsFromCoach(
         : {}),
       ...(planEntry?.strengthPatternContributions?.length
         ? { strengthPatternContributions: [...planEntry.strengthPatternContributions] }
+        : {}),
+      // Ruling 4a (Sam, 2026-08-06): the dose variant rides onto the day so the
+      // §18 power owners can see that this session's jump row is AUTHORED by the
+      // G-2 prescription rather than chosen by the weekly primer selector.
+      ...(planEntry?.strengthVariant && planEntry.strengthVariant !== 'standard'
+        ? { strengthVariant: planEntry.strengthVariant }
         : {}),
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),
