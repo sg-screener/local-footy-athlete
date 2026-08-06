@@ -29,6 +29,7 @@ import {
   useProgramStore,
 } from '../store/programStore';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 let fixedPass = 0;
 let fixedFail = 0;
@@ -241,8 +242,8 @@ check('17 legacy migration is deterministic and idempotent',
     migratedOnce.seasonPhaseClock.originProvenance === 'deterministic_legacy_migration' &&
     JSON.stringify(migratedOnce.seasonPhaseClock) === JSON.stringify(migratedTwice.seasonPhaseClock));
 
-const hydratedOnce = withoutRoutineLogs(() => canonicaliseHydratedProgram(legacyProgram));
-const hydratedTwice = withoutRoutineLogs(() => canonicaliseHydratedProgram(hydratedOnce));
+const hydratedOnce = withoutRoutineLogs(() => canonicaliseHydratedProgram(legacyProgram, emptyEvaluationSurfaces()));
+const hydratedTwice = withoutRoutineLogs(() => canonicaliseHydratedProgram(hydratedOnce, emptyEvaluationSurfaces()));
 check('18 repeated rehydration does not move phase entry',
   hydratedOnce.seasonPhaseClock?.phaseEntryWeekStartISO ===
     hydratedTwice.seasonPhaseClock?.phaseEntryWeekStartISO);
@@ -291,7 +292,7 @@ const generatedLate = withoutRoutineLogs(() => generateProgramLocally(OFF_PROFIL
   blockNumber: 99,
   previousProgram: firstOffProgram,
 }));
-const hydratedLate = withoutRoutineLogs(() => canonicaliseHydratedProgram(generatedLate));
+const hydratedLate = withoutRoutineLogs(() => canonicaliseHydratedProgram(generatedLate, emptyEvaluationSurfaces()));
 const pathIdentities = [
   generatedLate.microcycles[0].exposureContractV2?.identity,
   rolled.program?.microcycles[0].exposureContractV2?.identity,

@@ -71,6 +71,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
+import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
@@ -806,6 +807,18 @@ function legacyMigrationFallbackProfile(args: {
 
 function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
+  /**
+   * THE WORLD BEING HYDRATED, not the live one
+   * (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`, condition 3).
+   *
+   * This door was the one the entry census could never price — it never met a
+   * non-empty store in the witness set, and now it is clear why that was the
+   * wrong question. During hydration the live store still holds the PREVIOUS
+   * world; the truth is the snapshot arriving. Reading the store here would
+   * judge the incoming week against the outgoing one, which is the PROPOSAL
+   * defect wearing a different hat.
+   */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   phase?: string,
   phaseClock?: SeasonPhaseClock,
   profile?: OnboardingData | null,
@@ -904,6 +917,7 @@ function canonicaliseHydratedMicrocycle(
         workouts: safety.workouts,
         weekStart: microcycle.startDate.slice(0, 10),
         profile,
+        surfaces,
         regenerate: fallbackProfile
           ? () => require('../utils/postGenerationConstraintValidation')
               .buildSection18ProductionFallbackCandidate({
@@ -942,6 +956,8 @@ function canonicaliseHydratedMicrocycle(
 
 export function canonicaliseHydratedProgram(
   program: TrainingProgram,
+  /** The world being hydrated — see `canonicaliseHydratedMicrocycle`. */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   profile?: OnboardingData | null,
 ): TrainingProgram {
   // Defence in depth: this is exported and reachable without going through
@@ -959,6 +975,7 @@ export function canonicaliseHydratedProgram(
     microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
       canonicaliseHydratedMicrocycle(
         microcycle,
+        surfaces,
         clockedProgram.programPhase,
         clockedProgram.seasonPhaseClock,
         profile,
@@ -1049,8 +1066,22 @@ function canonicaliseAcceptedBoundaryState(
   },
 ): Partial<ProgramState> {
   const effectiveTodayISO = options.todayISO ?? todayISOLocal();
+  // THE WORLD ARRIVING, composed once for every door in this function. The
+  // snapshot under hydration IS the evaluation context here; the live store
+  // still holds the world being replaced.
+  const hydratingSurfaces: AcceptedEffectiveWeekSurfaces = {
+    currentProgram: persistedState.currentProgram ?? null,
+    currentMicrocycle: persistedState.currentMicrocycle ?? null,
+    dateOverrides: persistedState.dateOverrides ?? {},
+    weekScopedOverlays: persistedState.weekScopedOverlays ?? {},
+    userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
+  };
   let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
-    ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
+    ? canonicaliseHydratedProgram(
+        persistedState.currentProgram,
+        hydratingSurfaces,
+        options.profile,
+      )
     : persistedState.currentProgram;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
@@ -1091,6 +1122,7 @@ function canonicaliseAcceptedBoundaryState(
   let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
+        hydratingSurfaces,
         phase,
         currentProgram?.seasonPhaseClock,
         options.profile,
@@ -1288,7 +1320,7 @@ function canonicaliseAcceptedBoundaryState(
         weekStart,
         profile: options.profile,
         activeFixtureDates,
-        userRemovalConstraints: persistedState.userRemovalConstraints,
+        surfaces: hydratingSurfaces,
         regenerate: buildFallback,
         safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
@@ -1298,7 +1330,7 @@ function canonicaliseAcceptedBoundaryState(
             weekStart,
             profile: options.profile,
             scheduleState: { markedDays: { ...(options.markedDays ?? {}) } },
-            userRemovalConstraints: persistedState.userRemovalConstraints,
+            surfaces: hydratingSurfaces,
           }),
       });
     // R5.3 RESIDUAL PROBE (Sam's ruling, 2026-08-06: the residual is

@@ -78,6 +78,7 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
+import { liveAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import {
   requireSection18AcceptedWeek,
   type Section18AcceptedWeekCandidate,
@@ -1268,6 +1269,10 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       workouts: safetyWorkouts,
       weekStart,
       profile: args.profile,
+      // A LIVE-STORE WRITE VALIDATOR MEANS THE LIVE WORLD, and now says so.
+      // All four doors here were forgotten doors
+      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract: exposureContractV2!,
         weekStart,
@@ -1359,6 +1364,7 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
       workouts: Object.values(workoutsByDate).filter((workout): workout is Workout => !!workout),
       weekStart: validated.weekStart,
       profile: args.profile,
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract,
         weekStart: validated.weekStart,
@@ -1575,6 +1581,7 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
     workouts,
     weekStart,
     profile: args.context.profile,
+    surfaces: liveAcceptedEffectiveWeekSurfaces(),
     // A single-date store primitive cannot atomically persist repairs to
     // other dates. Reject cross-day repair needs; week/overlay writers can
     // use the full deterministic repair loop.
@@ -1775,6 +1782,7 @@ export function validateLiveWeekOverlayWrite(
       workouts: effectiveWorkouts,
       weekStart: overlay.weekStart,
       profile: context.profile,
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract: exposureContractV2!,
         weekStart: overlay.weekStart,

@@ -734,7 +734,6 @@ export function stageClearReversibleAdjustment(
         primaryWeekStarts: adjustment.rollingDependencyWeeks,
         primaryMutationIntent: 'restore_adjustment',
         dependentMutationIntent: 'restore_adjustment',
-        userRemovalConstraints: restored.surfaces.userRemovalConstraints,
       });
       const exactOwnedWeeks = new Set([
         ...adjustment.displacedOriginalState.ownedDays.map((owned) => owned.weekStart),

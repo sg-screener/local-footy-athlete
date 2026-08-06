@@ -92,6 +92,7 @@ import {
   SAM_PASS_20260805_GENERATION_DAY,
   SAM_PASS_20260805_MARKED_DAYS,
 } from './support/samDevicePass20260805Fixture';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const TODAY = SAM_PASS_20260805_TODAY_ISO;
 const WEEK = SAM_PASS_20260805_CURRENT_WEEK;
@@ -196,6 +197,7 @@ function weekBlockers(weekStart: string): string[] {
     if (workout) workouts.push(workout);
   }
   const visible = quiet(() => resolveFinalVisibleSection18Week({
+    surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts,
     weekStart,

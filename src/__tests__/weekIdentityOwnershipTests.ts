@@ -62,6 +62,7 @@ import {
 } from '../rules/section18AcceptedWeekGateway';
 import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const PROFILE: Partial<OnboardingData> = {
   seasonPhase: 'In-season',
@@ -295,6 +296,7 @@ function impossibleWeekInput() {
     ],
   });
   return { ...candidate(), weekStart: WEEK_2, profile: PROFILE as OnboardingData,
+    surfaces: emptyEvaluationSurfaces(),
     regenerate: candidate, safeFallback: candidate };
 }
 

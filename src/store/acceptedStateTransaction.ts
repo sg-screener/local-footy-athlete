@@ -74,6 +74,7 @@ import {
   type TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
+import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   buildFixtureMinimalReplan,
   type FixtureMutationIntent,
@@ -1607,7 +1608,17 @@ export function buildFixtureProjection(args: {
   sourceMarkedDays?: Readonly<Record<string, CalendarDayType>>;
   activeConstraints?: readonly ActiveConstraint[];
   mutationIntent?: FixtureMutationIntent;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE WORLD THE REPLAN IS JUDGED AGAINST, when it differs from the world the
+   * week is COMPOSED FROM (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+   *
+   * Two surfaces objects, because a staging transaction genuinely has two
+   * worlds: a delete composes from the world where the binned target is still
+   * present (it is the relocation template) and is judged against the world
+   * where it is gone. Omitted means the two are the same world, which is what
+   * every non-staging caller means.
+   */
+  evaluationSurfaces?: AcceptedEffectiveWeekSurfaces;
   /**
    * Is this projection APPLYING A NEW FIXTURE DECISION, or re-materialising
    * the accepted week's existing fixture marks?
@@ -1640,13 +1651,16 @@ export function buildFixtureProjection(args: {
     ([date, mark]) => weekDates.has(date) && mark === 'noGame',
   );
   const liveState = useProgramStore.getState();
+  // THE ONE DEFAULT TO THE LIVE WORLD (the ruling names this line). Every
+  // other site passes the surfaces it means; this is the single place where a
+  // caller that said nothing resolves to the world as persisted.
   const sourceSurfaces = args.sourceSurfaces ?? {
+    ...liveAcceptedEffectiveWeekSurfaces(),
     currentProgram: args.program,
-    currentMicrocycle: liveState.currentMicrocycle,
-    dateOverrides: liveState.dateOverrides,
-    weekScopedOverlays: liveState.weekScopedOverlays,
-    userRemovalConstraints: liveState.userRemovalConstraints,
   };
+  // A caller that names only one world is judged against the world it composes
+  // from. That is not a second default to live — it is the identity case.
+  const evaluationSurfaces = args.evaluationSurfaces ?? sourceSurfaces;
   // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
   // A FIXTURE DECISION NEVER REBASES FROM THE WEEK A PREVIOUS FIXTURE BUILT.
   //
@@ -1870,7 +1884,7 @@ export function buildFixtureProjection(args: {
     priorFixtures,
     proposedFixtures,
     activeFixtureDates,
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: evaluationSurfaces,
     mutationIntent: args.mutationIntent ?? 'fixture_transition',
   });
   // Dynamic loading avoids an initialisation cycle: weekRebuild itself uses
@@ -2085,7 +2099,8 @@ export function stageRollingHorizonFixtureRepair(args: {
   primaryWeekStarts: readonly string[];
   primaryMutationIntent?: FixtureMutationIntent;
   dependentMutationIntent?: FixtureMutationIntent;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /** Forwarded verbatim — see `buildFixtureProjection`'s own field. */
+  evaluationSurfaces?: AcceptedEffectiveWeekSurfaces;
   /**
    * Set by the fixture door: this staging is APPLYING a fixture decision, so
    * the PRIMARY weeks — the ones the decision is about — may not rebase from
@@ -2140,7 +2155,7 @@ export function stageRollingHorizonFixtureRepair(args: {
       sourceSurfaces: args.sourceSurfaces,
       sourceMarkedDays: args.beforeMarkedDays,
       activeConstraints: args.activeConstraints,
-      userRemovalConstraints: args.userRemovalConstraints,
+      evaluationSurfaces: args.evaluationSurfaces,
       mutationIntent: primary.has(weekStart)
         ? args.primaryMutationIntent ?? 'fixture_transition'
         : args.dependentMutationIntent ?? 'remove_from_date',
@@ -2326,7 +2341,7 @@ export function commitCalendarStateTransaction(args: {
       ),
       primaryMutationIntent: args.mutationIntent,
       dependentMutationIntent: 'remove_from_date',
-      userRemovalConstraints: proposedUserRemovalConstraints,
+      evaluationSurfaces: { ...state, userRemovalConstraints: proposedUserRemovalConstraints },
     });
     for (const projection of repair.projections) {
       affectedWeeks.add(projection.weekStart);
@@ -2801,7 +2816,12 @@ function stageAthleteMutationConstraint(args: {
     primaryWeekStarts,
     primaryMutationIntent: args.mutationIntent,
     dependentMutationIntent: 'remove_from_date',
-    userRemovalConstraints,
+    // THE SECOND WORLD, named. The composition surface above deliberately
+    // withholds the proposed constraint on a delete so the binned target
+    // survives as a relocation template; the week is still JUDGED against the
+    // world where the athlete's decision has landed. Two surfaces objects say
+    // that; one array could not.
+    evaluationSurfaces: { ...sourceSurfaces, userRemovalConstraints },
   });
   const weekScopedOverlays = { ...state.weekScopedOverlays };
   for (const projection of repair.projections) {
@@ -3469,7 +3489,6 @@ export function commitProgramSetupRebuildTransaction(args: {
         sourceSurfaces: state,
         sourceMarkedDays: prior.markedDays,
         activeConstraints: prior.activeConstraints,
-        userRemovalConstraints: state.userRemovalConstraints,
         mutationIntent: state.userRemovalConstraints.some((constraint) =>
           constraint.status === 'active' && mondayForDate(constraint.targetDate) === weekStart)
           ? 'athlete_removal'

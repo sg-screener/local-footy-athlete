@@ -23,12 +23,25 @@ import type { DaySurfaceOwner } from './dayPrecedence';
 /** Alias, not a second declaration — the owner set is `dayPrecedence`'s. */
 export type AcceptedWeekSurfaceOwner = DaySurfaceOwner;
 
+/**
+ * THE WORLD UNDER EVALUATION (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+ *
+ * Sometimes that world is the persisted store; sometimes it is the world a
+ * transaction is composing, because a decision in flight is a decision. Both
+ * are expressed here, and which one a call means is stated by the caller.
+ */
 export interface AcceptedEffectiveWeekSurfaces {
   currentProgram: TrainingProgram | null;
   currentMicrocycle?: Microcycle | null;
   dateOverrides: Readonly<Record<string, Workout>>;
   weekScopedOverlays: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * REQUIRED, and that is the whole precondition unit. It was optional, and
+   * six doors forgot it — 328 measured entries where the gateway was told the
+   * athlete had binned nothing while their bin sat full. A world with no
+   * removal decisions says so with `[]`; it no longer says so by silence.
+   */
+  userRemovalConstraints: readonly UserRemovalConstraint[];
 }
 
 export interface AcceptedEffectiveWeekDate {
@@ -153,7 +166,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekStart,
     profile: args.profile ?? undefined,
     scheduleState: { markedDays },
-    userRemovalConstraints: args.surfaces.userRemovalConstraints,
+    surfaces: args.surfaces,
   });
   const evaluation = evaluateSection18EffectiveWeek({
     contract,

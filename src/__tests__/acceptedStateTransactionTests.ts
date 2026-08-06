@@ -77,6 +77,7 @@ import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK_START = '2026-07-13';
 const WEDNESDAY = '2026-07-15';
@@ -246,6 +247,7 @@ function acceptedWeek(weekStart: string) {
     if (workout) workouts.push(workout);
   }
   const visible = resolveFinalVisibleSection18Week({
+    surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts,
     weekStart,
@@ -427,7 +429,7 @@ function stripContracts(program: TrainingProgram): TrainingProgram {
 
 function migrated(value: OnboardingData): TrainingProgram {
   resetStores();
-  return canonicaliseHydratedProgram(stripContracts(generate(value)), value);
+  return canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
 }
 
 function placeholderOverlay(weekStart: string): WeekScopedWorkoutOverlay {
@@ -678,8 +680,8 @@ run('regression', '14 an unrepairable legacy week returns a typed migration fail
 
 run('regression', '15 repeated hydration is deterministic and idempotent', () => {
   const value = profile('Off-season');
-  const once = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
-  const twice = canonicaliseHydratedProgram(clone(once), value);
+  const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
+  const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
   assert(JSON.stringify(once) === JSON.stringify(twice), 'repeated hydration changed accepted state');
 });
 
@@ -925,7 +927,7 @@ run('property', 'no structural readiness change can bypass the gateway', async (
 run('property', 'no contractless material week persists without accepted Contract v2', () => {
   for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
     const value = profile(phase);
-    const result = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
+    const result = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
     assert(result.microcycles.every((week) => !!week.exposureContractV2), `${phase} retained contractless week`);
   }
 });
@@ -995,8 +997,8 @@ run('property', 'unknown legacy participation never gains anchor credit', () => 
 run('property', 'hydration remains deterministic and idempotent', () => {
   for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
     const value = profile(phase);
-    const once = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
-    const twice = canonicaliseHydratedProgram(clone(once), value);
+    const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
+    const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
     assert(JSON.stringify(once) === JSON.stringify(twice), `${phase} hydration drifted`);
   }
 });

@@ -50,6 +50,7 @@ import {
 } from '../rules/profileSetupChange';
 import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -181,7 +182,7 @@ section('[1] A skewed device is told, not quietly corrected');
   // rebuild failed after that write.
   const stored = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
   const preSeasonProgram = generate(profile('Pre-season'));
-  const hydrated = quiet(() => canonicaliseHydratedProgram(preSeasonProgram, stored));
+  const hydrated = quiet(() => canonicaliseHydratedProgram(preSeasonProgram, emptyEvaluationSurfaces(), stored));
 
   const owned = ownSeasonPhase({ program: hydrated, profile: stored });
   ok('the clock still owns the phase after hydration', owned.phase === 'Pre-season',
@@ -320,7 +321,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
   const scaledWeeks: string[] = [];
   for (const entry of entryWeeks) {
     const program = generate(stored, entry, WEEK_START);
-    const hydrated = quiet(() => canonicaliseHydratedProgram(program, stored));
+    const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
     for (const microcycle of hydrated.microcycles ?? []) {
       if (microcycle.weekKind === 'deload') deloadWeeks.push(`${entry}:${microcycle.startDate}`);
       if ((microcycle.intensityMultiplier ?? 1) !== 1) {
@@ -342,7 +343,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
     start: microcycle.startDate,
     workouts: (microcycle.workouts ?? []).length,
   }));
-  const hydrated = quiet(() => canonicaliseHydratedProgram(program, stored));
+  const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
   const after = (hydrated.microcycles ?? []).map((microcycle) => ({
     start: microcycle.startDate,
     workouts: (microcycle.workouts ?? []).length,
@@ -393,7 +394,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
     // which covers both deload rules and the build weeks between them.
     for (const entry of ['2026-07-13', '2026-06-22', '2026-05-25', '2026-04-27']) {
       const program = generate(stored, entry, WEEK_START);
-      const hydrated = quiet(() => canonicaliseHydratedProgram(program, stored));
+      const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
       for (const microcycle of hydrated.microcycles ?? []) {
         const expected = resolveWeekIntensityMultiplier(phase, microcycle.weekKind);
         checked.push(`${phase}/${microcycle.weekKind}`);

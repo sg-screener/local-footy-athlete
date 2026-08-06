@@ -240,6 +240,7 @@ const closure = rollingHorizonDependencyClosure({
     currentMicrocycle: null,
     dateOverrides: {},
     weekScopedOverlays: { '2026-07-20': dependencyOverlay },
+    userRemovalConstraints: [],
   },
 });
 check('rolling horizon closes deterministically over provenance-referenced weeks',

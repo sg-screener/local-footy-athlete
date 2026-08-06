@@ -57,6 +57,7 @@ import {
 } from '../store/reversibleAdjustmentTransaction';
 import { executeHomeGameMutationDurably } from '../screens/home/homeGameMutationController';
 import type { GameChangeVisibleDay } from '../utils/gameChangeCoachNotes';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK_START = '2026-03-23';
 const SATURDAY = '2026-03-28';
@@ -261,6 +262,7 @@ function visibleStoredWeek(program: TrainingProgram, athlete: OnboardingData): M
   const microcycle = program.microcycles[0]!;
   const contract = microcycle.exposureContractV2!;
   return new Map(resolveFinalVisibleSection18Week({
+    surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts: microcycle.workouts,
     weekStart: WEEK_START,

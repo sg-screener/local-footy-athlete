@@ -50,6 +50,7 @@ import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuil
 import { runSection18AcceptedWeekGateway } from '../rules/section18AcceptedWeekGateway';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { addDaysISO } from '../utils/programBlockState';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK = '2026-07-13';
 const NEXT_WEEK = addDaysISO(WEEK, 7);
@@ -320,7 +321,7 @@ run('4b mode validates structurally: the generated illness_recovery week is acce
   const week = generateWithIllness(true);
   assert(week.exposureContract?.identity.mode === 'optional_week',
     `a seeded severe illness fact must derive an illness_recovery week, got ${week.exposureContract?.identity.mode}`);
-  const result = quiet(() => runSection18AcceptedWeekGateway({
+  const result = quiet(() => runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK,
     profile: profile(), resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
   }));

@@ -465,7 +465,6 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           sourceSurfaces: state,
           activeConstraints: canonicalActiveConstraints(),
           primaryWeekStarts: [targetWeekStart!],
-          userRemovalConstraints: state.userRemovalConstraints,
           // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
           // this rebuild IS the fixture decision, so the week it is about
           // must not rebase from the week a previous fixture built.
@@ -488,7 +487,6 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           sourceSurfaces: state,
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
           activeConstraints: canonicalActiveConstraints(),
-          userRemovalConstraints: state.userRemovalConstraints,
           // Same law, the non-rolling path: this projection IS the decision.
           appliesFixtureDecision: true,
         });
