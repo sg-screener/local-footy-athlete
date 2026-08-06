@@ -593,6 +593,49 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 > `expectation-edited-to-match-the-regression` — the shape this unit exists to
 > refuse.
 
+> **(r) THE FREED DAY IS RULED, AND THE LAST RED IS AN OWNERSHIP FINDING.**
+> Sam ruled 2026-08-06: **the DERIVER is correct** — a day a fixture is removed
+> from returns to the athlete's own pattern, and filling it was
+> `fixture-identity-1`'s bug generalised. Applied on `feat/r53-v3-switchover`
+> (`bd5a0abb`); the bible went from 8 suites to **144 of 156**.
+>
+> `seedExactSundayRegression` took its `Hard Conditioning` TEMPLATE from the
+> accepted week, which only had one because the replan filled the freed
+> Saturday. It now takes it from the replan the seed already clones as its base
+> and then overwrites, so the seeded world is byte-identical:
+> `test:athlete-session-deletion` is back at its exact baseline totals
+> (24/24, 5/5, 3/3, `TRUE_EXIT=0`). Those sixteen cells are about DELETION and
+> their coordinate must not drift under a fixture ruling.
+>
+> **THE REMAINING RED IS NOT A FIX — IT IS A RULING IN THE WRONG LAYER.**
+> `test:phase-structure` cell 8 (ruling 2, Sam 2026-08-06: "the offer never
+> re-roles, and never survives a fixture change") fails — after the game is
+> removed the `optional_flush` SURVIVES on the Tuesday. The cause is exact:
+>
+> ```
+> fixtureMinimalReplan.ts:294
+>   if (workout.section18ConditioningRole !== 'optional_flush') return [workout];
+> ```
+>
+> **The flush is dropped by the REPLAN'S OWN TRANSFORM.** Ruling 2 was
+> implemented inside the layer leg (i) stops publishing, so with the replan no
+> longer reaching the athlete's week nothing drops the offer and the planner's
+> offer launders across a fixture decision. That is the CLAUDE.md escalation
+> shape exactly — a ruling living in a later layer than the one that owns the
+> decision — and it is re-homed in the DERIVER, never patched at the door.
+>
+> The cell proving it is already written and already two-directional (flush
+> STAYS typed while the fixture stands, GONE after the removal — they fail in
+> opposite directions). Its second half still carries the freed-Saturday
+> baseline Sam superseded today, so that half is rewritten in the same commit
+> that re-homes the rule.
+>
+> **THE NEXT UNIT, in order:** (1) re-home ruling 2's flush drop in the deriver
+> and rewrite cell 8's superseded half; (2) full `test:bible` to `TRUE_EXIT=0`;
+> (3) condition 4 — retire the fixture replay interpreter WITH the `markedDays`
+> proof attached, still NOT STARTED; (4) merge to `feat/stage-b-stage2`. R5.7
+> is untouched and opens whenever there is tank for the whole five-file cut.
+
 **R5.4 — the hydration category.** `programHydrationIngress`,
 `programHydrationProjection`, `acceptedStateColdStart`'s migration half,
 `appHydrationGate`'s migration path. Retires LR-8 — **NO: see the R5.3 re-cut
