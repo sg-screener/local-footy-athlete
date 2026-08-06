@@ -2,27 +2,33 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. RULING on docs/R53_TWO_DIAGNOSES_2026-08-07.md — read
+   docs/PROJECTED_ANCHOR_PRECEDENCE_RULING_2026-08-07.md. Short form:
+
+   a. The projection STANDS (Bible: game day is the main anchor; a
+      KNOWN bye releases it — silence is not a bye). The overwrite
+      DIES under the ratified precedence ordering: an athlete-placed
+      session outranks a materialised projected game; day occupancy in
+      resolveFinalVisibleSection18Week composes under dayPrecedence.
+      Systemic fix, not a cell-19 patch. The conservation guard stays.
+
+   b. Close the residual FIRST (one probe: phase/mode contradiction =
+      store carry-over across cells vs genuine divergence). The
+      precedence fix builds regardless; the probe only decides whether
+      the cell-19 witness also needs seed isolation.
+
+   c. Freed-day producer still unnamed — that STOP stands. Next probe
+      starts at commitWeekScopedOverlay's merge of an explicitly
+      undefined published field (contractSource: overlay in both
+      worlds). If still unnamed after that probe, STOP back to the
+      seat with what was excluded.
+
+   d. Condition 1 unchanged: re-measure priced configs with the
+      precedence-obeying projection before building; LFA_BASIS=visible
+      ships WITH leg (iii). Commit the ruling doc as authored.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
-
-## Processed 2026-08-07 (third pass)
-
-- The two ordered diagnoses (`1e363e72`) — docs/R53_TWO_DIAGNOSES_2026-08-07.md.
-  (a) CLOSED. Leg (iii) PRODUCES the game anchor that destroys the move:
-  stored `anchorState: none` with no anchors, ZERO calendar marks, and
-  `targetWeekFixtures` synthesises a Saturday fixture from the profile's
-  `usualGameDay`. The visible resolver then overwrites the moved session
-  with it. Ninth sighting confirmed; root one layer earlier than the
-  destroyer. NOT built under the standing rules — the fix changes what
-  `usualGameDay` means for an unmarked week, which is how every future
-  in-season week is planned. Residual stated: profilePhase In-season vs
-  storedMode early_offseason decides product-fix vs seed-isolation.
-  (b) HYPOTHESIS REFUTED BY MEASUREMENT. `presentRequiredCoreConditioning`
-  fires byte-identically with and without the published contract on the
-  bye-build week, so it is NOT the producer and the pre-authorised tier-4
-  migration would NOT have unblocked step 2. Step 2's premise also needs
-  re-examining: the overlay still carries an `exposureContractV2` under
-  leg (v). Producer NOT named — STOP, per the ruling's own terms.
 
 ## Standing
 - Update docs/NOW.md at every checkpoint. Answer inbox items in
