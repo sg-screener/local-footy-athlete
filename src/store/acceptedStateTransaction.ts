@@ -1786,6 +1786,45 @@ export function buildFixtureProjection(args: {
         microcycleLimit: 1,
       });
       targetMicrocycle = target.microcycles[0];
+      // WEEK IDENTITY IS THE COVERING WEEK'S, NEVER THE STUB'S (R5.3,
+      // 2026-08-06 — measured by the derived-declaration entry gate,
+      // `docs/R53_DECLARATION_READER_CENSUS_2026-08-06.md`).
+      //
+      // The call above regenerates ONE microcycle (`microcycleLimit: 1`)
+      // starting at `args.weekStart`, so that microcycle is week 1 of its own
+      // little program and its contract is stamped `globalWeek: 1,
+      // weekInBlock: 1` — truthfully, for the stub. It is NOT week 1 of the
+      // athlete's block, and every consumer downstream believes the stamp:
+      // `weeklyExposureContractV2.ts` stores `globalWeek ?? null` and
+      // `section18AcceptedWeekGateway.ts:223` reads `?? 1`, then the allocator
+      // alternates its patterns on `weekNumber % 2`
+      // (`programBlockState.ts:190-205`). So WEEK 1's PATTERNS GET PLANNED ONTO
+      // WEEK 2: measured on `fixture-identity-3` as `Lower Hinge|7` published
+      // where derivation says `Lower Squat|8`, with Monday's and Wednesday's
+      // training halves swapped — the same signature as the L16 relaunch red.
+      //
+      // The identity is not the stub's to invent. It belongs to the microcycle
+      // that COVERS this week, which the accepted source already resolved.
+      // This survives the derived-declaration switchover: the projection stops
+      // being PUBLISHED there, but it still decides the sweep and the rolling
+      // horizon, and a repair planned on the wrong week is wrong either way.
+      const coveringWeek = acceptedSource.baseMicrocycle;
+      if (coveringWeek && targetMicrocycle?.exposureContractV2) {
+        targetMicrocycle = {
+          ...targetMicrocycle,
+          weekNumber: coveringWeek.weekNumber,
+          miniCycleNumber: coveringWeek.miniCycleNumber,
+          exposureContractV2: {
+            ...targetMicrocycle.exposureContractV2,
+            identity: {
+              ...targetMicrocycle.exposureContractV2.identity,
+              globalWeek: coveringWeek.weekNumber,
+              weekInBlock: ((Math.max(1, coveringWeek.weekNumber) - 1) % 4) + 1,
+              blockNumber: coveringWeek.miniCycleNumber,
+            },
+          },
+        };
+      }
     } catch (error) {
       if (!(error instanceof Section18WeekAcceptanceError)) throw error;
       // The rolling repair owner, not target generation, decides whether the
