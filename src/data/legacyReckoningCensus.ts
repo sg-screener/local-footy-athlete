@@ -601,10 +601,33 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'in the dead-affordance inventory.',
     size: 'M',
     status: 'scheduled',
+    sequence: 'RE-MEASURED 2026-08-06 during the R5.3 pre-deletion measurement, and the '
+      + 'founding line numbers are STALE in a way that matters. Live sites passing '
+      + '`skipConstraintProjection: true`: temporarySourceFactTransaction.ts:630,925 '
+      + '(the two the founding counted, moved), profileProgramTransaction.ts:393, and '
+      + 'dev/e2e/defaultDevE2ESeedCoordinator.ts:288 — FOUR, double the founding two, '
+      + 'and the third is in a SECOND DOOR the founding sweep never named. The flag '
+      + 'itself is a field of the accepted-state proposal '
+      + '(acceptedStateTransaction.ts:213, consumed at :724). '
+      + 'RE-ASSIGNED: docs/R5_DELETION_SEQUENCE_2026-08-06.md §3 listed this unit under '
+      + 'R5.4 (the hydration category), which has no relationship to it. What pays it is '
+      + 'the switchover at the FACT DOOR plus the accepted-state layer\'s deletion — '
+      + 'R5.6. The re-cut records this.',
     detector: null,
-    whyNotDetectable: 'Two call sites of a boolean. A count of two that can only ever be '
-      + 'two or zero is a checklist item, not a ratchet — and the fix is a behaviour '
-      + 'change (rebuild, or stop recording), not a deletion.',
+    whyNotDetectable: 'REFUTED BY MEASUREMENT 2026-08-06, and left standing as the reason '
+      + 'a detector is now owed. The original argument was: "Two call sites of a boolean. '
+      + 'A count of two that can only ever be two or zero is a checklist item, not a '
+      + 'ratchet — and the fix is a behaviour change (rebuild, or stop recording), not a '
+      + 'deletion." The count was never two-or-zero: it is FOUR, it grew into a door the '
+      + 'entry does not mention, and nothing was watching. That is the '
+      + 'one-predicate-grows-uncounted-copies shape. '
+      + 'THE DETECTOR IS FILED, NOT ADDED, and the reason is DIRECTION 4: a detector here '
+      + 'declares 4 against a per-unit ceiling of 0 and raises both LEGACY_DEBT_BASELINE '
+      + '(73 -> 77) and LEGACY_DEBT_FOUNDING_BASELINE (116 -> 118). Direction 4 says '
+      + 'raising the founding baseline is A RULING, NOT AN EDIT, precisely so a builder '
+      + 'cannot manufacture the headroom it needs. So this seat measured it, named the '
+      + 'sweep that missed it (the 2026-07-30 founding sweep, same blind spot as LR-27 '
+      + 'and LR-30), and leaves the raise to Sam rather than taking it.',
   },
   {
     id: 'LR-9',

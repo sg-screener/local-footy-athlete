@@ -143,9 +143,145 @@ projections are deleted. Retires LR-13 with its ceiling drop.
 mirrors. Empties `workBillTests.DECLARED_MIRROR_BILL` (six stores) — rule 2
 of that suite forces it. Retires LR-4, LR-26, LR-30.
 
+> **R5.3 IS RE-CUT (2026-08-06), per §5's own clause, and the re-cut moves the
+> SLICE BOUNDARY rather than this batch's contents.** Measured before deleting,
+> as R5.2 was. Six corrections, and the first one governs the rest.
+>
+> **(a) R5.1 IS ONE DOOR OF N, so R5.3's precondition does not hold.**
+> `settleDerivedWorldAfterDecision` has exactly ONE caller in the entire tree:
+> `injuryEpisodeTransaction.ts:622`. The fixture door still publishes a
+> materialised replan (`fixtureMutationTransaction.ts:370`,
+> `rebuildLocalWeek({ scope: 'weekOverlay' })`) and still appends at `:804`.
+> `fixture-identity-3` is STILL RED and still measures exactly this — run on
+> this tree it reports the published week disagreeing with derivation on 3 of 7
+> days (Monday's session identity and size, two team-night pairings). R5.1's own
+> commit (`cdb78b48`) is honest about it: it deleted `fact-door-inputs` cell 3
+> and did NOT delete `fixture-identity-3`. §3's R5.1 line claims both cells are
+> paid in the greening commit; **one was.** Every deletion in R5.3–R5.6 rests on
+> "derive() has no rivals", and derive() has rivals at every door but one.
+>
+> **(b) The remaining doors are NOT the injury door's 14-line wrap.** The injury
+> fact is one of the six PERSISTED keys, so regeneration reads it back as an
+> input and settling is free. The fixture decision is not persisted — it lives in
+> the LEDGER, and replay interprets it by calling
+> `executeFixtureMutationInMemory` (`quiescentBoot.ts:174`), which is the replan
+> engine. So settling a fixture decision re-publishes the overlay through the
+> very engine the switchover exists to retire, and cell 3 would still red. The
+> door also derives its own control flow from the replan's product —
+> `executeCandidate` returns `no_change` when `result.reversibleAdjustmentId` is
+> absent — so its outcome semantics move with it. This is a UNIT, not a wrap, and
+> it is what the rest of R5 is blocked behind.
+>
+> **(c) LR-4 cannot retire here.** Live count 71 across 34 files, equal to its
+> declared 71 (detector re-run on this tree). R5.3's whole surface holds **15**:
+> `acceptedStateTransaction` 13, `coachMutationTransaction` 2. The other 56 are
+> the coach pipeline under LR-6's STOP (`coachTurnController` 6,
+> `planChangeProducer` 6, `coachCommandExecutor` 2, `coachRevisionTemplateContext`
+> 1, `resetCoach` 1), the R5.2 device-pass rival (`useSchedule` 5), R5.5/R5.6 door
+> bodies (`reversibleAdjustmentTransaction` 3, `temporarySourceFactTransaction` 3,
+> `fixtureMutationTransaction` 2, `profileProgramTransaction` 2), and ~13 in
+> onboarding and home screens that no R5 batch names at all. LR-4 is a
+> CROSS-SLICE unit; no single batch retires it and its ceiling does not drop here.
+>
+> **(d) LR-26 cannot retire here, and its own census entry says who does.**
+> The record TYPE lives in `rules/reversibleAdjustmentLedger.ts` and the restore
+> path that reads the before side in full is
+> `reversibleAdjustmentTransaction.ts` — both **R5.5**. R5.3 would delete two
+> writer sites (`acceptedStateTransaction.ts:1332,1562`) and leave the type, the
+> reader and the restore machinery standing until R5.5: a writer deleted while
+> its reader lives is R5's own named failure mode. The before side also has 63
+> reads in `coachCommandExecutor` and 16 in `coachProgramEdit` — LR-6's STOP, the
+> same wall R5.2's projection trio hit. The entry states outright that the before
+> side "becomes derivable, and deletes, when undo is rebuilt as
+> replay-from-decisions: that is LR-29." **LR-26 retires in R5.5 with LR-29.**
+>
+> **(e) LR-30 cannot retire here.** Its named surviving owner is the
+> GENERATION-time writer, and the measurement agrees: `exposureContract` refs are
+> `postGenerationConstraintValidation` 62, `programStore` 57, `generateProgram`
+> 17, and `acceptedStateTransaction` only 11. `assertEffectiveMicrocycleExposure`
+> is defined in `postGenerationConstraintValidation.ts:688`. None of the bulk is
+> in R5.3's surface. LR-30 is a generation-contract cut and needs its own batch.
+>
+> **(f) LR-8 IS MIS-ASSIGNED TO R5.4, and its founding count is STALE.** LR-8 is
+> `skipConstraintProjection` — the fact door recording a fact that changes
+> nothing — which has no relationship to the hydration category R5.4 deletes.
+> Its founding names two call sites in `temporarySourceFactTransaction.ts`; there
+> are now **three** product sites: `temporarySourceFactTransaction.ts:630,925`
+> and `profileProgramTransaction.ts:393`. The third is an UNCOUNTED COPY of the
+> declared shape, found by this measurement and corrected in the census in the
+> same commit. And the flag is a field of the accepted-state proposal
+> (`acceptedStateTransaction.ts:213`, consumed at `:724`), so what actually pays
+> LR-8 is the switchover at the fact door plus this layer's deletion — **R5.6,
+> not R5.4.**
+>
+> **R5.4 is also not the clean cut it reads as.** `programStore` uses six live
+> symbols from the two hydration modules (`dropRetiredWeekOverlaysAtHydration`,
+> `requireProgramHydrationIngress`, `ProgramHydrationIngressError`,
+> `PROGRAM_STORE_PERSISTENCE_VERSION`, `projectHydratedStateDerivedFields`,
+> `projectAcceptedMaterialContextDerivedFields`). This is the SAME finding §2
+> already ruled for `appHydrationGate`, arrived at from the other end: **the
+> migration is the dead category, the ingress classifier and the hydration
+> projection are live readers.** R5.4 is a migration-half cut, not a file cut.
+>
+> **(g) WHAT THE SWITCHOVER IS WORTH, MEASURED — and it is an athlete-visible
+> defect, not a tidiness argument.** A scratch probe drove the DURABLE fixture
+> door (`executeFixtureMutationTransaction`, the one that appends) on the rest-
+> Saturday world, then relaunched, then dropped only the published output.
+> Three things came out of it:
+>
+> 1. **One fixture decision has THREE durable representations.** The persisted
+>    life-fact (`calendarStore.partialize` writes `markedDays`), the ledger entry
+>    (`fixture_add`), and the published overlay (`weekScopedOverlays['2026-08-10']`
+>    — keyed by week START, so it is the whole week).
+> 2. **Post-tap and post-relaunch AGREE, 0 of 7 days.** So the two engines do not
+>    disagree ACROSS A RELAUNCH at this door, and the R5 §1 framing ("the week
+>    after a tap is built by a different engine than the week after a relaunch")
+>    is not what cell 3 measures here — replay re-runs the replan
+>    (`executeFixtureMutationInMemory`) and REPUBLISHES the same overlay. The
+>    published week always wins; the resolve never gets to be the answer.
+> 3. **The replan and the resolve disagree 3 of 7, and the RESOLVE IS RIGHT.**
+>    Against the pre-decision week: the pure resolve changes **2 of 7** days —
+>    exactly the two the decision touches (Friday `Lower Hinge|7 -> Gunshow|6`,
+>    the G-1 demotion; Saturday `REST -> Game Day`). The published replan changes
+>    **5 of 7**, and the extra three are days the athlete never touched:
+>
+>    | Day | published replan | pure resolve |
+>    |---|---|---|
+>    | Mon 2026-08-10 | `Lower Body Strength` **4 exercises** | `Lower Squat` **8 exercises** |
+>    | Tue 2026-08-11 | `Team Training + Upper Push` | `Team Training + Upper Pull` |
+>    | Thu 2026-08-13 | `Team Training + Upper Pull` | `Team Training + Upper Push` |
+>
+>    So adding a Saturday practice match today costs the athlete **half their
+>    Monday session** (eight exercises down to four) and **swaps both team-night
+>    pairings**, for no reason either week can justify. The resolve keeps them and
+>    still delivers the Game Day and the G-1 demotion. This is what
+>    `fixture-identity-3` has been declaring since 2026-08-05, priced.
+>
+> **THE ONE THING THE PROBE DID NOT MEASURE, and it is the unit's real risk.**
+> This world had NO other athlete decisions in the week. §2's own header says the
+> overlay is how a fixture change CONSERVES the athlete's other decisions (an
+> added session, a swapped template) and cannot tell them apart from the previous
+> fixture's repair product. So the switchover at this door is not "delete the
+> publish": it must show that the other decisions survive the resolve, which
+> means they must be carried by the ledger and `dateOverrides` rather than by the
+> overlay. **A probe world with a fixture change ON TOP OF another decision is
+> the entry gate for the unit, and it is not built yet.** Deleting the publish
+> before that is measured would be trading a known 3-day defect for an unknown
+> conservation loss.
+>
+> **THE RE-SEQUENCE.** The switchover is not batch 1 of 8; it is batches 1..k,
+> one per door, and it must finish before any deletion. Nothing in R5.3–R5.6 is
+> payable until it does. What that makes the next unit: **finish the switchover
+> at the fixture door**, which is what `fixture-identity-3` has been waiting for
+> since 2026-08-05 and the only declared red in R5 still measuring the two
+> engines. R5.7 (the coach scope cut) and R5.8 (the structural sweep) are
+> independent of the switchover and stay payable in place.
+
 **R5.4 — the hydration category.** `programHydrationIngress`,
 `programHydrationProjection`, `acceptedStateColdStart`'s migration half,
-`appHydrationGate`'s migration path. Retires LR-8.
+`appHydrationGate`'s migration path. Retires LR-8 — **NO: see the R5.3 re-cut
+(f). LR-8 is the fact door's flag and is paid in R5.6. R5.4 retires nothing
+until a census entry is filed for the hydration migration itself.**
 
 **R5.5 — reversal by decision.** `reversibleAdjustmentTransaction` and the
 stored before-state. Retires LR-28, LR-29.
