@@ -5,6 +5,71 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (twelfth pass) — SOURCE TAPE + harness compression
+
+- Answered in docs/R53_SOURCE_TAPE_ZERO_READERS_2026-08-07.md; instruments
+  at `4b846988` on scratch/r53-pricing-7-probe. NOTHING BUILT.
+- **(a) ZERO READERS, and the flag still decides.** A recording getter on
+  `SCAFFOLD.legII` (plus a module-load line for the env read) finds ALL
+  readers by construction. In `fact-horizon`: flags off 14/0; `LEG_II=1`
+  **12/2**; `LEG_II=1` WITH the getter installed **12/2** — and
+  **0 property reads in every arm**, only the module-load line.
+  **Controls:** `LEG_II=0` → 14/0 and an unrelated env var → 14/0, so it is
+  specifically the VALUE `'1'`, not the variable's presence and not any env
+  change. Repo-wide the var appears in exactly ONE place, and there is NO
+  dynamic env access in `src`.
+- **Branch of your decision tree: "zero hits both arms."** Stated precisely
+  rather than glossed — the value demonstrably DOES decide the outcome, so
+  the finding is the sharper **"the value decides without any reader
+  consuming it."** Both readings point at the step you already named:
+  **diff the two arms' module-load lists + compiled-artifact state.**
+  **Fourth-sighting watch.** No mechanism named — three hypotheses died in
+  this unit by being plausible and unexecuted.
+- **(b) HARNESS-LIES COMPRESSION SHIPPED** — `scripts/sweep.sh`. cwd/HEAD/
+  symbol-in-source are a MANDATORY PREAMBLE inside the runner, printed
+  before any suite runs, exiting non-zero WITHOUT measuring if unmet.
+  Proven both ways: from the branch it ABORTS (exit 3) naming the
+  2026-08-07 lie; from the scaffold it prints `SWEEP WORLD: … head=f91ea404
+  files_with_symbol=1` and proceeds. Suite list read from the bible chain
+  itself so it cannot drift.
+- **(c) ACCEPTED:** per-leg prices don't add; (iii)+(iv) mask two of leg
+  (ii)'s seven; the five-vs-seven correction stands. Ordering arguments cite
+  measured COMBINATIONS only.
+- **NOT covered:** no root cause (deliberately not guessed); the
+  module-load/artifact diff NOT run; only `fact-horizon` taped; masking
+  mechanism uninvestigated.
+
+## Processed 2026-08-07 (twelfth pass) — the order as the seat wrote it
+
+- LOOP CHECK: flag-changes-outcome-with-zero-gate-executions —
+   sighting 1 of this shape, but it is the enumerate-readers-and-miss
+   class, and harness-lies is at sighting 3 — COMPRESS both. RULED on
+   the 58c40414 STOP:
+   (a) Instrument the SOURCE, not the enumerated readers: make
+   SCAFFOLD.legII (and the env read that feeds it) a recording getter
+   — every access logged with stack, including module-load-time
+   captures, in the fact-horizon suite, both arms. Grep found four
+   readers; the getter finds ALL readers by construction, or proves
+   there are none. One run, then:
+   - hits found -> the hidden reader is the mechanism candidate; tape
+     it executing before attributing (executes-on-path law).
+   - zero hits both arms -> the flag's VALUE is not the cause; the
+     difference is environmental (world identity), and the next diff
+     is the two arms' module-load lists + compiled-artifact state —
+     harness territory, fourth-sighting watch.
+   (b) Harness-lies compression (sighting 3): the cwd/HEAD/
+   flag-in-source assertions move INTO the sweep runner as a
+   mandatory preamble — no measurement counts without its world-
+   identity line printed. Same class as gate.sh's exit line: trust
+   only printed evidence.
+   (c) The interaction finding is ACCEPTED as law for this unit:
+   per-leg prices don't add; every ordering/build argument cites
+   MEASURED COMBINATIONS only. The five-vs-seven correction stands
+   recorded.
+   (d) Nothing lands; parity gate and all standing conditions
+   unchanged; worst-first stands (fact-horizon before the other
+   six). Sam holds a veto.
+
 ## Processed 2026-08-07 (eleventh pass) — SWEEP: leg (ii) priced ALONE + taped
 
 - Answered in docs/R53_LEG_II_ALONE_PRICED_AND_TAPED_2026-08-07.md.

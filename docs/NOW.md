@@ -4,26 +4,28 @@
   feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7
   (`f91ea404`) holds legs (iv)/(v), the ported seed fix and this pass's
   probes; -6, -5, -5-before preserved.
-- **Current unit:** the seat's sweep order — price leg (ii) ALONE + diagnose
-  by tape. **Both done; STOP with the question open.** See
-  docs/R53_LEG_II_ALONE_PRICED_AND_TAPED_2026-08-07.md. NOTHING BUILT.
-- **LEG (ii) ALONE COSTS SEVEN, not five.** 154 suites, sets: control 6;
-  (iii)+(iv)+basis 6 (**0 new**); **(ii) alone 13 (7 new)**;
-  (ii)+(iii)+(iv) 11 (5 new).
-- **(iii)+(iv) MASK two of leg (ii)'s reds** (`device-pass-...-evening`,
-  `session-list-combinations`). **The legs INTERACT — per-leg prices do not
-  add**, so the earlier "5" was residue. Order arguments must use measured
-  COMBINATIONS.
-- **THE TAPE: leg (ii)'s gates never execute in `fact-horizon`.** Failure
-  is deterministic (14/0 vs 12/2, twice each way), yet all FOUR
-  `SCAFFOLD.legII` read sites record **ZERO** hits there. Instrument proven
-  sound — same tape fires 1205/1205/532 in the deletion suite.
-- **Open question (untested, deliberately):** module-init/import-order
-  effect of evaluating `SCAFFOLD`, a fifth reader grep misses, or a value
-  captured at load. Nothing named until measured.
-- **Harness lie caught:** the first (ii)-alone run measured the BRANCH
-  (worktree add refused a duplicate branch checkout, `cd` failed silently)
-  and reported a clean 1. Reruns now assert cwd/HEAD/flag first.
+- **Current unit:** the seat's source-tape order. **Both halves done; STOP
+  at the fourth-sighting watch.** See
+  docs/R53_SOURCE_TAPE_ZERO_READERS_2026-08-07.md; instruments at
+  `4b846988` on scratch/r53-pricing-7-probe. NOTHING BUILT.
+- **ZERO READERS, and the flag still decides.** Recording getter on
+  `SCAFFOLD.legII` + module-load tape: `fact-horizon` flags off 14/0,
+  `LEG_II=1` **12/2**, same 12/2 WITH the getter installed, and **0
+  property reads in every arm**. Controls: `LEG_II=0` → 14/0, unrelated env
+  var → 14/0 — so it is the VALUE `'1'` specifically. One env reader
+  repo-wide; no dynamic env access in `src`.
+- **This is your "zero hits both arms" branch**, stated precisely: the value
+  DOES decide the outcome, so the finding is **"the value decides without
+  any reader consuming it."** Next step (yours, already named): diff the two
+  arms' **module-load lists + compiled-artifact state**. Harness territory,
+  **fourth-sighting watch**. No mechanism named — unexecuted hypotheses are
+  worth nothing here.
+- **HARNESS COMPRESSION SHIPPED:** `scripts/sweep.sh` — cwd/HEAD/symbol
+  preamble is mandatory, printed, and aborts non-zero without measuring.
+  Proven both ways (branch → ABORT exit 3 naming the 2026-08-07 lie;
+  scaffold → prints world, proceeds).
+- **Accepted as unit law:** per-leg prices don't add; (iii)+(iv) mask two of
+  leg (ii)'s seven; ordering arguments cite measured COMBINATIONS only.
 - **Parked:** condition 1's re-measure (the premise it waited on changed);
   leg (v) re-price; cell 22's 2nd assertion (leg (i) not landed); cell 23
   undiagnosed; parallel-gate stage 1 items 2–4; the other 53 declared
