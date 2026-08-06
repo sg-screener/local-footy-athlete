@@ -5,6 +5,60 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (eighth pass) — THE TAPE
+
+- Answered in docs/R53_TAPE_DROP_HOP_NAMED_2026-08-07.md; tape at
+  `f91ea404` on scratch/r53-pricing-7 (`LFA_TAPE`, inert by default).
+  NOTHING BUILT. Sam's sweep-not-serial method was applied as ordered.
+- **THE TAPES DISAGREE ON PAYLOAD AT EXACTLY ONE HOP.** Sequence identical
+  to index 10; payload empty in BOTH worlds through publication and
+  staging (the deliberate `workoutsByDate: {}`), then:
+  `H8.rev:store-after-accepted-commit` = **2/2 flags-off vs 0/0 leg (v)**.
+  The payload is materialised INSIDE `commitAcceptedStateTransaction`.
+  Staging does not fill it (H7 identical), ruling out
+  `stageReversibleAdjustmentCreationTransaction`.
+- **The discriminator is the published declaration.** The only proposal
+  difference between worlds is `exposureContractV2` on the proposed
+  overlay. Both worlds END with a contract in the store (v2=T at H8 either
+  way — the transaction mints/repairs one regardless); only the world
+  whose PROPOSED overlay carried it gets its PAYLOAD materialised.
+  `LFA_LEGV_SCOPE=both` reproduces the same hop and the same 0/0.
+- **Five suspects settled in the one run:**
+  `buildWeekScopedWorkoutOverlay` builds identically in both worlds (H1);
+  staged rolling-horizon projections byte-identical (H5); no colliding
+  `additionalOverlays`; `commitWeekScopedOverlay` replaces wholesale;
+  `validateLiveWeekOverlayWrite` never executes.
+- **STOP CONDITION MET, hop named.** The drop is inside
+  `commitAcceptedStateTransaction` — the signed accept-and-reduce owner
+  (`forward_decision`/`restoration`). Per the order's own terms that is
+  signed behaviour, so this is the STOP, not a narrowing to build against.
+  Which LINE inside it materialises the payload was deliberately NOT
+  narrowed.
+- **For the seat:** the freed day's content is materialised by the signed
+  commit BECAUSE the publication declares a contract. Retiring the
+  declaration removes content the commit would otherwise materialise —
+  and that is a WRITE-time materialisation, which leg (iii) does not
+  obviously supply, since leg (iii) changes READ-time derivation.
+  Condition 1's re-measure stays parked; build-order question is yours.
+
+## Processed 2026-08-07 (eighth pass) — the order as the seat wrote it
+
+- SEAT ORDER, UPGRADED per Sam's method call (2026-08-07, his third
+   sweep-not-serial instinct — matrix law, batch law, now this):
+   STOP hypothesis-at-a-time. ONE instrumented run, BOTH worlds:
+   tape EVERY write and transform that touches the freed week's
+   workoutsByDate across the whole commit path — build, publication,
+   republish, staging, commit — with stack + payload size at each
+   hop, flags-off vs leg (v), then DIFF the two tapes. The first hop
+   where the tapes disagree is the answer; every suspect is tested
+   in the same run, ranked by the diff instead of by guesses. The
+   executes-on-path law is satisfied by construction (the tape IS
+   execution). Attribution only; nothing built; STOP conditions
+   unchanged; condition 1's re-measure stays parked; build-order
+   question waits for the diff. Cell-19 retirement (1eb65683)
+   ACCEPTED. If the tape shows the drop inside a decision payload or
+   signed behaviour, STOP with the hop named.
+
 ## Processed 2026-08-07 (seventh pass) — SEAT CORRECTION on answer 3
 
 - Ruling committed as authored (`a375b49f`). Answered in
@@ -209,3 +263,10 @@
 ## Standing
 - Update docs/NOW.md at every checkpoint. Answer inbox items in
   boundary reports.
+- FORMAT LAW (2026-08-07, Sam-forced after the seat ignored its own
+  sweep rule): every seat order and every boundary report OPENS with
+  one line — "LOOP CHECK: <shape of this work> — sighting N — iterate
+  or compress". An order or report without that line is malformed and
+  gets sent back, by either side. Sighting 2 of any shape = the
+  compression is ordered, not the iteration. This line exists because
+  reminders don't execute; a required field does.

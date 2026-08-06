@@ -150,3 +150,14 @@ seat writes the SHORT tap list (plain, expected sights, Release build).
 
 Usage practice Sam ruled: fresh Cowork sessions at natural boundaries,
 text over screenshots, the check/check-inbox two-word flow.
+
+## §6 FORMAT LAW 2026-08-07 (Sam-forced; binding on every future seat)
+
+The seat repeatedly wrote post-failure reminders and then failed the
+same way (serial probes ordered AFTER the sweep rule existed — third
+sighting of write-the-rule-then-ignore-it). Reminders don't execute.
+The fix is structural: every seat order and boundary report OPENS with
+"LOOP CHECK: <shape> — sighting N — iterate or compress" (see
+SEAT_INBOX Standing). No line, no valid order. Sighting 2 = compress.
+If you are a future seat reading this: the line is not ceremony, it is
+the thinking Sam paid for, made mandatory.
