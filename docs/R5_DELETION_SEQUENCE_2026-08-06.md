@@ -100,6 +100,44 @@ callers.
 rival (`useScheduleState`), the debug panel's third copy, and the surplus
 projections are deleted. Retires LR-13 with its ceiling drop.
 
+> **R5.2 IS RE-CUT (2026-08-06), per §5's own clause.** The batch was measured
+> before deletion and it does not hold as written. Three corrections:
+>
+> **(a) The owner was WRONG where the rival was RIGHT, and that is now fixed.**
+> `assembleScheduleState` read `onboardingData?.seasonPhase` directly;
+> `useScheduleState` resolves it through `ownSeasonPhase` — the CLOCK — and its
+> own comment records the incident that caused the change ("a failed phase-shift
+> rebuild left the visible week built from one and labelled by the other",
+> phase-ownership collapse `46fe2df`). Deleting the rival first would have
+> deleted the only correct copy of a paid ruling. It matters more in the owner
+> than it did in the rival: since **R5.1 this is the boot authority**
+> (`quiescentBoot:154` → `buildScheduleStateImperative` → here), so a skewed
+> world derived its week under the profile's answer on every relaunch. Gate
+> written first and RED on HEAD (L11); now green, `test:bible` `TRUE_EXIT=0`,
+> differential golden byte-identical.
+>
+> **(b) `buildScheduleStateImperative` is NOT a rival and must not be deleted.**
+> It already delegates (`coachWeekDiff:127` → `assembleScheduleState(
+> gatherDeriveInputs())`), and `derivedWeekOwnershipTests` fails the build if it
+> stops. It has 23 product referrers. §2 listed it under "LR-13's rivals"; that
+> is a census note, not a deletion target.
+>
+> **(c) The projection trio is NOT payable in R5.2.**
+> `visibleProgramReadModel` (23 product referrers) and `visibleProgramProjection`
+> sit inside `coachCommandExecutor` / `coachTurnController` / `coachProgramEdit`
+> — **the coach pipeline, under LR-6's standing STOP**, which §4 says holds.
+> `modalityPreferences` is the same story: it is not on `ScheduleState` at all
+> and never reaches the resolver; it feeds `visibleProgramProjection`, so it is
+> projection-path work, not an assembly gap. LR-13 therefore CANNOT be retired
+> by this batch and its ceiling does not drop here.
+>
+> **What remains of R5.2:** retiring the reactive rival itself. It is a private
+> assembly behind six exported hooks, so it is a delegation, not a file
+> deletion — and this repo has **no mounted-render test** (the suite says so in
+> its own header), so the reactivity it exists for cannot be verified by
+> execution here. That makes it a **device-pass item**, and it is carried to
+> Sam's combined pass rather than landed blind.
+
 **R5.3 — the accepted-state layer.** `acceptedStateTransaction`,
 `coachMutationTransaction`'s envelope, `acceptedMaterialContext` and the
 mirrors. Empties `workBillTests.DECLARED_MIRROR_BILL` (six stores) — rule 2

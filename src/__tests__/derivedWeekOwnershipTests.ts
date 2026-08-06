@@ -48,7 +48,9 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import {
+  assembleScheduleState,
   deriveVisibleWeek,
   gatherDeriveInputs,
 } from '../utils/deriveVisibleWeek';
@@ -238,6 +240,56 @@ run('deriveVisibleWeek is the resolver over the one assembly', () => {
     quiet(() => resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())));
   assert(derived === legacyPath,
     'the derive owner and the adapter pipeline disagree on the same world');
+});
+
+// ── R5.2 PRECONDITION. The rival cannot die while it knows something the
+// owner does not, and it does: SEASON PHASE.
+//
+// `useScheduleState` resolves it through `ownSeasonPhase` (the CLOCK), and its
+// own comment records why — "this used to read `onboardingData.seasonPhase`
+// directly while the home chrome read the program's clock — two answers, and a
+// failed phase-shift rebuild left the visible week built from one and labelled
+// by the other". That is the phase-ownership collapse, closed at `46fe2df`.
+//
+// `assembleScheduleState` reads `onboardingData?.seasonPhase` directly. It is
+// the SAME defect, in the module that R5.1 just made the boot authority:
+// `quiescentBoot:154` calls `buildScheduleStateImperative`, which delegates
+// here. So a world whose clock and profile selection disagree derives its week
+// under the profile's answer on every relaunch.
+//
+// This cell is written BEFORE the deletion and must RED on HEAD (Process Law
+// L11). Deleting the rival first would have deleted the only correct copy.
+run('the derive owner resolves season phase from the CLOCK, not the profile selection', () => {
+  // Driven through the assembly's OWN CONTRACT — explicit inputs — for the same
+  // reason the cell above uses: `assembleScheduleState` answers to its
+  // arguments, so the divergence is constructed there rather than fought
+  // through the profile mirror. (Measured: ProfileStore is a read mirror of the
+  // authoritative accepted snapshot and narrows straight back, so a store-level
+  // fixture cannot hold the two answers apart at all — it goes green without
+  // ever building the coordinates. This drives the function instead.)
+  const inputs = gatherDeriveInputs(TODAY);
+  const program = inputs.currentProgram as TrainingProgram | null;
+  const owned = ownSeasonPhase({ program, profile: inputs.onboardingData as never }).phase;
+  const divergent = owned === 'In-season' ? 'Off-season' : 'In-season';
+  const skewed = {
+    ...inputs,
+    onboardingData: { ...(inputs.onboardingData as never as object), seasonPhase: divergent },
+  } as never;
+  const clockNow = ownSeasonPhase({
+    program,
+    profile: (skewed as { onboardingData?: unknown }).onboardingData as never,
+  }).phase;
+  assert(clockNow === owned && clockNow !== divergent,
+    `the fixture failed to diverge: the phase owner answered "${clockNow}" for a profile `
+    + `selection of "${divergent}", so this world cannot tell the two owners apart`);
+  const assembled = assembleScheduleState(skewed);
+  assert(assembled.seasonPhase === clockNow,
+    `the derive owner answered season phase "${assembled.seasonPhase}" from the profile `
+    + `selection while the phase owner says "${clockNow}". The clock owns season phase `
+    + '(phase-ownership collapse, 46fe2df) and this assembly reads onboardingData.seasonPhase '
+    + 'directly — and since R5.1 it is the boot authority (quiescentBoot:154 -> '
+    + 'buildScheduleStateImperative -> here), so a skewed world derives every relaunch '
+    + 'under the profile answer.');
 });
 
 console.log(`\nDerived week ownership totals: ${passed} passed, ${failed} failed`);

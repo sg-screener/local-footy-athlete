@@ -34,6 +34,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { todayISOLocal as getTodayISOLocal } from './appDate';
 import { profileCapacityBandOrNull } from './readiness';
+import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
@@ -172,7 +173,21 @@ export function assembleScheduleState(
       ? acceptedContext.markedDays
       : (inputs.markedDays as never) || {},
     athleteContext,
-    seasonPhase: onboardingData?.seasonPhase || null,
+    // THE CLOCK OWNS SEASON PHASE (phase-ownership collapse, `46fe2df`), and
+    // this assembly used to read the profile selection directly — the exact
+    // defect that ruling closed. The declared rival already resolved it through
+    // the owner and recorded why: "a failed phase-shift rebuild left the visible
+    // week built from one and labelled by the other."
+    //
+    // R5.2 found it while measuring what the rival knows that the owner does
+    // not, and it is the reason the rival could not simply be deleted. It
+    // matters more here than it did there: since R5.1 this is the BOOT
+    // authority (`quiescentBoot` -> `buildScheduleStateImperative` -> here), so
+    // a skewed world derived every relaunch under the profile's answer.
+    seasonPhase: ownSeasonPhase({
+      program: inputs.currentProgram as never,
+      profile: onboardingData as never,
+    }).phase,
     usualGameDay: onboardingData?.usualGameDay,
     gameDay: onboardingData?.gameDay,
     readiness,
