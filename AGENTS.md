@@ -363,3 +363,17 @@ Practical consequences:
   `git merge-base --is-ancestor <branch> main` and `git log main..<branch>`.
 - A branch fully contained in `main` should be deleted rather than left as a
   pointer someone can build on.
+
+## Seat coordination laws (Sam, 2026-08-07)
+
+- **SEAT INBOX:** when this terminal stops for a review-seat ruling, read
+  `docs/SEAT_INBOX.md` FIRST — the review seat writes rulings there
+  before Sam relays anything. A one-line nudge from Sam ("check inbox")
+  means exactly that. This retires Sam as the courier of paste blocks.
+- **NOW FILE:** every checkpoint/handover updates `docs/NOW.md` — branch,
+  HEAD, current unit, next step, open rulings; five lines, overwrite in
+  place (it is a pointer, not history — history lives in the dated
+  docs). Every fresh session reads it before anything else.
+- **LOOP-AUDIT LAW:** docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md binds this
+  seat — third sighting of any repeated ruling-shape, round-trip, toll
+  or rediscovery = propose the compression, never a fourth silent run.
