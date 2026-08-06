@@ -22,15 +22,25 @@
   game day is REFUSED with "It's game day — sessions can't be changed or
   added here", visible week unchanged; the non-anchor control applies
   fine. The overwrite exists only in the manufactured contradiction.
-- **Next:** SAM'S LEAD (inbox item 3) on the freed-day producer — the
-  fixture-release pathway that implements "a removed game can be replaced
-  by hard conditioning" (`fixtureConditionedAvailability.ts`
-  releasedFixtures + `bye_usual_game_day`, consumer
-  `fixtureMinimalReplan.ts:249`). Check BEFORE the
-  `commitWeekScopedOverlay` overlay-merge probe.
+- **SAM'S LEAD ANSWERED — the freed day's producer is NAMED** (`a7b49764`,
+  docs/R53_FREED_DAY_PRODUCER_NAMED_2026-08-07.md, nothing built). The
+  release pathway is INNOCENT (52 vs 46 distinct records, **0 present only
+  in leg (v)** — a strict subset). The producer is the published overlay's
+  **`workoutsByDate`**: the overlay is published in BOTH worlds (hence the
+  earlier `contractSource: overlay` confusion), but leg (v) empties its
+  payload — flags-off `2026-07-18:Hard Conditioning`, leg (v) `[]`, and the
+  accepted week drops 6 sessions to 5. The 16 deletion failures are FIXTURE
+  debt: all run through `seedExactSundayRegression`, which borrows that
+  session as a TEMPLATE for days it then overwrites.
+- **Next:** clause (c)'s `commitWeekScopedOverlay` merge probe, now
+  COLLAPSED into the payload question — probe as one question, not two.
+  Then parallel-gate stage 1 items 2–4.
 - **Open for the seat:** withdraw or re-aim clause (a)(2); the FORM of the
   witness fix (`seed()` through the one-door law, not the probe's poke);
-  re-run condition 1's pricing now the cell-19 blocker is gone.
+  re-run condition 1's pricing now the cell-19 blocker is gone; **and is
+  leg (v) meant to retire the overlay's workout PAYLOAD or only the
+  `exposureContractV2` declaration?** That one answer re-prices leg (v) —
+  until it is settled, deletion 24/24→16/24 is not leg (v)'s real cost.
 - **Named not fixed:** the one-door narrowing gate does not scan test
   sources, so `athleteSessionMoveTests.ts:146` assigns `onboardingData`
   directly and the gate stays green.

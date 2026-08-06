@@ -2,7 +2,40 @@
 
 ## Unprocessed (newest first)
 
-1. SAM'S LEAD on the freed-day producer (2026-08-07, coaching knowledge,
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (fifth pass) — SAM'S LEAD
+
+- Answered in docs/R53_FREED_DAY_PRODUCER_NAMED_2026-08-07.md; probe at
+  `a7b49764` on scratch/r53-pricing-7. NOTHING BUILT.
+  **The lead was right about the law and narrowed the search correctly,
+  and the producer is ONE HOP downstream of the pathway it named.**
+  The release pathway is INNOCENT: distinct release records are 52
+  flags-off vs 46 leg (v), with **0 present only in leg (v)** — a strict
+  subset (leg (v) fails earlier, so raw counts would have lied). Every
+  record agrees: `byeUsualGameDay: true`, `releasedFixtures:
+  ["2026-07-18:game:bye_usual_game_day"]`, capacity 6.
+  THE PRODUCER: the published overlay's **`workoutsByDate`**. The overlay
+  is still PUBLISHED in both worlds — which is why the earlier probe saw
+  `contractSource: overlay` on both sides and could not attribute the
+  difference; the premise that leg (v) removes the overlay was wrong.
+  Flags-off it carries `2026-07-18:Hard Conditioning`; under leg (v) it is
+  `[]` and the accepted week drops from 6 sessions to 5.
+  AND the 16 deletion failures are FIXTURE debt: all run through
+  `seedExactSundayRegression`, which reads that Hard Conditioning purely
+  as a TEMPLATE to clone into days it then OVERWRITES — depending on the
+  very fill Sam ruled a bug on 2026-08-06.
+  **Back to the seat:** (i) is leg (v) meant to retire the overlay's
+  workout PAYLOAD or only the `exposureContractV2` declaration? That one
+  answer re-prices leg (v). (ii) If only the declaration, the emptying is
+  a scaffold defect and leg (v)'s refutation was priced against it.
+  (iii) `seedExactSundayRegression` needs its own fixture-fidelity fix.
+  Clause (c)'s `commitWeekScopedOverlay` probe COLLAPSES into this, as the
+  lead anticipated — probe it as one question, not two.
+
+- The lead as the seat wrote it, kept verbatim for the record:
+   SAM'S LEAD on the freed-day producer (2026-08-07, coaching knowledge,
    check FIRST before the commitWeekScopedOverlay probe): "if a game is
    removed it can be replaced by hard conditioning." That is the Bible's
    bye/fixture-release law (:164, :4670, :4676 — the released usual game
@@ -17,9 +50,6 @@
    input differ between the two worlds (via the overlay merge of the
    published field)? If it names the producer, the overlay-merge probe
    collapses into it. Attribution before build, as ruled.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (fourth pass)
 
