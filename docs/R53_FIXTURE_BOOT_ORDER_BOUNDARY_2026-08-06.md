@@ -176,6 +176,30 @@ was half-doing. **It is not built here** — it reshapes an approved design, and
 proposing it as done is how the last two mechanisms got approved on partial
 measurement.
 
+## The full bible, run — and the whole chain accounted for
+
+The bible ran after this unit landed. It **stops at `test:fixture-identity`**,
+which is the red bisected above.
+
+| segment of the chain | result |
+|---|---|
+| everything BEFORE `test:fixture-identity` (~140 suites, `action-walker` among them) | **PASSED** — the `&&` chain reached fixture-identity, which is what reaching it means |
+| `test:fixture-identity` | **3 passed, 3 failed** — chain stops, exit non-zero |
+| everything AFTER it (17 suites + `action-walker:deep`) | **all green**, run separately: envelope-migration 7/0, operation-ownership 12/0, fact-door-inputs 8/0, session-outcome-control 5/0, results-persist 5/0, phase-structure 11/0, action-walker:deep 20/0, exercise-edit-entry-surface 37/37, coach-entry-surface 33/33, visible-program-projection, weekly-plan-display 62/0, conditioning-identity 63/0, standalone-conditioning-ownership 57/0, workout-canonicalisation 41/0, deload-week 41/0 (3 declared gaps), modality-swap, coach-revision-proposal-behavior, stage-b-generation-differential 3/0 |
+
+So the whole bible is accounted for and **fixture-identity is its only red**.
+
+**My capture was faulty and is declared, not glossed.** The run was piped through
+`tail -30`, which swallowed the trailing exit and left no literal
+`BIBLE_TRUE_EXIT=` line on record. What IS on record from inside that run is the
+suite's own printed totals — `Fixture identity totals: 3 passed, 3 failed` — so
+the chain's exit is non-zero, but the canonical printed line was not obtained.
+It must be captured cleanly (`npm run test:bible; echo "BIBLE_TRUE_EXIT=$?"`,
+unpiped) on the run that is actually allowed to gate the merge.
+
+**Fourth recorded sighting:** the background completion notification reported
+**exit code 0** for this run.
+
 ## Status
 
 - Boot-order unit: **COMPLETE and green.**
