@@ -492,6 +492,11 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           // Same law, the non-rolling path: this projection IS the decision.
           appliesFixtureDecision: true,
         });
+    // DEPENDENT weeks are not this decision's product — they are OTHER weeks
+    // being repaired, the maintenance surface R5.3 condition 1(b) priced by
+    // mutation (dropping it cost fourteen athlete-deletion regressions: it is
+    // where relocated work lands). Leg (i) deletes the DECIDED week's overlay
+    // only. `appliesFixtureDecision` already draws this exact line.
     const adjacentOverlays = rollingRepair?.projections
       .filter((candidate) => candidate.weekStart !== targetWeekStart)
       .map((candidate) => candidate.overlay) ?? [];
@@ -523,7 +528,22 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
         sourceActionOrIntentId,
       });
-      const committedAdjustment = commitWeekScopedOverlay(projection.overlay, sweep, {
+      // R5.3 LEG (i), 2026-08-06: THE DOOR NO LONGER PUBLISHES ITS REPLAN.
+      //
+      // A fixture decision's whole durable effect is the life-fact
+      // (`markedDays`) plus the ledger entry. The week that expresses it is
+      // DERIVED — so the door commits the fact, the sweep and the reversible
+      // adjustment, and DELETES the target week's overlay instead of writing
+      // one. `projection` is still built: the replan is what decides the
+      // sweep, the gateway status the door reports, and the rolling horizon
+      // this transaction must validate. It is a decision aid now, not a
+      // published output.
+      //
+      // Passing `null` with `targetWeekStart` is the delete branch of
+      // `commitWeekScopedOverlay` — the same atomic publication, one surface
+      // lighter.
+      const committedAdjustment = commitWeekScopedOverlay(null, sweep, {
+        targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,
         markedDays,
         additionalOverlays: adjacentOverlays,

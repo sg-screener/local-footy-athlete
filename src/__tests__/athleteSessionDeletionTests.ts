@@ -333,7 +333,7 @@ function seedExactSundayRegression(): {
 } {
   const athlete = profile();
   seed({ athlete, markedDays: { [SATURDAY]: 'game' } });
-  rebuildLocalWeek({
+  const rebuilt = rebuildLocalWeek({
     baseProfile: athlete,
     newGameDay: null,
     scope: 'weekOverlay',
@@ -342,10 +342,18 @@ function seedExactSundayRegression(): {
     todayISO: WEEK,
   });
   const state = useProgramStore.getState();
-  const overlay = clone(state.weekScopedOverlays[WEEK]);
+  // THE DOOR'S RETURN VALUE, not the store — R5.3 leg (i) (2026-08-06) stopped
+  // the fixture door publishing an overlay for the week it decides, and this
+  // seed was reading that published output back to get a materialised week to
+  // plant into. The replan is still computed and still returned; only the
+  // publication went. Nothing about what this seed BUILDS has changed.
+  const overlay = clone(state.weekScopedOverlays[WEEK] ?? rebuilt.overlay);
+  assert(overlay, 'the fixture rebuild produced no week for this seed to plant into');
   const hard = accepted().visibleWorkouts.find((workout) =>
     /Hard Conditioning/i.test(workout.name));
-  assert(hard, 'bye-build hard conditioning precondition missing');
+  assert(hard, 'bye-build hard conditioning precondition missing; the accepted week reads '
+    + JSON.stringify(accepted().visibleWorkouts.map((workout) =>
+      `${workout.dayOfWeek}:${workout.name}`)));
   const optionalSource = accepted().visibleWorkouts.find((workout) =>
     workout.sessionTier === 'optional' && workout.dayOfWeek !== 6);
   const gunshow: Workout = optionalSource

@@ -1001,7 +1001,40 @@ run('property', 'hydration remains deterministic and idempotent', () => {
   }
 });
 
-run('property', 'rolling fixture repair publishes current and dependent weeks once', () => {
+/**
+ * THE RULING MOVED, AND THIS CELL MOVED WITH IT — stated out loud rather than
+ * quietly flipped (R5.3 V3 switchover, 2026-08-06; supersedes the publication
+ * shape this property pinned since the rolling-horizon owner landed).
+ *
+ * It used to assert the fixture door publishes an overlay for the week it
+ * decides. Leg (i) of the switchover deletes exactly that: a fixture decision's
+ * durable effect is the life-fact plus the ledger entry, and the week that
+ * expresses it is DERIVED. So the assertion INVERTS.
+ *
+ * The other two claims did NOT move, and keeping them is what makes this an
+ * inversion rather than a deletion: the publication is still ONE atomic state,
+ * and the DEPENDENT week is still repaired and still carries its cross-week
+ * provenance. That pairing is deliberate and two-directional — an absent
+ * overlay everywhere would satisfy the new claim while silently losing the
+ * repair R5.3 condition 1(b) priced at fourteen athlete-deletion regressions.
+ *
+ * SCOPED TO THE WORLD IT DRIVES, and the name says so. This cell moves a
+ * fixture (`clearOverlayDate` + a new day), and on THAT path the decided week
+ * ends with no stored week at all — measured before and after: V0 left
+ * `[WEEK_START, NEXT_WEEK]`, leg (i) leaves `[NEXT_WEEK]`.
+ *
+ * It is NOT the general law, and regression 16 above is the counter-example
+ * kept deliberately green: on the ADD path the decided week still carries an
+ * overlay, byte-for-byte the same before and after leg (i), written from
+ * inside the reversible-adjustment publication rather than by the door's
+ * replan. What this unit proves is ONE COMPOSER — that any surviving stored
+ * week EQUALS the derived one (`fixtureIdentityTests` cells 3, 5 and 6, all
+ * three red before it and green after) — not that no stored week remains.
+ * The survivor is named, measured and carried as R5 debt; see
+ * docs/R5_DELETION_SEQUENCE_2026-08-06.md (q).
+ */
+run('property', 'a fixture MOVE publishes its dependent week once and leaves no stored '
+  + 'week for the week it decided', () => {
   const value = profile('In-season', {
     usualGameDay: 'Saturday',
     gameDay: 'Saturday',
@@ -1023,7 +1056,10 @@ run('property', 'rolling fixture repair publishes current and dependent weeks on
   const followingMonday = useProgramStore.getState().weekScopedOverlays[NEXT_WEEK]
     ?.workoutsByDate[NEXT_WEEK];
   assert(publishes === 1, `rolling fixture repair published ${publishes} states`);
-  assert(!!useProgramStore.getState().weekScopedOverlays[WEEK_START], 'current overlay missing');
+  assert(!useProgramStore.getState().weekScopedOverlays[WEEK_START],
+    'the fixture MOVE published a stored week for the week it decided — leg (i) of the '
+    + 'R5.3 switchover (2026-08-06) deletes that overlay, and a second composer is a '
+    + 'second truth even when neither is wrong');
   assert(followingMonday?.derivedSessionProvenance?.some((record) =>
     record.dependency?.source.date === SUNDAY) === true,
   'following-week dependency was not committed in the same snapshot');

@@ -335,57 +335,6 @@ function materialisedProgramPatch(
   return normalizeAcceptedProgramSurfaces({ ...base, ...(patch ?? {}) });
 }
 
-function materialiseFixtureMarksForCandidate(args: {
-  candidate: AcceptedProgramSurfaces;
-  context: AcceptedMaterialContext;
-  profile: OnboardingData | null;
-}): AcceptedProgramSurfaces {
-  if (!args.candidate.currentProgram || !args.profile) return args.candidate;
-  const overlays = { ...args.candidate.weekScopedOverlays };
-  let changed = false;
-  for (const microcycle of args.candidate.currentProgram.microcycles) {
-    const weekStart = microcycle.startDate.slice(0, 10);
-    const weekDates = datesInWeek(weekStart);
-    const explicitGameDate = weekDates.find((date) => args.context.markedDays[date] === 'game');
-    const explicitNoGame = weekDates.some((date) => args.context.markedDays[date] === 'noGame');
-    const recurringDay = (args.profile.usualGameDay || args.profile.gameDay) as DayOfWeek | undefined;
-    const recurringDate = recurringDay
-      ? weekDates.find((date) => dayNameForDate(date) === recurringDay)
-      : undefined;
-    const recurringFixtureRest = !!recurringDate &&
-      args.context.markedDays[recurringDate] === 'rest';
-    if (!explicitGameDate && !explicitNoGame && !recurringFixtureRest) continue;
-    const existing = overlays[weekStart];
-    const contract = existing?.exposureContractV2 ?? microcycle.exposureContractV2;
-    const desiredAnchor = explicitGameDate
-      ? canonicalFixtureKind(ownSeasonPhase({
-          program: args.candidate.currentProgram,
-          profile: args.profile,
-        }))
-      : 'bye';
-    const fixtureAnchor = contract?.anchors.find((anchor) =>
-      anchor.kind === 'game' || anchor.kind === 'practice_match');
-    const alreadyMaterialised = contract?.identity.anchorState === desiredAnchor && (
-      !explicitGameDate || fixtureAnchor?.dayOfWeek ===
-        new Date(`${explicitGameDate}T12:00:00`).getDay()
-    );
-    if (alreadyMaterialised) continue;
-    overlays[weekStart] = buildFixtureProjection({
-      program: args.candidate.currentProgram,
-      profile: args.profile,
-      weekStart,
-      markedDays: args.context.markedDays,
-      sourceSurfaces: args.candidate,
-      sourceMarkedDays: args.context.markedDays,
-      activeConstraints: args.context.activeConstraints.filter((constraint) =>
-        constraint.type !== 'injury'),
-      userRemovalConstraints: args.candidate.userRemovalConstraints,
-    }).overlay;
-    changed = true;
-  }
-  return changed ? { ...args.candidate, weekScopedOverlays: overlays } : args.candidate;
-}
-
 /**
  * THE STALE-LEDGER COMPARISON, DELETED — Sam's derive-at-read ruling
  * (2026-07-29). It is recorded here rather than quietly removed, because
@@ -682,14 +631,17 @@ export function stageAcceptedStateTransaction(
       },
     });
   }
-  const patchedCandidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
-  const candidate = proposal.preserveExactAcceptedWorkouts
-    ? patchedCandidate
-    : materialiseFixtureMarksForCandidate({
-        candidate: patchedCandidate,
-        context,
-        profile,
-      });
+  // R5.3 LEG (ii), 2026-08-06: the candidate fixture materialiser is GONE.
+  //
+  // It re-composed every accepted commit's fixture marks by running
+  // `buildFixtureProjection` over the candidate surfaces, which made this
+  // staging body a SECOND composer of the athlete's week beside the deriver.
+  // Measured before deleting it (see docs/R5_DELETION_SEQUENCE_2026-08-06.md
+  // (o)): it fired 4,378 times across the bible and changed the candidate 518
+  // times through NINE product doors, so this was never boot-only. A fixture is
+  // a persisted life-fact; the week that expresses it is DERIVED, and there is
+  // now one body that does the deriving.
+  const candidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
   if (proposal.preserveExactAcceptedWorkouts) {
     if (context.acceptedCompositionBase) {
       context = normalizeAcceptedMaterialContext({
@@ -1661,11 +1613,13 @@ export function buildFixtureProjection(args: {
    * the accepted week's existing fixture marks?
    *
    * They are different operations and only the first may not read the week's
-   * own published output — see the fixture identity law below. The candidate
-   * materialiser (`materialiseFixtureMarksForCandidate`) runs on EVERY
-   * accepted commit, deletions included, where that overlay is the state
-   * being MAINTAINED rather than a previous decision's product; it leaves
-   * this false and composes over it exactly as before.
+   * own published output — see the fixture identity law below. The MAINTENANCE
+   * callers leave this false and compose over the existing overlay: the
+   * calendar-mark door, the removal/move constraint door, fixture-adjustment
+   * restoration, the program-setup rebuild, and every DEPENDENT week inside
+   * `stageRollingHorizonFixtureRepair`. For those the overlay is the state
+   * being maintained — the bed relocated work lands in — not a previous
+   * decision's product.
    */
   appliesFixtureDecision?: boolean;
 }): {
@@ -1726,11 +1680,12 @@ export function buildFixtureProjection(args: {
   // first cut of this law dropped the overlay for every caller and broke two
   // athlete-DELETION regressions — a Sunday conditioning deletion stopped
   // relocating to Saturday, and conditioning stopped stacking onto Monday's
-  // strength. `materialiseFixtureMarksForCandidate` calls this on every
-  // accepted commit to keep the accepted week's fixture marks materialised,
-  // and there the week's overlay is the state being maintained, not a
-  // previous fixture's product. Applying a decision and maintaining a week
-  // are different operations; the caller says which.
+  // strength. That is not a remembered scar: R5.3's condition 1(b) re-priced
+  // the same surface by mutation on 2026-08-06 and `test:athlete-session-deletion`
+  // printed TRUE_EXIT=1 with fourteen failures against a baseline of zero,
+  // because the maintenance overlay is WHERE RELOCATED WORK LANDS. Applying a
+  // decision and maintaining a week are different operations; the caller says
+  // which.
   const rebaseOverlays = { ...sourceSurfaces.weekScopedOverlays };
   if (args.appliesFixtureDecision) delete rebaseOverlays[args.weekStart];
   const acceptedSource = rebaseAcceptedEffectiveWeek({

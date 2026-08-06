@@ -106,53 +106,28 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   // gone and add-then-remove is identity by construction. The cell stands as
   // a plain law now; a regression FAILS outright instead of wearing a
   // declaration.
-  {
-    id: 'fixture-identity-3',
-    finding: 'A published week disagrees with the week derived from the same inputs',
-    matches: /published week disagrees with derivation/,
-    why: 'What option A did NOT pay, stated honestly rather than sized to fit. '
-      + 'A removed the FEEDBACK LOOP (cell 1), but the published week and the '
-      + 'derived week are still built by two different engines: the fixture '
-      + 'path publishes a materialised REPLAN, while derivation RESOLVES the '
-      + 'base microcycle against the fixture facts. On this world they agree '
-      + 'about the fixture and its freed day and disagree on three untouched '
-      + 'days — the Monday session\'s identity and size, and the two '
-      + 'team-night pairings. Two composition engines is a second truth even '
-      + 'when neither is wrong, and it is out of A\'s reach by construction: '
-      + 'no rebase input can make a replan equal a resolve.',
-    paidBy: 'R5, when derive() has no rivals and there is no published week '
-      + 'left to disagree — the plan\'s own switchover, not a further '
-      + 'adjustment to this door.',
-  },
-  {
-    id: 'fixture-identity-5',
-    finding: 'A relaunch rebuilds an athlete\'s week differently when TWO decisions '
-      + 'are in it',
-    matches: /the relaunched world does not derive the week the athlete last saw/,
-    why: 'Found 2026-08-06 by the R5.3 pre-deletion measurement, and it is the '
-      + 'coordinate `quiescentBootTests` never builds. That suite already asserts '
-      + 'this exact law — "the world is its inputs: the visible week survives a '
-      + 'relaunch by derivation" — and it PASSES, because it acts ONE decision '
-      + '(a delete) and a single-decision world happens to agree. Add a SECOND '
-      + 'decision of a different kind and it does not: with an athlete removal '
-      + 'already in the week, a fixture add gives one Monday at the tap and a '
-      + 'different Monday after the relaunch (`Lower Squat` 7 exercises -> '
-      + '`Lower Body Strength` 4), and both team-night pairings swap with it. '
-      + 'Three engines, three answers for one untouched day: the pure resolve '
-      + 'says `Lower Squat|8` (the pre-fixture Monday, untouched, which is the '
-      + 'right answer), the published replan says `|7`, and the replay says '
-      + '`Lower Body Strength|4`. The athlete\'s own decisions both SURVIVE — '
-      + 'the removal is conserved by `userRemovalConstraints` and the ledger, not '
-      + 'by the overlay — so this is not lost data; it is the same week composed '
-      + 'three ways, and a relaunch is enough to change what the athlete trains.',
-    paidBy: 'R5, the switchover at the FIXTURE DOOR specifically — the door stops '
-      + 'publishing a materialised replan and the week derives from the persisted '
-      + 'life-fact plus the ledger. Measured precondition, recorded in '
-      + 'docs/R5_DELETION_SEQUENCE_2026-08-06.md §3 R5.3 re-cut (g): the pure '
-      + 'resolve already produces the correct week AND conserves the other '
-      + 'decision, so what pays this is deleting the publish, not adding a rebase '
-      + 'input.',
-  },
+  // ── PAID BY R5.3's V3 SWITCHOVER, DELETED 2026-08-06 (the ratchet's rule) ──
+  //
+  // `fixture-identity-3` and `fixture-identity-5` lived here. Both are now
+  // plain laws: a regression FAILS outright instead of wearing a declaration.
+  //
+  // WHAT PAID THEM, and it took BOTH halves. (i) the fixture door stopped
+  // publishing its replan into `weekScopedOverlays` and now deletes the target
+  // week's overlay instead; (ii) `materialiseFixtureMarksForCandidate` — the
+  // overlay every accepted commit wrote, boot included — is gone. Each half
+  // alone was priced by mutation first and each alone was WRONG:
+  //
+  //   V1 = (i) only   cell 3 RED, cell 5 GREEN, Monday `Lower Body Strength|4`
+  //   V2 = (ii) only  cell 3 RED, cell 5 1 of 7 RED, Monday `|7` then `|8`
+  //   V3 = both       BOTH GREEN, Monday `Lower Squat|8`
+  //
+  // V1 IS THE NAMED TRAP: "the door settles by re-deriving" is R5.1's own
+  // sentence and it greens cell 5 by moving the TAP DOWN to boot's wrong
+  // answer — the athlete's Monday drops from eight exercises to four
+  // immediately instead of at the next relaunch. A cell that asks the two
+  // sides to AGREE cannot see that; it is `expectation-edited-to-match-the-
+  // regression` wearing a green gate. Cells 5 and 6 below therefore pin WHICH
+  // ANSWER IS RIGHT, not that the surfaces match each other.
 ];
 
 let passed = 0;
@@ -471,11 +446,41 @@ run('fixture-identity-4 removing the last fixture clears the athlete\'s '
     + 'survive R5.');
 });
 
-// ── Cell 5: TWO DECISIONS, AND A RELAUNCH ─────────────────────────────────
+// ── Cells 5 and 6: TWO DECISIONS, IN A STATED ORDER, AND A RELAUNCH ───────
 //
-// Cells 1-4 are synchronous because the in-memory twin is. This one needs the
-// DURABLE door (only it appends to the ledger) and a real relaunch, so it gets
-// an async runner with the same declared-red bookkeeping.
+// Cells 1-4 are synchronous because the in-memory twin is. These need the
+// DURABLE door (only it appends to the ledger) and a real relaunch, so they
+// get an async runner with the same bookkeeping.
+//
+// THE AXIS IS DECISION ORDER, NOT DECISION COUNT. The first cut of this cell
+// named the missing coordinate as "the NUMBER of simultaneous decisions".
+// Measured across five worlds on 2026-08-06, that is refuted: two of them hold
+// two decisions and only one diverged.
+//
+//   W2  removal then fixture   tap vs relaunch 3 of 7   tap vs deriver 1 of 7
+//   W2r fixture then removal   tap vs relaunch 0 of 7   tap vs deriver 3 of 7
+//
+// Same two decisions, different answers. The mechanism is exact: a fixture
+// rides a PERSISTED life-fact, so boot applies it inside `commitRebuiltProgram`
+// at position zero — before a single ledger entry replays. Boot always composed
+// the fixture as the athlete's FIRST decision whatever the ledger said, and W2r
+// agreed only because there it really was first. A relaunch does not re-order
+// the ledger; it hoisted the one decision that rides a life-fact out of the
+// ledger entirely. `quiescentBootTests` asserts this same law and passes,
+// because ONE decision cannot express an order.
+//
+// Both orderings are pinned here permanently, against the deriver, so the
+// coordinate can never go missing again.
+//
+// AND THE CORRECTION THIS COMMIT OWES: the deleted `fixture-identity-5` entry
+// said "three engines, three answers". THAT COUNT WAS WRONG. Attribution by
+// instrumented stacks (docs/R5_DELETION_SEQUENCE_2026-08-06.md (k)) found TWO
+// PRODUCERS. `Lower Squat|8` is `resolveWeekWithConditioning`, the deriver, and
+// it is invariant in every world at every stage. `Lower Squat|7` and
+// `Lower Body Strength|4` were the SAME ENGINE at two different input states —
+// both called `buildFixtureProjection` and both published through the one site
+// — differing only in whether `userRemovalConstraints` was populated when the
+// projection ran. Two producers, and this unit deleted the second.
 
 async function runAsync(name: string, body: () => Promise<void>): Promise<void> {
   try {
@@ -529,14 +534,43 @@ async function durableFixtureAdd(date: string): Promise<{ outcome?: string }> {
   } as never)) as { outcome?: string };
 }
 
-async function main(): Promise<void> {
-  await runAsync('fixture-identity-5 two decisions in one week survive a relaunch as the '
-    + 'same week', async () => {
-    freshWorld();
-    const wednesday = addDaysISO(weekStart, 2);
-    const saturday = addDaysISO(weekStart, 5);
+/**
+ * THE DERIVER'S OWN ANSWER, PINNED LITERALLY.
+ *
+ * `resolveWeekWithConditioning` is the deriver and this is its Monday: the
+ * athlete's pre-fixture session, untouched, eight exercises. The fixture is on
+ * the Saturday and the deriver never moves the Monday — measured invariant in
+ * all five worlds of the R5.3 attribution, before and after boot, in both
+ * orderings.
+ *
+ * It is pinned as a LITERAL on purpose. A cell that only asks its surfaces to
+ * agree with each other greens when they agree on the WRONG week, which is
+ * exactly what V1 was priced doing. This is the value they must agree ON.
+ */
+const DERIVED_MONDAY = 'Lower Squat|8';
 
-    // DECISION ONE: the athlete clears a day, through the real door.
+interface OrderedWorld {
+  label: string;
+  monday: string;
+  wednesday: string;
+  saturday: string;
+  atTheTap: string[];
+  deriver: string[];
+  afterRelaunch: string[];
+}
+
+async function twoDecisionWorld(
+  order: 'removal_then_fixture' | 'fixture_then_removal',
+): Promise<OrderedWorld> {
+  freshWorld();
+  const monday = weekStart;
+  const wednesday = addDaysISO(weekStart, 2);
+  const saturday = addDaysISO(weekStart, 5);
+  const label = order === 'removal_then_fixture' ? 'W2' : 'W2r';
+
+  // The athlete clears a day, through the real door (it appends a
+  // `plan_change` entry — the ledger needs both decisions in it).
+  const clearTheWednesday = (): void => {
     const removal = quiet(() => applyPlanChange({
       change: { kind: 'remove_session', date: wednesday },
       visibleWeek: quiet(() =>
@@ -547,32 +581,84 @@ async function main(): Promise<void> {
       },
     } as never)) as { ok: boolean; message?: string };
     assert(removal.ok,
-      `the athlete's removal was REFUSED (${removal.message ?? 'no message'}) — this cell `
-      + 'asserts nothing until its own first decision lands');
-
-    // DECISION TWO: a fixture, through the DURABLE door so the ledger has both.
+      `${label}: the athlete's removal was REFUSED (${removal.message ?? 'no message'}) — `
+      + 'this cell asserts nothing until both its own decisions land');
+  };
+  // A fixture, through the DURABLE door — the only one that appends.
+  const addTheFixture = async (): Promise<void> => {
     const added = await durableFixtureAdd(saturday);
     assert(added.outcome !== 'impossible' && added.outcome !== 'no_change',
-      `the fixture ADD did not land (outcome "${added.outcome}") — a different red`);
+      `${label}: the fixture ADD did not land (outcome "${added.outcome}") — a different red`);
+  };
 
-    const atTheTap = derivedWeek();
-    await quietAsync(async () => { await runQuiescentBoot(); });
-    const afterRelaunch = derivedWeek();
+  if (order === 'removal_then_fixture') {
+    clearTheWednesday();
+    await addTheFixture();
+  } else {
+    await addTheFixture();
+    clearTheWednesday();
+  }
 
-    // The athlete's removal must survive — if it does not, this is a DATA LOSS
-    // red and not the composition red this cell declares.
-    const wednesdayAfter = afterRelaunch[2];
-    assert(wednesdayAfter === `${wednesday}=REST|0`,
-      `the athlete's cleared Wednesday did not survive the relaunch — it reads `
-      + `"${wednesdayAfter}". That is decision LOSS, a worse red than this cell's.`);
+  const atTheTap = derivedWeek();
 
-    const changed = diffWeeks(atTheTap, afterRelaunch);
-    assert(changed.length === 0,
-      `the relaunched world does not derive the week the athlete last saw — `
-      + `${changed.length} of 7 days moved under a relaunch that decided nothing:\n      ${
-        changed.join('\n      ')}\n      `
-      + 'Both decisions survived; the week was simply COMPOSED differently. One '
-      + 'engine per week is what makes a relaunch a no-op.');
+  // THE DERIVER, ALONE: the same inputs with every stored week dropped. Life
+  // facts, profile, program, overrides and removal constraints are untouched —
+  // only published OUTPUT goes, which is cell 3's move on this world.
+  const published = useProgramStore.getState().weekScopedOverlays;
+  useProgramStore.setState({ weekScopedOverlays: {} } as never);
+  const deriver = derivedWeek();
+  useProgramStore.setState({ weekScopedOverlays: published } as never);
+
+  await quietAsync(async () => { await runQuiescentBoot(); });
+  const afterRelaunch = derivedWeek();
+
+  return { label, monday, wednesday, saturday, atTheTap, deriver, afterRelaunch };
+}
+
+function assertOneComposer(world: OrderedWorld): void {
+  // DECISION LOSS FIRST, so it reds as the worse finding rather than hiding
+  // inside a composition diff.
+  const wednesdayAfter = world.afterRelaunch[2];
+  assert(wednesdayAfter === `${world.wednesday}=REST|0`,
+    `${world.label}: the athlete's cleared Wednesday did not survive the relaunch — it `
+    + `reads "${wednesdayAfter}". That is decision LOSS, a worse red than composition drift.`);
+
+  // THE TRUTH THIS CELL MEASURES AGAINST, stated rather than inferred. If the
+  // deriver itself moves, nothing below means what it says, so this fails
+  // first and loudly.
+  assert(world.deriver[0] === `${world.monday}=${DERIVED_MONDAY}`,
+    `${world.label}: the DERIVER's own Monday reads "${world.deriver[0]}", not the pinned `
+    + `"${world.monday}=${DERIVED_MONDAY}". The truth every other surface is measured `
+    + 'against has moved; fix that before reading anything else in this cell.');
+  assert(world.deriver[2] === `${world.wednesday}=REST|0`,
+    `${world.label}: the DERIVER lost the athlete's cleared Wednesday — "${world.deriver[2]}". `
+    + 'It cannot be the one composer if it drops a decision.');
+  assert(!/=REST\|0$/.test(world.deriver[5] ?? ''),
+    `${world.label}: the DERIVER left the athlete's fixture Saturday empty — `
+    + `"${world.deriver[5]}". It cannot be the one composer if it drops a decision.`);
+
+  // AND EACH SURFACE AGAINST THE DERIVER — never against the other one.
+  const tapDrift = diffWeeks(world.deriver, world.atTheTap);
+  assert(tapDrift.length === 0,
+    `${world.label}: the week the athlete saw AT THE TAP disagrees with the deriver on `
+    + `${tapDrift.length} of 7 days:\n      ${tapDrift.join('\n      ')}\n      `
+    + 'A second composer is a second truth even when neither is wrong.');
+  const relaunchDrift = diffWeeks(world.deriver, world.afterRelaunch);
+  assert(relaunchDrift.length === 0,
+    `${world.label}: the week AFTER THE RELAUNCH disagrees with the deriver on `
+    + `${relaunchDrift.length} of 7 days:\n      ${relaunchDrift.join('\n      ')}\n      `
+    + 'A relaunch decided nothing; it must compose the week the deriver composes.');
+}
+
+async function main(): Promise<void> {
+  await runAsync('fixture-identity-5 removal THEN fixture: one composer, and it is the '
+    + 'deriver', async () => {
+    assertOneComposer(await twoDecisionWorld('removal_then_fixture'));
+  });
+
+  await runAsync('fixture-identity-6 fixture THEN removal: the same two decisions in the '
+    + 'other order, and the same one composer', async () => {
+    assertOneComposer(await twoDecisionWorld('fixture_then_removal'));
   });
 
   console.log(`\nFixture identity totals: ${passed} passed, ${failed} failed`);
