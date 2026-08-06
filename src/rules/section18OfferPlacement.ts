@@ -304,6 +304,213 @@ export function presentDeclaredOffer(args: {
   return { workouts, placedDays, withdrawnDays: [] };
 }
 
+/**
+ * PRESENT THE CORE CONDITIONING THE CONTRACT REQUIRES — the same rule as the
+ * offer above, one line up the same contract.
+ *
+ * WHY THIS EXISTS (R5.3, 2026-08-06 —
+ * `docs/R53_RESIDUAL_ATTRIBUTION_2026-08-06.md`). Required core conditioning was
+ * in exactly the state the OFFER was in before this module was written: placed
+ * only by generation's allocator, with no owner any repair path could reach.
+ * Measured through the fixture door — remove a Saturday game and the week
+ * becomes a bye-build week declaring three core conditioning exposures while
+ * delivering two, because the game had been paying one. §18 named the shortfall
+ * precisely (`required_minimum_shortfall`) and the whole-week repair engine had
+ * no move that answered it: `repairByStackingCandidates` only RELOCATES existing
+ * work and `repairOptionalRestCandidates` only rests days, so the search
+ * evaluated one candidate and returned `impossible`.
+ *
+ * Nothing was inventing content, which is why the week simply came back short.
+ *
+ * THE CONTENT IS NOT CHOSEN HERE, and that is the point. The session's stress
+ * comes from the contract's own `requiredCoreStress`, and its rows come from
+ * `buildWorkoutsFromCoach` — the same signed pools generation uses, through the
+ * same `demandCategoryFor`/`selectConditioningTemplate` owners. No words are
+ * invented in this module and none may be.
+ *
+ * WHICH DAY comes from `selectOfferDays`, unchanged: a club night is never the
+ * app's to add work to, a day already carrying conditioning never takes a second
+ * helping, and fixture protection is respected. Sharing that selector is what
+ * stops the core placer and the offer placer disagreeing about where work
+ * belongs.
+ */
+export function presentRequiredCoreConditioning(args: {
+  workouts: readonly Workout[];
+  contract: WeeklyExposureContractV2;
+  shortfall: number;
+  weekStart: string;
+  profile?: OnboardingData | null;
+  microcycleId: string;
+  weekKind: Microcycle['weekKind'];
+}): { workouts: Workout[]; placedDays: number[] } {
+  const workouts = [...args.workouts];
+  if (args.shortfall <= 0) return { workouts, placedDays: [] };
+
+  const fixtureDay = args.contract.anchors
+    .find((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
+    ?.dayOfWeek ?? null;
+  const anchorDays = new Set(args.contract.anchors.map((anchor) => anchor.dayOfWeek));
+  const candidateDays = selectOfferDays({
+    candidates: workouts.map((workout) => ({
+      dayOfWeek: workout.dayOfWeek,
+      isTeamDay: workout.workoutType === 'Team Training' || anchorDays.has(workout.dayOfWeek),
+      hasConditioning: hasConditioningContent(workout),
+      hasStrength: hasMainStrengthRow(workout),
+      hasSpeed: !!workout.speedBlock,
+      isSelectedCore: false,
+    })),
+    count: args.shortfall,
+    fixtureDay,
+  });
+  // AN EMPTY DAY IS PREFERRED, and this is where required work parts company
+  // with the offer.
+  //
+  // `selectOfferDays` can only choose among days that already carry a session,
+  // because the OFFER stacks — Bible `:81` authors the flush ON the strength
+  // days, and an easy aerobic flush beside a lift is a small addition. A
+  // REQUIRED core exposure is not: in a bye-build week it is a hard glycolytic
+  // session, and stacking that onto a strength day spends a day the athlete
+  // could have trained on twice while making one day much harder.
+  //
+  // So the order inverts here. The week this repairs is short precisely because
+  // a day emptied, and that day is where the work belongs — which is also what
+  // the pre-V3 baseline built (freed Saturday, "Hard Conditioning",
+  // required_core, glycolytic) and what `phaseStructureConformanceTests` cell 8
+  // pins. Stacking remains the fallback for a week with no free day, where
+  // `repairByStackingCandidates` is the engine's own next move.
+  const occupied = new Set(workouts.map((workout) => workout.dayOfWeek));
+  const emptyDays: number[] = [];
+  for (const dayOfWeek of [1, 2, 3, 4, 5, 6, 0]) {
+    if (occupied.has(dayOfWeek) || anchorDays.has(dayOfWeek)) continue;
+    if (!offerFixtureSafe({
+      dayOfWeek,
+      isTeamDay: false,
+      hasConditioning: false,
+      hasStrength: false,
+      hasSpeed: false,
+      isSelectedCore: false,
+    }, fixtureDay)) continue;
+    emptyDays.push(dayOfWeek);
+  }
+  const targetDays = [...emptyDays, ...candidateDays].slice(0, args.shortfall);
+
+  const placedDays: number[] = [];
+  for (const dayOfWeek of targetDays) {
+    const session = buildCoreConditioningSession({
+      dayOfWeek,
+      weekStart: args.weekStart,
+      profile: args.profile,
+      microcycleId: args.microcycleId,
+      weekKind: args.weekKind,
+      contract: args.contract,
+    });
+    if (!session) continue;
+    const index = workouts.findIndex((workout) => workout.dayOfWeek === dayOfWeek);
+    if (index < 0) workouts.push(session);
+    else workouts[index] = attachCore(workouts[index], session);
+    placedDays.push(dayOfWeek);
+  }
+  return { workouts, placedDays };
+}
+
+/**
+ * The required session's CONTENT, from the same owner generation uses.
+ *
+ * `requiredCoreStress` is the contract's authored answer for how hard this
+ * week's core conditioning must be; the category follows it rather than being
+ * chosen here. `buildWorkoutsFromCoach` then composes the rows from the signed
+ * pools, so the athlete sees the same authored session whether the week was
+ * generated or repaired.
+ */
+function buildCoreConditioningSession(args: {
+  dayOfWeek: number;
+  weekStart: string;
+  profile?: OnboardingData | null;
+  microcycleId: string;
+  weekKind: Microcycle['weekKind'];
+  contract: WeeklyExposureContractV2;
+}): Workout | null {
+  const dayName = OFFER_DAY_NAMES[args.dayOfWeek];
+  // The contract's authored stress decides the demand. `hard` is the in-season
+  // bye-build answer and maps to the glycolytic pool; anything softer takes the
+  // aerobic pool. The choice is the CONTRACT's, read here, never made here.
+  const stress = args.contract.conditioning.requiredCoreStress;
+  const wantsHard = stress.includes('hard');
+  const [built] = buildWorkoutsFromCoach(
+    [],
+    args.microcycleId,
+    [{
+      tier: 'core',
+      focus: wantsHard
+        ? 'Hard conditioning — required core exposure'
+        : 'Aerobic conditioning — required core exposure',
+      dayOfWeek: dayName,
+      isHardExposure: wantsHard,
+      conditioningFlavour: wantsHard ? 'glycolytic' : 'aerobic',
+      // `glycolytic` and `aerobic_base` are the AUTHORED category names
+      // (`rules/conditioningSelection.AthleteConditioningCategory`), read from
+      // that union rather than spelled here — an unknown category silently
+      // empties `poolForCategory` and the selector throws on it.
+      conditioningCategory: wantsHard ? 'glycolytic' : 'aerobic_base',
+      section18ConditioningRole: 'required_core',
+      conditioningVariant: 'full',
+      stressLevel: wantsHard ? 'high' : 'moderate',
+      planEntryId: `core:${args.weekStart}:${dayName.toLowerCase()}:conditioning`,
+    }] as never,
+    args.profile ?? undefined,
+    {
+      miniCycleNumber: args.contract.identity.blockNumber ?? 1,
+      weekInBlock: args.contract.identity.weekInBlock ?? 1,
+      weekStartISO: args.weekStart,
+      weekKind: args.weekKind,
+      intensityMultiplier: args.weekKind === 'deload' ? 0.9 : 1,
+    } as never,
+  );
+  return built ?? null;
+}
+
+/** Stack required conditioning onto a day, keeping everything already there. */
+function attachCore(target: Workout, session: Workout): Workout {
+  // Same discriminator and same reasoning as `attachOffer` below: only rows
+  // typed `conditioning` travel, so the standalone session's own warm-up does
+  // not become a second warm-up on a day that already has one.
+  const rows = (session.exercises ?? [])
+    .filter((row) => row.section18Evidence?.role === 'conditioning')
+    .map((row, index) => ({
+      ...row,
+      workoutId: target.id,
+      exerciseOrder: (target.exercises?.length ?? 0) + index + 1,
+    }));
+  const survivingIds = new Set(rows.map((row) => row.id));
+  const conditioningBlock = session.conditioningBlock
+    ? {
+        ...session.conditioningBlock,
+        options: session.conditioningBlock.options.map((option) => ({
+          ...option,
+          exerciseIds: option.exerciseIds.filter((id) => survivingIds.has(id)),
+        })),
+      }
+    : undefined;
+  const conditioningGain: Partial<Workout> = {
+    hasCombinedConditioning: true,
+    attachedConditioningKind: 'component',
+    conditioningFlavour: session.conditioningFlavour,
+    conditioningCategory: session.conditioningCategory,
+    conditioningFeasibility: session.conditioningFeasibility,
+    conditioningBlock,
+    section18ConditioningRole: 'required_core',
+    section18Evidence: session.section18Evidence,
+  };
+  return {
+    ...target,
+    workoutType: target.workoutType === 'Team Training' ? target.workoutType : 'Mixed',
+    durationMinutes: target.durationMinutes + session.durationMinutes,
+    exercises: [...(target.exercises ?? []), ...rows],
+    ...conditioningGain,
+    ...composedOptionalClearingPatch(conditioningGain),
+  };
+}
+
 const OFFER_DAY_NAMES = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 ] as const;

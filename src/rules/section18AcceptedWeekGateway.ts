@@ -21,7 +21,10 @@ import {
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
 import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
-import { presentDeclaredOffer } from './section18OfferPlacement';
+import {
+  presentDeclaredOffer,
+  presentRequiredCoreConditioning,
+} from './section18OfferPlacement';
 import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
 import {
   contractOffseasonSubphase,
@@ -75,6 +78,7 @@ export type Section18WeekRepairKind =
   /** The week was not presenting the offer its contract declares; it is now. */
   | 'offer_presented'
   | 'offer_withdrawn'
+  | 'core_conditioning_presented'
   | 'obsolete_derived_work_expired'
   | 'optional_work_removed_for_rest'
   | 'core_work_stacked_on_existing_stress_day'
@@ -707,6 +711,7 @@ function localRepairCandidates(args: {
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
   weekStart: string;
+  profile?: OnboardingData | null;
 }): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const restShort = args.evaluation.blockingViolations.some((finding) =>
     finding.domain === 'full_rest');
@@ -720,7 +725,57 @@ function localRepairCandidates(args: {
     ...(restShort
       ? repairByStackingCandidates({ ...args, requireHardTarget: false })
       : []),
+    ...repairCoreConditioningShortfallCandidates(args),
   ];
+}
+
+/**
+ * THE SHORTFALL THE ENGINE COULD NOT ANSWER (R5.3, 2026-08-06 —
+ * `docs/R53_RESIDUAL_ATTRIBUTION_2026-08-06.md`).
+ *
+ * Every other generator here MOVES work: stacking relocates an existing session,
+ * the rest repair converts one to rest. So a week that is simply SHORT an
+ * exposure produced zero candidates, the search evaluated one state and returned
+ * `impossible`, and the athlete's week published a disclosed shortfall it could
+ * have filled. Measured through the fixture door: removing a Saturday game makes
+ * the week a bye-build declaring three core conditioning exposures and
+ * delivering two, because the game had been paying one.
+ *
+ * The placement owner is `rules/section18OfferPlacement` — the same module that
+ * already answers "which day does the week's conditioning belong on", so the
+ * required session and the optional offer can never disagree about where work
+ * goes or where its words come from.
+ *
+ * It is a CANDIDATE, not a normalisation, and that is deliberate: required core
+ * conditioning is blocking, so the repaired week must be re-evaluated and may
+ * still be rejected. The offer is advisory and is normalised instead.
+ */
+function repairCoreConditioningShortfallCandidates(args: {
+  workouts: readonly Workout[];
+  evaluation: Section18EffectiveWeekEvaluation;
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  profile?: OnboardingData | null;
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
+  const shortfall = args.evaluation.contract.conditioning.core.unresolvedMinimumShortfall ?? 0;
+  if (shortfall <= 0) return [];
+  const placed = presentRequiredCoreConditioning({
+    workouts: args.workouts,
+    contract: args.evaluation.contract,
+    shortfall,
+    weekStart: args.weekStart,
+    profile: args.profile,
+    microcycleId: `section18-core:${args.weekStart}`,
+    weekKind: args.evaluation.contract.identity.weekKind,
+  });
+  if (placed.placedDays.length === 0) return [];
+  return [{
+    workouts: placed.workouts,
+    repair: {
+      kind: 'core_conditioning_presented',
+      detail: `Presented ${placed.placedDays.length} required core conditioning exposure${placed.placedDays.length === 1 ? '' : 's'} the week's contract declares but the week did not carry, on ${placed.placedDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
+    },
+  }];
 }
 
 function resolveCandidate(args: {
@@ -893,6 +948,7 @@ function resolveCandidate(args: {
         evaluation: evaluated.evaluation,
         contract: evaluated.contract,
         weekStart: args.input.weekStart,
+        profile: args.input.profile,
       }).map((repair) => ({
         workouts: repair.workouts,
         repairs: [...candidate.repairs, repair.repair],
