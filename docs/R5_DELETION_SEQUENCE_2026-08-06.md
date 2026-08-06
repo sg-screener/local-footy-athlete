@@ -296,6 +296,32 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 > than composition drift), and is declared red against the fixture-door
 > switchover.
 >
+> **(j) FIRST DESIGN CANDIDATE, REFUTED BY MUTATION — do not spend a session on
+> it.** The obvious reading of (b) is that boot applies the fixture TWICE — once
+> as the persisted life-fact fed to `commitRebuiltProgram`
+> (`quiescentBoot.ts:304`) and once through the replan in `replayEntry`
+> (`:180`) — and that the doubling is what makes the relaunched week differ. It
+> is structurally true that both happen. **It is not the cause.** Mutation:
+> `return` before the fixture branch of `replayEntry`, making `fixture_add`,
+> `fixture_remove` and `fixture_move` replay inert. Result: `fixture-identity-3`
+> and `fixture-identity-5` both still red with **byte-identical** diffs, and
+> cells 1, 2 and 4 stay green. So deleting the fixture replay interpreter does
+> not pay either cell, and "one application instead of two" is not the unit.
+>
+> Stated precisely, because the negative result is only worth what it actually
+> covers: removing the fixture replay does not change these two cells' outcomes
+> on these worlds. `test:quiescent-boot` and `test:worn-world-boot` were NOT run
+> under the mutation, so this is not a claim that the interpreter is dead code.
+>
+> What it leaves: the divergence is between the DOOR's replan overlay at tap time
+> and `commitRebuiltProgram`'s own composition at boot time (plus `plan_change`
+> replay ordering), not between one fixture application and two. Note the shape
+> of the three answers before attributing them — boot's Monday
+> (`Lower Body Strength|4`) equals the single-decision world's PUBLISHED Monday,
+> while the tap's Monday in the two-decision world is `Lower Squat|7` and the pure
+> resolve is `Lower Squat|8`. The next seat should attribute each of those three
+> to its producer before changing any of them.
+>
 > **THE RE-SEQUENCE.** The switchover is not batch 1 of 8; it is batches 1..k,
 > one per door, and it must finish before any deletion. Nothing in R5.3–R5.6 is
 > payable until it does. What that makes the next unit: **finish the switchover
