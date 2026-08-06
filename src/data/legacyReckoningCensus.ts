@@ -285,6 +285,22 @@ export function mirrorDecisionReads(source: string, _file?: string): number {
   return [...code(source).matchAll(/useProfileStore[^;\n]{0,60}?\bonboardingData\b/g)].length;
 }
 
+/**
+ * LR-8 — a door telling the accepted-state proposal not to re-validate.
+ *
+ * The idiom is PASSING THE FLAG TRUE. The field's declaration and the one read
+ * that consumes it (`acceptedStateTransaction.ts:213,724`) are the mechanism
+ * this unit converts, not violations of it, so only `: true` is counted.
+ *
+ * WHY THIS DETECTOR EXISTS AT ALL, against its own entry's old argument: the
+ * founding sweep called it "two call sites of a boolean… a checklist item, not
+ * a ratchet". It was four, in three modules, and nothing noticed for a week.
+ * A count is small until it is not.
+ */
+export function skipConstraintProjectionRefs(source: string, _file?: string): number {
+  return [...code(source).matchAll(/\bskipConstraintProjection\s*:\s*true\b/g)].length;
+}
+
 /** LR-3 — call sites of the legacy §18 override writer, excluding its own definition. */
 export function legacyOverrideWriterRefs(source: string, _file?: string): number {
   return [...code(source).matchAll(/(?<!function\s)\bapplyCoachRevisionDateOverrides\s*\(/g)]
@@ -314,6 +330,7 @@ export const DETECTORS = {
   unownedPersistedStores,
   legacyOverrideWriterRefs,
   mirrorDecisionReads,
+  skipConstraintProjectionRefs,
 } as const;
 
 export type LegacyDetectorId = keyof typeof DETECTORS;
@@ -339,6 +356,11 @@ export function detectorScopeExempts(id: LegacyDetectorId): readonly string[] {
       ];
     case 'legacyOverrideWriterRefs':
       return ['data/legacyReckoningCensus.ts'];
+    case 'skipConstraintProjectionRefs':
+      // The proposal that DECLARES the field and the one read that consumes it
+      // are the mechanism, not a violation of it — and neither passes `: true`,
+      // so this exemption is belt-and-braces rather than load-bearing.
+      return ['store/acceptedStateTransaction.ts', 'data/legacyReckoningCensus.ts'];
     case 'unownedPersistedStores':
       return ['data/legacyReckoningCensus.ts'];
     default:
@@ -601,7 +623,19 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'in the dead-affordance inventory.',
     size: 'M',
     status: 'scheduled',
-    sequence: 'RE-MEASURED 2026-08-06 during the R5.3 pre-deletion measurement, and the '
+    sequence: 'RULED (Sam, 2026-08-06): the detector is ADDED and both baselines are RAISED '
+      + 'by ruling — LEGACY_DEBT_BASELINE 73 -> 77, LEGACY_DEBT_FOUNDING_BASELINE 116 -> '
+      + '120, foundingCount 2 -> 4. DIRECTION 4\'s sanctioned case exactly: a genuine '
+      + 'PRE-LAW surface the founding sweep missed. Dated, because "missed" is a claim: '
+      + 'all four sites predate the census founding commit 0bc3a1ff (2026-07-29) — '
+      + 'temporarySourceFactTransaction at 1350b749 (2026-07-16) and 59bcb3d2 '
+      + '(2026-07-23), profileProgramTransaction at d651761c (2026-07-16), the dev seed at '
+      + '07cf32d4 (2026-07-17). NO new debt was authored after the law; the 2026-07-30 '
+      + 'founding sweep counted 2 of 4, and it is the same blind spot that dropped LR-30 '
+      + 'in transcription and under-counted LR-27. The raise is a ruling and not an edit '
+      + 'precisely so a builder cannot manufacture its own headroom; this seat measured '
+      + 'it, named the sweep, and asked. '
+      + 'RE-MEASURED 2026-08-06 during the R5.3 pre-deletion measurement, and the '
       + 'founding line numbers are STALE in a way that matters. Live sites passing '
       + '`skipConstraintProjection: true`: temporarySourceFactTransaction.ts:630,925 '
       + '(the two the founding counted, moved), profileProgramTransaction.ts:393, and '
@@ -613,21 +647,9 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'R5.4 (the hydration category), which has no relationship to it. What pays it is '
       + 'the switchover at the FACT DOOR plus the accepted-state layer\'s deletion — '
       + 'R5.6. The re-cut records this.',
-    detector: null,
-    whyNotDetectable: 'REFUTED BY MEASUREMENT 2026-08-06, and left standing as the reason '
-      + 'a detector is now owed. The original argument was: "Two call sites of a boolean. '
-      + 'A count of two that can only ever be two or zero is a checklist item, not a '
-      + 'ratchet — and the fix is a behaviour change (rebuild, or stop recording), not a '
-      + 'deletion." The count was never two-or-zero: it is FOUR, it grew into a door the '
-      + 'entry does not mention, and nothing was watching. That is the '
-      + 'one-predicate-grows-uncounted-copies shape. '
-      + 'THE DETECTOR IS FILED, NOT ADDED, and the reason is DIRECTION 4: a detector here '
-      + 'declares 4 against a per-unit ceiling of 0 and raises both LEGACY_DEBT_BASELINE '
-      + '(73 -> 77) and LEGACY_DEBT_FOUNDING_BASELINE (116 -> 118). Direction 4 says '
-      + 'raising the founding baseline is A RULING, NOT AN EDIT, precisely so a builder '
-      + 'cannot manufacture the headroom it needs. So this seat measured it, named the '
-      + 'sweep that missed it (the 2026-07-30 founding sweep, same blind spot as LR-27 '
-      + 'and LR-30), and leaves the raise to Sam rather than taking it.',
+    detector: 'skipConstraintProjectionRefs',
+    declared: 4,
+    foundingCount: 4,
   },
   {
     id: 'LR-9',
@@ -1155,8 +1177,19 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * 74 -> 73 (R1.3, 2026-08-05): the quiescent-boot flip deleted the program
  * store's hydration-migration machinery and one LR-4 mirror read went with
  * its layer (the persisted-profile fallback to the live store).
+ *
+ * 73 -> 77 (RULED, Sam, 2026-08-06): LR-8 takes a detector and declares 4.
+ * THE ONLY RAISE IN THIS NUMBER'S HISTORY, and it is a ruling rather than an
+ * edit because Direction 4 makes it one. LR-8's own entry had argued a detector
+ * was not worth building ("two call sites of a boolean… a checklist item, not a
+ * ratchet"); the R5.3 pre-deletion measurement found FOUR, in three modules,
+ * one of them a door the entry never mentions. Every one of the four predates
+ * the census founding commit, so this is missed pre-law surface and not new
+ * debt — see the unit's `sequence` for the per-site dating. The raise is
+ * therefore NOT headroom: it makes an unwatched surface watched, and the count
+ * can only fall from here.
  */
-export const LEGACY_DEBT_BASELINE = 73;
+export const LEGACY_DEBT_BASELINE = 77;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
@@ -1173,8 +1206,17 @@ export const LEGACY_DEBT_BASELINE = 73;
  * by the founding sweep, say so in the census document, get it ruled, and raise
  * the unit's founding count and this total together — with the sweep that
  * missed it named.
+ *
+ * 116 -> 120 (RULED, Sam, 2026-08-06): LR-8's founding count goes 2 -> 4, and
+ * this total moves with it in the same commit, which is the procedure above
+ * followed rather than described. THE SWEEP THAT MISSED IT, NAMED: the founding
+ * sweep of 2026-07-30 counted two `skipConstraintProjection: true` sites in the
+ * fact door and did not count the two outside it. Same blind spot that dropped
+ * LR-30 out of the transcription entirely and under-counted LR-27 — a sweep
+ * that reads the module it is thinking about. All four sites are dated against
+ * the founding commit in LR-8's `sequence`; none postdates it.
  */
-export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
+export const LEGACY_DEBT_FOUNDING_BASELINE = 120;
 
 /**
  * The census was founded with 24 units, and holds 25 by RULING. DIRECTION 4c.

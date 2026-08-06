@@ -347,6 +347,32 @@ console.log("\n[7] The detectors count what they claim to count");
   ok('mirrorDecisionReads: does NOT see a two-step read (declared limitation)',
     mirror('const p = useProfileStore.getState();\nconst d = p.onboardingData;', 'x.ts') === 0);
 
+  // LR-8's detector, added by Sam's ruling of 2026-08-06 with both baselines
+  // raised. The idiom is PASSING THE FLAG TRUE — the field's declaration and the
+  // single read that consumes it are the mechanism the unit converts, not
+  // violations of it, so neither may be counted.
+  const skipProjection = DETECTORS.skipConstraintProjectionRefs;
+  ok('skipConstraintProjectionRefs: counts a flag passed true',
+    skipProjection('commit({ reason: "x", skipConstraintProjection: true });', 'x.ts') === 1);
+  ok('skipConstraintProjectionRefs: counts each site separately',
+    skipProjection('a({ skipConstraintProjection: true });\nb({ skipConstraintProjection: true });',
+      'x.ts') === 2);
+  ok('skipConstraintProjectionRefs: tolerates whitespace around the colon',
+    skipProjection('a({ skipConstraintProjection : true });', 'x.ts') === 1);
+  ok('skipConstraintProjectionRefs: does NOT count the field declaration',
+    skipProjection('skipConstraintProjection?: boolean;', 'x.ts') === 0,
+    'the proposal type declares the mechanism; it does not skip a projection');
+  ok('skipConstraintProjectionRefs: does NOT count the read that consumes it',
+    skipProjection('activeConstraints: !proposal.skipConstraintProjection && n > 0', 'x.ts') === 0,
+    'the one consuming read is what the unit converts, not a violation to count');
+  ok('skipConstraintProjectionRefs: does not count a flag passed false',
+    skipProjection('a({ skipConstraintProjection: false });', 'x.ts') === 0,
+    'passing false IS re-validating — that is the fixed state, not the debt');
+  ok('skipConstraintProjectionRefs: ignores comments',
+    skipProjection('// skipConstraintProjection: true used to be passed here\n', 'x.ts') === 0);
+  ok('skipConstraintProjectionRefs: ignores a longer identifier containing it',
+    skipProjection('a({ skipConstraintProjectionLegacy: true });', 'x.ts') === 0);
+
   const legacyWriter = DETECTORS.legacyOverrideWriterRefs;
   ok('legacyOverrideWriterRefs: counts a call',
     legacyWriter('const p = applyCoachRevisionDateOverrides({ a: 1 });', 'x.ts') === 1);
