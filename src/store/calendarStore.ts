@@ -285,6 +285,7 @@ export const useCalendarStore = create<CalendarState>()(
 export type CalendarWriterId =
   | 'accepted_transaction'
   | 'coach_mutation_mirror'
+  | 'quiescent_boot'
   | 'reset';
 
 export interface CalendarWriteOutcome {
