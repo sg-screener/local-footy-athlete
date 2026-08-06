@@ -1,52 +1,45 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
-  feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7
-  (`1198cb95`) holds legs (iv)/(v) AND the residual probe; -6, -5,
-  -5-before preserved. (NOW.md previously recorded the scaffold at
-  `901ba9b9` — that commit was reset and recommitted as `bf1c569c`;
-  nothing lost, the pointer was stale.)
-- **Current unit:** the projected-anchor ruling (`d6efec30`) — residual
-  CLOSED, and clause (a)(2)'s premise REFUTED. **STOP, nothing built.**
-  See docs/R53_RESIDUAL_CLOSED_OVERWRITE_UNREACHABLE_2026-08-07.md.
-- **The residual is STORE CARRY-OVER through a product path.** `seed()`
-  writes `onboardingData` directly; the profile mirror fence then
-  republishes the PREVIOUS cell's accepted snapshot over it, because
-  `seed()` sets programStore on the next line. Cell 19 runs on an
-  In-season/Saturday profile it never seeded.
-- **The named blocker is DISSOLVED.** 2×2 measured, isolation inert
-  flags-off: flags-off 22/0 both ways; leg (iii) 21/1 without isolation,
-  **22/0 with**. Cell 19's red was never leg (iii)'s.
-- **Clause (a)(2) has NO reachable witness.** In the coherent In-season
-  world (Saturday `usualGameDay`, zero marks) the move onto the projected
-  game day is REFUSED with "It's game day — sessions can't be changed or
-  added here", visible week unchanged; the non-anchor control applies
-  fine. The overwrite exists only in the manufactured contradiction.
-- **SAM'S LEAD ANSWERED — the freed day's producer is NAMED** (`a7b49764`,
-  docs/R53_FREED_DAY_PRODUCER_NAMED_2026-08-07.md, nothing built). The
-  release pathway is INNOCENT (52 vs 46 distinct records, **0 present only
-  in leg (v)** — a strict subset). The producer is the published overlay's
-  **`workoutsByDate`**: the overlay is published in BOTH worlds (hence the
-  earlier `contractSource: overlay` confusion), but leg (v) empties its
-  payload — flags-off `2026-07-18:Hard Conditioning`, leg (v) `[]`, and the
-  accepted week drops 6 sessions to 5. The 16 deletion failures are FIXTURE
-  debt: all run through `seedExactSundayRegression`, which borrows that
-  session as a TEMPLATE for days it then overwrites.
-- **Next:** clause (c)'s `commitWeekScopedOverlay` merge probe, now
-  COLLAPSED into the payload question — probe as one question, not two.
-  Then parallel-gate stage 1 items 2–4.
-- **Open for the seat:** withdraw or re-aim clause (a)(2); the FORM of the
-  witness fix (`seed()` through the one-door law, not the probe's poke);
-  re-run condition 1's pricing now the cell-19 blocker is gone; **and is
-  leg (v) meant to retire the overlay's workout PAYLOAD or only the
-  `exposureContractV2` declaration?** That one answer re-prices leg (v) —
-  until it is settled, deletion 24/24→16/24 is not leg (v)'s real cost.
-- **Named not fixed:** the one-door narrowing gate does not scan test
-  sources, so `athleteSessionMoveTests.ts:146` assigns `onboardingData`
-  directly and the gate stays green.
-- **Still open:** cell 22's 2nd assertion (re-pin NOT taken, leg (i) has
-  not landed); cell 23 undiagnosed as ruled; parallel-gate stage 1 items
-  2–4.
+  feat/r53-v3-switchover = the live unit, HEAD `766fe81a`;
+  scratch/r53-pricing-7 (`a7b49764`) holds legs (iv)/(v) + this unit's
+  probes; -6, -5, -5-before preserved.
+- **Current unit:** seat answers (`81beac19`). **Answer 2 BUILT AND
+  GREEN; answer 3 STOPPED before building.** See
+  docs/R53_WITNESS_FIX_BUILT_LEGV_RESCOPE_REFUTED_2026-08-07.md.
+- **BUILT — the witness fix + the systemic half** (`6f3a2a7a`): `seed()`
+  retires the previous world first and writes through
+  `applyProfileOnboardingWrite`, then ASSERTS it holds what it asked for;
+  the one-door narrowing gate now walks `src/__tests__` + `src/dev` and
+  checks the census in BOTH directions (undeclared fails; a stale
+  declaration also fails), mutation-proven both ways + non-vacuity. 54
+  files/~75 sites declared as DEBT; fault injection must carry
+  `PROFILE-DOOR-BYPASS: fault injection`.
+- **BUILT — the deletion seed** (`766fe81a`): reads the DERIVED week
+  first, not the published payload. Proven byte-identical
+  (`identicalJSON: true`), so 18 cells keep their coordinate.
+- **STOP — answer 3 has nothing to narrow.** `workoutsByDate: {}` at
+  `weekRebuild.ts:564` is **unconditional**, outside leg (v) entirely;
+  leg (v)'s whole delta is `exposureContractV2: undefined`, and
+  `commitWeekScopedOverlay` REPLACES wholesale (clause (c)'s merge is
+  innocent). The payload loss is a CONSEQUENCE of retiring the
+  declaration, not a scope overreach — so the prior refutation may be
+  correctly priced, not scaffold-priced.
+- **Next probe, sharp:** what fills `workoutsByDate` after a publication
+  that writes `{}`, and why does removing `exposureContractV2` stop it?
+  That names the freed day's real owner and decides leg (v)'s price.
+- **NOT verified:** leg (iii)'s blocker removal is proven only on the
+  scaffold's earlier probe — `LFA_SCAFFOLD_LEG_III` does NOT exist on this
+  branch, so the "22/0 under leg (iii)" run here was INERT. Re-prove by
+  porting the seed fix to the scaffold.
+- **Gate this pass:** full test:bible UNPIPED, EXIT 1 on
+  test:fixture-identity 3/3 — the branch's pre-existing red, verified at
+  HEAD in a clean worktree. Bible stops at first red, so the 18 suites
+  after it were run individually: 18/18 pass.
+- **Still open:** condition 1's priced-config re-measure (NOT run — the
+  premise is in question); cell 22's 2nd assertion (leg (i) not landed);
+  cell 23 undiagnosed; parallel-gate stage 1 items 2–4; the other 53
+  declared debt files.
 - **Tracked debts:** hydration snapshot-vs-live pin; todayISO clock fix
   (146/172 wall-clock stamps); R5.7 whole-or-none; remaining R5 batches;
   condition 4 markedDays proof; the merge.

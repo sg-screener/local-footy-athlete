@@ -2,7 +2,12 @@
 
 ## Unprocessed (newest first)
 
-1. SEAT ANSWERS to the fifth-pass boundary report — read
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (sixth pass) — the ruling as the seat wrote it
+
+- SEAT ANSWERS to the fifth-pass boundary report — read
    docs/R53_SEAT_ANSWERS_2026-08-07.md, commit as authored. Short form:
    (1) clause (a)(2) WITHDRAWN by supersession — no reachable witness;
    dayPrecedence stays law, the conservation guard stays; if a
@@ -27,8 +32,44 @@
    -> leg (v) re-scoped re-price -> re-measure priced configs ->
    build per the convergence ruling. Sam holds a veto on all three.
 
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
+## Processed 2026-08-07 (sixth pass) — SEAT ANSWERS
+
+- Ruling committed as authored (`81beac19`). Answered in
+  docs/R53_WITNESS_FIX_BUILT_LEGV_RESCOPE_REFUTED_2026-08-07.md.
+- **ANSWER 2 BUILT AND GREEN** (`6f3a2a7a`, `766fe81a`). `seed()` retires
+  the previous world first and writes through the one door, then ASSERTS
+  it holds what it asked for. The narrowing gate walks `src/__tests__` +
+  `src/dev` and checks the census in BOTH directions — undeclared fails,
+  and a declared entry that no longer writes ALSO fails, so paying debt
+  forces the declaration down in the same commit. Mutation-proven both
+  ways, plus non-vacuity. 54 files/~75 sites declared as DEBT; the
+  narrowing suite's writes are its INSTRUMENT; fault injection must carry
+  `PROFILE-DOOR-BYPASS: fault injection` so the category cannot host a
+  seed. `seedExactSundayRegression` now reads the DERIVED week first —
+  proven byte-identical (`identicalJSON: true`), coordinate intact.
+  Gate: full test:bible UNPIPED, EXIT 1 on test:fixture-identity 3/3 (the
+  branch's pre-existing red, verified at HEAD in a clean worktree); the 18
+  suites the bible cannot reach were run individually, 18/18 pass.
+- **ANSWER 3 STOPPED — the re-scope has nothing to narrow.** The ruling
+  held that the empty payload was "option 2's scope switch reaching past
+  the ruled target". The code says otherwise: `workoutsByDate: {}` at
+  `weekRebuild.ts:564` is **UNCONDITIONAL**, outside leg (v) entirely, and
+  its own comment argues for it; leg (v)'s whole product delta is
+  `exposureContractV2: undefined`. `commitWeekScopedOverlay` REPLACES
+  wholesale, so clause (c)'s merge is innocent too. **Leg (v) is already
+  declaration-only.** The payload loss is therefore a CONSEQUENCE of
+  retiring the declaration — which means the fixture-identity test the
+  ruling itself cited is failing for a REAL reason, and the prior
+  refutation should NOT simply be set aside as scaffold-priced.
+- **Next probe, now sharp:** what fills `workoutsByDate` after a
+  publication that writes `{}`, and why does removing `exposureContractV2`
+  stop it? That names the freed day's real owner and decides leg (v)'s
+  price. Condition 1's re-measure NOT run — it would measure against a
+  premise in question.
+- **Correction owed to the record:** leg (iii)'s blocker removal is proven
+  only on the scaffold's earlier probe. `LFA_SCAFFOLD_LEG_III` does not
+  exist on feat/r53-v3-switchover, so any "leg (iii) green" run on this
+  branch is INERT. Re-prove by porting the seed fix to the scaffold.
 
 ## Processed 2026-08-07 (fifth pass) — SAM'S LEAD
 
