@@ -474,6 +474,41 @@ verifies and closes LR-10/LR-11.
 **R5.7 — the coach cut (§6).** The free-text entry point does not appear in
 the beta build. Decision C(a), signed. Any copy this changes ships PROPOSED.
 
+> **THE BOUNDARY IS RULED (Sam, 2026-08-06) — the FULL cut, and it is wider
+> than the sentence reads.** §6 says "the free-text coach entry point does not
+> appear" and C(a) says "hidden entirely ... no half-alive chat surface". Those
+> read differently against the code, so the boundary was put to Sam before any
+> edit. **Ruled: the tab goes AND the prefill doors are retired** — zero paths
+> to a chat surface in the beta UI, rather than a reachable screen with its
+> input removed.
+>
+> The measured surface, so the next seat does not re-survey it:
+>
+> | site | what goes |
+> |---|---|
+> | `AppNavigator.tsx:143` | the `CoachTab` `Tab.Screen` |
+> | `useHomeScreen.ts:1275` | `handleMessageCoach` (navigates with `prefill`) |
+> | `HomeQuickActionSheet.tsx:21` | `onMessageCoach` + its prefill default |
+> | `HomeScreen.tsx:308,346` | both `onReview` -> `handleMessageCoach` routes |
+> | `DayWorkoutScreenV2.tsx:190,594,2802` | the `coach_fallback` step and `onAskCoachTeam` |
+>
+> **LR-6 HOLDS: the pipeline is not touched.** `CoachScreen` and the 29k
+> pipeline stay in the tree, frozen. This is a scope cut, not a retirement —
+> §6's own words.
+>
+> **TWO THINGS THE BUILD OWES, both named before it starts.** (1)
+> `coachEntrySurfaceContractTests` cell [2] currently PINS the input and send
+> control as SURVIVING ("the athlete just talks to the coach via the input" —
+> ruling 13, 2026-07-30). R5.7 inverts that cell. This is the legitimate case of
+> `expectation-edited-to-match-regression`: **the RULING moved, with a date, and
+> the later one supersedes for beta** — the commit must say so explicitly rather
+> than quietly flipping an assertion. (2) Some day-menu affordances lose their
+> coach fallback; any replacement copy ships PROPOSED, unsigned.
+>
+> **NOT STARTED.** Ruled and scoped on 2026-08-06, deliberately not begun on a
+> partial tank: a five-file entry-surface cut left half-applied is precisely the
+> half-alive surface C(a) exists to prevent.
+
 **R5.8 — the structural sweep (§7) + the bible re-link.** A permanent suite
 enumerating every persisted key, failing on any key not declared profile /
 fact / decision / result, with the coach-era stores as a dated, shrink-only
