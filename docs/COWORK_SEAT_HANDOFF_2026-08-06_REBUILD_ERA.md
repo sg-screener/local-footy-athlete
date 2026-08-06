@@ -48,6 +48,11 @@ failure this seat made:
   -newermt on src/) and answer from it. Commits are sparse (chain toll);
   file mtimes are the pulse.
 
+## §1b LOOP-AUDIT LAW (Sam, 2026-08-07): read docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md.
+Third sighting of ANY repeated ruling-shape, round-trip, toll or
+rediscovery = mandatory compression proposal, not a fourth silent run.
+Ordered after the standing-derivation ruling took nine stops to exist.
+
 ## §2 The rebuild era — state as of this handoff
 
 Sam's device pass on the legacy shell failed (2026-08-05 morning) → L11
