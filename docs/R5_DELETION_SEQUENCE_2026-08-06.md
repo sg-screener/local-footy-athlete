@@ -257,17 +257,44 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 >    still delivers the Game Day and the G-1 demotion. This is what
 >    `fixture-identity-3` has been declaring since 2026-08-05, priced.
 >
-> **THE ONE THING THE PROBE DID NOT MEASURE, and it is the unit's real risk.**
-> This world had NO other athlete decisions in the week. §2's own header says the
-> overlay is how a fixture change CONSERVES the athlete's other decisions (an
-> added session, a swapped template) and cannot tell them apart from the previous
-> fixture's repair product. So the switchover at this door is not "delete the
-> publish": it must show that the other decisions survive the resolve, which
-> means they must be carried by the ledger and `dateOverrides` rather than by the
-> overlay. **A probe world with a fixture change ON TOP OF another decision is
-> the entry gate for the unit, and it is not built yet.** Deleting the publish
-> before that is measured would be trading a known 3-day defect for an unknown
-> conservation loss.
+> **(h) THE ENTRY GATE WAS BUILT, AND IT PASSES — the overlay does NOT carry
+> conservation.** §2's header says the overlay is how a fixture change conserves
+> the athlete's other decisions, so the unit could not start until that was
+> measured. A second probe made the athlete clear a Wednesday through the real
+> door (`applyPlanChange`, which appends a `plan_change` entry), THEN added the
+> Saturday fixture through the durable door, then dropped only the published
+> overlay. **The cleared Wednesday survives the resolve, and survives a
+> relaunch** — it is carried by `userRemovalConstraints` and the ledger, not by
+> the overlay. So conservation is already decision-borne, and deleting the
+> publish does not trade a known defect for a conservation loss. **The switchover
+> at this door is unblocked.**
+>
+> **(i) AND THE GATE FOUND SOMETHING WORSE, now pinned as `fixture-identity-5`.**
+> On the two-decision world, **post-tap and post-relaunch DISAGREE on 3 of 7
+> days** — where the single-decision world agreed on 0 of 7. So R5 §1's framing
+> ("the week after a tap is built by a different engine than the week after a
+> relaunch") is literally true; it just needs two decisions of different kinds to
+> surface. One untouched Monday, composed three ways:
+>
+> | engine | Monday 2026-08-10 |
+> |---|---|
+> | pure resolve (the pre-fixture Monday, untouched) | `Lower Squat` **8** |
+> | published replan, at the tap | `Lower Squat` **7** |
+> | ledger replay, after the relaunch | `Lower Body Strength` **4** |
+>
+> Both team-night pairings swap with it. Neither decision is lost — this is one
+> week composed three ways, and **a relaunch alone is enough to change what the
+> athlete trains.**
+>
+> This was UNMEASURED, and the reason is the shape this repo has now named six
+> times: `quiescentBootTests` already asserts exactly this law — *"the world is
+> its inputs: the visible week survives a relaunch by derivation"* — and it
+> PASSES, because it acts ONE decision (`actOneDelete`) and a single-decision
+> world happens to agree. **The assertion was right and the fixture coordinate
+> was missing.** `fixture-identity-5` builds the missing coordinate, asserts the
+> athlete's decisions survive FIRST (so decision loss reds as a worse finding
+> than composition drift), and is declared red against the fixture-door
+> switchover.
 >
 > **THE RE-SEQUENCE.** The switchover is not batch 1 of 8; it is batches 1..k,
 > one per door, and it must finish before any deletion. Nothing in R5.3–R5.6 is

@@ -80,7 +80,12 @@ import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
-import { executeFixtureMutationInMemory } from '../store/fixtureMutationTransaction';
+import {
+  executeFixtureMutationInMemory,
+  executeFixtureMutationTransaction,
+} from '../store/fixtureMutationTransaction';
+import { runQuiescentBoot } from '../store/quiescentBoot';
+import { applyPlanChange } from '../utils/planChangeProducer';
 
 // ── The reproduction ledger ──────────────────────────────────────────────
 interface DeclaredRed {
@@ -118,6 +123,35 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     paidBy: 'R5, when derive() has no rivals and there is no published week '
       + 'left to disagree — the plan\'s own switchover, not a further '
       + 'adjustment to this door.',
+  },
+  {
+    id: 'fixture-identity-5',
+    finding: 'A relaunch rebuilds an athlete\'s week differently when TWO decisions '
+      + 'are in it',
+    matches: /the relaunched world does not derive the week the athlete last saw/,
+    why: 'Found 2026-08-06 by the R5.3 pre-deletion measurement, and it is the '
+      + 'coordinate `quiescentBootTests` never builds. That suite already asserts '
+      + 'this exact law — "the world is its inputs: the visible week survives a '
+      + 'relaunch by derivation" — and it PASSES, because it acts ONE decision '
+      + '(a delete) and a single-decision world happens to agree. Add a SECOND '
+      + 'decision of a different kind and it does not: with an athlete removal '
+      + 'already in the week, a fixture add gives one Monday at the tap and a '
+      + 'different Monday after the relaunch (`Lower Squat` 7 exercises -> '
+      + '`Lower Body Strength` 4), and both team-night pairings swap with it. '
+      + 'Three engines, three answers for one untouched day: the pure resolve '
+      + 'says `Lower Squat|8` (the pre-fixture Monday, untouched, which is the '
+      + 'right answer), the published replan says `|7`, and the replay says '
+      + '`Lower Body Strength|4`. The athlete\'s own decisions both SURVIVE — '
+      + 'the removal is conserved by `userRemovalConstraints` and the ledger, not '
+      + 'by the overlay — so this is not lost data; it is the same week composed '
+      + 'three ways, and a relaunch is enough to change what the athlete trains.',
+    paidBy: 'R5, the switchover at the FIXTURE DOOR specifically — the door stops '
+      + 'publishing a materialised replan and the week derives from the persisted '
+      + 'life-fact plus the ledger. Measured precondition, recorded in '
+      + 'docs/R5_DELETION_SEQUENCE_2026-08-06.md §3 R5.3 re-cut (g): the pure '
+      + 'resolve already produces the correct week AND conserves the other '
+      + 'decision, so what pays this is deleting the publish, not adding a rebase '
+      + 'input.',
   },
 ];
 
@@ -437,20 +471,131 @@ run('fixture-identity-4 removing the last fixture clears the athlete\'s '
     + 'survive R5.');
 });
 
-console.log(`\nFixture identity totals: ${passed} passed, ${failed} failed`);
+// ── Cell 5: TWO DECISIONS, AND A RELAUNCH ─────────────────────────────────
+//
+// Cells 1-4 are synchronous because the in-memory twin is. This one needs the
+// DURABLE door (only it appends to the ledger) and a real relaunch, so it gets
+// an async runner with the same declared-red bookkeeping.
 
-// THE RATCHET DIRECTION: a declared red that no longer reds is a cell that
-// went green, and the commit that turned it green owes the deletion.
-const stale = DECLARED_RED.filter((entry) => !declaredRedHits.has(entry.id));
-if (stale.length > 0) {
-  console.error(`DECLARED RED NO LONGER REDS — delete the entry:\n  ${
-    stale.map((entry) => `${entry.id} (paid by ${entry.paidBy})`).join('\n  ')}`);
-  totalsPrinted(failed + stale.length);
-  process.exit(1);
+async function runAsync(name: string, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
+    passed += 1;
+    console.log(`  PASS ${name}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const declared = DECLARED_RED.find(
+      (entry) => name.startsWith(entry.id) && entry.matches.test(message),
+    );
+    if (declared) {
+      declaredRedHits.add(declared.id);
+      passed += 1;
+      console.log(`  RED (declared: ${declared.id}) ${name}`);
+      console.log(`      ${message.split('\n').slice(0, 4).join('\n      ')}`);
+      return;
+    }
+    failed += 1;
+    failures.push(`${name}: ${message}`);
+    console.log(`  FAIL ${name}`);
+    console.log(`      ${message}`);
+  }
 }
 
-totalsPrinted(failed);
-if (failed > 0) {
-  console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
-  process.exit(1);
+async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
+  const log = console.log; const warn = console.warn; const error = console.error;
+  const debug = console.debug; const info = console.info;
+  console.log = () => {}; console.warn = () => {}; console.error = () => {};
+  console.debug = () => {}; console.info = () => {};
+  try { return await body(); } finally {
+    console.log = log; console.warn = warn; console.error = error;
+    console.debug = debug; console.info = info;
+  }
 }
+
+/** The DURABLE fixture door — the only one that appends to the ledger. */
+async function durableFixtureAdd(date: string): Promise<{ outcome?: string }> {
+  return await quietAsync(async () => executeFixtureMutationTransaction({
+    action: 'add',
+    fixtureKind: 'practice_match',
+    targetDate: date,
+    expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+    source: {
+      requestedBy: 'athlete',
+      producer: 'tap',
+      surface: 'program_tab',
+      commandId: `fixture-identity:durable-add:${date}`,
+    },
+    todayISO,
+  } as never)) as { outcome?: string };
+}
+
+async function main(): Promise<void> {
+  await runAsync('fixture-identity-5 two decisions in one week survive a relaunch as the '
+    + 'same week', async () => {
+    freshWorld();
+    const wednesday = addDaysISO(weekStart, 2);
+    const saturday = addDaysISO(weekStart, 5);
+
+    // DECISION ONE: the athlete clears a day, through the real door.
+    const removal = quiet(() => applyPlanChange({
+      change: { kind: 'remove_session', date: wednesday },
+      visibleWeek: quiet(() =>
+        resolveWeekWithConditioning(weekStart, buildScheduleStateImperative())),
+      todayISO,
+      applyOverride: () => {
+        throw new Error('a removal must not use the single-date writer');
+      },
+    } as never)) as { ok: boolean; message?: string };
+    assert(removal.ok,
+      `the athlete's removal was REFUSED (${removal.message ?? 'no message'}) — this cell `
+      + 'asserts nothing until its own first decision lands');
+
+    // DECISION TWO: a fixture, through the DURABLE door so the ledger has both.
+    const added = await durableFixtureAdd(saturday);
+    assert(added.outcome !== 'impossible' && added.outcome !== 'no_change',
+      `the fixture ADD did not land (outcome "${added.outcome}") — a different red`);
+
+    const atTheTap = derivedWeek();
+    await quietAsync(async () => { await runQuiescentBoot(); });
+    const afterRelaunch = derivedWeek();
+
+    // The athlete's removal must survive — if it does not, this is a DATA LOSS
+    // red and not the composition red this cell declares.
+    const wednesdayAfter = afterRelaunch[2];
+    assert(wednesdayAfter === `${wednesday}=REST|0`,
+      `the athlete's cleared Wednesday did not survive the relaunch — it reads `
+      + `"${wednesdayAfter}". That is decision LOSS, a worse red than this cell's.`);
+
+    const changed = diffWeeks(atTheTap, afterRelaunch);
+    assert(changed.length === 0,
+      `the relaunched world does not derive the week the athlete last saw — `
+      + `${changed.length} of 7 days moved under a relaunch that decided nothing:\n      ${
+        changed.join('\n      ')}\n      `
+      + 'Both decisions survived; the week was simply COMPOSED differently. One '
+      + 'engine per week is what makes a relaunch a no-op.');
+  });
+
+  console.log(`\nFixture identity totals: ${passed} passed, ${failed} failed`);
+
+  // THE RATCHET DIRECTION: a declared red that no longer reds is a cell that
+  // went green, and the commit that turned it green owes the deletion.
+  const stale = DECLARED_RED.filter((entry) => !declaredRedHits.has(entry.id));
+  if (stale.length > 0) {
+    console.error(`DECLARED RED NO LONGER REDS — delete the entry:\n  ${
+      stale.map((entry) => `${entry.id} (paid by ${entry.paidBy})`).join('\n  ')}`);
+    totalsPrinted(failed + stale.length);
+    process.exit(1);
+  }
+
+  totalsPrinted(failed);
+  if (failed > 0) {
+    console.error(`FAILURES:\n  ${failures.join('\n  ')}`);
+    process.exit(1);
+  }
+}
+
+main().catch((error) => {
+  console.error('fixture identity suite THREW outside a cell', error);
+  totalsPrinted(failed + 1);
+  process.exit(1);
+});
