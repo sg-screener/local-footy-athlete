@@ -541,6 +541,58 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 > Both scratch instruments restored from backup: `git diff` over `src/` is
 > EMPTY at this commit. Markdown only.
 
+> **(q) V3 IS BUILT AND MEASURED — held on `feat/r53-v3-switchover` (`0d913c1e`),
+> NOT merged.** Five of six gates are green off their own printed exit lines;
+> the full `test:bible` printed `TRUE_EXIT=1` on one suite, and that red is a
+> finding that needs a ruling rather than a fix.
+>
+> **BOTH LEGS LAND AS DESIGNED.** Leg (ii) deleted the candidate materialiser;
+> leg (i) stopped the fixture door publishing its replan and deletes the decided
+> week's overlay instead. Cells 3, 5 and 6 are GREEN, and proven to bite: run
+> against the V0 product tree the new cells fail at exactly the independently
+> measured table — cell 3 at 3 of 7, W2 at 1 of 7, W2r at 3 of 7. The walker's
+> L16 relaunch-identity slice is 20/0.
+>
+> **LEG (i) WAS NARROWED BY MEASUREMENT.** The first cut also dropped the
+> DEPENDENT weeks' repair overlays and immediately red the cross-week dependency
+> property. Those weeks are the maintenance surface (p) priced at fourteen
+> athlete-deletion regressions, so leg (i) deletes the DECIDED week only —
+> the line `appliesFixtureDecision` already draws.
+>
+> **AND V2 IS NOT A STATE THAT EXISTS.** The full bible under leg (ii) ALONE
+> printed `TRUE_EXIT=1` at 133 suites on the walker's L16 slice: without leg (i)
+> the tap is still the replan while the relaunch has become the deriver. Under
+> V3 the same slice is green. The ruling's "leg (ii) first" is a BUILD order,
+> never a commit boundary.
+>
+> **WHAT THE UNIT DOES NOT PROVE, measured both ways.** On the fixture MOVE path
+> the decided week ends with no stored week (V0 `[WEEK_START, NEXT_WEEK]` -> V3
+> `[NEXT_WEEK]`). On the ADD path it does not: regression 16's overlay is
+> byte-identical before and after leg (i), written from inside the
+> reversible-adjustment publication rather than by the replan. The proven claim
+> is ONE COMPOSER — any surviving stored week EQUALS the derived one — not "no
+> stored week remains". The survivor is named and carried.
+>
+> **THE OPEN QUESTION, AND IT IS SAM'S.** `test:athlete-session-deletion` fails
+> 16 cells on one seed precondition. After a fixture is REMOVED through the
+> door, the freed Saturday reads:
+>
+> | | freed Saturday |
+> |---|---|
+> | V0, the published replan | `Hard Conditioning` |
+> | V3, the deriver | **empty** |
+>
+> The replan filled the freed day and the deriver does not. Three facts, none of
+> them decisive on their own: (1) the derived week is §18 LEGAL — the accepted
+> commit did not refuse it and disclosed no shortfall; (2) `fixture-identity-1`,
+> the founding cell, calls filling a freed Saturday the BUG Sam found on his
+> device pass; (3) BUT that world is a rest-Saturday athlete and this one trains
+> six days, so the two are not the same coordinate. Whether the empty Saturday
+> is the ruled-correct answer or the deriver under-producing is not this seat's
+> to decide, and editing the seed to accept it is precisely
+> `expectation-edited-to-match-the-regression` — the shape this unit exists to
+> refuse.
+
 **R5.4 — the hydration category.** `programHydrationIngress`,
 `programHydrationProjection`, `acceptedStateColdStart`'s migration half,
 `appHydrationGate`'s migration path. Retires LR-8 — **NO: see the R5.3 re-cut
