@@ -330,6 +330,133 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 > engines. R5.7 (the coach scope cut) and R5.8 (the structural sweep) are
 > independent of the switchover and stay payable in place.
 
+> **(k) THE THREE MONDAYS, ATTRIBUTED — and there are TWO producers, not
+> three.** (j) asked the next seat to attribute them before changing any. Done,
+> by instrumenting the real boot body (wrapping the modules `quiescentBoot`
+> lazily requires, so no source was edited to measure) and by capturing the
+> writer of `weekScopedOverlays` from its own stack rather than reading code.
+>
+> | Monday | producer, by stack | why it says what it says |
+> |---|---|---|
+> | `Lower Squat` **8** | `resolveWeekWithConditioning` — the deriver | INVARIANT. Identical in all five worlds below, before and after boot. The fixture is on Saturday; the deriver never moves the Monday. |
+> | `Lower Squat` **7** | the DOOR's replan: `rebuildLocalWeek` -> `commitWeekScopedOverlay` -> `commitAcceptedStateTransaction` (`weekRebuild.ts:855`) | composes with the live surfaces, which already hold the Wednesday removal in `userRemovalConstraints`. |
+> | `Lower Body Strength` **4** | `materialiseFixtureMarksForCandidate` (`acceptedStateTransaction.ts:338`, called at `:688`) inside `commitRebuiltProgram` at `quiescentBoot.ts:303` | composes with the CANDIDATE surfaces, whose `userRemovalConstraints` boot cleared eleven lines earlier (`:271`). |
+>
+> So `|7` and `|4` are **the same engine at two different input states**, not
+> two engines. Both routes call `buildFixtureProjection`; both publish through
+> the one site (`acceptedStateTransaction.ts:880`). The difference is entirely
+> whether `userRemovalConstraints` was populated when the projection ran. The
+> "three engines, three answers" framing in `fixture-identity-5`'s own `why`
+> is wrong on the count and should be corrected when the cell is paid.
+>
+> **(l) THE BISECT, AND THE AXIS IS NOT DECISION COUNT.** (i) named the missing
+> axis as "the NUMBER of simultaneous decisions". Measured across five worlds,
+> that is refuted — two of them hold two decisions and only one diverges:
+>
+> | world | decisions, in order | tap vs relaunch | tap vs pure resolve |
+> |---|---|---|---|
+> | W0 | none | 0 of 7 | 0 of 7 |
+> | W1a | removal | 0 of 7 | 0 of 7 |
+> | W1b | fixture | 0 of 7 | **3 of 7** |
+> | W2 | removal, then fixture | **3 of 7** | 1 of 7 |
+> | W2r | fixture, then removal | 0 of 7 | 3 of 7 |
+>
+> **The axis is decision ORDER.** W2 and W2r are the same two decisions and
+> disagree. The mechanism is exact: the fixture life-fact is one of the six
+> PERSISTED keys, so boot applies it inside `commitRebuiltProgram` — at
+> position zero, before a single ledger entry replays. Boot therefore always
+> composes the fixture as if it were the athlete's FIRST decision, whatever the
+> ledger records. W2r agrees only because there the fixture really was first.
+> A relaunch does not re-order the ledger; it hoists the one decision that
+> rides a life-fact out of the ledger entirely.
+>
+> That also explains why nothing caught it. `quiescentBootTests` acts one
+> decision, and one decision cannot express an order.
+>
+> **(m) THE DEAD-CODE QUESTION (j) LEFT OPEN, ANSWERED — and the answer is
+> NO.** (j) declined to claim the fixture replay interpreter is dead because
+> the boot suites had not been run under the mutation. Both were, and the
+> question splits:
+>
+> - **No boot suite covers it.** Under the mutation `test:quiescent-boot`
+>   printed `TRUE_EXIT=0` at 4/4 and `test:worn-world-boot` printed
+>   `TRUE_EXIT=0` at 4/4. `test:fixture-identity` printed `TRUE_EXIT=0` with
+>   cells 3 and 5 byte-identical to the unmutated diffs — (j)'s claim, re-pinned
+>   on this tree rather than believed.
+> - **But it is NOT dead code — it fires and does real work.** A world that
+>   adds then removes a fixture durably replays as `fixture add -> regenerated`,
+>   `fixture remove -> repaired`. It is reachable and it executes.
+> - **And deleting it still changes nothing.** Those same worlds are 0 of 7 tap
+>   vs relaunch both with the replay and without it. Across all five worlds
+>   measured, the fixture replay is **behaviourally redundant**.
+> - The reason is structural, not luck: `markedDays` is persisted, and
+>   `commitRebuiltProgram` materialises it before replay runs, so the life-fact
+>   already carries the net state the replay would re-establish. A fixture is
+>   the one decision kind whose entire effect is a persisted input. A
+>   `plan_change` is not, which is why its replay is load-bearing.
+> - **One thing found while measuring it, worth its own line:** on an
+>   add-then-MOVE world, both fixture replays FAIL — `fixture add` returns
+>   `impossible` ("Use a move action when the accepted week already contains a
+>   fixture") because the materialiser already placed the moved fixture, and
+>   `fixture_move` then returns `no_change` ("source fixture is no longer
+>   present"). The week is correct anyway. Two representations of one decision,
+>   one of them erroring into a `logger.warn` nobody reads, and the product
+>   right by the other. That is the redundancy stated as a defect.
+>
+> **(n) THE CORRECTED SWITCHOVER DESIGN, PRICED BY MUTATION BEFORE BUILDING.**
+> (j) refuted the first candidate. This one was tested the same way before
+> being proposed. Two deletions are available, and they pay DIFFERENT cells:
+>
+> - **(i)** the DOOR's own replan publish, replaced by settle-by-re-derive —
+>   simulated with no source edit at all, by calling
+>   `settleDerivedWorldAfterDecision` after the durable door returns, which is
+>   exactly R5.1's semantics.
+> - **(ii)** `materialiseFixtureMarksForCandidate`, the overlay BOOT ITSELF
+>   writes — a one-line scratch mutation returning the candidate untouched.
+>
+> | variant | cell 3 (published vs resolve) | cell 5 (tap vs relaunch) | the athlete's Monday |
+> |---|---|---|---|
+> | V0 today | 3 of 7 RED | 3 of 7 RED | `Lower Squat\|7`, becoming `\|4` on relaunch |
+> | V1 = (i) only | 3 of 7 RED | **0 of 7 GREEN** | `Lower Body Strength\|4` — **worse, and sooner** |
+> | V2 = (ii) only | 3 of 7 RED | 1 of 7 RED | `\|7` at the tap, `\|8` after relaunch |
+> | V3 = **(i) + (ii)** | **0 of 7 GREEN** | **0 of 7 GREEN** | `Lower Squat\|8` — the right one |
+>
+> **THE FINDING THAT DECIDES THE UNIT: V1 alone is a trap.** "The door settles
+> by re-deriving" is R5.1's own sentence and the obvious next step, and it
+> greens `fixture-identity-5` — by moving the TAP down to boot's wrong answer.
+> The athlete's Monday goes from eight exercises to four immediately instead of
+> at the next relaunch. That is `expectation-edited-to-match-the-regression`
+> wearing a green gate: the cell asks the two sides to agree and does not ask
+> which side is right. **A switchover that lands (i) without (ii) ships a
+> regression and closes the cell that would have caught it.**
+>
+> Under V3 the Saturday still gets its `Game Day` (published and resolved
+> agree, both runs), and the athlete's cleared Wednesday still survives the
+> relaunch — so V3 pays both cells without trading a decision.
+>
+> **A THIRD OVERLAY WRITER, MEASURED AND NOT YET PRICED.** Under V3 an overlay
+> key is still written, from `stageRollingHorizonFixtureRepair`
+> (`acceptedStateTransaction.ts:~2812`) on the markedDays-carrying commit. On
+> these worlds it composes to the SAME week the resolve does, which is why cell
+> 3 greens with it present — it is a stored output, not a second truth. It is
+> north-star debt the unit should name, and it means the build should verify
+> the deletion count is two rather than assume it.
+>
+> **NOT MEASURED, and the build must not read past this line.** (1) V3's leg
+> (i) was simulated as publish-then-settle-overwrites, NOT as the door's
+> publish removed; the real deletion may differ and must be re-measured, not
+> inherited from this table. (2) `materialiseFixtureMarksForCandidate` runs on
+> EVERY accepted commit, deletions included — its own comment says so. Nothing
+> here measures the other doors, and the full `test:bible` was NOT run under
+> either mutation. The blast radius of deleting (ii) is UNKNOWN and sizing it
+> is the build's first task. (3) Five worlds, one profile, one week shape.
+>
+> **THE UNIT, RESTATED.** Not "the door stops publishing a replan" — that is
+> leg (i) and it is half. It is: **the fixture week has one composer, and it is
+> the deriver.** Both routes into `buildFixtureProjection` go, in an order where
+> each is independently measurable, and (ii) goes FIRST because it is the one
+> with the unknown blast radius and the one whose absence makes leg (i) safe.
+
 **R5.4 — the hydration category.** `programHydrationIngress`,
 `programHydrationProjection`, `acceptedStateColdStart`'s migration half,
 `appHydrationGate`'s migration path. Retires LR-8 — **NO: see the R5.3 re-cut
