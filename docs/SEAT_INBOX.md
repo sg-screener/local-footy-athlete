@@ -2,7 +2,49 @@
 
 ## Unprocessed (newest first)
 
-1. SEAT CORRECTION on answer 3 — read
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (seventh pass) — SEAT CORRECTION on answer 3
+
+- Ruling committed as authored (`a375b49f`). Answered in
+  docs/R53_SHARP_PROBE_FILLER_NAMED_2026-08-07.md; probes at `1eb65683`
+  and `9d7d8ddc` on scratch/r53-pricing-7. NOTHING BUILT.
+- **OWED ITEM DONE — cell-19 blocker removal RE-PROVEN with the flag
+  live.** The shipped fixture fixes are ported to the scaffold, and both
+  sides measured on ONE worktree: scaffold's ORIGINAL seed + leg (iii) =
+  **21/1** (cell 19); shipped seed fix + leg (iii) = **22/0**; flags off =
+  22/0. The blocker is retired on the branch that can actually test it.
+- **THE HYPOTHESIS IS REFUTED.** The filler is NOT a reader of the
+  published declaration. `validateLiveWeekOverlayWrite` — which matches the
+  hypothesis exactly (reads `exposureContractV2`, early-returns without it,
+  writes `workoutsByDate`) — prints **ZERO** times on this path. It reads
+  the declaration as described and is simply not on the path.
+- **THE FILLER, NAMED:** `buildFixtureProjection`
+  (`acceptedStateTransaction.ts:2029`) → `buildWeekScopedWorkoutOverlay`
+  (`weekRebuild.ts:217`, reason `one_off_no_game`), reached from
+  `stageRollingHorizonFixtureRepair` and `commitProgramSetupRebuildTransaction`.
+  It builds the payload from the REPLAN's own workouts, not from the
+  declaration — so the publication's deliberate `{}` is overwritten
+  afterwards by this rolling-horizon republish.
+- **And it is NOT gated on the declaration:** overlays built = 84 flags
+  off, 59 under leg (v), 59 under legs (iii)+(iv)+(v). It still runs. What
+  leg (v) changes is whether the payload SURVIVES the transaction for that
+  week (AFTER-txn `[]`).
+- Also excluded: `additionalOverlays` never collide with the primary week
+  (zero adjacent overlays here), and `commitWeekScopedOverlay` replaces
+  wholesale — clause (c)'s merge re-confirmed innocent.
+- **Back to the seat:** the correction's "no new ruling needed — build
+  leg (iii)(+iv) first" branch does not apply *on its stated grounds*,
+  because the filler never read the declaration. The convergence order may
+  still be right; that is the seat's call. **Next question, now sharp:**
+  why does the projection's payload fail to survive the COMMIT for that
+  week under leg (v), when the projection still produces it? Condition 1's
+  re-measure stays parked — the premise it waited on has changed.
+
+## Processed 2026-08-07 (seventh pass) — the correction as the seat wrote it
+
+- SEAT CORRECTION on answer 3 — read
    docs/R53_SEAT_ANSWER3_CORRECTION_2026-08-07.md, commit as authored.
    Short form: the seat's overreach attribution is withdrawn (code
    proved workoutsByDate:{} is landed behaviour; leg (v) was
@@ -20,9 +62,6 @@
    world the ruled order never produces). Also owed first: re-prove
    the cell-19 blocker removal by porting the seed fix to
    scratch/r53-pricing-7. Sam holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (sixth pass) — the ruling as the seat wrote it
 
