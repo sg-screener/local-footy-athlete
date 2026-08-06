@@ -119,17 +119,31 @@ The injury was never the subject. **Re-deriving moved the athlete's entire
 program forward to today and deleted the week they were in.** The results
 inputs survived (3 `sessionFeedback` keys) — the week they belong to did not.
 
-The cause, read from source and confirmed by the printout:
+> **CORRECTED 2026-08-06, later the same day.** The paragraph that stood here
+> claimed the store field "has no writer anywhere in product". **That was
+> wrong**, and it was wrong in the direction that flatters the finding. The
+> field does have a writer — `commitRebuiltProgram` (`weekRebuild.ts`), which
+> every EDIT door goes through. What it does NOT have is a writer on the
+> door ONBOARDING uses. The probe that produced the printout above ran on a
+> hand-built seed, and I generalised from it without checking the product
+> path. The corrected cause is below; it is narrower, and it is an ownership
+> defect rather than a missing writer. See `wornWorldBootTests` for the
+> version that is gated.
 
-- `rebuildDerivedWorld` (`quiescentBoot.ts:197`) reads
-  `storeState.generationAnchorISO ?? todayISOLocal()`.
-- **That store field has no writer anywhere in product.** `grep` over `src/`
-  excluding tests: `generateProgram.ts:992` sets `generationAnchorISO` on the
-  PROGRAM object; `programStore.ts:332` and `:2225` persist
-  `state.generationAnchorISO ?? null`; `:2249` rehydrates it. Nothing ever
-  assigns it. The persisted "anchor input" is therefore **always `null`**.
-- So the fallback is not a fallback. It is the only branch that ever runs,
-  and every re-derivation anchors to TODAY.
+The cause, corrected and gated:
+
+- `rebuildDerivedWorld` read `storeState.generationAnchorISO ??
+  todayISOLocal()`.
+- **Two install doors, one silent.** `commitRebuiltProgram` stamped the
+  anchor onto the store, riding the same publication as the program it
+  anchors. `programStore.setCurrentProgram` — the door
+  `onboardingCompletion.ts:114` installs a first program through — did not:
+  its `commitAcceptedStateTransaction` payload had no `generationAnchorISO`
+  key at all.
+- So a world built by EDITING carried its anchor, and a world built by
+  ONBOARDING carried null and fell into the `??`. One input, two authors,
+  one of them silent.
+- The fallback then re-anchored that athlete's whole program to today.
 
 One input, two homes — `programStore.generationAnchorISO` and
 `program.generationAnchorISO` — and the derive owner reads the one that is
@@ -174,20 +188,37 @@ proven, and reverted once it exposed a defect underneath it.
 - R5.1 — built and proven, REVERTED, in `stash@{0}`. Blocked on §4b.
 - R5.2–R5.8 — not started. All of them sit behind the switchover.
 
-**The next seat's order of work, and it is not R5.2.**
+**UPDATE — the anchor unit is DONE, and it was not the cause.**
 
-1. **Fix the anchor's ownership** (§4b). One home for the generation anchor,
-   read by the derive owner. It is a small change with a large blast radius,
-   and it is a prerequisite for the whole switchover: every batch after R5.1
-   makes derivation more authoritative, and derivation is currently anchored
-   to the wrong day.
-2. **Build the gate that would have caught it** before fixing it — a world
-   whose program was generated on an earlier day, relaunched. Every existing
-   boot suite is same-day, which is why 138 links missed this.
-3. Then `git stash pop` R5.1, and re-run `test:injury-authority`. If the
-   anchor was the whole cause, those five cells go green with no further
-   change to the switchover.
-4. Then R5.2 onward, per `docs/R5_DELETION_SEQUENCE_2026-08-06.md` §3.
+Steps 1–3 below were executed on Sam's ruling of 2026-08-06 (the anchor is a
+decision with one home; the `?? todayISOLocal()` fallback is forbidden; no
+anchor is a typed refusal). Landed: `wornWorldBootTests` (red-first on HEAD,
+green after), the anchor's one owner, the refusal, the second install door
+stamped, and the `spent-week-friday` seed corrected — it carried no anchor at
+all, which is a state no athlete can reach.
+
+**And then step 3 disproved the premise.** With the anchor fixed and the seed
+corrected, `test:injury-authority` returned to **12 passed / 5 failed with the
+ORIGINAL signature**, `planner_selected_target_miss:main_strength:2`. The
+anchor was a real, separate, athlete-reachable defect that R5.1 happened to
+surface. It is not what R5.1's five red cells are about.
+
+**So R5.1 remains blocked, on a different finding**: under a severe
+upper-body injury the derive path delivers fewer main-strength sessions than
+the §18 phase planner selected. It clears the floor and misses the target of
+2. Lower-body and back_midline pass at every severity; upper_body passes at
+2/5/7 and fails at 9. This is the finding-3 family — "a restricted week holds
+its frequency and substitutes" (Sam, `a5a6b611`) — reaching a coordinate
+finding 3 did not cover, and it wants its own diagnosis and ruling rather
+than a change to the switchover.
+
+**The next seat's order:**
+
+1. Root-cause the §18 upper-body target miss on the derive path. It is a §18
+   placement unit, not a slice-boundary patch.
+2. Then `git stash pop` R5.1 (still `stash@{0}`), re-run
+   `test:injury-authority`, and land the switchover.
+3. Then R5.2 onward, per `docs/R5_DELETION_SEQUENCE_2026-08-06.md` §3.
 
 **Baseline evidence:** full `test:bible` on `91446fe3`, clean tree, printed
 `TRUE_EXIT=0`, chain reached its last suite.

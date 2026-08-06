@@ -47,7 +47,11 @@ import type {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
-import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
+import {
+  generationAnchorForProgram,
+  getCurrentBlockNumberForGeneration,
+  useProgramStore,
+} from '../store/programStore';
 import {
   buildFixtureProjection,
   commitAcceptedStateTransaction,
@@ -735,7 +739,12 @@ export function commitRebuiltProgram(
   // program was GENERATED with, recorded by generation itself so the anchor
   // can never drift from what actually ran (a caller's selectedDate can —
   // the walker's did). It rides the same publication as the program.
-  const anchor = program.generationAnchorISO ?? options.selectedDate;
+  // Through the one owner. The `?? options.selectedDate` that used to sit
+  // here was a second author for the same decision: a caller's selectedDate
+  // is where the rebuild is being applied, not the day generation ran. Sam's
+  // 2026-08-06 ruling collapses both install doors onto the program's own
+  // anchor — one home, and no door may invent one.
+  const anchor = generationAnchorForProgram(program);
   if (anchor) {
     (proposal as { generationAnchorISO?: string }).generationAnchorISO = anchor;
   }

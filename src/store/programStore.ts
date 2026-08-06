@@ -302,6 +302,29 @@ registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
  */
 export const PRE_REBUILD_ENVELOPE_PARKING_KEY = 'program-store.pre-rebuild-envelope';
 
+/**
+ * THE GENERATION ANCHOR'S ONE OWNER (Sam's ruling, 2026-08-06).
+ *
+ * The anchor is a DECISION — the day the athlete's program was actually
+ * generated — and it is written in exactly one place: by generation itself,
+ * onto the program (`generateProgram.ts`). Every install door stamps the
+ * persisted anchor THROUGH HERE, so the value can never be authored by a
+ * caller's idea of today.
+ *
+ * Why this function exists rather than an inline read at each door: the two
+ * install doors disagreed. `commitRebuiltProgram` stamped the anchor and
+ * `programStore.setCurrentProgram` — the one ONBOARDING uses — did not, so a
+ * world built by editing carried its anchor and a world built by onboarding
+ * carried null. Boot then guessed today and re-anchored the whole program.
+ * Two doors, one input, one of them silent: the ownership defect underneath
+ * the symptom.
+ */
+export function generationAnchorForProgram(
+  program: { generationAnchorISO?: string } | null | undefined,
+): string | null {
+  return program?.generationAnchorISO ?? null;
+}
+
 /** An old-shape envelope carries stored outputs; the new shape carries `inputs`. */
 export function programEnvelopeIsOldShape(raw: string): boolean {
   try {
@@ -1854,6 +1877,14 @@ export const useProgramStore = create<ProgramState>()(
             blockState: validatedProgram
               ? deriveStoredBlockStateFromProgram(validatedProgram, effectiveTodayISO)
               : null,
+            // THE ANCHOR RIDES THE PROGRAM IT ANCHORS (Sam, 2026-08-06). This
+            // is the door ONBOARDING installs a first program through, and it
+            // was the only install door that did not stamp the anchor —
+            // `commitRebuiltProgram` did (`weekRebuild.ts`), so a world built
+            // by editing carried its anchor and a world built by onboarding
+            // did not. One home, one value, read off the program: never a
+            // caller's idea of today. `wornWorldBootTests` holds the line.
+            generationAnchorISO: generationAnchorForProgram(validatedProgram),
           },
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
             microcycle.startDate.slice(0, 10)) ?? [],

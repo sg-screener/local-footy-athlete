@@ -14,6 +14,8 @@
  * byte-identical within a small write budget; the visible week survives a
  * relaunch by derivation; replay is idempotent; an old-shape envelope is
  * parked byte-identical for R2's migration before any new-shape write.
+ * `wornWorldBootTests` holds the one they all missed: a program generated on
+ * an EARLIER day, booted today, keeps its anchor and its week.
  */
 
 import { useProgramStore, PROGRAM_STORE_PERSISTENCE_KEY } from './programStore';
@@ -46,6 +48,27 @@ export async function parkPreRebuildEnvelopeIfPresent(): Promise<void> {
   } catch (error) {
     // Parking is insurance for R2; a failed park must not block boot.
     logger.error('[quiescentBoot] failed to park the pre-rebuild envelope', { error });
+  }
+}
+
+/**
+ * The typed refusal when the persisted inputs carry no generation anchor.
+ * `appHydrationGate` catches it, logs it, and publishes
+ * `status: 'failed', failedStores: ['derived-world']` — the boot error screen
+ * with its Try Again, which is a visible failure rather than a silent wrong
+ * week (L-C1). A world that cannot say WHEN it was generated cannot be
+ * derived, and inventing the day is the defect this replaced.
+ */
+export class MissingGenerationAnchorError extends Error {
+  readonly code = 'missing_generation_anchor';
+
+  constructor() {
+    super(
+      'The derived world cannot be rebuilt: the persisted inputs carry no '
+      + 'generation anchor. The anchor is recorded at generation and read at '
+      + 'boot; it is never guessed from today.',
+    );
+    this.name = 'MissingGenerationAnchorError';
   }
 }
 
@@ -192,9 +215,18 @@ export async function rebuildDerivedWorld(): Promise<void> {
     generationAnchorISO?: string | null;
     hydratedSeasonPhaseClock?: unknown;
   };
-  // The anchor is an input: regenerate the program the athlete's world was
-  // generated for. A world with no recorded anchor generates for today.
-  const generationISO = storeState.generationAnchorISO ?? todayISOLocal();
+  // THE ANCHOR IS A DECISION (Sam, 2026-08-06), and boot READS it. There is
+  // no `?? todayISOLocal()` here and there must never be one again: that was
+  // not a fallback, it was the only branch that ever ran, and it re-anchored
+  // every worn athlete's program to today and deleted the week they were in
+  // (`wornWorldBootTests`). Re-anchoring to today is the clock-twin of "a
+  // decision never rebases from a stored week" — a derivation quietly
+  // authoring an input it was supposed to read. Absent anchor is a typed
+  // REFUSAL, reported through the boot's own failure surface, never a guess.
+  const generationISO = storeState.generationAnchorISO;
+  if (!generationISO) {
+    throw new MissingGenerationAnchorError();
+  }
   const clock = storeState.hydratedSeasonPhaseClock ?? undefined;
   beginLedgerReplay();
   try {
