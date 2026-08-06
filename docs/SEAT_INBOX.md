@@ -5,6 +5,68 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (eleventh pass) — SWEEP: leg (ii) priced ALONE + taped
+
+- Answered in docs/R53_LEG_II_ALONE_PRICED_AND_TAPED_2026-08-07.md.
+  NOTHING BUILT.
+- **(c) LEG (ii) ALONE COSTS SEVEN, not five.** All 154 suites, sets:
+  control 6; (iii)+(iv)+basis 6 (**0 new**); **(ii) ALONE 13 (7 new)**;
+  (ii)+(iii)+(iv) 11 (5 new). The seven:
+  `accepted-state-transactions`, `action-walker:deep`,
+  `device-pass-2026-08-05-evening`, `fact-horizon`,
+  `program-control-durable`, `session-list-combinations`, `work-bill`.
+- **LEGS (iii)+(iv) MASK TWO of leg (ii)'s failures** —
+  `device-pass-2026-08-05-evening` and `session-list-combinations` are red
+  alone, green in combination; nothing goes the other way. **The legs
+  INTERACT: per-leg prices do not add**, so the earlier "5" was the
+  residue, not leg (ii)'s cost. Any ordering argument must be made against
+  measured COMBINATIONS.
+- **(b) THE TAPE — leg (ii)'s gates NEVER EXECUTE in `fact-horizon`.**
+  The failure is real and deterministic (flags off 14/0; `LEG_II=1` 12/2,
+  repeated twice each way). `SCAFFOLD.legII` is read in exactly FOUR places
+  in `src`; all four taped; **all four record ZERO hits** in that suite —
+  tier-4 host entry, `withDisplacedCapacityReduction`,
+  `repairDisplacedStrengthCandidates`, `selectedShortfall`.
+  **The instrument is proven sound:** the same tape fires 1205/1205/532 in
+  `test:athlete-session-deletion`.
+- **STOP with the question open.** Leg (ii) changes the outcome without any
+  of its gates running, so the effect is not flowing through them.
+  Candidates — module-init/import-order effect of evaluating `SCAFFOLD`, a
+  fifth reader grep does not match, a value captured once at load — are
+  NOT tested, and per the standing rule none is worth anything unmeasured.
+- **A measurement that lied, and was caught.** The first leg (ii)-alone run
+  reported 1 failure: `git worktree add` refuses a second checkout of the
+  same branch, the `cd` failed silently, and it measured the BRANCH where
+  the flag is inert. Rerun asserts `cwd`, `HEAD` and the flag's presence
+  before measuring. Third harness-lies sighting this unit.
+- **NOT covered:** the other six were not taped (worst-first, as ordered);
+  no root cause; the masking mechanism not investigated.
+
+## Processed 2026-08-07 (eleventh pass) — the order as the seat wrote it
+
+- LOOP CHECK: unpriced-leg-reaches-front-of-build-order — sighting 1,
+   but the sweep-not-serial law already covers it — COMPRESS both the
+   pricing and the diagnosis. RULED on the leg (ii) STOP (34bb2af4):
+   (a) The five reds are ACCEPTED as leg (ii)'s price; the STOP was
+   right; 2-of-3 stays known-wrong; option 1's grounds stand.
+   (b) DIAGNOSE BY TAPE, not serially: ONE instrumented run across
+   all five failing suites' worlds recording every tier-4 write —
+   target day, that day's completed/fact status, payload, stack —
+   then diff against the laws. The one-root hypothesis gets ANSWERED
+   by that run, not argued; if one cause explains several, the map
+   falls out of the same tape. Fact-horizon is the read of the tape
+   to do first (completed days are FACTS — a layer rewriting them is
+   the named destroy-class, worst first).
+   (c) In the SAME sweep: price leg (ii) ALONE (it was only ever
+   measured riding (iii)+(iv)) — the build order gets chosen knowing
+   every leg's own price, per your own named pattern, which is
+   ENDORSED as standing: every remaining leg of any unit is priced in
+   one sweep BEFORE build order is chosen, never as it reaches the
+   front of the queue.
+   (d) Nothing lands until the five are attributed and re-priced;
+   parity gate and all standing conditions unchanged. Sam holds a
+   veto.
+
 ## Processed 2026-08-07 (tenth pass) — OPTION 1 RULED -> LEG (ii) PRICED -> STOP
 
 - Answered in docs/R53_LEG_II_PRICED_STOP_2026-08-07.md. NOTHING BUILT.

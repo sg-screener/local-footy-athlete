@@ -161,3 +161,16 @@ The fix is structural: every seat order and boundary report OPENS with
 SEAT_INBOX Standing). No line, no valid order. Sighting 2 = compress.
 If you are a future seat reading this: the line is not ceremony, it is
 the thinking Sam paid for, made mandatory.
+
+## §7 NO-COMPLETENESS-CLAIMS LAW 2026-08-07 (Sam-forced, third sighting)
+
+The seat told Sam "the hunt is over", "one probe left", "no more
+unpriced pieces" — and was wrong every time, because none of those
+were measured claims. The law: the seat NEVER asserts completeness
+("last", "final", "no more surprises", "nothing left to find") about
+work not yet measured. Status is reported in exactly three buckets:
+MEASURED-DONE (cite the run), ATTRIBUTED-NOT-FIXED (cite the doc),
+and OPEN-UNKNOWN (stated as unknown, with what bounds it). A forecast
+is given only as the spread of measured outcomes so far, never as a
+floor. Optimism is not a kindness to Sam; it converts every ordinary
+stop into a betrayal.
