@@ -1301,6 +1301,35 @@ function canonicaliseAcceptedBoundaryState(
             userRemovalConstraints: persistedState.userRemovalConstraints,
           }),
       });
+    // R5.3 RESIDUAL PROBE (Sam's ruling, 2026-08-06: the residual is
+    // INSTRUMENTED BEFORE FIXING). An INSTRUMENT, not a gate — prints only
+    // under R53_PROBE=1 and is inert otherwise. What it answers: when the
+    // derived bye week is a core-conditioning session short, does the gateway
+    // repair it and the repair fail to reach the read, or does the gateway
+    // return the shortfall unrepaired?
+    if (process.env.R53_PROBE === '1') {
+      const ev = accepted.evaluation as unknown as {
+        blockingViolations?: { code: string }[];
+        advisoryViolations?: { code: string }[];
+      };
+      // `process.stdout` deliberately, not `console.log`: the suites that reach
+      // this path wrap their doors in `quiet()`, which replaces the console.
+      process.stdout.write('[R53_PROBE] gateway ' + JSON.stringify({
+        weekStart,
+        mode: accepted.contract?.identity?.mode,
+        status: accepted.status,
+        attempts: accepted.attempts,
+        repairs: (accepted.repairs ?? []).map((r: { kind: string }) => r.kind),
+        blocking: (ev.blockingViolations ?? []).map((v) => v.code),
+        advisory: (ev.advisoryViolations ?? []).map((v) => v.code),
+        coreMin: accepted.contract?.conditioning?.core?.requiredMinimum,
+        anchors: (accepted.contract?.anchors ?? [])
+          .map((a: { kind: string; dayOfWeek: number }) => `${a.kind}@${a.dayOfWeek}`),
+        canonicalByDay: accepted.canonicalWorkouts
+          .map((w: Workout) => `${w.dayOfWeek}:${w.name}`),
+        hadOverlay: !!overlay,
+      }) + '\n');
+    }
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
     );
