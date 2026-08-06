@@ -457,6 +457,90 @@ of that suite forces it. Retires LR-4, LR-26, LR-30.
 > each is independently measurable, and (ii) goes FIRST because it is the one
 > with the unknown blast radius and the one whose absence makes leg (i) safe.
 
+> **(o) CONDITION 1(a) DISCHARGED — THE MATERIALISER'S DOORS, MEASURED. It is
+> not boot's writer; boot is 21% of it.** The ruling required the doors
+> measured BEFORE leg (ii) lands. Instrument: an env-guarded census wrapper
+> around `materialiseFixtureMarksForCandidate` recording, per distinct stack,
+> how often it was REACHED and how often it actually CHANGED the candidate.
+> Corpus: the full `test:bible`, which printed `TRUE_EXIT=0` across 156 suites
+> under the instrument — so the census tree is also proven behaviour-identical.
+>
+> **4,378 invocations, 73 distinct stacks, 50 suites. It changes the candidate
+> 518 times (11.8%), through NINE product doors.**
+>
+> | door that reaches it | candidate CHANGED |
+> |---|---|
+> | `commitAthleteSessionAdditionTransaction` | 129 |
+> | `commitAthleteSessionDeletionTransaction` | 113 |
+> | `commitRebuiltProgram` (boot, and every rebuild) | 110 |
+> | `commitAthleteSessionMoveTransaction` | 110 |
+> | `commitWeekScopedOverlay` -> `commitReversibleAdjustmentCreationTransaction` | 30 |
+> | `commitCalendarMarkTransaction` | 12 |
+> | `coachUpdatesStore.ts:674` | 8 |
+> | `profileProgramTransaction.mutate` | 2 |
+> | `programStore.clearWeekScopedOverlays` | 1 |
+> | (`athleteSessionDeletionTests` local helper) | 3 |
+>
+> **Two things the attribution in (k) did not have.** First, the materialiser is
+> primarily the ATHLETE-DOOR overlay writer — add, move and delete are 352 of
+> the 518 changes (68%), and boot is 110 (21%). (k) attributed
+> `Lower Body Strength|4` to it inside `commitRebuiltProgram` and that is
+> correct, but it is one door of nine and not the busiest. Second, **the fixture
+> door's OWN publish is rewritten by it 30 times** — `commitWeekScopedOverlay`
+> stages through `stageAcceptedStateTransaction` like every other commit, so
+> the door publishes a replan and the materialiser then composes over it. That
+> route is not in (k)'s table at all. It does not fire on the fixture-identity
+> worlds (0 of 18 there), which is why the two-decision measurement never saw
+> it.
+>
+> **THE BLAST RADIUS OF LEG (ii), SIZED:** not "boot composes differently" but
+> "nine doors stop having their fixture marks re-materialised", four of them
+> athlete-facing. That is what the full `test:bible` under leg (ii) has to
+> answer.
+>
+> **DECLARED GAP.** The census measures the SUITE corpus, not the device. Of the
+> ten modules that statically call `commitAcceptedStateTransaction`, four were
+> never reached by it: `postGenerationConstraintValidation.ts`,
+> `temporarySourceFactTransaction.ts` (2 sites),
+> `defaultDevE2ESeedCoordinator.ts` (5 sites, dev e2e, outside the bible) and
+> `reversibleAdjustmentTransaction`'s own RESTORE path. Nothing here says what
+> leg (ii) does to those.
+>
+> **(p) CONDITION 1(b) DISCHARGED — THE THIRD WRITER IS PRICED, AND IT IS NOT
+> DELETABLE IN THIS UNIT. The deletion count is TWO, verified rather than
+> assumed.** (n) named `stageRollingHorizonFixtureRepair` as a third overlay
+> writer that "composes to the SAME week the resolve does" on the fixture
+> worlds, and asked the build to price it. Mutation: drop the three overlay
+> writes it feeds OUTSIDE the fixture door — `acceptedStateTransaction.ts`
+> `:2337-2339` (`commitCalendarStateTransaction`) and `:2812-2815` (the
+> removal/move constraint door), and `reversibleAdjustmentTransaction.ts`
+> `:743-750` (fixture-adjustment restoration) — env-guarded, twelve suites run,
+> every result off its own printed exit line.
+>
+> | suite | exit | against a baseline of zero failures |
+> |---|---|---|
+> | `test:athlete-session-deletion` | **1** | **14 failures**; regressions 24/24 -> 11/24, properties 5/5 -> 4/5 |
+> | `test:accepted-state-transactions` | **1** | 1 failure; regressions 23/23 -> 22/23 |
+> | the other ten, `test:fixture-identity` included | 0 | unchanged; cells 3 and 5 byte-identical to baseline |
+>
+> **What it costs, in the athlete's terms:** deleted work stops relocating at
+> all (`Saturday=undefined`, `lower destination=undefined`, "Upper Push was not
+> relocated"), Section 18 pattern restoration fails outright
+> (`pattern_restore_failure` for squat, hinge and push), and two restorations
+> come back `conflicted`. **The rolling repair's overlay is where relocated work
+> LANDS.** It is a stored output and it is north-star debt, but it is not the
+> fixture week's second truth — on the fixture-identity worlds removing it
+> changes literally nothing, which is exactly what (n) measured and now has a
+> price beside it.
+>
+> So: **two deletions in this unit, not three.** The third is carried with a
+> measured price, and its retirement is its own unit — one that must first give
+> RELOCATION an owner that is not a stored week. Filing it as an assumption
+> would have been the cheap read; the mutation says the opposite.
+>
+> Both scratch instruments restored from backup: `git diff` over `src/` is
+> EMPTY at this commit. Markdown only.
+
 **R5.4 — the hydration category.** `programHydrationIngress`,
 `programHydrationProjection`, `acceptedStateColdStart`'s migration half,
 `appHydrationGate`'s migration path. Retires LR-8 — **NO: see the R5.3 re-cut
