@@ -5,6 +5,67 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (tenth pass) — OPTION 1 RULED -> LEG (ii) PRICED -> STOP
+
+- Answered in docs/R53_LEG_II_PRICED_STOP_2026-08-07.md. NOTHING BUILT.
+  The ruling's own first condition was leg (ii)'s measurement run FIRST.
+  Done — and the price stops the build.
+- **CONTROLLED, same worktree, all 154 suites.** Control (flags off) 6;
+  `LEG_II+LEG_III+LEG_IV+basis=visible` 11. Diffed as SETS:
+  **5 NEW, 0 FIXED.** The (iii)+(iv)+basis arm was 0/0, so all five belong
+  to leg (ii).
+- **The five are laws, not re-pins:**
+  (1) `fact-horizon` — tier 4 **REWRITES ALREADY-COMPLETED DAYS**
+  (2026-07-20 High→Moderate, 2026-07-21 High→Moderate), for both
+  `illness_severe` and `cooked_week`.
+  (2) `accepted-state-transactions` — "Pre-season hydration drifted"
+  (determinism) and "following-week dependency was not committed in the
+  same snapshot" (atomicity).
+  (3) `program-control-durable` — "a move committed durably reaches the
+  visible week" FAILS.
+  (4) `work-bill` — a category add bills beyond its decision + declared
+  mirrors.
+  (5) `action-walker:deep` — **L13's gate, law L-P3 TEMPLATE = PROJECTION**
+  violated; session list omits `["speed"]`, invents `["support"]`.
+  **Minimal failing history: 6 actions** — not a deep-state curiosity.
+- **STOP.** Option 1's grounds are not disputed; what is new is the price,
+  which the ruling ordered measured before building. Under the standing
+  conditions leg (ii) cannot land in this state, so neither can the
+  (ii)+(iii)+(iv) unit as one commit.
+- **Shapes offered, none taken:** (a) fix leg (ii) first, pricing the five
+  individually — `fact-horizon` looks like the root and several others are
+  consistent with tier 4 over-reaching, so one cause may explain three or
+  four; (b) land (iii)+(iv) alone accepting the known-wrong 2-of-3 install
+  temporarily; (c) re-scope tier 4's reach to exclude completed days and
+  the dependent-week snapshot, then re-price. **Recommended: (a), but only
+  after the `fact-horizon` root is diagnosed.**
+- **NOT diagnosed, only characterised** — the "one root" idea is a
+  hypothesis and worth nothing until measured. Leg (ii) ALONE was not
+  measured (only added to (iii)+(iv)).
+
+## Processed 2026-08-07 (tenth pass) — the ruling as the seat wrote it
+
+- LOOP CHECK: leg-assumed-independent-shares-host (flags lied about
+   the work's shape) — sighting 1 — ITERATE, and the cheap catch you
+   named (check a leg's install sites against the TARGET branch
+   before pricing it) is ENDORSED as standing practice now, not at
+   sighting 2. RULED: OPTION 1 — land legs (ii)+(iii)+(iv) together.
+   Grounds, all recorded: leg (ii) was ALWAYS part of the ruled
+   four-leg unit (the deriver-acquires-repair-search ruling ordered
+   the full :4688 capability into tier 4 before any of this); landing
+   the unit in its own dependency order is not a scope expansion, it
+   is the convergence ruling built as designed; and the Elegant
+   Solution Requirement prefers the shape that removes a
+   representation over a 2-of-3 install that keeps the publisher
+   composing against the stored contract (the fixture-identity
+   residual you refused to create — right refusal). Conditions
+   unchanged: leg (ii)'s single measurement run FIRST (price before
+   build, as always); parity gate (derived == materialised,
+   byte-equal, tape as instrument) before leg (v) re-prices;
+   materialisation + declaration retire together with leg (v); full
+   test:bible UNPIPED per commit; STOP conditions stand. Sam holds a
+   veto.
+
 ## Processed 2026-08-07 (ninth pass) — BUILD MAY START -> SURVEYED, then STOP
 
 - Ruling committed as authored (`a81cc38a`). Answered in
