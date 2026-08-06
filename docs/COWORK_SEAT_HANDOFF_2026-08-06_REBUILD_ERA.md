@@ -123,3 +123,30 @@ live, name waits for coach rebuild).
 Memory upkeep: the walker/post-merge memory file is the running history —
 update after every milestone; keep MEMORY.md pointing at THIS doc for
 session start.
+
+## §5 STATE STAMP 2026-08-07 (supersedes §2's "in flight" picture)
+
+Current truth lives in docs/NOW.md (always) + docs/SEAT_INBOX.md (the
+terminal reads it at every stop — Sam types "check inbox" there, and
+just "check" to the review seat, who reads the repo directly).
+
+Era summary: 1b, finding 3, G-2 quality-lower, anchor fix, R5.1/R5.2,
+structural sweep all LANDED on feat/stage-b-stage2 (green). R5.3 = the
+V3 fixture switchover saga on feat/r53-v3-switchover: a four-leg
+conformance unit (derive the contract, tier 4 in the deriver with the
+full :4688 repair search, retire write-backs, link derives from
+decision) built by price-first discipline — every leg measured on
+scaffolds before building. Read the docs/R53_* and *_RULING_2026-08-0[67]
+trail; the loop-audit law (§1b), the STANDING_DERIVATION_RULING (derive
+without round-trips, three stop-conditions), RESOLVED_AUTHORITY,
+SURFACES_CONTEXT, REMOVAL_RECORD_SPLIT and PATTERN_IDENTITY rulings are
+all in force. gate.sh landed (trust ONLY printed exit lines — the
+completion notification has lied 5+ times). Parallel-gate stage 1
+queued (docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md).
+
+After V3: condition 4 (markedDays proof), merge, R5.7 whole-or-none,
+remaining batches, STOP at Sam's combined device pass — the review
+seat writes the SHORT tap list (plain, expected sights, Release build).
+
+Usage practice Sam ruled: fresh Cowork sessions at natural boundaries,
+text over screenshots, the check/check-inbox two-word flow.

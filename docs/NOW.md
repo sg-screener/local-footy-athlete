@@ -10,6 +10,18 @@
 - **Settled:** the BASIS is `visible` by measurement — derive the
   contract against the week that is JUDGED. Pays cell 7 (deletion
   21/24→22/24), free alone, but INERT without leg (iii).
+- **Diagnoses (a)+(b) ANSWERED** —
+  docs/R53_TWO_DIAGNOSES_2026-08-07.md. (a) CLOSED: leg (iii) INVENTS
+  the game anchor (stored `anchorState: none`, zero anchors, zero
+  marks) from the profile's `usualGameDay`, and the visible resolver
+  then overwrites the athlete's moved Saturday session with it — ninth
+  sighting, root one layer earlier than the destroyer. Back to the seat
+  because the fix changes how EVERY future in-season week is planned.
+  (b) HYPOTHESIS REFUTED: the core-conditioning placer is byte-identical
+  in both worlds, so it is NOT the freed day's producer, and the overlay
+  still carries a contract under leg (v) — producer NOT named; next
+  probe starts at `commitWeekScopedOverlay`'s merge of an explicit
+  `undefined`.
 - **Two named blockers:** leg (iii) alone regresses
   athlete-session-move cell 19 ('Move would silently destroy session
   w2:monday:none:strength'), owned by no other leg and present in every
