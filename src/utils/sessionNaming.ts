@@ -280,6 +280,30 @@ export function canonicalStrengthLabel(
 /** Canonical team-session name (team day with no strength load). */
 export const TEAM_ONLY_NAME = 'Team Training';
 
+/**
+ * THE TYPE NAMES ITSELF — canonical conditioning identity by intent.
+ *
+ * Ruled 2026-08-06 (`docs/CORE_PLACER_NAMING_AND_SCOPE_RULING_2026-08-06.md` §1)
+ * on the charter's type-names-itself rule, the L-P6 precedent the deep walker
+ * already enforces for Gunshow. A conditioning session's IDENTITY is its intent;
+ * the structure family it happens to be built from ("Hard Intervals", a
+ * `CONDITIONING_VISIBLE_LABELS` entry) is its CONTENT and never its name.
+ *
+ * This exists so there is ONE producer of those three words. Before it, the
+ * literals lived inline in `workoutCanonicalisation`'s typed fallback and again
+ * in `fixtureMinimalReplan` — and that second module is what R5.3 leg (i)
+ * deletes, which is exactly how a name gets deleted along with its composer.
+ */
+export function canonicalConditioningLabel(
+  intent: 'tempo' | 'high-intensity' | 'aerobic' | string,
+): string {
+  return intent === 'tempo'
+    ? 'Tempo Conditioning'
+    : intent === 'high-intensity'
+      ? 'Hard Conditioning'
+      : 'Aerobic Conditioning';
+}
+
 /** Clean a raw name/focus string so it's presentable as a fallback. */
 function fallbackFromText(text: string | undefined): string {
   if (!text) return '';

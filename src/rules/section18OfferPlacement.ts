@@ -27,6 +27,7 @@
 import type { Microcycle, OnboardingData, Workout } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { composedOptionalClearingPatch } from '../utils/composedOptionalMarker';
+import { canonicalConditioningLabel } from '../utils/sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
 import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
@@ -466,7 +467,23 @@ function buildCoreConditioningSession(args: {
       intensityMultiplier: args.weekKind === 'deload' ? 0.9 : 1,
     } as never,
   );
-  return built ?? null;
+  if (!built) return null;
+  // THE TYPE NAMES ITSELF (ruled 2026-08-06,
+  // `docs/CORE_PLACER_NAMING_AND_SCOPE_RULING_2026-08-06.md` §1). The pools hand
+  // back a session named after the structure family they drew from — "Hard
+  // Intervals", a `CONDITIONING_VISIBLE_LABELS` entry — which is the session's
+  // CONTENT. Its IDENTITY is the typed exposure the contract required, and the
+  // charter's type-names-itself rule (L-P6, the law the deep walker already
+  // enforces for Gunshow) says a typed session renders its charter name.
+  //
+  // The name is not spelled here. `canonicalConditioningLabel` is the one
+  // producer, shared with the canonicaliser's typed fallback, so a repaired
+  // session and a generated one can never disagree about what the athlete is
+  // looking at — and so the words survive the deletion of any one composer.
+  return {
+    ...built,
+    name: canonicalConditioningLabel(wantsHard ? 'high-intensity' : 'aerobic'),
+  };
 }
 
 /** Stack required conditioning onto a day, keeping everything already there. */

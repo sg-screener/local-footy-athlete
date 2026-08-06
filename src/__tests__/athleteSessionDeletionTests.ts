@@ -941,9 +941,37 @@ run('regression', '11 impossible relocation records typed reduction and keeps de
   assert(reductions.length > 0 && reductions.every((entry) =>
     entry.affectedWeek === WEEK && entry.deletionIdentity === constraint.id),
   `reductions=${JSON.stringify(after.contract.authorisedReductions)}`);
+  // SCOPE RULED, THEN MEASURED (review seat,
+  // `docs/CORE_PLACER_NAMING_AND_SCOPE_RULING_2026-08-06.md` §2): a repair that
+  // ADDS work fires only on a commit whose outcome is ACCEPTED, never inside a
+  // refusal. This world was measured onto the accepted side — `previewPlanChangeRisk`
+  // and `applyPlanChange` both returned ok, the deletion stands, and
+  // `blockingViolations` is empty. The "impossible" in this cell's name is the
+  // RELOCATION of the displaced strength work, not the commit. So the core placer
+  // is in scope here and the confirmation owes the honest disclosure of every day
+  // it touched (invariant #4) — Tuesday is named because Tuesday changed.
   assert(result.message ===
-    'Session removed. This week’s strength target has been reduced at your request.',
+    'Session removed. This week’s strength target has been reduced at your request.'
+    + ' I also rebalanced Tuesday to keep your week balanced.',
   `message=${result.message}`);
+  // WHAT THE PLACER CONSUMED, PINNED SO IT CAN NEVER SILENTLY INVERT. Measured
+  // against the same world with the candidate generator disabled: the pre-placer
+  // path answered this deletion by REDUCING the conditioning minimum 3 -> 2 under
+  // `explicit_user_override` ("relocation and substitution were exhausted"). A
+  // placement is now available, so that precondition is false and the concession
+  // is correctly withdrawn — the athlete's strength reduction is authorised and
+  // disclosed, and their conditioning minimum is DELIVERED instead of quietly cut.
+  const conditioningCore = after.contract.conditioning.core;
+  assert(conditioningCore.unresolvedMinimumShortfall === 0 &&
+    conditioningCore.achievedCount >= conditioningCore.requiredMinimum,
+  `conditioning core unmet: ${JSON.stringify(conditioningCore)}`);
+  assert(!after.contract.conditioning.reductions.some((entry) =>
+    entry.reason === 'explicit_user_override'),
+  `deletion cut the conditioning minimum instead of delivering it: ${
+    JSON.stringify(after.contract.conditioning.reductions)}`);
+  const rebalanced = after.visibleWorkouts.find((workout) => workout.dayOfWeek === 2);
+  assert(rebalanced && rebalanced.sessionTier === 'core',
+    `disclosed Tuesday carries no core session: ${rebalanced?.name ?? 'nothing'}`);
   reloadAcceptedState(athlete);
   assert(accepted().contract.authorisedReductions.some((entry) =>
     entry.deletionIdentity === constraint.id && entry.affectedWeek === WEEK),
