@@ -2,7 +2,23 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. LOOP CHECK: tape-hop ruling — sighting 2 of write-side-producer-
+   feeds-stored-output in R5.3 — COMPRESS via the standing derivation
+   ruling. Read docs/R53_COMMIT_MATERIALISATION_RULING_2026-08-07.md,
+   commit as authored. Short form: the materialised payload is OUTPUT
+   not decision (recomputable from ledger + facts; records no athlete
+   choice), so the standing derivation ruling applies and the signed
+   accept-and-reduce rulings are not touched — they sign what accept
+   DOES, not where content is produced. Order: leg (iii) builds
+   first, corrected grounds (the deriver must supply at read what the
+   commit materialises at write); parity gate before leg (v)
+   re-prices — derived week == materialised week, byte-equal, on the
+   tape's own fixture worlds, tape as instrument; materialisation +
+   declaration retire TOGETHER with leg (v) after parity, no
+   half-state; condition 1's re-measure unparks after the parity
+   gate. BUILD MAY START. Sam holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (eighth pass) — THE TAPE
