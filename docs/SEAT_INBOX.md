@@ -2,7 +2,32 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. SEAT ANSWERS to the fifth-pass boundary report — read
+   docs/R53_SEAT_ANSWERS_2026-08-07.md, commit as authored. Short form:
+   (1) clause (a)(2) WITHDRAWN by supersession — no reachable witness;
+   dayPrecedence stays law, the conservation guard stays; if a
+   REACHABLE world ever reds composed-vs-visible on an athlete
+   decision it returns as its own unit. (2) Cell-19 witness fix =
+   seed() through the owned doors (fixture-fidelity law), AND the
+   one-door narrowing gate learns to scan TEST sources in the SAME
+   unit — third fixture-manufactured misdirection this unit (cell-19
+   carry-over, seedExactSundayRegression's borrowed fill, scaffold
+   defect 4), so the compression ships with the fix, not later.
+   seedExactSundayRegression's own fixture-fidelity fix is part of
+   this unit's class. (3) Leg (v) RE-SCOPES to the DECLARATION only —
+   workoutsByDate keeps publishing. Cited: the standing derivation
+   ruling named "a stored representation feeding a computation" = the
+   exposureContractV2 declaration, not the payload; R2 deliberately
+   kept weekScopedOverlays; the fixture-identity law retires derived
+   content only when re-derive-at-read provably reproduces it, and
+   the freed-day measurement proves it does not yet. The payload
+   emptying is option 2's scope switch reaching past the ruled
+   target. Re-price leg (v) on the new scope; the prior refutation is
+   SET ASIDE as scaffold-priced. Order: witness fix + gate extension
+   -> leg (v) re-scoped re-price -> re-measure priced configs ->
+   build per the convergence ruling. Sam holds a veto on all three.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (fifth pass) — SAM'S LEAD
