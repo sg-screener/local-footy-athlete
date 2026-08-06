@@ -16,6 +16,19 @@
  * parked byte-identical for R2's migration before any new-shape write.
  * `wornWorldBootTests` holds the one they all missed: a program generated on
  * an EARLIER day, booted today, keeps its anchor and its week.
+ *
+ * R5.1 — THE SWITCHOVER (`docs/R5_DELETION_SEQUENCE_2026-08-06.md`). This
+ * module also owns what happens after a decision LANDS, because it is the
+ * same act: `settleDerivedWorldAfterDecision` is `rebuildDerivedWorld` under
+ * the replay latch. Until R5.1 the doors published a materialised replan and
+ * boot resolved instead, so the week after a tap was composed by a different
+ * engine than the week after a relaunch — measured by `fixture-identity-3`
+ * (three untouched days disagree) and `fact-door-inputs` cell 3 (an injured
+ * week derives differently either side of a relaunch). Settling by
+ * re-derivation makes the two engines one BY CONSTRUCTION: a landed decision
+ * now produces the post-relaunch week, because it runs the post-relaunch
+ * body. The replan engine keeps working and loses its authority; R5.2–R5.6
+ * delete it.
  */
 
 import { useProgramStore, PROGRAM_STORE_PERSISTENCE_KEY } from './programStore';
@@ -25,6 +38,7 @@ import {
   decisionLedgerEntries,
   beginLedgerReplay,
   endLedgerReplay,
+  ledgerReplayActive,
 } from './decisionLedgerStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
@@ -194,6 +208,24 @@ function replayEntry(entry: DecisionLedgerEntry): void {
  */
 export async function runQuiescentBoot(): Promise<void> {
   await parkPreRebuildEnvelopeIfPresent();
+  await rebuildDerivedWorld();
+}
+
+/**
+ * R5.1 — THE SWITCHOVER, one owner.
+ *
+ * A door that has just landed a decision settles by RE-DERIVING, never by
+ * keeping the replan it built on the way. The week an athlete sees after a
+ * tap is therefore the week they see after a relaunch, because it is built
+ * by the same body.
+ *
+ * Replay calls the door interpreters directly and is already inside a
+ * derivation, so settling is skipped under the latch — not as a guard on
+ * intent, but because a derivation that re-entered itself would replay the
+ * ledger against its own half-finished effects.
+ */
+export async function settleDerivedWorldAfterDecision(): Promise<void> {
+  if (ledgerReplayActive()) return;
   await rebuildDerivedWorld();
 }
 

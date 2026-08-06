@@ -106,20 +106,16 @@ interface DeclaredRed {
 }
 
 const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: '3',
-    matches: /the injured week changed across the relaunch/,
-    finding:
-      'Declaring a hamstring injury derives one week before the relaunch and a DIFFERENT '
-      + 'one after it (Lower Squat + Continuous Aerobic → Upper Push + Upper Pull). The '
-      + 'injury survives and the week still responds; what differs is HOW. Before the '
-      + 'relaunch the episode is applied as an incremental REPLAN over the published week; '
-      + 'after it, the same fact is an input to a full RESOLVE. This is the replan-vs-derive '
-      + 'class Sam already ruled on at the fixture-identity unit — "the published week is a '
-      + 'materialised REPLAN, derivation is a RESOLVE, and no rebase input makes them equal" '
-      + '— and it closes the same way, at the switchover, not by weakening the assertion here.',
-    paidBy: 'R5 (the switchover: derive() becomes the only week authority)',
-  },
+  // ── PAID BY R5.1, DELETED 2026-08-06 (the ratchet's own rule) ────────────
+  //
+  // Cell `3` lived here: declaring a hamstring derived one week before the
+  // relaunch and a different one after it, because the door applied the
+  // episode as an incremental REPLAN over the published week while boot
+  // RESOLVED the same fact as an input. The switchover paid it at the door
+  // BODY, not at an executor boundary — `createOrUpdateInjuryEpisode` now
+  // settles by re-deriving, so the landed week IS the post-relaunch week by
+  // construction rather than by agreement. Cell 3 stands as a plain law now;
+  // a regression FAILS outright instead of wearing a declaration.
   {
     id: '6',
     matches: /changed nothing in the visible week/,

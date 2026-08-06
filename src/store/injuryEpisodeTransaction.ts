@@ -613,6 +613,20 @@ export async function transactExactInjuryEpisode(
 export async function createOrUpdateInjuryEpisode(
   input: CreateOrUpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
+  const result = await createOrUpdateInjuryEpisodeTraced(input);
+  // R5.1 (the switchover): the fact has landed as an INPUT, so the week
+  // re-derives from it. The incremental replan this transaction produced on
+  // the way is discarded — an injured week must not depend on whether the
+  // athlete has relaunched since declaring it (`fact-door-inputs` cell 3).
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
+  await settleDerivedWorldAfterDecision();
+  return result;
+}
+
+async function createOrUpdateInjuryEpisodeTraced(
+  input: CreateOrUpdateInjuryEpisodeInput,
+): Promise<InjuryEpisodeMutationResult> {
   if (!athleteActionDiagnosticsEnabled()) return createOrUpdateInjuryEpisodeWithinTrace(input);
   const trace = beginAthleteActionTrace({
     source: /coach/i.test(input.sourceSurface)
