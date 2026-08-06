@@ -2,7 +2,7 @@
 
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
   feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7
-  (`9d7d8ddc`) holds legs (iv)/(v), the ported seed fix and this pass's
+  (`f91ea404`) holds legs (iv)/(v), the ported seed fix and this pass's
   probes; -6, -5, -5-before preserved.
 - **Current unit:** the upgraded seat order (Sam's sweep-not-serial method
   call). **THE TAPE ran; the drop hop is NAMED; STOP condition met.** See
