@@ -349,11 +349,29 @@ function seedExactSundayRegression(): {
   // publication went. Nothing about what this seed BUILDS has changed.
   const overlay = clone(state.weekScopedOverlays[WEEK] ?? rebuilt.overlay);
   assert(overlay, 'the fixture rebuild produced no week for this seed to plant into');
-  const hard = accepted().visibleWorkouts.find((workout) =>
-    /Hard Conditioning/i.test(workout.name));
-  assert(hard, 'bye-build hard conditioning precondition missing; the accepted week reads '
-    + JSON.stringify(accepted().visibleWorkouts.map((workout) =>
-      `${workout.dayOfWeek}:${workout.name}`)));
+  // THE CONDITIONING TEMPLATE COMES FROM THE WEEK THIS SEED PLANTS, not from
+  // the accepted week — R5.3 (Sam, 2026-08-06).
+  //
+  // `hard` is a TEMPLATE, cloned into the Sunday `Hard Intervals` this seed
+  // needs and (absent an optional source) into the Saturday `Gunshow`. Both
+  // days are then overwritten below, so nothing this seed BUILDS depends on
+  // where the template was read from.
+  //
+  // It used to be read off the accepted week, because the fixture door's replan
+  // filled the freed Saturday with `Hard Conditioning` and published it. Sam
+  // ruled the DERIVER correct on 2026-08-06: a freed fixture day returns to the
+  // athlete's own pattern, and filling it was `fixture-identity-1`'s bug
+  // generalised. So the accepted week no longer has one to read, and the
+  // template moves to `overlay` — the replan this seed already clones as its
+  // base. The seeded world is byte-identical to what it was; these cells are
+  // about DELETION and their coordinate must not drift under a fixture ruling.
+  const hard = Object.values(overlay.workoutsByDate).find((workout) =>
+    !!workout && /Hard Conditioning/i.test(workout.name))
+    ?? accepted().visibleWorkouts.find((workout) => /Hard Conditioning/i.test(workout.name));
+  assert(hard, 'bye-build hard conditioning template missing from both the rebuilt week and '
+    + `the accepted week; rebuilt reads ${JSON.stringify(
+      Object.entries(overlay.workoutsByDate).map(([date, workout]) =>
+        `${date}:${workout?.name ?? 'REST'}`))}`);
   const optionalSource = accepted().visibleWorkouts.find((workout) =>
     workout.sessionTier === 'optional' && workout.dayOfWeek !== 6);
   const gunshow: Workout = optionalSource
