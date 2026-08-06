@@ -74,6 +74,7 @@ export type Section18WeekRepairKind =
   | 'weekly_power_budget'
   /** The week was not presenting the offer its contract declares; it is now. */
   | 'offer_presented'
+  | 'offer_withdrawn'
   | 'obsolete_derived_work_expired'
   | 'optional_work_removed_for_rest'
   | 'core_work_stacked_on_existing_stress_day'
@@ -806,6 +807,16 @@ function resolveCandidate(args: {
     initialRepairs.push({
       kind: 'offer_presented',
       detail: `Presented the week's ${offered.placedDays.length} declared optional flush offer${offered.placedDays.length === 1 ? '' : 's'} on ${offered.placedDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
+    });
+  }
+  // A WITHDRAWAL IS DISCLOSED LIKE A PLACEMENT, or ruling 2 removes the
+  // athlete's visible session silently. Same repair channel, opposite
+  // direction: the week carried more offers than its contract declares —
+  // which is what a fixture change makes true — so the surplus came off.
+  if (offered.withdrawnDays.length > 0) {
+    initialRepairs.push({
+      kind: 'offer_withdrawn',
+      detail: `Withdrew ${offered.withdrawnDays.length} optional flush offer${offered.withdrawnDays.length === 1 ? '' : 's'} the week's contract no longer declares, on ${offered.withdrawnDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
     });
   }
   const baseContract = power.contract;

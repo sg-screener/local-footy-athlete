@@ -528,21 +528,43 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
         sourceActionOrIntentId,
       });
-      // R5.3 LEG (i), 2026-08-06: THE DOOR NO LONGER PUBLISHES ITS REPLAN.
+      // R5.3 LEG (i), 2026-08-06: THE DOOR PUBLISHES ITS DECLARATION, NEVER ITS
+      // CONTENT (option 2, approved on measurement —
+      // `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`,
+      // `docs/R53_OPTION2_MEASUREMENT_2026-08-06.md`).
       //
-      // A fixture decision's whole durable effect is the life-fact
-      // (`markedDays`) plus the ledger entry. The week that expresses it is
-      // DERIVED — so the door commits the fact, the sweep and the reversible
-      // adjustment, and DELETES the target week's overlay instead of writing
-      // one. `projection` is still built: the replan is what decides the
-      // sweep, the gateway status the door reports, and the rolling horizon
-      // this transaction must validate. It is a decision aid now, not a
-      // published output.
+      // A fixture decision's durable effect is the life-fact (`markedDays`),
+      // the ledger entry, and the week's DECLARATION — the contract the
+      // planner derives for the week the athlete now actually has. The
+      // SESSIONS that express it are derived, so the overlay is published with
+      // its `exposureContractV2` and an EMPTY `workoutsByDate`.
       //
-      // Passing `null` with `targetWeekStart` is the delete branch of
-      // `commitWeekScopedOverlay` — the same atomic publication, one surface
-      // lighter.
-      const committedAdjustment = commitWeekScopedOverlay(null, sweep, {
+      // The first cut of this leg published nothing at all, and that was
+      // measured wrong rather than argued wrong. Deleting the overlay left the
+      // decided week being composed AND JUDGED against the microcycle's stored
+      // contract, which never learned about the fixture change: after removing
+      // a Saturday game the week still derived `in_season_game_week` carrying a
+      // `game@6` anchor, and `section18EffectiveWeekEvaluator:526` credits
+      // conditioning, sprint and hard-day exposure straight off
+      // `contract.anchors`. So a CANCELLED GAME went on paying the week's
+      // bills, §18 reported zero shortfall, and the flush the week no longer
+      // declared survived because the stale contract still declared it.
+      //
+      // `materialiseFixtureMarksForCandidate` — deleted by leg (ii) — was the
+      // only thing in the app reconciling a stored contract against the fixture
+      // fact. It was right to delete it as a second COMPOSER; this is the
+      // reconciling half it was also doing, re-homed as a published decision
+      // rather than a re-composition. No stored contract outlives a fixture
+      // decision.
+      //
+      // `projection` is otherwise still a decision aid, not a published output:
+      // it decides the sweep, the gateway status the door reports, and the
+      // rolling horizon this transaction must validate. Only its contract is
+      // published.
+      const committedAdjustment = commitWeekScopedOverlay({
+        ...projection.overlay,
+        workoutsByDate: {},
+      }, sweep, {
         targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,
         markedDays,

@@ -27,6 +27,8 @@
 import type { Microcycle, OnboardingData, Workout } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { composedOptionalClearingPatch } from '../utils/composedOptionalMarker';
+import { normalizeVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
+import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
 
 /**
@@ -151,13 +153,51 @@ function hasConditioningContent(workout: Workout): boolean {
     workout.hasCombinedConditioning === true;
 }
 
+/**
+ * Take the offer back off a day, leaving everything else exactly as it was.
+ *
+ * The inverse of `attachOffer` below, and deliberately the same body
+ * `fixtureMinimalReplan.stripConditioningComponent` used while the replan owned
+ * ruling 2 — so re-homing the rule did not also change what "withdrawing an
+ * offer" means. Returns `null` when nothing meaningful is left, which is the
+ * signal to drop the day entirely rather than keep an empty session.
+ */
+function stripOffer(workout: Workout): Workout | null {
+  const linkedRows = new Set(
+    (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
+  );
+  const stripped = normalizeVisibleWorkoutIdentity({
+    ...workout,
+    exercises: (workout.exercises ?? []).filter((row) =>
+      !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
+    conditioningBlock: undefined,
+    conditioningCategory: undefined,
+    conditioningFlavour: undefined,
+    conditioningFeasibility: undefined,
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    coachAddedConditioningLabel: undefined,
+    section18ConditioningRole: 'none',
+    section18Evidence: {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
+    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
+      record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
+  });
+  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
+}
+
 function hasMainStrengthRow(workout: Workout): boolean {
   return (workout.exercises ?? []).some((row) =>
     row.section18Evidence?.role === 'main_strength');
 }
 
 /**
- * PRESENT THE WEEK'S OFFER — the repair half of the shared rule.
+ * PRESENT EXACTLY THE OFFERS THE WEEK'S CONTRACT DECLARES — the repair half of
+ * the shared rule, and RULING 2'S OWNER.
  *
  * Called on an accepted-week candidate before it is judged, so every path that
  * reaches the gateway (generation, rebuild, rollover, deletion repair, coach
@@ -166,9 +206,27 @@ function hasMainStrengthRow(workout: Workout): boolean {
  * 2026-08-06: this restores the offer, and a week that cannot hold one is never
  * refused for it.
  *
- * It is deliberately additive and never removes: the demote path in the
- * allocator owns turning existing conditioning into an offer, and a repair that
- * could also take one away would be a second opinion about the same field.
+ * IT IS SYMMETRIC (R5.3, 2026-08-06 — ruling 2 re-homed). It used to be
+ * additive only, on the reasoning that "a repair that could also take one away
+ * would be a second opinion about the same field". That reasoning held while
+ * `fixtureMinimalReplan:294` owned the taking-away — and ruling 2 (Sam,
+ * 2026-08-06, "2a": a flush does NOT survive a fixture change) was implemented
+ * THERE, inside the layer the R5.3 switchover stops publishing. With that layer
+ * no longer reaching the athlete's week, nothing dropped the offer and the
+ * planner's offer laundered across a fixture decision.
+ *
+ * So it re-homes here, as one statement rather than two: the week presents
+ * EXACTLY what its contract declares — placing a shortfall, withdrawing a
+ * surplus. That is not a second opinion, it is the single opinion; the removed
+ * half was never a different rule, only the same rule read backwards.
+ *
+ * The demote path in the allocator still owns turning existing CORE
+ * conditioning into an offer. This owns how many offers the week carries.
+ *
+ * Withdrawal walks the week in REVERSE training order so that when a week must
+ * shed more than one offer it sheds the latest first, leaving the earliest — the
+ * same "earlier in training order takes precedence" the core-slot derivation
+ * uses, so the two cannot disagree about which session survives.
  */
 export function presentDeclaredOffer(args: {
   workouts: readonly Workout[];
@@ -177,12 +235,35 @@ export function presentDeclaredOffer(args: {
   profile?: OnboardingData | null;
   microcycleId: string;
   weekKind: Microcycle['weekKind'];
-}): { workouts: Workout[]; placedDays: number[] } {
+}): { workouts: Workout[]; placedDays: number[]; withdrawnDays: number[] } {
   const workouts = [...args.workouts];
   const declared = declaredOfferCount(args.contract.conditioning);
   const present = workouts.filter(carriesOffer).length;
   const shortfall = declared - present;
-  if (shortfall <= 0) return { workouts, placedDays: [] };
+  if (shortfall < 0) {
+    let surplus = present - declared;
+    const withdrawnDays: number[] = [];
+    const dropped = new Set<number>();
+    for (let index = workouts.length - 1; index >= 0 && surplus > 0; index--) {
+      const target = workouts[index];
+      if (!carriesOffer(target)) continue;
+      const stripped = stripOffer(target);
+      // A day whose ONLY content was the offer stops being a session at all.
+      // `stripOffer` returns null there and the day is DROPPED, so it derives
+      // as a typed rest day rather than surviving as an empty shell — the same
+      // answer `stripConditioningComponent` gives on the replan path.
+      if (stripped) workouts[index] = stripped;
+      else dropped.add(index);
+      withdrawnDays.push(target.dayOfWeek);
+      surplus--;
+    }
+    return {
+      workouts: workouts.filter((_, index) => !dropped.has(index)),
+      placedDays: [],
+      withdrawnDays,
+    };
+  }
+  if (shortfall <= 0) return { workouts, placedDays: [], withdrawnDays: [] };
 
   const fixtureDay = args.contract.anchors
     .find((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
@@ -220,7 +301,7 @@ export function presentDeclaredOffer(args: {
     workouts[index] = attachOffer(workouts[index], offer);
     placedDays.push(dayOfWeek);
   }
-  return { workouts, placedDays };
+  return { workouts, placedDays, withdrawnDays: [] };
 }
 
 const OFFER_DAY_NAMES = [

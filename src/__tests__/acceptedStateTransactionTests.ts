@@ -1018,10 +1018,17 @@ run('property', 'hydration remains deterministic and idempotent', () => {
  * overlay everywhere would satisfy the new claim while silently losing the
  * repair R5.3 condition 1(b) priced at fourteen athlete-deletion regressions.
  *
+ * CORRECTED THE SAME DAY, ON MEASUREMENT (Sam,
+ * `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`). The inversion above went
+ * one step too far: "no stored week at all" left the decided week judged
+ * against the microcycle's STALE contract, and a cancelled game kept crediting
+ * the week's conditioning. What is durable about a fixture decision is the
+ * life-fact, the ledger entry AND the week's DECLARATION; only the sessions are
+ * derived. So the decided week keeps an overlay carrying `exposureContractV2`
+ * with an empty `workoutsByDate`, and the assertion below pins both halves.
+ *
  * SCOPED TO THE WORLD IT DRIVES, and the name says so. This cell moves a
- * fixture (`clearOverlayDate` + a new day), and on THAT path the decided week
- * ends with no stored week at all — measured before and after: V0 left
- * `[WEEK_START, NEXT_WEEK]`, leg (i) leaves `[NEXT_WEEK]`.
+ * fixture (`clearOverlayDate` + a new day).
  *
  * It is NOT the general law, and regression 16 above is the counter-example
  * kept deliberately green: on the ADD path the decided week still carries an
@@ -1033,8 +1040,8 @@ run('property', 'hydration remains deterministic and idempotent', () => {
  * The survivor is named, measured and carried as R5 debt; see
  * docs/R5_DELETION_SEQUENCE_2026-08-06.md (q).
  */
-run('property', 'a fixture MOVE publishes its dependent week once and leaves no stored '
-  + 'week for the week it decided', () => {
+run('property', 'a fixture MOVE publishes its dependent week once and leaves the week it '
+  + 'decided a DECLARATION with no content', () => {
   const value = profile('In-season', {
     usualGameDay: 'Saturday',
     gameDay: 'Saturday',
@@ -1056,10 +1063,32 @@ run('property', 'a fixture MOVE publishes its dependent week once and leaves no 
   const followingMonday = useProgramStore.getState().weekScopedOverlays[NEXT_WEEK]
     ?.workoutsByDate[NEXT_WEEK];
   assert(publishes === 1, `rolling fixture repair published ${publishes} states`);
-  assert(!useProgramStore.getState().weekScopedOverlays[WEEK_START],
-    'the fixture MOVE published a stored week for the week it decided — leg (i) of the '
-    + 'R5.3 switchover (2026-08-06) deletes that overlay, and a second composer is a '
-    + 'second truth even when neither is wrong');
+  // RE-INVERTED, WITH THE DATED RULING THAT MOVED IT — Sam,
+  // `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`, on the measurement at
+  // 11ba8cb7. This is the cell's THIRD statement in one day and that is said
+  // out loud rather than quietly flipped a second time.
+  //
+  // It first asserted the door publishes an overlay for the week it decides.
+  // Leg (i) inverted it to "no stored week at all" — and THAT was measured
+  // wrong: with nothing published, the decided week was judged against the
+  // microcycle's stale contract, so a cancelled game went on crediting the
+  // week's conditioning (`section18EffectiveWeekEvaluator:526`) and §18
+  // reported zero shortfall on a week that was a session short.
+  //
+  // The standing claim is the one that survived both moves: the door publishes
+  // a DECLARATION, never CONTENT. An overlay may exist for the decided week —
+  // it carries the contract derived from the athlete's current facts — but it
+  // holds no workouts, because the sessions are derived. Both halves are
+  // asserted so neither an absent overlay nor a re-composed one can pass.
+  const decided = useProgramStore.getState().weekScopedOverlays[WEEK_START];
+  assert(!!decided?.exposureContractV2,
+    'the fixture MOVE published no contract for the week it decided — the decision\'s '
+    + 'declaration is durable (no stored contract outlives a fixture decision), and '
+    + 'without it the week is judged against the contract for the fixture it no longer has');
+  assert(Object.keys(decided.workoutsByDate ?? {}).length === 0,
+    `the fixture MOVE published stored CONTENT for the week it decided `
+    + `(${Object.keys(decided.workoutsByDate ?? {}).join(', ')}) — the sessions are DERIVED, `
+    + 'and a second composer is a second truth even when neither is wrong');
   assert(followingMonday?.derivedSessionProvenance?.some((record) =>
     record.dependency?.source.date === SUNDAY) === true,
   'following-week dependency was not committed in the same snapshot');
