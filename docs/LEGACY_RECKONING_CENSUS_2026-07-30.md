@@ -343,6 +343,20 @@ it can be sized.
 > same document ratified the ceiling at 30 and the ledger is at 30 of 30: a
 > thirty-first unit needs Sam's word, not a bump taken while filing.
 >
+> **AND ONE CANDIDATE IS HELD WITHOUT AN ID, for the same reason.** Filed
+> 2026-08-06 out of finding 3's step 2, which ruled it ADJACENT and out of that
+> unit's scope: an all-optional early off-season week SELECTS three optional
+> main-strength sessions (`optionalMainStrengthSelected = 3`) with push and pull
+> both safe, and under a Severe hamstring restriction offers **none** — measured
+> 3 (healthy control) vs 0 (restricted) on the differential matrix. The `3 -> 1`
+> half is pre-existing; step 2's `1 -> 0` is understood and correct (the `1` was
+> manufactured by the safety finaliser's frequency-ceiling consolidation pass).
+> Recorded in `docs/QUEUE_ALL_OPTIONAL_RESTRICTED_STRENGTH_OFFER_2026-08-06.md`
+> with the measurements. It does NOT map cleanly onto a current unit's subject,
+> so unlike the D-2 branch above it cannot simply be scoped onto one — and it is
+> not an LR-31, on the same ground: the ceiling is 30 of 30 and a thirty-first
+> unit needs Sam's word. Assigning it is a review-seat call.
+>
 > **IDS WERE RECYCLED, so this document's numbering is not the live one.**
 > Two divergences, both real:
 >

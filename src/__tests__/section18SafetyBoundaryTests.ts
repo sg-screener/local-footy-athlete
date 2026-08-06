@@ -236,6 +236,49 @@ function injuryContext(region: 'lower_body' | 'upper_body'): GenerationConstrain
   return { activeConstraintIds: [injury.id], injuries: [injury], activeInjuryKeys: injury.injuryKeys };
 }
 
+/**
+ * A restriction that leaves NO safe main pattern — the only world that still
+ * authorises a main-strength FREQUENCY reduction.
+ *
+ * WHICH SIDE MOVED, asked and answered. Three cells below (P3, P6, M5) used to
+ * reach their frequency reduction through `injuryContext('lower_body')`, a
+ * PARTIAL restriction: squat and hinge prohibited, push and pull still safe.
+ * Ruled 2026-08-06 (`docs/FINDING_3_RULING_2026-08-06.md`, Bible `:4755`) that a
+ * partially-restricted week HOLDS its frequency and substitutes safe work, so
+ * that world no longer authorises the reduction those cells defend.
+ *
+ * Their invariants did not weaken and are not weakened here — a typed reduction
+ * must never be escaped, re-derived away, or lowered to match unsafe output. The
+ * FIXTURE was what moved, so the fixture is what changed: `:1913` at 8-10/10
+ * ("pause affected training entirely… clearly unaffected work only") is where
+ * the reduction is authored, and that is where these cells now stand. Editing
+ * the assertions to match the new behaviour instead would have been the
+ * regression writing its own expectation.
+ *
+ * Two pause-band injuries are needed, matching `resolveRestrictedMainStrengthPatterns`:
+ * a lower-body one takes squat and hinge, and an upper-body one takes push AND
+ * pull only when it pauses affected training.
+ */
+function wholeBodyInjuryContext(): GenerationConstraintContext {
+  const lower = injuryContext('lower_body').injuries![0];
+  const upper: GenerationInjuryConstraint = {
+    ...injuryContext('upper_body').injuries![0],
+    id: 'upper-body-pause-injury',
+    severity: 9,
+    effectiveSeverity: 9,
+    // `severityBand` is deliberately INHERITED rather than restated.
+    // `resolveRestrictedMainStrengthPatterns` reads `pauseAffectedTraining` and
+    // `effectiveSeverity ?? severity` — never the band — so restating it would
+    // add a typecheck error against the ratchet for a field nothing consults.
+    pauseAffectedTraining: true,
+  };
+  return {
+    activeConstraintIds: [lower.id, upper.id],
+    injuries: [lower, upper],
+    activeInjuryKeys: [...(lower.injuryKeys ?? []), ...(upper.injuryKeys ?? [])],
+  };
+}
+
 // Readiness is deloaded-or-not (Sam, 2026-07-27). The tiers and their four
 // behavioural flags are retired; severity survives for display only.
 function readinessContext(severity = 6): GenerationConstraintContext {
@@ -537,11 +580,29 @@ run('property', 'P2d a genuine training pause DOES withdraw field participation'
 });
 
 run('property', 'P3 canonicalisation cannot increase a safety-reduced frequency target', () => {
-  const contract = withSafety(baseContract(), injuryContext('lower_body'));
+  const contract = withSafety(baseContract(), wholeBodyInjuryContext());
+  const ceiling = contract.safety.mainStrengthFrequencyCeiling;
+  assert(ceiling === 0,
+    'this cell needs a world with an authorised frequency ceiling to defend, and the '
+    + `whole-body restriction produced ${ceiling}. Without one it would pass vacuously.`);
   for (let count = 0; count <= 6; count++) {
     const result = finish(contract, Array.from({ length: count }, (_, index) => workout(`p3-${count}-${index}`, index, [index % 2 ? 'Bench Press' : 'Back Squat'])));
-    assert(result.evaluation.ledger.mainStrength.achievedCount <= 2, `frequency ${count} escaped cap`);
+    assert(result.evaluation.ledger.mainStrength.achievedCount <= ceiling, `frequency ${count} escaped cap`);
   }
+
+  // THE OTHER SIDE OF THE RULING, pinned in the same cell so the fixture move
+  // above can never be mistaken for a relaxation: a PARTIAL restriction must
+  // author no frequency ceiling at all. A regression that reinstated the
+  // pattern-count cap under any name would fail here.
+  const partial = withSafety(baseContract(), injuryContext('lower_body'));
+  assert(partial.strengthPatterns.requiredSafePatterns.length > 0,
+    'the partial fixture left no safe pattern, so it is the whole-body case and proves nothing');
+  assert(partial.safety.mainStrengthFrequencyCeiling === null ||
+    partial.safety.mainStrengthFrequencyCeiling === undefined,
+    'a partially-restricted week authored a main-strength frequency ceiling of '
+    + `${partial.safety.mainStrengthFrequencyCeiling} while `
+    + `${JSON.stringify(partial.strengthPatterns.requiredSafePatterns)} remained safe. `
+    + 'Bible :4755 — substitute before reducing frequency (ruled 2026-08-06).');
 });
 
 run('property', 'P4 constrained participation never receives automatic sprint credit', () => {
@@ -565,11 +626,11 @@ run('property', 'P5 healthy unrestricted anchor credit remains stable', () => {
 // never weakened by re-writing the week — is unchanged and still worth proving;
 // readiness simply no longer authors a reduction for it to defend.
 run('property', 'P6 safety reductions survive every repeated write boundary', () => {
-  let contract = withSafety(baseContract(), injuryContext('lower_body'));
+  let contract = withSafety(baseContract(), wholeBodyInjuryContext());
   let workouts = [workout('p6-a', 1, ['Back Squat']), workout('p6-b', 3, ['Bench Press']), workout('p6-c', 5, ['Pull-Ups'])];
   for (let pass = 0; pass < 6; pass++) {
     const result = finish(contract, workouts);
-    assert(result.contract.safety.mainStrengthFrequencyCeiling === 2 && result.evaluation.ledger.mainStrength.achievedCount <= 2, `pass ${pass} weakened reduction`);
+    assert(result.contract.safety.mainStrengthFrequencyCeiling === 0 && result.evaluation.ledger.mainStrength.achievedCount <= 0, `pass ${pass} weakened reduction`);
     contract = withSafety(JSON.parse(JSON.stringify(result.contract)));
     workouts = JSON.parse(JSON.stringify(result.workouts));
   }
@@ -641,26 +702,56 @@ run('mutation', 'M4 retaining power under an injury prohibition is killed', () =
 // lowering the contract until the unsafe week passes — is still real, but the
 // reduction it lowers must be one that still exists.
 run('mutation', 'M5 lowering the contract to match unsafe output is killed', () => {
-  const contract = withSafety(baseContract(), injuryContext('lower_body'));
+  // THE KILL CRITERION MOVED TO THE BOUNDARY THIS MODULE ACTUALLY DEFENDS, and
+  // the reason is a property of the ruling rather than a convenience.
+  //
+  // The old criterion was "the lowered contract lets the week exceed the original
+  // ceiling". That needs a reduction which BINDS ON ITS OWN. After the 2026-08-06
+  // ruling an injury-authored `main_strength_frequency` reduction exists only
+  // when NO main pattern is safe — and in that world every strength row is
+  // already stripped by the pattern prohibition, so raising the frequency ceiling
+  // changes nothing observable. Measured, not assumed: with the whole-body
+  // fixture the mutated contract still achieved 0. A cell that cannot observe its
+  // own mutant is not a witness, so leaving it pointed there would have been a
+  // gate passing on coordinates it never builds.
+  //
+  // What this module promises in its own docstring is the stronger claim anyway:
+  // "The post-canonical finaliser must conform to this policy; it must never
+  // lower the policy to match unsafe output." So the mutant to kill is a LOWERED
+  // POLICY, and the kill is that it does not survive re-projection from the typed
+  // source of truth. Generation constraints are that source; the contract is a
+  // projection of them, and a projection cannot outrank what it projects.
+  const contract = withSafety(baseContract(), wholeBodyInjuryContext());
+  const approvedCeiling = contract.safety.mainStrengthFrequencyCeiling;
+  assert(approvedCeiling === 0,
+    `this cell needs an approved frequency ceiling to defend, and got ${approvedCeiling}`);
   const unsafeWorkouts = [
     workout('m5-a', 1, ['Back Squat']),
     workout('m5-b', 3, ['Bench Press']),
     workout('m5-c', 5, ['Pull-Ups']),
   ];
   const conformed = finish(contract, unsafeWorkouts);
-  assert(conformed.evaluation.ledger.mainStrength.achievedCount === 2,
+  assert(conformed.evaluation.ledger.mainStrength.achievedCount === 0,
     'source policy did not enforce the approved reduction');
+
   const mutated = JSON.parse(JSON.stringify(contract)) as WeeklyExposureContractV2;
-  const reduction = mutated.authorisedReductions.find((entry) => entry.metric === 'main_strength_frequency' && entry.reason === 'injury_restriction');
+  const reduction = mutated.authorisedReductions.find((entry) =>
+    entry.metric === 'main_strength_frequency' && entry.reason === 'injury_restriction');
   assert(!!reduction, 'fixture lacked the injury reduction');
   reduction.reducedTarget = 3;
   mutated.safety.mainStrengthFrequencyCeiling = 3;
-  const unsafeAccepted = finish(mutated, unsafeWorkouts);
-  assert(
-    unsafeAccepted.evaluation.ledger.mainStrength.achievedCount >
-      contract.safety.mainStrengthFrequencyCeiling!,
-    'contract-lowering mutation did not violate the original approved ceiling',
-  );
+  assert(mutated.safety.mainStrengthFrequencyCeiling === 3,
+    'the mutation did not take, so the kill below would be vacuous');
+
+  const reprojected = withSafety(mutated);
+  assert(reprojected.safety.mainStrengthFrequencyCeiling === approvedCeiling,
+    'a contract lowered to match unsafe output SURVIVED re-projection — the ceiling came '
+    + `back as ${reprojected.safety.mainStrengthFrequencyCeiling} instead of `
+    + `${approvedCeiling}. The policy is projected from the typed constraints and must never `
+    + 'be lowered to match whatever output happened to survive.');
+  const afterReprojection = finish(reprojected, unsafeWorkouts);
+  assert(afterReprojection.evaluation.ledger.mainStrength.achievedCount <= approvedCeiling,
+    'the re-projected contract still admitted work the approved reduction forbids');
 });
 
 // RE-PINNED to an injury prohibition: hydrated power must still be stripped by

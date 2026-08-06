@@ -56463,55 +56463,118 @@
               "date": "2026-07-15",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
-                "conditioningIntensity": "Moderate",
+                "strengthIntensity": "High",
+                "conditioningIntensity": "High",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
+                    "intensity": "High",
+                    "durationMinutes": null,
+                    "exerciseIds": [
+                      "ex-squat",
+                      "ex-walking-lunges",
+                      "ex-nordic-lower"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "ex-squat",
+                        "exerciseId": "ex-squat",
+                        "name": "Back Squat",
+                        "order": 1,
+                        "sets": 3,
+                        "repsMin": 4,
+                        "repsMax": 6,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell",
+                          "Rack"
+                        ]
+                      },
+                      {
+                        "identity": "ex-walking-lunges",
+                        "exerciseId": "ex-walking-lunges",
+                        "name": "Walking Lunges",
+                        "order": 2,
+                        "sets": 3,
+                        "repsMin": 6,
+                        "repsMax": 10,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Dumbbells"
+                        ]
+                      },
+                      {
+                        "identity": "ex-nordic-lower",
+                        "exerciseId": "ex-nordic-lower",
+                        "name": "Nordic Lower",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 3,
+                        "repsMax": 5,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "squat"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "lower",
+                        "effectivePatterns": [
+                          "squat"
+                        ],
+                        "plannedPatterns": [
+                          "squat"
+                        ],
+                        "primaryPattern": "squat"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
                     "durationMinutes": 0,
                     "exerciseIds": [
-                      "cond-2026-07-15-warmup",
                       "cond-2026-07-15-main"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-07-15-warmup",
-                        "exerciseId": "cond-2026-07-15-warmup",
-                        "name": "Warm-up",
-                        "order": 1,
-                        "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
-                        "weightKg": null,
-                        "restSeconds": 0,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
                         "identity": "cond-2026-07-15-main",
                         "exerciseId": "cond-2026-07-15-main",
                         "name": "30:30 Controlled Tempo Blocks",
-                        "order": 2,
+                        "order": 4,
                         "sets": 13,
                         "repsMin": 1,
                         "repsMax": 1,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "tempo",
                       "title": "30:30 Controlled Tempo Blocks"
@@ -56520,17 +56583,52 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-07-15-warmup",
-                    "exerciseId": "cond-2026-07-15-warmup",
-                    "name": "Warm-up",
+                    "identity": "ex-squat",
+                    "exerciseId": "ex-squat",
+                    "name": "Back Squat",
                     "order": 1,
-                    "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "sets": 3,
+                    "repsMin": 4,
+                    "repsMax": 6,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell",
+                      "Rack"
+                    ]
+                  },
+                  {
+                    "identity": "ex-walking-lunges",
+                    "exerciseId": "ex-walking-lunges",
+                    "name": "Walking Lunges",
+                    "order": 2,
+                    "sets": 3,
+                    "repsMin": 6,
+                    "repsMax": 10,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Dumbbells"
+                    ]
+                  },
+                  {
+                    "identity": "ex-nordic-lower",
+                    "exerciseId": "ex-nordic-lower",
+                    "name": "Nordic Lower",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 5,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
@@ -56538,20 +56636,20 @@
                     "identity": "cond-2026-07-15-main",
                     "exerciseId": "cond-2026-07-15-main",
                     "name": "30:30 Controlled Tempo Blocks",
-                    "order": 2,
+                    "order": 4,
                     "sets": 13,
                     "repsMin": 1,
                     "repsMax": 1,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Tempo Intervals",
+                  "title": "Lower Squat",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -56566,144 +56664,187 @@
               "workout": {
                 "identity": "scrubbed",
                 "workoutType": "Strength",
-                "durationMinutes": 0,
-                "strengthIntensity": "Moderate",
+                "durationMinutes": 35,
+                "strengthIntensity": "Light",
                 "conditioningIntensity": null,
                 "components": [
                   {
                     "identity": "strength:0",
                     "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
-                    "durationMinutes": null,
+                    "intensity": "Light",
+                    "durationMinutes": 0.4166666666666667,
                     "exerciseIds": [
-                      "ex-overhead-press",
-                      "ex-custom-db-bench-press",
-                      "ex-barbell-curls"
+                      "woodchop-standing",
+                      "copenhagen-long",
+                      "band-pull-apart-sh",
+                      "seated-calf",
+                      "swiss-ball-curl"
                     ],
                     "exercises": [
                       {
-                        "identity": "ex-overhead-press",
-                        "exerciseId": "ex-overhead-press",
-                        "name": "Overhead Press",
+                        "identity": "woodchop-standing",
+                        "exerciseId": "woodchop-standing",
+                        "name": "Woodchop (Standing)",
                         "order": 1,
-                        "sets": 3,
-                        "repsMin": 4,
-                        "repsMax": 6,
+                        "sets": 2,
+                        "repsMin": 10,
+                        "repsMax": 12,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 45,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell"
-                        ]
-                      },
-                      {
-                        "identity": "ex-custom-db-bench-press",
-                        "exerciseId": "ex-custom-db-bench-press",
-                        "name": "DB Bench Press",
-                        "order": 2,
-                        "sets": 3,
-                        "repsMin": 8,
-                        "repsMax": 15,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "Light",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "ex-barbell-curls",
-                        "exerciseId": "ex-barbell-curls",
-                        "name": "Bicep Curl (Barbell)",
+                        "identity": "copenhagen-long",
+                        "exerciseId": "copenhagen-long",
+                        "name": "Long-Lever Copenhagen",
+                        "order": 2,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 25,
+                        "weightKg": null,
+                        "restSeconds": 45,
+                        "prescriptionType": "duration",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": 0.4166666666666667,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "band-pull-apart-sh",
+                        "exerciseId": "band-pull-apart-sh",
+                        "name": "Band Pull-Apart",
                         "order": 3,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "seated-calf",
+                        "exerciseId": "seated-calf",
+                        "name": "Seated Calf Raise",
+                        "order": 4,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "swiss-ball-curl",
+                        "exerciseId": "swiss-ball-curl",
+                        "name": "Swiss Ball Hamstring Curl",
+                        "order": 5,
                         "sets": 2,
                         "repsMin": 10,
-                        "repsMax": 20,
-                        "weightKg": 20,
-                        "restSeconds": 0,
+                        "repsMax": 12,
+                        "weightKg": null,
+                        "restSeconds": 45,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "Light",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell"
-                        ]
+                        "equipment": []
                       }
                     ],
                     "metadata": {
-                      "patterns": [
-                        "push"
-                      ],
-                      "strengthIntent": {
-                        "archetype": "upper",
-                        "effectivePatterns": [
-                          "push"
-                        ],
-                        "plannedPatterns": [
-                          "push"
-                        ],
-                        "primaryPattern": "push"
-                      }
+                      "patterns": [],
+                      "strengthIntent": null
                     }
                   }
                 ],
                 "exercises": [
                   {
-                    "identity": "ex-overhead-press",
-                    "exerciseId": "ex-overhead-press",
-                    "name": "Overhead Press",
+                    "identity": "woodchop-standing",
+                    "exerciseId": "woodchop-standing",
+                    "name": "Woodchop (Standing)",
                     "order": 1,
-                    "sets": 3,
-                    "repsMin": 4,
-                    "repsMax": 6,
+                    "sets": 2,
+                    "repsMin": 10,
+                    "repsMax": 12,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 45,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell"
-                    ]
-                  },
-                  {
-                    "identity": "ex-custom-db-bench-press",
-                    "exerciseId": "ex-custom-db-bench-press",
-                    "name": "DB Bench Press",
-                    "order": 2,
-                    "sets": 3,
-                    "repsMin": 8,
-                    "repsMax": 15,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "Light",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "ex-barbell-curls",
-                    "exerciseId": "ex-barbell-curls",
-                    "name": "Bicep Curl (Barbell)",
+                    "identity": "copenhagen-long",
+                    "exerciseId": "copenhagen-long",
+                    "name": "Long-Lever Copenhagen",
+                    "order": 2,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 25,
+                    "weightKg": null,
+                    "restSeconds": 45,
+                    "prescriptionType": "duration",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": 0.4166666666666667,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "band-pull-apart-sh",
+                    "exerciseId": "band-pull-apart-sh",
+                    "name": "Band Pull-Apart",
                     "order": 3,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 20,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "seated-calf",
+                    "exerciseId": "seated-calf",
+                    "name": "Seated Calf Raise",
+                    "order": 4,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 20,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "swiss-ball-curl",
+                    "exerciseId": "swiss-ball-curl",
+                    "name": "Swiss Ball Hamstring Curl",
+                    "order": 5,
                     "sets": 2,
                     "repsMin": 10,
-                    "repsMax": 20,
-                    "weightKg": 20,
-                    "restSeconds": 0,
+                    "repsMax": 12,
+                    "weightKg": null,
+                    "restSeconds": 45,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "Light",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell"
-                    ]
+                    "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Push",
-                  "description": "",
-                  "sessionTier": "core",
+                  "title": "Prehab & Accessories",
+                  "description": "Optional top-up - injury prevention and accessory work",
+                  "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": []
                 }
@@ -56713,8 +56854,8 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 3,
-              "hardDays": 3,
+              "hardExposures": 4,
+              "hardDays": 4,
               "mainStrengthExposures": 3,
               "conditioningExposures": 4,
               "extraConditioningSessions": 2,
@@ -56728,10 +56869,11 @@
                 "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
-                "lower_strength": 1,
+                "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 1
               }
             }
           }
@@ -58611,42 +58753,103 @@
               "date": "2026-08-03",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
+                "strengthIntensity": "Moderate",
                 "conditioningIntensity": "Moderate",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
                     "intensity": "Moderate",
-                    "durationMinutes": 0,
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "cond-2026-08-03-warmup",
-                      "cond-2026-08-03-main"
+                      "power-w-coach-1-exercise",
+                      "ex-squat",
+                      "ex-custom-step-ups"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-08-03-warmup",
-                        "exerciseId": "cond-2026-08-03-warmup",
-                        "name": "Warm-up",
-                        "order": 1,
-                        "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
+                        "identity": "power-w-coach-1-exercise",
+                        "exerciseId": "power-w-coach-1-exercise",
+                        "name": "Lateral Bounds",
+                        "order": 0,
+                        "sets": 2,
+                        "repsMin": 3,
+                        "repsMax": 3,
                         "weightKg": null,
-                        "restSeconds": 0,
+                        "restSeconds": 120,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Moderate",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
+                        "identity": "ex-squat",
+                        "exerciseId": "ex-squat",
+                        "name": "Back Squat",
+                        "order": 1,
+                        "sets": 2,
+                        "repsMin": 4,
+                        "repsMax": 6,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell",
+                          "Rack"
+                        ]
+                      },
+                      {
+                        "identity": "ex-custom-step-ups",
+                        "exerciseId": "ex-custom-step-ups",
+                        "name": "Step Ups",
+                        "order": 2,
+                        "sets": 2,
+                        "repsMin": 6,
+                        "repsMax": 10,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "squat"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "lower",
+                        "effectivePatterns": [
+                          "squat"
+                        ],
+                        "plannedPatterns": [
+                          "squat"
+                        ],
+                        "primaryPattern": "squat"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "Moderate",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-03-main"
+                    ],
+                    "exercises": [
+                      {
                         "identity": "cond-2026-08-03-main",
                         "exerciseId": "cond-2026-08-03-main",
                         "name": "30:30 Controlled Tempo Blocks",
-                        "order": 2,
+                        "order": 3,
                         "sets": 13,
                         "repsMin": 1,
                         "repsMax": 1,
@@ -58659,24 +58862,95 @@
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "tempo",
                       "title": "30:30 Controlled Tempo Blocks"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
+                    "intensity": "Moderate",
+                    "durationMinutes": null,
+                    "exerciseIds": [],
+                    "exercises": [],
+                    "metadata": {
+                      "exercise": {
+                        "description": "Lateral Bounds",
+                        "difficultyLevel": "Intermediate",
+                        "equipmentRequired": [],
+                        "exerciseType": "Compound",
+                        "muscleGroups": [],
+                        "name": "Lateral Bounds"
+                      },
+                      "exerciseId": "power-w-coach-1-exercise",
+                      "exerciseOrder": 0,
+                      "notes": "Do this fresh, early in the session — before the main lifts.",
+                      "power": {
+                        "family": "lower",
+                        "kind": "primer"
+                      },
+                      "prescribedRepsMax": 3,
+                      "prescribedRepsMin": 3,
+                      "prescribedSets": 2,
+                      "restSeconds": 120,
+                      "role": "power",
+                      "section18Evidence": {
+                        "mainStrengthPattern": null,
+                        "protocolVersion": 1,
+                        "provenance": "canonical_row_classifier",
+                        "role": "power",
+                        "strengthPattern": null
+                      }
                     }
                   }
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-08-03-warmup",
-                    "exerciseId": "cond-2026-08-03-warmup",
-                    "name": "Warm-up",
-                    "order": 1,
-                    "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "identity": "power-w-coach-1-exercise",
+                    "exerciseId": "power-w-coach-1-exercise",
+                    "name": "Lateral Bounds",
+                    "order": 0,
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 3,
                     "weightKg": null,
-                    "restSeconds": 0,
+                    "restSeconds": 120,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-squat",
+                    "exerciseId": "ex-squat",
+                    "name": "Back Squat",
+                    "order": 1,
+                    "sets": 2,
+                    "repsMin": 4,
+                    "repsMax": 6,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell",
+                      "Rack"
+                    ]
+                  },
+                  {
+                    "identity": "ex-custom-step-ups",
+                    "exerciseId": "ex-custom-step-ups",
+                    "name": "Step Ups",
+                    "order": 2,
+                    "sets": 2,
+                    "repsMin": 6,
+                    "repsMax": 10,
+                    "weightKg": null,
+                    "restSeconds": 30,
                     "prescriptionType": "reps",
                     "strengthIntensity": "Moderate",
                     "itemDurationMinutes": null,
@@ -58686,7 +58960,7 @@
                     "identity": "cond-2026-08-03-main",
                     "exerciseId": "cond-2026-08-03-main",
                     "name": "30:30 Controlled Tempo Blocks",
-                    "order": 2,
+                    "order": 3,
                     "sets": 13,
                     "repsMin": 1,
                     "repsMax": 1,
@@ -58699,7 +58973,7 @@
                   }
                 ],
                 "presentation": {
-                  "title": "Tempo Intervals",
+                  "title": "Lower Squat",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -58847,26 +59121,10 @@
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [
-                      "power-w-coach-3-exercise",
                       "ex-squat",
                       "ex-custom-deadlift"
                     ],
                     "exercises": [
-                      {
-                        "identity": "power-w-coach-3-exercise",
-                        "exerciseId": "power-w-coach-3-exercise",
-                        "name": "Lateral Bounds",
-                        "order": 0,
-                        "sets": 2,
-                        "repsMin": 3,
-                        "repsMax": 3,
-                        "weightKg": null,
-                        "restSeconds": 120,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
                       {
                         "identity": "ex-squat",
                         "exerciseId": "ex-squat",
@@ -58952,62 +59210,9 @@
                       "intent": "aerobic",
                       "title": "Short Flush"
                     }
-                  },
-                  {
-                    "identity": "power:2",
-                    "kind": "power",
-                    "order": 2,
-                    "intensity": "Moderate",
-                    "durationMinutes": null,
-                    "exerciseIds": [],
-                    "exercises": [],
-                    "metadata": {
-                      "exercise": {
-                        "description": "Lateral Bounds",
-                        "difficultyLevel": "Intermediate",
-                        "equipmentRequired": [],
-                        "exerciseType": "Compound",
-                        "muscleGroups": [],
-                        "name": "Lateral Bounds"
-                      },
-                      "exerciseId": "power-w-coach-3-exercise",
-                      "exerciseOrder": 0,
-                      "notes": "Do this fresh, early in the session — before the main lifts.",
-                      "power": {
-                        "family": "lower",
-                        "kind": "primer"
-                      },
-                      "prescribedRepsMax": 3,
-                      "prescribedRepsMin": 3,
-                      "prescribedSets": 2,
-                      "restSeconds": 120,
-                      "role": "power",
-                      "section18Evidence": {
-                        "mainStrengthPattern": null,
-                        "protocolVersion": 1,
-                        "provenance": "canonical_row_classifier",
-                        "role": "power",
-                        "strengthPattern": null
-                      }
-                    }
                   }
                 ],
                 "exercises": [
-                  {
-                    "identity": "power-w-coach-3-exercise",
-                    "exerciseId": "power-w-coach-3-exercise",
-                    "name": "Lateral Bounds",
-                    "order": 0,
-                    "sets": 2,
-                    "repsMin": 3,
-                    "repsMax": 3,
-                    "weightKg": null,
-                    "restSeconds": 120,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
                   {
                     "identity": "ex-squat",
                     "exerciseId": "ex-squat",
@@ -59072,110 +59277,64 @@
               "date": "2026-08-06",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Recovery",
                 "durationMinutes": 0,
-                "strengthIntensity": "Moderate",
+                "strengthIntensity": "Light",
                 "conditioningIntensity": null,
                 "components": [
                   {
                     "identity": "strength:0",
                     "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
+                    "intensity": "Light",
                     "durationMinutes": null,
                     "exerciseIds": [
-                      "ex-overhead-press",
-                      "ex-tricep-dips"
+                      "ex-custom-mobility-flow"
                     ],
                     "exercises": [
                       {
-                        "identity": "ex-overhead-press",
-                        "exerciseId": "ex-overhead-press",
-                        "name": "Overhead Press",
+                        "identity": "ex-custom-mobility-flow",
+                        "exerciseId": "ex-custom-mobility-flow",
+                        "name": "Mobility Flow",
                         "order": 1,
-                        "sets": 2,
-                        "repsMin": 4,
-                        "repsMax": 6,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell"
-                        ]
-                      },
-                      {
-                        "identity": "ex-tricep-dips",
-                        "exerciseId": "ex-tricep-dips",
-                        "name": "Dips",
-                        "order": 2,
-                        "sets": 2,
-                        "repsMin": 8,
+                        "sets": 1,
+                        "repsMin": 10,
                         "repsMax": 15,
                         "weightKg": null,
-                        "restSeconds": 30,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "Light",
                         "itemDurationMinutes": null,
                         "equipment": []
                       }
                     ],
                     "metadata": {
-                      "patterns": [
-                        "push"
-                      ],
-                      "strengthIntent": {
-                        "archetype": "upper",
-                        "effectivePatterns": [
-                          "push"
-                        ],
-                        "plannedPatterns": [
-                          "push"
-                        ],
-                        "primaryPattern": "push"
-                      }
+                      "patterns": [],
+                      "strengthIntent": null
                     }
                   }
                 ],
                 "exercises": [
                   {
-                    "identity": "ex-overhead-press",
-                    "exerciseId": "ex-overhead-press",
-                    "name": "Overhead Press",
+                    "identity": "ex-custom-mobility-flow",
+                    "exerciseId": "ex-custom-mobility-flow",
+                    "name": "Mobility Flow",
                     "order": 1,
-                    "sets": 2,
-                    "repsMin": 4,
-                    "repsMax": 6,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell"
-                    ]
-                  },
-                  {
-                    "identity": "ex-tricep-dips",
-                    "exerciseId": "ex-tricep-dips",
-                    "name": "Dips",
-                    "order": 2,
-                    "sets": 2,
-                    "repsMin": 8,
+                    "sets": 1,
+                    "repsMin": 10,
                     "repsMax": 15,
                     "weightKg": null,
-                    "restSeconds": 30,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "Light",
                     "itemDurationMinutes": null,
                     "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Push",
+                  "title": "Recovery Session",
                   "description": "",
-                  "sessionTier": "core",
+                  "sessionTier": "recovery",
                   "coachNotes": [],
                   "conditioningLabels": []
                 }
@@ -59185,25 +59344,26 @@
           "section18": {
             "status": "repaired",
             "visibleCounts": {
-              "hardExposures": 3,
-              "hardDays": 3,
+              "hardExposures": 4,
+              "hardDays": 4,
               "mainStrengthExposures": 3,
               "conditioningExposures": 4,
               "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
                 "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
-                "lower_strength": 1,
+                "lower_strength": 2,
+                "recovery": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 1
               }
             }
           }
@@ -72629,7 +72789,7 @@
             "visibleCounts": {
               "hardExposures": 0,
               "hardDays": 0,
-              "mainStrengthExposures": 1,
+              "mainStrengthExposures": 0,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
               "runningExposures": 0,
@@ -72640,8 +72800,8 @@
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "recovery": 3,
-                "upper_strength": 1
+                "prehab": 1,
+                "recovery": 3
               }
             }
           }
@@ -73596,7 +73756,7 @@
             "visibleCounts": {
               "hardExposures": 0,
               "hardDays": 0,
-              "mainStrengthExposures": 1,
+              "mainStrengthExposures": 0,
               "conditioningExposures": 2,
               "extraConditioningSessions": 2,
               "runningExposures": 0,
@@ -73607,8 +73767,8 @@
               "games": 0,
               "byCategory": {
                 "aerobic_base": 2,
-                "recovery": 3,
-                "upper_strength": 1
+                "prehab": 1,
+                "recovery": 3
               }
             }
           }
@@ -73627,16 +73787,16 @@
               "phaseWeek": 3
             },
             "mainStrengthExposure": {
-              "requiredMinimum": 2,
+              "requiredMinimum": 3,
               "defaultTarget": 4,
               "preferredRange": {
                 "min": 3,
                 "max": 4
               },
               "permittedMaximum": 4,
-              "plannerSelectedTarget": 2,
+              "plannerSelectedTarget": 4,
               "plannerSelectionKind": "core",
-              "achievedCount": 2,
+              "achievedCount": 4,
               "unresolvedMinimumShortfall": 0,
               "unresolvedPlannerSelectedShortfall": 0,
               "maximumBreach": 0
@@ -73686,22 +73846,22 @@
               "date": "2026-07-27",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": "Moderate",
-                "conditioningIntensity": null,
+                "strengthIntensity": "High",
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
                     "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
+                    "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [
                       "power-w-coach-1-exercise",
-                      "ex-bench-press",
-                      "ex-barbell-rows",
-                      "ex-face-pulls"
+                      "ex-overhead-press",
+                      "ex-custom-push-ups",
+                      "ex-custom-hammer-curl"
                     ],
                     "exercises": [
                       {
@@ -73715,14 +73875,14 @@
                         "weightKg": null,
                         "restSeconds": 120,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "ex-bench-press",
-                        "exerciseId": "ex-bench-press",
-                        "name": "Bench Press",
+                        "identity": "ex-overhead-press",
+                        "exerciseId": "ex-overhead-press",
+                        "name": "Overhead Press",
                         "order": 1,
                         "sets": 1,
                         "repsMin": 4,
@@ -73730,34 +73890,31 @@
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell",
-                          "Bench"
-                        ]
-                      },
-                      {
-                        "identity": "ex-barbell-rows",
-                        "exerciseId": "ex-barbell-rows",
-                        "name": "Barbell Row",
-                        "order": 2,
-                        "sets": 1,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": [
                           "Barbell"
                         ]
                       },
                       {
-                        "identity": "ex-face-pulls",
-                        "exerciseId": "ex-face-pulls",
-                        "name": "Face Pulls",
+                        "identity": "ex-custom-push-ups",
+                        "exerciseId": "ex-custom-push-ups",
+                        "name": "Push-ups",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 13,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-hammer-curl",
+                        "exerciseId": "ex-custom-hammer-curl",
+                        "name": "Hammer Curl",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 10,
@@ -73765,37 +73922,65 @@
                         "weightKg": null,
                         "restSeconds": 0,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Cable Machine"
-                        ]
+                        "equipment": []
                       }
                     ],
                     "metadata": {
                       "patterns": [
-                        "push",
-                        "pull"
+                        "push"
                       ],
                       "strengthIntent": {
                         "archetype": "upper",
                         "effectivePatterns": [
-                          "push",
-                          "pull"
+                          "push"
                         ],
                         "plannedPatterns": [
-                          "push",
-                          "pull"
+                          "push"
                         ],
                         "primaryPattern": "push"
                       }
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
-                    "intensity": "Moderate",
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-27-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-07-27-main",
+                        "exerciseId": "cond-2026-07-27-main",
+                        "name": "Continuous Aerobic Run",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Continuous Aerobic Run"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
+                    "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [],
                     "exercises": [],
@@ -73842,14 +74027,14 @@
                     "weightKg": null,
                     "restSeconds": 120,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "ex-bench-press",
-                    "exerciseId": "ex-bench-press",
-                    "name": "Bench Press",
+                    "identity": "ex-overhead-press",
+                    "exerciseId": "ex-overhead-press",
+                    "name": "Overhead Press",
                     "order": 1,
                     "sets": 1,
                     "repsMin": 4,
@@ -73857,34 +74042,31 @@
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell",
-                      "Bench"
-                    ]
-                  },
-                  {
-                    "identity": "ex-barbell-rows",
-                    "exerciseId": "ex-barbell-rows",
-                    "name": "Barbell Row",
-                    "order": 2,
-                    "sets": 1,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": [
                       "Barbell"
                     ]
                   },
                   {
-                    "identity": "ex-face-pulls",
-                    "exerciseId": "ex-face-pulls",
-                    "name": "Face Pulls",
+                    "identity": "ex-custom-push-ups",
+                    "exerciseId": "ex-custom-push-ups",
+                    "name": "Push-ups",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 13,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-hammer-curl",
+                    "exerciseId": "ex-custom-hammer-curl",
+                    "name": "Hammer Curl",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 10,
@@ -73892,19 +74074,34 @@
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Cable Machine"
-                    ]
+                    "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-07-27-main",
+                    "exerciseId": "cond-2026-07-27-main",
+                    "name": "Continuous Aerobic Run",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Body Strength",
+                  "title": "Upper Push",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Continuous Aerobic Run"
+                  ]
                 }
               }
             },
@@ -73913,169 +74110,9 @@
               "workout": {
                 "identity": "scrubbed",
                 "workoutType": "Strength",
-                "durationMinutes": 35,
-                "strengthIntensity": "Light",
-                "conditioningIntensity": null,
-                "components": [
-                  {
-                    "identity": "strength:0",
-                    "kind": "strength",
-                    "order": 0,
-                    "intensity": "Light",
-                    "durationMinutes": null,
-                    "exerciseIds": [
-                      "side-plank-row",
-                      "lateral-lunge",
-                      "scap-push-up",
-                      "calf-raise"
-                    ],
-                    "exercises": [
-                      {
-                        "identity": "side-plank-row",
-                        "exerciseId": "side-plank-row",
-                        "name": "Side Plank Row",
-                        "order": 1,
-                        "sets": 2,
-                        "repsMin": 8,
-                        "repsMax": 10,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "lateral-lunge",
-                        "exerciseId": "lateral-lunge",
-                        "name": "Lateral Lunge",
-                        "order": 2,
-                        "sets": 1,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 60,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "scap-push-up",
-                        "exerciseId": "scap-push-up",
-                        "name": "Scap Push-Up",
-                        "order": 3,
-                        "sets": 1,
-                        "repsMin": 8,
-                        "repsMax": 13,
-                        "weightKg": null,
-                        "restSeconds": 45,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "calf-raise",
-                        "exerciseId": "calf-raise",
-                        "name": "Single-Leg Calf Raise",
-                        "order": 4,
-                        "sets": 3,
-                        "repsMin": 12,
-                        "repsMax": 15,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      }
-                    ],
-                    "metadata": {
-                      "patterns": [],
-                      "strengthIntent": null
-                    }
-                  }
-                ],
-                "exercises": [
-                  {
-                    "identity": "side-plank-row",
-                    "exerciseId": "side-plank-row",
-                    "name": "Side Plank Row",
-                    "order": 1,
-                    "sets": 2,
-                    "repsMin": 8,
-                    "repsMax": 10,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "lateral-lunge",
-                    "exerciseId": "lateral-lunge",
-                    "name": "Lateral Lunge",
-                    "order": 2,
-                    "sets": 1,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 60,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "scap-push-up",
-                    "exerciseId": "scap-push-up",
-                    "name": "Scap Push-Up",
-                    "order": 3,
-                    "sets": 1,
-                    "repsMin": 8,
-                    "repsMax": 13,
-                    "weightKg": null,
-                    "restSeconds": 45,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "calf-raise",
-                    "exerciseId": "calf-raise",
-                    "name": "Single-Leg Calf Raise",
-                    "order": 4,
-                    "sets": 3,
-                    "repsMin": 12,
-                    "repsMax": 15,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  }
-                ],
-                "presentation": {
-                  "title": "Prehab & Accessories",
-                  "description": "Optional top-up - injury prevention and accessory work",
-                  "sessionTier": "optional",
-                  "coachNotes": [],
-                  "conditioningLabels": []
-                }
-              }
-            },
-            {
-              "date": "2026-07-29",
-              "workout": {
-                "identity": "scrubbed",
-                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "Moderate",
-                "conditioningIntensity": "Moderate",
+                "conditioningIntensity": null,
                 "components": [
                   {
                     "identity": "strength:0",
@@ -74084,15 +74121,15 @@
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [
-                      "power-w-coach-3-exercise",
-                      "ex-bench-press",
+                      "power-w-coach-2-exercise",
+                      "ex-pullups",
                       "ex-barbell-rows",
                       "ex-face-pulls"
                     ],
                     "exercises": [
                       {
-                        "identity": "power-w-coach-3-exercise",
-                        "exerciseId": "power-w-coach-3-exercise",
+                        "identity": "power-w-coach-2-exercise",
+                        "exerciseId": "power-w-coach-2-exercise",
                         "name": "Explosive Push-up",
                         "order": 0,
                         "sets": 3,
@@ -74106,22 +74143,19 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-bench-press",
-                        "exerciseId": "ex-bench-press",
-                        "name": "Bench Press",
+                        "identity": "ex-pullups",
+                        "exerciseId": "ex-pullups",
+                        "name": "Pull-Ups",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 4,
+                        "repsMin": 6,
                         "repsMax": 8,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Moderate",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell",
-                          "Bench"
-                        ]
+                        "equipment": []
                       },
                       {
                         "identity": "ex-barbell-rows",
@@ -74160,60 +74194,24 @@
                     ],
                     "metadata": {
                       "patterns": [
-                        "push",
                         "pull"
                       ],
                       "strengthIntent": {
                         "archetype": "upper",
                         "effectivePatterns": [
-                          "push",
                           "pull"
                         ],
                         "plannedPatterns": [
-                          "push",
                           "pull"
                         ],
-                        "primaryPattern": "push"
+                        "primaryPattern": "pull"
                       }
                     }
                   },
                   {
-                    "identity": "conditioning:1",
-                    "kind": "conditioning",
-                    "order": 1,
-                    "intensity": "Moderate",
-                    "durationMinutes": 0,
-                    "exerciseIds": [
-                      "cond-2026-07-29-main"
-                    ],
-                    "exercises": [
-                      {
-                        "identity": "cond-2026-07-29-main",
-                        "exerciseId": "cond-2026-07-29-main",
-                        "name": "Continuous Aerobic Run",
-                        "order": 4,
-                        "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
-                        "weightKg": null,
-                        "restSeconds": 0,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      }
-                    ],
-                    "metadata": {
-                      "attachedKind": "component",
-                      "description": "",
-                      "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
-                    }
-                  },
-                  {
-                    "identity": "power:2",
+                    "identity": "power:1",
                     "kind": "power",
-                    "order": 2,
+                    "order": 1,
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -74227,7 +74225,7 @@
                         "muscleGroups": [],
                         "name": "Explosive Push-up"
                       },
-                      "exerciseId": "power-w-coach-3-exercise",
+                      "exerciseId": "power-w-coach-2-exercise",
                       "exerciseOrder": 0,
                       "notes": "Do this fresh, early in the session — before the main lifts.",
                       "power": {
@@ -74251,8 +74249,8 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "power-w-coach-3-exercise",
-                    "exerciseId": "power-w-coach-3-exercise",
+                    "identity": "power-w-coach-2-exercise",
+                    "exerciseId": "power-w-coach-2-exercise",
                     "name": "Explosive Push-up",
                     "order": 0,
                     "sets": 3,
@@ -74266,22 +74264,19 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-bench-press",
-                    "exerciseId": "ex-bench-press",
-                    "name": "Bench Press",
+                    "identity": "ex-pullups",
+                    "exerciseId": "ex-pullups",
+                    "name": "Pull-Ups",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 4,
+                    "repsMin": 6,
                     "repsMax": 8,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
                     "strengthIntensity": "Moderate",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell",
-                      "Bench"
-                    ]
+                    "equipment": []
                   },
                   {
                     "identity": "ex-barbell-rows",
@@ -74316,40 +74311,23 @@
                     "equipment": [
                       "Cable Machine"
                     ]
-                  },
-                  {
-                    "identity": "cond-2026-07-29-main",
-                    "exerciseId": "cond-2026-07-29-main",
-                    "name": "Continuous Aerobic Run",
-                    "order": 4,
-                    "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
-                    "weightKg": null,
-                    "restSeconds": 0,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Body Strength",
+                  "title": "Upper Pull",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": [
-                    "Continuous Aerobic Run"
-                  ]
+                  "conditioningLabels": []
                 }
               }
             },
             {
-              "date": "2026-07-30",
+              "date": "2026-07-29",
               "workout": {
                 "identity": "scrubbed",
                 "workoutType": "Recovery",
-                "durationMinutes": 15,
+                "durationMinutes": 0,
                 "strengthIntensity": "Light",
                 "conditioningIntensity": null,
                 "components": [
@@ -74358,99 +74336,134 @@
                     "kind": "strength",
                     "order": 0,
                     "intensity": "Light",
-                    "durationMinutes": 2,
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "deep-squat-hold",
-                      "pigeon-stretch",
-                      "cat-cow",
-                      "dead-hang",
-                      "atg-split-squat",
-                      "pissing-dog-wall"
+                      "ex-custom-mobility-flow"
                     ],
                     "exercises": [
                       {
-                        "identity": "deep-squat-hold",
-                        "exerciseId": "deep-squat-hold",
-                        "name": "Deep Squat Hold",
+                        "identity": "ex-custom-mobility-flow",
+                        "exerciseId": "ex-custom-mobility-flow",
+                        "name": "Mobility Flow",
                         "order": 1,
-                        "sets": 2,
-                        "repsMin": 30,
-                        "repsMax": 45,
+                        "sets": 1,
+                        "repsMin": 10,
+                        "repsMax": 15,
                         "weightKg": null,
-                        "restSeconds": 20,
-                        "prescriptionType": "duration",
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
                         "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.75,
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [],
+                      "strengthIntent": null
+                    }
+                  }
+                ],
+                "exercises": [
+                  {
+                    "identity": "ex-custom-mobility-flow",
+                    "exerciseId": "ex-custom-mobility-flow",
+                    "name": "Mobility Flow",
+                    "order": 1,
+                    "sets": 1,
+                    "repsMin": 10,
+                    "repsMax": 15,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  }
+                ],
+                "presentation": {
+                  "title": "Recovery Session",
+                  "description": "",
+                  "sessionTier": "recovery",
+                  "coachNotes": [],
+                  "conditioningLabels": []
+                }
+              }
+            },
+            {
+              "date": "2026-07-30",
+              "workout": {
+                "identity": "scrubbed",
+                "workoutType": "Strength",
+                "durationMinutes": 35,
+                "strengthIntensity": "Light",
+                "conditioningIntensity": null,
+                "components": [
+                  {
+                    "identity": "strength:0",
+                    "kind": "strength",
+                    "order": 0,
+                    "intensity": "Light",
+                    "durationMinutes": null,
+                    "exerciseIds": [
+                      "banded-dead-bug",
+                      "groin-squeeze",
+                      "band-ext-rot",
+                      "seated-calf"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "banded-dead-bug",
+                        "exerciseId": "banded-dead-bug",
+                        "name": "Banded Dead Bug",
+                        "order": 1,
+                        "sets": 3,
+                        "repsMin": 8,
+                        "repsMax": 10,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "pigeon-stretch",
-                        "exerciseId": "pigeon-stretch",
-                        "name": "Pigeon Stretch",
+                        "identity": "groin-squeeze",
+                        "exerciseId": "groin-squeeze",
+                        "name": "Groin Squeeze",
                         "order": 2,
-                        "sets": 2,
-                        "repsMin": 30,
-                        "repsMax": 45,
-                        "weightKg": null,
-                        "restSeconds": 15,
-                        "prescriptionType": "duration",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.75,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "cat-cow",
-                        "exerciseId": "cat-cow",
-                        "name": "Cat-Cow",
-                        "order": 3,
-                        "sets": 2,
+                        "sets": 3,
                         "repsMin": 10,
                         "repsMax": 12,
                         "weightKg": null,
-                        "restSeconds": 15,
+                        "restSeconds": 30,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Light",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "dead-hang",
-                        "exerciseId": "dead-hang",
-                        "name": "Dead Hang",
+                        "identity": "band-ext-rot",
+                        "exerciseId": "band-ext-rot",
+                        "name": "Banded External Rotation",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 15,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 20,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "seated-calf",
+                        "exerciseId": "seated-calf",
+                        "name": "Seated Calf Raise",
                         "order": 4,
-                        "sets": 2,
-                        "repsMin": 20,
-                        "repsMax": 30,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "duration",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.5,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "atg-split-squat",
-                        "exerciseId": "atg-split-squat",
-                        "name": "ATG Split Squat",
-                        "order": 5,
-                        "sets": 2,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "pissing-dog-wall",
-                        "exerciseId": "pissing-dog-wall",
-                        "name": "Pissing Dog Against Wall",
-                        "order": 6,
-                        "sets": 2,
-                        "repsMin": 6,
-                        "repsMax": 6,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 20,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
@@ -74467,88 +74480,58 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "deep-squat-hold",
-                    "exerciseId": "deep-squat-hold",
-                    "name": "Deep Squat Hold",
+                    "identity": "banded-dead-bug",
+                    "exerciseId": "banded-dead-bug",
+                    "name": "Banded Dead Bug",
                     "order": 1,
-                    "sets": 2,
-                    "repsMin": 30,
-                    "repsMax": 45,
+                    "sets": 3,
+                    "repsMin": 8,
+                    "repsMax": 10,
                     "weightKg": null,
-                    "restSeconds": 20,
-                    "prescriptionType": "duration",
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
                     "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.75,
+                    "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "pigeon-stretch",
-                    "exerciseId": "pigeon-stretch",
-                    "name": "Pigeon Stretch",
+                    "identity": "groin-squeeze",
+                    "exerciseId": "groin-squeeze",
+                    "name": "Groin Squeeze",
                     "order": 2,
-                    "sets": 2,
-                    "repsMin": 30,
-                    "repsMax": 45,
-                    "weightKg": null,
-                    "restSeconds": 15,
-                    "prescriptionType": "duration",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.75,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "cat-cow",
-                    "exerciseId": "cat-cow",
-                    "name": "Cat-Cow",
-                    "order": 3,
-                    "sets": 2,
+                    "sets": 3,
                     "repsMin": 10,
                     "repsMax": 12,
                     "weightKg": null,
-                    "restSeconds": 15,
+                    "restSeconds": 30,
                     "prescriptionType": "reps",
                     "strengthIntensity": "Light",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "dead-hang",
-                    "exerciseId": "dead-hang",
-                    "name": "Dead Hang",
+                    "identity": "band-ext-rot",
+                    "exerciseId": "band-ext-rot",
+                    "name": "Banded External Rotation",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 15,
+                    "repsMax": 20,
+                    "weightKg": null,
+                    "restSeconds": 20,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "seated-calf",
+                    "exerciseId": "seated-calf",
+                    "name": "Seated Calf Raise",
                     "order": 4,
-                    "sets": 2,
-                    "repsMin": 20,
-                    "repsMax": 30,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "duration",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.5,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "atg-split-squat",
-                    "exerciseId": "atg-split-squat",
-                    "name": "ATG Split Squat",
-                    "order": 5,
-                    "sets": 2,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "pissing-dog-wall",
-                    "exerciseId": "pissing-dog-wall",
-                    "name": "Pissing Dog Against Wall",
-                    "order": 6,
-                    "sets": 2,
-                    "repsMin": 6,
-                    "repsMax": 6,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 20,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
@@ -74558,8 +74541,8 @@
                   }
                 ],
                 "presentation": {
-                  "title": "Mobility",
-                  "description": "Optional top-up - easy ranges only, nothing forced",
+                  "title": "Prehab & Accessories",
+                  "description": "Optional top-up - injury prevention and accessory work",
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": []
@@ -74570,55 +74553,117 @@
               "date": "2026-07-31",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
-                "conditioningIntensity": "Moderate",
+                "strengthIntensity": "High",
+                "conditioningIntensity": "High",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
-                    "durationMinutes": 0,
+                    "intensity": "High",
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "cond-2026-07-31-warmup",
-                      "cond-2026-07-31-main"
+                      "ex-pullups",
+                      "ex-barbell-rows",
+                      "ex-face-pulls"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-07-31-warmup",
-                        "exerciseId": "cond-2026-07-31-warmup",
-                        "name": "Warm-up",
+                        "identity": "ex-pullups",
+                        "exerciseId": "ex-pullups",
+                        "name": "Pull-Ups",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
+                        "repsMin": 6,
+                        "repsMax": 8,
                         "weightKg": null,
-                        "restSeconds": 0,
+                        "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
+                        "identity": "ex-barbell-rows",
+                        "exerciseId": "ex-barbell-rows",
+                        "name": "Barbell Row",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 8,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell"
+                        ]
+                      },
+                      {
+                        "identity": "ex-face-pulls",
+                        "exerciseId": "ex-face-pulls",
+                        "name": "Face Pulls",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 10,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Cable Machine"
+                        ]
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "pull"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "upper",
+                        "effectivePatterns": [
+                          "pull"
+                        ],
+                        "plannedPatterns": [
+                          "pull"
+                        ],
+                        "primaryPattern": "pull"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-07-31-main"
+                    ],
+                    "exercises": [
+                      {
                         "identity": "cond-2026-07-31-main",
                         "exerciseId": "cond-2026-07-31-main",
                         "name": "30:30 Controlled Tempo Blocks",
-                        "order": 2,
+                        "order": 4,
                         "sets": 13,
                         "repsMin": 1,
                         "repsMax": 1,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "tempo",
                       "title": "30:30 Controlled Tempo Blocks"
@@ -74627,38 +74672,72 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-07-31-warmup",
-                    "exerciseId": "cond-2026-07-31-warmup",
-                    "name": "Warm-up",
+                    "identity": "ex-pullups",
+                    "exerciseId": "ex-pullups",
+                    "name": "Pull-Ups",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "repsMin": 6,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-barbell-rows",
+                    "exerciseId": "ex-barbell-rows",
+                    "name": "Barbell Row",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell"
+                    ]
+                  },
+                  {
+                    "identity": "ex-face-pulls",
+                    "exerciseId": "ex-face-pulls",
+                    "name": "Face Pulls",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 10,
+                    "repsMax": 20,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": []
+                    "equipment": [
+                      "Cable Machine"
+                    ]
                   },
                   {
                     "identity": "cond-2026-07-31-main",
                     "exerciseId": "cond-2026-07-31-main",
                     "name": "30:30 Controlled Tempo Blocks",
-                    "order": 2,
+                    "order": 4,
                     "sets": 13,
                     "repsMin": 1,
                     "repsMax": 1,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Tempo Intervals",
+                  "title": "Upper Pull",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -74672,42 +74751,102 @@
               "date": "2026-08-01",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
+                "strengthIntensity": "Moderate",
                 "conditioningIntensity": "Moderate",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
                     "intensity": "Moderate",
-                    "durationMinutes": 0,
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "cond-2026-08-01-warmup",
-                      "cond-2026-08-01-main"
+                      "ex-overhead-press",
+                      "ex-custom-push-ups",
+                      "ex-custom-hammer-curl"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-08-01-warmup",
-                        "exerciseId": "cond-2026-08-01-warmup",
-                        "name": "Warm-up",
+                        "identity": "ex-overhead-press",
+                        "exerciseId": "ex-overhead-press",
+                        "name": "Overhead Press",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
+                        "repsMin": 4,
+                        "repsMax": 8,
                         "weightKg": null,
-                        "restSeconds": 0,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell"
+                        ]
+                      },
+                      {
+                        "identity": "ex-custom-push-ups",
+                        "exerciseId": "ex-custom-push-ups",
+                        "name": "Push-ups",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 13,
+                        "weightKg": null,
+                        "restSeconds": 30,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Moderate",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
+                        "identity": "ex-custom-hammer-curl",
+                        "exerciseId": "ex-custom-hammer-curl",
+                        "name": "Hammer Curl",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 10,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "push"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "upper",
+                        "effectivePatterns": [
+                          "push"
+                        ],
+                        "plannedPatterns": [
+                          "push"
+                        ],
+                        "primaryPattern": "push"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "Moderate",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-01-main"
+                    ],
+                    "exercises": [
+                      {
                         "identity": "cond-2026-08-01-main",
                         "exerciseId": "cond-2026-08-01-main",
                         "name": "Continuous Aerobic Run",
-                        "order": 2,
+                        "order": 4,
                         "sets": 1,
                         "repsMin": 1,
                         "repsMax": 1,
@@ -74720,7 +74859,7 @@
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
                       "title": "Continuous Aerobic Run"
@@ -74729,13 +74868,45 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-08-01-warmup",
-                    "exerciseId": "cond-2026-08-01-warmup",
-                    "name": "Warm-up",
+                    "identity": "ex-overhead-press",
+                    "exerciseId": "ex-overhead-press",
+                    "name": "Overhead Press",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "repsMin": 4,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell"
+                    ]
+                  },
+                  {
+                    "identity": "ex-custom-push-ups",
+                    "exerciseId": "ex-custom-push-ups",
+                    "name": "Push-ups",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 13,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-hammer-curl",
+                    "exerciseId": "ex-custom-hammer-curl",
+                    "name": "Hammer Curl",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 10,
+                    "repsMax": 20,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
@@ -74747,7 +74918,7 @@
                     "identity": "cond-2026-08-01-main",
                     "exerciseId": "cond-2026-08-01-main",
                     "name": "Continuous Aerobic Run",
-                    "order": 2,
+                    "order": 4,
                     "sets": 1,
                     "repsMin": 1,
                     "repsMax": 1,
@@ -74760,7 +74931,7 @@
                   }
                 ],
                 "presentation": {
-                  "title": "Continuous Aerobic",
+                  "title": "Upper Push",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -74776,20 +74947,21 @@
             "visibleCounts": {
               "hardExposures": 0,
               "hardDays": 0,
-              "mainStrengthExposures": 2,
-              "conditioningExposures": 4,
-              "extraConditioningSessions": 4,
-              "runningExposures": 1,
+              "mainStrengthExposures": 4,
+              "conditioningExposures": 3,
+              "extraConditioningSessions": 3,
+              "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 0,
               "recoverySessions": 1,
               "teamTrainingSessions": 0,
               "games": 0,
               "byCategory": {
-                "aerobic_base": 3,
+                "aerobic_base": 2,
+                "prehab": 1,
                 "recovery": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 4
               }
             }
           }
@@ -74808,16 +74980,16 @@
               "phaseWeek": 4
             },
             "mainStrengthExposure": {
-              "requiredMinimum": 2,
+              "requiredMinimum": 3,
               "defaultTarget": 4,
               "preferredRange": {
                 "min": 3,
                 "max": 4
               },
               "permittedMaximum": 4,
-              "plannerSelectedTarget": 2,
+              "plannerSelectedTarget": 4,
               "plannerSelectionKind": "core",
-              "achievedCount": 2,
+              "achievedCount": 4,
               "unresolvedMinimumShortfall": 0,
               "unresolvedPlannerSelectedShortfall": 0,
               "maximumBreach": 0
@@ -74867,22 +75039,22 @@
               "date": "2026-08-03",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Strength",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": "Moderate",
-                "conditioningIntensity": null,
+                "strengthIntensity": "High",
+                "conditioningIntensity": "High",
                 "components": [
                   {
                     "identity": "strength:0",
                     "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
+                    "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [
                       "power-w-coach-1-exercise",
-                      "ex-bench-press",
-                      "ex-barbell-rows",
-                      "ex-face-pulls"
+                      "ex-overhead-press",
+                      "ex-tricep-dips",
+                      "ex-custom-incline-dumbbell-curl"
                     ],
                     "exercises": [
                       {
@@ -74896,14 +75068,14 @@
                         "weightKg": null,
                         "restSeconds": 120,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
-                        "identity": "ex-bench-press",
-                        "exerciseId": "ex-bench-press",
-                        "name": "Bench Press",
+                        "identity": "ex-overhead-press",
+                        "exerciseId": "ex-overhead-press",
+                        "name": "Overhead Press",
                         "order": 1,
                         "sets": 1,
                         "repsMin": 4,
@@ -74911,34 +75083,31 @@
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell",
-                          "Bench"
-                        ]
-                      },
-                      {
-                        "identity": "ex-barbell-rows",
-                        "exerciseId": "ex-barbell-rows",
-                        "name": "Barbell Row",
-                        "order": 2,
-                        "sets": 1,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": [
                           "Barbell"
                         ]
                       },
                       {
-                        "identity": "ex-face-pulls",
-                        "exerciseId": "ex-face-pulls",
-                        "name": "Face Pulls",
+                        "identity": "ex-tricep-dips",
+                        "exerciseId": "ex-tricep-dips",
+                        "name": "Dips",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 13,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "ex-custom-incline-dumbbell-curl",
+                        "exerciseId": "ex-custom-incline-dumbbell-curl",
+                        "name": "Incline Dumbbell Curl",
                         "order": 3,
                         "sets": 2,
                         "repsMin": 10,
@@ -74946,37 +75115,65 @@
                         "weightKg": null,
                         "restSeconds": 0,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Cable Machine"
-                        ]
+                        "equipment": []
                       }
                     ],
                     "metadata": {
                       "patterns": [
-                        "push",
-                        "pull"
+                        "push"
                       ],
                       "strengthIntent": {
                         "archetype": "upper",
                         "effectivePatterns": [
-                          "push",
-                          "pull"
+                          "push"
                         ],
                         "plannedPatterns": [
-                          "push",
-                          "pull"
+                          "push"
                         ],
                         "primaryPattern": "push"
                       }
                     }
                   },
                   {
-                    "identity": "power:1",
-                    "kind": "power",
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
                     "order": 1,
-                    "intensity": "Moderate",
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-03-main"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "cond-2026-08-03-main",
+                        "exerciseId": "cond-2026-08-03-main",
+                        "name": "Continuous Aerobic Run",
+                        "order": 4,
+                        "sets": 1,
+                        "repsMin": 1,
+                        "repsMax": 1,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "attachedKind": "component",
+                      "description": "",
+                      "intent": "aerobic",
+                      "title": "Continuous Aerobic Run"
+                    }
+                  },
+                  {
+                    "identity": "power:2",
+                    "kind": "power",
+                    "order": 2,
+                    "intensity": "High",
                     "durationMinutes": null,
                     "exerciseIds": [],
                     "exercises": [],
@@ -75023,14 +75220,14 @@
                     "weightKg": null,
                     "restSeconds": 120,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   },
                   {
-                    "identity": "ex-bench-press",
-                    "exerciseId": "ex-bench-press",
-                    "name": "Bench Press",
+                    "identity": "ex-overhead-press",
+                    "exerciseId": "ex-overhead-press",
+                    "name": "Overhead Press",
                     "order": 1,
                     "sets": 1,
                     "repsMin": 4,
@@ -75038,34 +75235,31 @@
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell",
-                      "Bench"
-                    ]
-                  },
-                  {
-                    "identity": "ex-barbell-rows",
-                    "exerciseId": "ex-barbell-rows",
-                    "name": "Barbell Row",
-                    "order": 2,
-                    "sets": 1,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": [
                       "Barbell"
                     ]
                   },
                   {
-                    "identity": "ex-face-pulls",
-                    "exerciseId": "ex-face-pulls",
-                    "name": "Face Pulls",
+                    "identity": "ex-tricep-dips",
+                    "exerciseId": "ex-tricep-dips",
+                    "name": "Dips",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 13,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-incline-dumbbell-curl",
+                    "exerciseId": "ex-custom-incline-dumbbell-curl",
+                    "name": "Incline Dumbbell Curl",
                     "order": 3,
                     "sets": 2,
                     "repsMin": 10,
@@ -75073,19 +75267,34 @@
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Cable Machine"
-                    ]
+                    "equipment": []
+                  },
+                  {
+                    "identity": "cond-2026-08-03-main",
+                    "exerciseId": "cond-2026-08-03-main",
+                    "name": "Continuous Aerobic Run",
+                    "order": 4,
+                    "sets": 1,
+                    "repsMin": 1,
+                    "repsMax": 1,
+                    "weightKg": null,
+                    "restSeconds": 0,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Body Strength",
+                  "title": "Upper Push",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": []
+                  "conditioningLabels": [
+                    "Continuous Aerobic Run"
+                  ]
                 }
               }
             },
@@ -75094,169 +75303,9 @@
               "workout": {
                 "identity": "scrubbed",
                 "workoutType": "Strength",
-                "durationMinutes": 35,
-                "strengthIntensity": "Light",
-                "conditioningIntensity": null,
-                "components": [
-                  {
-                    "identity": "strength:0",
-                    "kind": "strength",
-                    "order": 0,
-                    "intensity": "Light",
-                    "durationMinutes": null,
-                    "exerciseIds": [
-                      "ab-wheel",
-                      "lateral-lunge",
-                      "scap-push-up",
-                      "seated-calf"
-                    ],
-                    "exercises": [
-                      {
-                        "identity": "ab-wheel",
-                        "exerciseId": "ab-wheel",
-                        "name": "Ab Wheel",
-                        "order": 1,
-                        "sets": 3,
-                        "repsMin": 6,
-                        "repsMax": 10,
-                        "weightKg": null,
-                        "restSeconds": 60,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "lateral-lunge",
-                        "exerciseId": "lateral-lunge",
-                        "name": "Lateral Lunge",
-                        "order": 2,
-                        "sets": 1,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 60,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "scap-push-up",
-                        "exerciseId": "scap-push-up",
-                        "name": "Scap Push-Up",
-                        "order": 3,
-                        "sets": 1,
-                        "repsMin": 8,
-                        "repsMax": 13,
-                        "weightKg": null,
-                        "restSeconds": 45,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "seated-calf",
-                        "exerciseId": "seated-calf",
-                        "name": "Seated Calf Raise",
-                        "order": 4,
-                        "sets": 3,
-                        "repsMin": 15,
-                        "repsMax": 20,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      }
-                    ],
-                    "metadata": {
-                      "patterns": [],
-                      "strengthIntent": null
-                    }
-                  }
-                ],
-                "exercises": [
-                  {
-                    "identity": "ab-wheel",
-                    "exerciseId": "ab-wheel",
-                    "name": "Ab Wheel",
-                    "order": 1,
-                    "sets": 3,
-                    "repsMin": 6,
-                    "repsMax": 10,
-                    "weightKg": null,
-                    "restSeconds": 60,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "lateral-lunge",
-                    "exerciseId": "lateral-lunge",
-                    "name": "Lateral Lunge",
-                    "order": 2,
-                    "sets": 1,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 60,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "scap-push-up",
-                    "exerciseId": "scap-push-up",
-                    "name": "Scap Push-Up",
-                    "order": 3,
-                    "sets": 1,
-                    "repsMin": 8,
-                    "repsMax": 13,
-                    "weightKg": null,
-                    "restSeconds": 45,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "seated-calf",
-                    "exerciseId": "seated-calf",
-                    "name": "Seated Calf Raise",
-                    "order": 4,
-                    "sets": 3,
-                    "repsMin": 15,
-                    "repsMax": 20,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  }
-                ],
-                "presentation": {
-                  "title": "Prehab & Accessories",
-                  "description": "Optional top-up - injury prevention and accessory work",
-                  "sessionTier": "optional",
-                  "coachNotes": [],
-                  "conditioningLabels": []
-                }
-              }
-            },
-            {
-              "date": "2026-08-05",
-              "workout": {
-                "identity": "scrubbed",
-                "workoutType": "Mixed",
                 "durationMinutes": 0,
                 "strengthIntensity": "Moderate",
-                "conditioningIntensity": "Moderate",
+                "conditioningIntensity": null,
                 "components": [
                   {
                     "identity": "strength:0",
@@ -75265,15 +75314,15 @@
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [
-                      "power-w-coach-3-exercise",
-                      "ex-bench-press",
+                      "power-w-coach-2-exercise",
+                      "ex-pullups",
                       "ex-barbell-rows",
                       "ex-face-pulls"
                     ],
                     "exercises": [
                       {
-                        "identity": "power-w-coach-3-exercise",
-                        "exerciseId": "power-w-coach-3-exercise",
+                        "identity": "power-w-coach-2-exercise",
+                        "exerciseId": "power-w-coach-2-exercise",
                         "name": "Explosive Push-up",
                         "order": 0,
                         "sets": 3,
@@ -75287,22 +75336,19 @@
                         "equipment": []
                       },
                       {
-                        "identity": "ex-bench-press",
-                        "exerciseId": "ex-bench-press",
-                        "name": "Bench Press",
+                        "identity": "ex-pullups",
+                        "exerciseId": "ex-pullups",
+                        "name": "Pull-Ups",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 4,
+                        "repsMin": 6,
                         "repsMax": 8,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Moderate",
                         "itemDurationMinutes": null,
-                        "equipment": [
-                          "Barbell",
-                          "Bench"
-                        ]
+                        "equipment": []
                       },
                       {
                         "identity": "ex-barbell-rows",
@@ -75341,60 +75387,24 @@
                     ],
                     "metadata": {
                       "patterns": [
-                        "push",
                         "pull"
                       ],
                       "strengthIntent": {
                         "archetype": "upper",
                         "effectivePatterns": [
-                          "push",
                           "pull"
                         ],
                         "plannedPatterns": [
-                          "push",
                           "pull"
                         ],
-                        "primaryPattern": "push"
+                        "primaryPattern": "pull"
                       }
                     }
                   },
                   {
-                    "identity": "conditioning:1",
-                    "kind": "conditioning",
-                    "order": 1,
-                    "intensity": "Moderate",
-                    "durationMinutes": 0,
-                    "exerciseIds": [
-                      "cond-2026-08-05-main"
-                    ],
-                    "exercises": [
-                      {
-                        "identity": "cond-2026-08-05-main",
-                        "exerciseId": "cond-2026-08-05-main",
-                        "name": "Continuous Aerobic Run",
-                        "order": 4,
-                        "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
-                        "weightKg": null,
-                        "restSeconds": 0,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      }
-                    ],
-                    "metadata": {
-                      "attachedKind": "component",
-                      "description": "",
-                      "intent": "aerobic",
-                      "title": "Continuous Aerobic Run"
-                    }
-                  },
-                  {
-                    "identity": "power:2",
+                    "identity": "power:1",
                     "kind": "power",
-                    "order": 2,
+                    "order": 1,
                     "intensity": "Moderate",
                     "durationMinutes": null,
                     "exerciseIds": [],
@@ -75408,7 +75418,7 @@
                         "muscleGroups": [],
                         "name": "Explosive Push-up"
                       },
-                      "exerciseId": "power-w-coach-3-exercise",
+                      "exerciseId": "power-w-coach-2-exercise",
                       "exerciseOrder": 0,
                       "notes": "Do this fresh, early in the session — before the main lifts.",
                       "power": {
@@ -75432,8 +75442,8 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "power-w-coach-3-exercise",
-                    "exerciseId": "power-w-coach-3-exercise",
+                    "identity": "power-w-coach-2-exercise",
+                    "exerciseId": "power-w-coach-2-exercise",
                     "name": "Explosive Push-up",
                     "order": 0,
                     "sets": 3,
@@ -75447,22 +75457,19 @@
                     "equipment": []
                   },
                   {
-                    "identity": "ex-bench-press",
-                    "exerciseId": "ex-bench-press",
-                    "name": "Bench Press",
+                    "identity": "ex-pullups",
+                    "exerciseId": "ex-pullups",
+                    "name": "Pull-Ups",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 4,
+                    "repsMin": 6,
                     "repsMax": 8,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
                     "strengthIntensity": "Moderate",
                     "itemDurationMinutes": null,
-                    "equipment": [
-                      "Barbell",
-                      "Bench"
-                    ]
+                    "equipment": []
                   },
                   {
                     "identity": "ex-barbell-rows",
@@ -75497,40 +75504,23 @@
                     "equipment": [
                       "Cable Machine"
                     ]
-                  },
-                  {
-                    "identity": "cond-2026-08-05-main",
-                    "exerciseId": "cond-2026-08-05-main",
-                    "name": "Continuous Aerobic Run",
-                    "order": 4,
-                    "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
-                    "weightKg": null,
-                    "restSeconds": 0,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
-                    "itemDurationMinutes": null,
-                    "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Upper Body Strength",
+                  "title": "Upper Pull",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
-                  "conditioningLabels": [
-                    "Continuous Aerobic Run"
-                  ]
+                  "conditioningLabels": []
                 }
               }
             },
             {
-              "date": "2026-08-06",
+              "date": "2026-08-05",
               "workout": {
                 "identity": "scrubbed",
                 "workoutType": "Recovery",
-                "durationMinutes": 15,
+                "durationMinutes": 0,
                 "strengthIntensity": "Light",
                 "conditioningIntensity": null,
                 "components": [
@@ -75539,104 +75529,24 @@
                     "kind": "strength",
                     "order": 0,
                     "intensity": "Light",
-                    "durationMinutes": 2.25,
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "deep-squat-hold",
-                      "pissing-dog-wall",
-                      "cat-cow",
-                      "lat-stretch",
-                      "atg-split-squat",
-                      "couch-stretch"
+                      "ex-custom-mobility-flow"
                     ],
                     "exercises": [
                       {
-                        "identity": "deep-squat-hold",
-                        "exerciseId": "deep-squat-hold",
-                        "name": "Deep Squat Hold",
+                        "identity": "ex-custom-mobility-flow",
+                        "exerciseId": "ex-custom-mobility-flow",
+                        "name": "Mobility Flow",
                         "order": 1,
-                        "sets": 2,
-                        "repsMin": 30,
-                        "repsMax": 45,
-                        "weightKg": null,
-                        "restSeconds": 20,
-                        "prescriptionType": "duration",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.75,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "pissing-dog-wall",
-                        "exerciseId": "pissing-dog-wall",
-                        "name": "Pissing Dog Against Wall",
-                        "order": 2,
-                        "sets": 2,
-                        "repsMin": 6,
-                        "repsMax": 6,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "cat-cow",
-                        "exerciseId": "cat-cow",
-                        "name": "Cat-Cow",
-                        "order": 3,
-                        "sets": 2,
+                        "sets": 1,
                         "repsMin": 10,
-                        "repsMax": 12,
+                        "repsMax": 15,
                         "weightKg": null,
-                        "restSeconds": 15,
+                        "restSeconds": 0,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Light",
                         "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "lat-stretch",
-                        "exerciseId": "lat-stretch",
-                        "name": "Lat Stretch",
-                        "order": 4,
-                        "sets": 2,
-                        "repsMin": 30,
-                        "repsMax": 45,
-                        "weightKg": null,
-                        "restSeconds": 15,
-                        "prescriptionType": "duration",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.75,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "atg-split-squat",
-                        "exerciseId": "atg-split-squat",
-                        "name": "ATG Split Squat",
-                        "order": 5,
-                        "sets": 2,
-                        "repsMin": 6,
-                        "repsMax": 8,
-                        "weightKg": null,
-                        "restSeconds": 30,
-                        "prescriptionType": "reps",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": null,
-                        "equipment": []
-                      },
-                      {
-                        "identity": "couch-stretch",
-                        "exerciseId": "couch-stretch",
-                        "name": "Couch Stretch",
-                        "order": 6,
-                        "sets": 2,
-                        "repsMin": 30,
-                        "repsMax": 45,
-                        "weightKg": null,
-                        "restSeconds": 15,
-                        "prescriptionType": "duration",
-                        "strengthIntensity": "Light",
-                        "itemDurationMinutes": 0.75,
                         "equipment": []
                       }
                     ],
@@ -75648,99 +75558,184 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "deep-squat-hold",
-                    "exerciseId": "deep-squat-hold",
-                    "name": "Deep Squat Hold",
+                    "identity": "ex-custom-mobility-flow",
+                    "exerciseId": "ex-custom-mobility-flow",
+                    "name": "Mobility Flow",
                     "order": 1,
-                    "sets": 2,
-                    "repsMin": 30,
-                    "repsMax": 45,
-                    "weightKg": null,
-                    "restSeconds": 20,
-                    "prescriptionType": "duration",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.75,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "pissing-dog-wall",
-                    "exerciseId": "pissing-dog-wall",
-                    "name": "Pissing Dog Against Wall",
-                    "order": 2,
-                    "sets": 2,
-                    "repsMin": 6,
-                    "repsMax": 6,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "cat-cow",
-                    "exerciseId": "cat-cow",
-                    "name": "Cat-Cow",
-                    "order": 3,
-                    "sets": 2,
+                    "sets": 1,
                     "repsMin": 10,
-                    "repsMax": 12,
+                    "repsMax": 15,
                     "weightKg": null,
-                    "restSeconds": 15,
+                    "restSeconds": 0,
                     "prescriptionType": "reps",
                     "strengthIntensity": "Light",
                     "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "lat-stretch",
-                    "exerciseId": "lat-stretch",
-                    "name": "Lat Stretch",
-                    "order": 4,
-                    "sets": 2,
-                    "repsMin": 30,
-                    "repsMax": 45,
-                    "weightKg": null,
-                    "restSeconds": 15,
-                    "prescriptionType": "duration",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.75,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "atg-split-squat",
-                    "exerciseId": "atg-split-squat",
-                    "name": "ATG Split Squat",
-                    "order": 5,
-                    "sets": 2,
-                    "repsMin": 6,
-                    "repsMax": 8,
-                    "weightKg": null,
-                    "restSeconds": 30,
-                    "prescriptionType": "reps",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": null,
-                    "equipment": []
-                  },
-                  {
-                    "identity": "couch-stretch",
-                    "exerciseId": "couch-stretch",
-                    "name": "Couch Stretch",
-                    "order": 6,
-                    "sets": 2,
-                    "repsMin": 30,
-                    "repsMax": 45,
-                    "weightKg": null,
-                    "restSeconds": 15,
-                    "prescriptionType": "duration",
-                    "strengthIntensity": "Light",
-                    "itemDurationMinutes": 0.75,
                     "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Mobility",
-                  "description": "Optional top-up - easy ranges only, nothing forced",
+                  "title": "Recovery Session",
+                  "description": "",
+                  "sessionTier": "recovery",
+                  "coachNotes": [],
+                  "conditioningLabels": []
+                }
+              }
+            },
+            {
+              "date": "2026-08-06",
+              "workout": {
+                "identity": "scrubbed",
+                "workoutType": "Strength",
+                "durationMinutes": 35,
+                "strengthIntensity": "Light",
+                "conditioningIntensity": null,
+                "components": [
+                  {
+                    "identity": "strength:0",
+                    "kind": "strength",
+                    "order": 0,
+                    "intensity": "Light",
+                    "durationMinutes": 0.4166666666666667,
+                    "exerciseIds": [
+                      "bird-dog",
+                      "copenhagen-long",
+                      "band-pull-apart-sh",
+                      "seated-calf"
+                    ],
+                    "exercises": [
+                      {
+                        "identity": "bird-dog",
+                        "exerciseId": "bird-dog",
+                        "name": "Bird Dog",
+                        "order": 1,
+                        "sets": 2,
+                        "repsMin": 8,
+                        "repsMax": 10,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "copenhagen-long",
+                        "exerciseId": "copenhagen-long",
+                        "name": "Long-Lever Copenhagen",
+                        "order": 2,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 25,
+                        "weightKg": null,
+                        "restSeconds": 45,
+                        "prescriptionType": "duration",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": 0.4166666666666667,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "band-pull-apart-sh",
+                        "exerciseId": "band-pull-apart-sh",
+                        "name": "Band Pull-Apart",
+                        "order": 3,
+                        "sets": 1,
+                        "repsMin": 13,
+                        "repsMax": 18,
+                        "weightKg": null,
+                        "restSeconds": 35,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      },
+                      {
+                        "identity": "seated-calf",
+                        "exerciseId": "seated-calf",
+                        "name": "Seated Calf Raise",
+                        "order": 4,
+                        "sets": 3,
+                        "repsMin": 15,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Light",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [],
+                      "strengthIntent": null
+                    }
+                  }
+                ],
+                "exercises": [
+                  {
+                    "identity": "bird-dog",
+                    "exerciseId": "bird-dog",
+                    "name": "Bird Dog",
+                    "order": 1,
+                    "sets": 2,
+                    "repsMin": 8,
+                    "repsMax": 10,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "copenhagen-long",
+                    "exerciseId": "copenhagen-long",
+                    "name": "Long-Lever Copenhagen",
+                    "order": 2,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 25,
+                    "weightKg": null,
+                    "restSeconds": 45,
+                    "prescriptionType": "duration",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": 0.4166666666666667,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "band-pull-apart-sh",
+                    "exerciseId": "band-pull-apart-sh",
+                    "name": "Band Pull-Apart",
+                    "order": 3,
+                    "sets": 1,
+                    "repsMin": 13,
+                    "repsMax": 18,
+                    "weightKg": null,
+                    "restSeconds": 35,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "seated-calf",
+                    "exerciseId": "seated-calf",
+                    "name": "Seated Calf Raise",
+                    "order": 4,
+                    "sets": 3,
+                    "repsMin": 15,
+                    "repsMax": 20,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Light",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  }
+                ],
+                "presentation": {
+                  "title": "Prehab & Accessories",
+                  "description": "Optional top-up - injury prevention and accessory work",
                   "sessionTier": "optional",
                   "coachNotes": [],
                   "conditioningLabels": []
@@ -75751,55 +75746,117 @@
               "date": "2026-08-07",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
-                "conditioningIntensity": "Moderate",
+                "strengthIntensity": "High",
+                "conditioningIntensity": "High",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
-                    "intensity": "Moderate",
-                    "durationMinutes": 0,
+                    "intensity": "High",
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "cond-2026-08-07-warmup",
-                      "cond-2026-08-07-main"
+                      "ex-pullups",
+                      "ex-barbell-rows",
+                      "ex-face-pulls"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-08-07-warmup",
-                        "exerciseId": "cond-2026-08-07-warmup",
-                        "name": "Warm-up",
+                        "identity": "ex-pullups",
+                        "exerciseId": "ex-pullups",
+                        "name": "Pull-Ups",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
+                        "repsMin": 6,
+                        "repsMax": 8,
                         "weightKg": null,
-                        "restSeconds": 0,
+                        "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
+                        "identity": "ex-barbell-rows",
+                        "exerciseId": "ex-barbell-rows",
+                        "name": "Barbell Row",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 8,
+                        "weightKg": null,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell"
+                        ]
+                      },
+                      {
+                        "identity": "ex-face-pulls",
+                        "exerciseId": "ex-face-pulls",
+                        "name": "Face Pulls",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 10,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "High",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Cable Machine"
+                        ]
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "pull"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "upper",
+                        "effectivePatterns": [
+                          "pull"
+                        ],
+                        "plannedPatterns": [
+                          "pull"
+                        ],
+                        "primaryPattern": "pull"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "High",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-07-main"
+                    ],
+                    "exercises": [
+                      {
                         "identity": "cond-2026-08-07-main",
                         "exerciseId": "cond-2026-08-07-main",
                         "name": "30:30 Controlled Tempo Blocks",
-                        "order": 2,
+                        "order": 4,
                         "sets": 13,
                         "repsMin": 1,
                         "repsMax": 1,
                         "weightKg": null,
                         "restSeconds": 30,
                         "prescriptionType": "reps",
-                        "strengthIntensity": "Moderate",
+                        "strengthIntensity": "High",
                         "itemDurationMinutes": null,
                         "equipment": []
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "tempo",
                       "title": "30:30 Controlled Tempo Blocks"
@@ -75808,38 +75865,72 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-08-07-warmup",
-                    "exerciseId": "cond-2026-08-07-warmup",
-                    "name": "Warm-up",
+                    "identity": "ex-pullups",
+                    "exerciseId": "ex-pullups",
+                    "name": "Pull-Ups",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "repsMin": 6,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-barbell-rows",
+                    "exerciseId": "ex-barbell-rows",
+                    "name": "Barbell Row",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "High",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell"
+                    ]
+                  },
+                  {
+                    "identity": "ex-face-pulls",
+                    "exerciseId": "ex-face-pulls",
+                    "name": "Face Pulls",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 10,
+                    "repsMax": 20,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
-                    "equipment": []
+                    "equipment": [
+                      "Cable Machine"
+                    ]
                   },
                   {
                     "identity": "cond-2026-08-07-main",
                     "exerciseId": "cond-2026-08-07-main",
                     "name": "30:30 Controlled Tempo Blocks",
-                    "order": 2,
+                    "order": 4,
                     "sets": 13,
                     "repsMin": 1,
                     "repsMax": 1,
                     "weightKg": null,
                     "restSeconds": 30,
                     "prescriptionType": "reps",
-                    "strengthIntensity": "Moderate",
+                    "strengthIntensity": "High",
                     "itemDurationMinutes": null,
                     "equipment": []
                   }
                 ],
                 "presentation": {
-                  "title": "Tempo Intervals",
+                  "title": "Upper Pull",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -75853,42 +75944,102 @@
               "date": "2026-08-08",
               "workout": {
                 "identity": "scrubbed",
-                "workoutType": "Conditioning",
+                "workoutType": "Mixed",
                 "durationMinutes": 0,
-                "strengthIntensity": null,
+                "strengthIntensity": "Moderate",
                 "conditioningIntensity": "Moderate",
                 "components": [
                   {
-                    "identity": "conditioning:0",
-                    "kind": "conditioning",
+                    "identity": "strength:0",
+                    "kind": "strength",
                     "order": 0,
                     "intensity": "Moderate",
-                    "durationMinutes": 0,
+                    "durationMinutes": null,
                     "exerciseIds": [
-                      "cond-2026-08-08-warmup",
-                      "cond-2026-08-08-main"
+                      "ex-overhead-press",
+                      "ex-tricep-dips",
+                      "ex-custom-incline-dumbbell-curl"
                     ],
                     "exercises": [
                       {
-                        "identity": "cond-2026-08-08-warmup",
-                        "exerciseId": "cond-2026-08-08-warmup",
-                        "name": "Warm-up",
+                        "identity": "ex-overhead-press",
+                        "exerciseId": "ex-overhead-press",
+                        "name": "Overhead Press",
                         "order": 1,
                         "sets": 1,
-                        "repsMin": 1,
-                        "repsMax": 1,
+                        "repsMin": 4,
+                        "repsMax": 8,
                         "weightKg": null,
-                        "restSeconds": 0,
+                        "restSeconds": 30,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": [
+                          "Barbell"
+                        ]
+                      },
+                      {
+                        "identity": "ex-tricep-dips",
+                        "exerciseId": "ex-tricep-dips",
+                        "name": "Dips",
+                        "order": 2,
+                        "sets": 1,
+                        "repsMin": 6,
+                        "repsMax": 13,
+                        "weightKg": null,
+                        "restSeconds": 30,
                         "prescriptionType": "reps",
                         "strengthIntensity": "Moderate",
                         "itemDurationMinutes": null,
                         "equipment": []
                       },
                       {
+                        "identity": "ex-custom-incline-dumbbell-curl",
+                        "exerciseId": "ex-custom-incline-dumbbell-curl",
+                        "name": "Incline Dumbbell Curl",
+                        "order": 3,
+                        "sets": 2,
+                        "repsMin": 10,
+                        "repsMax": 20,
+                        "weightKg": null,
+                        "restSeconds": 0,
+                        "prescriptionType": "reps",
+                        "strengthIntensity": "Moderate",
+                        "itemDurationMinutes": null,
+                        "equipment": []
+                      }
+                    ],
+                    "metadata": {
+                      "patterns": [
+                        "push"
+                      ],
+                      "strengthIntent": {
+                        "archetype": "upper",
+                        "effectivePatterns": [
+                          "push"
+                        ],
+                        "plannedPatterns": [
+                          "push"
+                        ],
+                        "primaryPattern": "push"
+                      }
+                    }
+                  },
+                  {
+                    "identity": "conditioning:1",
+                    "kind": "conditioning",
+                    "order": 1,
+                    "intensity": "Moderate",
+                    "durationMinutes": 0,
+                    "exerciseIds": [
+                      "cond-2026-08-08-main"
+                    ],
+                    "exercises": [
+                      {
                         "identity": "cond-2026-08-08-main",
                         "exerciseId": "cond-2026-08-08-main",
                         "name": "Continuous Aerobic Run",
-                        "order": 2,
+                        "order": 4,
                         "sets": 1,
                         "repsMin": 1,
                         "repsMax": 1,
@@ -75901,7 +76052,7 @@
                       }
                     ],
                     "metadata": {
-                      "attachedKind": null,
+                      "attachedKind": "component",
                       "description": "",
                       "intent": "aerobic",
                       "title": "Continuous Aerobic Run"
@@ -75910,13 +76061,45 @@
                 ],
                 "exercises": [
                   {
-                    "identity": "cond-2026-08-08-warmup",
-                    "exerciseId": "cond-2026-08-08-warmup",
-                    "name": "Warm-up",
+                    "identity": "ex-overhead-press",
+                    "exerciseId": "ex-overhead-press",
+                    "name": "Overhead Press",
                     "order": 1,
                     "sets": 1,
-                    "repsMin": 1,
-                    "repsMax": 1,
+                    "repsMin": 4,
+                    "repsMax": 8,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": [
+                      "Barbell"
+                    ]
+                  },
+                  {
+                    "identity": "ex-tricep-dips",
+                    "exerciseId": "ex-tricep-dips",
+                    "name": "Dips",
+                    "order": 2,
+                    "sets": 1,
+                    "repsMin": 6,
+                    "repsMax": 13,
+                    "weightKg": null,
+                    "restSeconds": 30,
+                    "prescriptionType": "reps",
+                    "strengthIntensity": "Moderate",
+                    "itemDurationMinutes": null,
+                    "equipment": []
+                  },
+                  {
+                    "identity": "ex-custom-incline-dumbbell-curl",
+                    "exerciseId": "ex-custom-incline-dumbbell-curl",
+                    "name": "Incline Dumbbell Curl",
+                    "order": 3,
+                    "sets": 2,
+                    "repsMin": 10,
+                    "repsMax": 20,
                     "weightKg": null,
                     "restSeconds": 0,
                     "prescriptionType": "reps",
@@ -75928,7 +76111,7 @@
                     "identity": "cond-2026-08-08-main",
                     "exerciseId": "cond-2026-08-08-main",
                     "name": "Continuous Aerobic Run",
-                    "order": 2,
+                    "order": 4,
                     "sets": 1,
                     "repsMin": 1,
                     "repsMax": 1,
@@ -75941,7 +76124,7 @@
                   }
                 ],
                 "presentation": {
-                  "title": "Continuous Aerobic",
+                  "title": "Upper Push",
                   "description": "",
                   "sessionTier": "core",
                   "coachNotes": [],
@@ -75957,10 +76140,10 @@
             "visibleCounts": {
               "hardExposures": 0,
               "hardDays": 0,
-              "mainStrengthExposures": 2,
+              "mainStrengthExposures": 4,
               "conditioningExposures": 3,
               "extraConditioningSessions": 3,
-              "runningExposures": 1,
+              "runningExposures": 0,
               "sprintCodExposures": 0,
               "gunshowSessions": 0,
               "recoverySessions": 1,
@@ -75971,7 +76154,7 @@
                 "prehab": 1,
                 "recovery": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 4
               }
             }
           }

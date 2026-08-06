@@ -274,15 +274,49 @@ export function applyGenerationSafetyToSection18Contract(args: {
       scope: 'pattern',
       detail: `Active injury policy prohibits ${prohibited.join(', ')} while preserving safe unaffected patterns.`,
     });
-    addReduction(contract, {
-      metric: 'main_strength_frequency',
-      reducedTarget: Math.min(
-        selectedMainStrengthTarget(contract),
-        requiredSafe.length,
-      ),
-      reason: 'injury_restriction',
-      detail: 'The selected strength frequency cannot exceed the number of safely available main patterns.',
-    });
+    // SUBSTITUTE BEFORE REDUCING FREQUENCY (Bible `:4755`, ruled 2026-08-06 in
+    // `docs/FINDING_3_RULING_2026-08-06.md`).
+    //
+    // This used to cap the frequency at `requiredSafe.length` — the number of
+    // surviving PATTERNS. Prohibit squat and hinge and the week could hold at
+    // most two strength sessions, not because two is all the athlete can safely
+    // do but because two patterns remain. Pattern count constrains VARIETY;
+    // frequency is a different quantity, and every authored reduction at 6-7/10
+    // is per-area or per-movement (`:1913-1917`, `:871`, `:923`, `:942`) — none
+    // caps the week's session count.
+    //
+    // ONE OWNER IS PROVEN BY ENUMERATING THE SHAPES, never by the owner
+    // existing. The same rule is also stated at
+    // `weeklyExposureContractBuilders`' `main_strength` allocation cap, and
+    // paying THIS site alone left the declared red at exactly the same 6 -> 5
+    // (`docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md` §1). Both moved together.
+    //
+    // The reduction survives where the Bible authors it: `:1913` at 8-10/10,
+    // "pause affected training entirely… clearly unaffected work only". With no
+    // safe pattern there is nothing to substitute, so the reduction is the
+    // honest answer rather than an evasion of one.
+    //
+    // THE CONDITION IS `availableSafePatterns`, NOT `requiredSafe`, and the
+    // difference is a defect the differential golden caught. `requiredSafe` is
+    // `[]` whenever the MODE requires no strength — `weeklyExposureContractV2`
+    // builds `requiredSafePatterns` as `policy.balance && policy.strength.required
+    // > 0 ? … : []` — so an all-optional early off-season week has no required
+    // safe patterns for reasons that have nothing to do with safety. Testing it
+    // read that mode fact as a whole-body restriction and zeroed the frequency:
+    // measured, the restricted early-off-season week's strength exposures went
+    // 1 -> 0 while the healthy control kept 3, which is the very collapse Bible
+    // `:72`/`:93` and this ruling forbid, and it would have shipped inside the
+    // commit that fixes it. `availableSafePatterns` asks the question the ruling
+    // asks: is ANY main pattern safe?
+    if (availableSafePatterns.length === 0) {
+      addReduction(contract, {
+        metric: 'main_strength_frequency',
+        reducedTarget: 0,
+        reason: 'injury_restriction',
+        detail: 'No main-strength pattern is safe, so there is nothing to substitute and the '
+          + 'week carries no main strength.',
+      });
+    }
   }
   if (lowerBodyRestriction) {
     addReduction(contract, {

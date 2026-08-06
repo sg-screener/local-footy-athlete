@@ -720,8 +720,9 @@ function buildParallelSection18Contract(args: {
   // (`buildFixtureWeekContract` cuts STRENGTH to the safe placements around G,
   // G-1 and G+1). Conditioning at G-2/G-1 is not unsafe, it is easy — which is a
   // dose, and belongs to the eligibility law that already downgrades it.
-  const optionalFlushSelected = weeklyPlan.filter((allocation) =>
-    allocation.section18ConditioningRole === 'optional_flush').length;
+  // `optionalFlushSelected` is GONE, not merely unused: counting the flushes the
+  // plan already carries is what let the plan declare its own contract. See the
+  // `optionalFlush` field below.
   const optionalRecoveryAerobicSelected = weeklyPlan.filter((allocation) =>
     allocation.section18ConditioningRole === 'optional_recovery_aerobic').length;
   const imbalanceReduction = legacy.reductions.find((entry) =>
@@ -764,16 +765,27 @@ function buildParallelSection18Contract(args: {
         : weeklyPlan.filter((allocation) =>
             allocation.tier === 'optional' && !!allocation.strengthIntent?.plannedPatterns.length).length,
       coreConditioning: selectedCoreConditioning,
-      // DECLARE, THEN PLACE. `optionalFlushSelected` counts what the plan
-      // ALREADY carries, and on a fresh week that is zero — the flush role is
-      // stamped by `applySection18ConditioningAllocation`, which runs after this
-      // contract is built. So a count alone can only ever tell the contract
-      // "no flush", and any flush placed later is work the contract was never
-      // told about. Taking the planner's declaration alongside the count is what
-      // lets the contract carry the offer INTO the allocation instead of
-      // learning about it afterwards. Same shape as `optionalRecoveryAerobic`
-      // directly below, which has always done this.
-      optionalFlush: Math.max(selected.optionalFlush, optionalFlushSelected),
+      // DECLARE, THEN PLACE — and the declaration is DERIVED, never counted off
+      // the plan.
+      //
+      // This was `Math.max(selected.optionalFlush, optionalFlushSelected)`, and
+      // the `Math.max` defeated the sentence above it. Measured 2026-08-06
+      // (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md`): on a restricted
+      // off-season week the allocator's demote loop stamped a surplus
+      // conditioning day as a flush, and the NEXT contract build read
+      // `alreadyStampedInPlan=1 => plannerSelected.optionalFlush=1`. The
+      // contract learned its own declaration from the output it is supposed to
+      // govern — a stored output wearing a decision's clothes, and the reason
+      // two weeks with identical v1 numbers disagreed about whether the week was
+      // offering anything.
+      //
+      // `selected.optionalFlush` is the mode's authored allowance
+      // (`policyFor`'s `conditioning.optionalFlush.min`), which is a decision.
+      // With the count gone the flow is one-directional: the policy declares,
+      // the allocator places what was declared, and a flush the contract never
+      // declared is SURPLUS rather than an offer — which is what the demote loop
+      // now enforces.
+      optionalFlush: selected.optionalFlush,
       optionalRecoveryAerobic: Math.max(
         selected.optionalRecoveryAerobic,
         optionalRecoveryAerobicSelected,
@@ -6514,8 +6526,35 @@ function buildWeeklyPlan(
           stressLevel: 'low',
         }));
     })();
+    /**
+     * THE WEEK'S WORKING-DAY BUDGET — an INPUT to placement, not a guard after it.
+     *
+     * Nothing owned this. Measured 2026-08-06: `fullRest` appeared nowhere in
+     * this file, and `full_rest` appeared exactly once — in a speed-only
+     * consolidation loop that fired only after the validation had already red.
+     * So a repair could spend the week's last rest day and the only thing that
+     * noticed was the gate, one layer later, by refusing the week outright
+     * (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md`).
+     *
+     * It is expressed in the LEDGER'S OWN CURRENCY on purpose. `achieved.full_rest`
+     * is the number of days carrying no exposure at all — the same quantity the
+     * contract requires and the gate judges — so this is not a second
+     * representation of the week's occupancy that could drift from the first. A
+     * free day is capacity only while spending it would still leave the week its
+     * required rest.
+     *
+     * THE BUILDER OWNS THE WEEK (Sam, 2026-07-30). With the budget in hand the
+     * ruled fallback order stops being advice: when no free day may be claimed,
+     * ATTACH is not merely preferred, it is the only thing left — and the
+     * comparator below no longer has to be trusted to volunteer it.
+     */
+    const restBudgetSpare = (): number =>
+      evaluateAllocationExposureContract(weeklyExposureContract, adjusted)
+        .ledger.achieved.full_rest - weeklyExposureContract.fullRest.required;
     const freeSlots = (): SessionAllocation[] =>
-      freeDayCandidates.filter((candidate) => !adjusted.includes(candidate));
+      restBudgetSpare() > 0
+        ? freeDayCandidates.filter((candidate) => !adjusted.includes(candidate))
+        : [];
     /** Bring a claimed free day into the week. Idempotent for already-present days. */
     const claimSlot = (session: SessionAllocation): void => {
       if (adjusted.includes(session)) return;
@@ -6570,13 +6609,34 @@ function buildWeeklyPlan(
             isSafeRepairDay(left, true, [pattern]));
           const rightCanHostMissing = missingPatterns.some((pattern) =>
             isSafeRepairDay(right, true, [pattern]));
-          const leftSurplusConditioning = !!left.conditioningCategory &&
+          // ATTACH-FIRST IS AN ORDERING, NOT ONLY AN ELIGIBILITY.
+          //
+          // This key had the opposite sign: a day already carrying conditioning
+          // sorted LAST, so the repair reached past every attachable day to take
+          // an empty one. Ninety-nine lines above, the ruling it answers to says
+          // "attach the missing work to an existing day first; take a free day
+          // standalone second". The filter implemented that; this comparator
+          // inverted it — which is exactly why no gate caught it, because every
+          // day the ruling wanted was present in the candidate list and merely
+          // last in it.
+          //
+          // Measured on a restricted off-season week
+          // (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md`): candidates
+          // were `Tue(FREE),Thu(FREE),Fri,Sat` with `allowCombined=true`, so
+          // Friday and Saturday were eligible and lost here. The repair spent
+          // both of the week's spare days and left two conditioning days bare;
+          // §18 then refused the week for a missing full-rest day.
+          //
+          // An existing day is now PREFERRED, which also produces the shape
+          // Bible `:81` authors — the easy conditioning sits on the strength
+          // days rather than claiming days of its own.
+          const leftAttachable = !!left.conditioningCategory &&
             left.tier !== 'recovery' && left.tier !== 'optional';
-          const rightSurplusConditioning = !!right.conditioningCategory &&
+          const rightAttachable = !!right.conditioningCategory &&
             right.tier !== 'recovery' && right.tier !== 'optional';
           return Number(!leftCanHostMissing) - Number(!rightCanHostMissing) ||
             Number(!!left.isTeamDay) - Number(!!right.isTeamDay) ||
-            Number(leftSurplusConditioning) - Number(rightSurplusConditioning) ||
+            Number(!leftAttachable) - Number(!rightAttachable) ||
             trainingOrder(dayNameToNumber(left.dayOfWeek ?? '')) -
               trainingOrder(dayNameToNumber(right.dayOfWeek ?? ''));
         });
@@ -6750,13 +6810,27 @@ function buildWeeklyPlan(
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
     }
 
-    // A required speed exposure may initially occupy its own safe day, but
-    // that placement cannot violate the same contract's hard-day or full-rest
-    // boundary. Consolidate it before an existing upper-strength exposure so
-    // the exposure survives without inventing a sixth hard/training day.
+    // THE FULL-REST HALF OF THIS LOOP IS RETIRED — the budget above owns it now.
+    //
+    // This was the ONLY place in this file that knew `full_rest` existed, and it
+    // knew it reactively: it fired after the validation had already red, and it
+    // could consolidate exactly one shape — a standalone SPEED block onto an
+    // upper-strength day. The move it makes is the right one, and the scope was
+    // the defect: strength and conditioning could each spend the week's last
+    // rest day with nothing watching
+    // (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md` question 1).
+    //
+    // With `restBudgetSpare()` gating `freeSlots()`, no repair can occupy a day
+    // the week cannot afford, so a full-rest shortfall is no longer something to
+    // repair after the fact. What survives here is the HARD-DAY boundary, which
+    // the budget does not speak to: hard days are about the intensity of days
+    // already occupied, not about how many days are occupied. Retiring that half
+    // too would delete a live capability to satisfy a tidier diff.
+    // Measured by mutation 2026-08-06: restoring the full-rest arm changed NO
+    // golden byte, so this narrowing is behaviour-neutral on the matrix rather
+    // than merely believed to be.
     while (validation.unresolvedShortfalls.some((violation) =>
-      violation.code === 'hard_day_limit_exceeded' ||
-      (violation.code === 'required_exposure_shortfall' && violation.domain === 'full_rest'),
+      violation.code === 'hard_day_limit_exceeded',
     )) {
       const standaloneSpeed = adjusted.find((session) =>
         !!session.speedBlock &&
@@ -7067,13 +7141,31 @@ function applySection18ConditioningAllocation(
     }
   };
 
+  // AN UNDECLARED FLUSH IS SURPLUS, NOT AN OFFER.
+  //
+  // The demote loop obeys the DERIVED declaration. It used to cap at the
+  // authored MAXIMUM (`preferredRange.max`), which let it stamp a flush the
+  // contract had declared nothing about — and `plannerSelectedCount` then
+  // counted that stamp back into the contract, so the surplus wrote its own
+  // permission. Measured on a restricted off-season week: `declaredFlushIn=0/1`
+  // on every pass, and the loop stamped one anyway
+  // (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md`, approval
+  // clarification).
+  //
+  // It matters beyond bookkeeping because of what an occupied day costs. The
+  // §18 ledger's `activeDays` does not read the conditioning ROLE, so a day
+  // whose only content is a flush counts toward nothing in `:127`'s arithmetic
+  // while counting as a working day for the week's full-rest requirement. An
+  // offer nobody declared was therefore able to spend a required rest day —
+  // exactly what the Optional Placement Law forbids.
+  const declaredFlushCount = declaredOfferCount(contract.conditioning);
   let optionalFlushes = 0;
   for (const session of plan.filter((candidate) => hasConditioning(candidate) && !candidate.isTeamDay)) {
     if (selectedSet.has(session)) continue;
     if (
       session.conditioningCategory === 'aerobic_base' &&
       flushFixtureSafe(session) &&
-      optionalFlushes < contract.conditioning.optionalFlush.preferredRange.max
+      optionalFlushes < declaredFlushCount
     ) {
       stampFlush(session);
       optionalFlushes++;
@@ -7093,7 +7185,8 @@ function applySection18ConditioningAllocation(
   //
   // The contract has now been told the offer is wanted before it was built, so
   // this places it rather than inventing it: the count comes from the contract,
-  // capped by the same authored maximum the demote respects.
+  // which is the same number the demote above now obeys — one declaration, two
+  // routes to it, and neither able to exceed it.
   // WHICH DAY comes from the shared owner (`rules/section18OfferPlacement`), so
   // generation and the accepted-week repair can never disagree about where the
   // week's offer belongs. This module keeps only the ATTACHMENT, which is
@@ -7101,8 +7194,7 @@ function applySection18ConditioningAllocation(
   // before any content exists, and `buildWorkoutsFromCoach` materialises it
   // afterwards. Sam's ruling 2026-08-06:
   // docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md.
-  const declaredFlush = declaredOfferCount(contract.conditioning);
-  const unplacedFlush = Math.max(0, declaredFlush - optionalFlushes);
+  const unplacedFlush = Math.max(0, declaredFlushCount - optionalFlushes);
   if (unplacedFlush > 0) {
     const byDayNumber = new Map(plan.map((session) => [day(session), session]));
     const offerDays = selectOfferDays({

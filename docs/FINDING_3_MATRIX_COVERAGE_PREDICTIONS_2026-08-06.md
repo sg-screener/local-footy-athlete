@@ -147,3 +147,111 @@ Recorded now, checked then. In the two `mid_offseason` weeks of
 
 Unpredicted movement in any other scenario is a STOP, per the harness's own
 instruction.
+
+## CORRECTED AFTER DIAGNOSIS — two movements the predictions above got wrong
+
+Both were STOPPED on rather than regenerated through, diagnosed by bisection, and
+are corrected here WITH their mechanisms. Neither is rewritten silently: the
+original predictions stand above, wrong, and these are the corrections.
+
+### Correction A — `early_offseason` DOES move, and it is correct
+
+Predicted: "the two `early_offseason` weeks must NOT move". Measured:
+`mainStrengthExposures 1 -> 0` in both.
+
+**Mechanism, established by bisection.** Not the budget, not attach-first, not
+the flush declaration — all four combinations of those give 0. Restoring the old
+frequency cap restores the 1. The consumer is
+`section18SafetyFinaliser.ts:415-470`: when
+`safety.mainStrengthFrequencyCeiling !== null`, the finaliser runs a
+CONSOLIDATION pass that, for every pattern in `requiredSafePatterns` not already
+represented, **clones a main-strength row onto a kept session** (falling back to
+`safePatternFallbackRow` when no source row exists). With the old cap the
+restricted early-off-season week had a ceiling of 2 and
+`requiredSafePatterns = ['push','pull']`, so the pass manufactured two main lifts
+on Tuesday:
+
+```
+old cap ON :  Tue rows = [main_strength/pull, main_strength/push, trunk_support, strength_accessory, strength_accessory]
+old cap OFF:  Tue rows = [trunk_support, strength_accessory, strength_accessory]
+```
+
+**Direction, judged against the laws.** `:110` — the week is all-optional and
+its contract requires and selects zero main strength (`requiredMinimum: 0`,
+`plannerSelectedTarget: 0`, `unresolvedMinimumShortfall: 0`,
+`unresolvedPlannerSelectedShortfall: null`, `maximumBreach: 0`). `:72`/`:93`
+speak to keeping work in when work exists; this work never existed in the plan —
+it was authored by a pass whose job is to CAP frequency. A cap that adds main
+lifts is a reduction inventing exposure, which is the shape Sam's
+intensity-never-feeds-identity law forbids.
+
+So `1 -> 0` is **a correct consequence of the corrected gate**: a week that
+requires and selects zero main strength no longer has a classification
+manufactured for it by a ceiling that should never have been authored. The week's
+shape is byte-identical in both worlds — Tuesday is still shown, still a Strength
+session, still optional.
+
+The adjacent question this exposes — an all-optional week SELECTS three optional
+main-strength sessions and under a restriction offers none, where the healthy
+control offers three — is ruled out of this unit's scope and filed as its own
+queue entry (`docs/QUEUE_ALL_OPTIONAL_RESTRICTED_STRENGTH_OFFER_2026-08-06.md`,
+pointed at from the legacy-reckoning census). It is pre-existing: the healthy-to-
+restricted collapse was 3 -> 1 before this unit touched anything.
+
+### Correction C — the POWER-COUNTING golden moves too, same cause
+
+Step 1's prediction 5 said `powerCountingDifferential`'s golden would be
+UNCHANGED because it is a separate scenario file. Wrong: it carries
+**`preseason-team-and-game` as well** (scenario index 6), so the very movement
+corrected in B below is visible in both goldens. Measured diff:
+
+```
+scenarios.6.weeks.0.days.2.name         "Tempo Intervals" → "Lower Squat"
+scenarios.6.weeks.0.days.2.workoutType  "Conditioning"    → "Mixed"
+scenarios.6.weeks.0.counts.hardDays     2 → 3
+scenarios.6.weeks.0.counts.byCategory   lower_strength 1→2, upper_strength 2→1, prehab +1
+```
+
+Same world, same mechanism, already diagnosed and ruled correct in B:
+`hardPreferred=4`, `hardPermitted=5`, `isHardMaximum=false`, rest quota untouched,
+zero findings, and `section18.status` unchanged at `repaired`. Regenerated on that
+basis, not re-derived.
+
+**The lesson, which is the reusable part:** "separate scenario file" is not
+evidence of "separate coverage". Two matrices sharing a scenario id share its
+movements, and the prediction assumed independence it never checked. Next time,
+grep the scenario id across both matrices before predicting either.
+
+### Correction B — `preseason-team-and-game` moves, and it is correct
+
+Predicted: "no other scenario moves". Measured: `hardExposures`/`hardDays 3 -> 4`
+in wk1 and wk4, plus `recoverySessions 0 -> 1` in wk4.
+
+**Mechanism, established by bisection.** Attach-first is the sole cause; the
+budget makes no difference in either direction (budget ON/OFF × attach-first
+ON/OFF gives 4/4/3/3). Wednesday already carried tempo conditioning, and
+attach-first put the missing strength THERE rather than elsewhere, making it
+`Mixed`:
+
+```
+attach-first OFF:  Mon:Mixed/aerobic_base Tue:Team Wed:Conditioning/tempo Thu:Strength Fri:Strength Sat:Game
+attach-first ON :  Mon:Mixed/aerobic_base Tue:Team Wed:Mixed/tempo        Thu:Strength Fri:Strength Sat:Game
+```
+
+**Direction.** The same six days are occupied either way, `restAchieved` equals
+`fullRestRequired` (1) in both, and the strength count is 3 in both. The week
+moves to `hardDays = 4`, which is the contract's own **preferred** count
+(`hardPreferred=4`), one below its permitted maximum (`hardPermitted=5`), with
+`isHardMaximum=false` and `hardFindings=[]` — no `hard_day_limit_exceeded`, no
+findings at all. The week became denser on a day it was already using, which is
+what attach-first is for and the shape Bible `:81` authors.
+
+**Ruling application.** The review seat ruled in advance that IF the budget were
+trading a full-rest breach for a hard-day breach, the fix would be one budget
+object carrying rest days AND hard days together as construction inputs. That
+condition is **not satisfied**, on two independent measurements: the budget is
+causally uninvolved, and there is no breach to trade into. So the redesign is not
+triggered by this evidence and is not built. The ruling stands for the future: if
+a later world shows either mechanism pushing a week past
+`hardDays.permittedCount`, the shape is already decided and needs no further
+sign-off.

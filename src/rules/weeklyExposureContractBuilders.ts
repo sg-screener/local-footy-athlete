@@ -317,9 +317,18 @@ function applyCommonSafetyReductions(
       to: allowed.length,
       detail: `Active injury restrictions remove affected strength patterns: ${Array.from(blockedPatterns).join(', ')}.`,
     });
-    contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, allowed.length),
-      'injury_restriction',
-      `Active injury restrictions remove affected strength patterns: ${Array.from(blockedPatterns).join(', ')}.`);
+    // THE SECOND SITE THAT STATES THE FREQUENCY RULE, and the one that governs
+    // an off-season week's allocation. It capped `targetCount` at
+    // `allowed.length`, which is the pattern-count cap wearing the allocation's
+    // clothes; `section18SafetyPolicy` carries the matching ruling comment.
+    // Bible `:4755` — substitute before reducing frequency. The week keeps its
+    // count and fills the freed days with safe work; only a whole-body
+    // restriction removes the work itself.
+    if (allowed.length === 0) {
+      contract = reduceAllocationTarget(contract, 'main_strength', 0,
+        'injury_restriction',
+        `Active injury restrictions remove every main-strength pattern: ${Array.from(blockedPatterns).join(', ')}.`);
+    }
     const lowerBlocked = blockedPatterns.has('squat') || blockedPatterns.has('hinge');
     if (lowerBlocked) {
       contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'injury_restriction',

@@ -131,16 +131,19 @@ const NEXT = addDaysISO(WEEK, 7);
  * mechanism stays armed: it is what makes the next declared red pay for itself
  * too.
  *
- * Cell 10 STAYS DECLARED, and its declaration is now a different, smaller
- * claim than it was this morning. The ruled rule change was built, measured at
- * both sites that state it, and REVERTED — not because it was wrong but
- * because it is not sufficient on its own. See
- * `docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md`: with the rule changed the
- * injured week's contract becomes byte-identical to the healthy week's, and a
- * PLACEMENT owner then spreads that identical demand over six working days
- * instead of five, so the week loses a required full-rest day and §18 refuses
- * it outright. That owner is a different layer, and CLAUDE.md's escalation
- * rule says reassess before changing it.
+ * Cell 10's entry was deleted on 2026-08-06 by the commit that paid it, and the
+ * list is EMPTY again. It took three commits and two layers: the rule change
+ * was built and reverted first because it was not sufficient alone
+ * (`docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md` — with the rule changed a
+ * PLACEMENT owner spread the identical demand over six working days instead of
+ * five and §18 refused the week), and the placement owner was reassessed before
+ * being touched, per CLAUDE.md's escalation rule
+ * (`docs/FINDING_3_PLACEMENT_REASSESSMENT_2026-08-06.md`). The declaration
+ * outliving one commit is the mechanism working, not the mechanism failing.
+ *
+ * An EMPTY list is the healthy state. The staleness check below is what keeps it
+ * honest: a declared red that stops redding fails the suite until its entry
+ * goes, so no entry can quietly outlive the defect it describes.
  */
 interface DeclaredRed {
   readonly id: string;
@@ -148,15 +151,7 @@ interface DeclaredRed {
   readonly paidBy: string;
 }
 
-const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
-  {
-    id: '10',
-    matches: /the injured week lost a session/,
-    paidBy: 'docs/FINDING_3_BUILD_MEASUREMENT_2026-08-06.md — the rule change is '
-      + 'proven and reverted; it lands with the placement owner that keeps the '
-      + 'week\'s required rest',
-  },
-];
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [];
 
 const declaredRedHits = new Set<string>();
 

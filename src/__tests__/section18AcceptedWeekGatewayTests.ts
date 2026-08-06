@@ -1347,14 +1347,45 @@ const severeUpper = program({
   injuries: [{ bodyArea: 'Shoulder', description: 'No loaded pushing', severity: 'Severe' }],
 });
 const severeUpperEvaluation = visibleEvaluation(severeUpper);
+// RE-PINNED to the ruling, and WHICH SIDE MOVED was asked before touching it.
+//
+// This asserted `achievedCount === 3`, and 3 was the CEILING's number rather
+// than the contract's: late off-season selects 4 (`plannerSelectedTarget`), the
+// healthy control achieves 4, and the old `main_strength_frequency` cap lowered
+// the restricted week to the count of surviving PATTERNS. Ruled 2026-08-06
+// (`docs/FINDING_3_RULING_2026-08-06.md`, Bible `:4755`): a restricted week HOLDS
+// its selected frequency and substitutes safe work. So the literal 3 was the
+// abolished behaviour written down as an expectation.
+//
+// The cell is STRONGER now, not weaker. It reads the target from the contract
+// instead of a literal, and it compares against the HEALTHY control, so it states
+// the ruling itself: the restricted week trains as often as the unrestricted one.
+// Measured — healthy `squat 1/hinge 1/push 1/pull 1`, restricted
+// `squat 2/hinge 1/push 0/pull 1` — the substitution is visible in the lift
+// counts, which is what `:4755` asks for. Everything that must NOT move is kept:
+// push stays zero, pull survives, conditioning stays C4, and the week is still
+// §18-clean.
+const healthyUpperControl = visibleEvaluation(program({
+  phase: 'Off-season',
+  phaseEntry: '2026-06-15',
+}));
 severeUpperAccepted = severeUpperEvaluation.contract.identity.mode === 'late_offseason' &&
-  severeUpperEvaluation.ledger.mainStrength.achievedCount === 3 &&
+  healthyUpperControl.ledger.mainStrength.achievedCount > 0 &&
+  severeUpperEvaluation.ledger.mainStrength.achievedCount ===
+    healthyUpperControl.ledger.mainStrength.achievedCount &&
+  severeUpperEvaluation.ledger.mainStrength.achievedCount ===
+    severeUpperEvaluation.contract.mainStrength.exposure.plannerSelectedTarget &&
   severeUpperEvaluation.ledger.conditioning.coreCount === 4 &&
   severeUpperEvaluation.ledger.strengthPatterns.meaningfulMainLiftCount.push === 0 &&
   severeUpperEvaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull > 0 &&
   severeUpperEvaluation.blockingViolations.length === 0;
-check('46 severe upper injury produces a valid safe late-off-season S3/C4 week',
-  severeUpperAccepted, severeUpperEvaluation);
+check('46 severe upper injury holds its frequency and substitutes in late off-season (Bible :4755)',
+  severeUpperAccepted, {
+    restrictedAchieved: severeUpperEvaluation.ledger.mainStrength.achievedCount,
+    healthyAchieved: healthyUpperControl.ledger.mainStrength.achievedCount,
+    selectedTarget: severeUpperEvaluation.contract.mainStrength.exposure.plannerSelectedTarget,
+    lifts: severeUpperEvaluation.ledger.strengthPatterns.meaningfulMainLiftCount,
+  });
 
 substitutionBeforeReduction = firstWeek(limitedMid).exposureContractV2?.equipment.substitutionStatus === 'substituted' &&
   firstWeek(limitedMid).exposureContractV2?.equipment.appConditioningFeasible === true &&
