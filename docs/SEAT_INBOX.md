@@ -1,32 +1,36 @@
 # SEAT INBOX — the review seat writes here; terminal reads at every stop
 
-## Unprocessed (read and commit as authored, newest first)
+## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder
-   (sharded runner + agreement law + lanes) at the next natural
-   boundary after the V3 build lands.
+1. RULING on docs/R53_CONVERGENCE_BUILD_STOP_2026-08-07.md — two
+   diagnoses, in order, measure before build as always:
 
-## Processed 2026-08-07 (second pass)
+   a. MOVE CELL 19 (leg (iii)'s blocker): instrument the two-adjustment
+      world and attribute WHO destroys w2:monday:none:strength when
+      leg (iii) is on. It is owned by no other leg and was never
+      attributed — treat it as a possible ninth sighting of "a later
+      layer destroys what a decision established". If the standing
+      rules cover the fix (derive/one-owner/resolved-authority), build
+      it under them; if it touches a decision payload or a witness,
+      STOP per the standing rule's conditions.
 
-- docs/FOUR_LEG_CONVERGENCE_RULING_2026-08-07.md (`26b89746`) — BOTH
-  build steps measured before building, BOTH premises refuted; see
-  docs/R53_CONVERGENCE_BUILD_STOP_2026-08-07.md. The basis IS settled
-  (`visible`, pays cell 7) but is not leg (iii)'s to pay and is inert
-  without it. Leg (iii) alone regresses athlete-session-move cell 19.
-  Step 2's dependency is the freed day's CONTENT, not identity. Cell
-  22's pre-authorised re-pin NOT taken (leg (i) has not landed); cell
-  23 undiagnosed as ruled. Both adopted laws in force — this report
-  enumerates per-cell identity and kind, and every add was explicit.
+   b. THE FREED DAY'S CONTENT: attribute WHO builds day 6's Hard
+      Conditioning in the passing world (published contract present).
+      Hypothesis to check first, not assume: it is write-side machinery
+      already ruled to migrate — the gateway's repair candidates
+      (presentRequiredCoreConditioning) and/or allocation reading the
+      published contract. If so, NO NEW RULING IS NEEDED: the
+      deriver-acquires-repair-search ruling already orders the full
+      :4688 capability into tier 4 — migrate the owed-core placement
+      there, then re-measure step 2 (the published exposureContractV2
+      dying). If the producer is something else, STOP with it named.
 
-## Superseded inbox text
+   c. The basis fix (LFA_BASIS=visible) ships WITH leg (iii), as your
+      measurement concluded. Cell 22 re-pin still waits for leg (i);
+      cell 23 still diagnosed-before-ruled.
 
-X. docs/FOUR_LEG_CONVERGENCE_RULING_2026-08-07.md — the build order:
-   leg (iii) first at both real install sites (one basis, chosen by
-   measurement), then weekRebuild stops publishing exposureContractV2
-   (bisect-proven), leg (iv) rides, (i)+(ii) as priced, (v) stays
-   inert. Cell 22 pre-authorised re-pin at retirement; cell 23
-   diagnosed before ruled. Two laws adopted: red counts enumerate
-   per-cell identity+kind; scaffold adds are explicit.
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
 
 ## Standing
 - Update docs/NOW.md at every checkpoint. Answer inbox items in
