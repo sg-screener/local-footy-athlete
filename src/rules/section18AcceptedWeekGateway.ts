@@ -58,6 +58,7 @@ import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import { canonicalUserRemovalConstraints } from '../utils/canonicalRemovalConstraints';
 import {
   currentAthleteActionTrace,
   emitAthleteActionEvent,
@@ -65,6 +66,55 @@ import {
 } from '../utils/athleteActionDiagnostics';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+
+/**
+ * CONDITION 1's MEASUREMENT — is the canonical source reachable at every
+ * gateway site, and does it agree with what the site used to thread?
+ *
+ * An INSTRUMENT, not a gate: prints only under `LFA_CONSTRAINT_ENTRY_PROBE=1`
+ * and is inert otherwise. It names the site by its own call stack so the
+ * census counts the DOORS rather than my reading of them, and it reports the
+ * threaded value's ABSENCE separately from its emptiness — those are the two
+ * things the residual confused.
+ */
+function probeConstraintEntry(
+  door: string,
+  threaded: readonly UserRemovalConstraint[] | undefined,
+): void {
+  if (process.env.LFA_CONSTRAINT_ENTRY_PROBE !== '1') return;
+  const canonical = canonicalUserRemovalConstraints();
+  const stack = (new Error().stack ?? '').split('\n').slice(2, 12)
+    .map((line) => line.trim())
+    .filter((line) => /\/src\//.test(line) && !/section18AcceptedWeekGateway\.ts/.test(line))
+    .map((line) => {
+      const match = /\/src\/(.+?\.tsx?):(\d+):\d+/.exec(line);
+      return match ? `${match[1]}:${match[2]}` : null;
+    })
+    .filter((line): line is string => line !== null)[0] ?? 'unknown';
+  const key = (constraint: UserRemovalConstraint) =>
+    `${constraint.status}:${constraint.targetDate}:${constraint.id}`;
+  const threadedKeys = (threaded ?? []).map(key).sort().join(',');
+  const canonicalKeys = canonical.map(key).sort().join(',');
+  const canonicalIds = new Set(canonical.map((constraint) => constraint.id));
+  const threadedIds = new Set((threaded ?? []).map((constraint) => constraint.id));
+  process.stdout.write('[ENTRY] ' + JSON.stringify({
+    door,
+    site: stack,
+    threaded: threaded === undefined ? 'ABSENT' : threaded.length,
+    canonical: canonical.length,
+    agree: threaded === undefined
+      ? canonical.length === 0
+      : threadedKeys === canonicalKeys,
+    // WHICH SIDE HOLDS WHAT THE OTHER DOES NOT. A threaded-only constraint is
+    // a decision the store has not been told about yet — a PROPOSAL under
+    // evaluation, not a forgotten input.
+    threadedOnly: [...threadedIds].filter((id) => !canonicalIds.has(id)).length,
+    canonicalOnly: [...canonicalIds].filter((id) => !threadedIds.has(id)).length,
+    statusDiff: threadedKeys !== canonicalKeys &&
+      [...threadedIds].filter((id) => !canonicalIds.has(id)).length === 0 &&
+      [...canonicalIds].filter((id) => !threadedIds.has(id)).length === 0,
+  }) + '\n');
+}
 
 export type Section18WeekAcceptanceStatus =
   | 'accepted'
@@ -210,6 +260,7 @@ export function resolveFinalVisibleSection18Week(args: {
   scheduleState?: Partial<ScheduleState>;
   userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): Workout[] {
+  probeConstraintEntry('visible_resolver', args.userRemovalConstraints);
   const weekStart = args.weekStart.slice(0, 10);
   const weekEnd = dateForDay(weekStart, 0);
   const constrainedWorkouts = applyUserRemovalConstraintsToWeek({
@@ -984,6 +1035,7 @@ function resolveCandidate(args: {
 export function runSection18AcceptedWeekGateway(
   input: Section18AcceptedWeekGatewayInput,
 ): Section18AcceptedWeekGatewayResult {
+  probeConstraintEntry('gateway', input.userRemovalConstraints);
   const traced = (result: Section18AcceptedWeekGatewayResult, candidatePath: string) => {
     emitAthleteActionEvent(input.trace ?? currentAthleteActionTrace(), 'accepted_week_gateway_result', {
       weekId: input.weekStart,
