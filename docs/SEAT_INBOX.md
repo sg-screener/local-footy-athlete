@@ -2,7 +2,49 @@
 
 ## Unprocessed (newest first)
 
-1. LOOP CHECK: tape-hop ruling — sighting 2 of write-side-producer-
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (ninth pass) — BUILD MAY START -> SURVEYED, then STOP
+
+- Ruling committed as authored (`a81cc38a`). Answered in
+  docs/R53_LEG_III_SURVEY_AND_SEPARABILITY_STOP_2026-08-07.md.
+  NOTHING BUILT into the branch.
+- **THE SURVEY: legs (iii)+(iv)+`basis=visible` are BEHAVIOUR-NEUTRAL.**
+  All 154 bible suites, flags-off control vs target: **6 failures vs 6,
+  identical sets — 0 new, 0 fixed.** The control's 5 scaffold-only reds
+  were verified to PRE-DATE this pass's tape (re-run at `1eb65683`); the
+  branch's own control is 1 (`fixture-identity`), which leg (iii) does NOT
+  fix, as predicted.
+- **The module IS separable.** `derivedWeekContract.ts` lands cleanly —
+  every import already exists on the branch. Install site 1 of 3
+  (`acceptedEffectiveWeek` read + the basis) is separable too; the
+  `removalDecisions` field beside it belongs to the removal-record split
+  and is NOT required by leg (iii).
+- **BLOCKER — install site 2 of 3 requires LEG (ii).** On the scaffold the
+  deriver's resolver read lives INSIDE `scaffoldSection18TierFour`, gated
+  `if (!legII && !legIII) return`, and that function IS leg (ii)'s tier-4
+  host. **The branch has no tier-4 host at all.** Site 3 additionally needs
+  `stripConditioningComponent` moved to `sessionRowCounting` — small, not a
+  blocker.
+- **A partial install is known-wrong**, by the scaffold's own record:
+  installing only the read sites left the PUBLISHER composing against the
+  stored contract — `Lower Hinge|7` published vs `Lower Squat|8` derived,
+  which IS the fixture-identity residual. So 2-of-3 was not done.
+- **For the seat — the ruling's step 1 assumed leg (iii) is buildable
+  alone; as scaffolded it is not.** Options: (1) land (ii)+(iii)+(iv)
+  together per the convergence pairing — RECOMMENDED, removes
+  representations rather than adding one, and needs one measurement run for
+  leg (ii); (2) author a new leg-(iii)-only resolver install — new code,
+  adds a representation; (3) sites 1+3 only — rejected as known-wrong,
+  recorded so it is not silently dropped.
+- `test:compile` excluded from the survey: +2/+1 vs the scaffold baseline
+  is a scaffold-type artifact — branch baselines are identical (5/4) and
+  `test:compile` PASSES on the branch (verified).
+
+## Processed 2026-08-07 (ninth pass) — the ruling as the seat wrote it
+
+- LOOP CHECK: tape-hop ruling — sighting 2 of write-side-producer-
    feeds-stored-output in R5.3 — COMPRESS via the standing derivation
    ruling. Read docs/R53_COMMIT_MATERIALISATION_RULING_2026-08-07.md,
    commit as authored. Short form: the materialised payload is OUTPUT
@@ -17,9 +59,6 @@
    declaration retire TOGETHER with leg (v) after parity, no
    half-state; condition 1's re-measure unparks after the parity
    gate. BUILD MAY START. Sam holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (eighth pass) — THE TAPE
 
