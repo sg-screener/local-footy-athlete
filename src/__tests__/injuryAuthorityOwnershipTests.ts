@@ -51,6 +51,13 @@ import {
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { useProfileStore } from '../store/profileStore';
+import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { looksLikeNeuralPrimer } from '../rules/weekStructureValidator';
+import { getSessionComponents } from '../utils/sessionComponents';
+import { rebuildDerivedWorld } from '../store/quiescentBoot';
+import type { OnboardingData, Workout } from '../types/domain';
+import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import {
   SPENT_TODAY,
   SPENT_WEEK_1,
@@ -127,7 +134,255 @@ function currentWeekContract() {
   }).contract;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// THE G-2 QUALITY-LOWER MATRIX
+//
+// `docs/INJURY_AUTHORITY_EXHAUSTION_RULING_V2_2026-08-06.md` §3: three worlds —
+// no-game (must NOT exhaust), Saturday game + severe upper (must FILL G-2),
+// genuinely exhausted (the typed reduction witnessed only there).
+//
+// The worlds are driven at the layer that OWNS the decision — `buildCoachingPlan`
+// places, `buildWorkoutsFromCoach` composes — because the seeded world carries a
+// Saturday fixture in every one of its weeks (measured: weeks 1-4 all resolve
+// `in_season_game_week` off the profile's usual game day), so a no-game week is
+// not reachable from it at all. `G7` closes the loop end-to-end on the seed.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const G2_DAY = 'Thursday';   // G-2 for a Saturday game, and a team-training day
+
+function matrixProfile(gameDay: 'Saturday' | undefined): Partial<OnboardingData> {
+  return {
+    seasonPhase: 'In-season',
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday'],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    sprintExposure: '2+ times per week',
+    conditioningLevel: 'Good',
+    recentTrainingLoad: 'Very consistent',
+    experienceLevel: '2-5 years',
+    injuries: [],
+    motivation: 'Get stronger',
+    gameDay,
+    usualGameDay: gameDay,
+  };
+}
+
+/** Severe (pause-band) restrictions, in the shape the pipeline actually reads. */
+function injuryConstraints(
+  regions: ReadonlyArray<'upper_body' | 'lower_body'>,
+): GenerationConstraintContext {
+  return {
+    injuries: regions.map((region, index) => ({
+      id: `matrix-${region}-${index}`,
+      sourceType: 'injury',
+      bodyPart: region === 'upper_body' ? 'Shoulder' : 'Hamstring',
+      region,
+      severity: 9,
+      effectiveSeverity: 9,
+      severityBand: 'avoid',
+      onboardingSeverity: 'Severe',
+      triggers: [],
+      reduceAffectedWork: true,
+      removeRiskyWork: true,
+      pauseAffectedTraining: true,
+      injuryKeys: [],
+    })),
+  } as never as GenerationConstraintContext;
+}
+
+function matrixWorld(args: {
+  gameDay: 'Saturday' | undefined;
+  restricted: ReadonlyArray<'upper_body' | 'lower_body'>;
+}) {
+  const profile = matrixProfile(args.gameDay);
+  const inputs = onboardingToCoachingInputs(profile as OnboardingData, {
+    generationConstraints: args.restricted.length > 0
+      ? injuryConstraints(args.restricted)
+      : undefined,
+  });
+  const plan = buildCoachingPlan(inputs);
+  const workouts = buildWorkoutsFromCoach(
+    [], 'mc-g2-matrix', plan.weeklyPlan, profile as OnboardingData,
+    // A rotation context IS supplied: the authored G-2 movement must survive
+    // cross-cycle rotation, and a world without one could not prove it.
+    { miniCycleNumber: 1, weekStartISO: '2026-07-20', weekKind: 'normal' } as never,
+  );
+  return {
+    plan,
+    workouts,
+    // THE V2 CONTRACT, deliberately: `main_strength_frequency` is the typed
+    // metric the ruling names, the one `applyReductionProjections` lowers the
+    // planner-selected target off, and the one `hasFrequencyReduction`
+    // authorises a miss against. The legacy contract calls the same decision
+    // `weekly_exposure_count`, and asserting on that name would pass while
+    // proving nothing about the metric that governs the gate.
+    reductionMetrics: (plan.weeklyExposureContractV2?.authorisedReductions ?? [])
+      .map((entry) => entry.metric),
+    qualityLowerDays: plan.weeklyPlan
+      .filter((entry) => entry.strengthVariant === 'quality_low_volume')
+      .map((entry) => entry.dayOfWeek),
+  };
+}
+
+function workoutForDay(workouts: readonly Workout[], dayName: string): Workout | undefined {
+  const dayNum: Record<string, number> = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+  };
+  return workouts.find((workout) => workout.dayOfWeek === dayNum[dayName]);
+}
+
+function rowSummary(workout: Workout | undefined): string {
+  return (workout?.exercises ?? [])
+    .map((row) => `${row.exercise?.name}[${row.prescribedSets}x${row.prescribedRepsMin}-${row.prescribedRepsMax}]`)
+    .join(', ');
+}
+
 function registerScenarios(): void {
+  // ── G1 — WORLD 1: no game. The last resort must be UNREACHABLE, and nothing
+  // may exhaust. Without a fixture there is no G-2, so the safe lower patterns
+  // have ordinary days to live on and the week keeps its count by substitution
+  // alone — which is the rule the exception is an exception TO.
+  scenario('g1', 'G1 a no-game week with a severe upper injury never reaches the G-2 exception and never exhausts', async () => {
+    const world = matrixWorld({ gameDay: undefined, restricted: ['upper_body'] });
+    assert(world.qualityLowerDays.length === 0,
+      `a week with no fixture placed the G-2 quality-lower on ${world.qualityLowerDays.join(', ')} — `
+      + 'the exception is scoped to the G-2 slot, and a week with no game has none');
+    assert(!world.reductionMetrics.includes('main_strength_frequency'),
+      'a no-game week authorised a main-strength FREQUENCY reduction: '
+      + `${world.reductionMetrics.join(', ')} — substitution was available and was not exhausted`);
+  });
+
+  // ── G2 — WORLD 2: Saturday game + severe upper. THE HEADLINE. Both upper
+  // patterns are paused and heavy lower is barred at G-2, so the day used to be
+  // stranded (docs/UPPER_BODY_SEVERE_STRENGTH_MISS_DIAGNOSIS_2026-08-06.md).
+  // The anchor's own second state fills it.
+  scenario('g2', 'G2 a Saturday game + severe upper injury FILLS the G-2 day with the authored quality-lower', async () => {
+    const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
+    assert(world.qualityLowerDays.includes(G2_DAY),
+      `the G-2 day (${G2_DAY}) did not receive the quality-lower; placed on `
+      + `[${world.qualityLowerDays.join(', ') || 'nothing'}]. The day is stranded again: `
+      + 'upper is paused by the injury and heavy lower is barred by the game.');
+    assert(!world.reductionMetrics.includes('main_strength_frequency'),
+      'the week authorised a main-strength FREQUENCY reduction even though the G-2 '
+      + 'exception could fill the day — exhaustion must be a MEASURED outcome, and '
+      + `this week is not exhausted. Reductions: ${world.reductionMetrics.join(', ')}`);
+  });
+
+  // ── G3 — THE BINDING GATE. The shape the placer produces must be the shape
+  // `looksLikeNeuralPrimer` licenses. This is what stops the producer and the
+  // authored definition drifting apart: a heavier "quality" lower would still
+  // pass G2 above and would be a full lower session two days before a game.
+  scenario('g3', 'G3 the G-2 session the placer ships satisfies the authored neural-primer definition', async () => {
+    const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
+    const workout = workoutForDay(world.workouts, G2_DAY);
+    assert(workout, `no workout was built for ${G2_DAY}`);
+    assert(looksLikeNeuralPrimer(workout!),
+      `the G-2 session is NOT a neural primer by the authored definition `
+      + `(rules/weekStructureValidator.looksLikeNeuralPrimer): ${rowSummary(workout)}`);
+    // And the husk cannot come back: a day that carries a strength component
+    // must carry strength rows.
+    assert((workout!.exercises ?? []).length > 0,
+      `${G2_DAY} shipped with zero rows — the husk the diagnosis measured`);
+  });
+
+  // ── G4 — SAM'S SENTENCE, VERBATIM. "2x3 box squats to high box + 2x3 vertical
+  // jumps". Both halves are composed here; the week's authorised power-primer
+  // budget decides whether the jump row survives to the athlete (measured: in the
+  // seeded world the budget is 0 for `game_load_protection`, and the power owner
+  // removes it — content built to the number the contract authorises).
+  scenario('g4', 'G4 the authored G-2 content is High Box Squat 2x3 + Vertical Jump 2x3, and rotation does not rewrite it', async () => {
+    const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
+    const workout = workoutForDay(world.workouts, G2_DAY);
+    const rows = (workout?.exercises ?? []).map((row) => ({
+      name: row.exercise?.name ?? '',
+      sets: row.prescribedSets,
+      repsMax: row.prescribedRepsMax,
+    }));
+    const squat = rows.find((row) => row.name === 'High Box Squat');
+    assert(squat, `the G-2 session does not name High Box Squat — "low range of motion" is `
+      + `the ruling, and a rotated full-range squat is not it: ${rowSummary(workout)}`);
+    assert(squat!.sets === 2 && squat!.repsMax === 3,
+      `High Box Squat shipped ${squat!.sets}x${squat!.repsMax}, not the authored 2x3 — `
+      + 'a phase rep scheme overwrote the dose that IS the exception');
+    const jump = rows.find((row) => row.name === 'Vertical Jump');
+    assert(jump && jump.sets === 2 && jump.repsMax === 3,
+      `the composed G-2 session is missing the authored 2x3 Vertical Jump: ${rowSummary(workout)}`);
+  });
+
+  // ── G5 — THE RULING'S OWN ENFORCEMENT. A healthy week must not move a byte.
+  // The exception is a FALLBACK: it never displaces a week that already fits.
+  scenario('g5', 'G5 a healthy Saturday-game week never reaches the G-2 exception', async () => {
+    const healthy = matrixWorld({ gameDay: 'Saturday', restricted: [] });
+    assert(healthy.qualityLowerDays.length === 0,
+      `a HEALTHY week placed the G-2 quality-lower on ${healthy.qualityLowerDays.join(', ')} — `
+      + 'the exception has become a default, which is exactly what ruling V2 forbids');
+    // And a lower-body restriction must not reach it either: upper is safe, so
+    // G-2 carries upper work as it always has.
+    const lowerHurt = matrixWorld({ gameDay: 'Saturday', restricted: ['lower_body'] });
+    assert(lowerHurt.qualityLowerDays.length === 0,
+      'a LOWER-body restriction reached the quality-lower exception — the branch is '
+      + 'for a slot with no upper substitute, not for any injury at all');
+  });
+
+  // ── G6 — WORLD 3: genuine exhaustion. Every main-strength pattern is paused,
+  // so there is no safe work of that kind to place anywhere and the typed
+  // frequency reduction is the honest answer. Witnessed HERE and nowhere else.
+  scenario('g6', 'G6 a genuinely exhausted week authorises the typed main-strength frequency reduction', async () => {
+    const exhausted = matrixWorld({
+      gameDay: 'Saturday', restricted: ['upper_body', 'lower_body'],
+    });
+    assert(exhausted.reductionMetrics.includes('main_strength_frequency'),
+      'every main-strength pattern is paused and no typed main_strength_frequency '
+      + `reduction was authorised: ${exhausted.reductionMetrics.join(', ')}`);
+    assert(exhausted.qualityLowerDays.length === 0,
+      'a week with no safe squat placed the quality-lower anyway — the authored shape '
+      + 'is squat-family, and building it out of banned movements would be a primer in '
+      + 'name only');
+  });
+
+  // ── G7 — END TO END on the seeded world, through the same re-derivation boot
+  // runs. This is the cell the R5.1 switchover makes the shipping path: before
+  // the fix it threw `planner_selected_target_miss:main_strength:2` outright.
+  scenario('g7', 'G7 the seeded severe-upper world re-derives to a full, admissible week with no husk', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const result = await reportInjury('upper_body', 9);
+    assert((result as { ok?: boolean }).ok === true,
+      `the injury was rejected: "${(result as { message?: string }).message}"`);
+    // The derive path, not the door's replan — the same body boot runs.
+    await quietAsync(() => rebuildDerivedWorld());
+
+    const week = acceptedWeek(SPENT_WEEK_1);
+    assert(week.blockingViolations.length === 0,
+      `the re-derived week carries ${week.blockingViolations.length} blocking violation(s): `
+      + week.blockingViolations.join('  '));
+
+    const state = useProgramStore.getState();
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: state as never,
+      weekStart: SPENT_WEEK_1,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    });
+    const exposure = (rebased.contract as never as {
+      mainStrength?: { exposure?: { achievedCount?: number; plannerSelectedTarget?: number } };
+    }).mainStrength?.exposure;
+    assert(exposure?.achievedCount === exposure?.plannerSelectedTarget,
+      `the week achieved ${exposure?.achievedCount} main-strength sessions against a `
+      + `selected target of ${exposure?.plannerSelectedTarget}`);
+
+    // THE HUSK, as a standing law: no session may carry a strength component
+    // while carrying no rows to put in it.
+    const husks = rebased.visibleWorkouts.filter((workout) =>
+      (workout.exercises ?? []).length === 0 &&
+      getSessionComponents(workout as never)
+        .some((component: { id: unknown }) => String(component.id) === 'strength'));
+    assert(husks.length === 0,
+      `${husks.length} session(s) ship a strength component with zero rows: `
+      + husks.map((workout) => `d${workout.dayOfWeek}`).join(', '));
+  });
+
   // ── I1 — the headline. An upper-body 8/10 must be RECORDED. Nothing about
   // an athlete telling the app their shoulder is badly hurt is conditional on
   // the app's ability to produce an admissible week from it.

@@ -813,6 +813,14 @@ function applyPhaseRepSchemeToExercise(
   if (!isStrengthPrescriptionContext(context) || exercise.prescriptionType && exercise.prescriptionType !== 'reps') {
     return exercise;
   }
+  // THE DOSE IS THE RULING HERE, so the phase scheme does not own it. Every
+  // other strength session takes its sets and reps from the phase because the
+  // phase is the right owner; `lower_strength_g3`'s state 2 is the one session
+  // whose sets and reps ARE the Bible sentence ("low reps ... 2x3 ... low
+  // volume"). A phase scheme applied on top rewrote 2x3 to 3x2-4, which is a
+  // heavy squat wearing the exception's name. Read as a variant, exactly as
+  // `conditioningVariant` is read — not a phrase match, not a day check.
+  if (context.planEntry?.strengthVariant === 'quality_low_volume') return exercise;
 
   const seasonPhase = context.seasonPhase!;
   const exerciseName = exercise.exercise?.name ?? '';
@@ -1073,6 +1081,34 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   }
   if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
+  // ── THE AUTHORED G-2 EXCEPTION, verbatim (BIBLE_ANCHOR: lower_strength_g3) ──
+  //
+  // Sam, Section 3: "g-2 if it's low range of motion, low reps, high quality
+  // i.e. 2x3 box squats to high box + 2x3 vertical jumps - low volume, not many
+  // exercises". These two rows ARE that sentence, and they are the same two
+  // rows `weekStructureValidatorTests` has been using as its neural-primer
+  // example since 2026-07-08.
+  //
+  // This branch sits ahead of every pattern branch on purpose: the planned
+  // pattern here is `squat`, so the generic single-squat block below (Back
+  // Squat 3x8-10 + Reverse Lunges + Leg Extension) would otherwise claim it and
+  // put a full hard lower session two days before a game.
+  //
+  // Row count, sets and reps are all load-bearing — `looksLikeNeuralPrimer`
+  // reads exactly them (≤2 lower/power exercises, ≤3 sets, ≤3 reps) and the
+  // injury-authority suite asserts the produced session still satisfies it.
+  // COPY: these rows ship with NO note. Two sentences were drafted for them
+  // ("Low range of motion, high quality - stop well short of failure" and
+  // "Quality reps, full recovery between sets") and they are athlete-facing, so
+  // they are PROPOSED, NOT SIGNED — they go to Sam with the copy batch, recorded
+  // in docs/G2_QUALITY_LOWER_BOUNDARY_REPORT_2026-08-06.md §5. The dose carries
+  // the instruction on its own until then; an unsigned sentence does not ship.
+  if (entry.strengthVariant === 'quality_low_volume') {
+    return [
+      { name: 'High Box Squat', sets: 2, repsMin: 3, repsMax: 3 },
+      { name: 'Vertical Jump', sets: 2, repsMin: 3, repsMax: 3 },
+    ];
   }
   // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
   // pump + prehab work, never main pressing — the previous fallthrough to
@@ -2383,7 +2419,14 @@ export function buildWorkoutsFromCoach(
       // Cross-cycle variation: rewrite AI-suggested name to the
       // rotation-selected pool variant when applicable. Non-pool exercises
       // (carry, core, isolation, anything untagged) pass through unchanged.
-      const resolvedName = rotationContext && poolUsage
+      // THE AUTHORED G-2 EXCEPTION NAMES ITS OWN MOVEMENT. Rotation is the
+      // cross-cycle VARIATION system for ordinary main lifts; here the movement
+      // is the ruling — "box squats to HIGH BOX" is the low-range-of-motion half
+      // of `lower_strength_g3`'s state 2, and rotating it to a Front or Back
+      // Squat would put a full-range squat two days before a game while still
+      // reading as the exception. BIBLE_ANCHOR: lower_strength_g3
+      const resolvedName = rotationContext && poolUsage &&
+        planEntry?.strengthVariant !== 'quality_low_volume'
         ? applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)
         : ex.name;
       const exercise = findOrCreateExercise(resolvedName);

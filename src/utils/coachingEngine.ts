@@ -350,6 +350,34 @@ export interface SessionAllocation {
 
   /** Canonical allocation-owned planned/effective strength contract. */
   strengthIntent?: StrengthIntent;
+  /**
+   * Volume variant of the MAIN STRENGTH work, the exact twin of
+   * `conditioningVariant` above — a DOSE, never an identity.
+   *
+   *   - undefined / 'standard' : normal session volume.
+   *   - 'quality_low_volume'   : the authored G-2 exception. Sam, Section 3:
+   *     "How close can lower strength be to game day: g-3 (g-2 if it's low range
+   *     of motion, low reps, high quality i.e. 2x3 box squats to high box + 2x3
+   *     vertical jumps) - low volume, not many exercises."
+   *
+   * WHY A DOSE AND NOT AN ARCHETYPE. `StrengthArchetype` is DERIVED from the
+   * pattern set (`inferStrengthArchetype`: squat -> 'lower'), so a fourth member
+   * could never be inferred and `workoutCanonicalisation` would overwrite it on
+   * every round trip. It would also be intensity feeding identity, which is a
+   * closed Sam ruling (`a670115`). This session IS a lower session; what the
+   * anchor's second state scopes is how much of it there is.
+   *
+   * THE SHAPE ALREADY HAD AN OWNER AND NO PRODUCER. `looksLikeNeuralPrimer`
+   * (rules/weekStructureValidator.ts, approved 2026-07-08) is the authored
+   * definition — <=2 lower/power exercises, <=3 sets, <=3 reps, no hinge, no
+   * deadlift/RDL/Nordic — and `weekStructureValidatorTests` pins Sam's own
+   * example. This variant is what finally BUILDS what that validator has been
+   * licensing, and cell G3 of the injury-authority suite binds the two so they
+   * cannot drift apart.
+   *
+   * BIBLE_ANCHOR: lower_strength_g3   (this is state 2, the G-2 exception)
+   */
+  strengthVariant?: 'standard' | 'quality_low_volume';
   /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */
   strengthPatternContributions?: MainStrengthPattern[];
   /** Stable identity for generated workout matching and diagnostics. */
@@ -1879,6 +1907,56 @@ function buildWeeklyPlan(
     const preGame = daySlots.filter(d => d.offset === -1);                         // G−1
     const postGame = daySlots.filter(d => d.offset === 1 || d.offset <= -6);       // G+1
 
+    // ── THE G-2 QUALITY-LOWER LAST RESORT (BIBLE_ANCHOR: lower_strength_g3) ──
+    //
+    // The anchor declares two states and only state 3 was ever built:
+    //   "How close can lower strength be to game day: g-3 (g-2 IF it's low range
+    //    of motion, low reps, high quality i.e. 2x3 box squats to high box + 2x3
+    //    vertical jumps) - low volume, not many exercises"
+    //
+    // State 2 is a FALLBACK, never a default (ruling V2, 2026-08-06): G-3 is
+    // preferred, and G-2 is available in the quality shape only when the week
+    // cannot otherwise hold its main-strength count. It never displaces a week
+    // that already fits — which is why the whole branch hangs off a NON-EMPTY
+    // restriction set. A healthy week cannot reach it by construction, and the
+    // healthy differential goldens are that claim's enforcement.
+    //
+    // ONE OWNER for "which patterns are unsafe": the same function the §18
+    // contract uses, so the placer and the contract can never disagree about
+    // what the injury blocked.
+    const restrictedPatterns = resolveRestrictedMainStrengthPatterns({
+      activeInjuries: inputs.generationConstraints?.injuries,
+      profileInjuries: inputs.injuries,
+    });
+    // Reachable ONLY when the slot has nothing else it could carry:
+    //   - both upper patterns are prohibited, so no upper substitute exists;
+    //   - squat is safe, because the authored shape is squat-family and
+    //     `looksLikeNeuralPrimer` bans hinge / deadlift / RDL / Nordic outright.
+    // An athlete with only hinge left is therefore genuinely exhausted here, and
+    // the typed reduction — not a primer built out of banned movements — is the
+    // honest answer. Cell G6 witnesses that; it is measured, never assumed.
+    const g2QualityLowerAvailable =
+      restrictedPatterns.has('push') &&
+      restrictedPatterns.has('pull') &&
+      !restrictedPatterns.has('squat');
+    /** The authored G-2 exception as an allocation. Squat-family, low volume. */
+    const g2QualityLowerAllocation = (slot: typeof daySlots[0]): SessionAllocation => ({
+      tier: 'core',
+      focus: 'Lower body - low range of motion, low reps, high quality (low volume, '
+        + 'not many exercises)',
+      dayOfWeek: slot.dayName,
+      // Not a hard exposure: the whole point of the exception is that it is a
+      // tiny neural dose two days out, not a session to recover from.
+      isHardExposure: false,
+      strengthPattern: 'lower',
+      strengthIntent: createStrengthIntent({
+        archetype: 'lower',
+        primaryPattern: 'squat',
+        plannedPatterns: ['squat'],
+      }),
+      strengthVariant: 'quality_low_volume',
+    });
+
     // ── STEP 1: Place PRIMARY CORE ──
     // 1-core week → Basic Full Body (1 lower + 1 push + 1 pull, minimal accessory)
     // 2+ core week → Lower body strength (squat + hinge), upper handled in Steps 2+3
@@ -1964,15 +2042,24 @@ function buildWeeklyPlan(
         const isTeamDaySlot = pushSlot3Core.isTeamDay;
         const isLateWeekSlot = pushSlot3Core.offset === -2;
         const isModerate = isTeamDaySlot || isLateWeekSlot;
-        assigned.set(pushSlot3Core.dayName, {
-          tier: 'core',
-          focus: isModerate
-            ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
-            : 'Upper body - push emphasis',
-          dayOfWeek: pushSlot3Core.dayName,
-          isHardExposure: !isModerate,
-          strengthPattern: 'push',
-        });
+        // THE LAST RESORT, and the only placement this unit changes. When this
+        // slot is G-2 and BOTH upper patterns are prohibited, it has no upper
+        // substitute to fall back to and heavy lower is barred here by
+        // `g_minus_2_no_heavy_lower_or_speed` — the intersection that stranded
+        // the day and left a husk (docs/UPPER_BODY_SEVERE_STRENGTH_MISS_
+        // DIAGNOSIS_2026-08-06.md). The anchor's own state 2 fills it.
+        assigned.set(pushSlot3Core.dayName,
+          isLateWeekSlot && g2QualityLowerAvailable
+            ? g2QualityLowerAllocation(pushSlot3Core)
+            : {
+                tier: 'core',
+                focus: isModerate
+                  ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
+                  : 'Upper body - push emphasis',
+                dayOfWeek: pushSlot3Core.dayName,
+                isHardExposure: !isModerate,
+                strengthPattern: 'push',
+              });
       }
 
       // Place PULL at G−4 (hard) — prefer a DIFFERENT team day from push.
@@ -2016,20 +2103,26 @@ function buildWeeklyPlan(
       // reflect slot position, while the secondary pattern remains meaningful.
       const isLateWeekSlot = upperSlot.offset === -2;
       const upperPrimary: MainStrengthPattern = isLateWeekSlot ? 'push' : 'pull';
-      assigned.set(upperSlot.dayName, {
-        tier: 'core',
-        focus: isLateWeekSlot
-          ? 'Upper body - balanced push + pull (push primary, moderate intensity, low fatigue)'
-          : 'Upper body - balanced pull + push (pull primary, moderate intensity)',
-        dayOfWeek: upperSlot.dayName,
-        isHardExposure: !isLateWeekSlot,
-        strengthPattern: 'upper_combined',
-        strengthIntent: createStrengthIntent({
-          archetype: 'upper',
-          primaryPattern: upperPrimary,
-          plannedPatterns: ['push', 'pull'],
-        }),
-      });
+      if (isLateWeekSlot && g2QualityLowerAvailable) {
+        // The same last resort, the same reason: a balanced upper slot whose
+        // BOTH patterns are prohibited is the stranded day in its 2-core shape.
+        assigned.set(upperSlot.dayName, g2QualityLowerAllocation(upperSlot));
+      } else {
+        assigned.set(upperSlot.dayName, {
+          tier: 'core',
+          focus: isLateWeekSlot
+            ? 'Upper body - balanced push + pull (push primary, moderate intensity, low fatigue)'
+            : 'Upper body - balanced pull + push (pull primary, moderate intensity)',
+          dayOfWeek: upperSlot.dayName,
+          isHardExposure: !isLateWeekSlot,
+          strengthPattern: 'upper_combined',
+          strengthIntent: createStrengthIntent({
+            archetype: 'upper',
+            primaryPattern: upperPrimary,
+            plannedPatterns: ['push', 'pull'],
+          }),
+        });
+      }
     }
 
     // ── STEP 5: the remaining days ──
