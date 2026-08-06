@@ -2,7 +2,26 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. SEAT CORRECTION on answer 3 — read
+   docs/R53_SEAT_ANSWER3_CORRECTION_2026-08-07.md, commit as authored.
+   Short form: the seat's overreach attribution is withdrawn (code
+   proved workoutsByDate:{} is landed behaviour; leg (v) was
+   declaration-only all along). The leg (v) price was measured OUT OF
+   THE RULED ORDER — the convergence ruling already predicted the
+   contract dies by leg (iii), not leg (v). Ordered: run the sharp
+   probe with the recorded hypothesis — the downstream filler is
+   suspected to be the READER of the published declaration (the
+   consuming half of the reconcile publishing hand-rolls,
+   weekRebuild.ts:550-561 comment + four-leg price doc :180). Name
+   it. If confirmed: no new ruling — build leg (iii)(+iv) first per
+   the convergence order, leg (v) re-prices only after leg (iii)
+   lands. If it is something else: STOP with it named. Condition 1's
+   re-measure WAITS for the probe (leg (v)-alone configs measure a
+   world the ruled order never produces). Also owed first: re-prove
+   the cell-19 blocker removal by porting the seed fix to
+   scratch/r53-pricing-7. Sam holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (sixth pass) — the ruling as the seat wrote it
