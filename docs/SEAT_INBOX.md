@@ -2,30 +2,120 @@
 
 ## Unprocessed (newest first)
 
-1. SAM'S DEVICE PASS RESULT + ORDER: MERGE TO MAIN. Commit
-   docs/COACHING_QUALITY_EXHIBITS_2026-08-07.md as authored.
-   LOOP CHECK: pass-findings-vs-gate-scope — ruled cleanly: the L10
-   stages-1+2 gate judged mechanics; mechanics PASSED (taps 1-3
-   good, 4 not-applicable, 5 = programming-quality findings which
-   Sam explicitly ruled DEFERRED: "move on and get all the other
-   shit in, then we can optimise the coaching").
-   (a) Record the pass in the tap-list doc: 1 flush correct, 2
-   conditioning names correct, 3 rest clean, 4 n/a (no coach
-   override exists), 5 = quality exhibits filed (exhibits doc).
-   L10 for stages 1+2: MET on Sam's word.
-   (b) MERGE feat/stage-b-stage2 → main. Full test:bible UNPIPED on
-   main BEFORE and AFTER; after-state must equal stage-b-stage2's
-   declared set exactly (the declared reds ride, recorded in the
-   merge commit as before). Verify branch before every commit.
-   Update NOW.md, roadmap (Phase 1 CLOSES except the deferred
-   items), the branch ledger.
-   (c) THEN kick off the REPLAY UNIT from its filed kickoff doc —
-   its opening law first: the full measured dependency list before
-   any build or scaffold. Fable is NOT authorised yet — run the
-   dependency list on Opus and STOP with it in hand; the seat and
-   Sam decide the model for the build from the list's size.
-   One-turn law, continuous authorisation through (a)-(c)'s STOP.
-   Sam holds a veto.
+1. (queue empty)
+
+## Processed 2026-08-07 (thirty-fifth pass) — MERGED TO MAIN; BOTH DEPENDENCY LISTS DELIVERED; SLICE 1 STOPPED ON ITS CHECK-OFF HALF
+
+- LOOP CHECK: **pin-the-"already-covered"-claim** FIRES, and against my own
+  plan document. I confirmed `componentCompletions` EXISTS as a field and
+  inferred a door to write it. **Existence of the state is not existence of the
+  door.** One grep at the write path refuted it — after I had already written
+  "STOP CONDITIONS: CLEAN" into a committed doc. Corrected in place, in the
+  section that was wrong, rather than quietly revised.
+- **THE MERGE IS DONE — `feat/stage-b-stage2` → `main`, `89b540f9`, `--no-ff`.**
+  Sam's L10 stages-1+2 device pass PASSED and it was the only gate.
+  **BEFORE on main: `TRUE_EXIT=0`**, green to its last suite, 0 FAIL lines.
+  **AFTER: `TRUE_EXIT=1`** at `program-control-durable`, 1 FAIL line, same
+  assertion text. **Sweep at `89b540f9`: 2 of 156 = `program-control-durable` +
+  `fixture-identity` — the declared set EXACTLY. No difference, no STOP.**
+  **Said plainly: a green main went to a 2-red main, knowingly.**
+- **(a) THE TAP LIST RECORDS THE PASS** — 1 flush correct, 2 conditioning names
+  correct, 3 rest clean, 4 N/A, 5 = quality exhibits filed. **L10 MET.**
+- **THE BRANCH LEDGER WAS TAKEN FROM git AND THE CHECK PAID FOR ITSELF:** my
+  first draft named **five** scratch branches and there are **twelve**, with one
+  sha already stale; it named one stash where there are **four**. Ancestry
+  confirmed by `merge-base`. Phase 1 CLOSES **except four items named openly**
+  rather than closed by rounding (1b, injury substitution, R6, the replay unit).
+- **(a-new) THE LR-29 DEPENDENCY LIST IS DELIVERED**, measured with a recording
+  Proxy in the declaration door and **priced against the control set BEFORE any
+  reading was believed — 2 of 156 both arms, so the Proxy does not perturb.**
+  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md
+  - **3 of 10 readers read ZERO fields** — 50,078 door calls answered by an
+    existence predicate.
+  - **The `current_microcycle` rung answered ZERO times** in 156 suites. Three
+    rungs collapse to two, free.
+  - **THE LEDGER CANNOT EXPRESS THE CLASS SENTENCE.** Six kinds, three
+    production writers, and **no vocabulary for illness/injury/readiness/phase**
+    — the type file's own comment says R3 would add them and R3 never did. So
+    "replay the ledger onto the base" is **not a sufficient description of the
+    unit**: its input set is ledger PLUS fact stores. **Largest open decision.**
+  - **THE BOOT ALREADY REPLAYS** (`quiescentBoot.rebuildDerivedWorld`) and
+    already wipes the stored-declaration surfaces. The unit is not starting from
+    nothing; its real first question is whether that replay already reconstructs
+    `authorisedReductions`. **NOT MEASURED — item 1 of the list.**
+  - **PAYER CLAIM RE-CONFIRMED, NOT QUOTED:** under `LFA_FLIP_DOOR=1` on
+    today's main, **`fixture-identity` goes GREEN.**
+  - **A CARRIED CLAIM CORRECTED:** `validateLiveWeekOverlayWrite` was recorded
+    as firing **0×** in three passes. It fires **12 times**.
+  - **THE INSTRUMENT'S OWN LIMIT STATED BEFORE IT IS USED:** a uniform read
+    count across every field is a CLONE, not consumption, so for two readers the
+    tape measures copying and cannot answer the question.
+- **(b) THE DAY-FIRST UNIT PLAN IS DELIVERED.**
+  docs/DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md
+  - **The direction doc names the wrong half:** the timeline must consume
+    `project()`'s `VisibleDay.parts`, **not `ProjectedDayParts`**, which
+    deliberately carries no words. A timeline on `projectParts` renders nameless.
+  - **Group by `id`, never by `kind`** — `COMPONENT_TO_PART` is many-to-one, so
+    a day with a conditioning AND a finisher yields two parts of one kind.
+  - **A hazard I drafted was REFUTED before it shipped:** the colon-containing
+    id is a WORKOUT id and never becomes a component id. Recorded rather than
+    deleted — the plan would otherwise have ordered a defensive parse against a
+    defect that cannot occur.
+  - **Ruling 13 is MOOT** (R5.7 already cut the coach chips); **ruling 11** (the
+    injury "Other" data path) is named as its own investigation deliverable.
+  - The rulings doc is in `docs/`, not `artifacts/` as the order cited.
+- **(c) SLICE 1: THREE QUARTERS AUTHORISED, ONE QUARTER STOPPED.** The render
+  half is clean. **The check-off half is a GENUINE STANDING CONDITION and did
+  not proceed** — the order's premise *"via the existing per-component
+  completion"* is refuted: `componentCompletions` has exactly one writer,
+  `commitSessionOutcomeTransaction`, which mints a **session-outcome receipt**
+  that drives the Done badge, the completed-day display and progression, and
+  **there is no draft-persistence path at all.** So a single tick either
+  fabricates a completion (**signed-behaviour change**, and it corrupts the very
+  completed-day boundary that is one of Sam's standing device flags) or
+  persists partial progress (**new stored state of the worst shape**). The
+  escalation rule says the answer is not to invent a door. **Fork A/B/C is in
+  the plan, A recommended.**
+- **NOTHING WAS BUILT.** No product code landed this pass — the
+  `componentIdFromPartId` helper was drafted and **held out rather than landed
+  unused**; it lands with the surface that needs it. Commits are docs-only plus
+  one inert instrument on `scratch/lr29-dependency-list` (`7c3dc1e3`).
+- **NOT COVERED:** no device evidence; the day-first list is measured on SOURCE
+  and TYPES, not on a running surface (no tape — the surface does not exist
+  yet), and its `kind`-collision hazard is reasoned from a table and **not
+  reproduced by a failing case**; the icon assets are not inventoried; rulings
+  1–12 remain owed; docs-only commits did not re-run the gate, so main's gate
+  line is the merge's AFTER measurement.
+
+## Processed 2026-08-07 — the overnight order as the seat wrote it
+
+1. OVERNIGHT ORDER (Sam ruled, going to bed — VISIBLE-FIRST):
+   LOOP CHECK: sequencing ruled by the product owner — no iteration.
+   (a) The replay unit is RE-SLOTTED: produce its measured
+   dependency list ONLY (Opus, cheap, file it with the kickoff doc)
+   — the unit itself now builds AFTER day-first UI, before beta. It
+   remains payer of the declared fixture-identity reds.
+   (b) THEN DAY-FIRST UI KICKS OFF TONIGHT, per
+   docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md + the home-screen
+   redesign rulings (artifacts/HOME_SCREEN_REDESIGN_RULINGS_
+   2026-07-30.md — 13 Sam rulings, binding) + the signed copy sheet.
+   First deliverable: the unit plan with its FULL measured
+   dependency list (the V3 law — dependencies before build).
+   (c) OVERNIGHT AUTHORISATION: if the plan's dependency list is
+   CLEAN of stop conditions (no decision payloads, no signed-
+   behaviour changes — expected, per the direction doc this is a
+   new window onto project(), not new machinery), PROCEED to build
+   slice 1 overnight: the today-first Program view — week strip
+   with the game-day anchor, today leading, the day's session as a
+   tappable component timeline off ProjectedDayParts, check-off via
+   the existing per-component completion. NO clock times. New
+   strings ship PROPOSED; icons use existing assets flagged for
+   Sam's pick session; L16 vertical slice; full test:bible UNPIPED
+   per commit; walker surface laws apply. Park every Sam-shaped
+   question in PARKED_QUESTIONS (overnight law) and keep building.
+   One batched report by morning: what's on screen, what's parked,
+   what's next. STOP only on genuine standing conditions.
+   Sam holds a veto on everything when he wakes.
 
 2. (queue empty below this)
 

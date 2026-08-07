@@ -12,19 +12,71 @@ Binding authoring sources, all three read:
 
 ---
 
-## 1. THE VERDICT ON STOP CONDITIONS — **CLEAN**
+## 1. THE VERDICT ON STOP CONDITIONS — **THREE QUARTERS CLEAN, AND ONE
+## GENUINE STANDING CONDITION**
 
-The overnight authorisation is conditional on the dependency list carrying no
-stop conditions. Checked against the two named:
+> **THIS SECTION'S FIRST VERDICT WAS "CLEAN" AND IT WAS WRONG.** It is corrected
+> in place rather than quietly revised, because the way it was wrong is the
+> finding. I confirmed that `componentCompletions` EXISTS as a field and
+> inferred from that that a door existed to write it. **Existence of the state
+> is not existence of the door.** Measuring the WRITE PATH refuted it.
+> *(`pin-the-already-covered-claim` — the pin costs one grep, believing it costs
+> a shipped defect.)*
 
-| stop condition | verdict | evidence |
-|---|---|---|
-| **new stored state / decision payloads** | **NONE** | The timeline renders from `project()`. Check-off writes `componentCompletions`, which already exists in session feedback and is a **RESULT** — a legitimate stored input under the north star ("training results — what was actually done"), not derived output. |
-| **signed-behaviour changes** | **NONE** | Slice 1 adds a WINDOW. Every door behind it is the existing door, unchanged. New chrome strings ship **PROPOSED**. |
+| slice-1 element | verdict |
+|---|---|
+| today-first view + week strip (game-day anchored) | **CLEAN** — a new window onto `project()` |
+| tappable component timeline → existing day-detail door | **CLEAN** — existing door, unchanged |
+| no clock times | **CLEAN** — satisfied by construction (§2g) |
+| **per-component check-off** | **STOP — genuine standing condition** |
 
-**The direction doc's own claim is confirmed by measurement, not assumed:** this
-is a new window onto `project()`, not new machinery. **Slice 1 is authorised and
-proceeds.**
+### The stop, stated precisely
+
+The order says check-off goes *"via the existing per-component completion"*.
+**Measured, there is no such door.** `componentCompletions` exists only as a
+field inside a whole-session outcome commit:
+
+- The only writer is `commitSessionOutcomeTransaction`
+  (`src/store/sessionOutcomeTransaction.ts:185`). It takes a full
+  `RecordSessionOutcomeIntent` **including a session-level `completion` state**,
+  and it emits a **session-outcome RECEIPT**.
+- That receipt is not inert. It is what drives the **"Done" badge**, the
+  completed-day display, and progression receipts
+  (`HomeScreenV2.tsx:1484` — *"a persisted session-outcome receipt for this day
+  means the athlete finished and saved feedback"*).
+- **There is no draft-persistence path.** `feedbackDraft`
+  (`SessionFeedbackPanel.tsx:279`) is component-local React state. Nothing
+  persists a partially-ticked session.
+
+So ticking one component of three on the timeline has exactly two
+implementations, and **both trip a stop condition**:
+
+1. **Commit through the existing door** → fabricates a session-outcome receipt
+   for a session the athlete has not finished, turning on "Done", the
+   completed-day display and progression. That is a **signed-behaviour change**,
+   and it corrupts the very completed-day boundary that is already one of Sam's
+   standing device flags.
+2. **Persist an incremental tick** → **NEW STORED STATE**, and of the worst
+   shape: partial progress toward a result, which is derived-output-shaped and
+   which the north star presumes wrong without an explicit Sam-approved
+   exception and a retirement plan.
+
+**Neither is mine to choose**, and the escalation rule is explicit that the
+answer is not to invent a door. **The check-off half of slice 1 does not
+proceed.** The render half is clean and is what gets built.
+
+### The fork, for Sam and the seat
+
+- **(A)** Check-off is **display-only** in slice 1 — the timeline shows which
+  components a SAVED outcome recorded as done, and ticking navigates into the
+  existing feedback panel. Zero new state, zero behaviour change, ships tonight.
+  *Recommended* — it is the honest vertical slice.
+- **(B)** A real incremental per-component ledger is authored as its own unit,
+  as a **decision/result input** with its own door — the north-star-shaped
+  answer, and a genuinely bigger piece of work.
+- **(C)** Extend `commitSessionOutcomeTransaction` with a partial state that
+  does NOT mint a completion receipt — smaller than (B), but it changes a
+  transaction that eight surfaces read, so it is not a slice-1-sized edit.
 
 ---
 
@@ -144,8 +196,16 @@ The today-first Program view:
 1. Week strip across the top, days + dates, **game-day anchored**, today leading.
 2. The selected day's session as a **tappable component timeline** off
    `VisibleDay.parts`, keyed on `part.id`.
-3. **Per-component check-off** through the existing `componentCompletions`.
+3. **Completion shown, not written** — pending the fork in §1. The timeline
+   reads what a saved outcome recorded and routes a tap into the existing
+   feedback panel. **No new state, no new door.**
 4. No clock times. Existing doors behind every tap.
+
+Landing with it, per §NOT-COVERED's L12 note: **`componentIdFromPartId`, one
+owner for both halves of the part id**, placed in `projectVisibleWeek.ts` beside
+where those ids are constructed — so a second parse is never written elsewhere.
+(Drafted and held out of this commit rather than landed unused; it lands with
+the surface that needs it.)
 
 Gate per commit: full `test:bible` UNPIPED. Walker surface laws apply as to any
 surface.

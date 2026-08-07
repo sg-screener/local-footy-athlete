@@ -36,12 +36,27 @@
   Instrument on `scratch/lr29-dependency-list` (`7c3dc1e3`), flag-inert, and
   **priced against the control set before any reading was believed — 2 of 156
   both arms, so the Proxy does not perturb.**
-  (b) then **DAY-FIRST UI kicks off** — docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
-  + artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md (13 binding Sam
-  rulings) + the signed copy sheet. First deliverable: the unit plan with its
-  FULL measured dependency list (the V3 law — dependencies before build).
-  (c) overnight authorisation to build slice 1 if that list is clean of stop
-  conditions; new strings ship PROPOSED; L16 vertical slice.
+- **(b) DELIVERED — THE DAY-FIRST UI UNIT PLAN.**
+  docs/DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md (rulings doc is in `docs/`, not
+  `artifacts/` as the order cited). The timeline must consume `project()`'s
+  `VisibleDay.parts`, **not `ProjectedDayParts`** — the structural half carries
+  no words, so a timeline built on it renders nameless. Group by `id`, never by
+  `kind`. Ruling 13 is MOOT (R5.7 already cut it); ruling 11 (injury "Other"
+  data path) is its own investigation.
+- **(c) SLICE 1 IS STOPPED ON ITS CHECK-OFF HALF — a genuine standing
+  condition, and the render half is clean.** The order's premise *"check-off via
+  the existing per-component completion"* is **refuted by measurement**:
+  `componentCompletions` has exactly ONE writer,
+  `commitSessionOutcomeTransaction`, which mints a **session-outcome receipt**
+  driving the Done badge, the completed-day display and progression — and there
+  is **no draft-persistence path**. One tick therefore either fabricates a
+  completion (signed-behaviour change, and it corrupts the completed-day
+  boundary that is one of Sam's own standing device flags) or persists partial
+  progress (new stored state of the worst shape). **Not the terminal's to
+  choose** — fork A/B/C is in the plan, **A recommended** (completion shown,
+  not written; zero new state).
+  **NOTHING WAS BUILT this pass.** The `componentIdFromPartId` helper was
+  drafted and **held out rather than landed unused**.
 
 - **Branches (the ledger — ask git, never recall):**
   - `main` — **the tip**, carries everything below. `89b540f9`.
