@@ -2,6 +2,69 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-fourth pass) — OWNERSHIP DERIVES AT READ, BUILT AND FREE
+
+- LOOP CHECK: **gate-passing-on-coordinates-it-never-builds** — sighting
+  against myself, caught mid-pass by reading the controls instead of the
+  verdict. The first equality bind was GREEN across the whole ordered
+  witness set and proved almost nothing: 35 of 37 consumer calls compared
+  an EMPTY set against an EMPTY set.
+- Answered in docs/R53_REDUCTION_OWNERSHIP_DERIVED_2026-08-07.md.
+  **BUILT into the branch, unflagged** (`08212473`) — read half only; the
+  writer is untouched, per "read side first, writer last".
+
+- **(b) BUILT.** Both restoration consumers asked the mirror ONE question —
+  *which of this week's authorised reductions does this adjustment own?* —
+  and never read a target, metric or detail from it. That question already
+  had a decision-shaped answer, recorded as leg (iv)'s own ruling: a typed
+  reduction belongs to the adjustment whose CONSTRAINT authored it. So
+  ownership now derives as `deletionIdentity ∈ linkedUserRemovalConstraintIds`
+  against the contract in hand. It cannot go stale.
+- **(c) EQUALITY HOLDS.** All 156 suites, derivation live: **45 consumer
+  calls, 10 rows selected on each side, DIVERGENT 0.** Restore's meaning is
+  protected, not changed.
+- **THE GATE IS FREE: sweep 2 of 156** (`program-control-durable`,
+  `fixture-identity`) — exactly the declared set, 0 new / 0 fixed.
+  `test:compile` EXIT 0. Action walker 22/22.
+- **TWO CORRECTIONS, BOTH MINE, BOTH BEFORE TRUSTING THE RESULT.** (1) The
+  bind's first version compared the RAW sets and reported 6 divergences; the
+  mirror was naming rows the contract does not carry, which both consumers
+  filter away — the comparison had to be over what each method SELECTS from
+  the contract. (2) The near-vacuous green above.
+- **THE VACUOUS-PASS FIX IS A HARNESS DEFECT PAID.** An athlete can undo an
+  adjustment from the week screen (`useHomeScreen.ts:1749`); the walker had
+  no action for it, which the walker's own header already calls a defect in
+  the harness, not a gap in the app. `clearReversibleAdjustment` is awaited
+  and `perform` is synchronous, so it is walked end-to-end in a new cell,
+  `walkTheRestoreDoorOverAReduction` — which asserts the bind was EXERCISED
+  (calls moved, equal moved) BEFORE asserting it agreed.
+- **THE MIRROR IS NOW BEHAVIOURALLY WRITE-ONLY.** Census: five writers, a
+  type declaration, a hydration shape guard, and exactly one content reader
+  — which exists only to feed the bind. That is the state (d) needs for it
+  to retire with the declaration in the leg (v) landing.
+- **`reversibleAdjustmentLedger.ts:419` IS A FILLER, NOT A CONSUMER.** It
+  reads the stored contracts to WRITE the mirror. Under this ruling there is
+  nothing to convert: it retires with the mirror. Naming it as converted
+  would be claiming work that does not exist.
+- **THE ENDORSED COMPRESSION IS BUILT:** `src/dev/measure.ts` `Tally` (cannot
+  report a bare number — occurrences, distinct, and the dedup key's NAME
+  always travel together) and the AGENTS.md law *"a count names the
+  instrument's unit, not the domain noun"*, with all three sightings.
+- **NOT COVERED:** only **4 of 45** calls compare a non-empty set and only
+  **5 of 156** suites reach the consumers at all — the bind is exact but
+  narrow, and nothing here rests on it being broad; `explicit_load_edit`
+  adjustments own no constraint id, so derived ownership is empty for them
+  by construction (measured empty on the stored side too in every witness
+  world, but an `explicit_load_edit` that ever recorded a matching row would
+  diverge and no world produces one); the writer is untouched; the 3
+  deep-walker direct-transaction worlds are reachable through the new cell's
+  route but not individually pinned; no device evidence.
+
+## Processed 2026-08-07 (twenty-third pass) — the ruling as the seat wrote it
+
 1. RULING on 6ff1e745 — the mirror dies, it does not get filled.
    Commit as authored.
    LOOP CHECK: count-taken-for-a-record — sighting 3, your proposed
@@ -38,9 +101,6 @@
    5/6 re-pin, and the words only if the measurements support them.
    One-turn law and continuous authorisation EXTEND through all of
    it. Sam holds a veto. Device flags unchanged.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (thirteenth pass) — THREE-CLASS RUN: "zero readers" REFUTED
 

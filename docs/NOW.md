@@ -46,6 +46,25 @@
   that are NOT gaps, +3 dropped fields, +20 weeks where the replay INVENTS).
   That is the seat's pre-ruled EQUALITY-FAILS exit: a decision-record gap, a
   design question, not a patch. **(c) NOT reached; V3 NOT closed.**
+- **THE MIRROR DIES, AND ITS READ HALF IS BUILT AND FREE** — `08212473`,
+  UNFLAGGED. Both restoration consumers now DERIVE reduction ownership
+  (`deletionIdentity ∈ linkedUserRemovalConstraintIds`, leg (iv)'s own ruling)
+  instead of reading `linkedTypedReductions`. **Equality bind across all 156
+  suites: 45 consumer calls, 10 rows each side, DIVERGENT 0.** Sweep **2 of 156**
+  — the declared set, 0 new / 0 fixed; `test:compile` EXIT 0; walker 22/22.
+  **The mirror is now behaviourally write-only** (five writers, one content
+  reader and it only feeds the bind), which is what (d) needs for it to retire
+  WITH the declaration in the leg (v) landing. `reversibleAdjustmentLedger.ts:419`
+  is a FILLER of the mirror, not a consumer — it retires with it.
+  **Two self-corrections before trusting the result:** the bind first compared
+  RAW sets (6 false divergences — the mirror names rows the contract no longer
+  carries); and the first green was near-vacuous (35 of 37 calls empty-vs-empty)
+  because the walker had no restore action — paid with a new cell,
+  `walkTheRestoreDoorOverAReduction`, which asserts the bind was EXERCISED
+  before asserting it agreed. **Narrowness stated: 4 of 45 calls compare a
+  non-empty set; 5 of 156 suites reach the consumers at all.**
+  Compression BUILT: `src/dev/measure.ts` `Tally` + the AGENTS.md counting law.
+  Report: docs/R53_REDUCTION_OWNERSHIP_DERIVED_2026-08-07.md
 - **THE 159 IS CORRECTED BY THE WRITE SIDE: 330 OCCURRENCES = 40 ROWS = 23
   DECISIONS, AND NO DOOR FAILS TO APPEND.** Write-side tape, all 156 suites via
   `scripts/sweep.sh`, 5 producing suites. `noAdjustment` **0 of 40** (proven
