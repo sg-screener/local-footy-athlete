@@ -21,8 +21,9 @@ import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
-import type { VisibleDay, VisibleWeek } from '../../rules/visibleProjection';
+import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visibleProjection';
 import { visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
+import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -32,7 +33,7 @@ import type {
 import type { ProgramControlStatusUpdate } from '../../utils/programControlActions';
 import { guidedInjuryResultFromConstraint } from '../../utils/guidedInjuryControl';
 import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
-import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
+import { dayOfMonthLabel, shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
 import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
@@ -93,9 +94,11 @@ export default function HomeScreenV2() {
     handleNext,
     handleThisWeek,
     selectedIdx,
+    todayIdx,
     mode,
     handleDayTap,
     handleSelectDayOnly,
+    handleSelectDay,
     handleClearSelection,
     handleCancelMove,
     handleAddGameMode,
@@ -180,6 +183,35 @@ export default function HomeScreenV2() {
     handleAddGameMode();
   };
 
+  // ── Day-first vs week (Sam's day-first direction, 2026-08-01) ──
+  //
+  // TODAY LEADS, AND THE WEEK IS THE ZOOM-OUT — the direction's own words: "the
+  // regular Program view leads with TODAY — days and dates of the week as a
+  // strip at the top; the selected day shows what's scheduled. A tab/top control
+  // zooms out to weekly or monthly view."
+  //
+  // TWO SHAPES OF ONE SCREEN, NOT TWO SCREENS. Both render the same
+  // `visibleWeek`, the same `DayRow` and the same doors; what differs is how
+  // many days are drawn at full size. A rival day-first screen would be two live
+  // truths about one week — the shape every law in this repo exists to kill.
+  //
+  // THE WEEK VIEW IS NOT OPTIONAL CHROME, IT IS THE FORCED SHAPE FOR TWO CASES,
+  // and both are about a day-first view having no day to be about:
+  //   - ANOTHER WEEK has no today, and `useHomeScreen` deliberately selects
+  //     nothing when the athlete browses off this week (selection is emphasis;
+  //     browsing should not pre-emphasise an arbitrary Monday). A day-first view
+  //     there would either show nothing or need a second selection rule.
+  //   - A PICKER (move game / add game) asks the athlete to choose among all
+  //     seven days. That is a week-level act, and the picker's target rows and
+  //     their testIDs stay exactly as they were.
+  const [preferredProgramView, setPreferredProgramView] =
+    useState<'today' | 'week'>('today');
+  const dayFirst = preferredProgramView === 'today' && isThisWeek && isNormal;
+  // Selection is owned by `useHomeScreen`; this only says which day the
+  // day-first view is ABOUT when that owner is holding the sentinel.
+  const dayFirstIdx = selectedIdx >= 0 ? selectedIdx : todayIdx;
+  const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
   const [coachNoteSheet, setCoachNoteSheet] = useState<{
@@ -241,6 +273,15 @@ export default function HomeScreenV2() {
         }),
       }];
     }), [currentProgram, sessionFeedback]);
+  const receiptIdsForDate = (date: string): string[] => feedbackRenderWitnesses
+    .filter((witness) => witness.receipt.date === date)
+    .map((witness) => witness.receipt.transactionId);
+  const progressionReceiptsForDate = (date: string) => feedbackRenderWitnesses
+    .filter((witness) => witness.progressionTarget?.targetDate === date)
+    .map((witness) => ({
+      transactionId: witness.receipt.transactionId,
+      targetSessionId: witness.progressionTarget!.targetSessionId,
+    }));
   const adjustmentResultWitnesses = useMemo(() => {
     const testIDs: string[] = [];
     for (const adjustment of visibleReversibleAdjustments) {
@@ -324,6 +365,72 @@ export default function HomeScreenV2() {
     () => guidedInjuryResultFromConstraint(injuryFlowConstraint),
     [injuryFlowConstraint],
   );
+
+  /**
+   * ONE FULL-SIZE DAY ROW, WHICHEVER SHAPE THE SCREEN IS IN.
+   *
+   * The week view calls this seven times, the day-first view once. Everything a
+   * row is — its doors, its badges, its receipts, its testIDs — is decided here
+   * and only here, so the two shapes cannot drift into offering different things
+   * on the same day.
+   *
+   * The one difference is the tap, and it is the honest one: in the week view
+   * tapping the open row COLLAPSES it (selection is expansion, and the list is
+   * still whole without it); in the day-first view the row is what the screen is
+   * about, so tapping it re-selects rather than emptying the screen. Game days
+   * keep their action sheet in both.
+   */
+  const renderDayRow = (day: typeof weekDays[0], idx: number) => {
+    const isSelected = dayFirst ? true : idx === selectedIdx;
+    const hasWorkout = !!day.workout;
+    const isGame = day.workout?.workoutType === 'Game';
+    const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
+    const isPickerMode = mode.type === 'moveGame' || mode.type === 'addGame';
+    const isMoveTarget = isPickerMode && !isMoveSource;
+    // The projection's answer for this date — the card's ONE source for
+    // its title/context words. `visibleWeek` and `weekDays` are the same
+    // derivation (`project()` wraps `buildProgramTabProjectedWeek`), so
+    // this find is always a hit; `undefined` only guards a render before
+    // the two have settled together.
+    const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
+
+    return (
+      <DayRow
+        key={day.date}
+        day={day}
+        visibleDay={visibleDay}
+        isSelected={isSelected}
+        isMoveSource={isMoveSource}
+        isMoveTarget={isMoveTarget}
+        pickerMode={mode.type}
+        hasWorkout={hasWorkout}
+        isGame={!!isGame}
+        onPress={() => {
+          if (dayFirst && !isGame) return handleSelectDay(idx);
+          return isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx);
+        }}
+        onViewWorkout={() => handleViewWorkout(day)}
+        onFinishTeam={() => handleFinishTeamSession(day)}
+        onLogGame={() => handleLogGame(day.date)}
+        onGameDayActions={() => handleOpenGameDayActions(day.date)}
+        onMakeChange={() => setChangeSheetDate(day.date)}
+        staleWarning={staleByDate[day.date]}
+        normal={isNormal}
+        feedbackReceipts={receiptIdsForDate(day.date)}
+        progressionReceipts={progressionReceiptsForDate(day.date)}
+        /* THE COMPONENT TIMELINE — day-first only, and it is a READ.
+           `dayTimeline` folds the athlete's SAVED outcome onto the projection's
+           parts; nothing here writes. A tap opens the same day-detail door the
+           row's own CTA opens (Sam's fork A: completion shown, not written). */
+        timeline={dayFirst && visibleDay ? (
+          <DayTimeline
+            entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
+            onOpen={() => handleViewWorkout(day)}
+          />
+        ) : null}
+      />
+    );
+  };
 
   // Smoke harness no longer renders any controls in HomeScreen. The
   // coach-bike-flow regression now opens Wednesday's DayWorkout directly
@@ -416,6 +523,52 @@ export default function HomeScreenV2() {
             </View>
           </View>
 
+          {/* ── Today / Week ──
+              The zoom control Sam's direction asks for. Offered only where
+              there is a choice to make: on another week there is no today, and
+              during a game picker the athlete is choosing among all seven days.
+              Both cases render the week and hide this rather than showing a
+              control that would do nothing.
+
+              COPY: "Today" and "Week" are PROPOSED, UNSIGNED — the day-first
+              slice's only new chrome words, and they join Sam's next signing
+              batch. Both are already this screen's vocabulary ("Today" is the
+              day badge; "This week" / "Next week" / "Last week" are the nav
+              badges), which is why they were chosen over inventing a pair. The
+              extraction gate does not count them — it only sees prose — so this
+              comment is the record that they are new, not the gate. */}
+          {isThisWeek && isNormal ? (
+            <View style={styles.viewToggle} testID="program-view-toggle">
+              {(['today', 'week'] as const).map((option) => {
+                const isActive = preferredProgramView === option;
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => setPreferredProgramView(option)}
+                    testID={`program-view-${option}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={option === 'today' ? 'Today' : 'Week'}
+                    style={({ pressed }) => [
+                      styles.viewToggleOption,
+                      isActive && styles.viewToggleOptionActive,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.viewToggleLabel,
+                        isActive && styles.viewToggleLabelActive,
+                      ]}
+                    >
+                      {option === 'today' ? 'Today' : 'Week'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+
         </View>
 
         {/* ── Picker banners ── */}
@@ -484,55 +637,47 @@ export default function HomeScreenV2() {
           onAction={handleCoachNoteAction}
         />
 
-        {/* ── Week list — all seven days, selected day carries the emphasis ── */}
-        <View style={styles.dayList}>
-          {weekDays.map((day, idx) => {
-            const isSelected = idx === selectedIdx;
-            const hasWorkout = !!day.workout;
-            const isGame = day.workout?.workoutType === 'Game';
-            const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
-            const isPickerMode = mode.type === 'moveGame' || mode.type === 'addGame';
-            const isMoveTarget = isPickerMode && !isMoveSource;
-            // The projection's answer for this date — the card's ONE source for
-            // its title/context words. `visibleWeek` and `weekDays` are the same
-            // derivation (`project()` wraps `buildProgramTabProjectedWeek`), so
-            // this find is always a hit; `undefined` only guards a render before
-            // the two have settled together.
-            const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
-
-            return (
-              <DayRow
+        {/* ── The week ──
+            ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
+            place a day is drawn at full size; the day-first view calls it once
+            and the week view calls it seven times. Two JSX copies of a sixteen-
+            prop row is two places to forget a prop, and the one that got
+            forgotten would be the one nobody looked at. */}
+        {dayFirst ? (
+          <View style={styles.dayFirst}>
+            <WeekStrip
+              weekDays={weekDays}
+              visibleWeek={visibleWeek}
+              activeDate={dayFirstDay?.date ?? null}
+              onSelect={handleSelectDay}
+            />
+            {dayFirstDay ? renderDayRow(dayFirstDay, dayFirstIdx) : null}
+            {/* THE SIX DAYS THE STRIP STANDS IN FOR STILL REPORT THEMSELVES.
+                Every day mounts its canonical state leaves in BOTH shapes — a
+                fixture's state node, a session card, a saved-feedback receipt.
+                Without this, changing the shape of the screen would silently
+                narrow what the explorer can observe, and a day-first view would
+                start reporting that six of the athlete's days do not exist. */}
+            {weekDays.map((day, idx) => (idx === dayFirstIdx ? null : (
+              <DayStateLeaves
                 key={day.date}
                 day={day}
-                visibleDay={visibleDay}
-                isSelected={isSelected}
-                isMoveSource={isMoveSource}
-                isMoveTarget={isMoveTarget}
-                pickerMode={mode.type}
-                hasWorkout={hasWorkout}
-                isGame={!!isGame}
-                onPress={() =>
-                  isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx)}
-                onViewWorkout={() => handleViewWorkout(day)}
-                onFinishTeam={() => handleFinishTeamSession(day)}
-                onLogGame={() => handleLogGame(day.date)}
-                onGameDayActions={() => handleOpenGameDayActions(day.date)}
-                onMakeChange={() => setChangeSheetDate(day.date)}
-                staleWarning={staleByDate[day.date]}
-                normal={isNormal}
-                feedbackReceipts={feedbackRenderWitnesses
-                  .filter((witness) => witness.receipt.date === day.date)
-                  .map((witness) => witness.receipt.transactionId)}
-                progressionReceipts={feedbackRenderWitnesses
-                  .filter((witness) => witness.progressionTarget?.targetDate === day.date)
-                  .map((witness) => ({
-                    transactionId: witness.receipt.transactionId,
-                    targetSessionId: witness.progressionTarget!.targetSessionId,
-                  }))}
+                feedbackReceipts={receiptIdsForDate(day.date)}
+                progressionReceipts={progressionReceiptsForDate(day.date)}
+                stateToken={dayStateToken({
+                  day,
+                  isSelected: false,
+                  isMoveSource: false,
+                  isMoveTarget: false,
+                })}
               />
-            );
-          })}
-        </View>
+            )))}
+          </View>
+        ) : (
+          <View style={styles.dayList}>
+            {weekDays.map((day, idx) => renderDayRow(day, idx))}
+          </View>
+        )}
 
         {/* Canonical state leaves survive wording changes and cold reloads. */}
         {injuryEpisodes.map((episode) => (
@@ -1075,6 +1220,12 @@ interface DayRowProps {
   staleWarning: any;
   feedbackReceipts: string[];
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
+  /**
+   * The day's component timeline, rendered inside the expanded block above the
+   * session CTA. Passed in rather than built here: the row is presentation, and
+   * WHICH shape of the screen shows a timeline is the screen's decision.
+   */
+  timeline?: React.ReactNode;
 }
 
 const DAY_ROW_ACCENT = {
@@ -1425,6 +1576,87 @@ function cardLeadHeadline(day: VisibleDay | undefined): string | null {
 }
 
 /**
+ * WHAT THIS DAY IS, AS THE EXPLORER READS IT — one owner for both shapes.
+ *
+ * The token is a canonical state leaf: the dev-e2e explorer resolves an athlete
+ * action by finding `day-row-<day>-state-<token>` in the tree. It was computed
+ * inline in `DayRow`, which was fine while a row was the only thing that could
+ * report a day. The day-first view draws six of its days as strip chips and one
+ * as a row, and both have to answer this question the same way — so the question
+ * has a function, and there is exactly one place to get the answer wrong.
+ */
+function dayStateToken({
+  day, isSelected, isMoveSource, isMoveTarget,
+}: {
+  day: any;
+  isSelected: boolean;
+  isMoveSource: boolean;
+  isMoveTarget: boolean;
+}): string {
+  if (isMoveSource) return 'move-source';
+  if (isMoveTarget) return 'move-target';
+  if (day.workout?.workoutType === 'Game') return 'fixture';
+  if (!day.workout) return 'rest';
+  return isSelected ? 'selected' : 'scheduled';
+}
+
+interface DayStateLeavesProps {
+  day: any;
+  feedbackReceipts: string[];
+  progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
+  stateToken: string;
+}
+
+/**
+ * A DAY'S CANONICAL STATE LEAVES — zero-size witness nodes, no words, no doors.
+ *
+ * Every day the athlete has reports these whether or not the screen happens to
+ * be drawing it at full size. They are what the dev-e2e explorer resolves
+ * mutations against (`docs/` trace-v2 references), and they must survive a
+ * change to the SHAPE of the screen — a view that drew fewer of them would make
+ * the app look, to the explorer, as though days had stopped existing.
+ */
+function DayStateLeaves({
+  day, feedbackReceipts, progressionReceipts, stateToken,
+}: DayStateLeavesProps) {
+  const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
+  return (
+    <>
+      {day.workout ? (
+        <ExplorerRenderWitness testID={explorerTestId.sessionCard(day.workout.id)} />
+      ) : null}
+      {day.workout?.workoutType === 'Game' ? (
+        <>
+          <ExplorerRenderWitness testID={explorerTestId.fixtureCard(day.workout.id)} />
+          <ExplorerRenderWitness testID={explorerTestId.fixtureState(day.workout.id, 'active')} />
+        </>
+      ) : (
+        <ExplorerRenderWitness
+          testID={explorerTestId.fixtureState(`calendar-game-${day.date}`, 'absent')}
+        />
+      )}
+      {feedbackReceipts.map((transactionId) => (
+        <ExplorerRenderWitness
+          key={transactionId}
+          testID={explorerTestId.feedbackReceipt(transactionId)}
+        />
+      ))}
+      {progressionReceipts.map(({ transactionId, targetSessionId }) => (
+        <ExplorerRenderWitness
+          key={`${transactionId}:${targetSessionId}`}
+          testID={explorerTestId.feedbackProgressionTarget(transactionId, targetSessionId)}
+        />
+      ))}
+      <View
+        pointerEvents="none"
+        style={{ width: 1, height: 1 }}
+        testID={`day-row-${dayToken}-state-${stateToken}`}
+      />
+    </>
+  );
+}
+
+/**
  * Day row — one of seven identical rows in the week list.
  *
  * The SELECTED row (default: today, via useHomeScreen) is the screen's
@@ -1437,7 +1669,7 @@ function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning,
-  feedbackReceipts, progressionReceipts,
+  feedbackReceipts, progressionReceipts, timeline,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
@@ -1501,17 +1733,7 @@ function DayRow({
   // the zero-parts fallback above); a training day's is its first part.
   const selectedTitle = title;
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
-  const stateToken = isMoveSource
-    ? 'move-source'
-    : isMoveTarget
-      ? 'move-target'
-      : isGame
-        ? 'fixture'
-        : !hasWorkout
-          ? 'rest'
-          : isSelected
-            ? 'selected'
-            : 'scheduled';
+  const stateToken = dayStateToken({ day, isSelected, isMoveSource, isMoveTarget });
   const exposesExpandedActions = isSelected && normal;
 
   return (
@@ -1538,35 +1760,11 @@ function DayRow({
         emphasized && selectedDayRowStyle(accentColor),
       ]}
     >
-      {hasWorkout ? (
-        <ExplorerRenderWitness testID={explorerTestId.sessionCard(day.workout.id)} />
-      ) : null}
-      {isGame ? (
-        <>
-          <ExplorerRenderWitness testID={explorerTestId.fixtureCard(day.workout.id)} />
-          <ExplorerRenderWitness testID={explorerTestId.fixtureState(day.workout.id, 'active')} />
-        </>
-      ) : (
-        <ExplorerRenderWitness
-          testID={explorerTestId.fixtureState(`calendar-game-${day.date}`, 'absent')}
-        />
-      )}
-      {feedbackReceipts.map((transactionId) => (
-        <ExplorerRenderWitness
-          key={transactionId}
-          testID={explorerTestId.feedbackReceipt(transactionId)}
-        />
-      ))}
-      {progressionReceipts.map(({ transactionId, targetSessionId }) => (
-        <ExplorerRenderWitness
-          key={`${transactionId}:${targetSessionId}`}
-          testID={explorerTestId.feedbackProgressionTarget(transactionId, targetSessionId)}
-        />
-      ))}
-      <View
-        pointerEvents="none"
-        style={{ width: 1, height: 1 }}
-        testID={`day-row-${dayToken}-state-${stateToken}`}
+      <DayStateLeaves
+        day={day}
+        feedbackReceipts={feedbackReceipts}
+        progressionReceipts={progressionReceipts}
+        stateToken={stateToken}
       />
       <View
         pointerEvents="none"
@@ -1708,6 +1906,7 @@ function DayRow({
               warning={staleWarning}
             />
           )}
+          {timeline}
           {isCompleted ? (
             <>
               <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
@@ -1780,6 +1979,189 @@ function DayRow({
       )}
       </View>
     </Card>
+  );
+}
+
+interface WeekStripProps {
+  weekDays: any[];
+  visibleWeek: VisibleWeek;
+  activeDate: string | null;
+  onSelect: (idx: number) => void;
+}
+
+/**
+ * THE WEEK STRIP — seven days across the top, the game anchoring them.
+ *
+ * Sam's direction, 2026-08-01: "days and dates of the week as a strip at the
+ * top ... the week strip stays visible in the today view — the game-day anchor
+ * is how a footballer orients their week."
+ *
+ * WHAT KIND OF DAY EACH ONE IS COMES FROM THE PROJECTION AND NOWHERE ELSE.
+ * `VisibleDay.kind` is already derived from the typed `FIXTURE_WORKOUT_TYPES`
+ * set, so the anchor needs no derivation of its own and cannot disagree with the
+ * row below it about which day is the game. A strip that sniffed a title for the
+ * word "Game" would be a second answer to a question the projection settled.
+ *
+ * NO WORDS BUT THE CALENDAR'S. The chips carry a weekday token, a date number
+ * and a coloured mark — no session names, no prose, nothing that could be
+ * unsigned copy. The day's name is the row's job, and the row says it once.
+ */
+function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripProps) {
+  return (
+    <View style={styles.weekStrip} testID="week-strip">
+      {weekDays.map((day, idx) => {
+        const visibleDay = visibleWeek.days.find((candidate) => candidate.date === day.date);
+        const kind = visibleDay?.kind ?? 'rest';
+        const isActive = day.date === activeDate;
+        const markColor = kind === 'game'
+          ? '#FFC247'
+          : kind === 'training'
+            ? '#C8FF00'
+            : '#5E6268';
+        return (
+          <Pressable
+            key={day.date}
+            onPress={() => onSelect(idx)}
+            testID={`week-strip-${dayOfWeekTestIdToken(day.dayOfWeek)}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${day.short ?? ''} ${shortDayMonthLabel(day.date)}`}
+            style={({ pressed }) => [
+              styles.weekStripChip,
+              isActive && styles.weekStripChipActive,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.weekStripDay,
+                day.isToday && styles.weekStripDayToday,
+                isActive && styles.weekStripDayActive,
+              ]}
+            >
+              {day.short}
+            </Text>
+            <Text style={[styles.weekStripDate, isActive && styles.weekStripDateActive]}>
+              {dayOfMonthLabel(day.date)}
+            </Text>
+            {kind === 'game' ? (
+              <RowIcon kind="game" size={11} color={markColor} />
+            ) : (
+              <View style={[styles.weekStripMark, { backgroundColor: markColor }]} />
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * The icon for a part, by its TYPED kind.
+ *
+ * Deliberately not `titleIconKind`, which reads a display LABEL and matches it
+ * against a table of names. That table exists because the week card's title is a
+ * string by the time it reaches the icon; a timeline row holds the part itself,
+ * so it asks the structural question directly and cannot be wrong about a
+ * session whose name the table has not heard of. Exhaustive by type: a new
+ * `VisiblePartKind` stops this compiling rather than quietly drawing a default.
+ *
+ * Existing assets only (rulings 6 and 10: every row carries a meaningful icon;
+ * icons are imagery, not copy, and need no signing). Flagged for Sam's icon-pick
+ * session — nonsense pairings are his call at the device pass.
+ */
+const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
+  strength: 'strength',
+  power: 'bolt',
+  speed: 'bolt',
+  conditioning: 'flame',
+  support: 'core',
+  recovery: 'recovery',
+  team_training: 'team',
+  game: 'game',
+};
+
+/**
+ * WHAT A SAVED OUTCOME LOOKS LIKE ON A TIMELINE ROW.
+ *
+ * `null` — nothing saved — draws a hollow ring, not a cross: "not answered yet"
+ * and "skipped" are different facts and the athlete said one of them.
+ */
+const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
+  full: '#5BD98A',
+  partial: '#FFC247',
+  skipped: '#5E6268',
+};
+
+interface DayTimelineProps {
+  entries: readonly DayTimelineEntry[];
+  onOpen: () => void;
+}
+
+/**
+ * THE DAY'S COMPONENT TIMELINE — the day-first view's centrepiece.
+ *
+ * Sam's direction: "the day's session as a tappable component timeline —
+ * Mobility flow warm-up → tap to open · Strength/Power component → tap to open ·
+ * Conditioning or Team Training → tap to open."
+ *
+ * COMPLETION IS SHOWN, NOT WRITTEN (Sam's fork A ruling, 2026-08-07). Each row
+ * reflects what a SAVED session outcome recorded for that component; tapping a
+ * row opens the same day-detail door the CTA under it opens, and the existing
+ * feedback panel remains the only place a completion is ever authored. There is
+ * no per-component write door in this app, and this surface does not invent one.
+ *
+ * NO CLOCK TIMES — Sam's direction, and satisfied by construction: the
+ * projection carries no time of day for this to render even if it wanted to.
+ *
+ * KEYED ON `partId`, NEVER ON KIND. `COMPONENT_TO_PART` is many-to-one, so a day
+ * with a conditioning component AND a finisher yields two entries of kind
+ * `conditioning`. A list keyed by kind would silently drop one of them — work
+ * the athlete has to do, missing from the only screen that shows it.
+ */
+function DayTimeline({ entries, onOpen }: DayTimelineProps) {
+  if (entries.length === 0) return null;
+  return (
+    <View style={styles.timeline} testID="day-timeline">
+      {entries.map((entry, index) => {
+        const iconKind = PART_ICON_KIND[entry.kind];
+        const completionColor = entry.completion
+          ? TIMELINE_COMPLETION_COLOR[entry.completion]
+          : null;
+        return (
+          <Pressable
+            key={entry.partId}
+            onPress={onOpen}
+            testID={`day-timeline-part-${entry.componentId}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${entry.headline}${
+              entry.completion ? ` — ${entry.completion}` : ''}`}
+            style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
+          >
+            <View style={styles.timelineRail}>
+              <View
+                style={[
+                  styles.timelineNode,
+                  completionColor
+                    ? { backgroundColor: completionColor, borderColor: completionColor }
+                    : null,
+                ]}
+              />
+              {index < entries.length - 1 ? <View style={styles.timelineConnector} /> : null}
+            </View>
+            <RowIcon kind={iconKind} size={15} color={rowIconColor(iconKind)} />
+            <Text style={styles.timelineHeadline} numberOfLines={1} ellipsizeMode="tail">
+              {entry.headline}
+            </Text>
+            {entry.completion ? (
+              <ExplorerRenderWitness
+                testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
+              />
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -3138,6 +3520,69 @@ const styles = StyleSheet.create({
   // carrier — slightly bigger type + roomier padding on top of the
   // Card's accent surface. Selection IS the hierarchy (no hero card).
   dayList: { gap: 6, marginTop: spacing.sm },
+
+  // ── Day-first view ──
+  dayFirst: { gap: spacing.sm, marginTop: spacing.sm },
+  viewToggle: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    padding: 3,
+    gap: 3,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  viewToggleOption: {
+    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+  },
+  viewToggleOptionActive: { backgroundColor: 'rgba(200,255,0,0.14)' },
+  viewToggleLabel: { color: '#8A8F98', fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
+  viewToggleLabelActive: { color: '#C8FF00' },
+
+  weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
+  weekStripChip: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  weekStripChipActive: {
+    backgroundColor: 'rgba(200,255,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,255,0,0.35)',
+  },
+  weekStripDay: { color: '#8A8F98', fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
+  weekStripDayToday: { color: '#C8FF00' },
+  weekStripDayActive: { color: '#C8FF00' },
+  weekStripDate: { color: '#E8EAED', fontSize: 15, fontWeight: '600' },
+  weekStripDateActive: { color: '#FFFFFF' },
+  weekStripMark: { width: 5, height: 5, borderRadius: 3 },
+
+  // The component timeline inside the selected day's expanded block.
+  timeline: { gap: 0 },
+  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 7 },
+  timelineRail: { width: 12, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },
+  timelineNode: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#5E6268',
+    backgroundColor: 'transparent',
+  },
+  timelineConnector: {
+    position: 'absolute',
+    top: '50%',
+    bottom: -7,
+    width: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  timelineHeadline: { flex: 1, color: '#E8EAED', fontSize: 14, fontWeight: '600' },
+
   dayRow: { position: 'relative' },
   dayAccentStrip: {
     position: 'absolute',

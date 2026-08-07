@@ -515,6 +515,43 @@ function partKind(componentId: string, onDay: VisibleDayKind): VisiblePartKind {
   return COMPONENT_TO_PART[componentId] ?? 'strength';
 }
 
+/**
+ * THE PART ID HAS ONE OWNER, AND IT OWNS BOTH DIRECTIONS.
+ *
+ * A part's id is `<date>:<componentId>` — a compound, and a compound that any
+ * consumer can take apart is a shape three surfaces will end up parsing three
+ * ways. L12's class for the day-first unit is exactly that: *a surface that
+ * re-derives an identity the projection already carries*. So construction and
+ * recovery are one pair of functions, sitting where the id is minted, and the
+ * day a part id's shape changes ONE place fails loudly instead of three surfaces
+ * drifting.
+ *
+ * THE NAIVE SPLIT IS SAFE, AND THAT WAS MEASURED RATHER THAN ASSUMED.
+ * `SessionComponent.id` is typed `SessionComponentKind`, a closed union of ten
+ * colon-free literals, and every id `getSessionComponents` emits is one of them
+ * verbatim — so a part id carries exactly one colon. (The colon-bearing
+ * `${sourceIdentity}:${movedKind}-component` id in `sessionComponents.ts` is a
+ * WORKOUT id and never becomes a component id;
+ * docs/DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md §2e records the check.) The
+ * first-colon rule below is written anyway, because it costs nothing and it is
+ * the rule that stays correct if a date format ever grows one.
+ */
+export function partIdFor(date: string, componentId: string): string {
+  return `${date}:${componentId}`;
+}
+
+/**
+ * The component half of a part id.
+ *
+ * An id with no separator is returned whole rather than emptied: the callers are
+ * lookups against a saved outcome, and a silently-blank key would read as "this
+ * component was never done" — a wrong answer dressed as a real one.
+ */
+export function componentIdFromPartId(partId: string): string {
+  const separator = partId.indexOf(':');
+  return separator < 0 ? partId : partId.slice(separator + 1);
+}
+
 function partsForWorkout(
   date: string,
   workout: Workout | null | undefined,
@@ -525,7 +562,7 @@ function partsForWorkout(
     const componentId = String(component.id);
     const kind = partKind(componentId, onDay);
     return {
-      id: `${date}:${componentId}`,
+      id: partIdFor(date, componentId),
       kind,
       capabilities: partCapabilities(componentId, kind, onDay),
       countsTowardLoad: PART_COUNTS_TOWARD_LOAD[kind],

@@ -201,12 +201,29 @@ export function getVisibleFeedbackSections(
   return sections;
 }
 
-export function completionMapFromFeedback(
+/**
+ * WHAT A SAVED OUTCOME SAYS ABOUT EACH COMPONENT — one rule, two shapes of caller.
+ *
+ * The feedback panel asks it holding `SessionComponent[]`; the day-first timeline
+ * asks it holding part ids off the projection. Both need the SAME answer,
+ * including the legacy lift below, so the rule is stated once over bare ids and
+ * `completionMapFromFeedback` is the panel's spelling of it. A second copy of
+ * this would be a second answer to "was this component done", and the two would
+ * disagree the first time the lift changed.
+ *
+ * THE LEGACY LIFT (unchanged, and load-bearing): a saved outcome from before
+ * component-level completions carries no `components[]` at all. On a
+ * single-component session its session-level `completion` IS that component's
+ * completion — without this, a session the card already badges "Done" shows an
+ * unticked timeline, which is one screen telling two stories. L15's read-ingress
+ * shape: old formats are lifted at the boundary, never written again.
+ */
+export function completionByComponentId(
   feedback: SessionFeedback | null | undefined,
-  components: SessionComponent[],
+  componentIds: readonly string[],
 ): Record<string, FeedbackCompletion | null> {
   const next: Record<string, FeedbackCompletion | null> = {};
-  const validIds = new Set<string>(components.map((component) => component.id));
+  const validIds = new Set<string>(componentIds);
 
   for (const entry of feedback?.components ?? []) {
     if (validIds.has(entry.componentId)) {
@@ -214,15 +231,25 @@ export function completionMapFromFeedback(
     }
   }
 
-  if ((feedback?.components ?? []).length === 0 && components.length === 1) {
-    next[components[0].id] = feedback?.completion ?? null;
+  if ((feedback?.components ?? []).length === 0 && componentIds.length === 1) {
+    next[componentIds[0]] = feedback?.completion ?? null;
   }
 
-  for (const component of components) {
-    if (!(component.id in next)) next[component.id] = null;
+  for (const componentId of componentIds) {
+    if (!(componentId in next)) next[componentId] = null;
   }
 
   return next;
+}
+
+export function completionMapFromFeedback(
+  feedback: SessionFeedback | null | undefined,
+  components: SessionComponent[],
+): Record<string, FeedbackCompletion | null> {
+  return completionByComponentId(
+    feedback,
+    components.map((component) => component.id),
+  );
 }
 
 export function componentReasonsFromFeedback(

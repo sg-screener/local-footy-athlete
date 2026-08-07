@@ -114,6 +114,16 @@ export function shortDayMonthLabel(dateISO: string): string {
 }
 
 /**
+ * The calendar day alone, e.g. "3". For a week strip, where the month is
+ * already established by the week label above it and seven "3/7"s would be
+ * seven times the ink for one fact. Same single-owner rule as the label above:
+ * no surface re-slices an ISO date for itself.
+ */
+export function dayOfMonthLabel(dateISO: string): string {
+  return String(Number(dateISO.slice(8, 10)));
+}
+
+/**
  * Weekday + short date, e.g. "Fri 3/7". For surfaces that don't already
  * render their own weekday label.
  */

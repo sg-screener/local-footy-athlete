@@ -1239,6 +1239,22 @@ export function useHomeScreen() {
   };
 
   /**
+   * SELECT A DAY, NEVER TOGGLE IT OFF — the day-first view's picker.
+   *
+   * The week list's selection is a toggle because selection there is expansion:
+   * tapping the open row closes it and the list is still whole. The day-first
+   * view is the other shape — the strip picks WHICH day the screen is about, and
+   * a strip that could deselect would leave the screen about nothing.
+   *
+   * Same setter, same sentinel, same owner. This is one more question asked of
+   * the existing selection state, not a second selection state.
+   */
+  const handleSelectDay = (idx: number) => {
+    if (mode.type !== 'normal') return;
+    setSelectedIdx(idx);
+  };
+
+  /**
    * Clear the row selection without touching any other state. Intended for
    * the outer tap-outside dismiss layer on HomeScreenV2 — when the athlete
    * taps off any day card, the currently-expanded row collapses.
@@ -1998,9 +2014,14 @@ export function useHomeScreen() {
 
     // Selection / interaction mode
     selectedIdx,
+    // The index of today in the displayed week, or -1 on any other week. The
+    // day-first view needs it to fall back to today rather than re-deriving
+    // "which day is now" beside the owner that already answered it.
+    todayIdx,
     mode,
     handleDayTap,
     handleSelectDayOnly,
+    handleSelectDay,
     handleClearSelection,
     handleCancelMove,
     handleAddGameMode,
