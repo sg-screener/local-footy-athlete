@@ -303,6 +303,7 @@
     "test:fixture-identity": "TZ=Australia/Melbourne sucrase-node src/__tests__/fixtureIdentityTests.ts",
     "test:work-bill": "TZ=Australia/Melbourne sucrase-node src/__tests__/workBillTests.ts",
     "test:gateway-authority-census": "TZ=Australia/Melbourne sucrase-node src/__tests__/gatewayAuthorityInputCensusTests.ts",
+    "test:derived-week-lawfulness": "TZ=Australia/Melbourne sucrase-node src/__tests__/derivedWeekLawfulnessProof.ts",
     "test:operation-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/publicationOperationOwnershipTests.ts",
     "test:fact-door-inputs": "TZ=Australia/Melbourne sucrase-node src/__tests__/factDoorInputOwnershipTests.ts",
     "test:session-outcome-control": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionOutcomeControlOwnershipTests.ts",
