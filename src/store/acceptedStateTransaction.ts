@@ -54,6 +54,10 @@ import {
   rebaseAcceptedEffectiveWeek,
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
+import {
+  microcycleCoversWeek,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import type { G1LandingRouteId } from '../rules/g1LandingAsk';
 import { staleAcceptedSnapshotRepair } from '../rules/profileMirrorNarrowing';
@@ -452,7 +456,14 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         ? surfaces.currentMicrocycle
         : null
     );
-    const contract = overlay?.exposureContractV2 ?? microcycle?.exposureContractV2;
+    // THE FLIP, MOVE (ii) — one read door. `microcycle` above already folds
+    // the current-microcycle fallback in, so this caller has two candidates.
+    const contract = selectStoredWeekDeclaration({
+      overlay,
+      coveringMicrocycle: microcycle,
+      weekStart,
+      reader: 'acceptedStateTransaction.validateAcceptedWeeks',
+    });
     if (!contract) continue;
     const rebased = rebaseAcceptedEffectiveWeek({
       surfaces: storedWorldSurfaces(surfaces),
@@ -1059,18 +1070,19 @@ function contractForAcceptedWeek(
   surfaces: AcceptedProgramSurfaces,
   weekStart: string,
 ): WeeklyExposureContractV2 | undefined {
-  const overlay = surfaces.weekScopedOverlays[weekStart];
-  if (overlay?.exposureContractV2) return overlay.exposureContractV2;
-  const microcycle = surfaces.currentProgram?.microcycles.find((candidate) =>
-    weekStart >= candidate.startDate.slice(0, 10) &&
-    weekStart <= candidate.endDate.slice(0, 10));
-  if (microcycle?.exposureContractV2) return microcycle.exposureContractV2;
-  if (
-    surfaces.currentMicrocycle &&
-    weekStart >= surfaces.currentMicrocycle.startDate.slice(0, 10) &&
-    weekStart <= surfaces.currentMicrocycle.endDate.slice(0, 10)
-  ) return surfaces.currentMicrocycle.exposureContractV2;
-  return undefined;
+  // THE FLIP, MOVE (ii) — one read door. Three-branch caller: the current
+  // microcycle is consulted only when it COVERS the week, which is what the
+  // door's `currentMicrocycle` candidate means.
+  return selectStoredWeekDeclaration({
+    overlay: surfaces.weekScopedOverlays[weekStart],
+    coveringMicrocycle: surfaces.currentProgram?.microcycles.find((candidate) =>
+      microcycleCoversWeek(candidate, weekStart)),
+    currentMicrocycle: microcycleCoversWeek(surfaces.currentMicrocycle, weekStart)
+      ? surfaces.currentMicrocycle
+      : null,
+    weekStart,
+    reader: 'acceptedStateTransaction.contractForAcceptedWeek',
+  }) ?? undefined;
 }
 
 function linkedReductionSignature(entry: ReversibleAdjustmentLinkedReduction): string {

@@ -120,6 +120,10 @@ import {
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import {
+  microcycleCoversWeek,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -1206,19 +1210,20 @@ function canonicaliseAcceptedBoundaryState(
       ]))
     : persistedState.weekScopedOverlays;
   const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
-    const overlay = weekScopedOverlays?.[mondayForDate(date)];
-    if (overlay?.exposureContractV2) return overlay.exposureContractV2;
-    const programMicrocycle = currentProgram?.microcycles.find((microcycle) =>
-      date >= microcycle.startDate.slice(0, 10) && date <= microcycle.endDate.slice(0, 10));
-    if (programMicrocycle?.exposureContractV2) return programMicrocycle.exposureContractV2;
-    if (
-      currentMicrocycle &&
-      date >= currentMicrocycle.startDate.slice(0, 10) &&
-      date <= currentMicrocycle.endDate.slice(0, 10)
-    ) {
-      return currentMicrocycle.exposureContractV2;
-    }
-    return undefined;
+    // THE FLIP, MOVE (ii) — one read door. NOTE the asymmetry, preserved
+    // exactly: the overlay is found by the week's MONDAY, the two microcycles
+    // by the DATE itself. Collapsing the two onto one coordinate would be a
+    // behaviour change wearing a refactor.
+    return selectStoredWeekDeclaration({
+      overlay: weekScopedOverlays?.[mondayForDate(date)],
+      coveringMicrocycle: currentProgram?.microcycles.find((microcycle) =>
+        microcycleCoversWeek(microcycle, date)),
+      currentMicrocycle: microcycleCoversWeek(currentMicrocycle, date)
+        ? currentMicrocycle
+        : null,
+      weekStart: mondayForDate(date),
+      reader: 'programStore.safetyContractForDate',
+    }) ?? undefined;
   };
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
@@ -1276,7 +1281,14 @@ function canonicaliseAcceptedBoundaryState(
         ? currentMicrocycle
         : undefined
     );
-    const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+    // THE FLIP, MOVE (ii) — one read door. `baseMicrocycle` above already
+    // folds the current-microcycle fallback in, so this caller has two.
+    const contract = selectStoredWeekDeclaration({
+      overlay,
+      coveringMicrocycle: baseMicrocycle,
+      weekStart,
+      reader: 'programStore.validateHydratedWeeks',
+    });
     if (!contract) continue;
 
     const rebased = rebaseAcceptedEffectiveWeek({

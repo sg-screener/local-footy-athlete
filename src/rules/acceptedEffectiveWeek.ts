@@ -19,6 +19,7 @@ import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
 import { deriveWeekContract } from './derivedWeekContract';
+import { selectStoredWeekDeclaration } from './storedWeekDeclaration';
 import type { DaySurfaceOwner } from './dayPrecedence';
 import type { TemporarySourceFact } from './temporarySourceFact';
 
@@ -171,7 +172,15 @@ export function rebaseAcceptedEffectiveWeek(args: {
   const weekEnd = addDays(weekStart, 6);
   const overlay = args.surfaces.weekScopedOverlays[weekStart] ?? null;
   const baseMicrocycle = microcycleForWeek(args.surfaces, weekStart);
-  const storedContract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+  // THE FLIP, MOVE (ii) — one read door. `microcycleForWeek` above already
+  // folds the store's current microcycle into the covering answer, so this
+  // caller has two candidates, not three.
+  const storedContract = selectStoredWeekDeclaration({
+    overlay,
+    coveringMicrocycle: baseMicrocycle,
+    weekStart,
+    reader: 'acceptedEffectiveWeek.rebase',
+  });
   if (!storedContract) {
     throw new AcceptedEffectiveWeekUnavailableError(weekStart, 'Contract v2 is missing');
   }

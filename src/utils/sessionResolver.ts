@@ -94,6 +94,7 @@ import {
 import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -1818,7 +1819,15 @@ export function resolveWeekWithConditioning(
     mondayStr,
   );
   const section18Overlay = state.weekScopedOverlays?.[mondayStr];
-  if (section18Overlay?.exposureContractV2 || section18Microcycle?.exposureContractV2) {
+  // THE FLIP, MOVE (ii) — one read door. `selectMicrocycleForDate` above is
+  // the covering answer, current-microcycle fallback already folded in.
+  const section18StoredContract = selectStoredWeekDeclaration({
+    overlay: section18Overlay,
+    coveringMicrocycle: section18Microcycle,
+    weekStart: mondayStr,
+    reader: 'sessionResolver.tierFourEntry',
+  });
+  if (section18StoredContract) {
     const rested = result.map((day) =>
       !day.workout && day.source === 'none'
         ? buildDay(day.date, day.dayOfWeek, today, null, 'rest')
@@ -1831,8 +1840,7 @@ export function resolveWeekWithConditioning(
     // REMOVAL never reaches the conformance pass (scaffold defect 4).
     return section18TierFour({
       days: rested,
-      storedContract: section18Overlay?.exposureContractV2 ??
-        section18Microcycle?.exposureContractV2 ?? null,
+      storedContract: section18StoredContract,
       // The AUTHORED week, which is what the publisher relocated from. A
       // session the fixture displaced is gone from `rested` by definition.
       strengthTemplates: section18Microcycle?.workouts ?? [],
