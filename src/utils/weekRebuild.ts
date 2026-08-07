@@ -95,6 +95,7 @@ import {
   type AthleteActionTraceContext,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
+import { SCAFFOLD as LEGV_SCAFFOLD } from '../rules/derivedWeekContract';
 
 // ─── Canonical context ───────────────────────────────────────────────
 
@@ -232,14 +233,21 @@ export function buildWeekScopedWorkoutOverlay(args: {
     // reads an overlay's v1 field — every consumer falls back to the
     // microcycle's — so the copy bought nothing but a stale second home.
     // The microcycle-level writer is what remains, and it is filed as LR-30.
-    exposureContractV2: sourceMicrocycle.exposureContractV2 ?? (
-      sourceMicrocycle.exposureContract
-        ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
-            blockNumber: sourceMicrocycle.miniCycleNumber,
-            weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
-            globalWeek: sourceMicrocycle.weekNumber,
-          })
-        : undefined
+    // LEG (v) WRITER, PRICING SCAFFOLD — publication site 1 of 2. The
+    // DECLARATION retires at its OWNER, not at one call site; both sites
+    // retire together or the world is half-stored. The readers already derive
+    // (leg (v)'s read half, landed at 8ca5ae24) and the reduction-ownership
+    // consumers already derive (08212473). Inert without the flag.
+    exposureContractV2: LEGV_SCAFFOLD.writer ? undefined : (
+      sourceMicrocycle.exposureContractV2 ?? (
+        sourceMicrocycle.exposureContract
+          ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
+              blockNumber: sourceMicrocycle.miniCycleNumber,
+              weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
+              globalWeek: sourceMicrocycle.weekNumber,
+            })
+          : undefined
+      )
     ),
     workoutsByDate,
     createdAt: now,
@@ -563,6 +571,8 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       const committedAdjustment = commitWeekScopedOverlay({
         ...projection.overlay,
         workoutsByDate: {},
+        // LEG (v) WRITER, PRICING SCAFFOLD — publication site 2 of 2.
+        ...(LEGV_SCAFFOLD.writer ? { exposureContractV2: undefined } : {}),
       }, sweep, {
         targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,

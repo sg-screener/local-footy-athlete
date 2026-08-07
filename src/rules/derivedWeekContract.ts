@@ -31,7 +31,23 @@ import { applyAthleteRemovalTypedReduction } from './userRemovalConstraints';
 import { deriveIllnessRecoveryWeekMode } from './illnessRecoveryWeekMode';
 import type { TemporarySourceFact } from './temporarySourceFact';
 
-
+/**
+ * PRICING SCAFFOLD — leg (v)'s WRITER half, re-priced 2026-08-07 against the
+ * current branch rather than against the world it was first measured in.
+ *
+ * The read half is LANDED and unflagged (`8ca5ae24`), and the reduction-
+ * ownership consumers now derive too (`08212473`), so the earlier
+ * "writer-alone 11 reds / unit 9" figure was measured in a world that no
+ * longer exists. Only the writer is behind this flag now; the control is the
+ * branch itself.
+ *
+ *   LFA_SCAFFOLD_LEGV_WRITER=1   the stored declaration stops being written
+ *
+ * Inert unless the flag is set; nothing here is landed behaviour.
+ */
+export const SCAFFOLD = {
+  get writer(): boolean { return process.env.LFA_SCAFFOLD_LEGV_WRITER === '1'; },
+};
 
 /**
  * DIAGNOSTIC ONLY, and named so it cannot be mistaken for product state.
