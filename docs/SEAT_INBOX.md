@@ -2,6 +2,80 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twentieth pass) — LEG (v) RE-SCOPED, BUILT, PRICED -> STOP
+
+- LOOP CHECK: green-claimed-from-a-printed-tail-instead-of-the-exit-line —
+  harness-lies sighting 5, and it is MINE — COMPRESS, and the compression is
+  shipped in the same commit, not written down as a reminder.
+- Answered in docs/R53_LEGV_RESCOPED_PRICED_STOP_2026-08-07.md; the arm is
+  flag-gated at `d91d23fc` on scratch/r53-legv-readers. **NOTHING BUILT into
+  the branch** (harness-only change to `scripts/sweep.sh`).
+- **(a) THE RE-SCOPE IS BUILT AND THE READ HALF IS FREE.** The week's IDENTITY
+  derives from the athlete's facts — a severe illness mints `optional_week`
+  through the SAME single owner generation asks
+  (`deriveIllnessRecoveryWeekMode`), never a second predicate. All 156 suites
+  per arm, sets diffed, world-identity preamble printed:
+
+  | arm | failures | vs control |
+  |---|---|---|
+  | control | **2** | `program-control-durable`, `fixture-identity` |
+  | readers alone | **2** | **control set EXACTLY — 0 new, 0 fixed** |
+  | writer alone | **11** | 10 new, **`fixture-identity` FIXED** |
+  | the unit | **9** | 8 new, **`fixture-identity` FIXED** |
+
+  Your compression is now a MEASUREMENT: readers can be taught to derive
+  BEFORE the writer stops, at zero behavioural cost.
+- **AND A CORRECTION OF MY OWN, OWED FIRST.** I reported the six witness
+  suites "six-for-six green" under the unit. **WITHDRAWN.** I read
+  `npm run … | tail -3` instead of the exit line, on a repo whose own law is
+  trust-only-printed-exit-lines. Four of the six exit 1 on cells above a
+  green-looking totals line. **The read half pays 2 of the nine
+  (`readiness-ownership`, `deriving-device-commit`), not six**; the other four
+  are red under both arms with byte-identical text.
+- **(b) THE TWO UNEXPLAINED ARE STILL RED AND NOT THE SAME SENTENCE** —
+  `phase-structure` 8 (the flush SURVIVED the fixture-change rebuild) and the
+  walker's lighter-day cell (`:deep` is 20/1, this cell alone). **So this is
+  the STOP, taken on the ruling's own terms.** A candidate exists and is
+  offered AS a candidate: both read consistently with the eighth-pass hop —
+  the payload is materialised inside `commitAcceptedStateTransaction` gated on
+  the proposed overlay's DECLARATION, so retiring it stops materialisation and
+  the base shows through (content missing in the deletion cells, stale content
+  surviving in cell 8). NOT attributed; the tape has not been run.
+- **(c) THE D13 ENTRY IS CONFIRMED PAYABLE** — the walker's stale-debt cell
+  reds naming `session_list_calls_a_conditioning_day_recovery`. The ratchet
+  working; the deletion belongs in the landing commit.
+- **(e) THE PARITY GATE'S EXPIRY FIRES AS BUILT** —
+  `stored_declaration_costs_mondays_power_row` no longer happens in any world
+  and `derived-week-lawfulness` reds demanding its deletion, exactly as its
+  `expiresWhen` predicted. Two of the unit's nine reds are therefore ratchets,
+  not defects.
+- **THE REST OF THE NINE:** 1 is the branch's control red; 1 is `fact-horizon`
+  T4, ALREADY attributed (the tier-4 read-time write) with a MEASURED payer
+  (the one-owner boundary greens it in every combination); 3 are content the
+  read side does not yet supply — and one of those three
+  (`illness-clear-game-week` G3) is a WITNESS reading the stored declaration
+  directly, a re-point candidate that must NOT be re-pointed until the derived
+  week is measured at that coordinate.
+- **COMPRESSION SHIPPED:** `scripts/sweep.sh` gains `SWEEP_SUITES`, so a
+  targeted witness batch runs through the same runner as a full sweep —
+  preamble, exit codes, failure set, no tails. Proven both directions in one
+  run (`failures=1 of 2`, naming the known red, not the known green).
+- **RECOMMENDATION:** land the READ HALF alone now — measured free, it is your
+  own named standing shape, and it drops leg (v)'s price from 10 new to 8
+  before anything else is attempted. Then ONE tape of the materialisation
+  branch, which is positioned to answer the 3 content suites and the 2
+  unexplained cells together.
+- **NOT COVERED:** the two unexplained are characterised, not attributed;
+  install sites 2 and 3 of the deriver do not receive the facts in this arm
+  (only site 1 does), so the LIVE resolver may still answer the mode from
+  storage; whether the derived week says `optional_week` at G3's coordinate;
+  `test:compile` outside the sweep as always; no device evidence.
+
+## Processed 2026-08-07 (twentieth pass) — the ruling as the seat wrote it
+
 1. RULING on ed38e2a3 — commit as authored.
    LOOP CHECK: writer-retired-before-its-readers — sighting 2 (leg
    (iii)'s commit-materialisation was sighting 1: content had to

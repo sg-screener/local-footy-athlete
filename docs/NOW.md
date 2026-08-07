@@ -2,53 +2,47 @@
 
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
   **feat/r53-v3-switchover = the live unit and it carries the build**;
-  scratch/r53-legv-price (`1d831279`) holds the PRICED leg (v) arm, unlanded;
-  scratch/r53-pricing-7-probe (`8696193e`) holds the shelved
-  `DERIVED_IDENTITY` fix and every earlier instrument.
-- **THE BRANCH'S PRICE, measured this pass: 2 failures of 155**
-  (`program-control-durable`, `fixture-identity`), down from 3 — the D13
-  decompose retired `action-walker:deep`.
-- **THE THIRD PRODUCER IS NAMED, BY TAPE:** `commitAcceptedStateTransaction`
-  (`acceptedStateTransaction.ts:837`) ← `commitAthleteSessionDeletionTransaction`
-  ← the athlete's own REMOVAL. It writes the declaration AND the payload in one
-  store write, on a path neither of leg (v)'s writers touches. Positive control
-  in-world: 38/84/125 store writes, 15/33/51 transitions.
-  Report: docs/R53_THIRD_PRODUCER_NAMED_PARITY_CLASSIFIED_2026-08-07.md
-- **AND IT OVERTURNED MY OWN CLAIM.** "The write path drops the row" is
-  WITHDRAWN: the stored Monday is written with **all 8 rows at every store
-  write**. What costs the row is the stored DECLARATION being present at READ —
-  dose-response: both writers publishing = 3 of 3 worlds lose `Vertical Jump`,
-  one writer = 1 of 3, none = 0 of 3. Resolve-order and the write-validator
-  were both tested and REFUTED.
-- **THE PARITY GATE IS GREEN AND IN THE BIBLE CHAIN — 16/16**, with the diff
-  CLASSIFIED as ruled: `stored_declaration_costs_mondays_power_row`, cited to
-  the fixture-identity law, paid by leg (v), with its expiry written down.
-  Mutation-proven three ways (wrong row → red, no entry → red, stale entry →
-  red). Container identity is normalised and reported, not compared.
-- **THE NINE ARE MOSTLY ONE SENTENCE.** Six of leg (v)'s nine reds say the same
-  thing — the accepted week no longer knows what kind of week it is
-  (`mode=in_season_game_week` where illness_recovery was authored; bye and
-  practice-match tables not selected). **The week's IDENTITY lives in the
-  stored declaration and its readers still read it from storage**: leg (v)
-  retires the write without retiring the read. Two more are unexplained; the
-  ninth is `action-walker`'s ratchet asking for
-  `session_list_calls_a_conditioning_day_recovery` to be DELETED — leg (v) pays
-  a declared D13 debt.
-- **RECOMMENDATION TO THE SEAT:** re-scope leg (v) from "the writer stops" to
-  **"the readers derive, then the writer stops"**, priced as one unit — the
-  same shape that made leg (iii) land.
-- **Device-pass flag, PENDING not current:** when leg (v) lands, Monday gains
-  its `Vertical Jump` back on the phone. Sam's standing flag is unchanged:
-  **completed-day display**.
-- **Parked:** parallel-gate stage 1 remainder (inbox item 2); cells 22/23; the
-  53 profile-write debt files; done-flag + todayISO tape oddities.
-- **Tracked debts:** door unification (payer of a live red); the D13
-  session-template debt (three entries carried, one of them payable by leg
-  (v)); hydration snapshot-vs-live pin; R5.7 whole-or-none; remaining R5
-  batches; condition 4 markedDays proof; the merge.
-- **Gate:** `test:compile` **EXIT 0** (gate PASSED, 459 vs baseline, nothing
-  regressed). Full `test:bible` UNPIPED **EXIT 1** on
-  `test:program-control-durable` — the declared red; the chain stops there, so
-  `test:derived-week-lawfulness` (registered after it) is verified by direct
-  run at 16/16 rather than by the chain. Sam's combined device pass = the
-  merge gate.
+  scratch/r53-legv-readers (`d91d23fc`) holds the RE-SCOPED leg (v) arm —
+  BOTH halves, each flag-gated, unlanded; scratch/r53-legv-price
+  (`1d831279`) holds the older writer-only arm;
+  scratch/r53-pricing-7-probe (`8696193e`) holds the one-owner boundary
+  probe (`c076f53f`) and every earlier instrument.
+- **THE BRANCH'S PRICE, re-measured this pass in a clean worktree: 2
+  failures of 156** (`program-control-durable`, `fixture-identity`).
+- **LEG (v) IS RE-SCOPED AND BUILT ON THE SCAFFOLD** — "the readers derive,
+  then the writer stops". Read half: the week's IDENTITY derives from the
+  athlete's facts, a severe illness minting `optional_week` through the SAME
+  owner generation asks (`deriveIllnessRecoveryWeekMode`). Write half: both
+  publication sites stop storing `exposureContractV2`.
+  Report: docs/R53_LEGV_RESCOPED_PRICED_STOP_2026-08-07.md
+- **THE READ HALF IS FREE — control set EXACTLY, 0 new / 0 fixed.** The
+  seat's compression proven as a measurement: readers can be taught to
+  derive BEFORE the writer stops, at zero behavioural cost.
+- **THE UNIT COSTS 8 NEW REDS OF 156 — STOP.** Arms: control 2, readers 2,
+  writer-alone 11, unit 9; `test:fixture-identity` GREEN in both writer
+  arms (the prize). The 9 classify as: 1 control red, **2 DEBT PAYMENTS**
+  (the parity entry EXPIRED as built + the D13 entry (c) authorises
+  deleting), 1 already-attributed with a measured payer (`fact-horizon`
+  T4 ← the one-owner boundary), 3 content gaps the read side does not yet
+  supply, **2 STILL UNEXPLAINED and NOT the same sentence** — which is the
+  ruling's own stop condition, taken on its terms.
+- **THE READ HALF PAYS 2 OF THE NINE, NOT SIX. My earlier "six-for-six
+  green" is WITHDRAWN** — it was read off `tail -3` instead of the exit
+  line. Harness-lies sighting 5, mine. Compression SHIPPED: `SWEEP_SUITES`
+  makes a witness batch run through the sweep runner (preamble + exit
+  codes), proven both directions.
+- **RECOMMENDATION TO THE SEAT:** land the READ HALF alone now (free,
+  measured, the standing shape), then attribute the content class by ONE
+  tape of `commitAcceptedStateTransaction`'s materialisation branch — the
+  candidate hop that would make the 3 content suites and the 2 unexplained
+  cells one sentence.
+- **Device-pass flag, PENDING not current:** Monday's `Vertical Jump`
+  returns WHEN leg (v) lands. Sam's standing flag: **completed-day display**.
+- **Parked:** parallel-gate stage 1 remainder (inbox item 2); cells 22/23;
+  the 53 profile-write debt files; done-flag + todayISO tape oddities.
+- **Tracked debts:** door unification; the D13 session-template debt (one
+  entry payable by leg (v)); the parity-gate declared entry (deleted when
+  leg (v) lands); hydration snapshot-vs-live pin; R5.7 whole-or-none;
+  remaining R5 batches; condition 4 markedDays proof; the merge.
+- **Gate:** see the exit line recorded at the bottom of this pass's report
+  commit. Sam's combined device pass = the merge gate.

@@ -52,11 +52,31 @@ fi
 echo "SWEEP WORLD: label=$LABEL cwd=$(pwd) head=$HEAD_SHA symbol=${REQUIRED_SYMBOL:-none} files_with_symbol=$SYMBOL_HITS arm=[$*]"
 
 # ── the suites, read from the bible chain itself so it cannot drift ──
+#
+# HARNESS-LIES SIGHTING 5, and it is mine (2026-08-07, leg (v) re-scope). A
+# WITNESS BATCH — "just these six suites, both arms" — was hand-run in a shell
+# loop that read `npm run … | tail -3`. Four suites printed a green-looking
+# totals line and EXITED 1 on cells further up, so the batch reported six-for-six
+# green and the full sweep, which reads exit codes, reported four of them still
+# red. The repo already had this law (gate.sh: trust only printed exit lines);
+# what it did not have was a way to run a SUBSET under the same discipline, so
+# the shortcut was a hand-rolled loop every time.
+#
+# SWEEP_SUITES makes the targeted batch the same instrument as the full sweep:
+# same world-identity preamble, same exit-code verdict, same failure set. A
+# witness batch is now a sweep with a shorter list, never a tail.
+#
+#   SWEEP_SUITES="test:fact-horizon test:work-bill" scripts/sweep.sh witness SYMBOL VAR=1
+if [ -n "${SWEEP_SUITES:-}" ]; then
+  SUITES="$(printf '%s\n' $SWEEP_SUITES)"
+  echo "SWEEP SUBSET: explicit list of $(printf '%s\n' $SWEEP_SUITES | wc -l | tr -d ' ')"
+else
 SUITES="$(node -e '
 const s = require("./package.json").scripts["test:bible"];
 console.log([...s.matchAll(/npm run (test:[a-z0-9:\-]+)/g)].map((m) => m[1])
   .filter((n) => n !== "test:compile").join("\n"));
 ')"
+fi
 TOTAL="$(printf '%s\n' "$SUITES" | wc -l | tr -d ' ')"
 echo "SWEEP SUITES: $TOTAL"
 
