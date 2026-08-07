@@ -1,48 +1,58 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
-  feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7-probe at
-  `8696193e` — the boundary + ALL FOUR root fixes, every one flag-gated and
-  inert by default; scratch/r53-pricing-7 (`f91ea404`) unchanged; -6, -5,
-  -5-before preserved.
-- **Current unit:** the six-root queue, worked CONTINUOUSLY under the seat's
-  (e) authorisation. **DONE — one batched report:**
-  docs/R53_SIX_ROOTS_SETTLED_2026-08-07.md (+ root-1 detail in
-  docs/R53_AST_TWO_ROOTS_NAMED_2026-08-07.md). NOTHING on the branch.
-- **The six roots:** 1a order-without-an-owner → `LFA_SCAFFOLD_ORDER_OWNER`;
-  1b/4/5 one mechanism — `activeFixtureDates` never reached tier-4-at-read
-  (sighting 2 of authority-on-the-write-path-only) →
-  `LFA_SCAFFOLD_FIXTURE_AUTHORITY`; 6 relocation onto a marked game day —
-  green under leg (iii) (the "masking" IS the unit's convergence); 2 move
-  door's two-representations defect; 3 offer withdrawal role-by-shape →
-  `LFA_SCAFFOLD_OFFER_PROVENANCE` (pre-ruled, clean everywhere).
-- **The genuine STOP that ended the queue:** `LFA_SCAFFOLD_DERIVED_IDENTITY`
-  (pre-ruled fix for root 2) is REFUTED AS SCOPED — g1-landing-ask-flow reds
-  in BOTH worlds: the move door has TWO caller classes on TWO visible bases
-  (sheet: `resolveWeekWithConditioning`; G-1 landing:
-  `rebaseAcceptedEffectiveWeek`). Either basis breaks the other class. No
-  compatibility branch; the fix is the recorded door-unification debt —
-  seat's ruling owed.
-- **THE PRICE (154/arm at `8696193e`):** 2-fix neutral 6 = control; 4-fix
-  neutral 7 (+g1); landing 4-fix 8 (+g1+walker); **landing 3-fix RECOMMENDED
-  8** (+program-control-durable+walker). This morning the unit priced 5 new
-  reds; it now prices **2**, both named and owned: the move-door basis red
-  (either suite, seat's choice) and the DECLARED D13 speed-representation
-  debt at an undeclared coordinate (2026-08-10) — not widened from this
-  seat.
-- **Next:** the seat rules on (1) the two-bases question, (2) the D13 debt.
-  Then the unit's landing assembly (boundary + fixes land unflagged with it,
-  per the sixteenth-pass ruling (a)).
-- **Parked:** parallel-gate stage 1 remainder (inbox item); condition 1's
-  re-measure; leg (v) re-price; cells 22/23; the 53 profile-write debt
-  files; done-flag + todayISO tape oddities.
-- **Tracked debts:** gateway-input census-gate compression (proposed,
-  sighting 2); `governedFromISO` census gate (sighting 4, belongs to the
-  build unit); door unification (now load-bearing); hydration
-  snapshot-vs-live pin; R5.7 whole-or-none; remaining R5 batches; condition
-  4 markedDays proof; the merge. Device-pass flags for Sam: completed-day
-  display; re-keyed move identities IF DERIVED_IDENTITY lands.
-- **Gate:** nothing landed on the branch; probe commits on the scaffold
-  branch only. Last full test:bible UNPIPED on this branch exited 1 on
-  test:fixture-identity 3/3 (pre-existing); Sam's combined device pass =
-  merge gate. Full test:bible UNPIPED before any commit that touches src.
+  **feat/r53-v3-switchover = the live unit, and it now CARRIES THE BUILD**
+  (`d490c7a8`); scratch/r53-pricing-7-probe at `8696193e` holds the shelved
+  `DERIVED_IDENTITY` fix and every instrument; scratch/r53-pricing-7
+  (`f91ea404`) unchanged.
+- **Current unit: THE LANDING SET IS BUILT AND ON THE BRANCH, UNFLAGGED.**
+  Legs (ii)+(iii)+(iv) + `basis=visible` + the one-owner `governedFromISO`
+  boundary + the three ruled fixes (ORDER_OWNER, FIXTURE_AUTHORITY,
+  OFFER_PROVENANCE). No scaffold flag survives. Report:
+  docs/R53_LANDING_SET_BUILT_2026-08-07.md
+- **THE PRICE — sweep, all 155 suites, sets diffed, HEAD `b72b5574`:**
+  **3 failures against a branch control of 1** → **2 new, both named and
+  owned**. `test:compile` PASSES the ratchet and improved by 3.
+- **NOT landed, deliberately:** leg (i), leg (v), `DERIVED_IDENTITY` (shelved
+  as ruled), and the `bounded`/`provenance` rulings — all measured OFF in
+  every priced arm, so none rides in on a measured set.
+- **THE CYCLE — 4 reds, one cause, and the control had hidden it.** The first
+  sweep was 7, not 3: four ownership suites died at `programStore.ts:1877`
+  (`Cannot read properties of undefined`). Migrating
+  `stripConditioningComponent` into the low-level `sessionRowCounting` closed
+  a module cycle back through `programStore`. FIXED — the rule now lives in
+  `rules/strengthRelocationTemplate.ts`. Those four are four of the five reds
+  the ninth-pass survey wrote off as scaffold-only; they were ours all along.
+- **THE COMPRESSION, BUILT:** `test:gateway-authority-census`, in the bible
+  chain. Three members of the class, three mechanisms: `activeFixtureDates`
+  by declared census (both directions), `governedFromISO` by one owner,
+  `surfaces` by the compiler. 6/6, mutation-proven three ways.
+- **THE GENUINE STOP — the D13 ruling's premise is REFUTED.** Re-measured on
+  the scaffold that produced the number: **2026-08-10 is the PRE-fix
+  coordinate**; the landing set's is **2026-07-27** in every arm, and the
+  shape is `omits ["speed"] and invents ["support"]` — the COMBINATION of the
+  two already-declared D13 entries, which no single-shape regex can match (a
+  gap the walker file has documented in prose since 2026-08-04). NOTHING
+  WIDENED. Seat owns the choice: a third entry, decompose the match, or the
+  D13 owner pays both. Terminal's recommendation is decompose.
+- **The other carried red, DECLARED:** `program-control-durable` — the move
+  door's oracle reads the MATERIALISED week while the athlete acts on the
+  DERIVED one. Payer: the recorded door-unification debt (two caller classes,
+  two visible bases). Declared at the code site, not only in the report.
+- **Next, per the order and NOT run:** the parity gate (derived ==
+  materialised, byte-equal), then leg (v) on its real price, then condition
+  1's re-measure. `derivedWeekLawfulnessProof` is not ported and is the
+  instrument the parity gate wants — owed with that step.
+- **Parked:** parallel-gate stage 1 remainder (inbox item 2); cells 22/23; the
+  53 profile-write debt files; done-flag + todayISO tape oddities.
+- **Tracked debts:** door unification (now load-bearing, and it is the payer
+  of a live red); the D13 session-template debt; hydration snapshot-vs-live
+  pin; R5.7 whole-or-none; remaining R5 batches; condition 4 markedDays proof;
+  the merge.
+- **Device-pass flag for Sam (one, and it is the only one):** **completed-day
+  display** — a completed day that used to show a softened intensity now shows
+  what was actually completed. That is the fact-horizon boundary working. The
+  re-keyed-move-identity flag is DROPPED, since `DERIVED_IDENTITY` is shelved.
+- **Gate:** full `test:bible` UNPIPED, **EXIT 1** on
+  `test:program-control-durable` — the declared red. The 155-suite sweep with
+  sets diffed is the price. Sam's combined device pass = the merge gate.
