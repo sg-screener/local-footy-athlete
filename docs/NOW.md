@@ -19,6 +19,22 @@
   the stored-declaration read path and its writers** (they retire in the replay
   unit). Then census closures, structural sweep, coach free-text hidden per the
   signed beta cut. Full bible per commit.
+- **R5's BATCH ORDER IS DECIDED BY THE EXCLUSION.** It rules out more than R5.3:
+  **R5.4 collides** (hydration validates the declaration's stored SHAPE),
+  **R5.5 IS the replay unit** (LR-29, `beforeExposureContract`), **R5.6
+  collides** (the fact door AUTHORS the declaration). **R5.7 — the coach cut —
+  is the only batch that touches none of it** and is the batch in progress.
+- **R5.7: THE SURFACE IS RE-SURVEYED AND THE RULING'S TABLE WAS INCOMPLETE**
+  (`92be2cee`) — **three `navigate('CoachTab')` doors, not one**
+  (`useDayWorkout.ts:369` and `ProfileScreen.tsx:345` unnamed), plus the
+  ProfileScreen prop chain, HomeScreenV2's `onReviewStale`, `HomeScreen:454`
+  and `StaleOverrideBanner`. **AND A DEAD-END:** `programControlActions` still
+  returns a `coach_fallback` ROUTE — cutting the affordance without answering
+  it strands the athlete at a sheet with nothing to press. The route is frozen
+  pipeline (LR-6); **the replacement copy is the batch's FIRST deliverable and
+  ships PROPOSED.** **THE CUT IS NOT BEGUN, deliberately** — it is a seven-file
+  cut whose first deliverable is unsigned copy, and the batch's own recorded
+  reason is that a half-applied entry-surface cut is the thing C(a) forbids.
 - **DEVICE FLAGS, CORRECTED:** completed-day display **LANDED**. **Vertical Jump
   is STRUCK** — it is measured only under the parked flip arm, so it is not
   something the athlete has; it returns with the replay unit.

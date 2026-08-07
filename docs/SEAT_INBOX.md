@@ -2,6 +2,68 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-ninth pass) — V3 BANKED, THE REPLAY UNIT FILED, R5 ENTERED
+
+- LOOP CHECK: **a doc named 1 site, there were 2** — third sighting, and it
+  fired on the seat's OWN measured table before a single line was cut.
+- Answered in docs/V3_BOUNDARY_BANKED_2026-08-07.md and
+  docs/REPLAY_UNIT_KICKOFF_2026-08-07.md. Nothing was built to bank V3 — the
+  boundary is the state the branch was already in.
+- **(a) V3 IS BANKED, NOT CLOSED** (`8a8f3d4d`). The words are written exactly
+  as ruled. **CONVERGED:** content and derivation — the visible week derives,
+  the contract derives from the athlete's facts at all three selection lines,
+  reduction ownership derives, and ten longhand precedence copies collapsed to
+  ONE DOOR. **NOT CONVERGED:** the decision-accumulated identity
+  (`authorisedReductions` + the decision-authored identity) is still read from
+  storage, which is stored OUTPUT and exactly what the north star forbids.
+  Behaviourally sound; not yet convergent — both halves stated, neither is the
+  headline alone. Branch stays at its declared **2 of 156**; flip scaffold
+  parked inert. NOW.md and the shell-rebuild roadmap updated to match.
+- **NO LR-29 PRICING RUN WAS MID-FLIGHT**, so there was nothing to convert;
+  the measurements already in hand went into the kickoff doc instead.
+- **(b) THE REPLAY UNIT IS FILED** as the next ENGINE unit after the merge gate,
+  carrying the class sentence, the four refuted routes with their prices, the
+  sizing measurements, every parked scaffold, five open questions, and the
+  debts that retire with it. **Its opening law is written first and in bold:
+  the first act is the FULL MEASURED DEPENDENCY LIST, before any build or
+  scaffold** — V3 spent four passes discovering dependencies one at a time and
+  each discovery invalidated the plan built on the last.
+- **(d) DEVICE FLAGS CORRECTED:** completed-day display **LANDED**; **Vertical
+  Jump STRUCK** — it is measured only under a parked inert flag, so it is not
+  something the athlete has. Nothing promised that isn't real.
+- **(c) R5 ENTERED, AND THE BATCH ORDER IS DECIDED BY THE EXCLUSION.** Sam's
+  carve-out (the stored-declaration read path and its writers retire in the
+  replay unit) rules out more than R5.3: **R5.4 collides** (hydration validates
+  the declaration's stored SHAPE), **R5.5 IS the replay unit** (LR-29,
+  `beforeExposureContract`), **R5.6 collides** (the fact door AUTHORS the
+  declaration). **R5.7 — the coach cut — is the only batch that touches none of
+  it**, and it is already ruled and signed. It is the batch in progress.
+- **R5.7's SURFACE RE-SURVEYED AND THE RULING'S TABLE IS INCOMPLETE**
+  (`92be2cee`). **Three `navigate('CoachTab')` doors, not one** —
+  `useDayWorkout.ts:369` and `ProfileScreen.tsx:345` were unnamed; so were the
+  ProfileScreen `onMessageCoach` prop chain and its button, HomeScreenV2's
+  `onReviewStale`, `HomeScreen:454` and `StaleOverrideBanner`. The hook path in
+  the table is stale.
+- **AND A DEAD-END THE RULING NAMES BUT THE TABLE DOES NOT:**
+  `programControlActions` still returns a `coach_fallback` ROUTE. Cutting the
+  affordance without answering it strands the athlete at a sheet with nothing
+  to press — the half-alive surface C(a) exists to prevent. The route is frozen
+  pipeline (LR-6) so it is not deleted; **the replacement copy the ruling
+  already requires is the batch's FIRST deliverable**, and it ships PROPOSED.
+- **THE CUT IS NOT BEGUN, DELIBERATELY** — on the batch's own recorded reason
+  ("a five-file entry-surface cut left half-applied is precisely the half-alive
+  surface C(a) exists to prevent"), and it is now a seven-file cut whose first
+  deliverable is unsigned copy. It starts from a measured surface next pass.
+- **NOT COVERED:** no code moved in R5.7; the proposed copy is not written; the
+  `coachEntrySurfaceContractTests` cell [2] inversion is not made; R5.4/R5.6
+  are excluded by the carve-out but their exact boundary against the replay
+  unit is argued from the census, not measured; no device evidence.
+
+## Processed 2026-08-07 (twenty-ninth pass) — the ruling as Sam wrote it
+
 1. SAM RULED: OPTION B — bank V3 where it stands and move to R5.
    Commit as authored. If the LR-29 pricing run is mid-flight,
    convert what it has already measured into a SIZING DOC for the
@@ -32,9 +94,6 @@
    Device flags for it: completed-day display (landed). Vertical
    Jump is NOT landed (waits on the replay unit) — struck from the
    current flags so nothing promised isn't real. Sam holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-seventh + twenty-eighth passes) — THE CLASS IS THE ACCUMULATOR, AND THE REPLAY IS REFUTED
 
