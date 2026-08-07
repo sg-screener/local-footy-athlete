@@ -44,5 +44,8 @@
   entry payable by leg (v)); the parity-gate declared entry (deleted when
   leg (v) lands); hydration snapshot-vs-live pin; R5.7 whole-or-none;
   remaining R5 batches; condition 4 markedDays proof; the merge.
-- **Gate:** see the exit line recorded at the bottom of this pass's report
-  commit. Sam's combined device pass = the merge gate.
+- **Gate:** `test:compile` **EXIT 0**. Full `test:bible` UNPIPED **EXIT 1** on
+  `test:program-control-durable` (18 passed, 1 failed) — the declared red;
+  the chain stops there, so the suites registered after it are covered by
+  this pass's CONTROL SWEEP instead (all 156 suites, 2 red, same set).
+  Sam's combined device pass = the merge gate.
