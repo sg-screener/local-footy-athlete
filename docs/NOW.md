@@ -31,7 +31,31 @@
   line. Harness-lies sighting 5, mine. Compression SHIPPED: `SWEEP_SUITES`
   makes a witness batch run through the sweep runner (preamble + exit
   codes), proven both directions.
-- **THE READ HALF IS AT ALL THREE SELECTION LINES AND NO SUITE CAN TELL** —
+- **THE READ HALF IS LANDED** — `8ca5ae24`, unflagged, all three selection
+  lines. The gate AFTER landing is BYTE-IDENTICAL to the gate before it
+  (`test:compile` EXIT 0; `test:bible` EXIT 1 on `test:program-control-durable`,
+  18 passed / 1 failed). Free, exactly as priced.
+- **THE TAPE ANSWERED THE TWO UNEXPLAINED — and they were never missing
+  content.** `phase-structure`: builds 19/19, store writes 78/78, transitions
+  31/31, ZERO payload-losing transitions in either arm; the only field that
+  changes is `hasDeclaration`. What moves is the CONTRACT — `required` 2 -> 3 —
+  because **the stored declaration is an ACCUMULATOR of the week's authorised
+  reductions** (zero-reduction judging contracts 1,231/2,704 -> 12,945/15,000;
+  the stack caps at 2 where the stored world reaches 6). The hydration-predicate
+  candidate was REFUTED first: 0 hits, both arms, both suites.
+- **ONE FIX BUILT AND MEASURED, AND IT DOES NOT PAY THE CLASS:** the deriver
+  now reads the removal RECORD instead of the gateway-blanked application input
+  (the removal-record-split ruling's SECOND consumer). Real — 15,000 -> 10,924
+  shortfall verdicts — but the stack is not rebuilt (87% still zero, still
+  capped at 2) and the failing set is unchanged at 9 of 156.
+- **STOP, ON THE RULING'S OWN CONDITION:** `contract.authorisedReductions` feed
+  `linkedTypedReductions` (`reversibleAdjustmentLedger.ts:419`) and the
+  restoration path (`acceptedStateTransaction.ts:1141/1163/2761`) — retiring the
+  declaration without reproducing the stack changes what a Restore does. **That
+  is a decision payload, so (c) is NOT reached and V3 is NOT CLOSED.**
+  Report: docs/R53_LEGV_READ_HALF_LANDED_TAPE_STOP_2026-08-07.md
+- **Superseded, kept for the record:** the read half at three selection lines
+  measured set-identical to one site —
   three-site arms are SET-IDENTICAL to one-site (readers 2, unit 9), so sites
   2/3 rest on the one-owner law and the source, not on a measurement. L12: the
   missing gate is an AGREEMENT assertion across the three contract-selection

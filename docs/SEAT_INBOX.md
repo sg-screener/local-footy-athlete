@@ -2,6 +2,68 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-first pass) — READ HALF LANDED; TAPE ANSWERED; STOP ON A DECISION PAYLOAD
+
+- LOOP CHECK: confirmation-taken-from-the-thing-I-produced-rather-than-the-
+  thing-I-measured — harness-lies sighting 6, mine, THIRD form today (a
+  `tail -3`; a background job's "launched" echo; a partial tape file) —
+  COMPRESS, structurally: the sweep runner is the only sanctioned answer to
+  "is this suite green", and a tape is not read until its runner wrote its
+  exit line. I caught the third before building on it, which is the only
+  reason this report's numbers stand.
+- Answered in docs/R53_LEGV_READ_HALF_LANDED_TAPE_STOP_2026-08-07.md.
+- **(a) DONE — THE READ HALF IS LANDED** (`8ca5ae24`, unflagged, all three
+  selection lines). Gate AFTER landing is byte-identical to the gate before:
+  `test:compile` EXIT 0, `test:bible` EXIT 1 on `test:program-control-durable`
+  18/1. Free, exactly as priced.
+- **(b) THE TAPE ANSWERED BOTH UNEXPLAINED CELLS — and "missing content" was
+  wrong.** Four watch points, both cells, both arms, one run, positive control
+  in every arm. `phase-structure` is the clean case: builds 19/19, store writes
+  78/78, transitions 31/31, **zero payload-losing transitions in either arm**;
+  the only field that changes is `hasDeclaration`. What moves is the CONTRACT —
+  `required` 2 -> 3 — because **the stored declaration is an ACCUMULATOR of the
+  week's authorised reductions**: judging contracts carrying ZERO reductions go
+  from 1,231/2,704 to 12,945/15,000, and the stack caps at 2 where the stored
+  world reaches 6. One sentence covers both cells (a lighter-day trim refused,
+  a flush that survives because the harder contract still wants it).
+- **MY CARRIED CANDIDATE WAS REFUTED FIRST, cheaply:** the hydration predicate
+  `programUsesCurrentContracts` reads exactly like the mechanism and fires
+  **0 times in both arms, both suites**. Recorded so nobody re-runs it.
+- **ONE FIX BUILT AND MEASURED — AND IT DOES NOT PAY.** The deriver was asking
+  `userRemovalConstraints`, which the gateway BLANKS (`:379`); it now reads
+  `removalDecisions`, the RECORD — the removal-record-split ruling's SECOND
+  consumer. Live and real: 15,000 -> 10,924 shortfall verdicts. But the stack
+  is NOT rebuilt (87% still zero, still capped at 2) and the failing set is
+  **unchanged at 9 of 156**. Calling that a win because the first number moved
+  would be the same error as reading a totals line.
+- **STOP — (b)'S OWN CONDITION, MET, WITH THE LINES:**
+  `contract.authorisedReductions` feed `linkedTypedReductions`
+  (`reversibleAdjustmentLedger.ts:419`) and the restoration path
+  (`acceptedStateTransaction.ts:1141/1163/2761`). They are bound to deletion
+  identities and are what makes "Restore removes only its typed reduction"
+  true. Retiring the declaration without reproducing the stack changes what a
+  Restore does — **a decision payload.** So the writer does not retire, (c) is
+  NOT reached, and **V3 is NOT closed.** I am also one fix past the point where
+  guessing should stop.
+- **THE SHAPE OF THE ANSWER, for the seat to rule:** (1) replay the adjustment
+  ledger — it already holds `linkedTypedReductions`, so decisions in, contract
+  out, which is the convergence rule exactly; the tape says the RECORD alone is
+  insufficient, so the question is whether the per-adjustment entries are.
+  (2) re-derive from facts as the mode now is — but `explicit_user_override` is
+  a DECISION, not a fact, so this likely covers only the safety/deload kinds.
+  Option 1 matches the north star. **Neither is priced.**
+- **NOT COVERED:** the three content suites were not separately taped (their
+  membership in the same sentence is read from failure text, not measured);
+  whether replaying the ledger reproduces the stack — unmeasured, and it is the
+  whole of option 1; G3's re-point still must not happen until the derived week
+  is measured at that coordinate; the tape instrumentation is scaffold-only and
+  must be stripped before any product landing.
+
+## Processed 2026-08-07 (twenty-first pass) — the ruling as the seat wrote it
+
 1. RULING on a2ac0aa8 — MAXIMUM CONTINUOUS ORDER, one run to V3
    close or one true STOP. Commit as authored.
    LOOP CHECK: hand-rolled-suite-loop — sighting 1 and already
