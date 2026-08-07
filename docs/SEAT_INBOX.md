@@ -2,7 +2,32 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. SAM'S DEVICE PASS RESULT + ORDER: MERGE TO MAIN. Commit
+   docs/COACHING_QUALITY_EXHIBITS_2026-08-07.md as authored.
+   LOOP CHECK: pass-findings-vs-gate-scope — ruled cleanly: the L10
+   stages-1+2 gate judged mechanics; mechanics PASSED (taps 1-3
+   good, 4 not-applicable, 5 = programming-quality findings which
+   Sam explicitly ruled DEFERRED: "move on and get all the other
+   shit in, then we can optimise the coaching").
+   (a) Record the pass in the tap-list doc: 1 flush correct, 2
+   conditioning names correct, 3 rest clean, 4 n/a (no coach
+   override exists), 5 = quality exhibits filed (exhibits doc).
+   L10 for stages 1+2: MET on Sam's word.
+   (b) MERGE feat/stage-b-stage2 → main. Full test:bible UNPIPED on
+   main BEFORE and AFTER; after-state must equal stage-b-stage2's
+   declared set exactly (the declared reds ride, recorded in the
+   merge commit as before). Verify branch before every commit.
+   Update NOW.md, roadmap (Phase 1 CLOSES except the deferred
+   items), the branch ledger.
+   (c) THEN kick off the REPLAY UNIT from its filed kickoff doc —
+   its opening law first: the full measured dependency list before
+   any build or scaffold. Fable is NOT authorised yet — run the
+   dependency list on Opus and STOP with it in hand; the seat and
+   Sam decide the model for the build from the list's size.
+   One-turn law, continuous authorisation through (a)-(c)'s STOP.
+   Sam holds a veto.
+
+2. (queue empty below this)
 
 ## Processed 2026-08-07 (thirty-fourth pass) — RULINGS APPLIED; THE SCREEN-LEVEL INPUT DELIVERED; STOPPED
 
