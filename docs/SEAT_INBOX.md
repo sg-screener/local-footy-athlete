@@ -5,6 +5,76 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (thirteenth pass) — THREE-CLASS RUN: "zero readers" REFUTED
+
+- Answered in docs/R53_THREE_CLASS_RUN_ZERO_READERS_REFUTED_2026-08-07.md;
+  instrument at `271a7be4` on scratch/r53-pricing-7-probe. NOTHING BUILT.
+- **THE PREVIOUS PASS'S HEADLINE IS WITHDRAWN — it was wrong, and your
+  ordered instrument caught it.** All three classes in one run, writing to
+  ONE FILE rather than stdout:
+
+  | measure | flags off | LEG_II=1 |
+  |---|---|---|
+  | `scaffoldSection18TierFour` reads `SCAFFOLD.legII` | **6,947** | **13,894** |
+  | env reads of the var | 30 | 46 |
+  | module loads | 34,510 | 48,404 |
+
+  Stack: `get legII <- scaffoldSection18TierFour <- resolveWeekWithConditioning`.
+  **Leg (ii)'s gate is live in fact-horizon and reads the flag on every week
+  resolve.**
+- **WHY THE EARLIER TAPES SAID ZERO:** `durableFactHorizonTests.ts:675
+  runAllForked()` **spawnSync's its cases into CHILD PROCESSES**. The
+  four-site tape and the reader-getter both wrote to `process.stdout`, read
+  back through `npm run … | grep` — so everything the children wrote was
+  never in the grepped stream. Both zeros were instrument artifacts. Same
+  cause invalidates the earlier "tier-4 write tape recorded zero".
+- **The specific reasoning error, named:** I claimed the instrument was
+  "proven sound, not assumed" because it fired 1205/1205/532 in the
+  DELETION suite. That is a real observation and a false proof — firing in
+  suite X says nothing about surviving suite Y's PROCESS MODEL.
+  **Harness-lies sighting 4, and it is mine.**
+- **The open question DISSOLVES — it was never true.** No module-init
+  effect, no artifact cache, no hidden fifth reader. Your stated escape
+  hatch ("all three empty → impugn the runner") does NOT fire: class (1)
+  came back loud. The runner is not impugned; the instrument was.
+- **Next, on solid ground:** re-run the tier-4 WRITE tape to a FILE and name
+  the write that rewrites 2026-07-20 / 2026-07-21. Straightforward re-run
+  now, not a mystery.
+- **NOT covered:** the completed-day rewrite is still not attributed to a
+  line; module-load-order diff captured but not analysed (unnecessary once
+  class (1) answered); only fact-horizon instrumented; no compiled-artifact
+  caches exist in the tree, so class (3)'s artifact half had nothing to hash.
+
+## Processed 2026-08-07 (thirteenth pass) — the order as the seat wrote it
+
+- LOOP CHECK: instrument-covered-one-class-while-three-were-live —
+   sighting 2 (the reader-getter, like the four-site tape before it,
+   watched one class of consumer while the others stayed dark) —
+   COMPRESS: one run instruments ALL THREE candidate classes at once.
+   RULED on the b589241b report:
+   (a) The finding is ACCEPTED as measured: value '1' decides the
+   outcome with zero post-install reads of SCAFFOLD.legII. That
+   leaves exactly three places a consumer can hide, and ONE run
+   covers all of them, both arms, diffed:
+   - LOAD-TIME CAPTURE: the recording getter moves INTO the SCAFFOLD
+     definition itself (first executable line, nothing can read
+     before it exists) — a capture at import now records or cannot
+     happen.
+   - READER OUTSIDE src (harness, scripts, node_modules): a Proxy on
+     process.env recording every key access with stack, installed
+     via node --require before ANY module loads.
+   - INIT-ORDER / ARTIFACT: tape the module-load ORDER both arms and
+     hash the compiled-artifact state (.qa-compiled and friends —
+     the retired tsc pipeline's leftovers are prior art for exactly
+     this class; harness-lies sighting 4 watch), diff both.
+   If all three come back identical/empty while the outcome still
+   differs, STOP — that result would impugn the runner itself and
+   the seat re-examines the measurement, not the code.
+   (b) sweep.sh's world-identity preamble: ACCEPTED as shipped, both
+   directions proven — this is the harness-lies compression landing.
+   (c) Standing conditions unchanged; nothing lands; no mechanism
+   named until watched executing. Sam holds a veto.
+
 ## Processed 2026-08-07 (twelfth pass) — SOURCE TAPE + harness compression
 
 - Answered in docs/R53_SOURCE_TAPE_ZERO_READERS_2026-08-07.md; instruments

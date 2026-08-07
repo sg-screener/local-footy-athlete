@@ -4,28 +4,30 @@
   feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7
   (`f91ea404`) holds legs (iv)/(v), the ported seed fix and this pass's
   probes; -6, -5, -5-before preserved.
-- **Current unit:** the seat's source-tape order. **Both halves done; STOP
-  at the fourth-sighting watch.** See
-  docs/R53_SOURCE_TAPE_ZERO_READERS_2026-08-07.md; instruments at
-  `4b846988` on scratch/r53-pricing-7-probe. NOTHING BUILT.
-- **ZERO READERS, and the flag still decides.** Recording getter on
-  `SCAFFOLD.legII` + module-load tape: `fact-horizon` flags off 14/0,
-  `LEG_II=1` **12/2**, same 12/2 WITH the getter installed, and **0
-  property reads in every arm**. Controls: `LEG_II=0` → 14/0, unrelated env
-  var → 14/0 — so it is the VALUE `'1'` specifically. One env reader
-  repo-wide; no dynamic env access in `src`.
-- **This is your "zero hits both arms" branch**, stated precisely: the value
-  DOES decide the outcome, so the finding is **"the value decides without
-  any reader consuming it."** Next step (yours, already named): diff the two
-  arms' **module-load lists + compiled-artifact state**. Harness territory,
-  **fourth-sighting watch**. No mechanism named — unexecuted hypotheses are
-  worth nothing here.
-- **HARNESS COMPRESSION SHIPPED:** `scripts/sweep.sh` — cwd/HEAD/symbol
-  preamble is mandatory, printed, and aborts non-zero without measuring.
-  Proven both ways (branch → ABORT exit 3 naming the 2026-08-07 lie;
-  scaffold → prints world, proceeds).
-- **Accepted as unit law:** per-leg prices don't add; (iii)+(iv) mask two of
-  leg (ii)'s seven; ordering arguments cite measured COMBINATIONS only.
+- **Current unit:** the seat's three-class compression run. **Done — and it
+  REFUTES my previous pass.** See
+  docs/R53_THREE_CLASS_RUN_ZERO_READERS_REFUTED_2026-08-07.md; instrument at
+  `271a7be4` on scratch/r53-pricing-7-probe. NOTHING BUILT.
+- **"ZERO READERS" IS WITHDRAWN.** Writing the tape to a FILE instead of
+  stdout: `scaffoldSection18TierFour` reads `SCAFFOLD.legII` **6,947 times
+  flags-off and 13,894 with LEG_II=1**, via `resolveWeekWithConditioning`.
+  Leg (ii)'s gate is live in fact-horizon.
+- **Why the earlier zeros:** `durableFactHorizonTests.ts:675 runAllForked()`
+  **spawnSync's cases into CHILD PROCESSES**; the stdout tapes were read
+  back through `npm run … | grep`, so child output was never in the stream.
+  Both zeros were instrument artifacts — as was the earlier "tier-4 write
+  tape recorded zero".
+- **My reasoning error, named:** "proven sound" because it fired 1205 times
+  in the DELETION suite — firing in suite X says nothing about suite Y's
+  PROCESS MODEL. **Harness-lies sighting 4, and it is mine.**
+- **The exotic question dissolves** — no module-init effect, no artifact
+  cache, no hidden reader. The seat's "impugn the runner" hatch does NOT
+  fire: class (1) came back loud.
+- **Next:** re-run the tier-4 WRITE tape to a FILE and name the write that
+  rewrites 2026-07-20 / 2026-07-21. Straightforward now.
+- **Standing law added:** cross-process instruments write to a FILE; and a
+  soundness check must run in the SAME world as the measurement — a positive
+  control inside the same run, before any zero in that tape is believed.
 - **Parked:** condition 1's re-measure (the premise it waited on changed);
   leg (v) re-price; cell 22's 2nd assertion (leg (i) not landed); cell 23
   undiagnosed; parallel-gate stage 1 items 2–4; the other 53 declared
