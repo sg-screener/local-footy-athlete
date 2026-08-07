@@ -31,3 +31,4 @@ test-results/bible-conformance/
 # sweep runner output — measurements, not source
 .sweep*/
 .door/
+.bind/

@@ -83,6 +83,7 @@ import {
 import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
 import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
@@ -3061,6 +3062,98 @@ async function clearEveryActiveReadinessFactThroughItsDoor(date: string): Promis
   assert(false, 'the clear door never emptied the active readiness facts');
 }
 
+/**
+ * THE RESTORE DOOR, OVER A REDUCTION-AUTHORING REMOVAL — seat ruling,
+ * 2026-08-07: the reduction-ownership derivation is "equality-bound against
+ * current Restore behaviour on the full witness set".
+ *
+ * WHY THIS CELL HAD TO EXIST. The first bind run was green across the whole
+ * ordered witness set and it proved almost nothing: of 37 consumer calls, 35
+ * had an EMPTY owned set on both sides, so only 2 comparisons had any content.
+ * The walker reached the consumers once, with an `explicit_load_edit`. The
+ * cause is the vocabulary, not the app — an athlete can undo an adjustment
+ * from the week screen (`useHomeScreen.ts:1749`) and the walker had no action
+ * for it, which is the defect this file's own header already names:
+ *
+ *   > a state an athlete can reach that the walker cannot is a defect in the
+ *   > harness (L13), not a gap in the app.
+ *
+ * `clearReversibleAdjustment` is awaited, and `perform` is synchronous, so it
+ * cannot be a `WalkerAction` — the same constraint that put the schedule doors
+ * in `walkTheScheduleDoors`. It is walked here instead, end to end, through
+ * the real door.
+ *
+ * The cell asserts the bind was EXERCISED, not merely un-failed: a Restore
+ * whose owned set is empty compares nothing, and a cell that passed on that
+ * would be the gate-passing-on-coordinates-it-never-builds shape.
+ */
+async function walkTheRestoreDoorOverAReduction(): Promise<void> {
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+
+  const authorisedReductions = (): Array<{ reason?: string; deletionIdentity?: string }> => {
+    const overlay = useProgramStore.getState().weekScopedOverlays[weekStart];
+    return (overlay?.exposureContractV2?.authorisedReductions ?? []) as never;
+  };
+  const removalReductions = () => authorisedReductions()
+    .filter((entry) => entry.reason === 'explicit_user_override' && !!entry.deletionIdentity);
+
+  // ACT until the week's contract carries a removal-authored reduction. A
+  // removal only authors one when relocation AND substitution are exhausted,
+  // so it takes several — which is exactly why no bounded fixture reaches it.
+  const removed: string[] = [];
+  for (const day of visibleWeek()) {
+    if (removalReductions().length > 0) break;
+    if ((day.workout?.exercises ?? []).length === 0) continue;
+    performAction({ kind: 'plan_change', change: { kind: 'remove_session', date: day.date } });
+    removed.push(day.date);
+  }
+  const reductions = removalReductions();
+  if (reductions.length === 0) {
+    // NOT a silent skip, on the lighter-day door's precedent: a walked world
+    // that never authored a typed reduction cannot bind this consumer, and
+    // saying so is the honest outcome.
+    throw new Error('the walked world authored no explicit_user_override reduction after '
+      + `${removed.length} removals — the reduction-ownership consumers are unreachable `
+      + 'from it and this cell proves nothing');
+  }
+  const identity = reductions[0]!.deletionIdentity!;
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+    .find((entry) => (entry.linkedUserRemovalConstraintIds ?? []).includes(identity));
+  assert(!!adjustment, `no adjustment claims the constraint that authored the reduction (${identity})`);
+
+  const before = (require('../dev/reductionOwnershipBind') as
+    typeof import('../dev/reductionOwnershipBind')).snapshotOwnershipBind();
+  const restored = await quietAsync(() => clearReversibleAdjustment(
+    adjustment!.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  ));
+  const after = (require('../dev/reductionOwnershipBind') as
+    typeof import('../dev/reductionOwnershipBind')).snapshotOwnershipBind();
+
+  assert(restored.outcome === 'restored' || restored.outcome === 'recomposed',
+    `the durable Restore did not restore: ${JSON.stringify(restored)}`);
+
+  // THE COVERAGE ASSERTION — the comparison ran WITH CONTENT.
+  assert(after.calls > before.calls,
+    'the Restore never reached the reduction-ownership consumers — this cell '
+    + 'would pass without comparing anything');
+  assert(after.equal > before.equal,
+    'every ownership comparison during this Restore had an EMPTY owned set; the '
+    + `derivation was never actually exercised (calls ${before.calls} -> ${after.calls})`);
+
+  // THE EQUALITY BIND — the seat's (c). Restore's meaning is protected, not changed.
+  assert(after.divergent === before.divergent,
+    'DERIVED ownership disagreed with the stored mirror during Restore — '
+    + `divergences ${before.divergent} -> ${after.divergent}; run with `
+    + 'LFA_OWNERSHIP_BIND=<file> to read the rows');
+
+  // AND THE VISIBLE MEANING: the reduction the restored decision authored is gone.
+  assert(!removalReductions().some((entry) => entry.deletionIdentity === identity),
+    'Restore left the removal-authored reduction on the contract');
+}
+
 async function walkTheLighterDayDoor(): Promise<void> {
   freshInstall();
   performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
@@ -3721,6 +3814,8 @@ void (async () => {
     walkTheScheduleDoors);
   await runAsync('accepting a lighter day derives from the fact and never touches the athlete\'s surface',
     walkTheLighterDayDoor);
+  await runAsync('Restore over a reduction-authoring removal: ownership DERIVES and binds equal',
+    walkTheRestoreDoorOverAReduction);
   await runAsync('THE L16 SLICE: load, display, change, repair, approve, persist, relaunch-identical',
     walkTheL16Slice);
 
