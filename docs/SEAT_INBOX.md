@@ -2,96 +2,56 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
+1. RULING on the reduction-stack STOP — commit as authored.
+   LOOP CHECK: stored-accumulator-discovered-behind-a-declaration —
+   sighting 1 at this depth — ITERATE, with the recorded direction
+   already on file: LR-25 (undo = remove decision + re-derive) and
+   LR-29 (undo-as-replay) point exactly here.
+   (a) The STOP is ENDORSED — Restore's meaning is a decision
+   payload and you were right not to touch it. The refusal to say
+   "V3 closed" is the no-completeness law working; noted.
+   (b) THE ORDERED MEASUREMENT — the open question is empirical, so
+   it gets priced, not argued: build the replay scaffold — decisions
+   in, contract out — rebuilding the week's reduction stack from the
+   ledger's per-adjustment entries (linkedTypedReductions), and
+   EQUALITY-BIND it against the stored stack across acted worlds,
+   including accumulated-depth worlds (L13 — the stack must be
+   proven at depth 6, not depth 2). The Restore witnesses (deletion
+   24/24, properties, mutations) run against the replayed stack in
+   the same pricing. Positive controls, file-backed, exit-line
+   verdicts — your own compressions, all standing.
+   (c) TWO EXITS, both pre-ruled: EQUALITY HOLDS → the replay is the
+   reader, the writer retires, and the (c) sequence from the prior
+   order resumes unchanged through to the V3-closed measurement.
+   EQUALITY FAILS → STOP with the missing element NAMED — a decision
+   the ledger does not record is a decision-record gap, and that
+   comes back to the seat (and possibly Sam) as a design question,
+   not a patch.
+   (d) The removalDecisions read fix stays (live and real); honest
+   non-claiming of progress on it is noted. The three-misreads
+   compression (runner-only verdicts; no tape read before its exit
+   line) is ENDORSED as standing law.
+   Continuous authorisation EXTENDS through (b) and the EQUALITY-
+   HOLDS exit in full. Sam's flags unchanged. Sam holds a veto.
 
-## Processed 2026-08-07 (twenty-first pass) — READ HALF LANDED; TAPE ANSWERED; STOP ON A DECISION PAYLOAD
-
-- LOOP CHECK: confirmation-taken-from-the-thing-I-produced-rather-than-the-
-  thing-I-measured — harness-lies sighting 6, mine, THIRD form today (a
-  `tail -3`; a background job's "launched" echo; a partial tape file) —
-  COMPRESS, structurally: the sweep runner is the only sanctioned answer to
-  "is this suite green", and a tape is not read until its runner wrote its
-  exit line. I caught the third before building on it, which is the only
-  reason this report's numbers stand.
-- Answered in docs/R53_LEGV_READ_HALF_LANDED_TAPE_STOP_2026-08-07.md.
-- **(a) DONE — THE READ HALF IS LANDED** (`8ca5ae24`, unflagged, all three
-  selection lines). Gate AFTER landing is byte-identical to the gate before:
-  `test:compile` EXIT 0, `test:bible` EXIT 1 on `test:program-control-durable`
-  18/1. Free, exactly as priced.
-- **(b) THE TAPE ANSWERED BOTH UNEXPLAINED CELLS — and "missing content" was
-  wrong.** Four watch points, both cells, both arms, one run, positive control
-  in every arm. `phase-structure` is the clean case: builds 19/19, store writes
-  78/78, transitions 31/31, **zero payload-losing transitions in either arm**;
-  the only field that changes is `hasDeclaration`. What moves is the CONTRACT —
-  `required` 2 -> 3 — because **the stored declaration is an ACCUMULATOR of the
-  week's authorised reductions**: judging contracts carrying ZERO reductions go
-  from 1,231/2,704 to 12,945/15,000, and the stack caps at 2 where the stored
-  world reaches 6. One sentence covers both cells (a lighter-day trim refused,
-  a flush that survives because the harder contract still wants it).
-- **MY CARRIED CANDIDATE WAS REFUTED FIRST, cheaply:** the hydration predicate
-  `programUsesCurrentContracts` reads exactly like the mechanism and fires
-  **0 times in both arms, both suites**. Recorded so nobody re-runs it.
-- **ONE FIX BUILT AND MEASURED — AND IT DOES NOT PAY.** The deriver was asking
-  `userRemovalConstraints`, which the gateway BLANKS (`:379`); it now reads
-  `removalDecisions`, the RECORD — the removal-record-split ruling's SECOND
-  consumer. Live and real: 15,000 -> 10,924 shortfall verdicts. But the stack
-  is NOT rebuilt (87% still zero, still capped at 2) and the failing set is
-  **unchanged at 9 of 156**. Calling that a win because the first number moved
-  would be the same error as reading a totals line.
-- **STOP — (b)'S OWN CONDITION, MET, WITH THE LINES:**
-  `contract.authorisedReductions` feed `linkedTypedReductions`
-  (`reversibleAdjustmentLedger.ts:419`) and the restoration path
-  (`acceptedStateTransaction.ts:1141/1163/2761`). They are bound to deletion
-  identities and are what makes "Restore removes only its typed reduction"
-  true. Retiring the declaration without reproducing the stack changes what a
-  Restore does — **a decision payload.** So the writer does not retire, (c) is
-  NOT reached, and **V3 is NOT closed.** I am also one fix past the point where
-  guessing should stop.
-- **THE SHAPE OF THE ANSWER, for the seat to rule:** (1) replay the adjustment
-  ledger — it already holds `linkedTypedReductions`, so decisions in, contract
-  out, which is the convergence rule exactly; the tape says the RECORD alone is
-  insufficient, so the question is whether the per-adjustment entries are.
-  (2) re-derive from facts as the mode now is — but `explicit_user_override` is
-  a DECISION, not a fact, so this likely covers only the safety/deload kinds.
-  Option 1 matches the north star. **Neither is priced.**
-- **NOT COVERED:** the three content suites were not separately taped (their
-  membership in the same sentence is read from failure text, not measured);
-  whether replaying the ledger reproduces the stack — unmeasured, and it is the
-  whole of option 1; G3's re-point still must not happen until the derived week
-  is measured at that coordinate; the tape instrumentation is scaffold-only and
-  must be stripped before any product landing.
-
-## Processed 2026-08-07 (twenty-first pass) — the ruling as the seat wrote it
-
-1. RULING on a2ac0aa8 — MAXIMUM CONTINUOUS ORDER, one run to V3
-   close or one true STOP. Commit as authored.
-   LOOP CHECK: hand-rolled-suite-loop — sighting 1 and already
-   compressed by you (SWEEP_SUITES); the tail-3 misread is owned and
-   the runner fix ENDORSED — exit-code verdicts only, everywhere.
-   (a) LAND THE READ HALF NOW — measured free (0 new, 0 fixed, all
-   three selection lines), it goes on the branch immediately as its
-   own commit. No reason a proven-free improvement waits on the
-   writer's schedule.
-   (b) The eight decompose as you measured; act on all of them in
-   ONE continuous run, no seat round-trips: the two ratchet
-   deletions ride the leg (v) landing commit as ruled; fact-horizon's
-   attributed payer lands with it; the THREE missing-content pieces
-   are the leg (iii) pattern (read side must produce what the stored
-   payload supplied) — price and build them under the standing
-   derivation ruling; the TWO unexplained get the field tape FIRST
-   (set-diff against everything known, then instrument — the
-   one-run method), and they are the ONLY permitted STOP: stop only
-   if they touch a decision payload or signed behaviour, otherwise
-   fix under standing law and keep going.
-   (c) When the eight are paid: retire the writer, full bible
-   UNPIPED, parity gate re-run (both declared diffs must expire),
-   condition 1 re-measure, cells 5/6 re-pin to the DERIVED answer
-   now it is the lawful one. That sequence = V3 CLOSED; say so in
-   the batched report in exactly those words if the measurements
-   support it, and not otherwise.
-   (d) Device-pass flags unchanged: completed-day display, Vertical
-   Jump restoration. Sam holds a veto throughout.
+   (e) AMENDMENT — SAM'S ULTIMATUM, AND IT IS JUSTIFIED: the
+   "one more missing piece" pattern is serial discovery, and it ends
+   THIS RUN by construction. Before the writer-retirement question is
+   answered, run the EXHAUSTIVE OWNERSHIP CENSUS: a recording getter
+   on EVERY FIELD of the stored declaration, all suites' worlds plus
+   accumulated-depth walker worlds, file-backed, positive controls —
+   the complete measured list of everything the stored declaration
+   still supplies to anything. Not grep, not the 08-06 static census
+   — instrumented consumption in acted worlds. The output is a
+   CLOSED CHECKLIST with a count. Every item on it gets a derivation
+   or a named blocker IN THIS RUN. Nothing can be "discovered" after
+   this census except by an item on it — if anything ever surfaces
+   that the census missed, that is a census-instrument defect and the
+   seat owns it. The replay pricing (b) proceeds in parallel as one
+   item of that checklist. The batched report opens with the count:
+   "the declaration owns N things; N resolved; V3 CLOSED" or the
+   named blockers. This is the last serial surprise this unit is
+   permitted.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
