@@ -34,3 +34,6 @@ test-results/bible-conformance/
 .bind/
 .legv/
 .legv-run.log
+
+# parallel-gate runner output — measurements, not source
+.bible-parallel/

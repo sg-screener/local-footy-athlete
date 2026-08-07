@@ -2,10 +2,68 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder.
-   **UNPARKED 2026-08-07** — this is its natural boundary (roadmap
-   Phase 1.5, the first post-merge unit). Proceed under standing
-   conditions.
+(none)
+
+## Processed 2026-08-07 (thirty-third pass) — PARALLEL GATE STAGE 1 DELIVERED; STAGE 2 STOPPED ON A REFUTED PREMISE
+
+- LOOP CHECK: **a ruling premise is a claim too** fires, and against the unit's
+  OWN scoping line — "target 20 min → ~3-5 min" and "suites are independent".
+  Both are refuted by measurement below. Also **a gate that can lie about its
+  own result**: my runner produced two before it measured anything.
+- **STAGE 1 ITEMS 2-4 BUILT** — `scripts/bible-runner.js`,
+  `scripts/bible-agreement.js`, four npm entry points. Item 1 (`gate.sh`)
+  already existed.
+- **ONE RUNNER, CONCURRENCY ITS ONLY VARIABLE** — `--jobs 1` is the serial
+  reference, `--jobs N` the fast lane, same derived list, same literal command
+  strings. Two programs would have made a disagreement unattributable.
+- **ONE SUITE LIST (guardrail 5) DERIVED AND ASSERTED:** the chain splits on
+  `&&` into **158 units** (157 `npm run` + the leading slice; the sweep's 156
+  is that set minus `test:compile` and the slice). Fewer parsed than the chain
+  contains → it **refuses to measure**.
+- **AGREEMENT LAW MET: 4 runs, ALL AGREE** (jobs 8/4/10/8) on the same tree
+  `9f15e011`. Every arm **2 of 158** = `program-control-durable`,
+  `fixture-identity`, same FIRST_FAILURE. **The declared set exactly.**
+- **MUTATION CHECK 6 OF 6, non-vacuous in BOTH directions.** Cells 2/3 (dropped
+  unit, flipped exit) must red; cells 1/4 (identical; **same set, different
+  finish order**) must stay green — without those an always-red comparator
+  passes the ruled cell vacuously. Cell 5 spends 3 real suite runs through the
+  actual runner; cell 6 proves the wall-clock detector fires when `EXCLUSIVE`
+  is emptied.
+- **WHAT THE LAW CAUGHT, FIRST REAL RUN, AND IT WAS REAL:** `chain:runSlice1`
+  passed serially 21.2s, FAILED at `--jobs 8` in 43.5s — *"Bible harness
+  runtime 43514.4ms exceeds hard ceiling 30000ms"* (`runSlice1.ts:63`).
+  **NOT shared state — a WALL-CLOCK SELF-ASSERTION**, which measures machine
+  load, not the app, and a lane cannot save it because a lane still runs beside
+  the pool. Now **EXCLUSIVE**, with a detector that refuses to measure if
+  another unit's entry file declares a runtime ceiling undeclared. **THE
+  CEILING WAS NOT RAISED** — the side that moved was my runner, not the app.
+- **TWO DEFECTS IN MY OWN RUNNER, caught by its own output before it measured
+  anything.** `chain:runSlice1` exited **127** — the one non-`npm run` unit
+  missed npm's `node_modules/.bin` PATH — and **both arms would have reproduced
+  it identically, so the check would have called it a match**: a vacuous
+  agreement on an instrument fault, the exact class this unit exists to
+  prevent. And a spawn that never starts crashed the runner mid-measurement.
+  Exit 127 is now an **ABORT with no results file**; "command not found" is
+  never a suite's verdict about the app.
+- **THE PREMISE IS REFUTED AND STAGE 2 STOPS ON IT.** Scoped "20 min → 3-5
+  min". **Measured: full 158-unit serial set 257.7s; parallel 111-128s;
+  speedup 2.0-2.3x. The chain as felt today is 115s** (short-circuits at the
+  declared red near unit 92). **The saving is ~2 minutes, not ~16.** Flipping
+  the official gate buys little and adds a timing-sensitive failure mode.
+  **Sam's call — the terminal does not flip a merge gate on a refuted premise.**
+- **ITEM 4 IS LIVE:** inner-loop rounds may use `npm run test:bible:parallel`.
+  **Every commit still pays the serial chain unpiped.**
+- **GATE LINE:** full `test:bible` UNPIPED — `GATE_EXIT=1` at
+  `test:program-control-durable`, **1 FAIL line**, declared red, same text.
+  `test:bible` verified **byte-identical** after the package.json edit.
+- **SEPARATE FINDING FOR SAM:** serial `runSlice1` at 21.2s is already past its
+  own 18s warning and inside 30s of its hard ceiling. Nothing was changed about
+  it.
+- **NOT COVERED:** the wall-clock detector scans each unit's ENTRY file only,
+  not transitive imports; lane membership beyond `runSlice1` is argued from
+  measured shape (child-process fan-out, compiler memory), not individually
+  A/B-priced; agreement was measured on this machine at 10 cores only; no
+  device evidence; stage 2 not begun.
 
 ## Processed 2026-08-07 (thirty-second pass) — SIGNED, MERGED, AND THE TARGET LANDS ON THE DECLARED SET EXACTLY
 

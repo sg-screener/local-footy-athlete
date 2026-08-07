@@ -1,5 +1,32 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **PARALLEL GATE STAGE 1 IS DONE; STAGE 2 IS STOPPED FOR SAM.**
+  docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md
+  `npm run test:bible:parallel` (fast lane, gates nothing),
+  `npm run test:bible:agreement`, `npm run test:bible:agreement:mutation`.
+  **`test:bible` is UNTOUCHED and remains the only official gate** — verified
+  byte-identical when the new scripts were added.
+- **THE AGREEMENT LAW IS MET: 4 runs, all AGREE** (jobs 8/4/10/8) against the
+  same serial reference at `9f15e011`; every arm **2 failures of 158** =
+  `program-control-durable` + `fixture-identity`, same FIRST_FAILURE. **The
+  declared set exactly.** Mutation check **6 of 6**, with non-vacuity cells in
+  BOTH directions (a dropped unit must red; a different finish order must not).
+- **THE LAW CAUGHT A REAL ONE ON ITS FIRST RUN:** `runSlice1` asserts on its own
+  WALL-CLOCK runtime — 21.2s serial, **43.5s under load against a 30s hard
+  ceiling**. Not shared state; a suite timing itself measures the machine. It
+  now runs EXCLUSIVE and a detector refuses to measure if another such suite
+  appears undeclared. **The ceiling was NOT raised** — the runner moved, not the
+  app.
+- **PREMISE REFUTED, and it is why stage 2 stops:** the unit was scoped "20 min
+  → 3-5 min". **Measured: full 158-unit serial set 257.7s, parallel 111-128s,
+  speedup 2.0-2.3x; the chain as felt today is 115s.** The saving is ~2 min, not
+  ~16. Flipping the official gate buys little and adds a timing-sensitive
+  failure mode — **Sam's call, not the terminal's.**
+- **SEPARATE, AND WORTH SAM'S EYE:** serial `runSlice1` at 21.2s is already past
+  its own 18s warning, inside 30s of its hard ceiling.
+- **GATE LINE:** full `test:bible` UNPIPED — `GATE_EXIT=1` at
+  `test:program-control-durable`, **1 FAIL line**, the declared red, same text.
+
 - **MERGED. `feat/r53-v3-switchover` → `feat/stage-b-stage2` (`75fb71df`).**
   Sam's combined device pass = the merge gate: **MET** (5/5 testable taps
   passed; four items converted to WATCH-FORS). All three R5.7 strings SIGNED.

@@ -30,10 +30,22 @@ thereby IN scope for v1, not parked).
 - [ ] R6 — Release-class measurements, TestFlight build
 
 ## Phase 1.5 — first post-merge unit (Sam approved 2026-08-07)
-- [ ] PARALLEL GATE: shard test:bible across cores (suites are
-      independent; target 20 min → ~3-5 min) + gate.sh writing the
-      exit line to a file (retires the lying completion notification,
-      5+ sightings). Harness-only unit; deliberately AFTER the merge.
+- [x] PARALLEL GATE **STAGE 1 DONE** 2026-08-07 — gate.sh (item 1, already
+      landed) + `test:bible:parallel` + the AGREEMENT LAW, mutation-checked
+      6/6. **4 agreement runs, all AGREE** (jobs 8/4/10/8) at the branch's
+      declared 2-of-158 set. `test:bible` untouched and still the only
+      official gate. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md
+      **THE "20 min → 3-5 min" PREMISE IS REFUTED BY MEASUREMENT:** the full
+      158-unit serial set is **257.7s**, parallel **111-128s**, speedup
+      **2.0-2.3x**; the chain as felt today is **115s** (it short-circuits at
+      the declared red). The saving is ~2 min, not ~16.
+      **NOT "suites are independent" either** — the agreement law caught
+      `runSlice1` asserting on its own WALL-CLOCK runtime (43.5s under load vs
+      a 30s hard ceiling). It now runs exclusive; the ceiling was not raised.
+- [ ] PARALLEL GATE **STAGE 2 — STOPPED FOR SAM.** Flipping the official gate
+      to the parallel runner was scoped as the first commit after the merge,
+      but its stated payoff was the refuted 20-minute figure. Worth ~2 min per
+      commit against a new failure mode (timing-sensitive suites). Sam's call.
 
 ## Phase 2 — the full app (Sam's reorder: before beta)
 Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
