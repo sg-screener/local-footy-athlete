@@ -46,6 +46,23 @@
   that are NOT gaps, +3 dropped fields, +20 weeks where the replay INVENTS).
   That is the seat's pre-ruled EQUALITY-FAILS exit: a decision-record gap, a
   design question, not a patch. **(c) NOT reached; V3 NOT closed.**
+- **(b) CANNOT GO FIRST — THE DEBT DELETIONS ARE WRITER-COUPLED.** All four
+  cells measured on `test:derived-week-lawfulness`: entry present + writer live
+  = EXIT 0; present + retired = EXIT 1 (ratchet fires); deleted + live = EXIT 1
+  (undeclared 7-vs-8 parity diff); deleted + retired = EXIT 0. **No state of
+  the file is green in both worlds** — the entry is a debt whose payment IS the
+  writer, so it lands in the writer's commit. Same destination, arm still drops
+  to 6. **The SECOND entry is NOT deleted and NOT claimed paid:** its own note
+  records a MOVED-NOT-PAID deletion and same-day restore, the stale-debt ratchet
+  has no reach check, and the arm builds conditioning days and recovery days but
+  no day that is BOTH — the coordinate it names. Re-sequenced under standing law
+  (no ruling needed): (a) → (c) → deletions land with the writer.
+  **(a) SIZED, NOT STARTED: it is LR-29's undo-as-replay.**
+  `beforeExposureContract` is a stored snapshot of the pre-decision contract
+  (written `acceptedStateTransaction.ts:1330/:1577`, read
+  `reversibleAdjustmentTransaction.ts:661`); deriving it means removing the
+  decision and re-deriving the week.
+  Report: docs/R53_DEBT_DELETIONS_ARE_WRITER_COUPLED_2026-08-07.md
 - **LEG (v)'s WRITER, RE-PRICED: 8 NEW / 1 FIXED, AND IT IS A STOP.** Control =
   the branch (2 of 156); arm `LFA_SCAFFOLD_LEGV_WRITER=1` = **9 of 156**.
   `fixture-identity` is **FIXED** (the prize its declared debt entry predicted).
