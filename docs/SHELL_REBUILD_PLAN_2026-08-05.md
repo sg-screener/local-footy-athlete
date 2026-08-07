@@ -191,6 +191,14 @@ That has never been true.
 
 ### R5 — The reckoning: deletion, census, coach cut, the combined pass (size M)
 
+> **AMENDED 2026-08-07 — SAM'S OPTION B RULING.** R5.3 (the V3 switchover) is
+> **BANKED at the one-door boundary, not closed**
+> (`docs/V3_BOUNDARY_BANKED_2026-08-07.md`). The stored declaration remains the
+> READ authority, so **its read path and its writers are EXCLUDED from R5's
+> deletion** — they retire in the **LR-29 replay unit**
+> (`docs/REPLAY_UNIT_KICKOFF_2026-08-07.md`), filed as the next ENGINE unit
+> AFTER the merge gate. Everything else in this slice proceeds as written.
+
 Delete the replaced machinery and every persisted-output surface; retire the
 census units §5 lists — ruling-referenced, ratcheted, ceiling drop in the SAME
 commit as each deletion; hide the coach free-text entry point for beta (§6);

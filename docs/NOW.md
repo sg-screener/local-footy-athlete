@@ -1,5 +1,28 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **SAM RULED OPTION B: V3 IS BANKED AT THE ONE-DOOR BOUNDARY — NOT CLOSED.**
+  The words are *"V3 BANKED at the one-door boundary; remainder = the LR-29
+  replay unit"*. **CONVERGED:** content and derivation — the visible week
+  derives, the contract derives from the athlete's facts at all three selection
+  lines, reduction ownership derives, and ten longhand precedence copies
+  collapsed to ONE DOOR. **NOT CONVERGED:** the decision-accumulated identity
+  (`authorisedReductions` + the decision-authored identity) is still read from
+  storage. Behaviourally sound (undo works, nothing ships broken); not yet
+  convergent. Both halves true.
+  Report: docs/V3_BOUNDARY_BANKED_2026-08-07.md
+- **THE LR-29 REPLAY UNIT IS FILED, NOT STARTED** — next ENGINE unit AFTER the
+  merge gate. Its OPENING LAW: the first act is the FULL MEASURED DEPENDENCY
+  LIST, before any build or scaffold. Carries the class sentence, the four
+  refuted routes, the sizing measurements, the parked scaffolds and five open
+  questions. Kickoff: docs/REPLAY_UNIT_KICKOFF_2026-08-07.md
+- **R5 IS AMENDED AND IS THE CURRENT WORK:** the big delete as scoped, **EXCEPT
+  the stored-declaration read path and its writers** (they retire in the replay
+  unit). Then census closures, structural sweep, coach free-text hidden per the
+  signed beta cut. Full bible per commit.
+- **DEVICE FLAGS, CORRECTED:** completed-day display **LANDED**. **Vertical Jump
+  is STRUCK** — it is measured only under the parked flip arm, so it is not
+  something the athlete has; it returns with the replay unit.
+
 - **THE FLIP (a)(b)(c): THE EIGHT ARE ONE CLASS — THE ACCUMULATOR — AND THE
   REPLAY IS REFUTED BY MEASUREMENT. STOP.** Three arms, 156 suites each,
   world-identity preamble printed, sets diffed never totals:
