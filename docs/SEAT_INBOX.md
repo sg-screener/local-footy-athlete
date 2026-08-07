@@ -5,6 +5,89 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (fifteenth pass) — THE BOUNDARY, BUILT AND PRICED
+
+- Answered in docs/R53_ONE_OWNER_BOUNDARY_PRICED_2026-08-07.md; probe at
+  `c076f53f` on scratch/r53-pricing-7-probe. NOTHING BUILT — flag-gated
+  (`LFA_SCAFFOLD_BOUNDARY`), inert by default, branch untouched.
+- **(a) BUILT AS ORDERED:** one owner, at the assembly — top of
+  `resolveCandidate` (`section18AcceptedWeekGateway.ts`), where every
+  candidate's mutable day-set is put together. Fact days
+  (< `governedFromISO`) never enter the normaliser chain or the repair
+  search; reassembly re-attaches them byte-exact and by construction
+  refuses anything a writer placed on a fact day. The finaliser and the
+  offer placer are UNMODIFIED — no writer was taught. Readers keep the
+  whole week (the evaluator already counts pre-boundary days as history).
+- **(c) THE PRICE, all 154 suites per arm, world-identity preambles
+  printed, sets diffed:**
+
+  | arm | failures | vs reference |
+  |---|---|---|
+  | boundary ALONE | **6** | control set EXACTLY — 0 new, 0 fixed |
+  | (ii)+boundary | **12** | (ii)-alone 13 − fact-horizon, 0 new |
+  | (ii)+(iii)+(iv)+basis+boundary | **10** | 11 − fact-horizon, 0 new |
+
+  **fact-horizon greens in every measured combination** (12/2 → 14/0,
+  both completed-day rewrites gone, T3 byte-exact restoration intact).
+- **The boundary touches NOTHING else.** All six remaining reds ran
+  individually both arms: byte-identical FAIL lines. The tenth-pass "one
+  root may explain three or four" hypothesis is REFUTED by measurement —
+  the six have their own roots, unnamed. The (iii)+(iv) masking of the
+  pair persists unchanged beside the boundary.
+- **Write door immunity, read at source:** the `:565-570` post-filter is
+  a STORAGE guarantee (keeps overlay keys off history) and stays
+  load-bearing; the door's history PIN consumes
+  `rebaseAcceptedEffectiveWeek(...).visibleWorkouts` — the very
+  projection the finaliser was rewriting — so before the boundary the
+  door could pin SOFTENED history into generation's remainder basis. The
+  boundary makes the write door's own input truthful. Not rivals.
+- **Build-order consequence, per the ruling's own condition:** the ruled
+  combination's price with the boundary is **4 new reds** — the unit
+  still cannot land under standing conditions; the boundary retires the
+  destroy-class red and the rest queue behind their own unnamed roots.
+  Worst-first offered, not taken: `accepted-state-transactions`
+  (the unit's only atomicity/determinism laws).
+- **NOT covered:** the six persisting reds are characterised by
+  failure-text diff, not diagnosed; the probe partitions by
+  `governedFromISO` only (done-flag and todayISO oddities stay parked);
+  no suite witnesses a repair TARGETING a fact day (that class is
+  refused by construction, unwitnessed); `test:compile` outside the
+  sweep as before.
+
+## Processed 2026-08-07 (fifteenth pass) — the order as the seat wrote it
+
+- LOOP CHECK: law-enforced-by-one-owner-while-sibling-writers-never-
+   learned-it — sighting 4 — COMPRESS, and the compression IS the fix:
+   RULED on bb1abfc9 (the named write, section18SafetyFinaliser
+   :265-278 + presentDeclaredOffer, both blind to governedFromISO):
+   (a) The fix shape, from recorded law, is STRUCTURAL not per-writer:
+   the governance boundary is enforced ONCE, by construction, where
+   the projection assembles the mutable day-set — writers downstream
+   receive only governable days, so a writer that never learned the
+   law CANNOT over-reach. Teaching the two writers individually is
+   rejected (that recreates this class at writer #3); a tier-4
+   filter is rejected as the wrong place, as you measured. Grounds:
+   fact-horizon law (completed days are FACTS), resolved authority
+   (a reduction resolves against CURRENT facts — against a completed
+   day it resolves to nothing, so the write must not exist), one
+   write format / one owner.
+   (b) The §18 STOP is answered: this is law ENFORCEMENT, not
+   signed-behaviour change. No signed sentence moves; the change is
+   that projections stop rewriting the athlete's past — completed
+   days render as completed. Stored data was never touched (measured:
+   read-time write only). One athlete-visible consequence to flag,
+   not sign: a completed day that previously displayed a softened
+   intensity now displays what was actually completed. Sam holds a
+   veto on that consequence specifically.
+   (c) Price before build, as always: on the scaffold, measure
+   whether the one-owner boundary greens fact-horizon AND what it
+   does to the other four reds + the masked pair (your not-measured
+   list is the measurement list, plus the write door's immunity as a
+   source reading). Then the leg (ii) re-price with the boundary in
+   place decides the unit's build order, measured combinations only.
+   (d) Standing conditions unchanged; full test:bible UNPIPED before
+   any product commit; STOP at R5 close.
+
 ## Processed 2026-08-07 (fourteenth pass) — THE TIER-4 WRITE, NAMED
 
 - Answered in docs/R53_TIER4_WRITE_NAMED_SAFETY_FINALISER_2026-08-07.md;

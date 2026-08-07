@@ -3,49 +3,49 @@
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
   feat/r53-v3-switchover = the live unit; scratch/r53-pricing-7
   (`f91ea404`) holds legs (iv)/(v) + the ported seed fix;
-  scratch/r53-pricing-7-probe now at `b5918f9d` (and it finally carries
-  `271a7be4`, which was dangling); -6, -5, -5-before preserved.
-- **Current unit:** the tier-4 WRITE tape, to a FILE, with its positive
-  control inside. **Done — the write is NAMED.** See
-  docs/R53_TIER4_WRITE_NAMED_SAFETY_FINALISER_2026-08-07.md. NOTHING BUILT.
-- **THE WRITE:** `src/rules/section18SafetyFinaliser.ts:265–278` — the
-  `lighterStrengthRequired` branch; `:270-274` maps High|Maximal → Moderate,
-  `:276` writes it. Reached from the gateway's stage 3
-  (`section18AcceptedWeekGateway.ts:1311`) inside tier 4 at READ
-  (`sessionResolver.ts:1088`). **A second site in the same chain:**
-  `presentDeclaredOffer` (gateway `:1355`) placed a flush offer on Monday
-  2026-07-20 and says so in its own repair text.
-- **It is a READ-TIME write.** Tier 4's INPUT is identical in both arms —
-  the stored week still says High after the commit. Nothing wrote the
-  completed days; the projection rewrites them on the way to the screen.
-- **THE DECIDING FACT:** the contract already carries
-  `governedFromISO: "2026-07-24"`, and both rewritten days are before it.
-  The evaluator honours that boundary (`section18EffectiveWeekEvaluator.ts:518`);
-  the safety finaliser and the offer placer read it **zero times**.
-  Census: 4 files read it (generation, the write door, the stamper, the
-  evaluator), the two mutators do not.
-- **Why leg (ii) exposed it:** the write door doesn't rely on the
-  normalisers — it POST-FILTERS them
-  (`temporarySourceFactTransaction.ts:565-570`, keeps only
-  `date >= governedFromISO`). Tier 4 at read has no post-filter.
-- **STOP, per standing conditions** — the named site is §18 signed
-  behaviour (section18SafetyBoundaryTests pins the finaliser; the offer
-  placer implements Sam's 2026-08-06 offer-survival ruling).
-- **Compression owed (sighting 4 of one-owner-enforces-a-law-siblings-don't):**
-  proposed, not built — the `369af59d` both-directions census gate shape,
-  aimed at `governedFromISO`: every accepted-week mutator reads it or
-  declares an exemption.
-- **Next:** the seat rules on §6's placement argument and §7's compression.
-  The other four of leg (ii)'s seven reds are still uninstrumented.
+  scratch/r53-pricing-7-probe now at `c076f53f` — the one-owner
+  `governedFromISO` boundary probe (flag `LFA_SCAFFOLD_BOUNDARY`, inert by
+  default); -6, -5, -5-before preserved.
+- **Current unit:** the fourteenth-pass ruling's (c) — build the one-owner
+  boundary ON THE SCAFFOLD and price it. **Done.** See
+  docs/R53_ONE_OWNER_BOUNDARY_PRICED_2026-08-07.md. NOTHING BUILT on the
+  branch.
+- **THE PRICE, all 154 suites per arm, sets diffed:** boundary alone **6 =
+  control set exactly** (0 new, 0 fixed); (ii)+boundary **12** = (ii)-alone's
+  13 minus fact-horizon, 0 new; (ii)+(iii)+(iv)+basis+boundary **10** = 11
+  minus fact-horizon, 0 new. fact-horizon greens in EVERY measured
+  combination (12/2 → 14/0; both completed-day rewrites gone, T3 byte-exact
+  restoration intact).
+- **The boundary touches NOTHING else:** all six remaining reds have
+  byte-identical FAIL lines between (ii)-alone and (ii)+boundary. The
+  tenth-pass "one root explains three or four" hypothesis is REFUTED — the
+  six have their own unnamed roots. The (iii)+(iv) masking of the pair
+  persists unchanged beside the boundary.
+- **Write door source reading:** its `:565-570` post-filter is a STORAGE
+  guarantee and stays load-bearing; its history PIN consumes
+  `rebaseAcceptedEffectiveWeek(...).visibleWorkouts` — the projection the
+  finaliser was rewriting — so the boundary makes the write door's own input
+  truthful. Not rivals; one owner at read, one guarantee at storage.
+- **Where the probe lives:** top of `resolveCandidate`
+  (`section18AcceptedWeekGateway.ts`) — every candidate's mutable day-set is
+  assembled there; fact days never enter the normaliser chain or the repair
+  search; reassembly is byte-exact and refuses writer output on fact days.
+  The finaliser and offer placer are UNMODIFIED — no writer was taught.
+- **Next:** the seat rules on the build unit (boundary + leg (ii)) and the
+  worst-first order for the six remaining reds (offered:
+  accepted-state-transactions first — the atomicity/determinism class).
+  Sam's veto on the athlete-visible consequence (completed days now display
+  what was completed) stands flagged.
 - **Parked:** condition 1's re-measure; leg (v) re-price; cell 22's 2nd
   assertion; cell 23 undiagnosed; parallel-gate stage 1 items 2–4; the other
-  53 declared profile-write debt files.
-- **Tracked debts:** hydration snapshot-vs-live pin; todayISO clock fix
-  (the tape saw tier 4 running with today=2026-08-07, the wall clock);
-  R5.7 whole-or-none; remaining R5 batches; condition 4 markedDays proof;
-  the merge.
-- **Gate:** nothing built this pass, so no gate was owed. Last full
-  test:bible UNPIPED on this branch exited 1 on test:fixture-identity 3/3 —
-  the branch's pre-existing red, verified at HEAD in a clean worktree; the
-  18 suites it cannot reach ran 18/18. Sam's combined device pass = merge
-  gate. Full test:bible UNPIPED before any commit that touches src.
+  53 declared profile-write debt files; the tape's done=false + todayISO
+  wall-clock oddities (recorded, unchased).
+- **Tracked debts:** hydration snapshot-vs-live pin; R5.7 whole-or-none;
+  remaining R5 batches; condition 4 markedDays proof; the merge; the
+  `governedFromISO` census-gate compression (sighting 4) — belongs to the
+  build unit.
+- **Gate:** nothing built on the branch this pass, so no gate was owed. Last
+  full test:bible UNPIPED on this branch exited 1 on test:fixture-identity
+  3/3 — the branch's pre-existing red; the 18 unreachable suites ran 18/18.
+  Sam's combined device pass = merge gate. Full test:bible UNPIPED before any
+  commit that touches src.
