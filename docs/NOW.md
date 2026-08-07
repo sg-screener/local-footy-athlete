@@ -20,11 +20,22 @@
   them and V3 banked short. **Payer = the LR-29 replay unit**, measured (it is
   the one unit whose arm turns `fixture-identity` green). Sam-accepted as
   known-imperfect.
-- **NEXT (seat's overnight order, 2026-08-07):**
-  (a) the LR-29 replay unit is **RE-SLOTTED** — produce its **measured
-  dependency list ONLY**, filed beside docs/REPLAY_UNIT_KICKOFF_2026-08-07.md;
-  the unit itself now builds **AFTER day-first UI, before beta**. It remains
-  the payer of the declared `fixture-identity` reds.
+- **(a) DELIVERED — THE LR-29 MEASURED DEPENDENCY LIST.**
+  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md. The unit stays RE-SLOTTED to
+  build **after day-first UI**, and it remains the measured payer of main's
+  `fixture-identity` red — **re-confirmed today, not carried**: under
+  `LFA_FLIP_DOOR=1` on `fc4013cc`, `fixture-identity` goes **GREEN**.
+  Headline findings: **3 of 10 readers read ZERO fields** (50,078 door calls
+  satisfied by an existence predicate); the `current_microcycle` rung
+  **answered ZERO times in 156 suites** and can be deleted; **the ledger has no
+  vocabulary for illness/injury/readiness/phase**, so "replay the ledger" is
+  not a sufficient description of the unit — the input set is ledger + fact
+  stores, and that fork is the largest open decision; and **the boot already
+  replays** (`quiescentBoot.rebuildDerivedWorld`), so the unit's real first
+  question is whether that replay already reconstructs `authorisedReductions`.
+  Instrument on `scratch/lr29-dependency-list` (`7c3dc1e3`), flag-inert, and
+  **priced against the control set before any reading was believed — 2 of 156
+  both arms, so the Proxy does not perturb.**
   (b) then **DAY-FIRST UI kicks off** — docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
   + artifacts/HOME_SCREEN_REDESIGN_RULINGS_2026-07-30.md (13 binding Sam
   rulings) + the signed copy sheet. First deliverable: the unit plan with its
