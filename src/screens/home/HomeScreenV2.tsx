@@ -462,7 +462,12 @@ export default function HomeScreenV2() {
          * announced as an extra "button" wrapping the whole view.
          */}
         <Pressable
-          onPress={handleClearSelection}
+          /* NOT IN THE DAY-FIRST SHAPE. Clearing the selection means "collapse
+             the expanded row", which is a week-list act: the list is still whole
+             with nothing expanded. In the day-first shape the selection is WHICH
+             DAY the screen is about, so a tap on whitespace would silently snap
+             the athlete off the Thursday they picked and back to today. */
+          onPress={dayFirst ? undefined : handleClearSelection}
           accessible={false}
         >
         {/* ── Week nav bar ── */}
