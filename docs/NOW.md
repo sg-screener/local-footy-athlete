@@ -1,5 +1,29 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **THE FLIP, MOVE (i): NOT BUILDABLE AS WRITTEN — THE WRITER IS A FIFTH SITE,
+  AND THE PREMISE IS REFUTED.** Four publication sites were taught to write
+  `derive()` and the stored declaration moved **0 leaves** (56 of 191 from the
+  derived one, every run, all three worlds). A three-seam tape settled it:
+  `buildFixtureProjection` fires 30× and publishes the derived declaration
+  intact all the way into `commitWeekScopedOverlay`; both overlay validators
+  fire **0×**; the store still ends up holding the gateway's contract. **The
+  author is `programStore.ts:1449-1462`, the accepted-snapshot repair** — it
+  re-writes `exposureContractV2: accepted.contract` AND
+  `workoutsByDate: accepted.canonicalWorkouts`, and it is in no census.
+  **THE DECLARED ENTRY'S MECHANISM IS REFUTED:** what costs Monday's power row
+  is the stored PAYLOAD (canonical, not visible — and a stored day outranks the
+  base at read), NOT the declaration. So filling the declaration cannot make
+  parity green by construction, in any world measured.
+  **§8 SECOND-WALL LAW FIRES AGAINST ME** — same wall shape four times; attempt
+  five NOT made. The alternative it requires is in the report's §5: **delete
+  move (i), do (ii)+(iii)** — (iii) makes storage UNREAD, which makes all five
+  writers and any sixth harmless in one commit. Costs stated (the parity gate
+  goes VACUOUS, not green; the debt entry retires MOVED-not-PAID). **NOT
+  PRICED — it is a ruling, not a re-price.** V3 NOT closed.
+  **NOTHING BUILT** — whole arm in `stash@{0}` ("flip-move-i-wip"), branch
+  byte-identical to `411881eb` apart from the report + this pointer.
+  Report: docs/R53_FLIP_MOVE_I_WRITER_NAMED_BY_TAPE_2026-08-07.md
+
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
   **feat/r53-v3-switchover = the live unit and it carries the build**;
   scratch/r53-legv-readers (`0103c052`) holds the RE-SCOPED leg (v) arm —
