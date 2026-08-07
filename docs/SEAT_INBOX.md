@@ -2,42 +2,35 @@
 
 ## Unprocessed (newest first)
 
-1. RE-SCOPE ORDER — THE FLIP. Supersedes the serial reader-migration
-   remainder of the 71c84220 ruling; commit as authored.
-   LOOP CHECK: remove-then-discover-the-lean — sighting 4 today
-   (freed day, reductions, restore, the six) — COMPRESS: stop
-   removing. The Elegant Solution Requirement decides this (prefer
-   what removes representations): the stored declaration dies as an
-   AUTHORITY by being made a proven mirror, not by being torn out of
-   sixteen hands.
-   THE UNIT, three moves, each gate-proven:
-   (i) THE WRITER WRITES DERIVE(). At the commit site, the stored
-   declaration (and its dependent fields) are filled with the
-   deriver's own output. Parity gate goes green BY CONSTRUCTION and
-   stands as the permanent guard; its declared-diff entries expire.
-   Every reader — Restore included — keeps working untouched: what
-   they read is now the engine's truth. The Vertical Jump Monday and
-   the completed-day boundary land on screen through this move.
-   (ii) ONE READ DOOR. Every read site from the census funnels
-   through a single accessor — mechanical, behaviour-identical,
-   verified by the census tape re-run (same pairs, same counts).
-   (iii) FLIP THE DOOR. The accessor's implementation switches from
-   storage to deriver in one commit. Storage becomes write-only; its
-   physical deletion is a line item in R5's big delete, ordered
-   there, not here.
-   GATES: full test:bible UNPIPED per move; census tape re-run after
-   (ii); parity green after (i) and stays in the chain; the 8-red
-   writer arm is EXPECTED to dissolve (those reds priced a removal
-   that no longer happens) — measure, don't assume; any red that
-   survives (i) is attributed before (iii).
-   ENDPOINT: after (iii), derived is the sole authority, proven.
-   That is the V3 convergence answer. If the measurements support
-   it, the report says V3 CLOSED.
-   One-turn law and continuous authorisation apply END TO END. The
-   restore-derivation and six-attribution work from the superseded
-   ruling PARK (nothing lost — scaffolds preserved); LR-29
-   replay-undo stays the recorded future of undo, unchanged. Sam
-   holds a veto. Device flags unchanged, now landing via (i).
+1. RULING on f546c0b4 — the §8 alternative is APPROVED. Commit as
+   authored.
+   LOOP CHECK: §8 applied by the terminal against the seat's own
+   order, first firing — this is the law working; adopted.
+   (a) Move (i) is DELETED from the flip. The fifth writer finding
+   is ACCEPTED; the seat owns the census gap as promised (the census
+   enumerated reads — writer enumeration was never its dimension,
+   and under this ruling it never needs to be: unread storage makes
+   every writer, found or unfound, harmless).
+   (b) THE UNIT IS NOW (ii) → (iii): one read door (mechanical,
+   census-verified by tape re-run — same pairs, same counts), then
+   flip the door to the deriver in ONE commit. Every divergence
+   between stored and derived at flip time is a behaviour change in
+   the DERIVED direction — the full witness set (bible unpiped,
+   Restore/deletion suites, walker, parity worlds) measures it; any
+   red is attributed before the flip lands, none carried silently.
+   The Monday power row and Vertical Jump land BY the flip, as
+   measured.
+   (c) BOOKKEEPING, honest: the parity gate goes vacuous — accepted;
+   its entry retires MOVED-not-PAID with that exact phrase in the
+   record, and the gate itself retires with the storage deletion in
+   R5's big delete, where the stored declaration's physical removal
+   is already a line item. The stash arm (flip-move-i-wip) is
+   preserved per condition 4.
+   (d) After (iii): derived is the sole read authority — the V3
+   convergence answer. Run the endpoint measurements; the words only
+   if they support it. One-turn law and continuous authorisation to
+   the endpoint. Sam holds a veto. Device flags unchanged, landing
+   via the flip.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
