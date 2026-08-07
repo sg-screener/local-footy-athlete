@@ -2,6 +2,77 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-third pass) — THE DOOR IS NAMED, AND THE PREMISE IS CORRECTED
+
+- LOOP CHECK: **a-count-taken-for-a-record** — THIRD sighting
+  (`a-red-count-is-a-claim`; the `tail -3` batch; now this) — MANDATORY
+  AUDIT under the loop-audit law, and the compression is proposed in the
+  report rather than run a fourth time: *a number reported by an
+  instrument names the instrument's unit, not the domain noun; state its
+  unit and denominator, and give the distinct count of the domain object
+  beside it.*
+- Answered in docs/R53_REMOVAL_DOOR_ATTRIBUTION_2026-08-07.md.
+  **NOTHING BUILT into the branch.** Scaffold on
+  `scratch/r53-removal-door-attribution` (`b5c57963`), flag-gated, inert.
+
+- **(a) THE DOORS ARE NAMED — AND NO DOOR FAILS TO APPEND.** A write-side
+  tape on the store seam captured the calling frames at the write where an
+  unrecorded removal reduction FIRST enters an overlay. All **156 suites**
+  through `scripts/sweep.sh` (a plain `test:bible` truncated at 81 on the
+  declared red); 83 processes produced records, **5 produced sightings**.
+  Doors, ranked: the **fixture week-overlay rebuild** 16, **move** 8, the
+  **coach mutation / temporary-fact** path 5, **deletion** 8 (two routes),
+  the calendar path 2, **addition** 1. The read side's offered candidate
+  (`temporarySourceFactTransaction`) is CONFIRMED as one producer of five,
+  now taped on the failing path — third-largest, not the root.
+- **THE PREMISE IS REFUTED. `noAdjustment` = 0 of 40.** Every sighting has
+  an adjustment that claims the constraint; 39 of 40 still hold the
+  decision in `userRemovalConstraints` (a persisted INPUT). And the link
+  looked in the right place: 40 of 40 the week IS in the claiming
+  adjustment's `rollingDependencyWeeks`. **The zero is measured, not bare**
+  — a claim-blinding control arm flips all 40 to `noAdjustment`.
+- **THE 159 IS AN OCCURRENCE COUNT.** The replay bind compared on every
+  store write. Re-derived on both axes: **330 occurrences = 40 distinct
+  reduction rows = 23 removal decisions.** Its `identityAbsent` also asked
+  absent-from-THIS-WEEK, not absent-from-the-ledger. The instruments agree;
+  the noun was wrong.
+- **TWO MECHANISMS, NEITHER A MISSING DECISION.** (1) The link is computed
+  while the transaction is STAGED; the reduction is materialised at COMMIT
+  — the hop this unit already named from the other side. **My own first
+  reading ("the deriver cannot reproduce it") was REFUTED by its own
+  measurement: 0 of 568 week-walks have the stored contract carrying an
+  owned reduction the deriver misses.** (2) 59 adjustment creations name no
+  removal constraint and never attempt a link at all — including the single
+  largest door, the fixture week-overlay rebuild.
+- **(c) DOES NOT FIRE.** 37 of 40 sightings have a same-date `plan_change`
+  on the decision ledger; `remove_session`/`move_session` are existing
+  members of the vocabulary. No new decision vocabulary is required. The 3
+  that find nothing are all deep-walker worlds reached by direct
+  transaction calls, and are reported rather than rounded away.
+- **(b) GOES BACK TO THE SEAT.** (b)(i) is already true; (b)(ii) would lift
+  decisions that already exist. What is actually incomplete is
+  `linkedTypedReductions` — **a stored mirror of derived arithmetic, not an
+  input**. Filling it by any of the three available routes (including the
+  new cheap one: move the link after materialisation) moves AWAY from the
+  north star. The deriver already owns this arithmetic and is not the
+  limiting factor. The converging direction is to derive the stack from the
+  removal decisions and RETIRE the mirror. That is a design call and this
+  report does not take it.
+- **NOT COVERED:** the ordering mechanism is established by elimination,
+  not by a tape ON the materialising write; the 23 is an upper bound
+  (summed per process); the 1 absent constraint and the 1 `valueDrift` are
+  undiagnosed; the read side's 20 "replay invents" cases are untouched;
+  `session_add` claiming a removal constraint (16 of 40) is recorded, not
+  explained; no device evidence.
+- **Gate:** `test:compile` EXIT 0; sweep failure set **2 of 156**
+  (`program-control-durable`, `fixture-identity`) — exactly what NOW.md
+  already declares, and identical with the tape on and off.
+
+## Processed 2026-08-07 (twenty-second pass) — the ruling as the seat wrote it
+
 1. RULING on the decision-record gap — commit as authored.
    LOOP CHECK: decisions-created-without-a-ledger-append — sighting 1
    at this scale, but the CLASS is R2's own: userRemovalConstraints
@@ -33,9 +104,6 @@
    product landing, as you flagged.
    One-turn law and continuous authorisation EXTEND through all of
    it. Sam holds a veto. His device flags unchanged.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (fifteenth pass) — THE BOUNDARY, BUILT AND PRICED
 

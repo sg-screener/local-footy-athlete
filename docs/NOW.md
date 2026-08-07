@@ -46,6 +46,23 @@
   that are NOT gaps, +3 dropped fields, +20 weeks where the replay INVENTS).
   That is the seat's pre-ruled EQUALITY-FAILS exit: a decision-record gap, a
   design question, not a patch. **(c) NOT reached; V3 NOT closed.**
+- **THE 159 IS CORRECTED BY THE WRITE SIDE: 330 OCCURRENCES = 40 ROWS = 23
+  DECISIONS, AND NO DOOR FAILS TO APPEND.** Write-side tape, all 156 suites via
+  `scripts/sweep.sh`, 5 producing suites. `noAdjustment` **0 of 40** (proven
+  producible by a claim-blinding control arm); 39 of 40 still hold the decision
+  in `userRemovalConstraints`; 40 of 40 the link walked the right week.
+  Doors: fixture week-overlay rebuild 16, move 8, coach/temporary-fact 5,
+  deletion 8, calendar 2, addition 1. **(c) does not fire** — 37 of 40 have a
+  same-date `plan_change`; no new vocabulary needed.
+  **Two mechanisms, neither a missing decision:** the link is computed while
+  STAGED and the reduction materialises at COMMIT (my "the deriver cannot
+  reproduce it" REFUTED — 0 of 568 weeks where stored has it and derived does
+  not); and 59 adjustment creations name no removal constraint so no link is
+  attempted at all. **(b) goes back to the seat**: what is incomplete is
+  `linkedTypedReductions`, a stored mirror of derived arithmetic — filling it
+  moves AWAY from the north star.
+  Report: docs/R53_REMOVAL_DOOR_ATTRIBUTION_2026-08-07.md
+  Scaffold: scratch/r53-removal-door-attribution (`b5c57963`), inert.
 - **DEPTH REVERSED BOTH ANSWERS.** Shallow said 0 missing decisions and 8
   reproduced fields; depth 10 said 187 and 4. L13 twice in one pass.
 - **THE READ HALF IS LANDED** — `8ca5ae24`, unflagged, all three selection
