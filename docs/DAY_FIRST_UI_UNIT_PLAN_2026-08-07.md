@@ -154,6 +154,39 @@ carrying both a conditioning component and a finisher yields **two parts of the
 same `kind` with different ids.** Any timeline keyed on `kind` collides and
 loses a row. Key on `id`.
 
+> **THE PAIR THIS SECTION NAMED IS REFUTED, AND THE RULING IT SUPPORTS SURVIVES
+> UNCHANGED — corrected in place at build time (2026-08-08, slice 1).**
+>
+> This section said the collision was *a day carrying both a conditioning
+> component and a finisher*. **Measured at the emitter, that day cannot exist.**
+> `getSessionComponents` (`sessionComponents.ts`, the conditioning block) pushes
+> **one** of them from a single `if`, choosing on
+> `attachedConditioningKind === 'finisher'` — so conditioning and finisher are
+> mutually exclusive by construction. `session` and `strength` are the same
+> story: `session` is emitted only when `components.length === 0`.
+>
+> **The reachable pair is `recovery` + `recovery_addon`.** `recovery` is emitted
+> for a recovery workout with no other components, and `recovery_addon` is
+> appended AFTER that check — so a recovery day with a populated add-on carries
+> both, and both project as part kind `recovery`. `dayFirstTimelineTests` builds
+> exactly that day and holds the keying against it (mutation-proven: keying the
+> timeline by kind reds that cell).
+>
+> The plan's own NOT-COVERED demanded this: *"(f) ... has NOT been reproduced by
+> a failing case — a day carrying both a conditioning and a finisher component
+> should be built and observed before the timeline's keying is trusted."*
+> Building it is what refuted it. **Key on `id`** was right for a reason that was
+> wrong, and is now right for a measured one.
+> *(`a-ruling-premise-is-a-claim-too`, second firing inside this one plan.)*
+>
+> **A CONSEQUENCE WORTH REPORTING RATHER THAN FIXING HERE:** those two `recovery`
+> parts render with the SAME headline and the SAME rows, because `partHeadline`
+> and `rowsForKind` both key on `kind`. Keying the timeline on `id` keeps both
+> rows — no work vanishes — but the athlete would see two identical-looking
+> lines. The projection carries nothing that tells them apart, so this is not the
+> day-first surface's to answer: a surface that invented a distinguishing word
+> would be composing. **Named for Sam, not patched.**
+
 ### (g) No clock times — nothing to suppress
 Measured: the projection carries no time-of-day anywhere. Sam's "NO clock times"
 is satisfied by construction, not by a rule the surface has to remember.

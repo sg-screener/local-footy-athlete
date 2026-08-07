@@ -144,6 +144,35 @@ Practically:
 This is the counting half of `a-ruling-premise-is-a-claim-too`: a premise stated
 as a number gets checked as a number, including when the ruling is the seat's.
 
+### The same law for SOURCE SCANS — count the occurrences, then read what runs them
+
+**Sighting 4, 2026-08-08, and it fired inside a brand-new gate on its first
+mutation test.** The day-first slice added a cell asserting that every day of
+the week still mounts its explorer state leaves. It counted `<DayStateLeaves`
+occurrences and required exactly two. It **passed** against a mutation that
+emptied the loop feeding one of them (`weekDays.map` → `[].map`): the count was
+right and the days were gone. It also matched on a prefix, so renaming the
+component satisfied it too.
+
+The failure is the section above in a new instrument. A source scan counts
+**call sites**; the domain noun is **days that report themselves**. Those are
+different units, and a call site iterating nothing mounts nothing.
+
+So, for any gate that asserts on source text:
+
+- **Count with a word boundary.** `<Foo` matches `<FooBar`. `\b` costs nothing.
+- **A count is never the whole assertion.** Locate the REGION the occurrence
+  lives in and assert what makes it run — the loop it is inside, the collection
+  it iterates, the branch that reaches it. A cell that only counts is satisfied
+  by dead code.
+- **Prove the region was found.** Assert the extracted slice is non-trivial
+  before asserting anything about it; a `slice` between two `indexOf`s that both
+  missed returns something a regex will happily pass over.
+
+The general shape, third time it has been written in this file: **an instrument
+answers in its own unit, and a gate that never states its unit will eventually
+be read in the domain's.**
+
 ## Instrumentation must be alive where the defects are
 
 **A diagnostic that is off on the build the defect lives on is a green gate that

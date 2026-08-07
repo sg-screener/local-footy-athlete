@@ -56,7 +56,7 @@ import type { TrainingProgram } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
-import { useProfileStore } from '../store/profileStore';
+import { applyProfileOnboardingWrite } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -105,7 +105,17 @@ const WEEKS = [WEEK, '2026-08-03', '2026-08-10'];
 function world(): void {
   localStorageData.clear();
   const profile = samExport8Profile();
-  useProfileStore.setState({ onboardingData: profile, isOnboardingComplete: true });
+  // THROUGH THE OWNED DOOR, NOT AROUND IT. `profileMirrorNarrowingTests`'
+  // one-door census counts every test source that assigns `onboardingData`
+  // directly, and its ~50 declared entries are DEBT, not permission — a new
+  // suite joining that list would push a ratchet that has only moved down this
+  // era. `applyProfileOnboardingWrite` is the write owner; this suite has no
+  // reason to need the back way in, so it does not take it.
+  applyProfileOnboardingWrite({
+    next: profile,
+    writer: 'onboarding_step',
+    isOnboardingComplete: true,
+  });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} } as never);
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
