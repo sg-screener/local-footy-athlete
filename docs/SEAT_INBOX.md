@@ -53,6 +53,18 @@
    named blockers. This is the last serial surprise this unit is
    permitted.
 
+   (f) ONE-TURN LAW for this order: do NOT end your turn between
+   checklist items, censuses, prices, builds, or gates. Your turn
+   ends at exactly one of two events: the batched report containing
+   the census count and its resolution ("N owned / N resolved / V3
+   CLOSED" or the named blockers), or a genuine STOP under standing
+   conditions. Interim findings go in the report doc as you go, not
+   as turn-ending messages. If an internal limit forces a turn end
+   anyway, your final line must be exactly: SEND CONTINUE — and the
+   single word "continue" from Sam resumes you with nothing lost.
+   Sam is not a courier; a turn end that is not an endpoint or a
+   STOP is a defect in this order's terms.
+
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
