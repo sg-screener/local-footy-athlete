@@ -1,5 +1,6 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -235,13 +236,11 @@ const dependencyOverlay = {
 const closure = rollingHorizonDependencyClosure({
   seedWeekStarts: [WEEK],
   changedTriggerDates: ['2026-07-19'],
-  surfaces: {
+  surfaces: composeAcceptedEffectiveWeekSurfaces({
     currentProgram: null,
-    currentMicrocycle: null,
-    dateOverrides: {},
     weekScopedOverlays: { '2026-07-20': dependencyOverlay },
-    userRemovalConstraints: [],
-  },
+    removalDecisions: [],
+  }),
 });
 check('rolling horizon closes deterministically over provenance-referenced weeks',
   JSON.stringify(closure) === JSON.stringify([WEEK, '2026-07-20']), closure);

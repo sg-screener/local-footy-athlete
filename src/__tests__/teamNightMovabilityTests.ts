@@ -25,6 +25,7 @@
  */
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -171,7 +172,7 @@ function visibleWeek(): ResolvedDay[] {
 function dayFingerprints(): Map<string, string> {
   const state = useProgramStore.getState();
   const accepted = quiet(() => rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,

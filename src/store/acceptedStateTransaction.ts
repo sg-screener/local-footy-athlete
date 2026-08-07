@@ -74,7 +74,11 @@ import {
   type TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
-import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
+import {
+  composeAcceptedEffectiveWeekSurfaces,
+  liveAcceptedEffectiveWeekSurfaces,
+  storedWorldSurfaces,
+} from '../utils/liveEvaluationSurfaces';
 import {
   buildFixtureMinimalReplan,
   type FixtureMutationIntent,
@@ -451,7 +455,7 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
     const contract = overlay?.exposureContractV2 ?? microcycle?.exposureContractV2;
     if (!contract) continue;
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces,
+      surfaces: storedWorldSurfaces(surfaces),
       weekStart,
       profile,
       markedDays: context.markedDays,
@@ -1007,7 +1011,7 @@ function acceptedWorkoutsForDates(args: {
   const byDate = new Map<string, Workout | null>();
   for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: args.surfaces,
+      surfaces: storedWorldSurfaces(args.surfaces),
       weekStart,
       profile: args.profile,
       markedDays: args.context.markedDays,
@@ -1035,7 +1039,7 @@ function acceptedSurfaceRowsForDates(args: {
   }>();
   for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: args.surfaces,
+      surfaces: storedWorldSurfaces(args.surfaces),
       weekStart,
       profile: args.profile,
       markedDays: args.context.markedDays,
@@ -1071,6 +1075,84 @@ function contractForAcceptedWeek(
 
 function linkedReductionSignature(entry: ReversibleAdjustmentLinkedReduction): string {
   return semanticFingerprint(entry);
+}
+
+/**
+ * LEG (iv) — THE DERIVED CONTRACT FOR AN ACCEPTED WEEK.
+ *
+ * `contractForAcceptedWeek` reads the STORED contract. Under the pattern-
+ * identity ruling a week's contract is derived from the decisions and the
+ * facts, so the ledger — which has to name what the athlete can undo — must
+ * ask the same question the reader asks. This is that question, and it is the
+ * reader's own owner (`rebaseAcceptedEffectiveWeek`), not a restatement.
+ *
+ * Returns null when the week cannot be derived (no stored identity to derive
+ * FROM); callers fall through to the stored answer rather than inventing one.
+ */
+function derivedContractForAcceptedWeek(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile?: OnboardingData | null;
+  weekStart: string;
+}): WeeklyExposureContractV2 | null {
+  try {
+    return rebaseAcceptedEffectiveWeek({
+      surfaces: storedWorldSurfaces(args.surfaces),
+      weekStart: args.weekStart,
+      profile: args.profile,
+      markedDays: args.context.markedDays,
+    }).contract;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * LEG (iv) — THE LINK, DERIVED FROM THE DECISION.
+ *
+ * The ruling in one sentence: a typed reduction belongs to the adjustment
+ * whose CONSTRAINT authored it. So the link is `deletionIdentity ∈ the
+ * constraint ids this adjustment carries`, read off the contract the week
+ * actually derives to — not the set difference of two stored contracts.
+ *
+ * Why the diff cannot survive: `applyAthleteRemovalTypedReduction` returns a
+ * whole contract with the reduction folded into its targets, and leg (i) stops
+ * persisting that arithmetic. An after-minus-before over the stored surface is
+ * therefore empty by construction, and an empty link means the undo cannot
+ * name its own reduction. Asking the deriver instead is the same question the
+ * athlete's screen asks.
+ */
+function decisionDerivedLinkedReductions(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile?: OnboardingData | null;
+  weekStarts: readonly string[];
+  constraintIds: readonly string[];
+}): ReversibleAdjustmentLinkedReduction[] {
+  if (args.constraintIds.length === 0) return [];
+  const owned = new Set(args.constraintIds);
+  return args.weekStarts.flatMap((weekStart) => {
+    const contract = derivedContractForAcceptedWeek({
+      surfaces: args.surfaces,
+      context: args.context,
+      profile: args.profile,
+      weekStart,
+    });
+    return (contract?.authorisedReductions ?? [])
+      .filter((entry) => entry.deletionIdentity && owned.has(entry.deletionIdentity))
+      .map((entry) => {
+        const reduction = {
+          weekStart,
+          metric: entry.metric,
+          reason: entry.reason,
+          originalApprovedTarget: entry.originalApprovedTarget,
+          reducedTarget: entry.reducedTarget,
+          detail: entry.detail,
+          deletionIdentity: entry.deletionIdentity ?? null,
+        };
+        return { ...reduction, fingerprint: semanticFingerprint(reduction) };
+      });
+  });
 }
 
 function acceptedLinkedReductions(
@@ -1220,13 +1302,27 @@ export function stageReversibleAdjustmentCreationTransaction(
     beforeProgram,
     rollingDependencyWeeks,
   ).map(linkedReductionSignature));
-  const linkedTypedReductions = acceptedLinkedReductions(
-    firstStage.program,
-    rollingDependencyWeeks,
-  ).filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
+  // Leg (iv), install site 1 of 2 — THE LINK DERIVES FROM THE DECISION.
+  const linkedTypedReductions = decisionDerivedLinkedReductions({
+    surfaces: firstStage.program,
+    context: firstStage.context,
+    profile,
+    weekStarts: rollingDependencyWeeks,
+    constraintIds: Array.from(new Set(input.linkedUserRemovalConstraintIds ?? [])),
+  });
   const ownedWeeks = rollingDependencyWeeks.flatMap((weekStart) => {
-    const beforeContract = contractForAcceptedWeek(beforeProgram, weekStart) ?? null;
-    const afterContract = contractForAcceptedWeek(firstStage.program, weekStart) ?? null;
+    // Leg (iv), install site 2 of 2 — the OWNED WEEK is the week whose
+    // contract the decision moved, and under leg (i) that movement is visible
+    // only in the DERIVED contract. Comparing stored surfaces reports "nothing
+    // changed" for a decision that changed what the athlete trains, so the undo
+    // has no contract to restore and no conformance basis to refuse a corrupt
+    // one against. Falls back to the stored answer when a week cannot derive.
+    const beforeContract = derivedContractForAcceptedWeek({
+      surfaces: beforeProgram, context: beforeContext, profile, weekStart,
+    }) ?? contractForAcceptedWeek(beforeProgram, weekStart) ?? null;
+    const afterContract = derivedContractForAcceptedWeek({
+      surfaces: firstStage.program, context: firstStage.context, profile, weekStart,
+    }) ?? contractForAcceptedWeek(firstStage.program, weekStart) ?? null;
     const beforeFingerprint = semanticFingerprint(beforeContract);
     const afterFingerprint = semanticFingerprint(afterContract);
     return beforeFingerprint === afterFingerprint ? [] : [{
@@ -2334,14 +2430,17 @@ export function commitCalendarStateTransaction(args: {
       profile: baseProfile,
       beforeMarkedDays: prior.markedDays,
       afterMarkedDays: args.markedDays,
-      sourceSurfaces: state,
+      sourceSurfaces: storedWorldSurfaces(state),
       activeConstraints: prior.activeConstraints,
       primaryWeekStarts: Array.from(
         args.mutationIntent === 'athlete_removal' ? affectedWeeks : fixtureWeeks,
       ),
       primaryMutationIntent: args.mutationIntent,
       dependentMutationIntent: 'remove_from_date',
-      evaluationSurfaces: { ...state, userRemovalConstraints: proposedUserRemovalConstraints },
+      evaluationSurfaces: storedWorldSurfaces({
+        ...state,
+        userRemovalConstraints: proposedUserRemovalConstraints,
+      }),
     });
     for (const projection of repair.projections) {
       affectedWeeks.add(projection.weekStart);
@@ -2565,7 +2664,7 @@ function acceptedWorkoutForDate(args: {
 }): Workout | null {
   const weekStart = mondayForDate(args.date);
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: args.state,
+    surfaces: storedWorldSurfaces(args.state),
     weekStart,
     profile: args.profile,
     markedDays: args.context.markedDays,
@@ -2625,7 +2724,7 @@ function deriveAthleteDeletionPublishedOutcome(args: {
 }): AthleteDeletionPublishedOutcome {
   const weekStart = mondayForDate(args.input.date);
   const after = rebaseAcceptedEffectiveWeek({
-    surfaces: args.published.program,
+    surfaces: storedWorldSurfaces(args.published.program),
     weekStart,
     profile: args.profile,
     markedDays: args.published.context.markedDays,
@@ -2792,19 +2891,27 @@ function stageAthleteMutationConstraint(args: {
     delete dateOverrides[date];
     delete overrideContexts[date];
   }
-  const sourceSurfaces: AcceptedEffectiveWeekSurfaces = {
+  // THE ONE SITE WHERE THE TWO FIELDS DIFFER, and it is stated rather than
+  // reached (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+  //
+  // Deletion repair needs the accepted target still present as a relocation
+  // template, so it APPLIES the prior set. A move, by contrast, must enter
+  // repair with both athlete-owned halves already staged, so it applies the
+  // proposed set. Either way the RECORD is the proposed one: the athlete's
+  // decision has been made, and every question about WHY this week looks the
+  // way it does must be answered with it — including the repair search's
+  // stand-down, which is the reason a delete's search used to relocate over
+  // the very decision it was composing around.
+  const sourceSurfaces = composeAcceptedEffectiveWeekSurfaces({
     currentProgram: state.currentProgram,
     currentMicrocycle: state.currentMicrocycle,
     dateOverrides,
     weekScopedOverlays: state.weekScopedOverlays,
-    // Deletion repair needs the accepted target still present as a relocation
-    // template. A move, by contrast, must enter repair with both athlete-owned
-    // halves already staged. The gateway receives the proposed constraint in
-    // both cases and keeps the prohibited source immutable.
-    userRemovalConstraints: args.mutationIntent === 'athlete_move'
+    removalDecisions: userRemovalConstraints,
+    applyOnly: args.mutationIntent === 'athlete_move'
       ? userRemovalConstraints
       : state.userRemovalConstraints,
-  };
+  });
   const primaryWeekStarts = Array.from(new Set(args.affectedDates.map(mondayForDate))).sort();
   const repair = stageRollingHorizonFixtureRepair({
     program: state.currentProgram,
@@ -2820,8 +2927,11 @@ function stageAthleteMutationConstraint(args: {
     // withholds the proposed constraint on a delete so the binned target
     // survives as a relocation template; the week is still JUDGED against the
     // world where the athlete's decision has landed. Two surfaces objects say
-    // that; one array could not.
-    evaluationSurfaces: { ...sourceSurfaces, userRemovalConstraints },
+    // that; one array could not. Both carry the same RECORD.
+    evaluationSurfaces: composeAcceptedEffectiveWeekSurfaces({
+      ...sourceSurfaces,
+      removalDecisions: userRemovalConstraints,
+    }),
   });
   const weekScopedOverlays = { ...state.weekScopedOverlays };
   for (const projection of repair.projections) {
@@ -3025,6 +3135,18 @@ export function stageAthleteSessionMoveTransaction(
   const profile = useProfileStore.getState().onboardingData;
   if (!profile) throw new Error('Athlete move requires an accepted profile');
   const prior = materialContext(state);
+  // THE MOVE DOOR'S IDENTITY ORACLE, declared red and NOT fixed here.
+  //
+  // The oracle reads the MATERIALISED week while the athlete acts on the
+  // DERIVED one, so under tier-4-at-read a durable move on a re-planned day is
+  // refused (`program-control-durable`, 2026-08-05/06 coordinate). Retiring it
+  // to the derived basis was built and REFUTED AS SCOPED: the door has TWO
+  // caller classes on TWO visible bases — the sheet route resolves
+  // `resolveWeekWithConditioning`, the G-1 landing flow captures from
+  // `rebaseAcceptedEffectiveWeek` — and either basis breaks the other class.
+  // A per-caller fallback would be the compatibility path this repo forbids.
+  // The payer is the recorded door-unification debt (one visible basis for
+  // every door); see `docs/R53_LANDING_SET_BUILT_2026-08-07.md`.
   const acceptedSource = acceptedWorkoutForDate({ date: sourceDate, state, context: prior, profile });
   const expectedSourceIdentity = args.acceptedSourcePlanEntryId ?? args.sourceWorkoutId;
   if (!acceptedSource || workoutIdentity(acceptedSource) !== expectedSourceIdentity ||
@@ -3159,7 +3281,7 @@ export function commitAthleteSessionDeletionTransaction(
   if (!profile) throw new Error('Athlete deletion requires an accepted profile');
   const beforeContext = materialContext(state);
   const before = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: mondayForDate(args.date),
     profile,
     markedDays: beforeContext.markedDays,
@@ -3207,7 +3329,7 @@ function detectAthleteMoveContentLoss(args: {
   const afterIdentities = new Map<string, number>();
   for (const weekStart of Array.from(new Set(args.weekStarts))) {
     const after = rebaseAcceptedEffectiveWeek({
-      surfaces: publishedState,
+      surfaces: storedWorldSurfaces(publishedState),
       weekStart,
       profile: args.profile,
       markedDays: publishedMarkedDays,
@@ -3313,7 +3435,10 @@ export function stageAthleteSessionAdditionTransaction(
   // Rest days that visibleWorkouts omits). It must have a stable id to pin against
   // and to undo back to.
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state, weekStart: mondayForDate(date), profile, markedDays: prior.markedDays,
+    surfaces: storedWorldSurfaces(state),
+    weekStart: mondayForDate(date),
+    profile,
+    markedDays: prior.markedDays,
   });
   const composedPlaceholder = accepted.composedWorkouts.find(
     (workout) => workout.dayOfWeek === dayOfWeek) ?? null;
@@ -3486,7 +3611,7 @@ export function commitProgramSetupRebuildTransaction(args: {
         profile: args.profile,
         weekStart,
         markedDays: prior.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: prior.markedDays,
         activeConstraints: prior.activeConstraints,
         mutationIntent: state.userRemovalConstraints.some((constraint) =>
@@ -3573,7 +3698,7 @@ export function commitReadinessStateTransaction(args: {
   const weekStarts = rollingHorizonDependencyClosure({
     seedWeekStarts: args.affectedDates.map(mondayForDate),
     changedTriggerDates: args.affectedDates,
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
   });
   return commitAcceptedStateTransaction({
     // Answering the readiness sheet is the athlete stating a fact about their

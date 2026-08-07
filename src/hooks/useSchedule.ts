@@ -200,6 +200,12 @@ function useScheduleState(): ScheduleState & {
     manualOverrides: manualOverrides || {},
     weekScopedOverlays: weekScopedOverlays || {},
     userRemovalConstraints: userRemovalConstraints || [],
+    // The RECORD, from the same source in the same breath
+    // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). On the live path
+    // nothing has consumed the list, so the two are the same — they diverge
+    // only inside the §18 derivation, which blanks the input above and carries
+    // this one through.
+    removalDecisions: userRemovalConstraints || [],
     markedDays: markedDays || {},
     athleteContext,
     seasonPhase,

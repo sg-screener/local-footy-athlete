@@ -99,6 +99,7 @@ import {
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import {
   canonicalContextSubphase,
   finaliseWorkoutAfterMutation,
@@ -4062,7 +4063,7 @@ function verifyAcceptedRequiredCoreRelocation(args: {
     const state = useProgramStore.getState();
     const context = getAcceptedMaterialContext();
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile: useProfileStore.getState().onboardingData,
       markedDays: context.markedDays,

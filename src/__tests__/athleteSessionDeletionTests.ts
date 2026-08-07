@@ -18,6 +18,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -251,7 +252,7 @@ function seed(args: {
 function accepted(weekStart = WEEK) {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -1657,7 +1658,7 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
   const state = useProgramStore.getState();
   assert(state.userRemovalConstraints.length === 1, 'constraint missing from ProgramStore');
   assert(!rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,

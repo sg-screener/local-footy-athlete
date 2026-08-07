@@ -24,7 +24,55 @@
  * array and says exactly that. The lie the measurement found was never an
  * empty answer — it was an absent parameter that read like one.
  */
+import type {
+  Microcycle,
+  TrainingProgram,
+  UserRemovalConstraint,
+  Workout,
+  WeekScopedWorkoutOverlay,
+} from '../types/domain';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+
+/**
+ * THE ONE COMPOSER (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+ *
+ * The surfaces carry the athlete's removals TWICE, because two different
+ * questions are asked of them: `userRemovalConstraints` is the APPLICATION
+ * input, consumed and blanked once folded into composed workouts;
+ * `removalDecisions` is the RECORD, never blanked, read only to explain why a
+ * week looks the way it does.
+ *
+ * Two fields is one field more than the disease this unit has been treating,
+ * so they are populated HERE, together, from one argument — the drift between
+ * them would be a third representation and the exact thing the split is meant
+ * to avoid. Every `AcceptedEffectiveWeekSurfaces` in the app is built through
+ * this function; there is no other constructor.
+ *
+ * `applyOnly` is the one case where the two genuinely differ, and it is stated
+ * by NAME rather than reached by accident: a delete composes from the world
+ * where the binned target is still present (it is the relocation template)
+ * while the record already carries the decision that binned it. A named
+ * divergence is a decision; an unnamed one would be the drift.
+ */
+export function composeAcceptedEffectiveWeekSurfaces(source: {
+  currentProgram: TrainingProgram | null;
+  currentMicrocycle?: Microcycle | null;
+  dateOverrides?: Readonly<Record<string, Workout>>;
+  weekScopedOverlays?: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
+  /** THE athlete's removal decisions in this world — the single source. */
+  removalDecisions: readonly UserRemovalConstraint[];
+  /** The APPLICATION input when it is deliberately NOT the whole record. */
+  applyOnly?: readonly UserRemovalConstraint[];
+}): AcceptedEffectiveWeekSurfaces {
+  return {
+    currentProgram: source.currentProgram ?? null,
+    currentMicrocycle: source.currentMicrocycle ?? null,
+    dateOverrides: source.dateOverrides ?? {},
+    weekScopedOverlays: source.weekScopedOverlays ?? {},
+    userRemovalConstraints: source.applyOnly ?? source.removalDecisions,
+    removalDecisions: source.removalDecisions,
+  };
+}
 
 /**
  * The store is reached lazily, the way `programStore` already reaches the
@@ -55,14 +103,37 @@ import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWe
  * it must first acquire the repair that answers them, and this is the single
  * line that changes.
  */
+/**
+ * A WORLD WHOSE REMOVALS HAVE NOT BEEN CONSUMED — the persisted store, a
+ * transaction's snapshot of it, an accepted surfaces bundle.
+ *
+ * In all of those the removal list is still the athlete's full record: the
+ * blanking happens further in, inside one derivation, on a `ScheduleState`
+ * that never travels back out. So the record and the application input are the
+ * same list, and that is stated ONCE here rather than at each of the
+ * twenty-four doors that pass such a world to the gateway.
+ */
+export function storedWorldSurfaces(source: {
+  currentProgram: TrainingProgram | null;
+  currentMicrocycle?: Microcycle | null;
+  dateOverrides?: Readonly<Record<string, Workout>>;
+  weekScopedOverlays?: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
+}): AcceptedEffectiveWeekSurfaces {
+  return composeAcceptedEffectiveWeekSurfaces({
+    currentProgram: source.currentProgram,
+    currentMicrocycle: source.currentMicrocycle,
+    dateOverrides: source.dateOverrides,
+    weekScopedOverlays: source.weekScopedOverlays,
+    removalDecisions: source.userRemovalConstraints ?? [],
+  });
+}
+
 export function freshGenerationSurfaces(): AcceptedEffectiveWeekSurfaces {
-  return {
+  return composeAcceptedEffectiveWeekSurfaces({
     currentProgram: null,
-    currentMicrocycle: null,
-    dateOverrides: {},
-    weekScopedOverlays: {},
-    userRemovalConstraints: [],
-  };
+    removalDecisions: [],
+  });
 }
 
 export function liveAcceptedEffectiveWeekSurfaces(): AcceptedEffectiveWeekSurfaces {
@@ -71,20 +142,17 @@ export function liveAcceptedEffectiveWeekSurfaces(): AcceptedEffectiveWeekSurfac
     const store = require('../store/programStore') as
       typeof import('../store/programStore');
     const state = store.useProgramStore.getState();
-    return {
+    return composeAcceptedEffectiveWeekSurfaces({
       currentProgram: state.currentProgram ?? null,
       currentMicrocycle: state.currentMicrocycle ?? null,
       dateOverrides: state.dateOverrides ?? {},
       weekScopedOverlays: state.weekScopedOverlays ?? {},
-      userRemovalConstraints: state.userRemovalConstraints ?? [],
-    };
+      removalDecisions: state.userRemovalConstraints ?? [],
+    });
   } catch {
-    return {
+    return composeAcceptedEffectiveWeekSurfaces({
       currentProgram: null,
-      currentMicrocycle: null,
-      dateOverrides: {},
-      weekScopedOverlays: {},
-      userRemovalConstraints: [],
-    };
+      removalDecisions: [],
+    });
   }
 }

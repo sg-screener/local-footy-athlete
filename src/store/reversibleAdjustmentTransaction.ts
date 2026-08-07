@@ -10,6 +10,7 @@ import {
 } from '../rules/reversibleAdjustmentLedger';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   diffSemanticDays,
   semanticFingerprint,
@@ -83,7 +84,7 @@ function acceptedWorkoutForDate(args: {
 }): Workout | null {
   const profile = useProfileStore.getState().onboardingData;
   const rebased = rebaseAcceptedEffectiveWeek({
-    surfaces: args.surfaces,
+    surfaces: storedWorldSurfaces(args.surfaces),
     weekStart: mondayForDate(args.date),
     profile,
     markedDays: args.context.markedDays,
@@ -729,7 +730,7 @@ export function stageClearReversibleAdjustment(
         profile,
         beforeMarkedDays: context.markedDays,
         afterMarkedDays: restored.markedDays,
-        sourceSurfaces: restored.surfaces,
+        sourceSurfaces: storedWorldSurfaces(restored.surfaces),
         activeConstraints: context.activeConstraints,
         primaryWeekStarts: adjustment.rollingDependencyWeeks,
         primaryMutationIntent: 'restore_adjustment',

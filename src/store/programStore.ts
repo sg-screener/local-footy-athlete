@@ -70,6 +70,7 @@ import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
@@ -938,6 +939,15 @@ function canonicaliseHydratedMicrocycle(
     workouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
   }
+  // ── ROOT 1a — ONE OWNER FOR WORKOUT ORDER.
+  // The same seven sessions in two orders are two different byte-worlds, and
+  // no layer owned the order: the shortfall placer appends, regeneration
+  // day-orders, and JSON is order-sensitive, so hydration was not idempotent.
+  // Hydration is the composition owner, so it canonicalises the order exactly
+  // once — Monday-first week position, stable within a day.
+  const weekPosition = (day: number): number => (day === 0 ? 7 : day);
+  workouts = [...workouts].sort((a, b) =>
+    weekPosition(a.dayOfWeek) - weekPosition(b.dayOfWeek));
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
@@ -1069,13 +1079,16 @@ function canonicaliseAcceptedBoundaryState(
   // THE WORLD ARRIVING, composed once for every door in this function. The
   // snapshot under hydration IS the evaluation context here; the live store
   // still holds the world being replaced.
-  const hydratingSurfaces: AcceptedEffectiveWeekSurfaces = {
-    currentProgram: persistedState.currentProgram ?? null,
-    currentMicrocycle: persistedState.currentMicrocycle ?? null,
-    dateOverrides: persistedState.dateOverrides ?? {},
-    weekScopedOverlays: persistedState.weekScopedOverlays ?? {},
-    userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
-  };
+  const hydratingSurfaces: AcceptedEffectiveWeekSurfaces =
+    composeAcceptedEffectiveWeekSurfaces({
+      currentProgram: persistedState.currentProgram ?? null,
+      currentMicrocycle: persistedState.currentMicrocycle ?? null,
+      dateOverrides: persistedState.dateOverrides ?? {},
+      weekScopedOverlays: persistedState.weekScopedOverlays ?? {},
+      // Nothing has consumed the arriving snapshot's removals yet, so the
+      // record and the application input are the same list.
+      removalDecisions: persistedState.userRemovalConstraints ?? [],
+    });
   let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
     ? canonicaliseHydratedProgram(
         persistedState.currentProgram,
@@ -1267,13 +1280,13 @@ function canonicaliseAcceptedBoundaryState(
     if (!contract) continue;
 
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: {
+      surfaces: composeAcceptedEffectiveWeekSurfaces({
         currentProgram,
         currentMicrocycle,
         dateOverrides: dateOverrides ?? {},
         weekScopedOverlays: weekScopedOverlays ?? {},
-        userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
-      },
+        removalDecisions: persistedState.userRemovalConstraints ?? [],
+      }),
       weekStart,
       profile: options.profile,
       markedDays: options.markedDays ?? {},

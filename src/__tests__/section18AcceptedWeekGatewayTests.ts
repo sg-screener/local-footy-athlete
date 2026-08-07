@@ -9,6 +9,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -321,7 +322,7 @@ function resetLiveStores(value: ReturnType<typeof program>): void {
 function liveWeekAccepted(value: ReturnType<typeof program>): boolean {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: firstWeek(value).startDate.slice(0, 10),
     profile: value.profile,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -425,7 +426,7 @@ const OVERLAY_DEPENDENCY_WORKOUT_ID = 'overlay-fourth-core-workout';
 function overlayDependencyGone(value: ReturnType<typeof program>): boolean {
   const state = useProgramStore.getState();
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: firstWeek(value).startDate.slice(0, 10),
     profile: value.profile,
     markedDays: state.acceptedMaterialContext.markedDays,

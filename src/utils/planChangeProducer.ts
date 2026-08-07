@@ -86,6 +86,7 @@ import {
 } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import {
   G1_LANDING_WARNING,
@@ -1397,7 +1398,7 @@ function proposedWeekFromAcceptedStage(args: {
     const weekStart = getMondayForDate(day.date);
     if (weeks.has(weekStart)) continue;
     const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: args.staged.program,
+      surfaces: storedWorldSurfaces(args.staged.program),
       weekStart,
       profile: args.profile ?? useProfileStore.getState().onboardingData,
       markedDays: args.staged.context.markedDays,
@@ -1552,7 +1553,7 @@ export function g1LandingAskForChange(args: {
   let contract: WeeklyExposureContractV2 | null = null;
   try {
     contract = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile,
       markedDays: state.acceptedMaterialContext.markedDays,
@@ -2495,7 +2496,7 @@ function acceptedSessionNameOn(date: string): string | null {
   const profile = useProfileStore.getState().onboardingData;
   try {
     const week = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart: getMondayForDate(date),
       profile,
       markedDays: state.acceptedMaterialContext.markedDays,

@@ -47,6 +47,7 @@ import {
   powerRows,
   withoutPowerRows,
 } from './sessionRowCounting';
+import { stripConditioningComponent } from './strengthRelocationTemplate';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import {
@@ -60,6 +61,7 @@ import type { AcceptedStateOperationKind } from '../store/acceptedStateTransacti
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import type { AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
+import { strengthPatternLedger } from './strengthPatternContributions';
 import {
   currentAthleteActionTrace,
   emitAthleteActionEvent,
@@ -135,6 +137,8 @@ export type Section18WeekAcceptanceStatus =
 
 export type Section18WeekRepairKind =
   | 'weekly_power_budget'
+  /** A required pattern's day was consumed; its lift moved rather than died. */
+  | 'displaced_strength_relocated'
   /** The week was not presenting the offer its contract declares; it is now. */
   | 'offer_presented'
   | 'offer_withdrawn'
@@ -182,6 +186,12 @@ export interface Section18AcceptedWeekGatewayInput extends Section18AcceptedWeek
   surfaces: AcceptedEffectiveWeekSurfaces;
   /** The caller may supply the exact live projection; generation uses the canonical resolver below. */
   resolveVisibleWorkouts?: (workouts: readonly Workout[]) => Workout[];
+  /**
+   * The week's AUTHORED plan, as relocation templates for the repair search.
+   * A displaced session is gone from the candidate by definition, so the week
+   * cannot supply its own template.
+   */
+  strengthTemplates?: readonly Workout[];
   maxRepairAttempts?: number;
   regenerate?: () => Section18AcceptedWeekCandidate | null;
   safeFallback?: () => Section18AcceptedWeekCandidate | null;
@@ -385,6 +395,18 @@ export function resolveFinalVisibleSection18Week(args: {
     currentProgram: program,
     currentMicrocycle: microcycle,
     markedDays,
+    // THE RECORD SURVIVES THE BLANKING
+    // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+    //
+    // `userRemovalConstraints` above is blanked because it has been APPLIED.
+    // This is the other question, and it is not consumed by anything: the
+    // derivation below runs §18 as tier 4, and its repair search must be able
+    // to ask whether a DECISION explains a missing pattern so it can stand
+    // down for the deletion class's own relocation. Measured before the split:
+    // 1,045 of 1,045 search entries reached that question with nothing to
+    // answer it. Set BELOW the spread, like the three lines above it, because
+    // it is owned by the surfaces and no caller may substitute its own.
+    removalDecisions: args.surfaces.removalDecisions,
   };
   return resolveWeekWithConditioning(weekStart, state)
     .flatMap((day) => day.workout ? [day.workout] : []);
@@ -449,13 +471,14 @@ function weeklyPowerBudget(args: {
   const teamCount = normalAnchors.filter((anchor) => anchor.kind === 'team_training').length;
   const fixture = normalAnchors.find((anchor) =>
     anchor.kind === 'game' || anchor.kind === 'practice_match');
-  const budget = ineligible
+  const fieldLoadBudget = ineligible
     ? 0
     : fixture && teamCount >= 2
       ? 0
       : fixture || teamCount >= 2
         ? 1
         : 2;
+  const budget = fieldLoadBudget;
   const fixtureDay = fixture?.dayOfWeek;
   // RULING 4a (Sam, 2026-08-06) — THE THIRD READER.
   //
@@ -784,18 +807,315 @@ function signature(evaluation: Section18EffectiveWeekEvaluation): string {
     .join('|');
 }
 
+/**
+ * THE RELOCATION THE PUBLISHER USED TO OWN — migrated, not copied
+ * (`docs/DERIVER_ACQUIRES_REPAIR_SEARCH_RULING_2026-08-06.md`).
+ *
+ * When a fixture consumes the day carrying a required pattern — G-1 demotes
+ * the Friday, and the Friday was the week's only HINGE — the week must
+ * RE-PLAN or it is unlawful. `fixtureMinimalReplan`'s strength-shortfall path
+ * was the only thing in the app that did it, and it lives on the PUBLISH side,
+ * so a derivation could never produce the lawful week. The ruling moves the
+ * capability here, where the week is made, and the publisher defers to it.
+ *
+ * The Bible's :4688 order is respected by POSITION in `localRepairCandidates`:
+ * relocate first (this), then substitute/stack, then move optional work, and a
+ * typed reduction only when nothing else answers.
+ *
+ * THE TEMPLATE SOURCE is the week's AUTHORED plan, which is exactly what the
+ * publisher used (`targetMicrocycle.workouts`). A displaced session is gone
+ * from the derived week by definition, so the week cannot supply its own
+ * relocation template.
+ */
+function repairDisplacedStrengthCandidates(args: {
+  workouts: readonly Workout[];
+  evaluation: Section18EffectiveWeekEvaluation;
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  profile?: OnboardingData | null;
+  strengthTemplates?: readonly Workout[];
+  /** The world the week is judged against. The search asks it ONE question,
+   * and it asks the RECORD (`removalDecisions`), never the application input:
+   * "does a decision explain this missing pattern?" It never applies a
+   * removal, which is why an emptied `userRemovalConstraints` is no answer at
+   * all (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). */
+  surfaces: AcceptedEffectiveWeekSurfaces;
+  availableDayNumbers?: readonly number[];
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
+  // CONDITION 1 — the search runs ONLY on violation. A conforming week never
+  // reaches here, and a week whose violation is a different domain does not
+  // pay for this one.
+  const missingPattern = args.evaluation.blockingViolations.some((finding) =>
+    finding.domain === 'strength_patterns');
+  const strengthShort = args.evaluation.blockingViolations.some((finding) =>
+    finding.domain === 'main_strength');
+  if (!missingPattern && !strengthShort) return [];
+  const templates = args.strengthTemplates ?? [];
+  if (templates.length === 0) return [];
+
+  const achieved = args.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount;
+  const missing = args.contract.strengthPatterns.requiredSafePatterns
+    .filter((pattern) => (achieved[pattern] ?? 0) === 0);
+  const present = new Set(args.workouts.map((workout) => workout.planEntryId ?? workout.id));
+  // A SESSION THE ATHLETE DELETED IS NOT A RELOCATION TEMPLATE.
+  //
+  // The template source is the week's AUTHORED plan, so a session the athlete
+  // binned is still in it — and "not present in the week" is exactly what a
+  // deletion produces. Without this the search re-adds the deleted session on
+  // another day and calls it a pattern repair, which is decision LOSS wearing a
+  // repair's name. The deletion class has its OWN relocation, which records the
+  // constraint as it moves; this one must not compete with it.
+  //
+  // AND MORE THAN THAT: when a DELETION explains the missing pattern, the
+  // deletion class owns the repair and this one stands down entirely. Its
+  // relocation records the typed ownership that makes a restore reversible;
+  // mine does not, so a candidate of mine that greens the week first would
+  // leave the athlete's bin un-restorable. This is condition 3 read the right
+  // way round — a repair carries the authority of what TRIGGERED it, so a
+  // missing pattern caused by a decision belongs to that decision's repair and
+  // a missing pattern caused by a fixture belongs to this one.
+  //
+  // IT READS THE RECORD, NOT THE APPLICATION INPUT. This is the split's whole
+  // reason: by the time tier 4 reaches this line the removals have already
+  // been folded into the composed week and `userRemovalConstraints` has been
+  // blanked for that reason, so asking it returned `[]` every single time.
+  const decisionsForSearch = args.surfaces.removalDecisions;
+  const removalSpeaksForThisWeek = decisionsForSearch.some((constraint) => {
+    if (constraint.status !== 'active') return false;
+    for (let day = 0; day < 7; day++) {
+      if (dateForDay(args.weekStart, day) === constraint.targetDate) return true;
+    }
+    return false;
+  });
+  if (removalSpeaksForThisWeek) return [];
+
+  // CONDITION 3 — an athlete-emptied day STAYS EMPTY. Last is not highest, and
+  // a relocation that lands on a day the athlete cleared is the conformance
+  // pass overruling a decision.
+  //
+  // The RECORD again, and for the same reason: asking which days a decision
+  // emptied is an explanation question. (Reached only when no decision speaks
+  // for this week at all, so today it can add nothing the stand-down did not
+  // already answer — it reads the record so that stays true if the stand-down
+  // is ever narrowed to a single pattern.)
+  const emptied = new Set<number>();
+  for (const constraint of decisionsForSearch) {
+    if (constraint.status !== 'active') continue;
+    for (let day = 0; day < 7; day++) {
+      if (dateForDay(args.weekStart, day) === constraint.targetDate) emptied.add(day);
+    }
+  }
+
+  const byDayNumber = new Map(args.workouts.map((workout) => [workout.dayOfWeek, workout]));
+  const anchorDays = new Set(args.contract.anchors.map((anchor) => anchor.dayOfWeek));
+  const allowed = (args.availableDayNumbers && args.availableDayNumbers.length > 0
+    ? args.availableDayNumbers
+    : [1, 2, 3, 4, 5, 6, 0]);
+  // DETERMINISTIC ORDERING (condition 2): a stable preference, then the day
+  // number. No wall-clock, no set iteration order.
+  const placementDays = Array.from(new Set(allowed))
+    .filter((day) => {
+      if (emptied.has(day) || anchorDays.has(day)) return false;
+      const existing = byDayNumber.get(day);
+      if (!existing) return true;
+      return !hasMainStrength(existing);
+    })
+    .sort((left, right) => {
+      const leftEmpty = byDayNumber.has(left) ? 1 : 0;
+      const rightEmpty = byDayNumber.has(right) ? 1 : 0;
+      return leftEmpty - rightEmpty || left - right;
+    });
+  if (placementDays.length === 0) return [];
+
+  const candidates: Array<{ workouts: Workout[]; repair: Section18WeekRepair }> = [];
+  for (const pattern of missing) {
+    // ONLY THE LIFT TRAVELS. A stacked conditioning component pays the bill of
+    // the DAY it was placed on; carrying it to the relocation target
+    // double-counts the week and breaches the conditioning maximum.
+    const template = templates
+      .filter((workout) => !present.has(workout.planEntryId ?? workout.id) &&
+        strengthPatternLedger([workout] as never, 'effective')[pattern] > 0)
+      .flatMap((workout) => {
+        // ONLY THE LIFT TRAVELS — power rows come off for the same reason the
+        // conditioning component does, and ruling 4a is why it matters here:
+        // the WEEKLY BUDGET decides what competes for a primer slot, and that
+        // decision was already taken above, before this relocation existed.
+        // Carrying a primer in would put the week over its own authorised
+        // reduction (`reduction_contradiction:power`) — a repair breaking the
+        // arithmetic of the repair that preceded it.
+        const stripped = stripConditioningComponent(withoutPowerRows(workout));
+        return stripped ? [{ ...stripped, dayOfWeek: workout.dayOfWeek }] : [];
+      })[0];
+    if (!template) continue;
+    for (const day of placementDays) {
+      const relocated = relocateStrengthTemplate({
+        template, dayOfWeek: day, weekStart: args.weekStart,
+        contract: args.contract, profile: args.profile,
+      });
+      candidates.push({
+        workouts: [
+          ...args.workouts.filter((workout) => workout.dayOfWeek !== day),
+          relocated,
+        ].sort((left, right) => left.dayOfWeek - right.dayOfWeek),
+        repair: {
+          kind: 'displaced_strength_relocated',
+          sourceDay: template.dayOfWeek,
+          targetDay: day,
+          // CONDITION 3 — the repair NAMES what authorises it.
+          detail: `Relocated the week's ${pattern} main lift from ${DAY_NAMES[template.dayOfWeek]} to `
+            + `${DAY_NAMES[day]}; authorised by ${authorityForDisplacement(args.contract)}.`,
+        },
+      });
+    }
+  }
+  return candidates;
+}
+
+/** The week's available days, read through the ONE availability owner. */
+function profileAvailableDayNumbers(args: {
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  profile?: OnboardingData | null;
+}): number[] {
+  if (!args.profile) return [];
+  return resolveProfileTargetWeekAvailability({
+    profile: args.profile,
+    weekStart: args.weekStart,
+    markedDays: fixtureAwareMarkedDaysForWeek({
+      contract: args.contract,
+      weekStart: args.weekStart,
+      profile: args.profile,
+    }),
+    ownedPhase: ownSeasonPhaseForGeneration(args.profile),
+  }).effectiveAvailableDayNumbers ?? [];
+}
+
+/** Does this workout carry a meaningful main lift? The ledger is the owner. */
+function hasMainStrength(workout: Workout): boolean {
+  const ledger = strengthPatternLedger([workout] as never, 'effective');
+  return ledger.squat + ledger.hinge + ledger.push + ledger.pull > 0;
+}
+
+/** RESOLVED AUTHORITY at the relocation (condition 3): what displaced the day. */
+function authorityForDisplacement(contract: WeeklyExposureContractV2): string {
+  const fixture = contract.anchors.find((anchor) =>
+    anchor.kind === 'game' || anchor.kind === 'practice_match');
+  if (fixture) return `week.fixture.${fixture.kind} on ${DAY_NAMES[fixture.dayOfWeek]}`;
+  const decision = contract.authorisedReductions.find((reduction) => reduction.deletionIdentity);
+  if (decision) return `decision ${decision.deletionIdentity}`;
+  return 'week.contract.required_pattern_coverage';
+}
+
+function relocateStrengthTemplate(args: {
+  template: Workout;
+  dayOfWeek: number;
+  weekStart: string;
+  contract: WeeklyExposureContractV2;
+  profile?: OnboardingData | null;
+}): Workout {
+  const dayName = DAY_NAMES[args.dayOfWeek].toLowerCase();
+  const id = `${args.template.id}:tier4-replan:${args.weekStart}:${dayName}`;
+  const moved: Workout = {
+    ...args.template,
+    id,
+    dayOfWeek: args.dayOfWeek,
+    planEntryId: `tier4-replan:${args.weekStart}:${dayName}:strength`,
+    exercises: args.template.exercises.map((row, index) => ({
+      ...row,
+      id: `${id}:row:${index + 1}`,
+      workoutId: id,
+      exerciseOrder: index + 1,
+    })),
+  };
+  return finaliseWorkoutAfterMutation(moved, {
+    phase: args.contract.identity.seasonPhase,
+    offseasonSubphase: canonicalContextSubphase(
+      args.contract.identity.seasonPhase,
+      contractOffseasonSubphase(args.contract),
+    ),
+    weekKind: args.contract.identity.weekKind,
+    profile: args.profile ?? undefined,
+    planIntentValid: true,
+    referenceWorkout: args.template,
+    restoreMissingPlanPatterns: false,
+  }).workout;
+}
+
+/**
+ * A typed reduction for capacity a FACT took away, named by that fact.
+ *
+ * The week declares a planner-selected core-conditioning target it can no
+ * longer reach because a fixture consumed one of its days and the displaced
+ * lift had to occupy another. Relocation ran first and substitution after it;
+ * this is what is left, and the Bible puts it last for exactly that reason.
+ */
+function withDisplacedCapacityReduction(args: {
+  contract: WeeklyExposureContractV2;
+  workouts: readonly Workout[];
+  weekStart: string;
+  profile?: OnboardingData | null;
+}): WeeklyExposureContractV2 {
+  const fixture = args.contract.anchors.find((anchor) =>
+    anchor.kind === 'game' || anchor.kind === 'practice_match');
+  // NOTHING DISPLACED, NOTHING AUTHORISED.
+  if (!fixture) return args.contract;
+  const evaluation = evaluateSection18EffectiveWeek({
+    contract: args.contract,
+    workouts: args.workouts,
+    weekStart: args.weekStart,
+  });
+  const core = evaluation.contract.conditioning.core;
+  const gap = core.unresolvedPlannerSelectedShortfall ?? 0;
+  if (gap <= 0) return args.contract;
+  // The floor is never reduced here — only the planner's SELECTED target, and
+  // only down to what the week can actually deliver.
+  const delivered = evaluation.ledger.conditioning.coreCount;
+  if (delivered < core.requiredMinimum) return args.contract;
+  const contract = cloneContract(args.contract);
+  const reason: Section18AuthorisedReduction['reason'] = fixture.kind === 'game'
+    ? 'game_load_protection'
+    : 'practice_match_load';
+  contract.authorisedReductions = contract.authorisedReductions.filter((entry) =>
+    !(entry.metric === 'conditioning_core_frequency' && entry.reason === reason));
+  contract.authorisedReductions.push({
+    metric: 'conditioning_core_frequency',
+    originalApprovedTarget: core.plannerSelectedTarget ?? core.requiredMinimum,
+    reducedTarget: delivered,
+    reason,
+    scope: 'week',
+    change: 'frequency',
+    detail: `The ${fixture.kind === 'game' ? 'game' : 'practice match'} on `
+      + `${DAY_NAMES[fixture.dayOfWeek]} consumed a training day and displaced the week's `
+      + `lift onto another; core conditioning delivers ${delivered} of `
+      + `${core.plannerSelectedTarget ?? core.requiredMinimum} selected, floor `
+      + `${core.requiredMinimum} held.`,
+    provenance: 'live_typed_reduction',
+    affectedWeek: args.weekStart,
+  });
+  contract.conditioning.core.plannerSelectedTarget = delivered;
+  contract.conditioning.reductions = contract.authorisedReductions.filter((entry) =>
+    entry.metric === 'conditioning_core_frequency');
+  return contract;
+}
+
 function localRepairCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
   weekStart: string;
   profile?: OnboardingData | null;
+  strengthTemplates?: readonly Workout[];
+  surfaces: AcceptedEffectiveWeekSurfaces;
+  availableDayNumbers?: readonly number[];
 }): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const restShort = args.evaluation.blockingViolations.some((finding) =>
     finding.domain === 'full_rest');
   const hardBreach = args.evaluation.blockingViolations.some((finding) =>
     finding.code === 'hard_day_breach');
   return [
+    // THE :4688 ORDER. Relocate first — moving the athlete's own authored
+    // session is always cheaper than substituting for it or reducing the week.
+    ...repairDisplacedStrengthCandidates(args),
     ...(restShort ? repairOptionalRestCandidates(args) : []),
     ...(hardBreach
       ? repairByStackingCandidates({ ...args, requireHardTarget: true })
@@ -835,7 +1155,19 @@ function repairCoreConditioningShortfallCandidates(args: {
   weekStart: string;
   profile?: OnboardingData | null;
 }): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
-  const shortfall = args.evaluation.contract.conditioning.core.unresolvedMinimumShortfall ?? 0;
+  const core = args.evaluation.contract.conditioning.core;
+  // THE :4688 ORDER's THIRD STEP, reached at last. This generator already knew
+  // how to place required core conditioning; it was only ever ASKED when the
+  // week missed its floor. A relocation that lands on a day which was paying a
+  // conditioning bill leaves the week short against the PLANNER-SELECTED
+  // target instead — the same gap, one rung up, and the same answer. Under the
+  // deriver-acquires-repair-search ruling tier 4 performs the whole order, so
+  // the question it asks widens to the shortfall the week actually has.
+  const selectedShortfall = args.evaluation.blockingViolations.some((finding) =>
+      finding.code === 'planner_selected_target_miss' && finding.domain === 'conditioning')
+    ? core.unresolvedPlannerSelectedShortfall ?? 0
+    : 0;
+  const shortfall = Math.max(core.unresolvedMinimumShortfall ?? 0, selectedShortfall);
   if (shortfall <= 0) return [];
   const placed = presentRequiredCoreConditioning({
     workouts: args.workouts,
@@ -863,12 +1195,41 @@ function resolveCandidate(args: {
 }): Section18AcceptedWeekGatewayResult {
   const maxCandidates = Math.max(1, args.input.maxRepairAttempts ?? 48);
   const initialRepairs = [...(args.inheritedRepairs ?? [])];
+  // ── THE ONE-OWNER GOVERNANCE BOUNDARY (fourteenth-pass ruling,
+  // 2026-08-07). The contract's `governedFromISO` partitions the week
+  // HERE, where the mutable day-set is assembled. Days before the boundary are
+  // FACTS: they never enter the normaliser chain or the repair search, so a
+  // downstream writer that never learned the law CANNOT over-reach — the
+  // safety finaliser and the offer placer stop being trusted to know it.
+  // Reassembly re-attaches the fact days byte-exact, which by construction
+  // also refuses anything a writer tried to place on a fact day. Readers keep
+  // the whole week: the visible resolver and the evaluator see facts (the
+  // evaluator already counts them as delivered history).
+  const governedBoundaryISO = (args.candidate.contract as { governedFromISO?: string | null })
+    .governedFromISO ?? null;
+  const isFactDay = (day: number): boolean =>
+    governedBoundaryISO !== null &&
+    dateForDay(args.input.weekStart, day) < governedBoundaryISO;
+  const factDayWorkouts: readonly Workout[] = governedBoundaryISO === null
+    ? []
+    : args.candidate.workouts.filter((workout) => isFactDay(workout.dayOfWeek));
+  const governableCandidateWorkouts: readonly Workout[] =
+    governedBoundaryISO === null
+      ? args.candidate.workouts
+      : args.candidate.workouts.filter((workout) => !isFactDay(workout.dayOfWeek));
+  const assembleWithFactDays = (workouts: readonly Workout[]): Workout[] =>
+    governedBoundaryISO === null
+      ? [...workouts]
+      : [
+          ...factDayWorkouts,
+          ...workouts.filter((workout) => !isFactDay(workout.dayOfWeek)),
+        ];
   // A persisted athlete deletion is an accepted-state input, not a render
   // filter. Apply it before lifecycle, safety and repair so those owners can
   // never restore content onto the prohibited target and then lose it again
   // only at the final visible projection.
   const constrainedCandidateWorkouts = applyUserRemovalConstraintsToWeek({
-    workouts: args.candidate.workouts,
+    workouts: governableCandidateWorkouts,
     weekStart: args.input.weekStart,
     constraints: args.input.surfaces.userRemovalConstraints,
   });
@@ -985,7 +1346,12 @@ function resolveCandidate(args: {
           profile: args.input.profile,
           surfaces: args.input.surfaces,
         }));
-      const visibleWorkouts = resolver(candidate.workouts);
+      // Readers see the assembled week (facts included); the assembly is
+      // re-applied to the resolver's OUTPUT so the projection's fact days are
+      // byte-exact candidate facts no matter what any stage inside did.
+      const visibleWorkouts = assembleWithFactDays(
+        resolver(assembleWithFactDays(candidate.workouts)),
+      );
       let evaluation = evaluateSection18EffectiveWeek({
         contract,
         workouts: visibleWorkouts,
@@ -1027,6 +1393,13 @@ function resolveCandidate(args: {
         contract: evaluated.contract,
         weekStart: args.input.weekStart,
         profile: args.input.profile,
+        strengthTemplates: args.input.strengthTemplates,
+        surfaces: args.input.surfaces,
+        availableDayNumbers: profileAvailableDayNumbers({
+          contract: evaluated.contract,
+          weekStart: args.input.weekStart,
+          profile: args.input.profile,
+        }),
       }).map((repair) => ({
         workouts: repair.workouts,
         repairs: [...candidate.repairs, repair.repair],
@@ -1043,7 +1416,7 @@ function resolveCandidate(args: {
         ? 'regenerated'
         : selected.repairs.length > 0 ? 'repaired' : 'accepted',
     contract: selectedEvaluation.contract,
-    canonicalWorkouts: selected.workouts,
+    canonicalWorkouts: assembleWithFactDays(selected.workouts),
     visibleWorkouts: selectedEvaluation.visibleWorkouts,
     evaluation: selectedEvaluation.evaluation,
     repairs: selected.repairs,
@@ -1089,6 +1462,33 @@ export function runSection18AcceptedWeekGateway(
   };
   const primary = resolveCandidate({ input, candidate: input });
   if (primary.status !== 'impossible') return traced(primary, 'primary');
+
+  // THE :4688 ORDER's LAST STEP, and LAST is the whole point.
+  //
+  // This was first written as a normalisation beside the power budget, which
+  // put it BEFORE the search — and a reduction taken before relocation ran
+  // deleted the shortfall the relocation existed to answer, so the deletion
+  // class's own relocation stopped happening (`relocated=undefined`). The
+  // Bible's order is not decoration: reduce only what relocation and
+  // substitution could not.
+  //
+  // So it runs here, after the search has exhausted, and only then. The
+  // contract change cannot ride a search candidate because `assess` re-clones
+  // the contract from the base every time; a second pass over the same
+  // machinery is how a contract-level repair takes its turn in the order.
+  const reduced = withDisplacedCapacityReduction({
+    contract: input.contract,
+    workouts: primary.visibleWorkouts,
+    weekStart: input.weekStart,
+    profile: input.profile,
+  });
+  if (reduced !== input.contract) {
+    const result = resolveCandidate({
+      input: { ...input, regenerate: undefined, safeFallback: undefined },
+      candidate: { contract: reduced, workouts: input.workouts },
+    });
+    if (result.status !== 'impossible') return traced(result, 'displaced_capacity_reduced');
+  }
 
   const regenerated = input.regenerate?.();
   if (regenerated) {

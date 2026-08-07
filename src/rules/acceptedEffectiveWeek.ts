@@ -18,6 +18,7 @@ import {
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
+import { deriveWeekContract } from './derivedWeekContract';
 import type { DaySurfaceOwner } from './dayPrecedence';
 
 /** Alias, not a second declaration — the owner set is `dayPrecedence`'s. */
@@ -36,12 +37,41 @@ export interface AcceptedEffectiveWeekSurfaces {
   dateOverrides: Readonly<Record<string, Workout>>;
   weekScopedOverlays: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
   /**
+   * THE APPLICATION INPUT — the removals this world still has to APPLY.
+   *
    * REQUIRED, and that is the whole precondition unit. It was optional, and
    * six doors forgot it — 328 measured entries where the gateway was told the
    * athlete had binned nothing while their bin sat full. A world with no
    * removal decisions says so with `[]`; it no longer says so by silence.
+   *
+   * It is CONSUMED: once the removals are folded into composed workouts the
+   * field is blanked on purpose (`section18AcceptedWeekGateway.ts`'s three
+   * blanks), because re-feeding them would apply each twice and re-remove the
+   * remainder a bin left behind. That blanking is signed and stays.
    */
   userRemovalConstraints: readonly UserRemovalConstraint[];
+  /**
+   * THE RECORD — the athlete's removal decisions, NEVER blanked
+   * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+   *
+   * One representation was carrying two questions. "What must I still remove?"
+   * is answered above and emptied by its first consumer. "Does a DECISION
+   * explain why this week looks like this?" is a different question, asked
+   * later and deeper — by the repair search's stand-down, which must let the
+   * deletion class's own relocation (the one recording the typed ownership
+   * that makes a restore reversible) run before it may green the week. A field
+   * emptied because it has already been APPLIED cannot answer it: measured,
+   * 1,045 of 1,045 search entries arrived with `constraints=(none)`.
+   *
+   * READ-ONLY, and read for EXPLANATION only. Nothing applies it — applying it
+   * would be the double-removal the blanking exists to prevent. Both fields
+   * are populated by ONE composer
+   * (`liveEvaluationSurfaces.composeAcceptedEffectiveWeekSurfaces`) from the
+   * same source in the same breath, so they cannot drift; where a staging
+   * transaction genuinely means two different sets it says so by NAME, and
+   * that is a decision rather than drift.
+   */
+  removalDecisions: readonly UserRemovalConstraint[];
 }
 
 export interface AcceptedEffectiveWeekDate {
@@ -112,8 +142,8 @@ export function rebaseAcceptedEffectiveWeek(args: {
   const weekEnd = addDays(weekStart, 6);
   const overlay = args.surfaces.weekScopedOverlays[weekStart] ?? null;
   const baseMicrocycle = microcycleForWeek(args.surfaces, weekStart);
-  const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
-  if (!contract) {
+  const storedContract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+  if (!storedContract) {
     throw new AcceptedEffectiveWeekUnavailableError(weekStart, 'Contract v2 is missing');
   }
 
@@ -159,6 +189,18 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekStart,
     constraints: args.surfaces.userRemovalConstraints,
   });
+  // Leg (iii), install site 1 of 3 — the app's contract-SELECTION line.
+  // AFTER composition, deliberately: the removal ledger's typed reduction is
+  // measured against the composed week, so the contract cannot be derived
+  // before the week it describes exists.
+  const contract = deriveWeekContract({
+    contract: storedContract,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.markedDays,
+    userRemovalConstraints: args.surfaces.userRemovalConstraints,
+    workouts: composedWorkouts,
+  });
   const markedDays = { ...args.markedDays };
   const visibleWorkouts = resolveFinalVisibleSection18Week({
     contract,
@@ -168,8 +210,21 @@ export function rebaseAcceptedEffectiveWeek(args: {
     scheduleState: { markedDays },
     surfaces: args.surfaces,
   });
+  // ONE BASIS — the contract a week is JUDGED by is derived against the week
+  // that IS judged, and that week is the VISIBLE one: the athlete's screen is
+  // the only week they can act on, so a contract derived against anything else
+  // judges a week nobody sees. Basis chosen by measurement, per
+  // `docs/FOUR_LEG_CONVERGENCE_RULING_2026-08-07.md`.
+  const judgedContract = deriveWeekContract({
+    contract: storedContract,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.markedDays,
+    userRemovalConstraints: args.surfaces.userRemovalConstraints,
+    workouts: visibleWorkouts,
+  });
   const evaluation = evaluateSection18EffectiveWeek({
-    contract,
+    contract: judgedContract,
     workouts: visibleWorkouts,
     weekStart,
   });
@@ -179,7 +234,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekEnd,
     baseMicrocycle,
     overlay,
-    contract,
+    contract: judgedContract,
     markedDays,
     dates,
     composedWorkouts,

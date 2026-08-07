@@ -6,6 +6,11 @@ import type {
   Workout,
 } from '../types/domain';
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
+import { deriveWeekContract } from '../rules/derivedWeekContract';
+// ONE OWNER: the relocation template rule moved to
+// `rules/strengthRelocationTemplate` when the deriver acquired the repair
+// search. This file no longer keeps a copy.
+import { stripConditioningComponent } from '../rules/strengthRelocationTemplate';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
@@ -323,33 +328,6 @@ function visibleResolver(
   });
 }
 
-function stripConditioningComponent(workout: Workout): Workout | null {
-  const linkedRows = new Set(
-    (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
-  );
-  const stripped = normalizeVisibleWorkoutIdentity({
-    ...workout,
-    exercises: (workout.exercises ?? []).filter((row) =>
-      !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
-    conditioningBlock: undefined,
-    conditioningCategory: undefined,
-    conditioningFlavour: undefined,
-    conditioningFeasibility: undefined,
-    hasCombinedConditioning: false,
-    attachedConditioningKind: undefined,
-    coachAddedConditioningLabel: undefined,
-    section18ConditioningRole: 'none',
-    section18Evidence: {
-      protocolVersion: 1,
-      conditioningRole: 'none',
-      conditioningStress: 'unknown',
-      provenance: 'explicit_mutation',
-    },
-    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
-      record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
-  });
-  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
-}
 
 /**
  * A strength component displaced from a stacked day is a relocatable app
@@ -1057,6 +1035,32 @@ export function buildFixtureMinimalReplan(
   const args: BuildFixtureMinimalReplanInput = {
     ...input,
     sourceWorkouts: withoutPlannerOffers(input.sourceWorkouts),
+    // Leg (iii), install site 3 of 3 — THE PUBLISHER's own
+    // contract-selection line.
+    //
+    // Sites 1 and 2 are both READ sites. Installing only there left the
+    // publisher composing and repairing against the STORED contract, so the
+    // week it published carried the stored contract's pattern requirements
+    // while the deriver read the derived ones — which is `Lower Hinge|7`
+    // published against `Lower Squat|8` derived, exactly the fixture-identity
+    // residual. Under the pattern-identity ruling pattern selection reads the
+    // DERIVED contract, and the publisher is where selection happens.
+    //
+    // Replacing the microcycle's contract once here rather than at each of the
+    // six readers below is deliberate: they must not be able to disagree.
+    targetMicrocycle: input.targetMicrocycle.exposureContractV2
+      ? {
+        ...input.targetMicrocycle,
+        exposureContractV2: deriveWeekContract({
+          contract: input.targetMicrocycle.exposureContractV2,
+          weekStart: input.weekStart,
+          profile: input.profile,
+          markedDays: input.proposedMarkedDays,
+          userRemovalConstraints: input.surfaces.userRemovalConstraints,
+          workouts: input.sourceWorkouts,
+        }),
+      }
+      : input.targetMicrocycle,
   };
   const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;

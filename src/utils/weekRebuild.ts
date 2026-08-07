@@ -66,6 +66,7 @@ import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
 import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
+import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import {
   deriveStoredBlockStateFromProgram,
   selectMicrocycleForDate,
@@ -462,7 +463,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           profile: args.baseProfile,
           beforeMarkedDays: state.acceptedMaterialContext.markedDays,
           afterMarkedDays: markedDays,
-          sourceSurfaces: state,
+          sourceSurfaces: storedWorldSurfaces(state),
           activeConstraints: canonicalActiveConstraints(),
           primaryWeekStarts: [targetWeekStart!],
           // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
@@ -484,7 +485,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           profile: args.baseProfile,
           weekStart: targetWeekStart!,
           markedDays,
-          sourceSurfaces: state,
+          sourceSurfaces: storedWorldSurfaces(state),
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
           activeConstraints: canonicalActiveConstraints(),
           // Same law, the non-rolling path: this projection IS the decision.

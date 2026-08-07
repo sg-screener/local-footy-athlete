@@ -15,6 +15,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import type {
   DayOfWeek,
   OnboardingData,
@@ -210,7 +211,7 @@ function exerciseSignature(workout: Workout | undefined): string {
 function acceptedWeekSignature(athlete: OnboardingData): string {
   const state = useProgramStore.getState();
   const week = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -233,7 +234,7 @@ function acceptedWeekSignature(athlete: OnboardingData): string {
 function acceptedWeekRows(athlete: OnboardingData): GameChangeVisibleDay[] {
   const state = useProgramStore.getState();
   const week = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,

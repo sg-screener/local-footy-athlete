@@ -24,7 +24,12 @@
  * view below is the minimum both shapes can answer.
  */
 
-import type { Microcycle, OnboardingData, Workout } from '../types/domain';
+import type {
+  DerivedSessionProvenance,
+  Microcycle,
+  OnboardingData,
+  Workout,
+} from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { composedOptionalClearingPatch } from '../utils/composedOptionalMarker';
 import { canonicalConditioningLabel } from '../utils/sessionNaming';
@@ -148,6 +153,41 @@ function carriesOffer(workout: Workout): boolean {
     (workout.section18ConditioningRole === 'optional_flush' && hasConditioningContent(workout));
 }
 
+/**
+ * THE PROVENANCE LAW APPLIED TO WITHDRAWAL (seat ruling, 2026-08-07).
+ * An offer IS an offer because this rule PLACED it as one — the stamp below
+ * is that typed provenance, in the placer's own trigger namespace. A session
+ * whose shape merely LOOKS like an offer (the athlete's added light
+ * conditioning derived `optional_flush` by shape and was withdrawn as
+ * surplus — the destroy-class on a decision) never carries it, so the
+ * withdrawal structurally cannot reach it.
+ */
+const OFFER_TRIGGER_PREFIX = 'section18-offer:';
+
+function carriesOfferProvenance(workout: Workout): boolean {
+  return (workout.derivedSessionProvenance ?? []).some((record) =>
+    record.triggerSignature.startsWith(OFFER_TRIGGER_PREFIX));
+}
+
+function offerProvenanceRecord(weekStart: string): DerivedSessionProvenance {
+  const date = weekStart.slice(0, 10);
+  return {
+    protocolVersion: 2,
+    authorship: 'system',
+    origin: 'optional_planner_addition',
+    scope: 'conditioning_component',
+    triggerSignature: `${OFFER_TRIGGER_PREFIX}${date}`,
+    targetMetric: 'optional_non_core',
+    credit: { metric: 'optional_non_core', amount: 1, conditioningRole: 'optional_flush' },
+    originatingFixtureDate: null,
+    originatingDate: date,
+    validWhile: [],
+    invalidWhen: [],
+    history: [{ action: 'created', date }],
+    sourcePlanEntryId: null,
+  };
+}
+
 function hasConditioningContent(workout: Workout): boolean {
   return !!workout.conditioningBlock?.options.length ||
     !!workout.conditioningCategory ||
@@ -248,6 +288,7 @@ export function presentDeclaredOffer(args: {
     for (let index = workouts.length - 1; index >= 0 && surplus > 0; index--) {
       const target = workouts[index];
       if (!carriesOffer(target)) continue;
+      if (!carriesOfferProvenance(target)) continue;
       const stripped = stripOffer(target);
       // A day whose ONLY content was the offer stops being a session at all.
       // `stripOffer` returns null there and the day is DROPPED, so it derives
@@ -299,7 +340,16 @@ export function presentDeclaredOffer(args: {
       contract: args.contract,
     });
     if (!offer) continue;
-    workouts[index] = attachOffer(workouts[index], offer);
+    const attached = attachOffer(workouts[index], offer);
+    // THE PLACER STAMPS WHAT IT PLACES — that stamp is what makes the
+    // withdrawal above reachable, and only for what this rule placed.
+    workouts[index] = {
+      ...attached,
+      derivedSessionProvenance: [
+        ...(attached.derivedSessionProvenance ?? []),
+        offerProvenanceRecord(args.weekStart),
+      ],
+    };
     placedDays.push(dayOfWeek);
   }
   return { workouts, placedDays, withdrawnDays: [] };

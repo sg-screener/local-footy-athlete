@@ -6,6 +6,7 @@ import type {
 } from '../types/fixtureMutation';
 import type { WholeWeekRepairOutcome } from '../rules/wholeWeekRepairEngine';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   canonicalFixtureKind,
   targetWeekFixtures,
@@ -308,7 +309,7 @@ function acceptedVisibleRows(
   const markedDays = state.acceptedMaterialContext.markedDays;
   return weekStarts.flatMap((weekStart) => {
     const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile,
       markedDays,

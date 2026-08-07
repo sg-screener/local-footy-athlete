@@ -169,6 +169,10 @@ export function assembleScheduleState(
     manualOverrides: (inputs.dateOverrides as never) || {},
     weekScopedOverlays: (inputs.weekScopedOverlays as never) || {},
     userRemovalConstraints: (inputs.userRemovalConstraints as never) || [],
+    // The RECORD, same source, same breath — see the declared rival
+    // (`hooks/useSchedule.ts`) and
+    // `docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`.
+    removalDecisions: (inputs.userRemovalConstraints as never) || [],
     markedDays: acceptedOwnsMaterialState
       ? acceptedContext.markedDays
       : (inputs.markedDays as never) || {},

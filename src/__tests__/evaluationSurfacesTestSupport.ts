@@ -9,21 +9,29 @@
  * visibly different rather than accidentally identical.
  */
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import type { UserRemovalConstraint } from '../types/domain';
 
 export function emptyEvaluationSurfaces(): AcceptedEffectiveWeekSurfaces {
-  return {
+  return composeAcceptedEffectiveWeekSurfaces({
     currentProgram: null,
-    currentMicrocycle: null,
-    dateOverrides: {},
-    weekScopedOverlays: {},
-    userRemovalConstraints: [],
-  };
+    removalDecisions: [],
+  });
 }
 
-/** A world whose only distinguishing fact is what the athlete has binned. */
+/**
+ * A world whose only distinguishing fact is what the athlete has binned.
+ *
+ * ONE argument still, because a cell means one thing: these removals are the
+ * athlete's decisions AND the removals this world has yet to apply
+ * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). A cell that means the
+ * two apart says so with the composer directly.
+ */
 export function surfacesWithRemovals(
   userRemovalConstraints: readonly UserRemovalConstraint[],
 ): AcceptedEffectiveWeekSurfaces {
-  return { ...emptyEvaluationSurfaces(), userRemovalConstraints };
+  return composeAcceptedEffectiveWeekSurfaces({
+    currentProgram: null,
+    removalDecisions: userRemovalConstraints,
+  });
 }
