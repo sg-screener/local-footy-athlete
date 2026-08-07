@@ -2,6 +2,63 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (eighteenth pass) — THE PARITY GATE IS RED, LEG (v) PRICED
+
+- LOOP CHECK: recorded-scope-measured-on-a-world-that-has-moved — sighting 3 of
+  the stale-record class — COMPRESS, and the compression is in the report: an
+  arm is not believed until a positive control proves it changed the state it
+  claims to change, IN THE WORLD THE CLAIM IS ABOUT. Present-in-source is not
+  live-on-path, and leg (v) reaches one of this unit's two worlds, not both.
+- Answered in docs/R53_PARITY_GATE_RED_LEGV_PRICED_2026-08-07.md.
+  **BUILT at `77565f00` — harness only, no product code moved.**
+- **(a) D13 DECOMPOSE BUILT AS RULED.** A declared red declares its SHAPE
+  (`omits`/`invents` sets), not a prose regex, and the matcher decomposes a
+  combination into its constituents. The 2026-07-27 red is covered by its two
+  already-declared entries, both credited. `test:action-walker` 21/21, `:deep`
+  21/21. The ratchet holds in the other direction and it is PROVEN: subset-only
+  participation, one novel element reds the whole day, a shapeless entry fails
+  the file — 8 shapes, 3 of which must NOT match, plus a formatter/parser round
+  trip. Debt unchanged in rank and owner.
+- **THE BRANCH'S PRICE, RE-MEASURED: 2 of 155** (down from 3 — the decompose
+  retired the deep walker, measured in the sweep, not inferred).
+- **(d) THE INSTRUMENT IS PORTED AND PASSES:** `derivedWeekLawfulnessProof`
+  12/12 unedited, so `lastTierFourDerivation` has its reader and step 1 of
+  cells 5/6 is discharged.
+- **(d) THE PARITY GATE IS RED, AND IT NAMES THE ROW.** Monday 2026-08-10:
+  materialised 7 rows, derived 8, missing row **`Vertical Jump`**. The
+  generated program carries all 8 — the derivation is faithful, the WRITE path
+  is short. §18 scores both weeks identically, so it is neither a repair nor an
+  authorised reduction. Non-vacuity asserted before equality.
+- **(d) LEG (v) ON ITS REAL PRICE — 9 NEW, 1 FIXED**, 155 suites, sets diffed,
+  both arms at HEAD, world identity printed. **The one fixed is
+  `test:fixture-identity` 6/6** — condition 1's own witness, and the payer the
+  branch's own comment nominated. The nine: `accepted-state-transactions`,
+  `athlete-session-deletion`, `readiness-ownership`, `deriving-device-commit`,
+  `illness-clear-game-week`, `fact-horizon`, `action-walker`,
+  `action-walker:deep`, `phase-structure` — named, NONE diagnosed.
+- **THE SAME ARM REACHES ONE WORLD AND NOT THE OTHER.** In the parity world the
+  stored overlay still carries its declaration AND its payload with both
+  declaration writers removed, and the gate still reds — a third producer
+  exists and is not named. `postGenerationConstraintValidation:1742/1813` reads
+  exactly like it and was REFUTED BY TAPE (zero hits on that path).
+- **CONDITION 1'S RE-MEASURE: NOT GREEN, RESIDUAL NAMED.** Cells 5/6's re-pin
+  NOT done on purpose — the pins already hold the derived answer and leg (v)
+  greens them; re-pinning to 7 would be expectation-edited-to-match-the-
+  regression with a ruling for cover.
+- **FOR THE SEAT:** leg (v) is a measured trade and cannot land under standing
+  conditions. Shapes offered, none taken: (1) diagnose the nine worst-first —
+  RECOMMENDED, on this unit's own precedent; (2) re-scope leg (v) to one path —
+  rejected as the half-state the eighth-pass ruling already forbade; (3) name
+  the parity world's third producer first.
+- **NOT COVERED:** the nine are named not diagnosed; the parity world's
+  producer; whether the row drop and the recorded team-night pairings are one
+  mechanism; `test:compile` on the branch only, as before.
+
+## Processed 2026-08-07 (seventeenth pass) — SEAT ANSWERS on the landing report
+
 1. SEAT ANSWERS on the d490c7a8 landing report — commit as authored.
    LOOP CHECK: seat-ruling-built-on-a-stale-record — sighting 2 for
    this seat (the leg (v) overreach attribution was sighting 1) —
