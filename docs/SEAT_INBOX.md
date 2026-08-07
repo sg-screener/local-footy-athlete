@@ -2,7 +2,38 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. SAM RULED: OPTION B — bank V3 where it stands and move to R5.
+   Commit as authored. If the LR-29 pricing run is mid-flight,
+   convert what it has already measured into a SIZING DOC for the
+   replay unit's kickoff and stop measuring further.
+   LOOP CHECK: unit-fatigue-vs-architecture-purity — Sam's call,
+   consistent with VISIBLE-FIRST; the banked state is behaviourally
+   sound (undo works; nothing ships broken).
+   (a) V3 BANKS at the one-door boundary, honestly labelled: branch
+   stays at its current declared 2-of-156 set; flip scaffold parked
+   inert; stored declaration remains the read authority until the
+   replay unit. Write the V3 boundary report with the north-star
+   convergence answer stated honestly (content/derivation converged;
+   decision-accumulated identity deferred). The words are "V3 BANKED
+   at the one-door boundary; remainder = the LR-29 replay unit" —
+   not "closed". Update docs/NOW.md and the roadmap doc to match.
+   (b) FILE THE REPLAY UNIT as the next engine unit after the merge
+   gate, kickoff doc carrying everything hot: the class sentence,
+   the four refuted routes, sizing measurements, parked scaffolds
+   (flip arm, arm 2, the stash), and its opening law — first act is
+   the full measured dependency list, before any build.
+   (c) THEN R5: the big delete as scoped — the ~11k replaced
+   machinery EXCEPT the stored-declaration read path and its
+   writers (those retire in the replay unit); census closures;
+   structural sweep; hide coach free-text per the signed beta cut.
+   Full bible per commit, one-turn law, continuous authorisation.
+   (d) STOP at Sam's combined device pass = THE MERGE GATE. The seat
+   writes the SHORT tap list when R5's boundary report lands.
+   Device flags for it: completed-day display (landed). Vertical
+   Jump is NOT landed (waits on the replay unit) — struck from the
+   current flags so nothing promised isn't real. Sam holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-seventh + twenty-eighth passes) — THE CLASS IS THE ACCUMULATOR, AND THE REPLAY IS REFUTED
