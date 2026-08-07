@@ -2,6 +2,74 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-second pass) — THE CENSUS CLOSED: 16 OWNED, 4 RESOLVED, 12 BLOCKED
+
+- LOOP CHECK: shallow-world-said-yes-and-depth-said-no — sighting 1, and it
+  happened TWICE in this one pass — ITERATE: no claim about an accumulator is
+  made below the depth it accumulates to. The Restore witnesses (depth <=5)
+  said 0 missing decisions and 8 reproduced fields; the deep walker (depth 10)
+  said 187 and 4. Without your explicit depth-6 order this run would have
+  reported "equality holds, retire the writer" and been wrong twice.
+- Answered in docs/R53_OWNERSHIP_CENSUS_AND_REPLAY_2026-08-07.md.
+  **NOTHING BUILT into the branch** beyond the already-landed read half.
+
+- **(e) THE CENSUS IS CLOSED — THE DECLARATION OWNS 16 THINGS; 4 RESOLVED,
+  12 BLOCKED.** Recording Proxy at the store seam, saturated at 16 top-level
+  fields from the FIRST suite, 277 field paths, unchanged across 132+ suites and
+  70 records — forked child processes included, so the spawnSync scenarios are
+  captured this time. **The instrument found its own defect first** (a re-wrap
+  guard checked and never set, nesting proxies); fixed and re-smoked, and the
+  proxy is behaviour-preserving (suite still EXIT 0).
+- **RESOLVED (4)** — reproduced by the deriver without exception at depth, 553
+  derivations, 0 errors: `protocolVersion`, `authority`, `source`, `equipment`.
+- **BLOCKED (12):** `authorisedReductions` (the accumulator, root named below);
+  `mainStrength`, `conditioning`, `sprintHighSpeed`, `power`, `restStress`,
+  `strengthPatterns` (dose sections the builder computes FROM the reduction
+  stack — consistent with the same root, READ not measured); and
+  **`anchors`, `safety`, `identity`, `migration`, `governedFromISO` with NO
+  named root at all.**
+- **Independent confirmation from the other direction:** the divergence
+  instrument (what the overlay's copy answers differently from the covering
+  microcycle's) reaches the SAME 4/12 split by a different method.
+- **NO CONSUMER REQUIRES THE STORED COPY.** Every reader
+  (`section18EffectiveWeekEvaluator`, `section18SafetyFinaliser`,
+  `derivedSessionProvenance`, `coachMutationTransaction`, `programStore`)
+  consumes *a* contract. The blockers are not consumers — they are the
+  deriver's inability to reproduce 12 fields.
+- **Retiring the writer today would change 12 of 16 fields of every accumulated
+  week's contract.** That is the writer-retirement answer, measured.
+
+- **(b) THE REPLAY EQUALITY BIND: EQUALITY FAILS.** Compared on every store
+  write, ledger-replayed stack vs stored stack. Deep walker controls: 468 store
+  writes, 553 weeks, 5,901 adjustments, 468 ledgers.
+  **THE MISSING ELEMENT, NAMED: 159 athlete-removal reductions
+  (`explicit_user_override`) whose `deletionIdentity` NO adjustment records at
+  all** (the other 28 of the 187 are value drift on identities the ledger DOES
+  hold — split deliberately, because naming a decision-record gap from a bare
+  comparison would be the attribution error this unit keeps paying for).
+  Also measured: 437 missing POLICY reductions are NOT gaps (their owners mint
+  them from identity+facts); the linked record drops `scope`, `change` and
+  `provenance` so a replay is set-equal at best; and in 20 weeks the replay
+  INVENTS a reduction the stored stack lacks — unattributed.
+  **This is your pre-ruled EQUALITY-FAILS exit, so it is a design question for
+  the seat and possibly Sam, not a patch.** One candidate producer, offered as
+  a candidate only: `temporarySourceFactTransaction.ts:376` writes
+  `linkedTypedReductions: []` unconditionally; not taped on the failing path.
+
+- **(c) IS NOT REACHED AND V3 IS NOT CLOSED.** I am not saying those words; the
+  measurements do not support them.
+- **NOT COVERED:** items 12-16 are measured blocked, NOT diagnosed; items 6-11
+  are attributed to item 5's root by READING, not by measurement; the 20
+  invented reductions are unattributed; `governedFromISO` rests on one
+  observation; the census reached 139 of 156 suites at report time (saturated
+  from suite 1); all three instruments are scaffold-only and must be stripped
+  before any product landing; no device evidence.
+
+## Processed 2026-08-07 (twenty-second pass) — the ruling as the seat wrote it
+
 1. RULING on the reduction-stack STOP — commit as authored.
    LOOP CHECK: stored-accumulator-discovered-behind-a-declaration —
    sighting 1 at this depth — ITERATE, with the recorded direction

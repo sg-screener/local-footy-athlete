@@ -31,6 +31,22 @@
   line. Harness-lies sighting 5, mine. Compression SHIPPED: `SWEEP_SUITES`
   makes a witness batch run through the sweep runner (preamble + exit
   codes), proven both directions.
+- **THE CENSUS IS CLOSED: THE DECLARATION OWNS 16 THINGS — 4 RESOLVED,
+  12 BLOCKED.** Recording Proxy at the store seam, saturated at 16 fields from
+  the first suite (277 paths, 70 records incl. forked children). RESOLVED at
+  depth (553 derivations, 0 errors): `protocolVersion`, `authority`, `source`,
+  `equipment`. BLOCKED: `authorisedReductions` (the accumulator) + the six dose
+  sections it feeds + `anchors`/`safety`/`identity`/`migration`/
+  `governedFromISO` with NO named root. **Retiring the writer today changes 12
+  of 16 fields of every accumulated week's contract.**
+  Report: docs/R53_OWNERSHIP_CENSUS_AND_REPLAY_2026-08-07.md
+- **THE REPLAY EQUALITY BIND: EQUALITY FAILS — 159 athlete-removal decisions
+  the ledger does not record at all** (+28 value drift, +437 policy reductions
+  that are NOT gaps, +3 dropped fields, +20 weeks where the replay INVENTS).
+  That is the seat's pre-ruled EQUALITY-FAILS exit: a decision-record gap, a
+  design question, not a patch. **(c) NOT reached; V3 NOT closed.**
+- **DEPTH REVERSED BOTH ANSWERS.** Shallow said 0 missing decisions and 8
+  reproduced fields; depth 10 said 187 and 4. L13 twice in one pass.
 - **THE READ HALF IS LANDED** — `8ca5ae24`, unflagged, all three selection
   lines. The gate AFTER landing is BYTE-IDENTICAL to the gate before it
   (`test:compile` EXIT 0; `test:bible` EXIT 1 on `test:program-control-durable`,
