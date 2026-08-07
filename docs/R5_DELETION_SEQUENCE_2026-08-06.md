@@ -687,6 +687,33 @@ the beta build. Decision C(a), signed. Any copy this changes ships PROPOSED.
 > **NOT STARTED.** Ruled and scoped on 2026-08-06, deliberately not begun on a
 > partial tank: a five-file entry-surface cut left half-applied is precisely the
 > half-alive surface C(a) exists to prevent.
+>
+> **THE SURFACE IS RE-SURVEYED (2026-08-07) AND THE TABLE ABOVE IS INCOMPLETE.**
+> `authored-source-already-exists` / "a doc named 1 site, there were 2", third
+> sighting — the table was trusted-then-checked, and checking found more.
+>
+> **There are THREE `navigate('CoachTab')` doors, not one:**
+>
+> | site | named above? |
+> |---|---|
+> | `screens/home/useHomeScreen.ts:1276` | yes (as `useHomeScreen.ts:1275`) |
+> | `screens/home/useDayWorkout.ts:369` | **NO — unnamed** |
+> | `screens/profile/ProfileScreen.tsx:345` | **NO — unnamed** |
+>
+> Also unnamed: `ProfileScreen.tsx:1002/1129/1181/1587` (`onMessageCoach` prop
+> chain and its button), `HomeScreenV2.tsx:104/523` (`onReviewStale`),
+> `HomeScreen.tsx:454`, `StaleOverrideBanner.tsx:55/145`. The path in the table
+> is also stale: the hook is `src/screens/home/useHomeScreen.ts`, not
+> `src/hooks/`.
+>
+> **AND A DEAD-END RISK THE RULING NAMES BUT THE TABLE DOES NOT.**
+> `utils/programControlActions.ts` carries a `coach_fallback` ROUTE
+> (`:305/:411/:935`) that the program-control layer still returns. Removing the
+> UI affordance without answering that route leaves the athlete at a sheet with
+> nothing to press — the exact half-alive surface C(a) forbids. **The route
+> belongs to the frozen pipeline (LR-6), so it is not deleted; what it needs is
+> the replacement copy the ruling already says ships PROPOSED.** That copy is
+> the batch's first deliverable, not an afterthought.
 
 **R5.8 — the structural sweep (§7) + the bible re-link.** A permanent suite
 enumerating every persisted key, failing on any key not declared profile /
