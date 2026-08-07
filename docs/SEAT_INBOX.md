@@ -2,7 +2,22 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. ORDER: R5 BOUNDARY REPORT, then STOP for the merge gate.
+   Write R5's boundary report: what was deleted across all landed
+   batches (counts, census closures, ceiling movement), what is
+   deferred to the replay unit and why (the carve-out, R5.4/5.5/5.6),
+   the north-star convergence answer for the era, NOT-COVERED
+   honestly, and the exact state of the branch vs the merge target
+   (declared reds, their debts, their payers). Include everything
+   the seat needs to write the SHORT device-pass tap list: which
+   athlete-visible behaviours changed this era, landed only (no
+   parked flags), each with where to see it and what Sam should
+   expect. List the PROPOSED strings for the signing batch. Full
+   bible UNPIPED as the report's gate line. Then STOP — the next
+   step is the seat's tap list and Sam's combined device pass, the
+   merge gate, as always ruled. Sam holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (thirtieth pass) — R5.7 THE BETA COACH CUT: BUILT, GATED, MEASURED AT THE CONTROL SET
