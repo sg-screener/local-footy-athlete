@@ -1,5 +1,30 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **R5.7 — THE BETA COACH CUT: BUILT AND LANDED** (`1c41e6d2`), nine product
+  files. **Sweep 156 = 2 failures, IDENTICAL TO THE CONTROL SET** (0 new /
+  0 fixed); `test:compile` EXIT 0 no file regressed; full `test:bible` UNPIPED
+  `TRUE_EXIT=1` at `program-control-durable` — the declared red, same text.
+  The tab, all three navigate doors, every prop chain, the banner fallback and
+  DayWorkoutScreenV2's three coach callbacks are gone. **LR-6 HOLDS** — stack,
+  CoachScreen and pipeline stay FROZEN in the tree.
+  **NO DEAD ENDS:** the frozen `coach_fallback` route still renders, now
+  reporting the refusal and closing; three sheets carry **PROPOSED, UNSIGNED**
+  copy; `StaleOverrideBanner`'s Review became unconditional rather than being
+  orphaned behind a deleted prop.
+  **THE GATE WATCHES THE DELETED SURFACE** (`coachEntrySurface` section [4]) —
+  and caught a real leftover on its first run.
+  **TWO PINS INVERTED OUT LOUD** (profile-reset setup fallback; the
+  `askCoachForTeamTraining` flow owner) — the RULING moved, with a date.
+  **THE RULING'S OWN EXPECTATION CORRECTED:** R5.7 does NOT invert
+  `coachEntrySurface` cell [2] — that suite reads CoachScreen, which LR-6
+  freezes; it passed 33/33 untouched.
+  **ARM 2 OF THE FLIP DELETED, and an attribution corrected:** it read the
+  profile MIRROR, which legacy-census counts by SOURCE SCAN, so a parked
+  flag-off scaffold pushed LR-4 debt up by one — **`legacy-census` was never a
+  behavioural artefact of arm 2, it was this static hit.** Arm 1 stays.
+  **OWED:** the PROPOSED copy is unsigned — it joins Sam's next signing batch
+  with the device-pass tap list.
+
 - **SAM RULED OPTION B: V3 IS BANKED AT THE ONE-DOOR BOUNDARY — NOT CLOSED.**
   The words are *"V3 BANKED at the one-door boundary; remainder = the LR-29
   replay unit"*. **CONVERGED:** content and derivation — the visible week

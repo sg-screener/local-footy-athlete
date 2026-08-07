@@ -2,6 +2,57 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (thirtieth pass) — R5.7 THE BETA COACH CUT: BUILT, GATED, MEASURED AT THE CONTROL SET
+
+- LOOP CHECK: **a note is output, never evidence** — my own explanatory comment
+  in `AppNavigator` tripped my own new classifier on its first run. The note
+  yielded, not the gate.
+- **R5.7 IS BUILT AND LANDED** (`1c41e6d2`), nine product files.
+  **Sweep 156 suites = 2 failures, IDENTICAL TO THE CONTROL SET** (0 new,
+  0 fixed); `test:compile` EXIT 0, no file regressed; full `test:bible` UNPIPED
+  `TRUE_EXIT=1` at `program-control-durable` — the declared red, same text.
+- **THE FULL CUT, as ruled:** the `CoachTab` tab; all three navigate doors; the
+  `onMessageCoach`/`onReviewStale` prop chains through HomeScreen, HomeScreenV2,
+  HomeQuickActionSheet and ProfileScreen; the StaleOverrideBanner fallback;
+  DayWorkoutScreenV2's `askCoachForExerciseEdit`, `askCoachForTeamTraining` and
+  `onAskCoachTeam`. **LR-6 HOLDS** — the stack, CoachScreen and the pipeline
+  stay in the tree, FROZEN.
+- **NO DEAD ENDS, as framed.** The frozen `coach_fallback` route still renders
+  its step; it now reports the refusal and closes. Three sheets that lost their
+  only action carry **PROPOSED, UNSIGNED** copy saying what is true and where
+  the athlete can act. `StaleOverrideBanner`'s Review became UNCONDITIONAL
+  rather than being orphaned behind a deleted prop — gating it on the cut prop
+  would have hidden a working surface.
+- **THE GATE WATCHES THE DELETED SURFACE** (`coachEntrySurfaceContractTests`
+  section [4]): no product source navigates to `CoachTab`, no `Tab.Screen`
+  registers it, and the frozen stack is still present. **It caught a real
+  leftover on its first run.**
+- **TWO PINS INVERTED OUT LOUD**, both the legitimate
+  `expectation-edited-to-match-regression` case because the RULING moved with a
+  date: `profileResetUITests`' setup-sheet fallback (now RATCHETS the cut) and
+  `exerciseEditEntrySurfaceContractTests`' `askCoachForTeamTraining` flow owner.
+  Every other ruling-12 owner stays pinned.
+- **THE RULING'S OWN EXPECTATION IS CORRECTED:** it scoped R5.7 believing it
+  would invert `coachEntrySurface` cell [2]. **Measured, it does not** — that
+  suite reads CoachScreen, which LR-6 freezes, and it passed 33/33 untouched.
+  Recorded so nobody goes looking for a flip that never happened.
+- **AN EARLIER ATTRIBUTION OF MINE IS CORRECTED, AND ARM 2 IS DELETED.** Arm 2
+  read the profile MIRROR, which the legacy-census ratchet counts by SOURCE
+  SCAN — so a parked, flag-off scaffold pushed LR-4 debt UP by one. **That
+  explains one of arm 2's own five "new reds": `legacy-census` was never a
+  behavioural artefact of the arm, it was this static hit.** A refuted scaffold
+  is not worth a debt ratchet; the replay unit re-derives its arm from the
+  kickoff doc. Arm 1 (the priced rung-drop) stays.
+- **NOT COVERED:** the PROPOSED copy is UNSIGNED and joins Sam's next signing
+  batch with the device-pass tap list; no device evidence; the remaining four
+  of arm 2's five new reds are still undiagnosed; R5.4/R5.5/R5.6 stay deferred
+  to the replay unit as recorded.
+
+## Processed 2026-08-07 (thirtieth pass) — the ruling as Sam wrote it
+
 1. SAM RULED: MAKE THE CUT. R5.7 proceeds NOW on the measured
    surface — commit as authored.
    LOOP CHECK: doc-named-fewer-sites-than-exist — sighting 3, and
@@ -28,9 +79,6 @@
    natural boundary or genuine STOP. STOP at Sam's combined device
    pass = the merge gate; the seat writes the SHORT tap list when
    R5's boundary report lands. Sam holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-ninth pass) — V3 BANKED, THE REPLAY UNIT FILED, R5 ENTERED
 
