@@ -2,136 +2,37 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (twenty-second pass) — THE CENSUS CLOSED: 16 OWNED, 4 RESOLVED, 12 BLOCKED
-
-- LOOP CHECK: shallow-world-said-yes-and-depth-said-no — sighting 1, and it
-  happened TWICE in this one pass — ITERATE: no claim about an accumulator is
-  made below the depth it accumulates to. The Restore witnesses (depth <=5)
-  said 0 missing decisions and 8 reproduced fields; the deep walker (depth 10)
-  said 187 and 4. Without your explicit depth-6 order this run would have
-  reported "equality holds, retire the writer" and been wrong twice.
-- Answered in docs/R53_OWNERSHIP_CENSUS_AND_REPLAY_2026-08-07.md.
-  **NOTHING BUILT into the branch** beyond the already-landed read half.
-
-- **(e) THE CENSUS IS CLOSED — THE DECLARATION OWNS 16 THINGS; 4 RESOLVED,
-  12 BLOCKED.** Recording Proxy at the store seam, saturated at 16 top-level
-  fields from the FIRST suite, 278 field paths, unchanged to the last — COMPLETE:
-  all 156 suites ran, **44 produce records at all** (the other 112 never put a
-  stored declaration in the store), 83 records, forked children included. That
-  44-of-156 is why a static census kept looking complete. **The instrument found its own defect first** (a re-wrap
-  guard checked and never set, nesting proxies); fixed and re-smoked, and the
-  proxy is behaviour-preserving (suite still EXIT 0).
-- **RESOLVED (4)** — reproduced by the deriver without exception at depth, 553
-  derivations, 0 errors: `protocolVersion`, `authority`, `source`, `equipment`.
-- **BLOCKED (12):** `authorisedReductions` (the accumulator, root named below);
-  `mainStrength`, `conditioning`, `sprintHighSpeed`, `power`, `restStress`,
-  `strengthPatterns` (dose sections the builder computes FROM the reduction
-  stack — consistent with the same root, READ not measured); and
-  **`anchors`, `safety`, `identity`, `migration`, `governedFromISO` with NO
-  named root at all.**
-- **Independent confirmation from the other direction:** the divergence
-  instrument (what the overlay's copy answers differently from the covering
-  microcycle's) reaches the SAME 4/12 split by a different method.
-- **NO CONSUMER REQUIRES THE STORED COPY.** Every reader
-  (`section18EffectiveWeekEvaluator`, `section18SafetyFinaliser`,
-  `derivedSessionProvenance`, `coachMutationTransaction`, `programStore`)
-  consumes *a* contract. The blockers are not consumers — they are the
-  deriver's inability to reproduce 12 fields.
-- **Retiring the writer today would change 12 of 16 fields of every accumulated
-  week's contract.** That is the writer-retirement answer, measured.
-
-- **(b) THE REPLAY EQUALITY BIND: EQUALITY FAILS.** Compared on every store
-  write, ledger-replayed stack vs stored stack. Deep walker controls: 468 store
-  writes, 553 weeks, 5,901 adjustments, 468 ledgers.
-  **THE MISSING ELEMENT, NAMED: 159 athlete-removal reductions
-  (`explicit_user_override`) whose `deletionIdentity` NO adjustment records at
-  all** (the other 28 of the 187 are value drift on identities the ledger DOES
-  hold — split deliberately, because naming a decision-record gap from a bare
-  comparison would be the attribution error this unit keeps paying for).
-  Also measured: 437 missing POLICY reductions are NOT gaps (their owners mint
-  them from identity+facts); the linked record drops `scope`, `change` and
-  `provenance` so a replay is set-equal at best; and in 20 weeks the replay
-  INVENTS a reduction the stored stack lacks — unattributed.
-  **This is your pre-ruled EQUALITY-FAILS exit, so it is a design question for
-  the seat and possibly Sam, not a patch.** One candidate producer, offered as
-  a candidate only: `temporarySourceFactTransaction.ts:376` writes
-  `linkedTypedReductions: []` unconditionally; not taped on the failing path.
-
-- **(c) IS NOT REACHED AND V3 IS NOT CLOSED.** I am not saying those words; the
-  measurements do not support them.
-- **NOT COVERED:** items 12-16 are measured blocked, NOT diagnosed; items 6-11
-  are attributed to item 5's root by READING, not by measurement; the 20
-  invented reductions are unattributed; `governedFromISO` rests on one
-  observation; the census is COMPLETE and the count did not move; all three instruments are scaffold-only and must be stripped
-  before any product landing; no device evidence.
-
-## Processed 2026-08-07 (twenty-second pass) — the ruling as the seat wrote it
-
-1. RULING on the reduction-stack STOP — commit as authored.
-   LOOP CHECK: stored-accumulator-discovered-behind-a-declaration —
-   sighting 1 at this depth — ITERATE, with the recorded direction
-   already on file: LR-25 (undo = remove decision + re-derive) and
-   LR-29 (undo-as-replay) point exactly here.
-   (a) The STOP is ENDORSED — Restore's meaning is a decision
-   payload and you were right not to touch it. The refusal to say
-   "V3 closed" is the no-completeness law working; noted.
-   (b) THE ORDERED MEASUREMENT — the open question is empirical, so
-   it gets priced, not argued: build the replay scaffold — decisions
-   in, contract out — rebuilding the week's reduction stack from the
-   ledger's per-adjustment entries (linkedTypedReductions), and
-   EQUALITY-BIND it against the stored stack across acted worlds,
-   including accumulated-depth worlds (L13 — the stack must be
-   proven at depth 6, not depth 2). The Restore witnesses (deletion
-   24/24, properties, mutations) run against the replayed stack in
-   the same pricing. Positive controls, file-backed, exit-line
-   verdicts — your own compressions, all standing.
-   (c) TWO EXITS, both pre-ruled: EQUALITY HOLDS → the replay is the
-   reader, the writer retires, and the (c) sequence from the prior
-   order resumes unchanged through to the V3-closed measurement.
-   EQUALITY FAILS → STOP with the missing element NAMED — a decision
-   the ledger does not record is a decision-record gap, and that
-   comes back to the seat (and possibly Sam) as a design question,
-   not a patch.
-   (d) The removalDecisions read fix stays (live and real); honest
-   non-claiming of progress on it is noted. The three-misreads
-   compression (runner-only verdicts; no tape read before its exit
-   line) is ENDORSED as standing law.
-   Continuous authorisation EXTENDS through (b) and the EQUALITY-
-   HOLDS exit in full. Sam's flags unchanged. Sam holds a veto.
-
-   (e) AMENDMENT — SAM'S ULTIMATUM, AND IT IS JUSTIFIED: the
-   "one more missing piece" pattern is serial discovery, and it ends
-   THIS RUN by construction. Before the writer-retirement question is
-   answered, run the EXHAUSTIVE OWNERSHIP CENSUS: a recording getter
-   on EVERY FIELD of the stored declaration, all suites' worlds plus
-   accumulated-depth walker worlds, file-backed, positive controls —
-   the complete measured list of everything the stored declaration
-   still supplies to anything. Not grep, not the 08-06 static census
-   — instrumented consumption in acted worlds. The output is a
-   CLOSED CHECKLIST with a count. Every item on it gets a derivation
-   or a named blocker IN THIS RUN. Nothing can be "discovered" after
-   this census except by an item on it — if anything ever surfaces
-   that the census missed, that is a census-instrument defect and the
-   seat owns it. The replay pricing (b) proceeds in parallel as one
-   item of that checklist. The batched report opens with the count:
-   "the declaration owns N things; N resolved; V3 CLOSED" or the
-   named blockers. This is the last serial surprise this unit is
-   permitted.
-
-   (f) ONE-TURN LAW for this order: do NOT end your turn between
-   checklist items, censuses, prices, builds, or gates. Your turn
-   ends at exactly one of two events: the batched report containing
-   the census count and its resolution ("N owned / N resolved / V3
-   CLOSED" or the named blockers), or a genuine STOP under standing
-   conditions. Interim findings go in the report doc as you go, not
-   as turn-ending messages. If an internal limit forces a turn end
-   anyway, your final line must be exactly: SEND CONTINUE — and the
-   single word "continue" from Sam resumes you with nothing lost.
-   Sam is not a courier; a turn end that is not an endpoint or a
-   STOP is a defect in this order's terms.
+1. RULING on the decision-record gap — commit as authored.
+   LOOP CHECK: decisions-created-without-a-ledger-append — sighting 1
+   at this scale, but the CLASS is R2's own: userRemovalConstraints
+   were already extracted to the ledger once; this is a removal class
+   R2's extraction MISSED plus (likely) a door still writing
+   removals without appending. ITERATE under existing law.
+   (a) ATTRIBUTE FIRST, one run: which door(s)/path(s) produced the
+   159 unrecorded removal decisions in the acted worlds — the census
+   data already knows which consumers read them; tape the WRITE side
+   of those removals the same way. Name the door.
+   (b) THE FIX, pre-ruled by recorded law, two halves in one unit:
+   (i) the door appends — every removal path writes its decision to
+   the ledger at the moment it happens (R1 doors-append law; north
+   star: a removal IS a decision, the ledger is where decisions
+   live); (ii) the R2-style one-time extraction — existing stored
+   reductions lift into typed ledger decisions exactly as
+   dateOverrides and userRemovalConstraints did at aa5a70cc. No
+   real users (recorded): the extraction runs on Sam's test devices
+   only, no compatibility machinery.
+   (c) STOP CONDITION, the only one: if any of the 159 cannot be
+   expressed as an EXISTING typed decision — the stored record
+   carries information no current decision shape captures — STOP
+   with that shape named; new decision vocabulary is Sam's to sign,
+   never invented.
+   (d) Then: replay equality re-runs against the completed ledger;
+   EQUALITY HOLDS resumes the pre-ruled run home unchanged (writer
+   retires, gates, parity expiry, re-measure, the words only if the
+   measurements support them). Instruments stripped before any
+   product landing, as you flagged.
+   One-turn law and continuous authorisation EXTEND through all of
+   it. Sam holds a veto. His device flags unchanged.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
