@@ -2,7 +2,34 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. SAM RULED: MAKE THE CUT. R5.7 proceeds NOW on the measured
+   surface — commit as authored.
+   LOOP CHECK: doc-named-fewer-sites-than-exist — sighting 3, and
+   your re-survey firing on a measured table is the law working;
+   the survey-before-cut practice is STANDING for every R5 batch.
+   (a) The cut is AUTHORISED on your measured surface: all seven
+   files, all three navigate doors, the prop chains, the banner.
+   The coach_fallback stranded route is answered exactly as you
+   framed it: the sheet never renders a dead end — the replacement
+   copy ships PROPOSED per the signed-copy regime (equality-bound,
+   PROPOSED-marked), and joins Sam's next signing batch, which the
+   seat will present WITH the device-pass tap list. Building does
+   not wait on the signature; showing the athlete final words does.
+   The route itself stays frozen under LR-6, as you said.
+   (b) After R5.7: continue R5 in the collision-safe order you
+   derived — batches touching none of the carved-out declaration
+   surface first; R5.4/R5.5/R5.6 collisions stay deferred to the
+   replay unit as recorded. Census closures and structural sweep
+   ride their batches as scoped.
+   (c) Model: Opus throughout R5 (Sam asked — deletes are Opus
+   work; Fable is reserved for the replay unit kickoff).
+   Full bible UNPIPED per commit, one-turn law, continuous
+   authorisation through R5's batches; one batched report per
+   natural boundary or genuine STOP. STOP at Sam's combined device
+   pass = the merge gate; the seat writes the SHORT tap list when
+   R5's boundary report lands. Sam holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-ninth pass) — V3 BANKED, THE REPLAY UNIT FILED, R5 ENTERED
