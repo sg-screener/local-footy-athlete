@@ -2,7 +2,38 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. RULING on the 71c84220 writer-reprice STOP — commit as authored.
+   LOOP CHECK: same-census-item-reached-from-its-other-side — not a
+   new discovery; the decision-payload STOP re-encountered at the
+   restore path. The census promise holds; the item deepens, the
+   list does not grow.
+   All three questions, ruled from standing law:
+   (a) YES — the restore path gets the SAME derive treatment as the
+   visible week. It is a consumer like any other (standing
+   derivation ruling; read-side-first shape, landing for the fourth
+   time). Restore derives its working data — the before-contract and
+   typed-reduction ownership — from decisions + the deriver,
+   equality-bound on the FULL Restore witness set including the new
+   end-to-end undo cell, non-vacuity asserted (the bind must be
+   EXERCISED before it is believed — your own law).
+   (b) YES — take the two pre-authorised deletions now: both entries
+   fire exactly as their expiry declared; the ratchet working is
+   never deferred. Arm drops to 6.
+   (c) YES — the six get attributed BEFORE the writer lands, per the
+   recorded precedent: set-diff first, then tape, the one-run
+   method. Decision payload or signed behaviour → STOP; otherwise
+   fix under standing law and keep going.
+   (d) Sequence: (b) deletions → (a) restore derivation priced and
+   equality-proven → (c) six attributed and paid → writer re-priced
+   on the then-current world (never a stale figure — your own
+   correction, adopted) → arm clean → writer retires → the pre-ruled
+   run home executes to its endpoint. One-turn law and continuous
+   authorisation EXTEND to that endpoint. The Restore-cell fixes
+   (151030d4) are ACCEPTED — a cell measuring storage instead of the
+   app is the class this unit exists to kill. Sam holds a veto.
+   Nothing on his phone changes until the device pass.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-fourth pass) — OWNERSHIP DERIVES AT READ, BUILT AND FREE
