@@ -174,3 +174,20 @@ and OPEN-UNKNOWN (stated as unknown, with what bounds it). A forecast
 is given only as the spread of measured outcomes so far, never as a
 floor. Optimism is not a kindness to Sam; it converts every ordinary
 stop into a betrayal.
+
+## §8 SECOND-WALL LAW 2026-08-07 (Sam-ordered, in his words: binding)
+
+When the same SHAPE of wall is hit twice — in any setup, any unit, any
+era — the seat MUST, unprompted, put an elegant alternative on the
+table before ordering a third attempt down the same path. "Elegant"
+per Sam's own Elegant Solution Requirement in CLAUDE.md: compare the
+incremental fix against the redesign; prefer what removes
+representations, removes the discovery dimension, or removes the wall's
+preconditions entirely. The V3 flip is the founding precedent: four
+remove-then-discover-the-lean walls were hit before the seat offered
+the strategy that made the wall geometrically impossible — and only
+because Sam demanded it. A seat that orders attempt three at a
+twice-hit wall without having offered an alternative has failed this
+law, whatever else it got right. This applies to the seat's OWN
+strategies above all — the loop-audit points at the plan, not just
+the steps.
