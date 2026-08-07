@@ -46,6 +46,25 @@
   that are NOT gaps, +3 dropped fields, +20 weeks where the replay INVENTS).
   That is the seat's pre-ruled EQUALITY-FAILS exit: a decision-record gap, a
   design question, not a patch. **(c) NOT reached; V3 NOT closed.**
+- **LEG (v)'s WRITER, RE-PRICED: 8 NEW / 1 FIXED, AND IT IS A STOP.** Control =
+  the branch (2 of 156); arm `LFA_SCAFFOLD_LEGV_WRITER=1` = **9 of 156**.
+  `fixture-identity` is **FIXED** (the prize its declared debt entry predicted).
+  8 new: 2 are pre-authorised debt firing (the parity gate's own non-vacuity
+  assertion + the stale-debt ratchet), **6 are named and NOT diagnosed**.
+  **The read halves were free AND they did not pay the writer down.**
+  **THE FINDING: with the writer retired the restoration path's typed-reduction
+  ownership goes VACUOUS** — 7 consumer calls, 0 owned on BOTH methods, 0
+  divergent. The `08212473` derivation is safe in both arms; Restore is not,
+  because it works on `beforeExposureContract` and an overlay that no longer
+  declares one. That is the seat's earlier STOP from a new direction: the read
+  half made the VISIBLE week derive, not the RESTORE path.
+  **STOP on (d)'s terms — the words only if the measurements support them. They
+  do not. V3 is NOT closed.** Three questions for the seat in the report.
+  Scaffold: scratch/r53-legv-writer-reprice (`ec490090`), inert.
+  Report: docs/R53_LEGV_WRITER_REPRICED_STOP_2026-08-07.md
+- **TWO HARNESS DEFECTS FOUND BY THE PRICING AND FIXED** (`151030d4`): the
+  Restore cell read the STORED declaration (it would have red the moment its own
+  unit landed) and undid a SUPERSEDED decision. Walker 22/22.
 - **THE MIRROR DIES, AND ITS READ HALF IS BUILT AND FREE** — `08212473`,
   UNFLAGGED. Both restoration consumers now DERIVE reduction ownership
   (`deletionIdentity ∈ linkedUserRemovalConstraintIds`, leg (iv)'s own ruling)
