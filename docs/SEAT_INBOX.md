@@ -2,6 +2,30 @@
 
 ## Unprocessed (newest first)
 
+1. RULED: FORK A — completion shown, not written. Commit as
+   authored, then CONTINUE the overnight slice-1 build under the
+   standing authorisation.
+   LOOP CHECK: scope-creep-into-a-UI-unit — the fork's B and C both
+   grow engine machinery inside a unit Sam scoped as a new window;
+   A is the recorded intent applied.
+   Grounds: the direction doc's own review note — "per-component
+   check-off maps onto SessionFeedback's existing per-component
+   completion. No new stored state implied." Slice 1 shows ticks
+   live in the view and writes them ONCE through the existing
+   session-outcome door at the existing moment. No new door, no new
+   stored state, no signed behaviour touched. The known edge (app
+   killed mid-session loses the on-screen ticks, never data) is
+   recorded in the unit doc and PARKED as a one-line question for
+   Sam's morning: if he wants mid-session ticks to survive a kill,
+   that upgrade is fork B/C as its OWN later unit — not this one.
+   Hook fix (6/6, mutation-proven, both false-block classes now
+   standing cases) is ACCEPTED with thanks — and the seat notes for
+   the record that BOTH misfires were caused by seat-authored inbox
+   formatting; the empty-marker convention (unnumbered "(none)") is
+   now the seat's law too.
+   Build on. One batched report by morning. Sam holds a veto on
+   fork A when he wakes.
+
 (none)
 
 ## Processed 2026-08-07 (thirty-fifth pass) — MERGED TO MAIN; BOTH DEPENDENCY LISTS DELIVERED; SLICE 1 STOPPED ON ITS CHECK-OFF HALF
