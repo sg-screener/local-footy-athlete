@@ -2,279 +2,42 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (twenty-third pass) — THE DOOR IS NAMED, AND THE PREMISE IS CORRECTED
-
-- LOOP CHECK: **a-count-taken-for-a-record** — THIRD sighting
-  (`a-red-count-is-a-claim`; the `tail -3` batch; now this) — MANDATORY
-  AUDIT under the loop-audit law, and the compression is proposed in the
-  report rather than run a fourth time: *a number reported by an
-  instrument names the instrument's unit, not the domain noun; state its
-  unit and denominator, and give the distinct count of the domain object
-  beside it.*
-- Answered in docs/R53_REMOVAL_DOOR_ATTRIBUTION_2026-08-07.md.
-  **NOTHING BUILT into the branch.** Scaffold on
-  `scratch/r53-removal-door-attribution` (`b5c57963`), flag-gated, inert.
-
-- **(a) THE DOORS ARE NAMED — AND NO DOOR FAILS TO APPEND.** A write-side
-  tape on the store seam captured the calling frames at the write where an
-  unrecorded removal reduction FIRST enters an overlay. All **156 suites**
-  through `scripts/sweep.sh` (a plain `test:bible` truncated at 81 on the
-  declared red); 83 processes produced records, **5 produced sightings**.
-  Doors, ranked: the **fixture week-overlay rebuild** 16, **move** 8, the
-  **coach mutation / temporary-fact** path 5, **deletion** 8 (two routes),
-  the calendar path 2, **addition** 1. The read side's offered candidate
-  (`temporarySourceFactTransaction`) is CONFIRMED as one producer of five,
-  now taped on the failing path — third-largest, not the root.
-- **THE PREMISE IS REFUTED. `noAdjustment` = 0 of 40.** Every sighting has
-  an adjustment that claims the constraint; 39 of 40 still hold the
-  decision in `userRemovalConstraints` (a persisted INPUT). And the link
-  looked in the right place: 40 of 40 the week IS in the claiming
-  adjustment's `rollingDependencyWeeks`. **The zero is measured, not bare**
-  — a claim-blinding control arm flips all 40 to `noAdjustment`.
-- **THE 159 IS AN OCCURRENCE COUNT.** The replay bind compared on every
-  store write. Re-derived on both axes: **330 occurrences = 40 distinct
-  reduction rows = 23 removal decisions.** Its `identityAbsent` also asked
-  absent-from-THIS-WEEK, not absent-from-the-ledger. The instruments agree;
-  the noun was wrong.
-- **TWO MECHANISMS, NEITHER A MISSING DECISION.** (1) The link is computed
-  while the transaction is STAGED; the reduction is materialised at COMMIT
-  — the hop this unit already named from the other side. **My own first
-  reading ("the deriver cannot reproduce it") was REFUTED by its own
-  measurement: 0 of 568 week-walks have the stored contract carrying an
-  owned reduction the deriver misses.** (2) 59 adjustment creations name no
-  removal constraint and never attempt a link at all — including the single
-  largest door, the fixture week-overlay rebuild.
-- **(c) DOES NOT FIRE.** 37 of 40 sightings have a same-date `plan_change`
-  on the decision ledger; `remove_session`/`move_session` are existing
-  members of the vocabulary. No new decision vocabulary is required. The 3
-  that find nothing are all deep-walker worlds reached by direct
-  transaction calls, and are reported rather than rounded away.
-- **(b) GOES BACK TO THE SEAT.** (b)(i) is already true; (b)(ii) would lift
-  decisions that already exist. What is actually incomplete is
-  `linkedTypedReductions` — **a stored mirror of derived arithmetic, not an
-  input**. Filling it by any of the three available routes (including the
-  new cheap one: move the link after materialisation) moves AWAY from the
-  north star. The deriver already owns this arithmetic and is not the
-  limiting factor. The converging direction is to derive the stack from the
-  removal decisions and RETIRE the mirror. That is a design call and this
-  report does not take it.
-- **NOT COVERED:** the ordering mechanism is established by elimination,
-  not by a tape ON the materialising write; the 23 is an upper bound
-  (summed per process); the 1 absent constraint and the 1 `valueDrift` are
-  undiagnosed; the read side's 20 "replay invents" cases are untouched;
-  `session_add` claiming a removal constraint (16 of 40) is recorded, not
-  explained; no device evidence.
-- **Gate:** `test:compile` EXIT 0; sweep failure set **2 of 156**
-  (`program-control-durable`, `fixture-identity`) — exactly what NOW.md
-  already declares, and identical with the tape on and off.
-
-## Processed 2026-08-07 (twenty-second pass) — the ruling as the seat wrote it
-
-1. RULING on the decision-record gap — commit as authored.
-   LOOP CHECK: decisions-created-without-a-ledger-append — sighting 1
-   at this scale, but the CLASS is R2's own: userRemovalConstraints
-   were already extracted to the ledger once; this is a removal class
-   R2's extraction MISSED plus (likely) a door still writing
-   removals without appending. ITERATE under existing law.
-   (a) ATTRIBUTE FIRST, one run: which door(s)/path(s) produced the
-   159 unrecorded removal decisions in the acted worlds — the census
-   data already knows which consumers read them; tape the WRITE side
-   of those removals the same way. Name the door.
-   (b) THE FIX, pre-ruled by recorded law, two halves in one unit:
-   (i) the door appends — every removal path writes its decision to
-   the ledger at the moment it happens (R1 doors-append law; north
-   star: a removal IS a decision, the ledger is where decisions
-   live); (ii) the R2-style one-time extraction — existing stored
-   reductions lift into typed ledger decisions exactly as
-   dateOverrides and userRemovalConstraints did at aa5a70cc. No
-   real users (recorded): the extraction runs on Sam's test devices
-   only, no compatibility machinery.
-   (c) STOP CONDITION, the only one: if any of the 159 cannot be
-   expressed as an EXISTING typed decision — the stored record
-   carries information no current decision shape captures — STOP
-   with that shape named; new decision vocabulary is Sam's to sign,
-   never invented.
-   (d) Then: replay equality re-runs against the completed ledger;
-   EQUALITY HOLDS resumes the pre-ruled run home unchanged (writer
-   retires, gates, parity expiry, re-measure, the words only if the
-   measurements support them). Instruments stripped before any
-   product landing, as you flagged.
+1. RULING on 6ff1e745 — the mirror dies, it does not get filled.
+   Commit as authored.
+   LOOP CHECK: count-taken-for-a-record — sighting 3, your proposed
+   compression is ENDORSED as written in the report; build it as part
+   of this unit's harness work, don't run the loop a fourth time.
+   (a) The attribution is ACCEPTED in full, including the refutation
+   of my ruling's premise: the ledger is COMPLETE (no door skips the
+   append; 23 decisions, all recorded; my "159 missing decisions"
+   framing is struck from the record). The R2-style extraction
+   ordered in (b)(ii) is CANCELLED — there is nothing to extract.
+   (b) The design call, ruled by the standing derivation ruling —
+   this is its textbook case, and your own measurements close every
+   stop-condition: linkedTypedReductions is a STORED MIRROR OF
+   DERIVED ARITHMETIC (output, not decision — the deriver already
+   owns the arithmetic, 0 of 568 week-walks show it missing
+   anything). So it is NOT filled by any route — not the staging
+   reorder, not the cheap post-materialisation link, none. Filling a
+   mirror is building more stored output; the north star and LR-29
+   (undo-as-replay) both say the same word: derive.
+   THE UNIT: the consumers at reversibleAdjustmentLedger.ts:419 and
+   the restoration path derive the typed reductions from decisions +
+   the deriver's arithmetic AT READ, equality-bound against current
+   Restore behaviour on the full witness set — deletion 24/24,
+   properties, mutations, the 40 reduction-row worlds, AND the 3
+   deep-walker direct-transaction worlds explicitly (reported, so
+   they get covered, not rounded away). Read side first, writer
+   last, one priced unit — the shape that has now landed twice.
+   (c) Restore's meaning is the signed behaviour being PROTECTED
+   here, not changed: the equality bind IS the proof. If equality
+   fails on any witness, STOP with the row named.
+   (d) EQUALITY HOLDS → the mirror retires WITH the declaration in
+   the leg (v) landing, instruments stripped, and the pre-ruled run
+   home resumes unchanged through parity expiry, condition 1, cells
+   5/6 re-pin, and the words only if the measurements support them.
    One-turn law and continuous authorisation EXTEND through all of
-   it. Sam holds a veto. His device flags unchanged.
-
-## Processed 2026-08-07 (fifteenth pass) — THE BOUNDARY, BUILT AND PRICED
-
-- Answered in docs/R53_ONE_OWNER_BOUNDARY_PRICED_2026-08-07.md; probe at
-  `c076f53f` on scratch/r53-pricing-7-probe. NOTHING BUILT — flag-gated
-  (`LFA_SCAFFOLD_BOUNDARY`), inert by default, branch untouched.
-- **(a) BUILT AS ORDERED:** one owner, at the assembly — top of
-  `resolveCandidate` (`section18AcceptedWeekGateway.ts`), where every
-  candidate's mutable day-set is put together. Fact days
-  (< `governedFromISO`) never enter the normaliser chain or the repair
-  search; reassembly re-attaches them byte-exact and by construction
-  refuses anything a writer placed on a fact day. The finaliser and the
-  offer placer are UNMODIFIED — no writer was taught. Readers keep the
-  whole week (the evaluator already counts pre-boundary days as history).
-- **(c) THE PRICE, all 154 suites per arm, world-identity preambles
-  printed, sets diffed:**
-
-  | arm | failures | vs reference |
-  |---|---|---|
-  | boundary ALONE | **6** | control set EXACTLY — 0 new, 0 fixed |
-  | (ii)+boundary | **12** | (ii)-alone 13 − fact-horizon, 0 new |
-  | (ii)+(iii)+(iv)+basis+boundary | **10** | 11 − fact-horizon, 0 new |
-
-  **fact-horizon greens in every measured combination** (12/2 → 14/0,
-  both completed-day rewrites gone, T3 byte-exact restoration intact).
-- **The boundary touches NOTHING else.** All six remaining reds ran
-  individually both arms: byte-identical FAIL lines. The tenth-pass "one
-  root may explain three or four" hypothesis is REFUTED by measurement —
-  the six have their own roots, unnamed. The (iii)+(iv) masking of the
-  pair persists unchanged beside the boundary.
-- **Write door immunity, read at source:** the `:565-570` post-filter is
-  a STORAGE guarantee (keeps overlay keys off history) and stays
-  load-bearing; the door's history PIN consumes
-  `rebaseAcceptedEffectiveWeek(...).visibleWorkouts` — the very
-  projection the finaliser was rewriting — so before the boundary the
-  door could pin SOFTENED history into generation's remainder basis. The
-  boundary makes the write door's own input truthful. Not rivals.
-- **Build-order consequence, per the ruling's own condition:** the ruled
-  combination's price with the boundary is **4 new reds** — the unit
-  still cannot land under standing conditions; the boundary retires the
-  destroy-class red and the rest queue behind their own unnamed roots.
-  Worst-first offered, not taken: `accepted-state-transactions`
-  (the unit's only atomicity/determinism laws).
-- **NOT covered:** the six persisting reds are characterised by
-  failure-text diff, not diagnosed; the probe partitions by
-  `governedFromISO` only (done-flag and todayISO oddities stay parked);
-  no suite witnesses a repair TARGETING a fact day (that class is
-  refused by construction, unwitnessed); `test:compile` outside the
-  sweep as before.
-
-## Processed 2026-08-07 (fifteenth pass) — the order as the seat wrote it
-
-- LOOP CHECK: law-enforced-by-one-owner-while-sibling-writers-never-
-   learned-it — sighting 4 — COMPRESS, and the compression IS the fix:
-   RULED on bb1abfc9 (the named write, section18SafetyFinaliser
-   :265-278 + presentDeclaredOffer, both blind to governedFromISO):
-   (a) The fix shape, from recorded law, is STRUCTURAL not per-writer:
-   the governance boundary is enforced ONCE, by construction, where
-   the projection assembles the mutable day-set — writers downstream
-   receive only governable days, so a writer that never learned the
-   law CANNOT over-reach. Teaching the two writers individually is
-   rejected (that recreates this class at writer #3); a tier-4
-   filter is rejected as the wrong place, as you measured. Grounds:
-   fact-horizon law (completed days are FACTS), resolved authority
-   (a reduction resolves against CURRENT facts — against a completed
-   day it resolves to nothing, so the write must not exist), one
-   write format / one owner.
-   (b) The §18 STOP is answered: this is law ENFORCEMENT, not
-   signed-behaviour change. No signed sentence moves; the change is
-   that projections stop rewriting the athlete's past — completed
-   days render as completed. Stored data was never touched (measured:
-   read-time write only). One athlete-visible consequence to flag,
-   not sign: a completed day that previously displayed a softened
-   intensity now displays what was actually completed. Sam holds a
-   veto on that consequence specifically.
-   (c) Price before build, as always: on the scaffold, measure
-   whether the one-owner boundary greens fact-horizon AND what it
-   does to the other four reds + the masked pair (your not-measured
-   list is the measurement list, plus the write door's immunity as a
-   source reading). Then the leg (ii) re-price with the boundary in
-   place decides the unit's build order, measured combinations only.
-   (d) Standing conditions unchanged; full test:bible UNPIPED before
-   any product commit; STOP at R5 close.
-
-## Processed 2026-08-07 (fourteenth pass) — THE TIER-4 WRITE, NAMED
-
-- Answered in docs/R53_TIER4_WRITE_NAMED_SAFETY_FINALISER_2026-08-07.md;
-  instrument at `b5918f9d` on scratch/r53-pricing-7-probe (which now also
-  carries the previously dangling `271a7be4`). NOTHING BUILT.
-- **CONTROLS FIRED FIRST, as ordered.** File-backed tape across
-  `runAllForked`'s spawnSync boundary: `tape-init` 13 (one per forked
-  scenario that resolves a week), `tier4-entry` 6,947, `tier4-result`
-  6,947. Suite reproduced 12/2 exactly. No zero is relied on anywhere.
-- **THE WRITE:** `section18SafetyFinaliser.ts:265–278` — the
-  `lighterStrengthRequired` branch; `:270-274` maps High|Maximal →
-  Moderate, `:276` writes it and discloses `strength_dose_reduced`.
-  Gateway stage 3 (`section18AcceptedWeekGateway.ts:1311`), inside tier 4
-  at READ (`sessionResolver.ts:1088` ← `rebaseAcceptedEffectiveWeek`).
-  **Second site, same chain:** `presentDeclaredOffer` (gateway `:1355`)
-  placed the flush offer on Monday 2026-07-20 — its own repair text says
-  so. That is Monday's 4ex→5ex, masked by the intensity failure.
-- **IT IS A READ-TIME WRITE.** Tier 4's INPUT is byte-identical in the
-  before and after arms (both `High`) — the stored week was never
-  rewritten. The test's own two calls (`:379` and `:385`) are in the tape.
-- **THE DECIDING MEASUREMENT:** the contract carries
-  `governedFromISO: "2026-07-24"` and both rewritten days precede it. The
-  evaluator honours that boundary (`:518-520`, behind the delivered-vs-
-  remaining reassessment); the safety finaliser and the offer placer read
-  it **zero times**. Census: 4 readers (generation, the write door, the
-  stamper, the evaluator), 2 unenumerated mutators.
-- **Control that makes it specific:** `t4-poor_sleep_week` runs the same
-  chain and PASSES — `in_season_game_week`, `lighterStrengthRequired:
-  false`, every stage leaves both days High.
-- **WHY LEG (ii) EXPOSED IT:** the write door does not depend on the
-  normalisers being bounded — it POST-FILTERS them
-  (`temporarySourceFactTransaction.ts:565-570` keeps only
-  `date >= governedFromISO`, "byte-exact preservation by construction").
-  Tier 4 at read has no post-filter, so leg (ii) is the door that stopped
-  hiding two writers that were already over-reaching.
-- **ON YOUR (c):** it lands BETWEEN your two branches. The write DOES name
-  its authorising fact, and that authorisation is correctly bounded — so
-  the write site is the defect, but not for the reason (c) offers. It
-  names an authorisation, is handed that authorisation's boundary in the
-  same argument, and does not read it. Consequence for the fix: your
-  stated shape ("tier 4's search space excludes fact days") is right in
-  OUTCOME and would be built in the wrong PLACE as a tier-4 filter — two
-  normalisers over-reach, and a filter at the door leaves both writers
-  wrong for the next door.
-- **STOPPED per standing conditions** — §18 signed behaviour
-  (section18SafetyBoundaryTests pins the finaliser; the offer placer
-  implements Sam's 2026-08-06 offer-survival ruling).
-- **COMPRESSION OWED AND PROPOSED, not built** (sighting 4 of
-  one-owner-enforces-a-law-its-siblings-never-learned): the `369af59d`
-  both-directions census gate shape, aimed at `governedFromISO` — every
-  accepted-week mutator reads it or declares an exemption.
-- **NOT COVERED:** whether bounding the two writers greens fact-horizon
-  (not measured); the other four reds (not instrumented, worst-first as
-  ordered); the write door's immunity is a SOURCE reading, not a run; the
-  offer placement is attributed by its own disclosure + stage tape, not a
-  line-level tape; the tape's `done` flag came back false for days that
-  ARE Done, and tier 4 ran with `today=2026-08-07` (the wall clock) —
-  both recorded, neither chased.
-
-## Processed 2026-08-07 (fourteenth pass) — the order as the seat wrote it
-
-- LOOP CHECK: harness-lies — sighting 4 (instrument stdout lost
-   across the process boundary; a zero believed without a same-world
-   positive control) — COMPRESS: your two laws are ENDORSED as
-   standing and join the world-identity preamble in the harness
-   discipline: (i) cross-process instruments write to files, never
-   stdout; (ii) a zero is a claim — no zero is believed without a
-   positive control that fired in the SAME run and same process
-   model. RULED on the 70447c21 report:
-   (a) The ghost finding is ACCEPTED as dissolved — prior zeros were
-   instrument artifacts; the runner stands; the three-class run's
-   own escape hatch correctly did not fire.
-   (b) Proceed to the ordinary step, worst-first unchanged: re-run
-   the tier-4 write tape TO A FILE with its positive control inside,
-   and NAME the write that rewrites 2026-07-20/2026-07-21.
-   Attribution before any fix, executes-on-path as always.
-   (c) When attributed, the fix is PRE-FRAMED by recorded law, not
-   open: completed days are FACTS (fact-horizon law) and resolved
-   authority requires every repair to name its authorising decision
-   or resolving fact — a tier-4 write to a completed day either
-   names one (then the AUTHORISATION is the defect to trace) or
-   cannot (then the write site is the defect and tier 4's search
-   space excludes fact days). If the fix touches a decision payload
-   or signed behaviour, STOP per standing conditions.
-   (d) The remaining four reds queue behind fact-horizon as ruled;
-   masking analysis stays parked until the roots are named. Sam
-   holds a veto.
+   it. Sam holds a veto. Device flags unchanged.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
