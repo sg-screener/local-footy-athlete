@@ -388,11 +388,31 @@ run('every day still reports its canonical state leaves in the day-first shape',
       'utf8',
     ),
   );
-  const mounts = home.match(/<DayStateLeaves/g) ?? [];
+  // COUNTING THE CALL SITES IS NOT ENOUGH, AND THAT WAS MEASURED. The first
+  // version of this cell counted `<DayStateLeaves` occurrences and PASSED against
+  // a mutation that emptied the loop feeding them (`weekDays.map` -> `[].map`) —
+  // the count was right and the days were gone. A call site that iterates nothing
+  // mounts nothing, so the gate reads the day-first block itself.
+  const mounts = home.match(/<DayStateLeaves\b/g) ?? [];
   assert(mounts.length === 2,
     `HomeScreenV2 mounts <DayStateLeaves> ${mounts.length} time(s). It must mount `
     + 'inside the full-size row AND for the days the strip stands in for — exactly '
     + 'two call sites.');
+  const dayFirstBlock = home.slice(
+    home.indexOf('{dayFirst ? ('),
+    home.indexOf('<View style={styles.dayList}>'),
+  );
+  assert(dayFirstBlock.length > 200,
+    'the day-first block could not be located in HomeScreenV2 — this gate is '
+    + 'reading the wrong region and would pass on anything');
+  assert(/weekDays\.map\(/.test(dayFirstBlock) && /<DayStateLeaves\b/.test(dayFirstBlock),
+    'the day-first shape no longer mounts a state leaf for EVERY day of the week. '
+    + 'Six of the athlete\'s days are drawn as strip chips there; if their leaves '
+    + 'stop mounting, the explorer sees six days that have ceased to exist.');
+  assert(/idx === dayFirstIdx \? null :/.test(dayFirstBlock),
+    'the day-first block no longer skips the day it draws at full size — that day '
+    + 'would mount its leaves twice, and a duplicate testID is a finder that picks '
+    + 'one of two nodes at random.');
   assert(/function dayStateToken\(/.test(home),
     'the day state token no longer has one owner — two copies is two answers about '
     + 'what a day is, and the explorer reads whichever one rendered');
