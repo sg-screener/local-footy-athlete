@@ -20,6 +20,29 @@ import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
 import { deriveWeekContract } from './derivedWeekContract';
 import type { DaySurfaceOwner } from './dayPrecedence';
+import type { TemporarySourceFact } from './temporarySourceFact';
+
+/**
+ * THE ATHLETE'S SOURCE FACTS IN THIS WORLD — leg (v)'s read side.
+ *
+ * Stated as a helper rather than a required field because the surfaces bundle
+ * reaches this function two ways: composed through
+ * `composeAcceptedEffectiveWeekSurfaces`, which carries the field, and cast
+ * whole from the store (`useProgramStore.getState() as never`), where the same
+ * list lives under `acceptedMaterialContext`. Both are the SAME list; reading
+ * either here is what stops a caller silently claiming the athlete is well.
+ */
+export function factsForWorld(
+  surfaces: AcceptedEffectiveWeekSurfaces,
+): readonly TemporarySourceFact[] {
+  const direct = (surfaces as { temporarySourceFacts?: readonly TemporarySourceFact[] })
+    .temporarySourceFacts;
+  if (direct) return direct;
+  const context = (surfaces as {
+    acceptedMaterialContext?: { temporarySourceFacts?: readonly TemporarySourceFact[] };
+  }).acceptedMaterialContext;
+  return context?.temporarySourceFacts ?? [];
+}
 
 /** Alias, not a second declaration — the owner set is `dayPrecedence`'s. */
 export type AcceptedWeekSurfaceOwner = DaySurfaceOwner;
@@ -72,6 +95,12 @@ export interface AcceptedEffectiveWeekSurfaces {
    * that is a decision rather than drift.
    */
   removalDecisions: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS in this world — leg (v)'s read side. Optional
+   * because the same bundle also arrives as the store cast whole, where the
+   * list lives under `acceptedMaterialContext`; `factsForWorld` reads either.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
 }
 
 export interface AcceptedEffectiveWeekDate {
@@ -200,6 +229,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     markedDays: args.markedDays,
     userRemovalConstraints: args.surfaces.userRemovalConstraints,
     workouts: composedWorkouts,
+    temporarySourceFacts: factsForWorld(args.surfaces),
   });
   const markedDays = { ...args.markedDays };
   const visibleWorkouts = resolveFinalVisibleSection18Week({
@@ -222,6 +252,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     markedDays: args.markedDays,
     userRemovalConstraints: args.surfaces.userRemovalConstraints,
     workouts: visibleWorkouts,
+    temporarySourceFacts: factsForWorld(args.surfaces),
   });
   const evaluation = evaluateSection18EffectiveWeek({
     contract: judgedContract,

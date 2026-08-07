@@ -28,6 +28,8 @@ import {
 import { targetWeekFixtures } from './fixtureConditionedAvailability';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import { applyAthleteRemovalTypedReduction } from './userRemovalConstraints';
+import { deriveIllnessRecoveryWeekMode } from './illnessRecoveryWeekMode';
+import type { TemporarySourceFact } from './temporarySourceFact';
 
 
 
@@ -94,6 +96,37 @@ function fixtureIdentityForWeek(args: {
 }
 
 /**
+ * THE WEEK'S IDENTITY, DERIVED FROM EVERY FACT THAT OWNS A PIECE OF IT.
+ *
+ * The fixtures own anchor state, fixture day and the fixture family of the
+ * mode. The athlete's SOURCE FACTS own one thing the fixtures cannot see: a
+ * severe illness makes the week optional, and until leg (v) that answer reached
+ * a reader only because generation had WRITTEN it onto the overlay's stored
+ * declaration. The read side derives it here instead, from the same single
+ * owner generation asks (`deriveIllnessRecoveryWeekMode`) — one predicate, two
+ * callers, so a stored week and a derived week cannot disagree about what kind
+ * of week the athlete is in.
+ *
+ * PRECEDENCE, and it is the law's, not this file's: the illness answer wins
+ * over the fixture answer, because `weekModeOverride` is exactly what
+ * generation does with it ("when set it wins over readiness/injury/bye logic").
+ */
+function weekIdentityForWeek(args: {
+  profile: OnboardingData;
+  weekStart: string;
+  markedDays?: Readonly<Record<string, CalendarDayType>>;
+  storedMode: Section18WeekMode;
+  temporarySourceFacts?: readonly TemporarySourceFact[];
+}): { anchorState: Section18AnchorState; fixtureDay: number | null; mode: Section18WeekMode } {
+  const fixture = fixtureIdentityForWeek(args);
+  const optional = deriveIllnessRecoveryWeekMode({
+    temporarySourceFacts: args.temporarySourceFacts ?? [],
+    weekStartISO: args.weekStart,
+  });
+  return optional ? { ...fixture, mode: 'optional_week' } : fixture;
+}
+
+/**
  * THE REMOVAL LEDGER, APPLIED TO A DERIVED CONTRACT.
  *
  * `applyAthleteRemovalTypedReduction` is the app's ONE owner of what a
@@ -156,15 +189,22 @@ export function deriveWeekContract(args: {
   userRemovalConstraints?: readonly UserRemovalConstraint[];
   /** The composed week the reduction is measured against. */
   workouts?: readonly Workout[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side (see
+   * `weekIdentityForWeek`). Absent means a caller with no facts to offer, which
+   * is a world with no illness, not a world whose illness is unknown.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
 }): WeeklyExposureContractV2 {
   // No profile, no facts to derive FROM — the stored identity stands.
   if (!args.profile) return args.contract;
   const stored = args.contract;
-  const derived = fixtureIdentityForWeek({
+  const derived = weekIdentityForWeek({
     profile: args.profile,
     weekStart: args.weekStart.slice(0, 10),
     markedDays: args.markedDays,
     storedMode: stored.identity.mode,
+    temporarySourceFacts: args.temporarySourceFacts,
   });
   const storedFixture = stored.anchors.find((anchor) =>
     anchor.kind === 'game' || anchor.kind === 'practice_match');

@@ -30,6 +30,7 @@ import type {
   TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+import { factsForWorld } from '../rules/acceptedEffectiveWeek';
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { getSessionComponentRows } from './sessionComponents';
@@ -1058,6 +1059,10 @@ export function buildFixtureMinimalReplan(
           markedDays: input.proposedMarkedDays,
           userRemovalConstraints: input.surfaces.userRemovalConstraints,
           workouts: input.sourceWorkouts,
+          // Leg (v) read side, install site 3 of 3 — the PUBLISHER. Sites 1 and
+          // 2 deriving while this one composes against a stored identity is the
+          // same residual leg (iii) already paid for once.
+          temporarySourceFacts: factsForWorld(input.surfaces),
         }),
       }
       : input.targetMicrocycle,

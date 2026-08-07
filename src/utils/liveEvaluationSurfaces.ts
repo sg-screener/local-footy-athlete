@@ -32,6 +32,7 @@ import type {
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 
 /**
  * THE ONE COMPOSER (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
@@ -63,6 +64,12 @@ export function composeAcceptedEffectiveWeekSurfaces(source: {
   removalDecisions: readonly UserRemovalConstraint[];
   /** The APPLICATION input when it is deliberately NOT the whole record. */
   applyOnly?: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS in this world — leg (v)'s read side. Carried by
+   * the composer for the same reason the removal RECORD is: a world that has
+   * facts should not say it has none by silence.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
 }): AcceptedEffectiveWeekSurfaces {
   return {
     currentProgram: source.currentProgram ?? null,
@@ -71,6 +78,7 @@ export function composeAcceptedEffectiveWeekSurfaces(source: {
     weekScopedOverlays: source.weekScopedOverlays ?? {},
     userRemovalConstraints: source.applyOnly ?? source.removalDecisions,
     removalDecisions: source.removalDecisions,
+    temporarySourceFacts: source.temporarySourceFacts ?? [],
   };
 }
 
@@ -119,6 +127,7 @@ export function storedWorldSurfaces(source: {
   dateOverrides?: Readonly<Record<string, Workout>>;
   weekScopedOverlays?: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  acceptedMaterialContext?: { temporarySourceFacts?: readonly TemporarySourceFact[] };
 }): AcceptedEffectiveWeekSurfaces {
   return composeAcceptedEffectiveWeekSurfaces({
     currentProgram: source.currentProgram,
@@ -126,6 +135,7 @@ export function storedWorldSurfaces(source: {
     dateOverrides: source.dateOverrides,
     weekScopedOverlays: source.weekScopedOverlays,
     removalDecisions: source.userRemovalConstraints ?? [],
+    temporarySourceFacts: source.acceptedMaterialContext?.temporarySourceFacts,
   });
 }
 
@@ -148,6 +158,7 @@ export function liveAcceptedEffectiveWeekSurfaces(): AcceptedEffectiveWeekSurfac
       dateOverrides: state.dateOverrides ?? {},
       weekScopedOverlays: state.weekScopedOverlays ?? {},
       removalDecisions: state.userRemovalConstraints ?? [],
+      temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts,
     });
   } catch {
     return composeAcceptedEffectiveWeekSurfaces({

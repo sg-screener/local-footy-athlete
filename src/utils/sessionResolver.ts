@@ -37,6 +37,7 @@ import type {
   UserRemovalConstraint,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
@@ -129,6 +130,18 @@ export interface ScheduleState {
    * so the deriver can hand it on; nothing in this file applies it.
    */
   removalDecisions?: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
+   *
+   * The week's IDENTITY (a severe illness makes it optional) reached this
+   * resolver only because generation had WRITTEN it onto the overlay's stored
+   * declaration. Installing the derivation at the accepted reader alone would
+   * leave THIS line answering the same question from storage, and the one-owner
+   * law is about the three lines agreeing, not about one of them being right.
+   * Assembled from `acceptedMaterialContext`, which the one assembly already
+   * carries — no new store read.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
   markedDays: Record<string, CalendarDayType>;
   /** Athlete profile context for adaptive derived sessions. */
   athleteContext: AthleteContext;
@@ -951,6 +964,8 @@ function section18TierFour(args: {
     markedDays: args.state.markedDays,
     userRemovalConstraints: args.state.userRemovalConstraints,
     workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
+    // Leg (v) read side, install site 2 of 3 — the same facts, the same owner.
+    temporarySourceFacts: args.state.temporarySourceFacts,
   });
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as
