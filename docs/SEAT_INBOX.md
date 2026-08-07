@@ -2,90 +2,38 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (seventeenth pass) — THE LANDING SET IS BUILT
-
-- LOOP CHECK: control-set-attributed-to-the-instrument-instead-of-the-code —
-  sighting 3 of the red-count class — COMPRESS, and the compression is the
-  one already endorsed and built this pass.
-- Answered in docs/R53_LANDING_SET_BUILT_2026-08-07.md. **BUILT on the
-  branch at `d490c7a8`** — the first pass in this unit that lands product
-  code. Legs (ii)+(iii)+(iv)+`basis=visible`+boundary+the three ruled fixes,
-  every one UNFLAGGED. `DERIVED_IDENTITY` shelved to the scaffold as ruled.
-- **THE PRICE: 3 failures of 155 against a branch control of 1 — TWO NEW**,
-  exactly the pair predicted. `test:compile` PASSES and improved by 3.
-  Full `test:bible` UNPIPED: **EXIT 1** on `test:program-control-durable`,
-  the declared red.
-- **NOT landed, deliberately:** legs (i) and (v), and the
-  `bounded`/`provenance` rulings — all measured OFF in every priced arm, so
-  none rides into a landing set on someone else's measurement.
-- **A DEFECT THE CONTROL HAD HIDDEN FOR A DAY.** First sweep: 7, not 3. Four
-  ownership suites died at `programStore.ts:1877` on one module cycle —
-  `stripConditioningComponent` migrated into the low-level
-  `sessionRowCounting` gave it an eager `visibleWorkoutIdentity` edge that
-  closed a loop through `programStore`. FIXED (`rules/strengthRelocation
-  Template.ts`); cycles through `programStore` now 0. **Those four are four
-  of the five reds the ninth-pass survey recorded as scaffold-only and "not
-  mine".** They were this unit's code, carried in every price since.
-- **THE COMPRESSION IS BUILT:** `test:gateway-authority-census`, in the bible
-  chain — `activeFixtureDates` by declared census in BOTH directions,
-  `governedFromISO` by one owner, `surfaces` by the compiler. 6/6,
-  mutation-proven three ways; two mutations found real holes in the gate as
-  first written, a third caught it counting text instead of reads.
-- **THE GENUINE STOP — the D13 ruling's premise is REFUTED by re-measurement
-  on its own scaffold.** 2026-08-10 is the **PRE-fix** coordinate; the
-  landing set reds at **2026-07-27** in every arm (branch and scaffold agree
-  byte-for-byte, so the port is faithful and the record was wrong). The shape
-  is `omits ["speed"] and invents ["support"]` — the COMBINATION of the two
-  already-declared D13 entries, matchable by neither regex, and a gap the
-  walker file has carried in prose since 2026-08-04. **NOTHING WIDENED.**
-  Seat's choice: (a) a third entry at 2026-07-27, (b) decompose a combination
-  into its constituent declared shapes — the compression, and this terminal's
-  recommendation — or (c) the D13 owner pays both and both entries delete.
-- **`program-control-durable` DECLARED** with its coordinate and its payer
-  (the door-unification debt), at the code site as well as in the report.
-- **NOT COVERED / owed:** the parity gate, leg (v)'s real price and condition
-  1's re-measure are the order's remaining steps and are NOT run — filed at
-  the STOP, as the order provides. `derivedWeekLawfulnessProof` is not ported
-  and is the instrument the parity gate wants.
-- **Sam device-pass flag, the only one:** completed-day display.
-
-## Processed 2026-08-07 (seventeenth pass) — the order as the seat wrote it
-
-1. THE TWO OWED RULINGS — read with the 6147dba9 report; both from
-   recorded law; Sam holds a veto on both.
-   LOOP CHECK: declared-red-narrower-than-defect — sighting 2 (the
-   support-badge "DEEP ONLY" lesson was sighting 1) — COMPRESS: the
-   recorded class rule applies — a declaration describes the
-   DEFECT'S reach, never the instrument's.
-   TWO-BASES: the 3-FIX SET is RULED as the landing set. The
-   DERIVED_IDENTITY fix is SHELVED to the scratch branch (condition-4
-   amendment — preserved, not lost): it stands refuted as scoped,
-   and a refuted-as-scoped fix does not enter a landing set, nor does
-   a decision re-key ride in on a fix that doesn't survive its own
-   neutrality sweep. The move-door basis red is DECLARED with its
-   coordinate, naming the recorded door-unification debt as its
-   payer — one door, one basis, its own unit, after this one. The
-   two-caller-classes finding is adopted into that debt's record.
-   (This also drops the re-key device-pass flag for now.)
-   D13: WIDEN THE DECLARATION to the measured coordinate
-   (2026-08-10). Grounds: the class rule above — the current
-   declaration described where the instrument had looked, not where
-   the defect lives. The debt itself stays the same debt in the same
-   queue position; only its honest boundary moves.
-   THEN — the run home, standing authorisation extended: assemble the
-   landing set on the branch (legs (ii)+(iii)+(iv)+basis, the
-   boundary, the three fixes, unflagged), full test:bible UNPIPED,
-   then the parity gate (derived == materialised, byte-equal, tape as
-   instrument), then leg (v) on its real price, then condition 1's
-   re-measure. One batched report at the end or at a genuine STOP.
-   Gateway-input census gate (your sighting-2 compression proposal)
-   is ENDORSED — build it inside the assembly, it is L12's answer for
-   the authority-on-write-path-only class.
-   Sam device-pass flags now standing: completed-day display
-   consequence only.
+1. SEAT ANSWERS on the d490c7a8 landing report — commit as authored.
+   LOOP CHECK: seat-ruling-built-on-a-stale-record — sighting 2 for
+   this seat (the leg (v) overreach attribution was sighting 1) —
+   COMPRESS: before ruling on any recorded coordinate or price, the
+   seat's ruling must cite a measurement RE-RUN on the current world,
+   not the record of one; you enforced exactly that here, correctly.
+   (a) D13: the widening ruling is WITHDRAWN by supersession — its
+   premise (2026-08-10 as the defect's coordinate) was the record,
+   and the record was wrong. RULED in its place, your recommendation:
+   DECOMPOSE — a red whose shape is a combination of already-declared
+   entries is covered by its constituents; build that into the
+   declaration matcher so combinations are expressible by
+   construction. Grounds: the class rule itself (a declaration
+   describes the defect's reach — this defect IS a combination, and
+   the prose in the walker file has said so since 2026-08-04; the
+   regexes were the instrument falling short of the declared truth).
+   The D13 debt itself is unchanged in rank and owner.
+   (b) The four background reds: correction ACCEPTED and the record
+   is amended — they were this unit's module cycle, not pre-existing;
+   the cycle fix and cycles-through-programStore=0 stand. The
+   ninth-pass "not mine" line is struck.
+   (c) The two refusals (bounded, provenance measured off in every
+   priced arm) are ENDORSED — nothing rides in on someone else's
+   measurement.
+   (d) CONTINUE under the standing authorisation: port
+   derivedWeekLawfulnessProof (the parity instrument —
+   lastTierFourDerivation's missing reader), run the parity gate
+   (derived == materialised, byte-equal, both flag-state worlds),
+   then leg (v) on its real price, then condition 1's re-measure.
+   One batched report at the end or at a genuine STOP.
+   (e) Sam's single device-pass flag stands: completed-day display
+   shows what was actually done. Sam holds a veto on all of (a)-(d).
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
