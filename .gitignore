@@ -32,3 +32,5 @@ test-results/bible-conformance/
 .sweep*/
 .door/
 .bind/
+.legv/
+.legv-run.log
