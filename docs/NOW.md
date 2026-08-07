@@ -1,5 +1,28 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **R5 IS AT ITS BOUNDARY. STOP — the next step is the seat's SHORT tap list and
+  Sam's combined device pass, the MERGE GATE.** Nothing further should land on
+  this branch before that pass.
+  Report: **docs/R5_BOUNDARY_REPORT_2026-08-07.md**
+- **GATE LINE:** full `test:bible` UNPIPED at `e202724d` — `TRUE_EXIT=1`, last
+  suite `test:program-control-durable`, **1 FAIL line in the whole run**. Sweep
+  **2 of 156**; `test:compile` EXIT 0, no file regressed.
+- **THE BRANCH LEDGER, CORRECTED:** `feat/r53-v3-switchover` is **3 behind /
+  124 ahead** of `feat/stage-b-stage2`, and **R5.1, R5.2 and R5.8 are ALREADY
+  ANCESTORS OF THE MERGE TARGET.** This branch carries **R5.3 and R5.7 only** —
+  counting the others would be double-counting.
+- **THE MERGE-CRITICAL FACT:** `test:fixture-identity` 3/5/6 are RED **as plain
+  laws with no declaration wearing them** — the ratchet deleted their entries
+  when V3 was expected to pay them, and V3 banked short. **Payer = the LR-29
+  replay unit**, measured (it is the ONE suite the flip arm fixes). It does not
+  go green before that unit.
+- **CENSUS:** declared debt **77**, baseline tightened to 77, founding 120;
+  LR-1 **0** (founding 27). Down this era, never up.
+- **TAP-LIST INPUT READY: seven athlete-visible changes, LANDED ONLY**, each
+  with where to look and what to expect. **Vertical Jump STRUCK** (parked flag
+  only). R5.3 is engine-internal — a week that CHANGES is a finding.
+- **THREE PROPOSED STRINGS** listed for Sam's signing batch, all unsigned.
+
 - **R5.7 — THE BETA COACH CUT: BUILT AND LANDED** (`1c41e6d2`), nine product
   files. **Sweep 156 = 2 failures, IDENTICAL TO THE CONTROL SET** (0 new /
   0 fixed); `test:compile` EXIT 0 no file regressed; full `test:bible` UNPIPED

@@ -2,6 +2,55 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (thirty-first pass) — R5 BOUNDARY REPORT WRITTEN; STOP AT THE MERGE GATE
+
+- LOOP CHECK: **a count taken for a record** does NOT fire — the batch ledger
+  was checked by ANCESTRY rather than by reading commit subjects, and that is
+  what caught the double-count below.
+- Answered in **docs/R5_BOUNDARY_REPORT_2026-08-07.md**. Nothing was built.
+- **GATE LINE:** full `test:bible` UNPIPED at `e202724d` — `TRUE_EXIT=1`, last
+  suite `test:program-control-durable`, **1 FAIL line in the whole run**. Sweep
+  **2 of 156**; `test:compile` EXIT 0, no file regressed.
+- **THE BRANCH LEDGER IS CORRECTED BEFORE IT REACHES THE TAP LIST.**
+  `feat/r53-v3-switchover` is **3 behind / 124 ahead** of `feat/stage-b-stage2`,
+  and **R5.1, R5.2 and R5.8 are ALREADY ANCESTORS OF THE MERGE TARGET.** What
+  this branch carries that the target does not is **R5.3 and R5.7 only**.
+  Counting 5.1/5.2/5.8 as this branch's work would be double-counting.
+- **CENSUS:** total declared debt **77**, baseline tightened to 77, founding
+  baseline 120; LR-1 **0** (founding 27). The ratchet moved DOWN this era and
+  never up — the one attempted upward move (arm 2's static LR-4 hit) was
+  refused by deleting the scaffold, not by retuning the number.
+- **THE MERGE-CRITICAL LINE:** `test:fixture-identity` cells 3/5/6 are RED **as
+  PLAIN LAWS with no declaration wearing them** — the ratchet correctly deleted
+  their entries when V3 was expected to pay them, and V3 BANKED short. **Its
+  payer is the LR-29 replay unit**, and it is measured: `fixture-identity` is
+  the ONE suite the flip arm FIXES. It does not go green before that unit.
+- **DEFERRED BY THE CARVE-OUT:** R5.4 (hydration validates the declaration's
+  stored SHAPE), R5.5 (it IS the replay unit), R5.6 (the fact door AUTHORS the
+  declaration). **That boundary is ARGUED FROM THE CENSUS, NOT MEASURED** —
+  stated as a claim the replay unit's dependency list must test.
+- **NORTH STAR FOR THE ERA:** the derivation half landed, the accumulation half
+  did not. Behaviourally sound; not yet convergent. **V3 BANKED, not closed.**
+- **TAP-LIST INPUT DELIVERED: seven athlete-visible changes, LANDED ONLY**, each
+  with where to look and what to expect. **Vertical Jump is STRUCK** (parked
+  flag only). R5.3 is engine-internal — a week that CHANGES is a finding.
+- **THREE PROPOSED STRINGS listed for the signing batch**, all unsigned, all
+  saying the same two things: nothing changed, and where to act instead.
+- **NOT-COVERED, stated:** no device evidence this era; `fixture-identity` stays
+  red; the R5.4/R5.6 exclusion is argued not measured; four of arm 2's five new
+  reds undiagnosed; class B text-only in three passes;
+  `validateLiveWeekOverlayWrite` fired 0x and `current_microcycle` was never the
+  answering source; the coach pipeline is FROZEN, not verified — the cut removes
+  the way in, it does not prove what is behind it; `program-control-durable` was
+  not re-attributed this era.
+- **STOPPED.** Next is the seat's SHORT tap list and Sam's combined device pass
+  — the merge gate. Nothing further should land on this branch before it.
+
+## Processed 2026-08-07 (thirty-first pass) — the order as the seat wrote it
+
 1. ORDER: R5 BOUNDARY REPORT, then STOP for the merge gate.
    Write R5's boundary report: what was deleted across all landed
    batches (counts, census closures, ceiling movement), what is
@@ -16,9 +65,6 @@
    bible UNPIPED as the report's gate line. Then STOP — the next
    step is the seat's tap list and Sam's combined device pass, the
    merge gate, as always ruled. Sam holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (thirtieth pass) — R5.7 THE BETA COACH CUT: BUILT, GATED, MEASURED AT THE CONTROL SET
 
