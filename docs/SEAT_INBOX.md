@@ -2,103 +2,38 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (nineteenth pass) — THE PRODUCER NAMED, THE DIFF CLASSIFIED
-
-- LOOP CHECK: attribution-stated-from-two-snapshots-instead-of-a-tape —
-  sighting 3 this unit — COMPRESS, and the compression is a correction of my
-  own report: **"the write path drops the row" is WITHDRAWN.** Which side of a
-  difference MOVED is not read off two snapshots; the tape watches the
-  transition, and the instrument you ordered overturned the finding it was sent
-  to confirm.
-- Answered in docs/R53_THIRD_PRODUCER_NAMED_PARITY_CLASSIFIED_2026-08-07.md.
-  **BUILT on the branch — harness only, no product code.**
-- **(a) THE THIRD PRODUCER, NAMED:** `commitAcceptedStateTransaction`
-  (`acceptedStateTransaction.ts:837`) ← `commitAthleteSessionDeletionTransaction`
-  (`:3291`) ← `planChangeProducer.commit` — reached from the athlete's own
-  REMOVAL, on a path neither of leg (v)'s writers touches. It writes the
-  declaration AND the payload in ONE store write. Positive control in-world:
-  38/84/125 store writes, 15/33/51 transitions; no zero relied on.
-- **AND THE PAYLOAD IS NEVER SHORT.** Every recorded payload transition is
-  `0 -> 8` rows with `Vertical Jump` present. What costs the row is the stored
-  DECLARATION at READ — dose-response across arms: both writers = 3 of 3 worlds
-  lose it, one writer = 1 of 3, none = 0 of 3. Resolve-order REFUTED (8
-  consecutive resolves, all 8 rows); the write validator REFUTED BY TAPE.
-- **(b) CLASSIFICATION BUILT INTO THE GATE, not written in a report.**
-  `DECLARED_PARITY_DIFF` carries one entry —
-  `stored_declaration_costs_mondays_power_row` — cited to the fixture-identity
-  law, with the rows it covers, its payer (leg (v)) and its expiry.
-  STORED-WRONG declared and flagged, does not block; unattributed and
-  derived-wrong still block. **Mutation-proven three ways** (wrong row → red,
-  entry deleted → red, stale entry → red). Container identity is NORMALISED and
-  reported, not compared — it names the container, which is what leg (v)
-  retires. `test:derived-week-lawfulness` **16/16 and REGISTERED in the bible
-  chain** (157), in the commit that greened it.
-- **(c) THE NINE, SET-DIFFED BEFORE DIAGNOSING — six are one sentence.** The
-  accepted week no longer knows what kind of week it is
-  (`mode=in_season_game_week` where illness_recovery was authored; bye and
-  practice-match tables not selected; "the fact reached the derivation but was
-  never materialised"). **The week's IDENTITY lives in the stored declaration
-  and its readers still read it from storage** — leg (v) retires the write
-  without retiring the read. Two (`phase-structure` cell 8, `action-walker`'s
-  lighter-day cell) are UNEXPLAINED. The ninth is the ratchet working:
-  `session_list_calls_a_conditioning_day_recovery` stops redding under the arm,
-  so leg (v) PAYS a declared D13 debt and owes that entry's deletion.
-- **RECOMMENDATION:** re-scope leg (v) from "the writer stops" to **"the
-  readers derive, then the writer stops"**, priced as one unit — the shape that
-  made leg (iii) land, and the reader census the gateway-census gate already
-  has a shape for.
-- **Device-pass flag, PENDING not current:** Monday gains its `Vertical Jump`
-  back WHEN leg (v) lands. Nothing changed on the phone this pass.
-- **GATE:** `test:compile` EXIT 0 (gate PASSED, nothing regressed). Full
-  `test:bible` UNPIPED **EXIT 1** on `test:program-control-durable`, the
-  declared red — the chain stops there, so the new suite is verified by direct
-  run at 16/16, not by the chain. The completion notification claimed exit 0
-  again: seventh sighting, printed lines only.
-- **NOT COVERED:** class B's two suites; the read-side mechanism is attributed
-  by dose-response, not by a line-level tape of the resolve; the reader census
-  is a grep sketch (8+ sites), not a gate; `action-walker:deep` not re-run under
-  the arm.
-
-## Processed 2026-08-07 (eighteenth pass) — the order as the seat wrote it
-
-1. RULINGS on the parity-red/leg-(v) report — commit as authored.
-   LOOP CHECK: unnamed-producer-hunt — sighting 2 this unit (the
-   freed-day producer was sighting 1, ended by the tape) — COMPRESS:
-   go straight to the field-level tape, no enumerated-suspects round.
-   (a) THIRD PRODUCER FIRST — it is leg (v)'s named blocker and one
-   bounded question. Instrument the FIELD, not guessed writers: a
-   recording tape at the overlay declaration's commit point (and the
-   payload rows for the same week), file-backed, positive control
-   in-world, both arms. Whoever writes with the two known writers
-   removed IS the answer; the same tape watches Monday 2026-08-10's
-   rows so the Vertical Jump drop gets its writer named in the same
-   run if it fires there.
-   (b) PARITY CLASSIFICATION, pre-framed: every parity diff must be
-   ATTRIBUTED with a law citation before it is anything. If the tape
-   proves the STORED week drops Vertical Jump with no §18 authority
-   (the evidence points there: program carries 8, §18 scores both
-   identically), the mismatch is classified STORED-WRONG — an old
-   write-path defect the derivation corrects; it gets a declared
-   entry + an athlete-visible device-pass flag (that Monday gains
-   its Vertical Jump back), and it does NOT block the gate. An
-   UNATTRIBUTED diff always blocks. Derived-wrong always blocks.
-   (c) THEN the nine, worst-first ranked by law class as you did for
-   leg (ii)'s seven — and your precedent is adopted as the working
-   hypothesis to TEST, not assume: measure whether they share
-   mechanisms before diagnosing them singly (set-diff their worlds
-   first, the way 1b/4/5 collapsed).
-   (d) Cells 5/6 no-re-pin: ENDORSED — expectations are never edited
-   to match a regression. The preserved priced arm (1d831279) is
-   noted per condition 4.
-   (e) The sixth notification lie changes nothing — printed lines
-   only, and the parked parallel-gate unit retires the channel.
-   Continuous-work authorisation EXTENDS through (a)-(c); batched
-   report at the end or at a genuine STOP. Sam holds a veto; his
-   device-pass flags now: completed-day display, plus (b)'s pending
-   Vertical Jump restoration if the tape confirms it.
+1. RULING on ed38e2a3 — commit as authored.
+   LOOP CHECK: writer-retired-before-its-readers — sighting 2 (leg
+   (iii)'s commit-materialisation was sighting 1: content had to
+   derive before the declaration could die) — COMPRESS: the re-scope
+   you recommend IS the standing shape, now named: a stored
+   representation retires READ-SIDE FIRST, writer last, one unit.
+   (a) RE-SCOPE APPROVED exactly as recommended: leg (v) becomes
+   "the readers derive, then the writer stops", priced as ONE unit
+   on the scaffold before building. Grounds: L15 (superseded shapes
+   get read-ingress lifts, never lingering readers), the standing
+   derivation ruling (week identity/mode is a stored representation
+   feeding computation — derive it from decisions and facts), and
+   leg (iii)'s own landed precedent. The six one-sentence reds are
+   that unit's witness set.
+   (b) The TWO UNEXPLAINED (phase-structure cell 8, walker
+   lighter-day) get attributed DURING the pricing run, not after —
+   set-diff them against the six first; if either is not the same
+   sentence, it stops the build per standing conditions.
+   (c) The D13-paid entry (conditioning-day-recovery) deletion is
+   AUTHORISED in the same commit that greens it — the ratchet
+   working as designed.
+   (d) The parity-gate classification mechanism (DECLARED_PARITY_
+   DIFF, mutation-proven, expiry-carrying) is ENDORSED as built; the
+   third-producer tape finding is ACCEPTED including your own
+   attribution withdrawal — dose-response beats narrative, recorded.
+   (e) Then: build under standing conditions, full bible UNPIPED,
+   parity gate re-run (the declared diff must EXPIRE when leg (v)
+   lands — a stale entry reds, as you built), condition 1's
+   re-measure. Continuous authorisation EXTENDS through all of it;
+   one batched report at the end or at a genuine STOP.
+   Sam's device-pass flags: completed-day display; Vertical Jump
+   restoration (lands with leg (v)). Sam holds a veto throughout.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
