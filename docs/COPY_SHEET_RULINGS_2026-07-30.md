@@ -1100,3 +1100,71 @@ as a ruling** — LR-6 freezes `CoachScreen` and the pipeline in the tree, and t
 tab is one `Tab.Screen` block from returning, so the word is dormant for beta
 rather than deleted. Stated so the next reader does not read its absence from
 the UI as a retirement nobody signed.
+
+---
+
+## Batch 12 — day-first slices 1 + 2 (2026-08-08): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Sam has not signed any string in this batch.** They ship
+under this file's transitional rule (a string may ship PROPOSED and may never
+ship unlisted) and are queued for his next signing batch.
+
+**WHY THERE ARE NEW WORDS AT ALL.** Sam's day-first ruling gives the Program
+screen two shapes and one chip row. Neither is new *behaviour* — but a zoom
+control needs two words, and a five-across chip row needs a word under each
+glyph, because his own device-pass note was that icon meanings were not obvious.
+
+**THE SHORT-LABEL LAW APPLIES** (this file, batch 1: Title Case for short action
+labels). Every label below is ONE Title Case word. That is not only style: a
+five-across row on a phone has room for a word and not a sentence, and each of
+these sits under an icon that already carries the meaning.
+
+**12-a. The zoom control** (`HomeScreenV2.tsx`, slice 1, shipped 2026-08-08):
+
+| Control | PROPOSED label |
+| --- | --- |
+| Zoom to the day | "Today" |
+| Zoom to the week | "Week" |
+
+Both are already this screen's vocabulary — "Today" is the day badge, and
+"This week" / "Next week" / "Last week" are the week-nav badges — which is why
+they were chosen over inventing a pair.
+
+**They are in a TABLE, and that is not a formatting choice.**
+`copyRulingsBindingTests` binds what it finds QUOTED IN A TABLE ROW and ignores
+everything else, so a proposal written as a bullet list is a proposal no gate
+watches. The slice-1 report recorded these two as "parked for the signing
+batch"; parked in prose, they were bound by nothing.
+
+**12-b. The five life-fact chip labels** (`HomeScreenV2.tsx`, slice 2). Each
+replaces a full sentence that used to be the bar's visible text. **The sentence
+is not deleted**: it is now the chip's `accessibilityLabel` or
+`accessibilityHint`, so it is still what the door is called and still what a
+screen reader says.
+
+| Chip | PROPOSED label | The sentence it replaces on screen |
+| --- | --- | --- |
+| Short on time | "Time" | "Short on time today" |
+| Away | "Away" | "Away this week?" |
+| Readiness | "Sick" | "I'm sick/flat today" (signed, ruling 4) |
+| Injury | "Injured" | "I'm injured" |
+| Equipment | "Equipment" | "Missing equipment?" |
+
+**BOTH COLUMNS ARE QUOTED ON PURPOSE.** The binding gate reads every quoted
+string in a table row and asserts it is in the app. The left column binds the
+new labels — the thing that needs watching. The right column binds the
+sentences, which is the receipt for 12-d below: if one of them is ever quietly
+deleted along with the bar it used to sit on, the gate says so.
+
+**12-c. "Equipment" over a shorter invention.** "Kit" and "Gear" both fit the row
+more comfortably. Neither is a word this app uses: it says *equipment*
+everywhere — the sheet, the constants file, the day screen's swap reason. A
+shortened label should not also be a new noun, so the longest of the five labels
+is the one that invents nothing.
+
+**12-d. NOTHING WAS RETIRED, and that is deliberate.** "I'm sick/flat today"
+(ruling 4) and "Missing equipment?" both keep their pins in
+`weeklyReadinessCardTests`, `readinessSourceFactOwnershipTests` and
+`profileResetUITests` — they are still in the file, in the accessible position.
+If Sam signs the short labels AND rules that the sentences go, that is a
+separate, later deletion with those three pins as its receipt.

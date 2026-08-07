@@ -386,8 +386,19 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   const witnessSrc = fs.readFileSync(
     `${__dirname}/../components/ExplorerRenderWitness.tsx`, 'utf8',
   ) as string;
-  const readinessEntryTag = jsxOpeningTags(src, 'Pressable')
-    .find((tag) => tag.includes('setReadinessVisible(true)')) ?? '';
+  // THE ENTRY IS A CHIP NOW, NOT A ROW (Sam's chip-row ruling, 2026-08-08).
+  // The door is unchanged — same onPress, same testID, same accessibility label
+  // — but it is rendered through the shared `LifeFactChip`, so the tag this cell
+  // reads is a `<LifeFactChip>` and not a bare `<Pressable>`. Both element names
+  // are searched: what this cell is about is that the week-readiness entry
+  // carries the fact's stable identity, and the element it is drawn with is not
+  // the claim. A find over one name only would have gone quietly vacuous ('')
+  // the moment the row was restyled — so an empty find is failed explicitly
+  // below rather than being allowed to satisfy `.includes` on nothing.
+  const readinessEntryTag = [
+    ...jsxOpeningTags(src, 'LifeFactChip'),
+    ...jsxOpeningTags(src, 'Pressable'),
+  ].find((tag) => tag.includes('setReadinessVisible(true)')) ?? '';
   const sheetOptionTags = jsxOpeningTags(src, 'SheetOption');
   const readinessFactId = 'temporary-readiness:fatigue:2026-07-20';
   const readinessFactToken = stableTestIdToken(readinessFactId);
@@ -399,12 +410,23 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     explorerTestId.readinessProgrammingEffect(readinessFactId),
   ];
 
+  // The button ROLE moved with the element: it is declared once, inside
+  // `LifeFactChip`, instead of five times at five call sites. So the role is
+  // asserted at its owner and the identity at the call site — which is where
+  // each of them actually lives now.
+  const lifeFactChipComponent = (() => {
+    const start = src.indexOf('function LifeFactChip(');
+    return start < 0 ? '' : src.slice(start, src.indexOf('\n}\n', start + 1));
+  })();
   ok('readiness entry and lifecycle selectors preserve stable fact identity',
     factSelectors.every((selector) => selector.endsWith(readinessFactToken)) &&
     new Set(factSelectors).size === factSelectors.length &&
+    readinessEntryTag.length > 0 &&
     readinessEntryTag.includes('explorerTestId.readinessUpdate(weekReadiness.id)') &&
     readinessEntryTag.includes('explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)') &&
-    readinessEntryTag.includes('accessibilityRole="button"') &&
+    (readinessEntryTag.includes('accessibilityRole="button"') ||
+      (readinessEntryTag.startsWith('<LifeFactChip') &&
+        lifeFactChipComponent.includes('accessibilityRole="button"'))) &&
     readinessEntryTag.includes('accessibilityLabel={weekReadiness'));
 
   // Every readiness tier still commits (zero capability loss), now reached via the
@@ -559,11 +581,20 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('active state update/clear affordances present',
     src.includes('Clear adjustment'));
 
-  // Rider (a): the active-state surface sits ABOVE the seven day rows so it
-  // explains the week it precedes — and only while something is shaping it.
-  ok('[A4] active-state notes render above the week list',
+  // INVERTED OUT LOUD, 2026-08-08 — THE RULING MOVED, SO THE PIN MOVED.
+  // A4 rider (a) put the active-state surface ABOVE the seven day rows, so it
+  // explained the week it preceded. Sam's day-first layout ruling (2026-08-08,
+  // `docs/SEAT_INBOX.md`) names the order himself: Today/Week toggle → the week
+  // strip → today's card → the life-fact chip row → THEN Coach Notes. Rider (a)'s
+  // argument — the explanation sits with the thing it explains — now points the
+  // other way, because the screen leads with one day instead of seven rows.
+  // Which side moved: the RULING, on a date, by the owner. The cell is not
+  // deleted, and it still asserts a POSITION rather than mere presence — an
+  // inverted pin that only checked existence would pass on any layout at all.
+  ok('[A4] active-state notes render below the day card and its chip row',
     src.indexOf('<CoachNotesSection') > 0 &&
-    src.indexOf('<CoachNotesSection') < src.indexOf('{weekDays.map('));
+    src.indexOf('<CoachNotesSection') > src.indexOf('{weekDays.map(') &&
+    src.indexOf('<CoachNotesSection') > src.indexOf('testID="home-life-fact-chips"'));
   ok('[A4] nothing active means no empty card takes screen space',
     /if \(notes\.length === 0\) return null;/.test(src));
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',

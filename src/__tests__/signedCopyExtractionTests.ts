@@ -276,7 +276,28 @@ function extract(): ExtractedString[] {
  * the whole surface tree in one commit, which is a ceiling re-baseline and a unit
  * of its own, not a side effect of landing a ruling.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 141;
+/**
+ * 141 -> 130, DROPPED IN THE SAME COMMIT THAT EARNED IT (day-first slice 2,
+ * 2026-08-08). A ceiling left standing above a real measurement is headroom, and
+ * headroom is how the next surface adds words for free.
+ *
+ * WHERE THE ELEVEN WENT, AND WHAT THAT DOES NOT MEAN. Sam's chip-row ruling
+ * turned five stacked bars on the Program screen into five icon chips. The
+ * sentences those bars showed ("Short on time today", "Away this week?", "I'm
+ * injured", "Missing equipment?", and the readiness door's own line) are no
+ * longer JSX text children, so this extractor stops seeing them — they are now
+ * each chip's `accessibilityLabel` / `accessibilityHint`, positions this
+ * instrument has never counted. So the drop is REAL against the instrument and
+ * only PARTLY real against the app: the words still exist, they are still Sam's,
+ * they are still the doors' spoken names. What actually left the screen is five
+ * visible sentences, replaced by five one-word Title Case labels that
+ * `looksLikeProse` correctly does not count.
+ *
+ * The five new labels are PROPOSED and unsigned; they are recorded in
+ * `docs/COPY_SHEET_RULINGS_2026-07-30.md` (batch 12) — which is where the gap is
+ * closed, here and always.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 130;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

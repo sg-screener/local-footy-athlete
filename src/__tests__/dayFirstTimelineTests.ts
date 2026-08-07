@@ -430,6 +430,164 @@ run('every day still reports its canonical state leaves in the day-first shape',
     'the day-first shape is gone from HomeScreenV2; this gate is watching nothing');
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SLICE 2 — THE LAYOUT AND THE CHIP ROW (Sam's ruling, 2026-08-08)
+//
+// Sam named the spine himself: Today/Week toggle → the seven-day strip with the
+// numbers directly under it → today's card → the life-fact chip row → Coach
+// Notes. Slice 2 is presentation: five stacked bars become one row of chips and
+// two blocks change places. So these cells watch ORDER and DOORS, which are the
+// two things a "presentation only" change is allowed to leave alone — and the
+// only two things that would prove it did not.
+//
+// SOURCE-SCAN LAW (`a count taken for a record`, sighting 4, which fired inside
+// this very suite): word-boundary the count, read the REGION that runs it, and
+// prove the region was found before believing anything it says.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The file every slice-2 cell reads, comments stripped so a comment cannot pass a gate. */
+function homeScreenSource(): string {
+  return stripComments(fs.readFileSync(
+    path.join(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8',
+  ));
+}
+
+/**
+ * THE FIVE DOORS, AS THEY WERE BEFORE THE CHIP ROW EXISTED.
+ *
+ * Taken from the five bars this row replaces. Each row is what the athlete's tap
+ * must still reach: the handler it calls and the coordinate the walker, the
+ * explorer and the dev-e2e finder resolve it by. A chip that minted a new testID
+ * from its own label would be a silent rename of five doors, and every one of
+ * them is a door Sam has tapped on a device.
+ */
+const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: string; readonly testID: string }[] = [
+  { label: 'Time', onPress: 'handleApplyShortOnTimeToday()', testID: 'testID="home-short-on-time-entry"' },
+  { label: 'Away', onPress: 'setAwayDaysVisible(true)', testID: 'testID="home-away-this-week-entry"' },
+  { label: 'Sick', onPress: 'setReadinessVisible(true)', testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
+  { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
+  { label: 'Equipment', onPress: 'setEquipmentVisible(true)', testID: 'explorerTestId.equipmentUpdate(activeEquipmentFact.factId)' },
+];
+
+run('the screen is in the order Sam ruled: toggle, strip, card, chips, notes', () => {
+  const home = homeScreenSource();
+  const at = (needle: string): number => {
+    const index = home.indexOf(needle);
+    assert(index >= 0, `the day-first spine no longer contains ${needle} — this gate `
+      + 'is reading a screen that has been rebuilt around it and would otherwise '
+      + 'compare -1 against -1 and call that an order');
+    return index;
+  };
+  // Five landmarks, one per element Sam named, each the thing itself rather than
+  // a style name: the toggle's testID, the strip component, the one call that
+  // draws the day at full size, the chip row's testID, the notes component.
+  const toggle = at('testID="program-view-toggle"');
+  const strip = at('<WeekStrip');
+  const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
+  const chips = at('testID="home-life-fact-chips"');
+  const notes = at('<CoachNotesSection');
+  assert(toggle < strip && strip < card && card < chips && chips < notes,
+    'the Program screen is no longer in the order Sam ruled on 2026-08-08 '
+    + `(toggle ${toggle} → strip ${strip} → card ${card} → chips ${chips} → `
+    + 'notes ${notes}). He wrote the sequence out: Today/Week, the seven-day '
+    + 'strip directly under it, today\'s card, the chip row under the card, then '
+    + 'Coach Notes below all of it.');
+  // NOTHING BETWEEN THE TOGGLE AND THE STRIP. "Directly under it" is the half of
+  // the ruling an ordering assertion alone cannot see: three cards used to queue
+  // up in that gap, and re-inserting any one of them would keep this order and
+  // still break what he asked for.
+  const gap = home.slice(toggle, strip);
+  for (const intruder of ['<CoachNotesSection', '<MissedSessionPrompt', 'home-season-phase-skew']) {
+    assert(!gap.includes(intruder),
+      `${intruder} is back between the Today/Week control and the week strip. `
+      + 'Sam ruled the strip sits DIRECTLY under the toggle; anything that opens '
+      + 'in that gap pushes the athlete\'s week below the fold again.');
+  }
+});
+
+run('the chip row carries the five doors the five bars carried, unchanged', () => {
+  const home = homeScreenSource();
+  const rowStart = home.indexOf('testID="home-life-fact-chips"');
+  assert(rowStart > 0, 'the life-fact chip row is gone from HomeScreenV2 — this gate '
+    + 'is watching nothing');
+  // The region that RUNS the chips, not the whole file: a chip left behind
+  // somewhere else on the screen must not count as a chip in the row.
+  const row = home.slice(rowStart, home.indexOf('home-schedule-ack', rowStart));
+  assert(row.length > 500,
+    'the chip row region could not be delimited — this gate is reading the wrong '
+    + 'span and would pass on anything');
+  const chips = row.match(/<LifeFactChip\b/g) ?? [];
+  assert(chips.length === LIFE_FACT_DOORS.length,
+    `the row renders ${chips.length} chip(s); Sam ruled FIVE — short on time, `
+    + 'away, sick/flat, injured, missing equipment.');
+  for (const door of LIFE_FACT_DOORS) {
+    assert(row.includes(door.onPress),
+      `the "${door.label}" chip no longer calls ${door.onPress}. The chip row is `
+      + 'presentation: the doors behind it do not move.');
+    assert(row.includes(door.testID),
+      `the "${door.label}" chip no longer resolves by ${door.testID}. That is the `
+      + 'coordinate the walker and the explorer reach this door by; renaming it '
+      + 'silently is how a tap stops being findable while the screen still looks right.');
+    assert(new RegExp(`label="${door.label}"`).test(row),
+      `the "${door.label}" chip lost its label. A chip with a glyph and no word is `
+      + 'the device-pass finding Sam raised: icon meanings were not obvious.');
+  }
+  // ONE WORD, TITLE CASE. The short-label law, and also the copy gate: the row is
+  // five-across on a phone, and a chip label long enough to be prose is both
+  // unreadable there and a new athlete-visible sentence nobody signed.
+  const labels = [...row.matchAll(/\blabel="([^"]*)"/g)].map((match) => match[1]);
+  assert(labels.length === LIFE_FACT_DOORS.length,
+    `found ${labels.length} chip label(s) in the row, expected ${LIFE_FACT_DOORS.length}`);
+  for (const label of labels) {
+    assert(/^[A-Z][a-z]+$/.test(label),
+      `chip label "${label}" is not one Title Case word. The labels ship PROPOSED `
+      + 'under the copy regime and are Sam\'s to sign; a sentence smuggled in here '
+      + 'is unsigned copy on the busiest row of the screen.');
+  }
+});
+
+run('the five bars did not survive alongside their own chips', () => {
+  const home = homeScreenSource();
+  // COUNTED IN THE SCREEN BODY, NOT IN THE FILE — and the first version of this
+  // cell got that wrong and said so out loud on its first run. It counted
+  // `setReadinessInjuryVisible(true)` file-wide, found two, and called the second
+  // a leftover bar. It is the readiness sheet's own "Something hurts" row: the
+  // documented SECOND DOOR to one owner, older than this unit. The number named
+  // the FILE while the claim was about the SCREEN (`a count taken for a record`,
+  // again). So the region is the scroll body, where a row either is or is not.
+  const bodyStart = home.indexOf('<ScrollView');
+  const bodyEnd = home.indexOf('</ScrollView>');
+  assert(bodyStart > 0 && bodyEnd > bodyStart,
+    'the Program screen\'s scroll body could not be located — this gate is reading '
+    + 'the wrong region and would pass on anything');
+  const body = home.slice(bodyStart, bodyEnd);
+  // A MOVE THAT DOES NOT DELETE IS A DUPLICATE. Two live copies of one door means
+  // two nodes answering to one testID, and a finder that picks one at random.
+  for (const door of LIFE_FACT_DOORS) {
+    const hits = body.split(door.onPress).length - 1;
+    assert(hits === 1,
+      `${door.onPress} appears ${hits} times in the Program screen's body. The chip `
+      + 'row REPLACES the stacked bars; leaving one behind gives the athlete the '
+      + 'same door twice and gives the explorer two nodes with one identity.');
+  }
+  // THE OLD BAR TREATMENT HAS EXACTLY ONE SURVIVOR, AND IT IS NAMED. The 28pt
+  // icon-and-sentence card is what the five bars were; the practice-match CTA
+  // borrowed the same styles and is NOT one of Sam's five — it is a conditional
+  // week-level offer with a composed label, not a life fact. So the survivor is
+  // pinned by name rather than the treatment being banned outright: a SECOND
+  // survivor is a bar that was missed, and this reds on it.
+  const barIcons = body.match(/styles\.busyAwayIcon\b/g) ?? [];
+  assert(barIcons.length === 1,
+    `${barIcons.length} card(s) still use the old 28pt bar icon treatment; exactly `
+    + 'one may — the practice-match CTA. The five life-fact bars that used it are '
+    + 'the chip row now.');
+  const practiceMatch = body.slice(body.indexOf('showPracticeMatchCTA'));
+  assert(practiceMatch.includes('styles.busyAwayIcon'),
+    'the one card allowed to keep the old bar treatment is no longer the '
+    + 'practice-match CTA — something else inherited it, which is the leftover '
+    + 'this cell exists to find.');
+});
+
 run('no clock times, and the timeline entry shape is pinned', () => {
   world();
   const day = visibleDays(WEEK).find((candidate) => candidate.parts.length > 0);

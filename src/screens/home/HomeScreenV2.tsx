@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
@@ -587,60 +588,19 @@ export default function HomeScreenV2() {
           />
         )}
 
-        {/* ── Missed-session follow-up ── */}
-        {isNormal && missedSessionPrompt && (
-          <MissedSessionPrompt
-            missed={missedSessionPrompt}
-            onRespond={(response) =>
-              void handleMissedSessionResponse(missedSessionPrompt, response)}
-          />
-        )}
+        {/* NOTHING ELSE SITS BETWEEN THE TOGGLE AND THE WEEK.
+            Sam's layout ruling (2026-08-08): the seven-day strip sits DIRECTLY
+            under the Today/Week control. Everything that used to queue up here
+            — the missed-session prompt, the season-phase skew disclosure and
+            the Coach Notes section — now renders BELOW the day's card, in the
+            order he named. The picker banners above are the one exception and
+            they are not one: a picker forces the week shape, and "tap the day
+            to move the game to" has to sit above the days it is talking about.
 
-        {/* ── Season-phase skew disclosure ──
-            Stored state that is already wrong. The profile and the program
-            clock disagree, from a phase shift whose profile write landed
-            before its rebuild failed. Neither value is quietly overwritten to
-            match the other — the athlete is told what their week is actually
-            built as, what they told us they are, and offered one press that
-            reconciles it through the same atomic transaction a deliberate
-            phase shift uses. */}
-        {seasonPhaseSkew && (
-          <View style={styles.phaseSkewCard} testID="home-season-phase-skew">
-            <Text style={styles.phaseSkewTitle}>Your program is out of step</Text>
-            <Text style={styles.phaseSkewBody}>
-              This week is still built as {seasonPhaseSkew.ownedPhase}, but you told
-              us you're {seasonPhaseSkew.profileSelection}. Nothing has been changed
-              either way — rebuild when you're ready.
-            </Text>
-            {seasonPhaseRepairError ? (
-              <Text style={styles.phaseSkewError} testID="home-season-phase-skew-error">
-                {seasonPhaseRepairError}
-              </Text>
-            ) : null}
-            <Button
-              label={seasonPhaseRepairBusy
-                ? 'Rebuilding…'
-                : `Rebuild as ${seasonPhaseSkew.profileSelection}`}
-              size="md"
-              disabled={seasonPhaseRepairBusy}
-              onPress={() => void handleRepairSeasonPhaseSkew()}
-              testID="home-season-phase-skew-repair"
-            />
-          </View>
-        )}
-
-        {/* ── What's shaping this week ──
-            A4 rider (a): above the week it explains, and only while something
-            is actually active — CoachNotesSection renders nothing when the list
-            is empty, so a normal week loses no screen space. Rider (c): one
-            line and one clear per active fact, never collapsed. Rider (d): the
-            clears route through handleCoachNoteAction, the same cascade doors
-            used everywhere else. */}
-        <CoachNotesSection
-          notes={coachNotes}
-          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
-          onAction={handleCoachNoteAction}
-        />
+            THIS SUPERSEDES A4 RIDER (a) ("above the week it explains"), which
+            is written down in `weeklyReadinessCardTests`. That cell is inverted
+            in this same commit rather than deleted — the ruling moved, so the
+            pin moves with it. */}
 
         {/* ── The week ──
             ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
@@ -681,6 +641,228 @@ export default function HomeScreenV2() {
         ) : (
           <View style={styles.dayList}>
             {weekDays.map((day, idx) => renderDayRow(day, idx))}
+          </View>
+        )}
+
+        {/* ── THE LIFE-FACT CHIP ROW (Sam's ruling 2026-08-08, his own 2026-08-01
+            design, option a) ──
+            The five stacked bars that used to run down the bottom of this
+            screen are ONE horizontal row of round icon chips with a tiny label
+            under each, always visible, sitting just under the day's card.
+
+            PRESENTATION ONLY. Every chip keeps the door it already had: the same
+            onPress, the same testID, the same accessibility label — including the
+            two whose testID changes when a fact is already active. Nothing about
+            what a tap does moved; only where the tap lives and what it looks
+            like. The sentence each bar used to show is now the chip's spoken
+            hint, so the words are not deleted, they are demoted to where a five-
+            across row can still carry them.
+
+            THE LABELS ARE NEW AND UNSIGNED. "Time", "Away", "Sick", "Injured"
+            and "Equipment" are PROPOSED under the copy regime's transitional
+            rule and join Sam's next signing batch (with "Today"/"Week" from
+            slice 1). Title Case, one word each — a five-across row on a phone
+            has room for a word, not a sentence. "Equipment" was chosen over a
+            shorter invention ("Kit", "Gear") because this app already says
+            equipment everywhere; a new short label should not also be a new
+            word. */}
+        {isNormal && (
+          <View style={styles.lifeFactChips} testID="home-life-fact-chips">
+            <LifeFactChip
+              onPress={async () => {
+                // NEVER IN SILENCE. The tap used to discard its result, and the
+                // result is `ok: false` on every device with a real accepted base
+                // (declared red 1) — so this button reported nothing at all while
+                // doing nothing at all.
+                setScheduleAck(null);
+                const result = await handleApplyShortOnTimeToday();
+                const ack = buildScheduleAcknowledgment(result, 'short_on_time');
+                setScheduleAck(ack);
+                // The tape's witness that the ack layer RAN — Sam's 2026-08-01
+                // silence could not be reproduced below this line, so this line
+                // reports itself. See recordScheduleAckPresented.
+                recordScheduleAckPresented({
+                  traceId: result?.traceId, surface: 'short_on_time_today', tone: ack.tone,
+                });
+              }}
+              testID="home-short-on-time-entry"
+              accessibilityLabel="Short on time today"
+              label="Time"
+              icon={
+                /* Stopwatch — Sam's pick, 2026-08-03 icon ruling row 1
+                   (replacing the hourglass): time being COUNTED on one day.
+                   The hourglass it replaces is now nobody's, so no two rows
+                   share a glyph. */
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M10 2h4" />
+                  <Circle cx="12" cy="14" r="8" />
+                  <Path d="M12 14l3-3" />
+                </Svg>
+              }
+            />
+            <LifeFactChip
+              onPress={() => { setScheduleAck(null); setAwayDaysVisible(true); }}
+              testID="home-away-this-week-entry"
+              accessibilityLabel="Away this week?"
+              label="Away"
+              tint={styles.awayIconTint}
+              icon={
+                /* Globe — the same glyph the away row carried inside the old
+                   sheet, promoted with it. */
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#7CC4FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M3 12h18" />
+                  <Path d="M12 2a15 15 0 010 20" /><Path d="M12 2a15 15 0 000 20" />
+                </Svg>
+              }
+            />
+            <LifeFactChip
+              onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
+              testID={weekReadiness
+                ? explorerTestId.readinessUpdate(weekReadiness.id)
+                : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
+              accessibilityLabel={weekReadiness
+                ? explorerTestId.readinessUpdate(weekReadiness.id)
+                : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
+              /* A4 SURVIVES THE SHRINK: the label is still the owner's, not the
+                 card's. A chip cannot show a sentence, so the owner's title is
+                 what this chip SAYS (accessibility) while the row shows one
+                 word — and the athlete still reads that title in full, because
+                 an active readiness fact is a Coach Note and Coach Notes now sit
+                 directly below this row. The word "I'm sick/flat today" (signed,
+                 ruling 4) is still this file's, which is what its two pins
+                 assert. */
+              accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
+              label="Sick"
+              tint={styles.readinessIconTint}
+              icon={
+                /* Thermometer — Sam's pick, 2026-08-03 icon ruling row 2
+                   (replacing the pulse line): being sick, not a heartbeat. */
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />
+                </Svg>
+              }
+            />
+            <LifeFactChip
+              /* ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
+                 the readiness sheet's "Something hurts" row opens, and both
+                 complete through `handleApplyGuidedInjury`. */
+              onPress={() => setReadinessInjuryVisible(true)}
+              testID="home-injured-entry"
+              accessibilityLabel="I'm injured"
+              label="Injured"
+              tint={styles.injuredIconTint}
+              icon={
+                /* Plaster / bandage — an injury, not an alert triangle (that
+                   one belongs to the readiness sheet's own "Something hurts"
+                   row) and not the pulse above it. */
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
+                  <Path d="M8.5 8.5 15.5 15.5" />
+                </Svg>
+              }
+            />
+            <LifeFactChip
+              onPress={() => setEquipmentVisible(true)}
+              testID={activeEquipmentFact
+                ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
+                : explorerTestId.equipmentOption('open')}
+              accessibilityLabel={activeEquipmentFact
+                ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
+                : explorerTestId.equipmentOption('open')}
+              accessibilityHint="Missing equipment?"
+              label="Equipment"
+              tint={styles.equipmentIconTint}
+              icon={
+                /* Dumbbell struck through — Sam's pick, 2026-08-03 icon
+                   ruling row 4 (replacing the plain dumbbell): equipment
+                   MISSING, not equipment. */
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C6FF6B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="5.5" cy="12" r="2.3" />
+                  <Circle cx="18.5" cy="12" r="2.3" />
+                  <Path d="M8 12h8" />
+                  <Path d="M3 3l18 18" />
+                </Svg>
+              }
+            />
+          </View>
+        )}
+
+        {/* The answer to a chip tap, in the athlete's own words, directly under
+            the chip that was tapped. Tapping it dismisses it — an acknowledgment
+            the athlete cannot clear is a banner. */}
+        {isNormal && scheduleAck && !awayDaysVisible && (
+          <Pressable
+            onPress={() => setScheduleAck(null)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-schedule-ack"
+            accessibilityRole="button"
+            accessibilityLabel={scheduleAck.message}
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <Text style={[
+                styles.busyAwayText,
+                scheduleAck.tone === 'error' && styles.scheduleAckError,
+              ]}>
+                {scheduleAck.message}
+              </Text>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── What's shaping this week ──
+            MOVED BELOW THE CARD AND THE CHIPS (Sam, 2026-08-08). A4 rider (a)
+            put it above the week it explains; the day-first layout puts today
+            first and the explanation under it, which is the same argument
+            pointed at a screen that now leads with one day. Rider (c) — one line
+            and one clear per active fact, never collapsed — and rider (d) — the
+            clears route through handleCoachNoteAction — are untouched.
+            CoachNotesSection still renders nothing when the list is empty, so a
+            normal week loses no screen space. */}
+        <CoachNotesSection
+          notes={coachNotes}
+          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
+          onAction={handleCoachNoteAction}
+        />
+
+        {/* ── Missed-session follow-up ── */}
+        {isNormal && missedSessionPrompt && (
+          <MissedSessionPrompt
+            missed={missedSessionPrompt}
+            onRespond={(response) =>
+              void handleMissedSessionResponse(missedSessionPrompt, response)}
+          />
+        )}
+
+        {/* ── Season-phase skew disclosure ──
+            Stored state that is already wrong. The profile and the program
+            clock disagree, from a phase shift whose profile write landed
+            before its rebuild failed. Neither value is quietly overwritten to
+            match the other — the athlete is told what their week is actually
+            built as, what they told us they are, and offered one press that
+            reconciles it through the same atomic transaction a deliberate
+            phase shift uses. */}
+        {seasonPhaseSkew && (
+          <View style={styles.phaseSkewCard} testID="home-season-phase-skew">
+            <Text style={styles.phaseSkewTitle}>Your program is out of step</Text>
+            <Text style={styles.phaseSkewBody}>
+              This week is still built as {seasonPhaseSkew.ownedPhase}, but you told
+              us you're {seasonPhaseSkew.profileSelection}. Nothing has been changed
+              either way — rebuild when you're ready.
+            </Text>
+            {seasonPhaseRepairError ? (
+              <Text style={styles.phaseSkewError} testID="home-season-phase-skew-error">
+                {seasonPhaseRepairError}
+              </Text>
+            ) : null}
+            <Button
+              label={seasonPhaseRepairBusy
+                ? 'Rebuilding…'
+                : `Rebuild as ${seasonPhaseSkew.profileSelection}`}
+              size="md"
+              disabled={seasonPhaseRepairBusy}
+              onPress={() => void handleRepairSeasonPhaseSkew()}
+              testID="home-season-phase-skew-repair"
+            />
           </View>
         )}
 
@@ -784,199 +966,15 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* ── Short on time today (ruling 2) ──
-            TWO BUTTONS, TWO FACTS, NO MENU BETWEEN THEM. This half commits on
-            the tap — as the busy row inside the old sheet already did — and the
-            fact it writes is TODAY-scoped because the words say today. */}
-        {isNormal && (
-          <Pressable
-            onPress={async () => {
-              // NEVER IN SILENCE. The tap used to discard its result, and the
-              // result is `ok: false` on every device with a real accepted base
-              // (declared red 1) — so this button reported nothing at all while
-              // doing nothing at all.
-              setScheduleAck(null);
-              const result = await handleApplyShortOnTimeToday();
-              const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-              setScheduleAck(ack);
-              // The tape's witness that the ack layer RAN — Sam's 2026-08-01
-              // silence could not be reproduced below this line, so this line
-              // reports itself. See recordScheduleAckPresented.
-              recordScheduleAckPresented({
-                traceId: result?.traceId, surface: 'short_on_time_today', tone: ack.tone,
-              });
-            }}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-short-on-time-entry"
-            accessibilityRole="button"
-            accessibilityLabel="Short on time today"
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={styles.busyAwayIcon}>
-                  {/* Stopwatch — Sam's pick, 2026-08-03 icon ruling row 1
-                      (replacing the hourglass): time being COUNTED on one day.
-                      The hourglass it replaces is now nobody's, so no two rows
-                      share a glyph. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M10 2h4" />
-                    <Circle cx="12" cy="14" r="8" />
-                    <Path d="M12 14l3-3" />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>Short on time today</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
-        {/* ── Away this week? (ruling 2) — the one question with an answer ── */}
-        {isNormal && (
-          <Pressable
-            onPress={() => { setScheduleAck(null); setAwayDaysVisible(true); }}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-away-this-week-entry"
-            accessibilityRole="button"
-            accessibilityLabel="Away this week?"
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.awayIconTint]}>
-                  {/* Globe — the same glyph the away row carried inside the old
-                      sheet, promoted with it. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#7CC4FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M3 12h18" />
-                    <Path d="M12 2a15 15 0 010 20" /><Path d="M12 2a15 15 0 000 20" />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>Away this week?</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
-        {/* The answer to a schedule tap, in the athlete's own words. Tapping it
-            dismisses it — an acknowledgment the athlete cannot clear is a banner. */}
-        {isNormal && scheduleAck && !awayDaysVisible && (
-          <Pressable
-            onPress={() => setScheduleAck(null)}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-schedule-ack"
-            accessibilityRole="button"
-            accessibilityLabel={scheduleAck.message}
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <Text style={[
-                styles.busyAwayText,
-                scheduleAck.tone === 'error' && styles.scheduleAckError,
-              ]}>
-                {scheduleAck.message}
-              </Text>
-            </Card>
-          </Pressable>
-        )}
-
-        {/* ── Weekly readiness ("I'm sick/flat today") — all phases, week-level ── */}
-        {isNormal && (
-          <Pressable
-            onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID={weekReadiness
-              ? explorerTestId.readinessUpdate(weekReadiness.id)
-              : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-            accessibilityRole="button"
-            accessibilityLabel={weekReadiness
-              ? explorerTestId.readinessUpdate(weekReadiness.id)
-              : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.readinessIconTint]}>
-                  {/* Thermometer — Sam's pick, 2026-08-03 icon ruling row 2
-                      (replacing the pulse line): being sick, not a heartbeat.
-                      Same shape the readiness sheet's "Sick" bucket draws —
-                      one meaning, one mark. The sheet's own "Update" row keeps
-                      the pulse, which is now this surface's nobody-else's. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>
-                  {/* A4: the label is the owner's, not the card's.
-                      `resolveVisibleReadinessState` already attributes it to the
-                      fact kind; re-deriving it here from scope/isRecovery threw
-                      that away and printed the same generic line for every
-                      fact, which is what Sam saw on the phone. */}
-                  {weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
-                </Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
-        {/* ── I'm injured (ruling 3) ──
-            ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
-            the readiness sheet's "Something hurts" row opens, and both complete
-            through `handleApplyGuidedInjury`. The row inside the sheet stays:
-            an athlete who starts at "I'm sick/flat" and discovers it is a niggle
-            must not have to back out to a different button. */}
-        {isNormal && (
-          <Pressable
-            onPress={() => setReadinessInjuryVisible(true)}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-injured-entry"
-            accessibilityRole="button"
-            accessibilityLabel="I'm injured"
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.injuredIconTint]}>
-                  {/* Plaster / bandage — an injury, not an alert triangle (that
-                      one belongs to the readiness sheet's own "Something hurts"
-                      row) and not the pulse above it. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
-                    <Path d="M8.5 8.5 15.5 15.5" />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>I'm injured</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
-        {isNormal && (
-          <Pressable
-            onPress={() => setEquipmentVisible(true)}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID={activeEquipmentFact
-              ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
-              : explorerTestId.equipmentOption('open')}
-            accessibilityRole="button"
-            accessibilityLabel={activeEquipmentFact
-              ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
-              : explorerTestId.equipmentOption('open')}
-          >
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.equipmentIconTint]}>
-                  {/* Dumbbell struck through — Sam's pick, 2026-08-03 icon
-                      ruling row 4 (replacing the plain dumbbell): equipment
-                      MISSING, not equipment. Same visual family as the day
-                      screen's "No equipment" swap reason, redrawn in this
-                      surface's inline-SVG idiom. */}
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C6FF6B" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <Circle cx="5.5" cy="12" r="2.3" />
-                    <Circle cx="18.5" cy="12" r="2.3" />
-                    <Path d="M8 12h8" />
-                    <Path d="M3 3l18 18" />
-                  </Svg>
-                </View>
-                <Text style={styles.busyAwayText}>Missing equipment?</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
+        {/* THE FIVE LIFE-FACT BARS THAT STOOD HERE ARE THE CHIP ROW ABOVE.
+            They ran down the bottom of the screen as five full-width cards —
+            "Short on time today", "Away this week?", the weekly readiness door,
+            "I'm injured" and "Missing equipment?" — each with a 28pt icon and a
+            sentence. Sam's 2026-08-08 ruling makes them one row of round chips
+            under the day's card. Every door, testID and accessibility label went
+            with them unchanged; nothing about this row is new behaviour, and the
+            schedule acknowledgment moved up with them so an answer still appears
+            beside the thing that was tapped. */}
 
         {isNormal && showPracticeMatchCTA && (
           <Pressable
@@ -1984,6 +1982,52 @@ function DayRow({
       )}
       </View>
     </Card>
+  );
+}
+
+interface LifeFactChipProps {
+  readonly icon: React.ReactNode;
+  /** One of the existing `*IconTint` styles. Omitted = the blue the busy row used. */
+  readonly tint?: StyleProp<ViewStyle>;
+  /** PROPOSED, unsigned, one Title Case word. See the row's call site. */
+  readonly label: string;
+  readonly onPress: () => void;
+  readonly testID: string;
+  readonly accessibilityLabel: string;
+  /** The sentence the bar used to show, for anyone the one word is not enough for. */
+  readonly accessibilityHint?: string;
+}
+
+/**
+ * A LIFE-FACT CHIP — Sam's 2026-08-01 design, ruled 2026-08-08.
+ *
+ * ONE CHIP SHAPE, FIVE CALL SITES. Five copies of a round icon over a tiny
+ * label is five places for a padding to drift and one place to forget an
+ * accessibility label; the same argument that gave the day-first view one
+ * `renderDayRow`. What differs between chips — the door, the glyph, the tint,
+ * the word — is exactly what arrives as props, and nothing else can.
+ *
+ * IT OWNS NO DOOR OF ITS OWN. `onPress`, `testID` and `accessibilityLabel` come
+ * from the call site unchanged from the bar this chip replaces, so the walker,
+ * the explorer and the dev-e2e finder reach the same coordinates they always
+ * did. A chip that minted its own testID from its label would have quietly
+ * renamed five doors.
+ */
+function LifeFactChip({
+  icon, tint, label, onPress, testID, accessibilityLabel, accessibilityHint,
+}: LifeFactChipProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      style={({ pressed }) => [styles.lifeFactChip, pressed && { opacity: 0.7 }]}
+    >
+      <View style={[styles.lifeFactChipIcon, tint]}>{icon}</View>
+      <Text style={styles.lifeFactChipLabel} numberOfLines={1}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -3336,8 +3380,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
 
-  // Top bar (week nav) — generous bottom space so the list below breathes.
-  topBar: { marginBottom: spacing.xl },
+  // Top bar (week nav). TIGHTENED xl -> md (Sam, 2026-08-08): the week strip
+  // sits DIRECTLY under the Today/Week control now, and 32pt of air between a
+  // control and the thing it controls reads as two screens, not one.
+  topBar: { marginBottom: spacing.md },
   topBarRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', gap: spacing.sm,
@@ -3370,7 +3416,7 @@ const styles = StyleSheet.create({
 
   // Add game — no border, lighter surface
   addGame: {
-    marginBottom: spacing.md,
+    marginTop: spacing.sm,
     backgroundColor: '#121212',
     borderColor: 'transparent',
   },
@@ -3382,8 +3428,34 @@ const styles = StyleSheet.create({
   },
   addGameText: { color: '#B5B5B5', fontSize: 14, fontWeight: '500' },
 
+  // ── The life-fact chip row ──
+  // Five chips across, equal width, one gap. `justifyContent: space-between`
+  // with flex:1 chips keeps them even on every phone width without a hard-coded
+  // chip size — a fixed width would clip "Equipment" on a small screen and
+  // strand the row short of the margins on a large one.
+  lifeFactChips: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  lifeFactChip: { flex: 1, alignItems: 'center', gap: 6 },
+  lifeFactChipIcon: {
+    width: 44, height: 44, borderRadius: 22,
+    // The blue the "Short on time today" bar carried; the other four chips
+    // pass their own tint, so the five keep the colours Sam already picked.
+    backgroundColor: 'rgba(30, 167, 255, 0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  lifeFactChipLabel: {
+    color: '#8A8F98', fontSize: 11, fontWeight: '600', letterSpacing: 0.2,
+  },
+
   // Busy / away entry + missed-session prompt.
-  busyAwayEntry: { marginTop: spacing.md },
+  // TIGHTENED md -> sm (Sam, 2026-08-08: "too many UI gaps"). Five of these
+  // cards became the chip row above; the two or three that remain are answers
+  // and refusals, and they read as a group rather than as separate screens.
+  busyAwayEntry: { marginTop: spacing.sm },
   busyAwayRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   busyAwayIcon: {
     width: 28, height: 28, borderRadius: 14,
@@ -3426,7 +3498,7 @@ const styles = StyleSheet.create({
   awayCheckOn: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
   awayDayText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', flex: 1 },
 
-  missedCard: { marginTop: spacing.md },
+  missedCard: { marginTop: spacing.sm },
   missedTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 4 },
   missedBody: {
     color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 19,
@@ -3444,7 +3516,9 @@ const styles = StyleSheet.create({
   // Active Coach Notes — compact control-panel cards derived from typed
   // active constraints. Hidden entirely when nothing is shaping the program.
   coachNotesSection: {
-    paddingTop: spacing.lg,
+    // TIGHTENED lg -> md (Sam, 2026-08-08). The section now follows the chip
+    // row rather than opening the screen, so it needs separation, not a break.
+    paddingTop: spacing.md,
     gap: spacing.sm,
   },
   coachNotesTitle: {
@@ -3778,7 +3852,9 @@ const styles = StyleSheet.create({
   makeChangeText: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
 
   // Sections — larger rhythm between top-level blocks.
-  section: { paddingTop: spacing.xxl, gap: spacing.md },
+  // TIGHTENED xxl -> lg (Sam, 2026-08-08). 48pt above the phase card left a
+  // band of empty screen between it and whatever ended above it.
+  section: { paddingTop: spacing.lg, gap: spacing.md },
 
   // Phase card — borderless default surface; the outline Button below it
   // carries the accent weight.
