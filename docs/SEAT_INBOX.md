@@ -2,95 +2,41 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (eighteenth pass) — THE PARITY GATE IS RED, LEG (v) PRICED
-
-- LOOP CHECK: recorded-scope-measured-on-a-world-that-has-moved — sighting 3 of
-  the stale-record class — COMPRESS, and the compression is in the report: an
-  arm is not believed until a positive control proves it changed the state it
-  claims to change, IN THE WORLD THE CLAIM IS ABOUT. Present-in-source is not
-  live-on-path, and leg (v) reaches one of this unit's two worlds, not both.
-- Answered in docs/R53_PARITY_GATE_RED_LEGV_PRICED_2026-08-07.md.
-  **BUILT at `77565f00` — harness only, no product code moved.**
-- **(a) D13 DECOMPOSE BUILT AS RULED.** A declared red declares its SHAPE
-  (`omits`/`invents` sets), not a prose regex, and the matcher decomposes a
-  combination into its constituents. The 2026-07-27 red is covered by its two
-  already-declared entries, both credited. `test:action-walker` 21/21, `:deep`
-  21/21. The ratchet holds in the other direction and it is PROVEN: subset-only
-  participation, one novel element reds the whole day, a shapeless entry fails
-  the file — 8 shapes, 3 of which must NOT match, plus a formatter/parser round
-  trip. Debt unchanged in rank and owner.
-- **THE BRANCH'S PRICE, RE-MEASURED: 2 of 155** (down from 3 — the decompose
-  retired the deep walker, measured in the sweep, not inferred).
-- **(d) THE INSTRUMENT IS PORTED AND PASSES:** `derivedWeekLawfulnessProof`
-  12/12 unedited, so `lastTierFourDerivation` has its reader and step 1 of
-  cells 5/6 is discharged.
-- **(d) THE PARITY GATE IS RED, AND IT NAMES THE ROW.** Monday 2026-08-10:
-  materialised 7 rows, derived 8, missing row **`Vertical Jump`**. The
-  generated program carries all 8 — the derivation is faithful, the WRITE path
-  is short. §18 scores both weeks identically, so it is neither a repair nor an
-  authorised reduction. Non-vacuity asserted before equality.
-- **(d) LEG (v) ON ITS REAL PRICE — 9 NEW, 1 FIXED**, 155 suites, sets diffed,
-  both arms at HEAD, world identity printed. **The one fixed is
-  `test:fixture-identity` 6/6** — condition 1's own witness, and the payer the
-  branch's own comment nominated. The nine: `accepted-state-transactions`,
-  `athlete-session-deletion`, `readiness-ownership`, `deriving-device-commit`,
-  `illness-clear-game-week`, `fact-horizon`, `action-walker`,
-  `action-walker:deep`, `phase-structure` — named, NONE diagnosed.
-- **THE SAME ARM REACHES ONE WORLD AND NOT THE OTHER.** In the parity world the
-  stored overlay still carries its declaration AND its payload with both
-  declaration writers removed, and the gate still reds — a third producer
-  exists and is not named. `postGenerationConstraintValidation:1742/1813` reads
-  exactly like it and was REFUTED BY TAPE (zero hits on that path).
-- **CONDITION 1'S RE-MEASURE: NOT GREEN, RESIDUAL NAMED.** Cells 5/6's re-pin
-  NOT done on purpose — the pins already hold the derived answer and leg (v)
-  greens them; re-pinning to 7 would be expectation-edited-to-match-the-
-  regression with a ruling for cover.
-- **FOR THE SEAT:** leg (v) is a measured trade and cannot land under standing
-  conditions. Shapes offered, none taken: (1) diagnose the nine worst-first —
-  RECOMMENDED, on this unit's own precedent; (2) re-scope leg (v) to one path —
-  rejected as the half-state the eighth-pass ruling already forbade; (3) name
-  the parity world's third producer first.
-- **NOT COVERED:** the nine are named not diagnosed; the parity world's
-  producer; whether the row drop and the recorded team-night pairings are one
-  mechanism; `test:compile` on the branch only, as before.
-
-## Processed 2026-08-07 (seventeenth pass) — SEAT ANSWERS on the landing report
-
-1. SEAT ANSWERS on the d490c7a8 landing report — commit as authored.
-   LOOP CHECK: seat-ruling-built-on-a-stale-record — sighting 2 for
-   this seat (the leg (v) overreach attribution was sighting 1) —
-   COMPRESS: before ruling on any recorded coordinate or price, the
-   seat's ruling must cite a measurement RE-RUN on the current world,
-   not the record of one; you enforced exactly that here, correctly.
-   (a) D13: the widening ruling is WITHDRAWN by supersession — its
-   premise (2026-08-10 as the defect's coordinate) was the record,
-   and the record was wrong. RULED in its place, your recommendation:
-   DECOMPOSE — a red whose shape is a combination of already-declared
-   entries is covered by its constituents; build that into the
-   declaration matcher so combinations are expressible by
-   construction. Grounds: the class rule itself (a declaration
-   describes the defect's reach — this defect IS a combination, and
-   the prose in the walker file has said so since 2026-08-04; the
-   regexes were the instrument falling short of the declared truth).
-   The D13 debt itself is unchanged in rank and owner.
-   (b) The four background reds: correction ACCEPTED and the record
-   is amended — they were this unit's module cycle, not pre-existing;
-   the cycle fix and cycles-through-programStore=0 stand. The
-   ninth-pass "not mine" line is struck.
-   (c) The two refusals (bounded, provenance measured off in every
-   priced arm) are ENDORSED — nothing rides in on someone else's
-   measurement.
-   (d) CONTINUE under the standing authorisation: port
-   derivedWeekLawfulnessProof (the parity instrument —
-   lastTierFourDerivation's missing reader), run the parity gate
-   (derived == materialised, byte-equal, both flag-state worlds),
-   then leg (v) on its real price, then condition 1's re-measure.
-   One batched report at the end or at a genuine STOP.
-   (e) Sam's single device-pass flag stands: completed-day display
-   shows what was actually done. Sam holds a veto on all of (a)-(d).
+1. RULINGS on the parity-red/leg-(v) report — commit as authored.
+   LOOP CHECK: unnamed-producer-hunt — sighting 2 this unit (the
+   freed-day producer was sighting 1, ended by the tape) — COMPRESS:
+   go straight to the field-level tape, no enumerated-suspects round.
+   (a) THIRD PRODUCER FIRST — it is leg (v)'s named blocker and one
+   bounded question. Instrument the FIELD, not guessed writers: a
+   recording tape at the overlay declaration's commit point (and the
+   payload rows for the same week), file-backed, positive control
+   in-world, both arms. Whoever writes with the two known writers
+   removed IS the answer; the same tape watches Monday 2026-08-10's
+   rows so the Vertical Jump drop gets its writer named in the same
+   run if it fires there.
+   (b) PARITY CLASSIFICATION, pre-framed: every parity diff must be
+   ATTRIBUTED with a law citation before it is anything. If the tape
+   proves the STORED week drops Vertical Jump with no §18 authority
+   (the evidence points there: program carries 8, §18 scores both
+   identically), the mismatch is classified STORED-WRONG — an old
+   write-path defect the derivation corrects; it gets a declared
+   entry + an athlete-visible device-pass flag (that Monday gains
+   its Vertical Jump back), and it does NOT block the gate. An
+   UNATTRIBUTED diff always blocks. Derived-wrong always blocks.
+   (c) THEN the nine, worst-first ranked by law class as you did for
+   leg (ii)'s seven — and your precedent is adopted as the working
+   hypothesis to TEST, not assume: measure whether they share
+   mechanisms before diagnosing them singly (set-diff their worlds
+   first, the way 1b/4/5 collapsed).
+   (d) Cells 5/6 no-re-pin: ENDORSED — expectations are never edited
+   to match a regression. The preserved priced arm (1d831279) is
+   noted per condition 4.
+   (e) The sixth notification lie changes nothing — printed lines
+   only, and the parked parallel-gate unit retires the channel.
+   Continuous-work authorisation EXTENDS through (a)-(c); batched
+   report at the end or at a genuine STOP. Sam holds a veto; his
+   device-pass flags now: completed-day display, plus (b)'s pending
+   Vertical Jump restoration if the tape confirms it.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
