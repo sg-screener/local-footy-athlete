@@ -42,10 +42,15 @@ thereby IN scope for v1, not parked).
       **NOT "suites are independent" either** — the agreement law caught
       `runSlice1` asserting on its own WALL-CLOCK runtime (43.5s under load vs
       a 30s hard ceiling). It now runs exclusive; the ceiling was not raised.
-- [ ] PARALLEL GATE **STAGE 2 — STOPPED FOR SAM.** Flipping the official gate
-      to the parallel runner was scoped as the first commit after the merge,
-      but its stated payoff was the refuted 20-minute figure. Worth ~2 min per
-      commit against a new failure mode (timing-sensitive suites). Sam's call.
+- [x] PARALLEL GATE **STAGE 2 — REFUSED** 2026-08-07, ruled from the
+      measurement: ~2 min does not buy a timing-sensitive failure mode on the
+      gate that guards everything. The runner is kept as a **NON-OFFICIAL fast
+      pre-check** — agents may use it mid-work, **no official verdict ever
+      cites it**; the agreement law stays in the chain guarding the shadow.
+      **Unit CLOSED, delivered.**
+- [ ] SMALL MAINTENANCE (filed 2026-08-07, not now): `runSlice1` runs 21.2s
+      against its own 18s warning and 30s hard ceiling — the official gate is
+      closer to that wall than the record reflected.
 
 ## Phase 2 — the full app (Sam's reorder: before beta)
 Order RULED by Sam 2026-08-07: day-first UI → journal → coach.

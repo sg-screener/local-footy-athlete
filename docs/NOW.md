@@ -1,6 +1,24 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **PARALLEL GATE STAGE 1 IS DONE; STAGE 2 IS STOPPED FOR SAM.**
+- **SCREEN-LEVEL INPUT DELIVERED for the stages-1+2 combined device pass — the
+  L10 gate main waits on.** docs/STAGE_B_STAGES_1_2_SCREEN_INPUT_2026-08-07.md
+  Every item verified **LANDED BY ANCESTRY**, no parked flags, screens and
+  sights only. **The seat writes the tap list from it. STOPPED there**, as
+  ordered — the replay unit kicks off separately after the main merge.
+  Headline sights: the 55 signed conditioning names replacing every
+  code-authored dose; **a recovery slot actually giving a short flush** (10-20
+  min easy, 3-4/10) instead of a 30-50 min steady run; a **rest-marked day
+  holding nothing**; an **out-of-block override rendering again**. Two
+  ALREADY-KNOWN sights are flagged so they are not written up as discoveries —
+  the off-season block-2 deload reshaping instead of shrinking, and a lighter
+  day now being re-filterable by a later injury.
+- **PARALLEL GATE: UNIT CLOSED. STAGE 2 REFUSED** by the seat, ruled from the
+  measurement — ~2 min does not buy a timing-sensitive failure mode on the gate
+  that guards everything. The runner is a **NON-OFFICIAL fast pre-check**:
+  agents may use it mid-work, **no official verdict ever cites it**.
+  `runSlice1`'s 21.2s-vs-30s ceiling is FILED as small maintenance, not now.
+
+- **PARALLEL GATE STAGE 1 DETAIL (delivered `93b1b7fb`).**
   docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md
   `npm run test:bible:parallel` (fast lane, gates nothing),
   `npm run test:bible:agreement`, `npm run test:bible:agreement:mutation`.

@@ -4,6 +4,83 @@
 
 (none)
 
+## Processed 2026-08-07 (thirty-fourth pass) — RULINGS APPLIED; THE SCREEN-LEVEL INPUT DELIVERED; STOPPED
+
+- LOOP CHECK: **a doc named 1 site, there were 2** does NOT fire — the branch
+  ledger was taken by **ANCESTRY** (`merge-base --is-ancestor` on all 12 named
+  commits) before a single item was written, and all of stage 1 + stage 2 is
+  genuinely landed on this branch.
+- **(a) STAGE 2 REFUSED — RECORDED.** The unit doc's stage 2 section is struck
+  through and replaced with the ruling; roadmap ticked; NOW.md updated. The
+  runner is now written down everywhere as a **NON-OFFICIAL fast pre-check** —
+  agents may use it mid-work, **no official verdict ever cites it**; the
+  agreement law and its mutation proof stay in the chain guarding the shadow.
+  **Unit CLOSED, delivered.**
+- **(b) NOTED with thanks. No split** — the seat's hook edit stays inside
+  `93b1b7fb`, and the ruling line is the record.
+- **(c) `runSlice1` 21.2s vs its 30s ceiling FILED** on the roadmap as small
+  maintenance, explicitly not now.
+- **(d) DELIVERED: docs/STAGE_B_STAGES_1_2_SCREEN_INPUT_2026-08-07.md.**
+  Landed-only, no parked flags, screens and sights, no suite vocabulary.
+  Organised by the two screens the athlete actually reaches — the Program tab's
+  week screen and the day screen behind it (both V1 shells that render V2).
+  - **THE SHARPEST SIGHT:** a recovery slot now gives a **short flush** —
+    10-20 min continuous easy, 3-4/10, *"finish better than you started"* —
+    where it had been giving a **30-50 min steady run at 65-80% MAS**.
+  - **The switchover in one tap:** 55 signed conditioning names, the workbook's
+    dose words verbatim, a `Warm-up` row and **no cool-down row**, Sam's own
+    effort cue on the row. A composed or machine-suffixed name is the finding.
+  - **TWO SIDES OF ONE COMMIT, taped together:** a **rest-marked day holds
+    nothing** (stage 1's fix, taken from Sam's own device note), and an
+    **out-of-block override renders again** (the regression that same fix
+    briefly introduced, found and fixed inside stage 2).
+  - **TWO ALREADY-KNOWN SIGHTS FLAGGED so they are not written up as
+    discoveries:** the off-season **block-2 deload reshaping instead of
+    shrinking** (declared, unfixed, the obvious fix reverted because it breaks
+    pre-season generation), and a **lighter day now re-filterable by a later
+    injury** (a surfaced question, not a decided behaviour).
+  - **SCOPE BOUNDARY STATED IN THE DOC:** it covers stages 1 + 2 only and does
+    NOT re-cover R5.3/R5.7, which already had their own tap list.
+- **ONE ITEM MARKED LOW-CONFIDENCE AT ITS OWN ENTRY** rather than presented
+  level with the rest: B4, conditioning rows travelling with the projected week
+  — traced in the reports, not on a screen.
+- **NOT COVERED:** no device evidence anywhere in this list — that is what the
+  pass is for; screen and navigation WORDING is read from the navigator, not
+  tapped, so button text may be wrong; **five week modes (bye, bye_recovery,
+  deload, optional, illness_recovery/full-pause) were never reached by stage
+  1's proof loop**, so a pass landing in one of them is crossing ground no test
+  has; the coach path stays frozen and its doses remain a second authority.
+- **STOPPED**, as ordered. The seat writes the tap list; the replay unit kicks
+  off separately after the main merge.
+
+## Processed 2026-08-07 (thirty-third pass) — the ruling as the seat wrote it
+
+1. RULINGS on the parallel-gate report — commit as authored.
+   LOOP CHECK: payoff-measured-below-scope — the unit's own price
+   decides; no iteration.
+   (a) STAGE 2 IS REFUSED, ruled from your measurement: ~2 minutes
+   does not buy a timing-sensitive failure mode on the gate that
+   guards everything. The parallel runner is kept as a NON-OFFICIAL
+   fast pre-check (agents may use it mid-work; no official verdict
+   ever cites it). The agreement law and its mutation proof stay in
+   the chain guarding the shadow. Unit CLOSES here, delivered.
+   (b) The hook fix (9cde529c) is ACCEPTED with thanks — proven
+   three ways is exactly the standard. The seat's hook edit riding
+   in 93b1b7fb: leave it, no split; this line is the record.
+   (c) runSlice1 at 21.2s vs its 30s ceiling: FILED as a small
+   maintenance item on the queue, not now.
+   (d) NEXT UNIT — the cheap one that unlocks main: produce the
+   SCREEN-LEVEL input for the stages-1+2 combined device pass (the
+   L10 gate main waits on): from the stage 1 + stage 2 boundary
+   reports, list every athlete-visible change that is LANDED on
+   feat/stage-b-stage2 — for each: which screen, how to reach it,
+   what Sam should expect to see. Landed only, no parked flags, no
+   suite vocabulary — screens and sights. The seat writes the tap
+   list from it. STOP after delivering that list; the replay unit
+   kicks off separately after the main merge. Sam holds a veto.
+
+2. (queue empty below this)
+
 ## Processed 2026-08-07 (thirty-third pass) — PARALLEL GATE STAGE 1 DELIVERED; STAGE 2 STOPPED ON A REFUTED PREMISE
 
 - LOOP CHECK: **a ruling premise is a claim too** fires, and against the unit's

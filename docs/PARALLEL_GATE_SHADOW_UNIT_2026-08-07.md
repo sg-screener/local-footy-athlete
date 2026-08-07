@@ -90,10 +90,18 @@ official gate is closer to that wall than anyone has been reading.
 unpiped** — `test:bible` is untouched and remains the only official gate
 (verified byte-identical when the new scripts were added).
 
-## Stage 2 — first commit AFTER the merge
+## Stage 2 — REFUSED 2026-08-07 (seat ruling, thirty-third pass)
 
-Flip the official gate to the parallel runner, citing its accumulated
-agreement runs. One commit, boring by construction.
+~~Flip the official gate to the parallel runner, citing its accumulated
+agreement runs. One commit, boring by construction.~~
+
+**REFUSED, ruled from the measurement:** ~2 minutes does not buy a
+timing-sensitive failure mode on the gate that guards everything.
+
+**The parallel runner is kept as a NON-OFFICIAL fast pre-check.** Agents may
+use it mid-work; **no official verdict ever cites it.** The agreement law and
+its mutation proof stay in the chain, guarding the shadow. **The unit CLOSES
+here, delivered.**
 
 Roadmap Phase 1.5 updated by reference to this doc.
 
