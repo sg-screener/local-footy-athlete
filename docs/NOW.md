@@ -1,104 +1,95 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `89b540f9` (the merge commit).
-- **UNIT:** Stage B stages 1 + 2 **MERGED TO MAIN**. The L10 combined device
-  pass — the gate main waited on since `75fb71df` — was run by Sam on
-  2026-08-07 and **PASSED**. Taps 1/2/3 correct, tap 4 N/A (no coach override
-  exists in his state), tap 5 = programming-quality findings which Sam
-  explicitly DEFERRED. Mechanics passed; the gate judged mechanics.
-  docs/DEVICE_PASS_TAP_LIST_STAGES_1_2_2026-08-07.md
-- **THE GATE, BOTH SIDES, full `test:bible` UNPIPED on main:**
-  **BEFORE `TRUE_EXIT=0`** — green to its last suite
-  (`stage-b-generation-differential`), **0 FAIL lines**.
-  **AFTER `TRUE_EXIT=1`** at `test:program-control-durable`, **1 FAIL line**,
-  same assertion text (18 passed / 1 failed). Sweep at `89b540f9`:
-  **2 of 156 = `test:program-control-durable` + `test:fixture-identity`** —
-  **the branch's declared set EXACTLY. No difference, no STOP.**
-- **SAID PLAINLY: this merge took a green main to a 2-red main, knowingly.**
-  `fixture-identity` 3/5/6 are red as **plain laws with no declaration wearing
-  them** — the ratchet deleted their debt entries when V3 was expected to pay
-  them and V3 banked short. **Payer = the LR-29 replay unit**, measured (it is
-  the one unit whose arm turns `fixture-identity` green). Sam-accepted as
-  known-imperfect.
-- **(a) DELIVERED — THE LR-29 MEASURED DEPENDENCY LIST.**
-  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md. The unit stays RE-SLOTTED to
-  build **after day-first UI**, and it remains the measured payer of main's
-  `fixture-identity` red — **re-confirmed today, not carried**: under
-  `LFA_FLIP_DOOR=1` on `fc4013cc`, `fixture-identity` goes **GREEN**.
-  Headline findings: **3 of 10 readers read ZERO fields** (50,078 door calls
-  satisfied by an existence predicate); the `current_microcycle` rung
-  **answered ZERO times in 156 suites** and can be deleted; **the ledger has no
-  vocabulary for illness/injury/readiness/phase**, so "replay the ledger" is
-  not a sufficient description of the unit — the input set is ledger + fact
-  stores, and that fork is the largest open decision; and **the boot already
-  replays** (`quiescentBoot.rebuildDerivedWorld`), so the unit's real first
-  question is whether that replay already reconstructs `authorisedReductions`.
-  Instrument on `scratch/lr29-dependency-list` (`7c3dc1e3`), flag-inert, and
-  **priced against the control set before any reading was believed — 2 of 156
-  both arms, so the Proxy does not perturb.**
-- **(b) DELIVERED — THE DAY-FIRST UI UNIT PLAN.**
-  docs/DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md (rulings doc is in `docs/`, not
-  `artifacts/` as the order cited). The timeline must consume `project()`'s
-  `VisibleDay.parts`, **not `ProjectedDayParts`** — the structural half carries
-  no words, so a timeline built on it renders nameless. Group by `id`, never by
-  `kind`. Ruling 13 is MOOT (R5.7 already cut it); ruling 11 (injury "Other"
-  data path) is its own investigation.
-- **(c) SLICE 1 IS STOPPED ON ITS CHECK-OFF HALF — a genuine standing
-  condition, and the render half is clean.** The order's premise *"check-off via
-  the existing per-component completion"* is **refuted by measurement**:
-  `componentCompletions` has exactly ONE writer,
-  `commitSessionOutcomeTransaction`, which mints a **session-outcome receipt**
-  driving the Done badge, the completed-day display and progression — and there
-  is **no draft-persistence path**. One tick therefore either fabricates a
-  completion (signed-behaviour change, and it corrupts the completed-day
-  boundary that is one of Sam's own standing device flags) or persists partial
-  progress (new stored state of the worst shape). **Not the terminal's to
-  choose** — fork A/B/C is in the plan, **A recommended** (completion shown,
-  not written; zero new state).
-  **NOTHING WAS BUILT this pass.** The `componentIdFromPartId` helper was
-  drafted and **held out rather than landed unused**.
+- **BRANCH:** `main` · **HEAD:** `2796f6d1` (day-first slice 1; docs follow it).
+- **UNIT: DAY-FIRST UI, SLICE 1 — BUILT AND LANDED.** Sam ruled **fork A**
+  (completion shown, not written) and the overnight authorisation carried the
+  build. docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md
+- **WHAT IS ON HIS PHONE:** the Program tab **leads with today** — a seven-day
+  week strip with the **game-day anchor**, the selected day at full size with
+  every door it already had, and the day's session as a **tappable component
+  timeline** between the day's name and its CTA. **No clock times.** A
+  **Today / Week** control zooms out to the existing seven-row list.
+- **COMPLETION IS SHOWN, NOT WRITTEN.** A filled node means the athlete's SAVED
+  outcome recorded that component; hollow means not answered yet. Nothing on the
+  screen writes. Gated, not merely intended: frozen inputs plus a source
+  assertion that the timeline module reaches no writer.
+- **TWO SHAPES OF ONE SCREEN, NOT TWO SCREENS.** Both render the same
+  `visibleWeek` through the same `DayRow` from **one row call site**. A rival
+  day-first screen behind a third `DESIGN_VERSION` — the switch the unit plan
+  named — would have been two live truths about one week. The week list is one
+  tap away and is the FORCED shape on another week (no today) and in a game
+  picker (a week-level act), so no door and no testID moved.
+- **THE GATE, on the FINAL tree `2796f6d1`, both instruments:** full `test:bible`
+  **UNPIPED `TRUE_EXIT=1` at `test:program-control-durable`, 1 FAIL cell line**
+  (*"a move committed durably reaches the visible week"*, 18 passed / 1 failed) —
+  byte-for-byte main's declared red. **Sweep: 2 of 157 =
+  `program-control-durable` + `fixture-identity`, the declared set EXACTLY**
+  (157 = 156 + this unit's suite). `test:compile` EXIT 0, no file regressed.
+  Copy extraction **130 before and after**, measured in a worktree. The chain ran
+  on the final tree, **not once per commit** — and the first full run is what
+  caught the profile-census red below.
+- **CORRECTION, AND IT IS THE UNIT PLAN'S OWN:** §2f named *conditioning +
+  finisher* as the live `kind` collision. **Measured at the emitter, that day
+  cannot exist** — `getSessionComponents` emits one or the other. The reachable
+  pair is **`recovery` + `recovery_addon`**, now built by the suite. "Key on
+  `id`" was right for a wrong reason and is now right for a measured one. A
+  consequence is NAMED not patched: two `recovery` parts render identically,
+  because headline and rows both key on kind.
+- **CORRECTION, MINE:** the new suite reached the profile store around its owner
+  — `profileMirrorNarrowing`'s one-door census caught it on the full chain, and
+  it is routed through `applyProfileOnboardingWrite` rather than joining ~50
+  entries of declared debt. **The value of running the whole chain rather than
+  the suites I thought were related.**
+- **LOOP CHECK, SIGHTING 4, COMPRESSED:** `a count taken for a record` fired
+  inside a gate I wrote, on its first mutation test — it counted call sites and
+  passed while the loop feeding them was empty. AGENTS.md now carries the source-
+  scan half of that law. **Seven mutations, seven reds** across the new suite.
+- **PARKED FOR SAM (five, in the boundary report §7):** mid-session ticks do not
+  survive an app kill (fork A's known edge); `Today`/`Week` ship PROPOSED,
+  unsigned; icons are terminal-proposed from existing assets; the Today/Week
+  choice is not persisted (persisting it would be new stored state); the two
+  identical `recovery` rows.
+- **NOT COVERED, first line of it: NO DEVICE EVIDENCE.** Nothing here has been on
+  a phone, and the layout/spacing/colour of the strip and timeline are unverified
+  by eye. This repo has no render-level test, so no cell asserts the day-first
+  branch mounts — the three source-scan assertions read the block's shape and
+  that limit is stated. Rulings 1–12 of the home-screen redesign remain owed.
+- **NEXT:** Sam's veto on fork A and on the shape; then either the device pass on
+  slice 1 or the next slice (the icon shortcut row / the four-action menu). The
+  **LR-29 replay unit** still builds after day-first UI and remains the measured
+  payer of main's `fixture-identity` red.
+
+- **STILL TRUE FROM THE MERGE (2026-08-07, `89b540f9`):** main carries Stage B
+  stages 1 + 2; **a green main went to a 2-red main knowingly** —
+  `test:program-control-durable` + `test:fixture-identity`, the declared set
+  exactly. `fixture-identity` 3/5/6 are plain laws whose payer is the LR-29
+  replay unit, measured (under `LFA_FLIP_DOOR=1` that suite goes GREEN).
+  Sam-accepted as known-imperfect.
+- **The LR-29 dependency list is DELIVERED** —
+  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md. 3 of 10 readers read ZERO
+  fields; the `current_microcycle` rung answered ZERO times in 156 suites; **the
+  ledger has no vocabulary for illness/injury/readiness/phase**, so the unit's
+  input set is ledger + fact stores and that fork is its largest open decision;
+  **the boot already replays**, so its real first question is whether that replay
+  already reconstructs `authorisedReductions`.
 
 - **Branches (the ledger — ask git, never recall):**
-  - `main` — **the tip**, carries everything below. `89b540f9`.
-  - `feat/stage-b-stage2` — **FULLY MERGED into main**, 0 ahead. Its 267
-    commits are main's now. Safe to delete; kept this pass only so the merge
-    can be read from either side.
-  - `feat/r53-v3-switchover` — merged into stage-b-stage2 at `75fb71df`,
-    therefore an **ancestor of main**. Historical.
-  - **TWELVE `scratch/*` branches — inert instruments, unlanded, kept for the
-    replay unit.** Enumerated rather than sampled (the ledger is taken from
-    `for-each-ref`, not from memory — an earlier draft of this block named five
-    and there are twelve):
-    `r53-legv-price` `1d831279` · `r53-legv-readers` `24c32928` ·
-    `r53-legv-replay` `cf44bcc7` · `r53-legv-writer-reprice` `ec490090` ·
-    `r53-pricing-3-scaffold` `2eedd2d4` · `r53-pricing-4` `ae242d43` ·
-    `r53-pricing-5` `de059e7d` · `r53-pricing-5-before` `24cb9620` ·
-    `r53-pricing-6` `2d617a56` · `r53-pricing-7` `f91ea404` ·
-    `r53-pricing-7-probe` `8696193e` ·
-    `r53-removal-door-attribution` `b5c57963`.
-  - **FOUR stashes, and only the first is the one the kickoff doc names:**
-    `stash@{0}` "flip-move-i-wip" (route 2's four-site build, preserved for the
-    replay unit) · `stash@{1}` and `stash@{2}` are readiness-family arms taken
-    ON MAIN and recorded as RED · `stash@{3}` a 2026-07-27 tier/flag migration.
-    Stash is unsafe in this shared worktree — nothing here is to be popped
-    without its own unit.
-
-- **WATCH-FORS still open on Sam's device** (untestable in the states he was
-  in): completed-day display at the next completed session; the three fallback
-  sheets; stale-banner Review; the team-training affordance.
-- **DEFERRED, NOT FORGOTTEN:** coaching QUALITY (session composition, ordering,
-  density) — Sam's words, *"labels are okay but the programming is pretty
-  shit"*. Concrete exhibits from the device pass are filed at
-  docs/COACHING_QUALITY_EXHIBITS_2026-08-07.md so that unit starts from real
-  screens instead of memory. Not current work.
+  - `main` — **the tip**. `feat/stage-b-stage2` is fully merged, 0 ahead;
+    `feat/r53-v3-switchover` is an ancestor. Both historical.
+  - **TWELVE `scratch/*` branches** — inert instruments, unlanded, kept for the
+    replay unit. **FOUR stashes**; only `stash@{0}` ("flip-move-i-wip") is the
+    one the kickoff doc names. Stash is unsafe in this shared worktree.
+- **WATCH-FORS still open on Sam's device:** completed-day display at the next
+  completed session; the three fallback sheets; stale-banner Review; the
+  team-training affordance.
+- **DEFERRED, NOT FORGOTTEN:** coaching QUALITY — *"labels are okay but the
+  programming is pretty shit"*. Exhibits at
+  docs/COACHING_QUALITY_EXHIBITS_2026-08-07.md. Not current work.
 - **Small maintenance, filed not now:** `runSlice1` runs 21.2s against its own
   18s warning and 30s hard ceiling.
-- **INBOX CONVENTION, now enforced:** an empty queue is written `(none)`,
-  **unnumbered**. Writing `1. (queue empty)` made the stop hook read its own
-  empty marker as an order and block on a cleared inbox — its second misfire,
-  both of them false BLOCKS. Fixed `80a3f2c8`, and the hook now has cases in
-  both directions (`scripts/__tests__/seatInboxHookTests.sh`, 6/6), each guard
-  mutation-proven load-bearing.
+- **INBOX CONVENTION:** an empty queue is written `(none)`, **unnumbered** — the
+  stop hook read a numbered empty marker as an order twice
+  (`scripts/__tests__/seatInboxHookTests.sh`, 6/6).
 - **Standing:** `test:bible` is the ONLY official gate, unpiped, per commit.
   `npm run test:bible:parallel` is a NON-OFFICIAL fast pre-check — no official
   verdict ever cites it. Verify `git branch --show-current` before every commit

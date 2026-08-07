@@ -83,9 +83,26 @@ Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
 - [ ] 1. Day-first UI — per docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
       **KICKED OFF 2026-08-07 (Sam's overnight order), and it now runs BEFORE
       the LR-29 replay unit** — the replay unit was re-slotted behind it.
-      Binding alongside the direction doc: artifacts/HOME_SCREEN_REDESIGN_
-      RULINGS_2026-07-30.md (13 Sam rulings) and the signed copy sheet.
+      Binding alongside the direction doc: docs/HOME_SCREEN_REDESIGN_
+      RULINGS_2026-07-30.md (13 Sam rulings — the file is in `docs/`, not
+      `artifacts/`) and the signed copy sheet.
       First deliverable: the unit plan with its FULL measured dependency list.
+      - [x] Unit plan + measured dependency list —
+            docs/DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md
+      - [x] **SLICE 1 BUILT AND LANDED 2026-08-08** — the today-first Program
+            view: week strip with the game-day anchor, today leading, the day's
+            session as a tappable component timeline, **completion SHOWN not
+            written** (Sam's fork A), no clock times, a Today/Week zoom control.
+            docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md. **Awaiting Sam's veto
+            and a device pass — no device evidence exists yet.**
+      - [ ] Later slices — rulings 1-12 remain owed: the repeat-week DELETION
+            (1), the bottom button stack split into the icon shortcut row (2-5),
+            the intermediate menu's death and the four-action menu (7-9),
+            inline exercise editing (12). Ruling 13 is MOOT (R5.7 cut it).
+      - [ ] Ruling 11 — the injury "Other" free-text data path. **Its own
+            INVESTIGATION, not a UI slice:** Sam asked where a free-text injury
+            answer goes, and a stored answer that affects nothing is the worst
+            class. Traced with receipts, reported.
 - [ ] 2. Journal — finished to JOURNAL_DESIGN_2026-07-23 (storage proven
       in R4; LR-18 journal-store retirement rides this unit)
 - [ ] 3. Coach rebuild — free-text coach on the clean shell (LR-6 lifts;

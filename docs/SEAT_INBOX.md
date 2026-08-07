@@ -2,6 +2,89 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+## Processed 2026-08-08 (thirty-sixth pass) — DAY-FIRST SLICE 1 BUILT AND LANDED; COMPLETION SHOWN, NOT WRITTEN
+
+- LOOP CHECK: **`a count taken for a record` — SIGHTING 4 — COMPRESSED**, and it
+  fired inside a gate I wrote, on that gate's FIRST mutation test. The state-leaf
+  cell counted `<DayStateLeaves` occurrences and PASSED against a mutation that
+  emptied the loop feeding them: the count was right and the days were gone. It
+  also matched on a prefix. AGENTS.md now carries the source-scan half of the law
+  (word-boundary the count, then read the region that runs it, then prove the
+  region was found) rather than leaving it as a note in a report. Secondary:
+  **`a-ruling-premise-is-a-claim-too`** — the unit plan's own §2f hazard is
+  refuted below.
+- **FORK A COMMITTED AS AUTHORED** (`46b77be0`), then the build continued under
+  the standing authorisation, as ordered.
+- **SLICE 1 IS ON HIS PHONE.** The Program tab **leads with today**: a seven-day
+  strip with the **game-day anchor**, the selected day at full size with every
+  door it already had, and the day's session as a **tappable component timeline**
+  between the day's name and its CTA. **No clock times.** A **Today / Week**
+  control zooms out to the existing seven-row list.
+  docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md
+- **COMPLETION IS SHOWN, NOT WRITTEN — GATED, NOT MERELY INTENDED.** Frozen
+  inputs plus a source assertion that the timeline module reaches no writer.
+  A filled node = the athlete's SAVED outcome recorded that component; a hollow
+  ring = not answered yet, which is deliberately NOT the same as skipped.
+- **TWO SHAPES OF ONE SCREEN, NOT TWO SCREENS — and this is the one real design
+  call I made.** The unit plan named a third `DESIGN_VERSION` value as the
+  switch. I did not take it: a rival day-first screen is **two live truths about
+  one week**, the shape the L14–L16 note already refused once. Both shapes render
+  the same `visibleWeek` through the same `DayRow` from **ONE row call site**, so
+  no door, no badge, no receipt and no testID moved. The week list is one tap
+  away and is the FORCED shape on another week (no today) and in a game picker
+  (a week-level act).
+- **THE TIMELINE IS THE PROJECTION'S PARTS.** Built on `projectDayDetail`, so the
+  day-first view and the day-detail screen are one list asked twice and the
+  walker's existing L-P3 cell covers both. What it adds is the one thing the
+  projection must not carry — the RESULT, which arrives BESIDE `VisibleDay`.
+- **THE UNIT PLAN'S OWN HAZARD IS REFUTED.** §2f named *conditioning + finisher*
+  as the live `kind` collision. **Measured at the emitter, that day cannot
+  exist** — `getSessionComponents` emits one or the other from a single `if`.
+  The reachable pair is **`recovery` + `recovery_addon`**, and the suite now
+  builds it. "Key on `id`" was right for a wrong reason and is now right for a
+  measured one. Corrected in place, in the section that was wrong.
+  **A consequence NAMED not patched:** those two parts render identically,
+  because headline and rows both key on kind. Sam's call.
+- **A CORRECTION OF MINE THE FULL CHAIN CAUGHT.** The new suite reached the
+  profile store around its owner; `profileMirrorNarrowing`'s one-door census
+  failed it. Its ~50 declared entries are DEBT, not permission, so the suite was
+  routed through `applyProfileOnboardingWrite` rather than joining a ratchet that
+  has only moved down this era. **Nothing in my model of "what a UI slice
+  touches" contained the profile census — that is the argument for the whole
+  chain over the suites I thought were related.**
+- **ONE OWNER PER IDENTITY, which is L12's answer for this unit's class** (*a
+  surface that re-derives an identity the projection already carries*): the part
+  id both ways (`partIdFor`/`componentIdFromPartId`), what a saved outcome says
+  about a component (`completionByComponentId` — panel and timeline, one rule,
+  legacy lift included), a day's explorer state (`dayStateToken` +
+  `DayStateLeaves`, so the six strip days still report themselves), and the
+  date's display (`dayOfMonthLabel`).
+- **SEVEN MUTATIONS, SEVEN REDS**, each against the cell that claims the property.
+- **FIVE QUESTIONS PARKED** (docs/PARKED_QUESTIONS/DAY_FIRST_SLICE1_2026-08-08.md):
+  the app-kill edge (recommend leaving it — fork B/C is its own unit);
+  `Today`/`Week` PROPOSED and unsigned; icons terminal-proposed, **power and
+  speed share the bolt**; whether the Today/Week choice should be remembered
+  (persisting it would be new stored state, so it is not); the two identical
+  `recovery` rows.
+- **NORTH STAR: TOWARD, and modestly.** Zero new stored state — the whole ruling
+  is that it stores nothing. But it is a new WINDOW, so it converges nothing that
+  was divergent; neutral-to-positive, not a convergence step, and the report says
+  so rather than dressing it up.
+- **NOT COVERED, first line of it: NO DEVICE EVIDENCE** — the layout, spacing and
+  colour of the strip and timeline are unverified by eye. This repo has **no
+  render-level test**, so no cell asserts the day-first branch mounts; the three
+  source-scan assertions read the block's SHAPE and that limit is stated at the
+  cell, not buried. The `recovery` + `recovery_addon` day is a pure-function
+  probe, not a state reached by acting. **The week strip has no walker action**,
+  so selecting a day from it is untested — by the walker's own header that is a
+  harness defect, filed not fixed. The five week modes stage 1 never reached are
+  not reached here either. **Rulings 1–12 remain owed.** The full chain was run on
+  the FINAL tree, not once per commit.
+
+## Processed 2026-08-08 (thirty-sixth pass) — the ruling as the seat wrote it
+
 1. RULED: FORK A — completion shown, not written. Commit as
    authored, then CONTINUE the overnight slice-1 build under the
    standing authorisation.
@@ -25,8 +108,6 @@
    now the seat's law too.
    Build on. One batched report by morning. Sam holds a veto on
    fork A when he wakes.
-
-(none)
 
 ## Processed 2026-08-07 (thirty-fifth pass) — MERGED TO MAIN; BOTH DEPENDENCY LISTS DELIVERED; SLICE 1 STOPPED ON ITS CHECK-OFF HALF
 
