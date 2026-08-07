@@ -2,7 +2,27 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. SAM RULED: MERGE. Commit docs/SIGNING_AND_MERGE_GATE_2026-08-07.md
+   as authored, then execute:
+   (a) Retire the three PROPOSED markers to SIGNED (equality-bound to
+   the signed text, both directions, per the copy law).
+   (b) THE MERGE: feat/r53-v3-switchover into the ruled merge target
+   feat/stage-b-stage2. Full test:bible UNPIPED on the target BEFORE
+   and AFTER; the after-state's declared set must equal the
+   boundary report's exactly (2 of 156 + the named fixture-identity
+   reds) — any difference is a STOP, not a shrug. Verify branch
+   before every commit (shared-worktree law). If recorded rulings
+   say the stage-b-stage2 -> main merge is part of this same gate,
+   execute it under the same before/after discipline; if not,
+   report what gates it.
+   (c) Post-merge: update NOW.md, the roadmap checkboxes, and the
+   walker memory pointer. Then item 2 (parallel-gate stage 1
+   remainder) is UNPARKED — this is its natural boundary, per the
+   roadmap's Phase 1.5. Proceed under standing conditions.
+   One-turn law and continuous authorisation through (a)-(c). Sam
+   holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (thirty-first pass) — R5 BOUNDARY REPORT WRITTEN; STOP AT THE MERGE GATE
