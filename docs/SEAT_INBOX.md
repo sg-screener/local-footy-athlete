@@ -2,36 +2,42 @@
 
 ## Unprocessed (newest first)
 
-1. RULING on the 71c84220 writer-reprice STOP — commit as authored.
-   LOOP CHECK: same-census-item-reached-from-its-other-side — not a
-   new discovery; the decision-payload STOP re-encountered at the
-   restore path. The census promise holds; the item deepens, the
-   list does not grow.
-   All three questions, ruled from standing law:
-   (a) YES — the restore path gets the SAME derive treatment as the
-   visible week. It is a consumer like any other (standing
-   derivation ruling; read-side-first shape, landing for the fourth
-   time). Restore derives its working data — the before-contract and
-   typed-reduction ownership — from decisions + the deriver,
-   equality-bound on the FULL Restore witness set including the new
-   end-to-end undo cell, non-vacuity asserted (the bind must be
-   EXERCISED before it is believed — your own law).
-   (b) YES — take the two pre-authorised deletions now: both entries
-   fire exactly as their expiry declared; the ratchet working is
-   never deferred. Arm drops to 6.
-   (c) YES — the six get attributed BEFORE the writer lands, per the
-   recorded precedent: set-diff first, then tape, the one-run
-   method. Decision payload or signed behaviour → STOP; otherwise
-   fix under standing law and keep going.
-   (d) Sequence: (b) deletions → (a) restore derivation priced and
-   equality-proven → (c) six attributed and paid → writer re-priced
-   on the then-current world (never a stale figure — your own
-   correction, adopted) → arm clean → writer retires → the pre-ruled
-   run home executes to its endpoint. One-turn law and continuous
-   authorisation EXTEND to that endpoint. The Restore-cell fixes
-   (151030d4) are ACCEPTED — a cell measuring storage instead of the
-   app is the class this unit exists to kill. Sam holds a veto.
-   Nothing on his phone changes until the device pass.
+1. RE-SCOPE ORDER — THE FLIP. Supersedes the serial reader-migration
+   remainder of the 71c84220 ruling; commit as authored.
+   LOOP CHECK: remove-then-discover-the-lean — sighting 4 today
+   (freed day, reductions, restore, the six) — COMPRESS: stop
+   removing. The Elegant Solution Requirement decides this (prefer
+   what removes representations): the stored declaration dies as an
+   AUTHORITY by being made a proven mirror, not by being torn out of
+   sixteen hands.
+   THE UNIT, three moves, each gate-proven:
+   (i) THE WRITER WRITES DERIVE(). At the commit site, the stored
+   declaration (and its dependent fields) are filled with the
+   deriver's own output. Parity gate goes green BY CONSTRUCTION and
+   stands as the permanent guard; its declared-diff entries expire.
+   Every reader — Restore included — keeps working untouched: what
+   they read is now the engine's truth. The Vertical Jump Monday and
+   the completed-day boundary land on screen through this move.
+   (ii) ONE READ DOOR. Every read site from the census funnels
+   through a single accessor — mechanical, behaviour-identical,
+   verified by the census tape re-run (same pairs, same counts).
+   (iii) FLIP THE DOOR. The accessor's implementation switches from
+   storage to deriver in one commit. Storage becomes write-only; its
+   physical deletion is a line item in R5's big delete, ordered
+   there, not here.
+   GATES: full test:bible UNPIPED per move; census tape re-run after
+   (ii); parity green after (i) and stays in the chain; the 8-red
+   writer arm is EXPECTED to dissolve (those reds priced a removal
+   that no longer happens) — measure, don't assume; any red that
+   survives (i) is attributed before (iii).
+   ENDPOINT: after (iii), derived is the sole authority, proven.
+   That is the V3 convergence answer. If the measurements support
+   it, the report says V3 CLOSED.
+   One-turn law and continuous authorisation apply END TO END. The
+   restore-derivation and six-attribution work from the superseded
+   ruling PARK (nothing lost — scaffolds preserved); LR-29
+   replay-undo stays the recorded future of undo, unchanged. Sam
+   holds a veto. Device flags unchanged, now landing via (i).
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
