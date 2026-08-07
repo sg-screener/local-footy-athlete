@@ -32,8 +32,9 @@
   makes a witness batch run through the sweep runner (preamble + exit
   codes), proven both directions.
 - **THE CENSUS IS CLOSED: THE DECLARATION OWNS 16 THINGS — 4 RESOLVED,
-  12 BLOCKED.** Recording Proxy at the store seam, saturated at 16 fields from
-  the first suite (277 paths, 70 records incl. forked children). RESOLVED at
+  12 BLOCKED.** Recording Proxy at the store seam, COMPLETE and saturated at 16
+  fields from the first suite (278 paths; all 156 suites ran, only 44 produce
+  records — the other 112 never store a declaration). RESOLVED at
   depth (553 derivations, 0 errors): `protocolVersion`, `authority`, `source`,
   `equipment`. BLOCKED: `authorisedReductions` (the accumulator) + the six dose
   sections it feeds + `anchors`/`safety`/`identity`/`migration`/

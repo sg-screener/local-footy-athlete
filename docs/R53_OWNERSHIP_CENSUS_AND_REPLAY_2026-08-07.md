@@ -19,10 +19,16 @@ scratch branches and inert by default.
 
 ## THE CLOSED CHECKLIST
 
-The census is **saturated**: 16 top-level fields from the very first suite, 277
-distinct field paths, unchanged across 132 suites and 70 census records
-(forked child processes included — each writes its own record, so the
-spawnSync scenarios are captured rather than lost as in harness-lies sighting 4).
+The census is **saturated and now COMPLETE**: all 156 bible suites ran under it;
+**44 of them produce records at all** (the other 112 never put a stored
+declaration into the store), yielding **83 census records** — forked child
+processes included, each writing its own record, so the spawnSync scenarios are
+captured rather than lost as in harness-lies sighting 4. **16 top-level fields
+from the very first suite, unchanged to the last; 278 distinct field paths.**
+
+That 44-of-156 figure is itself worth stating rather than glossing: the
+declaration is not touched by three quarters of the chain, which is why a static
+census kept looking complete.
 
 Resolution measured at **accumulated depth** (deep walker: 553 derivations,
 0 derivation errors), asking of each field: *does `deriveWeekContract` reproduce
@@ -187,8 +193,9 @@ measurements do not support saying otherwise.
 - The 20 "replay invents a reduction" cases are unattributed.
 - `governedFromISO` has a single observation; the deletion worlds do not carry
   it, so its verdict rests on one deep-walker week.
-- The census ran to 132 of 156 suites at the time of writing, saturated from the
-  first suite; the remaining suites can confirm the 16 but have not.
+- The census is COMPLETE (156 suites run, 44 producing records, 83 records, 16
+  fields, 278 paths) — the "132 of 156" caveat in the first draft of this report
+  is closed, and the count did not move.
 - All three instruments are scaffold-only and must be stripped before any
   product landing — they touch `weekRebuild`, the evaluator and the hydration
   ingress.

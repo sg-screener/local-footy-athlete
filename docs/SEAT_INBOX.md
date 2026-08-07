@@ -18,9 +18,10 @@
 
 - **(e) THE CENSUS IS CLOSED — THE DECLARATION OWNS 16 THINGS; 4 RESOLVED,
   12 BLOCKED.** Recording Proxy at the store seam, saturated at 16 top-level
-  fields from the FIRST suite, 277 field paths, unchanged across 132+ suites and
-  70 records — forked child processes included, so the spawnSync scenarios are
-  captured this time. **The instrument found its own defect first** (a re-wrap
+  fields from the FIRST suite, 278 field paths, unchanged to the last — COMPLETE:
+  all 156 suites ran, **44 produce records at all** (the other 112 never put a
+  stored declaration in the store), 83 records, forked children included. That
+  44-of-156 is why a static census kept looking complete. **The instrument found its own defect first** (a re-wrap
   guard checked and never set, nesting proxies); fixed and re-smoked, and the
   proxy is behaviour-preserving (suite still EXIT 0).
 - **RESOLVED (4)** — reproduced by the deriver without exception at depth, 553
@@ -64,8 +65,7 @@
 - **NOT COVERED:** items 12-16 are measured blocked, NOT diagnosed; items 6-11
   are attributed to item 5's root by READING, not by measurement; the 20
   invented reductions are unattributed; `governedFromISO` rests on one
-  observation; the census reached 139 of 156 suites at report time (saturated
-  from suite 1); all three instruments are scaffold-only and must be stripped
+  observation; the census is COMPLETE and the count did not move; all three instruments are scaffold-only and must be stripped
   before any product landing; no device evidence.
 
 ## Processed 2026-08-07 (twenty-second pass) — the ruling as the seat wrote it
