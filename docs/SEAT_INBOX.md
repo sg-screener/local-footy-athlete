@@ -2,124 +2,34 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
-
-## Processed 2026-08-07 (twentieth pass) — LEG (v) RE-SCOPED, BUILT, PRICED -> STOP
-
-- LOOP CHECK: green-claimed-from-a-printed-tail-instead-of-the-exit-line —
-  harness-lies sighting 5, and it is MINE — COMPRESS, and the compression is
-  shipped in the same commit, not written down as a reminder.
-- Answered in docs/R53_LEGV_RESCOPED_PRICED_STOP_2026-08-07.md; the arm is
-  flag-gated at `0103c052` on scratch/r53-legv-readers. **NOTHING BUILT into
-  the branch** (harness-only change to `scripts/sweep.sh`).
-- **(a) THE RE-SCOPE IS BUILT AND THE READ HALF IS FREE.** The week's IDENTITY
-  derives from the athlete's facts — a severe illness mints `optional_week`
-  through the SAME single owner generation asks
-  (`deriveIllnessRecoveryWeekMode`), never a second predicate. All 156 suites
-  per arm, sets diffed, world-identity preamble printed:
-
-  | arm | failures | vs control |
-  |---|---|---|
-  | control | **2** | `program-control-durable`, `fixture-identity` |
-  | readers alone | **2** | **control set EXACTLY — 0 new, 0 fixed** |
-  | writer alone | **11** | 10 new, **`fixture-identity` FIXED** |
-  | the unit | **9** | 8 new, **`fixture-identity` FIXED** |
-
-  Your compression is now a MEASUREMENT: readers can be taught to derive
-  BEFORE the writer stops, at zero behavioural cost.
-- **AND A CORRECTION OF MY OWN, OWED FIRST.** I reported the six witness
-  suites "six-for-six green" under the unit. **WITHDRAWN.** I read
-  `npm run … | tail -3` instead of the exit line, on a repo whose own law is
-  trust-only-printed-exit-lines. Four of the six exit 1 on cells above a
-  green-looking totals line. **The read half pays 2 of the nine
-  (`readiness-ownership`, `deriving-device-commit`), not six**; the other four
-  are red under both arms with byte-identical text.
-- **(b) THE TWO UNEXPLAINED ARE STILL RED AND NOT THE SAME SENTENCE** —
-  `phase-structure` 8 (the flush SURVIVED the fixture-change rebuild) and the
-  walker's lighter-day cell (`:deep` is 20/1, this cell alone). **So this is
-  the STOP, taken on the ruling's own terms.** A candidate exists and is
-  offered AS a candidate: both read consistently with the eighth-pass hop —
-  the payload is materialised inside `commitAcceptedStateTransaction` gated on
-  the proposed overlay's DECLARATION, so retiring it stops materialisation and
-  the base shows through (content missing in the deletion cells, stale content
-  surviving in cell 8). NOT attributed; the tape has not been run.
-- **(c) THE D13 ENTRY IS CONFIRMED PAYABLE** — the walker's stale-debt cell
-  reds naming `session_list_calls_a_conditioning_day_recovery`. The ratchet
-  working; the deletion belongs in the landing commit.
-- **(e) THE PARITY GATE'S EXPIRY FIRES AS BUILT** —
-  `stored_declaration_costs_mondays_power_row` no longer happens in any world
-  and `derived-week-lawfulness` reds demanding its deletion, exactly as its
-  `expiresWhen` predicted. Two of the unit's nine reds are therefore ratchets,
-  not defects.
-- **THE REST OF THE NINE:** 1 is the branch's control red; 1 is `fact-horizon`
-  T4, ALREADY attributed (the tier-4 read-time write) with a MEASURED payer
-  (the one-owner boundary greens it in every combination); 3 are content the
-  read side does not yet supply — and one of those three
-  (`illness-clear-game-week` G3) is a WITNESS reading the stored declaration
-  directly, a re-point candidate that must NOT be re-pointed until the derived
-  week is measured at that coordinate.
-- **COMPRESSION SHIPPED:** `scripts/sweep.sh` gains `SWEEP_SUITES`, so a
-  targeted witness batch runs through the same runner as a full sweep —
-  preamble, exit codes, failure set, no tails. Proven both directions in one
-  run (`failures=1 of 2`, naming the known red, not the known green).
-- **THE READ HALF IS NOW AT ALL THREE SELECTION LINES, and NO SUITE CAN TELL.**
-  Site 1 alone left the accepted reader deriving while the LIVE resolver and the
-  publisher still answered from storage. All three now take the same facts (the
-  rival hook included, so it cannot diverge); `test:compile` PASSED at baseline.
-  Three-site arms: readers **2** (control set exactly), unit **9** —
-  **set-identical to the one-site arms**. The two extra lines are bought on the
-  one-owner law and the source, NOT on a measurement, because nothing measures
-  them. **L12 finding:** the gate this class needs is an AGREEMENT assertion —
-  three selection lines, same world, same week, same contract identity — the
-  surface-agreement shape aimed at the contract instead of the content. It does
-  not exist, and until it does an install at one line looks exactly like three.
-- **RECOMMENDATION:** land the READ HALF alone now (all three sites) — measured free, it is your
-  own named standing shape, and it drops leg (v)'s price from 10 new to 8
-  before anything else is attempted. Then ONE tape of the materialisation
-  branch, which is positioned to answer the 3 content suites and the 2
-  unexplained cells together.
-- **NOT COVERED:** the two unexplained are characterised, not attributed;
-  install sites 2 and 3 are BUILT but unwitnessed (nothing in the chain
-  separates them from site 1 alone); whether the derived week says
-  `optional_week` at G3's coordinate — the fact that decides whether its
-  precondition is a legitimate re-point or a real defect; `test:compile`
-  outside the sweep as always; no device evidence.
-
-## Processed 2026-08-07 (twentieth pass) — the ruling as the seat wrote it
-
-1. RULING on ed38e2a3 — commit as authored.
-   LOOP CHECK: writer-retired-before-its-readers — sighting 2 (leg
-   (iii)'s commit-materialisation was sighting 1: content had to
-   derive before the declaration could die) — COMPRESS: the re-scope
-   you recommend IS the standing shape, now named: a stored
-   representation retires READ-SIDE FIRST, writer last, one unit.
-   (a) RE-SCOPE APPROVED exactly as recommended: leg (v) becomes
-   "the readers derive, then the writer stops", priced as ONE unit
-   on the scaffold before building. Grounds: L15 (superseded shapes
-   get read-ingress lifts, never lingering readers), the standing
-   derivation ruling (week identity/mode is a stored representation
-   feeding computation — derive it from decisions and facts), and
-   leg (iii)'s own landed precedent. The six one-sentence reds are
-   that unit's witness set.
-   (b) The TWO UNEXPLAINED (phase-structure cell 8, walker
-   lighter-day) get attributed DURING the pricing run, not after —
-   set-diff them against the six first; if either is not the same
-   sentence, it stops the build per standing conditions.
-   (c) The D13-paid entry (conditioning-day-recovery) deletion is
-   AUTHORISED in the same commit that greens it — the ratchet
-   working as designed.
-   (d) The parity-gate classification mechanism (DECLARED_PARITY_
-   DIFF, mutation-proven, expiry-carrying) is ENDORSED as built; the
-   third-producer tape finding is ACCEPTED including your own
-   attribution withdrawal — dose-response beats narrative, recorded.
-   (e) Then: build under standing conditions, full bible UNPIPED,
-   parity gate re-run (the declared diff must EXPIRE when leg (v)
-   lands — a stale entry reds, as you built), condition 1's
-   re-measure. Continuous authorisation EXTENDS through all of it;
-   one batched report at the end or at a genuine STOP.
-   Sam's device-pass flags: completed-day display; Vertical Jump
-   restoration (lands with leg (v)). Sam holds a veto throughout.
+1. RULING on a2ac0aa8 — MAXIMUM CONTINUOUS ORDER, one run to V3
+   close or one true STOP. Commit as authored.
+   LOOP CHECK: hand-rolled-suite-loop — sighting 1 and already
+   compressed by you (SWEEP_SUITES); the tail-3 misread is owned and
+   the runner fix ENDORSED — exit-code verdicts only, everywhere.
+   (a) LAND THE READ HALF NOW — measured free (0 new, 0 fixed, all
+   three selection lines), it goes on the branch immediately as its
+   own commit. No reason a proven-free improvement waits on the
+   writer's schedule.
+   (b) The eight decompose as you measured; act on all of them in
+   ONE continuous run, no seat round-trips: the two ratchet
+   deletions ride the leg (v) landing commit as ruled; fact-horizon's
+   attributed payer lands with it; the THREE missing-content pieces
+   are the leg (iii) pattern (read side must produce what the stored
+   payload supplied) — price and build them under the standing
+   derivation ruling; the TWO unexplained get the field tape FIRST
+   (set-diff against everything known, then instrument — the
+   one-run method), and they are the ONLY permitted STOP: stop only
+   if they touch a decision payload or signed behaviour, otherwise
+   fix under standing law and keep going.
+   (c) When the eight are paid: retire the writer, full bible
+   UNPIPED, parity gate re-run (both declared diffs must expire),
+   condition 1 re-measure, cells 5/6 re-pin to the DERIVED answer
+   now it is the lawful one. That sequence = V3 CLOSED; say so in
+   the batched report in exactly those words if the measurements
+   support it, and not otherwise.
+   (d) Device-pass flags unchanged: completed-day display, Vertical
+   Jump restoration. Sam holds a veto throughout.
 
 2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
