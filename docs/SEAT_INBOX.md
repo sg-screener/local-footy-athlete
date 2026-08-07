@@ -2,7 +2,40 @@
 
 ## Unprocessed (newest first)
 
-1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+1. RULING on the move (iii) price STOP — commit as authored.
+   LOOP CHECK: same-failure-set-from-two-mechanisms — the
+   re-attribution is ACCEPTED: the 8 reds belong to "the stored
+   declaration stops answering at read", not to either migration.
+   The writer arm's diagnostic work carries over as you found. The
+   seat's dissolve prediction is struck as refuted; the (c)
+   correction (parity PAID, not MOVED — gate non-vacuous) is
+   ACCEPTED in the good direction, write it as you measured it.
+   (a) CONFIRM THE CLASS SENTENCE, cheaply: the leg (v) era already
+   diagnosed six reds as one sentence — "the accepted week no longer
+   knows what kind of week it is" (mode/identity read from storage).
+   Set-diff the five undiagnosed + phase-structure against that
+   recorded diagnosis in ONE run. Expected: most or all are that
+   sentence via the read side now instead of the write side. Any
+   that aren't: tape them, one run, named before anything lands.
+   (b) FACT-HORIZON: re-confirm the carried attribution with its
+   existing tape (the instrument exists; a carried claim is not a
+   measurement — your own caveat, adopted).
+   (c) THE FIX, pre-framed by the standing derivation ruling and the
+   read-side-first shape: the week's ACCUMULATED identity — mode,
+   authorised in-week changes — derives by replaying the week's
+   decisions onto the base contract at read. The deriver owns that
+   arithmetic. Equality-bind against current behaviour on the full
+   witness set (the six suites + Restore + walker worlds). If any
+   piece of accumulated identity cannot be recomputed from ledger +
+   facts, that is the classification STOP — name the piece.
+   (d) Then: the flip lands WITH the two pre-authorised ratchet
+   deletions (parity entry PAID, D13-paid entry), full bible
+   UNPIPED, endpoint measurements, the words only if supported.
+   One-turn law and continuous authorisation to the endpoint. Sam
+   holds a veto. Device flags land via the flip as measured
+   (Vertical Jump Monday byte-equal in all three worlds).
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-sixth pass) — MOVE (ii) BUILT AND FREE, MOVE (iii) PRICED AND STOPPED
