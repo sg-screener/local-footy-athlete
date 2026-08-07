@@ -122,8 +122,13 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + 'by commitAcceptedStateTransaction — the door owns the DECISION, the transaction '
       + 'owns the PUBLICATION. CAVEAT, measured not assumed: no walked athlete tap door '
       + 'writes `dateOverrides` any more (adds/swaps land in weekScopedOverlays, deletions '
-      + 'in userRemovalConstraints) — the surviving writers are the coach pipeline, the '
-      + "lighter-day transaction and LR-3's residuals. "
+      + 'in userRemovalConstraints). NARROWED 2026-08-04 (Stage B stage 1): Task A took '
+      + "LR-3's athlete re-add residual into the typed constraint lane and Task B moved "
+      + 'the lighter-day trim onto a `readiness_reduction` week overlay, deleting '
+      + "'lighter_day' from the closed writer union. The surviving writers are the COACH "
+      + 'PIPELINE AND NOTHING ELSE — no athlete-reachable door writes the surface, by '
+      + 'construction rather than convention, since the union is closed and every '
+      + 'remaining id is a coach id. '
       + 'RULED (Sam, 2026-08-03, Stage B stage 0): `dateOverrides` is a STORED-OUTPUT '
       + 'surface, not a decision ledger — the old "athlete\'s decision surface" name was '
       + 'wrong and the measurement says so '
@@ -181,6 +186,17 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
     caveat: 'Armoured 2026-08-03 (store-armour fleet). Store-ownership work only '
       + '(LR-6): the door owns HOW the map is written; what any coach path decides '
       + 'is unchanged.',
+  },
+  {
+    file: 'store/decisionLedgerStore.ts',
+    persistKey: 'decision-ledger-store',
+    owner: 'applyDecisionLedgerWrite',
+    taped: true,
+    caveat: 'BORN ARMOURED (shell rebuild R1.1, docs/SHELL_REBUILD_PLAN_2026-08-05.md, '
+      + 'approved 2026-08-05): the rebuild\'s one new persisted store — every athlete '
+      + 'edit is one appended typed decision; the visible week is derived, never stored. '
+      + 'Recipe applied at birth plus the ledger\'s own append-only refusal '
+      + '(`ledger_rewrite_without_reset`); undo appends a reversal (LR-29 by construction).',
   },
   {
     file: 'store/athletePreferencesStore.ts',
@@ -269,6 +285,22 @@ export function mirrorDecisionReads(source: string, _file?: string): number {
   return [...code(source).matchAll(/useProfileStore[^;\n]{0,60}?\bonboardingData\b/g)].length;
 }
 
+/**
+ * LR-8 — a door telling the accepted-state proposal not to re-validate.
+ *
+ * The idiom is PASSING THE FLAG TRUE. The field's declaration and the one read
+ * that consumes it (`acceptedStateTransaction.ts:213,724`) are the mechanism
+ * this unit converts, not violations of it, so only `: true` is counted.
+ *
+ * WHY THIS DETECTOR EXISTS AT ALL, against its own entry's old argument: the
+ * founding sweep called it "two call sites of a boolean… a checklist item, not
+ * a ratchet". It was four, in three modules, and nothing noticed for a week.
+ * A count is small until it is not.
+ */
+export function skipConstraintProjectionRefs(source: string, _file?: string): number {
+  return [...code(source).matchAll(/\bskipConstraintProjection\s*:\s*true\b/g)].length;
+}
+
 /** LR-3 — call sites of the legacy §18 override writer, excluding its own definition. */
 export function legacyOverrideWriterRefs(source: string, _file?: string): number {
   return [...code(source).matchAll(/(?<!function\s)\bapplyCoachRevisionDateOverrides\s*\(/g)]
@@ -298,6 +330,7 @@ export const DETECTORS = {
   unownedPersistedStores,
   legacyOverrideWriterRefs,
   mirrorDecisionReads,
+  skipConstraintProjectionRefs,
 } as const;
 
 export type LegacyDetectorId = keyof typeof DETECTORS;
@@ -323,6 +356,11 @@ export function detectorScopeExempts(id: LegacyDetectorId): readonly string[] {
       ];
     case 'legacyOverrideWriterRefs':
       return ['data/legacyReckoningCensus.ts'];
+    case 'skipConstraintProjectionRefs':
+      // The proposal that DECLARES the field and the one read that consumes it
+      // are the mechanism, not a violation of it — and neither passes `: true`,
+      // so this exemption is belt-and-braces rather than load-bearing.
+      return ['store/acceptedStateTransaction.ts', 'data/legacyReckoningCensus.ts'];
     case 'unownedPersistedStores':
       return ['data/legacyReckoningCensus.ts'];
     default:
@@ -451,20 +489,24 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
     tier: 1,
     laws: ['L-A1', 'L-A2', 'L-A3', 'L-C1'],
     blastRadius: 'accepted_content',
-    founding: 'planChangeProducer.ts:1365,1583,1594,1596 defer occupied-day stack adds, '
-      + 'active-removal re-adds and no-template swaps to applyCoachRevisionDateOverrides; '
-      + 'coachTurnController.ts:2343,2429 calls it directly. Tracked in the §18 '
-      + 'retirement ledger since 2026-07-22 and re-verified open 2026-07-30.',
+    founding: 'FOUNDING (2026-07-30, line receipts long drifted): four producer defer '
+      + 'sites plus coachTurnController.ts calling applyCoachRevisionDateOverrides '
+      + 'directly. Tracked in the §18 retirement ledger since 2026-07-22. CORRECTED BY '
+      + 'MEASUREMENT (Stage B stage 1, 2026-08-03): the occupied-day stack add had '
+      + 'already come home to the typed path, and no_template_for_category was a no-op '
+      + 'double refusal; the one real athlete residual was the active-removal re-add '
+      + '(restoration), whose un-pinning only the legacy writer knew how to do.',
     size: 'M',
     status: 'scheduled',
-    sequence: 'ASSIGNED (Sam, 2026-08-03, the dateOverrides ruling): Stage B pays this '
-      + 'unit. The athlete routes that still reach the legacy writer (occupied-day stack '
-      + 'adds and no-template swaps, via ADD/SWAP_DEFERS_TO_LEGACY) convert to typed '
-      + 'transactions as assembler placement work; the coachTurnController call sites are '
-      + "coach-owned and retire with the coach units under LR-6's boundary. See "
+    sequence: 'ATHLETE SHARE PAID (Stage B stage 1, 2026-08-03): the re-add restoration '
+      + 'is typed (stageAthleteSessionAdditionTransaction flips the bin to '
+      + "restored/'explicit_re_add' in the staged proposal), the defer-sets and both "
+      + 'planChangeProducer call sites are deleted, and no athlete surface reaches the '
+      + 'legacy writer. The two coachTurnController call sites remain: coach-owned, '
+      + "retire with the coach units under LR-6's boundary. See "
       + 'docs/STAGE_B_STAGE0_DATEOVERRIDES_IDENTITY_2026-08-03.md §4 Option C.',
     detector: 'legacyOverrideWriterRefs',
-    declared: 4,
+    declared: 2,
     foundingCount: 4,
   },
   {
@@ -480,8 +522,12 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'decision-feeding, not reconciliation, which is why that file is not exempt.',
     size: 'M',
     status: 'scheduled',
+    sequence: '72 -> 71 (R1.3, 2026-08-05): the quiescent-boot flip deleted the '
+      + 'programStore hydration-migration machinery, and one of its mirror reads '
+      + '(the persisted-profile fallback to the live store) went with it — a read '
+      + 'DELETED with its layer, not migrated.',
     detector: 'mirrorDecisionReads',
-    declared: 72,
+    declared: 71,
     foundingCount: 74,
   },
   {
@@ -522,7 +568,27 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'owned store door — NAME AT THE DOOR, identical call, identical context, identical '
       + 'transaction — is STORE-OWNERSHIP work and is NOT held by this STOP. What is held '
       + 'is changing what a coach path DECIDES. The test is behaviour: if the coach path '
-      + 'would produce a different write, it is LR-6 work and it stops.',
+      + 'would produce a different write, it is LR-6 work and it stops. '
+      + 'D-2 SCOPE INHERITED (Sam, 2026-08-05, docs/DAY_CLOSE_RULINGS_2026-08-05.md '
+      + 'ruling 2, option a): the HYDRATION-REPAIR IN-PLACE BRANCH '
+      + '(`programStore.ts:1216-1219`, inside `canonicaliseAcceptedBoundaryState`) is '
+      + 'THIS UNIT\'S SCOPE. The branch overwrites a stored `dateOverrides` entry with '
+      + 'the gateway\'s repaired day, bypassing the door\'s tape, and the result is '
+      + 'later stamped `authorship: \'athlete\'`. The worn-world probe '
+      + '(docs/D2_WORN_WORLD_PROBE_2026-08-05.md) measured it: it fires and is NOT a '
+      + 'no-op (one hit — same session id re-derived, +116 bytes), but the '
+      + 'purpose-built worn world authored ZERO overrides across five relaunch cycles, '
+      + 'because no athlete tap door writes that surface any more (the LR-1 '
+      + 'measurement). Its entire surviving population is COACH writes and restores, '
+      + 'which is why it is filed HERE rather than as its own unit: the rebuild that '
+      + 'reaches those writers is the rebuild that owns this branch. NOTHING IS DONE TO '
+      + 'IT UNTIL THEN — no redirect (mechanically inert: `dayPrecedence.ts:151-160` '
+      + 'shadows an overlay-filed repair with the very override it repairs, so "just '
+      + 'move it" is secretly a precedence-reordering decision), no reorder, no '
+      + 'implementation. WHAT THE PROBE COULD NOT SETTLE, so that no rebuild reads this '
+      + 'as cleared: its behaviour on a coach-authored phone, whether the +116 bytes '
+      + 'accumulates over many cycles, and whether an authored override\'s CONTENT is '
+      + 'ever replaced by a materially different session — not observed, not excluded.',
     detector: null,
     whyNotDetectable: 'Counting exported type names would count vocabulary, not '
       + 'representations, and would go green on a rename. The finding is an architectural '
@@ -557,10 +623,33 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'in the dead-affordance inventory.',
     size: 'M',
     status: 'scheduled',
-    detector: null,
-    whyNotDetectable: 'Two call sites of a boolean. A count of two that can only ever be '
-      + 'two or zero is a checklist item, not a ratchet — and the fix is a behaviour '
-      + 'change (rebuild, or stop recording), not a deletion.',
+    sequence: 'RULED (Sam, 2026-08-06): the detector is ADDED and both baselines are RAISED '
+      + 'by ruling — LEGACY_DEBT_BASELINE 73 -> 77, LEGACY_DEBT_FOUNDING_BASELINE 116 -> '
+      + '120, foundingCount 2 -> 4. DIRECTION 4\'s sanctioned case exactly: a genuine '
+      + 'PRE-LAW surface the founding sweep missed. Dated, because "missed" is a claim: '
+      + 'all four sites predate the census founding commit 0bc3a1ff (2026-07-29) — '
+      + 'temporarySourceFactTransaction at 1350b749 (2026-07-16) and 59bcb3d2 '
+      + '(2026-07-23), profileProgramTransaction at d651761c (2026-07-16), the dev seed at '
+      + '07cf32d4 (2026-07-17). NO new debt was authored after the law; the 2026-07-30 '
+      + 'founding sweep counted 2 of 4, and it is the same blind spot that dropped LR-30 '
+      + 'in transcription and under-counted LR-27. The raise is a ruling and not an edit '
+      + 'precisely so a builder cannot manufacture its own headroom; this seat measured '
+      + 'it, named the sweep, and asked. '
+      + 'RE-MEASURED 2026-08-06 during the R5.3 pre-deletion measurement, and the '
+      + 'founding line numbers are STALE in a way that matters. Live sites passing '
+      + '`skipConstraintProjection: true`: temporarySourceFactTransaction.ts:630,925 '
+      + '(the two the founding counted, moved), profileProgramTransaction.ts:393, and '
+      + 'dev/e2e/defaultDevE2ESeedCoordinator.ts:288 — FOUR, double the founding two, '
+      + 'and the third is in a SECOND DOOR the founding sweep never named. The flag '
+      + 'itself is a field of the accepted-state proposal '
+      + '(acceptedStateTransaction.ts:213, consumed at :724). '
+      + 'RE-ASSIGNED: docs/R5_DELETION_SEQUENCE_2026-08-06.md §3 listed this unit under '
+      + 'R5.4 (the hydration category), which has no relationship to it. What pays it is '
+      + 'the switchover at the FACT DOOR plus the accepted-state layer\'s deletion — '
+      + 'R5.6. The re-cut records this.',
+    detector: 'skipConstraintProjectionRefs',
+    declared: 4,
+    foundingCount: 4,
   },
   {
     id: 'LR-9',
@@ -822,6 +911,241 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
       + 'which those units\' detectors already count. A third count of the same '
       + 'references would corrupt the baseline.',
   },
+  {
+    id: 'LR-25',
+    title: 'The plan-change producer\'s legacy tail — deleted ahead of its ruling',
+    tier: 2,
+    laws: ['L-A1', 'L-C1'],
+    blastRadius: 'accepted_content',
+    founding: 'Stage B stage 1 Task A (2026-08-04) removed BOTH '
+      + 'applyCoachRevisionDateOverrides call sites from planChangeProducer, not only '
+      + 'the two athlete routes Sam\'s Option C ruling named. The reachability was '
+      + 'verified — the six athlete-owned kinds return from the typed branch above it; '
+      + 'shutdown_week has no product constructor at all; clear_days is constructed '
+      + '(useHomeScreen) but only as payload METADATA on a set_schedule_modifier '
+      + 'action, whose non-durable case refuses outright and whose durable lane never '
+      + 'calls applyPlanChange; move_team_night is durable-door owned and its refusal '
+      + 'sentence is byte-identical because both codes collapse through '
+      + 'athleteSafeRefusal. Behaviour delta: the tape\'s internalResultCode and '
+      + 'firstFailingBoundary for a tail refusal.',
+    size: 'S',
+    status: 'scheduled',
+    sequence: 'RECORDED, NOT RULED (Sam, 2026-08-04): "out of scope tonight — own unit, '
+      + 'own ruling. Record it in the census, don\'t smuggle it in." The deletion is '
+      + 'currently PRESENT in the stage 1 branch commit 0221d4d and is separable: '
+      + 'restoring the tail is mechanical, and the restoration capability plus the '
+      + 'defer-set deletion (what Option C actually ordered) stand without it. Sam '
+      + 'rules whether it stays, reverts, or lands as its own unit.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the ABSENCE of the two call sites LR-3 already '
+      + 'counts. LR-3\'s declared count fell 4 -> 2 in the same commit, so a second '
+      + 'detector over the same references would double-count the same payment.',
+  },
+  {
+    id: 'LR-26',
+    title: 'The reversible-adjustment ledger stores workout snapshots it never reads back',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-04 (Stage B stage 1, scratch probe): a bin -> re-add '
+      + 'cycle grows reversibleAdjustmentLedger by ~227 KB — two adjustments at ~113 KB '
+      + 'each, because displacedOriginalState.ownedDays carries full before/after '
+      + 'Workouts including beforeDateOverride/afterDateOverride '
+      + '(acceptedStateTransaction.ts:1386-1401). Uncapped: 20 cycles ~ 4.9 MB of store '
+      + 'state. It is what exhausted a 12 GB heap when the walker\'s shrinker replayed '
+      + 'a deep walk 200 times.',
+    size: 'M',
+    // PAID IN PART 2026-08-05 — the after side is deleted. The entry STAYS
+    // because the before side survives by ruling, and LR-29 is what retires it.
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-04): capping or compressing the snapshot is REJECTED '
+      + '— both accept the premise that the snapshot belongs there, and it does not. '
+      + 'The north star answer is DELETE the snapshot, keep the decision, and re-derive '
+      + 'the restored state at read. '
+      + 'PREMISE CORRECTED BY MEASUREMENT 2026-08-05, and Sam re-ruled on the '
+      + 'correction (docs/LR26_LR27_RULINGS_2026-08-05.md, ruling 2). The founding '
+      + 'claim "nothing reads them back" is HALF wrong, and the halves are opposite: '
+      + 'the BEFORE side is read IN FULL by the undo restore path '
+      + '(reversibleAdjustmentTransaction.ts:511-553), while of the AFTER side nothing '
+      + 'read the content at all — afterSurfaceWorkout had no reader, afterWorkout was '
+      + 'read only for planEntryId ?? id, and afterDateOverride/afterOverrideContext '
+      + 'only to compute a semanticFingerprint. '
+      + 'AFTER SIDE DELETED 2026-08-05 (Sam, option a): the four stored objects are '
+      + 'replaced by afterStableIdentity + afterDateOverrideFingerprint + '
+      + 'afterOverrideContextFingerprint — exactly what the readers consumed, beside '
+      + 'the afterFingerprint that already existed. A hydrate-time read-ingress lift '
+      + '(liftOwnedDayAfterSide, L15) converts ledgers already on the phone and DROPS '
+      + 'the legacy keys, so the payload cut is real for existing installs and not '
+      + 'only for new writes. Zero behaviour change; whole bible green. '
+      + 'BEFORE SIDE STAYS, RE-CLASSIFIED (Sam, ruling 2): it is the undo '
+      + 'transaction\'s working data, not dead stored output — ruled the decision\'s '
+      + 'own content for now. It becomes derivable, and deletes, when undo is rebuilt '
+      + 'as replay-from-decisions: that is LR-29, filed rather than silently kept.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the SIZE and reachability of a field, not the '
+      + 'presence of a symbol. A detector counting displacedOriginalState references '
+      + 'would count the restore machinery that legitimately reads the decision, and '
+      + 'go green the moment the field was renamed.',
+  },
+  {
+    id: 'LR-27',
+    title: 'derivedSessionProvenance nests a full displaced-session snapshot, and it GROWS on every relaunch',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-04 by the L16 relaunch-identical walker cell, on its '
+      + 'FIRST run — which is the whole argument for L16. In the in-season game-week '
+      + 'loop the athlete-visible week survives a process relaunch byte-identical '
+      + '(weekFingerprint and every visible field match), but the PROJECTION does not: '
+      + 'derivedSessionProvenance[0].dependency.displacedSession.workout carries a full '
+      + 'Workout, which carries its own derivedSessionProvenance, recursively. Measured '
+      + 'across ONE relaunch of the Friday Gunshow: chain depth 3 -> 4 and the projected '
+      + "day's payload 66,947 -> 139,331 bytes. It roughly DOUBLES per launch, and a "
+      + 'phone launches many times. 3,056 projection leaves differed, only 404 of them '
+      + 'timestamps.',
+    size: 'M',
+    sequence: 'RULED (Sam, 2026-08-06): LR-27 gets LR-26\'s ruling — delete the nested '
+      + 'snapshot, keep the reference, re-derive at read; scheduled EARLY, because a '
+      + 'record that doubles per launch is not a filing; builder verifies with receipts '
+      + 'that no consumer needs the snapshot over the reference before deleting. '
+      + 'THE GROWTH IS PAID 2026-08-05 (stage 2 priority B), AT ITS ROOT, AND THE '
+      + 'RECEIPTS RESHAPED THE UNIT. What the probe (LR27_PROBE=1, deep walker) '
+      + 'measured: in EVERY acted-world invocation the "displaced session" snapshot was '
+      + 'a copy of the very workout carrying it — carrier and snapshot shared one id — '
+      + 'and the record carried no sourcePlanEntryId at all. The doubling was never a '
+      + 'restoration: this resolver derives a G-1/G+1 filler, materialiseVisibleSystemWork '
+      + 'persists it, and the next resolve reads that filler back as its own '
+      + '"displaced" template, because resolverMayDisplace only asks whether the ATHLETE '
+      + 'placed it. Fixed by asking the predicate that already owns the question '
+      + '(isResolverOwnedDerivedSession): a filler has no accepted session underneath '
+      + 'it, so the dependency records the reference and NO snapshot. Recursion is now '
+      + 'unrepresentable rather than capped. Measured after: the self-referential '
+      + 'snapshots are gone (6 invocations with 2 self-copies -> 2 invocations, both '
+      + 'snapshot=null) and the L16 relaunch pin is REVERSED — it required growth of '
+      + 'exactly one level, it now requires zero. '
+      + 'THE RESIDUE, UNPAID AND SAM\'S: restoration.workout still stores a full Workout '
+      + 'when a genuine ACCEPTED session is displaced (the G+1-over-accepted-Monday '
+      + 'shape). That is still stored output by the north star\'s definition. Two '
+      + 'receipts bound it and they disagree, which is why it is not deleted here: '
+      + '(1) a whole-bible mutation that made the reader ignore the snapshot entirely '
+      + 'reds EXACTLY ONE cell — wholeWeekRepairEngineTests "expired G+1 recovery '
+      + 'restores the exact displaced Monday"; (2) that cell\'s world is HAND-BUILT, and '
+      + 'no acted world the deep walker reaches produces it. So the only thing standing '
+      + 'between this field and deletion is a fixture nothing reaches by acting — the '
+      + 'mirror of the class named on 2026-08-04. Deleting on that evidence would be '
+      + 'guessing; keeping it silently would be the debt this census exists to stop. '
+      + 'CLOSED 2026-08-05 (Sam, ruling 1): the doubling — which is what this entry '
+      + 'measured and founded on — is PAID at its root, and the residue is separated '
+      + 'into LR-28 with its own entry gate rather than left riding inside a paid unit.',
+    status: 'retired',
+    detector: null,
+    whyNotDetectable: 'Its subject is the depth and size of a nested field across a '
+      + 'process boundary, not the presence of a symbol. Only a relaunch comparison '
+      + 'observes it — which is exactly why no suite had seen it before the L16 cell '
+      + 'existed, and why the pin lives there rather than in a source sweep.',
+  },
+  {
+    id: 'LR-28',
+    title: 'The displaced-accepted-session restoration still stores a workout copy',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'LR-27\'s residue, separated from it 2026-08-05 so the paid part and the '
+      + 'unpaid part cannot be confused. When a derived session displaces a genuinely '
+      + 'ACCEPTED session, dependency.restoration.workout still stores a full Workout '
+      + '(sessionResolver.ts applyGameProximity, section18AcceptedWeekGateway.ts:582). '
+      + 'LR-27 paid the FILLER case — a resolver-owned filler snapshotted into its own '
+      + 'successor, which is what doubled per launch — and this is what is left.',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, ruling 1 — docs/LR26_LR27_RULINGS_2026-08-05.md): '
+      + 'the BEHAVIOUR is real product behaviour. An expired G+1 recovery that displaced '
+      + 'a genuinely accepted session must give the athlete back what it displaced; the '
+      + 'athlete\'s acceptance is a decision and restoring it is the north star\'s own '
+      + 'sentence. So the snapshot STAYS for now — deleting on the current evidence '
+      + 'would be guessing. THE UNIT: replace the stored copy with reference + '
+      + 'derive-at-read, the same shape LR-27\'s filler fix used. '
+      + 'ENTRY GATE, and it is unusual on purpose (Sam, ruling 1): the receipts showed '
+      + 'the ONLY thing asserting this behaviour is a HAND-BUILT fixture — a whole-bible '
+      + 'mutation ignoring the snapshot reds exactly one cell '
+      + '(wholeWeekRepairEngineTests "expired G+1 recovery restores the exact displaced '
+      + 'Monday"), and no acted world the deep walker reaches builds that composition. '
+      + 'That is the mirror of the 2026-08-04 class. So this unit does not start until '
+      + 'the matrix or walker reaches displace-an-accepted-session BY ACTING (L11/L13). '
+      + 'No device pass and no deletion before then.',
+    detector: null,
+    whyNotDetectable: 'Its subject is whether a field holds a copy or a reference, and a '
+      + 'detector counting references to restoration.workout would count the legitimate '
+      + 'reader the unit exists to convert.',
+  },
+  {
+    id: 'LR-29',
+    title: 'Undo restores from stored before-state instead of replaying decisions',
+    tier: 2,
+    laws: ['L-A1'],
+    blastRadius: 'accepted_content',
+    founding: 'Measured 2026-08-05 while paying LR-26\'s after side. '
+      + 'reversibleAdjustmentTransaction.ts:511-553 restores by writing stored '
+      + 'beforeWorkout / beforeSurfaceWorkout / beforeDateOverride / '
+      + 'beforeOverrideContext straight back onto dateOverrides and weekScopedOverlays. '
+      + 'Those are full Workout copies (~113 KB each; ~227 KB per bin/re-add cycle, '
+      + 'uncapped — the measurement that founded LR-26).',
+    size: 'L',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, ruling 2): the before side is the undo '
+      + 'transaction\'s WORKING DATA and is ruled the decision\'s own content for now — '
+      + 'it is read in full and it is not dead stored output, which is why LR-26 did '
+      + 'not delete it. THE UNIT: rebuild undo as replay-from-decisions, at which point '
+      + 'the before state is derivable and the stored copies delete. Explicitly NOT '
+      + 'part of Stage 2 and sized separately — it changes how undo works, not what it '
+      + 'stores, and the north star\'s "store only decisions" is the whole argument for '
+      + 'it. Filed rather than silently kept, per Sam.',
+    detector: null,
+    whyNotDetectable: 'Its subject is the MECHANISM of undo, not the presence of a '
+      + 'symbol. A detector counting beforeWorkout references would count the restore '
+      + 'machinery this unit exists to replace.',
+  },
+  {
+    id: 'LR-30',
+    title: 'One week\'s contract still has more than one home — the legacy v1 contract is still written',
+    tier: 3,
+    laws: ['L-A1'],
+    blastRadius: 'honesty',
+    founding: 'REFILED 2026-08-05, and the refiling is the finding. Sam\'s FOUNDING '
+      + 'census of 2026-07-30 declared this unit — "One week\'s contract has THREE '
+      + 'homes" (docs/LEGACY_RECKONING_CENSUS_2026-07-30.md, its LR-26) — and it was '
+      + 'NEVER TYPED INTO THIS FILE. `git log -S` finds no occurrence of it in this '
+      + 'module in any commit, ever. It was not paid; it was dropped in the '
+      + 'transcription from the document to code and stayed dropped for six days. '
+      + 'The Priority D survey (2026-08-05) then rediscovered its subject from the '
+      + 'other end, and measured it: FIVE writers of the v1 `exposureContract` shape, '
+      + 'of which `generateProgram.ts:692,767` mints one onto EVERY freshly generated '
+      + 'microcycle — so this is not legacy residue sitting still, it is a superseded '
+      + 'shape still being authored today. L15 is unconditional: "superseded formats '
+      + 'are never written again, by anything, ever. A writer of a retired shape is a '
+      + 'red-gate defect, not a compatibility feature."',
+    size: 'M',
+    status: 'scheduled',
+    sequence: 'RULED (Sam, 2026-08-05, D-1 option a): the CONTAINED CUT LANDED in the '
+      + 'same batch as this filing — the two overlay writers (`weekRebuild.ts:220` '
+      + 'verbatim copy, reachable from hydrate via fixture-mark materialisation, and '
+      + 'the re-derived attach in `postGenerationConstraintValidation.ts`) no longer '
+      + 'write v1, so the overlay home is gone and three homes became two. WHAT THIS '
+      + 'UNIT STILL OWNS: the generation-time writer and its readers — the V2-less '
+      + 'acceptance throw (`generateProgram.ts:697-713`), '
+      + '`assertEffectiveMicrocycleExposure`, the bye-mode fallback '
+      + '(`sessionResolver.ts:1690`, dead on any V2 install), the date-mutation '
+      + 'reconciliation, and ~7 test files. Sam\'s reason for filing rather than '
+      + 'sweeping: `domain.ts:665-667` records that v1 "runs alongside the legacy '
+      + 'acceptance contract UNTIL THE FINAL COMMIT-GATEWAY SLICE IS APPROVED" — a '
+      + 'staged retirement whose gate nobody owns. Filing gives that gate an owner by '
+      + 'RATCHET rather than by memory, which is the whole argument.',
+    detector: null,
+    whyNotDetectable: 'Its subject is a SHAPE still being written, not a symbol that '
+      + 'should not exist. A detector counting `exposureContract` references would '
+      + 'count every read-ingress lift — the sanctioned direction L15 explicitly '
+      + 'allows — and go green the moment the field were renamed.',
+  },
 ];
 
 /**
@@ -849,8 +1173,23 @@ export const LEGACY_UNIT_CENSUS: readonly LegacyUnit[] = [
  * its twenty-seven references route through one named door, so LR-1 goes 27 ->
  * 0 and LR-2's last count — the program store itself — goes 1 -> 0. Baseline
  * 104 -> 76. Every persisted store in this app now has a write owner.
+ *
+ * 74 -> 73 (R1.3, 2026-08-05): the quiescent-boot flip deleted the program
+ * store's hydration-migration machinery and one LR-4 mirror read went with
+ * its layer (the persisted-profile fallback to the live store).
+ *
+ * 73 -> 77 (RULED, Sam, 2026-08-06): LR-8 takes a detector and declares 4.
+ * THE ONLY RAISE IN THIS NUMBER'S HISTORY, and it is a ruling rather than an
+ * edit because Direction 4 makes it one. LR-8's own entry had argued a detector
+ * was not worth building ("two call sites of a boolean… a checklist item, not a
+ * ratchet"); the R5.3 pre-deletion measurement found FOUR, in three modules,
+ * one of them a door the entry never mentions. Every one of the four predates
+ * the census founding commit, so this is missed pre-law surface and not new
+ * debt — see the unit's `sequence` for the per-site dating. The raise is
+ * therefore NOT headroom: it makes an unwatched surface watched, and the count
+ * can only fall from here.
  */
-export const LEGACY_DEBT_BASELINE = 76;
+export const LEGACY_DEBT_BASELINE = 77;
 
 /**
  * Frozen 2026-07-30 at the number the census landed with. DIRECTION 4.
@@ -867,8 +1206,17 @@ export const LEGACY_DEBT_BASELINE = 76;
  * by the founding sweep, say so in the census document, get it ruled, and raise
  * the unit's founding count and this total together — with the sweep that
  * missed it named.
+ *
+ * 116 -> 120 (RULED, Sam, 2026-08-06): LR-8's founding count goes 2 -> 4, and
+ * this total moves with it in the same commit, which is the procedure above
+ * followed rather than described. THE SWEEP THAT MISSED IT, NAMED: the founding
+ * sweep of 2026-07-30 counted two `skipConstraintProjection: true` sites in the
+ * fact door and did not count the two outside it. Same blind spot that dropped
+ * LR-30 out of the transcription entirely and under-counted LR-27 — a sweep
+ * that reads the module it is thinking about. All four sites are dated against
+ * the founding commit in LR-8's `sequence`; none postdates it.
  */
-export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
+export const LEGACY_DEBT_FOUNDING_BASELINE = 120;
 
 /**
  * The census was founded with 24 units, and holds 25 by RULING. DIRECTION 4c.
@@ -884,8 +1232,94 @@ export const LEGACY_DEBT_FOUNDING_BASELINE = 116;
  * missed it and get it ruled, do not file it in quietly" — and the sweep that missed it
  * is the founding sweep, which counted stores and writers rather than asking two phrase
  * maps the same word.
+ *
+ * 25 -> 27 on 2026-08-04, both by RULING, both during Stage B stage 1. Sam:
+ *
+ *   LR-25 — "Legacy tail deletion: out of scope tonight. Own unit, own ruling.
+ *   Record it in the census, don't smuggle it in."
+ *   LR-26 — "Cap and compress both accept the premise that the snapshot belongs
+ *   there. It doesn't … The north star answer is DELETE the snapshot, keep the
+ *   decision, re-derive at read. Record it as a ruled unit."
+ *
+ * THE SWEEP THAT MISSED THEM, named as the gate demands — and they are missed
+ * differently, which matters:
+ *
+ *   LR-25 was not missed at all. It is a surface this repo CREATED on 2026-08-04,
+ *   when Task A deleted more of the producer than Option C ordered. A census entry
+ *   for a change made hours earlier is not debt discovered; it is scope declared so
+ *   it cannot ride along inside another unit's payment. If Sam rules the deletion
+ *   in, the entry retires with it.
+ *
+ *   LR-26 WAS missed, by the same blind spot as LR-27: the founding sweep counted
+ *   STORES AND WRITERS — shapes present in the source — and never asked what a
+ *   legitimately-owned store puts INSIDE a record it owns. A decision ledger is a
+ *   correct thing to have; a decision ledger carrying full workout snapshots nobody
+ *   reads back is stored output wearing a decision's name, and no detector built to
+ *   count writers could see it. It took a heap exhaustion to surface.
  */
-export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 25;
+/**
+ * 27 -> 29 on 2026-08-05, BY RULING — `docs/LR26_LR27_RULINGS_2026-08-05.md`.
+ *
+ * Sam's two rulings each name a unit that must be filed rather than silently
+ * kept, and both are RESIDUES OF WORK PAID IN THE SAME SESSION rather than
+ * newly discovered debt — which is the honest reason the count rises while two
+ * defects were being paid:
+ *
+ *   LR-28 — ruling 1. LR-27's doubling is paid at its root; the
+ *   displaced-ACCEPTED-session copy is what is left. Separated so a paid unit
+ *   cannot go on claiming an unpaid surface.
+ *   LR-29 — ruling 2. LR-26's after side is deleted; the before side stays by
+ *   ruling as the undo transaction's working data, and retires only when undo
+ *   is rebuilt as replay-from-decisions.
+ *
+ * THE SWEEP THAT MISSED THEM, as the gate demands: neither was missed. Both
+ * were created by measurement on 2026-08-05 — the after/before split and the
+ * filler-self-copy finding did not exist when ruling 3 (2026-08-06 batch) was
+ * made, and that ruling's own premise was corrected by them. Filing them is
+ * scope declared, not debt discovered.
+ */
+/**
+ * 29 -> 30 on 2026-08-05, BY RULING — `docs/PRIORITY_D_RULINGS_2026-08-05.md`,
+ * D-1: "Generation still minting v1 on every fresh microcycle is FILED as its
+ * own census unit ... the staged 'until the commit-gateway slice is approved'
+ * gate gets an owner by being ratcheted, not by memory."
+ *
+ * THE SWEEP THAT MISSED IT, as the gate demands — and the answer is worse than
+ * a sweep missing it. NOTHING missed it. Sam's FOUNDING census of 2026-07-30
+ * declared this exact unit in its own words: "One week's contract has THREE
+ * homes ... Collapse to one home. No sync job and no fourth writer, under any
+ * version" (`docs/LEGACY_RECKONING_CENSUS_2026-07-30.md`, its LR-26). It was
+ * never transcribed into this file — `git log -S` finds it in no commit, ever
+ * — so the ledger the gate reads has been one unit short of the ledger Sam
+ * signed since the day this module was written, and the missing one went on
+ * being true for six days.
+ *
+ * That is why this raise is not headroom. LR-30 restores a founding unit to
+ * the count it should always have had; the number 29 was itself the error.
+ * Recorded in the founding document too (its own reconciliation block), so
+ * neither file can be read as the whole ledger again.
+ */
+/**
+ * RATIFIED at 30 by Sam, 2026-08-05 — `docs/DAY_CLOSE_RULINGS_2026-08-05.md`
+ * ruling 1: "The rise restores the founding unit dropped in transcription;
+ * 29 was the error. The code ledger is the live ledger; the founding doc is
+ * history."
+ *
+ * So this constant is now a RULED number and not a raise waiting for one, and
+ * the ledger sits at exactly 30 of 30 — ZERO SLACK, deliberately.
+ *
+ * WHAT THAT COST, ON THE SAME DAY, so it is on the record rather than in
+ * someone's memory: D-2 (the hydration-repair in-place branch) was ruled
+ * "filed on the census, scoped to the coach rebuild" in ruling 2 of the same
+ * document. It was filed as SCOPE ON LR-6 — the coach-rebuild unit — and NOT
+ * as an LR-31, because a thirty-first unit would have required raising a
+ * ceiling Sam ratified three paragraphs earlier in the same breath. Direction
+ * 4 exists precisely so that raise cannot be quiet bookkeeping; taking it
+ * unasked would have been the move the tripwire is aimed at. If Sam meant a
+ * standalone unit, the ceiling is his to raise and the entry is a small
+ * follow-up — the scope text on LR-6 says everything an entry would say.
+ */
+export const LEGACY_CENSUS_FOUNDING_UNIT_COUNT = 30;
 
 /**
  * WHAT DIRECTION 4 IS NOT, stated so nobody over-trusts it.

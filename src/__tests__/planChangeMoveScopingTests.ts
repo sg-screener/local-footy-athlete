@@ -201,6 +201,30 @@ function combinedDay(weekStart: string): { date: string; workout: Workout } {
   return { date: thursday, workout: day.workout };
 }
 
+/**
+ * A day whose ONLY content is the session on it — the fixture the two Remove
+ * sub-line cells below are about.
+ *
+ * It ASKS the seed rather than naming a weekday, and that is a repair rather
+ * than a convenience. Both cells hardcoded Monday, which was sole-content when
+ * they were written. Sam's flush-offer ruling landed on 2026-08-06 and the
+ * in-season week now carries its authored offer as a component on the first
+ * fixture-safe strength day — Monday — so Monday became a two-part day and the
+ * cells could no longer build the shape they assert about. Nothing about the
+ * CLAIM changed; the seed moved underneath it. Asking makes it unable to rot
+ * that way again, and the assertion here fails loudly if the seed ever stops
+ * producing such a day at all rather than passing on a shape it never built.
+ */
+function soleContentDay(weekStart: string): string {
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDaysISO(weekStart, offset);
+    const options = optionsFor(weekStart, date);
+    if (options.canRemove && removeEmptiesTheDay(options)) return date;
+  }
+  throw new Error('the seed no longer produces ANY sole-content day, so neither '
+    + 'Remove sub-line cell can build its fixture');
+}
+
 console.log('\n-- Plan-change move scoping and refusal --');
 
 // ── The reported dead end ────────────────────────────────────────────────
@@ -478,7 +502,7 @@ run('one predicate decides whether removing this day empties it', () => {
   // computed, so the sentence the athlete reads and the removal that follows are
   // answering from one fact.
   const weekStart = seed();
-  const plain = optionsFor(weekStart, addDaysISO(weekStart, 0));
+  const plain = optionsFor(weekStart, soleContentDay(weekStart));
   const { date: combined } = combinedDay(weekStart);
   const multi = optionsFor(weekStart, combined);
 
@@ -486,9 +510,12 @@ run('one predicate decides whether removing this day empties it', () => {
     'one of the two days cannot be removed from at all, so neither sentence is '
     + `reachable and this cell proves nothing (plain=${plain.canRemove}, multi=${multi.canRemove})`);
   assert(removeEmptiesTheDay(plain),
-    'a plain strength day — whose only content IS the session — is reported as '
+    'a day whose only content IS the session is reported as '
     + `having something that survives the removal; binScopes=${JSON.stringify(plain.binScopes.map((s) => s.id))}. `
     + 'It would read "anything else on the day stays" over a day about to become rest.');
+  assert(plain.binScopes.length === 1 && plain.binScopes[0].id === 'whole_day',
+    'the day this cell calls sole-content offers more than one bin scope, so the '
+    + `predicate is agreeing with the wrong shape; binScopes=${JSON.stringify(plain.binScopes.map((s) => s.id))}`);
   // The combined day is the case that makes this more than a restatement of a
   // length: a team night offers its two parts and NO whole-day scope at all, so
   // removing either leaves the other standing.
@@ -584,23 +611,31 @@ run('the fifth Add/Swap row reads "Accessories"', () => {
 // sentence he picks, per this repo's declared-red/declared-gap pattern.
 run('the row sub-line and the whole-day scope can still disagree on an '
   + 'unanchored multi-kind day (PINNED, copy sheet §6-VI, unruled)', () => {
+  // HOW THE FIXTURE IS REACHED CHANGED; WHAT IT PINS DID NOT.
+  //
+  // This used to take the seed's plain Monday and ADD light conditioning to it,
+  // because nothing in the seed produced an unanchored two-kind day on its own.
+  // Since Sam's flush-offer ruling landed (2026-08-06) the in-season week
+  // carries its authored offer as a component on a strength day, so the seed now
+  // produces exactly this shape without being asked — and the old construction
+  // no longer reaches it, because the only remaining sole-content day is an
+  // accessory day that absorbs an added conditioning part instead of standing
+  // beside it. The cell takes the day that HAS the shape, and still refuses to
+  // pass if no such day exists.
   const weekStart = seed();
-  const monday = addDaysISO(weekStart, 0);
-  const before = optionsFor(weekStart, monday);
-  assert(before.canRemove && removeEmptiesTheDay(before),
-    'the seed\'s Monday is no longer a plain sole-content strength day, so this '
-    + `cell cannot build the unanchored multi-kind fixture from it; before=${JSON.stringify(before.binScopes.map((s) => s.id))}`);
+  const target = [0, 1, 2, 3, 4, 5, 6]
+    .map((offset) => addDaysISO(weekStart, offset))
+    .find((date) => {
+      const options = optionsFor(weekStart, date);
+      const ids = options.binScopes.map((scope) => scope.id);
+      return options.canRemove && ids.includes('whole_day') &&
+        ids.filter((id) => id !== 'whole_day').length >= 2;
+    });
+  assert(target,
+    'the seed produces no unanchored multi-kind day at all, so this cell cannot '
+    + 'reach the state it pins — re-point it or retire it');
 
-  const added = quiet(() => applyPlanChange({
-    change: { kind: 'add_category', date: monday, category: 'conditioning_light' },
-    visibleWeek: visibleWeek(weekStart),
-    todayISO: weekStart,
-    applyOverride: (overrideDate, workout, context) =>
-      seedManualOverride(overrideDate, workout, context),
-  }));
-  assert(added.ok, `adding conditioning to the plain Monday day was refused: ${added.message}`);
-
-  const after = optionsFor(weekStart, monday);
+  const after = optionsFor(weekStart, target);
   // THE ROW'S HALF: unanchored, two kinds, `removeEmptiesTheDay` is false —
   // the row reads "anything else on the day stays."
   assert(!removeEmptiesTheDay(after),

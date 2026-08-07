@@ -49,6 +49,7 @@ import {
   semanticFingerprint,
   snapshotSemanticResolvedDay,
 } from './programSemanticSnapshot';
+import { assembleScheduleState, gatherDeriveInputs } from './deriveVisibleWeek';
 
 // ─── Types ───
 
@@ -120,97 +121,10 @@ export interface WeekDiff {
  * mirrored here, or the snapshot won't match what the Program tab shows.
  */
 export function buildScheduleStateImperative(): ScheduleState & { activeConstraints: any[] } {
-  const programState = useProgramStore.getState();
-  const calendarState = useCalendarStore.getState();
-  const profileState = useProfileStore.getState();
-  const onboardingData = profileState.onboardingData;
-  const todayISO = getTodayISOLocal();
-
-  // Injury / constraint state — read lazily via require to avoid circular imports.
-  // The same active constraint array also carries equipment limits.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const coachUpdatesState = useCoachUpdatesStore.getState();
-
-  // AthleteContext (matches useAthleteContext)
-  const athleteContext = onboardingData
-    ? {
-        injuries: onboardingData.injuries || [],
-        equipmentTags: resolveEquipmentAvailability(
-          onboardingData,
-          coachUpdatesState.activeConstraints ?? [],
-          todayISO,
-        ),
-        trainingLocation: onboardingData.trainingLocation || 'Commercial gym',
-        onboardingData,
-      }
-    : DEFAULT_ATHLETE_CONTEXT;
-
-  const seasonPhase = onboardingData?.seasonPhase || null;
-  const usualGameDay = onboardingData?.usualGameDay;
-  const gameDay = onboardingData?.gameDay;
-  // Older persisted states and focused test fixtures can pre-date the
-  // accepted-context field.  The cold-start normalizer is the ownership
-  // boundary for that compatibility case; visible projection should never
-  // dereference a partial store snapshot directly.
-  const acceptedContext = normalizeAcceptedMaterialContext(
-    programState.acceptedMaterialContext,
-  );
-  const acceptedOwnsMaterialState = acceptedContext.revision > 0;
-  const todayReadinessSignal = acceptedOwnsMaterialState
-    ? acceptedContext.readinessSignalsByDate[todayISO]
-    : useReadinessStore.getState().signalsByDate[todayISO];
-  // RENDER MUST NOT THROW (Sam, 2026-07-30). This is a read, not a prescription,
-  // so it asks for the band OR NULL. `deriveProfileReadiness` still throws and
-  // is still what generation calls — an unscoreable profile is refused a
-  // program, it is not refused a screen. `null` travels as null; see
-  // rules note in utils/readiness.ts.
-  const readiness = profileCapacityBandOrNull(onboardingData);
-
-  const preferredDays = onboardingData?.preferredTrainingDays;
-  const availableDayNumbers =
-    preferredDays && preferredDays.length > 0
-      ? preferredDays
-          .map((name: string) => DAY_NAME_TO_NUMBER[name])
-          .filter((n: number | undefined) => n !== undefined)
-      : undefined;
-
-  const activeInjury = acceptedOwnsMaterialState
-    ? acceptedContext.activeInjury
-    : coachUpdatesState.activeInjury ?? null;
-  const activeConstraints = acceptedOwnsMaterialState
-    ? acceptedContext.activeConstraints
-    : coachUpdatesState.activeConstraints ?? [];
-  const readinessActiveConstraints = acceptedOwnsMaterialState
-    ? []
-    : buildReadinessActiveConstraints(todayReadinessSignal);
-
-  return {
-    currentProgram: programState.currentProgram,
-    currentMicrocycle: programState.currentMicrocycle,
-    manualOverrides: programState.dateOverrides || {},
-    weekScopedOverlays: programState.weekScopedOverlays || {},
-    markedDays: acceptedOwnsMaterialState
-      ? acceptedContext.markedDays
-      : calendarState.markedDays || {},
-    athleteContext,
-    seasonPhase,
-    usualGameDay,
-    gameDay,
-    readiness,
-    blockState: programState.blockState || null,
-    sessionFeedback: programState.sessionFeedback || {},
-    weightOverrides: programState.weightOverrides || {},
-    availableDayNumbers,
-    activeInjury,
-    injuryProjectionOwner: acceptedContext.injuryEpisodes.length > 0
-      ? 'accepted_episode'
-      : undefined,
-    activeConstraints: [
-      ...activeConstraints,
-      ...readinessActiveConstraints,
-    ],
-  };
+  // R1.2 (shell rebuild): the assembly moved to the derive owner. This
+  // adapter survives for its 14 callers but can no longer drift — it IS the
+  // owner now. `derivedWeekOwnershipTests` pins the delegation.
+  return assembleScheduleState(gatherDeriveInputs());
 }
 
 // ─── Snapshot ───

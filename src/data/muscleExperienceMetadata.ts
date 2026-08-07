@@ -110,6 +110,7 @@ export {
 } from '../rules/experienceCrosswalk';
 
 import type { ExperienceGate } from '../rules/experienceCrosswalk';
+import { conditioningMuscleEntry } from './conditioningMuscleMetadata';
 
 /**
  * Spelling variants that WERE in the FINAL sheet and have been corrected.
@@ -188,15 +189,6 @@ export const MUSCLE_METADATA_POOLS: readonly string[] = [
 ];
 
 /* ── Reconciliation with the selectable vocabulary ── */
-
-/**
- * Selectable exercises the authored sheet gives no metadata for.
- *
- * EMPTY as of Sam's 2026-07-27 reconciliation: he ruled `Single-Arm Pulldown`
- * KEEP and authored its row, closing the only gap. The list and its gate stay so
- * a future selectable addition without metadata is caught rather than assumed.
- */
-export const SELECTABLE_WITHOUT_METADATA: readonly string[] = [];
 
 export interface MetadataWithoutSelectableExercise {
   readonly exercise: string;
@@ -2075,9 +2067,35 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
 
 ];
 
-/** Metadata for one exercise, or null when the sheet carries none. */
+/**
+ * Metadata for one exercise, or null when no signed sheet carries one.
+ *
+ * TWO SIGNED SHEETS, ONE QUESTION (Sam, 2026-08-05). The exercise master sheet
+ * owns lifts and the two conditioning rows he signed there; the conditioning
+ * workbook owns the other 53. Each is equality-gated to its own workbook, so
+ * neither can drift — but "does this exercise have authored metadata" must
+ * have exactly one answer, and this is it. Callers ask here and never compose
+ * a second lookup.
+ *
+ * A conditioning row's MUSCLES may be empty even when the row exists: the 27
+ * machine-agnostic templates derive theirs from the modality map, and that
+ * question has its own owner (`conditioningSessionMuscles`) because the answer
+ * is not knowable until the rendering modality is.
+ */
 export function muscleMetadataFor(exercise: string): ExerciseMuscleEntry | null {
-  return EXERCISE_MUSCLE_METADATA.find((entry) => entry.exercise === exercise) ?? null;
+  const authored = EXERCISE_MUSCLE_METADATA.find((entry) => entry.exercise === exercise);
+  if (authored) return authored;
+  const conditioning = conditioningMuscleEntry(exercise);
+  if (!conditioning) return null;
+  return {
+    exercise: conditioning.exercise,
+    pool: conditioning.pool,
+    primary: conditioning.primary,
+    secondary: conditioning.secondary,
+    experienceGate: conditioning.experienceGate,
+    note: conditioning.note,
+    flagged: conditioning.flagged,
+  };
 }
 
 /** Every entry whose primary OR secondary tags include a muscle group. */
@@ -2091,3 +2109,17 @@ export function exercisesTargeting(muscle: MuscleGroup): readonly ExerciseMuscle
 export function exercisesInMetadataPool(pool: string): readonly ExerciseMuscleEntry[] {
   return EXERCISE_MUSCLE_METADATA.filter((entry) => entry.pool === pool);
 }
+
+/**
+ * Selectable exercises no authored sheet gives metadata for.
+ *
+ * EMPTY AGAIN, and this time by SIGNING rather than by scope. The Stage B
+ * switchover made the 55 conditioning templates selectable and this list
+ * carried the 53 with no muscle row; Sam signed them on 2026-08-05
+ * (`docs/MUSCLE_SHEET_SIGNING_2026-08-05.md`), so the gap closed at its
+ * source and `muscleMetadataFor` now answers for every selectable name.
+ *
+ * The list and its gate stay so a future selectable addition without metadata
+ * is caught rather than assumed — which is exactly what caught these 53.
+ */
+export const SELECTABLE_WITHOUT_METADATA: readonly string[] = [];

@@ -61,18 +61,44 @@ export interface ResolvedSessionOutcomeTarget {
   components: SessionComponent[];
 }
 
+/**
+ * WHY THIS OUTCOME CANNOT BE RECORDED, or `null` when it can.
+ *
+ * THE RULE HAS ONE OWNER AND TWO READERS. `resolveSessionOutcomeTarget` refuses
+ * below by consuming exactly this answer; `SessionFeedbackPanel` asks it before
+ * offering "Save & Finish". Until 2026-08-06 only the door knew, so the panel
+ * rendered the control for a session that had not happened yet, the athlete
+ * tapped it, the door refused, and the handler's `if (!result.ok) return;`
+ * dropped the refusal on the floor — the button did nothing and said nothing
+ * (Sam, R3 door pass, finding 4).
+ *
+ * A DATE COMPARISON COPIED INTO THE PANEL WOULD HAVE FIXED THE SYMPTOM AND
+ * REBUILT THE CAUSE: two owners of one rule, drifting apart at the next change.
+ * `sessionOutcomeControlOwnershipTests` cell 4 sweeps for exactly that copy.
+ */
+export function sessionOutcomeRecordableRefusal(
+  date: string,
+  todayISO: string = todayISOLocal(),
+): { code: string; message: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { code: 'invalid_date', message: `Invalid session date: ${date}` };
+  }
+  if (date > todayISO) {
+    return {
+      code: 'future_session_outcome',
+      message: 'Session outcomes can only be recorded for today or a past session.',
+    };
+  }
+  return null;
+}
+
 export function resolveSessionOutcomeTarget(
   date: string,
   todayISO: string = todayISOLocal(),
 ): ResolvedSessionOutcomeTarget {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new SessionOutcomeValidationError('invalid_date', `Invalid session date: ${date}`);
-  }
-  if (date > todayISO) {
-    throw new SessionOutcomeValidationError(
-      'future_session_outcome',
-      'Session outcomes can only be recorded for today or a past session.',
-    );
+  const refusal = sessionOutcomeRecordableRefusal(date, todayISO);
+  if (refusal) {
+    throw new SessionOutcomeValidationError(refusal.code, refusal.message);
   }
   const programState = useProgramStore.getState();
   const day = buildDayWorkoutProjectedDay({
@@ -158,8 +184,25 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
  */
 export async function commitSessionOutcomeTransaction(
   intent: RecordSessionOutcomeIntent,
+  todayISO: string = todayISOLocal(),
 ): Promise<SessionOutcomeTransactionResult> {
-  const commandTodayISO = todayISOLocal();
+  // THE DOOR'S CLOCK IS AN INPUT, like every other fact it reads.
+  //
+  // Its two siblings in this file — `resolveSessionOutcomeTarget` and
+  // `createRecordSessionOutcomeIntentFromFeedback` — already take `todayISO`
+  // with exactly this default. This one read the wall clock and could not be
+  // told otherwise, which made any world-based test of it depend on the day it
+  // was RUN rather than on the world it declares.
+  //
+  // That is not hypothetical: `sessionOutcomeControlOwnershipTests` cell 1 asks
+  // this door to refuse a future session in a world pinned to 2026-08-05. It
+  // passed while the wall clock agreed and went red the moment the date rolled
+  // over, because the session it calls "tomorrow" had become the real today.
+  // A suite that changes its answer overnight is not a gate.
+  //
+  // Production behaviour is unchanged — every caller that omits this argument
+  // still gets the athlete's real today.
+  const commandTodayISO = todayISO;
   const trace = beginAthleteActionTrace({
     source: intent.source.entryPoint,
     actionType: 'session_feedback',

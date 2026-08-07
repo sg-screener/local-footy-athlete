@@ -16,6 +16,9 @@
  *   'avoid'   = hard exclude when injury is active
  */
 
+import { CONDITIONING_TEMPLATES } from './conditioningTemplates';
+import { TIER_FOR_QUALITY, renderableModalities } from '../rules/conditioningSelection';
+
 // ─── Tag Types ───
 
 export type MovementPattern =
@@ -158,6 +161,34 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Easy Swim':                { tier: 'C',      modality: 'swim', impact: 'low' },
   'Light Circuits':           { tier: 'C',      modality: 'bike', impact: 'low' },
 };
+
+/**
+ * The 55 authored conditioning templates join the registry by DERIVATION
+ * (Stage B switchover, 2026-08-05): tier from the quality tab, modality and
+ * impact from the authored `modalityNotes`. Nothing here is invented — a
+ * curated entry above (a ruled triple, e.g. `Erg EMOM`, `MAS 15:15 Blocks`)
+ * always wins over the derivation, so Sam's rulings cannot be overwritten by
+ * a reader. This is what makes the authored names selectable vocabulary and
+ * lets the row classifiers answer from the registry instead of a name regex.
+ */
+{
+  const machineToMeta: Record<string, ConditioningModality> = {
+    bike: 'bike', air_bike: 'bike', row: 'row', ski: 'ski',
+  };
+  for (const template of CONDITIONING_TEMPLATES) {
+    if (CONDITIONING_META[template.name]) continue;
+    const modalities = renderableModalities(template);
+    const machines = modalities.filter((modality) => modality !== 'run');
+    const runs = modalities.includes('run');
+    CONDITIONING_META[template.name] = {
+      tier: TIER_FOR_QUALITY[template.quality],
+      modality: runs
+        ? (machines.length > 0 ? 'mixed' : 'run')
+        : machines.length > 1 ? 'mixed' : machineToMeta[machines[0]] ?? 'mixed',
+      impact: runs && machines.length === 0 ? 'high' : 'low',
+    };
+  }
+}
 
 // ─── Exercise Tag Registry ───
 

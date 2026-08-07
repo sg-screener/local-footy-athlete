@@ -77,6 +77,7 @@ import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK_START = '2026-07-13';
 const WEDNESDAY = '2026-07-15';
@@ -246,6 +247,7 @@ function acceptedWeek(weekStart: string) {
     if (workout) workouts.push(workout);
   }
   const visible = resolveFinalVisibleSection18Week({
+    surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts,
     weekStart,
@@ -352,36 +354,65 @@ function withGatewayFailure(body: () => void): boolean {
   // simply no longer goes through. The injection follows the owner.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const originalRequire = gateway.requireSection18AcceptedWeek;
-  const originalRun = gateway.runSection18AcceptedWeekGateway;
-  const inject = () => { throw new Error('INJECTED_ACCEPTANCE_FAILURE'); };
-  gateway.requireSection18AcceptedWeek = inject;
-  gateway.runSection18AcceptedWeekGateway = inject;
+  const restore = injectGatewayFailure(gateway);
   try {
     body();
     return false;
   } catch (error) {
     return String(error).includes('INJECTED_ACCEPTANCE_FAILURE');
   } finally {
-    gateway.requireSection18AcceptedWeek = originalRequire;
-    gateway.runSection18AcceptedWeekGateway = originalRun;
+    restore();
   }
+}
+
+/**
+ * Stub EVERY gateway entry point, because the owner keeps moving and the
+ * injection must follow it. Twice now this helper has reported "the failure did
+ * not reach the gateway" when the failure reached fine and the GATEWAY had
+ * changed underneath it:
+ *
+ *   • Sam's ownership collapse (2026-07-29) moved the transaction owner off the
+ *     throwing wrapper onto `runSection18AcceptedWeekGateway`, so a rejected
+ *     week became a typed result it could accept-and-reduce.
+ *   • The §18 ownership reassessment (2026-08-05, D3) moved GENERATION onto
+ *     `acceptSection18Week`, which routes by operation: a restoration throws, a
+ *     forward athlete decision publishes the best achievable week. A gate must
+ *     never veto a fact.
+ *
+ * Stubbing all three keeps these regressions about what they claim to be about
+ * — ATOMICITY, that a failure anywhere in acceptance commits no surface — and
+ * not about which function currently holds the decision. The injected error is
+ * a plain `Error`, so it is fatal under every operation and the atomicity claim
+ * stays sharp regardless of who is asking.
+ */
+function injectGatewayFailure(
+  gateway: Record<string, unknown>,
+  onCall?: () => void,
+): () => void {
+  const names = [
+    'requireSection18AcceptedWeek',
+    'runSection18AcceptedWeekGateway',
+    'acceptSection18Week',
+  ] as const;
+  const originals = names.map((name) => [name, gateway[name]] as const);
+  const inject = () => {
+    onCall?.();
+    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
+  };
+  for (const name of names) gateway[name] = inject;
+  return () => { for (const [name, original] of originals) gateway[name] = original; };
 }
 
 async function withGatewayFailureAsync(body: () => Promise<void>): Promise<boolean> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
-  const original = gateway.requireSection18AcceptedWeek;
   let called = false;
-  gateway.requireSection18AcceptedWeek = () => {
-    called = true;
-    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
-  };
+  const restore = injectGatewayFailure(gateway, () => { called = true; });
   try {
     await body();
     return called;
   } finally {
-    gateway.requireSection18AcceptedWeek = original;
+    restore();
   }
 }
 
@@ -398,7 +429,7 @@ function stripContracts(program: TrainingProgram): TrainingProgram {
 
 function migrated(value: OnboardingData): TrainingProgram {
   resetStores();
-  return canonicaliseHydratedProgram(stripContracts(generate(value)), value);
+  return canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
 }
 
 function placeholderOverlay(weekStart: string): WeekScopedWorkoutOverlay {
@@ -649,8 +680,8 @@ run('regression', '14 an unrepairable legacy week returns a typed migration fail
 
 run('regression', '15 repeated hydration is deterministic and idempotent', () => {
   const value = profile('Off-season');
-  const once = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
-  const twice = canonicaliseHydratedProgram(clone(once), value);
+  const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
+  const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
   assert(JSON.stringify(once) === JSON.stringify(twice), 'repeated hydration changed accepted state');
 });
 
@@ -896,7 +927,7 @@ run('property', 'no structural readiness change can bypass the gateway', async (
 run('property', 'no contractless material week persists without accepted Contract v2', () => {
   for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
     const value = profile(phase);
-    const result = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
+    const result = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
     assert(result.microcycles.every((week) => !!week.exposureContractV2), `${phase} retained contractless week`);
   }
 });
@@ -919,6 +950,8 @@ run('property', 'failed transactions preserve every prior state surface', () => 
   seed(profile('Pre-season'));
   const before = materialSignature();
   const failed = withGatewayFailure(() => commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'property:forced_failure',
     readinessSignalsByDate: {
       [WEDNESDAY]: {
@@ -964,13 +997,53 @@ run('property', 'unknown legacy participation never gains anchor credit', () => 
 run('property', 'hydration remains deterministic and idempotent', () => {
   for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
     const value = profile(phase);
-    const once = canonicaliseHydratedProgram(stripContracts(generate(value)), value);
-    const twice = canonicaliseHydratedProgram(clone(once), value);
+    const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
+    const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
     assert(JSON.stringify(once) === JSON.stringify(twice), `${phase} hydration drifted`);
   }
 });
 
-run('property', 'rolling fixture repair publishes current and dependent weeks once', () => {
+/**
+ * THE RULING MOVED, AND THIS CELL MOVED WITH IT — stated out loud rather than
+ * quietly flipped (R5.3 V3 switchover, 2026-08-06; supersedes the publication
+ * shape this property pinned since the rolling-horizon owner landed).
+ *
+ * It used to assert the fixture door publishes an overlay for the week it
+ * decides. Leg (i) of the switchover deletes exactly that: a fixture decision's
+ * durable effect is the life-fact plus the ledger entry, and the week that
+ * expresses it is DERIVED. So the assertion INVERTS.
+ *
+ * The other two claims did NOT move, and keeping them is what makes this an
+ * inversion rather than a deletion: the publication is still ONE atomic state,
+ * and the DEPENDENT week is still repaired and still carries its cross-week
+ * provenance. That pairing is deliberate and two-directional — an absent
+ * overlay everywhere would satisfy the new claim while silently losing the
+ * repair R5.3 condition 1(b) priced at fourteen athlete-deletion regressions.
+ *
+ * CORRECTED THE SAME DAY, ON MEASUREMENT (Sam,
+ * `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`). The inversion above went
+ * one step too far: "no stored week at all" left the decided week judged
+ * against the microcycle's STALE contract, and a cancelled game kept crediting
+ * the week's conditioning. What is durable about a fixture decision is the
+ * life-fact, the ledger entry AND the week's DECLARATION; only the sessions are
+ * derived. So the decided week keeps an overlay carrying `exposureContractV2`
+ * with an empty `workoutsByDate`, and the assertion below pins both halves.
+ *
+ * SCOPED TO THE WORLD IT DRIVES, and the name says so. This cell moves a
+ * fixture (`clearOverlayDate` + a new day).
+ *
+ * It is NOT the general law, and regression 16 above is the counter-example
+ * kept deliberately green: on the ADD path the decided week still carries an
+ * overlay, byte-for-byte the same before and after leg (i), written from
+ * inside the reversible-adjustment publication rather than by the door's
+ * replan. What this unit proves is ONE COMPOSER — that any surviving stored
+ * week EQUALS the derived one (`fixtureIdentityTests` cells 3, 5 and 6, all
+ * three red before it and green after) — not that no stored week remains.
+ * The survivor is named, measured and carried as R5 debt; see
+ * docs/R5_DELETION_SEQUENCE_2026-08-06.md (q).
+ */
+run('property', 'a fixture MOVE publishes its dependent week once and leaves the week it '
+  + 'decided a DECLARATION with no content', () => {
   const value = profile('In-season', {
     usualGameDay: 'Saturday',
     gameDay: 'Saturday',
@@ -992,7 +1065,32 @@ run('property', 'rolling fixture repair publishes current and dependent weeks on
   const followingMonday = useProgramStore.getState().weekScopedOverlays[NEXT_WEEK]
     ?.workoutsByDate[NEXT_WEEK];
   assert(publishes === 1, `rolling fixture repair published ${publishes} states`);
-  assert(!!useProgramStore.getState().weekScopedOverlays[WEEK_START], 'current overlay missing');
+  // RE-INVERTED, WITH THE DATED RULING THAT MOVED IT — Sam,
+  // `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`, on the measurement at
+  // 11ba8cb7. This is the cell's THIRD statement in one day and that is said
+  // out loud rather than quietly flipped a second time.
+  //
+  // It first asserted the door publishes an overlay for the week it decides.
+  // Leg (i) inverted it to "no stored week at all" — and THAT was measured
+  // wrong: with nothing published, the decided week was judged against the
+  // microcycle's stale contract, so a cancelled game went on crediting the
+  // week's conditioning (`section18EffectiveWeekEvaluator:526`) and §18
+  // reported zero shortfall on a week that was a session short.
+  //
+  // The standing claim is the one that survived both moves: the door publishes
+  // a DECLARATION, never CONTENT. An overlay may exist for the decided week —
+  // it carries the contract derived from the athlete's current facts — but it
+  // holds no workouts, because the sessions are derived. Both halves are
+  // asserted so neither an absent overlay nor a re-composed one can pass.
+  const decided = useProgramStore.getState().weekScopedOverlays[WEEK_START];
+  assert(!!decided?.exposureContractV2,
+    'the fixture MOVE published no contract for the week it decided — the decision\'s '
+    + 'declaration is durable (no stored contract outlives a fixture decision), and '
+    + 'without it the week is judged against the contract for the fixture it no longer has');
+  assert(Object.keys(decided.workoutsByDate ?? {}).length === 0,
+    `the fixture MOVE published stored CONTENT for the week it decided `
+    + `(${Object.keys(decided.workoutsByDate ?? {}).join(', ')}) — the sessions are DERIVED, `
+    + 'and a second composer is a second truth even when neither is wrong');
   assert(followingMonday?.derivedSessionProvenance?.some((record) =>
     record.dependency?.source.date === SUNDAY) === true,
   'following-week dependency was not committed in the same snapshot');
@@ -1059,7 +1157,7 @@ run('mutation', 'contractless workouts cannot be canonicalised without weekly va
 });
 
 run('mutation', 'program and constraints cannot publish sequential material state', () => {
-  const coordinator = coachSource.indexOf("commitAcceptedStateTransaction({\n      reason: 'constraint:update'");
+  const coordinator = coachSource.indexOf("reason: 'constraint:update'");
   const mirror = coachSource.indexOf('commitConstraintState();', coordinator);
   assert(coordinator >= 0 && mirror > coordinator, 'constraint coordinator no longer precedes mirror');
 });

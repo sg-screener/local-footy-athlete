@@ -699,6 +699,9 @@ export function useHomeScreen() {
   const runRebuild = async (profileOverride?: typeof onboardingData) => {
     const profile = profileOverride ?? onboardingData;
     const program = await generateProgramFromProfile(profile, {
+      // The athlete asked for this rebuild (onboarding, phase shift). A week
+      // that cannot meet its contract is disclosed downstream, not refused.
+      weekAcceptance: 'forward_decision',
       blockNumber: getCurrentBlockNumberForGeneration(),
     });
     const sweep = decideSweepForCurrentStores(program, profile);
@@ -1267,13 +1270,6 @@ export function useHomeScreen() {
         date: day.date,
       });
     }
-  };
-
-  const handleMessageCoach = (prefill: string) => {
-    navigation.navigate('CoachTab', {
-      screen: 'Coach',
-      params: { prefill: prefill || `Coach, I need to update my program - ` },
-    });
   };
 
   const handleOpenProgramSetup = useCallback(() => {
@@ -2012,7 +2008,6 @@ export function useHomeScreen() {
     // Per-day actions
     handleViewWorkout,
     handleFinishTeamSession,
-    handleMessageCoach,
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,

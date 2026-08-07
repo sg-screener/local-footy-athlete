@@ -86,15 +86,21 @@ function installBase(d: ReturnType<typeof buildDevE2ESeed>): void {
     onboardingData: d.profile, program: d.program, todayISO: d.anchorDate,
     programStore: {
       setCurrentProgram: (program: unknown) => { commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'device-exact-seed:install',
         program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
           blockState: deriveStoredBlockStateFromProgram(program as never) },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: vws } as never); },
       setCurrentMicrocycle: (m: { startDate: string } | null) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'device-exact-seed:mc', program: { currentMicrocycle: m },
         profile: d.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [] } as never),
       setTodayWorkout: (w: unknown) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'device-exact-seed:today', program: { todayWorkout: w },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: [d.anchorDate] } as never),
     },
@@ -145,6 +151,8 @@ export function installDeviceExactSeed(opts?: {
       if (w.mark === 'game') gameDate = w.date;
     }
     quiet(() => { commitAcceptedStateTransaction({
+      // Harness seed: installs a world, never restores one.
+      operation: 'forward_decision',
       reason: 'device-exact-seed:calendar_witnesses',
       markedDays: md, profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: vws } as never); });
   }

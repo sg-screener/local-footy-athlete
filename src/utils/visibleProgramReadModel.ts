@@ -20,18 +20,25 @@ import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import { selectMicrocycleForDate } from './programBlockState';
+import { hasStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 
 function hasAcceptedWeekContract(
   state: ScheduleState,
   date: string,
 ): boolean {
   const weekStart = getMondayForDate(date);
-  if (state.weekScopedOverlays?.[weekStart]?.exposureContractV2) return true;
-  return !!selectMicrocycleForDate(
-    state.currentProgram,
-    state.currentMicrocycle,
-    date,
-  )?.exposureContractV2;
+  // THE FLIP, MOVE (ii) — one read door. An EXISTENCE question on the week's
+  // declaration, asked of the same owner that answers the selection.
+  return hasStoredWeekDeclaration({
+    overlay: state.weekScopedOverlays?.[weekStart],
+    coveringMicrocycle: selectMicrocycleForDate(
+      state.currentProgram,
+      state.currentMicrocycle,
+      date,
+    ),
+    weekStart,
+    reader: 'visibleProgramReadModel.weekHasAcceptedContract',
+  });
 }
 
 export type VisibleProgramItemDomain =

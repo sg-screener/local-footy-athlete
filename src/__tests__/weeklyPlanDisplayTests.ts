@@ -1,5 +1,9 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
 import type { Workout, WorkoutExercise } from '../types/domain';
 import {
   classifyConditioningWorkout,
@@ -211,6 +215,7 @@ eq('game icon remains outside conditioning mapping', weeklyConditioningIconKind(
 eq('team icon remains outside conditioning mapping', weeklyConditioningIconKind('Team Training'), null);
 
 console.log(`\nweeklyPlanDisplayTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(failures.join('\n'));
   process.exit(1);

@@ -83,8 +83,20 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
     states: [3, 2],
     meaning: 'Lower-body strength stops at G-3, with a named G-2 exception for low-volume, '
       + 'high-quality work. Governs which day slots may host a heavy lower session.',
+    // BOTH DECLARED STATES NOW CITE A SITE. Until 2026-08-06 this anchor listed
+    // only `midWeek` — state 3 alone — while `states` declared [3, 2], and the
+    // registry gate passed because it only asks whether each number appears in
+    // the QUOTE. State 2 had an authored shape (`looksLikeNeuralPrimer`, and its
+    // example in `weekStructureValidatorTests`) and no producer anywhere, for
+    // six days, reading as covered. The producer is now cited alongside the
+    // validator that licenses it. The general gap — a numeric anchor may still
+    // declare a state no site implements — is recorded in
+    // `docs/G2_CONDITIONS_5_AND_6_2026-08-06.md` §1 and is its own unit.
     sites: [
       { file: 'utils/coachingEngine.ts', symbol: 'midWeek' },
+      { file: 'utils/coachingEngine.ts', symbol: 'g2QualityLowerAllocation' },
+      { file: 'rules/weekStructureValidator.ts', symbol: 'looksLikeNeuralPrimer' },
+      { file: 'data/defaultProgram.ts', symbol: 'fallbackExercisesForPlanEntry' },
     ],
   },
   {

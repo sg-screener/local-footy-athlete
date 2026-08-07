@@ -47,7 +47,11 @@ import type {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
-import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
+import {
+  generationAnchorForProgram,
+  getCurrentBlockNumberForGeneration,
+  useProgramStore,
+} from '../store/programStore';
 import {
   buildFixtureProjection,
   commitAcceptedStateTransaction,
@@ -62,6 +66,7 @@ import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
 import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
+import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import {
   deriveStoredBlockStateFromProgram,
   selectMicrocycleForDate,
@@ -90,6 +95,7 @@ import {
   type AthleteActionTraceContext,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
+import { SCAFFOLD as LEGV_SCAFFOLD } from '../rules/derivedWeekContract';
 
 // ─── Canonical context ───────────────────────────────────────────────
 
@@ -217,15 +223,31 @@ export function buildWeekScopedWorkoutOverlay(args: {
     weekEnd: addDays(args.weekStart, 6),
     anchorDate: args.anchorDate,
     reason: args.reason,
-    exposureContract: sourceMicrocycle.exposureContract,
-    exposureContractV2: sourceMicrocycle.exposureContractV2 ?? (
-      sourceMicrocycle.exposureContract
-        ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
-            blockNumber: sourceMicrocycle.miniCycleNumber,
-            weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
-            globalWeek: sourceMicrocycle.weekNumber,
-          })
-        : undefined
+    // NO v1 CONTRACT ON A NEW OVERLAY (L15, Sam's D-1 ruling 2026-08-05).
+    // This copied `sourceMicrocycle.exposureContract` verbatim, and because
+    // hydrate re-materialises fixture-mark overlays through here, a superseded
+    // shape was written on launches — L15's subject exactly ("superseded
+    // formats are never written again, by anything, ever"). The V2 lift below
+    // is a READ-INGRESS lift, which is the sanctioned direction: it migrates a
+    // legacy microcycle's v1 into the current shape on the way in. Nothing
+    // reads an overlay's v1 field — every consumer falls back to the
+    // microcycle's — so the copy bought nothing but a stale second home.
+    // The microcycle-level writer is what remains, and it is filed as LR-30.
+    // LEG (v) WRITER, PRICING SCAFFOLD — publication site 1 of 2. The
+    // DECLARATION retires at its OWNER, not at one call site; both sites
+    // retire together or the world is half-stored. The readers already derive
+    // (leg (v)'s read half, landed at 8ca5ae24) and the reduction-ownership
+    // consumers already derive (08212473). Inert without the flag.
+    exposureContractV2: LEGV_SCAFFOLD.writer ? undefined : (
+      sourceMicrocycle.exposureContractV2 ?? (
+        sourceMicrocycle.exposureContract
+          ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
+              blockNumber: sourceMicrocycle.miniCycleNumber,
+              weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
+              globalWeek: sourceMicrocycle.weekNumber,
+            })
+          : undefined
+      )
     ),
     workoutsByDate,
     createdAt: now,
@@ -449,10 +471,13 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           profile: args.baseProfile,
           beforeMarkedDays: state.acceptedMaterialContext.markedDays,
           afterMarkedDays: markedDays,
-          sourceSurfaces: state,
+          sourceSurfaces: storedWorldSurfaces(state),
           activeConstraints: canonicalActiveConstraints(),
           primaryWeekStarts: [targetWeekStart!],
-          userRemovalConstraints: state.userRemovalConstraints,
+          // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
+          // this rebuild IS the fixture decision, so the week it is about
+          // must not rebase from the week a previous fixture built.
+          appliesFixtureDecision: true,
         })
       : null;
     const primaryRollingProjection = rollingRepair?.projections.find((candidate) =>
@@ -468,11 +493,17 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           profile: args.baseProfile,
           weekStart: targetWeekStart!,
           markedDays,
-          sourceSurfaces: state,
+          sourceSurfaces: storedWorldSurfaces(state),
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
           activeConstraints: canonicalActiveConstraints(),
-          userRemovalConstraints: state.userRemovalConstraints,
+          // Same law, the non-rolling path: this projection IS the decision.
+          appliesFixtureDecision: true,
         });
+    // DEPENDENT weeks are not this decision's product — they are OTHER weeks
+    // being repaired, the maintenance surface R5.3 condition 1(b) priced by
+    // mutation (dropping it cost fourteen athlete-deletion regressions: it is
+    // where relocated work lands). Leg (i) deletes the DECIDED week's overlay
+    // only. `appliesFixtureDecision` already draws this exact line.
     const adjacentOverlays = rollingRepair?.projections
       .filter((candidate) => candidate.weekStart !== targetWeekStart)
       .map((candidate) => candidate.overlay) ?? [];
@@ -504,7 +535,46 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
         sourceActionOrIntentId,
       });
-      const committedAdjustment = commitWeekScopedOverlay(projection.overlay, sweep, {
+      // R5.3 LEG (i), 2026-08-06: THE DOOR PUBLISHES ITS DECLARATION, NEVER ITS
+      // CONTENT (option 2, approved on measurement —
+      // `docs/FREED_DAY_RULING_CORRECTION_2026-08-06.md`,
+      // `docs/R53_OPTION2_MEASUREMENT_2026-08-06.md`).
+      //
+      // A fixture decision's durable effect is the life-fact (`markedDays`),
+      // the ledger entry, and the week's DECLARATION — the contract the
+      // planner derives for the week the athlete now actually has. The
+      // SESSIONS that express it are derived, so the overlay is published with
+      // its `exposureContractV2` and an EMPTY `workoutsByDate`.
+      //
+      // The first cut of this leg published nothing at all, and that was
+      // measured wrong rather than argued wrong. Deleting the overlay left the
+      // decided week being composed AND JUDGED against the microcycle's stored
+      // contract, which never learned about the fixture change: after removing
+      // a Saturday game the week still derived `in_season_game_week` carrying a
+      // `game@6` anchor, and `section18EffectiveWeekEvaluator:526` credits
+      // conditioning, sprint and hard-day exposure straight off
+      // `contract.anchors`. So a CANCELLED GAME went on paying the week's
+      // bills, §18 reported zero shortfall, and the flush the week no longer
+      // declared survived because the stale contract still declared it.
+      //
+      // `materialiseFixtureMarksForCandidate` — deleted by leg (ii) — was the
+      // only thing in the app reconciling a stored contract against the fixture
+      // fact. It was right to delete it as a second COMPOSER; this is the
+      // reconciling half it was also doing, re-homed as a published decision
+      // rather than a re-composition. No stored contract outlives a fixture
+      // decision.
+      //
+      // `projection` is otherwise still a decision aid, not a published output:
+      // it decides the sweep, the gateway status the door reports, and the
+      // rolling horizon this transaction must validate. Only its contract is
+      // published.
+      const committedAdjustment = commitWeekScopedOverlay({
+        ...projection.overlay,
+        workoutsByDate: {},
+        // LEG (v) WRITER, PRICING SCAFFOLD — publication site 2 of 2.
+        ...(LEGV_SCAFFOLD.writer ? { exposureContractV2: undefined } : {}),
+      }, sweep, {
+        targetWeekStart: targetWeekStart!,
         clearOverlayDate: args.clearOverlayDate,
         markedDays,
         additionalOverlays: adjacentOverlays,
@@ -574,6 +644,11 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
+    // The rebuild's own publication declares `forward_decision` (R1.3, and the
+    // long note at `commitRebuiltProgram`). The GENERATION that produces it is
+    // the same decision one layer earlier and must say so, or the strict
+    // verdict simply throws before the publication is ever reached.
+    weekAcceptance: 'forward_decision',
     todayISO: generationDate,
     blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
     previousProgram: persistedProgram,
@@ -711,8 +786,31 @@ export function commitRebuiltProgram(
   } = {},
 ): void {
   const proposal = buildRebuiltProgramSurfaces(program, sweep, options);
+  // R1.3 (shell rebuild): the generation anchor is an input — the day this
+  // program was GENERATED with, recorded by generation itself so the anchor
+  // can never drift from what actually ran (a caller's selectedDate can —
+  // the walker's did). It rides the same publication as the program.
+  // Through the one owner. The `?? options.selectedDate` that used to sit
+  // here was a second author for the same decision: a caller's selectedDate
+  // is where the rebuild is being applied, not the day generation ran. Sam's
+  // 2026-08-06 ruling collapses both install doors onto the program's own
+  // anchor — one home, and no door may invent one.
+  const anchor = generationAnchorForProgram(program);
+  if (anchor) {
+    (proposal as { generationAnchorISO?: string }).generationAnchorISO = anchor;
+  }
   commitAcceptedStateTransaction({
     reason: options.reason ?? 'week_rebuild:block',
+    // ACCEPT-AND-REDUCE, FORWARD ONLY (Sam, 2026-07-29). A rebuild publishes a
+    // NEW week around a fact or change the athlete stated — the founding case
+    // of accept-and-reduce, already classified this way at the calendar-mark
+    // owner. Left unstated, the equivalence gate's restoration default THREW
+    // on a repaired week's disclosed shortfall, and the walker's conformance
+    // cell measured the consequence on Sam's own device shape: a game add his
+    // real phone performed and kept came back "impossible". Restorations
+    // declare themselves at the adjustment ledger's own commit; nothing that
+    // reaches this owner is one.
+    operation: 'forward_decision',
     program: proposal,
     markedDays: options.markedDays,
     validateWeekStarts: [
@@ -796,6 +894,10 @@ function commitWeekScopedOverlay(
   ]);
   const proposal = {
     reason: 'week_rebuild:overlay',
+    // Forward decision, same law as commitRebuiltProgram above: an overlay
+    // commit carries an athlete-stated change forward; the RESTORE of a prior
+    // adjustment states 'restoration' at the adjustment ledger's own commit.
+    operation: 'forward_decision' as const,
     program: { weekScopedOverlays: overlays, dateOverrides, overrideContexts },
     markedDays: options?.markedDays,
     validateWeekStarts: Array.from(affectedWeeks),
@@ -821,6 +923,7 @@ export function clearWeekScopedOverlayForDate(args: {
   delete overlays[weekStart];
   commitAcceptedStateTransaction({
     reason: `week_rebuild:clear_overlay:${weekStart}`,
+    operation: 'forward_decision',
     program: { weekScopedOverlays: overlays },
     markedDays: args.markedDays,
     validateWeekStarts: [weekStart],

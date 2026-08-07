@@ -206,6 +206,7 @@ run('the door refuses the bare default over authored overrides', () => {
   const before = JSON.stringify(useProgramStore.getState().dateOverrides);
 
   const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_action',
     reason: 'test:bare_default',
@@ -225,6 +226,7 @@ run('a stale erasure act is refused', () => {
   endProgramOverrideResetAction(id);
 
   const outcome = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'reset',
     reason: 'test:stale_act',
@@ -293,6 +295,7 @@ run('every override write is on the tape, refused or not — counts, never answe
   const from = athleteActionLogEntries().length;
 
   const refused = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_undo',
     reason: 'test:tape_refused',
@@ -305,7 +308,12 @@ run('every override write is on the tape, refused or not — counts, never answe
       ...useProgramStore.getState().currentMicrocycle!.workouts[0],
       name: SWAPPED_IN_NAME,
     } as Workout,
-    writer: 'lighter_day',
+    // WAS `'lighter_day'`, retired from the closed union 2026-08-04 when the
+    // readiness trim moved to the `readiness_reduction` week overlay. Any
+    // surviving product writer id serves as the "a normal write must land"
+    // case; `coach_action` is picked because the coach share is the population
+    // this surface still legitimately has (LR-6).
+    writer: 'coach_action',
   }));
   assert(applied.ok, 'precondition: a normal write must land');
 
@@ -315,7 +323,7 @@ run('every override write is on the tape, refused or not — counts, never answe
   assert(writes[0]!.outcome === 'refused' && writes[0]!.writer === 'coach_undo'
     && writes[0]!.internalResultCode === 'default_over_answered_overrides',
     `the refused write is not named on the tape: ${JSON.stringify(writes[0])}`);
-  assert(writes[1]!.outcome === 'applied' && writes[1]!.writer === 'lighter_day',
+  assert(writes[1]!.outcome === 'applied' && writes[1]!.writer === 'coach_action',
     `the applied write is not named on the tape: ${JSON.stringify(writes[1])}`);
   assert(writes[0]!.overrideCountBefore === 1 && writes[1]!.overrideCountAfter === 1,
     `the tape does not record the material counts either side: ${JSON.stringify(writes)}`);
@@ -392,6 +400,7 @@ run('the writer boundary is registered and the door\'s refusal arms it', async (
   authorOneOverride(WEEK);
 
   const refused = quiet(() => applyProgramOverrideSliceWrite({
+    operation: 'forward_decision',
     next: { dateOverrides: {}, overrideContexts: {} },
     writer: 'coach_executor',
     reason: 'test:quarantine_arm',

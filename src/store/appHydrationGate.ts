@@ -8,6 +8,7 @@ import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import { useCoachUpdatesStore } from './coachUpdatesStore';
 import { useAthletePreferencesStore } from './athletePreferencesStore';
+import { useDecisionLedgerStore, DECISION_LEDGER_PERSISTENCE_KEY } from './decisionLedgerStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { logger } from '../utils/logger';
 
@@ -75,6 +76,9 @@ export const PERSISTED_STORE_HYDRATION_REGISTRY: readonly PersistedStoreHandle[]
   handle('coach-preferences-store', useCoachPreferencesStore),
   handle('coach-updates', useCoachUpdatesStore),
   handle('athlete-preferences-store', useAthletePreferencesStore),
+  // The rebuild's decision ledger (R1.1): an input store, hydrated before
+  // first render like every other input.
+  handle(DECISION_LEDGER_PERSISTENCE_KEY, useDecisionLedgerStore),
 ];
 
 /**
@@ -171,6 +175,20 @@ export function awaitAppHydration(): Promise<AppHydrationState> {
     const failedStores = outcomes.filter((o) => !o.hydrated).map((o) => o.key);
     if (failedStores.length > 0) {
       logger.error('[boot][hydration] persisted stores did not hydrate', { failedStores });
+    }
+    if (failedStores.length === 0) {
+      // R1.3 (shell rebuild): boot reads inputs and DERIVES. The old
+      // hydration-acceptance machinery is gone; the derived world is rebuilt
+      // in memory here, after every input store has settled.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { runQuiescentBoot } = require('./quiescentBoot');
+        await runQuiescentBoot();
+      } catch (error) {
+        logger.error('[boot][hydration] the derived-world rebuild failed', { error });
+        publish({ status: 'failed', failedStores: ['derived-world'] });
+        return state;
+      }
     }
     publish({
       status: failedStores.length === 0 ? 'ready' : 'failed',

@@ -34,16 +34,21 @@ import type {
   GameDay,
   WeekScopedWorkoutOverlay,
   LoggedWorkout,
+  UserRemovalConstraint,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
+import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import {
   buildDerivedSession,
   buildConditioningSession,
   isRunningBasedConditioning,
-  switchToOffFeetModality,
   type AthleteContext,
   DEFAULT_ATHLETE_CONTEXT,
 } from './sessionBuilder';
+import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
 import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
 import type { WeekLog } from './conditioningRules';
 import { resolveRecovery } from './recoveryRules';
@@ -82,10 +87,14 @@ import {
   attachPrescriptionEffectEvidence,
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
-import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
+import {
+  createDerivedSessionProvenance,
+  isResolverOwnedDerivedSession,
+} from '../rules/derivedSessionProvenance';
 import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -97,6 +106,43 @@ export interface ScheduleState {
   manualOverrides: Record<string, Workout>;
   /** System-authored selected-week overlays; manual overrides still outrank these. */
   weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
+  /**
+   * The athlete's removal decisions — bins, and the remainders they leave.
+   *
+   * ADDED 2026-08-04 by the precedence unification. This is the surface that
+   * makes a deletion survive §18, and until now it was not a field here at all:
+   * `rebaseAcceptedEffectiveWeek` applied it and the live resolver could not
+   * see it, so a binned day the accepted week held empty went on showing
+   * whatever else occupied it. Both adapters
+   * (`hooks/useSchedule.ts`, `utils/coachWeekDiff.ts`) feed it; the §18 gateway
+   * passes it explicitly and then blanks it, because by the time the gateway
+   * re-enters, constraints have already been applied to the composed content
+   * and applying them twice would re-remove a remainder.
+   */
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE RECORD of those same decisions, never blanked
+   * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+   *
+   * The field above is an APPLICATION input and the gateway empties it once
+   * the removals are folded into the composed week. Tier 4 runs downstream of
+   * that, and its repair search has a different question — "does a decision
+   * explain this gap?" — which an emptied input cannot answer. Carried here
+   * so the deriver can hand it on; nothing in this file applies it.
+   */
+  removalDecisions?: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
+   *
+   * The week's IDENTITY (a severe illness makes it optional) reached this
+   * resolver only because generation had WRITTEN it onto the overlay's stored
+   * declaration. Installing the derivation at the accepted reader alone would
+   * leave THIS line answering the same question from storage, and the one-owner
+   * law is about the three lines agreeing, not about one of them being right.
+   * Assembled from `acceptedMaterialContext`, which the one assembly already
+   * carries — no new store read.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
   markedDays: Record<string, CalendarDayType>;
   /** Athlete profile context for adaptive derived sessions. */
   athleteContext: AthleteContext;
@@ -646,43 +692,72 @@ function applyGameProximity(
     fixtureDate: string;
     relation: 'g_plus_1' | 'g_minus_1' | 'g_minus_2';
     creditMetric: 'safe_session_content' | 'hard_day_distribution';
-  }) => createDerivedSessionProvenance({
-    origin: args.origin,
-    scope: 'session',
-    triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
-    credit: { metric: args.creditMetric, amount: 1 },
-    originatingDate: date,
-    originatingFixtureDate: args.fixtureDate,
-    sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-    validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
-    invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
-    dependency: {
-      kind: 'fixture_to_session',
-      source: {
-        date: args.fixtureDate,
-        weekStart: getMondayForDate(args.fixtureDate),
+  }) => {
+    // ── LR-27: A FILLER HAS NOTHING UNDERNEATH IT TO RESTORE ─────────────────
+    //
+    // MEASURED 2026-08-05 (stage 2 priority B, `LR27_PROBE=1` on the deep
+    // walker): in every acted-world invocation the "displaced session" snapshot
+    // was a copy of THE VERY WORKOUT CARRYING IT — carrier and snapshot shared
+    // one id (`derived-arms_pump-…:week-overlay:…`), and the record carried no
+    // `sourcePlanEntryId` at all. That is the doubling, caught in the act.
+    //
+    // The mechanism: this resolver derives a G-1 Gunshow / G+1 flush over the
+    // day, `materialiseVisibleSystemWork` persists it into the week overlay,
+    // and on the NEXT resolve that stored filler arrives back here as
+    // `templateWorkout`. `resolverMayDisplace` says only "the athlete did not
+    // place it", which is true, so the filler was snapshotted into its own
+    // successor — provenance depth +1, payload ×2, every launch, on disk.
+    //
+    // A resolver-owned filler is not an accepted session. There is no
+    // prescription underneath it that a returning fixture must give back; the
+    // resolver simply stops synthesising it. So the dependency records the
+    // reference and NO snapshot, and the recursion becomes structurally
+    // unrepresentable rather than bounded by a cap.
+    //
+    // `isResolverOwnedDerivedSession` is the existing owner of exactly this
+    // question (system-authored game-proximity provenance + no backing plan
+    // entry) — asked here rather than re-answered, so this site cannot drift
+    // from the five others that already consult it.
+    const displaced = isResolverOwnedDerivedSession(templateWorkout)
+      ? null
+      : templateWorkout;
+    const snapshot = (): Workout | null => displaced
+      ? JSON.parse(JSON.stringify(displaced)) as Workout
+      : null;
+    return createDerivedSessionProvenance({
+      origin: args.origin,
+      scope: 'session',
+      triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
+      credit: { metric: args.creditMetric, amount: 1 },
+      originatingDate: date,
+      originatingFixtureDate: args.fixtureDate,
+      sourcePlanEntryId: displaced?.planEntryId ?? null,
+      validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
+      invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
+      dependency: {
+        kind: 'fixture_to_session',
+        source: {
+          date: args.fixtureDate,
+          weekStart: getMondayForDate(args.fixtureDate),
+        },
+        target: {
+          date,
+          weekStart: getMondayForDate(date),
+        },
+        crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
+        displacedSession: {
+          targetDate: date,
+          sourcePlanEntryId: displaced?.planEntryId ?? null,
+          workout: snapshot(),
+        },
+        restoration: {
+          targetDate: date,
+          sourcePlanEntryId: displaced?.planEntryId ?? null,
+          workout: snapshot(),
+        },
       },
-      target: {
-        date,
-        weekStart: getMondayForDate(date),
-      },
-      crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
-      displacedSession: {
-        targetDate: date,
-        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-        workout: templateWorkout
-          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
-          : null,
-      },
-      restoration: {
-        targetDate: date,
-        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-        workout: templateWorkout
-          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
-          : null,
-      },
-    },
-  });
+    });
+  };
 
   // G+1: the day after a game.
   //
@@ -858,6 +933,124 @@ function workoutToIndicator(workout: Workout | null, source: ResolvedDay['source
 
 // ─── Build Helper ───
 
+/**
+ * §18 AS TIER 4 OF THE DERIVATION — legs (ii) and (iii) at the deriver.
+ *
+ * Leg (iii): the week's contract is DERIVED from current fixture facts here,
+ * not read stale off the overlay. Leg (ii): §18 then runs as TIER 4 of the
+ * ordering (`rules/dayPrecedence.ts:19`) — a projection with the resolver
+ * IDENTITY (`resolveVisibleWorkouts: (w) => [...w]`, which is also what stops
+ * the gateway re-entering this resolver), output never persisted.
+ *
+ * The gateway imports this module, so the import is lazy by construction.
+ */
+function section18TierFour(args: {
+  days: ResolvedDay[];
+  storedContract: WeeklyExposureContractV2 | null;
+  /** The week's AUTHORED plan — the repair search's relocation templates. */
+  strengthTemplates: readonly Workout[];
+  weekStart: string;
+  today: string;
+  state: ScheduleState;
+}): ResolvedDay[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const derived = require('../rules/derivedWeekContract') as
+    typeof import('../rules/derivedWeekContract');
+  if (!args.storedContract) return args.days;
+  const profile = args.state.athleteContext?.onboardingData ?? null;
+  const contract = derived.deriveWeekContract({
+    contract: args.storedContract,
+    weekStart: args.weekStart,
+    profile,
+    markedDays: args.state.markedDays,
+    userRemovalConstraints: args.state.userRemovalConstraints,
+    workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
+    // Leg (v) read side, install site 2 of 3 — the same facts, the same owner.
+    temporarySourceFacts: args.state.temporarySourceFacts,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const gateway = require('../rules/section18AcceptedWeekGateway') as
+    typeof import('../rules/section18AcceptedWeekGateway');
+  let result;
+  try {
+    result = gateway.runSection18AcceptedWeekGateway({
+      contract,
+      workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
+      weekStart: args.weekStart,
+      profile,
+      // THE DERIVER IS JUDGED AGAINST THE STATE IT IS DERIVING FROM
+      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`). Tier 4 at read has no
+      // accepted surfaces of its own — it is producing the week those surfaces
+      // would describe — so the only thing it carries is the athlete's
+      // decisions, and it says so rather than leaving the field absent.
+      // Composed through the ONE composer, and it says both things: the
+      // removals still to APPLY (blanked above this line by the gateway, which
+      // has already applied them) and the RECORD of the decisions, which is
+      // what the repair search's stand-down asks
+      // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+      surfaces: composeAcceptedEffectiveWeekSurfaces({
+        currentProgram: null,
+        removalDecisions: args.state.removalDecisions ?? [],
+        applyOnly: args.state.userRemovalConstraints ?? [],
+      }),
+      strengthTemplates: args.strengthTemplates,
+      // ── ROOT 1b (sixteenth pass): the exact-date fixture
+      // authority, derived from the same facts the host already carries
+      // (profile + markedDays), the `governedFromISO` treatment. Without it
+      // the expiry guard's `fixture_absent` check degrades to day-of-week in
+      // THIS week's contract — structurally false for cross-week
+      // dependencies — and tier 4 at read expires every fixture-linked
+      // derived session the write path deliberately preserved.
+      activeFixtureDates: profile
+        ? (require('../rules/rollingHorizonRepair') as
+            typeof import('../rules/rollingHorizonRepair'))
+            .effectiveFixtureDatesForWeeks({
+              profile,
+              markedDays: args.state.markedDays ?? {},
+              weekStarts: [
+                (require('./programBlockState') as
+                  typeof import('./programBlockState'))
+                  .addDaysISO(args.weekStart, -7),
+                args.weekStart,
+                (require('./programBlockState') as
+                  typeof import('./programBlockState'))
+                  .addDaysISO(args.weekStart, 7),
+              ],
+            })
+        : undefined,
+      // THE PROJECTION IDENTITY the ruling specifies.
+      resolveVisibleWorkouts: (workouts) => [...workouts],
+    });
+  } catch {
+    // Tier 4 at read is a projection: a week it cannot accept is reported by
+    // the accepted stack, never by blanking the athlete's screen.
+    return args.days;
+  }
+  // DIAGNOSTIC ONLY — see `lastTierFourDerivation`'s header. The contract the
+  // visible week answers to is never stored, so this is the only place the
+  // lawfulness proof can read it from.
+  derived.lastTierFourDerivation.weekStart = args.weekStart;
+  derived.lastTierFourDerivation.contract = result.contract;
+  derived.lastTierFourDerivation.status = result.status;
+  derived.lastTierFourDerivation.repairs = result.repairs.map((repair) => repair.kind);
+  derived.lastTierFourDerivation.blockingViolations = result.evaluation.blockingViolations
+    .map((finding) => `${finding.code}:${finding.domain}`);
+  const byDay = new Map<number, Workout>();
+  for (const workout of result.visibleWorkouts) byDay.set(workout.dayOfWeek, workout);
+  return args.days.map((day) => {
+    // TIER 4 RUNS LAST; LAST IS NOT HIGHEST.
+    // Tier 1 — the emptying decision — outranks it, so a day already emptied by
+    // decision is left exactly as it is rather than having a typed Rest
+    // installed onto it.
+    if (!day.workout) return day;
+    const conformed = byDay.get(day.dayOfWeek);
+    if (!conformed) return buildDay(day.date, day.dayOfWeek, args.today, null, 'rest');
+    return conformed === day.workout
+      ? day
+      : buildDay(day.date, day.dayOfWeek, args.today, conformed, day.source);
+  });
+}
+
 function buildDay(
   date: string,
   dow: number,
@@ -939,14 +1132,28 @@ function applyInjuryFilterPass(
 /**
  * resolveDate — Single source of truth for any date's workout.
  *
- * Resolution priority:
- *   1. Manual override (human/coach)
- *   2. Calendar rest mark → null
- *   3. Calendar game mark → game stub
- *   4. Template says game but no calendar mark → freed slot (optional session)
- *   5. Template + game proximity rules
- *   6. Unmodified template
- *   7. No workout
+ * Resolution priority — THE ordering, owned by `rules/dayPrecedence.ts`:
+ *   1. Emptying decisions: calendar rest mark → null; calendar game mark →
+ *      game stub; an active removal constraint → its remainder or nothing.
+ *   2. Composed content: manual override > week overlay > base microcycle.
+ *   3. Template says game but no calendar mark → freed slot (optional session)
+ *   4. Template + game proximity rules
+ *   5. Unmodified template
+ *   6. No workout
+ *
+ * THE MANUAL OVERRIDE USED TO SIT AT PRIORITY 1, ABOVE THE MARK. That single
+ * exception was the whole live/accepted divergence: the accepted stack reaches
+ * this same function through the §18 gateway with `manualOverrides: {}`
+ * (`section18AcceptedWeekGateway.ts:248-250`), because by then the override has
+ * already been composed into the candidate microcycle — so Priority 1 never
+ * fired there and the mark won. One ordering, two answers, decided by whether
+ * the surface happened to still be populated.
+ *
+ * Sam recorded the consequence himself at `programStore.ts:1187-1196`: the
+ * screen prescribed Lower Squat on a day he had marked rest "while the accepted
+ * week correctly held nothing". The accepted answer is the one his note calls
+ * correct, so the live path converges onto it and the accepted stack does not
+ * move. See `rules/dayPrecedence.ts` for the full reasoning.
  */
 function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const { currentProgram, manualOverrides, markedDays } = state;
@@ -959,12 +1166,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const today = todayISOLocal();
   const inBlock = isInBlock(date, currentProgram);
 
-  // ── Priority 1: Manual override (human/coach authored) ──
-  if (manualOverrides && manualOverrides[date]) {
-    return buildDay(date, dow, today, manualOverrides[date], 'manual');
-  }
-
-  // ── Priority 2: Calendar marks (game / rest / noGame) ──
+  // ── Priority 1: Calendar marks (game / rest / noGame) ──
   const mark = markedDays ? markedDays[date] : undefined;
   if (mark === 'rest') {
     return buildDay(date, dow, today, null, 'rest');
@@ -1008,14 +1210,57 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
 
   const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
 
+  // ── Priority 2: composed content — override > overlay > base ──
+  //
+  // ONE statement of the ordering (`rules/dayPrecedence.ts`), the same call the
+  // accepted stack makes. Overlay SELECTION stays here because this site
+  // range-checks the overlay's own `weekStart`/`weekEnd` and the others key
+  // straight off the Monday; only the ordering is shared.
+  const composed = composeDaySurfaces({
+    date,
+    dayOfWeek: dow,
+    dateOverrides: manualOverrides,
+    overlay: overlayTemplate.hasOverlay
+      ? { workoutsByDate: { [date]: overlayTemplate.workout } }
+      : null,
+    base: currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null,
+  });
+
+  // ── Priority 1, constraint half: the athlete emptied or trimmed this day ──
+  //
+  // `userRemovalConstraints` was not a field on `ScheduleState` and appeared
+  // nowhere in this file, so the live path could not order what it could not
+  // see: a bin the accepted week honoured was invisible to the screen the
+  // moment anything else occupied the day. Applied AFTER compose and BELOW the
+  // marks, which is where the accepted stack applies it
+  // (`acceptedEffectiveWeek.ts:144-157`, before the gateway's own resolver
+  // pass). The result then continues down the normal derivation path so
+  // proximity, conditioning and recovery treat it exactly as they do there.
+  const constrained = removalConstraintForComposedDay({
+    composed,
+    constraints: state.userRemovalConstraints,
+  });
+
+  // ── The date override answers WITHOUT needing block data ──
+  //
+  // A date override is stored content FOR THIS DATE. It is not derived from a
+  // block, so the "no block data" guard below — which governs TEMPLATE
+  // derivation — must not swallow it. Before the precedence unification the
+  // override returned above that guard as Priority 1 and this was free; moving
+  // it below the marks moved it below the guard too, and an override on any
+  // date outside `[program.startDate, program.endDate]` silently stopped
+  // rendering. Marks and removal constraints still outrank it: both are
+  // resolved above this line.
+  if (!constrained && composed.owner === 'date_override' && composed.workout) {
+    return buildDay(date, dow, today, composed.workout, 'manual');
+  }
+
   // ── No block data → nothing to resolve ──
   if (!inBlock || (!currentMicrocycle && !overlayTemplate.hasOverlay)) {
     return buildDay(date, dow, today, null, 'none');
   }
 
-  const templateWorkout = overlayTemplate.hasOverlay
-    ? overlayTemplate.workout
-    : currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null;
+  const templateWorkout = constrained ? constrained.workout : composed.workout;
   const templateMicrocycleId = overlayTemplate.overlay?.id ?? currentMicrocycle?.id ?? 'derived';
 
   // ── Priority 4: Game proximity rules (G+1 recovery, G-1 Gunshow, G-2 moderate) ──
@@ -1574,11 +1819,35 @@ export function resolveWeekWithConditioning(
     mondayStr,
   );
   const section18Overlay = state.weekScopedOverlays?.[mondayStr];
-  if (section18Overlay?.exposureContractV2 || section18Microcycle?.exposureContractV2) {
-    return result.map((day) =>
+  // THE FLIP, MOVE (ii) — one read door. `selectMicrocycleForDate` above is
+  // the covering answer, current-microcycle fallback already folded in.
+  const section18StoredContract = selectStoredWeekDeclaration({
+    overlay: section18Overlay,
+    coveringMicrocycle: section18Microcycle,
+    weekStart: mondayStr,
+    reader: 'sessionResolver.tierFourEntry',
+  });
+  if (section18StoredContract) {
+    const rested = result.map((day) =>
       !day.workout && day.source === 'none'
         ? buildDay(day.date, day.dayOfWeek, today, null, 'rest')
         : day);
+    // Legs (ii)+(iii), install site 2 of 3 — THE DERIVER'S OWN
+    // contract-selection line. The deriver reads
+    // `overlay.exposureContractV2 ?? microcycle.exposureContractV2` itself, so
+    // installing the derivation only at `acceptedEffectiveWeek.ts:102` leaves
+    // tier 4 here conforming against the STORED contract and a fixture's
+    // REMOVAL never reaches the conformance pass (scaffold defect 4).
+    return section18TierFour({
+      days: rested,
+      storedContract: section18StoredContract,
+      // The AUTHORED week, which is what the publisher relocated from. A
+      // session the fixture displaced is gone from `rested` by definition.
+      strengthTemplates: section18Microcycle?.workouts ?? [],
+      weekStart: mondayStr,
+      today,
+      state,
+    });
   }
 
   // Pass 2: progressive conditioning placement
@@ -1728,7 +1997,10 @@ export function resolveWeekWithConditioning(
       const isFlyingSprints = condWorkout.name === 'Flying Sprints';
 
       if (isRunning && !isFlyingSprints && runningSessionCount >= MAX_RUNNING_SESSIONS) {
-        const offFeet = switchToOffFeetModality(condWorkout.name, day.date);
+        const offFeetTemplate = offFeetAlternative(condWorkout.name, day.date);
+        const offFeet = offFeetTemplate
+          ? composeConditioningRows(offFeetTemplate, day.date)
+          : null;
         if (offFeet) {
           for (const ex of offFeet) { ex.workoutId = condWorkout.id; }
           condWorkout.exercises = offFeet;

@@ -10,6 +10,7 @@ import {
 } from '../rules/reversibleAdjustmentLedger';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   diffSemanticDays,
   semanticFingerprint,
@@ -83,7 +84,7 @@ function acceptedWorkoutForDate(args: {
 }): Workout | null {
   const profile = useProfileStore.getState().onboardingData;
   const rebased = rebaseAcceptedEffectiveWeek({
-    surfaces: args.surfaces,
+    surfaces: storedWorldSurfaces(args.surfaces),
     weekStart: mondayForDate(args.date),
     profile,
     markedDays: args.context.markedDays,
@@ -161,6 +162,10 @@ function stageStatusOnly(args: {
   const context = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
   const updated = updateAdjustmentStatus(args);
   const proposal: AcceptedStateTransactionProposal = {
+    // Replaying state accepted once — the one kind that must keep throwing.
+    // (Sam, forward-only, 2026-07-29; the assert at the clear commit says the
+    // same in full.)
+    operation: 'restoration',
     reason: `reversible_adjustment:${args.status}:${args.adjustment.id}`,
     preserveExactAcceptedWorkouts: true,
     program: {
@@ -202,12 +207,16 @@ function currentMatchesAcceptedAfter(args: {
       if (reversibleAdjustmentWorkoutFingerprint(owned.date, current) !== owned.afterFingerprint) {
         return true;
       }
+      // LR-26: the recorded side is the FINGERPRINT the decision produced, not
+      // a copy of the state. This comparison is unchanged in meaning — it used
+      // to fingerprint a stored copy on the spot, and the copy was the only
+      // reason that copy existed.
       if (semanticFingerprint(args.surfaces.dateOverrides[owned.date] ?? null) !==
-        semanticFingerprint(owned.afterDateOverride ?? null)) {
+        owned.afterDateOverrideFingerprint) {
         return true;
       }
       if (semanticFingerprint(args.surfaces.overrideContexts[owned.date] ?? null) !==
-        semanticFingerprint(owned.afterOverrideContext ?? null)) {
+        owned.afterOverrideContextFingerprint) {
         return true;
       }
       return false;
@@ -289,6 +298,9 @@ function stageClearDerivingSourceFactAdjustment(args: {
   };
   const profile = useProfileStore.getState().onboardingData;
   const proposal: AcceptedStateTransactionProposal = {
+    // Undo replays a stored snapshot; a week it cannot reproduce means the
+    // snapshot is corrupt and is refused, never reduced into accepted state.
+    operation: 'restoration',
     reason: `reversible_adjustment:clear:${args.adjustment.id}`,
     profile,
     program: surfaces,
@@ -352,15 +364,101 @@ function restoredPatterns(adjustment: ReversibleAdjustmentRecord): Array<'squat'
   }))) as Array<'squat' | 'hinge' | 'push' | 'pull'>;
 }
 
+/**
+ * THE OWNED SET — DERIVED FROM THE DECISION, NOT READ FROM THE MIRROR.
+ *
+ * Seat ruling, 2026-08-07: `linkedTypedReductions` is a stored mirror of
+ * derived arithmetic, and a mirror is not filled — it dies. Both restoration
+ * consumers only ever used it as ONE question: *which of this week's
+ * authorised reductions does this adjustment own?* That question already has a
+ * decision-shaped answer, recorded as leg (iv)'s ruling in
+ * `acceptedStateTransaction.decisionDerivedLinkedReductions`:
+ *
+ *   > a typed reduction belongs to the adjustment whose CONSTRAINT authored
+ *   > it — the link is `deletionIdentity ∈ the constraint ids this adjustment
+ *   > carries`.
+ *
+ * So ownership is derived here from the constraint ids the adjustment records
+ * (a decision) against the contract in hand, and the mirror is never consulted.
+ * The write-side attribution proved the mirror is the unreliable half: 40
+ * reduction rows across 23 decisions carry no mirror entry at all, because the
+ * link is computed while the transaction is staged and the reduction is
+ * materialised when it commits. The identity is present in both worlds.
+ *
+ * `ADJUSTMENTS WITHOUT A REMOVAL CONSTRAINT`: an `explicit_load_edit` records
+ * typed reductions with no constraint id, so this returns the empty set for
+ * them and the equality bind reports it rather than the switch hiding it.
+ */
+function derivedOwnedReductionFingerprints(args: {
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  adjustment: ReversibleAdjustmentRecord;
+}): Set<string> {
+  const constraintIds = new Set(args.adjustment.linkedUserRemovalConstraintIds ?? []);
+  if (constraintIds.size === 0) return new Set();
+  return new Set((args.contract.authorisedReductions ?? [])
+    .filter((entry) => entry.deletionIdentity && constraintIds.has(entry.deletionIdentity))
+    .map((entry) => reductionFingerprint({ weekStart: args.weekStart, entry })));
+}
+
+/** The mirror's answer to the same question — kept only to bind against. */
+function storedOwnedReductionFingerprints(
+  weekStart: string,
+  adjustment: ReversibleAdjustmentRecord,
+): Set<string> {
+  return new Set((adjustment.linkedTypedReductions ?? [])
+    .filter((entry) => entry.weekStart === weekStart)
+    .map((entry) => entry.fingerprint));
+}
+
+/**
+ * THE EQUALITY BIND, at the consumer. The seat's (c): Restore's meaning is the
+ * signed behaviour being PROTECTED, so both answers are computed on every call
+ * and compared against the contract actually in hand. Which one is USED is the
+ * flag's business; whether they AGREE is recorded either way.
+ */
+function ownedReductionFingerprints(args: {
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  adjustment: ReversibleAdjustmentRecord;
+  site: 'reverse' | 'recompose';
+}): Set<string> {
+  const derived = derivedOwnedReductionFingerprints(args);
+  const stored = storedOwnedReductionFingerprints(args.weekStart, args.adjustment);
+  // THE COMPARISON IS OVER WHAT EACH METHOD SELECTS FROM THE CONTRACT IN HAND,
+  // not over the two raw sets. The mirror routinely names reductions that are
+  // not in this contract at all (a fingerprint recorded against a week whose
+  // rows have since been rebuilt), and both consumers filter those away before
+  // they can matter. Comparing the raw sets reports a divergence the product
+  // never observes — a bind that reds on a difference with no behaviour is the
+  // `gate-passing-on-coordinates-it-never-builds` law pointed the other way.
+  const rows = (args.contract.authorisedReductions ?? []).map((entry) => ({
+    fingerprint: reductionFingerprint({ weekStart: args.weekStart, entry }),
+    entry,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  (require('../dev/reductionOwnershipBind') as typeof import('../dev/reductionOwnershipBind'))
+    .bindOwnership({
+      site: args.site,
+      weekStart: args.weekStart,
+      adjustmentKind: args.adjustment.kind,
+      constraintIds: args.adjustment.linkedUserRemovalConstraintIds ?? [],
+      rows,
+      derived,
+      stored,
+    });
+  return derived;
+}
+
 function reverseOwnedReductions(
   contract: WeeklyExposureContractV2,
   weekStart: string,
   adjustment: ReversibleAdjustmentRecord,
 ): WeeklyExposureContractV2 {
   const restored = clone(contract);
-  const owned = new Map(adjustment.linkedTypedReductions
-    .filter((entry) => entry.weekStart === weekStart)
-    .map((entry) => [entry.fingerprint, entry]));
+  const owned = ownedReductionFingerprints({
+    contract: restored, weekStart, adjustment, site: 'reverse',
+  });
   const removed = restored.authorisedReductions.filter((entry) =>
     owned.has(reductionFingerprint({ weekStart, entry })));
   if (removed.length === 0) return restored;
@@ -433,9 +531,14 @@ function recomposeUnrelatedReductions(args: {
   adjustment: ReversibleAdjustmentRecord;
 }): WeeklyExposureContractV2 {
   const contract = clone(args.restored);
-  const owned = new Set(args.adjustment.linkedTypedReductions
-    .filter((entry) => entry.weekStart === args.weekStart)
-    .map((entry) => entry.fingerprint));
+  // Ownership is asked of the CURRENT contract here, not the restored one:
+  // this site decides which of the live week's reductions survive the undo.
+  const owned = ownedReductionFingerprints({
+    contract: args.current,
+    weekStart: args.weekStart,
+    adjustment: args.adjustment,
+    site: 'recompose',
+  });
   const existing = new Set(contract.authorisedReductions.map((entry) =>
     reductionFingerprint({ weekStart: args.weekStart, entry })));
   const unrelated = args.current.authorisedReductions.filter((entry) => {
@@ -718,12 +821,11 @@ export function stageClearReversibleAdjustment(
         profile,
         beforeMarkedDays: context.markedDays,
         afterMarkedDays: restored.markedDays,
-        sourceSurfaces: restored.surfaces,
+        sourceSurfaces: storedWorldSurfaces(restored.surfaces),
         activeConstraints: context.activeConstraints,
         primaryWeekStarts: adjustment.rollingDependencyWeeks,
         primaryMutationIntent: 'restore_adjustment',
         dependentMutationIntent: 'restore_adjustment',
-        userRemovalConstraints: restored.surfaces.userRemovalConstraints,
       });
       const exactOwnedWeeks = new Set([
         ...adjustment.displacedOriginalState.ownedDays.map((owned) => owned.weekStart),
@@ -750,6 +852,8 @@ export function stageClearReversibleAdjustment(
     const activeConstraints = context.activeConstraints.filter((constraint) =>
       !adjustment.linkedConstraintIds.includes(constraint.id));
     const proposal: AcceptedStateTransactionProposal = {
+      // Same restoration this stage's own assert already declares below.
+      operation: 'restoration',
       reason: `reversible_adjustment:clear:${adjustment.id}`,
       program: {
         dateOverrides: restored.surfaces.dateOverrides,

@@ -120,17 +120,23 @@ async function seedDeviceExact(): Promise<void> {
     todayISO: dseed.anchorDate,
     programStore: {
       setCurrentProgram: (program: unknown) => { commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'move-occupied-test:device-exact-install',
         program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
           blockState: deriveStoredBlockStateFromProgram(program as never) },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts,
       } as never); },
       setCurrentMicrocycle: (m: { startDate: string } | null) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'move-occupied-test:device-exact-mc', program: { currentMicrocycle: m },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [],
       } as never),
       setTodayWorkout: (w: unknown) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'move-occupied-test:device-exact-today', program: { todayWorkout: w },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: [dseed.anchorDate],
@@ -143,6 +149,8 @@ async function seedDeviceExact(): Promise<void> {
   const gameDate = addDaysISO(dseed.anchorDate, 5); // 2026-07-18 Saturday
   const accepted = useProgramStore.getState().acceptedMaterialContext;
   quiet(() => commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: `move-occupied-test:calendar_game:${gameDate}`,
     markedDays: { ...accepted.markedDays, [gameDate]: 'game' },
     profile: dseed.profile,

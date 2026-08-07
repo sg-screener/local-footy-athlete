@@ -124,40 +124,88 @@ export function pendingListProblems(repoRoot: string): string[] {
  * checks that template actually exists in the sheet. A pin without a real
  * replacement is just a wish that something will replace it.
  */
+/**
+ * WHICH PATH OWNS A PINNED SYMBOL — added 2026-08-05 by RULING.
+ *
+ * `docs/STAGE_B_PRIORITY_C_BLOCKER_2026-08-05.md`, Sam ruled option (a). The
+ * gate used to be all-or-nothing: the first `conditioningTemplates` import in
+ * ANY consumer file demanded all twenty symbols be deleted at once. Five of the
+ * twenty are coach doses, and replacing them changes what the coach path
+ * WRITES — which is exactly what LR-6's ratified stop test holds. So the gate
+ * could not be satisfied without breaking a standing STOP, and the athlete
+ * conditioning switchover was blocked behind the coach rebuild.
+ *
+ * Splitting by path lets the athlete path land now and holds the coach path
+ * where LR-6 already holds it.
+ *
+ * SAID PLAINLY, IN THE GATE'S OWN WORDS, BECAUSE THE RULING REQUIRES IT: this
+ * block's original text says a surviving pinned symbol "is a second
+ * conditioning dose authority sitting beside the equality-bound one, which is
+ * the precise defect the sheet exists to remove." Under this split, that is
+ * KNOWINGLY TRUE OF THE COACH PATH — five coach doses go on competing with
+ * Sam's 55 signed templates until the coach rebuild lifts LR-6 and retires
+ * them. That is a declared, ruled cost, not an oversight, and the pin below
+ * keeps it visible rather than letting it pass as paid.
+ */
+export type StageBPinPath = 'athlete' | 'coach';
+
 export interface StageBPin {
   /** Path relative to `src/`. */
   readonly file: string;
   readonly symbol: string;
   /** Name of the authored template in conditioningTemplates.ts that replaces it. */
   readonly supersededBy: string;
+  /**
+   * Which path's landing retires this pin. `coach` pins are held by LR-6 and
+   * survive the athlete switchover deliberately.
+   */
+  readonly path: StageBPinPath;
 }
+
+/**
+ * The files whose import of `conditioningTemplates` means that path has landed.
+ *
+ * Behaviour, not a flag (the original reasoning, unchanged): a flag can be set
+ * while the wiring is half-done; an import cannot.
+ */
+export const STAGE_B_PATH_CONSUMERS: Readonly<Record<StageBPinPath, readonly string[]>> = {
+  athlete: [
+    'utils/sessionBuilder.ts',
+    'data/defaultProgram.ts',
+    'utils/conditioningRules.ts',
+  ],
+  coach: [
+    'utils/coachPlan.ts',
+    'utils/coachRevisionTemplates.ts',
+  ],
+};
 
 export const STAGE_B_DOOMED: readonly StageBPin[] = [
   // ── sessionBuilder: the bulk of the live conditioning/speed dose authorship
-  { file: 'utils/sessionBuilder.ts', symbol: 'machineSprintPrescription', supersededBy: 'Erg Short-Burst Repeats (15–20 s)' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'buildConditioningTemplateRaw', supersededBy: 'Classic 4×4' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'buildCombinedConditioningTemplate', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'aerobicErgPrescription', supersededBy: 'Erg Flush Blocks' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'buildAttachedConditioningComponentTemplate', supersededBy: 'Two-Minute Repeats' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'switchToOffFeetModality', supersededBy: 'Classic 4×4' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'buildSprintMicroDose', supersededBy: '20 m Acceleration Reps' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'buildSprintReducedVolume', supersededBy: '20 m Acceleration Reps' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningFlavourToExerciseName', supersededBy: 'Classic 4×4' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningCategoryToExerciseName', supersededBy: 'Classic 4×4' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningWorkoutType', supersededBy: 'Classic 4×4' },
-  { file: 'utils/sessionBuilder.ts', symbol: 'TEMPLATE_CATEGORY', supersededBy: 'Classic 4×4' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'machineSprintPrescription', supersededBy: 'Erg Short-Burst Repeats (15–20 s)' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'buildConditioningTemplateRaw', supersededBy: 'Classic 4×4' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'buildCombinedConditioningTemplate', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'aerobicErgPrescription', supersededBy: 'Erg Flush Blocks' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'buildAttachedConditioningComponentTemplate', supersededBy: 'Two-Minute Repeats' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'switchToOffFeetModality', supersededBy: 'Classic 4×4' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'buildSprintMicroDose', supersededBy: '20 m Acceleration Reps' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'buildSprintReducedVolume', supersededBy: '20 m Acceleration Reps' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningFlavourToExerciseName', supersededBy: 'Classic 4×4' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningCategoryToExerciseName', supersededBy: 'Classic 4×4' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'conditioningWorkoutType', supersededBy: 'Classic 4×4' , path: 'athlete' },
+  { file: 'utils/sessionBuilder.ts', symbol: 'TEMPLATE_CATEGORY', supersededBy: 'Classic 4×4' , path: 'athlete' },
 
   // ── speed / COD doses elsewhere in the live path
-  { file: 'data/defaultProgram.ts', symbol: 'buildExercisesForSpeedBlock', supersededBy: 'Hill Acceleration' },
-  { file: 'rules/speedTemplates.ts', symbol: 'LATE_OFFSEASON_SPEED_TEMPLATES', supersededBy: 'Off-Season Speed Reintroduction' },
-  { file: 'utils/coachingEngine.ts', symbol: 'createQualitySpeedMicroDoseBlock', supersededBy: '20 m Acceleration Reps' },
+  { file: 'data/defaultProgram.ts', symbol: 'buildExercisesForSpeedBlock', supersededBy: 'Hill Acceleration' , path: 'athlete' },
+  { file: 'rules/speedTemplates.ts', symbol: 'LATE_OFFSEASON_SPEED_TEMPLATES', supersededBy: 'Off-Season Speed Reintroduction' , path: 'athlete' },
+  { file: 'utils/coachingEngine.ts', symbol: 'createQualitySpeedMicroDoseBlock', supersededBy: '20 m Acceleration Reps' , path: 'athlete' },
 
   // ── coach-authored conditioning doses
-  { file: 'utils/coachRevisionTemplates.ts', symbol: 'TEMPLATE_DEFINITIONS', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' },
-  { file: 'utils/coachRevisionTemplates.ts', symbol: 'conditioningRowsForTemplate', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' },
-  { file: 'utils/coachPlan.ts', symbol: 'sprintAdditionSelection', supersededBy: '20 s Max Sprint — Small Dose' },
-  { file: 'utils/coachPlan.ts', symbol: 'aerobicAdditionSelection', supersededBy: 'Continuous Aerobic Run' },
-  { file: 'utils/coachPlan.ts', symbol: 'buildConditioningPrescription', supersededBy: 'Classic 4×4' },
+  { file: 'utils/coachRevisionTemplates.ts', symbol: 'TEMPLATE_DEFINITIONS', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' , path: 'coach' },
+  { file: 'utils/coachRevisionTemplates.ts', symbol: 'conditioningRowsForTemplate', supersededBy: 'Steady Blocks (3×8 min or 4×6 min)' , path: 'coach' },
+  { file: 'utils/coachPlan.ts', symbol: 'sprintAdditionSelection', supersededBy: '20 s Max Sprint — Small Dose' , path: 'coach' },
+  { file: 'utils/coachPlan.ts', symbol: 'aerobicAdditionSelection', supersededBy: 'Continuous Aerobic Run' , path: 'coach' },
+  { file: 'utils/coachPlan.ts', symbol: 'buildConditioningPrescription', supersededBy: 'Classic 4×4' , path: 'coach' },
 ];
 
 /**
@@ -168,16 +216,20 @@ export const STAGE_B_DOOMED: readonly StageBPin[] = [
  * generation path. A flag can be set while the wiring is half-done; an import
  * cannot.
  */
-export function isStageBLanded(srcDir: string): boolean {
-  const consumers = [
-    'utils/sessionBuilder.ts',
-    'data/defaultProgram.ts',
-    'utils/conditioningRules.ts',
-    'utils/coachPlan.ts',
-  ];
-  return consumers.some((rel) => {
+export function isStageBPathLanded(srcDir: string, pinPath: StageBPinPath): boolean {
+  return STAGE_B_PATH_CONSUMERS[pinPath].some((rel) => {
     const file = path.join(srcDir, rel);
     if (!fs.existsSync(file)) return false;
     return /from\s+'[^']*conditioningTemplates'/.test(fs.readFileSync(file, 'utf8'));
   });
+}
+
+/**
+ * Stage B's conditioning switchover is landed WHOLE only when both paths are.
+ *
+ * Kept as the honest summary answer: while the coach path is held by LR-6, the
+ * switchover is not finished, and nothing should be able to report that it is.
+ */
+export function isStageBLanded(srcDir: string): boolean {
+  return isStageBPathLanded(srcDir, 'athlete') && isStageBPathLanded(srcDir, 'coach');
 }

@@ -15,6 +15,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type {
@@ -102,7 +103,19 @@ function profile(args: {
     motivation: 'Get stronger',
     usualGameDay: withFixture ? 'Saturday' : undefined,
     gameDay: withFixture ? 'Saturday' : undefined,
-  };
+    // The equipment door is a required step now; a built world answered it
+    // (the walker's world-completion fix, applied here when the suite's
+    // generation started refusing equipment-less profiles).
+    equipmentAnswer: {
+      tags: {
+        barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
+        bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
+        foam_roller: 'have', plyo_box: 'have',
+      },
+      modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+      answeredOn: WEEK_START,
+    },
+  } as unknown as OnboardingData;
 }
 
 function seedAcceptedWeek(args: {
@@ -199,7 +212,7 @@ function lastAdjustment() {
 function visibleSemantic(athlete: OnboardingData): string {
   const state = useProgramStore.getState();
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -331,11 +344,17 @@ async function main(): Promise<void> {
       expectedMark: { date: SATURDAY, value: 'noGame' },
     }));
 
-  await run('7 expected accepted-revision conflict publishes nothing', async () => {
+  await run('7 a stale render revision does not refuse the athlete\'s decision (R1.4b)', async () => {
+    // This cell used to pin the OPPOSITE: a mismatched expectedAcceptedRevision
+    // answered `conflicted` and published nothing. That handshake is RETIRED
+    // (R1.4b, shell rebuild): boot no longer mints revisions past the render,
+    // and a fixture tap is a decision about a DATE resolved against current
+    // accepted state — his device's "Couldn't update your week" was this
+    // handshake refusing a change nothing conflicted with. The pin reverses:
+    // a tap carrying a stale revision still LANDS, so re-adding the check
+    // reds here.
     const athlete = profile();
     seedAcceptedWeek({ athlete });
-    const before = completeAcceptedStateFingerprint();
-    const beforeEnvelope = await readDurableProgramStoreEnvelope();
     const result = await executeFixtureMutationTransaction({
       ...input({
         action: 'move',
@@ -346,13 +365,11 @@ async function main(): Promise<void> {
       expectedAcceptedRevision:
         useProgramStore.getState().acceptedMaterialContext.revision + 1,
     });
-    assert(result.outcome === 'conflicted', JSON.stringify(result));
-    assert(completeAcceptedStateFingerprint() === before,
-      'conflict changed accepted state');
-    assert((await readDurableProgramStoreEnvelope()) === beforeEnvelope,
-      'conflict changed durable state');
-    assert(useCoachUpdatesStore.getState().activeConstraints.length === 0,
-      'conflict created a Coach Note');
+    assert(result.outcome !== 'conflicted',
+      `the retired revision handshake refused the move again: ${JSON.stringify(result)}`);
+    assert(result.outcome === 'accepted' || result.outcome === 'repaired'
+      || result.outcome === 'regenerated' || result.outcome === 'fallback',
+      `the stale-revision move did not land: ${JSON.stringify(result)}`);
   });
 
   await run('8 persistence failure restores fixture, program, ledger, mirrors and notes', async () => {

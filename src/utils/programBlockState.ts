@@ -180,11 +180,55 @@ function getWeekOffset(blockStartDate: string, dateISO: string): number {
 }
 
 export function getWeekInBlock(blockStartDate: string, dateISO: string): number {
-  return (getWeekOffset(blockStartDate, dateISO) % WEEKS_PER_BLOCK) + 1;
+  return resolveBlockGridPosition({ blockStartDate, blockNumber: 1 }, dateISO).weekInBlock;
 }
 
 export function getWeeksSinceDeload(blockStartDate: string, dateISO: string): number {
   return getWeekInBlock(blockStartDate, dateISO) - 1;
+}
+
+/**
+ * Where a date sits on the block grid the stored anchor defines.
+ *
+ * THE ONE OWNER OF WEEK IDENTITY (§18 ownership reassessment 2026-08-05,
+ * defect D1; approved by Sam). The grid is fully determined by the anchor —
+ * a Monday and the block number that starts there — and every question about
+ * a date ("which block? which week of it? when did that block start?") is one
+ * projection of that single arithmetic.
+ *
+ * It exists because the answers used to come from two places. Generation asked
+ * the anchor for the block NUMBER and asked `computeBlockBounds(todayISO)` for
+ * the block START, which agree only when the date IS a block start. Re-authoring
+ * any later week therefore called it week 1, and since the allocator alternates
+ * on `weekNumber % 2`, the mirror week's patterns were planned onto the real
+ * week. Returning the position whole is what makes that disagreement
+ * unrepresentable.
+ */
+export interface BlockGridPosition {
+  /** 1-based block number containing `dateISO`. */
+  blockNumber: number;
+  /** Monday that block began on. */
+  blockStart: string;
+  /** Sunday that block ends on. */
+  blockEnd: string;
+  /** 1-based week of that block containing `dateISO`. */
+  weekInBlock: number;
+}
+
+export function resolveBlockGridPosition(
+  anchor: StoredProgramBlockState,
+  dateISO: string,
+): BlockGridPosition {
+  const anchorMonday = getMondayISOForDate(anchor.blockStartDate.split('T')[0]!);
+  const weekOffset = getWeekOffset(anchorMonday, dateISO);
+  const blocksElapsed = Math.floor(weekOffset / WEEKS_PER_BLOCK);
+  const blockStart = addDaysISO(anchorMonday, blocksElapsed * DAYS_PER_BLOCK);
+  return {
+    blockNumber: Math.max(1, Math.floor(anchor.blockNumber || 1)) + blocksElapsed,
+    blockStart,
+    blockEnd: addDaysISO(blockStart, DAYS_PER_BLOCK - 1),
+    weekInBlock: (weekOffset % WEEKS_PER_BLOCK) + 1,
+  };
 }
 
 export function getBlockNumberForDate(
@@ -192,8 +236,7 @@ export function getBlockNumberForDate(
   blockNumber: number,
   dateISO: string,
 ): number {
-  const baseBlockNumber = Math.max(1, Math.floor(blockNumber || 1));
-  return baseBlockNumber + Math.floor(getWeekOffset(blockStartDate, dateISO) / WEEKS_PER_BLOCK);
+  return resolveBlockGridPosition({ blockStartDate, blockNumber }, dateISO).blockNumber;
 }
 
 export function resolveIntensityMultiplier(

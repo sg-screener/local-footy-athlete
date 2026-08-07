@@ -347,6 +347,32 @@ console.log("\n[7] The detectors count what they claim to count");
   ok('mirrorDecisionReads: does NOT see a two-step read (declared limitation)',
     mirror('const p = useProfileStore.getState();\nconst d = p.onboardingData;', 'x.ts') === 0);
 
+  // LR-8's detector, added by Sam's ruling of 2026-08-06 with both baselines
+  // raised. The idiom is PASSING THE FLAG TRUE — the field's declaration and the
+  // single read that consumes it are the mechanism the unit converts, not
+  // violations of it, so neither may be counted.
+  const skipProjection = DETECTORS.skipConstraintProjectionRefs;
+  ok('skipConstraintProjectionRefs: counts a flag passed true',
+    skipProjection('commit({ reason: "x", skipConstraintProjection: true });', 'x.ts') === 1);
+  ok('skipConstraintProjectionRefs: counts each site separately',
+    skipProjection('a({ skipConstraintProjection: true });\nb({ skipConstraintProjection: true });',
+      'x.ts') === 2);
+  ok('skipConstraintProjectionRefs: tolerates whitespace around the colon',
+    skipProjection('a({ skipConstraintProjection : true });', 'x.ts') === 1);
+  ok('skipConstraintProjectionRefs: does NOT count the field declaration',
+    skipProjection('skipConstraintProjection?: boolean;', 'x.ts') === 0,
+    'the proposal type declares the mechanism; it does not skip a projection');
+  ok('skipConstraintProjectionRefs: does NOT count the read that consumes it',
+    skipProjection('activeConstraints: !proposal.skipConstraintProjection && n > 0', 'x.ts') === 0,
+    'the one consuming read is what the unit converts, not a violation to count');
+  ok('skipConstraintProjectionRefs: does not count a flag passed false',
+    skipProjection('a({ skipConstraintProjection: false });', 'x.ts') === 0,
+    'passing false IS re-validating — that is the fixed state, not the debt');
+  ok('skipConstraintProjectionRefs: ignores comments',
+    skipProjection('// skipConstraintProjection: true used to be passed here\n', 'x.ts') === 0);
+  ok('skipConstraintProjectionRefs: ignores a longer identifier containing it',
+    skipProjection('a({ skipConstraintProjectionLegacy: true });', 'x.ts') === 0);
+
   const legacyWriter = DETECTORS.legacyOverrideWriterRefs;
   ok('legacyOverrideWriterRefs: counts a call',
     legacyWriter('const p = applyCoachRevisionDateOverrides({ a: 1 });', 'x.ts') === 1);
@@ -390,6 +416,25 @@ console.log('\n[8] The census records the sequencing Sam ruled');
   ok('LR-6 is a standing STOP', lr6?.status === 'stop',
     'no coach-pipeline work before its reassessment is written and approved');
   ok('LR-6 says what the stop blocks', !!lr6?.sequence && lr6.sequence.length > 0);
+
+  // SAM'S D-2 RULING, 2026-08-05 (docs/DAY_CLOSE_RULINGS_2026-08-05.md, ruling
+  // 2): the hydration-repair in-place branch is filed on the census, scoped to
+  // the coach rebuild — "ratcheted, not remembered". This cell is the ratchet.
+  // Without it the scope is a sentence in a string field that a later edit can
+  // drop the way the founding LR-26 was dropped for six days — which is the
+  // exact failure that cost this census a unit and forced the 29->30 raise.
+  const D2_SCOPE_MARKERS = [
+    'D-2 SCOPE INHERITED',
+    'canonicaliseAcceptedBoundaryState',
+    'DAY_CLOSE_RULINGS_2026-08-05.md',
+  ];
+  const missingScope = D2_SCOPE_MARKERS.filter(
+    (marker) => !(lr6?.sequence ?? '').includes(marker));
+  ok('LR-6 still carries the D-2 scope Sam filed on it',
+    missingScope.length === 0,
+    `missing: ${missingScope.join(', ')} — the coach rebuild inherits the `
+    + 'hydration-repair in-place branch; if that scope is being moved to a unit '
+    + 'of its own, the ceiling is Sam\'s to raise');
 
   const inFlight = LEGACY_UNIT_CENSUS.filter((u) => u.status === 'in_flight');
   ok('in-flight units are marked so they are not double-scheduled', inFlight.length > 0,

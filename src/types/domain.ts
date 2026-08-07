@@ -288,7 +288,14 @@ export type DeterministicCoachNoteEffectKind =
   | 'beginner_policy'
   | 'testing_bias'
   | 'subphase_policy'
-  | 'bye_week';
+  | 'bye_week'
+  // The G-2 quality-lower session (ruling 4a + the signing batch, Sam
+  // 2026-08-06). Its own kind because it is the INTERSECTION of two facts —
+  // a paused region and a fixture two days out — and neither alone produces
+  // it: `subphase_policy` is a phase decision and `bye_week` is a fixture
+  // absence, so folding it into either would let the note fire on a week
+  // that never built the session.
+  | 'injury_game_proximity';
 
 export type DeterministicCoachNoteEffectReason =
   | 'adaptation_reduced'
@@ -307,13 +314,39 @@ export type DeterministicCoachNoteEffectReason =
   | 'mid_preseason'
   | 'late_preseason'
   | 'bye_build'
-  | 'bye_recovery';
+  | 'bye_recovery'
+  | 'g2_quality_lower';
+
+/**
+ * The specifics a COMPOSED sentence needs, stated by whoever makes the decision.
+ *
+ * Sam's signed G-2 sentence names three things — the session's day, the paused
+ * body part and the fixture's day — and every one of them varies by world. A
+ * static string carrying "Thursday", "shoulder" and "Saturday" would be a note
+ * that LIES the moment the athlete's shoulder is a hamstring or the game moves,
+ * which is worse than no note. So the sentence is composed, and these are its
+ * inputs, resolved where the session is placed (the placer knows all three) and
+ * never re-derived downstream.
+ *
+ * Derived, never persisted: it rides on the allocation and then on the workout's
+ * `deterministicCoachNoteEvidence`, both of which are rebuilt every derive.
+ */
+export interface DeterministicCoachNoteEffectDetail {
+  /** Day the session sits on, e.g. 'Thursday'. */
+  sessionDayName?: string;
+  /** The paused body part as the ATHLETE named it, e.g. 'shoulder'. */
+  pausedBodyPart?: string;
+  /** Day the fixture sits on, e.g. 'Saturday'. */
+  fixtureDayName?: string;
+}
 
 export interface DeterministicCoachNoteEffectSeed {
   kind: DeterministicCoachNoteEffectKind;
   reason: DeterministicCoachNoteEffectReason;
   /** Stable decision owner, used for evidence replacement before week dedupe. */
   ownerKey: string;
+  /** Present only for reasons whose copy is composed rather than constant. */
+  detail?: DeterministicCoachNoteEffectDetail;
 }
 
 export type ConditioningFeasibilityReason =
@@ -432,6 +465,12 @@ export interface SpeedBlock {
   notes?: string[];
   exerciseIds?: string[];
   counting: SpeedBlockCountingFence;
+  /**
+   * The authored conditioning template this block renders (Stage B
+   * switchover). Rows derive from the template by name — never from
+   * string-prefix matching on `id`, which is the coupling this replaced.
+   */
+  templateName?: string;
 }
 
 /**
@@ -606,6 +645,14 @@ export interface TrainingProgram {
 
   /** Canonical persisted entry clock for the user-selected season phase. */
   seasonPhaseClock?: import('../rules/seasonPhaseClock').SeasonPhaseClock;
+
+  /**
+   * R1.3 (shell rebuild): the todayISO this program was GENERATED with — the
+   * generation records its own input, so the anchor can never drift from
+   * what actually ran. Persisted as an input; the quiescent boot regenerates
+   * with exactly this day.
+   */
+  generationAnchorISO?: string;
 
   // Duration
   startDate: string; // ISO date
@@ -830,6 +877,22 @@ export interface Workout {
   athletePlacement?: AthletePlacement;
   /** Canonical planned/effective strength contract. Existing typed intent always wins. */
   strengthIntent?: StrengthIntent;
+  /**
+   * The allocation's main-strength DOSE variant, carried onto the built day.
+   * Mirrors `SessionAllocation.strengthVariant` and means the same thing.
+   *
+   * It rides this far for ONE reason: Sam's ruling 4a (2026-08-06) exempts the
+   * authored 2x3 Vertical Jump from the weekly power-primer budget *when it
+   * ships as part of the G-2 quality-lower session*. An exemption the CONTENT
+   * owner knows and the VERDICT owner does not is precisely the asymmetry
+   * `section18SafetyFinaliser` was written to kill ("content derived to match
+   * its budget cannot contradict it"), so both read this one field:
+   * `budgetedPowerSession` in the finaliser, and the primer ledger in
+   * `section18EffectiveWeekEvaluator`. Derived, never persisted.
+   *
+   * BIBLE_ANCHOR: lower_strength_g3
+   */
+  strengthVariant?: 'standard' | 'quality_low_volume';
   /** Development/audit proof for planned patterns absent after final filtering. */
   strengthIntentDiagnostics?: StrengthIntentDiagnostic[];
   /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */
@@ -1031,6 +1094,12 @@ export interface ConditioningOption {
   durationMinutes?: number;
   /** Typed accepted option intensity when it differs from the workout default. */
   intensity?: IntensityLevel;
+  /**
+   * The modality this option resolved to (Stage B switchover). Authored
+   * template names never carry a machine name, so readers must never
+   * keyword-guess the modality from the title — this field is the answer.
+   */
+  modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed';
 }
 
 /**
@@ -1131,6 +1200,22 @@ export interface WorkoutExercise {
    *   - 'distance': repsMin/repsMax are metres
    */
   prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
+
+  /**
+   * WHO NAMED THIS ROW — the emitter's own marker, set at build time.
+   *
+   * `'authored'` means every athlete-facing word on the row traces to a signed
+   * source: an authored template name, or a sentence on the copy sheet. The
+   * visible projection carries such a row; it refuses rows whose names a
+   * builder composed out of planner nouns and numbers
+   * (`isComposedPrescriptionRow`). Absent means "not claimed", which is the
+   * honest default for every legacy and coach-authored row.
+   *
+   * A MARKER, NOT A LOOKUP: the projection must never decide what to carry by
+   * asking whether the words happen to be registered — that makes the copy
+   * sheet the authority over content. This says how the row was BUILT.
+   */
+  nameProvenance?: 'authored';
   /** True if prescription is per side (e.g. "30s per side", "8 reps per side"). */
   perSide?: boolean;
 

@@ -7,6 +7,55 @@ proposal Sam has accepted — parked means UNANSWERED.
 
 ---
 
+## §11 + §12 ANSWERED — Sam, 2026-08-05 (evening signing session)
+
+Both recorded verbatim in `docs/METCON_RESIGN_AND_SIGNOFFS_2026-08-05.md` and
+committed as authored. Superseding answers; nothing below is edited in place.
+
+**§12 — SIGNED, option (b).** An athlete-CHOSEN deloaded day says:
+
+> Easy day: keep RPE 5-6; every rep fast and clean.
+
+Day-scoped, selected by the TYPED CAUSE per the copy law, with "Deload:"
+RESERVED for scheduled deload weeks. SHIPPED: `DeloadWeekPolicy` now carries
+the `door` that minted it, and the strength note is selected from it; device
+cell `finding-6b-door` retired. The recorded repeat-guard mismatch was paid in
+the same unit — the guard matched `Deload week:` while appending `Deload: `,
+so it never recognised its own output; it now compares against the exact
+sentence.
+
+**§11 — SUPERSEDED by Sam's MetCon re-authoring**, which is a bigger change
+than a reworded sentence: the session is renamed "MetCon" (the off-legs
+identity is retired), the structure is 60 s work / 30 s rest, and both the
+category DEFINITION and the athlete DESCRIPTION are newly signed. The
+proposed reword parked here is withdrawn — it was never needed, because the
+signed description carries no ratio. Split of what applies now versus what
+pins to the coach rebuild: `docs/METCON_SPLIT_2026-08-05.md`.
+
+### §13 — ANSWERED same day, Sam signed the wording
+
+**SIGNED** (`docs/EASY_DAY_CONDITIONING_COPY_2026-08-05.md`), closing the gap
+this unit parked:
+
+> Easy day: smooth and controlled — comfortable pace, stop well short of hard.
+
+Selected by the same typed cause as the strength sentence, athlete-chosen
+route only; "Deload:" sentences stay reserved for scheduled deload weeks.
+SHIPPED and equality-bound both directions against the signed record
+(`test:deload-law`, the shortfall-copy regime), with the deload sentences added
+to the copy-sheet gate's authoring modules so a retirement cannot be missed.
+
+**One defect the wiring exposed and paid.** The signed sentence contains the
+word "hard" ("stop well short of hard"), and `isQualityConditioningRow`
+matched intensity words across `name + notes` — so one pass wrote the sentence
+and the NEXT pass read it back and promoted an easy aerobic row to the week's
+one quality exposure, halving its duration again. A note is OUTPUT, never
+evidence: the classifiers now strip this module's own sentences before
+reading, narrowly enough that an intensity word in the ATHLETE'S own note
+still classifies exactly as before.
+
+---
+
 ## §8, §9, §10 ANSWERED — Sam, 2026-08-03 (third batch); THE FILE IS EMPTY
 
 **§8 team-night riders — all three SIGNED as proposed.** Copy sheet 10-c
@@ -261,3 +310,47 @@ variant (e.g. "It's match day — …")?
 **Shipped meanwhile:** the signed sentence verbatim on all fixture days; the
 inert lane and typed `inertReason: 'fixture_day'` are wording-independent,
 so a variant is a one-line ack-owner change plus one cell.
+
+---
+
+## §11 PARKED — MetCon description reworded under the display-times rule (2026-08-05)
+
+**Unit:** finding-7 display rule (docs/DISPLAY_TIMES_RULING_2026-08-05.md).
+
+**What changed meanwhile:** the "MetCon - Off-Legs" coach-template
+description carried "Vary work:rest from 1:2 up to 3:1." — a ratio on an
+athlete-rendered line, barred by your ruling. It now ships PROPOSED as:
+
+> "Vary how hard you push and how long you recover between stations."
+
+**Your question:** sign, reword, or drop the sentence. (The Rest-line case
+needed no words from you — "2 min (Sam's 1:2 ruling)" now renders "Rest:
+2 min" and the workbook cell is untouched.)
+
+---
+
+## §12 PARKED — what does an athlete-CHOSEN deloaded day say? (2026-08-05)
+
+**Unit:** device-pass finding 6b, reproduced by acting
+(`test:device-pass-2026-08-05`, `finding-6b-door`): adding a session onto
+G-1 and answering the landing ask with "Deloaded" stamps
+
+> "Deload: keep RPE 5-6; every rep fast and clean, nowhere near failure."
+
+onto a standard (non-deload) week, persisted with no strip path. The DOSE is
+correct — you chose it. The WORDS are the question: on your device this read
+as a deload-week note leaking onto a normal week.
+
+**Your options:**
+- (a) keep the sentence as-is on athlete-chosen deloaded days (it describes
+  the dose, not the week) — the cell then asserts it appears ONLY on days
+  the athlete deloaded;
+- (b — recommended) a day-scoped sentence for the chosen route (e.g. "Easy
+  day: keep RPE 5-6; every rep fast and clean." — yours to word), selected
+  by the typed cause per the copy law, with "Deload:" reserved for scheduled
+  deload weeks;
+- (c) no note at all on the chosen route — the dose speaks for itself.
+
+**Also recorded for the same unit:** `appendDeloadNote`'s repeat-guard
+matches "Deload week:" while it appends "Deload: " — reapplying can
+duplicate the sentence (latent; not yet red-celled).

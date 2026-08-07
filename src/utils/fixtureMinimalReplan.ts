@@ -5,6 +5,12 @@ import type {
   UserRemovalConstraint,
   Workout,
 } from '../types/domain';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
+import { deriveWeekContract } from '../rules/derivedWeekContract';
+// ONE OWNER: the relocation template rule moved to
+// `rules/strengthRelocationTemplate` when the deriver acquired the repair
+// search. This file no longer keeps a copy.
+import { stripConditioningComponent } from '../rules/strengthRelocationTemplate';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
@@ -23,6 +29,8 @@ import type {
   FixtureConditionedAvailability,
   TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
+import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+import { factsForWorld } from '../rules/acceptedEffectiveWeek';
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { getSessionComponentRows } from './sessionComponents';
@@ -141,7 +149,15 @@ export interface BuildFixtureMinimalReplanInput {
   priorFixtures: readonly TargetWeekFixture[];
   proposedFixtures: readonly TargetWeekFixture[];
   activeFixtureDates?: ReadonlySet<string>;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE WORLD THIS REPLAN IS JUDGED AGAINST — required, and forwarded to the
+   * gateway unchanged (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+   *
+   * Optional here would have reinstalled the forgettable class one layer up:
+   * the gateway's parameter cannot be omitted, but a replan that had nothing
+   * to forward would have had to invent an empty world to satisfy it.
+   */
+  surfaces: AcceptedEffectiveWeekSurfaces;
   mutationIntent?: FixtureMutationIntent;
 }
 
@@ -263,6 +279,39 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
   });
 }
 
+/**
+ * RULING 2 (Sam, 2026-08-06, "2a" — `docs/1B_FLUSH_OFFER_RULINGS_2026-08-06.md`):
+ * A FLUSH DOES NOT SURVIVE A FIXTURE CHANGE.
+ *
+ * The flush is the planner's OFFER for the shape the week had — not an athlete
+ * decision and not a result. By the north star and the fixture identity law,
+ * decisions persist and derived content re-derives: on a fixture change the
+ * week comes back clean and a flush appears only if the REBUILT week's authored
+ * policy declares one. It is the same reason `weekScopedOverlays` were never
+ * migrated.
+ *
+ * MEASURED, and it is why this is not optional polish. Remove the game from an
+ * in-season week whose Tuesday carries the offer and the replan below picks
+ * Tuesday as its shortfall-repair day — the offer is not core, so nothing kept
+ * it out of the candidate set — stacks its own conditioning onto it, and
+ * overwrites the role with `required_core`. Two things break at once: the offer
+ * the athlete was free to skip becomes work they owe, and the freed Saturday
+ * never gets the hard conditioning the bye week should have built, because the
+ * laundered offer already satisfied the core floor.
+ *
+ * Carrying it forward stays wrong even with the role derived rather than
+ * stamped (Sam's ruling 1): the surviving Tuesday content is EARLIER in
+ * training order, so it takes the core slot and Saturday falls through to the
+ * offer — the same week inverted. The two rulings only hold together.
+ */
+function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
+  return workouts.flatMap((workout) => {
+    if (workout.section18ConditioningRole !== 'optional_flush') return [workout];
+    const stripped = stripConditioningComponent(workout);
+    return stripped ? [stripped] : [];
+  });
+}
+
 function visibleResolver(
   args: BuildFixtureMinimalReplanInput,
   contract = args.targetMicrocycle.exposureContractV2!,
@@ -276,37 +325,10 @@ function visibleResolver(
       markedDays: args.proposedMarkedDays,
       availableDayNumbers: args.availability.effectiveAvailableDayNumbers,
     },
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: args.surfaces,
   });
 }
 
-function stripConditioningComponent(workout: Workout): Workout | null {
-  const linkedRows = new Set(
-    (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
-  );
-  const stripped = normalizeVisibleWorkoutIdentity({
-    ...workout,
-    exercises: (workout.exercises ?? []).filter((row) =>
-      !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
-    conditioningBlock: undefined,
-    conditioningCategory: undefined,
-    conditioningFlavour: undefined,
-    conditioningFeasibility: undefined,
-    hasCombinedConditioning: false,
-    attachedConditioningKind: undefined,
-    coachAddedConditioningLabel: undefined,
-    section18ConditioningRole: 'none',
-    section18Evidence: {
-      protocolVersion: 1,
-      conditioningRole: 'none',
-      conditioningStress: 'unknown',
-      provenance: 'explicit_mutation',
-    },
-    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
-      record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
-  });
-  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
-}
 
 /**
  * A strength component displaced from a stacked day is a relocatable app
@@ -440,6 +462,21 @@ function attachConditioningPreservingCore(target: Workout, conditioning: Workout
     workoutId: target.id,
     exerciseOrder: target.exercises.length + index + 1,
   }));
+  // The conditioning this day GAINS, named so the marker rule can read it —
+  // see `composedOptionalMarker`. A stack is the clone's twin: the day is no
+  // longer one composed Gunshow / Accessories / Mobility session once a
+  // conditioning part lands on it (ruling 7-e), and the owner decides that from
+  // the very fields this merge is about to write.
+  const conditioningGain: Partial<Workout> = {
+    hasCombinedConditioning: true,
+    attachedConditioningKind: conditioning.attachedConditioningKind,
+    conditioningFlavour: conditioning.conditioningFlavour,
+    conditioningCategory: conditioning.conditioningCategory,
+    conditioningFeasibility: conditioning.conditioningFeasibility,
+    conditioningBlock: conditioning.conditioningBlock,
+    section18ConditioningRole: conditioning.section18ConditioningRole,
+    section18Evidence: conditioning.section18Evidence,
+  };
   return {
     ...target,
     name: `${target.name} + ${conditioning.name}`,
@@ -449,14 +486,8 @@ function attachConditioningPreservingCore(target: Workout, conditioning: Workout
       : target.intensity,
     durationMinutes: target.durationMinutes + conditioning.durationMinutes,
     exercises: [...target.exercises, ...appendedRows],
-    hasCombinedConditioning: true,
-    attachedConditioningKind: conditioning.attachedConditioningKind,
-    conditioningFlavour: conditioning.conditioningFlavour,
-    conditioningCategory: conditioning.conditioningCategory,
-    conditioningFeasibility: conditioning.conditioningFeasibility,
-    conditioningBlock: conditioning.conditioningBlock,
-    section18ConditioningRole: conditioning.section18ConditioningRole,
-    section18Evidence: conditioning.section18Evidence,
+    ...conditioningGain,
+    ...composedOptionalClearingPatch(conditioningGain),
     derivedSessionProvenance: [
       ...(target.derivedSessionProvenance ?? []).filter((record) =>
         record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
@@ -589,7 +620,7 @@ function displacedStrengthTemplates(
   source: readonly Workout[],
 ): Array<{ workout: Workout; fixtureDisplacement?: DerivedSessionProvenance }> {
   const explicitComponentDisplacements = activeUserRemovalConstraintsForWeek(
-    input.userRemovalConstraints,
+    input.surfaces.userRemovalConstraints,
     input.weekStart,
   ).flatMap((constraint) => {
     if (constraint.scope !== 'strength_component' ||
@@ -598,7 +629,7 @@ function displacedStrengthTemplates(
     return component ? [{ workout: component }] : [];
   });
   const explicitSourceIds = new Set(activeUserRemovalConstraintsForWeek(
-    input.userRemovalConstraints,
+    input.surfaces.userRemovalConstraints,
     input.weekStart,
   ).flatMap((constraint) => constraint.scope === 'strength_component'
     ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
@@ -656,7 +687,7 @@ function addStrengthDeltaVariants(args: {
   const displacedIds = new Set([
     ...displaced.map(({ workout }) => workout.planEntryId ?? workout.id),
     ...activeUserRemovalConstraintsForWeek(
-      args.input.userRemovalConstraints,
+      args.input.surfaces.userRemovalConstraints,
       args.input.weekStart,
     ).flatMap((constraint) => constraint.scope === 'strength_component'
       ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
@@ -990,8 +1021,52 @@ function changedDaySets(source: readonly Workout[], target: readonly Workout[]) 
  * full generation remains its fallback rather than a fixture authority.
  */
 export function buildFixtureMinimalReplan(
-  args: BuildFixtureMinimalReplanInput,
+  input: BuildFixtureMinimalReplanInput,
 ): FixtureMinimalReplanResult {
+  // RULING 2 APPLIES TO THE WHOLE MODULE, NOT JUST THE CANDIDATE SEED.
+  //
+  // `sourceWorkouts` is read as two different things below: the material the
+  // candidates are built from, AND the baseline every candidate's edit cost and
+  // preservation set is measured against. The offer has to leave BOTH, or the
+  // second one silently re-decides the week: stripping the flush only from the
+  // seed left the day it sat on already counted as "changed", so attaching the
+  // shortfall repair there looked free while the released fixture day looked
+  // like a fresh edit — measured, and the bye week's Saturday lost its hard
+  // conditioning to the very Tuesday the ruling clears.
+  const args: BuildFixtureMinimalReplanInput = {
+    ...input,
+    sourceWorkouts: withoutPlannerOffers(input.sourceWorkouts),
+    // Leg (iii), install site 3 of 3 — THE PUBLISHER's own
+    // contract-selection line.
+    //
+    // Sites 1 and 2 are both READ sites. Installing only there left the
+    // publisher composing and repairing against the STORED contract, so the
+    // week it published carried the stored contract's pattern requirements
+    // while the deriver read the derived ones — which is `Lower Hinge|7`
+    // published against `Lower Squat|8` derived, exactly the fixture-identity
+    // residual. Under the pattern-identity ruling pattern selection reads the
+    // DERIVED contract, and the publisher is where selection happens.
+    //
+    // Replacing the microcycle's contract once here rather than at each of the
+    // six readers below is deliberate: they must not be able to disagree.
+    targetMicrocycle: input.targetMicrocycle.exposureContractV2
+      ? {
+        ...input.targetMicrocycle,
+        exposureContractV2: deriveWeekContract({
+          contract: input.targetMicrocycle.exposureContractV2,
+          weekStart: input.weekStart,
+          profile: input.profile,
+          markedDays: input.proposedMarkedDays,
+          userRemovalConstraints: input.surfaces.userRemovalConstraints,
+          workouts: input.sourceWorkouts,
+          // Leg (v) read side, install site 3 of 3 — the PUBLISHER. Sites 1 and
+          // 2 deriving while this one composes against a stored identity is the
+          // same residual leg (iii) already paid for once.
+          temporarySourceFacts: factsForWorld(input.surfaces),
+        }),
+      }
+      : input.targetMicrocycle,
+  };
   const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
@@ -1059,14 +1134,19 @@ export function buildFixtureMinimalReplan(
                 contract.conditioning.core.requiredMinimum) -
               baselineEvaluation.ledger.conditioning.coreCount);
           const sourceMap = byDay(strengthSource);
+          // READS THE DERIVATION, NEVER A STAMP (Sam's ruling 1, 2026-08-06).
+          //
+          // This used to answer "which days already hold core conditioning" by
+          // reading the role STORED on each workout — a field five writers set
+          // and disagreed about. It is the same question `baselineEvaluation`
+          // one line up already answers, from the contract plus the week, at the
+          // single layer that owns it. Asking twice is how this module became a
+          // second planner.
           const daysWithCoreConditioning = new Set(
-            strengthSource
-              .filter((workout) => {
-                const role = workout.section18Evidence?.conditioningRole ??
-                  workout.section18ConditioningRole;
-                return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
-              })
-              .map((workout) => workout.dayOfWeek),
+            baselineEvaluation.ledger.conditioning.credits
+              .filter((credit) => credit.role === 'required_core' ||
+                credit.role === 'planner_selected_core' || credit.role === 'core')
+              .map((credit) => credit.dayOfWeek),
           );
           const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
             if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
@@ -1078,10 +1158,18 @@ export function buildFixtureMinimalReplan(
           const displacedConditioning = displacedStandaloneConditioningTemplates(args, strengthSource);
           const daySets = shortfall === 0 ? [[]] : combinations(candidateDays, shortfall);
           for (const addedDays of daySets) {
-            const role = baselineEvaluation.ledger.conditioning.coreCount <
-              contract.conditioning.core.requiredMinimum
-              ? 'required_core'
-              : 'planner_selected_core';
+            // THE REPAIR DECLARES ITS PURPOSE; IT NO LONGER DERIVES A ROLE.
+            //
+            // What stood here was a second copy of the evaluator's own anchor
+            // rule — `coreCount < requiredMinimum ? 'required_core' :
+            // 'planner_selected_core'` — restated in a module that had no
+            // business owning it. Sam's ruling 1 retires it: which KIND of core
+            // a session is, is positional and belongs to the one derivation.
+            //
+            // The session this repair builds is core conditioning the contract
+            // is short of; that is not a derivation but a statement of what the
+            // repair IS, and it is the only thing the field still carries here.
+            const role = 'required_core' as const;
             let candidate = [...strengthSource];
             for (const dayNumber of addedDays) {
               const displaced = displacedConditioning[addedDays.indexOf(dayNumber)];
@@ -1114,7 +1202,7 @@ export function buildFixtureMinimalReplan(
               weekStart: args.weekStart,
               profile: args.profile,
               activeFixtureDates: args.activeFixtureDates,
-              userRemovalConstraints: args.userRemovalConstraints,
+              surfaces: args.surfaces,
               resolveVisibleWorkouts: visibleResolver(args),
             });
             if (gateway.status === 'impossible') {
@@ -1253,7 +1341,7 @@ export function buildFixtureMinimalReplan(
   }
 
   const activeRemovalConstraint = activeUserRemovalConstraintsForWeek(
-    args.userRemovalConstraints,
+    args.surfaces.userRemovalConstraints,
     args.weekStart,
   ).sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   if (
@@ -1279,7 +1367,7 @@ export function buildFixtureMinimalReplan(
         weekStart: args.weekStart,
         profile: args.profile,
         activeFixtureDates: args.activeFixtureDates,
-        userRemovalConstraints: args.userRemovalConstraints,
+        surfaces: args.surfaces,
         resolveVisibleWorkouts: visibleResolver(args),
       });
       if (gateway.status === 'impossible') {
@@ -1313,7 +1401,7 @@ export function buildFixtureMinimalReplan(
         weekStart: args.weekStart,
         profile: args.profile,
         activeFixtureDates: args.activeFixtureDates,
-        userRemovalConstraints: args.userRemovalConstraints,
+        surfaces: args.surfaces,
         resolveVisibleWorkouts: visibleResolver(args, reducedContract),
       });
       if (reducedGateway.status !== 'impossible' || attempt >= 3) break;
@@ -1427,7 +1515,7 @@ export function buildFixtureMinimalReplan(
     weekStart: args.weekStart,
     profile: args.profile,
     activeFixtureDates: args.activeFixtureDates,
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: args.surfaces,
     resolveVisibleWorkouts: visibleResolver(args),
     regenerate: () => ({
       contract,

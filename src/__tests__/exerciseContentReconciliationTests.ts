@@ -143,7 +143,9 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
   ok('no selectable exercise lacks a video for an unexplained reason',
     selectable.filter((n) => !lookupExerciseDemo(n).url && !isExempt(n, 'video')));
 
-  // Metadata is waived by NO exemption kind, so coverage is unconditional.
+  // Metadata is waived by NO exemption kind, so coverage is unconditional
+  // again: Sam signed the 53 conditioning rows on 2026-08-05 and the derived
+  // gap list emptied at its source (docs/MUSCLE_SHEET_SIGNING_2026-08-05.md).
   ok('every selectable exercise has muscle/experience metadata',
     selectable.filter((n) => !muscleMetadataFor(n)));
 }

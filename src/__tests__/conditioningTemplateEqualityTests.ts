@@ -270,6 +270,10 @@ const AUTHORED_PROPERTY_COUNTS: Readonly<Record<TemplateProperty, number>> = {
   availability_gate_no_team_training: 4,
   mid_session_mixing_flush_only: 3,
   no_ski_row_flywheel: 4,
+  // Sam's ruling 5, 2026-08-05 (docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md):
+  // authored onto the Acceleration tab so the gate is the SHEET's, not a code
+  // filter. One row — 'Team-Training Warm-Up Dose'.
+  warmup_rider_only: 1,
 };
 
 for (const [property, expected] of Object.entries(AUTHORED_PROPERTY_COUNTS)) {
@@ -280,8 +284,11 @@ for (const [property, expected] of Object.entries(AUTHORED_PROPERTY_COUNTS)) {
 }
 
 ok(
-  'exactly six property kinds exist — no seventh appears untyped',
-  Object.keys(TEMPLATE_PROPERTY_SOURCE_TEXT).length === 6,
+  // SEVEN since Sam's ruling 5, 2026-08-05 — the warm-up rider gate. The
+  // count is pinned, not the number: an EIGHTH appearing untyped is the
+  // defect this cell exists to catch.
+  'exactly seven property kinds exist — no eighth appears untyped',
+  Object.keys(TEMPLATE_PROPERTY_SOURCE_TEXT).length === 7,
   `found ${Object.keys(TEMPLATE_PROPERTY_SOURCE_TEXT).length}`,
 );
 

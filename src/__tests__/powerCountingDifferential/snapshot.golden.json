@@ -261,7 +261,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -486,7 +486,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -502,8 +502,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "6 x 10m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Push-ups",
                 "Hammer Curl"
@@ -653,8 +653,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -794,8 +794,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "4 x 20m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Dips",
                 "Incline Dumbbell Curl"
@@ -945,8 +945,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -966,7 +966,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -1146,8 +1146,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Speed warm-up",
-                "Short hills or controlled accelerations (10-15m)",
+                "Warm-up",
+                "Hill Acceleration",
                 "Overhead Press",
                 "DB Bench Press",
                 "Bicep Curl (Barbell)"
@@ -1302,8 +1302,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -1323,7 +1323,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -1427,7 +1427,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -1443,8 +1443,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Speed warm-up",
-                "Short hills or controlled accelerations (10-15m)",
+                "Warm-up",
+                "Hill Acceleration",
                 "Overhead Press",
                 "Incline DB Bench",
                 "Bicep Curl (Dumbbell)"
@@ -1599,8 +1599,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -1724,7 +1724,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -1740,8 +1740,8 @@
                 "total": 6
               },
               "strengthRowNames": [
-                "Speed warm-up",
-                "Short hills or controlled accelerations (10-15m)",
+                "Warm-up",
+                "Hill Acceleration",
                 "Overhead Press",
                 "Push-ups"
               ],
@@ -1887,8 +1887,8 @@
               "countedRows": {
                 "strength": 2,
                 "support": 0,
-                "conditioning": 2,
-                "total": 4
+                "conditioning": 1,
+                "total": 3
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -2019,8 +2019,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Speed warm-up",
-                "Short hills or controlled accelerations (10-15m)",
+                "Warm-up",
+                "Hill Acceleration",
                 "Overhead Press",
                 "Dips",
                 "Incline Dumbbell Curl"
@@ -2175,8 +2175,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -2196,7 +2196,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -2575,7 +2575,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -2799,7 +2799,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -2814,8 +2814,8 @@
                 "total": 6
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "6 x 10m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Seated DB Press",
                 "DB Bench Press",
                 "Hammer Curl"
@@ -3054,8 +3054,8 @@
                 "total": 6
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "4 x 20m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Seated DB Press",
                 "DB Bench Press",
                 "Incline Dumbbell Curl"
@@ -3183,7 +3183,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -3747,8 +3747,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "6 x 10m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Push-ups",
                 "Banded Bicep Curl"
@@ -3898,8 +3898,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -4038,8 +4038,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "4 x 20m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Dips",
                 "Banded Tricep Pushdown"
@@ -4183,8 +4183,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -4581,7 +4581,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -4805,7 +4805,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -4821,8 +4821,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "6 x 10m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Push-ups",
                 "Hammer Curl"
@@ -4971,8 +4971,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -5112,8 +5112,8 @@
                 "total": 7
               },
               "strengthRowNames": [
-                "Quality speed warm-up (short)",
-                "4 x 20m acceleration build-ups (micro-dose)",
+                "Warm-up",
+                "20 m Acceleration Reps",
                 "Overhead Press",
                 "Dips",
                 "Incline Dumbbell Curl"
@@ -5262,8 +5262,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -5283,7 +5283,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -5604,7 +5604,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -5861,7 +5861,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -6118,7 +6118,7 @@
                 },
                 {
                   "category": "aerobic_base",
-                  "modality": "none"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
@@ -6479,44 +6479,51 @@
           "weekNumber": 1,
           "weekKind": "build",
           "counts": {
-            "hardExposures": 2,
-            "hardDays": 2,
+            "hardExposures": 3,
+            "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 1,
-            "runningExposures": 2,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 2,
+            "runningExposures": 1,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
             "recoverySessions": 0,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "lower_strength": 1,
+              "aerobic_base": 1,
+              "lower_strength": 2,
+              "prehab": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
-              "upper_strength": 2
+              "upper_strength": 1
             }
           },
           "days": [
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
                 "power",
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 4
+                "conditioning": 1,
+                "total": 5
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -6579,33 +6586,42 @@
             },
             {
               "dayOfWeek": 3,
-              "name": "Tempo Intervals",
-              "workoutType": "Conditioning",
+              "name": "Lower Squat",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
+                  "category": "lower_strength",
+                  "modality": "none"
+                },
+                {
                   "category": "tempo_conditioning",
-                  "modality": "mixed"
+                  "modality": "off_feet"
                 }
               ],
               "components": [
+                "strength",
                 "conditioning"
               ],
               "countedRows": {
-                "strength": 0,
+                "strength": 3,
                 "support": 0,
-                "conditioning": 3,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
-              "strengthRowNames": [],
+              "strengthRowNames": [
+                "Back Squat",
+                "Walking Lunges",
+                "Nordic Lower"
+              ],
               "power": null
             },
             {
               "dayOfWeek": 4,
-              "name": "Upper Push",
+              "name": "Prehab & Accessories",
               "workoutType": "Strength",
               "taxonomy": [
                 {
-                  "category": "upper_strength",
+                  "category": "prehab",
                   "modality": "none"
                 }
               ],
@@ -6613,15 +6629,17 @@
                 "strength"
               ],
               "countedRows": {
-                "strength": 3,
+                "strength": 5,
                 "support": 0,
                 "conditioning": 0,
-                "total": 3
+                "total": 5
               },
               "strengthRowNames": [
-                "Overhead Press",
-                "DB Bench Press",
-                "Bicep Curl (Barbell)"
+                "Woodchop (Standing)",
+                "Long-Lever Copenhagen",
+                "Band Pull-Apart",
+                "Seated Calf Raise",
+                "Swiss Ball Hamstring Curl"
               ],
               "power": null
             }
@@ -6640,24 +6658,26 @@
             ],
             "powerDaysStripped": [],
             "visibleCounts": {
-              "hardExposures": 3,
-              "hardDays": 3,
+              "hardExposures": 4,
+              "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
-              "runningExposures": 3,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
+              "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
               "recoverySessions": 0,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
-                "lower_strength": 1,
+                "lower_strength": 2,
+                "prehab": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 1
               }
             }
           }
@@ -6669,8 +6689,8 @@
             "hardExposures": 2,
             "hardDays": 2,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 1,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 2,
             "runningExposures": 1,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
@@ -6678,6 +6698,7 @@
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "lower_strength": 1,
               "prehab": 1,
               "team_training": 1,
@@ -6689,22 +6710,27 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
                 "power",
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 4
+                "conditioning": 1,
+                "total": 5
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -6786,8 +6812,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -6842,8 +6868,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -6851,6 +6877,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -6869,8 +6896,8 @@
             "hardExposures": 2,
             "hardDays": 2,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 1,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 2,
             "runningExposures": 1,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
@@ -6878,6 +6905,7 @@
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "lower_strength": 1,
               "prehab": 1,
               "team_training": 1,
@@ -6889,22 +6917,27 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
                 "power",
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 4
+                "conditioning": 1,
+                "total": 5
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -6986,8 +7019,8 @@
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 2,
-                "total": 5
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Pull-Ups",
@@ -7042,8 +7075,8 @@
               "hardExposures": 3,
               "hardDays": 3,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
@@ -7051,6 +7084,7 @@
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -7066,46 +7100,78 @@
           "weekNumber": 4,
           "weekKind": "deload",
           "counts": {
-            "hardExposures": 2,
-            "hardDays": 2,
+            "hardExposures": 3,
+            "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 1,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 2,
             "runningExposures": 1,
             "sprintCodExposures": 1,
             "gunshowSessions": 0,
-            "recoverySessions": 0,
+            "recoverySessions": 1,
             "teamTrainingSessions": 1,
             "games": 0,
             "byCategory": {
-              "lower_strength": 1,
+              "aerobic_base": 1,
+              "lower_strength": 2,
+              "recovery": 1,
               "team_training": 1,
               "tempo_conditioning": 1,
-              "upper_strength": 2
+              "upper_strength": 1
             }
           },
           "days": [
             {
               "dayOfWeek": 1,
-              "name": "Tempo Intervals",
-              "workoutType": "Conditioning",
+              "name": "Lower Squat",
+              "workoutType": "Mixed",
               "taxonomy": [
+                {
+                  "category": "lower_strength",
+                  "modality": "none"
+                },
                 {
                   "category": "tempo_conditioning",
                   "modality": "off_feet"
                 }
               ],
               "components": [
+                "power",
+                "strength",
                 "conditioning"
               ],
               "countedRows": {
-                "strength": 0,
+                "strength": 2,
                 "support": 0,
-                "conditioning": 3,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
-              "strengthRowNames": [],
-              "power": null
+              "strengthRowNames": [
+                "Back Squat",
+                "Step Ups"
+              ],
+              "power": {
+                "kind": "primer",
+                "family": "lower",
+                "items": [
+                  {
+                    "exercise": "Lateral Bounds",
+                    "sets": 2,
+                    "repsMin": 3,
+                    "repsMax": 3,
+                    "equipmentRequired": [],
+                    "order": 0
+                  }
+                ],
+                "notes": [
+                  "Do this fresh, early in the session — before the main lifts."
+                ],
+                "fence": {
+                  "role": "power",
+                  "countedByAnything": false,
+                  "section18Role": "power"
+                }
+              }
             },
             {
               "dayOfWeek": 2,
@@ -7140,73 +7206,53 @@
             {
               "dayOfWeek": 3,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "power",
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 2,
                 "support": 0,
-                "conditioning": 0,
+                "conditioning": 1,
                 "total": 3
               },
               "strengthRowNames": [
                 "Back Squat",
                 "Deadlift"
               ],
-              "power": {
-                "kind": "primer",
-                "family": "lower",
-                "items": [
-                  {
-                    "exercise": "Lateral Bounds",
-                    "sets": 2,
-                    "repsMin": 3,
-                    "repsMax": 3,
-                    "equipmentRequired": [],
-                    "order": 0
-                  }
-                ],
-                "notes": [
-                  "Do this fresh, early in the session — before the main lifts."
-                ],
-                "fence": {
-                  "role": "power",
-                  "countedByAnything": false,
-                  "section18Role": "power"
-                }
-              }
+              "power": null
             },
             {
               "dayOfWeek": 4,
-              "name": "Upper Push",
-              "workoutType": "Strength",
+              "name": "Recovery Session",
+              "workoutType": "Recovery",
               "taxonomy": [
                 {
-                  "category": "upper_strength",
+                  "category": "recovery",
                   "modality": "none"
                 }
               ],
               "components": [
-                "strength"
+                "recovery"
               ],
               "countedRows": {
-                "strength": 2,
+                "strength": 0,
                 "support": 0,
                 "conditioning": 0,
-                "total": 2
+                "total": 1
               },
-              "strengthRowNames": [
-                "Overhead Press",
-                "Dips"
-              ],
+              "strengthRowNames": [],
               "power": null
             }
           ],
@@ -7217,31 +7263,33 @@
             "achievedPrimerCount": 1,
             "removalReason": "field_load_budget_reduction",
             "powerDaysBefore": [
-              3
+              1
             ],
             "powerDaysKept": [
-              3
+              1
             ],
             "powerDaysStripped": [],
             "visibleCounts": {
-              "hardExposures": 3,
-              "hardDays": 3,
+              "hardExposures": 4,
+              "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 1,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 2,
               "runningExposures": 2,
               "sprintCodExposures": 2,
               "gunshowSessions": 1,
-              "recoverySessions": 0,
+              "recoverySessions": 1,
               "teamTrainingSessions": 1,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
-                "lower_strength": 1,
+                "lower_strength": 2,
+                "recovery": 1,
                 "team_training": 1,
                 "tempo_conditioning": 1,
-                "upper_strength": 2
+                "upper_strength": 1
               }
             }
           }
@@ -7253,6 +7301,7 @@
         "powerDaysBefore": [
           1,
           2,
+          3,
           4
         ],
         "powerDaysKept": [
@@ -7260,6 +7309,7 @@
         ],
         "powerDaysStripped": [
           2,
+          3,
           4
         ],
         "keptFamilies": [
@@ -7271,24 +7321,26 @@
         "achievedPrimerCount": 1,
         "removalReason": "field_load_budget_reduction",
         "visibleCounts": {
-          "hardExposures": 3,
-          "hardDays": 3,
+          "hardExposures": 4,
+          "hardDays": 4,
           "mainStrengthExposures": 3,
-          "conditioningExposures": 3,
-          "extraConditioningSessions": 1,
-          "runningExposures": 3,
+          "conditioningExposures": 4,
+          "extraConditioningSessions": 2,
+          "runningExposures": 2,
           "sprintCodExposures": 2,
           "gunshowSessions": 1,
           "recoverySessions": 0,
           "teamTrainingSessions": 1,
           "games": 1,
           "byCategory": {
+            "aerobic_base": 1,
             "game": 1,
             "gunshow": 1,
-            "lower_strength": 1,
+            "lower_strength": 2,
+            "prehab": 1,
             "team_training": 1,
             "tempo_conditioning": 1,
-            "upper_strength": 2
+            "upper_strength": 1
           }
         }
       }
@@ -7304,8 +7356,8 @@
             "hardExposures": 3,
             "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 0,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
             "gunshowSessions": 1,
@@ -7313,6 +7365,7 @@
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "gunshow": 1,
               "lower_strength": 1,
               "prehab": 1,
@@ -7324,21 +7377,26 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -7480,8 +7538,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -7489,6 +7547,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -7506,8 +7565,8 @@
             "hardExposures": 3,
             "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 0,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
             "gunshowSessions": 1,
@@ -7515,6 +7574,7 @@
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "gunshow": 1,
               "lower_strength": 1,
               "prehab": 1,
@@ -7526,21 +7586,26 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Deadlift",
@@ -7682,8 +7747,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -7691,6 +7756,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -7708,8 +7774,8 @@
             "hardExposures": 3,
             "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 0,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
             "gunshowSessions": 1,
@@ -7717,6 +7783,7 @@
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "gunshow": 1,
               "lower_strength": 1,
               "prehab": 1,
@@ -7728,21 +7795,26 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Back Squat",
@@ -7883,8 +7955,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -7892,6 +7964,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,
@@ -7909,8 +7982,8 @@
             "hardExposures": 3,
             "hardDays": 3,
             "mainStrengthExposures": 3,
-            "conditioningExposures": 2,
-            "extraConditioningSessions": 0,
+            "conditioningExposures": 3,
+            "extraConditioningSessions": 1,
             "runningExposures": 2,
             "sprintCodExposures": 2,
             "gunshowSessions": 1,
@@ -7918,6 +7991,7 @@
             "teamTrainingSessions": 2,
             "games": 0,
             "byCategory": {
+              "aerobic_base": 1,
               "gunshow": 1,
               "lower_strength": 1,
               "prehab": 1,
@@ -7929,21 +8003,26 @@
             {
               "dayOfWeek": 1,
               "name": "Lower Body Strength",
-              "workoutType": "Strength",
+              "workoutType": "Mixed",
               "taxonomy": [
                 {
                   "category": "lower_strength",
                   "modality": "none"
+                },
+                {
+                  "category": "aerobic_base",
+                  "modality": "off_feet"
                 }
               ],
               "components": [
-                "strength"
+                "strength",
+                "conditioning"
               ],
               "countedRows": {
                 "strength": 3,
                 "support": 0,
-                "conditioning": 0,
-                "total": 3
+                "conditioning": 1,
+                "total": 4
               },
               "strengthRowNames": [
                 "Deadlift",
@@ -8085,8 +8164,8 @@
               "hardExposures": 4,
               "hardDays": 4,
               "mainStrengthExposures": 3,
-              "conditioningExposures": 3,
-              "extraConditioningSessions": 0,
+              "conditioningExposures": 4,
+              "extraConditioningSessions": 1,
               "runningExposures": 3,
               "sprintCodExposures": 3,
               "gunshowSessions": 1,
@@ -8094,6 +8173,7 @@
               "teamTrainingSessions": 2,
               "games": 1,
               "byCategory": {
+                "aerobic_base": 1,
                 "game": 1,
                 "gunshow": 1,
                 "lower_strength": 1,

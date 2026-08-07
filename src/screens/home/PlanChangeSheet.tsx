@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
+import { menuRowFor } from './planChangeTypeMenu';
 import { useProgramStore } from '../../store';
 import { applyProgramOverrideWrite } from '../../store/programStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
@@ -688,11 +689,17 @@ export function PlanChangeSheet({
           options.categories.some((category) => category.id === id);
         const copyFor = (id: PlanChangeCategoryId) =>
           options.categories.find((category) => category.id === id);
+        // Row visibility comes from the MODEL (planChangeTypeMenu), so the
+        // render vocabulary and the findability gate read one list — a
+        // producer-offered category no row reaches is a red cell, not a
+        // silent gap on a phone (device pass 2026-08-05, finding 3).
+        const rowOffered = (rowId: Parameters<typeof menuRowFor>[0]) =>
+          menuRowFor(rowId).reaches.some(offers);
         const mode = step.mode;
         return (
         <View>
           <Text style={styles.sectionLabel}>{mode === 'swap' ? 'Swap to:' : 'Add:'}</Text>
-          {(offers('strength_upper') || offers('strength_lower') || offers('strength_full')) && (
+          {rowOffered('strength') && (
             <MenuOption
               label="Strength"
               sub="Upper, lower or full body"
@@ -702,7 +709,7 @@ export function PlanChangeSheet({
                 () => setStep({ kind: 'pick_strength', mode }))}
             />
           )}
-          {(offers('conditioning_light') || offers('conditioning_hard')) && (
+          {rowOffered('conditioning') && (
             <MenuOption
               label="Conditioning"
               sub="Light or hard - bike, row, ski or intervals"
@@ -712,7 +719,7 @@ export function PlanChangeSheet({
                 () => setStep({ kind: 'pick_conditioning', mode }))}
             />
           )}
-          {offers('gunshow') && (
+          {rowOffered('gunshow') && (
             <MenuOption
               label={copyFor('gunshow')!.label}
               sub={copyFor('gunshow')!.sub}
@@ -722,7 +729,7 @@ export function PlanChangeSheet({
                 () => chooseCategory(mode, 'gunshow'))}
             />
           )}
-          {offers('mobility') && (
+          {rowOffered('mobility') && (
             <MenuOption
               label={copyFor('mobility')!.label}
               sub={copyFor('mobility')!.sub}
@@ -732,6 +739,23 @@ export function PlanChangeSheet({
                 () => chooseCategory(mode, 'mobility'))}
             />
           )}
+          {/* THE RECOVERY CHOICE (Sam, 2026-08-05, docs/DISPLAY_TIMES_RULING
+              §1). The 2026-07-31 charter ruling stands — the app never PLACES
+              recovery uninvited; an empty G+1 Sunday is REST. This row is the
+              athlete's own door to CHOOSE one: the producer had offered the
+              chartered category all along, and no row could reach it (device
+              pass 2026-08-05, finding 3). Copy renders from CATEGORY_COPY —
+              one name for the door. */}
+          {rowOffered('recovery') && (
+            <MenuOption
+              label={copyFor('recovery')!.label}
+              sub={copyFor('recovery')!.sub}
+              icon={recoveryIcon(ACCENT)}
+              testID="plan-change-type-recovery"
+              onPress={() => chooseType(mode, 'recovery',
+                () => chooseCategory(mode, 'recovery'))}
+            />
+          )}
           {/* RULING 9's "Accessories" ROW IS THE PREHAB DOOR. The charter split
               accessories into Gunshow and Prehab, and ruling 9 lists Gunshow
               separately, so this is the other half. SIGNED (Sam, 2026-07-31,
@@ -739,7 +763,7 @@ export function PlanChangeSheet({
               ruling 9's own word. The word lives in `CATEGORY_COPY` and this row
               renders it, so there is still exactly one name for the door; the
               typed id stays `prehab` because ids are not copy. */}
-          {offers('prehab') && (
+          {rowOffered('prehab') && (
             <MenuOption
               label={copyFor('prehab')!.label}
               sub={copyFor('prehab')!.sub}

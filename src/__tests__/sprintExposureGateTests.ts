@@ -681,30 +681,30 @@ console.log('\n-- SP-4. Late off-season speed templates --');
     offseasonSubphase: 'late_offseason',
     weekNumber: 4,
   });
-  eq('first late off-season build exposure selects low-risk acceleration',
-    first?.id,
-    'late_offseason_low_risk_acceleration',
-    JSON.stringify(first));
+  eq('first late off-season build exposure selects the authored hill acceleration',
+    first?.name,
+    'Hill Acceleration',
+    JSON.stringify(first?.name));
 
   const second = selectLateOffseasonSpeedTemplate({
     seasonPhase: 'Off-season',
     offseasonSubphase: 'late_offseason',
     weekNumber: 5,
   });
-  eq('later late off-season exposure can progress to acceleration build',
-    second?.id,
-    'late_offseason_acceleration_build',
-    JSON.stringify(second));
+  eq('later late off-season exposure can progress to the authored acceleration reps',
+    second?.name,
+    '20 m Acceleration Reps',
+    JSON.stringify(second?.name));
 
   const third = selectLateOffseasonSpeedTemplate({
     seasonPhase: 'Off-season',
     offseasonSubphase: 'late_offseason',
     weekNumber: 6,
   });
-  eq('later late off-season exposure can progress to build-up intro',
-    third?.id,
-    'late_offseason_build_up_intro',
-    JSON.stringify(third));
+  eq('later late off-season exposure can progress to the authored flying reintroduction',
+    third?.name,
+    'Off-Season Speed Reintroduction',
+    JSON.stringify(third?.name));
 }
 
 {

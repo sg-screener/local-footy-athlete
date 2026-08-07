@@ -39,7 +39,6 @@ import { applyOptionalTopUps } from '../utils/optionalTopUpPlacement';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { BICEPS_POOL, DELTS_POOL, TRICEPS_POOL } from '../data/exercisePools';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
-import { getTemplateCategory } from '../utils/sessionBuilder';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import {
@@ -570,27 +569,13 @@ run('COHERENCE. a day PROMOTED to required strength never composes prehab over i
     + `${names.join(', ')}. A stale marker must not outrank the contract.`);
 });
 
-run('R7. FINDING — rest-slot conditioning does NOT come from the 55 signed templates', () => {
-  // R7 WAS RECORDED AS NEEDING NO CODE CHANGE. The placement sheet lists its
-  // composition as "the 55 signed conditioning templates" and its ruling was
-  // therefore "real composed session only — already true". Writing the cell that
-  // proves it showed the claim is FALSE.
-  //
-  // What the generator actually puts on a rest-slot conditioning day is a
-  // SYNTHESISED prescription string — "5 x 8min zone 2 Rower" — assembled from a
-  // flavour, a dose and an erg modality. It is not one of the 55 signed
-  // `CONDITIONING_TEMPLATES`, and it is not even one of the ~20 names in
-  // `TEMPLATE_CATEGORY`, which is itself a third conditioning vocabulary.
-  //
-  // PINNED AS-IS, not asserted either way. Sam has not ruled on this, and it is the
-  // conditioning composition debt the charter already declares for the athlete's
-  // doors ("none of the 55 signed conditioning templates is consulted") turning out
-  // to hold for the GENERATOR too. Pinning it means the answer cannot change
-  // silently while the question is open.
-  //
-  // WHEN THIS CELL FAILS, that is the fix landing, not a regression: invert it and
-  // assert the signed template. Recorded in the boundary report and in
-  // docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md as a finding owed a ruling.
+run('R7. rest-slot conditioning comes FROM the 55 signed templates', () => {
+  // INVERTED 2026-08-05, exactly as the pinned form of this cell instructed:
+  // "WHEN THIS CELL FAILS, that is the fix landing, not a regression: invert
+  // it and assert the signed template." The Stage B switchover landed —
+  // selection now serves an authored template name, and the synthesised
+  // "5 x 8min zone 2 Rower" vocabulary is gone from the generator
+  // (`docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md`).
   const built = builtFrom({
     tier: 'optional',
     focus: 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)',
@@ -604,12 +589,15 @@ run('R7. FINDING — rest-slot conditioning does NOT come from the 55 signed tem
   assert(rows.length > 0, 'the optional conditioning session has no rows');
   assert(built.sessionTier === 'optional',
     `a rest-slot conditioning session reads as ${built.sessionTier}`);
-  const headline = String((rows[0] as { exercise?: { name?: string } }).exercise?.name ?? '');
+  // The structural Warm-up row is not the headline; the authored row is.
+  const headline = rows
+    .map((row) => String((row as { exercise?: { name?: string } }).exercise?.name ?? ''))
+    .find((name) => name !== '' && !/^warm-up$/i.test(name)) ?? '';
   const signedNames = new Set(CONDITIONING_TEMPLATES.map(
     (template) => canonicalExerciseName(template.name)));
-  assert(!signedNames.has(canonicalExerciseName(headline)) && getTemplateCategory(headline) === null,
-    `"${headline}" now resolves to a signed conditioning template. That is R7's ruling `
-    + 'landing — invert this cell to assert it, and strike the finding from the sheet.');
+  assert(signedNames.has(canonicalExerciseName(headline)),
+    `"${headline}" is not one of the 55 signed conditioning templates — a second `
+    + 'dose vocabulary is back in the generator.');
 });
 
 console.log(`\nOptional top-up totals: ${passed} passed, ${failed} failed`);

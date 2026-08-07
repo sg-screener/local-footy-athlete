@@ -37,7 +37,7 @@ process.env.TZ = 'Australia/Melbourne';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import type { OnboardingData } from '../types/domain';
 import { useProfileStore } from '../store/profileStore';
@@ -555,6 +555,183 @@ run('no writer can reach the profile around the owner', () => {
   }
 });
 
+/**
+ * THE GATE LEARNS TO SEE TESTS (seat answer 2, 2026-08-07).
+ *
+ * The one-door law above scanned PRODUCT sources only, so test code could
+ * assign `onboardingData` around the owner and nothing failed. That hole is
+ * not academic: it is how `athleteSessionMoveTests`' `seed()` manufactured a
+ * world no athlete can be in — an Off-season athlete running against an
+ * In-season profile, because the direct write fired the mirror fence while
+ * `programStore` still held the previous cell's accepted snapshot, and the
+ * fence republished that stale canonical straight back over it. A whole
+ * ruling was then reasoned from the trace that world produced, and withdrawn
+ * (docs/R53_SEAT_ANSWERS_2026-08-07.md §1).
+ *
+ * Third sighting of a fixture manufacturing a misdirection in one unit
+ * (cell-19 carry-over, `seedExactSundayRegression`'s borrowed fill, scaffold
+ * defect 4), so the compression ships with the fix rather than later.
+ *
+ * WHY A DECLARED CENSUS AND NOT A BAN. There are ~50 such files. Banning
+ * outright would either fail the build or invite a blanket exemption, and a
+ * gate with a blanket exemption is the gate that was already missing. So the
+ * set is DECLARED and checked in BOTH directions:
+ *
+ *   - a file that writes directly and is NOT declared fails immediately —
+ *     that is the half that stops this class growing;
+ *   - a declared file that no longer writes directly ALSO fails, so paying
+ *     the debt forces the declaration down in the same commit and the census
+ *     can never quietly overstate what is owed.
+ *
+ * Fixtures reach state by ACTING (AGENTS.md); every entry below is debt
+ * against that law, not a permission.
+ */
+
+/**
+ * The narrowing suite's own writes are NOT debt. Proving the fence catches an
+ * unowned write requires performing one, so these are the gate's instrument
+ * rather than a violation of it.
+ */
+const FENCE_PROVING_SOURCES = ['profileMirrorNarrowingTests.ts'];
+
+/**
+ * DELIBERATE FAULT INJECTION — a cell that breaks the store ON PURPOSE to
+ * prove the code fails safe, e.g. nulling the profile to induce a technical
+ * failure mid-transaction. That is the opposite of manufacturing a plausible
+ * world: it asserts an IMPOSSIBLE one and expects a refusal.
+ *
+ * This category cannot be used to seed. Every direct write in one of these
+ * files must sit on a line carrying `PROFILE-DOOR-BYPASS: fault injection`, so
+ * a seeding write added to the same file still fails the gate.
+ */
+const FAULT_INJECTION_SOURCES = ['athleteSessionMoveTests.ts'];
+const FAULT_INJECTION_MARKER = 'PROFILE-DOOR-BYPASS: fault injection';
+
+/**
+ * DEBT: fixtures that still assign `onboardingData` directly instead of
+ * reaching state through the owned doors. Remove an entry in the same commit
+ * that pays it — the gate fails if an entry no longer earns its place.
+ */
+const DIRECT_PROFILE_WRITE_DEBT = [
+  'acceptedStateTransactionTests.ts',
+  'athleteActionLogTests.ts',
+  'athleteDoorMatrixTests.ts',
+  'athleteMoveOccupiedContentLossTests.ts',
+  'athletePlacementOwnershipTests.ts',
+  'athleteSessionDeletionTests.ts',
+  'bibleConformance/observations/buildSlice4Trace.ts',
+  'capacityRenderSafetyTests.ts',
+  'chainedMutationContinuityTests.ts',
+  'coachAddSessionOwnershipTests.ts',
+  'coachClarifierAdvanceTests.ts',
+  'dayPrecedenceOwnershipTests.ts',
+  'deletionCalendarOwnershipTests.ts',
+  'derivedRepairOwnershipTests.ts',
+  'derivedWeekOwnershipTests.ts',
+  'derivingSourceFactDeviceCommitTests.ts',
+  'deviceExactSeed.ts',
+  'deviceFindingsReplayTests.ts',
+  'devicePass20260805EveningReplayTests.ts',
+  'devicePass20260805ReplayTests.ts',
+  'doorLedgerAppendTests.ts',
+  'durableFactHorizonTests.ts',
+  'equipmentAvailabilityTests.ts',
+  'equipmentScheduleFactTransactionTests.ts',
+  'fixtureConditionedReplanTests.ts',
+  'fixtureMutationTransactionTests.ts',
+  'g1LandingAskFlowTests.ts',
+  'illnessRecoveryModeTests.ts',
+  'mobilityAccessoryDoorTests.ts',
+  'onboardingColdStartTests.ts',
+  'onboardingReliabilityTests.ts',
+  'phaseShiftAtomicityTests.ts',
+  'planChangeMoveScopingTests.ts',
+  'planChangeProducerTests.ts',
+  'programControlActionsTests.ts',
+  'programControlDurableOwnershipTests.ts',
+  'programOverrideOwnershipTests.ts',
+  'projectionOwnershipTests.ts',
+  'quiescentBootTests.ts',
+  'readinessSourceFactOwnershipTests.ts',
+  'resolverDisplacementSweepTests.ts',
+  'seasonPhaseSkewRepairTests.ts',
+  'section18OwnershipInvariantTests.ts',
+  'sessionTypeCharterTests.ts',
+  'spentWeekFridayTestSupport.ts',
+  'support/armedMirrorDeviceFixture.ts',
+  'support/freshInstallStores.ts',
+  'surfaceAgreementTests.ts',
+  'teamNightMovabilityTests.ts',
+  'weekRebuildIntegrationTests.ts',
+  'workBillTests.ts',
+  'wornWorldBootTests.ts',
+];
+
+function testSourcesWritingProfileDirectly(): string[] {
+  const roots = [__dirname, join(__dirname, '..', 'dev')];
+  const found: string[] = [];
+  const walk = (dir: string, prefix: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name), rel);
+        continue;
+      }
+      if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) continue;
+      const source = readFileSync(join(dir, entry.name), 'utf8');
+      if (/useProfileStore\.setState\(/.test(source)) found.push(rel);
+    }
+  };
+  for (const root of roots) {
+    try {
+      walk(root, root === __dirname ? '' : 'dev');
+    } catch {
+      // A missing dev tree is not a gate failure.
+    }
+  }
+  return found.sort();
+}
+
+run('the one-door law reaches TEST sources, and the census is exact', () => {
+  const actual = testSourcesWritingProfileDirectly();
+  const declared = [...FENCE_PROVING_SOURCES, ...FAULT_INJECTION_SOURCES,
+    ...DIRECT_PROFILE_WRITE_DEBT].sort();
+
+  // Non-vacuity: a scan that finds nothing is a broken scan, not a clean repo.
+  assert(actual.length > 0,
+    'the test-source scan found no direct profile writes at all — the walker '
+    + 'or the pattern is broken, and a gate that cannot fail is not a gate');
+
+  const undeclared = actual.filter((file) => !declared.includes(file));
+  assert(undeclared.length === 0,
+    `${undeclared.length} test source(s) assign onboardingData around the write `
+    + `owner without being declared: ${undeclared.join(', ')}. Fixtures reach `
+    + 'state by ACTING (AGENTS.md) — route the write through the owned door, or '
+    + 'declare it as debt with a reason.');
+
+  const stale = declared.filter((file) => !actual.includes(file));
+  assert(stale.length === 0,
+    `${stale.length} declared entr(y/ies) no longer write the profile directly: `
+    + `${stale.join(', ')}. The declaration drops in the SAME commit that pays `
+    + 'the debt, or the census overstates what is owed.');
+
+  // Fault injection stays fault injection. Every direct write in one of those
+  // files must name itself, so the category cannot quietly host a seed.
+  for (const file of FAULT_INJECTION_SOURCES) {
+    const lines = readFileSync(join(__dirname, file), 'utf8').split('\n');
+    const unmarked = lines
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter(({ line }) => line.includes('useProfileStore.setState(') &&
+        !line.trimStart().startsWith('//') &&
+        !line.includes(FAULT_INJECTION_MARKER));
+    assert(unmarked.length === 0,
+      `${file} writes the profile store directly at line(s) `
+      + `${unmarked.map(({ number }) => number).join(', ')} without the `
+      + `\`${FAULT_INJECTION_MARKER}\` marker. Fault injection declares itself; `
+      + 'seeding goes through the owned door.');
+  }
+});
+
 // ── The residue: a corrupt record repairs itself (export 6) ──────────────
 //
 // The tape named the villain. Four `profile_write` attempts by writer
@@ -599,6 +776,8 @@ run('an ordinary transaction re-mints a snapshot poorer than the profile', () =>
     'the fixture no longer starts from an impoverished snapshot');
 
   commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'test:ordinary_transaction_with_no_profile',
     source: 'tap',
   } as never);

@@ -340,14 +340,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const openCoachWithSetupContext = () => {
-    setSetupSheetVisible(false);
-    navigation.navigate('CoachTab', {
-      screen: 'Coach',
-      params: { prefill: 'I need to update something about my setup.' },
-    });
-  };
-
   const openPlayerDetailsEditor = () => {
     setDraftName(pendingName);
     setDraftPosition(pendingPosition);
@@ -999,7 +991,6 @@ export default function ProfileScreen() {
         onSaveProgramDetails={saveProgramDetails}
         onEditPlayerDetails={openPlayerDetailsEditor}
         onEditProgramDetails={openProgramDetailsEditor}
-        onMessageCoach={openCoachWithSetupContext}
         onReviewUpdate={() => {
           setSetupUpdateError(null);
           setSetupSheetStep('confirm');
@@ -1126,7 +1117,6 @@ interface SetupUpdateSheetProps {
   onSaveProgramDetails: () => void;
   onEditPlayerDetails: () => void;
   onEditProgramDetails: () => void;
-  onMessageCoach: () => void;
   onReviewUpdate: () => void;
   onConfirmUpdate: () => void;
 }
@@ -1178,7 +1168,6 @@ function SetupUpdateSheet({
   onSaveProgramDetails,
   onEditPlayerDetails,
   onEditProgramDetails,
-  onMessageCoach,
   onReviewUpdate,
   onConfirmUpdate,
 }: SetupUpdateSheetProps) {
@@ -1581,15 +1570,6 @@ function SetupUpdateSheet({
         onPress={onClose}
         style={styles.sheetSecondaryButton}
       />
-      <TouchableOpacity
-        style={styles.sheetCoachFallback}
-        activeOpacity={0.72}
-        onPress={onMessageCoach}
-      >
-        <Text style={styles.sheetCoachFallbackText}>
-          Need to explain something? Ask Coach
-        </Text>
-      </TouchableOpacity>
     </>
   );
 

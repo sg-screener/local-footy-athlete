@@ -63,6 +63,11 @@ import { TEAM_ONLY_NAME } from '../utils/sessionNaming';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 import { CONDITIONING_SUBSTITUTION_ROW_NAMES } from './conditioningFeasibility';
+import {
+  CONDITIONING_WARMUP_COPY,
+  CONDITIONING_WARMUP_COPY_ID,
+  CONDITIONING_WARMUP_ROW_NAME,
+} from './conditioningSelection';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
 /**
@@ -107,6 +112,31 @@ export function registerProjectionCopy(): void {
   didRegister = true;
 
   registerSignedCopy([
+    // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
+    // Imported from the emitter rather than transcribed, the same shape
+    // `CONDITIONING_SUBSTITUTION_ROW_NAMES` uses below: the words exist once,
+    // so what ships on the row and what the sheet registers cannot drift.
+    {
+      id: CONDITIONING_WARMUP_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-05, ruling 4 of '
+        + 'docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md. Closes the bare `Warm-up` '
+        + 'row the Stage B switchover shipped and declared. Richer per-quality '
+        + 'warm-up copy is a future signing batch, not a code decision.',
+      text: CONDITIONING_WARMUP_COPY,
+    },
+    {
+      // The row's NAME, which the projection resolves separately from its
+      // prescription. Not a new word: it is the first word of the sentence
+      // Sam signed above, and it names the row that sentence describes.
+      id: exerciseNameCopyId(CONDITIONING_WARMUP_ROW_NAME),
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-05, ruling 4 of '
+        + 'docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md — the row named by the '
+        + 'signed warm-up sentence registered beside it.',
+      text: CONDITIONING_WARMUP_ROW_NAME,
+    },
+
     // ── Day headlines — NEW, proposed (Batch 6 / Task 2). ──
     {
       id: 'day.headline.training',

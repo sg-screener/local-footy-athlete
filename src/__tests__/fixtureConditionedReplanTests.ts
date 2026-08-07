@@ -15,6 +15,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import type {
   DayOfWeek,
   OnboardingData,
@@ -57,6 +58,7 @@ import {
 } from '../store/reversibleAdjustmentTransaction';
 import { executeHomeGameMutationDurably } from '../screens/home/homeGameMutationController';
 import type { GameChangeVisibleDay } from '../utils/gameChangeCoachNotes';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK_START = '2026-03-23';
 const SATURDAY = '2026-03-28';
@@ -209,7 +211,7 @@ function exerciseSignature(workout: Workout | undefined): string {
 function acceptedWeekSignature(athlete: OnboardingData): string {
   const state = useProgramStore.getState();
   const week = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -232,7 +234,7 @@ function acceptedWeekSignature(athlete: OnboardingData): string {
 function acceptedWeekRows(athlete: OnboardingData): GameChangeVisibleDay[] {
   const state = useProgramStore.getState();
   const week = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -261,6 +263,7 @@ function visibleStoredWeek(program: TrainingProgram, athlete: OnboardingData): M
   const microcycle = program.microcycles[0]!;
   const contract = microcycle.exposureContractV2!;
   return new Map(resolveFinalVisibleSection18Week({
+    surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts: microcycle.workouts,
     weekStart: WEEK_START,

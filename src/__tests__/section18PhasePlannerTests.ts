@@ -430,7 +430,11 @@ runCase('scenario', '22 late off-season normal week produces S4/C4/sprint1', () 
 runCase('scenario', '23 late off-season two selected sprint doses remain controlled', () => {
   const first = createLateOffseasonSpeedBlock('pre_lift', { seasonPhase: 'Off-season', offseasonSubphase: 'late_offseason', weekNumber: 5 });
   const second = createLateOffseasonSpeedBlock('standalone', { seasonPhase: 'Off-season', offseasonSubphase: 'late_offseason', weekNumber: 7 });
-  invariant(late.plan.weeklyExposureContractV2?.sprintHighSpeed.exposure.permittedMaximum === 2 && !!first && !!second && first.durationMinutes <= 18 && second.durationMinutes <= 18 && /full (?:walk-back )?rest|full recovery|full rest/i.test(`${first.prescription} ${second.prescription}`), 'two-dose sprint policy is not controlled');
+  // Stage B switchover: prescriptions are the authored template fields
+  // verbatim, so "controlled" reads as the sheet's own recovery wording
+  // (walk-down / passive / extended or full recovery), not the retired
+  // free-text "full walk-back rest".
+  invariant(late.plan.weeklyExposureContractV2?.sprintHighSpeed.exposure.permittedMaximum === 2 && !!first && !!second && first.durationMinutes <= 18 && second.durationMinutes <= 18 && /walk-down|passive|extended recovery|full recovery/i.test(`${first.prescription} ${second.prescription}`), 'two-dose sprint policy is not controlled');
 });
 runCase('scenario', '24 the off-season scorer no longer PLACES optional accessory work', () => {
   // RE-POINTED, NOT WEAKENED. This cell used to require at least one optional

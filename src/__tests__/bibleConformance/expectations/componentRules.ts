@@ -50,9 +50,24 @@ export const COMPONENT_BIBLE_RULES: readonly BibleComponentRule[] = [
     anchorQuote: 'A conditioning component is proper planned conditioning work that may sit on the same day as strength.',
     statement: 'Conditioning prescriptions remain separate from ordinary strength rows.',
     applicableScenarios: ['mixed-strength-aerobic'],
+    // Stage B switchover (2026-08-05): the composed "Easy Aerobic Flush
+    // (2 x 10min easy Mixed Erg Block)" vocabulary retired; the deterministic
+    // pick for this scenario is now the authored template row
+    // (docs/STAGE_B_STAGE2_SWITCHOVER_PREDICTION_2026-08-05.md).
+    //
+    // CORRECTED, unit 7 (2026-08-05). The switchover moved this cell to
+    // 'Continuous Aerobic Run', and that was the REGRESSION being recorded as
+    // the new truth: this entry carries §18 role `optional_recovery_aerobic`,
+    // and the row it used to produce was a FLUSH — the retired name says so in
+    // its own words. Selection had no recovery demand, so a session the planner
+    // had marked light asked the steady aerobic-capacity pool. With
+    // `demandCategoryFor` feeding the role through, it asks Sam's Flush tab
+    // again, and the row is the authored 'Short Flush'. Two other suites
+    // (`conditioningVisibleIdentityTests`, both unchained at the time) had been
+    // red on exactly this since the switchover.
     expectation: {
       kind: 'conditioning_section',
-      conditioningRows: ['Easy Aerobic Flush (2 x 10min easy Mixed Erg Block)'],
+      conditioningRows: ['Short Flush'],
     },
   },
   {

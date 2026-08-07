@@ -103,6 +103,14 @@ const AUTHORING_MODULES = [
   'utils/coachRevisionTemplates.ts',
   'data/strengthSessionVariants.ts',
   'data/mobilityFlowTemplates.ts',
+  // The deload/easy-day sentences (`DELOAD_SENTENCES`). Added when Sam signed
+  // the §13 conditioning wording, for the same reason `planChangeProducer.ts`
+  // was added on 2026-07-30: this is where those words are AUTHORED, and a gate
+  // that cannot see them cannot enforce a retirement. Their positive equality
+  // is bound against their own signed records in `test:deload-law`, the
+  // shortfall-copy regime; what this list adds is the RETIRED direction, so a
+  // sentence Sam replaces cannot quietly survive here.
+  'rules/deloadWeekRules.ts',
 ];
 
 function surfaceSources(): { file: string; text: string }[] {

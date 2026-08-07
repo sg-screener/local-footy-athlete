@@ -6,6 +6,7 @@ import type {
 } from '../types/fixtureMutation';
 import type { WholeWeekRepairOutcome } from '../rules/wholeWeekRepairEngine';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   canonicalFixtureKind,
   targetWeekFixtures,
@@ -31,6 +32,7 @@ import {
 } from '../utils/athleteActionDiagnostics';
 import { useProfileStore } from './profileStore';
 import { useProgramStore } from './programStore';
+import { appendDecisionEntry } from './decisionLedgerStore';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 
 type AppliedFixtureMutationOutcome = Exclude<WholeWeekRepairOutcome, 'impossible'>;
@@ -40,6 +42,11 @@ export interface FixtureMutationTransactionInput {
   fixtureKind: FixtureMutationKind;
   sourceDate?: string;
   targetDate?: string;
+  /**
+   * The revision the producing render saw. PROVENANCE ONLY since R1.4b —
+   * it rides the tape and command ids; the retired conflict handshake no
+   * longer compares it (see resolveFixtureMutation).
+   */
   expectedAcceptedRevision: number;
   source: FixtureMutationSourceMetadata;
   todayISO?: string;
@@ -175,17 +182,15 @@ function resolveFixtureMutation(
       'The supplied TraceV2 token does not match the fixture producer.',
     );
   }
-  const currentRevision = useProgramStore.getState().acceptedMaterialContext.revision;
-  if (input.expectedAcceptedRevision !== currentRevision) {
-    return {
-      kind: 'conflicted',
-      reason: 'The accepted program changed before the fixture mutation could run.',
-      error: new FixtureMutationValidationError(
-        'accepted_revision_conflict',
-        'The accepted program changed before the fixture mutation could run.',
-      ),
-    };
-  }
+  // R1.4b (shell rebuild): the accepted-revision handshake is RETIRED. It
+  // existed because boot re-transacted the same facts and minted revisions
+  // past the athlete's first render, so a tap could "conflict" with a world
+  // nothing about its decision disagreed with — the evening-2/3 device
+  // findings, verbatim. The quiescent boot derives instead of transacting,
+  // so the first-rendered world IS the accepted world; a fixture tap is a
+  // decision about a DATE, resolved against current accepted state, never
+  // a compare-and-swap on a revision counter. `expectedAcceptedRevision`
+  // stays typed as render-provenance for the tape and command ids.
   // Redundant by construction now that every producer derives `fixtureKind`
   // from the same owner this reads. Kept as a loud invariant: reaching it
   // means a command was built outside the owner, which is a defect in the
@@ -304,7 +309,7 @@ function acceptedVisibleRows(
   const markedDays = state.acceptedMaterialContext.markedDays;
   return weekStarts.flatMap((weekStart) => {
     const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile,
       markedDays,
@@ -359,17 +364,9 @@ function executeCandidate(args: {
   profile: OnboardingData;
   trace: AthleteActionTraceContext;
 }): CandidateResult {
-  const currentRevision = useProgramStore.getState().acceptedMaterialContext.revision;
-  if (args.input.expectedAcceptedRevision !== currentRevision) {
-    return {
-      kind: 'conflicted',
-      reason: 'The accepted program changed before publication.',
-      error: new FixtureMutationValidationError(
-        'accepted_revision_conflict',
-        'The accepted program changed before publication.',
-      ),
-    };
-  }
+  // R1.4b: the pre-publication expression of the retired revision handshake
+  // went with it — see resolveFixtureMutation. The candidate acts on current
+  // accepted state by construction.
   try {
     const result = rebuildLocalWeek({
       baseProfile: args.profile,
@@ -481,32 +478,51 @@ function deriveAcknowledgedCoachNote(args: {
   noteId: string | null;
   source: FixtureMutationSourceMetadata;
 } {
-  const source = acknowledgedSourceMetadata(args.result);
-  // Coach Notes are a target-week projection. The reversible ledger retains
-  // the complete rolling dependency horizon for restoration.
-  const weekStarts = [getMondayForDate(args.resolved.targetDate)];
-  const before = weekStarts.flatMap((weekStart) =>
-    args.beforeRowsByWeek.get(weekStart) ?? []);
-  const after = acceptedVisibleRows(args.profile, weekStarts);
-  const noteId = upsertGameChangeCoachNoteFromDiff({
-    action: gameChangeActionFromRebuild({
-      newGameDay: args.resolved.newGameDay,
-      clearOverlayDate: args.resolved.action === 'move'
-        ? args.resolved.sourceDate
-        : undefined,
-    }),
-    fixtureKind: args.resolved.fixtureKind,
-    targetDate: args.resolved.targetDate,
-    previousDate: args.resolved.sourceDate,
-    weekStartISO: getMondayForDate(args.resolved.targetDate),
-    before,
-    after,
-    todayISO: args.resolved.todayISO,
-    adjustmentId: args.result.reversibleAdjustmentId,
-    source,
-    traceId: args.trace.traceId,
-  });
-  return { noteId, source };
+  // A NOTE IS OUTPUT, NEVER EVIDENCE — and never a veto. This runs AFTER the
+  // athlete's fixture change has committed; the note upsert publishes through
+  // the coach-updates constraint transaction, whose accepted-state equivalence
+  // sweep covers EVERY materialised week and throws on shortfalls in weeks
+  // this mutation never touched (found by the walker's conformance cell on
+  // Sam's own device shape: a landed game add crashed on week-away
+  // `required_minimum_shortfall` blockers). The landed change stands; a note
+  // that cannot derive is a MISSING NOTE, disclosed on the tape.
+  try {
+    const source = acknowledgedSourceMetadata(args.result);
+    // Coach Notes are a target-week projection. The reversible ledger retains
+    // the complete rolling dependency horizon for restoration.
+    const weekStarts = [getMondayForDate(args.resolved.targetDate)];
+    const before = weekStarts.flatMap((weekStart) =>
+      args.beforeRowsByWeek.get(weekStart) ?? []);
+    const after = acceptedVisibleRows(args.profile, weekStarts);
+    const noteId = upsertGameChangeCoachNoteFromDiff({
+      action: gameChangeActionFromRebuild({
+        newGameDay: args.resolved.newGameDay,
+        clearOverlayDate: args.resolved.action === 'move'
+          ? args.resolved.sourceDate
+          : undefined,
+      }),
+      fixtureKind: args.resolved.fixtureKind,
+      targetDate: args.resolved.targetDate,
+      previousDate: args.resolved.sourceDate,
+      weekStartISO: getMondayForDate(args.resolved.targetDate),
+      before,
+      after,
+      todayISO: args.resolved.todayISO,
+      adjustmentId: args.result.reversibleAdjustmentId,
+      source,
+      traceId: args.trace.traceId,
+    });
+    return { noteId, source };
+  } catch (error) {
+    emitAthleteActionEvent(args.trace, 'coach_notes_result', {
+      noteIdentitiesDerived: [],
+      internalResultCode: athleteActionErrorCode(error, 'acknowledged_note_derivation_failed'),
+      originalRejectionCode: athleteActionErrorCode(error, 'acknowledged_note_derivation_failed'),
+      rejectingBoundary: 'deriveAcknowledgedCoachNote',
+      acknowledgedVisibleState: false,
+    });
+    return { noteId: null, source: args.resolved.source };
+  }
 }
 
 function emitRequestEvents(
@@ -604,9 +620,44 @@ function resolveForExecution(
 }
 
 /**
- * Screen-neutral in-memory compatibility seam. Production fixture UI uses the
- * durable transaction below; regression tests and temporary adapters may use
- * this to prove parity without owning any fixture policy themselves.
+ * THE LANDED FIXTURE DECISION, APPENDED — one site, both doors.
+ *
+ * R5.3 (boot-order ruling 2026-08-06). This append used to live in the durable
+ * door alone, under the note "ONLY the durable door appends". That made the
+ * RECORDING of the decision a property of which door you entered rather than of
+ * the decision landing, and the in-memory seam — which the walker and the
+ * temporary adapters enter — landed fixtures that were never recorded. Measured
+ * at `945e0cb4`: the L16 world's ledger held `plan_change` only, so no fixture
+ * decision existed to replay and the relaunch could not rebuild the week.
+ *
+ * Replay is still kept out by the LEDGER's own latch, not by the door: under
+ * `ledgerReplayActive()` `appendDecisionEntry` returns without writing
+ * (`decisionLedgerStore.ts:269`). That is the honest guard — replay never
+ * appends because it is replay, not because it picked the quiet door.
+ */
+function appendLandedFixtureDecision(input: FixtureMutationTransactionInput): void {
+  appendDecisionEntry({
+    decision: input.action === 'move'
+      ? {
+          kind: 'fixture_move',
+          fromDate: input.sourceDate ?? '',
+          toDate: input.targetDate ?? '',
+          fixtureKind: input.fixtureKind,
+        }
+      : input.action === 'add'
+        ? { kind: 'fixture_add', date: input.targetDate ?? '', fixtureKind: input.fixtureKind }
+        : { kind: 'fixture_remove', date: input.sourceDate ?? '', fixtureKind: input.fixtureKind },
+    provenance: input.source.requestedBy === 'athlete' ? 'athlete_tap' : 'coach',
+    writer: 'fixture_door',
+  });
+}
+
+/**
+ * Screen-neutral in-memory seam. Production fixture UI uses the durable
+ * transaction below; regression tests and temporary adapters may use this to
+ * prove parity without owning any fixture policy themselves. It is no longer a
+ * seam BENEATH the decision record — a fixture that lands here is appended by
+ * `appendLandedFixtureDecision`, exactly as it is through the durable door.
  */
 export function executeFixtureMutationInMemory(
   input: FixtureMutationTransactionInput,
@@ -668,6 +719,7 @@ export function executeFixtureMutationInMemory(
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
     });
+    appendLandedFixtureDecision(input);
     return {
       outcome: candidate.outcome,
       result: candidate.result,
@@ -783,6 +835,9 @@ export async function executeFixtureMutationTransaction(
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
     });
+    // R1.4a (shell rebuild): the landed fixture decision, appended verbatim —
+    // through the one site both doors share (R5.3, 2026-08-06).
+    appendLandedFixtureDecision(input);
     return {
       outcome: candidate.outcome,
       result: candidate.result,

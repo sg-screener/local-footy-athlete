@@ -19,6 +19,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -30,7 +31,7 @@ import {
   readDurableProgramStoreEnvelope,
   useProgramStore,
 } from '../store/programStore';
-import { useProfileStore } from '../store/profileStore';
+import { useProfileStore, applyProfileOnboardingWrite } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -143,11 +144,32 @@ function seed(
       originProvenance: 'explicit_user_phase_change',
     },
   }));
-  useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
   useCoachMutationHistoryStore.setState({ entries: [] });
+  // THE WORLD IS RETIRED BEFORE THE PROFILE IS ANSWERED, AND THE PROFILE GOES
+  // THROUGH THE OWNED DOOR (seat answer 2, 2026-08-07).
+  //
+  // This used to be `useProfileStore.setState({ onboardingData: athlete })`,
+  // placed ABOVE the program write. Both halves of that were wrong, and
+  // together they manufactured a world no athlete can be in.
+  //
+  // The direct write fired the profile mirror fence while `programStore` still
+  // held the PREVIOUS cell's accepted snapshot, so the fence — correctly, by
+  // its own law — republished that stale canonical straight back over the
+  // athlete this cell had just seeded. In-suite the write did not take AT ALL:
+  // cell 19 asked for an Off-season athlete with no game day and ran against
+  // In-season/Saturday, which is how a projected Saturday fixture appeared on a
+  // week whose own contract declared none. That contradiction was diagnosed as
+  // a product defect and a ruling was reasoned from it before measurement
+  // showed the state was unreachable (docs/R53_SEAT_ANSWERS_2026-08-07.md §1).
+  //
+  // The order below is the one the app itself has: answers land when there is
+  // no accepted program to contradict them. Retiring the previous world first
+  // leaves no canonical for the fence to republish, so the athlete's answers
+  // stand — and the write goes through `applyProfileOnboardingWrite`, the one
+  // door, exactly as product code must.
   useProgramStore.setState({
     currentProgram: program,
     currentMicrocycle: program.microcycles[0] ?? null,
@@ -173,6 +195,21 @@ function seed(
     sessionFeedback: {},
     weightOverrides: {},
   });
+  const written = applyProfileOnboardingWrite({
+    next: athlete,
+    writer: 'onboarding_step',
+    isOnboardingComplete: true,
+  });
+  assert(written.ok, `the seed's profile write was refused: ${written.reason}`);
+  // The fixture asserts it holds what it asked for. A seed that cannot prove
+  // this is the whole defect class above, and it costs one comparison.
+  const live = useProfileStore.getState().onboardingData;
+  assert(live?.seasonPhase === athlete.seasonPhase &&
+    live?.usualGameDay === athlete.usualGameDay &&
+    live?.gameDay === athlete.gameDay,
+  `the seeded profile did not survive the write: asked for ${athlete.seasonPhase}/`
+  + `${athlete.usualGameDay ?? 'no game day'}, store holds ${live?.seasonPhase}/`
+  + `${live?.usualGameDay ?? 'no game day'}`);
   return program;
 }
 
@@ -185,7 +222,7 @@ function addDaysISO(dateISO: string, days: number): string {
 function accepted(weekStart: string) {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -475,7 +512,10 @@ run('6 induced publication failure cannot create a half-move', () => {
   const input = moveInput(FUTURE_WEEK);
   const before = semantic(FUTURE_WEEK);
   const beforeConstraints = JSON.stringify(useProgramStore.getState().userRemovalConstraints);
-  useProfileStore.setState({ onboardingData: null } as never);
+  // An IMPOSSIBLE store state on purpose, to prove the transaction surfaces the
+  // technical failure instead of publishing half a move. Not a seed: no world
+  // is being manufactured, and nothing downstream is expected to succeed.
+  useProfileStore.setState({ onboardingData: null } as never); // PROFILE-DOOR-BYPASS: fault injection
   let rejected = false;
   try {
     commitAthleteSessionMoveTransaction(input);
@@ -1099,21 +1139,42 @@ async function finish(): Promise<void> {
     assert(result.ok, JSON.stringify(result));
     const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
     assert(adjustment?.status === 'active', 'durable tap adjustment missing');
-    const creationEnvelope = await readDurableProgramStoreEnvelope();
-    assert(creationEnvelope && JSON.parse(creationEnvelope).state.reversibleAdjustmentLedger
-      .adjustments.some((candidate: { id: string }) => candidate.id === adjustment.id),
-    'creation returned before durable ledger acknowledgement');
+    // R1.3 (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): persisted
+    // state is INPUTS — the reversible-adjustment record is a derived output
+    // now, rebuilt at boot by replaying the ledger, so the durable
+    // acknowledgement this cell pins moved to the DECISION: the move's own
+    // ledger entry (R1.4a appends it in the same act that lands the change).
+    const creationLedger = await AsyncStorage.getItem('decision-ledger-store');
+    const ledgerEntries = (JSON.parse(creationLedger ?? '{}') as {
+      state?: { entries?: { decision?: { kind?: string; change?: {
+        kind?: string; fromDate?: string; toDate?: string;
+      } } }[] };
+    }).state?.entries ?? [];
+    assert(ledgerEntries.some((entry) =>
+      entry.decision?.kind === 'plan_change' &&
+      entry.decision.change?.kind === 'move_session' &&
+      entry.decision.change.fromDate === dateForDay(FUTURE_WEEK, 1) &&
+      entry.decision.change.toDate === dateForDay(FUTURE_WEEK, 3)),
+    'creation returned before the decision reached the durable ledger');
     const restored = await clearReversibleAdjustment(
       adjustment.id,
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
     assert(restored.outcome === 'restored', JSON.stringify(restored));
     assert(semantic(FUTURE_WEEK) === before, 'durable Restore did not restore the exact week');
-    const restoreEnvelope = await readDurableProgramStoreEnvelope();
-    assert(restoreEnvelope && JSON.parse(restoreEnvelope).state.reversibleAdjustmentLedger
-      .adjustments.some((candidate: { id: string; status: string }) =>
-        candidate.id === adjustment.id && candidate.status === 'cleared'),
-    'Restore returned before durable cleared status acknowledgement');
+    // R1.3, PINNED GAP: no reversal producer exists yet — the ledger declares
+    // reversal entries typed and INERT until LR-29's heir lands, so an undo
+    // has NO durable record and does not survive a relaunch. That is R1's
+    // declared scope, not this cell's to hide: the pin below reds the moment
+    // a reversal producer starts writing, and this cell then asserts the
+    // reversal's own durability instead.
+    const restoreLedger = await AsyncStorage.getItem('decision-ledger-store');
+    const entriesAfterRestore = (JSON.parse(restoreLedger ?? '{}') as {
+      state?: { entries?: { decision?: { kind?: string } }[] };
+    }).state?.entries ?? [];
+    assert(!entriesAfterRestore.some((entry) => entry.decision?.kind === 'reversal'),
+      'a reversal entry reached the ledger — the reversal producer has landed, '
+      + 'so this cell must now assert the reversal\'s durable acknowledgement');
   });
 
   await runAsync('22 injected restoration persistence failure rolls back exactly', async () => {

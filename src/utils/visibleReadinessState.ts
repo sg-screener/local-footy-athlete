@@ -11,7 +11,7 @@
  */
 
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
-import { isInjurySourceFact } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, selectReadinessFactForDate } from '../rules/temporarySourceFact';
 import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 import {
   recoveryModeModifierIdForDate,
@@ -97,10 +97,19 @@ export function resolveVisibleReadinessState(
     READINESS_FACT_KINDS.has((fact as { factKind: string }).factKind) &&
     factHorizonCoversWeek(fact, weekAnchorISO));
   if (activeFacts.length > 0) {
-    // Prefer a today-scoped fact so the card reads "today" when that's true.
+    // ONE OWNER for "which fact is the fact today" (Sam's D-3 ruling,
+    // 2026-08-05). This used to pick prefer-today-else-position-zero while the
+    // lighter-day trim picked first-alphabetically, so the Clear button could
+    // target a different fact than the trim was linked to — the athlete cleared
+    // what they reported and the day stayed trimmed. Both now ask the same
+    // function, so they cannot disagree.
     const scopeOf = (fact: TemporarySourceFact): 'today' | 'week' =>
       (fact.scope.kind === 'date' && fact.scope.from === todayISO && isThisWeek) ? 'today' : 'week';
-    const chosen = activeFacts.find((fact) => scopeOf(fact) === 'today') ?? activeFacts[0];
+    const chosen = selectReadinessFactForDate({
+      facts: activeFacts,
+      dateISO: isThisWeek ? todayISO : weekAnchorISO,
+      todayISO: isThisWeek ? todayISO : undefined,
+    }) ?? activeFacts[0];
     const scope = scopeOf(chosen);
     return {
       id: chosen.factId,

@@ -335,9 +335,45 @@ function withoutDerivedScope(
   workout: Workout,
   record: DerivedSessionProvenance,
   recordIndex: number,
+  restorationSource?: readonly Workout[],
 ): Workout | null {
   if (record.scope === 'session') {
     const restoration = record.dependency?.restoration.workout;
+    // LR-27 RECEIPT PROBE (temporary, stage 2 priority B, 2026-08-05).
+    //
+    // Sam's ruling: the nested snapshot is stored output — delete it, keep the
+    // reference, re-derive at read. Before deleting, MEASURE whether the one
+    // reader of snapshot CONTENT can be served by the reference instead. This
+    // prints, at every real invocation, whether a workout carrying the record's
+    // `sourcePlanEntryId` is reachable from the array the caller already holds,
+    // and whether it is byte-identical to the snapshot.
+    if (process.env.LR27_PROBE === '1') {
+      const sourceId = record.dependency?.restoration.sourcePlanEntryId ?? null;
+      const byReference = sourceId
+        ? (restorationSource ?? []).find((candidate) =>
+            (candidate.planEntryId ?? candidate.id) === sourceId) ?? null
+        : null;
+      const strip = (value: unknown): string => JSON.stringify(
+        JSON.parse(JSON.stringify(value)),
+        (key, entry) => (key === 'derivedSessionProvenance' ? undefined : entry),
+      );
+      const identify = (candidate: Workout | null | undefined): string => candidate
+        ? `${candidate.planEntryId ?? 'noPlanEntry'}/${candidate.id}/${candidate.workoutType}`
+        : 'null';
+      console.log(`[lr27] scope=session origin=${record.origin} `
+        + `recordSourcePlanEntryId=${record.sourcePlanEntryId ?? 'NULL'} `
+        + `restorationSourceId=${sourceId ?? 'NULL'} `
+        + `snapshot=${identify(restoration)} `
+        + `carrier=${identify(workout)} `
+        + `byReference=${byReference ? 'FOUND' : 'MISSING'} `
+        + `identical=${
+          restoration && byReference
+            ? String(strip(restoration) === strip(byReference))
+            : 'n/a'}\n`
+        + `        sourceArray=${restorationSource
+          ? restorationSource.map(identify).join(' | ')
+          : 'NOT_PASSED'}`);
+    }
     return restoration ? JSON.parse(JSON.stringify(restoration)) as Workout : null;
   }
   if (record.scope === 'conditioning_component') {
@@ -462,7 +498,7 @@ export function buildDerivedSessionExpiryCandidates(args: {
         .sort((left, right) => right.recordIndex - left.recordIndex);
       for (const removal of forWorkout) {
         if (!next) break;
-        next = withoutDerivedScope(next, removal.record, removal.recordIndex);
+        next = withoutDerivedScope(next, removal.record, removal.recordIndex, args.workouts);
       }
       return next ? [next] : [];
     });

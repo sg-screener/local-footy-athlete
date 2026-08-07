@@ -409,6 +409,16 @@ function rowCue(row: any): SignedCopy | null {
  * conditioning_part`). See `rowsForKind` for why the alternatives are worse.
  */
 export function isComposedPrescriptionRow(row: any): boolean {
+  // STAGE B LANDED (2026-08-05). The `'Cardio'` test below was a PROXY for
+  // "this row's name was composed", correct only while every conditioning row
+  // was built by `sessionBuilder.condEx` out of planner nouns and numbers.
+  // The switchover retired that composer: a conditioning row now carries Sam's
+  // authored template name, and its warm-up carries his signed sentence
+  // (ruling 4, `docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md`). The emitter
+  // marks those rows `nameProvenance: 'authored'`, which is the same KIND of
+  // question this predicate always asked — how the row was built — just
+  // answered directly instead of inferred from its exercise type.
+  if (row?.nameProvenance === 'authored') return false;
   return String(row?.exercise?.exerciseType ?? '') === 'Cardio';
 }
 

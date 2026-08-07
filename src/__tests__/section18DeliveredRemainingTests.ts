@@ -311,6 +311,68 @@ run('D6 an authorised reduction is evaluated against app-authored prescribed exp
     JSON.stringify(result.blockingViolations));
 });
 
+// ── D7 — THE BOUNDARY TWIN. The coverage hole this suite carried, named by the
+// §18 ownership reassessment (2026-08-05, defect D2): every cell above tests
+// DOSE across the governed boundary, and none tested PATTERN COVERAGE. The two
+// pattern rules disagreed about the same elapsed days.
+//
+// `pattern_restore_failure` is already boundary-aware: when the contract governs
+// only a remainder, it softens to advisory, because immutable history plus a
+// reduced remainder may honestly be unable to restore every pattern and that
+// cannot block the athlete's report. `pattern_imbalance` read no boundary at
+// all — it counted the WHOLE week, history included, and blocked.
+//
+// They are two statements about one fact ("this remainder could not cover every
+// pattern"), so they must agree about elapsed days. Same week, same missing
+// hinge/push, same boundary: the twins are asserted together, in both
+// directions, so neither can drift again.
+run('D7 pattern_imbalance and pattern_restore_failure agree about elapsed days', () => {
+  // MON squat + TUE squat are delivered history. FRI pull is the whole
+  // authored remainder. Hinge and push are absent — not removed, never
+  // reachable — and the counts are maximally uneven (squat 2, pull 1, rest 0).
+  const partialWeek = evaluate({
+    contract: baseContract(),
+    workouts: [
+      strengthWorkout('mon', 1, ['Back Squat']),
+      strengthWorkout('tue', 2, ['Front Squat']),
+      strengthWorkout('fri', 5, ['Chin-Up']),
+    ],
+    governedFromISO: GOVERNED_FROM,
+    deliveredDates: [dateForDay(1), dateForDay(2)],
+  });
+  const advisoryCodes = partialWeek.findings
+    .filter((finding) => finding.severity === 'advisory')
+    .map((finding) => finding.code);
+  assert(advisoryCodes.includes('pattern_restore_failure'),
+    'the fixture is wrong, not the rule: pattern_restore_failure did not even fire ' +
+    `as advisory on a partial week — findings=${JSON.stringify(
+      partialWeek.findings.map((finding) => `${finding.code}:${finding.severity}`))}`);
+  assert(!has(partialWeek, 'pattern_imbalance', 'strength_patterns'),
+    'pattern_imbalance BLOCKED a partial week while its twin pattern_restore_failure ' +
+    'softened to advisory over the same elapsed days — one rule counts history the ' +
+    `other refuses to: ${JSON.stringify(partialWeek.blockingViolations)}`);
+
+  // The other direction, so the fix cannot be "never block". A WHOLE week the
+  // app authored from Monday has no history to excuse it: both twins block.
+  const wholeWeek = evaluate({
+    contract: baseContract(),
+    workouts: [
+      strengthWorkout('mon', 1, ['Back Squat']),
+      strengthWorkout('tue', 2, ['Front Squat']),
+      strengthWorkout('fri', 5, ['Chin-Up']),
+    ],
+    governedFromISO: null,
+    deliveredDates: [],
+  });
+  assert(has(wholeWeek, 'pattern_imbalance', 'strength_patterns'),
+    'a whole authored week with squat 2 / hinge 0 / push 0 must still block on ' +
+    `pattern_imbalance — the boundary softening leaked past its boundary: ${
+      JSON.stringify(wholeWeek.blockingViolations)}`);
+  assert(has(wholeWeek, 'pattern_restore_failure', 'strength_patterns'),
+    'the twin must block on a whole week too, or this cell proves nothing about ' +
+    `agreement: ${JSON.stringify(wholeWeek.blockingViolations)}`);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
 if (failed > 0) process.exit(1);

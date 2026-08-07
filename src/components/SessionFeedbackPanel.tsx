@@ -79,6 +79,7 @@ import { useWorkoutLogStore } from '../store/workoutLogStore';
 import {
   commitSessionOutcomeTransaction,
   createRecordSessionOutcomeIntentFromFeedback,
+  sessionOutcomeRecordableRefusal,
 } from '../store/sessionOutcomeTransaction';
 import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
 import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObservation';
@@ -86,6 +87,7 @@ import { explorerTestId } from '../utils/stableTestId';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { TEAM_NIGHT_SIZE_OPTIONS, type TeamNightSize } from '../rules/teamNightSize';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
+import { logger } from '../utils/logger';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -289,7 +291,15 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     componentCompletions,
     completion,
   );
-  const canSave = canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
+  const draftIsComplete = canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
+  // THE DOOR'S OWN RULE, ASKED — never re-implemented here (finding 4). A
+  // control offered for an act its door will refuse is a dead control, and the
+  // athlete taps it and nothing happens.
+  const recordableRefusal = sessionOutcomeRecordableRefusal(date);
+  const canSave = draftIsComplete && !recordableRefusal;
+  // A refusal the athlete must be TOLD about. `null` until a save is refused;
+  // the door's authored sentence, never a second one written here.
+  const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
   const hasComponentFlow = sessionComponents.length > 0;
   const conditioningComponentCompletion = componentCompletions.conditioning ?? completion;
   const strengthComponentCompletion = componentCompletions.strength ?? activeCompletion;
@@ -488,6 +498,8 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
 
   const handleSave = useCallback(async () => {
     if (!canSave || !activeCompletion) return;
+    setSaveRefusal(null);
+    try {
     const conditioning = buildConditioningLog();
     const conditioningRpeValue = conditioning?.rpe;
     const strengthCompletion =
@@ -522,7 +534,13 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       conditioning,
       strength,
     });
-    if (!feedback) return;
+    if (!feedback) {
+      // NOT a bare return. The draft passed its own gate and still produced no
+      // payload, which is a defect in this panel, not an athlete mistake — but
+      // the athlete is the one holding the phone, so they get told.
+      setSaveRefusal("Something went wrong saving that. Nothing was recorded — please try again.");
+      return;
+    }
     const result = await commitSessionOutcomeTransaction(
       createRecordSessionOutcomeIntentFromFeedback({
         date,
@@ -534,7 +552,18 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         },
       }),
     );
-    if (!result.ok) return;
+    if (!result.ok) {
+      // THE REFUSAL IS THE DOOR'S TO WORD. Every code it can answer reaches the
+      // athlete now; the future-session one is gated out above, and the rest —
+      // which no gate can predict — say what happened instead of nothing.
+      // `in` rather than the discriminant: this scope's narrowing does not
+      // survive the compile scope's settings, and a cast would hide a real
+      // shape change in the door's result.
+      const reason = 'reason' in result ? result.reason : null;
+      setSaveRefusal(reason
+        || "Something went wrong saving that. Nothing was recorded — please try again.");
+      return;
+    }
     const traceId = result.receipt.source.traceId;
     if (traceId) {
       registerAthleteActionUIOutcome({
@@ -549,6 +578,14 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       });
     }
     onSave?.(result.receipt);
+    } catch (error) {
+      // AN UNGUARDED `await` IN AN onPress IS A DEAD BUTTON. A throw anywhere in
+      // the chain above used to become an unhandled rejection and the tap simply
+      // did nothing — the same silence that hid the armour wrappers' crash
+      // (2026-08-03). It is an answer now.
+      logger.error('[SessionFeedbackPanel] the save threw', { date, error });
+      setSaveRefusal("Something went wrong saving that. Nothing was recorded — please try again.");
+    }
   }, [
     canSave,
     activeCompletion,
@@ -900,6 +937,21 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         )
       ) : null}
 
+      {/* A refused save says so. Silence here was finding 4. */}
+      {saveRefusal && (
+        <View style={styles.saveRefusalRow} testID="session-feedback-save-refusal">
+          <Text style={styles.saveRefusalText}>{saveRefusal}</Text>
+        </View>
+      )}
+
+      {/* THE CONTROL IS NOT OFFERED FOR AN ACT THE DOOR WILL REFUSE, and the
+          athlete is told why rather than left with a button that does nothing. */}
+      {draftIsComplete && recordableRefusal && (
+        <View style={styles.saveRefusalRow} testID="session-feedback-not-yet">
+          <Text style={styles.saveRefusalText}>{recordableRefusal.message}</Text>
+        </View>
+      )}
+
       {/* Save button - only when required fields for this path are selected */}
       {canSave && (
         <View style={styles.saveRow}>
@@ -1115,5 +1167,17 @@ const styles = StyleSheet.create({
   },
   saveRow: {
     marginTop: spacing.lg,
+  },
+  saveRefusalRow: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,122,133,0.12)',
+  },
+  saveRefusalText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text.secondary,
   },
 });

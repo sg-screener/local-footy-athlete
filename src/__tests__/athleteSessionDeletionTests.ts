@@ -18,6 +18,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -60,6 +61,7 @@ import {
   normalizeReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
 import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 
 const WEEK = '2026-07-13';
 const FRIDAY = '2026-07-17';
@@ -80,6 +82,34 @@ let properties = 0;
 let mutations = 0;
 const failures: string[] = [];
 
+/**
+ * DECLARED-RED — a measured defect that is CHARACTERISED but not yet ruled, and
+ * which owes the deletion of its own entry in the commit that pays it. An
+ * UNDECLARED red still fails outright, and a declared red that stops redding
+ * fails the suite until its entry is removed.
+ *
+ * Regressions 15 and 17 were declared here on 2026-08-06 and PAID the same day:
+ * an accepted-week repair destroyed the week's offer and nothing could restore
+ * it, because there was exactly one placer and it ran only at generation. Sam's
+ * ruling (`docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`) made the offer a
+ * property of the week at all times, and the shared owner
+ * (`rules/section18OfferPlacement`) now presents it at the one point every path
+ * converges. Both cells green on their ORIGINAL signed sentences — the "I also
+ * rebalanced Monday" clause is gone because nothing needs rebalancing.
+ *
+ * The list is empty and the mechanism stays armed: it is what makes the next
+ * declared red pay for itself too.
+ */
+interface DeclaredRed {
+  readonly id: string;
+  readonly matches: RegExp;
+  readonly paidBy: string;
+}
+
+const DECLARED_RED: ReadonlyArray<DeclaredRed> = [];
+
+const declaredRedHits = new Set<string>();
+
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
 }
@@ -92,6 +122,19 @@ function run(kind: 'regression' | 'property' | 'mutation', name: string, body: (
     else mutations += 1;
     console.log(`  PASS [${kind}] ${name}`);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const declared = DECLARED_RED.find(
+      (entry) => entry.id === name && entry.matches.test(message),
+    );
+    if (declared) {
+      declaredRedHits.add(declared.id);
+      if (kind === 'regression') regressions += 1;
+      else if (kind === 'property') properties += 1;
+      else mutations += 1;
+      console.log(`  RED (declared, paid by ${declared.paidBy}) [${kind}] ${name}`);
+      console.log(`      ${message.split('\n')[0]}`);
+      return;
+    }
     failures.push(`${kind}: ${name}`);
     console.error(`  FAIL [${kind}] ${name}`, error);
   }
@@ -209,7 +252,7 @@ function seed(args: {
 function accepted(weekStart = WEEK) {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -284,6 +327,61 @@ function deleteThroughRealSheetDoor(
   return result;
 }
 
+/**
+ * MONDAY–FRIDAY'S WORK, AS THE ATHLETE SEES IT — the comparable half of "a
+ * Sunday deletion changes nothing else".
+ *
+ * `row.workoutId` used to be pinned here and was REMOVED on 2026-08-06 after
+ * being measured, not after being argued with. R5.3 leg (i) made the fixture
+ * door publish its DECLARATION and never its content, so the week that exists
+ * immediately after a fixture decision is DERIVED from the microcycle and its
+ * rows carry the plain parent id (`w-coach-1`), while the week an accepted
+ * deletion PUBLISHES is materialised through the week overlay and carries
+ * `w-coach-1:week-overlay:2026-07-13`. The snapshot therefore straddled a
+ * derive->publish boundary and pinned the one field that boundary renames.
+ *
+ * Measured before changing: on `feat/stage-b-stage2` this cell is green, and
+ * the state AFTER the deletion is BYTE-IDENTICAL on both branches — same
+ * overlay, same reason, same ids. Only the pre-deletion snapshot moved, and it
+ * moved because leg (i) intended it to. Friday proves the suffix is namespacing
+ * and not content: `exact-accessories:2026-07-17` already carried it on BOTH
+ * sides of the comparison, on both branches, before anything was deleted.
+ *
+ * The claim the field was standing in for is kept and made explicit instead —
+ * `assertRowParentJoins` pins that every row's parent key resolves to its own
+ * workout, which is what could actually break, and which a literal string
+ * comparison could never have told apart from a rename.
+ */
+function preservedDaySnapshot(): string {
+  return JSON.stringify([1, 2, 3, 4, 5].map((day) => {
+    const workout = byDay().get(day);
+    return {
+      day,
+      planEntryId: workout?.planEntryId ?? null,
+      name: workout?.name ?? null,
+      exercises: workout?.exercises.map((row) => ({
+        id: row.id,
+        exerciseId: row.exerciseId,
+        sets: row.prescribedSets,
+        repsMin: row.prescribedRepsMin,
+        repsMax: row.prescribedRepsMax,
+        weight: row.prescribedWeightKg,
+        rest: row.restSeconds,
+      })) ?? [],
+    };
+  }));
+}
+
+/** Every visible row's parent key resolves to the workout it is rendered under. */
+function assertRowParentJoins(label: string): void {
+  for (const [day, workout] of byDay()) {
+    for (const row of workout.exercises ?? []) {
+      assert(row.workoutId === workout.id,
+        `${label}: day ${day} row ${row.id} parents to ${row.workoutId}, not ${workout.id}`);
+    }
+  }
+}
+
 function seedExactSundayRegression(): {
   athlete: OnboardingData;
   sunday: Workout;
@@ -291,7 +389,7 @@ function seedExactSundayRegression(): {
 } {
   const athlete = profile();
   seed({ athlete, markedDays: { [SATURDAY]: 'game' } });
-  rebuildLocalWeek({
+  const rebuilt = rebuildLocalWeek({
     baseProfile: athlete,
     newGameDay: null,
     scope: 'weekOverlay',
@@ -300,10 +398,42 @@ function seedExactSundayRegression(): {
     todayISO: WEEK,
   });
   const state = useProgramStore.getState();
-  const overlay = clone(state.weekScopedOverlays[WEEK]);
+  // THE DOOR'S RETURN VALUE, not the store — R5.3 leg (i) (2026-08-06) stopped
+  // the fixture door publishing an overlay for the week it decides, and this
+  // seed was reading that published output back to get a materialised week to
+  // plant into. The replan is still computed and still returned; only the
+  // publication went. Nothing about what this seed BUILDS has changed.
+  const overlay = clone(state.weekScopedOverlays[WEEK] ?? rebuilt.overlay);
+  assert(overlay, 'the fixture rebuild produced no week for this seed to plant into');
+  // THE CONDITIONING TEMPLATE COMES FROM THE DERIVED WEEK, not from a
+  // published payload (seat answer 2, 2026-08-07 — fixture-fidelity class).
+  //
+  // `hard` is a TEMPLATE, cloned into the Sunday `Hard Intervals` this seed
+  // needs and (absent an optional source) into the Saturday `Gunshow`. Both
+  // days are then overwritten below, so nothing this seed BUILDS depends on
+  // where the template was read from.
+  //
+  // The order below is the point. This used to read `overlay.workoutsByDate`
+  // FIRST — the fixture door's published replan — and fall back to the derived
+  // week. That made 18 deletion cells depend on a STORED OUTPUT: when leg (v)
+  // stopped publishing the payload, 16 of them red at this line, and the totals
+  // read as "leg (v) costs 8 deletion cells" when not one of those cells is
+  // about publication (docs/R53_FREED_DAY_PRODUCER_NAMED_2026-08-07.md).
+  //
+  // Reading the DERIVED week first is the north star applied to a fixture:
+  // store only decisions, derive everything else. The published payload stays
+  // as the fallback so the seeded world is unchanged where both agree — and
+  // these cells are about DELETION, so their coordinate must not drift.
   const hard = accepted().visibleWorkouts.find((workout) =>
-    /Hard Conditioning/i.test(workout.name));
-  assert(hard, 'bye-build hard conditioning precondition missing');
+    /Hard Conditioning/i.test(workout.name))
+    ?? Object.values(overlay.workoutsByDate).find((workout) =>
+      !!workout && /Hard Conditioning/i.test(workout.name));
+  assert(hard, 'bye-build hard conditioning template missing from both the derived week '
+    + `and the rebuilt week; derived reads ${JSON.stringify(
+      accepted().visibleWorkouts.map((workout) => `${workout.dayOfWeek}:${workout.name}`))}`
+    + `, rebuilt reads ${JSON.stringify(
+      Object.entries(overlay.workoutsByDate).map(([date, workout]) =>
+        `${date}:${workout?.name ?? 'REST'}`))}`);
   const optionalSource = accepted().visibleWorkouts.find((workout) =>
     workout.sessionTier === 'optional' && workout.dayOfWeek !== 6);
   const gunshow: Workout = optionalSource
@@ -357,24 +487,7 @@ function seedExactSundayRegression(): {
   useProgramStore.setState({
     weekScopedOverlays: { ...state.weekScopedOverlays, [WEEK]: overlay },
   });
-  const preservedDays = JSON.stringify([1, 2, 3, 4, 5].map((day) => {
-    const workout = byDay().get(day);
-    return {
-      day,
-      planEntryId: workout?.planEntryId ?? null,
-      name: workout?.name ?? null,
-      exercises: workout?.exercises.map((row) => ({
-        id: row.id,
-        workoutId: row.workoutId,
-        exerciseId: row.exerciseId,
-        sets: row.prescribedSets,
-        repsMin: row.prescribedRepsMin,
-        repsMax: row.prescribedRepsMax,
-        weight: row.prescribedWeightKg,
-        rest: row.restSeconds,
-      })) ?? [],
-    };
-  }));
+  const preservedDays = preservedDaySnapshot();
   assert(byDay().get(0)?.name === 'Hard Intervals', 'Sunday hard-interval seed failed');
   assert(byDay().get(5)?.name === 'Accessories', 'Friday Accessories seed failed');
   assert(byDay().get(6)?.name === 'Gunshow', 'Saturday Gunshow seed failed');
@@ -468,26 +581,10 @@ run('regression', '1 exact Sunday CORE conditioning deletion relocates to Saturd
     'lower-priority Saturday Gunshow survived required relocation');
   assert(week.evaluation.ledger.conditioning.coreCount === 3,
     `conditioning=${week.evaluation.ledger.conditioning.coreCount}`);
-  const preservedDaysAfter = JSON.stringify([1, 2, 3, 4, 5].map((day) => {
-    const workout = map.get(day);
-    return {
-      day,
-      planEntryId: workout?.planEntryId ?? null,
-      name: workout?.name ?? null,
-      exercises: workout?.exercises.map((row) => ({
-        id: row.id,
-        workoutId: row.workoutId,
-        exerciseId: row.exerciseId,
-        sets: row.prescribedSets,
-        repsMin: row.prescribedRepsMin,
-        repsMax: row.prescribedRepsMax,
-        weight: row.prescribedWeightKg,
-        rest: row.restSeconds,
-      })) ?? [],
-    };
-  }));
+  const preservedDaysAfter = preservedDaySnapshot();
   assert(preservedDaysAfter === seeded.preservedDays,
     `Monday–Friday changed\nbefore=${seeded.preservedDays}\nafter=${preservedDaysAfter}`);
+  assertRowParentJoins('after Sunday deletion');
   const hardCredits = week.evaluation.ledger.conditioning.credits.filter((credit) =>
     credit.source === 'app' && credit.stress === 'hard');
   assert(hardCredits.length === 1 && hardCredits[0].dayOfWeek === 6,
@@ -873,9 +970,37 @@ run('regression', '11 impossible relocation records typed reduction and keeps de
   assert(reductions.length > 0 && reductions.every((entry) =>
     entry.affectedWeek === WEEK && entry.deletionIdentity === constraint.id),
   `reductions=${JSON.stringify(after.contract.authorisedReductions)}`);
+  // SCOPE RULED, THEN MEASURED (review seat,
+  // `docs/CORE_PLACER_NAMING_AND_SCOPE_RULING_2026-08-06.md` §2): a repair that
+  // ADDS work fires only on a commit whose outcome is ACCEPTED, never inside a
+  // refusal. This world was measured onto the accepted side — `previewPlanChangeRisk`
+  // and `applyPlanChange` both returned ok, the deletion stands, and
+  // `blockingViolations` is empty. The "impossible" in this cell's name is the
+  // RELOCATION of the displaced strength work, not the commit. So the core placer
+  // is in scope here and the confirmation owes the honest disclosure of every day
+  // it touched (invariant #4) — Tuesday is named because Tuesday changed.
   assert(result.message ===
-    'Session removed. This week’s strength target has been reduced at your request.',
+    'Session removed. This week’s strength target has been reduced at your request.'
+    + ' I also rebalanced Tuesday to keep your week balanced.',
   `message=${result.message}`);
+  // WHAT THE PLACER CONSUMED, PINNED SO IT CAN NEVER SILENTLY INVERT. Measured
+  // against the same world with the candidate generator disabled: the pre-placer
+  // path answered this deletion by REDUCING the conditioning minimum 3 -> 2 under
+  // `explicit_user_override` ("relocation and substitution were exhausted"). A
+  // placement is now available, so that precondition is false and the concession
+  // is correctly withdrawn — the athlete's strength reduction is authorised and
+  // disclosed, and their conditioning minimum is DELIVERED instead of quietly cut.
+  const conditioningCore = after.contract.conditioning.core;
+  assert(conditioningCore.unresolvedMinimumShortfall === 0 &&
+    conditioningCore.achievedCount >= conditioningCore.requiredMinimum,
+  `conditioning core unmet: ${JSON.stringify(conditioningCore)}`);
+  assert(!after.contract.conditioning.reductions.some((entry) =>
+    entry.reason === 'explicit_user_override'),
+  `deletion cut the conditioning minimum instead of delivering it: ${
+    JSON.stringify(after.contract.conditioning.reductions)}`);
+  const rebalanced = after.visibleWorkouts.find((workout) => workout.dayOfWeek === 2);
+  assert(rebalanced && rebalanced.sessionTier === 'core',
+    `disclosed Tuesday carries no core session: ${rebalanced?.name ?? 'nothing'}`);
   reloadAcceptedState(athlete);
   assert(accepted().contract.authorisedReductions.some((entry) =>
     entry.deletionIdentity === constraint.id && entry.affectedWeek === WEEK),
@@ -1340,6 +1465,65 @@ run('regression', '22 Restore removes only its typed reduction and preserves an 
     candidate.linkedTypedReductions.some((entry) =>
       entry.deletionIdentity === owned.deletionIdentity)),
   'lossless migration did not link the existing typed reduction by deletion identity');
+
+  // ── LR-26's READ-INGRESS LIFT, on a record in the SUPERSEDED shape ────────
+  //
+  // A ledger already on the athlete's phone carries full afterWorkout /
+  // afterDateOverride / afterOverrideContext objects and none of the three
+  // fields that replaced them. L15 says the old shape survives only as a lift
+  // at the boundary, so this builds a record in that exact shape and hydrates
+  // it. Without this cell the lift is code nothing runs — the very failure the
+  // instrumentation rule names.
+  //
+  // BOTH DIRECTIONS: the lift must RECOVER what the readers consume (identity
+  // and the two fingerprints) and must DROP the legacy keys, or an existing
+  // install keeps paying the payload this unit deleted.
+  {
+    const legacyDay = {
+      date, weekStart: WEEK,
+      beforeWorkout: null,
+      afterWorkout: { id: 'legacy-after', planEntryId: 'legacy:plan:entry', exercises: [] },
+      beforeDateOverride: null,
+      afterDateOverride: { id: 'legacy-override', exercises: [] },
+      beforeOverrideContext: null,
+      afterOverrideContext: { intent: 'program_adjustment' },
+      beforeFingerprint: 'before', afterFingerprint: 'after',
+    };
+    const legacyRecord = {
+      ...clone(adjustment),
+      displacedOriginalState: {
+        ...clone(adjustment.displacedOriginalState),
+        ownedDays: [legacyDay],
+      },
+    };
+    const lifted = normalizeReversibleAdjustmentLedger({
+      value: { adjustments: [legacyRecord] } as never,
+      acceptedRevision: state.acceptedMaterialContext.revision,
+    });
+    const liftedDay = lifted.adjustments[0]?.displacedOriginalState.ownedDays[0] as
+      unknown as (Record<string, unknown> & {
+        afterStableIdentity?: string | null;
+        afterDateOverrideFingerprint?: string;
+        afterOverrideContextFingerprint?: string;
+      }) | undefined;
+    assert(!!liftedDay, 'the lift dropped the owned day entirely');
+    assert(liftedDay.afterStableIdentity === 'legacy:plan:entry',
+      'the lift did not recover the after identity the readers consume — a legacy '
+      + `record would lose its stable identity (got ${String(liftedDay.afterStableIdentity)})`);
+    assert(liftedDay.afterDateOverrideFingerprint ===
+      semanticFingerprint(legacyDay.afterDateOverride),
+    'the lift did not recover the afterDateOverride fingerprint, so undo verification '
+    + 'would refuse on an unchanged world');
+    assert(liftedDay.afterOverrideContextFingerprint ===
+      semanticFingerprint(legacyDay.afterOverrideContext),
+    'the lift did not recover the afterOverrideContext fingerprint');
+    for (const dead of
+      ['afterWorkout', 'afterSurfaceWorkout', 'afterDateOverride', 'afterOverrideContext']) {
+      assert(!(dead in liftedDay),
+        `the lift kept the superseded key "${dead}" — an existing install would go on `
+        + 'storing the copies this unit deleted');
+    }
+  }
   const program = clone(state.currentProgram);
   assert(program, 'accepted program missing');
   const unrelatedMicrocycle = program.microcycles.find((microcycle) =>
@@ -1474,7 +1658,7 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
   const state = useProgramStore.getState();
   assert(state.userRemovalConstraints.length === 1, 'constraint missing from ProgramStore');
   assert(!rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -1568,7 +1752,17 @@ run('regression', 'a partial Bin names the survivor from ITS OWN rows, never the
 
 console.warn = originalWarn;
 console.log(`\nAthlete session deletion totals: regressions=${regressions}/24 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
-totalsPrinted(failures.length);
+
+// THE RATCHET: a declared red that stops redding owes the deletion of its entry.
+const staleDeclared = DECLARED_RED.filter((entry) => !declaredRedHits.has(entry.id));
+if (staleDeclared.length > 0) {
+  console.error(`DECLARED RED NO LONGER REDS — delete the entry:\n  ${
+    staleDeclared.map((entry) => `${entry.id} (paid by ${entry.paidBy})`).join('\n  ')}`);
+  totalsPrinted(failures.length + staleDeclared.length);
+  process.exitCode = 1;
+} else {
+  totalsPrinted(failures.length);
+}
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

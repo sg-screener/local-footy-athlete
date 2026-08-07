@@ -187,9 +187,17 @@ async function main(): Promise<void> {
       'hydrating an acted previous-build store REFUSED it: '
       + `${threw?.name} — ${threw?.message}. A previous build's own output is a `
       + 'legacy shape to lift, not a corrupt snapshot to reject.');
+    // R1.3 (shell rebuild, docs/SHELL_REBUILD_RULING_2026-08-05.md): boot
+    // restores NO outputs — the lift moved to the R2 migration, which reads
+    // the envelope this cell proves SURVIVES. The protected property was
+    // never "a program appears in memory"; it is "the athlete's only copy is
+    // neither refused nor destroyed".
     const state = useProgramStore.getState();
-    assert(state.currentProgram,
-      'hydration completed and left no program in the store');
+    assert(state.currentProgram === null,
+      'an old-shape envelope resurrected outputs through rehydrate — the '
+      + 'R1.3 boot law is broken');
+    assert(envelopeCarriesProgram(),
+      'hydration destroyed the previous-build envelope — R2 has nothing to migrate');
   });
 
   await run('a refusal never persists the state it refused into', async () => {
@@ -260,19 +268,41 @@ async function main(): Promise<void> {
       `hydrating a stored repeat_week overlay REFUSED it: ${threw?.name} — ${threw?.message}. `
       + 'A retired-writer overlay is a legacy shape to drop, not a corrupt snapshot to reject.');
 
+    // R1.3 (shell rebuild): the L15 drop lives in the canonicaliser, which
+    // is what the R2 migration reads this envelope through — exercise it
+    // directly, exactly as the slice-4 probe does. The live store holds no
+    // outputs at all now, which subsumes "the overlay did not survive".
     const live = useProgramStore.getState();
     assert(!live.weekScopedOverlays[retiredWeekStart],
       'the stored repeat_week overlay survived hydration — L15 requires it dropped');
-    assert(!!live.currentProgram && (live.currentProgram.microcycles?.length ?? 0) > 0,
+    const { canonicaliseHydratedState } = require('../store/programStore') as
+      typeof import('../store/programStore');
+    const canonical = canonicaliseHydratedState(mutatedState as never, {
+      ingressKind: 'legacy_precanonical',
+      profile: (JSON.parse(durable.get('profile-store') ?? '{}') as {
+        state?: { onboardingData?: unknown };
+      }).state?.onboardingData ?? {},
+    } as never);
+    const canonicalOverlays = (canonical.weekScopedOverlays ?? {}) as Record<string, unknown>;
+    assert(!canonicalOverlays[retiredWeekStart],
+      'the retired overlay survived the canonicaliser — L15\'s drop is gone from the R2 read path');
+    assert(!!canonical.currentProgram
+      && ((canonical.currentProgram as { microcycles?: unknown[] }).microcycles?.length ?? 0) > 0,
       'the program failed to derive after the retired overlay was dropped');
 
+    // R1.3: outputs never persist forward, so a NEW-shape envelope carrying
+    // ANY overlay would be the drop failing twice over. The untouched
+    // OLD-shape envelope keeping its overlay is the non-destruction law —
+    // it is the R2 migration's source material, and the canonicaliser above
+    // is what drops the overlay when R2 reads it.
     const { raw: persistedRaw } = programEnvelope();
-    const persistedOverlays = persistedRaw
-      ? (JSON.parse(persistedRaw) as { state?: { weekScopedOverlays?: Record<string, unknown> } })
-        .state?.weekScopedOverlays ?? {}
+    const persistedState = persistedRaw
+      ? (JSON.parse(persistedRaw) as { state?: Record<string, unknown> }).state ?? {}
       : {};
-    assert(!persistedOverlays[retiredWeekStart],
-      'the retired overlay was durably re-persisted after hydration — the drop must survive the write-back');
+    if ('inputs' in persistedState) {
+      assert(!('weekScopedOverlays' in persistedState),
+        'a new-shape envelope persists overlays — outputs are back on disk');
+    }
     void fixture;
   });
 

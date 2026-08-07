@@ -317,9 +317,32 @@ function applyCommonSafetyReductions(
       to: allowed.length,
       detail: `Active injury restrictions remove affected strength patterns: ${Array.from(blockedPatterns).join(', ')}.`,
     });
-    contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, allowed.length),
-      'injury_restriction',
-      `Active injury restrictions remove affected strength patterns: ${Array.from(blockedPatterns).join(', ')}.`);
+    // THE SECOND SITE THAT STATES THE FREQUENCY RULE, and the one that governs
+    // an off-season week's allocation. It capped `targetCount` at
+    // `allowed.length`, which is the pattern-count cap wearing the allocation's
+    // clothes; `section18SafetyPolicy` carries the matching ruling comment.
+    //
+    // CITATION CORRECTED 2026-08-06. This comment cited Bible `:4755` for the
+    // substitute-before-reduce rule ON INJURY. Line 4755 sits under EQUIPMENT
+    // ("Substitute before reducing frequency" — running, walking, ergs). The
+    // INJURY bands are authored separately at `:1920-1926` ("Pause affected
+    // training ... Use rest, recovery, or clearly unaffected training only"),
+    // `:2200` and `:4108`. Both rules point the same way here, so no behaviour
+    // rested on the wrong line — but the load-bearing citation for injury is not
+    // the one that was written, and a comment that cites the wrong section is
+    // how the next reader inherits the wrong rule.
+    //
+    // Bible `:1920-1926` / `:2200` / `:4108` — pause the affected work and use
+    // clearly unaffected training. The week keeps its count and fills the freed
+    // days with safe work; only a whole-body restriction removes the work
+    // itself. Where the calendar leaves no eligible day for the safe patterns,
+    // `lower_strength_g3`'s state-2 exception is what fills it — see the G-2
+    // quality-lower last resort in `coachingEngine.buildWeeklyPlan`.
+    if (allowed.length === 0) {
+      contract = reduceAllocationTarget(contract, 'main_strength', 0,
+        'injury_restriction',
+        `Active injury restrictions remove every main-strength pattern: ${Array.from(blockedPatterns).join(', ')}.`);
+    }
     const lowerBlocked = blockedPatterns.has('squat') || blockedPatterns.has('hinge');
     if (lowerBlocked) {
       contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'injury_restriction',

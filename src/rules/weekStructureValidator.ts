@@ -170,6 +170,15 @@ const NEURAL_PRIMER_BANNED_NAME_RX = /deadlift|\brdl\b|romanian|nordic/i;
  * ≤2 lower/power exercises, ≤3 sets, ≤3 reps, no hard hinge, no
  * deadlift/RDL/Nordic, not a full lower session. Anything unverifiable
  * (no exercises) is NOT a primer — unsure means strong warning.
+ *
+ * THIS IS THE AUTHORED DEFINITION OF THE ANCHOR'S SECOND STATE, and until
+ * 2026-08-06 it was a validator with nothing to validate: no placer in the app
+ * ever produced the shape it licenses. The producer is the G-2 quality-lower
+ * last resort in `coachingEngine.buildWeeklyPlan`, and the injury-authority
+ * suite asserts the session that placer ships still satisfies THIS function —
+ * so the licence and the thing licensed cannot drift apart.
+ *
+ * BIBLE_ANCHOR: lower_strength_g3
  */
 export function looksLikeNeuralPrimer(w: Workout): boolean {
   const exs = w.exercises ?? [];

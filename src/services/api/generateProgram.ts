@@ -26,6 +26,8 @@ import { useReadinessStore } from '../../store/readinessStore';
 import {
   buildBlockWeekStates,
   computeBlockBounds,
+  getMondayISOForDate,
+  type BlockBounds,
 } from '../../utils/programBlockState';
 import {
   applyGenerationConstraintsToProfile,
@@ -54,7 +56,9 @@ import {
 } from '../../rules/conditioningFeasibility';
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
-import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
+import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
+import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
+import type { AcceptedStateOperationKind } from '../../store/acceptedStateTransaction';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
 import { weakPointFocusFor } from '../../rules/weakPointFocus';
 import {
@@ -150,6 +154,25 @@ export interface GenerateProgramFromProfileOptions {
   /** 1-based training block number. Defaults to 1 for a fresh generated block. */
   blockNumber?: number;
   /**
+   * The Monday this block began on, stated by the caller that owns the grid
+   * (the stored block anchor, via `getBlockPositionForGeneration`).
+   *
+   * §18 ownership reassessment (2026-08-05, defect D1). Generation used to take
+   * the block NUMBER from that anchor and re-derive the block START from
+   * `todayISO`. The two agree only when `todayISO` is itself a block start, so
+   * re-authoring any later week of a block called it week 1 — and because the
+   * strength allocator alternates on `weekNumber % 2`, the mirror week's
+   * patterns were planned onto the real week. That is what refused a sick
+   * athlete's report: the composite week covered two patterns instead of four
+   * and §18 rejected it as `pattern_imbalance`.
+   *
+   * Omitting it keeps the fresh-block meaning — a first generation genuinely
+   * starts its block on the athlete's own week — which is exactly the contract
+   * `blockNumber` already has. Stating it and `blockNumber` from the same read
+   * is what makes the two owners one.
+   */
+  blockStartISO?: string;
+  /**
    * Active injury/readiness constraints to feed into generation before the
    * week is built. When omitted, generation reads the current local stores.
    */
@@ -164,6 +187,20 @@ export interface GenerateProgramFromProfileOptions {
    * illness_recovery mode during a scoped-regen commit.
    */
   temporarySourceFacts?: readonly TemporarySourceFact[] | null;
+  /**
+   * The athlete's pool preferences (exclusions and pins).
+   *
+   * L14 PAYMENT (Sam ratified 2026-07-30, Stage B stage 1 Task D). Domain
+   * logic must be callable from a plain test with explicit inputs, and
+   * generation had NO injection point for this: it read the store
+   * unconditionally at both call sites below, so a caller could not generate a
+   * week for a stated athlete without first mutating global state.
+   *
+   * The store read survives only as the BOUNDARY DEFAULT — omitting the option
+   * is the same read the engine did before, which is why the stage-B generation
+   * differential predicted (and measured) ZERO golden movement for this change.
+   */
+  athletePrefs?: AthletePoolPrefsArg;
   /** Explicit continuity input for pure callers; normal app paths use the live persisted program. */
   previousProgram?: TrainingProgram | null;
   seasonPhaseClock?: SeasonPhaseClock | null;
@@ -188,6 +225,18 @@ export interface GenerateProgramFromProfileOptions {
     governedFromISO: string;
     pinnedHistoryWorkouts: readonly Workout[];
   } | null;
+  /**
+   * Whether an unacceptable week is fatal HERE, in the vocabulary
+   * `acceptedStateTransaction` already ratified.
+   *
+   * §18 ownership reassessment (2026-08-05, defect D3). Absent means
+   * `restoration` — strict, exactly as generation has always behaved. A caller
+   * that is carrying out a FORWARD ATHLETE DECISION states `forward_decision`,
+   * and generation then publishes the best achievable week instead of throwing:
+   * it is not generation's place to veto a fact the athlete stated, and the
+   * transaction downstream already owns accept-and-disclose.
+   */
+  weekAcceptance?: AcceptedStateOperationKind;
 }
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
@@ -245,6 +294,24 @@ function topUpCandidateDays(args: {
 
 function dateFromISO(todayISO: string): Date {
   return new Date(`${todayISO}T12:00:00`);
+}
+
+/**
+ * The block this generation belongs to: STATED by the caller when it owns the
+ * grid, derived from the target date only when nobody does.
+ *
+ * §18 ownership reassessment (2026-08-05, D1). The re-derivation was never
+ * wrong for a fresh block — it is wrong for a caller that already knows, which
+ * is every mid-block regen. One function so both generation entry points read
+ * week identity from the same place.
+ */
+function generationBlockBounds(
+  options: GenerateProgramFromProfileOptions,
+  effectiveTodayISO: string,
+): BlockBounds {
+  // computeBlockBounds week-aligns and spans four weeks from whatever day it is
+  // given, so handing it the stated block start yields that block exactly.
+  return computeBlockBounds(dateFromISO(options.blockStartISO ?? effectiveTodayISO));
 }
 
 function currentPersistedProgram(
@@ -430,18 +497,40 @@ export function buildGeneratedMicrocycles(args: {
   /** Raw facts, threaded per-week to mint the illness_recovery week mode. */
   temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   weekLimit?: 1 | 4;
+  /**
+   * Which week a `weekLimit: 1` build must author. Not an extra owner: it is the
+   * caller's own target Monday, and the block position that week holds comes
+   * from `blockStartISO`. `weekLimit: 1` used to mean "the block's FIRST week",
+   * which is only the target week when the target IS a block start — the §18
+   * reassessment's D1 (2026-08-05).
+   */
+  targetWeekStartISO?: string;
+  /** See GenerateProgramFromProfileOptions.weekAcceptance. */
+  weekAcceptance?: AcceptedStateOperationKind;
   /** See GenerateProgramFromProfileOptions.remainderBoundary. */
   remainderBoundary?: {
     governedFromISO: string;
     pinnedHistoryWorkouts: readonly Workout[];
   } | null;
 }): Microcycle[] {
-  const states = buildBlockWeekStates({
+  const blockStates = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
     blockNumber: args.blockNumber ?? 1,
     seasonPhase: args.profile.seasonPhase,
     seasonPhaseClock: args.seasonPhaseClock,
-  }).slice(0, args.weekLimit ?? 4);
+  });
+  const targetWeekStartISO = args.targetWeekStartISO ?? args.blockStartISO;
+  const states = args.weekLimit === 1
+    ? blockStates.filter((state) => state.weekStart === targetWeekStartISO)
+    : blockStates;
+  // A single-week build that cannot find its week has been handed a block it
+  // does not belong to. Silently authoring week 1 instead is the defect this
+  // unit retired, so the disagreement is raised where it happens.
+  if (args.weekLimit === 1 && states.length !== 1) {
+    throw new Error(
+      `week ${targetWeekStartISO} is not in the block starting ${args.blockStartISO}`,
+    );
+  }
 
   return states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
@@ -617,11 +706,24 @@ export function buildGeneratedMicrocycles(args: {
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
     if (exposureContractV2) {
-      const accepted = requireSection18AcceptedWeek({
+      // THE GATE INFORMS; IT DOES NOT VETO A FACT (§18 ownership reassessment
+      // 2026-08-05, D3; approved by Sam). This threw unconditionally, so a week
+      // derived from an athlete's own stated fact could refuse the fact itself —
+      // the transaction rolled back and the report died. Callers carrying a
+      // forward athlete decision now say so and get the best achievable week;
+      // `assertAcceptedVisibleLedgerEquivalence` discloses the shortfall it
+      // already owns. Restorations are unchanged and still throw.
+      const accepted = acceptSection18Week({
+        operation: args.weekAcceptance ?? 'restoration',
         contract: exposureContractV2,
         workouts,
         weekStart: blockState.weekStart,
         profile,
+        // GENERATION MEANS THE WORLD IT IS BUILDING, and now says so rather
+        // than saying nothing (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+        // Wiring this door to the live world was measured and refuted — see
+        // `freshGenerationSurfaces` for the cell that paid for it.
+        surfaces: freshGenerationSurfaces(),
         // Edge-authored and deterministic candidates both regenerate from the
         // same phase-owned plan before the final safe fallback is considered.
         regenerate: () => ({
@@ -787,8 +889,7 @@ export function generateProgramLocally(
 ): TrainingProgram {
   const effectiveTodayISO = options.todayISO ?? todayISOLocal();
   const availabilityDateISO = effectiveTodayISO;
-  const today = dateFromISO(effectiveTodayISO);
-  const { blockStart, blockEnd } = computeBlockBounds(today);
+  const { blockStart, blockEnd } = generationBlockBounds(options, effectiveTodayISO);
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
   const baseProfile = normalizeOnboardingRole(onboardingData);
@@ -852,7 +953,7 @@ export function generateProgramLocally(
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
-    athletePrefs: getAthletePrefs(),
+    athletePrefs: options.athletePrefs ?? getAthletePrefs(),
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
@@ -861,6 +962,8 @@ export function generateProgramLocally(
       require('../../store/programStore').useProgramStore.getState()
         .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
+    targetWeekStartISO: getMondayISOForDate(effectiveTodayISO),
+    weekAcceptance: options.weekAcceptance,
     remainderBoundary: options.remainderBoundary ?? null,
   });
   const firstMicrocycle = microcycles[0];
@@ -891,6 +994,8 @@ export function generateProgramLocally(
     primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
     microcycles,
+    // R1.3 (shell rebuild): generation records its own anchor input.
+    generationAnchorISO: effectiveTodayISO,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -1659,8 +1764,7 @@ export async function generateProgramFromProfile(
   // are enforced deterministically — the AI is not trusted for these.
   let microcycles: Microcycle[];
   try {
-    const today = dateFromISO(effectiveTodayISO);
-    const { blockStart } = computeBlockBounds(today);
+    const { blockStart } = generationBlockBounds(options, effectiveTodayISO);
     microcycles = buildGeneratedMicrocycles({
       coachWorkouts: result.programUpdate.workouts,
       plan,
@@ -1671,7 +1775,7 @@ export async function generateProgramFromProfile(
       blockStartISO: blockStart,
       blockNumber: options.blockNumber ?? 1,
       seasonPhaseClock: phaseResolution.clock,
-      athletePrefs: getAthletePrefs(),
+      athletePrefs: options.athletePrefs ?? getAthletePrefs(),
       availableEquipmentTags: resolvedEquipmentTags,
       availableConditioningModalities: resolvedEquipment.conditioningModalities,
       generationConstraints,
@@ -1764,8 +1868,7 @@ export async function generateProgramFromProfile(
   // Build dates — aligned to calendar week boundaries (Mon-Sun).
   // The week containing "today" is Week 1. Block runs through
   // the Sunday of the 3rd full week after (4 weeks total).
-  const today = dateFromISO(effectiveTodayISO);
-  const { blockStart, blockEnd } = computeBlockBounds(today);
+  const { blockStart, blockEnd } = generationBlockBounds(options, effectiveTodayISO);
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');
 

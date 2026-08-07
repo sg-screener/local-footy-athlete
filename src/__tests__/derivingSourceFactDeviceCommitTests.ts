@@ -117,15 +117,21 @@ function seedDeviceExact(): string {
     onboardingData: d.profile, program: d.program, todayISO: d.anchorDate,
     programStore: {
       setCurrentProgram: (program) => { commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'deriving-device-commit-test:install',
         program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
           blockState: deriveStoredBlockStateFromProgram(program) },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: vws } as never); },
       setCurrentMicrocycle: (m) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'deriving-device-commit-test:mc', program: { currentMicrocycle: m },
         profile: d.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [] } as never),
       setTodayWorkout: (w) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'deriving-device-commit-test:today', program: { todayWorkout: w },
         profile: d.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts: [d.anchorDate] } as never),
     },

@@ -100,6 +100,10 @@ function useScheduleState(): ScheduleState & {
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   const manualOverrides = useProgramStore((s) => s.dateOverrides);
   const weekScopedOverlays = useProgramStore((s) => s.weekScopedOverlays);
+  // The athlete's bins. Subscribed from 2026-08-04 (precedence unification) —
+  // this adapter omitted the surface entirely, so the screen could not honour a
+  // removal the accepted week honours.
+  const userRemovalConstraints = useProgramStore((s) => s.userRemovalConstraints);
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
@@ -195,6 +199,19 @@ function useScheduleState(): ScheduleState & {
     currentMicrocycle,
     manualOverrides: manualOverrides || {},
     weekScopedOverlays: weekScopedOverlays || {},
+    userRemovalConstraints: userRemovalConstraints || [],
+    // The RECORD, from the same source in the same breath
+    // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). On the live path
+    // nothing has consumed the list, so the two are the same — they diverge
+    // only inside the §18 derivation, which blanks the input above and carries
+    // this one through.
+    removalDecisions: userRemovalConstraints || [],
+    // THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3,
+    // from the same accepted context this adapter already subscribes to. The
+    // declared rival carries it because a rival that answers the week's
+    // identity from storage while the owner derives it is the divergence the
+    // rival exists to be measured against.
+    temporarySourceFacts: acceptedContext.temporarySourceFacts,
     markedDays: markedDays || {},
     athleteContext,
     seasonPhase,

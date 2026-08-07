@@ -38,11 +38,8 @@ import {
   buildConditioningTemplate,
   buildDerivedSession,
   condEx,
-  conditioningFlavourToExerciseName,
-  conditioningCategoryToExerciseName,
-  conditioningWorkoutType,
+  flavourToCategory,
   isRunningBasedConditioning,
-  switchToOffFeetModality,
   tagAsShiftedFromRun,
   conditioningDateHash,
   selectDefaultAerobicErgModalityFromHash,
@@ -51,6 +48,20 @@ import {
   type ConditioningFeel,
   type ConditioningVariant,
 } from '../utils/sessionBuilder';
+import {
+  SPEED_FALLBACK_TEMPLATE,
+  composeConditioningRows,
+  composeSpeedRows,
+  demandCategoryFor,
+  offFeetAlternative,
+  renderableModalities,
+  rendersOffFeet,
+  resolveTemplateByName,
+  selectConditioningTemplate,
+  workoutTypeForCategory,
+  type AthleteConditioningCategory,
+  type ConditioningRole,
+} from '../rules/conditioningSelection';
 import { selectPowerExercise } from '../rules/powerExercisePool';
 import {
   deloadPowerDose,
@@ -802,6 +813,14 @@ function applyPhaseRepSchemeToExercise(
   if (!isStrengthPrescriptionContext(context) || exercise.prescriptionType && exercise.prescriptionType !== 'reps') {
     return exercise;
   }
+  // THE DOSE IS THE RULING HERE, so the phase scheme does not own it. Every
+  // other strength session takes its sets and reps from the phase because the
+  // phase is the right owner; `lower_strength_g3`'s state 2 is the one session
+  // whose sets and reps ARE the Bible sentence ("low reps ... 2x3 ... low
+  // volume"). A phase scheme applied on top rewrote 2x3 to 3x2-4, which is a
+  // heavy squat wearing the exception's name. Read as a variant, exactly as
+  // `conditioningVariant` is read — not a phrase match, not a day check.
+  if (context.planEntry?.strengthVariant === 'quality_low_volume') return exercise;
 
   const seasonPhase = context.seasonPhase!;
   const exerciseName = exercise.exercise?.name ?? '';
@@ -1029,7 +1048,7 @@ function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
 function fallbackNameForPlanEntry(entry: SessionAllocation): string {
   if (entry.isTeamDay) return 'Team Training';
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
-    return entry.speedBlock?.title ?? 'Quality Speed Micro-dose';
+    return entry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE;
   }
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
     return 'Recovery Session';
@@ -1058,10 +1077,39 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
     return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
   }
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
-    return [{ name: entry.speedBlock?.title ?? 'Quality Speed Micro-dose', sets: 1, repsMin: 1, repsMax: 1 }];
+    return [{ name: entry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE, sets: 1, repsMin: 1, repsMax: 1 }];
   }
   if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
+  // ── THE AUTHORED G-2 EXCEPTION, verbatim (BIBLE_ANCHOR: lower_strength_g3) ──
+  //
+  // Sam, Section 3: "g-2 if it's low range of motion, low reps, high quality
+  // i.e. 2x3 box squats to high box + 2x3 vertical jumps - low volume, not many
+  // exercises". These two rows ARE that sentence, and they are the same two
+  // rows `weekStructureValidatorTests` has been using as its neural-primer
+  // example since 2026-07-08.
+  //
+  // This branch sits ahead of every pattern branch on purpose: the planned
+  // pattern here is `squat`, so the generic single-squat block below (Back
+  // Squat 3x8-10 + Reverse Lunges + Leg Extension) would otherwise claim it and
+  // put a full hard lower session two days before a game.
+  //
+  // Row count, sets and reps are all load-bearing — `looksLikeNeuralPrimer`
+  // reads exactly them (≤2 lower/power exercises, ≤3 sets, ≤3 reps) and the
+  // injury-authority suite asserts the produced session still satisfies it.
+  // COPY: SIGNED by Sam 2026-08-06, shipped verbatim.
+  // `docs/G2_SIGNING_AND_LAST_RESORT_RULING_2026-08-06.md` §"Signed copy".
+  // Both sentences are quoted character-for-character, INCLUDING the en dash in
+  // the first — a signed sentence is signed as written, and silently
+  // normalising its punctuation is the same class of edit as rewording it.
+  if (entry.strengthVariant === 'quality_low_volume') {
+    return [
+      { name: 'High Box Squat', sets: 2, repsMin: 3, repsMax: 3,
+        notes: 'Low range of motion, high quality – stop well short of failure' },
+      { name: 'Vertical Jump', sets: 2, repsMin: 3, repsMax: 3,
+        notes: 'Quality reps, full recovery between sets' },
+    ];
   }
   // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
   // pump + prehab work, never main pressing — the previous fallthrough to
@@ -1335,6 +1383,7 @@ function buildConditioningBlock(
   flavour: 'aerobic' | 'tempo' | 'high-intensity',
   condBlock: WorkoutExercise[],
   attachedKind?: AttachedConditioningKind,
+  modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed',
 ): ConditioningBlock | undefined {
   if (!condBlock || condBlock.length === 0) return undefined;
 
@@ -1356,9 +1405,47 @@ function buildConditioningBlock(
         title: headlineName,
         description: '',
         exerciseIds: condBlock.map((ex) => ex.id),
+        ...(modality ? { modality } : {}),
       },
     ],
   };
+}
+
+/**
+ * The modality a combined conditioning block resolved to. Authored names
+ * never carry a machine word, so this is typed from the selection decision:
+ * the erg pick when the block renders off-feet, 'running' when the authored
+ * template renders on run only.
+ */
+function resolvedBlockModality(
+  templateName: string,
+  ergModality: ErgModality | undefined,
+  availableMachines?: ReadonlyArray<'bike' | 'air_bike' | 'row' | 'ski'>,
+): 'bike' | 'row' | 'ski' | 'running' | 'mixed' | undefined {
+  const template = resolveTemplateByName(templateName);
+  if (template && !rendersOffFeet(template)) return 'running';
+  const requested = ergModality === 'bike_erg' ? 'bike' : ergModality;
+  if (!template) {
+    return requested === 'bike' || requested === 'row' || requested === 'ski' || requested === 'mixed'
+      ? requested
+      : undefined;
+  }
+  // Clamp the erg pick to what the AUTHORED notes let this row render on —
+  // a ski stamp on a run/bike-only template would be an invented rendering.
+  const machines = new Set(
+    renderableModalities(template)
+      .filter((m) => m !== 'run')
+      .filter((m) => availableMachines === undefined || availableMachines.includes(m as never))
+      .map((m) => (m === 'air_bike' ? 'bike' : m)),
+  );
+  if (requested === 'mixed' && machines.has('row') && machines.has('ski')) return 'mixed';
+  if ((requested === 'bike' || requested === 'row' || requested === 'ski') && machines.has(requested)) {
+    return requested;
+  }
+  return machines.has('bike') ? 'bike'
+    : machines.has('row') ? 'row'
+    : machines.has('ski') ? 'ski'
+    : undefined;
 }
 
 function buildSpeedBlock(
@@ -1469,63 +1556,6 @@ interface PowerBlockSelectionInput {
    * block-stability rule.
    */
   blockId?: string;
-}
-
-function buildExercisesForSpeedBlock(
-  speedBlock: SpeedBlock | undefined,
-  dateStr: string,
-): WorkoutExercise[] {
-  if (!speedBlock) {
-    return buildConditioningTemplate('Free Sprint Session', dateStr, {
-      variant: 'micro_dose',
-    });
-  }
-
-  const prefix = `speed-${dateStr}-${speedBlock.id}`;
-  if (speedBlock.id.startsWith('late_offseason_low_risk_acceleration')) {
-    return [
-      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
-        '8-10min easy movement, skips, marches and 2-3 relaxed build-ups'),
-      distanceSpeedEx(`${prefix}-accels`, 'Short hills or controlled accelerations (10-15m)', 2, 4, 10, 15, 90,
-        '4-6 x 10-15m. Full walk-back rest. Crisp reps only, not grindy.'),
-    ];
-  }
-  if (speedBlock.id.startsWith('late_offseason_acceleration_build')) {
-    return [
-      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
-        '10min easy movement, sprint drills and 3 relaxed 10m build-ups'),
-      distanceSpeedEx(`${prefix}-accels`, 'Acceleration build reps (10-20m)', 2, 4, 10, 20, 120,
-        '4-6 x 10-20m accelerations. Full walk-back rest. Stop before speed drops.'),
-    ];
-  }
-  if (speedBlock.id.startsWith('late_offseason_build_up_intro')) {
-    return [
-      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
-        '10-12min easy movement, drills and 3 relaxed build-ups'),
-      distanceSpeedEx(`${prefix}-buildups`, 'Smooth build-ups (20-30m)', 2, 3, 20, 30, 150,
-        '3-5 x 20-30m build-ups. Smooth, not all-out. Full rest between reps.'),
-    ];
-  }
-
-  return buildConditioningTemplate('Free Sprint Session', dateStr, {
-    variant: 'micro_dose',
-  });
-}
-
-function distanceSpeedEx(
-  id: string,
-  name: string,
-  order: number,
-  sets: number,
-  repsMin: number,
-  repsMax: number,
-  rest: number,
-  notes: string,
-): WorkoutExercise {
-  return {
-    ...condEx(id, name, order, sets, repsMin, repsMax, rest, notes),
-    prescriptionType: 'distance',
-  };
 }
 
 function stripConditioningSuffix(focus: string): string {
@@ -1643,6 +1673,12 @@ export function buildWorkoutsFromCoach(
     tags: [...availableEquipment],
     conditioningModalities: [...conditioningModalities],
   };
+  // The athlete's machine set in the authored-template modality space —
+  // selection must not serve a row nothing they own can render.
+  const availableMachines = equipmentCapabilities.conditioningModalities
+    .filter((modality) => modality !== 'treadmill')
+    .map((modality) => (modality === 'bike_erg' ? 'bike' : modality)) as
+      Array<'bike' | 'air_bike' | 'row' | 'ski'>;
   const effectiveWeeklyPlan = weeklyPlan
     ? resolveWeeklyConditioningFeasibility(
         weeklyPlan.map((entry) => deloadPlanEntry(entry, deloadPolicy)),
@@ -1886,36 +1922,44 @@ export function buildWorkoutsFromCoach(
       continue;
     }
     const dateStr = syntheticDateStr(cw.dayOfWeek);
-    // Prefer category when the planner assigned one (off-season / pre-
-    // season). Falls back to flavour-based mapping for legacy phases.
-    let candidateName = planEntry.conditioningCategory
-      ? conditioningCategoryToExerciseName(
-          planEntry.conditioningCategory,
-          dateStr,
-          rotationContext?.miniCycleNumber,
-        )
-      : conditioningFlavourToExerciseName(planEntry.conditioningFlavour, dateStr);
-    // 4B standalone tempo modality law: when the engine ruled this week's
-    // tempo off-feet (typed field on the plan entry — the single
-    // representation of that decision), force the erg tempo template.
-    if (
-      planEntry.conditioningCategory === 'tempo' &&
-      planEntry.conditioningOffFeet &&
-      isRunningBasedConditioning(candidateName)
-    ) {
-      candidateName = 'Bike/Row/Ski Tempo Intervals';
-    }
     const isCombined = !!planEntry.hasCombinedConditioning;
     const attachedConditioningKind = isCombined
       ? planEntry.attachedConditioningKind ?? 'finisher'
       : undefined;
-    // Infer the strength region being paired on combined days so the
-    // conditioning builder can auto-shift to an ergometer when pairing a
-    // lower-body lift with sprint or glycolytic work. "Lower body" /
-    // "hip-dominant" / "squat" / "hinge" / "leg" all count as lower.
+    const selectionRole: ConditioningRole = isCombined
+      ? (attachedConditioningKind === 'component' ? 'component' : 'finisher')
+      : 'standalone';
+    // Infer the strength region being paired on combined days so selection
+    // can shift to an ergometer when pairing a lower-body lift with sprint
+    // or glycolytic work. "Lower body" / "hip-dominant" / "squat" / "hinge"
+    // / "leg" all count as lower.
     const strengthRegion: 'lower' | 'upper' | 'full' | undefined =
       !isCombined ? undefined
       : strengthRegionForPlanEntry(planEntry);
+    const selectionCategory: AthleteConditioningCategory =
+      demandCategoryFor(
+        (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+          ?? flavourToCategory(planEntry.conditioningFlavour),
+        planEntry.section18ConditioningRole,
+      )!;
+    // Selection over the 55 signed templates (Stage B switchover). The
+    // planner's category (or legacy flavour) names the demand; the engine's
+    // off-feet ruling (typed field) and the standing combined-day policy are
+    // selection CONSTRAINTS now, not hardcoded names. The policy is the old
+    // path's, unchanged: combined non-sprint conditioning renders off-feet
+    // (the lift owns the legs); combined sprint goes off-feet only when
+    // paired with a lower-body lift.
+    const legSparingOffFeet = isCombined
+      && (selectionCategory !== 'sprint' || strengthRegion === 'lower');
+    const selectedTemplate = selectConditioningTemplate({
+      category: selectionCategory,
+      dateStr,
+      miniCycleNumber: rotationContext?.miniCycleNumber,
+      offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
+      availableMachines,
+      role: selectionRole,
+    });
+    const candidateName = selectedTemplate.name;
 
     // ── Assign feel (density/psychological character) per session ──
     // Deterministic per date + category so sessions feel distinct but
@@ -2047,7 +2091,9 @@ export function buildWorkoutsFromCoach(
     // running, it MUST be converted off-feet. (Team days themselves
     // can't be converted — that's handled by the engine's H-PRE-12.)
     if (candidateIsRun && runStreak >= 3 && !isProtectedSpeed) {
-      // 3rd (or later) consecutive run — convert to off-feet.
+      // 3rd (or later) consecutive run — convert to off-feet: an authored
+      // template of the SAME quality that renders on a machine.
+      const offFeetTemplate = isCombined ? null : offFeetAlternative(candidateName, dateStr);
       const offFeet = isCombined
         ? buildConditioningTemplate(candidateName, dateStr, {
             combined: true,
@@ -2057,12 +2103,9 @@ export function buildWorkoutsFromCoach(
             ergModality: templateErgModality,
             variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
           })
-        : planEntry.conditioningVariant === 'reduced' && cat === 'aerobic_base'
-          ? buildConditioningTemplate(candidateName, dateStr, {
-              variant: 'reduced',
-              ergModality: templateErgModality,
-            })
-          : switchToOffFeetModality(candidateName, dateStr);
+        : offFeetTemplate
+          ? composeConditioningRows(offFeetTemplate, dateStr)
+          : null;
       if (offFeet && offFeet.length > 0) {
         const tagged = tagAsShiftedFromRun(offFeet);
         resolved = {
@@ -2155,18 +2198,25 @@ export function buildWorkoutsFromCoach(
     if (isStandaloneConditioning || isStandaloneSpeed) {
       const resolved = conditioningByDow.get(cw.dayOfWeek);
       const dateStr = syntheticDateStr(cw.dayOfWeek);
+      const standaloneCategory: AthleteConditioningCategory | undefined = isStandaloneSpeed
+        ? undefined
+        : demandCategoryFor(
+            (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+              ?? flavourToCategory(planEntry.conditioningFlavour!),
+            planEntry.section18ConditioningRole,
+          );
       const exerciseName = isStandaloneSpeed
-        ? 'Free Sprint Session'
+        ? (planEntry.speedBlock?.templateName ?? SPEED_FALLBACK_TEMPLATE)
         : resolved?.exerciseName
-        ?? (planEntry.conditioningCategory
-          ? conditioningCategoryToExerciseName(
-              planEntry.conditioningCategory,
-              dateStr,
-              rotationContext?.miniCycleNumber,
-            )
-          : conditioningFlavourToExerciseName(planEntry.conditioningFlavour!, dateStr));
+        ?? selectConditioningTemplate({
+          category: standaloneCategory!,
+          dateStr,
+          miniCycleNumber: rotationContext?.miniCycleNumber,
+          offFeet: planEntry.conditioningOffFeet === true || undefined,
+          availableMachines,
+        }).name;
       const condExercises = isStandaloneSpeed
-        ? buildExercisesForSpeedBlock(planEntry.speedBlock, dateStr)
+        ? composeSpeedRows(planEntry.speedBlock?.templateName, dateStr)
         : resolved?.exercises
         ?? buildConditioningTemplate(exerciseName, dateStr, {
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
@@ -2190,14 +2240,14 @@ export function buildWorkoutsFromCoach(
       const displayName = resolved?.shiftedFromRun || isReducedAerobicBase
         ? (headlineExerciseName || exerciseName)
         : isStandaloneSpeed
-          ? (planEntry.speedBlock?.title ?? 'Quality Speed Micro-dose')
+          ? (planEntry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE)
           : exerciseName;
       const condWorkoutType = isStandaloneSpeed
         ? 'Sprint-Intervals'
         : resolved?.shiftedFromRun
         || isReducedAerobicBase
         ? 'Conditioning'
-        : conditioningWorkoutType(exerciseName);
+        : workoutTypeForCategory(standaloneCategory ?? null, planEntry.tier === 'recovery' ? 'C' : undefined);
       const speedBlock = isStandaloneSpeed
         ? buildSpeedBlock(planEntry, condExercises)
         : undefined;
@@ -2370,7 +2420,14 @@ export function buildWorkoutsFromCoach(
       // Cross-cycle variation: rewrite AI-suggested name to the
       // rotation-selected pool variant when applicable. Non-pool exercises
       // (carry, core, isolation, anything untagged) pass through unchanged.
-      const resolvedName = rotationContext && poolUsage
+      // THE AUTHORED G-2 EXCEPTION NAMES ITS OWN MOVEMENT. Rotation is the
+      // cross-cycle VARIATION system for ordinary main lifts; here the movement
+      // is the ruling — "box squats to HIGH BOX" is the low-range-of-motion half
+      // of `lower_strength_g3`'s state 2, and rotating it to a Front or Back
+      // Squat would put a full-range squat two days before a game while still
+      // reading as the exception. BIBLE_ANCHOR: lower_strength_g3
+      const resolvedName = rotationContext && poolUsage &&
+        planEntry?.strengthVariant !== 'quality_low_volume'
         ? applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)
         : ex.name;
       const exercise = findOrCreateExercise(resolvedName);
@@ -2466,13 +2523,19 @@ export function buildWorkoutsFromCoach(
       const dateStr = syntheticDateStr(cw.dayOfWeek);
       const resolved = conditioningByDow.get(cw.dayOfWeek);
       const condExName = resolved?.exerciseName
-        ?? (planEntry.conditioningCategory
-          ? conditioningCategoryToExerciseName(
-              planEntry.conditioningCategory,
-              dateStr,
-              rotationContext?.miniCycleNumber,
-            )
-          : conditioningFlavourToExerciseName(planEntry.conditioningFlavour, dateStr));
+        ?? selectConditioningTemplate({
+          category: demandCategoryFor(
+            (planEntry.conditioningCategory as AthleteConditioningCategory | undefined)
+              ?? flavourToCategory(planEntry.conditioningFlavour),
+            planEntry.section18ConditioningRole,
+          )!,
+          dateStr,
+          miniCycleNumber: rotationContext?.miniCycleNumber,
+          offFeet: planEntry.conditioningOffFeet === true || undefined,
+          availableMachines,
+          role: (planEntry.attachedConditioningKind ?? 'finisher') === 'component'
+            ? 'component' : 'finisher',
+        }).name;
       const condBlock = resolved?.exercises
         ?? buildConditioningTemplate(condExName, dateStr, {
           combined: true,
@@ -2499,6 +2562,11 @@ export function buildWorkoutsFromCoach(
         planEntry.conditioningFlavour,
         condBlock,
         planEntry.attachedConditioningKind ?? 'finisher',
+        resolvedBlockModality(
+          condExName,
+          planEntry.ergModality as ErgModality | undefined,
+          availableMachines,
+        ),
       );
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);
@@ -2528,7 +2596,7 @@ export function buildWorkoutsFromCoach(
     let resolvedSpeedBlock: SpeedBlock | undefined;
     if (planEntry?.speedWorkKind === 'true_speed' && planEntry.speedPlacement === 'pre_lift') {
       const dateStr = syntheticDateStr(cw.dayOfWeek);
-      const speedExercises = buildExercisesForSpeedBlock(planEntry.speedBlock, dateStr);
+      const speedExercises = composeSpeedRows(planEntry.speedBlock?.templateName, dateStr);
       for (let i = 0; i < speedExercises.length; i++) {
         speedExercises[i].workoutId = workoutId;
         speedExercises[i].exerciseOrder = i + 1;
@@ -2605,6 +2673,12 @@ export function buildWorkoutsFromCoach(
         : {}),
       ...(planEntry?.strengthPatternContributions?.length
         ? { strengthPatternContributions: [...planEntry.strengthPatternContributions] }
+        : {}),
+      // Ruling 4a (Sam, 2026-08-06): the dose variant rides onto the day so the
+      // §18 power owners can see that this session's jump row is AUTHORED by the
+      // G-2 prescription rather than chosen by the weekly primer selector.
+      ...(planEntry?.strengthVariant && planEntry.strengthVariant !== 'standard'
+        ? { strengthVariant: planEntry.strengthVariant }
         : {}),
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),

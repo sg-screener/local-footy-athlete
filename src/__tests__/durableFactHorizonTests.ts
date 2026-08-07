@@ -136,6 +136,8 @@ function seedSpentWeekFriday(): void {
     programStore: {
       setCurrentProgram: (program) => {
         commitAcceptedStateTransaction({
+          // Harness seed: installs a world, never restores one.
+          operation: 'forward_decision',
           reason: 'fact-horizon-test:install',
           program: {
             currentProgram: program,
@@ -149,6 +151,8 @@ function seedSpentWeekFriday(): void {
         } as never);
       },
       setCurrentMicrocycle: (microcycle) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'fact-horizon-test:mc',
         program: { currentMicrocycle: microcycle },
         profile: seed.profile,
@@ -156,6 +160,8 @@ function seedSpentWeekFriday(): void {
         validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
       } as never),
       setTodayWorkout: (workout) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'fact-horizon-test:today',
         program: { todayWorkout: workout },
         profile: seed.profile,
@@ -168,6 +174,8 @@ function seedSpentWeekFriday(): void {
         const accepted = getAcceptedMaterialContext();
         const program = useProgramStore.getState().currentProgram!;
         commitAcceptedStateTransaction({
+          // Harness seed: installs a world, never restores one.
+          operation: 'forward_decision',
           reason: `fact-horizon-test:calendar_game:${date}`,
           markedDays: { ...accepted.markedDays, [date]: 'game' },
           profile: seed.profile,

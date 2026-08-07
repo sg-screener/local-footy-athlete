@@ -137,9 +137,30 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   },
   {
     templateId: 'metcon_offlegs',
+    // THE NAME IS PINNED, THE WORDS ARE NOT — the split is measured, not
+    // assumed. See docs/METCON_SPLIT_2026-08-05.md.
+    //
+    // Sam re-authored this session on 2026-08-05 (ruling (b): general MetCon,
+    // burpees in, off-legs identity retired) and signed the name "MetCon". The
+    // label is not applied yet: it becomes `workout.name`, and this repo has
+    // already MEASURED that session names are live matching keys the frozen
+    // coach router/executor string-compare (buttons/UI unit Task 11 — 2/9/972
+    // of 30,937 distinct inputs are live producers of frozen coach keys). Under
+    // LR-6's ratified boundary — "if the coach path would produce a different
+    // write, it stops" — renaming changes what a coach path DECIDES, so it
+    // pins to the coach rebuild.
+    //
+    // The DESCRIPTION decides nothing: same template, same bye-only placement,
+    // same offer-on-the-ask, same 28 minutes. It is athlete-rendered copy, so
+    // Sam's signed sentence applies NOW, replacing the PROPOSED reword that was
+    // parked at §11 and is hereby withdrawn. That is what carries the actual
+    // content of the re-authoring — burpees in, 60 s work / 30 s rest, and the
+    // "Mostly off legs." sentence retired.
     label: 'MetCon - Off-Legs',
     description:
-      '28min: 4 stations x 7 rounds - hard erg efforts (bike/row/ski/assault), carries and burpees. Vary work:rest from 1:2 up to 3:1. Mostly off legs.',
+      '28 min MetCon: rotate stations — ergs (bike/row/ski/assault), carries, '
+      + 'and burpees. 60 s work, 30 s rest. Hard but repeatable — enough '
+      + 'recovery to keep technique and output consistent every round.',
     category: 'work_capacity',
     byeOnly: true,
     durationMinutes: 28,

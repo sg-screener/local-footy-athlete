@@ -76,11 +76,15 @@ function conditioningEntry(workout: Workout): HarnessConditioningEntry[] {
   return workout.conditioningBlock.options.map((option) => {
     const text = `${option.title} ${option.description}`;
     const typed = (option as typeof option & { modality?: string }).modality;
-    const modality: HarnessConditioningEntry['modality'] = typed === 'bike' || /bike/i.test(text) ? 'bike'
-      : typed === 'row' || /row/i.test(text) ? 'row'
-        : typed === 'ski' || /ski/i.test(text) ? 'ski'
-          : typed === 'running' || /run|jog/i.test(text) ? 'running'
-            : /mixed/i.test(text) ? 'mixed_off_feet' : 'other';
+    // TYPED FIRST (Stage B switchover): authored template titles carry no
+    // machine word, so the option's typed modality is the only honest read.
+    // Text sniffing survives strictly as the legacy fallback.
+    const modality: HarnessConditioningEntry['modality'] = typed === 'mixed' ? 'mixed_off_feet'
+      : typed === 'bike' || (!typed && /bike/i.test(text)) ? 'bike'
+        : typed === 'row' || (!typed && /row/i.test(text)) ? 'row'
+          : typed === 'ski' || (!typed && /ski/i.test(text)) ? 'ski'
+            : typed === 'running' || (!typed && /run|jog/i.test(text)) ? 'running'
+              : !typed && /mixed/i.test(text) ? 'mixed_off_feet' : 'other';
     return {
       modality,
       intent: workout.conditioningCategory === 'aerobic_base' ? 'aerobic_base'

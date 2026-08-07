@@ -14,7 +14,7 @@ import {
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 import {
   canonicaliseAcceptedStateCandidate,
-  getCurrentBlockNumberForGeneration,
+  getBlockPositionForGeneration,
   useProgramStore,
 } from './programStore';
 import { useProfileStore } from './profileStore';
@@ -518,15 +518,34 @@ function commitDerivingSourceFactScopedRegen(args: {
     // 1. Generate the reduced week with the PENDING facts threaded, so the per-week
     //    context mints the illness_recovery mode / readiness reduction (the store is
     //    still fact-empty mid-transaction). Single microcycle — this week only.
+    //
+    //    THE WEEK'S IDENTITY IS STATED, NOT RE-DERIVED (§18 ownership
+    //    reassessment 2026-08-05, D1; approved by Sam). This passed only the
+    //    block NUMBER and let generation work the block START back out of
+    //    `todayISO` — so re-authoring the second week of a block planned the
+    //    FIRST week's strength patterns onto it (the allocator alternates on
+    //    `weekNumber % 2`). The composite week then covered two patterns instead
+    //    of four, §18 rejected it as `pattern_imbalance`, and the athlete's
+    //    stored fact was rolled back. One read of the one owner, position whole.
+    const blockPosition = getBlockPositionForGeneration(weekStart);
     const generated = generateProgramLocally(profile, {
       todayISO: weekStart,
-      blockNumber: getCurrentBlockNumberForGeneration(weekStart),
+      blockNumber: blockPosition.blockNumber,
+      blockStartISO: blockPosition.blockStart,
       previousProgram: currentProgram,
       seasonPhaseClock: currentProgram.seasonPhaseClock,
       activeConstraints: args.compatibility.activeConstraints.filter((constraint) =>
         isTemporarySourceFactConstraint(constraint)),
       temporarySourceFacts: args.normalizedFacts,
       microcycleLimit: 1,
+      // THE FACT IS THE ATHLETE'S; THE WEEK IS THE APP'S PROBLEM (§18 ownership
+      // reassessment 2026-08-05, D3; approved by Sam). This lane exists because
+      // the athlete stated something true about themselves. If the best week
+      // buildable around that statement still cannot meet its contract, that is
+      // a shortfall to publish and disclose — the same accept-and-reduce ruling
+      // this transaction already commits under (`operation: 'forward_decision'`
+      // below) — never grounds for generation to discard the statement.
+      weekAcceptance: 'forward_decision',
       remainderBoundary,
     });
     // 2. The regenerated microcycle becomes a sparse week overlay (the mutation

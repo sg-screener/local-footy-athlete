@@ -183,6 +183,8 @@ function seed(athlete: OnboardingData = profile()): void {
   // Faithful acceptance — establishes acceptedCompositionBase + profile snapshot
   // exactly as programStore's `program:hydration_acceptance` does.
   quiet(() => commitAcceptedStateTransaction({
+    // Harness seed: installs a world, never restores one.
+    operation: 'forward_decision',
     reason: 'readiness-ownership-test:acceptance',
     profile: athlete,
     validateWeekStarts: [WEEK],
@@ -236,17 +238,23 @@ function seedDeviceExact(): string {
     todayISO: dseed.anchorDate,
     programStore: {
       setCurrentProgram: (program) => { commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-install',
         program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
           blockState: deriveStoredBlockStateFromProgram(program) },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts,
       } as never); },
       setCurrentMicrocycle: (m) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-mc', program: { currentMicrocycle: m },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [],
       } as never),
       setTodayWorkout: (w) => commitAcceptedStateTransaction({
+        // Harness seed: installs a world, never restores one.
+        operation: 'forward_decision',
         reason: 'readiness-ownership-test:device-exact-today', program: { todayWorkout: w },
         profile: dseed.profile, preserveExactAcceptedWorkouts: true,
         validateWeekStarts: [dseed.anchorDate],
@@ -394,11 +402,21 @@ async function main(): Promise<void> {
 
   // ── Invariant R5 (part c — progression-baseline guard): a trimmed day must NOT
   // drag the athlete's future progression baseline down. The baseline builder
-  // reads ONLY `weightOverrides`; the trim is applied as a `dateOverride`, so
-  // next week's strength prescription must be byte-identical, and weightOverrides
-  // must stay untouched. This is the "lighter loads are planned, not a
-  // performance signal" guarantee, tested structurally.
-  await run('R5 progression-guard: a trimmed today leaves next week\'s strength prescription byte-identical', () => {
+  // reads ONLY `weightOverrides`, so next week's strength prescription must be
+  // byte-identical and weightOverrides must stay untouched. This is the
+  // "lighter loads are planned, not a performance signal" guarantee, tested
+  // structurally.
+  //
+  // CONVERTED 2026-08-04 (Option C item 4, the lighter-day derivation unit).
+  // This cell used to SIMULATE the channel — it seeded a manual override by
+  // hand and its comment named `dateOverride` as "the channel the real action
+  // uses". It now drives the REAL door and asserts the channel instead of
+  // assuming it: the trim is a derived effect of a readiness fact, so it lands
+  // on `weekScopedOverlays` (`reason: 'readiness_reduction'`, the surface
+  // programStore.ts:1179-1190 already declares to be "derived content authored
+  // by a fact, not by the athlete") and `dateOverrides` stays EMPTY. A cell
+  // that simulates a channel cannot notice when the channel changes.
+  await run('R5 progression-guard: a trimmed today leaves next week\'s strength prescription byte-identical', async () => {
     const nextMonday = addDays(WEEK, 7);
     const nextWeekStrengthWeights = (): Record<string, number> => {
       const week = resolveWeekWithConditioning(nextMonday, buildScheduleStateImperative());
@@ -416,16 +434,30 @@ async function main(): Promise<void> {
     seed();
     const control = nextWeekStrengthWeights();
 
-    // Apply the lighter-day trim to TODAY as a dateOverride (the channel the
-    // real action uses) — NOT a weightOverride.
+    // Through the REAL door, not a simulated channel.
     const monVisible = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
       .find((day) => day.date === WEEK)?.workout;
     assert(monVisible, 'precondition: MON visible workout present');
-    const trimmed = applyLighterDayTrim(monVisible as never);
-    assert(trimmed.changes.length > 0, 'precondition: the trim actually changed today');
-    seedManualOverride(WEEK, trimmed.workout as never, {
-      intent: 'program_adjustment',
-    } as never);
+    const trimPreview = applyLighterDayTrim(monVisible as never);
+    assert(trimPreview.changes.length > 0, 'precondition: the trim actually changed today');
+
+    const applied = await (require('../utils/lighterDayTransaction') as {
+      applyLighterDayForToday: (args: { date: string; todayISO: string }) => Promise<{
+        ok: boolean; message: string; changes: string[];
+      }>;
+    }).applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
+    assert(applied.ok, `the lighter-day door refused: ${applied.message}`);
+
+    // THE CHANNEL, asserted rather than assumed.
+    const overlay = (useProgramStore.getState().weekScopedOverlays ?? {})[WEEK];
+    assert(overlay && Object.prototype.hasOwnProperty.call(overlay.workoutsByDate, WEEK),
+      'the trim did not land on the week overlay — a fact-derived reduction '
+      + 'belongs on the surface that means "derived content authored by a fact"');
+    const overrides = useProgramStore.getState().dateOverrides ?? {};
+    assert(Object.keys(overrides).length === 0,
+      'the lighter-day trim wrote the ATHLETE\'S decision surface: '
+      + `${JSON.stringify(Object.keys(overrides))}. dateOverrides records decisions; `
+      + 'a trim derived from a readiness fact is not one.');
 
     // Guard against a vacuous pass: the override must actually be in effect this
     // week (fewer total strength sets on MON than before).

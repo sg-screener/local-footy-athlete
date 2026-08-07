@@ -13,6 +13,7 @@ import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
 } from './teamTraining';
+import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { getExerciseTags } from '../data/exerciseTags';
 import { resolveExerciseName } from './loadEstimation';
 import { hasPowerRow, isPowerRow } from '../rules/sessionRowCounting';
@@ -479,10 +480,17 @@ function workoutRowIds(row: any): string[] {
     .filter(Boolean);
 }
 
+/**
+ * THE THIRD CLONE HELPER. The D13 payment routed "both `cloneWorkout` helpers"
+ * through `composedOptionalMarker`; there were three. This one composes the
+ * ACCEPTED week's visible sections, so a split or a bin that leaves a composed
+ * optional day carrying conditioning is exactly the shape ruling 7-e forbids.
+ */
 function cloneWorkout(workout: Workout, overrides: Partial<Workout>): Workout {
   return {
     ...workout,
     ...overrides,
+    ...composedOptionalClearingPatch(overrides),
     exercises: (overrides.exercises ?? workout.exercises ?? []).map((row: any) => ({
       ...row,
       exercise: row.exercise ? { ...row.exercise } : row.exercise,

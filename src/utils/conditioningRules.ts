@@ -35,6 +35,7 @@ import {
   type ConditioningModality,
 } from '../data/exerciseTags';
 import type { SeasonPhase } from '../types/domain';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 
 // ─── Context Types ───
 
@@ -583,8 +584,13 @@ export function resolveConditioning(
   const eligibleTiers = getEligibleTiers(ctx, weekLog, dateTiers);
   if (eligibleTiers.length === 0) return null;
 
-  // Step 5: Get all conditioning exercises for eligible tiers
-  const allConditioning = Object.keys(CONDITIONING_META);
+  // Step 5: The selection pool is the AUTHORED sheet — Sam's 55 signed
+  // templates (Stage B switchover). The legacy CONDITIONING_META name
+  // vocabulary survives for rendering stored content, but nothing selects
+  // from it any more; every template name carries a META triple (curated
+  // ruling first, sheet-derived otherwise), so the tier/injury filters
+  // below work unchanged.
+  const allConditioning = CONDITIONING_TEMPLATES.map((template) => template.name);
   const tierFiltered = allConditioning.filter(name => {
     const meta = CONDITIONING_META[name];
     return meta && eligibleTiers.includes(meta.tier);

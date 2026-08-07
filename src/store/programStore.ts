@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { asyncStorageCompat } from './asyncStorageCompat';
+import { asyncStorageCompat, trackDurableWrite } from './asyncStorageCompat';
 import {
   DayOfWeek,
   TrainingProgram,
@@ -22,7 +22,8 @@ import {
 import {
   addDaysISO,
   deriveStoredBlockStateFromProgram,
-  getBlockNumberForDate,
+  resolveBlockGridPosition,
+  type BlockGridPosition,
   type StoredProgramBlockState,
 } from '../utils/programBlockState';
 import type { SessionComponentKind } from '../utils/sessionComponents';
@@ -69,7 +70,9 @@ import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
+import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
@@ -117,6 +120,10 @@ import {
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import {
+  microcycleCoversWeek,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -190,7 +197,12 @@ export function endProgramPersistenceStage(token: ProgramPersistenceStageToken):
 }
 
 export function serializeProgramStoreEnvelope(state: ProgramState): string {
-  return JSON.stringify({ state, version: PROGRAM_STORE_PERSISTENCE_VERSION });
+  // R1.3 (shell rebuild): every serialization of this store — zustand's and
+  // the transaction layer's out-of-band protocol alike — converges to the
+  // inputs-only shape here. The fat output envelope cannot reach disk.
+  return reduceProgramEnvelopeToInputs(
+    JSON.stringify({ state, version: PROGRAM_STORE_PERSISTENCE_VERSION }),
+  );
 }
 
 export async function readDurableProgramStoreEnvelope(): Promise<string | null> {
@@ -266,6 +278,19 @@ registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
   carriesMaterial: (envelope) => {
     try {
       const state = (JSON.parse(envelope) as { state?: Record<string, unknown> }).state ?? {};
+      // R1.3 (shell rebuild): the NEW shape's material is its INPUTS — the
+      // athlete's facts, results and generation anchors. The old shape's
+      // material stays a program with microcycles (parked/legacy payloads
+      // still pass this boundary).
+      if ('inputs' in state) {
+        const inputs = (state.inputs ?? {}) as Record<string, unknown>;
+        return (inputs.temporarySourceFacts as unknown[] ?? []).length > 0
+          || (inputs.injuryEpisodes as unknown[] ?? []).length > 0
+          || Object.keys(inputs.sessionFeedback as Record<string, unknown> ?? {}).length > 0
+          || Object.keys(inputs.weightOverrides as Record<string, unknown> ?? {}).length > 0
+          || inputs.generationAnchorISO != null
+          || inputs.seasonPhaseClock != null;
+      }
       const program = state.currentProgram as { microcycles?: unknown[] } | null | undefined;
       return !!program && (program.microcycles ?? []).length > 0;
     } catch {
@@ -273,6 +298,96 @@ registerQuarantineBoundary(PROGRAM_STORE_PERSISTENCE_KEY, {
     }
   },
 });
+
+/**
+ * Where a pre-rebuild (old-shape) program envelope is parked, byte-identical,
+ * before any new-shape write can destroy it. R2's one-time migration reads
+ * THIS copy; it is deleted in the first post-beta release, never in the
+ * release that reads it (standing condition 5). Declared here — at the store
+ * whose boundary enforces it — and re-exported by quiescentBoot.
+ */
+export const PRE_REBUILD_ENVELOPE_PARKING_KEY = 'program-store.pre-rebuild-envelope';
+
+/**
+ * THE GENERATION ANCHOR'S ONE OWNER (Sam's ruling, 2026-08-06).
+ *
+ * The anchor is a DECISION — the day the athlete's program was actually
+ * generated — and it is written in exactly one place: by generation itself,
+ * onto the program (`generateProgram.ts`). Every install door stamps the
+ * persisted anchor THROUGH HERE, so the value can never be authored by a
+ * caller's idea of today.
+ *
+ * Why this function exists rather than an inline read at each door: the two
+ * install doors disagreed. `commitRebuiltProgram` stamped the anchor and
+ * `programStore.setCurrentProgram` — the one ONBOARDING uses — did not, so a
+ * world built by editing carried its anchor and a world built by onboarding
+ * carried null. Boot then guessed today and re-anchored the whole program.
+ * Two doors, one input, one of them silent: the ownership defect underneath
+ * the symptom.
+ */
+export function generationAnchorForProgram(
+  program: { generationAnchorISO?: string } | null | undefined,
+): string | null {
+  return program?.generationAnchorISO ?? null;
+}
+
+/** An old-shape envelope carries stored outputs; the new shape carries `inputs`. */
+export function programEnvelopeIsOldShape(raw: string): boolean {
+  try {
+    const state = (JSON.parse(raw) as { state?: Record<string, unknown> }).state;
+    if (!state || 'inputs' in state) return false;
+    return 'currentProgram' in state || 'acceptedMaterialContext' in state;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * R1.3: reduce ANY outgoing program envelope to the inputs shape. Writers
+ * that still serialise the fat output envelope (the transaction layer's
+ * out-of-band persistence, zustand's post-migration write-back) converge to
+ * inputs-only at this one door; writers already sending the new shape pass
+ * through untouched.
+ */
+export function reduceProgramEnvelopeToInputs(value: string): string {
+  try {
+    const parsed = JSON.parse(value) as { state?: Record<string, any>; version?: unknown };
+    const state = parsed.state;
+    if (!state || 'inputs' in state) return value;
+    const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
+    return JSON.stringify({
+      state: {
+        inputs: {
+          generationAnchorISO: state.generationAnchorISO ?? null,
+          seasonPhaseClock: state.currentProgram?.seasonPhaseClock
+            ?? state.hydratedSeasonPhaseClock ?? null,
+          sessionFeedback: state.sessionFeedback ?? {},
+          weightOverrides: state.weightOverrides ?? {},
+          temporarySourceFacts: accepted.temporarySourceFacts ?? [],
+          injuryEpisodes: accepted.injuryEpisodes ?? [],
+        },
+      },
+      version: parsed.version,
+    });
+  } catch {
+    return value;
+  }
+}
+
+async function parkThenReduceProgramEnvelope(name: string, value: string): Promise<string> {
+  try {
+    const onDisk = await programStorageGetItem(name);
+    if (onDisk !== null && programEnvelopeIsOldShape(onDisk)) {
+      const parked = await asyncStorageCompat.getItem(PRE_REBUILD_ENVELOPE_PARKING_KEY);
+      if (parked === null) {
+        await asyncStorageCompat.setItem(PRE_REBUILD_ENVELOPE_PARKING_KEY, onDisk);
+      }
+    }
+  } catch {
+    // Parking is insurance for R2; it must never block or fail a live write.
+  }
+  return reduceProgramEnvelopeToInputs(value);
+}
 
 const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -298,10 +413,50 @@ const programStateStorage = {
       throw programPersistenceFailure('read', error);
     }
   },
-  setItem: async (name: string, value: string): Promise<void> => {
+  // The WHOLE body is tracked from the first tick: zustand voids this call,
+  // and `flushPendingStorageWrites` must see the write during the park's
+  // async prelude too, or the durability guarantee silently narrows.
+  setItem: (name: string, value: string): Promise<void> =>
+    trackDurableWrite(programStateStorageSetItemBody(name, value)),
+  removeItem: async (name: string): Promise<void> => {
+    const trace = currentAthleteActionTrace();
+    try {
+      await programStorageRemoveItem(name);
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'remove',
+        persistenceStore: name,
+        persistenceSucceeded: true,
+      });
+    } catch (error) {
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'remove',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: 'program_persistence_failed',
+        rejectingBoundary: 'programStateStorage.removeItem',
+        failureCategory: 'persistence_failure',
+      });
+      throw programPersistenceFailure('remove', error);
+    }
+  },
+};
+
+async function programStateStorageSetItemBody(name: string, value: string): Promise<void> {
+  {
     if (activeProgramPersistenceStage) {
       return;
     }
+    // R1.3 (shell rebuild) — TWO LAWS AT THE ONE WRITER BOUNDARY:
+    //
+    // 1. PARK BEFORE THE FIRST OVERWRITE. zustand persists the migrated
+    //    state back after rehydrating an old-version envelope, and the
+    //    transaction layer writes envelopes out-of-band — either could be
+    //    the write that destroys the only pre-rebuild copy. Whoever gets
+    //    here first parks the old envelope byte-identical for R2.
+    // 2. PERSISTED STATE IS INPUTS ONLY. Any writer still serialising the
+    //    fat output envelope has it reduced to the inputs shape HERE, at
+    //    the boundary — one door, every writer converges.
+    value = await parkThenReduceProgramEnvelope(name, value);
     // A REFUSAL MUST NEVER PERSIST THE STATE IT REFUSED INTO (Sam, 2026-07-30).
     //
     // This is the single writer boundary for this store, which is why the law
@@ -353,29 +508,8 @@ const programStateStorage = {
       });
       throw programPersistenceFailure('write', error);
     }
-  },
-  removeItem: async (name: string): Promise<void> => {
-    const trace = currentAthleteActionTrace();
-    try {
-      await programStorageRemoveItem(name);
-      emitAthleteActionEvent(trace, 'persistence_result', {
-        persistenceOperation: 'remove',
-        persistenceStore: name,
-        persistenceSucceeded: true,
-      });
-    } catch (error) {
-      emitAthleteActionEvent(trace, 'persistence_result', {
-        persistenceOperation: 'remove',
-        persistenceStore: name,
-        persistenceSucceeded: false,
-        originalRejectionCode: 'program_persistence_failed',
-        rejectingBoundary: 'programStateStorage.removeItem',
-        failureCategory: 'persistence_failure',
-      });
-      throw programPersistenceFailure('remove', error);
-    }
-  },
-};
+  }
+}
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -678,6 +812,18 @@ function legacyMigrationFallbackProfile(args: {
 
 function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
+  /**
+   * THE WORLD BEING HYDRATED, not the live one
+   * (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`, condition 3).
+   *
+   * This door was the one the entry census could never price — it never met a
+   * non-empty store in the witness set, and now it is clear why that was the
+   * wrong question. During hydration the live store still holds the PREVIOUS
+   * world; the truth is the snapshot arriving. Reading the store here would
+   * judge the incoming week against the outgoing one, which is the PROPOSAL
+   * defect wearing a different hat.
+   */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   phase?: string,
   phaseClock?: SeasonPhaseClock,
   profile?: OnboardingData | null,
@@ -776,6 +922,7 @@ function canonicaliseHydratedMicrocycle(
         workouts: safety.workouts,
         weekStart: microcycle.startDate.slice(0, 10),
         profile,
+        surfaces,
         regenerate: fallbackProfile
           ? () => require('../utils/postGenerationConstraintValidation')
               .buildSection18ProductionFallbackCandidate({
@@ -796,6 +943,15 @@ function canonicaliseHydratedMicrocycle(
     workouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
   }
+  // ── ROOT 1a — ONE OWNER FOR WORKOUT ORDER.
+  // The same seven sessions in two orders are two different byte-worlds, and
+  // no layer owned the order: the shortfall placer appends, regeneration
+  // day-orders, and JSON is order-sensitive, so hydration was not idempotent.
+  // Hydration is the composition owner, so it canonicalises the order exactly
+  // once — Monday-first week position, stable within a day.
+  const weekPosition = (day: number): number => (day === 0 ? 7 : day);
+  workouts = [...workouts].sort((a, b) =>
+    weekPosition(a.dayOfWeek) - weekPosition(b.dayOfWeek));
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
@@ -814,6 +970,8 @@ function canonicaliseHydratedMicrocycle(
 
 export function canonicaliseHydratedProgram(
   program: TrainingProgram,
+  /** The world being hydrated — see `canonicaliseHydratedMicrocycle`. */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   profile?: OnboardingData | null,
 ): TrainingProgram {
   // Defence in depth: this is exported and reachable without going through
@@ -831,6 +989,7 @@ export function canonicaliseHydratedProgram(
     microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
       canonicaliseHydratedMicrocycle(
         microcycle,
+        surfaces,
         clockedProgram.programPhase,
         clockedProgram.seasonPhaseClock,
         profile,
@@ -921,8 +1080,25 @@ function canonicaliseAcceptedBoundaryState(
   },
 ): Partial<ProgramState> {
   const effectiveTodayISO = options.todayISO ?? todayISOLocal();
+  // THE WORLD ARRIVING, composed once for every door in this function. The
+  // snapshot under hydration IS the evaluation context here; the live store
+  // still holds the world being replaced.
+  const hydratingSurfaces: AcceptedEffectiveWeekSurfaces =
+    composeAcceptedEffectiveWeekSurfaces({
+      currentProgram: persistedState.currentProgram ?? null,
+      currentMicrocycle: persistedState.currentMicrocycle ?? null,
+      dateOverrides: persistedState.dateOverrides ?? {},
+      weekScopedOverlays: persistedState.weekScopedOverlays ?? {},
+      // Nothing has consumed the arriving snapshot's removals yet, so the
+      // record and the application input are the same list.
+      removalDecisions: persistedState.userRemovalConstraints ?? [],
+    });
   let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
-    ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
+    ? canonicaliseHydratedProgram(
+        persistedState.currentProgram,
+        hydratingSurfaces,
+        options.profile,
+      )
     : persistedState.currentProgram;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
@@ -963,6 +1139,7 @@ function canonicaliseAcceptedBoundaryState(
   let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
+        hydratingSurfaces,
         phase,
         currentProgram?.seasonPhaseClock,
         options.profile,
@@ -1033,19 +1210,20 @@ function canonicaliseAcceptedBoundaryState(
       ]))
     : persistedState.weekScopedOverlays;
   const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
-    const overlay = weekScopedOverlays?.[mondayForDate(date)];
-    if (overlay?.exposureContractV2) return overlay.exposureContractV2;
-    const programMicrocycle = currentProgram?.microcycles.find((microcycle) =>
-      date >= microcycle.startDate.slice(0, 10) && date <= microcycle.endDate.slice(0, 10));
-    if (programMicrocycle?.exposureContractV2) return programMicrocycle.exposureContractV2;
-    if (
-      currentMicrocycle &&
-      date >= currentMicrocycle.startDate.slice(0, 10) &&
-      date <= currentMicrocycle.endDate.slice(0, 10)
-    ) {
-      return currentMicrocycle.exposureContractV2;
-    }
-    return undefined;
+    // THE FLIP, MOVE (ii) — one read door. NOTE the asymmetry, preserved
+    // exactly: the overlay is found by the week's MONDAY, the two microcycles
+    // by the DATE itself. Collapsing the two onto one coordinate would be a
+    // behaviour change wearing a refactor.
+    return selectStoredWeekDeclaration({
+      overlay: weekScopedOverlays?.[mondayForDate(date)],
+      coveringMicrocycle: currentProgram?.microcycles.find((microcycle) =>
+        microcycleCoversWeek(microcycle, date)),
+      currentMicrocycle: microcycleCoversWeek(currentMicrocycle, date)
+        ? currentMicrocycle
+        : null,
+      weekStart: mondayForDate(date),
+      reader: 'programStore.safetyContractForDate',
+    }) ?? undefined;
   };
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
@@ -1103,17 +1281,24 @@ function canonicaliseAcceptedBoundaryState(
         ? currentMicrocycle
         : undefined
     );
-    const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+    // THE FLIP, MOVE (ii) — one read door. `baseMicrocycle` above already
+    // folds the current-microcycle fallback in, so this caller has two.
+    const contract = selectStoredWeekDeclaration({
+      overlay,
+      coveringMicrocycle: baseMicrocycle,
+      weekStart,
+      reader: 'programStore.validateHydratedWeeks',
+    });
     if (!contract) continue;
 
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: {
+      surfaces: composeAcceptedEffectiveWeekSurfaces({
         currentProgram,
         currentMicrocycle,
         dateOverrides: dateOverrides ?? {},
         weekScopedOverlays: weekScopedOverlays ?? {},
-        userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
-      },
+        removalDecisions: persistedState.userRemovalConstraints ?? [],
+      }),
       weekStart,
       profile: options.profile,
       markedDays: options.markedDays ?? {},
@@ -1160,7 +1345,7 @@ function canonicaliseAcceptedBoundaryState(
         weekStart,
         profile: options.profile,
         activeFixtureDates,
-        userRemovalConstraints: persistedState.userRemovalConstraints,
+        surfaces: hydratingSurfaces,
         regenerate: buildFallback,
         safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
@@ -1170,9 +1355,38 @@ function canonicaliseAcceptedBoundaryState(
             weekStart,
             profile: options.profile,
             scheduleState: { markedDays: { ...(options.markedDays ?? {}) } },
-            userRemovalConstraints: persistedState.userRemovalConstraints,
+            surfaces: hydratingSurfaces,
           }),
       });
+    // R5.3 RESIDUAL PROBE (Sam's ruling, 2026-08-06: the residual is
+    // INSTRUMENTED BEFORE FIXING). An INSTRUMENT, not a gate — prints only
+    // under R53_PROBE=1 and is inert otherwise. What it answers: when the
+    // derived bye week is a core-conditioning session short, does the gateway
+    // repair it and the repair fail to reach the read, or does the gateway
+    // return the shortfall unrepaired?
+    if (process.env.R53_PROBE === '1') {
+      const ev = accepted.evaluation as unknown as {
+        blockingViolations?: { code: string }[];
+        advisoryViolations?: { code: string }[];
+      };
+      // `process.stdout` deliberately, not `console.log`: the suites that reach
+      // this path wrap their doors in `quiet()`, which replaces the console.
+      process.stdout.write('[R53_PROBE] gateway ' + JSON.stringify({
+        weekStart,
+        mode: accepted.contract?.identity?.mode,
+        status: accepted.status,
+        attempts: accepted.attempts,
+        repairs: (accepted.repairs ?? []).map((r: { kind: string }) => r.kind),
+        blocking: (ev.blockingViolations ?? []).map((v) => v.code),
+        advisory: (ev.advisoryViolations ?? []).map((v) => v.code),
+        coreMin: accepted.contract?.conditioning?.core?.requiredMinimum,
+        anchors: (accepted.contract?.anchors ?? [])
+          .map((a: { kind: string; dayOfWeek: number }) => `${a.kind}@${a.dayOfWeek}`),
+        canonicalByDay: accepted.canonicalWorkouts
+          .map((w: Workout) => `${w.dayOfWeek}:${w.name}`),
+        hadOverlay: !!overlay,
+      }) + '\n');
+    }
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
     );
@@ -1215,6 +1429,28 @@ function canonicaliseAcceptedBoundaryState(
       const after = acceptedByDay.get(dayOfWeek) ?? null;
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
+        // D-2 PROBE (Sam's ruling: measure first, LR-27 method). An INSTRUMENT,
+        // not a gate: it prints only under D2_PROBE=1 and is inert otherwise.
+        // What it answers is the parked question — does this branch overwrite
+        // content the athlete authored, how often, and with what?
+        if (process.env.D2_PROBE === '1') {
+          const stored = (dateOverrides as Record<string, unknown>)[date] as
+            { id?: string; name?: string; exercises?: unknown[] } | null;
+          const replacement = after as
+            { id?: string; name?: string; exercises?: unknown[] } | null;
+          // eslint-disable-next-line no-console
+          console.log('[D2_PROBE] in_place_repair', JSON.stringify({
+            date,
+            action: after ? 'overwrite' : 'delete',
+            storedName: stored?.name ?? null,
+            storedRows: (stored?.exercises ?? []).length,
+            storedBytes: JSON.stringify(stored ?? null).length,
+            replacementName: replacement?.name ?? null,
+            replacementRows: (replacement?.exercises ?? []).length,
+            replacementBytes: JSON.stringify(replacement ?? null).length,
+            sameId: !!stored?.id && stored.id === replacement?.id,
+          }));
+        }
         if (after) dateOverrides[date] = after;
         else delete dateOverrides[date];
       } else {
@@ -1504,6 +1740,17 @@ export interface ProgramState {
   blockState: StoredProgramBlockState | null;
 
   /**
+   * R1.3 (shell rebuild) — INPUT-CLASS fields. The generation anchor is the
+   * todayISO the program was last generated with (a fact: partial-week
+   * boundaries depend on it), stamped by commitRebuiltProgram and persisted
+   * in the inputs envelope so the quiescent boot regenerates the SAME
+   * program. The hydrated clock is the persisted phase decision, restored by
+   * merge for the boot's generation call.
+   */
+  generationAnchorISO?: string | null;
+  hydratedSeasonPhaseClock?: SeasonPhaseClock | null;
+
+  /**
    * One accepted material snapshot for all inputs that can change the visible
    * Section 18 week. Calendar/readiness/constraint stores are compatibility
    * mirrors; athlete-visible projection reads this context with the program
@@ -1701,6 +1948,8 @@ export const useProgramStore = create<ProgramState>()(
         const validatedOverrideContexts = acceptedSurfaces?.overrideContexts ?? candidateOverrideContexts;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Installing a program the athlete just asked to be built.
+          operation: 'forward_decision',
           reason: 'program:replace',
           todayISO: effectiveTodayISO,
           program: {
@@ -1714,6 +1963,14 @@ export const useProgramStore = create<ProgramState>()(
             blockState: validatedProgram
               ? deriveStoredBlockStateFromProgram(validatedProgram, effectiveTodayISO)
               : null,
+            // THE ANCHOR RIDES THE PROGRAM IT ANCHORS (Sam, 2026-08-06). This
+            // is the door ONBOARDING installs a first program through, and it
+            // was the only install door that did not stamp the anchor —
+            // `commitRebuiltProgram` did (`weekRebuild.ts`), so a world built
+            // by editing carried its anchor and a world built by onboarding
+            // did not. One home, one value, read off the program: never a
+            // caller's idea of today. `wornWorldBootTests` holds the line.
+            generationAnchorISO: generationAnchorForProgram(validatedProgram),
           },
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
             microcycle.startDate.slice(0, 10)) ?? [],
@@ -1734,6 +1991,12 @@ export const useProgramStore = create<ProgramState>()(
         const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // A SELECTION publishes no new week content: the week it re-gates is
+          // the one already accepted, and it reproduces exactly. So a blocker
+          // here never means "the stored snapshot is corrupt" — it means the
+          // athlete is opening the reduced week they themselves asked for, and
+          // under the strict verdict they could not open it at all.
+          operation: 'forward_decision',
           reason: 'program:select_microcycle',
           todayISO: effectiveTodayISO,
           program: {
@@ -1749,6 +2012,8 @@ export const useProgramStore = create<ProgramState>()(
         const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Same family as the selection above.
+          operation: 'forward_decision',
           reason: 'program:set_today_workout',
           todayISO: effectiveTodayISO,
           program: {
@@ -1788,6 +2053,9 @@ export const useProgramStore = create<ProgramState>()(
         try {
           applyProgramOverrideSliceWrite({
             writer: 'store_action',
+            // The athlete taking their own content off a day is the same
+            // decision as putting it there, in the other direction.
+            operation: 'forward_decision',
             reason: `override:remove:${date}`,
             next: {
               dateOverrides: updatedOverrides,
@@ -1813,6 +2081,10 @@ export const useProgramStore = create<ProgramState>()(
         try {
           applyProgramOverrideSliceWrite({
             writer: 'reset',
+            // "A named act, on the tape, writer `reset`" — onboarding
+            // completion, program create, profile reset. Every one of them is
+            // something the athlete just did.
+            operation: 'forward_decision',
             reason: 'override:clear_all',
             todayISO: effectiveTodayISO,
             next: {
@@ -1874,6 +2146,10 @@ export const useProgramStore = create<ProgramState>()(
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // An overlay is DERIVED content (the fixture-identity law, 7d9d3ee7):
+          // republishing it replays no athlete decision, so it cannot be judged
+          // as a corrupt snapshot.
+          operation: 'forward_decision',
           reason: `overlay:set:${validatedOverlay.weekStart}`,
           program: {
             weekScopedOverlays: {
@@ -1892,6 +2168,8 @@ export const useProgramStore = create<ProgramState>()(
         delete updated[weekStart];
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Derived content again — see `setWeekScopedOverlay`.
+          operation: 'forward_decision',
           reason: `overlay:remove:${weekStart}`,
           program: { weekScopedOverlays: updated },
           validateWeekStarts: [weekStart],
@@ -1903,6 +2181,8 @@ export const useProgramStore = create<ProgramState>()(
         const affectedWeeks = Object.keys(state.weekScopedOverlays);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          // Derived content again — see `setWeekScopedOverlay`.
+          operation: 'forward_decision',
           reason: 'overlay:clear_all',
           program: { weekScopedOverlays: {} },
           validateWeekStarts: affectedWeeks,
@@ -2044,496 +2324,57 @@ export const useProgramStore = create<ProgramState>()(
       name: PROGRAM_STORE_PERSISTENCE_KEY,
       storage: createJSONStorage(() => programStateStorage),
       version: PROGRAM_STORE_PERSISTENCE_VERSION,
-      migrate: (persistedState, persistedVersion) => {
-        const ingress = requireProgramHydrationIngress(persistedState, persistedVersion);
-        return {
-          ...(persistedState as Record<string, unknown>),
-          __programHydrationIngress: ingress,
-        };
-      },
+      // R1.3 (shell rebuild, docs/SHELL_REBUILD_PLAN_2026-08-05.md):
+      // PERSISTED STATE IS INPUTS ONLY. The envelope carries the phase clock
+      // (an athlete decision), the fact slices (injury episodes + temporary
+      // source facts, until R3 gives them their own input stores), and the
+      // results (session feedback, weight overrides). Outputs — the program,
+      // the accepted context, overlays, overrides — are DERIVED at boot
+      // (store/quiescentBoot.ts) and never stored. The hydration-migration
+      // category (ingress classification, legacy fact lifts, acceptance
+      // transactions, canonical readback) ceased to exist with them; an
+      // OLD-shape envelope is parked byte-identical for R2's one-time
+      // migration by parkPreRebuildEnvelopeIfPresent, and restores nothing
+      // here. quiescentBootTests holds the laws.
+      migrate: (persistedState) => persistedState,
+      partialize: (state) => ({
+        inputs: {
+          generationAnchorISO: state.generationAnchorISO ?? null,
+          seasonPhaseClock: state.currentProgram?.seasonPhaseClock ?? null,
+          sessionFeedback: state.sessionFeedback ?? {},
+          weightOverrides: state.weightOverrides ?? {},
+          temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts ?? [],
+          injuryEpisodes: state.acceptedMaterialContext?.injuryEpisodes ?? [],
+        },
+      }) as unknown as ProgramState,
       merge: (persisted, current) => {
-        const candidate = (persisted as (Partial<ProgramState> & {
-          __programHydrationIngress?: ProgramHydrationIngressClassification;
-        }) | undefined) ?? {};
-        const embeddedIngress = candidate.__programHydrationIngress;
-        const { __programHydrationIngress: _ignoredIngress, ...incomingWithoutIngress } = candidate;
-        const incomingRaw = incomingWithoutIngress as Partial<ProgramState>;
-        const ingress = embeddedIngress ?? requireProgramHydrationIngress(
-          incomingRaw,
-          PROGRAM_STORE_PERSISTENCE_VERSION,
-        );
-        programHydrationIngressForAcceptance = ingress;
-        const acceptedCanonical = ingress.kind === 'accepted_canonical';
-        const rawAcceptedContext = (incomingRaw.acceptedMaterialContext ?? {}) as
-          Partial<AcceptedMaterialContext>;
-        let acceptedContext = acceptedCanonical
-          ? projectAcceptedMaterialContextDerivedFields(incomingRaw.acceptedMaterialContext)
-          : normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
-        const normalizedSurfaces = normalizeAcceptedProgramSurfaces(incomingRaw);
-        if (acceptedCanonical && incomingRaw.reversibleAdjustmentLedger) {
-          normalizedSurfaces.reversibleAdjustmentLedger = incomingRaw.reversibleAdjustmentLedger;
-        }
-        let incoming = {
-          ...incomingRaw,
-          ...normalizedSurfaces,
-          acceptedMaterialContext: acceptedContext,
-        };
-        if (!acceptedCanonical) {
-          const rawLegacyConstraints = Array.isArray(rawAcceptedContext.activeConstraints)
-            ? rawAcceptedContext.activeConstraints.filter((constraint) =>
-                (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
-                ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
-                  constraint.type === 'equipment' || constraint.type === 'schedule') &&
-                  (constraint.temporarySourceFactIds?.length ?? 0) === 0))
-            : [];
-          const legacyFacts = migrateLegacyTemporarySourceFacts({
-            activeConstraints: rawLegacyConstraints,
-            activeInjury: acceptedContext.temporarySourceFacts.some((fact) => 'episodeId' in fact)
-              ? null
-              : rawAcceptedContext.activeInjury ?? acceptedContext.activeInjury,
-            readinessSignalsByDate: rawAcceptedContext.readinessSignalsByDate ?? {},
-            availabilityConstraints: acceptedProfileForContext(
-              acceptedContext,
-              {},
-            ).availabilityConstraints,
-            sourceSurface: 'program_store_hydration',
-          });
-          const migratedFacts = normalizeTemporarySourceFacts({
-            value: [...legacyFacts, ...acceptedContext.temporarySourceFacts],
-          });
-          if (migratedFacts.length > 0) {
-            const capturedAt = migratedFacts
-              .map((fact) => fact.createdAt)
-              .sort()[0] ?? new Date(0).toISOString();
-            acceptedContext = normalizeAcceptedMaterialContext({
-              ...acceptedContext,
-              temporarySourceFacts: migratedFacts,
-              acceptedCompositionBase: acceptedContext.acceptedCompositionBase ?? {
-                protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
-                capturedAt,
-                updatedAt: capturedAt,
-                sourceRevision: acceptedContext.revision,
-                provenance: 'legacy_after_state_only',
-                // A legacy envelope has no provable displaced before-state. Its
-                // current accepted after-state is the only safe rebase source.
-                surfaces: normalizeAcceptedProgramSurfaces(incoming),
-              },
-            });
-            incoming = { ...incoming, acceptedMaterialContext: acceptedContext };
-          }
-          const migrationContractsByWeek: Record<string, WeeklyExposureContractV2> = {};
-          for (const microcycle of incoming.currentProgram?.microcycles ?? []) {
-            if (microcycle.exposureContractV2) {
-              migrationContractsByWeek[microcycle.startDate.slice(0, 10)] =
-                microcycle.exposureContractV2;
-            }
-          }
-          if (incoming.currentMicrocycle?.exposureContractV2) {
-            migrationContractsByWeek[incoming.currentMicrocycle.startDate.slice(0, 10)] =
-              incoming.currentMicrocycle.exposureContractV2;
-          }
-          for (const [weekStart, overlay] of Object.entries(incoming.weekScopedOverlays)) {
-            if (overlay.exposureContractV2) {
-              migrationContractsByWeek[weekStart] = overlay.exposureContractV2;
-            }
-          }
-          incoming.reversibleAdjustmentLedger = normalizeReversibleAdjustmentLedger({
-            value: incomingRaw.reversibleAdjustmentLedger,
-            userRemovalConstraints: incoming.userRemovalConstraints,
-            acceptedRevision: acceptedContext.revision,
-            exposureContractsByWeek: migrationContractsByWeek,
-          });
-          if (acceptedContext.acceptedCompositionBase) {
-            acceptedContext = normalizeAcceptedMaterialContext({
-              ...acceptedContext,
-              acceptedCompositionBase: {
-                ...acceptedContext.acceptedCompositionBase,
-                surfaces: {
-                  ...acceptedContext.acceptedCompositionBase.surfaces,
-                  reversibleAdjustmentLedger: incoming.reversibleAdjustmentLedger,
-                },
-              },
-            });
-            incoming = {
-              ...incoming,
-              ...acceptedContext.acceptedCompositionBase.surfaces,
-              acceptedMaterialContext: acceptedContext,
-            };
-          }
-        }
-        const persistedState = canonicaliseHydratedState(
-          incoming,
-          {
-            ingressKind: ingress.kind,
-            profile: acceptedProfileForContext(
-              acceptedContext,
-              {},
-            ),
-          },
-        );
-        const merged = { ...current, ...persistedState } as ProgramState;
-        if (!merged.blockState) {
-          merged.blockState = deriveStoredBlockStateFromProgram(merged.currentProgram);
-        }
-        const trace = programHydrationTrace();
-        emitAthleteActionEvent(trace, 'hydrated_state_checked', {
-          hydrationSucceeded: true,
-          acceptedStateVersion: merged.acceptedMaterialContext.revision,
-          hydratedStateHash: athleteActionDiagnosticHash({
-            program: normalizeAcceptedProgramSurfaces(merged),
-            context: merged.acceptedMaterialContext,
+        const inputs = (persisted as {
+          inputs?: {
+            generationAnchorISO?: string | null;
+            seasonPhaseClock?: unknown;
+            sessionFeedback?: Record<string, unknown>;
+            weightOverrides?: Record<string, unknown>;
+            temporarySourceFacts?: unknown[];
+            injuryEpisodes?: unknown[];
+          };
+        } | undefined)?.inputs;
+        if (!inputs) return { ...current };
+        return {
+          ...current,
+          sessionFeedback: (inputs.sessionFeedback ?? {}) as ProgramState['sessionFeedback'],
+          weightOverrides: (inputs.weightOverrides ?? {}) as ProgramState['weightOverrides'],
+          generationAnchorISO: inputs.generationAnchorISO ?? null,
+          hydratedSeasonPhaseClock: (inputs.seasonPhaseClock ?? null) as ProgramState['hydratedSeasonPhaseClock'],
+          acceptedMaterialContext: normalizeAcceptedMaterialContext({
+            ...current.acceptedMaterialContext,
+            temporarySourceFacts: (inputs.temporarySourceFacts ?? []) as never,
+            injuryEpisodes: (inputs.injuryEpisodes ?? []) as never,
           }),
-          visibleWeekCount: Object.keys(merged.weekScopedOverlays).length,
-          activeRemovalConstraintCount: merged.userRemovalConstraints.length,
-        });
-        return merged;
-      },
-      onRehydrateStorage: () => {
-        programHydrationIngressForAcceptance = null;
-        return (_state, error) => {
-        programHydrationAccepted = false;
-        programHydrationAcceptancePromise = (async () => {
-          if (error) {
-            const trace = programHydrationTrace();
-            const hydrationReason = error instanceof ProgramHydrationIngressError
-              ? error.reason
-              : 'program_hydration_failed';
-            // The diagnostic events below are DEV-ONLY —
-            // `athleteActionDiagnosticsEnabled()` is false in a production
-            // build, so on a real device every emit here is a no-op and the
-            // thrown message was invisible. A hydration failure then looked
-            // like "the athlete's program is empty" with nothing to read.
-            //
-            // `logger.error` emits at every level in every build, so the
-            // message survives. This matters most for the invariant throws that
-            // reach here by design — a canonical context asserting a phase and
-            // subphase that contradict each other, for example: loud is the
-            // whole point of throwing, and it was being swallowed one layer up.
-            //
-            // Zustand catches this inside `persist`'s hydrate chain and routes
-            // it here once. There is no retry, so a throw degrades to in-memory
-            // defaults with a readable reason rather than a crash loop.
-            logger.error(
-              '[programStore] hydration failed; falling back to in-memory defaults.',
-              { reason: hydrationReason, message: error instanceof Error ? error.message : String(error) },
-            );
-            emitAthleteActionEvent(trace, 'hydrated_state_checked', {
-              hydrationSucceeded: false,
-              originalRejectionCode: hydrationReason,
-              rejectingBoundary: 'programStore.onRehydrateStorage',
-              failureCategory: 'persistence_failure',
-            });
-            emitAthleteActionEvent(trace, 'athlete_action_failed', {
-              outcome: 'failed',
-              internalResultCode: 'program_hydration_failed',
-              originalRejectionCode: hydrationReason,
-              rejectionCodes: [hydrationReason],
-              firstFailingBoundary: 'programStore.onRehydrateStorage',
-            });
-            clearProgramHydrationTrace();
-            return;
-          }
-          const hydrated = useProgramStore.getState();
-          // Publish the complete hydrated/migrated program and material context
-          // through the same coordinator used at runtime. Compatibility-store
-          // hydration may happen in any order; those stores never publish
-          // upstream and are replaced from this accepted context.
-          const trace = programHydrationTrace();
-          try {
-            const acceptedBefore = normalizeAcceptedMaterialContext(
-              useProgramStore.getState().acceptedMaterialContext,
-            );
-
-            // Nothing has ever been accepted on this device and there is no
-            // program to accept — a fresh install, mid-onboarding.
-            //
-            // This path used to commit an accepted-state transaction anyway,
-            // taking the store to revision 1 with an `acceptedProfileSnapshot`
-            // of the (empty) profile. That is an acceptance record no athlete
-            // ever made, and it is what armed `profileStore`'s mirror against
-            // onboarding, reverting every answer in memory.
-            //
-            // There is nothing to accept, migrate, or project here: no program,
-            // no facts, no prior revision. Recording an acceptance is a lie.
-            //
-            // Reassessment: docs/PROFILE_MIRROR_OWNERSHIP_REASSESSMENT_2026-07-24.md
-            // Proof: onboardingReliabilityTests case 0b.
-            if (!hydrated.currentProgram && acceptedBefore.revision === 0) {
-              emitAthleteActionEvent(trace, 'athlete_action_completed', {
-                outcome: 'accepted',
-                internalResultCode: 'hydration_no_accepted_state_to_project',
-              });
-              return;
-            }
-
-            if (programHydrationIngressForAcceptance?.kind === 'accepted_canonical') {
-              await runWithAthleteActionTrace(trace, async () => {
-                if (acceptedBefore.temporarySourceFacts.length > 0) {
-                  require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
-                    activeConstraints: acceptedBefore.activeConstraints,
-                    activeInjury: acceptedBefore.activeInjury,
-                  });
-                }
-                if (acceptedBefore.acceptedProfileSnapshot) {
-                  require('./profileStore').publishAcceptedProfileCompatibilityMirror(
-                    acceptedBefore.acceptedProfileSnapshot.onboardingData,
-                  );
-                }
-                await persistCanonicalHydratedEnvelopeReadback();
-                emitAthleteActionEvent(trace, 'athlete_action_completed', {
-                  outcome: 'accepted',
-                  internalResultCode: 'hydration_accepted_canonical_projection',
-                });
-              });
-              return;
-            }
-            const persistedState = async (key: string): Promise<Record<string, any>> => {
-              try {
-                const raw = await asyncStorageCompat.getItem(key);
-                if (!raw) return {};
-                const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
-                return parsed && typeof parsed === 'object' && 'state' in parsed
-                  ? parsed.state ?? {}
-                  : parsed as Record<string, any>;
-              } catch {
-                return {};
-              }
-            };
-            const persistedProfile = await persistedState('profile-store');
-            let profileForAcceptance = acceptedProfileForContext(
-              acceptedBefore,
-              (persistedProfile.onboardingData && typeof persistedProfile.onboardingData === 'object'
-                ? persistedProfile.onboardingData
-                : require('./profileStore').useProfileStore.getState().onboardingData),
-            );
-            const profileSnapshotTime =
-              acceptedBefore.acceptedProfileSnapshot?.updatedAt ??
-              acceptedBefore.acceptedCompositionBase?.updatedAt ??
-              acceptedBefore.acceptedCompositionBase?.capturedAt ??
-              new Date(0).toISOString();
-            // NEVER MINT AN ACCEPTANCE NOBODY MADE (Sam, export 4, 2026-07-29).
-            //
-            // This is where his device's `sourceRevision: 1` snapshot came
-            // from: hydration ran mid-onboarding, minted an accepted profile
-            // from the store's 2-key DEFAULT, and every later hydration
-            // republished it over whatever he had answered since. Three
-            // onboardings.
-            //
-            // The guard above it — no program AND revision 0 — did not fire,
-            // because generation had already built him a program from those
-            // two answers. Program presence was never the question:
-            // `isOnboardingComplete` is, because that is the athlete's own act
-            // of acceptance. See rules/profileMirrorNarrowing.
-            const mintRefusal = acceptedProfileSnapshotMintRefusal({
-              isOnboardingComplete: !!(persistedProfile.isOnboardingComplete ??
-                require('./profileStore').useProfileStore.getState().isOnboardingComplete),
-              onboardingData: profileForAcceptance,
-            });
-            if (mintRefusal && !acceptedBefore.acceptedProfileSnapshot) {
-              emitAthleteActionEvent(trace, 'athlete_action_completed', {
-                outcome: 'accepted',
-                internalResultCode: 'hydration_snapshot_mint_refused',
-                mintRefusalReason: mintRefusal.reason,
-              });
-              return;
-            }
-            let acceptedProfileSnapshot: AcceptedProfileSnapshotV1 =
-              acceptedBefore.acceptedProfileSnapshot ?? {
-                protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
-                capturedAt: profileSnapshotTime,
-                updatedAt: profileSnapshotTime,
-                sourceRevision: acceptedBefore.revision + 1,
-                onboardingData: profileForAcceptance,
-              };
-            let legacyHydrationFacts = acceptedBefore.temporarySourceFacts;
-            if (legacyHydrationFacts.length === 0) {
-              const [coachMirror, readinessMirror] = await Promise.all([
-                persistedState('coach-updates'),
-                persistedState('readiness-store'),
-              ]);
-              legacyHydrationFacts = migrateLegacyTemporarySourceFacts({
-                activeConstraints: [
-                  ...acceptedBefore.activeConstraints,
-                  ...(Array.isArray(coachMirror.activeConstraints) ? coachMirror.activeConstraints : []),
-                ],
-                activeInjury: acceptedBefore.activeInjury ?? coachMirror.activeInjury ?? null,
-                readinessSignalsByDate: {
-                  ...(readinessMirror.signalsByDate && typeof readinessMirror.signalsByDate === 'object'
-                    ? readinessMirror.signalsByDate
-                    : {}),
-                  ...acceptedBefore.readinessSignalsByDate,
-                },
-                availabilityConstraints: profileForAcceptance.availabilityConstraints,
-                sourceSurface: 'program_store_hydration',
-              });
-            }
-            if ((profileForAcceptance.availabilityConstraints ?? [])
-              .some((constraint) => constraint.scope === 'temporary')) {
-              profileForAcceptance = {
-                ...profileForAcceptance,
-                availabilityConstraints: (profileForAcceptance.availabilityConstraints ?? [])
-                  .filter((constraint) => constraint.scope !== 'temporary'),
-              };
-              acceptedProfileSnapshot = {
-                ...acceptedProfileSnapshot,
-                onboardingData: profileForAcceptance,
-                updatedAt: profileSnapshotTime,
-              };
-            }
-            await runWithAthleteActionTrace(trace, async () => {
-              require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-                reason: 'program:hydration_acceptance',
-                // HYDRATION WEARS ONE DECLARED MODE (Sam, 2026-07-30).
-                //
-                // This field was absent, so the mode arrived by DEFAULT —
-                // `proposal.operation ?? 'restoration'` — and the type's own
-                // comment warns that is how a call site inherits a mode by
-                // accident. It is stated here because hydration is a
-                // restoration by nature: it replays state that was accepted
-                // once, so a week it cannot reproduce means the stored snapshot
-                // needs LIFTING, not reducing. Publishing a reduced version of
-                // a snapshot we do not understand would merge a defect into
-                // accepted state, which is the wipe's shape wearing a success.
-                //
-                // NOT YET WHOLE: the staging path below still runs the §18
-                // gateway's accept-and-reduce unconditionally, so one
-                // transaction can still reduce a week and then refuse the
-                // reduction. Declaring the mode removes the accident; making
-                // the two halves agree needs the read-ingress lift, which is
-                // its own unit. See
-                // docs/HYDRATION_WIPE_DIAGNOSIS_2026-07-30.md.
-                operation: 'restoration',
-                trace,
-                profile: profileForAcceptance,
-                acceptedProfileSnapshot,
-                activeConstraints: [
-                  ...acceptedBefore.activeConstraints.filter((constraint) =>
-                    !isAcceptedProfileConstraint(constraint)),
-                  ...composeAcceptedProfileConstraints(
-                    profileForAcceptance,
-                    profileSnapshotTime,
-                  ),
-                ],
-                validateWeekStarts: [
-                  ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
-                    microcycle.startDate.slice(0, 10)),
-                  ...(hydrated.currentMicrocycle
-                    ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
-                    : []),
-                  ...Object.keys(hydrated.weekScopedOverlays ?? {}),
-                ],
-                skipConstraintProjection: true,
-              });
-              if (legacyHydrationFacts.length > 0) {
-                const currentAccepted = normalizeAcceptedMaterialContext(
-                  useProgramStore.getState().acceptedMaterialContext,
-                );
-                if (currentAccepted.temporarySourceFacts.length === 0) {
-                  await require('./temporarySourceFactTransaction').commitTemporarySourceFactSet({
-                    nextFacts: legacyHydrationFacts,
-                    targetFactId: 'episodeId' in legacyHydrationFacts[0]
-                      ? legacyHydrationFacts[0].episodeId
-                      : legacyHydrationFacts[0].factId,
-                    todayISO: todayISOLocal(),
-                    reason: 'temporary_source_fact:hydrate_legacy_compatibility',
-                  });
-                } else {
-                  await require('./temporarySourceFactTransaction')
-                    .hydrateTemporarySourceFacts(todayISOLocal());
-                }
-              }
-              const accepted = normalizeAcceptedMaterialContext(
-                useProgramStore.getState().acceptedMaterialContext,
-              );
-              if (accepted.temporarySourceFacts.length > 0) {
-                require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
-                  activeConstraints: accepted.activeConstraints,
-                  activeInjury: accepted.activeInjury,
-                });
-              }
-              if (accepted.acceptedProfileSnapshot) {
-                require('./profileStore').publishAcceptedProfileCompatibilityMirror(
-                  accepted.acceptedProfileSnapshot.onboardingData,
-                );
-              }
-              await persistCanonicalHydratedEnvelopeReadback();
-              emitAthleteActionEvent(trace, 'athlete_action_completed', {
-                outcome: 'accepted',
-                internalResultCode: 'hydration_accepted',
-              });
-            });
-          } catch (hydrationError) {
-            const rejectionCode = hydrationError instanceof Error
-              ? hydrationError.name
-              : 'program_hydration_acceptance_failed';
-            // HOLD WHAT WAS REFUSED, before anything else can reach the disk.
-            //
-            // The rollback above restores memory correctly and always did; the
-            // 2026-07-29 wipe happened fourteen seconds LATER, when the boot
-            // gate timed out, the athlete tapped Try Again, and a second cycle
-            // published an empty baseline over the only copy of his program.
-            // What is quarantined is therefore the DISK copy, read here rather
-            // than serialised from memory: the disk copy is the one a later
-            // writer can destroy, and it is the one he actually still has.
-            //
-            // Best-effort by design. If the read fails we are already in a
-            // storage failure and there is nothing to protect; swallowing that
-            // must not replace the real rejection the athlete is owed.
-            try {
-              quarantineRefusedPayload(
-                PROGRAM_STORE_PERSISTENCE_KEY,
-                await readDurableProgramStoreEnvelope(),
-              );
-            } catch {
-              // fall through to the rejection below
-            }
-            emitAthleteActionEvent(trace, 'athlete_action_failed', {
-              outcome: 'failed',
-              internalResultCode: 'program_hydration_acceptance_failed',
-              originalRejectionCode: rejectionCode,
-              rejectionCodes: [rejectionCode],
-              firstFailingBoundary: 'programStore.onRehydrateStorage.acceptance',
-              failureCategory: 'persistence_failure',
-              previousStateRestored: true,
-            });
-            throw hydrationError;
-          } finally {
-            clearProgramHydrationTrace();
-          }
-        })().then(() => {
-          if (!error) programHydrationAccepted = true;
-        });
-        };
+        } as ProgramState;
       },
     },
   ),
 );
-
-const rawProgramStoreRehydrate = useProgramStore.persist.rehydrate;
-const rawProgramStoreHasHydrated = useProgramStore.persist.hasHydrated;
-const initialProgramHydrationCompletion = rawProgramStoreHasHydrated()
-  ? programHydrationAcceptancePromise
-  : new Promise<void>((resolve, reject) => {
-      const unsubscribe = useProgramStore.persist.onFinishHydration(() => {
-        unsubscribe();
-        programHydrationAcceptancePromise.then(resolve, reject);
-      });
-    });
-let programHydrationQueue = initialProgramHydrationCompletion.catch(() => undefined);
-
-useProgramStore.persist.rehydrate = () => {
-  const run = programHydrationQueue.then(async () => {
-    programHydrationAccepted = false;
-    programHydrationAcceptancePromise = Promise.resolve();
-    await rawProgramStoreRehydrate();
-    await programHydrationAcceptancePromise;
-  });
-  programHydrationQueue = run.catch(() => undefined);
-  return run;
-};
-
-useProgramStore.persist.hasHydrated = () =>
-  rawProgramStoreHasHydrated() && programHydrationAccepted;
 
 /* ────────────────────────────────────────────────────────────────────────────
  * THE OVERRIDE DOOR — LR-1
@@ -2578,7 +2419,10 @@ export type ProgramOverrideWriterId =
   | 'plan_change_producer'
   | 'program_control'
   | 'adjustment_events'
-  | 'lighter_day'
+  // RETIRED 2026-08-04 (Option C item 4): `'lighter_day'`. The readiness trim
+  // is a derived effect of a recorded fact, so it authors a sparse
+  // `readiness_reduction` week overlay instead of the athlete's decision
+  // surface. A future lighter-day override write is now a COMPILE ERROR.
   | 'coach_action'
   | 'coach_executor'
   | 'coach_program_edit'
@@ -2697,7 +2541,15 @@ export function applyProgramOverrideSliceWrite(args: {
   reason: string;
   validateWeekStarts: string[];
   markedDays?: Record<string, CalendarDayType>;
-  operation?: 'forward_decision';
+  /**
+   * REQUIRED, like the writer id above and for the same reason. Placing
+   * content already declared `forward_decision`; REMOVING it and the named
+   * erasure said nothing and inherited the strict verdict, so on a week the
+   * athlete had made short they could neither undo their own edit nor run the
+   * reset. Optional here meant "whichever the transaction happens to default
+   * to", which is the one thing a door must never leave to its callee.
+   */
+  operation: 'forward_decision' | 'restoration';
   todayISO?: string;
   resetActionId?: string;
 }): ProgramOverrideWriteOutcome {
@@ -2732,7 +2584,7 @@ export function applyProgramOverrideSliceWrite(args: {
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-    ...(args.operation ? { operation: args.operation } : {}),
+    operation: args.operation,
     reason: args.reason,
     ...(args.todayISO ? { todayISO: args.todayISO } : {}),
     program: {
@@ -2819,15 +2671,24 @@ export function applyProgramOverrideWrite(args: {
   });
 }
 
-export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
+/**
+ * The block position generation must be told, read from the one owner.
+ *
+ * §18 ownership reassessment (2026-08-05, D1). Callers used to hand generation
+ * the block NUMBER from this anchor and leave it to re-derive the block START
+ * from the date — two owners of one grid, which disagree for every date that is
+ * not itself a block start. There is now one read and it returns the position
+ * whole; `getCurrentBlockNumberForGeneration` is that same value projected, so
+ * the two readers cannot drift.
+ */
+export function getBlockPositionForGeneration(dateISO?: string): BlockGridPosition {
   const state = useProgramStore.getState();
   const blockState = state.blockState ?? state.ensureBlockState(dateISO);
-  const targetISO = dateISO ?? todayISOLocal();
-  return getBlockNumberForDate(
-    blockState.blockStartDate,
-    blockState.blockNumber,
-    targetISO,
-  );
+  return resolveBlockGridPosition(blockState, dateISO ?? todayISOLocal());
+}
+
+export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
+  return getBlockPositionForGeneration(dateISO).blockNumber;
 }
 
 /**

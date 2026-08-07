@@ -1,4 +1,5 @@
 import { asyncStorageCompat, asyncStorageDurable } from '../store/asyncStorageCompat';
+import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 
 /**
  * THE ON-DEVICE ACTION LOG — MASTER_PLAN 5D.3.
@@ -144,6 +145,8 @@ const DECISION_EVENTS: ReadonlySet<string> = new Set([
   'coach_store_write',
   'coach_memory_write',
   'program_override_write',
+  // The rebuild's ledger (R1.1): every athlete decision is one of these.
+  'decision_ledger_write',
   // 'auth_write' and 'ui_store_write' RETIRED with their stores
   // (Sam's §6 ruling, 2026-08-03) — no writer emits them any more.
   'profile_rehydrated',
@@ -190,6 +193,10 @@ export function recordAthleteActionLogEntry(event: {
   actionType: string;
   [field: string]: unknown;
 }): void {
+  // R1.3 (shell rebuild): a replayed interpreter is not the athlete acting.
+  // While the boot latch is held the ring stays quiet — the boot flood that
+  // evicted the athlete's own taps (evening-1) is unrepresentable.
+  if (ledgerReplayActive()) return;
   const { timestamp, ...rest } = event;
   entries.push({ at: timestamp, ...rest } as AthleteActionLogEntry);
   trimToCap();

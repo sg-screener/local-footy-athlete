@@ -55,6 +55,7 @@ import type { StressContext } from '../../rules/stressClassification';
 import { powerRows } from '../../rules/sessionRowCounting';
 import { projectPower, powerDays, type ProjectedPower } from './powerProjection';
 import { POWER_SCENARIOS, type PowerScenario } from './scenarios';
+import { emptyEvaluationSurfaces } from '../evaluationSurfacesTestSupport';
 
 const TODAY_ISO = '2026-07-13';
 
@@ -219,7 +220,7 @@ function section18Snapshot(
   if (!contract) return null;
   const weekStart = microcycle.startDate.slice(0, 10);
   const before = powerDays(microcycle.workouts);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: JSON.parse(JSON.stringify(contract)),
     workouts: microcycle.workouts.map((workout) => ({ ...workout })),
     weekStart,
@@ -302,7 +303,7 @@ function overBudgetProbe(
   const weekStart = microcycle.startDate.slice(0, 10);
   const filled = overFillPower(microcycle.workouts);
   const before = powerDays(filled);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: JSON.parse(JSON.stringify(microcycle.exposureContractV2)),
     workouts: filled,
     weekStart,

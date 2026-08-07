@@ -1,4 +1,8 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
 process.env.TZ = 'Australia/Melbourne';
 
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -295,6 +299,7 @@ for (const weekIndex of [2, 3]) {
 }
 
 console.log(`\nconditioningVisibleIdentityTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`Failures:\n${failures.map((name) => `  - ${name}`).join('\n')}`);
   process.exit(1);

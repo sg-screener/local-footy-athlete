@@ -106,6 +106,44 @@ The general shape: **a gate that reads code rather than behaviour is coupled to
 the code's SHAPE, and refactoring changes shape by definition.** After any
 de-duplication, ask what the gate matches on and whether it still matches.
 
+## A count names the instrument's unit, not the domain noun
+
+**Before a number enters a report or a ruling, state its unit and its
+denominator, and give the distinct count of the domain object beside it.**
+
+Seat-endorsed 2026-08-07 at the third sighting of the same shape, and by then it
+had cost a whole ruling:
+
+- "3 red both sides" hid one cell improving and two regressing into a different
+  KIND of delta.
+- A `| tail -3` totals line reported six-for-six green while four suites
+  exited 1.
+- **"159 athlete-removal DECISIONS the ledger does not record"** was 330
+  *per-store-write occurrences* of 40 reduction rows authored by 23 decisions,
+  and "absent" meant absent-from-THIS-WEEK rather than absent-from-the-ledger.
+  A ruling was written against that premise — a doors-append fix and a one-time
+  extraction — before the write side measured `noAdjustment` at 0 of 40 and the
+  extraction was cancelled as having nothing to extract.
+
+The failure is not arithmetic. Each number was correct **in the unit its
+instrument counts in**; each was then read in the unit the domain cares about.
+An instrument that compares on every store write counts store writes. One that
+dedups by row counts rows. Neither counts decisions unless it says so.
+
+Practically:
+
+- Emit counters as a PAIR — occurrences and distinct — with the dedup key named
+  in the field. `src/dev/measure.ts`'s `Tally` does this and refuses to print a
+  lone number; use it for new instruments.
+- Where two identities are meaningful (a row and the decision behind it), report
+  both. "40 rows from 23 decisions" is a sentence a ruling can be built on;
+  "159" is not.
+- Breakdowns and ranked lists are reported in DISTINCT terms, so they never
+  inherit the occurrence inflation.
+
+This is the counting half of `a-ruling-premise-is-a-claim-too`: a premise stated
+as a number gets checked as a number, including when the ruling is the seat's.
+
 ## Instrumentation must be alive where the defects are
 
 **A diagnostic that is off on the build the defect lives on is a green gate that
@@ -363,3 +401,17 @@ Practical consequences:
   `git merge-base --is-ancestor <branch> main` and `git log main..<branch>`.
 - A branch fully contained in `main` should be deleted rather than left as a
   pointer someone can build on.
+
+## Seat coordination laws (Sam, 2026-08-07)
+
+- **SEAT INBOX:** when this terminal stops for a review-seat ruling, read
+  `docs/SEAT_INBOX.md` FIRST — the review seat writes rulings there
+  before Sam relays anything. A one-line nudge from Sam ("check inbox")
+  means exactly that. This retires Sam as the courier of paste blocks.
+- **NOW FILE:** every checkpoint/handover updates `docs/NOW.md` — branch,
+  HEAD, current unit, next step, open rulings; five lines, overwrite in
+  place (it is a pointer, not history — history lives in the dated
+  docs). Every fresh session reads it before anything else.
+- **LOOP-AUDIT LAW:** docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md binds this
+  seat — third sighting of any repeated ruling-shape, round-trip, toll
+  or rediscovery = propose the compression, never a fourth silent run.

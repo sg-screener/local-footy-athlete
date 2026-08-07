@@ -440,7 +440,6 @@ export default function DayWorkoutScreenV2() {
     handleFinishWorkout,
     handleFeedbackSaved,
     handleScrollBeginDrag,
-    handleReviewStale,
     detail,
     isTeamOnly,
   } = useDayWorkout();
@@ -578,14 +577,6 @@ export default function DayWorkoutScreenV2() {
     setExerciseEditStep({ kind: 'confirm_remove', exercise: editable });
   }, []);
 
-  const askCoachForExerciseEdit = React.useCallback(
-    (prefill: string) => {
-      closeExerciseEditor();
-      handleReviewStale(prefill);
-    },
-    [closeExerciseEditor, handleReviewStale],
-  );
-
   const workoutLabel = workout?.name ?? 'this session';
   const dateLabel = date ?? 'today';
 
@@ -647,8 +638,14 @@ export default function DayWorkoutScreenV2() {
     (kind: AddExerciseKind) => {
       const suggestion = suggestAddExercise(kind, editableExercises);
       if (!suggestion) {
+        // R5.7 LEFTOVER, CAUGHT AT THE SIGNING PASS. This sheet was TITLED
+        // "Ask Coach" and, after the beta cut, offers no coach — a sheet named
+        // for a door that no longer exists is the half-alive surface C(a)
+        // forbids, and section [4]'s gate could not see it because it watches
+        // NAVIGATION, not titles. The replacement is not new copy: it is the
+        // signed title the other two fallback sheets already carry.
         showExerciseEditFallback(
-          'Ask Coach',
+          'I need a bit more detail',
           'I need a bit more detail before changing this safely.',
           `Add one ${kind.toLowerCase()} exercise or small block to ${workoutLabel} on ${dateLabel}.`,
         );
@@ -971,12 +968,6 @@ export default function DayWorkoutScreenV2() {
     [date, workout.id],
   );
 
-  const askCoachForTeamTraining = React.useCallback(
-    (message: string) => {
-      askCoachForExerciseEdit(`${message} Session: ${workoutLabel}. Date: ${dateLabel}.`);
-    },
-    [askCoachForExerciseEdit, dateLabel, workoutLabel],
-  );
   // Wrap derivation in try/catch so a thrown contract still produces a
   // failed marker with reason=contract-error instead of leaving the
   // screen silent.
@@ -1210,10 +1201,7 @@ export default function DayWorkoutScreenV2() {
         {/* Stale override warning */}
         {staleWarning ? (
           <View style={styles.banner}>
-            <StaleOverrideBanner
-              warning={staleWarning}
-              onReview={(prefill) => handleReviewStale(prefill)}
-            />
+            <StaleOverrideBanner warning={staleWarning} />
           </View>
         ) : null}
 
@@ -1351,7 +1339,6 @@ export default function DayWorkoutScreenV2() {
         onRemoveToday={removeExerciseToday}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
-        onAskCoachTeam={askCoachForTeamTraining}
       />
       <GuidedInjuryFlowSheet
         visible={injuryFlowExercise !== null}
@@ -2536,7 +2523,6 @@ interface ExerciseEditSheetProps {
   onRemoveToday: (exercise: EditableExercise) => void;
   onFutureScope: (step: FutureScopeStep) => void;
   onTodayOnly: () => void;
-  onAskCoachTeam: (message: string) => void;
 }
 
 function ExerciseEditSheet({
@@ -2555,7 +2541,6 @@ function ExerciseEditSheet({
   onRemoveToday,
   onFutureScope,
   onTodayOnly,
-  onAskCoachTeam,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -2598,12 +2583,6 @@ function ExerciseEditSheet({
           <Text style={styles.exerciseEditBody}>
             There are no editable gym exercises in this session.
           </Text>
-          <Button
-            label="Ask Coach"
-            variant="secondary"
-            size="md"
-            onPress={() => onAskCoachTeam('I need help changing this session.')}
-          />
         </>
       );
     }
@@ -2792,17 +2771,22 @@ function ExerciseEditSheet({
           </>
         );
       case 'coach_fallback':
+        // R5.7 — THE BETA COACH CUT. `programControlActions` still RETURNS a
+        // `coach_fallback` route (`:305/:411/:935`) and it stays frozen under
+        // LR-6, so this step still renders. What it must never do is strand
+        // the athlete at a sheet with nothing to press — the half-alive
+        // surface C(a) exists to prevent. It reports the refusal it already
+        // carries and closes.
+        //
+        // PROPOSED COPY, UNSIGNED, on the line below `step.message`.
         return (
           <>
             <Text style={styles.exerciseEditBody}>{step.message}</Text>
+            <Text style={styles.exerciseEditBody}>
+              {'Nothing has changed. You can make this change yourself from the day or session controls.'}
+            </Text>
             <Button
-              label="Ask Coach"
-              variant="primary"
-              size="md"
-              onPress={() => onAskCoachTeam(step.prefill)}
-            />
-            <Button
-              label="Cancel"
+              label="Close"
               variant="secondary"
               size="md"
               onPress={onClose}

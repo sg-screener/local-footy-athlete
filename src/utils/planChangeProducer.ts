@@ -41,13 +41,8 @@ import {
 } from './coachRevisionTemplates';
 import {
   byeUnlockedDatesForWeek,
-  coachRevisionValidationPolicyForWeek,
   protectedAnchorsForDaySnapshot,
 } from './coachRevisionPolicy';
-import {
-  applyCoachRevisionDateOverrides,
-  type CoachRevisionOverrideRejection,
-} from './coachRevisionOverrideWriter';
 import {
   materializeCanonicalPlanChangeCandidate,
   stackSessionOntoTeamAnchor,
@@ -82,7 +77,6 @@ export type {
   PlanChangeMoveScopeId,
 } from './planChangeTypes';
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
-import { assessProgramEditWrites } from './programEditWriteGuard';
 import { classifyProgramMutationRefusal } from '../rules/programMutationRefusal';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import {
@@ -92,6 +86,7 @@ import {
 } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import {
   G1_LANDING_WARNING,
@@ -1393,50 +1388,6 @@ export interface PlanChangeRiskPreviewResult {
   trace: AthleteActionTraceContext;
 }
 
-function validationPolicyForPlanChange(
-  visibleWeek: ResolvedDay[],
-  todayISO: string,
-  change?: PlanChange,
-) {
-  return {
-    // The athlete's answered G-1 route is part of what the app is authorised to
-    // materialise. Without it, "deloaded" would be refused as unknown content —
-    // the app asking a question and then rejecting the answer.
-    ...coachRevisionValidationPolicyForWeek(
-      visibleWeek,
-      todayISO,
-      change && 'g1Route' in change ? change.g1Route : undefined,
-    ),
-    requireConfirmationForAdds: false,
-  };
-}
-
-function rejectedForResult(
-  rejected: CoachRevisionOverrideRejection[],
-): PlanChangeApplyResult['rejected'] {
-  return rejected.map((entry) => ({
-    date: entry.date ?? null,
-    code: entry.code,
-    reason: entry.reason,
-  }));
-}
-
-function withPreviewWrites(
-  visibleWeek: ResolvedDay[],
-  writes: Array<{ date: string; workout: Workout }>,
-): ResolvedDay[] {
-  const byDate = new Map(writes.map((write) => [write.date, write.workout]));
-  return visibleWeek.map((day) => (
-    byDate.has(day.date)
-      ? {
-          ...day,
-          workout: byDate.get(day.date) ?? null,
-          source: 'manual' as const,
-        }
-      : day
-  ));
-}
-
 function proposedWeekFromAcceptedStage(args: {
   visibleWeek: ResolvedDay[];
   staged: AcceptedStateTransactionResult;
@@ -1447,7 +1398,7 @@ function proposedWeekFromAcceptedStage(args: {
     const weekStart = getMondayForDate(day.date);
     if (weeks.has(weekStart)) continue;
     const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: args.staged.program,
+      surfaces: storedWorldSurfaces(args.staged.program),
       weekStart,
       profile: args.profile ?? useProfileStore.getState().onboardingData,
       markedDays: args.staged.context.markedDays,
@@ -1602,7 +1553,7 @@ export function g1LandingAskForChange(args: {
   let contract: WeeklyExposureContractV2 | null = null;
   try {
     contract = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile,
       markedDays: state.acceptedMaterialContext.markedDays,
@@ -1708,9 +1659,10 @@ export type AthleteMutationResolution =
       swapped: false;
     }
   | {
-      // An add on an empty/rest day: a net-new session owned by the dedicated
-      // addition transaction (§18 repaired cross-day, never rejected for an
-      // off-target condition). Occupied-day stacks stay on the legacy writer.
+      // An add owned by the dedicated addition transaction (§18 repaired
+      // cross-day, never rejected for an off-target condition): empty/rest
+      // days, occupied-day stacks, and the re-add restoration onto a binned
+      // day (the transaction flips the bin to restored/'explicit_re_add').
       ok: true;
       kind: 'add_session';
       input: AthleteSessionAdditionTransactionInput;
@@ -1720,26 +1672,20 @@ export type AthleteMutationResolution =
     }
   | { ok: false; error: string };
 
-/**
- * Errors from a swap resolution that mean "this stage doesn't own this case —
- * fall through to the legacy registry writer" rather than a user-facing
- * rejection. Team-Training anchor swaps are now owned by the transaction (stage
- * 3); only a category pick with no resolvable template still defers.
- */
-const SWAP_DEFERS_TO_LEGACY = new Set<string>([
-  'no_template_for_category',
-]);
-
-/**
- * Errors from an add resolution that mean "fall through to the legacy writer".
- * Stage 3 owns only the empty/rest-day add; occupied-day STACK adds, a category
- * with no template, and a re-add onto a day emptied by an active removal
- * constraint (the restoration path) stay on the legacy writer.
- */
-const ADD_DEFERS_TO_LEGACY = new Set<string>([
-  'add_defers_to_legacy_stack',
-  'no_template_for_category',
-]);
+// THE LEGACY DEFERRAL IS RETIRED (Stage B stage 1, Option C item 3).
+//
+// Two defer-sets stood here, routing resolution errors to the legacy registry
+// writer (`applyCoachRevisionDateOverrides`). Measured on main 936bbf7 before
+// deletion:
+// - `no_template_for_category` was a NO-OP double refusal — the legacy path
+//   ran the identical `resolveTemplatePlanChange` lookup and refused with the
+//   same code, never reaching the writer
+//   (docs/STACK_PRIMITIVE_RETIREMENT_DIAGNOSIS_2026-07-23.md §5 Target 2).
+// - `add_defers_to_legacy_stack` (the active-removal re-add) was the last
+//   athlete route into the writer; the typed addition transaction now owns
+//   the restoration (`stageAthleteSessionAdditionTransaction` flips the bin
+//   to restored/'explicit_re_add' in the same staged proposal).
+// No athlete surface reaches the legacy override writer any more.
 
 /**
  * Every candidate this module materialises, with the athlete's G-1 answer
@@ -1813,10 +1759,11 @@ export function resolveAthleteMutation(args: {
   // routeless landing answers with the ask instead of applying anything —
   // which is what makes a silent substitution unreachable from ANY door.
   //
-  // This sits above every branch on purpose. Under it are refusals that hand
-  // work to the legacy writer (`add_defers_to_legacy_stack` is the occupied-day
-  // stack — exactly the add Sam hit on G-1), and a gate below them would let
-  // that path apply a full session on the day before a game without a word.
+  // This sits above every branch on purpose: every landing door answers the
+  // ask before anything else gets to refuse or apply, so no path can put a
+  // full session on the day before a game without a word. (It once also had
+  // to outrank the legacy deferral, which would have applied without asking —
+  // that writer is retired, the ordering stays.)
   const g1Ask = g1LandingAskForChange({ change, visibleWeek: args.visibleWeek });
   const g1Route = committingG1Route(change);
   if (g1Ask && !g1Route) {
@@ -1966,20 +1913,13 @@ export function resolveAthleteMutation(args: {
     //
     // The semantics are Sam's doubling law at the add door: what is there stays,
     // the new session stacks beside it, and the day becomes the combined shape
-    // generation already produces. Game day is still locked above; a day emptied
-    // by an active whole-day removal still defers below, because a re-add is a
-    // restoration and not a net-new add.
-    // A day emptied by an active whole-DAY removal is a re-add (restoration
-    // path), not a net-new add — defer so this primitive never fights it. Only a
-    // real removal leaves the day empty with remainingWorkout null; add/swap pins
-    // carry a remainingWorkout and leave the day occupied (handled above), so
-    // they are excluded here by the remainingWorkout check.
-    const hasActiveRemoval = useProgramStore.getState().userRemovalConstraints.some(
-      (constraint) => constraint.status === 'active' &&
-        constraint.targetDate === change.date &&
-        constraint.scope === 'whole_session' &&
-        !constraint.remainingWorkout);
-    if (hasActiveRemoval) return { ok: false, error: 'add_defers_to_legacy_stack' };
+    // generation already produces. Game day is still locked above.
+    //
+    // A day emptied by an active whole-DAY removal is a RESTORATION, not a
+    // net-new add — and that too is typed now (Stage B stage 1): the addition
+    // transaction flips the bin to restored/'explicit_re_add' in the same
+    // staged proposal. The `add_defers_to_legacy_stack` deferral that stood
+    // here handed the case to a legacy writer that could not deliver it.
     const template = resolveTemplatePlanChange({ change, visibleWeek: args.visibleWeek });
     if (!template) return { ok: false, error: 'no_template_for_category' };
     // No source workout on an empty day → the materializer yields the bare new
@@ -2233,14 +2173,8 @@ export function previewPlanChangeRisk(args: {
         visibleWeek: args.visibleWeek,
         source: 'tap',
       });
-      // No-template swaps and occupied-day / restoration adds defer to legacy.
-      const defersToLegacy = resolution.ok === false && (
-        (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
-        (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error)));
       // The ask is not a refusal and not a risk finding. Nothing is applied and
-      // nothing is wrong — the athlete simply has not answered yet. It is
-      // checked before `defersToLegacy` because an occupied-day add defers, and
-      // the legacy writer would apply it without ever raising the ask.
+      // nothing is wrong — the athlete simply has not answered yet.
       if (resolution.ok === false && resolution.error === 'g1_route_required' &&
         isG1RoutedChange(args.change)) {
         const ask = g1LandingAskForChange({
@@ -2259,7 +2193,7 @@ export function previewPlanChangeRisk(args: {
           }, { internalResultCode: resolution.error });
         }
       }
-      if (resolution.ok === false && !defersToLegacy) {
+      if (resolution.ok === false) {
         const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
         if (blocked) {
           return finish({
@@ -2342,80 +2276,25 @@ export function previewPlanChangeRisk(args: {
       }
     }
 
-    const proposal = buildPlanChangeProposal(args.change, {
-      visibleWeek: args.visibleWeek,
-      todayISO: args.todayISO,
-    });
-    if ('error' in proposal) {
-      const blocked = blockedAssessmentForBuildError(args.change, proposal.error);
-      if (blocked) {
-        return finish({
-          ok: true,
-          message: blocked.findings[0]?.message ?? "That change can't be applied here.",
-          appliedDates: [],
-          rejected: [],
-          proposedWeek: args.visibleWeek,
-          assessment: blocked,
-        }, { internalResultCode: proposal.error });
-      }
-      return finish({
-        ok: false,
-        message: refusalSentenceFor(proposal.error),
-        appliedDates: [],
-        rejected: [],
-        proposedWeek: args.visibleWeek,
-        assessment: emptyAssessment,
-      }, { internalResultCode: proposal.error });
-    }
-
-    const preview = applyCoachRevisionDateOverrides({
-      proposal,
-      planChange: resolveTemplatePlanChange({
-        change: args.change,
-        visibleWeek: args.visibleWeek,
-      }),
-      visibleWeek: args.visibleWeek,
-      todayISO: args.todayISO,
-      validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO, args.change),
-    });
-    if (preview.applied.length === 0 || preview.rejected.length > 0) {
-      return finish({
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: preview.applied.map((write) => write.date),
-        rejected: rejectedForResult(preview.rejected),
-        proposedWeek: args.visibleWeek,
-        assessment: emptyAssessment,
-      }, { internalResultCode: preview.rejected[0]?.code ?? 'proposal_write_build_failed' });
-    }
-
-    const proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
-
-    const riskWrites = proposedWeek
-      .filter((day) => {
-        const before = args.visibleWeek.find((candidate) => candidate.date === day.date)?.workout ?? null;
-        return JSON.stringify(before) !== JSON.stringify(day.workout);
-      })
-      .map((day) => ({ date: day.date, workout: day.workout }));
-    // Registry-backed revisions still use the existing proposal/materializer
-    // risk assessment. Athlete move/delete returned from their typed branch
-    // above and never reach this single-date policy path.
-    const assessment = assessProgramEditWrites({
-      writes: riskWrites,
-      visibleWeek: args.visibleWeek,
-      profile: args.profile,
-      activeConstraints: args.activeConstraints,
-      todayISO: args.todayISO,
-    }) ?? emptyAssessment;
-
+    // NOTHING BELOW THE TYPED BRANCH OWNS AN ATHLETE CHANGE ANY MORE.
+    //
+    // The legacy registry writer (`applyCoachRevisionDateOverrides`) is
+    // retired from this producer (Stage B stage 1, Option C): the six
+    // athlete-owned kinds return from the typed branch above, the week-level
+    // kinds (`shutdown_week`, `clear_days`) have no live product caller —
+    // away days travel as schedule facts through the deriving lane,
+    // bed-ridden is the illness_recovery §18 week mode — and
+    // `move_team_night` is owned by the durable door. What reaches here is
+    // refused honestly instead of being handed to a writer of a retired
+    // shape (L15).
     return finish({
-      ok: true,
-      message: 'Preview ready.',
-      appliedDates: preview.applied.map((write) => write.date),
+      ok: false,
+      message: refusalSentenceFor('plan_change_kind_not_owned'),
+      appliedDates: [],
       rejected: [],
-      proposedWeek,
-      assessment,
-    }, { selectedOutcome: 'single_date_candidate' });
+      proposedWeek: args.visibleWeek,
+      assessment: emptyAssessment,
+    }, { internalResultCode: 'plan_change_kind_not_owned' });
   });
 }
 
@@ -2511,6 +2390,15 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
         ? 'plan_change_generic_unsafe'
         : 'plan_change_specific_failure';
     if (result.ok) {
+      // R1.4a (shell rebuild): a decision that LANDED is appended to the
+      // ledger, verbatim and typed, in the same act. Refusals never reach it.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { appendDecisionEntry } = require('../store/decisionLedgerStore');
+      appendDecisionEntry({
+        decision: { kind: 'plan_change', change: args.change },
+        provenance: 'athlete_tap',
+        writer: 'program_control',
+      });
       emitAthleteActionEvent(trace, 'athlete_action_completed', {
         outcome: 'accepted',
         appliedDates: result.appliedDates,
@@ -2533,9 +2421,9 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
         ? result.rejected.length > 0
           ? 'athlete_session_transaction'
           : 'resolve_athlete_mutation'
-        : result.rejected.length > 0
-        ? 'applyCoachRevisionDateOverrides'
-        : 'buildPlanChangeProposal';
+        // The legacy writer is retired: a non-athlete-owned kind is refused at
+        // the producer boundary itself (no typed owner for the kind).
+        : 'plan_change_kind_not_owned';
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
         outcome: 'rejected',
         internalResultCode,
@@ -2608,7 +2496,7 @@ function acceptedSessionNameOn(date: string): string | null {
   const profile = useProfileStore.getState().onboardingData;
   try {
     const week = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart: getMondayForDate(date),
       profile,
       markedDays: state.acceptedMaterialContext.markedDays,
@@ -2745,43 +2633,36 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       source: 'tap',
     });
     if (resolution.ok === false) {
-      // No-template swaps and occupied-day / restoration adds are not owned by
-      // this stage — fall through to the legacy registry writer below.
-      const defersToLegacy =
-        (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
-        (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error));
-      if (!defersToLegacy) {
-        // Defence in depth for the ask. The sheet holds the change back until
-        // the athlete answers; a caller that commits anyway is refused in the
-        // domain's own words rather than getting a silent full-session landing
-        // on the day before a game.
-        if (resolution.error === 'g1_route_required') {
-          return {
-            ok: false,
-            outcome: 'refused',
-            message: `${G1_LANDING_WARNING.ask.headline} The plan is untouched.`,
-            appliedDates: [],
-            rejected: [{
-              date: isG1RoutedChange(args.change)
-                ? landingDateForChange(args.change)
-                : null,
-              code: resolution.error,
-              reason: 'The athlete has not chosen a route for the day before their game.',
-            }],
-          };
-        }
-        // Game day is locked — surface the plain-language block, never a raw code.
-        const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
+      // Defence in depth for the ask. The sheet holds the change back until
+      // the athlete answers; a caller that commits anyway is refused in the
+      // domain's own words rather than getting a silent full-session landing
+      // on the day before a game.
+      if (resolution.error === 'g1_route_required') {
         return {
           ok: false,
           outcome: 'refused',
-          message: blocked
-            ? blocked.findings[0]?.message ?? "That change can't be applied here."
-            : refusalSentenceFor(resolution.error),
+          message: `${G1_LANDING_WARNING.ask.headline} The plan is untouched.`,
           appliedDates: [],
-          rejected: [],
+          rejected: [{
+            date: isG1RoutedChange(args.change)
+              ? landingDateForChange(args.change)
+              : null,
+            code: resolution.error,
+            reason: 'The athlete has not chosen a route for the day before their game.',
+          }],
         };
       }
+      // Game day is locked — surface the plain-language block, never a raw code.
+      const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
+      return {
+        ok: false,
+        outcome: 'refused',
+        message: blocked
+          ? blocked.findings[0]?.message ?? "That change can't be applied here."
+          : refusalSentenceFor(resolution.error),
+        appliedDates: [],
+        rejected: [],
+      };
     } else if (resolution.kind === 'move_session') {
       if (args.change.kind !== 'move_session') {
         throw new Error('Athlete move resolution did not match its typed intent');
@@ -2989,72 +2870,21 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     }
   }
 
-  const proposal = buildPlanChangeProposal(args.change, {
-    visibleWeek: args.visibleWeek,
-    todayISO: args.todayISO,
-  });
-  if ('error' in proposal) {
-    return {
-      ok: false,
-      outcome: 'refused',
-      message: refusalSentenceFor(proposal.error),
-      appliedDates: [],
-      rejected: [],
-    };
-  }
-
-  const apply = applyCoachRevisionDateOverrides({
-    proposal,
-    planChange: resolveTemplatePlanChange({
-      change: args.change,
-      visibleWeek: args.visibleWeek,
-    }),
-    visibleWeek: args.visibleWeek,
-    todayISO: args.todayISO,
-    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO, args.change),
-    applyOverride: args.applyOverride,
-  });
-
-  if (apply.applied.length === 0 || apply.rejected.length > 0) {
-    return {
-      ok: false,
-      outcome: 'refused',
-      message: "I couldn't safely make that change, so the plan is untouched.",
-      appliedDates: apply.applied.map((write) => write.date),
-      rejected: rejectedForResult(apply.rejected),
-    };
-  }
-
-  // Category picks name what was chosen — the athlete picked a bucket,
-  // so the confirmation must say which session the producer put in.
-  const concreteTemplateChange = resolveTemplatePlanChange({
-    change: args.change,
-    visibleWeek: args.visibleWeek,
-  });
-  const pickedTitle = concreteTemplateChange
-    ? listCoachRevisionTemplates().find(
-        (template) => template.templateId === concreteTemplateChange.templateId,
-      )?.label ?? null
-    : proposal.kind === 'revision'
-      ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
-      : null;
-
-  // NAME WHAT THE ATHLETE SEES, not what was requested. `pickedTitle` is the
-  // registry label for the thing they picked; on a stacked day the day ends up
-  // named for its combination, and the door matrix caught this branch claiming
-  // "Full Body Strength added" over a day reading "Lower Squat".
-  const landedOn = 'date' in args.change ? args.change.date : null;
-  const message = planChangeDoneMessage(
-    args.change,
-    (landedOn ? visibleSessionNameOn(landedOn) : null) ?? pickedTitle,
-  );
-
+  // NOTHING BELOW THE TYPED BRANCH OWNS AN ATHLETE CHANGE ANY MORE.
+  //
+  // The legacy registry writer (`applyCoachRevisionDateOverrides`) is retired
+  // from this producer (Stage B stage 1, Option C): the six athlete-owned
+  // kinds return from the typed branch above, the week-level kinds
+  // (`shutdown_week`, `clear_days`) have no live product caller — away days
+  // travel as schedule facts through the deriving lane, bed-ridden is the
+  // illness_recovery §18 week mode — and `move_team_night` is owned by the
+  // durable door. What reaches here is refused honestly instead of being
+  // handed to a writer of a retired shape (L15).
   return {
-    ok: true,
-
-    outcome: 'applied',
-    message,
-    appliedDates: apply.applied.map((write) => write.date),
+    ok: false,
+    outcome: 'refused',
+    message: refusalSentenceFor('plan_change_kind_not_owned'),
+    appliedDates: [],
     rejected: [],
   };
 }

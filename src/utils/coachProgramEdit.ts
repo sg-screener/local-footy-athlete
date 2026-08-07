@@ -52,6 +52,7 @@ import {
 } from './coachModalitySwap';
 import { parseCoachDurationMinutes } from './coachValueNormalizers';
 import type { ConditioningModality } from '../data/exerciseTags';
+import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
 import {
   extractVisibleProgramItemsFromWorkout,
   getResolvedVisibleProgramForDate,
@@ -1811,7 +1812,13 @@ export interface ExecuteProgramSetupEditInput {
   updateOnboardingData: (patch: Partial<OnboardingData>) => void;
   generateProgramFromProfile: (
     profile: OnboardingData,
-    options?: { todayISO?: string; blockNumber?: number },
+    options?: {
+      todayISO?: string;
+      blockNumber?: number;
+      /** See generateProgram's `weekAcceptance`: the seam must be able to
+       * carry the caller's declaration, or the injected wrapper decides it. */
+      weekAcceptance?: AcceptedStateOperationKind;
+    },
   ) => Promise<TrainingProgram>;
   setCurrentProgram: (program: TrainingProgram | null) => void;
   setCurrentMicrocycle: (microcycle: TrainingProgram['microcycles'][number] | null) => void;
@@ -1874,7 +1881,11 @@ export async function executeProgramSetupEdit(
   input.onProgress?.('applying_change');
   let program: TrainingProgram;
   try {
-    program = await input.generateProgramFromProfile(nextProfile, { todayISO: input.todayISO });
+    program = await input.generateProgramFromProfile(nextProfile, {
+      // A coach program-setup edit carries the athlete's stated change.
+      weekAcceptance: 'forward_decision',
+      todayISO: input.todayISO,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.warn('[coach-program-setup] rebuild_failed', {

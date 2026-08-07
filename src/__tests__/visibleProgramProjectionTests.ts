@@ -13,6 +13,10 @@
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
 import {
   projectVisibleDay,
   projectAndLog,
@@ -27,7 +31,7 @@ import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import type { InjuryState } from '../utils/injuryProgression';
 import { buildFatigueConstraint } from '../utils/exposureEngine';
-import { powerRows } from '../rules/sessionRowCounting';
+import { hasPowerRow, powerRows } from '../rules/sessionRowCounting';
 
 // ─── Harness ───
 let pass = 0;
@@ -55,6 +59,26 @@ function ex(name: string): any {
     },
     createdAt: '', updatedAt: '',
   };
+}
+/**
+ * A POWER ROW in the current shape — `role: 'power'` plus the typed
+ * `power: { family, kind }`, in `exercises[]`.
+ *
+ * These fixtures used to build a `powerBlock`. That field is a LEGACY STORED
+ * SHAPE (`domain.ts`: "read only ... nothing writes this") which the power-row
+ * redesign retired, so a fixture writing it asserted a state no producer in
+ * the app can reach — and the cells reading it back through `powerRows()`, the
+ * row-era owner, could only ever be red. Migrated to the shape the app writes.
+ */
+function powerRow(name: string, sets = 3): any {
+  const row = ex(name);
+  row.id = `pw-${name}`;
+  row.role = 'power';
+  row.power = { family: 'lower', kind: 'primer' };
+  row.prescribedSets = sets;
+  row.prescribedRepsMin = 3;
+  row.prescribedRepsMax = 3;
+  return row;
 }
 function wk(name: string, dow: number, exercises: any[], opts: any = {}): Workout {
   return {
@@ -537,24 +561,7 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   const speedOnly = wk('Speed Exposure', 3, [], {
     speedBlock: { id: 'speed', title: 'Speed', prescription: '4 x 20m' },
   });
-  const powerOnly = wk('Power Primer', 3, [], {
-    powerBlock: {
-      id: 'power',
-      kind: 'primer',
-      family: 'lower',
-      title: 'Power Primer',
-      placement: 'pre_lift',
-      prescription: '3 x 3 jumps',
-      options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [] }],
-      notes: [],
-      counting: {
-        hardExposure: false,
-        mainStrength: false,
-        conditioningCredit: 'none',
-        isFinisher: false,
-      },
-    },
-  });
+  const powerOnly = wk('Power Primer', 3, [powerRow('Vertical Jump')], {});
   const addonOnly = wk('Mobility Support', 3, [], {
     recoveryAddons: [{
       id: 'addon',
@@ -587,9 +594,7 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   squat.prescribedRepsMin = 4;
   squat.prescribedRepsMax = 5;
   squat.prescribedWeightKg = 100;
-  const validPower = wk('Lower Strength', 3, [squat], {
-    powerBlock: powerOnly.powerBlock,
-  });
+  const validPower = wk('Lower Strength', 3, [powerRow('Vertical Jump'), squat], {});
   const validPowerProjected = projectVisibleDay({
     day: day(wed, validPower, 'manual'),
     activeInjury: null,
@@ -601,46 +606,47 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   eq('valid strength-linked power row keeps its dose',
     powerRows(validPowerProjected.day.workout!)[0]?.prescribedSets,
     3);
-  eq('valid strength-linked powerBlock exercise option survives visible projection',
-    validPowerProjected.day.workout?.powerBlock?.options?.[0]?.name,
+  eq('valid strength-linked power row keeps its exercise name',
+    powerRows(validPowerProjected.day.workout!)[0]?.exercise?.name,
     'Vertical Jump');
 }
 
-section('[16b] Cooked readiness does not leave an empty recovery shell');
+section('[16b] Cooked readiness LIMITS the session — it never removes it');
 {
-  const poweredStrength = wk('Powered Lower Strength', 3, [ex('Back Squat')], {
-    powerBlock: {
-      id: 'fatigue-power',
-      kind: 'primer',
-      family: 'lower',
-      title: 'Power Primer',
-      placement: 'pre_lift',
-      prescription: '3 x 3 jumps',
-      options: [{
-        name: 'Vertical Jump',
-        sets: 3,
-        repsMin: 3,
-        repsMax: 3,
-        equipmentRequired: [],
-      }],
-      notes: [],
-      counting: {
-        hardExposure: false,
-        mainStrength: false,
-        conditioningCredit: 'none',
-        isFinisher: false,
-      },
-    },
-  });
+  // SUPERSEDED BY A SAM RULING, and the cells below are its statement.
+  //
+  // This section used to assert that a cooked athlete's session COLLAPSED —
+  // power exposure deleted, an all-hard day returned as Rest with source
+  // 'rest'. Sam retired that on 2026-07-27 and the reason is written at the
+  // constraint's own site (`exposureEngine.ts`, `buildFatigueConstraint`):
+  // "FATIGUE NEVER BLOCKS AN EXPOSURE TYPE ... That is a session REMOVAL,
+  // which the readiness law forbids — and because it happened by side effect
+  // rather than through a recorded reduction, it survived the migration that
+  // retired all the recorded ones." What shrinks the work now is DELOAD_LAW
+  // through the readiness door; the session survives.
+  //
+  // The old cells went red the day that landed and stayed red, because this
+  // suite runs in nobody's gate. They are not relaxed here — they are INVERTED
+  // onto the law that replaced them, so a regression back to removal-by-fatigue
+  // fails this suite instead of satisfying it.
+  const poweredStrength = wk(
+    'Powered Lower Strength', 3, [powerRow('Vertical Jump'), ex('Back Squat')], {});
   const poweredProjected = projectVisibleDay({
     day: day('2026-05-06', poweredStrength, 'template'),
     activeInjury: null,
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
-  eq('cooked fatigue removes typed power exposure',
-    poweredProjected.day.workout?.powerBlock,
-    undefined);
+  // Asked of the ROW-ERA owner. The old form read the retired `powerBlock`
+  // field, which the projection has no reason to touch — so it could report
+  // "power removed" without any power ever having been present.
+  eq('cooked fatigue keeps the session', !!poweredProjected.day.workout, true);
+  eq('cooked fatigue does not delete the typed power row',
+    hasPowerRow(poweredProjected.day.workout),
+    true);
+  eq('cooked fatigue removes no rows at all',
+    poweredProjected.removedNames,
+    []);
 
   const hardOnly = wk('Hard Conditioning', 3, [
     ex('10m Sprint'),
@@ -656,8 +662,19 @@ section('[16b] Cooked readiness does not leave an empty recovery shell');
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
-  eq('cooked all-hard session with no recovery content collapses to Rest', projected.day.workout, null);
-  eq('cooked collapsed source is rest', projected.day.source, 'rest' as any);
+  ok('cooked all-hard session survives rather than collapsing to Rest',
+    !!projected.day.workout,
+    `projected=${projected.day.workout?.name ?? 'Rest'}`);
+  eq('cooked all-hard session keeps every row',
+    (projected.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name),
+    ['10m Sprint', 'Box Jump', 'Bike Intervals']);
+  eq('cooked source is not rewritten to rest', projected.day.source, 'template' as any);
+  // The athlete is TOLD, which is the half of the old behaviour that survived:
+  // fatigue speaks through cautions and safe focus, not through deletion.
+  ok('cooked session carries the constraint\'s cautions and safe focus',
+    (projected.day.workout?.coachNotes ?? []).some((note) => /^Caution:/.test(note))
+      && (projected.day.workout?.coachNotes ?? []).some((note) => /^Focus:/.test(note)),
+    JSON.stringify(projected.day.workout?.coachNotes));
 }
 
 section('[17] Strength removed from mixed session re-derives conditioning display');
@@ -805,9 +822,9 @@ section('[19] Tempo purpose stays stable while detail rows retain modality');
 console.log(`\n— Summary —`);
 console.log(`  Pass: ${pass}`);
 console.log(`  Fail: ${fail}`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`\n— Failures —`);
   for (const f of failures) console.log(`  • ${f}`);
   process.exit(1);
 }
-process.exit(0);

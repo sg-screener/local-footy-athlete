@@ -33,6 +33,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -222,7 +223,7 @@ function seed(
 function accepted(weekStart: string) {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -370,15 +371,60 @@ function athleteContext(): AthleteContext {
  * empty session and made these assertions vacuous, which is what test 9 caught.
  */
 function seedConditioningSession(): { weekStart: string; session: Workout } {
-  const program = seed(practiceMatchAthlete(), { phaseEntryOffsetWeeks: 2 });
-  const weekStart = program.microcycles[0]!.startDate.slice(0, 10);
-  const session = workoutOn(weekStart, 2);
-  assert(session, 'practice-match Tuesday conditioning session missing');
-  assert(session.exercises.some(isConditioningExerciseRow),
-    `${session.name} carries no conditioning rows — the seed changed`);
-  assert(!session.exercises.some((row) =>
-    !isConditioningExerciseRow(row) && isAccessoryStrengthRow(row)),
-  `${session.name} has accessory rows — it no longer exercises the no-accessories case`);
+  // THE SUBJECT IS "a session carrying conditioning with NO accessories", and it is
+  // ASKED FOR, never pinned to a coordinate.
+  //
+  // This used to seed `practiceMatchAthlete()` and take `dayOfWeek === 2`, which
+  // was that week's standalone Hard Intervals. It broke on 2026-08-06 when
+  // attach-first landing (`docs/FINDING_3_STEP2_BOUNDARY_REPORT_2026-08-06.md`)
+  // put strength onto that day: the guard below refused to run vacuously and named
+  // itself — `Lower Squat has accessory rows`. Attaching work to conditioning days
+  // is the RULED repair order (Bible `:81`), measured with zero findings in every
+  // world, so the DAY was the wrong coordinate, not the behaviour.
+  //
+  // WHY THIS ATHLETE. `practiceMatchAthlete()` drops team training, and with it the
+  // week's composition no longer produces an accessory-free conditioning day in ANY
+  // of its four microcycles. Keeping the team days back does — measured across
+  // off-season, pre-season and in-season seeds at five phase-entry offsets, the
+  // practice-match week with anchors carries one. The fixture keeps the
+  // practice-match/G-1 context these cells need and simply stops removing the
+  // anchors that shape it.
+  //
+  // Every week of the program is searched, and a miss still fails loudly with the
+  // whole week printed: if no mode anywhere produced such a session, that would be
+  // attach-first swallowing an authored session shape — a defect to stop on, not a
+  // fixture to loosen.
+  const program = seed(
+    { ...profile(), seasonPhase: 'Pre-season' } as unknown as OnboardingData,
+    { phaseEntryOffsetWeeks: 2 },
+  );
+  const qualifies = (workout: Workout): boolean =>
+    workout.exercises.some(isConditioningExerciseRow) &&
+    !workout.exercises.some((row) =>
+      !isConditioningExerciseRow(row) && isAccessoryStrengthRow(row));
+  let weekStart = program.microcycles[0]!.startDate.slice(0, 10);
+  let session: Workout | null = null;
+  for (const cycle of program.microcycles) {
+    const candidateWeek = cycle.startDate.slice(0, 10);
+    const hit = accepted(candidateWeek).visibleWorkouts.find(qualifies);
+    if (hit) {
+      weekStart = candidateWeek;
+      session = hit;
+      break;
+    }
+  }
+  assert(session,
+    'no session in ANY week of the practice-match program carries conditioning WITHOUT '
+    + 'accessory rows, so route (b) has no subject. That is attach-first swallowing an '
+    + 'authored session shape, not a fixture to loosen. Weeks: '
+    + program.microcycles.map((cycle) => {
+      const ws = cycle.startDate.slice(0, 10);
+      return `${ws}[` + accepted(ws).visibleWorkouts
+        .map((workout) => `${workout.dayOfWeek}:${workout.name}(c=${
+          workout.exercises.filter(isConditioningExerciseRow).length},a=${
+          workout.exercises.filter((row) => !isConditioningExerciseRow(row) &&
+            isAccessoryStrengthRow(row)).length})`).join(' ') + ']';
+    }).join(' '));
   return { weekStart, session };
 }
 
