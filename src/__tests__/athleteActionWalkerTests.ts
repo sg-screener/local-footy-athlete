@@ -84,6 +84,8 @@ import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
 import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
@@ -3092,9 +3094,29 @@ async function walkTheRestoreDoorOverAReduction(): Promise<void> {
   performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
   performAction({ kind: 'generate_program' });
 
+  // THE DERIVED CONTRACT FIRST, the stored overlay only as a fallback.
+  //
+  // The first version of this cell read `weekScopedOverlays[…].exposureContractV2`
+  // — the STORED DECLARATION, which is the exact thing leg (v) retires. It
+  // passed on the branch and RED the moment the writer arm was priced, saying
+  // "the walked world authored no reduction" about a world that had authored
+  // one. A cell that reds when the unit it belongs to lands is measuring the
+  // storage, not the app.
+  //
+  // Same correction the deletion suite already made for its own fixture
+  // (`athleteSessionDeletionTests.ts:418`): read the DERIVED week first, keep
+  // the published payload as the fallback so an unchanged world is unchanged.
   const authorisedReductions = (): Array<{ reason?: string; deletionIdentity?: string }> => {
-    const overlay = useProgramStore.getState().weekScopedOverlays[weekStart];
-    return (overlay?.exposureContractV2?.authorisedReductions ?? []) as never;
+    const state = useProgramStore.getState();
+    const derived = quiet(() => rebaseAcceptedEffectiveWeek({
+      surfaces: storedWorldSurfaces(state),
+      weekStart,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    }).contract.authorisedReductions);
+    if (derived.length > 0) return derived as never;
+    return (state.weekScopedOverlays[weekStart]?.exposureContractV2
+      ?.authorisedReductions ?? []) as never;
   };
   const removalReductions = () => authorisedReductions()
     .filter((entry) => entry.reason === 'explicit_user_override' && !!entry.deletionIdentity);
@@ -3118,30 +3140,42 @@ async function walkTheRestoreDoorOverAReduction(): Promise<void> {
       + `${removed.length} removals — the reduction-ownership consumers are unreachable `
       + 'from it and this cell proves nothing');
   }
-  const identity = reductions[0]!.deletionIdentity!;
-  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
-    .find((entry) => (entry.linkedUserRemovalConstraintIds ?? []).includes(identity));
-  assert(!!adjustment, `no adjustment claims the constraint that authored the reduction (${identity})`);
-
-  const before = (require('../dev/reductionOwnershipBind') as
+  // UNDO NEWEST-FIRST, which is what an athlete does and what the ledger
+  // permits. Picking the reduction's OWN adjustment restored a decision a
+  // later removal already superseded — the door correctly answered
+  // `superseded` and nothing was compared. Undoing in reverse order means
+  // nothing can own the restoration target ahead of the adjustment being
+  // undone, so the consumers are actually reached.
+  const bind = () => (require('../dev/reductionOwnershipBind') as
     typeof import('../dev/reductionOwnershipBind')).snapshotOwnershipBind();
-  const restored = await quietAsync(() => clearReversibleAdjustment(
-    adjustment!.id,
-    useProgramStore.getState().acceptedMaterialContext.revision,
-  ));
-  const after = (require('../dev/reductionOwnershipBind') as
-    typeof import('../dev/reductionOwnershipBind')).snapshotOwnershipBind();
+  const reductionIdentities = new Set(reductions.map((entry) => entry.deletionIdentity));
+  const undoOrder = [...useProgramStore.getState().reversibleAdjustmentLedger.adjustments]
+    .filter((entry) => entry.status === 'active')
+    .reverse();
+  assert(undoOrder.length > 0, 'the walked world holds no active adjustment to undo');
 
-  assert(restored.outcome === 'restored' || restored.outcome === 'recomposed',
-    `the durable Restore did not restore: ${JSON.stringify(restored)}`);
+  const before = bind();
+  let exercised = before;
+  let restoredIdentities: string[] = [];
+  for (const entry of undoOrder) {
+    const outcome = await quietAsync(() => clearReversibleAdjustment(
+      entry.id,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    ));
+    if (outcome.outcome !== 'restored' && outcome.outcome !== 'recomposed') continue;
+    restoredIdentities = [...restoredIdentities, ...(entry.linkedUserRemovalConstraintIds ?? [])];
+    exercised = bind();
+    if (exercised.equal > before.equal) break;
+  }
+  const after = bind();
 
-  // THE COVERAGE ASSERTION — the comparison ran WITH CONTENT.
+  // THE COVERAGE ASSERTIONS — the comparison ran, and ran WITH CONTENT.
   assert(after.calls > before.calls,
-    'the Restore never reached the reduction-ownership consumers — this cell '
-    + 'would pass without comparing anything');
+    'no Restore reached the reduction-ownership consumers — this cell would '
+    + 'pass without comparing anything');
   assert(after.equal > before.equal,
-    'every ownership comparison during this Restore had an EMPTY owned set; the '
-    + `derivation was never actually exercised (calls ${before.calls} -> ${after.calls})`);
+    'every ownership comparison during these Restores had an EMPTY owned set; '
+    + `the derivation was never actually exercised (calls ${before.calls} -> ${after.calls})`);
 
   // THE EQUALITY BIND — the seat's (c). Restore's meaning is protected, not changed.
   assert(after.divergent === before.divergent,
@@ -3149,9 +3183,13 @@ async function walkTheRestoreDoorOverAReduction(): Promise<void> {
     + `divergences ${before.divergent} -> ${after.divergent}; run with `
     + 'LFA_OWNERSHIP_BIND=<file> to read the rows');
 
-  // AND THE VISIBLE MEANING: the reduction the restored decision authored is gone.
-  assert(!removalReductions().some((entry) => entry.deletionIdentity === identity),
-    'Restore left the removal-authored reduction on the contract');
+  // AND THE VISIBLE MEANING: no restored decision still holds a reduction.
+  const undone = new Set(restoredIdentities.filter((id) => reductionIdentities.has(id)));
+  assert(undone.size > 0,
+    'no restored adjustment owned a reduction-authoring constraint, so the '
+    + 'visible half of this cell proves nothing');
+  assert(!removalReductions().some((entry) => undone.has(entry.deletionIdentity!)),
+    'Restore left a removal-authored reduction on the contract');
 }
 
 async function walkTheLighterDayDoor(): Promise<void> {
