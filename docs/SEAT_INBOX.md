@@ -2,6 +2,68 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (nineteenth pass) — THE PRODUCER NAMED, THE DIFF CLASSIFIED
+
+- LOOP CHECK: attribution-stated-from-two-snapshots-instead-of-a-tape —
+  sighting 3 this unit — COMPRESS, and the compression is a correction of my
+  own report: **"the write path drops the row" is WITHDRAWN.** Which side of a
+  difference MOVED is not read off two snapshots; the tape watches the
+  transition, and the instrument you ordered overturned the finding it was sent
+  to confirm.
+- Answered in docs/R53_THIRD_PRODUCER_NAMED_PARITY_CLASSIFIED_2026-08-07.md.
+  **BUILT on the branch — harness only, no product code.**
+- **(a) THE THIRD PRODUCER, NAMED:** `commitAcceptedStateTransaction`
+  (`acceptedStateTransaction.ts:837`) ← `commitAthleteSessionDeletionTransaction`
+  (`:3291`) ← `planChangeProducer.commit` — reached from the athlete's own
+  REMOVAL, on a path neither of leg (v)'s writers touches. It writes the
+  declaration AND the payload in ONE store write. Positive control in-world:
+  38/84/125 store writes, 15/33/51 transitions; no zero relied on.
+- **AND THE PAYLOAD IS NEVER SHORT.** Every recorded payload transition is
+  `0 -> 8` rows with `Vertical Jump` present. What costs the row is the stored
+  DECLARATION at READ — dose-response across arms: both writers = 3 of 3 worlds
+  lose it, one writer = 1 of 3, none = 0 of 3. Resolve-order REFUTED (8
+  consecutive resolves, all 8 rows); the write validator REFUTED BY TAPE.
+- **(b) CLASSIFICATION BUILT INTO THE GATE, not written in a report.**
+  `DECLARED_PARITY_DIFF` carries one entry —
+  `stored_declaration_costs_mondays_power_row` — cited to the fixture-identity
+  law, with the rows it covers, its payer (leg (v)) and its expiry.
+  STORED-WRONG declared and flagged, does not block; unattributed and
+  derived-wrong still block. **Mutation-proven three ways** (wrong row → red,
+  entry deleted → red, stale entry → red). Container identity is NORMALISED and
+  reported, not compared — it names the container, which is what leg (v)
+  retires. `test:derived-week-lawfulness` **16/16 and REGISTERED in the bible
+  chain** (157), in the commit that greened it.
+- **(c) THE NINE, SET-DIFFED BEFORE DIAGNOSING — six are one sentence.** The
+  accepted week no longer knows what kind of week it is
+  (`mode=in_season_game_week` where illness_recovery was authored; bye and
+  practice-match tables not selected; "the fact reached the derivation but was
+  never materialised"). **The week's IDENTITY lives in the stored declaration
+  and its readers still read it from storage** — leg (v) retires the write
+  without retiring the read. Two (`phase-structure` cell 8, `action-walker`'s
+  lighter-day cell) are UNEXPLAINED. The ninth is the ratchet working:
+  `session_list_calls_a_conditioning_day_recovery` stops redding under the arm,
+  so leg (v) PAYS a declared D13 debt and owes that entry's deletion.
+- **RECOMMENDATION:** re-scope leg (v) from "the writer stops" to **"the
+  readers derive, then the writer stops"**, priced as one unit — the shape that
+  made leg (iii) land, and the reader census the gateway-census gate already
+  has a shape for.
+- **Device-pass flag, PENDING not current:** Monday gains its `Vertical Jump`
+  back WHEN leg (v) lands. Nothing changed on the phone this pass.
+- **GATE:** `test:compile` EXIT 0 (gate PASSED, nothing regressed). Full
+  `test:bible` UNPIPED **EXIT 1** on `test:program-control-durable`, the
+  declared red — the chain stops there, so the new suite is verified by direct
+  run at 16/16, not by the chain. The completion notification claimed exit 0
+  again: seventh sighting, printed lines only.
+- **NOT COVERED:** class B's two suites; the read-side mechanism is attributed
+  by dose-response, not by a line-level tape of the resolve; the reader census
+  is a grep sketch (8+ sites), not a gate; `action-walker:deep` not re-run under
+  the arm.
+
+## Processed 2026-08-07 (eighteenth pass) — the order as the seat wrote it
+
 1. RULINGS on the parity-red/leg-(v) report — commit as authored.
    LOOP CHECK: unnamed-producer-hunt — sighting 2 this unit (the
    freed-day producer was sighting 1, ended by the tape) — COMPRESS:

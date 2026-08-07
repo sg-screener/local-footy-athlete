@@ -189,8 +189,117 @@ function derivedWeekBytes(): string {
     // EVERY stamp, at every depth — a derived row nests an exercise record
     // that carries its own pair, and normalising only the top level compares
     // two weeks that were never being compared.
-    (key, value) => (key === 'createdAt' || key === 'updatedAt') ? '<stamp>' : value,
+    //
+    // CONTAINER IDENTITY IS NORMALISED TOO, and for the same reason. A row read
+    // through the stored overlay carries that overlay's `microcycleId` and an
+    // id suffixed `:week-overlay:<date>` (`cloneWorkoutForOverlay`); the same
+    // row derived carries the microcycle's. That names WHICH CONTAINER the row
+    // came out of, which is exactly the thing leg (v) retires — comparing it
+    // would make the gate fail by definition and tell nobody anything about
+    // the athlete's week. `lawful-5` reports the container names it saw so the
+    // normalisation hides nothing.
+    (key, value) => {
+      if (key === 'createdAt' || key === 'updatedAt') return '<stamp>';
+      if (key === 'microcycleId') return '<container>';
+      if (key === 'id' && typeof value === 'string') {
+        return value.replace(/:week-overlay:\d{4}-\d{2}-\d{2}$/, '');
+      }
+      return value;
+    },
   );
+}
+
+/**
+ * DECLARED PARITY DIFFS — the seat's 2026-08-07 classification ruling, built.
+ *
+ * A parity difference is not a verdict until it is ATTRIBUTED with a law
+ * citation. Once it is, the ruling sorts it:
+ *
+ *   STORED-WRONG   — the stored week is the wrong one and the derivation
+ *                    corrects it. Declared here, flagged for the device pass,
+ *                    and it does NOT block: it is an old write-path defect
+ *                    this unit's own switchover retires.
+ *   DERIVED-WRONG  — always blocks. The derivation is what ships.
+ *   UNATTRIBUTED   — always blocks. An unexplained difference between the
+ *                    stored week and the derived one is the whole reason this
+ *                    gate exists.
+ *
+ * An entry states the exact rows it covers, so a diff that grows a row nobody
+ * declared reds even on a day that already carries a declared entry.
+ */
+interface DeclaredParityDiff {
+  id: string;
+  law: string;
+  date: string;
+  /** Rows the DERIVED week has and the stored week does not. */
+  onlyDerived: readonly string[];
+  /** Rows the STORED week has and the derived week does not. */
+  onlyMaterialised: readonly string[];
+  why: string;
+  paidBy: string;
+  expiresWhen: string;
+}
+
+const DECLARED_PARITY_DIFF: ReadonlyArray<DeclaredParityDiff> = [
+  {
+    id: 'stored_declaration_costs_mondays_power_row',
+    law: 'FIXTURE IDENTITY — a decision never rebases from a stored week; the '
+      + 'derived week is the one that ships',
+    date: '2026-08-10',
+    onlyDerived: ['Vertical Jump'],
+    onlyMaterialised: [],
+    why: 'STORED-WRONG, and attributed by tape rather than by comparison. The '
+      + 'field-level store tape (2026-08-07) shows the overlay\'s Monday is '
+      + 'written with ALL EIGHT rows at every single store write — the payload '
+      + 'is never short. What costs the row is the stored DECLARATION being '
+      + 'present at READ: with both declaration writers removed the row comes '
+      + 'back in all three worlds, with one writer restored it returns in one '
+      + 'of three, and on the branch it is gone in three of three. So the '
+      + 'athlete is one power row short of what generation prescribed, and the '
+      + 'derivation is the side that is right. §18 scores both weeks '
+      + 'identically, so no authority reduced it.',
+    paidBy: 'leg (v) — the stored declaration retiring. Measured: with it '
+      + 'retired, `test:fixture-identity` is 6/6 and this diff is gone.',
+    expiresWhen: 'the accepted week carries no stored `exposureContractV2`, so '
+      + 'nothing at read can answer from it.',
+  },
+];
+
+const parityDiffHits = new Set<string>();
+
+/** Null when every differing row on every day is declared. */
+function undeclaredParityDiffs(leftBytes: string, rightBytes: string): string[] {
+  const rows = (bytes: string): Map<string, string[]> => new Map(
+    (JSON.parse(bytes) as Array<{
+      date: string;
+      workout: { exercises?: Array<{ exercise?: { name?: string }; name?: string }> } | null;
+    }>).map((day) => [day.date, (day.workout?.exercises ?? []).map((row) =>
+      String(row?.exercise?.name ?? row?.name ?? '?'))]));
+  const left = rows(leftBytes);
+  const right = rows(rightBytes);
+  const undeclared: string[] = [];
+  for (const [date, materialisedRows] of left) {
+    const derivedRows = right.get(date) ?? [];
+    if (JSON.stringify(materialisedRows) === JSON.stringify(derivedRows)) continue;
+    const only = (a: string[], b: string[]): string[] =>
+      [...new Set(a.filter((name) => !b.includes(name)))].sort();
+    const onlyDerived = only(derivedRows, materialisedRows);
+    const onlyMaterialised = only(materialisedRows, derivedRows);
+    const entry = DECLARED_PARITY_DIFF.find((candidate) =>
+      candidate.date === date
+      && JSON.stringify([...candidate.onlyDerived].sort()) === JSON.stringify(onlyDerived)
+      && JSON.stringify([...candidate.onlyMaterialised].sort())
+        === JSON.stringify(onlyMaterialised));
+    if (entry) {
+      parityDiffHits.add(entry.id);
+      console.log(`      (declared parity diff carried: ${entry.id} — ${entry.law}`
+        + `\n        paid by ${entry.paidBy})`);
+      continue;
+    }
+    undeclared.push(`${date}: only-derived ${JSON.stringify(onlyDerived)} / `
+      + `only-materialised ${JSON.stringify(onlyMaterialised)}`);
+  }
+  return undeclared;
 }
 
 /**
@@ -569,18 +678,26 @@ async function main(): Promise<void> {
               `${domain}=${policy.unresolvedMinimumShortfall ?? 0}`).join(' ')}`;
         }).join('\n              ');
       };
-      assert(derived === materialised.bytes,
-        `${label}: the DERIVED week is not the week the athlete is looking at. `
-        + 'Retiring the materialised payload would change what is on the '
-        + 'phone, which is what the fixture-identity law forbids.\n      '
+      // THE CLASSIFICATION, BEFORE THE VERDICT (seat ruling, 2026-08-07). A
+      // difference that is ATTRIBUTED and declared STORED-WRONG is an old
+      // write-path defect the derivation corrects — it is flagged for the
+      // device pass and does not block. Everything else does: an unattributed
+      // difference is exactly what this gate is for.
+      const undeclared = undeclaredParityDiffs(materialised.bytes, derived);
+      assert(undeclared.length === 0 || derived === materialised.bytes,
+        `${label}: the stored week and the derived week disagree, and the `
+        + 'difference is NOT declared. Attribute it before it is anything — an '
+        + 'unattributed parity diff always blocks.\n      '
         + `materialised ${JSON.parse(materialised.bytes).map((day: { date: string; workout: { name?: string; exercises?: unknown[] } | null }) => `${day.date}=${day.workout?.name ?? 'REST'}|${day.workout?.exercises?.length ?? 0}`).join(' | ')}\n      `
         + `derived      ${derivedWeek().join(' | ')}\n      `
         + `${rowDiff(materialised.bytes, derived).join('\n      ')}\n      `
         + `§18 on each week — ${lawfulness()}\n      `
         + `the program's own rows — ${ancestry()}\n      `
-        + `DIFF ${firstDifference(materialised.bytes, derived)}`);
+        + `DIFF ${firstDifference(materialised.bytes, derived)}\n      `
+        + `UNDECLARED: ${undeclared.join('; ')}`);
       console.log(`      ${label} parity: ${materialised.overlayDays.length} `
-        + `materialised days (${materialised.overlayDays.join(', ')}) — byte-equal`);
+        + `materialised days (${materialised.overlayDays.join(', ')}) — `
+        + `${derived === materialised.bytes ? 'byte-equal' : 'every difference declared'}`);
     });
 
     // ── THE VALUES THE RE-PIN WOULD TAKE ────────────────────────────────
@@ -598,6 +715,16 @@ async function main(): Promise<void> {
         + `${stamps.total} (${stamps.distinct} distinct)`);
     });
   }
+
+  // ── THE RATCHET DIRECTION, same law as the walker's declared reds ─────
+  await run('every declared parity diff still happens — a paid one deletes', async () => {
+    const owed = DECLARED_PARITY_DIFF.filter((entry) => !parityDiffHits.has(entry.id));
+    assert(owed.length === 0,
+      'a declared parity diff no longer happens in any world. The commit that '
+      + 'turned it green owes the deletion of its entry — debt only ever moves '
+      + `down:\n      ${owed.map((entry) =>
+        `${entry.id} (expires when: ${entry.expiresWhen})`).join('\n      ')}`);
+  });
 
   console.log(`\nDerived-week lawfulness totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
