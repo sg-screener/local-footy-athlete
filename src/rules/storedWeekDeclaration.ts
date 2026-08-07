@@ -25,8 +25,10 @@
  * every writer — the five found and any sixth — harmless in one commit. This
  * door is what makes storage unread.
  */
-import type { Microcycle, WeekScopedWorkoutOverlay } from '../types/domain';
+import type { Microcycle, OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
+import type { CalendarDayType } from '../store/calendarStore';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
+import type { TemporarySourceFact } from './temporarySourceFact';
 
 /**
  * WHICH CANDIDATE ANSWERED. Recorded rather than inferred, because "the door
@@ -150,8 +152,67 @@ export interface StoredWeekDeclarationQuery {
  * Inert unless the flag is set. Nothing here is landed behaviour.
  */
 export const FLIP_SCAFFOLD = {
-  get door(): boolean { return process.env.LFA_FLIP_DOOR === '1'; },
+  /** Arm 1 and arm 2 both drop the overlay rung. */
+  get door(): boolean {
+    return process.env.LFA_FLIP_DOOR === '1' || process.env.LFA_FLIP_DOOR === '2';
+  },
+  /**
+   * ARM 2 — the rung-drop PLUS (c)'s replay of the week's identity onto the
+   * base contract, from the live world.
+   *
+   * Reading the store from a rules module is not the shape this codebase
+   * ships; it is what a SCAFFOLD is for. The question this arm answers is
+   * "how much of the 8 does the replay pay?", and answering it must not cost
+   * the fact-threading through ten callers that the answer decides whether to
+   * do at all.
+   *
+   * NOTE WHAT IT CANNOT DO, so the result is not over-read: the reduction
+   * arithmetic is measured against the COMPOSED WEEK, which no caller of this
+   * door has in hand. So arm 2 replays IDENTITY (fixtures + source facts) and
+   * NOT the accumulated reductions. Class D is expected to survive it, and
+   * that expectation is the measurement's whole point.
+   */
+  get replay(): boolean { return process.env.LFA_FLIP_DOOR === '2'; },
 };
+
+/** The live world, for arm 2 only. Required lazily so nothing loads it by default. */
+function liveReplayInputs(): {
+  profile: OnboardingData | null;
+  markedDays: Readonly<Record<string, CalendarDayType>>;
+  temporarySourceFacts: readonly TemporarySourceFact[];
+} | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const program = require('../store/programStore').useProgramStore.getState();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const profile = require('../store/profileStore').useProfileStore.getState().onboardingData;
+    return {
+      profile: profile ?? null,
+      markedDays: program.acceptedMaterialContext?.markedDays ?? {},
+      temporarySourceFacts: program.acceptedMaterialContext?.temporarySourceFacts ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function replayed(
+  contract: WeeklyExposureContractV2,
+  weekStart: string,
+): WeeklyExposureContractV2 {
+  if (!FLIP_SCAFFOLD.replay) return contract;
+  const world = liveReplayInputs();
+  if (!world?.profile) return contract;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { deriveWeekContract } = require('./derivedWeekContract');
+  return deriveWeekContract({
+    contract,
+    weekStart,
+    profile: world.profile,
+    markedDays: world.markedDays,
+    temporarySourceFacts: world.temporarySourceFacts,
+  });
+}
 
 export function selectStoredWeekDeclaration(
   query: StoredWeekDeclarationQuery,
@@ -164,12 +225,12 @@ export function selectStoredWeekDeclaration(
   const covering = query.coveringMicrocycle?.exposureContractV2;
   if (covering) {
     record(query.reader, query.weekStart, 'covering_microcycle');
-    return covering;
+    return replayed(covering, query.weekStart);
   }
   const current = query.currentMicrocycle?.exposureContractV2;
   if (current) {
     record(query.reader, query.weekStart, 'current_microcycle');
-    return current;
+    return replayed(current, query.weekStart);
   }
   record(query.reader, query.weekStart, 'none');
   return null;

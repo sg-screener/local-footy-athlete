@@ -2,6 +2,68 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-seventh + twenty-eighth passes) — THE CLASS IS THE ACCUMULATOR, AND THE REPLAY IS REFUTED
+
+- LOOP CHECK: **pin-the-"already covered"-claim** fires and pays for itself in
+  one suite run — (b) ordered the carried `fact-horizon` attribution
+  re-confirmed rather than believed, and it does NOT hold.
+- Answered in docs/R53_FLIP_CLASS_CONFIRMED_ACCUMULATOR_NAMED_2026-08-07.md and
+  docs/R53_FLIP_C_REPLAY_REFUTED_ACCUMULATOR_STOP_2026-08-07.md.
+  **NOTHING BUILT** — both arms flag-gated (`LFA_FLIP_DOOR=1|2`), inert.
+- **(a) THE SENTENCE HOLDS FOR THREE, VIA THE READ SIDE.**
+  `accepted-state-transactions` 1/2/5 byte-same to the recorded text;
+  `athlete-session-deletion` the same bye-build sentence but WIDER (4 recorded
+  cells -> 14); `illness-clear-game-week` G3 the same cell with the mechanism
+  visible in the changed value (`mode=undefined` -> `mode=in_season_game_week`:
+  the read falls back to the covering microcycle instead of finding nothing).
+  `phase-structure` 8 is BYTE-IDENTICAL to the recorded class B and still
+  undiagnosed in three passes.
+- **(a) FOUND A SECOND CLASS NOBODY HAD RECORDED — THE ACCUMULATOR.** Three
+  cells, two suites: `athlete-session-deletion` 22 ("owned reduction missing
+  from accepted contract"), `action-walker:deep` ("Restore over a
+  reduction-authoring removal"), `accepted-state-transactions` 7. Reductions
+  accumulate onto the OVERLAY's declaration, so dropping the rung drops the
+  accumulation. **8 of 8 accounted for**, where the last pass had 5 undiagnosed.
+- **(b) REFUTED, and the carried claim is STRUCK.** `fact-horizon` was recorded
+  as T1/A1 "the fact reached the derivation but was never materialised".
+  Measured today it is **T4**, "illness_severe rewrote 2 completed day(s)" —
+  different cell, different sentence, and T1/A1 do not fail under the arm at
+  all. It is the COMPLETED-DAY BOUNDARY, Sam's own standing device flag.
+- **(c) THE REPLAY IS REFUTED BY MEASUREMENT. Arm 2 = rung-drop + replay of
+  identity from the live world: control 2 -> arm 1 NINE -> arm 2 FOURTEEN.
+  It paid ZERO of the eight and cost five more.**
+- **THEREFORE CLASS A IS THE ACCUMULATOR TOO — the eight are ONE class.** If
+  class A were fixture/fact-derivable identity, arm 2 would have paid it;
+  `deriveWeekContract` is exactly that owner and its output reached every door
+  caller. It paid none of the three. So the missing state was written by
+  DECISION doors (bye-build/practice-match table selection, illness authoring,
+  in-week authorised changes) and the covering microcycle is generation's
+  output, which knows nothing of any decision taken after it.
+- **(c)'s STOP CONDITION IS MET — THE PIECE IS NAMED:** the week's
+  DECISION-ACCUMULATED contract state — (1) `authorisedReductions`, whose
+  arithmetic needs the composed week no door caller holds, and (2) the
+  decision-authored identity, measured NOT recomputable from fixtures + facts.
+  Both need the DECISION LEDGER replayed onto the base, which is **LR-29
+  undo-as-replay — recorded, sized, NOT BUILT**.
+- **A SECOND REFUTATION: the door is the WRONG PLACE to derive.** It is called
+  from hydration and stored-shape validation as well as live reads, so there is
+  no single world it can derive against — measured as arm 2's five new reds.
+  Deriving belongs where the world is already in hand.
+- **(d) NOT REACHED; V3 NOT CLOSED.** The flip does not land: it would ship the
+  accumulator loss, which is a decision payload — the same STOP reached now from
+  four directions.
+- **STILL TRUE AND CARRIED:** parity byte-equal in all three worlds,
+  `fixture-identity` FIXED, and the athlete's `2026-08-10=Lower Squat|8` Monday.
+- **NOT COVERED:** arm 2's five new reds are not individually diagnosed and some
+  may be scaffold artefacts (nothing rests on them — the decisive number is the
+  ZERO paid); class B is text-only in three passes; LR-29 is not built, not
+  scaffolded, not priced; no device evidence.
+
+## Processed 2026-08-07 (twenty-seventh pass) — the ruling as the seat wrote it
+
 1. RULING on the move (iii) price STOP — commit as authored.
    LOOP CHECK: same-failure-set-from-two-mechanisms — the
    re-attribution is ACCEPTED: the 8 reds belong to "the stored
@@ -34,9 +96,6 @@
    One-turn law and continuous authorisation to the endpoint. Sam
    holds a veto. Device flags land via the flip as measured
    (Vertical Jump Monday byte-equal in all three worlds).
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-sixth pass) — MOVE (ii) BUILT AND FREE, MOVE (iii) PRICED AND STOPPED
 

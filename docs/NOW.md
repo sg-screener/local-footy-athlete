@@ -1,5 +1,37 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **THE FLIP (a)(b)(c): THE EIGHT ARE ONE CLASS — THE ACCUMULATOR — AND THE
+  REPLAY IS REFUTED BY MEASUREMENT. STOP.** Three arms, 156 suites each,
+  world-identity preamble printed, sets diffed never totals:
+  **control 2 → arm 1 (drop the overlay rung) NINE → arm 2 (rung-drop +
+  (c)'s replay) FOURTEEN. The replay paid ZERO of the eight and cost five
+  more.**
+  **THEREFORE CLASS A IS THE ACCUMULATOR TOO.** If class A were
+  fixture/fact-derivable identity, arm 2 would have paid it —
+  `deriveWeekContract` is exactly that owner and its output reached every door
+  caller. It paid none of the three. The missing state was written by DECISION
+  doors (bye-build/practice-match table selection, illness authoring, in-week
+  authorised changes); the covering microcycle is generation's output and knows
+  nothing of any decision taken after it.
+  **(c)'s STOP CONDITION MET — THE PIECE IS NAMED:** the week's
+  DECISION-ACCUMULATED contract state — (1) `authorisedReductions` (its
+  arithmetic needs the composed week no door caller holds) and (2) the
+  decision-authored identity (measured NOT recomputable from fixtures + facts).
+  Both need the DECISION LEDGER replayed onto the base = **LR-29 undo-as-replay,
+  recorded and sized, NOT BUILT.**
+  **SECOND REFUTATION: the door is the WRONG PLACE to derive** — it is called
+  from hydration and stored-shape validation as well as live reads, so there is
+  no single world it can derive against (arm 2's five new reds).
+  **(a) confirmed the recorded sentence for three suites** (one byte-same, one
+  WIDER 4→14 cells, one with the mechanism in the changed value); **(b) REFUTED
+  and struck** — `fact-horizon` is **T4** "illness_severe rewrote 2 completed
+  day(s)", not the recorded T1/A1, so it is the COMPLETED-DAY BOUNDARY (Sam's
+  standing device flag). **8 of 8 accounted for.**
+  **STILL TRUE:** parity byte-equal in all three worlds, `fixture-identity`
+  FIXED, `2026-08-10=Lower Squat|8`. **(d) NOT reached; V3 NOT closed.**
+  Reports: docs/R53_FLIP_CLASS_CONFIRMED_ACCUMULATOR_NAMED_2026-08-07.md,
+  docs/R53_FLIP_C_REPLAY_REFUTED_ACCUMULATOR_STOP_2026-08-07.md
+
 - **THE FLIP: MOVE (ii) IS BUILT AND FREE; MOVE (iii) IS PRICED AND STOPPED.**
   **(ii) LANDED UNFLAGGED (`e97c9a49`)** — ten longhand copies of the
   declaration precedence onto one owner, `src/rules/storedWeekDeclaration.ts`.
