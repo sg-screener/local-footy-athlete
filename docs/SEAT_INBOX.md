@@ -2,7 +2,7 @@
 
 ## Unprocessed (newest first)
 
-1. (queue empty)
+(none)
 
 ## Processed 2026-08-07 (thirty-fifth pass) — MERGED TO MAIN; BOTH DEPENDENCY LISTS DELIVERED; SLICE 1 STOPPED ON ITS CHECK-OFF HALF
 
