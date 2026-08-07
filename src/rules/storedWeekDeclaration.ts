@@ -25,10 +25,8 @@
  * every writer — the five found and any sixth — harmless in one commit. This
  * door is what makes storage unread.
  */
-import type { Microcycle, OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
-import type { CalendarDayType } from '../store/calendarStore';
+import type { Microcycle, WeekScopedWorkoutOverlay } from '../types/domain';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
-import type { TemporarySourceFact } from './temporarySourceFact';
 
 /**
  * WHICH CANDIDATE ANSWERED. Recorded rather than inferred, because "the door
@@ -151,68 +149,27 @@ export interface StoredWeekDeclarationQuery {
  *
  * Inert unless the flag is set. Nothing here is landed behaviour.
  */
+/**
+ * ARM 2 IS DELETED, and the deletion is the finding, not tidying.
+ *
+ * Arm 2 replayed the week's identity onto the base contract from the live
+ * world — the seat's (c). It was measured (control 2 -> arm 1 nine -> arm 2
+ * FOURTEEN of 156: it paid ZERO and cost five more) and REFUTED, and its
+ * numbers are recorded in
+ * `docs/R53_FLIP_C_REPLAY_REFUTED_ACCUMULATOR_STOP_2026-08-07.md`.
+ *
+ * It is removed rather than parked because it read the profile MIRROR
+ * (`useProfileStore.getState().onboardingData`), which is an LR-4 violation
+ * the legacy-census ratchet counts by SOURCE SCAN — so a parked, flag-off
+ * scaffold still pushed declared debt up by one. **That also explains one of
+ * arm 2's own five "new reds": `test:legacy-census` was never a behavioural
+ * artefact of the arm, it was this static hit.** A refuted scaffold is not
+ * worth a debt ratchet; the replay unit re-derives its own arm from the
+ * kickoff doc.
+ */
 export const FLIP_SCAFFOLD = {
-  /** Arm 1 and arm 2 both drop the overlay rung. */
-  get door(): boolean {
-    return process.env.LFA_FLIP_DOOR === '1' || process.env.LFA_FLIP_DOOR === '2';
-  },
-  /**
-   * ARM 2 — the rung-drop PLUS (c)'s replay of the week's identity onto the
-   * base contract, from the live world.
-   *
-   * Reading the store from a rules module is not the shape this codebase
-   * ships; it is what a SCAFFOLD is for. The question this arm answers is
-   * "how much of the 8 does the replay pay?", and answering it must not cost
-   * the fact-threading through ten callers that the answer decides whether to
-   * do at all.
-   *
-   * NOTE WHAT IT CANNOT DO, so the result is not over-read: the reduction
-   * arithmetic is measured against the COMPOSED WEEK, which no caller of this
-   * door has in hand. So arm 2 replays IDENTITY (fixtures + source facts) and
-   * NOT the accumulated reductions. Class D is expected to survive it, and
-   * that expectation is the measurement's whole point.
-   */
-  get replay(): boolean { return process.env.LFA_FLIP_DOOR === '2'; },
+  get door(): boolean { return process.env.LFA_FLIP_DOOR === '1'; },
 };
-
-/** The live world, for arm 2 only. Required lazily so nothing loads it by default. */
-function liveReplayInputs(): {
-  profile: OnboardingData | null;
-  markedDays: Readonly<Record<string, CalendarDayType>>;
-  temporarySourceFacts: readonly TemporarySourceFact[];
-} | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const program = require('../store/programStore').useProgramStore.getState();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const profile = require('../store/profileStore').useProfileStore.getState().onboardingData;
-    return {
-      profile: profile ?? null,
-      markedDays: program.acceptedMaterialContext?.markedDays ?? {},
-      temporarySourceFacts: program.acceptedMaterialContext?.temporarySourceFacts ?? [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-function replayed(
-  contract: WeeklyExposureContractV2,
-  weekStart: string,
-): WeeklyExposureContractV2 {
-  if (!FLIP_SCAFFOLD.replay) return contract;
-  const world = liveReplayInputs();
-  if (!world?.profile) return contract;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { deriveWeekContract } = require('./derivedWeekContract');
-  return deriveWeekContract({
-    contract,
-    weekStart,
-    profile: world.profile,
-    markedDays: world.markedDays,
-    temporarySourceFacts: world.temporarySourceFacts,
-  });
-}
 
 export function selectStoredWeekDeclaration(
   query: StoredWeekDeclarationQuery,
@@ -225,12 +182,12 @@ export function selectStoredWeekDeclaration(
   const covering = query.coveringMicrocycle?.exposureContractV2;
   if (covering) {
     record(query.reader, query.weekStart, 'covering_microcycle');
-    return replayed(covering, query.weekStart);
+    return covering;
   }
   const current = query.currentMicrocycle?.exposureContractV2;
   if (current) {
     record(query.reader, query.weekStart, 'current_microcycle');
-    return replayed(current, query.weekStart);
+    return current;
   }
   record(query.reader, query.weekStart, 'none');
   return null;

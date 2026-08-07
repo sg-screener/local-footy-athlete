@@ -81,7 +81,6 @@ function HomeScreenClassic() {
     handleAddGameMode,
     handleViewWorkout,
     handleFinishTeamSession,
-    handleMessageCoach,
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
@@ -305,7 +304,6 @@ function HomeScreenClassic() {
                       {staleByDate[day.date] && (
                         <StaleOverrideBanner
                           warning={staleByDate[day.date]}
-                          onReview={(prefill) => handleMessageCoach(prefill)}
                         />
                       )}
                       {isTeamOnly ? (
@@ -343,7 +341,6 @@ function HomeScreenClassic() {
                   <StaleOverrideBanner
                     warning={staleByDate[day.date]}
                     compact
-                    onReview={(prefill) => handleMessageCoach(prefill)}
                   />
                 )}
 
@@ -451,7 +448,6 @@ function HomeScreenClassic() {
         onApplyEquipmentDecision={(decision) =>
           void handleApplyEquipmentDecision(decision, selectedQuickActionDate ?? undefined)}
         onApplyGuidedInjury={handleApplyGuidedInjury}
-        onMessageCoach={handleMessageCoach}
       />
 
       <PlanChangeSheet
