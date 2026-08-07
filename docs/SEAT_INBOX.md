@@ -11,7 +11,7 @@
   harness-lies sighting 5, and it is MINE — COMPRESS, and the compression is
   shipped in the same commit, not written down as a reminder.
 - Answered in docs/R53_LEGV_RESCOPED_PRICED_STOP_2026-08-07.md; the arm is
-  flag-gated at `d91d23fc` on scratch/r53-legv-readers. **NOTHING BUILT into
+  flag-gated at `0103c052` on scratch/r53-legv-readers. **NOTHING BUILT into
   the branch** (harness-only change to `scripts/sweep.sh`).
 - **(a) THE RE-SCOPE IS BUILT AND THE READ HALF IS FREE.** The week's IDENTITY
   derives from the athlete's facts — a severe illness mints `optional_week`
@@ -63,16 +63,28 @@
   targeted witness batch runs through the same runner as a full sweep —
   preamble, exit codes, failure set, no tails. Proven both directions in one
   run (`failures=1 of 2`, naming the known red, not the known green).
-- **RECOMMENDATION:** land the READ HALF alone now — measured free, it is your
+- **THE READ HALF IS NOW AT ALL THREE SELECTION LINES, and NO SUITE CAN TELL.**
+  Site 1 alone left the accepted reader deriving while the LIVE resolver and the
+  publisher still answered from storage. All three now take the same facts (the
+  rival hook included, so it cannot diverge); `test:compile` PASSED at baseline.
+  Three-site arms: readers **2** (control set exactly), unit **9** —
+  **set-identical to the one-site arms**. The two extra lines are bought on the
+  one-owner law and the source, NOT on a measurement, because nothing measures
+  them. **L12 finding:** the gate this class needs is an AGREEMENT assertion —
+  three selection lines, same world, same week, same contract identity — the
+  surface-agreement shape aimed at the contract instead of the content. It does
+  not exist, and until it does an install at one line looks exactly like three.
+- **RECOMMENDATION:** land the READ HALF alone now (all three sites) — measured free, it is your
   own named standing shape, and it drops leg (v)'s price from 10 new to 8
   before anything else is attempted. Then ONE tape of the materialisation
   branch, which is positioned to answer the 3 content suites and the 2
   unexplained cells together.
 - **NOT COVERED:** the two unexplained are characterised, not attributed;
-  install sites 2 and 3 of the deriver do not receive the facts in this arm
-  (only site 1 does), so the LIVE resolver may still answer the mode from
-  storage; whether the derived week says `optional_week` at G3's coordinate;
-  `test:compile` outside the sweep as always; no device evidence.
+  install sites 2 and 3 are BUILT but unwitnessed (nothing in the chain
+  separates them from site 1 alone); whether the derived week says
+  `optional_week` at G3's coordinate — the fact that decides whether its
+  precondition is a legitimate re-point or a real defect; `test:compile`
+  outside the sweep as always; no device evidence.
 
 ## Processed 2026-08-07 (twentieth pass) — the ruling as the seat wrote it
 

@@ -13,7 +13,7 @@ witness batch the same instrument as a full sweep.
 
 Twentieth pass. Answers inbox item 1 (a), (b), (c) and the first half of (e).
 **NOTHING BUILT into the branch** — the arm lives flag-gated on
-`scratch/r53-legv-readers` (`d91d23fc`), inert by default.
+`scratch/r53-legv-readers` (`0103c052`), inert by default.
 
 ## THE HEADLINE
 
@@ -73,6 +73,38 @@ deriver returns the stored object byte-for-byte.
 `readiness-ownership` and `deriving-device-commit`. Those are the two cells
 whose subject is the illness mode. The other four class-A suites are red under
 BOTH arms with byte-identical failure text — the read half does not touch them.
+
+## THE READ HALF AT ALL THREE SELECTION LINES — AND NO SUITE CAN TELL
+
+The arm above installed the fact input at ONE of the deriver's three
+contract-selection lines (the accepted reader). That left the accepted reader
+deriving the week's identity while the LIVE resolver and the publisher could
+still answer the same question from storage — three lines, potentially three
+answers, which is the thing the one-owner law forbids. So it was installed at
+all three: the live resolver's tier-4 host (`ScheduleState`, fed from the
+accepted context by BOTH the one assembly and its declared rival, so the rival
+cannot diverge) and the publisher (`fixtureMinimalReplan`, through the shared
+`factsForWorld` reader). No new store read anywhere — `assembleScheduleState`
+already carried `acceptedMaterialContext`.
+
+| arm | failures | vs the one-site arm |
+|---|---|---|
+| readers alone, 3 sites | **2** | control set EXACTLY (diffed, not counted) |
+| the unit, 3 sites | **9** | **IDENTICAL SET** |
+
+`test:compile` PASSED on the scaffold — 459 against baseline, nothing regressed.
+
+**AND THAT IS THE FINDING: no suite in the chain can distinguish one install
+site from three.** The two extra lines are bought on the one-owner law and on
+the source, not on a measurement, because nothing measures them. That is the
+harness-enters-below-the-door shape at the identity layer: the accepted reader
+is gated hard, and the live resolver's answer to "what kind of week is this?"
+is not gated at all. **L12, and it is the more useful half of this pass:** the
+gate this class needs is not another cell but an AGREEMENT assertion — the three
+selection lines, same world, same week, same contract identity — which is the
+`test:surface-agreement` shape aimed at the contract rather than at content. It
+does not exist, and until it does, an install at one line will keep looking
+exactly like an install at three.
 
 ## THE NINE, CLASSIFIED (the unit arm)
 
@@ -178,13 +210,10 @@ filled.
 
 - The two unexplained cells are CHARACTERISED and set-diffed, **not attributed**.
   The candidate mechanism is unmeasured and named as such.
-- Install sites 2 and 3 of the deriver (`sessionResolver`'s tier-4 host,
-  `fixtureMinimalReplan`'s publisher) do NOT receive the facts in this arm — only
-  site 1 does. They already call `deriveWeekContract`; what they lack is the fact
-  input, which matters only for the illness mode. Untested, and it means the LIVE
-  resolver path could still answer the mode from storage where the accepted
-  reader now derives it. `assembleScheduleState` already carries
-  `acceptedMaterialContext`, so the input is reachable without a new store read.
+- Install sites 2 and 3 are now BUILT, and **nothing in the chain witnesses
+  them** — the three-site arms are set-identical to the one-site arms. They rest
+  on the one-owner law and a source reading, not on a measurement, and the
+  agreement gate that would measure them does not exist.
 - Whether the derived week says `optional_week` at `illness-clear-game-week` G3's
   coordinate — the fact that decides whether its precondition is a legitimate
   re-point or a real defect.

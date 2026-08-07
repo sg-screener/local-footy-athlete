@@ -2,7 +2,7 @@
 
 - **Branches:** feat/stage-b-stage2 GREEN (merge target, untouched);
   **feat/r53-v3-switchover = the live unit and it carries the build**;
-  scratch/r53-legv-readers (`d91d23fc`) holds the RE-SCOPED leg (v) arm —
+  scratch/r53-legv-readers (`0103c052`) holds the RE-SCOPED leg (v) arm —
   BOTH halves, each flag-gated, unlanded; scratch/r53-legv-price
   (`1d831279`) holds the older writer-only arm;
   scratch/r53-pricing-7-probe (`8696193e`) holds the one-owner boundary
@@ -31,6 +31,11 @@
   line. Harness-lies sighting 5, mine. Compression SHIPPED: `SWEEP_SUITES`
   makes a witness batch run through the sweep runner (preamble + exit
   codes), proven both directions.
+- **THE READ HALF IS AT ALL THREE SELECTION LINES AND NO SUITE CAN TELL** —
+  three-site arms are SET-IDENTICAL to one-site (readers 2, unit 9), so sites
+  2/3 rest on the one-owner law and the source, not on a measurement. L12: the
+  missing gate is an AGREEMENT assertion across the three contract-selection
+  lines (surface-agreement aimed at the contract, not the content).
 - **RECOMMENDATION TO THE SEAT:** land the READ HALF alone now (free,
   measured, the standing shape), then attribute the content class by ONE
   tape of `commitAcceptedStateTransaction`'s materialisation branch — the
