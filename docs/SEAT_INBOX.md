@@ -5,6 +5,89 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (sixteenth pass, batched) — SIX ROOTS WORKED TO THE
+## END OF THE QUEUE
+
+- Answered in docs/R53_SIX_ROOTS_SETTLED_2026-08-07.md (the batch) +
+  docs/R53_AST_TWO_ROOTS_NAMED_2026-08-07.md (root-1 detail). Instruments
+  and all four flag-gated fixes at `8696193e` on scratch/r53-pricing-7-probe;
+  branch untouched. Worked CONTINUOUSLY per (e); this is the one batched
+  report, triggered by the queue ending AND a genuine STOP firing.
+- **LOOP CHECK: authority-carried-on-the-write-path-only — sighting 2**
+  (`activeFixtureDates`, after `governedFromISO`), and it alone explained
+  THREE of the six reds. Compression proposed: gateway-input census gate by
+  call site.
+- **The six roots:** 1a order-without-an-owner (FIXED, `ORDER_OWNER`);
+  1b + 4 + 5 the fixture-authority mechanism (FIXED, `FIXTURE_AUTHORITY` —
+  reorder clause exercised on the bisections); 6 the relocation generator on
+  a stored contract whose anchors predate the mark — green under leg (iii),
+  the "masking" named as the unit's own convergence; 2 the move door's
+  two-representations defect; 3 the offer withdrawal's role-by-shape
+  classification (FIXED under the pre-loaded ruling, `OFFER_PROVENANCE`,
+  clean in every measured combination).
+- **The genuine STOP (witness disagreement after a fix):** DERIVED_IDENTITY,
+  built under the pre-loaded ruling, is REFUTED AS SCOPED — g1-landing-ask-
+  flow reds in BOTH worlds at the target witness. Named: the move door has
+  TWO caller classes on TWO visible bases (sheet route:
+  `resolveWeekWithConditioning`; G-1 landing:
+  `rebaseAcceptedEffectiveWeek`); either oracle basis breaks the other
+  class. No compatibility branch built; the honest fix is the recorded
+  door-unification debt. The stop-again condition (stored decision MEANING)
+  did not fire — this is a basis collision, not a meaning change.
+- **THE PRICE (154/arm, sets diffed, all at `8696193e`):** 2-fix neutral
+  **6** = control exactly; 4-fix neutral **7** (+g1); landing 4-fix **8**
+  (+g1, +walker); **landing 3-fix RECOMMENDED 8** (+program-control-durable,
+  +walker). The unit's price: **5 new reds this morning → 2**, both named
+  and owned.
+- **The walker red is NOT root 4 returning** (text diffed): it is the
+  DECLARED D13 speed-representation debt surfacing at 2026-08-10, a
+  coordinate the declaration does not cover. Not widened from this seat.
+- **For the seat:** (1) the two-bases ruling (door unification vs carrying
+  program-control-durable red); (2) the D13 debt; (3) device-pass flags:
+  completed-day display + (if DERIVED_IDENTITY lands) re-keyed identities.
+- **NOT covered:** DERIVED_IDENTITY's g1 collision diagnosed to the basis
+  pair, not walked into `storedWorldSurfaces` vs imperative-state assembly;
+  the D13 fix not attempted (signed template); root 2's parity claim still
+  one-world; `test:compile` outside sweeps as standing.
+
+## Processed 2026-08-07 (sixteenth pass) — the pre-loaded rulings as the
+## seat wrote them
+
+1. PRE-LOADED RULINGS for the two build-STOPs, so the queue never
+   idles — read when the sweeps land, alongside your batched report.
+   LOOP CHECK: classification-by-shape-instead-of-provenance —
+   sighting 2 (warm-up duplicate discriminator was sighting 1: typed
+   role, never name/membership) — COMPRESS: the standing form is
+   "identity and classification read TYPED PROVENANCE, never
+   inferred shape", applied to both STOPs below.
+   ROOT 2 (move door's identity oracle reads materialised space):
+   RULED by the one-basis ruling — the basis is VISIBLE; identity
+   derives from the week the athlete acts on. The oracle retires to
+   the derived basis; the parity gate is the instrument that proves
+   the transition safe. On decision payloads keyed by old
+   identities: the app has NO real users (recorded 2026-07-28) —
+   legacy payloads exist on Sam's test devices only, so re-keying is
+   permitted without migration machinery; flag it for the device
+   pass rather than building compatibility. If the fix would ALTER
+   what a stored decision MEANS (not just its key), stop again with
+   that named.
+   ROOT 3 (offer withdrawal classifies an athlete-added session as
+   surplus by role shape): RULED by the provenance law + the 1B
+   offer-survival ruling — an offer IS an offer because the one
+   placement rule PLACED it as one (typed provenance), never because
+   a session's shape looks like one. An athlete-added session is a
+   DECISION; withdrawing it is the destroy-class. Fix: withdrawal
+   targets only sessions carrying offer provenance; athlete additions
+   are structurally out of its reach. No signed sentence moves —
+   this is the signed ruling being enforced, not changed.
+   Both fixes: price in measured combinations per standing law; the
+   continuous-work authorisation EXTENDS to building both under
+   these rulings, one batched report at the end. Sam holds a veto on
+   both.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
 ## Processed 2026-08-07 (fifteenth pass) — THE BOUNDARY, BUILT AND PRICED
 
 - Answered in docs/R53_ONE_OWNER_BOUNDARY_PRICED_2026-08-07.md; probe at
