@@ -23,7 +23,6 @@ interface StaleOverrideBannerProps {
   warning: StaleOverrideWarning;
   /** Compact mode for inline use in day rows */
   compact?: boolean;
-  /** Called only when user explicitly taps "Ask Coach" from the review sheet. */
 }
 
 export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideBannerProps) {
@@ -148,8 +147,7 @@ export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideB
             "Ask Coach". It now says what is true and closes rather than
             leaving the athlete somewhere with nothing to press. */}
         <Text style={styles.sheetBody}>
-          This one needs more context than we can gather here, so nothing has
-          changed. Keep the session or clear it from the options above.
+          {'This one needs more context than we can gather here, so nothing has changed. Keep the session or clear it from the options above.'}
         </Text>
         <Button
           label="Close"

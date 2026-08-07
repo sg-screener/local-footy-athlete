@@ -62,9 +62,11 @@ export function HomeQuickActionSheet({
         device-pass tap list; building does not wait on the signature, showing
         final words does.
       */}
+      {/* SIGNED (batch 11-a). One unbroken line: the copy-binding gate
+          equality-matches the rulings file exactly, and JSX line-wrapping
+          inside a sentence hides it from that match. */}
       <Text style={styles.body}>
-        This one needs more context than the menu can give, so nothing has
-        changed. Use the day or session controls to make the change yourself.
+        {'This one needs more context than the menu can give, so nothing has changed. Use the day or session controls to make the change yourself.'}
       </Text>
       <Button
         label="Close"

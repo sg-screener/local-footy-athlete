@@ -638,8 +638,14 @@ export default function DayWorkoutScreenV2() {
     (kind: AddExerciseKind) => {
       const suggestion = suggestAddExercise(kind, editableExercises);
       if (!suggestion) {
+        // R5.7 LEFTOVER, CAUGHT AT THE SIGNING PASS. This sheet was TITLED
+        // "Ask Coach" and, after the beta cut, offers no coach — a sheet named
+        // for a door that no longer exists is the half-alive surface C(a)
+        // forbids, and section [4]'s gate could not see it because it watches
+        // NAVIGATION, not titles. The replacement is not new copy: it is the
+        // signed title the other two fallback sheets already carry.
         showExerciseEditFallback(
-          'Ask Coach',
+          'I need a bit more detail',
           'I need a bit more detail before changing this safely.',
           `Add one ${kind.toLowerCase()} exercise or small block to ${workoutLabel} on ${dateLabel}.`,
         );
@@ -2777,8 +2783,7 @@ function ExerciseEditSheet({
           <>
             <Text style={styles.exerciseEditBody}>{step.message}</Text>
             <Text style={styles.exerciseEditBody}>
-              Nothing has changed. You can make this change yourself from the
-              day or session controls.
+              {'Nothing has changed. You can make this change yourself from the day or session controls.'}
             </Text>
             <Button
               label="Close"
