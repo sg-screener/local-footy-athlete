@@ -5,6 +5,97 @@
 1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
    the next natural boundary.
 
+## Processed 2026-08-07 (fourteenth pass) — THE TIER-4 WRITE, NAMED
+
+- Answered in docs/R53_TIER4_WRITE_NAMED_SAFETY_FINALISER_2026-08-07.md;
+  instrument at `b5918f9d` on scratch/r53-pricing-7-probe (which now also
+  carries the previously dangling `271a7be4`). NOTHING BUILT.
+- **CONTROLS FIRED FIRST, as ordered.** File-backed tape across
+  `runAllForked`'s spawnSync boundary: `tape-init` 13 (one per forked
+  scenario that resolves a week), `tier4-entry` 6,947, `tier4-result`
+  6,947. Suite reproduced 12/2 exactly. No zero is relied on anywhere.
+- **THE WRITE:** `section18SafetyFinaliser.ts:265–278` — the
+  `lighterStrengthRequired` branch; `:270-274` maps High|Maximal →
+  Moderate, `:276` writes it and discloses `strength_dose_reduced`.
+  Gateway stage 3 (`section18AcceptedWeekGateway.ts:1311`), inside tier 4
+  at READ (`sessionResolver.ts:1088` ← `rebaseAcceptedEffectiveWeek`).
+  **Second site, same chain:** `presentDeclaredOffer` (gateway `:1355`)
+  placed the flush offer on Monday 2026-07-20 — its own repair text says
+  so. That is Monday's 4ex→5ex, masked by the intensity failure.
+- **IT IS A READ-TIME WRITE.** Tier 4's INPUT is byte-identical in the
+  before and after arms (both `High`) — the stored week was never
+  rewritten. The test's own two calls (`:379` and `:385`) are in the tape.
+- **THE DECIDING MEASUREMENT:** the contract carries
+  `governedFromISO: "2026-07-24"` and both rewritten days precede it. The
+  evaluator honours that boundary (`:518-520`, behind the delivered-vs-
+  remaining reassessment); the safety finaliser and the offer placer read
+  it **zero times**. Census: 4 readers (generation, the write door, the
+  stamper, the evaluator), 2 unenumerated mutators.
+- **Control that makes it specific:** `t4-poor_sleep_week` runs the same
+  chain and PASSES — `in_season_game_week`, `lighterStrengthRequired:
+  false`, every stage leaves both days High.
+- **WHY LEG (ii) EXPOSED IT:** the write door does not depend on the
+  normalisers being bounded — it POST-FILTERS them
+  (`temporarySourceFactTransaction.ts:565-570` keeps only
+  `date >= governedFromISO`, "byte-exact preservation by construction").
+  Tier 4 at read has no post-filter, so leg (ii) is the door that stopped
+  hiding two writers that were already over-reaching.
+- **ON YOUR (c):** it lands BETWEEN your two branches. The write DOES name
+  its authorising fact, and that authorisation is correctly bounded — so
+  the write site is the defect, but not for the reason (c) offers. It
+  names an authorisation, is handed that authorisation's boundary in the
+  same argument, and does not read it. Consequence for the fix: your
+  stated shape ("tier 4's search space excludes fact days") is right in
+  OUTCOME and would be built in the wrong PLACE as a tier-4 filter — two
+  normalisers over-reach, and a filter at the door leaves both writers
+  wrong for the next door.
+- **STOPPED per standing conditions** — §18 signed behaviour
+  (section18SafetyBoundaryTests pins the finaliser; the offer placer
+  implements Sam's 2026-08-06 offer-survival ruling).
+- **COMPRESSION OWED AND PROPOSED, not built** (sighting 4 of
+  one-owner-enforces-a-law-its-siblings-never-learned): the `369af59d`
+  both-directions census gate shape, aimed at `governedFromISO` — every
+  accepted-week mutator reads it or declares an exemption.
+- **NOT COVERED:** whether bounding the two writers greens fact-horizon
+  (not measured); the other four reds (not instrumented, worst-first as
+  ordered); the write door's immunity is a SOURCE reading, not a run; the
+  offer placement is attributed by its own disclosure + stage tape, not a
+  line-level tape; the tape's `done` flag came back false for days that
+  ARE Done, and tier 4 ran with `today=2026-08-07` (the wall clock) —
+  both recorded, neither chased.
+
+## Processed 2026-08-07 (fourteenth pass) — the order as the seat wrote it
+
+- LOOP CHECK: harness-lies — sighting 4 (instrument stdout lost
+   across the process boundary; a zero believed without a same-world
+   positive control) — COMPRESS: your two laws are ENDORSED as
+   standing and join the world-identity preamble in the harness
+   discipline: (i) cross-process instruments write to files, never
+   stdout; (ii) a zero is a claim — no zero is believed without a
+   positive control that fired in the SAME run and same process
+   model. RULED on the 70447c21 report:
+   (a) The ghost finding is ACCEPTED as dissolved — prior zeros were
+   instrument artifacts; the runner stands; the three-class run's
+   own escape hatch correctly did not fire.
+   (b) Proceed to the ordinary step, worst-first unchanged: re-run
+   the tier-4 write tape TO A FILE with its positive control inside,
+   and NAME the write that rewrites 2026-07-20/2026-07-21.
+   Attribution before any fix, executes-on-path as always.
+   (c) When attributed, the fix is PRE-FRAMED by recorded law, not
+   open: completed days are FACTS (fact-horizon law) and resolved
+   authority requires every repair to name its authorising decision
+   or resolving fact — a tier-4 write to a completed day either
+   names one (then the AUTHORISATION is the defect to trace) or
+   cannot (then the write site is the defect and tier 4's search
+   space excludes fact days). If the fix touches a decision payload
+   or signed behaviour, STOP per standing conditions.
+   (d) The remaining four reds queue behind fact-horizon as ruled;
+   masking analysis stays parked until the roots are named. Sam
+   holds a veto.
+
+2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
 ## Processed 2026-08-07 (thirteenth pass) — THREE-CLASS RUN: "zero readers" REFUTED
 
 - Answered in docs/R53_THREE_CLASS_RUN_ZERO_READERS_REFUTED_2026-08-07.md;
