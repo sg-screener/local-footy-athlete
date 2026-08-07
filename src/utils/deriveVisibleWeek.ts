@@ -169,6 +169,15 @@ export function assembleScheduleState(
     manualOverrides: (inputs.dateOverrides as never) || {},
     weekScopedOverlays: (inputs.weekScopedOverlays as never) || {},
     userRemovalConstraints: (inputs.userRemovalConstraints as never) || [],
+    // The RECORD, same source, same breath — see the declared rival
+    // (`hooks/useSchedule.ts`) and
+    // `docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`.
+    removalDecisions: (inputs.userRemovalConstraints as never) || [],
+    // THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
+    // Same source, same breath as the marks below: the accepted context is
+    // already gathered, so the week's identity can be DERIVED here rather than
+    // looked up on a stored declaration.
+    temporarySourceFacts: acceptedContext.temporarySourceFacts,
     markedDays: acceptedOwnsMaterialState
       ? acceptedContext.markedDays
       : (inputs.markedDays as never) || {},

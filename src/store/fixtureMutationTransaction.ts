@@ -6,6 +6,7 @@ import type {
 } from '../types/fixtureMutation';
 import type { WholeWeekRepairOutcome } from '../rules/wholeWeekRepairEngine';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   canonicalFixtureKind,
   targetWeekFixtures,
@@ -308,7 +309,7 @@ function acceptedVisibleRows(
   const markedDays = state.acceptedMaterialContext.markedDays;
   return weekStarts.flatMap((weekStart) => {
     const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile,
       markedDays,
@@ -619,9 +620,44 @@ function resolveForExecution(
 }
 
 /**
- * Screen-neutral in-memory compatibility seam. Production fixture UI uses the
- * durable transaction below; regression tests and temporary adapters may use
- * this to prove parity without owning any fixture policy themselves.
+ * THE LANDED FIXTURE DECISION, APPENDED — one site, both doors.
+ *
+ * R5.3 (boot-order ruling 2026-08-06). This append used to live in the durable
+ * door alone, under the note "ONLY the durable door appends". That made the
+ * RECORDING of the decision a property of which door you entered rather than of
+ * the decision landing, and the in-memory seam — which the walker and the
+ * temporary adapters enter — landed fixtures that were never recorded. Measured
+ * at `945e0cb4`: the L16 world's ledger held `plan_change` only, so no fixture
+ * decision existed to replay and the relaunch could not rebuild the week.
+ *
+ * Replay is still kept out by the LEDGER's own latch, not by the door: under
+ * `ledgerReplayActive()` `appendDecisionEntry` returns without writing
+ * (`decisionLedgerStore.ts:269`). That is the honest guard — replay never
+ * appends because it is replay, not because it picked the quiet door.
+ */
+function appendLandedFixtureDecision(input: FixtureMutationTransactionInput): void {
+  appendDecisionEntry({
+    decision: input.action === 'move'
+      ? {
+          kind: 'fixture_move',
+          fromDate: input.sourceDate ?? '',
+          toDate: input.targetDate ?? '',
+          fixtureKind: input.fixtureKind,
+        }
+      : input.action === 'add'
+        ? { kind: 'fixture_add', date: input.targetDate ?? '', fixtureKind: input.fixtureKind }
+        : { kind: 'fixture_remove', date: input.sourceDate ?? '', fixtureKind: input.fixtureKind },
+    provenance: input.source.requestedBy === 'athlete' ? 'athlete_tap' : 'coach',
+    writer: 'fixture_door',
+  });
+}
+
+/**
+ * Screen-neutral in-memory seam. Production fixture UI uses the durable
+ * transaction below; regression tests and temporary adapters may use this to
+ * prove parity without owning any fixture policy themselves. It is no longer a
+ * seam BENEATH the decision record — a fixture that lands here is appended by
+ * `appendLandedFixtureDecision`, exactly as it is through the durable door.
  */
 export function executeFixtureMutationInMemory(
   input: FixtureMutationTransactionInput,
@@ -683,6 +719,7 @@ export function executeFixtureMutationInMemory(
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
     });
+    appendLandedFixtureDecision(input);
     return {
       outcome: candidate.outcome,
       result: candidate.result,
@@ -798,23 +835,9 @@ export async function executeFixtureMutationTransaction(
       internalResultCode: `fixture_mutation_${candidate.outcome}`,
       reversibleAdjustmentId: candidate.result.reversibleAdjustmentId ?? null,
     });
-    // R1.4a (shell rebuild): the landed fixture decision, appended verbatim.
-    // ONLY the durable door appends — the in-memory twin above is the parity
-    // and replay seam, and replay READS the ledger, it never writes it.
-    appendDecisionEntry({
-      decision: input.action === 'move'
-        ? {
-            kind: 'fixture_move',
-            fromDate: input.sourceDate ?? '',
-            toDate: input.targetDate ?? '',
-            fixtureKind: input.fixtureKind,
-          }
-        : input.action === 'add'
-          ? { kind: 'fixture_add', date: input.targetDate ?? '', fixtureKind: input.fixtureKind }
-          : { kind: 'fixture_remove', date: input.sourceDate ?? '', fixtureKind: input.fixtureKind },
-      provenance: input.source.requestedBy === 'athlete' ? 'athlete_tap' : 'coach',
-      writer: 'fixture_door',
-    });
+    // R1.4a (shell rebuild): the landed fixture decision, appended verbatim —
+    // through the one site both doors share (R5.3, 2026-08-06).
+    appendLandedFixtureDecision(input);
     return {
       outcome: candidate.outcome,
       result: candidate.result,

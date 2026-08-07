@@ -169,11 +169,26 @@ console.log('\n[2] The new entry surface exists');
 
 console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\'s boundary)');
 {
+  // `askCoachForTeamTraining` WAS PINNED HERE AND IS NOW REMOVED — R5.7, the
+  // beta coach cut (§6, decision C(a), signed; Sam's "MAKE THE CUT",
+  // 2026-08-07). Ruling 12's boundary was "existing guided flows behind these
+  // buttons are unchanged; only the entry surface changes", and on that ground
+  // this owner had to survive. The LATER ruling removes every path to a chat
+  // surface, so the flow it owned no longer has a destination — it is not an
+  // entry surface that moved, it is a flow that was cut.
+  //
+  // WHICH SIDE MOVED: the RULING, with a date. The code did not drift out from
+  // under a standing expectation, which is the test `expectation-edited-to-
+  // match-the-regression` demands before an assertion may be edited.
+  //
+  // Every OTHER owner stays pinned, and that is the point of editing the list
+  // rather than the loop: ruling 12's boundary still holds for the nine flows
+  // the beta cut does not touch.
   const flowOwners = [
     'prepareSwap', 'prepareAdd', 'prepareConcern', 'openExerciseInjuryFlow',
     'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
-    'askCoachForTeamTraining', 'suggestTapSwap',
+    'suggestTapSwap',
   ];
   for (const owner of flowOwners) {
     ok(

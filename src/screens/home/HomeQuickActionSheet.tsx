@@ -18,7 +18,6 @@ interface HomeQuickActionSheetProps {
   onApplyBusyWeekReduction: () => void;
   onApplyEquipmentDecision: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   onApplyGuidedInjury: (result: GuidedInjuryFlowResult) => void | Promise<void>;
-  onMessageCoach: (prefill: string) => void;
 }
 
 export function HomeQuickActionSheet({
@@ -30,7 +29,6 @@ export function HomeQuickActionSheet({
   onApplyBusyWeekReduction,
   onApplyEquipmentDecision,
   onApplyGuidedInjury,
-  onMessageCoach,
 }: HomeQuickActionSheetProps) {
   const [needsDetail, setNeedsDetail] = useState(false);
 
@@ -40,11 +38,6 @@ export function HomeQuickActionSheet({
 
   if (!action) return null;
 
-  const messagePrefill = action.prefill || 'Coach, I need to update my program - ';
-  const openCoachByChoice = () => {
-    onClose();
-    onMessageCoach(messagePrefill);
-  };
   const openDayControls = () => {
     onClose();
     onOpenDayControls();
@@ -61,17 +54,22 @@ export function HomeQuickActionSheet({
   const detailFallback = (
     <View>
       <Text style={styles.title}>I need a bit more detail</Text>
+      {/*
+        PROPOSED COPY, UNSIGNED — R5.7. This sheet's only action was "Ask
+        Coach", so the beta cut leaves it with nothing to do. It must not read
+        as a dead end: it says what is true (nothing changed) and where the
+        athlete can act instead. Joins Sam's next signing batch with the
+        device-pass tap list; building does not wait on the signature, showing
+        final words does.
+      */}
+      {/* SIGNED (batch 11-a). One unbroken line: the copy-binding gate
+          equality-matches the rulings file exactly, and JSX line-wrapping
+          inside a sentence hides it from that match. */}
       <Text style={styles.body}>
-        This one needs more context before we can change your program safely.
+        {'This one needs more context than the menu can give, so nothing has changed. Use the day or session controls to make the change yourself.'}
       </Text>
       <Button
-        label="Ask Coach"
-        size="lg"
-        glow={false}
-        onPress={openCoachByChoice}
-      />
-      <Button
-        label="Cancel"
+        label="Close"
         variant="ghost"
         size="md"
         glow={false}
@@ -135,11 +133,6 @@ export function HomeQuickActionSheet({
           sub="Swap the target day to an easy recovery flow"
           onPress={openDayControls}
         />
-        <QuickOption
-          label="Ask Coach"
-          sub="Use this only if the menu does not cover it"
-          onPress={openCoachByChoice}
-        />
       </Sheet>
     );
   }
@@ -161,11 +154,6 @@ export function HomeQuickActionSheet({
         <QuickOption
           label="Keep program as-is"
           onPress={onClose}
-        />
-        <QuickOption
-          label="Ask Coach"
-          sub="Use this only if the menu does not cover it"
-          onPress={openCoachByChoice}
         />
       </Sheet>
     );
@@ -193,11 +181,6 @@ export function HomeQuickActionSheet({
         label="Session or exercise"
         sub="Open the day/session controls"
         onPress={openDayControls}
-      />
-      <QuickOption
-        label="Ask Coach"
-        sub="Use this only if the menu does not cover it"
-        onPress={openCoachByChoice}
       />
     </Sheet>
   );

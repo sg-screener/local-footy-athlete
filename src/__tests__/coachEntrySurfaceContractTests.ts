@@ -26,11 +26,27 @@
  *      named in the file, so a future rewrite of the entry surface cannot
  *      quietly take a send path or a client guard out with it.
  *
- * WHY `route.params.prefill` SURVIVES AND IS PINNED. The chips were not the
- * only producer of a prefilled input: other screens navigate to Coach with a
- * `prefill` param (the day-menu "Ask the coach" doors). Ruling 13 retires the
- * CHIPS, not prefilling — so the param path is asserted present, and its
- * absence would be a different feature dying by accident.
+ * WHY `route.params.prefill` SURVIVES AND IS PINNED — AND WHY ITS ORIGINAL
+ * REASON NO LONGER HOLDS (R5.7, 2026-08-07). The stated reason was that "other
+ * screens navigate to Coach with a `prefill` param (the day-menu 'Ask the
+ * coach' doors)". **There are now ZERO such producers** — the beta coach cut
+ * (§6, decision C(a), signed; Sam's "MAKE THE CUT" 2026-08-07) removed the
+ * `CoachTab` tab and all three `navigate('CoachTab')` doors. The assertion
+ * still stands, but on a DIFFERENT ground: LR-6 freezes CoachScreen and its
+ * pipeline in the tree, so the param path must not be quietly deleted while
+ * the screen is frozen. A passing gate whose stated reason has become false is
+ * a gate nobody can trust, so the reason is corrected here rather than left.
+ *
+ * THE RULING'S OWN EXPECTATION IS CORRECTED TOO. R5.7 was scoped believing it
+ * would INVERT cell [2] ("R5.7 inverts that cell"). Measured: it does not. This
+ * suite reads CoachScreen's source, R5.7 cuts the ENTRY and not the screen, and
+ * the suite passes 33/33 untouched. Nothing was inverted, and nothing needed to
+ * be — recorded so the next reader does not go looking for a flip that never
+ * happened.
+ *
+ * WHAT R5.7 DID OWE, AND WHAT SECTION [4] IS. A cut with no gate watching the
+ * deleted surface is one careless import from coming back — the repo's own law
+ * ("the gate must watch the deleted surface"). Section [4] is that ratchet.
  *
  * Run: npm run test:coach-entry-surface
  */
@@ -49,6 +65,40 @@ const source = fs.readFileSync(SCREEN, 'utf8');
 
 const PACKET = path.resolve(__dirname, '..', 'utils', 'coachContextPacket.ts');
 const packetSource = fs.readFileSync(PACKET, 'utf8');
+
+/**
+ * Every PRODUCT source, as [repo-relative path, body]. Tests and dev/E2E are
+ * excluded on purpose: section [4] asks what can REACH the coach in the app
+ * that ships, and a suite naming the route is evidence rather than a door.
+ */
+function readProductSources(): Array<[string, string]> {
+  const root = path.resolve(__dirname, '..');
+  const out: Array<[string, string]> = [];
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === '__tests__' || entry.name === 'dev' || entry.name === 'node_modules') {
+          continue;
+        }
+        walk(full);
+      } else if (/\.tsx?$/.test(entry.name)) {
+        // CODE LINES ONLY, and the reason is a caught defect rather than a
+        // precaution: the first run of section [4] failed on AppNavigator
+        // because the COMMENT explaining the cut contains the very string the
+        // cell forbids. A note is output, never evidence — the same law
+        // `signedCopyExtractionTests` and cell [1] already follow.
+        const body = fs.readFileSync(full, 'utf8')
+          .split('\n')
+          .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+          .join('\n');
+        out.push([path.relative(root, full), body]);
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
 
 /**
  * The screen with its comment lines stripped.
@@ -226,6 +276,45 @@ console.log('\n[4] The packet still feeds the frozen layers their exact shape');
       + 'as `payload.targetSessionName`, which `coachCommandRouter` compares '
       + 'case-insensitively against `entry.sessionName`. Replacing them with '
       + 'projection headlines changes what the frozen router resolves',
+  );
+}
+
+console.log('\n[4] R5.7 — THE BETA COACH CUT: the entry surface is GONE and stays gone');
+{
+  // THE GATE MUST WATCH THE DELETED SURFACE. R5.7 removed the `CoachTab` tab
+  // and every door that navigated to it (§6, decision C(a), signed; Sam's
+  // "MAKE THE CUT", 2026-08-07). Without a ratchet, one restored import or one
+  // copied-in navigate call brings the beta chat surface back and no gate
+  // notices — which is how a scope cut becomes a half-alive surface.
+  //
+  // It reads the PRODUCT tree, not this file's own subject: the cut is about
+  // what can REACH the coach, and CoachScreen itself is deliberately untouched
+  // (LR-6). Test sources are excluded — a suite naming the route is evidence,
+  // not a door.
+  const productSources = readProductSources();
+  const navigateDoors = productSources.filter(([, body]) =>
+    /navigate\(\s*['"`]CoachTab['"`]/.test(body));
+  ok(
+    'no product source navigates to CoachTab',
+    navigateDoors.length === 0,
+    'R5.7 cut all three doors (useHomeScreen, useDayWorkout, ProfileScreen). '
+      + `A new one is the beta chat surface returning: ${
+        navigateDoors.map(([file]) => file).join(', ') || 'none'}`,
+  );
+  const navigatorSource = productSources
+    .find(([file]) => file.endsWith('AppNavigator.tsx'))?.[1] ?? '';
+  ok(
+    'AppNavigator registers no CoachTab tab screen',
+    navigatorSource.length > 0
+      && !/<Tab\.Screen[^>]*name=["'`]CoachTab["'`]/s.test(navigatorSource),
+    'the tab is the surface C(a) hides entirely; the stack and CoachScreen '
+      + 'stay in the tree FROZEN, which is a scope cut, not a retirement',
+  );
+  ok(
+    'the frozen coach stack is still in the tree (LR-6, not a retirement)',
+    /CoachStackNavigator/.test(navigatorSource) && /CoachScreen/.test(navigatorSource),
+    'R5.7 is §6\'s scope cut. Deleting the stack would make it a retirement, '
+      + 'which LR-6 forbids and which restoring the tab could not undo',
   );
 }
 

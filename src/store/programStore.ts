@@ -70,7 +70,9 @@ import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
+import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
@@ -118,6 +120,10 @@ import {
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import {
+  microcycleCoversWeek,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -806,6 +812,18 @@ function legacyMigrationFallbackProfile(args: {
 
 function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
+  /**
+   * THE WORLD BEING HYDRATED, not the live one
+   * (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`, condition 3).
+   *
+   * This door was the one the entry census could never price — it never met a
+   * non-empty store in the witness set, and now it is clear why that was the
+   * wrong question. During hydration the live store still holds the PREVIOUS
+   * world; the truth is the snapshot arriving. Reading the store here would
+   * judge the incoming week against the outgoing one, which is the PROPOSAL
+   * defect wearing a different hat.
+   */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   phase?: string,
   phaseClock?: SeasonPhaseClock,
   profile?: OnboardingData | null,
@@ -904,6 +922,7 @@ function canonicaliseHydratedMicrocycle(
         workouts: safety.workouts,
         weekStart: microcycle.startDate.slice(0, 10),
         profile,
+        surfaces,
         regenerate: fallbackProfile
           ? () => require('../utils/postGenerationConstraintValidation')
               .buildSection18ProductionFallbackCandidate({
@@ -924,6 +943,15 @@ function canonicaliseHydratedMicrocycle(
     workouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
   }
+  // ── ROOT 1a — ONE OWNER FOR WORKOUT ORDER.
+  // The same seven sessions in two orders are two different byte-worlds, and
+  // no layer owned the order: the shortfall placer appends, regeneration
+  // day-orders, and JSON is order-sensitive, so hydration was not idempotent.
+  // Hydration is the composition owner, so it canonicalises the order exactly
+  // once — Monday-first week position, stable within a day.
+  const weekPosition = (day: number): number => (day === 0 ? 7 : day);
+  workouts = [...workouts].sort((a, b) =>
+    weekPosition(a.dayOfWeek) - weekPosition(b.dayOfWeek));
   return {
     ...microcycle,
     weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
@@ -942,6 +970,8 @@ function canonicaliseHydratedMicrocycle(
 
 export function canonicaliseHydratedProgram(
   program: TrainingProgram,
+  /** The world being hydrated — see `canonicaliseHydratedMicrocycle`. */
+  surfaces: AcceptedEffectiveWeekSurfaces,
   profile?: OnboardingData | null,
 ): TrainingProgram {
   // Defence in depth: this is exported and reachable without going through
@@ -959,6 +989,7 @@ export function canonicaliseHydratedProgram(
     microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
       canonicaliseHydratedMicrocycle(
         microcycle,
+        surfaces,
         clockedProgram.programPhase,
         clockedProgram.seasonPhaseClock,
         profile,
@@ -1049,8 +1080,25 @@ function canonicaliseAcceptedBoundaryState(
   },
 ): Partial<ProgramState> {
   const effectiveTodayISO = options.todayISO ?? todayISOLocal();
+  // THE WORLD ARRIVING, composed once for every door in this function. The
+  // snapshot under hydration IS the evaluation context here; the live store
+  // still holds the world being replaced.
+  const hydratingSurfaces: AcceptedEffectiveWeekSurfaces =
+    composeAcceptedEffectiveWeekSurfaces({
+      currentProgram: persistedState.currentProgram ?? null,
+      currentMicrocycle: persistedState.currentMicrocycle ?? null,
+      dateOverrides: persistedState.dateOverrides ?? {},
+      weekScopedOverlays: persistedState.weekScopedOverlays ?? {},
+      // Nothing has consumed the arriving snapshot's removals yet, so the
+      // record and the application input are the same list.
+      removalDecisions: persistedState.userRemovalConstraints ?? [],
+    });
   let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
-    ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
+    ? canonicaliseHydratedProgram(
+        persistedState.currentProgram,
+        hydratingSurfaces,
+        options.profile,
+      )
     : persistedState.currentProgram;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
@@ -1091,6 +1139,7 @@ function canonicaliseAcceptedBoundaryState(
   let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
+        hydratingSurfaces,
         phase,
         currentProgram?.seasonPhaseClock,
         options.profile,
@@ -1161,19 +1210,20 @@ function canonicaliseAcceptedBoundaryState(
       ]))
     : persistedState.weekScopedOverlays;
   const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
-    const overlay = weekScopedOverlays?.[mondayForDate(date)];
-    if (overlay?.exposureContractV2) return overlay.exposureContractV2;
-    const programMicrocycle = currentProgram?.microcycles.find((microcycle) =>
-      date >= microcycle.startDate.slice(0, 10) && date <= microcycle.endDate.slice(0, 10));
-    if (programMicrocycle?.exposureContractV2) return programMicrocycle.exposureContractV2;
-    if (
-      currentMicrocycle &&
-      date >= currentMicrocycle.startDate.slice(0, 10) &&
-      date <= currentMicrocycle.endDate.slice(0, 10)
-    ) {
-      return currentMicrocycle.exposureContractV2;
-    }
-    return undefined;
+    // THE FLIP, MOVE (ii) — one read door. NOTE the asymmetry, preserved
+    // exactly: the overlay is found by the week's MONDAY, the two microcycles
+    // by the DATE itself. Collapsing the two onto one coordinate would be a
+    // behaviour change wearing a refactor.
+    return selectStoredWeekDeclaration({
+      overlay: weekScopedOverlays?.[mondayForDate(date)],
+      coveringMicrocycle: currentProgram?.microcycles.find((microcycle) =>
+        microcycleCoversWeek(microcycle, date)),
+      currentMicrocycle: microcycleCoversWeek(currentMicrocycle, date)
+        ? currentMicrocycle
+        : null,
+      weekStart: mondayForDate(date),
+      reader: 'programStore.safetyContractForDate',
+    }) ?? undefined;
   };
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
@@ -1231,17 +1281,24 @@ function canonicaliseAcceptedBoundaryState(
         ? currentMicrocycle
         : undefined
     );
-    const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+    // THE FLIP, MOVE (ii) — one read door. `baseMicrocycle` above already
+    // folds the current-microcycle fallback in, so this caller has two.
+    const contract = selectStoredWeekDeclaration({
+      overlay,
+      coveringMicrocycle: baseMicrocycle,
+      weekStart,
+      reader: 'programStore.validateHydratedWeeks',
+    });
     if (!contract) continue;
 
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: {
+      surfaces: composeAcceptedEffectiveWeekSurfaces({
         currentProgram,
         currentMicrocycle,
         dateOverrides: dateOverrides ?? {},
         weekScopedOverlays: weekScopedOverlays ?? {},
-        userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
-      },
+        removalDecisions: persistedState.userRemovalConstraints ?? [],
+      }),
       weekStart,
       profile: options.profile,
       markedDays: options.markedDays ?? {},
@@ -1288,7 +1345,7 @@ function canonicaliseAcceptedBoundaryState(
         weekStart,
         profile: options.profile,
         activeFixtureDates,
-        userRemovalConstraints: persistedState.userRemovalConstraints,
+        surfaces: hydratingSurfaces,
         regenerate: buildFallback,
         safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
@@ -1298,9 +1355,38 @@ function canonicaliseAcceptedBoundaryState(
             weekStart,
             profile: options.profile,
             scheduleState: { markedDays: { ...(options.markedDays ?? {}) } },
-            userRemovalConstraints: persistedState.userRemovalConstraints,
+            surfaces: hydratingSurfaces,
           }),
       });
+    // R5.3 RESIDUAL PROBE (Sam's ruling, 2026-08-06: the residual is
+    // INSTRUMENTED BEFORE FIXING). An INSTRUMENT, not a gate — prints only
+    // under R53_PROBE=1 and is inert otherwise. What it answers: when the
+    // derived bye week is a core-conditioning session short, does the gateway
+    // repair it and the repair fail to reach the read, or does the gateway
+    // return the shortfall unrepaired?
+    if (process.env.R53_PROBE === '1') {
+      const ev = accepted.evaluation as unknown as {
+        blockingViolations?: { code: string }[];
+        advisoryViolations?: { code: string }[];
+      };
+      // `process.stdout` deliberately, not `console.log`: the suites that reach
+      // this path wrap their doors in `quiet()`, which replaces the console.
+      process.stdout.write('[R53_PROBE] gateway ' + JSON.stringify({
+        weekStart,
+        mode: accepted.contract?.identity?.mode,
+        status: accepted.status,
+        attempts: accepted.attempts,
+        repairs: (accepted.repairs ?? []).map((r: { kind: string }) => r.kind),
+        blocking: (ev.blockingViolations ?? []).map((v) => v.code),
+        advisory: (ev.advisoryViolations ?? []).map((v) => v.code),
+        coreMin: accepted.contract?.conditioning?.core?.requiredMinimum,
+        anchors: (accepted.contract?.anchors ?? [])
+          .map((a: { kind: string; dayOfWeek: number }) => `${a.kind}@${a.dayOfWeek}`),
+        canonicalByDay: accepted.canonicalWorkouts
+          .map((w: Workout) => `${w.dayOfWeek}:${w.name}`),
+        hadOverlay: !!overlay,
+      }) + '\n');
+    }
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
     );

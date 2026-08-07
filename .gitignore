@@ -27,3 +27,10 @@ web-build/
 
 # Deterministic executable Bible-conformance reports (regenerated on demand).
 test-results/bible-conformance/
+
+# sweep runner output — measurements, not source
+.sweep*/
+.door/
+.bind/
+.legv/
+.legv-run.log

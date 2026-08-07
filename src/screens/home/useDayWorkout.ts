@@ -363,17 +363,6 @@ export function useDayWorkout() {
     });
   }, [date, workout, setLastOpenedWorkout]);
 
-  /** Explicit stale-banner fallback → coach tab with context. */
-  const handleReviewStale = useCallback(
-    (prefill: string) => {
-      navigation.navigate('CoachTab', {
-        screen: 'Coach',
-        params: { prefill },
-      });
-    },
-    [navigation],
-  );
-
   // ─── The detail surface, read from the one projection ───
   //
   // This memo used to be the day-detail composition over the raw workout — the fourth
@@ -433,7 +422,6 @@ export function useDayWorkout() {
     handleFinishWorkout,
     handleFeedbackSaved,
     handleScrollBeginDrag,
-    handleReviewStale,
 
     // The detail surface — projection-derived words and part list.
     detail,

@@ -49,6 +49,7 @@ import { getSessionComponents } from '../utils/sessionComponents';
 import { canonicaliseHydratedProgram } from '../store/programStore';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { POWER_SCENARIOS } from './powerCountingDifferential/scenarios';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const repoRoot = path.resolve(__dirname, '../..');
 
@@ -190,7 +191,7 @@ console.log('\n[1] The migration runs at read ingress, above every branch');
     primaryFocus: '', isActive: true, createdAt: '', updatedAt: '',
   } as unknown as TrainingProgram;
 
-  const hydrated = quietly(() => canonicaliseHydratedProgram(program));
+  const hydrated = quietly(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces()));
   const workout = hydrated.microcycles[0].workouts[0];
   // What THIS layer owns is that the legacy field does not survive ingress.
   // Whether the resulting row then survives is a different owner's decision:

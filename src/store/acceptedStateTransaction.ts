@@ -54,6 +54,10 @@ import {
   rebaseAcceptedEffectiveWeek,
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
+import {
+  microcycleCoversWeek,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import type { G1LandingRouteId } from '../rules/g1LandingAsk';
 import { staleAcceptedSnapshotRepair } from '../rules/profileMirrorNarrowing';
@@ -74,6 +78,11 @@ import {
   type TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
+import {
+  composeAcceptedEffectiveWeekSurfaces,
+  liveAcceptedEffectiveWeekSurfaces,
+  storedWorldSurfaces,
+} from '../utils/liveEvaluationSurfaces';
 import {
   buildFixtureMinimalReplan,
   type FixtureMutationIntent,
@@ -335,57 +344,6 @@ function materialisedProgramPatch(
   return normalizeAcceptedProgramSurfaces({ ...base, ...(patch ?? {}) });
 }
 
-function materialiseFixtureMarksForCandidate(args: {
-  candidate: AcceptedProgramSurfaces;
-  context: AcceptedMaterialContext;
-  profile: OnboardingData | null;
-}): AcceptedProgramSurfaces {
-  if (!args.candidate.currentProgram || !args.profile) return args.candidate;
-  const overlays = { ...args.candidate.weekScopedOverlays };
-  let changed = false;
-  for (const microcycle of args.candidate.currentProgram.microcycles) {
-    const weekStart = microcycle.startDate.slice(0, 10);
-    const weekDates = datesInWeek(weekStart);
-    const explicitGameDate = weekDates.find((date) => args.context.markedDays[date] === 'game');
-    const explicitNoGame = weekDates.some((date) => args.context.markedDays[date] === 'noGame');
-    const recurringDay = (args.profile.usualGameDay || args.profile.gameDay) as DayOfWeek | undefined;
-    const recurringDate = recurringDay
-      ? weekDates.find((date) => dayNameForDate(date) === recurringDay)
-      : undefined;
-    const recurringFixtureRest = !!recurringDate &&
-      args.context.markedDays[recurringDate] === 'rest';
-    if (!explicitGameDate && !explicitNoGame && !recurringFixtureRest) continue;
-    const existing = overlays[weekStart];
-    const contract = existing?.exposureContractV2 ?? microcycle.exposureContractV2;
-    const desiredAnchor = explicitGameDate
-      ? canonicalFixtureKind(ownSeasonPhase({
-          program: args.candidate.currentProgram,
-          profile: args.profile,
-        }))
-      : 'bye';
-    const fixtureAnchor = contract?.anchors.find((anchor) =>
-      anchor.kind === 'game' || anchor.kind === 'practice_match');
-    const alreadyMaterialised = contract?.identity.anchorState === desiredAnchor && (
-      !explicitGameDate || fixtureAnchor?.dayOfWeek ===
-        new Date(`${explicitGameDate}T12:00:00`).getDay()
-    );
-    if (alreadyMaterialised) continue;
-    overlays[weekStart] = buildFixtureProjection({
-      program: args.candidate.currentProgram,
-      profile: args.profile,
-      weekStart,
-      markedDays: args.context.markedDays,
-      sourceSurfaces: args.candidate,
-      sourceMarkedDays: args.context.markedDays,
-      activeConstraints: args.context.activeConstraints.filter((constraint) =>
-        constraint.type !== 'injury'),
-      userRemovalConstraints: args.candidate.userRemovalConstraints,
-    }).overlay;
-    changed = true;
-  }
-  return changed ? { ...args.candidate, weekScopedOverlays: overlays } : args.candidate;
-}
-
 /**
  * THE STALE-LEDGER COMPARISON, DELETED — Sam's derive-at-read ruling
  * (2026-07-29). It is recorded here rather than quietly removed, because
@@ -498,10 +456,17 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         ? surfaces.currentMicrocycle
         : null
     );
-    const contract = overlay?.exposureContractV2 ?? microcycle?.exposureContractV2;
+    // THE FLIP, MOVE (ii) — one read door. `microcycle` above already folds
+    // the current-microcycle fallback in, so this caller has two candidates.
+    const contract = selectStoredWeekDeclaration({
+      overlay,
+      coveringMicrocycle: microcycle,
+      weekStart,
+      reader: 'acceptedStateTransaction.validateAcceptedWeeks',
+    });
     if (!contract) continue;
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces,
+      surfaces: storedWorldSurfaces(surfaces),
       weekStart,
       profile,
       markedDays: context.markedDays,
@@ -682,14 +647,17 @@ export function stageAcceptedStateTransaction(
       },
     });
   }
-  const patchedCandidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
-  const candidate = proposal.preserveExactAcceptedWorkouts
-    ? patchedCandidate
-    : materialiseFixtureMarksForCandidate({
-        candidate: patchedCandidate,
-        context,
-        profile,
-      });
+  // R5.3 LEG (ii), 2026-08-06: the candidate fixture materialiser is GONE.
+  //
+  // It re-composed every accepted commit's fixture marks by running
+  // `buildFixtureProjection` over the candidate surfaces, which made this
+  // staging body a SECOND composer of the athlete's week beside the deriver.
+  // Measured before deleting it (see docs/R5_DELETION_SEQUENCE_2026-08-06.md
+  // (o)): it fired 4,378 times across the bible and changed the candidate 518
+  // times through NINE product doors, so this was never boot-only. A fixture is
+  // a persisted life-fact; the week that expresses it is DERIVED, and there is
+  // now one body that does the deriving.
+  const candidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
   if (proposal.preserveExactAcceptedWorkouts) {
     if (context.acceptedCompositionBase) {
       context = normalizeAcceptedMaterialContext({
@@ -1054,7 +1022,7 @@ function acceptedWorkoutsForDates(args: {
   const byDate = new Map<string, Workout | null>();
   for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: args.surfaces,
+      surfaces: storedWorldSurfaces(args.surfaces),
       weekStart,
       profile: args.profile,
       markedDays: args.context.markedDays,
@@ -1082,7 +1050,7 @@ function acceptedSurfaceRowsForDates(args: {
   }>();
   for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
     const rebased = rebaseAcceptedEffectiveWeek({
-      surfaces: args.surfaces,
+      surfaces: storedWorldSurfaces(args.surfaces),
       weekStart,
       profile: args.profile,
       markedDays: args.context.markedDays,
@@ -1102,22 +1070,101 @@ function contractForAcceptedWeek(
   surfaces: AcceptedProgramSurfaces,
   weekStart: string,
 ): WeeklyExposureContractV2 | undefined {
-  const overlay = surfaces.weekScopedOverlays[weekStart];
-  if (overlay?.exposureContractV2) return overlay.exposureContractV2;
-  const microcycle = surfaces.currentProgram?.microcycles.find((candidate) =>
-    weekStart >= candidate.startDate.slice(0, 10) &&
-    weekStart <= candidate.endDate.slice(0, 10));
-  if (microcycle?.exposureContractV2) return microcycle.exposureContractV2;
-  if (
-    surfaces.currentMicrocycle &&
-    weekStart >= surfaces.currentMicrocycle.startDate.slice(0, 10) &&
-    weekStart <= surfaces.currentMicrocycle.endDate.slice(0, 10)
-  ) return surfaces.currentMicrocycle.exposureContractV2;
-  return undefined;
+  // THE FLIP, MOVE (ii) — one read door. Three-branch caller: the current
+  // microcycle is consulted only when it COVERS the week, which is what the
+  // door's `currentMicrocycle` candidate means.
+  return selectStoredWeekDeclaration({
+    overlay: surfaces.weekScopedOverlays[weekStart],
+    coveringMicrocycle: surfaces.currentProgram?.microcycles.find((candidate) =>
+      microcycleCoversWeek(candidate, weekStart)),
+    currentMicrocycle: microcycleCoversWeek(surfaces.currentMicrocycle, weekStart)
+      ? surfaces.currentMicrocycle
+      : null,
+    weekStart,
+    reader: 'acceptedStateTransaction.contractForAcceptedWeek',
+  }) ?? undefined;
 }
 
 function linkedReductionSignature(entry: ReversibleAdjustmentLinkedReduction): string {
   return semanticFingerprint(entry);
+}
+
+/**
+ * LEG (iv) — THE DERIVED CONTRACT FOR AN ACCEPTED WEEK.
+ *
+ * `contractForAcceptedWeek` reads the STORED contract. Under the pattern-
+ * identity ruling a week's contract is derived from the decisions and the
+ * facts, so the ledger — which has to name what the athlete can undo — must
+ * ask the same question the reader asks. This is that question, and it is the
+ * reader's own owner (`rebaseAcceptedEffectiveWeek`), not a restatement.
+ *
+ * Returns null when the week cannot be derived (no stored identity to derive
+ * FROM); callers fall through to the stored answer rather than inventing one.
+ */
+function derivedContractForAcceptedWeek(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile?: OnboardingData | null;
+  weekStart: string;
+}): WeeklyExposureContractV2 | null {
+  try {
+    return rebaseAcceptedEffectiveWeek({
+      surfaces: storedWorldSurfaces(args.surfaces),
+      weekStart: args.weekStart,
+      profile: args.profile,
+      markedDays: args.context.markedDays,
+    }).contract;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * LEG (iv) — THE LINK, DERIVED FROM THE DECISION.
+ *
+ * The ruling in one sentence: a typed reduction belongs to the adjustment
+ * whose CONSTRAINT authored it. So the link is `deletionIdentity ∈ the
+ * constraint ids this adjustment carries`, read off the contract the week
+ * actually derives to — not the set difference of two stored contracts.
+ *
+ * Why the diff cannot survive: `applyAthleteRemovalTypedReduction` returns a
+ * whole contract with the reduction folded into its targets, and leg (i) stops
+ * persisting that arithmetic. An after-minus-before over the stored surface is
+ * therefore empty by construction, and an empty link means the undo cannot
+ * name its own reduction. Asking the deriver instead is the same question the
+ * athlete's screen asks.
+ */
+function decisionDerivedLinkedReductions(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile?: OnboardingData | null;
+  weekStarts: readonly string[];
+  constraintIds: readonly string[];
+}): ReversibleAdjustmentLinkedReduction[] {
+  if (args.constraintIds.length === 0) return [];
+  const owned = new Set(args.constraintIds);
+  return args.weekStarts.flatMap((weekStart) => {
+    const contract = derivedContractForAcceptedWeek({
+      surfaces: args.surfaces,
+      context: args.context,
+      profile: args.profile,
+      weekStart,
+    });
+    return (contract?.authorisedReductions ?? [])
+      .filter((entry) => entry.deletionIdentity && owned.has(entry.deletionIdentity))
+      .map((entry) => {
+        const reduction = {
+          weekStart,
+          metric: entry.metric,
+          reason: entry.reason,
+          originalApprovedTarget: entry.originalApprovedTarget,
+          reducedTarget: entry.reducedTarget,
+          detail: entry.detail,
+          deletionIdentity: entry.deletionIdentity ?? null,
+        };
+        return { ...reduction, fingerprint: semanticFingerprint(reduction) };
+      });
+  });
 }
 
 function acceptedLinkedReductions(
@@ -1267,13 +1314,27 @@ export function stageReversibleAdjustmentCreationTransaction(
     beforeProgram,
     rollingDependencyWeeks,
   ).map(linkedReductionSignature));
-  const linkedTypedReductions = acceptedLinkedReductions(
-    firstStage.program,
-    rollingDependencyWeeks,
-  ).filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
+  // Leg (iv), install site 1 of 2 — THE LINK DERIVES FROM THE DECISION.
+  const linkedTypedReductions = decisionDerivedLinkedReductions({
+    surfaces: firstStage.program,
+    context: firstStage.context,
+    profile,
+    weekStarts: rollingDependencyWeeks,
+    constraintIds: Array.from(new Set(input.linkedUserRemovalConstraintIds ?? [])),
+  });
   const ownedWeeks = rollingDependencyWeeks.flatMap((weekStart) => {
-    const beforeContract = contractForAcceptedWeek(beforeProgram, weekStart) ?? null;
-    const afterContract = contractForAcceptedWeek(firstStage.program, weekStart) ?? null;
+    // Leg (iv), install site 2 of 2 — the OWNED WEEK is the week whose
+    // contract the decision moved, and under leg (i) that movement is visible
+    // only in the DERIVED contract. Comparing stored surfaces reports "nothing
+    // changed" for a decision that changed what the athlete trains, so the undo
+    // has no contract to restore and no conformance basis to refuse a corrupt
+    // one against. Falls back to the stored answer when a week cannot derive.
+    const beforeContract = derivedContractForAcceptedWeek({
+      surfaces: beforeProgram, context: beforeContext, profile, weekStart,
+    }) ?? contractForAcceptedWeek(beforeProgram, weekStart) ?? null;
+    const afterContract = derivedContractForAcceptedWeek({
+      surfaces: firstStage.program, context: firstStage.context, profile, weekStart,
+    }) ?? contractForAcceptedWeek(firstStage.program, weekStart) ?? null;
     const beforeFingerprint = semanticFingerprint(beforeContract);
     const afterFingerprint = semanticFingerprint(afterContract);
     return beforeFingerprint === afterFingerprint ? [] : [{
@@ -1655,17 +1716,29 @@ export function buildFixtureProjection(args: {
   sourceMarkedDays?: Readonly<Record<string, CalendarDayType>>;
   activeConstraints?: readonly ActiveConstraint[];
   mutationIntent?: FixtureMutationIntent;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE WORLD THE REPLAN IS JUDGED AGAINST, when it differs from the world the
+   * week is COMPOSED FROM (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+   *
+   * Two surfaces objects, because a staging transaction genuinely has two
+   * worlds: a delete composes from the world where the binned target is still
+   * present (it is the relocation template) and is judged against the world
+   * where it is gone. Omitted means the two are the same world, which is what
+   * every non-staging caller means.
+   */
+  evaluationSurfaces?: AcceptedEffectiveWeekSurfaces;
   /**
    * Is this projection APPLYING A NEW FIXTURE DECISION, or re-materialising
    * the accepted week's existing fixture marks?
    *
    * They are different operations and only the first may not read the week's
-   * own published output — see the fixture identity law below. The candidate
-   * materialiser (`materialiseFixtureMarksForCandidate`) runs on EVERY
-   * accepted commit, deletions included, where that overlay is the state
-   * being MAINTAINED rather than a previous decision's product; it leaves
-   * this false and composes over it exactly as before.
+   * own published output — see the fixture identity law below. The MAINTENANCE
+   * callers leave this false and compose over the existing overlay: the
+   * calendar-mark door, the removal/move constraint door, fixture-adjustment
+   * restoration, the program-setup rebuild, and every DEPENDENT week inside
+   * `stageRollingHorizonFixtureRepair`. For those the overlay is the state
+   * being maintained — the bed relocated work lands in — not a previous
+   * decision's product.
    */
   appliesFixtureDecision?: boolean;
 }): {
@@ -1686,13 +1759,16 @@ export function buildFixtureProjection(args: {
     ([date, mark]) => weekDates.has(date) && mark === 'noGame',
   );
   const liveState = useProgramStore.getState();
+  // THE ONE DEFAULT TO THE LIVE WORLD (the ruling names this line). Every
+  // other site passes the surfaces it means; this is the single place where a
+  // caller that said nothing resolves to the world as persisted.
   const sourceSurfaces = args.sourceSurfaces ?? {
+    ...liveAcceptedEffectiveWeekSurfaces(),
     currentProgram: args.program,
-    currentMicrocycle: liveState.currentMicrocycle,
-    dateOverrides: liveState.dateOverrides,
-    weekScopedOverlays: liveState.weekScopedOverlays,
-    userRemovalConstraints: liveState.userRemovalConstraints,
   };
+  // A caller that names only one world is judged against the world it composes
+  // from. That is not a second default to live — it is the identity case.
+  const evaluationSurfaces = args.evaluationSurfaces ?? sourceSurfaces;
   // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
   // A FIXTURE DECISION NEVER REBASES FROM THE WEEK A PREVIOUS FIXTURE BUILT.
   //
@@ -1726,11 +1802,12 @@ export function buildFixtureProjection(args: {
   // first cut of this law dropped the overlay for every caller and broke two
   // athlete-DELETION regressions — a Sunday conditioning deletion stopped
   // relocating to Saturday, and conditioning stopped stacking onto Monday's
-  // strength. `materialiseFixtureMarksForCandidate` calls this on every
-  // accepted commit to keep the accepted week's fixture marks materialised,
-  // and there the week's overlay is the state being maintained, not a
-  // previous fixture's product. Applying a decision and maintaining a week
-  // are different operations; the caller says which.
+  // strength. That is not a remembered scar: R5.3's condition 1(b) re-priced
+  // the same surface by mutation on 2026-08-06 and `test:athlete-session-deletion`
+  // printed TRUE_EXIT=1 with fourteen failures against a baseline of zero,
+  // because the maintenance overlay is WHERE RELOCATED WORK LANDS. Applying a
+  // decision and maintaining a week are different operations; the caller says
+  // which.
   const rebaseOverlays = { ...sourceSurfaces.weekScopedOverlays };
   if (args.appliesFixtureDecision) delete rebaseOverlays[args.weekStart];
   const acceptedSource = rebaseAcceptedEffectiveWeek({
@@ -1831,6 +1908,45 @@ export function buildFixtureProjection(args: {
         microcycleLimit: 1,
       });
       targetMicrocycle = target.microcycles[0];
+      // WEEK IDENTITY IS THE COVERING WEEK'S, NEVER THE STUB'S (R5.3,
+      // 2026-08-06 — measured by the derived-declaration entry gate,
+      // `docs/R53_DECLARATION_READER_CENSUS_2026-08-06.md`).
+      //
+      // The call above regenerates ONE microcycle (`microcycleLimit: 1`)
+      // starting at `args.weekStart`, so that microcycle is week 1 of its own
+      // little program and its contract is stamped `globalWeek: 1,
+      // weekInBlock: 1` — truthfully, for the stub. It is NOT week 1 of the
+      // athlete's block, and every consumer downstream believes the stamp:
+      // `weeklyExposureContractV2.ts` stores `globalWeek ?? null` and
+      // `section18AcceptedWeekGateway.ts:223` reads `?? 1`, then the allocator
+      // alternates its patterns on `weekNumber % 2`
+      // (`programBlockState.ts:190-205`). So WEEK 1's PATTERNS GET PLANNED ONTO
+      // WEEK 2: measured on `fixture-identity-3` as `Lower Hinge|7` published
+      // where derivation says `Lower Squat|8`, with Monday's and Wednesday's
+      // training halves swapped — the same signature as the L16 relaunch red.
+      //
+      // The identity is not the stub's to invent. It belongs to the microcycle
+      // that COVERS this week, which the accepted source already resolved.
+      // This survives the derived-declaration switchover: the projection stops
+      // being PUBLISHED there, but it still decides the sweep and the rolling
+      // horizon, and a repair planned on the wrong week is wrong either way.
+      const coveringWeek = acceptedSource.baseMicrocycle;
+      if (coveringWeek && targetMicrocycle?.exposureContractV2) {
+        targetMicrocycle = {
+          ...targetMicrocycle,
+          weekNumber: coveringWeek.weekNumber,
+          miniCycleNumber: coveringWeek.miniCycleNumber,
+          exposureContractV2: {
+            ...targetMicrocycle.exposureContractV2,
+            identity: {
+              ...targetMicrocycle.exposureContractV2.identity,
+              globalWeek: coveringWeek.weekNumber,
+              weekInBlock: ((Math.max(1, coveringWeek.weekNumber) - 1) % 4) + 1,
+              blockNumber: coveringWeek.miniCycleNumber,
+            },
+          },
+        };
+      }
     } catch (error) {
       if (!(error instanceof Section18WeekAcceptanceError)) throw error;
       // The rolling repair owner, not target generation, decides whether the
@@ -1876,7 +1992,7 @@ export function buildFixtureProjection(args: {
     priorFixtures,
     proposedFixtures,
     activeFixtureDates,
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: evaluationSurfaces,
     mutationIntent: args.mutationIntent ?? 'fixture_transition',
   });
   // Dynamic loading avoids an initialisation cycle: weekRebuild itself uses
@@ -2091,7 +2207,8 @@ export function stageRollingHorizonFixtureRepair(args: {
   primaryWeekStarts: readonly string[];
   primaryMutationIntent?: FixtureMutationIntent;
   dependentMutationIntent?: FixtureMutationIntent;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /** Forwarded verbatim — see `buildFixtureProjection`'s own field. */
+  evaluationSurfaces?: AcceptedEffectiveWeekSurfaces;
   /**
    * Set by the fixture door: this staging is APPLYING a fixture decision, so
    * the PRIMARY weeks — the ones the decision is about — may not rebase from
@@ -2146,7 +2263,7 @@ export function stageRollingHorizonFixtureRepair(args: {
       sourceSurfaces: args.sourceSurfaces,
       sourceMarkedDays: args.beforeMarkedDays,
       activeConstraints: args.activeConstraints,
-      userRemovalConstraints: args.userRemovalConstraints,
+      evaluationSurfaces: args.evaluationSurfaces,
       mutationIntent: primary.has(weekStart)
         ? args.primaryMutationIntent ?? 'fixture_transition'
         : args.dependentMutationIntent ?? 'remove_from_date',
@@ -2325,14 +2442,17 @@ export function commitCalendarStateTransaction(args: {
       profile: baseProfile,
       beforeMarkedDays: prior.markedDays,
       afterMarkedDays: args.markedDays,
-      sourceSurfaces: state,
+      sourceSurfaces: storedWorldSurfaces(state),
       activeConstraints: prior.activeConstraints,
       primaryWeekStarts: Array.from(
         args.mutationIntent === 'athlete_removal' ? affectedWeeks : fixtureWeeks,
       ),
       primaryMutationIntent: args.mutationIntent,
       dependentMutationIntent: 'remove_from_date',
-      userRemovalConstraints: proposedUserRemovalConstraints,
+      evaluationSurfaces: storedWorldSurfaces({
+        ...state,
+        userRemovalConstraints: proposedUserRemovalConstraints,
+      }),
     });
     for (const projection of repair.projections) {
       affectedWeeks.add(projection.weekStart);
@@ -2556,7 +2676,7 @@ function acceptedWorkoutForDate(args: {
 }): Workout | null {
   const weekStart = mondayForDate(args.date);
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: args.state,
+    surfaces: storedWorldSurfaces(args.state),
     weekStart,
     profile: args.profile,
     markedDays: args.context.markedDays,
@@ -2616,7 +2736,7 @@ function deriveAthleteDeletionPublishedOutcome(args: {
 }): AthleteDeletionPublishedOutcome {
   const weekStart = mondayForDate(args.input.date);
   const after = rebaseAcceptedEffectiveWeek({
-    surfaces: args.published.program,
+    surfaces: storedWorldSurfaces(args.published.program),
     weekStart,
     profile: args.profile,
     markedDays: args.published.context.markedDays,
@@ -2783,19 +2903,27 @@ function stageAthleteMutationConstraint(args: {
     delete dateOverrides[date];
     delete overrideContexts[date];
   }
-  const sourceSurfaces: AcceptedEffectiveWeekSurfaces = {
+  // THE ONE SITE WHERE THE TWO FIELDS DIFFER, and it is stated rather than
+  // reached (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+  //
+  // Deletion repair needs the accepted target still present as a relocation
+  // template, so it APPLIES the prior set. A move, by contrast, must enter
+  // repair with both athlete-owned halves already staged, so it applies the
+  // proposed set. Either way the RECORD is the proposed one: the athlete's
+  // decision has been made, and every question about WHY this week looks the
+  // way it does must be answered with it — including the repair search's
+  // stand-down, which is the reason a delete's search used to relocate over
+  // the very decision it was composing around.
+  const sourceSurfaces = composeAcceptedEffectiveWeekSurfaces({
     currentProgram: state.currentProgram,
     currentMicrocycle: state.currentMicrocycle,
     dateOverrides,
     weekScopedOverlays: state.weekScopedOverlays,
-    // Deletion repair needs the accepted target still present as a relocation
-    // template. A move, by contrast, must enter repair with both athlete-owned
-    // halves already staged. The gateway receives the proposed constraint in
-    // both cases and keeps the prohibited source immutable.
-    userRemovalConstraints: args.mutationIntent === 'athlete_move'
+    removalDecisions: userRemovalConstraints,
+    applyOnly: args.mutationIntent === 'athlete_move'
       ? userRemovalConstraints
       : state.userRemovalConstraints,
-  };
+  });
   const primaryWeekStarts = Array.from(new Set(args.affectedDates.map(mondayForDate))).sort();
   const repair = stageRollingHorizonFixtureRepair({
     program: state.currentProgram,
@@ -2807,7 +2935,15 @@ function stageAthleteMutationConstraint(args: {
     primaryWeekStarts,
     primaryMutationIntent: args.mutationIntent,
     dependentMutationIntent: 'remove_from_date',
-    userRemovalConstraints,
+    // THE SECOND WORLD, named. The composition surface above deliberately
+    // withholds the proposed constraint on a delete so the binned target
+    // survives as a relocation template; the week is still JUDGED against the
+    // world where the athlete's decision has landed. Two surfaces objects say
+    // that; one array could not. Both carry the same RECORD.
+    evaluationSurfaces: composeAcceptedEffectiveWeekSurfaces({
+      ...sourceSurfaces,
+      removalDecisions: userRemovalConstraints,
+    }),
   });
   const weekScopedOverlays = { ...state.weekScopedOverlays };
   for (const projection of repair.projections) {
@@ -3011,6 +3147,18 @@ export function stageAthleteSessionMoveTransaction(
   const profile = useProfileStore.getState().onboardingData;
   if (!profile) throw new Error('Athlete move requires an accepted profile');
   const prior = materialContext(state);
+  // THE MOVE DOOR'S IDENTITY ORACLE, declared red and NOT fixed here.
+  //
+  // The oracle reads the MATERIALISED week while the athlete acts on the
+  // DERIVED one, so under tier-4-at-read a durable move on a re-planned day is
+  // refused (`program-control-durable`, 2026-08-05/06 coordinate). Retiring it
+  // to the derived basis was built and REFUTED AS SCOPED: the door has TWO
+  // caller classes on TWO visible bases — the sheet route resolves
+  // `resolveWeekWithConditioning`, the G-1 landing flow captures from
+  // `rebaseAcceptedEffectiveWeek` — and either basis breaks the other class.
+  // A per-caller fallback would be the compatibility path this repo forbids.
+  // The payer is the recorded door-unification debt (one visible basis for
+  // every door); see `docs/R53_LANDING_SET_BUILT_2026-08-07.md`.
   const acceptedSource = acceptedWorkoutForDate({ date: sourceDate, state, context: prior, profile });
   const expectedSourceIdentity = args.acceptedSourcePlanEntryId ?? args.sourceWorkoutId;
   if (!acceptedSource || workoutIdentity(acceptedSource) !== expectedSourceIdentity ||
@@ -3145,7 +3293,7 @@ export function commitAthleteSessionDeletionTransaction(
   if (!profile) throw new Error('Athlete deletion requires an accepted profile');
   const beforeContext = materialContext(state);
   const before = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: mondayForDate(args.date),
     profile,
     markedDays: beforeContext.markedDays,
@@ -3193,7 +3341,7 @@ function detectAthleteMoveContentLoss(args: {
   const afterIdentities = new Map<string, number>();
   for (const weekStart of Array.from(new Set(args.weekStarts))) {
     const after = rebaseAcceptedEffectiveWeek({
-      surfaces: publishedState,
+      surfaces: storedWorldSurfaces(publishedState),
       weekStart,
       profile: args.profile,
       markedDays: publishedMarkedDays,
@@ -3299,7 +3447,10 @@ export function stageAthleteSessionAdditionTransaction(
   // Rest days that visibleWorkouts omits). It must have a stable id to pin against
   // and to undo back to.
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state, weekStart: mondayForDate(date), profile, markedDays: prior.markedDays,
+    surfaces: storedWorldSurfaces(state),
+    weekStart: mondayForDate(date),
+    profile,
+    markedDays: prior.markedDays,
   });
   const composedPlaceholder = accepted.composedWorkouts.find(
     (workout) => workout.dayOfWeek === dayOfWeek) ?? null;
@@ -3472,10 +3623,9 @@ export function commitProgramSetupRebuildTransaction(args: {
         profile: args.profile,
         weekStart,
         markedDays: prior.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: prior.markedDays,
         activeConstraints: prior.activeConstraints,
-        userRemovalConstraints: state.userRemovalConstraints,
         mutationIntent: state.userRemovalConstraints.some((constraint) =>
           constraint.status === 'active' && mondayForDate(constraint.targetDate) === weekStart)
           ? 'athlete_removal'
@@ -3560,7 +3710,7 @@ export function commitReadinessStateTransaction(args: {
   const weekStarts = rollingHorizonDependencyClosure({
     seedWeekStarts: args.affectedDates.map(mondayForDate),
     changedTriggerDates: args.affectedDates,
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
   });
   return commitAcceptedStateTransaction({
     // Answering the readiness sheet is the athlete stating a fact about their

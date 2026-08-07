@@ -35,7 +35,7 @@ import {
   withSection18WorkoutEvidence,
   type Section18EvidenceMode,
 } from '../rules/section18WorkoutEvidence';
-import { canonicalStrengthLabel } from './sessionNaming';
+import { canonicalConditioningLabel, canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from './workoutContent';
 import {
@@ -338,11 +338,7 @@ function buildCanonicalConditioningBlock(args: {
     : modalities.length > 1
       ? 'Mixed'
       : '';
-  const intentLabel = intent === 'tempo'
-    ? 'Tempo Conditioning'
-    : intent === 'high-intensity'
-      ? 'Hard Conditioning'
-      : 'Aerobic Conditioning';
+  const intentLabel = canonicalConditioningLabel(intent);
   const typedFallback = `${modalityLabel} ${intentLabel}`.trim() || 'Conditioning';
   const title = existingHeadline && !isWarmupOrCooldown(existingHeadline)
     ? existingHeadline

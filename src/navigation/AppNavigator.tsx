@@ -141,17 +141,23 @@ export default function AppNavigator() {
           }}
           listeners={{ tabPress: () => logger.info('[tab-press] program') }}
         />
-        <Tab.Screen
-          name="CoachTab"
-          component={CoachStackNavigator}
-          options={{
-            title: 'Coach',
-            tabBarIcon: ({ color }) => <CoachIcon color={color} size={22} />,
-            tabBarButtonTestID: 'tab-coach',
-            tabBarAccessibilityLabel: 'Coach tab',
-          }}
-          listeners={{ tabPress: () => logger.info('[tab-press] coach') }}
-        />
+        {/*
+          R5.7 — THE BETA COACH CUT (§6, decision C(a), signed; Sam's
+          "MAKE THE CUT" 2026-08-07). The free-text coach entry point does not
+          appear in the beta build, and the boundary is the FULL cut: zero
+          paths to a chat surface, not a reachable screen with its input
+          removed. The tab is gone and all three navigation doors that
+          targeted it are gone with it.
+
+          The wording above is deliberate: `coachEntrySurfaceContractTests`
+          section [4] greps product sources for the literal call, and prose
+          containing it reads to that gate as a door. A note is output, never
+          evidence — so the note yields, not the gate.
+
+          LR-6 HOLDS: `CoachStackNavigator`, `CoachScreen` and the pipeline stay
+          in the tree, FROZEN. This is a scope cut, not a retirement — §6's own
+          words. Restoring the tab is one `Tab.Screen` block.
+        */}
         <Tab.Screen
           name="ProfileTab"
           component={ProfileStackNavigator}

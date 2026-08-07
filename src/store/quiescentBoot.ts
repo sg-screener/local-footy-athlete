@@ -230,6 +230,74 @@ export async function settleDerivedWorldAfterDecision(): Promise<void> {
 }
 
 /**
+ * THE FIXTURE MARKS ARE THE LEDGER'S, NOT THE DISK'S (ruled 2026-08-06,
+ * `docs/FIXTURE_BOOT_ORDER_RULING_2026-08-06.md`).
+ *
+ * A fixture reached the calendar as a DECISION, and the decision ledger owns
+ * it. `markedDays` is that decision's projection. Boot used to rehydrate the
+ * projection from disk BEFORE replaying the ledger, so the replayed decision
+ * found its own effect already present and refused as `no_change`
+ * (`resolveFixtureMutation`, "The requested fixture is already present") — a
+ * second representation pre-empting its owner, in boot ORDER rather than in a
+ * writer. The week the fixture implies was then never composed, and the
+ * athlete re-opened the app holding a different week (`945e0cb4` measured the
+ * whole chain, two-directionally).
+ *
+ * So boot drops the fixture marks and re-derives them:
+ *
+ *   - `game` / `noGame` are fixture marks. They are DROPPED here and put back
+ *     by the ledger replay that follows, which is the only fixture input.
+ *   - the RECURRING fixture is a profile ANSWER, not a decision — nothing in
+ *     the ledger records it — so it is re-derived from `gameDay` through the
+ *     same pure function onboarding seeds it with. This is a derivation of a
+ *     persisted input, not a restoration of a stored consequence, which is why
+ *     it is not the rejected option (b): generation is not fed by it.
+ *   - `rest` marks are NOT fixture marks and are left untouched. They are
+ *     carried by their own doors and are out of this ruling's scope; declared,
+ *     not silently widened.
+ *
+ * The empty write is legitimate here and is exactly what the calendar door
+ * refuses by default, so boot opens a reset act for it — the mechanism that
+ * already exists for "an act is in flight that may legitimately empty this".
+ */
+function deriveBootFixtureMarks(
+  // The ANSWER this needs, not the mirror it happens to arrive on — a
+  // `ReturnType<typeof useProfileStore.getState>['onboardingData']` annotation
+  // here reads as a 72nd profile-mirror consumer to LR-4's detector, and this
+  // function consumes exactly one field.
+  profile: { gameDay?: string } | null,
+  program: { startDate?: string; endDate?: string },
+): void {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { computeGameDatesForBlock } = require('../utils/sessionResolver');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {
+    applyCalendarMarkedDaysWrite,
+    beginCalendarResetAction,
+    endCalendarResetAction,
+  } = require('./calendarStore');
+  const current = useCalendarStore.getState().markedDays ?? {};
+  const next: Record<string, import('./calendarStore').CalendarDayType> = {};
+  for (const [date, mark] of Object.entries(current)) {
+    if (mark !== 'game' && mark !== 'noGame') next[date] = mark;
+  }
+  const gameDay = profile?.gameDay;
+  if (gameDay && gameDay !== 'Varies' && program.startDate && program.endDate) {
+    for (const date of computeGameDatesForBlock(
+      gameDay, program.startDate, program.endDate,
+    ) as string[]) {
+      next[date] = 'game';
+    }
+  }
+  const resetActionId = beginCalendarResetAction('quiescent_boot');
+  try {
+    applyCalendarMarkedDaysWrite({ next, writer: 'quiescent_boot', resetActionId });
+  } finally {
+    endCalendarResetAction(resetActionId);
+  }
+}
+
+/**
  * Rebuild the derived world from inputs. Idempotent; safe to call again.
  * Everything it builds lives in memory — persistence carries inputs only.
  */
@@ -300,6 +368,7 @@ export async function rebuildDerivedWorld(): Promise<void> {
       previousProgram: null,
       ...(clock ? { seasonPhaseClock: clock } : {}),
     });
+    deriveBootFixtureMarks(profile, program);
     commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
       markedDays: useCalendarStore.getState().markedDays ?? {},
       // TODAY, not the anchor: generation is anchored to the recorded input,

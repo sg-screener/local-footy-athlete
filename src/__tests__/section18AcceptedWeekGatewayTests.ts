@@ -9,6 +9,7 @@
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
@@ -66,6 +67,7 @@ import {
   composeInjuryCompatibility,
   migrateLegacyInjuryEpisodes,
 } from '../rules/injuryEpisode';
+import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
 
 const WEEK_START = '2026-07-13';
 const NOW = '2026-07-13T00:00:00.000Z';
@@ -175,7 +177,7 @@ function firstWeek(value: ReturnType<typeof program>): Microcycle {
 
 function visibleEvaluation(value: ReturnType<typeof program>, microcycle = firstWeek(value)) {
   const contract = microcycle.exposureContractV2!;
-  const workouts = resolveFinalVisibleSection18Week({
+  const workouts = resolveFinalVisibleSection18Week({ surfaces: emptyEvaluationSurfaces(),
     contract,
     workouts: microcycle.workouts,
     weekStart: microcycle.startDate.slice(0, 10),
@@ -320,7 +322,7 @@ function resetLiveStores(value: ReturnType<typeof program>): void {
 function liveWeekAccepted(value: ReturnType<typeof program>): boolean {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: firstWeek(value).startDate.slice(0, 10),
     profile: value.profile,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -329,7 +331,7 @@ function liveWeekAccepted(value: ReturnType<typeof program>): boolean {
 
 function coreConditioningWorkout(value: ReturnType<typeof program>): Workout {
   const week = firstWeek(value);
-  const visible = resolveFinalVisibleSection18Week({
+  const visible = resolveFinalVisibleSection18Week({ surfaces: emptyEvaluationSurfaces(),
     contract: week.exposureContractV2!,
     workouts: week.workouts,
     weekStart: week.startDate.slice(0, 10),
@@ -424,7 +426,7 @@ const OVERLAY_DEPENDENCY_WORKOUT_ID = 'overlay-fourth-core-workout';
 function overlayDependencyGone(value: ReturnType<typeof program>): boolean {
   const state = useProgramStore.getState();
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: firstWeek(value).startDate.slice(0, 10),
     profile: value.profile,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -576,7 +578,7 @@ check('5 in-season bye build KEEPS its primers, within budget', (() => {
     ...workout,
     powerBlock: workout.powerBlock ?? mid.program.microcycles[0].workouts.find((candidate) => candidate.powerBlock)?.powerBlock,
   }));
-  const canonical = canonicaliseHydratedProgram(hydrated);
+  const canonical = canonicaliseHydratedProgram(hydrated, emptyEvaluationSurfaces());
   hydrationRepairObserved = canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2;
   check('7 rollover/Repeat-style canonicalisation cannot restore excess primers',
     hydrationRepairObserved);
@@ -692,7 +694,7 @@ check('15 an empty G+1 is REST — nothing is placed on it uninvited',
       provenance: 'explicit_mutation',
     },
   };
-  const visible = resolveFinalVisibleSection18Week({
+  const visible = resolveFinalVisibleSection18Week({ surfaces: emptyEvaluationSurfaces(),
     contract: firstWeek(game).exposureContractV2!, workouts: firstWeek(game).workouts,
     weekStart: WEEK_START, profile: game.profile,
   });
@@ -736,7 +738,7 @@ check('17 an in-season bye meets its contract-stated full-rest minimum', (() => 
 {
   const base = firstWeek(pre3);
   const contract = clone(base.exposureContractV2!);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract, workouts: clone(base.workouts), weekStart: WEEK_START, profile: pre3.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
   });
@@ -838,7 +840,7 @@ check('21 generation cannot store a blocking final-visible violation',
   hydrated.microcycles[0].workouts = hydrated.microcycles[0].workouts.map((workout) => ({
     ...workout, ...(primer ? { powerBlock: primer } : {}),
   }));
-  const canonical = canonicaliseHydratedProgram(hydrated);
+  const canonical = canonicaliseHydratedProgram(hydrated, emptyEvaluationSurfaces());
   hydrationRepairObserved = hydrationRepairObserved &&
     canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2;
   const restDay = gameEvaluation.ledger.restStress.trueFullRestDays[0];
@@ -903,7 +905,7 @@ check('21 generation cannot store a blocking final-visible violation',
   const prohibited = clone(base.exposureContractV2!);
   prohibited.safety.prohibitedPower = true;
   prohibited.power.eligible = false;
-  const accepted = requireSection18AcceptedWeek({
+  const accepted = requireSection18AcceptedWeek({ surfaces: emptyEvaluationSurfaces(),
     contract: prohibited, workouts: unsafe,
     weekStart: WEEK_START, profile: low.profile,
   });
@@ -913,7 +915,7 @@ check('21 generation cannot store a blocking final-visible violation',
 }
 {
   const base = firstWeek(mid);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
     weekStart: WEEK_START, profile: mid.profile, maxRepairAttempts: 3,
     resolveVisibleWorkouts: (workouts) => [...workouts],
@@ -924,7 +926,7 @@ check('21 generation cannot store a blocking final-visible violation',
     result.status === 'impossible' && selectedTargetPreserved);
   check('30 repair loops terminate deterministically',
     result.status === 'impossible' && result.attempts <= 3 && !!result.failureSignature);
-  const fallback = runSection18AcceptedWeekGateway({
+  const fallback = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
     weekStart: WEEK_START, profile: mid.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts],
@@ -934,7 +936,7 @@ check('21 generation cannot store a blocking final-visible violation',
   check('31 safe fallback passes the same gateway',
     fallback.status !== 'impossible' && fallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate'));
   typedRejectionObserved = rejected(() =>
-    requireSection18AcceptedWeek({
+    requireSection18AcceptedWeek({ surfaces: emptyEvaluationSurfaces(),
       contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
       weekStart: WEEK_START, profile: mid.profile,
       resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 2,
@@ -945,7 +947,7 @@ check('21 generation cannot store a blocking final-visible violation',
 console.log('\n-- Cross-path equivalence --');
 {
   const base = firstWeek(mid);
-  const direct = requireSection18AcceptedWeek({
+  const direct = requireSection18AcceptedWeek({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: clone(base.workouts),
     weekStart: WEEK_START, profile: mid.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts],
@@ -953,7 +955,7 @@ console.log('\n-- Cross-path equivalence --');
   const rebuilt = validateMicrocycleAgainstActiveConstraints({
     microcycle: clone(base), todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
   });
-  const hydrated = canonicaliseHydratedProgram(clone(mid.program)).microcycles[0];
+  const hydrated = canonicaliseHydratedProgram(clone(mid.program), emptyEvaluationSurfaces()).microcycles[0];
   const signature = (contract: NonNullable<Microcycle['exposureContractV2']>, workouts: Workout[]) => {
     const evaluation = evaluateSection18EffectiveWeek({ contract, workouts, weekStart: WEEK_START });
     return JSON.stringify({
@@ -1031,7 +1033,7 @@ check('P9 repairs preserve required core work',
   gameEvaluation.ledger.conditioning.coreCount >= gameEvaluation.contract.conditioning.core.requiredMinimum);
 check('P10 contract authority cannot reconcile downward to broken output', (() => {
   const base = firstWeek(mid);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
     weekStart: WEEK_START, profile: mid.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
@@ -1041,7 +1043,7 @@ check('P10 contract authority cannot reconcile downward to broken output', (() =
 })());
 check('P11 all repair paths terminate', generated.every((value) => {
   const base = firstWeek(value);
-  return runSection18AcceptedWeekGateway({
+  return runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: clone(base.workouts),
     weekStart: base.startDate.slice(0, 10), profile: value.profile, maxRepairAttempts: 8,
   }).attempts <= 8;
@@ -1395,7 +1397,7 @@ check('47 safe substitution is attempted before conditioning reduction', substit
 
 const fallbackOrder: string[] = [];
 const fallbackBase = firstWeek(mid);
-const runProductionFallback = () => runSection18AcceptedWeekGateway({
+const runProductionFallback = () => runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
   contract: clone(fallbackBase.exposureContractV2!),
   workouts: allRest(fallbackBase.workouts),
   weekStart: fallbackBase.startDate.slice(0, 10),
@@ -1476,8 +1478,8 @@ check('51 fallback and repair terminate deterministically', fallbackDeterministi
   const existingIndex = week.workouts.findIndex((workout) => workout.dayOfWeek === unknownAnchor.dayOfWeek);
   if (existingIndex >= 0) week.workouts[existingIndex] = anchorWorkout;
   else week.workouts.push(anchorWorkout);
-  const hydratedOnce = canonicaliseHydratedProgram(persisted);
-  const hydratedTwice = canonicaliseHydratedProgram(clone(hydratedOnce));
+  const hydratedOnce = canonicaliseHydratedProgram(persisted, emptyEvaluationSurfaces());
+  const hydratedTwice = canonicaliseHydratedProgram(clone(hydratedOnce), emptyEvaluationSurfaces());
   const onceWeek = hydratedOnce.microcycles[0];
   const twiceWeek = hydratedTwice.microcycles[0];
   const onceEvaluation = evaluateSection18EffectiveWeek({

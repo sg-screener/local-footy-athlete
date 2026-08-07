@@ -46,6 +46,7 @@ import {
   type SemanticDaySnapshot,
 } from '../../utils/programSemanticSnapshot';
 import { STAGE_B_SCENARIOS, type StageBScenario } from './scenarios';
+import { emptyEvaluationSurfaces } from '../evaluationSurfacesTestSupport';
 
 /** Pinned clock — the same Monday the power differential runs on. */
 export const TODAY_ISO = '2026-07-13';
@@ -215,7 +216,7 @@ function section18Snapshot(
   const contract = microcycle.exposureContractV2;
   if (!contract) return null;
   const weekStart = microcycle.startDate.slice(0, 10);
-  const result = runSection18AcceptedWeekGateway({
+  const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: JSON.parse(JSON.stringify(contract)),
     workouts: microcycle.workouts.map((workout) => ({ ...workout })),
     weekStart,

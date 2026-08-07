@@ -1057,3 +1057,46 @@ file's transitional rule, signed the same day, all three verbatim:
   `scheduleProjection`): reasonLabel "Team training moved", title "Team
   training moved this week", body "Team training is on {target day} instead
   of {usual day} this week only."
+
+---
+
+## Batch 11 — R5.7, the beta coach cut (2026-08-07): SIGNED
+
+**Sam, verbatim: "sign yes"** (`docs/SIGNING_AND_MERGE_GATE_2026-08-07.md`).
+All three strings SIGNED AS WRITTEN. They shipped PROPOSED with the unit under
+this file's transitional rule and were signed the same day; the PROPOSED
+markers retire here.
+
+**WHY THERE ARE NEW WORDS AT ALL.** §6's beta scope cut removes every path to a
+chat surface. Three sheets had "Ask Coach" as their ONLY action, so the cut left
+them with nothing to do. A sheet the athlete cannot act on and that does not say
+why is the half-alive surface decision C(a) exists to prevent. All three say the
+same two things on purpose: **nothing changed**, and **where to act instead**.
+
+**11-a. `HomeQuickActionSheet` — the "I need a bit more detail" sheet.**
+Old: "This one needs more context before we can change your program safely."
+New (Sam-signed): "This one needs more context than the menu can give, so nothing has changed. Use the day or session controls to make the change yourself."
+
+**11-b. `StaleOverrideBanner` — the detail sheet.**
+Old: "This one needs more context before we can change your program safely."
+New (Sam-signed): "This one needs more context than we can gather here, so nothing has changed. Keep the session or clear it from the options above."
+
+**11-c. `DayWorkoutScreenV2` — the `coach_fallback` step**, appended below the
+step's own message (which is unchanged and still signed). This one replaces no
+string — the step previously ended in a button, not a sentence:
+- "Nothing has changed. You can make this change yourself from the day or session controls."
+
+**11-d. A TITLE corrected, and it is not new copy.** The exercise-add fallback
+sheet was TITLED "Ask Coach" and after the cut offers no coach. It now carries
+the signed title its two sibling fallback sheets already use — **"I need a bit
+more detail"**. Recorded because a title is athlete-visible and a silent change
+to one is exactly what this file exists to prevent, not because it needs a
+ruling.
+
+**11-e. "Ask Coach" — the string's own status.** Batch 6-I signed it as the
+replacement for "Message the coach". It no longer appears in any athlete-visible
+position; it survives only in comments explaining the cut. **It is not RETIRED
+as a ruling** — LR-6 freezes `CoachScreen` and the pipeline in the tree, and the
+tab is one `Tab.Screen` block from returning, so the word is dormant for beta
+rather than deleted. Stated so the next reader does not read its absence from
+the UI as a retirement nobody signed.

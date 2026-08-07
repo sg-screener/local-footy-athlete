@@ -15,6 +15,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type {
@@ -211,7 +212,7 @@ function lastAdjustment() {
 function visibleSemantic(athlete: OnboardingData): string {
   const state = useProgramStore.getState();
   const accepted = rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart: WEEK_START,
     profile: athlete,
     markedDays: state.acceptedMaterialContext.markedDays,

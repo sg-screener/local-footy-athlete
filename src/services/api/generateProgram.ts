@@ -57,6 +57,7 @@ import {
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
+import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
 import type { AcceptedStateOperationKind } from '../../store/acceptedStateTransaction';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
 import { weakPointFocusFor } from '../../rules/weakPointFocus';
@@ -718,6 +719,11 @@ export function buildGeneratedMicrocycles(args: {
         workouts,
         weekStart: blockState.weekStart,
         profile,
+        // GENERATION MEANS THE WORLD IT IS BUILDING, and now says so rather
+        // than saying nothing (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+        // Wiring this door to the live world was measured and refuted — see
+        // `freshGenerationSurfaces` for the cell that paid for it.
+        surfaces: freshGenerationSurfaces(),
         // Edge-authored and deterministic candidates both regenerate from the
         // same phase-owned plan before the final safe fallback is considered.
         regenerate: () => ({

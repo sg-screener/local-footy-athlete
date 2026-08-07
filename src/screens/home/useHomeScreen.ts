@@ -1272,13 +1272,6 @@ export function useHomeScreen() {
     }
   };
 
-  const handleMessageCoach = (prefill: string) => {
-    navigation.navigate('CoachTab', {
-      screen: 'Coach',
-      params: { prefill: prefill || `Coach, I need to update my program - ` },
-    });
-  };
-
   const handleOpenProgramSetup = useCallback(() => {
     navigation.navigate('ProfileTab');
   }, [navigation]);
@@ -2015,7 +2008,6 @@ export function useHomeScreen() {
     // Per-day actions
     handleViewWorkout,
     handleFinishTeamSession,
-    handleMessageCoach,
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,

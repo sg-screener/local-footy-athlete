@@ -101,7 +101,6 @@ export default function HomeScreenV2() {
     handleAddGameMode,
     handleViewWorkout,
     handleFinishTeamSession,
-    handleMessageCoach,
     handleApplyGuidedInjury,
     handleApplyEquipmentDecision,
     handleApplyShortOnTimeToday,
@@ -520,7 +519,6 @@ export default function HomeScreenV2() {
                 onGameDayActions={() => handleOpenGameDayActions(day.date)}
                 onMakeChange={() => setChangeSheetDate(day.date)}
                 staleWarning={staleByDate[day.date]}
-                onReviewStale={handleMessageCoach}
                 normal={isNormal}
                 feedbackReceipts={feedbackRenderWitnesses
                   .filter((witness) => witness.receipt.date === day.date)
@@ -1075,7 +1073,6 @@ interface DayRowProps {
   onGameDayActions: () => void;
   onMakeChange: () => void;
   staleWarning: any;
-  onReviewStale: (prefill: string) => void;
   feedbackReceipts: string[];
   progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
 }
@@ -1439,7 +1436,7 @@ function cardLeadHeadline(day: VisibleDay | undefined): string | null {
 function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
-  onLogGame, onGameDayActions, onMakeChange, staleWarning, onReviewStale,
+  onLogGame, onGameDayActions, onMakeChange, staleWarning,
   feedbackReceipts, progressionReceipts,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
@@ -1709,7 +1706,6 @@ function DayRow({
           {staleWarning && (
             <StaleOverrideBanner
               warning={staleWarning}
-              onReview={(prefill) => onReviewStale(prefill)}
             />
           )}
           {isCompleted ? (
@@ -1746,7 +1742,7 @@ function DayRow({
       )}
 
       {!isSelected && staleWarning && normal && (
-        <StaleOverrideBanner warning={staleWarning} compact onReview={(p) => onReviewStale(p)} />
+        <StaleOverrideBanner warning={staleWarning} compact />
       )}
 
       {isSelected && isGame && normal && (

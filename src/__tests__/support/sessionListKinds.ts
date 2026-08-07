@@ -166,10 +166,12 @@ export function rowCompositionCoordinate(workout: unknown): string {
 }
 
 /**
- * The offence sentence. **The walker's DECLARED_RED regexes match this string**
- * — change its wording and every containment in `athleteActionWalkerTests`
- * silently stops matching, so the stale-debt ratchet is the thing that would
- * catch you, one run later. Treat it as a published format.
+ * The offence sentence. **The walker's declared reds are read back out of this
+ * string** by `parseTemplateProjectionOffence` below — change its wording and
+ * every declaration silently stops matching, so the stale-debt ratchet is the
+ * thing that would catch you, one run later. Treat it as a published format,
+ * and move the parser in the same edit (the round-trip cell in
+ * `athleteActionWalkerTests` fails the pair if you don't).
  */
 export function templateProjectionOffence(
   date: string,
@@ -180,4 +182,43 @@ export function templateProjectionOffence(
     + `${JSON.stringify(disagreement.templateKinds)} / `
     + `projection ${JSON.stringify(disagreement.contentKinds)}. The list the athlete reads `
     + 'and the projection tell one story or neither is the projection.';
+}
+
+/**
+ * THE SHAPE OF ONE OFFENCE — what the day OMITS and what it INVENTS, read back
+ * out of the published sentence above.
+ *
+ * WHY THIS EXISTS (2026-08-07, seat ruling: DECOMPOSE). The walker's declared
+ * reds used to be prose regexes over that sentence, and a regex can only match
+ * ONE shape. A day that drops speed AND badges support produces
+ * `omits ["speed"] and invents ["support"]` — the combination of two shapes
+ * this repo has declared separately since 2026-08-04, matchable by neither
+ * regex and therefore reported as a new, undeclared defect. The file has said
+ * so in prose the whole time; the instrument was falling short of the declared
+ * truth.
+ *
+ * With the shape parsed out, a declaration names the SET it covers and the
+ * walker decomposes a combination into its constituents by construction — no
+ * third entry per pair, and no entry that can quietly swallow an element
+ * nobody declared.
+ */
+export interface TemplateProjectionShape {
+  omits: readonly string[];
+  invents: readonly string[];
+}
+
+/** Null when `detail` is not a template=projection offence sentence at all. */
+export function parseTemplateProjectionOffence(
+  detail: string,
+): TemplateProjectionShape | null {
+  const match = /the session list omits (\[[^\]]*\]) and invents (\[[^\]]*\])/.exec(detail);
+  if (!match) return null;
+  try {
+    const omits: unknown = JSON.parse(match[1]!);
+    const invents: unknown = JSON.parse(match[2]!);
+    if (!Array.isArray(omits) || !Array.isArray(invents)) return null;
+    return { omits: omits.map(String), invents: invents.map(String) };
+  } catch {
+    return null;
+  }
 }

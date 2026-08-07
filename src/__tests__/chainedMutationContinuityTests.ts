@@ -15,6 +15,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import type { DayOfWeek, OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
@@ -130,7 +131,7 @@ function reset(value: OnboardingData = athlete()): TrainingProgram {
 function accepted(weekStart = WEEK): AcceptedEffectiveWeekSnapshot {
   const state = useProgramStore.getState();
   return rebaseAcceptedEffectiveWeek({
-    surfaces: state,
+    surfaces: storedWorldSurfaces(state),
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
@@ -548,7 +549,7 @@ async function main(): Promise<void> {
         profile: useProfileStore.getState().onboardingData,
         weekStart: WEEK,
         markedDays: state.acceptedMaterialContext.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: state.acceptedMaterialContext.markedDays,
         mutationIntent: 'remove_weekly_exposure',
       });
@@ -570,7 +571,7 @@ async function main(): Promise<void> {
         profile: useProfileStore.getState().onboardingData,
         weekStart: WEEK,
         markedDays: state.acceptedMaterialContext.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: state.acceptedMaterialContext.markedDays,
         mutationIntent: 'remove_weekly_exposure',
       });
@@ -590,7 +591,7 @@ async function main(): Promise<void> {
       profile: useProfileStore.getState().onboardingData,
       weekStart: WEEK,
       markedDays: marks,
-      sourceSurfaces: state,
+      sourceSurfaces: storedWorldSurfaces(state),
       sourceMarkedDays: state.acceptedMaterialContext.markedDays,
       mutationIntent: 'remove_from_date',
     });
@@ -777,7 +778,7 @@ async function main(): Promise<void> {
       profile: useProfileStore.getState().onboardingData,
       weekStart: WEEK,
       markedDays: { ...state.acceptedMaterialContext.markedDays, [SATURDAY]: 'rest' },
-      sourceSurfaces: state,
+      sourceSurfaces: storedWorldSurfaces(state),
       sourceMarkedDays: state.acceptedMaterialContext.markedDays,
       mutationIntent: 'remove_from_date',
     });
@@ -796,7 +797,7 @@ async function main(): Promise<void> {
         profile: useProfileStore.getState().onboardingData,
         weekStart: WEEK,
         markedDays: state.acceptedMaterialContext.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: state.acceptedMaterialContext.markedDays,
         mutationIntent: 'remove_weekly_exposure',
       });
@@ -833,7 +834,7 @@ async function main(): Promise<void> {
         profile: useProfileStore.getState().onboardingData,
         weekStart: WEEK,
         markedDays: state.acceptedMaterialContext.markedDays,
-        sourceSurfaces: state,
+        sourceSurfaces: storedWorldSurfaces(state),
         sourceMarkedDays: state.acceptedMaterialContext.markedDays,
         mutationIntent: 'remove_weekly_exposure',
       });

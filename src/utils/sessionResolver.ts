@@ -37,7 +37,10 @@ import type {
   UserRemovalConstraint,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
+import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import {
   buildDerivedSession,
   buildConditioningSession,
@@ -91,6 +94,7 @@ import {
 import { resolverMayDisplace } from '../rules/athletePlacement';
 import { todayISOLocal } from './appDate';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -116,6 +120,29 @@ export interface ScheduleState {
    * and applying them twice would re-remove a remainder.
    */
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE RECORD of those same decisions, never blanked
+   * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+   *
+   * The field above is an APPLICATION input and the gateway empties it once
+   * the removals are folded into the composed week. Tier 4 runs downstream of
+   * that, and its repair search has a different question — "does a decision
+   * explain this gap?" — which an emptied input cannot answer. Carried here
+   * so the deriver can hand it on; nothing in this file applies it.
+   */
+  removalDecisions?: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS — leg (v)'s read side, install site 2 of 3.
+   *
+   * The week's IDENTITY (a severe illness makes it optional) reached this
+   * resolver only because generation had WRITTEN it onto the overlay's stored
+   * declaration. Installing the derivation at the accepted reader alone would
+   * leave THIS line answering the same question from storage, and the one-owner
+   * law is about the three lines agreeing, not about one of them being right.
+   * Assembled from `acceptedMaterialContext`, which the one assembly already
+   * carries — no new store read.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
   markedDays: Record<string, CalendarDayType>;
   /** Athlete profile context for adaptive derived sessions. */
   athleteContext: AthleteContext;
@@ -906,6 +933,124 @@ function workoutToIndicator(workout: Workout | null, source: ResolvedDay['source
 
 // ─── Build Helper ───
 
+/**
+ * §18 AS TIER 4 OF THE DERIVATION — legs (ii) and (iii) at the deriver.
+ *
+ * Leg (iii): the week's contract is DERIVED from current fixture facts here,
+ * not read stale off the overlay. Leg (ii): §18 then runs as TIER 4 of the
+ * ordering (`rules/dayPrecedence.ts:19`) — a projection with the resolver
+ * IDENTITY (`resolveVisibleWorkouts: (w) => [...w]`, which is also what stops
+ * the gateway re-entering this resolver), output never persisted.
+ *
+ * The gateway imports this module, so the import is lazy by construction.
+ */
+function section18TierFour(args: {
+  days: ResolvedDay[];
+  storedContract: WeeklyExposureContractV2 | null;
+  /** The week's AUTHORED plan — the repair search's relocation templates. */
+  strengthTemplates: readonly Workout[];
+  weekStart: string;
+  today: string;
+  state: ScheduleState;
+}): ResolvedDay[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const derived = require('../rules/derivedWeekContract') as
+    typeof import('../rules/derivedWeekContract');
+  if (!args.storedContract) return args.days;
+  const profile = args.state.athleteContext?.onboardingData ?? null;
+  const contract = derived.deriveWeekContract({
+    contract: args.storedContract,
+    weekStart: args.weekStart,
+    profile,
+    markedDays: args.state.markedDays,
+    userRemovalConstraints: args.state.userRemovalConstraints,
+    workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
+    // Leg (v) read side, install site 2 of 3 — the same facts, the same owner.
+    temporarySourceFacts: args.state.temporarySourceFacts,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const gateway = require('../rules/section18AcceptedWeekGateway') as
+    typeof import('../rules/section18AcceptedWeekGateway');
+  let result;
+  try {
+    result = gateway.runSection18AcceptedWeekGateway({
+      contract,
+      workouts: args.days.flatMap((day) => day.workout ? [day.workout] : []),
+      weekStart: args.weekStart,
+      profile,
+      // THE DERIVER IS JUDGED AGAINST THE STATE IT IS DERIVING FROM
+      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`). Tier 4 at read has no
+      // accepted surfaces of its own — it is producing the week those surfaces
+      // would describe — so the only thing it carries is the athlete's
+      // decisions, and it says so rather than leaving the field absent.
+      // Composed through the ONE composer, and it says both things: the
+      // removals still to APPLY (blanked above this line by the gateway, which
+      // has already applied them) and the RECORD of the decisions, which is
+      // what the repair search's stand-down asks
+      // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+      surfaces: composeAcceptedEffectiveWeekSurfaces({
+        currentProgram: null,
+        removalDecisions: args.state.removalDecisions ?? [],
+        applyOnly: args.state.userRemovalConstraints ?? [],
+      }),
+      strengthTemplates: args.strengthTemplates,
+      // ── ROOT 1b (sixteenth pass): the exact-date fixture
+      // authority, derived from the same facts the host already carries
+      // (profile + markedDays), the `governedFromISO` treatment. Without it
+      // the expiry guard's `fixture_absent` check degrades to day-of-week in
+      // THIS week's contract — structurally false for cross-week
+      // dependencies — and tier 4 at read expires every fixture-linked
+      // derived session the write path deliberately preserved.
+      activeFixtureDates: profile
+        ? (require('../rules/rollingHorizonRepair') as
+            typeof import('../rules/rollingHorizonRepair'))
+            .effectiveFixtureDatesForWeeks({
+              profile,
+              markedDays: args.state.markedDays ?? {},
+              weekStarts: [
+                (require('./programBlockState') as
+                  typeof import('./programBlockState'))
+                  .addDaysISO(args.weekStart, -7),
+                args.weekStart,
+                (require('./programBlockState') as
+                  typeof import('./programBlockState'))
+                  .addDaysISO(args.weekStart, 7),
+              ],
+            })
+        : undefined,
+      // THE PROJECTION IDENTITY the ruling specifies.
+      resolveVisibleWorkouts: (workouts) => [...workouts],
+    });
+  } catch {
+    // Tier 4 at read is a projection: a week it cannot accept is reported by
+    // the accepted stack, never by blanking the athlete's screen.
+    return args.days;
+  }
+  // DIAGNOSTIC ONLY — see `lastTierFourDerivation`'s header. The contract the
+  // visible week answers to is never stored, so this is the only place the
+  // lawfulness proof can read it from.
+  derived.lastTierFourDerivation.weekStart = args.weekStart;
+  derived.lastTierFourDerivation.contract = result.contract;
+  derived.lastTierFourDerivation.status = result.status;
+  derived.lastTierFourDerivation.repairs = result.repairs.map((repair) => repair.kind);
+  derived.lastTierFourDerivation.blockingViolations = result.evaluation.blockingViolations
+    .map((finding) => `${finding.code}:${finding.domain}`);
+  const byDay = new Map<number, Workout>();
+  for (const workout of result.visibleWorkouts) byDay.set(workout.dayOfWeek, workout);
+  return args.days.map((day) => {
+    // TIER 4 RUNS LAST; LAST IS NOT HIGHEST.
+    // Tier 1 — the emptying decision — outranks it, so a day already emptied by
+    // decision is left exactly as it is rather than having a typed Rest
+    // installed onto it.
+    if (!day.workout) return day;
+    const conformed = byDay.get(day.dayOfWeek);
+    if (!conformed) return buildDay(day.date, day.dayOfWeek, args.today, null, 'rest');
+    return conformed === day.workout
+      ? day
+      : buildDay(day.date, day.dayOfWeek, args.today, conformed, day.source);
+  });
+}
+
 function buildDay(
   date: string,
   dow: number,
@@ -1674,11 +1819,35 @@ export function resolveWeekWithConditioning(
     mondayStr,
   );
   const section18Overlay = state.weekScopedOverlays?.[mondayStr];
-  if (section18Overlay?.exposureContractV2 || section18Microcycle?.exposureContractV2) {
-    return result.map((day) =>
+  // THE FLIP, MOVE (ii) — one read door. `selectMicrocycleForDate` above is
+  // the covering answer, current-microcycle fallback already folded in.
+  const section18StoredContract = selectStoredWeekDeclaration({
+    overlay: section18Overlay,
+    coveringMicrocycle: section18Microcycle,
+    weekStart: mondayStr,
+    reader: 'sessionResolver.tierFourEntry',
+  });
+  if (section18StoredContract) {
+    const rested = result.map((day) =>
       !day.workout && day.source === 'none'
         ? buildDay(day.date, day.dayOfWeek, today, null, 'rest')
         : day);
+    // Legs (ii)+(iii), install site 2 of 3 — THE DERIVER'S OWN
+    // contract-selection line. The deriver reads
+    // `overlay.exposureContractV2 ?? microcycle.exposureContractV2` itself, so
+    // installing the derivation only at `acceptedEffectiveWeek.ts:102` leaves
+    // tier 4 here conforming against the STORED contract and a fixture's
+    // REMOVAL never reaches the conformance pass (scaffold defect 4).
+    return section18TierFour({
+      days: rested,
+      storedContract: section18StoredContract,
+      // The AUTHORED week, which is what the publisher relocated from. A
+      // session the fixture displaced is gone from `rested` by definition.
+      strengthTemplates: section18Microcycle?.workouts ?? [],
+      weekStart: mondayStr,
+      today,
+      state,
+    });
   }
 
   // Pass 2: progressive conditioning placement

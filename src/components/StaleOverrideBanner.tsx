@@ -23,11 +23,9 @@ interface StaleOverrideBannerProps {
   warning: StaleOverrideWarning;
   /** Compact mode for inline use in day rows */
   compact?: boolean;
-  /** Called only when user explicitly taps "Ask Coach" from the review sheet. */
-  onReview?: (prefill: string) => void;
 }
 
-export function StaleOverrideBanner({ warning, compact = false, onReview }: StaleOverrideBannerProps) {
+export function StaleOverrideBanner({ warning, compact = false }: StaleOverrideBannerProps) {
   const [dismissed, setDismissed] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -48,14 +46,6 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
     setReviewVisible(false);
     setDetailVisible(false);
     setDismissed(true);
-  };
-
-  const coachPrefill = `I have a manual override on ${warning.date} ("${warning.workout.name}") that might need updating. ${warning.reason} What should I do - keep it, change it, or clear it?`;
-
-  const handleMessageCoach = () => {
-    setReviewVisible(false);
-    setDetailVisible(false);
-    onReview?.(coachPrefill);
   };
 
   if (compact) {
@@ -93,14 +83,21 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
             <Text style={styles.keepButtonText}>Keep</Text>
           </Pressable>
 
-          {onReview && (
-            <Pressable
-              onPress={() => setReviewVisible(true)}
-              style={({ pressed }) => [styles.actionButton, styles.reviewButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.reviewButtonText}>Review</Text>
-            </Pressable>
-          )}
+          {/*
+            R5.7 — THE BETA COACH CUT. `Review` was gated on an `onReview`
+            prop that existed ONLY to carry a coach prefill; with the coach
+            entry cut, no caller passes it. The sheet it opens is NOT
+            coach-dependent — its actions are Keep and Clear, both the
+            athlete's — so the affordance becomes unconditional rather than
+            being orphaned behind a prop nobody supplies. Gating it on the
+            deleted prop would hide a working surface.
+          */}
+          <Pressable
+            onPress={() => setReviewVisible(true)}
+            style={({ pressed }) => [styles.actionButton, styles.reviewButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.reviewButtonText}>Review</Text>
+          </Pressable>
 
           <Pressable
             onPress={handleClear}
@@ -138,13 +135,6 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
           }}
           style={styles.sheetButton}
         />
-        <Button
-          label="Ask Coach"
-          variant="ghost"
-          glow={false}
-          onPress={handleMessageCoach}
-          style={styles.sheetButton}
-        />
       </Sheet>
 
       <Sheet
@@ -153,12 +143,14 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
         testID="stale-override-detail-sheet"
       >
         <Text style={styles.sheetTitle}>I need a bit more detail</Text>
+        {/* PROPOSED COPY, UNSIGNED — R5.7. This sheet's only action was
+            "Ask Coach". It now says what is true and closes rather than
+            leaving the athlete somewhere with nothing to press. */}
         <Text style={styles.sheetBody}>
-          This one needs more context before we can change your program safely.
+          {'This one needs more context than we can gather here, so nothing has changed. Keep the session or clear it from the options above.'}
         </Text>
-        <Button label="Ask Coach" glow={false} onPress={handleMessageCoach} />
         <Button
-          label="Cancel"
+          label="Close"
           variant="ghost"
           glow={false}
           onPress={() => setDetailVisible(false)}

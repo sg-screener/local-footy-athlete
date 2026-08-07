@@ -55,6 +55,7 @@ const localStorageData = new Map<string, string>();
 process.env.TZ = 'Australia/Melbourne';
 
 
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { seedManualOverride } from './support/programOverrideHarness';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
@@ -297,7 +298,7 @@ function acceptedNameOn(weekStart: string, date: string): string | null {
   const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
   try {
     const accepted = quiet(() => rebaseAcceptedEffectiveWeek({
-      surfaces: state,
+      surfaces: storedWorldSurfaces(state),
       weekStart,
       profile: useProfileStore.getState().onboardingData,
       markedDays: state.acceptedMaterialContext.markedDays,

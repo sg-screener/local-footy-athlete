@@ -16,12 +16,20 @@ thereby IN scope for v1, not parked).
 - [ ] Sam's combined device pass = THE MERGE GATE
 - [ ] R6 — Release-class measurements, TestFlight build
 
+## Phase 1.5 — first post-merge unit (Sam approved 2026-08-07)
+- [ ] PARALLEL GATE: shard test:bible across cores (suites are
+      independent; target 20 min → ~3-5 min) + gate.sh writing the
+      exit line to a file (retires the lying completion notification,
+      5+ sightings). Harness-only unit; deliberately AFTER the merge.
+
 ## Phase 2 — the full app (Sam's reorder: before beta)
-- [ ] Coach rebuild — free-text coach on the clean shell (LR-6 lifts;
-      propose decision → diff → accept → derive)
-- [ ] Journal — finished to JOURNAL_DESIGN_2026-07-23 (storage proven in
-      R4)
-- [ ] Day-first UI — per docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
+Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
+- [ ] 1. Day-first UI — per docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
+- [ ] 2. Journal — finished to JOURNAL_DESIGN_2026-07-23 (storage proven
+      in R4; LR-18 journal-store retirement rides this unit)
+- [ ] 3. Coach rebuild — free-text coach on the clean shell (LR-6 lifts;
+      propose decision → diff → accept → derive; MetCon rename lands
+      here)
 
 ## Phase 3 — beta
 - [ ] Renee + 2-3 trusted athletes on TestFlight

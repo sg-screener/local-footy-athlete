@@ -131,10 +131,27 @@ ok(
   /onProgramSetupChanged[\s\S]*setSetupSheetVisible\(true\)/.test(src)
     && /testID="profile-setup-update-sheet"/.test(src),
 );
+// INVERTED BY R5.7 — THE BETA COACH CUT, and inverted OUT LOUD.
+//
+// This cell pinned the setup sheet's coach fallback as SURVIVING. The beta
+// scope cut (§6, decision C(a), signed; boundary ruled by Sam 2026-08-06;
+// "MAKE THE CUT" 2026-08-07) removes every path to a chat surface, and this
+// was one of them.
+//
+// THIS IS THE LEGITIMATE CASE OF `expectation-edited-to-match-regression`,
+// and the law's own test is what makes it legitimate: ASK WHICH SIDE MOVED.
+// The RULING moved, with a date, and the later one supersedes for beta — the
+// code did not drift out from under a standing expectation. Recorded here
+// rather than quietly flipped, because a silently inverted assertion is
+// indistinguishable from the defect this law exists to catch.
+//
+// The assertion is inverted, not deleted: it now RATCHETS the cut, so the
+// fallback cannot return without a gate noticing. Restoring it is a decision,
+// not an accident.
 ok(
-  'Setup sheet keeps coach fallback for complex setup changes',
-  /Need to explain something\? Ask Coach/.test(src)
-    && /prefill:\s*'I need to update something about my setup\.'/.test(src),
+  'Setup sheet has NO coach fallback (R5.7 beta cut — supersedes the 2026-07-30 pin)',
+  !/Need to explain something\? Ask Coach/.test(src)
+    && !/prefill:\s*'I need to update something about my setup\.'/.test(src),
 );
 ok(
   'Player details edit opens structured setup flow',

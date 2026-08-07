@@ -18,17 +18,90 @@ import {
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
+import { deriveWeekContract } from './derivedWeekContract';
+import { selectStoredWeekDeclaration } from './storedWeekDeclaration';
 import type { DaySurfaceOwner } from './dayPrecedence';
+import type { TemporarySourceFact } from './temporarySourceFact';
+
+/**
+ * THE ATHLETE'S SOURCE FACTS IN THIS WORLD — leg (v)'s read side.
+ *
+ * Stated as a helper rather than a required field because the surfaces bundle
+ * reaches this function two ways: composed through
+ * `composeAcceptedEffectiveWeekSurfaces`, which carries the field, and cast
+ * whole from the store (`useProgramStore.getState() as never`), where the same
+ * list lives under `acceptedMaterialContext`. Both are the SAME list; reading
+ * either here is what stops a caller silently claiming the athlete is well.
+ */
+export function factsForWorld(
+  surfaces: AcceptedEffectiveWeekSurfaces,
+): readonly TemporarySourceFact[] {
+  const direct = (surfaces as { temporarySourceFacts?: readonly TemporarySourceFact[] })
+    .temporarySourceFacts;
+  if (direct) return direct;
+  const context = (surfaces as {
+    acceptedMaterialContext?: { temporarySourceFacts?: readonly TemporarySourceFact[] };
+  }).acceptedMaterialContext;
+  return context?.temporarySourceFacts ?? [];
+}
 
 /** Alias, not a second declaration — the owner set is `dayPrecedence`'s. */
 export type AcceptedWeekSurfaceOwner = DaySurfaceOwner;
 
+/**
+ * THE WORLD UNDER EVALUATION (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+ *
+ * Sometimes that world is the persisted store; sometimes it is the world a
+ * transaction is composing, because a decision in flight is a decision. Both
+ * are expressed here, and which one a call means is stated by the caller.
+ */
 export interface AcceptedEffectiveWeekSurfaces {
   currentProgram: TrainingProgram | null;
   currentMicrocycle?: Microcycle | null;
   dateOverrides: Readonly<Record<string, Workout>>;
   weekScopedOverlays: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE APPLICATION INPUT — the removals this world still has to APPLY.
+   *
+   * REQUIRED, and that is the whole precondition unit. It was optional, and
+   * six doors forgot it — 328 measured entries where the gateway was told the
+   * athlete had binned nothing while their bin sat full. A world with no
+   * removal decisions says so with `[]`; it no longer says so by silence.
+   *
+   * It is CONSUMED: once the removals are folded into composed workouts the
+   * field is blanked on purpose (`section18AcceptedWeekGateway.ts`'s three
+   * blanks), because re-feeding them would apply each twice and re-remove the
+   * remainder a bin left behind. That blanking is signed and stays.
+   */
+  userRemovalConstraints: readonly UserRemovalConstraint[];
+  /**
+   * THE RECORD — the athlete's removal decisions, NEVER blanked
+   * (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`).
+   *
+   * One representation was carrying two questions. "What must I still remove?"
+   * is answered above and emptied by its first consumer. "Does a DECISION
+   * explain why this week looks like this?" is a different question, asked
+   * later and deeper — by the repair search's stand-down, which must let the
+   * deletion class's own relocation (the one recording the typed ownership
+   * that makes a restore reversible) run before it may green the week. A field
+   * emptied because it has already been APPLIED cannot answer it: measured,
+   * 1,045 of 1,045 search entries arrived with `constraints=(none)`.
+   *
+   * READ-ONLY, and read for EXPLANATION only. Nothing applies it — applying it
+   * would be the double-removal the blanking exists to prevent. Both fields
+   * are populated by ONE composer
+   * (`liveEvaluationSurfaces.composeAcceptedEffectiveWeekSurfaces`) from the
+   * same source in the same breath, so they cannot drift; where a staging
+   * transaction genuinely means two different sets it says so by NAME, and
+   * that is a decision rather than drift.
+   */
+  removalDecisions: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S SOURCE FACTS in this world — leg (v)'s read side. Optional
+   * because the same bundle also arrives as the store cast whole, where the
+   * list lives under `acceptedMaterialContext`; `factsForWorld` reads either.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[];
 }
 
 export interface AcceptedEffectiveWeekDate {
@@ -99,8 +172,16 @@ export function rebaseAcceptedEffectiveWeek(args: {
   const weekEnd = addDays(weekStart, 6);
   const overlay = args.surfaces.weekScopedOverlays[weekStart] ?? null;
   const baseMicrocycle = microcycleForWeek(args.surfaces, weekStart);
-  const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
-  if (!contract) {
+  // THE FLIP, MOVE (ii) — one read door. `microcycleForWeek` above already
+  // folds the store's current microcycle into the covering answer, so this
+  // caller has two candidates, not three.
+  const storedContract = selectStoredWeekDeclaration({
+    overlay,
+    coveringMicrocycle: baseMicrocycle,
+    weekStart,
+    reader: 'acceptedEffectiveWeek.rebase',
+  });
+  if (!storedContract) {
     throw new AcceptedEffectiveWeekUnavailableError(weekStart, 'Contract v2 is missing');
   }
 
@@ -146,6 +227,19 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekStart,
     constraints: args.surfaces.userRemovalConstraints,
   });
+  // Leg (iii), install site 1 of 3 — the app's contract-SELECTION line.
+  // AFTER composition, deliberately: the removal ledger's typed reduction is
+  // measured against the composed week, so the contract cannot be derived
+  // before the week it describes exists.
+  const contract = deriveWeekContract({
+    contract: storedContract,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.markedDays,
+    userRemovalConstraints: args.surfaces.userRemovalConstraints,
+    workouts: composedWorkouts,
+    temporarySourceFacts: factsForWorld(args.surfaces),
+  });
   const markedDays = { ...args.markedDays };
   const visibleWorkouts = resolveFinalVisibleSection18Week({
     contract,
@@ -153,10 +247,24 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekStart,
     profile: args.profile ?? undefined,
     scheduleState: { markedDays },
+    surfaces: args.surfaces,
+  });
+  // ONE BASIS — the contract a week is JUDGED by is derived against the week
+  // that IS judged, and that week is the VISIBLE one: the athlete's screen is
+  // the only week they can act on, so a contract derived against anything else
+  // judges a week nobody sees. Basis chosen by measurement, per
+  // `docs/FOUR_LEG_CONVERGENCE_RULING_2026-08-07.md`.
+  const judgedContract = deriveWeekContract({
+    contract: storedContract,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.markedDays,
     userRemovalConstraints: args.surfaces.userRemovalConstraints,
+    workouts: visibleWorkouts,
+    temporarySourceFacts: factsForWorld(args.surfaces),
   });
   const evaluation = evaluateSection18EffectiveWeek({
-    contract,
+    contract: judgedContract,
     workouts: visibleWorkouts,
     weekStart,
   });
@@ -166,7 +274,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekEnd,
     baseMicrocycle,
     overlay,
-    contract,
+    contract: judgedContract,
     markedDays,
     dates,
     composedWorkouts,

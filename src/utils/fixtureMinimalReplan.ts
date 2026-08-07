@@ -6,6 +6,11 @@ import type {
   Workout,
 } from '../types/domain';
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
+import { deriveWeekContract } from '../rules/derivedWeekContract';
+// ONE OWNER: the relocation template rule moved to
+// `rules/strengthRelocationTemplate` when the deriver acquired the repair
+// search. This file no longer keeps a copy.
+import { stripConditioningComponent } from '../rules/strengthRelocationTemplate';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
   resolveFinalVisibleSection18Week,
@@ -24,6 +29,8 @@ import type {
   FixtureConditionedAvailability,
   TargetWeekFixture,
 } from '../rules/fixtureConditionedAvailability';
+import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
+import { factsForWorld } from '../rules/acceptedEffectiveWeek';
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { getSessionComponentRows } from './sessionComponents';
@@ -142,7 +149,15 @@ export interface BuildFixtureMinimalReplanInput {
   priorFixtures: readonly TargetWeekFixture[];
   proposedFixtures: readonly TargetWeekFixture[];
   activeFixtureDates?: ReadonlySet<string>;
-  userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /**
+   * THE WORLD THIS REPLAN IS JUDGED AGAINST — required, and forwarded to the
+   * gateway unchanged (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+   *
+   * Optional here would have reinstalled the forgettable class one layer up:
+   * the gateway's parameter cannot be omitted, but a replan that had nothing
+   * to forward would have had to invent an empty world to satisfy it.
+   */
+  surfaces: AcceptedEffectiveWeekSurfaces;
   mutationIntent?: FixtureMutationIntent;
 }
 
@@ -310,37 +325,10 @@ function visibleResolver(
       markedDays: args.proposedMarkedDays,
       availableDayNumbers: args.availability.effectiveAvailableDayNumbers,
     },
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: args.surfaces,
   });
 }
 
-function stripConditioningComponent(workout: Workout): Workout | null {
-  const linkedRows = new Set(
-    (workout.conditioningBlock?.options ?? []).flatMap((option) => option.exerciseIds),
-  );
-  const stripped = normalizeVisibleWorkoutIdentity({
-    ...workout,
-    exercises: (workout.exercises ?? []).filter((row) =>
-      !linkedRows.has(row.id) && row.section18Evidence?.role !== 'conditioning'),
-    conditioningBlock: undefined,
-    conditioningCategory: undefined,
-    conditioningFlavour: undefined,
-    conditioningFeasibility: undefined,
-    hasCombinedConditioning: false,
-    attachedConditioningKind: undefined,
-    coachAddedConditioningLabel: undefined,
-    section18ConditioningRole: 'none',
-    section18Evidence: {
-      protocolVersion: 1,
-      conditioningRole: 'none',
-      conditioningStress: 'unknown',
-      provenance: 'explicit_mutation',
-    },
-    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
-      record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
-  });
-  return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
-}
 
 /**
  * A strength component displaced from a stacked day is a relocatable app
@@ -632,7 +620,7 @@ function displacedStrengthTemplates(
   source: readonly Workout[],
 ): Array<{ workout: Workout; fixtureDisplacement?: DerivedSessionProvenance }> {
   const explicitComponentDisplacements = activeUserRemovalConstraintsForWeek(
-    input.userRemovalConstraints,
+    input.surfaces.userRemovalConstraints,
     input.weekStart,
   ).flatMap((constraint) => {
     if (constraint.scope !== 'strength_component' ||
@@ -641,7 +629,7 @@ function displacedStrengthTemplates(
     return component ? [{ workout: component }] : [];
   });
   const explicitSourceIds = new Set(activeUserRemovalConstraintsForWeek(
-    input.userRemovalConstraints,
+    input.surfaces.userRemovalConstraints,
     input.weekStart,
   ).flatMap((constraint) => constraint.scope === 'strength_component'
     ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
@@ -699,7 +687,7 @@ function addStrengthDeltaVariants(args: {
   const displacedIds = new Set([
     ...displaced.map(({ workout }) => workout.planEntryId ?? workout.id),
     ...activeUserRemovalConstraintsForWeek(
-      args.input.userRemovalConstraints,
+      args.input.surfaces.userRemovalConstraints,
       args.input.weekStart,
     ).flatMap((constraint) => constraint.scope === 'strength_component'
       ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
@@ -1048,6 +1036,36 @@ export function buildFixtureMinimalReplan(
   const args: BuildFixtureMinimalReplanInput = {
     ...input,
     sourceWorkouts: withoutPlannerOffers(input.sourceWorkouts),
+    // Leg (iii), install site 3 of 3 — THE PUBLISHER's own
+    // contract-selection line.
+    //
+    // Sites 1 and 2 are both READ sites. Installing only there left the
+    // publisher composing and repairing against the STORED contract, so the
+    // week it published carried the stored contract's pattern requirements
+    // while the deriver read the derived ones — which is `Lower Hinge|7`
+    // published against `Lower Squat|8` derived, exactly the fixture-identity
+    // residual. Under the pattern-identity ruling pattern selection reads the
+    // DERIVED contract, and the publisher is where selection happens.
+    //
+    // Replacing the microcycle's contract once here rather than at each of the
+    // six readers below is deliberate: they must not be able to disagree.
+    targetMicrocycle: input.targetMicrocycle.exposureContractV2
+      ? {
+        ...input.targetMicrocycle,
+        exposureContractV2: deriveWeekContract({
+          contract: input.targetMicrocycle.exposureContractV2,
+          weekStart: input.weekStart,
+          profile: input.profile,
+          markedDays: input.proposedMarkedDays,
+          userRemovalConstraints: input.surfaces.userRemovalConstraints,
+          workouts: input.sourceWorkouts,
+          // Leg (v) read side, install site 3 of 3 — the PUBLISHER. Sites 1 and
+          // 2 deriving while this one composes against a stored identity is the
+          // same residual leg (iii) already paid for once.
+          temporarySourceFacts: factsForWorld(input.surfaces),
+        }),
+      }
+      : input.targetMicrocycle,
   };
   const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;
@@ -1184,7 +1202,7 @@ export function buildFixtureMinimalReplan(
               weekStart: args.weekStart,
               profile: args.profile,
               activeFixtureDates: args.activeFixtureDates,
-              userRemovalConstraints: args.userRemovalConstraints,
+              surfaces: args.surfaces,
               resolveVisibleWorkouts: visibleResolver(args),
             });
             if (gateway.status === 'impossible') {
@@ -1323,7 +1341,7 @@ export function buildFixtureMinimalReplan(
   }
 
   const activeRemovalConstraint = activeUserRemovalConstraintsForWeek(
-    args.userRemovalConstraints,
+    args.surfaces.userRemovalConstraints,
     args.weekStart,
   ).sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   if (
@@ -1349,7 +1367,7 @@ export function buildFixtureMinimalReplan(
         weekStart: args.weekStart,
         profile: args.profile,
         activeFixtureDates: args.activeFixtureDates,
-        userRemovalConstraints: args.userRemovalConstraints,
+        surfaces: args.surfaces,
         resolveVisibleWorkouts: visibleResolver(args),
       });
       if (gateway.status === 'impossible') {
@@ -1383,7 +1401,7 @@ export function buildFixtureMinimalReplan(
         weekStart: args.weekStart,
         profile: args.profile,
         activeFixtureDates: args.activeFixtureDates,
-        userRemovalConstraints: args.userRemovalConstraints,
+        surfaces: args.surfaces,
         resolveVisibleWorkouts: visibleResolver(args, reducedContract),
       });
       if (reducedGateway.status !== 'impossible' || attempt >= 3) break;
@@ -1497,7 +1515,7 @@ export function buildFixtureMinimalReplan(
     weekStart: args.weekStart,
     profile: args.profile,
     activeFixtureDates: args.activeFixtureDates,
-    userRemovalConstraints: args.userRemovalConstraints,
+    surfaces: args.surfaces,
     resolveVisibleWorkouts: visibleResolver(args),
     regenerate: () => ({
       contract,

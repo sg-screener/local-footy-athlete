@@ -48,6 +48,11 @@ failure this seat made:
   -newermt on src/) and answer from it. Commits are sparse (chain toll);
   file mtimes are the pulse.
 
+## §1b LOOP-AUDIT LAW (Sam, 2026-08-07): read docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md.
+Third sighting of ANY repeated ruling-shape, round-trip, toll or
+rediscovery = mandatory compression proposal, not a fourth silent run.
+Ordered after the standing-derivation ruling took nine stops to exist.
+
 ## §2 The rebuild era — state as of this handoff
 
 Sam's device pass on the legacy shell failed (2026-08-05 morning) → L11
@@ -118,3 +123,71 @@ live, name waits for coach rebuild).
 Memory upkeep: the walker/post-merge memory file is the running history —
 update after every milestone; keep MEMORY.md pointing at THIS doc for
 session start.
+
+## §5 STATE STAMP 2026-08-07 (supersedes §2's "in flight" picture)
+
+Current truth lives in docs/NOW.md (always) + docs/SEAT_INBOX.md (the
+terminal reads it at every stop — Sam types "check inbox" there, and
+just "check" to the review seat, who reads the repo directly).
+
+Era summary: 1b, finding 3, G-2 quality-lower, anchor fix, R5.1/R5.2,
+structural sweep all LANDED on feat/stage-b-stage2 (green). R5.3 = the
+V3 fixture switchover saga on feat/r53-v3-switchover: a four-leg
+conformance unit (derive the contract, tier 4 in the deriver with the
+full :4688 repair search, retire write-backs, link derives from
+decision) built by price-first discipline — every leg measured on
+scaffolds before building. Read the docs/R53_* and *_RULING_2026-08-0[67]
+trail; the loop-audit law (§1b), the STANDING_DERIVATION_RULING (derive
+without round-trips, three stop-conditions), RESOLVED_AUTHORITY,
+SURFACES_CONTEXT, REMOVAL_RECORD_SPLIT and PATTERN_IDENTITY rulings are
+all in force. gate.sh landed (trust ONLY printed exit lines — the
+completion notification has lied 5+ times). Parallel-gate stage 1
+queued (docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md).
+
+After V3: condition 4 (markedDays proof), merge, R5.7 whole-or-none,
+remaining batches, STOP at Sam's combined device pass — the review
+seat writes the SHORT tap list (plain, expected sights, Release build).
+
+Usage practice Sam ruled: fresh Cowork sessions at natural boundaries,
+text over screenshots, the check/check-inbox two-word flow.
+
+## §6 FORMAT LAW 2026-08-07 (Sam-forced; binding on every future seat)
+
+The seat repeatedly wrote post-failure reminders and then failed the
+same way (serial probes ordered AFTER the sweep rule existed — third
+sighting of write-the-rule-then-ignore-it). Reminders don't execute.
+The fix is structural: every seat order and boundary report OPENS with
+"LOOP CHECK: <shape> — sighting N — iterate or compress" (see
+SEAT_INBOX Standing). No line, no valid order. Sighting 2 = compress.
+If you are a future seat reading this: the line is not ceremony, it is
+the thinking Sam paid for, made mandatory.
+
+## §7 NO-COMPLETENESS-CLAIMS LAW 2026-08-07 (Sam-forced, third sighting)
+
+The seat told Sam "the hunt is over", "one probe left", "no more
+unpriced pieces" — and was wrong every time, because none of those
+were measured claims. The law: the seat NEVER asserts completeness
+("last", "final", "no more surprises", "nothing left to find") about
+work not yet measured. Status is reported in exactly three buckets:
+MEASURED-DONE (cite the run), ATTRIBUTED-NOT-FIXED (cite the doc),
+and OPEN-UNKNOWN (stated as unknown, with what bounds it). A forecast
+is given only as the spread of measured outcomes so far, never as a
+floor. Optimism is not a kindness to Sam; it converts every ordinary
+stop into a betrayal.
+
+## §8 SECOND-WALL LAW 2026-08-07 (Sam-ordered, in his words: binding)
+
+When the same SHAPE of wall is hit twice — in any setup, any unit, any
+era — the seat MUST, unprompted, put an elegant alternative on the
+table before ordering a third attempt down the same path. "Elegant"
+per Sam's own Elegant Solution Requirement in CLAUDE.md: compare the
+incremental fix against the redesign; prefer what removes
+representations, removes the discovery dimension, or removes the wall's
+preconditions entirely. The V3 flip is the founding precedent: four
+remove-then-discover-the-lean walls were hit before the seat offered
+the strategy that made the wall geometrically impossible — and only
+because Sam demanded it. A seat that orders attempt three at a
+twice-hit wall without having offered an alternative has failed this
+law, whatever else it got right. This applies to the seat's OWN
+strategies above all — the loop-audit points at the plan, not just
+the steps.

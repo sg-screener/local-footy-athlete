@@ -83,6 +83,9 @@ import {
 import { useCoachStore, applyCoachStoreWrite } from '../store/coachStore';
 import { useCoachMemoryStore, applyCoachMemoryWrite } from '../store/coachMemoryStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
+import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
@@ -118,6 +121,7 @@ import {
   projectionContentKinds,
   templateProjectionDisagreement,
   templateProjectionOffence,
+  parseTemplateProjectionOffence,
   rowCompositionCoordinate,
 } from './support/sessionListKinds';
 import { projectDayDetail } from '../rules/visibleDayDetail';
@@ -1561,10 +1565,37 @@ console.log(`\n-- Athlete action-sequence walker (${TIER}: `
  * by asking less." Every entry below is a red the walker reached by walking, with
  * the assertion stated exactly as `surfaceAgreementTests` states it.
  */
+/**
+ * WHAT AN ENTRY DECLARES.
+ *
+ * `template_projection` names the SET of kinds the entry covers — what its
+ * defect makes the session list omit, and what it makes the list invent. It is
+ * a set rather than a sentence because a day can exhibit two declared defects
+ * at once, and the offence string names the whole day's disagreement: a day
+ * that drops speed AND badges support reads `omits ["speed"] and invents
+ * ["support"]`, which no single-shape regex can match. Declared as sets, the
+ * matcher DECOMPOSES that day into its constituents and both entries are
+ * credited — the seat's 2026-08-07 ruling, and the compression of a gap this
+ * file has carried in prose since 2026-08-04.
+ *
+ * `text` is the escape hatch for laws whose offence is prose rather than a
+ * kind-set. It matches whole strings and therefore cannot decompose; an entry
+ * that could be a shape must be one.
+ */
+type DeclaredShape =
+  | {
+      form: 'template_projection';
+      /** Kinds the projection carries that the list does not show. */
+      omits: readonly string[];
+      /** Kinds the list shows that the projection has no part for. */
+      invents: readonly string[];
+    }
+  | { form: 'text'; matches: RegExp };
+
 interface DeclaredRed {
   id: string;
   law: string;
-  matches: RegExp;
+  declares: DeclaredShape;
   why: string;
   /** The task that turns this cell green and deletes this entry. */
   paidBy: string;
@@ -1636,7 +1667,7 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
     // with undeclared reds truncating its walks is not evidence.)
     id: 'session_list_calls_a_conditioning_day_recovery',
     law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \["conditioning"\] and invents \["recovery"\]/,
+    declares: { form: 'template_projection', omits: ['conditioning'], invents: ['recovery'] },
     why: 'RECOVERY AS A MODE SHORT-CIRCUIT. `buildSessionTemplate` answers '
       + '`mode: "recovery"` from `isRecoveryWorkout` (sessionTemplate.ts:248) '
       + 'before its conditioning arms run, while `getSessionComponents` reads '
@@ -1654,7 +1685,7 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   {
     id: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
     law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \[\] and invents \["support"\]/,
+    declares: { form: 'template_projection', omits: [], invents: ['support'] },
     why: 'THE TRUNK/SUPPORT SPLIT, ANSWERED TWICE. The template badges a row '
       + '`midline` via `classifyExerciseRole(name)` — a NAME classifier — while '
       + '`getSessionComponentRows` decides the same question with '
@@ -1674,7 +1705,7 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
   {
     id: 'session_list_has_no_representation_for_speed_work',
     law: 'L-P3 TEMPLATE = PROJECTION',
-    matches: /omits \["speed"\] and invents \[\]/,
+    declares: { form: 'template_projection', omits: ['speed'], invents: [] },
     why: 'SPEED WORK IS PRESCRIBED AND NEVER RENDERED. `getSessionComponents` emits '
       + 'a `speed` component from `workout.speedBlock`, so the projection carries a '
       + '`speed` part; `buildSessionTemplate` has no arm for it — it reads '
@@ -1791,17 +1822,144 @@ const DECLARED_RED: ReadonlyArray<DeclaredRed> = [
 
 const declaredRedHits = new Set<string>();
 
+/**
+ * THE DECOMPOSING MATCHER (seat ruling, 2026-08-07).
+ *
+ * An offence is declared debt when EVERY element of it is covered by declared
+ * entries and NO entry is credited for an element the day does not exhibit.
+ * Both halves matter:
+ *
+ *   - coverage is by CONSTITUENTS, so a day that omits speed and invents
+ *     support is covered by the speed entry and the support entry together,
+ *     with no third entry declared for the pair. Combinations are expressible
+ *     by construction, which is the whole ruling;
+ *   - an entry only participates when its own set is a SUBSET of the day's, so
+ *     the conditioning/recovery entry cannot be credited on a day that never
+ *     dropped conditioning, and one novel element anywhere in the offence
+ *     (`invents ["power"]`) leaves the whole day undeclared and RED.
+ *
+ * Every participating entry is credited, so the stale-debt ratchet still sees
+ * a shape that only ever appears inside combinations. `declaredRedShapeProof`
+ * below pins all of it, including the shapes that must NOT match.
+ */
+function declaredRedsFor(law: string, detail: string): string[] | null {
+  const forLaw = DECLARED_RED.filter((candidate) => candidate.law === law);
+
+  const prose = forLaw.find((candidate) =>
+    candidate.declares.form === 'text' && candidate.declares.matches.test(detail));
+  if (prose) return [prose.id];
+
+  const shape = parseTemplateProjectionOffence(detail);
+  if (!shape) return null;
+  const constituents = forLaw.filter((candidate) => {
+    const declared = candidate.declares;
+    if (declared.form !== 'template_projection') return false;
+    // A declaration with no elements would cover every offence in its law —
+    // the wildcard this ratchet exists to forbid. `declaredRedShapeProof`
+    // fails the file if one is ever written; skipping it here keeps a mistake
+    // from silently swallowing a real red in the meantime.
+    if (declared.omits.length + declared.invents.length === 0) return false;
+    return declared.omits.every((kind) => shape.omits.includes(kind))
+      && declared.invents.every((kind) => shape.invents.includes(kind));
+  });
+  if (constituents.length === 0) return null;
+
+  type ShapeDeclaration = Extract<DeclaredShape, { form: 'template_projection' }>;
+  const covered = (pick: (declared: ShapeDeclaration) => readonly string[]): Set<string> =>
+    new Set(constituents.flatMap((candidate) =>
+      [...pick(candidate.declares as ShapeDeclaration)]));
+  const coveredOmits = covered((declared) => declared.omits);
+  const coveredInvents = covered((declared) => declared.invents);
+  if (!shape.omits.every((kind) => coveredOmits.has(kind))) return null;
+  if (!shape.invents.every((kind) => coveredInvents.has(kind))) return null;
+
+  return constituents.map((candidate) => candidate.id);
+}
+
 function declaredRedFor(law: string, detail: string): string | null {
-  const entry = DECLARED_RED.find((candidate) =>
-    candidate.law === law && candidate.matches.test(detail));
-  if (!entry) return null;
+  const ids = declaredRedsFor(law, detail);
+  if (!ids || ids.length === 0) return null;
   // HARVEST MODE arms every declared red so the walk fails, shrinks and reports
   // the minimal history — the evidence an entry has to carry. It can only ever
   // make the suite redder, which is why it is safe to leave reachable.
   if (process.env.WALKER_HARVEST === '1') return null;
-  declaredRedHits.add(entry.id);
-  return entry.id;
+  for (const id of ids) declaredRedHits.add(id);
+  return ids.join('+');
 }
+
+run('the declaration matcher decomposes combinations and refuses novelty', () => {
+  // THE PROOF THE RULING ASKED FOR, and it runs BEFORE the walk so a matcher
+  // that has stopped discriminating is caught in a second rather than credited
+  // for a walk that quietly declared everything it met.
+  //
+  // `declaredRedsFor` is the matcher WITHOUT the crediting side-effect, which
+  // is the only reason these synthetic strings are safe: a proof that credited
+  // entries would hand the stale-debt ratchet its own answer.
+  const LAW = 'L-P3 TEMPLATE = PROJECTION';
+  const offence = (omits: string[], invents: string[]): string =>
+    templateProjectionOffence('2026-07-27', {
+      omits, invents,
+      // The rendered lists either side of the dash are context for a human and
+      // are deliberately NOT what the matcher reads.
+      templateKinds: invents, contentKinds: omits,
+    });
+  const shapeOf = (omits: string[], invents: string[]): string[] | null =>
+    declaredRedsFor(LAW, offence(omits, invents));
+  const SPEED = 'session_list_has_no_representation_for_speed_work';
+  const SUPPORT = 'session_list_badges_a_midline_row_the_projection_has_no_part_for';
+  const RECOVERY = 'session_list_calls_a_conditioning_day_recovery';
+
+  const cases: Array<{ omits: string[]; invents: string[]; expect: string[] | null; why: string }> = [
+    { omits: ['speed'], invents: [], expect: [SPEED], why: 'a single declared shape still matches itself' },
+    { omits: [], invents: ['support'], expect: [SUPPORT], why: 'the other single shape' },
+    { omits: ['conditioning'], invents: ['recovery'], expect: [RECOVERY],
+      why: 'an entry that declares BOTH halves is one constituent, not two' },
+    // THE RED THIS RULING EXISTS FOR — the deep walker's 2026-07-27 offence.
+    { omits: ['speed'], invents: ['support'], expect: [SUPPORT, SPEED],
+      why: 'a combination is covered by its constituents, with no entry declared for the pair' },
+    { omits: ['conditioning', 'speed'], invents: ['recovery'], expect: [RECOVERY, SPEED],
+      why: 'a three-element combination decomposes the same way' },
+    // AND THE HALF THAT KEEPS IT A RATCHET.
+    { omits: ['strength'], invents: [], expect: null, why: 'an undeclared element is a NEW red' },
+    { omits: ['speed'], invents: ['power'], expect: null,
+      why: 'one novel element leaves the WHOLE day undeclared — no partial credit' },
+    { omits: [], invents: [], expect: null, why: 'an empty disagreement declares nothing' },
+  ];
+  const wrong: string[] = [];
+  for (const testCase of cases) {
+    const got = shapeOf(testCase.omits, testCase.invents);
+    const normalise = (ids: string[] | null): string =>
+      ids === null ? 'NOT DECLARED' : [...ids].sort().join(' + ');
+    if (normalise(got) !== normalise(testCase.expect)) {
+      wrong.push(`omits ${JSON.stringify(testCase.omits)} / invents ${
+        JSON.stringify(testCase.invents)} — expected ${normalise(testCase.expect)}, got ${
+        normalise(got)} (${testCase.why})`);
+    }
+  }
+  assert(wrong.length === 0,
+    `the declaration matcher does not decompose as ruled:\n    ${wrong.join('\n    ')}`);
+
+  // NO WILDCARDS. An entry declaring neither an omission nor an invention would
+  // cover every offence in its law; the matcher already refuses to credit one,
+  // and this is where writing one fails the file.
+  const wildcards = DECLARED_RED.filter((entry) =>
+    entry.declares.form === 'template_projection'
+    && entry.declares.omits.length + entry.declares.invents.length === 0);
+  assert(wildcards.length === 0,
+    `a declared red covers every offence in its law — declare the shape it actually `
+    + `carries:\n    ${wildcards.map((entry) => entry.id).join('\n    ')}`);
+
+  // ROUND TRIP. The matcher reads a sentence the offence owner writes; if the
+  // wording moves without the parser, every declaration goes quietly blind and
+  // the stale-debt cell reports it a run later as debt that stopped redding.
+  const parsed = parseTemplateProjectionOffence(offence(['speed'], ['support']));
+  assert(parsed !== null, 'the offence sentence no longer parses — `templateProjectionOffence` '
+    + 'and `parseTemplateProjectionOffence` have drifted apart');
+  assert(JSON.stringify(parsed) === JSON.stringify({ omits: ['speed'], invents: ['support'] }),
+    `the offence sentence round-trips to a different shape: ${JSON.stringify(parsed)}`);
+  console.log(`      matcher proof: ${cases.length} shapes, `
+    + `${cases.filter((testCase) => testCase.expect === null).length} of them must NOT match`);
+});
 
 run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
   const violations: string[] = [];
@@ -2906,6 +3064,134 @@ async function clearEveryActiveReadinessFactThroughItsDoor(date: string): Promis
   assert(false, 'the clear door never emptied the active readiness facts');
 }
 
+/**
+ * THE RESTORE DOOR, OVER A REDUCTION-AUTHORING REMOVAL — seat ruling,
+ * 2026-08-07: the reduction-ownership derivation is "equality-bound against
+ * current Restore behaviour on the full witness set".
+ *
+ * WHY THIS CELL HAD TO EXIST. The first bind run was green across the whole
+ * ordered witness set and it proved almost nothing: of 37 consumer calls, 35
+ * had an EMPTY owned set on both sides, so only 2 comparisons had any content.
+ * The walker reached the consumers once, with an `explicit_load_edit`. The
+ * cause is the vocabulary, not the app — an athlete can undo an adjustment
+ * from the week screen (`useHomeScreen.ts:1749`) and the walker had no action
+ * for it, which is the defect this file's own header already names:
+ *
+ *   > a state an athlete can reach that the walker cannot is a defect in the
+ *   > harness (L13), not a gap in the app.
+ *
+ * `clearReversibleAdjustment` is awaited, and `perform` is synchronous, so it
+ * cannot be a `WalkerAction` — the same constraint that put the schedule doors
+ * in `walkTheScheduleDoors`. It is walked here instead, end to end, through
+ * the real door.
+ *
+ * The cell asserts the bind was EXERCISED, not merely un-failed: a Restore
+ * whose owned set is empty compares nothing, and a cell that passed on that
+ * would be the gate-passing-on-coordinates-it-never-builds shape.
+ */
+async function walkTheRestoreDoorOverAReduction(): Promise<void> {
+  freshInstall();
+  performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
+  performAction({ kind: 'generate_program' });
+
+  // THE DERIVED CONTRACT FIRST, the stored overlay only as a fallback.
+  //
+  // The first version of this cell read `weekScopedOverlays[…].exposureContractV2`
+  // — the STORED DECLARATION, which is the exact thing leg (v) retires. It
+  // passed on the branch and RED the moment the writer arm was priced, saying
+  // "the walked world authored no reduction" about a world that had authored
+  // one. A cell that reds when the unit it belongs to lands is measuring the
+  // storage, not the app.
+  //
+  // Same correction the deletion suite already made for its own fixture
+  // (`athleteSessionDeletionTests.ts:418`): read the DERIVED week first, keep
+  // the published payload as the fallback so an unchanged world is unchanged.
+  const authorisedReductions = (): Array<{ reason?: string; deletionIdentity?: string }> => {
+    const state = useProgramStore.getState();
+    const derived = quiet(() => rebaseAcceptedEffectiveWeek({
+      surfaces: storedWorldSurfaces(state),
+      weekStart,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: state.acceptedMaterialContext.markedDays,
+    }).contract.authorisedReductions);
+    if (derived.length > 0) return derived as never;
+    return (state.weekScopedOverlays[weekStart]?.exposureContractV2
+      ?.authorisedReductions ?? []) as never;
+  };
+  const removalReductions = () => authorisedReductions()
+    .filter((entry) => entry.reason === 'explicit_user_override' && !!entry.deletionIdentity);
+
+  // ACT until the week's contract carries a removal-authored reduction. A
+  // removal only authors one when relocation AND substitution are exhausted,
+  // so it takes several — which is exactly why no bounded fixture reaches it.
+  const removed: string[] = [];
+  for (const day of visibleWeek()) {
+    if (removalReductions().length > 0) break;
+    if ((day.workout?.exercises ?? []).length === 0) continue;
+    performAction({ kind: 'plan_change', change: { kind: 'remove_session', date: day.date } });
+    removed.push(day.date);
+  }
+  const reductions = removalReductions();
+  if (reductions.length === 0) {
+    // NOT a silent skip, on the lighter-day door's precedent: a walked world
+    // that never authored a typed reduction cannot bind this consumer, and
+    // saying so is the honest outcome.
+    throw new Error('the walked world authored no explicit_user_override reduction after '
+      + `${removed.length} removals — the reduction-ownership consumers are unreachable `
+      + 'from it and this cell proves nothing');
+  }
+  // UNDO NEWEST-FIRST, which is what an athlete does and what the ledger
+  // permits. Picking the reduction's OWN adjustment restored a decision a
+  // later removal already superseded — the door correctly answered
+  // `superseded` and nothing was compared. Undoing in reverse order means
+  // nothing can own the restoration target ahead of the adjustment being
+  // undone, so the consumers are actually reached.
+  const bind = () => (require('../dev/reductionOwnershipBind') as
+    typeof import('../dev/reductionOwnershipBind')).snapshotOwnershipBind();
+  const reductionIdentities = new Set(reductions.map((entry) => entry.deletionIdentity));
+  const undoOrder = [...useProgramStore.getState().reversibleAdjustmentLedger.adjustments]
+    .filter((entry) => entry.status === 'active')
+    .reverse();
+  assert(undoOrder.length > 0, 'the walked world holds no active adjustment to undo');
+
+  const before = bind();
+  let exercised = before;
+  let restoredIdentities: string[] = [];
+  for (const entry of undoOrder) {
+    const outcome = await quietAsync(() => clearReversibleAdjustment(
+      entry.id,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    ));
+    if (outcome.outcome !== 'restored' && outcome.outcome !== 'recomposed') continue;
+    restoredIdentities = [...restoredIdentities, ...(entry.linkedUserRemovalConstraintIds ?? [])];
+    exercised = bind();
+    if (exercised.equal > before.equal) break;
+  }
+  const after = bind();
+
+  // THE COVERAGE ASSERTIONS — the comparison ran, and ran WITH CONTENT.
+  assert(after.calls > before.calls,
+    'no Restore reached the reduction-ownership consumers — this cell would '
+    + 'pass without comparing anything');
+  assert(after.equal > before.equal,
+    'every ownership comparison during these Restores had an EMPTY owned set; '
+    + `the derivation was never actually exercised (calls ${before.calls} -> ${after.calls})`);
+
+  // THE EQUALITY BIND — the seat's (c). Restore's meaning is protected, not changed.
+  assert(after.divergent === before.divergent,
+    'DERIVED ownership disagreed with the stored mirror during Restore — '
+    + `divergences ${before.divergent} -> ${after.divergent}; run with `
+    + 'LFA_OWNERSHIP_BIND=<file> to read the rows');
+
+  // AND THE VISIBLE MEANING: no restored decision still holds a reduction.
+  const undone = new Set(restoredIdentities.filter((id) => reductionIdentities.has(id)));
+  assert(undone.size > 0,
+    'no restored adjustment owned a reduction-authoring constraint, so the '
+    + 'visible half of this cell proves nothing');
+  assert(!removalReductions().some((entry) => undone.has(entry.deletionIdentity!)),
+    'Restore left a removal-authored reduction on the contract');
+}
+
 async function walkTheLighterDayDoor(): Promise<void> {
   freshInstall();
   performAction({ kind: 'answer_onboarding', profile: tapeWorldProfile() });
@@ -3566,6 +3852,8 @@ void (async () => {
     walkTheScheduleDoors);
   await runAsync('accepting a lighter day derives from the fact and never touches the athlete\'s surface',
     walkTheLighterDayDoor);
+  await runAsync('Restore over a reduction-authoring removal: ownership DERIVES and binds equal',
+    walkTheRestoreDoorOverAReduction);
   await runAsync('THE L16 SLICE: load, display, change, repair, approve, persist, relaunch-identical',
     walkTheL16Slice);
 

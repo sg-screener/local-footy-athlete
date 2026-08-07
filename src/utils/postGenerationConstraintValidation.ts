@@ -78,12 +78,17 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
+import { liveAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import {
   requireSection18AcceptedWeek,
   type Section18AcceptedWeekCandidate,
 } from '../rules/section18AcceptedWeekGateway';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import {
+  hasStoredWeekDeclaration,
+  selectStoredWeekDeclaration,
+} from '../rules/storedWeekDeclaration';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -713,7 +718,14 @@ function resolveLiveDateMutationExposure(args: {
   const v2Overlay = state.weekScopedOverlays?.[
     addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7))
   ] as WeekScopedWorkoutOverlay | undefined;
-  if (microcycle?.exposureContractV2 || v2Overlay?.exposureContractV2) {
+  // THE FLIP, MOVE (ii) — one read door. An EXISTENCE question on the same
+  // precedence, so it is asked of the same owner.
+  if (hasStoredWeekDeclaration({
+    overlay: v2Overlay,
+    coveringMicrocycle: microcycle,
+    weekStart: addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7)),
+    reader: 'postGenerationConstraintValidation.legacyLedgerSuppression',
+  })) {
     // Contract v2 was already enforced by finaliseLiveDateCandidateAgainstWeek.
     // The legacy ledger cannot represent stacked same-day credits and must
     // not become a second, contradictory commit authority.
@@ -1268,6 +1280,10 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       workouts: safetyWorkouts,
       weekStart,
       profile: args.profile,
+      // A LIVE-STORE WRITE VALIDATOR MEANS THE LIVE WORLD, and now says so.
+      // All four doors here were forgotten doors
+      // (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract: exposureContractV2!,
         weekStart,
@@ -1359,6 +1375,7 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
       workouts: Object.values(workoutsByDate).filter((workout): workout is Workout => !!workout),
       weekStart: validated.weekStart,
       profile: args.profile,
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract,
         weekStart: validated.weekStart,
@@ -1529,7 +1546,15 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
     -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7),
   );
   const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
-  let contract = overlay?.exposureContractV2 ?? microcycle.exposureContractV2 ?? (
+  // THE FLIP, MOVE (ii) — one read door. The legacy-migration rung sits
+  // BELOW both stored candidates, so it stays a fallback on the door's answer
+  // rather than becoming a branch inside it.
+  let contract = selectStoredWeekDeclaration({
+    overlay,
+    coveringMicrocycle: microcycle,
+    weekStart,
+    reader: 'postGenerationConstraintValidation.finaliseLiveDateCandidate',
+  }) ?? (
     microcycle.exposureContract
       ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
           blockNumber: microcycle.miniCycleNumber,
@@ -1575,6 +1600,7 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
     workouts,
     weekStart,
     profile: args.context.profile,
+    surfaces: liveAcceptedEffectiveWeekSurfaces(),
     // A single-date store primitive cannot atomically persist repairs to
     // other dates. Reject cross-day repair needs; week/overlay writers can
     // use the full deterministic repair loop.
@@ -1732,8 +1758,15 @@ export function validateLiveWeekOverlayWrite(
   );
   const exposureContract = state.exposureContractsByWeek?.[overlay.weekStart] ??
     validatedOverlay.exposureContract ?? baseMicrocycle?.exposureContract;
-  const persistedExposureContractV2 = validatedOverlay.exposureContractV2 ??
-    baseMicrocycle?.exposureContractV2;
+  // THE FLIP, MOVE (ii) — one read door. The candidate overlay being
+  // validated is the `overlay` rung here: this is a WRITE being checked, so
+  // the answer must come from the candidate, not from what is already stored.
+  const persistedExposureContractV2 = selectStoredWeekDeclaration({
+    overlay: validatedOverlay,
+    coveringMicrocycle: baseMicrocycle,
+    weekStart: overlay.weekStart,
+    reader: 'postGenerationConstraintValidation.validateLiveWeekOverlayWrite',
+  }) ?? undefined;
   if (!exposureContract && !persistedExposureContractV2) return validatedOverlay;
 
   let effectiveWorkouts: Workout[] = [];
@@ -1775,6 +1808,7 @@ export function validateLiveWeekOverlayWrite(
       workouts: effectiveWorkouts,
       weekStart: overlay.weekStart,
       profile: context.profile,
+      surfaces: liveAcceptedEffectiveWeekSurfaces(),
       regenerate: () => buildSection18ProductionFallbackCandidate({
         contract: exposureContractV2!,
         weekStart: overlay.weekStart,
