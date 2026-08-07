@@ -93,6 +93,12 @@
   screens instead of memory. Not current work.
 - **Small maintenance, filed not now:** `runSlice1` runs 21.2s against its own
   18s warning and 30s hard ceiling.
+- **INBOX CONVENTION, now enforced:** an empty queue is written `(none)`,
+  **unnumbered**. Writing `1. (queue empty)` made the stop hook read its own
+  empty marker as an order and block on a cleared inbox — its second misfire,
+  both of them false BLOCKS. Fixed `80a3f2c8`, and the hook now has cases in
+  both directions (`scripts/__tests__/seatInboxHookTests.sh`, 6/6), each guard
+  mutation-proven load-bearing.
 - **Standing:** `test:bible` is the ONLY official gate, unpiped, per commit.
   `npm run test:bible:parallel` is a NON-OFFICIAL fast pre-check — no official
   verdict ever cites it. Verify `git branch --show-current` before every commit
