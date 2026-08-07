@@ -2,6 +2,64 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder.
+   **UNPARKED 2026-08-07** — this is its natural boundary (roadmap
+   Phase 1.5, the first post-merge unit). Proceed under standing
+   conditions.
+
+## Processed 2026-08-07 (thirty-second pass) — SIGNED, MERGED, AND THE TARGET LANDS ON THE DECLARED SET EXACTLY
+
+- LOOP CHECK: **a doc named 1 site, there were 2** — sighting 4, and it fired at
+  the SIGNING pass on my own R5.7 cut: a sheet still TITLED "Ask Coach" that no
+  longer offers one. My section [4] gate could not see it because it watches
+  NAVIGATION, not titles.
+- **(a) THE THREE STRINGS RETIRE TO SIGNED** (`6fe02b0c`), recorded as batch 11
+  in the rulings file — the authoring source — and **equality-bound BOTH
+  DIRECTIONS**: `test:copy-rulings-binding` 7/7.
+  - **11-d, a leftover of mine caught here:** the exercise-add fallback sheet
+    was TITLED "Ask Coach" and after the cut offers no coach. Replaced with the
+    signed title its two sibling sheets already carry, so it is **not new copy**.
+    Plus an orphaned prop comment in `StaleOverrideBanner`.
+  - **11-e:** "Ask Coach" is **NOT retired as a ruling** — LR-6 freezes
+    CoachScreen and the tab is one `Tab.Screen` block from returning, so the
+    word is DORMANT for beta, not deleted. Stated so its absence from the UI is
+    not read as a retirement nobody signed.
+  - The signed sentences ship as single unbroken JSX lines: the binding gate
+    equality-matches the file exactly, and wrapping inside a sentence hides a
+    string from that match.
+- **(b) THE MERGE IS DONE** — `feat/r53-v3-switchover` → `feat/stage-b-stage2`,
+  `75fb71df`, `--no-ff`.
+  **BEFORE (full `test:bible` UNPIPED on the target): `TRUE_EXIT=0`**, green to
+  its last suite, 0 FAIL lines.
+  **AFTER: `TRUE_EXIT=1`** at `program-control-durable`, 1 FAIL line; sweep
+  **2 of 156** = `program-control-durable`, `fixture-identity`.
+  **That is the boundary report's declared set EXACTLY — no difference, no
+  STOP.**
+- **STATED PLAINLY: the merge took a GREEN target to a 2-RED target, knowingly.**
+  `fixture-identity` 3/5/6 are red as PLAIN LAWS with no declaration wearing
+  them; payer = the LR-29 replay unit, measured. Sam-accepted as
+  known-imperfect. Branch verified before every commit (shared-worktree law).
+- **TARGET → MAIN IS *NOT* PART OF THIS GATE, and here is what gates it:** the
+  recorded rulings gate it on **the L10 combined device pass for Stage B stages
+  1 + 2** (`STAGE_B_STAGE2_CHECKPOINT_COMPLETE`, `STAGE_B_UNIT7_BOUNDARY`,
+  `STAGE_B_IMPLEMENTATION_BATCH_BOUNDARY`) — a DIFFERENT pass, **NOT STARTED**.
+  Sam's 2026-08-07 pass covered the R5/beta-cut tap list only. **No merge to
+  main was executed.**
+- **(c) POST-MERGE UPDATES DONE:** `NOW.md` rewritten to the merged state;
+  roadmap R5 and the merge gate ticked with the partial-and-honest note
+  (R5.4/5.5/5.6 DEFERRED to the replay unit), and the replay unit added as the
+  next ENGINE line item. **Item 2 is UNPARKED.**
+- **WATCH-FORS carried from the pass:** completed-day display at the next
+  completed session; the three fallback sheets; stale-banner Review; the
+  team-training affordance.
+- **NOT COVERED:** no walker-memory pointer was found to update — the term
+  matches nothing in `docs/NOW.md` or the master plan, so nothing was changed on
+  a guess; say which artefact is meant and it will be updated. The R5.4/R5.6
+  exclusion is still ARGUED from the census, not measured. Four of arm 2's five
+  new reds remain undiagnosed. The coach pipeline is FROZEN, not verified.
+
+## Processed 2026-08-07 (thirty-second pass) — the order as the seat wrote it
+
 1. SAM RULED: MERGE. Commit docs/SIGNING_AND_MERGE_GATE_2026-08-07.md
    as authored, then execute:
    (a) Retire the three PROPOSED markers to SIGNED (equality-bound to
@@ -21,9 +79,6 @@
    roadmap's Phase 1.5. Proceed under standing conditions.
    One-turn law and continuous authorisation through (a)-(c). Sam
    holds a veto.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (thirty-first pass) — R5 BOUNDARY REPORT WRITTEN; STOP AT THE MERGE GATE
 

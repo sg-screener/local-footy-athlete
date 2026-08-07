@@ -11,9 +11,22 @@ thereby IN scope for v1, not parked).
       structures (:107/:108/:81)
 - [ ] Injury substitution — relocate → substitute → reduce (:4688, :4755,
       :1917), matrix-authored only
-- [ ] R5 — delete the ~11k legacy machinery, census closures, structural
-      sweep
-- [ ] Sam's combined device pass = THE MERGE GATE
+- [x] R5 — delete the ~11k legacy machinery, census closures, structural
+      sweep. **PARTIAL AND HONEST (2026-08-07):** R5.1/5.2/5.7/5.8 landed;
+      **R5.4/R5.5/R5.6 are DEFERRED to the LR-29 replay unit** by Sam's
+      Option B carve-out (they touch the stored-declaration read path and
+      its writers). V3 is **BANKED at the one-door boundary, not closed**.
+      Census: declared debt 77 at a tightened baseline, founding 120.
+      docs/R5_BOUNDARY_REPORT_2026-08-07.md
+- [x] Sam's combined device pass = THE MERGE GATE. **MET 2026-08-07** —
+      5/5 testable taps passed, four items converted to WATCH-FORS.
+      **MERGED** into feat/stage-b-stage2 (`75fb71df`); the target's
+      declared set after = the boundary report's exactly (2 of 156).
+      Known-imperfect stands: `fixture-identity` 3/5/6, payer = the
+      replay unit.
+- [ ] **THE LR-29 REPLAY UNIT** — the V3 remainder; next ENGINE unit.
+      Opening law: the first act is the FULL MEASURED DEPENDENCY LIST,
+      before any build. docs/REPLAY_UNIT_KICKOFF_2026-08-07.md
 - [ ] R6 — Release-class measurements, TestFlight build
 
 ## Phase 1.5 — first post-merge unit (Sam approved 2026-08-07)

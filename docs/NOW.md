@@ -1,5 +1,34 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **MERGED. `feat/r53-v3-switchover` → `feat/stage-b-stage2` (`75fb71df`).**
+  Sam's combined device pass = the merge gate: **MET** (5/5 testable taps
+  passed; four items converted to WATCH-FORS). All three R5.7 strings SIGNED.
+- **BEFORE/AFTER ON THE TARGET, both full `test:bible` UNPIPED:**
+  **BEFORE `TRUE_EXIT=0`** — green to its last suite
+  (`stage-b-generation-differential`), 0 FAIL lines.
+  **AFTER `TRUE_EXIT=1`** at `program-control-durable`, 1 FAIL line; sweep
+  **2 of 156** = `program-control-durable`, `fixture-identity`. **That is the
+  boundary report's declared set EXACTLY — no difference, no STOP.**
+- **STATE PLAINLY: the merge took a green target to a 2-red target, knowingly.**
+  `fixture-identity` 3/5/6 are red as **plain laws with no declaration wearing
+  them** — the ratchet deleted their entries when V3 was expected to pay them
+  and V3 banked short. **Payer = the LR-29 replay unit**, measured (it is the
+  one suite the flip arm fixes). Sam-accepted as known-imperfect.
+- **TARGET → MAIN IS *NOT* PART OF THIS GATE.** Recorded rulings gate it on
+  **the L10 combined device pass for Stage B stages 1 + 2**, which is a
+  different pass and is **NOT STARTED**. Sam's 2026-08-07 pass covered the
+  R5/beta-cut tap list only.
+- **NEXT: item 2 is UNPARKED — the PARALLEL GATE shadow unit, stage 1
+  remainder** (roadmap Phase 1.5, the first post-merge unit).
+  docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md
+- **AFTER THAT: the LR-29 replay unit** — the V3 remainder, next ENGINE unit.
+  Opening law: first act is the FULL MEASURED DEPENDENCY LIST, before any
+  build. docs/REPLAY_UNIT_KICKOFF_2026-08-07.md
+- **WATCH-FORS from the device pass** (untestable in that device state):
+  completed-day display at the next completed session; the three fallback
+  sheets; stale-banner Review; the team-training affordance.
+
+
 - **R5 IS AT ITS BOUNDARY. STOP — the next step is the seat's SHORT tap list and
   Sam's combined device pass, the MERGE GATE.** Nothing further should land on
   this branch before that pass.
