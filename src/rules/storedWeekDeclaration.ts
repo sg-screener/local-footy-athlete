@@ -137,10 +137,26 @@ export interface StoredWeekDeclarationQuery {
  * unchanged: the overlay's declaration outranks the covering microcycle's,
  * which outranks the store's current microcycle where a caller consulted it.
  */
+/**
+ * PRICING SCAFFOLD — move (iii), THE FLIP, priced before it is built.
+ *
+ * `LFA_FLIP_DOOR=1` drops the OVERLAY rung: the door stops answering from the
+ * declaration the write path authors, and the covering microcycle's contract —
+ * the generation output the deriver already treats as "the identity to derive
+ * FROM" — answers instead. That is the whole behavioural content of the flip;
+ * the fact-threading that lets the door derive in place is the BUILD, and it is
+ * not worth threading through ten callers before the price is known.
+ *
+ * Inert unless the flag is set. Nothing here is landed behaviour.
+ */
+export const FLIP_SCAFFOLD = {
+  get door(): boolean { return process.env.LFA_FLIP_DOOR === '1'; },
+};
+
 export function selectStoredWeekDeclaration(
   query: StoredWeekDeclarationQuery,
 ): WeeklyExposureContractV2 | null {
-  const overlay = query.overlay?.exposureContractV2;
+  const overlay = FLIP_SCAFFOLD.door ? undefined : query.overlay?.exposureContractV2;
   if (overlay) {
     record(query.reader, query.weekStart, 'overlay');
     return overlay;

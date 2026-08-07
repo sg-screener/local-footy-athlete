@@ -2,6 +2,56 @@
 
 ## Unprocessed (newest first)
 
+1. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
+   the next natural boundary.
+
+## Processed 2026-08-07 (twenty-sixth pass) — MOVE (ii) BUILT AND FREE, MOVE (iii) PRICED AND STOPPED
+
+- LOOP CHECK: **a-count-taken-for-a-record does NOT fire** — the arms were
+  diffed as SETS, and that is what produced the pass's main finding. The counts
+  alone (8 new / 1 fixed on both arms) would have read as coincidence.
+- Answered in docs/R53_FLIP_MOVE_III_PRICED_STOP_2026-08-07.md.
+- **(b) FIRST HALF BUILT: MOVE (ii) IS LANDED AND FREE** (`e97c9a49`,
+  unflagged). Ten longhand copies of the declaration precedence onto one owner,
+  `src/rules/storedWeekDeclaration.ts`. **Sweep 2 of 156 — the control set
+  EXACTLY**, 0 new / 0 fixed; `test:compile` EXIT 0 no file regressed; full
+  `test:bible` UNPIPED TRUE_EXIT=1 at `program-control-durable` (the declared
+  red, same text, 1 FAIL); parity gate 16/16. The census tape lives INSIDE the
+  door, so it is complete by construction — 6,399 calls / 28 triples / 7
+  readers in the parity worlds.
+- **(b) SECOND HALF PRICED, NOT BUILT: the flip is 9 of 156** —
+  `fixture-identity` **FIXED**, 8 new. Flag-gated `LFA_FLIP_DOOR`, inert.
+- **THE PARITY WORLDS GO BYTE-EQUAL and the Monday returns** —
+  `2026-08-10=Lower Squat|8` in all three worlds, Vertical Jump present. The
+  declared entry EXPIRES on its own `expiresWhen` terms.
+- **(c) IS REFUTED IN THE GOOD DIRECTION, and the ordered phrase is NOT
+  written.** The gate does NOT go vacuous: the flip drops only the DECLARATION
+  rung, the payload survives, so the comparison still exists (5/7/5 materialised
+  days, non-vacuity assertion passing) and is byte-equal. A diff that stopped
+  happening is PAID, not MOVED. "MOVED-not-PAID" does not apply here.
+- **THE MAIN FINDING: the seat's "the 8 will dissolve" prediction is REFUTED,
+  and the failure SET is byte-identical to the leg (v) WRITER arm's.** Two
+  different mechanisms — stop WRITING the declaration, stop READING it —
+  produce the same eight suites and the same one fix. **So the 8 reds belong to
+  neither the writer nor the reader migration, but to the one property both
+  arms share: the stored declaration stops answering at read.** The class
+  re-attributes as one cause, and the writer pass's diagnostic work carries
+  over instead of being redone.
+- **STOP ON (b)'s OWN CONDITION** ("any red is attributed before the flip
+  lands, none carried silently"): 1 is the declared debt paying itself, 1 is a
+  ratchet+harness cell, 1 (`fact-horizon`) is a CARRIED claim explicitly
+  recorded as not re-confirmed, and **5 are undiagnosed**. The flip does not
+  land. **(d) NOT REACHED; V3 NOT closed** — on (d)'s terms, the words only if
+  the measurements support them.
+- **NOT COVERED:** the 5 undiagnosed suites' failure text was not read (only
+  `illness-clear-game-week` and `fact-horizon` sampled); no device evidence;
+  `validateLiveWeekOverlayWrite` fired 0× and `current_microcycle` was never
+  the answering source in any taped world, so move (ii)'s identity for those
+  two rungs rests on code equivalence; the door does not yet DERIVE in place —
+  the flip is priced by its behavioural equivalent, not built.
+
+## Processed 2026-08-07 (twenty-fifth pass) — the ruling as the seat wrote it
+
 1. RULING on f546c0b4 — the §8 alternative is APPROVED. Commit as
    authored.
    LOOP CHECK: §8 applied by the terminal against the seat's own
@@ -31,9 +81,6 @@
    if they support it. One-turn law and continuous authorisation to
    the endpoint. Sam holds a veto. Device flags unchanged, landing
    via the flip.
-
-2. docs/PARALLEL_GATE_SHADOW_UNIT_2026-08-07.md — stage 1 remainder at
-   the next natural boundary.
 
 ## Processed 2026-08-07 (twenty-fourth pass) — OWNERSHIP DERIVES AT READ, BUILT AND FREE
 

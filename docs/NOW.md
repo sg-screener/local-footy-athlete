@@ -1,5 +1,30 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **THE FLIP: MOVE (ii) IS BUILT AND FREE; MOVE (iii) IS PRICED AND STOPPED.**
+  **(ii) LANDED UNFLAGGED (`e97c9a49`)** — ten longhand copies of the
+  declaration precedence onto one owner, `src/rules/storedWeekDeclaration.ts`.
+  **Sweep 2 of 156 = the CONTROL SET EXACTLY** (0 new / 0 fixed); `test:compile`
+  EXIT 0 no file regressed; full `test:bible` UNPIPED TRUE_EXIT=1 at
+  `program-control-durable` (the declared red, 1 FAIL, same text); parity 16/16.
+  The census tape lives INSIDE the door, complete by construction — 6,399 calls
+  / 28 (reader|week|source) triples / 7 readers in the parity worlds.
+  **(iii) PRICED at 9 of 156** (`LFA_FLIP_DOOR=1`, inert): `fixture-identity`
+  **FIXED**, 8 new. **All three parity worlds go BYTE-EQUAL** and the Monday
+  returns — `2026-08-10=Lower Squat|8`, Vertical Jump present.
+  **THE SEAT'S (c) IS REFUTED IN THE GOOD DIRECTION:** the gate does NOT go
+  vacuous (payload survives, 5/7/5 materialised days, non-vacuity passing), so
+  the declared entry retires **PAID, not MOVED** — the ordered phrase is not
+  written.
+  **THE MAIN FINDING: the "8 will dissolve" prediction is REFUTED and the
+  failure SET is byte-identical to the leg (v) WRITER arm's.** Stop-writing and
+  stop-reading produce the same eight suites and the same one fix, so **the 8
+  belong to one property both share — the declaration stops answering at read**
+  — and the writer pass's diagnostics carry over instead of being redone.
+  **STOP on (b)'s own condition:** 1 declared debt paying itself, 1
+  ratchet+harness, 1 CARRIED-not-re-confirmed (`fact-horizon`), **5
+  undiagnosed**. The flip does not land. **(d) NOT reached; V3 NOT closed.**
+  Report: docs/R53_FLIP_MOVE_III_PRICED_STOP_2026-08-07.md
+
 - **THE FLIP, MOVE (i): NOT BUILDABLE AS WRITTEN — THE WRITER IS A FIFTH SITE,
   AND THE PREMISE IS REFUTED.** Four publication sites were taught to write
   `derive()` and the stored declaration moved **0 leaves** (56 of 191 from the
