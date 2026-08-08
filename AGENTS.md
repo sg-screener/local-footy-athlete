@@ -173,6 +173,31 @@ The general shape, third time it has been written in this file: **an instrument
 answers in its own unit, and a gate that never states its unit will eventually
 be read in the domain's.**
 
+### The same law again — its subject is ANCHORING, not counting
+
+**Sighting 6, 2026-08-09, journal slice 1, and again inside a brand-new gate on
+its first mutation test.** A cell asserted the new Journal tab sits between
+Program and Profile by comparing three `indexOf` results directly. Renaming
+`ProgramTab` left the cell **green**: `indexOf` returns `-1` when the anchor is
+MISSING, and `-1` is less than everything, so "Program comes before Journal" was
+satisfied by Program having vanished.
+
+The two sections above are written about COUNTS, and that is why this slipped —
+the same author applied them correctly to the cell counting `<Tab.Screen` in the
+same file, and did not recognise an ORDER assertion as the same shape. So the
+law is restated at its real subject:
+
+**Any assertion that locates something in source by POSITION must prove every
+anchor was FOUND before claiming anything about their relationship.** That
+includes `indexOf` comparisons, a `slice` between two markers, "appears before /
+after", and a regex spanning anchors with `[\s\S]*?`. Every one of them returns
+a value that compares perfectly well when the anchor is absent — `-1`, `''`, an
+empty slice — and every one of them reads as a pass.
+
+Counting is one instance of anchoring, not the other way round. If a gate finds
+its subject before asserting on it, prove the finding first; the assertion is
+only meaningful afterwards.
+
 ## Instrumentation must be alive where the defects are
 
 **A diagnostic that is off on the build the defect lives on is a green gate that
