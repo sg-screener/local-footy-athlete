@@ -2,6 +2,74 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+## Processed 2026-08-09 (fortieth pass) — JOURNAL SLICE 1 BUILT, GATED, LANDED; SAM'S TWO RULINGS BUILT AS RULED
+
+- **ONE LINE: the Journal tab is on his phone — `1659d664`, full unpiped chain
+  `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line, sweep 2 of 158 = the
+  declared set exactly.** Boundary: docs/JOURNAL_SLICE1_BOUNDARY_2026-08-09.md
+- LOOP CHECK: **the source-scan law — SIGHTING 6**, inside a gate I had just
+  written, on its first mutation test. **COMPRESSED INTO AGENTS.md, not left in
+  a report:** the law's subject is **ANCHORING, not counting**. It slipped
+  because both existing sections are written about COUNTS — I applied them
+  correctly to the cell counting `<Tab.Screen` in the same file and did not
+  recognise an ORDER assertion as the same shape.
+- **ALL THREE ITEMS PROCESSED.** (1) and (2) committed as authored at
+  `65bff3b3`, with a note for the record that item 2's summary line still reads
+  "weights PROPOSED 2/1/0.5" — item 1 supersedes it and the ruling DOC already
+  carries SIGNED 2/1/0. The doc is the authority; the stale summary was left as
+  the seat wrote it rather than edited under it. (3) built.
+- **WHAT IS ON SCREEN:** a third tab between Program and Profile — this week's
+  **shape strip**, **did the work happen** (with "no reason recorded" where the
+  app does not know why), **how the week felt**, and the **honest building
+  state** for load.
+- **ZERO NEW STORED STATE, AND IT OPENS NO DOOR** — a cell scans the screen for
+  five writer idioms and requires zero. **North star: TOWARD, and a convergence
+  step** — it surfaces facts stored for months without minting a copy of any.
+- **ONE PREDICATE READ TWICE**, which is Sam's "two questions, one store" made
+  structural rather than promised. Shape short-circuits on Rest/Game, load does
+  not — so **a game takes the HARD weight through the existing owner**
+  (`stressClassification` returns `'high'` for a game) and **no game constant
+  exists**. His ruling never priced a game and this is why it did not need to.
+  Written the obvious way (`loadWeight > 0`), the session count would have
+  silently dropped every easy day — the one place he said they must appear — so
+  a cell asserts the two answers **DISAGREE** on that day.
+- **HARDNESS IS READ FROM ITS OWNER, NEVER RE-DERIVED.** The cell moves ONLY the
+  classifier's answer over an identical projection and requires the result to
+  follow; a re-deriving Journal would answer the same both times and no
+  whole-week fixture would notice.
+- **TWELVE MUTATIONS, TWELVE REDS — AND ONE SURVIVED FIRST.** The tab-order cell
+  compared three `indexOf` results directly; `indexOf` returns **−1** when the
+  anchor is MISSING and −1 is less than everything, so renaming `ProgramTab`
+  satisfied "Program comes before Journal" **vacuously**. Now proven present
+  before any order is claimed; a rename and a genuine reorder both red it.
+- **A RED THAT WAS MINE, CAUGHT BY AN EXISTING GATE.** The first full chain
+  stopped EARLIER than the declared set, at `test:legacy-census`: LR-4's
+  `mirrorDecisionReads` went **71 → 72** because the screen read `onboardingData`
+  off the profile MIRROR. Its own text says an undeclared hit is a new violation,
+  not a miscount — **so the violation was fixed, not the number.** It reads
+  through `useAthleteContext` now, the owner the census names as LR-4's
+  destination, and the declared count is untouched. **Nothing in my model of
+  "what a read-only UI slice touches" contained the legacy census** — that is the
+  argument for the full chain over the suites I thought were related.
+- **PARKED, NOT BUILT, AND SAID PLAINLY:** the load COMPARISON (slice 1 ships the
+  honest state only — the rolling average must derive from RECORDED history, not
+  from projections of past weeks that no longer exist); the exposure counts, week
+  status line, this-week's-job and observation lines; the note input, post-game
+  rating and "felt different" tap, each a new input and its own slice.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE.** Strip legibility, dot sizing,
+  the tab icon and how a five-mark row scans are unverified by eye; **no cell
+  mounts the screen**, so the honest states are asserted by testID presence in
+  source. `weeksOfHistory` counts weeks with ANY record, so a week with one
+  logged rest day counts. Multi-workout days read through `ResolvedDay.workout`
+  (singular) — consistent with the app, not proven correct. Depth (L13): 0.
+- **COPY IS PROPOSED AND UNSIGNED** — journal batch 13. The H/M/E/G letters are
+  the terminal's presentation choice, not a Sam ruling. **Sam holds a veto on
+  everything, and on the two rulings the seat approved pending him.**
+
+## Processed 2026-08-08 (the seat's orders, as written)
+
 1. WEIGHTS SIGNED (Sam, 2026-08-08, same-day completion of the
    load ruling): Hard 2 / Moderate 1 / Easy 0 — verbatim: "do
    2 - 1 - 0 though, easy days don't effect fatigue but count as
