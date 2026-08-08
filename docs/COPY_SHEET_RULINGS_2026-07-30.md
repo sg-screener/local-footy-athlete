@@ -1261,3 +1261,89 @@ and the day's identity is the title's job alone. This also closes parked questio
 **14-e. EACH WORD ONCE.** A day carrying a power part and a strength part
 bucket both to "Strength" and reads **"Strength"**, not "Strength + Strength" —
 Sam's power ruling (13-b) holding in the new place it could have broken out.
+
+---
+
+## Batch 15 — the Journal, slice 1 (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Every string below ships
+in the app today (`1659d664`) and is queued for his eye.
+
+**15-0. WHY THIS BATCH EXISTS AT ALL, STATED PLAINLY: these words shipped
+UNLISTED, which the transitional rule forbids.** The rule is "a string may ship
+PROPOSED, and it may never ship unlisted" (batch 8's note). Slice 1's report
+cited "journal batch 13" — but batch 13 is the bucket vocabulary and batch 14
+the compound name, so **no journal batch existed and the citation pointed at
+someone else's work.** Second sighting of proposed-copy-shipping-unlisted (the
+first: "Today"/"Week" parked in a bullet list no gate reads). The compression is
+in the same commit as this batch: the extraction gate's scope is now DERIVED
+from the source tree instead of a hand-maintained list, so a new surface joins
+the sheet the day it is created — see `signedCopyExtractionTests`, ceiling
+re-baselined 130 → 558 with the jump attributed.
+
+**15-a. THE TAB AND THE HEADINGS.** Title Case short labels, per batch 1's
+short-label law.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Tab label | "Journal" |
+| Tab accessibility label | "Journal tab" |
+| Screen heading | "Journal" |
+| Period subheading | "This week" |
+| Section heading | "Did the work happen" |
+| Section heading | "How the week felt" |
+| Section heading | "Load" |
+
+**15-b. THE WEEK-SHAPE STRIP.** The five day-shape words are Sam's own taxonomy
+(docs/JOURNAL_LOAD_AND_DAY_SHAPE_RULING_2026-08-08.md §2) and are NOT new
+vocabulary. What is new is the abbreviation.
+
+| Day shape | Spoken name (his word) | PROPOSED letter |
+| --- | --- | --- |
+| Hard day | "Hard" | "H" |
+| Moderate day | "Moderate" | "M" |
+| Easy day | "Easy" | "E" |
+| Game day | "Game" | "G" |
+| Rest day | "Rest" | "·" |
+
+**THE LETTERS ARE MINE, NOT HIS — FLAGGED, NOT SLIPPED IN.** Sam ruled the five
+SHAPES; he never ruled that a shape is shown as a single letter. H/M/E/G and the
+middle dot for rest are a terminal presentation choice made to fit seven days
+across a phone. **This is the one row of this batch that most wants his eye**,
+because an abbreviation is a word the athlete has to decode, and "M" for Moderate
+sits one letter away from nothing at all. The spoken names are carried on each
+day's accessibility label ("Hard day", "Moderate day", …) so the full word is
+never actually lost.
+
+**15-c. THE HONEST-ABSENCE LINES.** These are the Journal's most load-bearing
+sentences: rider 1 says the Journal shows an honest "no reason recorded" state
+and never invents a why.
+
+| State | PROPOSED string |
+| --- | --- |
+| No sessions this week | "No sessions planned this week." |
+| A missed session with no recorded reason | "No reason recorded for one of them." |
+| Nothing recorded about how the week felt | "You haven't recorded how anything felt this week." |
+| Not enough history for a load comparison | "Your Journal is building. Once you have a few weeks logged, this shows how the week compared with your normal." |
+| Enough history, comparison not built yet | "Comparing this week with your normal is coming next." |
+
+**15-d. THE COUNTED LINES ARE COMPOSED, AND ARE DELIBERATELY NOT IN A BOUND
+TABLE ROW.** Five sentences take a number and cannot be quoted as a literal:
+
+- "{done} of {planned} sessions done" (+ ", {n} in part" when partials exist)
+- "{n} missed."
+- "{n} still to log."
+- "No reason recorded for {n} of them." (the plural arm of 15-c row 2)
+
+Following batch 14-b's precedent: **a table row here would bind vacuously**, so
+the row is not written rather than written and useless. The wording is instead
+fixed by `journalWeekTests`, and the underlying counts by the derivation's own
+cells. **Sam still owns these sentences** — they are listed here in template form
+precisely so they are not invisible for being unquotable.
+
+**15-e. WHAT IS NOT YET BOUND, SAID OUT LOUD.** `copyRulingsBindingTests` parses
+the PROPOSED strings of **batch 5 only**; batches 12, 14 and this one are
+recorded but not equality-bound by that gate. The extraction gate now *counts*
+these strings and forbids new unlisted ones, which is a different and weaker
+claim than "the sheet and the app agree". Extending the binder to every PROPOSED
+batch is named here as owed and is not done in this commit.

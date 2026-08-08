@@ -30,10 +30,17 @@ import {
  * slices. Where the data does not exist yet, this screen says so in words
  * rather than showing a zero.
  *
- * COPY: every athlete-visible sentence below is PROPOSED, NOT SIGNED — journal
- * batch 13, queued for Sam. They are plain strings rather than `SignedCopy`
- * because nothing here is signed yet; the moment Sam signs the batch they move
- * onto the sheet like every other athlete-visible word.
+ * COPY: every athlete-visible sentence below is PROPOSED, NOT SIGNED — recorded
+ * as **batch 15** in docs/COPY_SHEET_RULINGS_2026-07-30.md, queued for Sam. They
+ * are plain strings rather than `SignedCopy` because nothing here is signed yet;
+ * the moment Sam signs the batch they move onto the sheet like every other
+ * athlete-visible word.
+ *
+ * THIS COMMENT ORIGINALLY CITED "batch 13" AND THAT WAS WRONG TWICE: batch 13 is
+ * the bucket vocabulary, and no journal batch existed at all — these words
+ * shipped UNLISTED, which the sheet's transitional rule forbids ("a string may
+ * ship PROPOSED, and it may never ship unlisted"). A citation is a claim; this
+ * one pointed at someone else's work and nothing checked it.
  */
 
 // ─── The strip ───────────────────────────────────────────────────────────
@@ -149,9 +156,13 @@ function HowTheWeekFelt({ week }: { week: JournalWeek }) {
   const { felt } = week;
 
   if (felt.nothingRecorded) {
+    // SINGLE UNBROKEN LITERAL, per batch 11's note: the binding gate
+    // equality-matches the file, and both an `&apos;` entity and a line break
+    // inside a sentence hide it from that match. Both cost a red on this
+    // batch's first run.
     return (
       <Text variant="body" style={styles.muted} testID="journal-felt-nothing-recorded">
-        You haven&apos;t recorded how anything felt this week.
+        {"You haven't recorded how anything felt this week."}
       </Text>
     );
   }
@@ -183,8 +194,7 @@ function LoadSection({ week }: { week: JournalWeek }) {
   if (!week.load.comparisonAvailable) {
     return (
       <Text variant="body" style={styles.muted} testID="journal-load-building">
-        Your Journal is building. Once you have a few weeks logged, this shows
-        how the week compared with your normal.
+        {'Your Journal is building. Once you have a few weeks logged, this shows how the week compared with your normal.'}
       </Text>
     );
   }

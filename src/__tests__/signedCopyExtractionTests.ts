@@ -76,12 +76,23 @@ function run(name: string, body: () => void): void {
 
 const SRC = path.join(__dirname, '..');
 
-/** The surfaces the athlete actually reads. Prose anywhere here is in scope. */
-const SURFACE_DIRS = [
-  'screens/home',
-  'screens/coach',
-  'components',
-];
+/**
+ * THE SURFACES THE ATHLETE READS — DEFAULT-IN, NOT OPT-IN.
+ *
+ * THIS USED TO BE `['screens/home', 'screens/coach', 'components']`, A
+ * HAND-MAINTAINED LIST, AND THAT IS EXACTLY HOW THE JOURNAL SHIPPED UNLISTED.
+ * `screens/journal` was created on 2026-08-09 with a screenful of athlete-facing
+ * prose, and this extractor never looked at it — the count stayed on the ceiling
+ * of 130 and the gate printed PASS. A green gate watching nothing, second
+ * sighting (the first was the copy-BINDING gate reading table rows only).
+ *
+ * An opt-in list fails the same way every time: the person who adds a surface is
+ * the person who would have to remember to add it here, and if they remembered
+ * they would not have needed the gate. So scope is now DERIVED from the tree —
+ * every directory under these roots is in scope the day it is created, and
+ * anything excluded must say so BY NAME AND WITH A REASON below.
+ */
+const SURFACE_ROOTS = ['screens', 'components', 'navigation'];
 
 /**
  * OFF THE SHEET — verified unreachable by an athlete, not merely labelled dev.
@@ -98,8 +109,20 @@ const SURFACE_DIRS = [
  * The check is repeated as an assertion below, not just recorded here: if either
  * gate is ever removed those 13 strings become athlete-visible vocabulary and must
  * come back onto the sheet.
+ *
+ * EVERY EXCLUSION NOW CARRIES ITS REASON IN THE DATA, so an exclusion is a claim
+ * somebody made rather than a path somebody added. A cell below requires each
+ * prefix to exist on disk — an exclusion for a directory that is gone protects
+ * nothing, and would silently start protecting something else if the name were
+ * ever reused.
  */
-const OFF_SHEET_DEV_ONLY = ['components/dev/'];
+const OFF_SHEET: ReadonlyArray<{ readonly prefix: string; readonly why: string }> = [
+  {
+    prefix: 'components/dev/',
+    why: 'Double-gated by __DEV__ at require and render sites (asserted below), '
+      + 'so its strings are not bundled into a production build.',
+  },
+];
 
 /**
  * Fields whose value lands in front of the athlete.
@@ -145,32 +168,80 @@ function walkFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Files in scope: everything under the roots, minus the declared exclusions. */
+function surfaceFiles(): string[] {
+  return walkFiles('')
+    .filter((file) => SURFACE_ROOTS.some((root) => file.startsWith(`${root}/`)))
+    .filter((file) => !OFF_SHEET.some(({ prefix }) => file.startsWith(prefix)));
+}
+
+/**
+ * Blank out comments so prose ABOUT copy is never counted AS copy.
+ *
+ * The old extractor skipped whole lines starting with `//`, `*` or `/*`, which
+ * misses a trailing `// note` and misses the body of a block comment whose lines
+ * do not begin with `*`. Replacing comment spans with equal-length whitespace
+ * keeps every byte offset intact, so line numbers stay honest.
+ */
+function blankComments(source: string): string {
+  const blank = (match: string) => match.replace(/[^\n]/g, ' ');
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, blank)
+    .replace(/(^|[^:])\/\/[^\n]*/g, (m, lead) => lead + blank(m.slice(lead.length)));
+}
+
+/**
+ * THE EXTRACTOR, WIDENED TO SPAN LINES — the fix this file named as owed and
+ * deliberately did not do: "widening the field regex to span lines is the honest
+ * fix and is NOT done here… a ceiling re-baseline and a unit of its own". This
+ * IS that unit, ordered by the seat after the journal shipped unlisted.
+ *
+ * Four shapes, because the old two missed the dominant React idiom — a `<Text>`
+ * whose sentence sits on its own line, so `>` and `</` are never on one line:
+ *
+ *   1. `field: 'text'` / `field={'text'}`, now allowed to span lines.
+ *   2. JSX text children, multi-line, whitespace-collapsed.
+ *   3. A JSX expression container holding a bare literal: `{'text'}`.
+ *   4. Both arms of a literal ternary: `cond ? 'a' : 'b'`.
+ *
+ * DISTINCT PER FILE, and the totals report occurrences BESIDE distinct
+ * (AGENTS.md's counting law) — one sentence rendered twice in a file is one
+ * sentence to author, and a number that never says its unit gets read in the
+ * domain's.
+ */
 function extract(): ExtractedString[] {
   const found: ExtractedString[] = [];
   const fieldPattern = new RegExp(
-    `\\b(${VISIBLE_FIELDS.join('|')})\\s*[:=]\\s*(['"\`])((?:\\\\.|(?!\\2).)*)\\2`,
+    `\\b(${VISIBLE_FIELDS.join('|')})\\s*[:=]\\s*\\{?\\s*(['"\`])((?:\\\\.|(?!\\2)[\\s\\S])*?)\\2`,
     'g',
   );
-  for (const file of walkFiles('')) {
-    if (!SURFACE_DIRS.some((dir) => file.startsWith(dir))) continue;
-    if (OFF_SHEET_DEV_ONLY.some((dir) => file.startsWith(dir))) continue;
-    const source = fs.readFileSync(path.join(SRC, file), 'utf8');
-    const lines = source.split('\n');
-    lines.forEach((line, index) => {
-      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
-      let match: RegExpExecArray | null;
-      fieldPattern.lastIndex = 0;
-      while ((match = fieldPattern.exec(line)) !== null) {
-        const [, field, , text] = match;
-        if (!looksLikeProse(text)) continue;
-        found.push({ file, line: index + 1, field, text });
-      }
-      // JSX text children: >Some words<
-      const jsx = /^[^<>{}]*>([^<>{}]{4,})<\//.exec(line.trim());
-      if (jsx && looksLikeProse(jsx[1].trim())) {
-        found.push({ file, line: index + 1, field: 'jsx_text', text: jsx[1].trim() });
-      }
-    });
+  const jsxTextPattern = />\s*([^<>{}][^<>{}]*?)\s*<\//g;
+  const jsxLiteralPattern = /\{\s*(['"])((?:\\.|(?!\1).)*)\1\s*\}/g;
+  const ternaryPattern = /\?\s*(['"])((?:\\.|(?!\1).)*)\1\s*:\s*(['"])((?:\\.|(?!\3).)*)\3/g;
+
+  for (const file of surfaceFiles()) {
+    const source = blankComments(fs.readFileSync(path.join(SRC, file), 'utf8'));
+    const lineAt = (index: number) => source.slice(0, index).split('\n').length;
+    const seen = new Set<string>();
+    const take = (raw: string, field: string, index: number) => {
+      const text = raw.replace(/\s+/g, ' ').trim();
+      if (!looksLikeProse(text) || seen.has(text)) return;
+      seen.add(text);
+      found.push({ file, line: lineAt(index), field, text });
+    };
+
+    let match: RegExpExecArray | null;
+    fieldPattern.lastIndex = 0;
+    while ((match = fieldPattern.exec(source)) !== null) take(match[3], match[1], match.index);
+    jsxTextPattern.lastIndex = 0;
+    while ((match = jsxTextPattern.exec(source)) !== null) take(match[1], 'jsx_text', match.index);
+    jsxLiteralPattern.lastIndex = 0;
+    while ((match = jsxLiteralPattern.exec(source)) !== null) take(match[2], 'jsx_literal', match.index);
+    ternaryPattern.lastIndex = 0;
+    while ((match = ternaryPattern.exec(source)) !== null) {
+      take(match[2], 'ternary', match.index);
+      take(match[4], 'ternary', match.index);
+    }
   }
   return found;
 }
@@ -297,7 +368,36 @@ function extract(): ExtractedString[] {
  * `docs/COPY_SHEET_RULINGS_2026-07-30.md` (batch 12) — which is where the gap is
  * closed, here and always.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 130;
+/**
+ * 130 -> 561: A RE-BASELINE, AND THE NUMBER WENT UP BECAUSE THE INSTRUMENT GOT
+ * BETTER, NOT BECAUSE THE APP GOT WORDIER.
+ *
+ * This is the exact inverse of the 141 -> 130 note above, and it must be read
+ * that way. Not one of the 431 newly-counted strings is new: they were written
+ * across `screens/onboarding`, `screens/profile` and the multi-line JSX of
+ * `screens/home` weeks or months ago. What changed is that the extractor can now
+ * SEE them. Attributed, so nobody later reads this as a surface that added 431
+ * unauthored sentences:
+ *
+ *   +102 SCOPE — `screens/onboarding` (74), `screens/profile` (23),
+ *        `screens/journal` (2) and `navigation` (3) were never scanned. Scope is
+ *        now derived from the tree, so this class of blindness cannot recur.
+ *        `navigation` earned its place the hard way: the copy BINDER went red on
+ *        "Journal tab" — a string plainly in the app, in `AppNavigator.tsx`,
+ *        which neither gate was looking at. Tab labels are athlete-visible words.
+ *   +329 SHAPE — multi-line JSX text children, `{'literal'}` expression
+ *        containers and literal ternaries. The dominant React idiom in this
+ *        codebase, invisible to a single-line regex since the extractor was
+ *        written. The old ceiling's own comment named this and deferred it as
+ *        "a unit of its own"; this is that unit.
+ *
+ * A CEILING THAT RISES IS NORMALLY THE FAILURE THIS RATCHET EXISTS TO CATCH. It
+ * is allowed exactly here, once, because the measurement changed rather than the
+ * app — and the ratchet is STRICTLY STRONGER afterwards: 5 directories instead
+ * of 3, 4 string shapes instead of 2, 46 files instead of 11. From this commit
+ * the number may only fall again.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 561;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
@@ -314,11 +414,62 @@ run('the dev panel excluded from the sheet is genuinely unreachable', () => {
     'ScheduleDebugPanel is no longer __DEV__-gated at its render site');
 });
 
+run('scope is DERIVED from the tree, so a new surface cannot be invisible', () => {
+  // THE CELL THAT WOULD HAVE CAUGHT THE JOURNAL. `screens/journal` shipped a
+  // screenful of prose while the extractor looked at a hand-written list of two
+  // sibling directories and reported PASS.
+  //
+  // It asserts EQUALITY, not membership: every directory that exists under
+  // `screens/` must be scanned, and nothing may be scanned that is not on disk.
+  // A future edit that replaces the roots with an enumerated list reds here,
+  // which is the point — the defect was the enumeration, not the entries.
+  const onDisk = fs.readdirSync(path.join(SRC, 'screens'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `screens/${entry.name}`)
+    .sort();
+  assert(onDisk.length > 1, `only ${onDisk.length} screen directories found — the read is broken`);
+
+  const scanned = new Set(surfaceFiles().map((file) => file.split('/').slice(0, 2).join('/')));
+  const unscanned = onDisk.filter((dir) => !scanned.has(dir)
+    && !OFF_SHEET.some(({ prefix }) => dir.startsWith(prefix) || prefix.startsWith(dir)));
+  assert(unscanned.length === 0,
+    `these screen directories exist but no file in them is scanned: ${unscanned.join(', ')}. `
+    + 'Every athlete-facing surface is in scope by default — if one genuinely is not '
+    + 'athlete-visible, add it to OFF_SHEET with a reason rather than leaving it unseen.');
+});
+
+run('every OFF_SHEET exclusion names a real path and gives a reason', () => {
+  // An exclusion is a claim. A stale one protects nothing and would silently
+  // start protecting something else if the directory name were reused.
+  for (const { prefix, why } of OFF_SHEET) {
+    assert(fs.existsSync(path.join(SRC, prefix)),
+      `OFF_SHEET excludes '${prefix}', which does not exist — remove the stale exclusion`);
+    assert(why.trim().length > 20,
+      `OFF_SHEET entry '${prefix}' has no real reason recorded`);
+  }
+});
+
+run('the extractor sees a multi-line JSX sentence', () => {
+  // NON-VACUITY FOR THE WIDENING ITSELF. The whole re-baseline rests on the
+  // claim that the extractor now spans lines; asserting the COUNT went up would
+  // not prove that — a scope change alone would do it. So this asserts a
+  // specific sentence that is multi-line in the source and was provably
+  // invisible before: the Journal's building state.
+  const found = extracted.filter((item) => item.file.startsWith('screens/journal'));
+  assert(found.length > 0, 'no journal strings extracted — scope regressed');
+  const multiLine = found.find((item) => /Your Journal is building/.test(item.text));
+  assert(multiLine !== undefined,
+    'the multi-line JSX sentence in JournalScreen was not extracted — the widened '
+    + `extractor is not spanning lines. Found instead: ${found.map((f) => f.text).join(' | ')}`);
+  assert(/weeks logged, this shows how the week compared/.test(multiLine.text),
+    `the sentence was truncated at a line break: "${multiLine.text}"`);
+});
+
 run('the extraction finds athlete-visible prose', () => {
   // Non-vacuity. A broken regex would report a beautifully clean app.
   assert(extracted.length > 50,
     `the extractor found only ${extracted.length} athlete-visible strings across `
-    + `${SURFACE_DIRS.join(', ')} — it is broken, not the app clean`);
+    + `${SURFACE_ROOTS.join(', ')} — it is broken, not the app clean`);
 });
 
 run('the sheet is written for Sam to rule on', () => {
@@ -382,7 +533,9 @@ run('the athlete-visible gap count only goes down', () => {
 
 console.log(`\nSigned copy extraction totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
-console.log(`  athlete-visible strings found: ${extracted.length} (ceiling ${ATHLETE_VISIBLE_GAP_CEILING})`);
+console.log(`  athlete-visible strings: ${extracted.length} distinct-per-file across `
+  + `${new Set(extracted.map((e) => e.file)).size} files (ceiling ${ATHLETE_VISIBLE_GAP_CEILING}); `
+  + `${new Set(extracted.map((e) => e.text)).size} distinct app-wide`);
 console.log(`  signed so far: ${signedCopyRegistrySize()}`);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);

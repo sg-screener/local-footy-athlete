@@ -2,7 +2,42 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. SAM RULED next slice: (b) THE NOTE INPUT (2026-08-08). Build
+   after item 2's copy fix lands.
+   LOOP CHECK: slice-choice-ruled-by-owner — sighting 1 — iterate.
+   Scope from the approved design, not re-litigated: the freeform
+   note box ("anything worth remembering about this week?") with
+   optional tags — the base five (recovery, mobility, injury, diet,
+   work stress) plus the addendum's sleep, illness, travel, all
+   selected under Sam's full-scope ruling. Record-only, its own
+   armoured store per your approved ruling (one door/tape/
+   quarantine, store-armour recipe); notes NEVER derive program
+   state — no constraint composition, the kickoff's non-negotiable.
+   Resurfacing (old notes at relevant moments) is a LATER slice —
+   note it as owed, don't build it here. Every visible word into
+   the copy sheet PROPOSED under the new gate. Full unpiped chain
+   per commit; boundary report; end athlete-visible on the phone.
+
+2. COPY DEFECT + THE PERMANENT GATE (seat review of slice 1,
+   2026-08-08): the Journal's athlete-visible words are NOT in the
+   copy sheet — the report cited "journal batch 13" but batch 13 is
+   the bucket vocabulary and no journal batch exists. Words shipped
+   UNLISTED, against the sheet's own transitional rule ("may ship
+   PROPOSED, may never ship unlisted").
+   LOOP CHECK: proposed-copy-ships-unlisted — SIGHTING 2 today
+   (sighting 1: "Today"/"Week" parked in a bullet list no gate
+   reads) — COMPRESS, no third sighting.
+   (a) Record every journal string as the next real batch number in
+   docs/COPY_SHEET_RULINGS_2026-07-30.md, PROPOSED, with the H/M/E/G
+   letters called out as terminal-chosen for Sam's eye.
+   (b) THE COMPRESSION, systemic per CLAUDE.md: extend the copy
+   gate so an athlete-visible string that resolves to NO sheet entry
+   (signed or proposed) is a RED, on every surface, mutation-proven
+   — shipping unlisted becomes impossible, not noticed-later. If
+   that gate can't be built honestly (say, dynamic strings), report
+   the boundary instead of a weaker gate that prints PASS.
+   One report, full unpiped chain per commit as always.
+
 
 ## Processed 2026-08-09 (fortieth pass) — JOURNAL SLICE 1 BUILT, GATED, LANDED; SAM'S TWO RULINGS BUILT AS RULED
 

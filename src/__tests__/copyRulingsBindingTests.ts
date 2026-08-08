@@ -113,8 +113,23 @@ const AUTHORING_MODULES = [
   'rules/deloadWeekRules.ts',
 ];
 
+/**
+ * SCOPE IS DERIVED FROM THE TREE, NOT ENUMERATED — the same compression applied
+ * to `signedCopyExtractionTests` in this commit, and it belongs here for the
+ * same reason: this list was `['screens/home', 'screens/coach', 'components']`,
+ * and when the Journal arrived on 2026-08-09 this gate could not see it either.
+ *
+ * The failure that exposed it is worth recording, because it is the good case.
+ * Recording the journal's strings as batch 15 made THIS gate red — "proposed to
+ * Sam and not in the app" — for strings that were plainly in the app, on a
+ * screen the gate was not looking at. A gate whose scope is hand-maintained does
+ * not merely miss things; it reports confident falsehoods about the things it
+ * misses.
+ */
+const SURFACE_ROOTS = ['screens', 'components', 'navigation'];
+
 function surfaceSources(): { file: string; text: string }[] {
-  const dirs = ['screens/home', 'screens/coach', 'components'];
+  const dirs = SURFACE_ROOTS;
   const out: { file: string; text: string }[] = [];
   for (const rel of AUTHORING_MODULES) {
     const full = path.join(ROOT, 'src', rel);
@@ -222,8 +237,15 @@ function proposedStrings(): { batch: string; text: string }[] {
     // last batch-5 sub-heading the parser happened to have seen — Task 4's own
     // rows came back labelled "5d". The failure message is what someone acts
     // on, so it has to name the right batch.
-    const heading = /^#+ (\d+[a-z])\./.exec(line);
-    if (heading) batch = heading[1];
+    // TWO HEADING FORMS, because the file uses two. The original regex matched
+    // only `### 5a.`; every batch from 10 onward writes its sub-headings as
+    // `**15-a. …**`, so none of them was ever recognised and their strings were
+    // all reported under whichever batch-5 sub-heading the parser had last seen.
+    // The comment above says the failure message has to name the right batch —
+    // it had stopped doing so, silently, for five batches.
+    const heading = /^#+ (\d+[a-z])\./.exec(line)
+      ?? /^\*\*(\d+)-([a-z])\./.exec(line);
+    if (heading) batch = heading.length > 2 ? `${heading[1]}${heading[2]}` : heading[1];
     if (!line.trimStart().startsWith('|')) continue;
     for (const match of line.matchAll(/"([^"]+)"/g)) out.push({ batch, text: match[1] });
   }
