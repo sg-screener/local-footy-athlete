@@ -1,7 +1,18 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `214ef66c` (the compound day name + a harness
-  fix; docs follow it).
+- **BRANCH:** `main` · **HEAD:** `d07e3fad` (the day-first dead-zone fix; the
+  compound day name and a harness fix behind it).
+- **LAST UNIT: THE DEAD ZONE UNDER THE DAY CARD — FIXED** (`d07e3fad`), from
+  Sam's 11:04 screenshot while building for Renee. **Invisible witness nodes were
+  participating in layout:** `DayStateLeaves` returns a FRAGMENT, so its
+  witnesses flattened into direct children of a `gap: spacing.sm` container and
+  every one of them earned a gap — **it grew as receipts accrued**, which is why
+  it looked like a spacing bug spacing could not fix. All six now sit in one
+  `stateLeafWell`; **`position: 'absolute'` is the load-bearing property** (a 0x0
+  STATIC wrapper still earns one gap). Leaves gate mutation-proven THROUGH the
+  new wrapper. **No device evidence — Sam's rebuild is the instrument**, and the
+  wrapper clips, which is safe for every tree-traversing gate but flagged for any
+  on-device explorer that resolves by geometry.
 - **UNIT: THE COMPOUND BUCKET NAME — BUILT AND LANDED** (`791979c0`), Sam's
   2026-08-08 afternoon answers. **A day is named by EVERY bucket on it**, joined
   by his own " + ", in timeline order, **each word once**. Week row and day title

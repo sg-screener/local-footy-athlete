@@ -2,32 +2,66 @@
 
 ## Unprocessed (newest first)
 
-3. JOURNAL UNIT KICKS OFF after item 1 lands + item 2's doc fix (Sam,
-   2026-08-08: "I want it all in the journal"; the day-first screen
-   is already finished — see item 2 — so the journal is NEXT).
-   Full order + scope:
-   docs/JOURNAL_UNIT_KICKOFF_2026-08-08.md — commit as authored.
-   LOOP CHECK: unit-kickoff-from-approved-design — sighting 1 —
-   iterate; one compression carried in: the unit's authored-copy
-   flood (status vocab + observation templates) ships in BATCHED
-   signing sheets per boundary, never per sentence.
-   Summary: FULL SCOPE — base design (approved 2026-07-23, source
-   of truth, no re-litigating) + ALL 11 addendum candidates. The
-   rep-range question is ALREADY RULED in the Bible (single middle
-   number, 3x10) — cite, don't ask. Settle first: the never-run
-   logging tree (LoggedSet type decided deliberately, screens
-   unmounted), domain.d.ts drift, and LR-18 rides this unit under
-   the store-armour recipe. Journal is a reading surface + record-
-   only notes — NEVER a mutation door. Slice vertically, athlete-
-   visible first: the tab + a real Monday card on Sam's phone
-   before the long tail. (The close-out detour was retracted —
-   item 2 — the screen's rulings were already built.)
-   This is a natural boundary: /clear + re-orient paste, Opus.
+(none)
 
-   [ITEMS 1 AND 2 ARE PROCESSED — see the thirty-eighth pass below.
-   This item is left numbered 3, as the seat wrote it, rather than
-   renumbered: the seat's numbering is its record, not the
-   terminal's to tidy.]
+## Processed 2026-08-08 (thirty-ninth pass) — THE DEAD ZONE WAS INVISIBLE NODES IN THE LAYOUT; FIXED, GATED, LANDED
+
+- **ONE LINE, AS ASKED: the dead zone is gone — `d07e3fad`, full unpiped chain
+  `TRUE_EXIT=1` at `program-control-durable`, 1 FAIL line, sweep 2 of 157 = the
+  declared set exactly.**
+- LOOP CHECK: the seat's `invisible-instrumentation-participates-in-layout`
+  sighting 1 stands, and its diagnosis was CONFIRMED IN SOURCE before anything
+  was touched rather than taken on the order's word.
+- **THE CAUSE, exactly as the seat called it.** `DayStateLeaves` returns a
+  FRAGMENT, so its witnesses flatten into DIRECT children of `styles.dayFirst`,
+  which carries `gap: spacing.sm`. A dozen-plus invisible children, each earning
+  a gap. **It GREW as receipts accrued** — which is why it read as a spacing bug
+  that spacing changes could not fix.
+- **ONE REFINEMENT ON THE PRESCRIBED FIX, and it is the load-bearing half.** The
+  order said zero-size + clipped + pointerEvents none. Zero-size is NOT
+  sufficient: a 0x0 STATIC wrapper still occupies a flex slot and still earns
+  ONE gap — a dozen down to one, not to zero, and Sam's report is that the gap
+  should not be there at all. **`position: 'absolute'` is what makes it truly
+  layout-inert** (an absolutely-positioned child is out of the flex flow, so
+  `gap` never applies at any count). The clip and the zero size are kept as
+  belt-and-braces for the children.
+- **SCOPE CHECKED, NOT ASSUMED — "in BOTH shapes" needed measuring.** `dayList`
+  (the week shape) also carries a gap, but there the leaves mount INSIDE each
+  row and `dayRow` has no gap, so that shape never had the defect. **One
+  container was affected; one container changed.**
+- **THE GATE WAS NOT TRADED AWAY — the order's own stop condition.** The leaves
+  cell is a SOURCE SCAN, so a PASS through a region I had just rewritten proves
+  nothing by itself (`a-count-taken-for-a-record`, source-scan form).
+  **Mutation-proven instead: emptying the loop INSIDE the new wrapper still reds
+  it.** Nothing about the witnesses changed — same components, same testIDs,
+  same count, same order.
+- **SPEED PATH FOLLOWED AS WRITTEN:** fix → day-first suite 22/22 + non-official
+  `test:bible:parallel` **2 of 159 = the declared set exactly** + `test:compile`
+  PASSED → **REBUILD IS GO given to Sam off the working tree** → THEN the full
+  official unpiped chain, and the commit was made only on its printed exit lines.
+- **NOT COVERED: no device evidence.** The dead zone is argued from the layout
+  rule, not seen closed on a phone — **Sam's rebuild is the instrument.** And the
+  wrapper CLIPS: every harness gate traverses the React tree so clipping is
+  invisible to them, but if the on-device explorer ever resolves by screen
+  GEOMETRY rather than by tree, a 0x0 clipped ancestor could hide a testID from
+  it. Unprovable from here, so it is flagged rather than ridden silently —
+  dropping `overflow: hidden` is the one-line answer if a device explorer run
+  ever fails to find day leaves.
+
+## Processed 2026-08-08 (seat, break declared) — ITEM 3 WITHDRAWN FROM THE QUEUE
+
+- The journal-kickoff item was pulled by the seat AFTER the thirty-eighth pass
+  report: Sam ruled a HARD BREAK here (he is building to Renee's phone and
+  stepping out). The terminal's docs commit had overwritten the seat's hard-stop
+  rewrite of item 3 with an earlier copy — a numbered kickoff item left in the
+  queue would have had the stop-hook push the terminal INTO the journal,
+  against Sam's ruling. So: queue emptied, journal starts ONLY by Sam's /clear
+  + orient paste. The kickoff doc is committed (bed172dd, verbatim) and its
+  order stands in full — FULL SCOPE, base + all 11 addendum candidates, Opus.
+  LOOP CHECK: two-writers-one-file — sighting 1 for SEAT_INBOX (the seat and
+  the terminal both hold copies; the terminal's commit clobbered the seat's
+  interleaved edit) — iterate this once; if it happens again the fix is
+  structural (append-only orders file or seat-writes-terminal-reads split).
 
 ## Processed 2026-08-08 (thirty-eighth pass) — THE COMPOUND NAME BUILT AND LANDED; AN ICON REGRESSION CAUGHT BEFORE IT SHIPPED; THE DOC-TRUTH FIX DONE
 
