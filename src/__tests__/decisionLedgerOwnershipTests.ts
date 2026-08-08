@@ -207,7 +207,29 @@ run('every ledger write is on the tape, refused or not — counts and door label
     && writes[1]!.entryCountBefore === 1 && writes[1]!.entryCountAfter === 2
     && writes[1]!.decisionKind === 'remove_session',
     `the applied write does not carry counts and the door label: ${JSON.stringify(writes[1])}`);
-  const serialised = JSON.stringify(writes);
+  // THE ANSWER-BEARING FIELDS, NOT THE WHOLE BLOB — and this cell learned the
+  // difference the hard way on 2026-08-08.
+  //
+  // It used to `JSON.stringify(writes)` and assert the string did not contain
+  // "2026-08-08". Every tape entry carries a required `at` TIMESTAMP, and on the
+  // one day the wall clock's UTC date equalled the date this fixture had chosen
+  // as its answer value, the assertion matched on the instrument's own metadata
+  // and reported an answer leak that had not happened. It reds on exactly two
+  // days in history — the two dates written above — and it is green on the other
+  // 363, which is the worst possible failure schedule for a gate: it looks like
+  // a regression in whatever unit happens to be in flight that morning. It cost
+  // one, and the sweep that "cleared" this suite hours earlier only did so
+  // because UTC had not yet ticked over.
+  //
+  // The law is `a-count-taken-for-a-record` in its assertion form: the check's
+  // UNIT was "every character the tape serialises", while its CLAIM was about
+  // "the fields that carry an answer". `at` is neither an answer nor optional —
+  // the tape is required to stamp it — so it is excluded BY NAME, and by name
+  // only. Every other field, present or added later, is still swept: a date
+  // reaching `decisionKind`, `route` or a field nobody has invented yet still
+  // reds this, which is the property that had to survive the fix.
+  const answerBearing = writes.map(({ at, ...rest }) => rest);
+  const serialised = JSON.stringify(answerBearing);
   assert(!serialised.includes('2026-08-08') && !serialised.includes('2026-08-11'),
     `an answer VALUE (a date) reached the tape: ${serialised}`);
 });
