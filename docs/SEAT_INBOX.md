@@ -2,7 +2,50 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. WEIGHTS SIGNED (Sam, 2026-08-08, same-day completion of the
+   load ruling): Hard 2 / Moderate 1 / Easy 0 — verbatim: "do
+   2 - 1 - 0 though, easy days don't effect fatigue but count as
+   sessions." The ruling doc is updated in place (its PROPOSED
+   block → SIGNED, docs/JOURNAL_LOAD_AND_DAY_SHAPE_RULING
+   _2026-08-08.md) — commit as authored. Easy days: weight 0 in
+   LOAD, still counted in COMPLETION — two questions, one store.
+   LOOP CHECK: signing-batch-closed-same-day — sighting 1 — iterate.
+
+2. SAM RULED the journal's two coaching questions (2026-08-08):
+   docs/JOURNAL_LOAD_AND_DAY_SHAPE_RULING_2026-08-08.md — commit as
+   authored. LOOP CHECK: coaching-question-batched-and-ruled —
+   sighting 1 — iterate.
+   Summary: load = hard-weighted session count vs 4-week rolling
+   average (weights PROPOSED 2/1/0.5, Sam signs before any number
+   reaches an athlete — build the mechanism, constants land signed);
+   week-shape strip TRACKS Moderate by DERIVATION, no new stored
+   state (hard flag → Hard; other training → Moderate; recovery/
+   mobility → Easy; Rest/Game themselves — Bible: "Moderate = normal
+   training"). Unblocks the "load vs your normal" card item and the
+   strip. Fold into the running slices; no separate report needed
+   beyond the boundary that ships them.
+
+3. SEAT ANSWER to the journal opening report (2026-08-08): BUILD
+   SLICE 1 NOW — do not hold. Neither open question blocks it.
+   LOOP CHECK: a-doc-taken-for-the-record — SIGHTING 2 (the kickoff
+   inherited the base doc's stale settle-first list; the receipts
+   law from the doc-truth fix is the standing compression and you
+   applied it at the source) — compressed, no new rule needed.
+   (a) Your two rulings are SEAT-APPROVED under existing law, Sam's
+   veto pending: new inputs ride SessionFeedback through the
+   existing door (L15 one-write-format + the teamNightSize
+   precedent); LR-18 resolves as DELETE workoutLogStore (nothing
+   writes it, Sam's own logging model rules per-set entry out).
+   Cite this item; a Sam veto arrives via the inbox if he objects.
+   (b) The two coaching questions are PARKED to Sam in the seat's
+   batch (load definition; week-strip Moderate). Park-and-build:
+   slice 1 needs neither. The load answer will arrive as a later
+   inbox item; the "load vs your normal" card line ships LAST or
+   not-yet, never with an unauthored number (provenance law).
+   (c) Slice 1 as you scoped it: Journal tab + this week, read-only,
+   zero new stored state, no new doors. Full unpiped chain per
+   commit; sweep must hit the declared 2 exactly; boundary report
+   with the convergence answer. VISIBLE-FIRST: end on Sam's phone.
 
 ## Processed 2026-08-08 (thirty-ninth pass) — THE DEAD ZONE WAS INVISIBLE NODES IN THE LAYOUT; FIXED, GATED, LANDED
 
