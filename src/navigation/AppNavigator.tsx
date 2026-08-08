@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import CoachScreen from '../screens/coach/CoachScreen';
+import JournalScreen from '../screens/journal/JournalScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import FAQScreen from '../screens/profile/FAQScreen';
 import { PrivacyScreen } from '../screens/profile/PrivacyScreen';
@@ -31,6 +32,7 @@ type ProfileStackParamList = {
 type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
   CoachTab: { screen: string; params?: { prefill?: string } } | undefined;
+  JournalTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -54,6 +56,17 @@ function CoachIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    </Svg>
+  );
+}
+
+function JournalIcon({ color, size }: { color: string; size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+      <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+      <Path d="M9 7h7" />
+      <Path d="M9 11h7" />
     </Svg>
   );
 }
@@ -158,6 +171,26 @@ export default function AppNavigator() {
           in the tree, FROZEN. This is a scope cut, not a retirement — §6's own
           words. Restoring the tab is one `Tab.Screen` block.
         */}
+        {/*
+          THE JOURNAL TAB (journal unit, slice 1) — the permanent home Sam ruled
+          in the design review: "the Journal TAB is the permanent home and ships
+          in the launch build". It sits between Program and Profile because it
+          is a training surface, not a settings one.
+
+          It is a READING SURFACE: no door, no transaction, no stored state. It
+          renders a derivation over facts the app already keeps as inputs.
+        */}
+        <Tab.Screen
+          name="JournalTab"
+          component={JournalScreen}
+          options={{
+            title: 'Journal',
+            tabBarIcon: ({ color }) => <JournalIcon color={color} size={22} />,
+            tabBarButtonTestID: 'tab-journal',
+            tabBarAccessibilityLabel: 'Journal tab',
+          }}
+          listeners={{ tabPress: () => logger.info('[tab-press] journal') }}
+        />
         <Tab.Screen
           name="ProfileTab"
           component={ProfileStackNavigator}
