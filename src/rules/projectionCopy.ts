@@ -179,6 +179,22 @@ export function registerProjectionCopy(): void {
       text: "There's nothing to change on this day.",
     },
 
+    // ── The one separator. ──
+    {
+      id: 'copy.joiner.plus',
+      source: 'signed_sentence',
+      provenance: 'SIGNED — Sam, 2026-08-08, verbatim in the compound-bucket ruling '
+        + '(docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md §3): "on weekly view it '
+        + 'should say whatever the bucket is that day i.e. Strength or strength + '
+        + 'conditioning". The " + " is HIS, quoted from that sentence, not a format '
+        + 'chosen here. It is the ONLY thing `joinSignedCopy` will put between two '
+        + 'signed strings, which is what stops a surface picking its own separator — '
+        + 'and a surface was: `DayWorkoutScreenV2` joined its subtitle on a `\' + \'` '
+        + 'literal until this batch retired that line.',
+      text: ' + ',
+      joiner: true,
+    },
+
     // ── Part-kind headlines — generic fallbacks. ──
     //
     // Used when a part's kind has no specific-name resolution (power, speed,

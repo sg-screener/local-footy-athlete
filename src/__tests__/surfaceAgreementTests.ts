@@ -54,7 +54,7 @@
  *
  *   - Cell 1 PASSES. READ WHAT THAT DOES AND DOES NOT MEAN. Since Task 6 the
  *     detail comparison here reads `projectDayDetail`, which is what
- *     `DayWorkoutScreenV2` uses for its TITLE and its attached-part line — and
+ *     `DayWorkoutScreenV2` uses for its TITLE and its section list — and
  *     `projectDayDetail` maps `parts` one-to-one, so those two lists agree by
  *     construction. What the cell holds is that they STAY that way: a filter or a
  *     `kind` branch added to the detail surface reds it. It does NOT compare the
@@ -120,7 +120,7 @@ import type { VisibleDayDetail } from '../rules/visibleDayDetail';
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleDay } from '../rules/visibleProjection';
 import { athleteVisibleStrings } from '../rules/visibleProjection';
-import { isSignedCopyText } from '../rules/signedCopy';
+import { isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import {
   samExport8Profile,
   SAM_EXPORT_8_TODAY_ISO,
@@ -333,8 +333,10 @@ function tap(change: PlanChange) {
  * performed at render: five booleans and three row buckets, which is how a day
  * carrying strength AND recovery told the athlete "Strength". That composition no
  * longer reaches a screen. `projectDayDetail` (`rules/visibleDayDetail.ts`) is
- * what `DayWorkoutScreenV2` renders now — title, attached-part line and section
- * list — so the comparison below is against the function that actually draws the
+ * what `DayWorkoutScreenV2` renders now — title and section list (the
+ * attached-part line retired with `attached` on 2026-08-08, when the compound
+ * title started naming every bucket the day holds) — so the comparison below is
+ * against the function that actually draws the
  * pixels, not against a stand-in for it.
  *
  * WHAT THIS CELL PROVES AND WHAT IT DOES NOT, STATED PLAINLY. `projectDayDetail`
@@ -344,8 +346,8 @@ function tap(change: PlanChange) {
  * assertion holds is that it STAYS that way: a filter, a `kind` branch or a
  * "recovery renders differently" case added to the detail surface reds here and
  * in the walker on the next run. It is NOT a cross-representation check, and it
- * must not be read as one: the words this covers are the title and the
- * attached-part line, not the rendered session list, which D13's
+ * must not be read as one: the words this covers are the title and the section
+ * headlines, not the rendered session list, which D13's
  * `buildSessionTemplate` composes separately. That comparison is
  * `L-P3 TEMPLATE = PROJECTION` in `athleteActionWalkerTests` — the walker,
  * because only the walker reaches real generated weeks — and it is red today in
@@ -440,9 +442,9 @@ function assertG1SundayIsRest(context: string): void {
   assert(String(detail.headline) === String(day.headline),
     `${context}: the detail titles the day "${detail.headline}" while the projection `
     + `calls it "${day.headline}". One day, two stories.`);
-  assert(detail.attached.length === 0 && detail.sections.length === 0,
-    `${context}: the detail invented ${detail.sections.length} section(s) and `
-    + `${detail.attached.length} attached headline(s) for a day with no parts.`);
+  assert(detail.sections.length === 0,
+    `${context}: the detail invented ${detail.sections.length} section(s) for a day `
+    + 'with no parts.');
   // AND THE CARD. `assertSurfacesAgree` is the card-vs-projection law itself, so
   // the rest day is put through it rather than given a private version of it.
   assertSurfacesAgree(G1_SUNDAY, `${context} — the untouched G+1 rest Sunday`);
@@ -506,9 +508,18 @@ run('(2) adding hard conditioning to the G+1 rest Sunday lands on every surface'
   assert(String(detail.headline) === String(day.parts[0].headline),
     `the detail titles the day "${detail.headline}" while the part it is showing is `
     + `"${day.parts[0].headline}". The lead name is one rule for both surfaces.`);
-  assert(detail.attached.length === 0,
-    `the detail attached ${JSON.stringify(detail.attached.map(String))} to a `
-    + 'single-part day.');
+  // A ONE-BUCKET DAY IS NAMED WITHOUT A SEPARATOR IN IT — the join is for days
+  // that hold more than one kind of work and must not fire on this one.
+  //
+  // THIS REPLACED an `attached.length === 0` assertion on the same day. The
+  // field is gone: under Sam's 2026-08-08 compound title the set it named ("the
+  // parts the lead did not speak for") is empty by definition, so the assertion
+  // that it was empty here had become a claim about nothing. The property worth
+  // holding on a single-part day moved to the title itself.
+  assert(!String(detail.headline).includes(String(signedCopy('copy.joiner.plus'))),
+    `the detail titles a SINGLE-part day "${detail.headline}" — a joined name on a `
+    + 'day with one bucket means the compound rule fires where there is nothing '
+    + 'to compound.');
 });
 
 run('(3) no surface renders internal planner vocabulary', () => {

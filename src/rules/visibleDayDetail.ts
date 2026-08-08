@@ -29,10 +29,9 @@
  * never be one.
  */
 
-import type { SignedCopy } from './signedCopy';
+import { joinSignedCopy, type SignedCopy } from './signedCopy';
 import type {
   VisibleDay,
-  VisiblePart,
   VisiblePartKind,
   VisibleRow,
 } from './visibleProjection';
@@ -49,14 +48,31 @@ export interface VisibleDayDetail {
   readonly date: string;
   /** The screen's title. */
   readonly headline: SignedCopy;
-  /**
-   * The parts beyond the leading one, which the title already spoke for. The
-   * screen joins these into its metadata line; the card does the same thing with
-   * the same list (`HomeScreenV2`), which is the point.
-   */
-  readonly attached: readonly SignedCopy[];
   readonly sections: readonly VisibleDayDetailSection[];
 }
+
+/*
+ * `attached` WAS HERE, AND ITS RETIREMENT IS THE COMPOUND RULING PAYING FOR
+ * ITSELF RATHER THAN A SCOPE GRAB.
+ *
+ * It was defined as "the parts the lead headline did not already speak for" —
+ * `parts.slice(1).map(headline)` — and the day screen rendered it as a subtitle
+ * fragment. Under a compound title that set is EMPTY BY THE FIELD'S OWN
+ * DEFINITION: the title now names every bucket on the day, so there is nothing
+ * left for a second line to add.
+ *
+ * Keeping it would have shipped the defect Sam ruled against on the morning of
+ * the same day, one screen over and worse than before: a day screen titled
+ * "Strength + Team Training" with "· Team Training" underneath it. That is
+ * parked question 4 of the slice-2 report ("the day SCREEN has the same
+ * double-labelling"), and it closes here as a CONSEQUENCE — the compound title
+ * is what made the second line redundant.
+ *
+ * It also takes a real composition site with it. `DayWorkoutScreenV2` joined
+ * this list on a `' + '` string literal in a screen file: athlete-visible
+ * punctuation, chosen at a surface, which is the class `SignedCopy` exists to
+ * make impossible. The one separator now lives in the sheet.
+ */
 
 /**
  * THE LEADING NAME OF A DAY — one rule, both surfaces.
@@ -77,28 +93,64 @@ export interface VisibleDayDetail {
  *     carrying a real squat projects `kind: 'game'` with `parts[0].kind:
  *     'strength'`, and would lead with "Strength" without this. Traced, not
  *     assumed. A fixture's title is its fixture either way.
- *   - Any other day with parts leads with `parts[0].bucket` — the leading part's
- *     CATEGORY. Sam's ruling, 2026-08-08: "week row = buckets, day title =
- *     buckets, timeline = the variant names stacked one per line."
+ *   - Any other day with parts leads with EVERY BUCKET ITS PARTS BELONG TO,
+ *     joined by the signed separator, in timeline order, each word once.
  *   - Zero parts (rest) falls back to `day.headline`.
  *
- * IT WAS `parts[0].headline` UNTIL 2026-08-08, and that is the whole of this
- * change: a day led with its session's variant name ("Upper Push", "Lower
- * Squat", and — the exhibit that made Sam rule — "Power" on a day whose power
- * component held one exercise). The name is not gone; it moved to the timeline,
- * which now enumerates the day's parts one per line and is the ONLY place the
- * day's contents are listed. The title said what the timeline said, and a screen
- * that says a thing twice has not decided which one is the answer.
+ * IT WAS `parts[0].headline` UNTIL 2026-08-08 MORNING, and `parts[0].bucket`
+ * until that afternoon. The first change moved the variant name off the title
+ * ("Upper Push", "Lower Squat", and — the exhibit that made Sam rule — "Power"
+ * on a day whose power component held one exercise); the name is not gone, it
+ * moved to the timeline, which enumerates the day's parts one per line and is
+ * the ONLY place the day's contents are listed.
+ *
+ * THE SECOND CHANGE IS THE LEADING PART GIVING UP ITS MONOPOLY, and it is Sam's
+ * own sentence: *"on weekly view it should say whatever the bucket is that day
+ * i.e. Strength or strength + conditioning."* A day holding strength work and a
+ * conditioning piece was reading "Strength", which is not false — it is
+ * incomplete, and at week zoom the row is all the athlete gets. So the day's
+ * name is a LIST of what is on it.
+ *
+ * EACH WORD ONCE, WHICH IS WHERE THE DEDUPLICATION EARNS ITS KEEP: the exhibit
+ * Tuesday carries a `power` part and a `strength` part, and both bucket to
+ * "Strength". Without the dedupe that day reads "Strength + Strength" — and it
+ * would be Sam's power ruling breaking out in a new place, which is exactly why
+ * the buckets are collapsed by WORD rather than by kind.
+ *
+ * IT IS STILL NOT A COMPOSITION. Every word is a sheet entry and so is the
+ * separator (`joinSignedCopy`); nothing here authors a character.
  */
 export function visibleDayLeadHeadline(day: VisibleDay): SignedCopy {
-  if (day.kind !== 'game' && day.parts.length > 0) return day.parts[0].bucket;
-  return day.headline;
+  const buckets = dayBuckets(day);
+  if (buckets.length === 0) return day.headline;
+  if (buckets.length === 1) return buckets[0];
+  return joinSignedCopy(buckets, DAY_NAME_JOINER);
 }
 
-/** The parts the lead headline did not already speak for. */
-function attachedHeadlines(day: VisibleDay): SignedCopy[] {
-  if (day.kind === 'game' || day.parts.length === 0) return [];
-  return day.parts.slice(1).map((part: VisiblePart) => part.headline);
+/** Sam's own separator, quoted from the ruling. See `projectionCopy.ts`. */
+const DAY_NAME_JOINER = 'copy.joiner.plus';
+
+/**
+ * THE DAY'S BUCKETS, IN TIMELINE ORDER, EACH ONE ONCE.
+ *
+ * Deduplicated by the WORD, not by the part kind. Two parts can share a bucket
+ * without sharing a kind — `power` and `strength` both bucket to "Strength",
+ * which is the whole of Sam's power ruling — and a day is not more of a strength
+ * day for holding two of them.
+ *
+ * A FIXTURE HAS NO BUCKETS HERE, on purpose: its title is its fixture whatever
+ * its workout resolved, and that gate is traced in this function's caller.
+ */
+function dayBuckets(day: VisibleDay): readonly SignedCopy[] {
+  if (day.kind === 'game') return [];
+  const seen = new Set<string>();
+  const buckets: SignedCopy[] = [];
+  for (const part of day.parts) {
+    if (seen.has(part.bucket)) continue;
+    seen.add(part.bucket);
+    buckets.push(part.bucket);
+  }
+  return buckets;
 }
 
 /**
@@ -112,7 +164,6 @@ export function projectDayDetail(day: VisibleDay | null | undefined): VisibleDay
   return {
     date: day.date,
     headline: visibleDayLeadHeadline(day),
-    attached: attachedHeadlines(day),
     sections: day.parts.map((part): VisibleDayDetailSection => ({
       partId: part.id,
       kind: part.kind,

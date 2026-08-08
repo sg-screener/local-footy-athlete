@@ -1040,16 +1040,20 @@ export default function DayWorkoutScreenV2() {
   // `deriveVisibleWorkoutIdentity(workout).title` re-derived a name from
   // `workout.name`; the subtitle pasted the raw internal `workout.workoutType`
   // onto the glass (and hand-wrote `+ Conditioning`); the count picked one of
-  // four branches off `composeDayDetail`'s booleans. Now the title and the
-  // attached-part line are `SignedCopy` from `projectDayDetail`, and the count is
-  // read off the list the athlete can actually count.
+  // four branches off `composeDayDetail`'s booleans. Now the title is
+  // `SignedCopy` from `projectDayDetail` and the count is read off the list the
+  // athlete can actually count.
   //
-  // Both are non-null past the guard above — no fallback, nothing substituted.
+  // Non-null past the guard above — no fallback, nothing substituted.
   const visibleWorkoutTitle: string = detail.headline;
 
-  // The parts the title did not already speak for — the SAME list the week card
-  // renders as its secondary line, from the same `projectDayDetail`.
-  const subtitleText = detail.attached.join(' + ');
+  //
+  // AND THE ATTACHED-PART FRAGMENT IS GONE (2026-08-08, Sam's compound-bucket
+  // ruling). It used to join `detail.attached` on a `' + '` literal written
+  // right here — a screen choosing athlete-visible punctuation. The title now
+  // names every bucket the day holds, so that fragment could only ever repeat
+  // one of the words above it; the separator it invented lives in the signed
+  // sheet, and the projection does the joining. See `visibleDayDetail.ts`.
 
   // Subtitle meta count — the numbered rows the athlete sees, taken from the one
   // list that renders them (`sessionListLabels` numbers exactly those). It used
@@ -1059,14 +1063,16 @@ export default function DayWorkoutScreenV2() {
     ? 0
     : sessionListLabels(sessionTemplate.items).filter(Boolean).length;
 
-  // Combined "Fri 3/7 · 6 exercises · Strength" subtitle. All fragments are
-  // merged into a single line of plain body text — no stacked labels, no
-  // uppercase chips. Date leads (matching the dated day rows on the
-  // Program tab), then count so the athlete's eye lands on volume.
+  // Combined "Fri 3/7 · 6 exercises" subtitle. All fragments are merged into a
+  // single line of plain body text — no stacked labels, no uppercase chips.
+  // Date leads (matching the dated day rows on the Program tab), then count so
+  // the athlete's eye lands on volume. What the day IS, is the title's job and
+  // only the title's — the third fragment used to answer that question a second
+  // time and was retired with `detail.attached` above.
   const dateFragment = date ? shortWeekdayDateLabel(date) : '';
   const countFragment =
     metaCount > 0 ? `${metaCount} exercise${metaCount !== 1 ? 's' : ''}` : '';
-  const combinedSubtitle = [dateFragment, countFragment, subtitleText]
+  const combinedSubtitle = [dateFragment, countFragment]
     .filter(Boolean)
     .join(' · ');
 

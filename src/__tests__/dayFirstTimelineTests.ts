@@ -72,7 +72,7 @@ import {
 } from '../rules/projectVisibleWeek';
 import { dayTimeline } from '../rules/dayTimeline';
 import { visibleDayLeadHeadline } from '../rules/visibleDayDetail';
-import { isSignedCopyText, signedCopy } from '../rules/signedCopy';
+import { isSignedCopyText, joinSignedCopy, signedCopy } from '../rules/signedCopy';
 import { registerProjectionCopy } from '../rules/projectionCopy';
 import type { VisibleDay } from '../rules/visibleProjection';
 import type { SessionFeedback } from '../store/programStore';
@@ -634,7 +634,22 @@ function bucketVocabulary(): Set<string> {
   return words;
 }
 
-run('every day is titled with a BUCKET word, never a session variant name', () => {
+/** Sam's separator, from the sheet — never a literal written in this file. */
+const JOINER = signedCopy('copy.joiner.plus');
+
+/**
+ * The bucket words in a day's title, as the athlete reads them.
+ *
+ * A title is a LIST since Sam's compound ruling (2026-08-08 afternoon), so every
+ * cell that used to ask "is this title a bucket word" now asks it of each word in
+ * the list. Splitting here rather than loosening those cells is the difference
+ * between the vocabulary law surviving the ruling and being quietly dropped by it.
+ */
+function titleWords(day: VisibleDay): string[] {
+  return String(visibleDayLeadHeadline(day)).split(String(JOINER));
+}
+
+run('every day is titled with BUCKET words, never a session variant name', () => {
   world();
   const vocabulary = bucketVocabulary();
   let checked = 0;
@@ -643,7 +658,13 @@ run('every day is titled with a BUCKET word, never a session variant name', () =
     for (const day of visibleDays(week)) {
       const title = visibleDayLeadHeadline(day);
       checked += 1;
-      if (!vocabulary.has(title)) offenders.push(`${day.date}="${title}"`);
+      // EVERY WORD IN THE LIST, not the list as a whole — a compound whose
+      // second half is a variant name ("Strength + Upper Push") is exactly the
+      // defect the ruling exists to prevent, and a whole-string membership test
+      // would have no opinion about it at all.
+      for (const word of titleWords(day)) {
+        if (!vocabulary.has(word)) offenders.push(`${day.date}="${title}" (word "${word}")`);
+      }
     }
   }
   // NON-VACUITY FIRST. A world that produced no days, or a vocabulary that
@@ -688,7 +709,10 @@ run('POWER never titles a day — and the word did not vanish, it moved', () => 
   for (const week of WEEKS) {
     for (const day of visibleDays(week)) {
       const title = visibleDayLeadHeadline(day);
-      assert(title !== signedCopy('part.headline.power'),
+      // NOT `title !== "Power"` — that was enough while a title was one word, and
+      // a compound title would smuggle the word straight past it as
+      // "Strength + Power". Every word in the list is checked.
+      assert(!titleWords(day).includes(String(signedCopy('part.headline.power'))),
         `${day.date} is titled "${title}". Sam, verbatim: power should not be `
         + 'labelled there for just one exercise — power is part of the Strength '
         + 'work, and "Power" never appears as a week row or a day title.');
@@ -715,6 +739,130 @@ run('POWER never titles a day — and the word did not vanish, it moved', () => 
   assert(powerDays >= 1,
     'no day in three generated weeks carries a power part — this cell proved '
     + 'nothing about the exhibit it was written for');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE COMPOUND NAME (Sam's ruling, 2026-08-08 afternoon, verbatim):
+//
+//   "on weekly view it should say whatever the bucket is that day i.e. Strength
+//    or strength + conditioning. On the daily it can get more granular and be
+//    like Upper body push and MAS work or whatever it is i think"
+//
+// The week row and the day title say ALL of the day's buckets, joined by his own
+// " + ", in timeline order, each word once.
+// ─────────────────────────────────────────────────────────────────────────────
+
+run('a day is named with ALL of its buckets, in timeline order, each word once', () => {
+  world();
+  let compound = 0;
+  let checked = 0;
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      // A fixture's title is its fixture whatever its workout resolved — the
+      // gate traced in `visibleDayLeadHeadline`, not re-litigated here.
+      if (day.kind === 'game' || day.parts.length === 0) continue;
+      checked += 1;
+      // THE EXPECTATION IS BUILT FROM THE DAY'S OWN PARTS, in the order the
+      // timeline renders them, deduplicated by the WORD. Built here rather than
+      // read from the implementation, or the cell agrees with whatever the code
+      // does by construction.
+      const expected: string[] = [];
+      for (const part of day.parts) {
+        const word = String(part.bucket);
+        if (!expected.includes(word)) expected.push(word);
+      }
+      assert(String(visibleDayLeadHeadline(day)) === expected.join(String(JOINER)),
+        `${day.date} is named "${visibleDayLeadHeadline(day)}" but holds buckets `
+        + `${JSON.stringify(expected)}. Sam ruled the week row says whatever the `
+        + 'buckets are that day, joined, in timeline order, each word once.');
+      // AND THE TIMELINE ORDER IS THE PART ORDER — the clause "in timeline order"
+      // is unfalsifiable unless the two lists are actually compared.
+      const timelineOrder = dayTimeline(day, null).map((entry) => entry.partId);
+      assert(JSON.stringify(timelineOrder) === JSON.stringify(day.parts.map((part) => part.id)),
+        `${day.date}'s timeline runs ${JSON.stringify(timelineOrder)} while the name `
+        + 'is built from the parts in projection order. "Timeline order" means '
+        + 'nothing if the two can differ.');
+      if (expected.length > 1) compound += 1;
+    }
+  }
+  // NON-VACUITY, BOTH WAYS. A world with no multi-bucket day proves nothing
+  // about a joined name, and a world with no days proves nothing at all.
+  assert(checked >= 8, `only ${checked} named day(s) read — the world is not built`);
+  assert(compound >= 1,
+    'no day in three generated weeks holds two different buckets, so this cell '
+    + 'never exercised the join it exists to check');
+});
+
+run('one bucket twice is ONE word — the exhibit day does not read "Strength + Strength"', () => {
+  // THE DEDUPE IS SAM'S POWER RULING IN A NEW PLACE. The exhibit Tuesday carries
+  // a `power` part AND a `strength` part; both bucket to "Strength". A compound
+  // name built without deduplication says "Strength + Strength" — which is the
+  // word he took off the title coming back as a stutter, on the exact day the
+  // ruling was written about.
+  world();
+  let exhibits = 0;
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      const buckets = day.parts.map((part) => String(part.bucket));
+      const repeated = buckets.filter((word, index) => buckets.indexOf(word) !== index);
+      if (repeated.length === 0) continue;
+      exhibits += 1;
+      const words = titleWords(day);
+      assert(words.length === new Set(words).size,
+        `${day.date} is titled "${visibleDayLeadHeadline(day)}" — a bucket word is `
+        + `repeated. Its parts are ${JSON.stringify(day.parts.map((p) => String(p.kind)))}, `
+        + `bucketing to ${JSON.stringify(buckets)}. Each word once.`);
+    }
+  }
+  assert(exhibits >= 1,
+    'no day in three generated weeks has two parts sharing one bucket — this cell '
+    + 'proved nothing about the deduplication it was written for. The exhibit is a '
+    + 'day carrying both a power and a strength part.');
+});
+
+run('a compound name is SIGNED, and one unsigned half makes the whole thing unsigned', () => {
+  world();
+  const strength = String(signedCopy('part.headline.strength'));
+  const conditioning = String(signedCopy('part.headline.conditioning'));
+  // THE L-P2 RUNTIME LAW STILL ANSWERS for a joined name — otherwise every
+  // surface-agreement sweep would report the athlete reading unsigned words.
+  assert(isSignedCopyText(`${strength}${JOINER}${conditioning}`),
+    'a compound of two signed bucket words does not read as signed. The runtime '
+    + 'copy law is what sweeps the surfaces; it has to know what a join is.');
+  // AND IT IS NOT A HOLE. This is the half that matters: the join must not turn
+  // `isSignedCopyText` into "contains a plus sign somewhere".
+  assert(!isSignedCopyText(`${strength}${JOINER}Upper Body Blast`),
+    'a compound with an UNSIGNED half reads as signed. The join would then be a '
+    + 'door for any text at all, which is the hole the branded type exists to '
+    + 'close — every part of a compound must be in the sheet.');
+  assert(!isSignedCopyText(`${strength} plus ${conditioning}`),
+    'two signed words joined by a separator NOBODY SIGNED read as signed. The '
+    + 'separator is athlete-visible text and it comes from the sheet like every '
+    + 'other character.');
+});
+
+run('joining is a SHEET operation — no surface picks its own separator', () => {
+  // THE COMPOSITION IS THE DEFECT, NOT THE PUNCTUATION. `DayWorkoutScreenV2` used
+  // to build its subtitle with `detail.attached.join(' + ')` — a screen choosing
+  // athlete-visible characters. This watches both screens that name a day.
+  for (const file of ['HomeScreenV2.tsx', 'DayWorkoutScreenV2.tsx']) {
+    const source = stripComments(fs.readFileSync(
+      path.join(__dirname, '..', 'screens', 'home', file), 'utf8'));
+    assert(!/\.join\((['"`])\s*\+\s*\1\)/.test(source),
+      `${file} joins something on a " + " literal again. The separator is a signed `
+      + 'entry (`copy.joiner.plus`) and the projection does the joining — a screen '
+      + 'that picks its own is authoring words the sheet never saw.');
+  }
+  // AND THE SHEET'S OWN DOOR REFUSES A NON-SEPARATOR, so the rule cannot be
+  // satisfied by joining with any entry that happens to be handy.
+  let refused = false;
+  try {
+    joinSignedCopy([signedCopy('part.headline.strength')], 'part.headline.conditioning');
+  } catch { refused = true; }
+  assert(refused,
+    'joinSignedCopy accepted an ordinary entry as its separator. It would paste '
+    + 'one athlete-visible sentence between two others and the result would still '
+    + 'type as signed.');
 });
 
 run('the day card composes no name of its own', () => {

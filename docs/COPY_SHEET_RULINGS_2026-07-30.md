@@ -1103,11 +1103,15 @@ the UI as a retirement nobody signed.
 
 ---
 
-## Batch 12 — day-first slices 1 + 2 (2026-08-08): PROPOSED, NOT SIGNED
+## Batch 12 — day-first slices 1 + 2 (2026-08-08): SIGNED
 
-**STATUS: PROPOSED. Sam has not signed any string in this batch.** They ship
-under this file's transitional rule (a string may ship PROPOSED and may never
-ship unlisted) and are queued for his next signing batch.
+**STATUS: SIGNED BY SAM, 2026-08-08, all seven strings exactly as proposed** —
+"Today", "Week", "Time", "Away", "Sick", "Injured", "Equipment". Asked whether
+the labels were right, he answered "yep" with no rewrites
+(docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md §1). The tables below are
+unchanged from the proposal because nothing about them changed; only this status
+line moved, and the binding stays equality-bound in both directions
+(`test:copy-rulings-binding`).
 
 **WHY THERE ARE NEW WORDS AT ALL.** Sam's day-first ruling gives the Program
 screen two shapes and one chip row. Neither is new *behaviour* — but a zoom
@@ -1206,3 +1210,54 @@ a string: the row COMPOSED it by joining part headlines with " + ". Nothing in
 exactly as before — measured on three generated weeks, before and after. The
 three charter doors keep their own word BECAUSE they are buckets, and a gate now
 holds that (a mutation that dropped it left every other cell green).
+
+---
+
+## Batch 14 — the compound day name (2026-08-08 afternoon): SIGNED
+
+**STATUS: SIGNED BY SAM, 2026-08-08**, in his own words, quoted in full in
+docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md §3:
+
+> "on weekly view it should say whatever the bucket is that day i.e. Strength or
+> strength + conditioning. On the daily it can get more granular and be like
+> Upper body push and MAS work or whatever it is i think"
+
+**14-a. NO NEW WORDS.** This batch adds no vocabulary. Every word a day can now
+be called is a bucket word already signed in batch 13; what changed is how many
+of them a title may say. Batch 13's rule was "the leading part's bucket"; this
+one is "all of them".
+
+**14-b. THE SEPARATOR IS A SIGNED ENTRY, AND IT IS HIS.** `copy.joiner.plus`
+(`rules/projectionCopy.ts`) is `" + "`, quoted from the sentence above. It is
+the first entry in the sheet marked `joiner: true` — a separator, the only kind
+of entry `joinSignedCopy` will put between two signed strings.
+
+**IT IS DELIBERATELY NOT IN A BOUND TABLE ROW, and that is stated rather than
+quietly done.** This file's binding gate asserts every quoted string in a table
+row appears in the surfaces; `" + "` is two characters of punctuation that
+appears in hundreds of unrelated string concatenations, so a table row would bind
+it VACUOUSLY — it would pass forever, against anything. That is the
+`a-green-gate-that-watches-nothing` shape, and adding a row that cannot fail is
+worse than adding none. It is bound where the binding can actually break: the
+compound cells in `dayFirstTimelineTests` rebuild each expected title using
+`signedCopy('copy.joiner.plus')` and compare byte-for-byte against what the
+projection produces, so changing the separator reds them.
+
+**14-c. BATCH 13-c IS REFINED, NOT REVERSED.** 13-c retired the composed "+ X"
+second line. A "+" is on the glass again — but the composition moved, it did not
+come back: **no surface joins anything.** The projection builds the one name
+(`visibleDayLeadHeadline` -> `joinSignedCopy`), out of sheet entries only, and
+the screens render a finished string. The test that forbids `HomeScreenV2` from
+composing a name stands unchanged and still passes.
+
+**14-d. AND THE LAST SURFACE-SIDE JOIN DIES WITH IT.** `DayWorkoutScreenV2` was
+still building its subtitle with `detail.attached.join(' + ')` — a screen
+choosing athlete-visible punctuation, which is exactly what `SignedCopy` exists
+to prevent, and it had survived 13-c because 13-c only looked at the Program
+screen. That line is gone: the day screen's subtitle is now date and count only,
+and the day's identity is the title's job alone. This also closes parked question
+4 of the slice-2 report ("Team Training" appearing twice on that screen).
+
+**14-e. EACH WORD ONCE.** A day carrying a power part and a strength part
+bucket both to "Strength" and reads **"Strength"**, not "Strength + Strength" —
+Sam's power ruling (13-b) holding in the new place it could have broken out.

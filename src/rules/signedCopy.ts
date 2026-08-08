@@ -68,6 +68,24 @@ export interface SignedCopyEntry {
    * already-signed copy, never arbitrary strings.
    */
   readonly text: string;
+  /**
+   * THIS ENTRY IS A SEPARATOR, AND SEPARATORS ARE THE ONLY WAY TWO SIGNED
+   * STRINGS MAY BECOME ONE.
+   *
+   * Sam's 2026-08-08 compound-bucket ruling made a day's name a LIST — "Strength
+   * + Conditioning" — and a list has to be joined somewhere. Every place that
+   * could be was wrong: a surface joining with a `' + '` literal is a surface
+   * inventing an athlete-visible character (`DayWorkoutScreenV2` was doing
+   * exactly that), and widening `FILLED_PLACEHOLDER` to admit words would let
+   * arbitrary text back through the one hole this module leaves open.
+   *
+   * So joining is a SHEET operation: `joinSignedCopy` puts a signed separator
+   * between signed parts, and every character of the result traces to an entry.
+   * `isSignedCopyText` knows to split on these, so a compound still reads as
+   * signed to the L-P2 runtime law — and still reads as UNSIGNED the moment one
+   * of its halves is not in the sheet, which is the property that matters.
+   */
+  readonly joiner?: true;
 }
 
 /**
@@ -147,6 +165,48 @@ export function signedCopy(
 }
 
 /**
+ * THE ONE WAY TO MAKE ONE SIGNED STRING OUT OF SEVERAL.
+ *
+ * Sam ruled a day's name compound on 2026-08-08 — *"on weekly view it should say
+ * whatever the bucket is that day i.e. Strength or strength + conditioning"* —
+ * and the `" + "` between them is his own, quoted from that sentence.
+ *
+ * WHY THIS EXISTS RATHER THAN A `.join(' + ')` AT THE CALL SITE. A join is a
+ * composition, and a composition is the defect `SignedCopy` was built to stop:
+ * the separator is athlete-visible text, so a call site choosing it is a call
+ * site authoring words. Here the separator is an ENTRY, with a provenance, and
+ * the only inputs are values that already came out of the sheet — so the result
+ * is signed in the strict sense, not signed by convention.
+ *
+ * It refuses a non-separator id rather than joining with whatever that entry
+ * says: `part.headline.strength` as a joiner would silently produce
+ * "MobilityStrengthConditioning" and every gate downstream would call it signed.
+ */
+export function joinSignedCopy(
+  parts: readonly SignedCopy[],
+  joinerId: string,
+): SignedCopy {
+  const entry = REGISTRY.get(joinerId);
+  if (!entry) throw new UnsignedCopyError(joinerId);
+  if (!entry.joiner) {
+    throw new Error(
+      `signed copy id "${joinerId}" is not a separator. Joining with an ordinary `
+      + 'entry would paste one athlete-visible sentence between two others and '
+      + 'the result would still type as signed — mark the entry `joiner: true` '
+      + 'or use an id that is one.',
+    );
+  }
+  if (parts.length === 0) {
+    throw new Error(
+      `joinSignedCopy("${joinerId}") was given nothing to join. An empty join is `
+      + 'an empty string on the glass, which is a caller that has not decided '
+      + 'what the athlete reads when there is nothing to say.',
+    );
+  }
+  return parts.join(entry.text) as SignedCopy;
+}
+
+/**
  * What a `{placeholder}` is allowed to have been filled with.
  *
  * A NUMBER, and nothing else. Every templated entry in the sheet is a
@@ -176,6 +236,28 @@ const FILLED_PLACEHOLDER = '\\d+(?:\\.\\d+)?';
  * its authored template.
  */
 export function isSignedCopyText(value: string): boolean {
+  if (matchesOneEntry(value)) return true;
+  // A COMPOUND IS SIGNED IFF EVERY PART OF IT IS. Sam's compound bucket name
+  // ("Strength + Conditioning") is one string on the glass made of three sheet
+  // entries — two words and the separator between them. Splitting on the
+  // separator and requiring EVERY piece to be an entry is what keeps this from
+  // being a hole: one unsigned word anywhere in the list and the whole compound
+  // reads unsigned, which is the answer the L-P2 law needs.
+  //
+  // ONE LEVEL, DELIBERATELY. The pieces are checked as plain entries, not
+  // recursively as further joins — a compound of compounds is not a thing any
+  // ruling has asked for, and admitting it would make the split ambiguous.
+  for (const entry of REGISTRY.values()) {
+    if (!entry.joiner || entry.text.length === 0) continue;
+    const pieces = value.split(entry.text);
+    if (pieces.length < 2) continue;
+    if (pieces.every((piece) => matchesOneEntry(piece))) return true;
+  }
+  return false;
+}
+
+/** One entry, exactly — or one entry's template with its numbers filled in. */
+function matchesOneEntry(value: string): boolean {
   for (const entry of REGISTRY.values()) {
     if (entry.text === value) return true;
     if (!entry.text.includes('{')) continue;
