@@ -1,10 +1,42 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `c140a2d0` (day-first slice 2 + the bucket
-  vocabulary; docs follow it).
-- **UNIT: DAY-FIRST UI, SLICE 2 — BUILT AND LANDED, both of Sam's 2026-08-08
-  orders.** `e8d227ac` (layout + chip row + spacing) and `c140a2d0` (bucket
-  vocabulary). docs/DAY_FIRST_SLICE2_BOUNDARY_2026-08-08.md
+- **BRANCH:** `main` · **HEAD:** `214ef66c` (the compound day name + a harness
+  fix; docs follow it).
+- **UNIT: THE COMPOUND BUCKET NAME — BUILT AND LANDED** (`791979c0`), Sam's
+  2026-08-08 afternoon answers. **A day is named by EVERY bucket on it**, joined
+  by his own " + ", in timeline order, **each word once**. Week row and day title
+  are the same rule, the same function. Batch 12 SIGNED in the same commit; chips
+  stay unlit (his "a"). docs/COMPOUND_BUCKET_BOUNDARY_2026-08-08.md
+- **JOINING IS NOW A SHEET OPERATION, which is the part that generalises.**
+  `copy.joiner.plus` is a signed entry marked `joiner: true`; `joinSignedCopy`
+  refuses any entry that is not one; `isSignedCopyText` splits on separators and
+  requires EVERY piece to be signed. **A compound with one unsigned half still
+  reads unsigned.** This retired the last surface-side join in the app —
+  `DayWorkoutScreenV2` was building its subtitle on a `' + '` literal, undetected
+  since Task 6.
+- **`attached` IS RETIRED, and it closed parked question 4 as a consequence.**
+  Its definition was "the parts the lead did not speak for"; a compound title
+  speaks for all of them. The day screen's subtitle is date + count now.
+- **THE TAPE, BOTH WORLDS, THREE GENERATED WEEKS: 6 rows changed, ALL titles.
+  TIMELINE BYTE-IDENTICAL. Parts byte-identical.** The exhibit Tuesday (power +
+  strength) shows NO diff line — it stayed "Strength", the dedupe proving itself
+  on the day the power ruling came from.
+- **FOR SAM'S EYE, THE ONE THING TO JUDGE: four of the six changed rows gained
+  "+ Team Training"**, not the "+ Conditioning" of his example. His exhibit week
+  now reads "Strength + Team Training" on three of five training days — a longer
+  row than anything he has seen. Built as ordered (all buckets), flagged not
+  narrowed.
+- **SEVEN MUTATIONS, SEVEN REDS**, each against the cell claiming the property.
+- **A RED THAT WAS NOT MINE, ATTRIBUTED NOT SHRUGGED** (`214ef66c`): the sweep
+  came back **3 of 157** against a declared 2. `test:decision-ledger-ownership`
+  hardcodes '2026-08-08' as an answer value and asserts it never appears in the
+  serialised tape — and every tape entry carries a required `at` UTC timestamp.
+  **It reds on exactly two days in history and is green on the other 363.** The
+  assertion's UNIT was the whole blob; its CLAIM was the answer-bearing fields.
+  `at` is now excluded by name only; mutation-proven that a real leak still reds.
+  The three sibling tape suites were audited: green, and none uses a date literal.
+- **SLICE 2 STILL STANDS BEHIND IT** — `e8d227ac` (layout + chip row + spacing)
+  and `c140a2d0` (bucket vocabulary). docs/DAY_FIRST_SLICE2_BOUNDARY_2026-08-08.md
 - **WHAT IS ON HIS PHONE, in the order he wrote out:** the Today/Week control,
   **the seven-day strip directly under it**, today's card with its component
   timeline, **the life-fact chip row**, then Coach Notes. The missed-session
@@ -68,13 +100,22 @@
   ("Strength" resolves, "Power" did not, so nothing regressed) — argued from the
   table, not rendered. `coachNoteDisplayTests` does not run at all (crashes at
   HEAD on a missing `TodayWorkoutCard.tsx`, pre-existing, not in the chain); its
-  pin was updated anyway rather than left as a trap. Rulings 1–12 of the
-  home-screen redesign remain owed.
+  pin was updated anyway rather than left as a trap.
+- **THE "RULINGS 1–12 REMAIN OWED" LINE THAT USED TO SIT HERE WAS FALSE, and it
+  cost a whole unit.** All 13 home-screen redesign rulings are BUILT, DELIVERED
+  or MOOT — re-measured in the source 2026-08-08, **one receipt per ruling** in
+  DAY_FIRST_UI_UNIT_PLAN_2026-08-07.md §3. The seat ordered a close-out unit off
+  this line before Sam caught it. **Standing law from that: a status claim about
+  built work carries a code receipt (`file:line` or commit) AT THE CLAIM, or it
+  says OPEN-UNKNOWN.** "Later slice" is a plan, not a status, and it goes stale
+  in silence.
 - **SLICE 1 STILL STANDS BEHIND IT** (`2796f6d1`, fork A — completion SHOWN, not
   written; two shapes of one screen, one row call site).
   docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md
-- **NEXT:** Sam's eye on slice 2 — he holds a veto on all of it, and the parked
-  seven are his. Then either the device pass or the next slice. The **LR-29
+- **NEXT: THE JOURNAL UNIT** (seat order, docs/JOURNAL_UNIT_KICKOFF_2026-08-08.md
+  — Sam: "I want it all in the journal"). Natural boundary: `/clear` + re-orient
+  paste, Opus. Before it: Sam's eye on the compound rows — he holds a veto, and
+  the parked questions are his. Then either the device pass or the next slice. The **LR-29
   replay unit** still builds after day-first UI and remains the measured payer of
   main's `fixture-identity` red.
 

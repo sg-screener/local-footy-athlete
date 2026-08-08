@@ -206,20 +206,38 @@ flagged for his pick session.
 
 ---
 
-## 3. WHAT IS *NOT* SLICE 1 — the rulings this unit still owes
+## 3. THE 13 RULINGS — WHERE EACH ONE ACTUALLY IS
 
-The 13 rulings are a larger unit than the overnight slice. Recorded so none is
-quietly lost:
+**CORRECTED 2026-08-08, AND THE CORRECTION IS THE POINT.** This table used to
+say "later slice" against nine of the thirteen. It was written from the plan's
+own intentions and never checked against the code, and by 2026-08-08 it was
+describing work that had **already shipped** — the seat ordered a whole close-out
+unit off it before Sam caught that the screen was finished.
 
-| ruling | status against this plan |
-|---|---|
-| 1 — repeat-week FEATURE DIES | later slice; it is a DELETION, not a redesign |
-| 2–5 — bottom button stack split/rename | later slice (the icon shortcut row) |
-| 6, 10 — every button/row carries an icon | standing, applies to slice 1's own chrome |
-| 7–9 — the intermediate menu dies; four-action menu | later slice |
-| 11 — **injury "Other" data path INVESTIGATION** | **its own deliverable, not a UI slice** — Sam asked where a free-text injury answer GOES, and a stored answer that affects nothing is the worst class. Traced with receipts, reported. |
-| 12 — inline exercise editing, "Edit exercises" modal retired | later slice |
-| 13 — coach preset chips removed | **MOOT — already delivered.** R5.7 cut the coach entry surface entirely; there is no chip row left to remove. Recorded rather than re-done. |
+The law that follows, and it now binds this file: **a status claim about built
+work carries a code receipt — `file:line`, a commit, or a doc — AT THE CLAIM, or
+it says OPEN-UNKNOWN.** "Later slice" is not a status; it is a plan, and a plan
+goes stale silently. Every row below was re-measured in the source on
+2026-08-08.
+
+| ruling | status | receipt |
+|---|---|---|
+| 1 — repeat-week FEATURE DIES | **BUILT** — writer retired, not relocated | `section18SafetyBoundaryTests.ts:412` ("the athlete-facing repeat-week writer is gone"); only survivor is the hydration lift that REFUSES the retired shape, `programHydrationIngress.ts:362` |
+| 2 — Busy/Away split in two | **BUILT** | `HomeScreenV2.tsx:688` "Short on time today" · `:705` "Away this week?" — two doors, two chips |
+| 3 — new "I'm injured" button | **BUILT** | `HomeScreenV2.tsx:750` |
+| 4 — "I'm not 100%" → "I'm sick/flat today" | **BUILT** | `HomeScreenV2.tsx:733`, and the sheet at `:2586` |
+| 5 — equipment + practice-match unchanged | **BUILT (unchanged, verified)** | `HomeScreenV2.tsx:771` "Missing equipment?" · `:174` "Practice match: …" |
+| 6 — every button carries an icon | **BUILT** | all five chips carry an 18pt `Svg`, e.g. `HomeScreenV2.tsx:690` (stopwatch, Sam's 2026-08-03 icon ruling row 1) |
+| 7, 8 — intermediate menu dies; four-action menu | **BUILT** | `PlanChangeSheet.tsx:69` — "THE INTERMEDIATE MENU IS GONE (ruling 7/8)" |
+| 9 — cross-referenced sub-copy | **BUILT** | `planChangeProducer.ts:489-496` (state-selected Remove sub) and `CATEGORY_COPY` at `:191` |
+| 10 — icons on every option-sheet row | **BUILT** | `EquipmentLimitationSheet.tsx` (9 icon sites), `GuidedInjuryFlowSheet.tsx` (12), readiness sheet region `HomeScreenV2.tsx:2586+` (8) |
+| 11 — injury "Other" data path INVESTIGATION | **DELIVERED** | docs/INJURY_OTHER_PATH_TRACE_2026-07-30.md (traced with receipts, 2026-07-30) |
+| 12 — "Edit exercises" modal retired, editing inline | **BUILT** | `DayWorkoutScreenV2.tsx:542` — "TASK 8 (ruling 12): the 'Edit exercises' link and its modal MENU are retired" |
+| 13 — coach preset chips removed | **MOOT — delivered by R5.7** | the coach entry surface was cut entirely (`1c41e6d2`); no chip row is left to remove. Grep for the seven chips in `CoachScreen.tsx` returns nothing. |
+
+**NOTHING IN THIS TABLE IS OPEN-UNKNOWN.** All thirteen are built, delivered or
+moot, each on a receipt above. What the day-first unit adds is a new WINDOW onto
+that finished screen, not the screen's remaining rulings.
 
 ---
 
@@ -259,8 +277,12 @@ surface.
 - **No device evidence.** None is possible until slice 1 renders.
 - **The icon assets are not inventoried.** "Use existing assets" is the order's
   word; which assets exist for which row is not measured here.
-- **Rulings 1–12 are scoped out of slice 1 by the order, not by judgement** —
-  they remain owed.
+- **~~Rulings 1–12 are scoped out of slice 1 by the order, not by judgement —
+  they remain owed.~~ FALSE, AND CORRECTED 2026-08-08.** They were not owed; they
+  were built, most of them before this plan was written. See §3, which now
+  carries a receipt per ruling. The claim survived here for a day because it was
+  read off this document's own status table instead of the code — the
+  `a-doc-taken-for-the-record` sighting that cost a retracted unit.
 - **L12 — what catches the NEXT defect of this class:** the class is **a
   surface that re-derives an identity the projection already carries** — (f) is
   a live instance and (e) was a near-miss of the same shape. The gate is an

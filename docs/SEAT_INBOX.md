@@ -2,33 +2,118 @@
 
 ## Unprocessed (newest first)
 
-1. SAM ANSWERED the slice-2 boundary (2026-08-08): batch 12 SIGNED,
-   chips stay unlit, week rows go COMPOUND BUCKET. Full record +
-   verbatim quote: docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md
-   — commit as authored.
-   LOOP CHECK: naming-refined-on-sight — sighting 2 — iterate; the
-   compression already exists (projection owns the words + the signed-
-   copy regime makes each refinement a one-row/one-batch change).
-   (a) SIGNED, all seven as proposed: "Today", "Week", "Time", "Away",
-   "Sick", "Injured", "Equipment". Copy sheet batch 12 PROPOSED →
-   SIGNED, equality-bound both directions.
-   (b) Parked Q1 CLOSED: chips do not light (Sam: "a"). Leave as
-   built; lit-chips is its own later unit if ever wanted.
-   (c) BUILD: week view rows say ALL the day's buckets, joined
-   " + ", timeline order, each word once — "Strength + Conditioning";
-   "Strength" alone when that is all there is. Signed bucket set
-   unchanged; Power folds under Strength BEFORE joining; Rest /
-   Practice Match / Game / Team Training rows unchanged. Derived in
-   the projection's words half — no surface composes it.
-   (d) SEAT-RULED, Sam holds the veto (grounds in the doc: his own
-   duplication ruling + one-name-per-session): the day TITLE carries
-   the SAME compound name; daily granularity stays on the timeline
-   ("upper push on one line with conditioning below it is good").
-   The title does NOT revert to variant names.
-   One report; the tape-before-tape-after discipline from slice 2
-   applies (three generated weeks, timeline byte-identical).
+3. JOURNAL UNIT KICKS OFF after item 1 lands + item 2's doc fix (Sam,
+   2026-08-08: "I want it all in the journal"; the day-first screen
+   is already finished — see item 2 — so the journal is NEXT).
+   Full order + scope:
+   docs/JOURNAL_UNIT_KICKOFF_2026-08-08.md — commit as authored.
+   LOOP CHECK: unit-kickoff-from-approved-design — sighting 1 —
+   iterate; one compression carried in: the unit's authored-copy
+   flood (status vocab + observation templates) ships in BATCHED
+   signing sheets per boundary, never per sentence.
+   Summary: FULL SCOPE — base design (approved 2026-07-23, source
+   of truth, no re-litigating) + ALL 11 addendum candidates. The
+   rep-range question is ALREADY RULED in the Bible (single middle
+   number, 3x10) — cite, don't ask. Settle first: the never-run
+   logging tree (LoggedSet type decided deliberately, screens
+   unmounted), domain.d.ts drift, and LR-18 rides this unit under
+   the store-armour recipe. Journal is a reading surface + record-
+   only notes — NEVER a mutation door. Slice vertically, athlete-
+   visible first: the tab + a real Monday card on Sam's phone
+   before the long tail. (The close-out detour was retracted —
+   item 2 — the screen's rulings were already built.)
+   This is a natural boundary: /clear + re-orient paste, Opus.
 
-(none)
+   [ITEMS 1 AND 2 ARE PROCESSED — see the thirty-eighth pass below.
+   This item is left numbered 3, as the seat wrote it, rather than
+   renumbered: the seat's numbering is its record, not the
+   terminal's to tidy.]
+
+## Processed 2026-08-08 (thirty-eighth pass) — THE COMPOUND NAME BUILT AND LANDED; AN ICON REGRESSION CAUGHT BEFORE IT SHIPPED; THE DOC-TRUTH FIX DONE
+
+- LOOP CHECK: **`a-ruling-premise-is-a-claim-too` — and the premise was MINE, one
+  commit old.** Slice 2's report read the row-icon table and concluded nothing
+  regressed *because "Strength" resolved in it where "Power" did not*. True then;
+  false the moment a title stopped being one word. It was caught only because the
+  NOT-COVERED line naming it was cheap enough to CHECK instead of FILE.
+  Secondary: **`a-count-taken-for-a-record` in its ASSERTION form** (the sweep
+  red below), which belongs in AGENTS.md beside the source-scan variant.
+- **THE COMPOUND NAME IS ON HIS PHONE** (`791979c0`). A day is named by **every
+  bucket on it**, joined by his own " + ", timeline order, **each word once**.
+  One function, both surfaces; no surface composes anything.
+  docs/COMPOUND_BUCKET_BOUNDARY_2026-08-08.md
+- **(a) BATCH 12 SIGNED** in the same commit, all seven as proposed.
+  **(b) Q1 CLOSED** — chips do not light, left as built.
+- **THE TAPE, BOTH WORLDS, THREE GENERATED WEEKS: 6 rows changed, ALL titles.
+  TIMELINE BYTE-IDENTICAL. Parts byte-identical.** Rest / Practice Match /
+  Gunshow / Accessories unchanged. **The exhibit Tuesday produced NO diff line** —
+  power + strength both bucket to "Strength" and it still reads "Strength", the
+  dedupe proving itself on the day the power ruling came from.
+- **FOR HIS EYE, AND IT IS THE RISK: four of the six changed rows gained
+  "+ Team Training"**, not the "+ Conditioning" of his example. His exhibit week
+  reads "Strength + Team Training" on three of five training days — a longer row
+  than anything he has seen. **Built as ordered, flagged not narrowed.**
+- **JOINING IS NOW A SHEET OPERATION**, and that is the part that generalises. A
+  compound is a COMPOSITION, the exact defect `SignedCopy` exists to forbid. Both
+  ways out were wrong: widening the placeholder regex reopens the one hole in the
+  type, and a `.join(' + ')` at a call site is a surface authoring punctuation —
+  **and one already was**, `DayWorkoutScreenV2`, undetected since Task 6. So the
+  separator is a sheet entry marked `joiner: true`, `joinSignedCopy` refuses any
+  entry that is not one, and **a compound with one unsigned half still reads
+  UNSIGNED**. Both directions are cells.
+- **`attached` RETIRED, and it closed parked question 4 as a CONSEQUENCE.** Its
+  own definition was "the parts the lead did not speak for"; a compound title
+  speaks for all of them. Keeping it would have shipped the duplication Sam ruled
+  against that morning, one screen over and worse.
+- **AN ICON REGRESSION THIS UNIT CAUSED, FOUND AND FIXED** (`b799949d`). The row
+  glyph AND accent colour match the day's name against a table of label
+  EQUALITIES; "strength + team training" matches nothing, so **four of the six
+  changed rows would have dropped to the generic grey glyph.** The glyph now keys
+  on the LEADING bucket — byte-for-byte the pre-ruling title rule, so no glyph
+  moved on any day, asserted not assumed. **The real fix (key off the typed
+  `VisiblePartKind`) is NAMED AND NOT DONE** — it would move glyphs on days this
+  ruling never touched.
+- **NINE MUTATIONS, NINE REDS. FIVE NEW CELLS**, and the two vocabulary cells
+  were **re-pointed, not loosened** — they check EVERY WORD in the list now, so
+  "Strength + Upper Push" reds where a whole-string test had no opinion.
+- **A SWEEP RED THAT WAS NOT MINE, ATTRIBUTED NOT SHRUGGED** (`214ef66c`). First
+  sweep came back **3 of 157** against a declared 2.
+  `test:decision-ledger-ownership` hardcodes '2026-08-08' as an answer value and
+  asserts it never appears in the serialised tape — and every entry carries a
+  required `at` UTC timestamp. **Today is 2026-08-08.** Moving only that cell's
+  two dates off today takes it to 8/8 with no product change; that is the whole
+  diagnosis. **It reds on exactly two days in history and is green on the other
+  363** — the worst possible schedule, because it presents as a regression in
+  whatever unit is in flight. Slice 2's sweep "cleared" it four hours earlier only
+  because UTC had not ticked past 10:00 AEST. `at` now excluded BY NAME only;
+  mutation-proven a real leak still reds. **The three sibling tape suites were
+  AUDITED, not assumed: green, and none uses a date literal.**
+- **(item 2) THE DOC-TRUTH FIX IS DONE.** The unit plan's §3 table said "later
+  slice" against nine of thirteen rulings; **all 13 are BUILT, DELIVERED or
+  MOOT**, re-measured in the source, **one line + one receipt each**, nothing
+  OPEN-UNKNOWN. NOW.md's "Rulings 1-12 remain owed" struck with the reason it
+  survived. **The compression is written into both files as standing law.**
+- **NORTH STAR: TOWARD, a convergence step.** Zero new stored state; TWO
+  representations removed (the day screen's second answer to "what is this day",
+  and the last surface-side composition of athlete-visible text).
+- **GATE, final tree:** full `test:bible` UNPIPED **`TRUE_EXIT=1` at
+  `test:program-control-durable`, 1 FAIL line**, same assertion text. Sweep
+  **2 of 157 = the declared set EXACTLY**. `test:compile` PASSED, no file
+  regressed.
+- **NOT COVERED, first line of it: NO DEVICE EVIDENCE.** How a
+  "Strength + Team Training" row WRAPS or truncates at week zoom is unverified by
+  eye, and given four of six changed rows took that shape it is the first thing to
+  look at. The icon fix is proven on the projection and the source wiring, **not
+  on a rendered pixel** — no cell in this repo mounts a row. Three weeks of ONE
+  athlete's program, and week 3 is all rest, so the real evidence is two weeks;
+  **no world here makes a three-bucket day, so the join is exercised at arity 2
+  only.** `coachNoteDisplayTests` still does not run (pre-existing crash). The
+  separator is deliberately NOT bound by a copy-sheet table row (two characters of
+  punctuation would bind vacuously) — it is bound by the compound cells, and the
+  doc says so at the entry. **The day-title half is SEAT-RULED, not Sam-ruled**;
+  his veto is one line.
+- **STOPPED at the boundary.** Item 3 (the journal unit) is unprocessed and wants
+  a `/clear` + re-orient paste, as the seat wrote.
 
 ## Processed 2026-08-08 (thirty-seventh pass) — SLICE 2 AND THE BUCKET VOCABULARY BOTH BUILT AND LANDED
 

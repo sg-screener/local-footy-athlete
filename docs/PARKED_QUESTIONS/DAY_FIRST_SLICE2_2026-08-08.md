@@ -1,3 +1,25 @@
+**STATUS UPDATE 2026-08-08 afternoon** — Sam answered three of these and a
+fourth closed as a consequence. See docs/COMPOUND_BUCKET_BOUNDARY_2026-08-08.md.
+
+- **Q1 (should an active fact light its chip): CLOSED — Sam ruled "a".** They do
+  not light. Left exactly as built; lit chips are their own later unit if ever
+  wanted.
+- **Q2 (a zoomed-out week row shows ONE word): ANSWERED, and it is why the
+  compound ruling exists.** A row now says every bucket on the day. The loss he
+  was warned about is repaid; the NEW risk is the opposite one — four of six
+  changed rows read "Strength + Team Training", a longer row than he has seen.
+- **Q4 (the day SCREEN double-labels, one screen over): CLOSED as a consequence,
+  not by a ruling of its own.** The compound title speaks for every part, so the
+  subtitle's attached-part fragment had nothing left to add and was retired with
+  the `attached` field. If Sam wanted that line, it returns as its own decision.
+- **Q5 (the five labels for signing): CLOSED — batch 12 SIGNED**, all seven as
+  proposed.
+- **STILL OPEN: Q3** (power gets its own timeline row for one exercise),
+  **Q6** (the Gunshow-without-a-typed-door gap), **Q7** (where the readiness
+  owner's title went).
+
+---
+
 # PARKED QUESTIONS — day-first slice 2 + the bucket vocabulary (2026-08-08)
 
 Seven questions. Every one is Sam's; none was answered by guessing. The build
