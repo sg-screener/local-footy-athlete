@@ -117,6 +117,21 @@ export interface VisiblePart {
   readonly id: string;
   readonly kind: VisiblePartKind;
   readonly headline: SignedCopy;
+  /**
+   * THE PART'S BUCKET — the athlete's CATEGORY for it, never its variant name.
+   *
+   * Sam's ruling, 2026-08-08: "bucket words only on the week view rows AND the
+   * day title" — Strength, Conditioning, Rest, Mobility, Accessories, Gunshow,
+   * Speed. The variant (Upper Push, Lower Squat, Full Body) belongs on the
+   * timeline, where the day enumerates its parts one per line.
+   *
+   * IT IS CARRIED, NOT DERIVED BY THE SURFACE, for the reason `countsTowardLoad`
+   * is: a card that mapped a headline back to a category would be a second
+   * naming authority, and the two would disagree the first time a variant was
+   * added. `headline` and `bucket` answer two different questions about one
+   * part, and the projection answers both.
+   */
+  readonly bucket: SignedCopy;
   readonly detail: SignedCopy | null;
   readonly rows: readonly VisibleRow[];
   readonly capabilities: PartCapabilities;

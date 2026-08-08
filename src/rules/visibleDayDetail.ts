@@ -77,12 +77,21 @@ export interface VisibleDayDetail {
  *     carrying a real squat projects `kind: 'game'` with `parts[0].kind:
  *     'strength'`, and would lead with "Strength" without this. Traced, not
  *     assumed. A fixture's title is its fixture either way.
- *   - Any other day with parts leads with `parts[0].headline` — the session's own
- *     identity, which is what both surfaces showed before the migration.
+ *   - Any other day with parts leads with `parts[0].bucket` — the leading part's
+ *     CATEGORY. Sam's ruling, 2026-08-08: "week row = buckets, day title =
+ *     buckets, timeline = the variant names stacked one per line."
  *   - Zero parts (rest) falls back to `day.headline`.
+ *
+ * IT WAS `parts[0].headline` UNTIL 2026-08-08, and that is the whole of this
+ * change: a day led with its session's variant name ("Upper Push", "Lower
+ * Squat", and — the exhibit that made Sam rule — "Power" on a day whose power
+ * component held one exercise). The name is not gone; it moved to the timeline,
+ * which now enumerates the day's parts one per line and is the ONLY place the
+ * day's contents are listed. The title said what the timeline said, and a screen
+ * that says a thing twice has not decided which one is the answer.
  */
 export function visibleDayLeadHeadline(day: VisibleDay): SignedCopy {
-  if (day.kind !== 'game' && day.parts.length > 0) return day.parts[0].headline;
+  if (day.kind !== 'game' && day.parts.length > 0) return day.parts[0].bucket;
   return day.headline;
 }
 

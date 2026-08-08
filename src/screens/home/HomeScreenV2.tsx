@@ -48,7 +48,6 @@ import {
   WEEK_DAYS,
   DAY_SHORT,
   NEXT_PHASE,
-  suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   type PhaseShiftStep,
@@ -1400,10 +1399,6 @@ function titleIconKind({
   return 'activity';
 }
 
-function contextIconKind(label: string | null | undefined): RowIconKind | null {
-  return displayLabelIconKind(label);
-}
-
 function rowIconColor(kind: RowIconKind): string {
   switch (kind) {
     case 'game':
@@ -1677,18 +1672,12 @@ function DayRow({
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
-  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout. See
-  // `cardLeadHeadline` above for the title rule (parts[0] leads; day.headline
-  // for rest and — deliberately, not merely "zero parts" — for every
-  // fixture). `contextLabel` is whatever rides beside the leading identity:
-  // for a fixture, nothing (a fixture's own part(s) are already spoken for by
-  // `title`, and a game day has never shown a secondary line — matches
-  // today's behaviour, where `splitSessionName("Game Day").context` is
-  // already `null`); for a training day, parts beyond the first, the same
-  // "+ " convention the old `splitSessionName` context carried. Every value
-  // here is `SignedCopy`, so this can only ever render an authored string.
-  const visibleParts = visibleDay?.parts ?? [];
-  const isFixtureDay = visibleDay?.kind === 'game';
+  // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout, and now
+  // exactly ONE word. `cardLeadHeadline` gives the day's BUCKET (Strength,
+  // Conditioning, Mobility, Gunshow, Accessories, Speed) for a training day,
+  // `day.headline` for rest and — deliberately, not merely "zero parts" — for
+  // every fixture. It is `SignedCopy`, so this can only ever render an
+  // authored string, and it is the only string this row shows about the work.
   const title: string | null = cardLeadHeadline(visibleDay);
   const accentColor = getDayRowAccentColor({
     hasWorkout,
@@ -1696,14 +1685,18 @@ function DayRow({
     sessionTier: day.workout?.sessionTier,
     title,
   });
-  const attachedParts = isFixtureDay ? [] : visibleParts.slice(1);
-  const rawContext = attachedParts.length > 0
-    ? `+ ${attachedParts.map((part) => part.headline).join(' + ')}`
-    : null;
-  const contextLabel = suppressDuplicateWorkoutContext(title, rawContext);
-  const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
+  // THE SECONDARY "+ X" LINE IS GONE, BOTH SHAPES (Sam, 2026-08-08). It read
+  // "+ Conditioning" under a title of "Upper Push", and then the timeline inside
+  // the same card listed "Upper Push" and "Conditioning" again. THE TIMELINE IS
+  // THE ENUMERATION: the card names the day's BUCKET once, and the parts are
+  // listed once, below it. His ruling for the zoomed-out shape is the same
+  // sentence — "bucket words only on the week view rows" — so the line is
+  // deleted rather than kept for the shape that has no timeline.
+  //
+  // DELETED, NOT DISABLED. Nothing in this file joins part names with "+" any
+  // more; that composition was the last place a surface here made a name out of
+  // other names, which is what "no surface composes its own words" forbids.
   const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
-  const contextIcon = contextIconKind(contextLabel);
   const isTeamOnly = hasWorkout && isTeamTrainingOnlyWorkout(day.workout);
   const isRecoverySession = hasWorkout && (
     day.workout.workoutType === 'Recovery' ||
@@ -1814,21 +1807,6 @@ function DayRow({
                   {selectedTitle}
                 </Text>
               </View>
-              {hasWorkout && contextLabel ? (
-                <View style={styles.selectedContextLine}>
-                  {contextIcon && <RowIcon kind={contextIcon} size={16} color={accentColor} />}
-                  <Text
-                    style={[
-                      styles.workoutContext,
-                      isAttachedContextLine && styles.attachedWorkoutContext,
-                      isAttachedContextLine && emphasized && styles.attachedWorkoutContextSelected,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {contextLabel}
-                  </Text>
-                </View>
-              ) : null}
             </View>
           </View>
         ) : (
@@ -1869,26 +1847,6 @@ function DayRow({
                   {title}
                 </Text>
               </View>
-              {contextLabel ? (
-                <View style={styles.rowContextLine}>
-                  {contextIcon && (
-                    <RowIcon
-                      kind={contextIcon}
-                      size={isAttachedContextLine ? 15 : 14}
-                      color={accentColor}
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.workoutContext,
-                      isAttachedContextLine && styles.attachedWorkoutContext,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {contextLabel}
-                  </Text>
-                </View>
-              ) : null}
             </View>
           ) : (
             <View style={styles.restLine}>
@@ -3766,12 +3724,6 @@ const styles = StyleSheet.create({
     gap: 6,
     maxWidth: '100%',
   },
-  selectedContextLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    maxWidth: '100%',
-  },
   selectedWorkoutTitle: {
     textAlign: 'left',
     flexShrink: 1,
@@ -3783,14 +3735,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 6,
     maxWidth: '100%',
-  },
-  rowContextLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 6,
-    maxWidth: '100%',
-    marginTop: 2,
   },
   rowIcon: {
     opacity: 0.95,
@@ -3808,21 +3752,6 @@ const styles = StyleSheet.create({
   // row, not a hero. White + heavier weight carry the emphasis.
   workoutTitleSelected: {
     color: '#FFFFFF', fontSize: 18, fontWeight: '700',
-  },
-  workoutContext: {
-    color: '#7A7A7A', fontSize: 12, fontWeight: '500',
-    textAlign: 'right', flexShrink: 1,
-  },
-  attachedWorkoutContext: {
-    color: '#7A7A7A',
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  attachedWorkoutContextSelected: {
-    color: '#7A7A7A',
-    fontSize: 17,
-    lineHeight: 21,
   },
   restLine: {
     flex: 1,

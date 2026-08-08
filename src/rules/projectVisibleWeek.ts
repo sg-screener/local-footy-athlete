@@ -86,7 +86,13 @@ export interface ProjectedDayParts {
    * no fixture in the suite had reached. Rows are composed in `project()`, where
    * the words already live.
    */
-  readonly parts: readonly Omit<VisiblePart, 'headline' | 'detail' | 'rows'>[];
+  /**
+   * `bucket` IS A WORD, SO IT SITS WITH THE WORDS. Added 2026-08-08 with Sam's
+   * bucket-vocabulary ruling: like `headline` it is `SignedCopy` and is resolved
+   * in `project()`, so the structural half stays free of the copy sheet and the
+   * structural laws keep working when a copy entry is missing.
+   */
+  readonly parts: readonly Omit<VisiblePart, 'headline' | 'bucket' | 'detail' | 'rows'>[];
   readonly capabilities: Omit<DayCapabilities, 'refusal'>;
 }
 
@@ -647,6 +653,7 @@ export function project(args: {
             ...part,
             rows,
             headline: partHeadline(part.kind, source.workout, rows),
+            bucket: partBucket(part.kind, source.workout),
             // Ambiguity resolution (Sam, as controller, 2026-07-31): populate from
             // a part's existing signed sub-line where one exists, otherwise null —
             // do not invent prose. No reliable authored sub-line source is wired to
@@ -686,6 +693,60 @@ function dayHeadline(kind: VisibleDayKind, day: ResolvedDay): SignedCopy {
     return signedCopy('day.headline.practice_match');
   }
   return signedCopy(`day.headline.${kind}`);
+}
+
+/**
+ * WHICH BUCKET EACH KIND OF WORK BELONGS TO.
+ *
+ * Sam's ruling, 2026-08-08. Every kind maps to itself except one:
+ *
+ * **POWER IS NOT A BUCKET.** Sam, verbatim: *"power should not be labelled there
+ * for just 1 exercise — power is just part of the Strength work."* A day whose
+ * leading part is a power component is a STRENGTH day to the athlete, and the
+ * word "Power" never reaches a week row or a day title again.
+ *
+ * IT IS A TABLE, NOT AN `if`. The next question of this shape — is `speed` its
+ * own bucket, is `support` — is answered by editing one row that the type system
+ * forces to be complete, rather than by finding the branch that hid the last
+ * answer. `speed` IS its own bucket, which is Sam's ruling too and is why it is
+ * written here rather than assumed.
+ */
+const PART_BUCKET_KIND: Readonly<Record<VisiblePartKind, VisiblePartKind>> = {
+  strength: 'strength',
+  power: 'strength',
+  conditioning: 'conditioning',
+  speed: 'speed',
+  support: 'support',
+  recovery: 'recovery',
+  team_training: 'team_training',
+  game: 'game',
+};
+
+/**
+ * A part's BUCKET — the category word, for the surfaces that name a whole day.
+ *
+ * The week row and the day title say what KIND of work the day holds; the
+ * timeline says which one. So this resolves the same two-step `partHeadline`
+ * does, minus the specific-name step in the middle:
+ *
+ *   1. A CHARTER OPTIONAL TYPE IS ALREADY A BUCKET, and keeps its own word.
+ *      "Gunshow", "Mobility" and "Accessories" are the Add-menu's doors and
+ *      three of the seven bucket words Sam listed; an athlete who tapped
+ *      Gunshow must not find their day filed under "Strength". This is the same
+ *      precedence `partHeadline` gives them, for the same reason.
+ *   2. Otherwise the kind's own generic word, through `PART_BUCKET_KIND`.
+ *
+ * WHAT IT DELIBERATELY NEVER DOES is look at the resolved strength variant. That
+ * step is the whole difference between the two functions: "Upper Push" is a name,
+ * "Strength" is a bucket, and a surface that wanted the bucket used to get the
+ * name because there was only one field to ask for.
+ */
+function partBucket(kind: VisiblePartKind, workout: Workout | null | undefined): SignedCopy {
+  const optional = workout?.composedOptionalKind;
+  if (optional && (kind === 'strength' || kind === 'recovery')) {
+    return signedCopy(`part.headline.optional.${optional}`);
+  }
+  return signedCopy(`part.headline.${PART_BUCKET_KIND[kind]}`);
 }
 
 /**

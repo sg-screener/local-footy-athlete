@@ -166,7 +166,19 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
   eq('useful non-duplicate context is kept',
     suppressDuplicateWorkoutContext('Upper Push', '+ Team Training'),
     '+ Team Training');
-  ok('HomeScreenV2 suppresses duplicate workout context', /suppressDuplicateWorkoutContext/.test(HOME_V2));
+  // INVERTED, 2026-08-08 — THE DUPLICATION IS NOW IMPOSSIBLE, NOT SUPPRESSED.
+  // This asked whether V2 still called the helper that hides a context line
+  // repeating its title. Sam's bucket ruling deletes the secondary line from
+  // the V2 row outright: the card shows the day's BUCKET once and the timeline
+  // enumerates the parts once, so there is no second line left to duplicate.
+  // A helper call cannot be asserted of a screen that no longer has the
+  // problem — so the cell asserts the STRUCTURAL version of the same claim,
+  // which is strictly stronger. The classic HomeScreen still has the line and
+  // keeps its pin below, unchanged.
+  ok('HomeScreenV2 cannot duplicate its title — it composes no context line at all',
+    !/suppressDuplicateWorkoutContext/.test(HOME_V2) &&
+    !/contextLabel/.test(HOME_V2) &&
+    !/`\+ \$\{/.test(HOME_V2));
   ok('classic HomeScreen suppresses duplicate workout context', /suppressDuplicateWorkoutContext/.test(HOME_CLASSIC));
   ok('HomeScreenV2 removes the lower phase-shift section label', !/Changing season phase\?/.test(HOME_V2));
   ok('HomeScreenV2 keeps phase mode copy inside the card', /You’re in \{currentPhase\} mode/.test(HOME_V2));

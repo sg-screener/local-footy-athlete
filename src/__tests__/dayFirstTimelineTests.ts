@@ -71,6 +71,7 @@ import {
   projectParts,
 } from '../rules/projectVisibleWeek';
 import { dayTimeline } from '../rules/dayTimeline';
+import { visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import { registerProjectionCopy } from '../rules/projectionCopy';
 import type { VisibleDay } from '../rules/visibleProjection';
@@ -586,6 +587,157 @@ run('the five bars did not survive alongside their own chips', () => {
     'the one card allowed to keep the old bar treatment is no longer the '
     + 'practice-match CTA — something else inherited it, which is the leftover '
     + 'this cell exists to find.');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLICE 2 — THE BUCKET VOCABULARY (Sam's ruling, 2026-08-08 morning)
+//
+// "BUCKET WORDS ONLY on the week view rows AND the day title" — Strength,
+// Conditioning, Rest, Mobility, Accessories, Gunshow, and Speed. The variant
+// (Upper Push, Lower Squat, Full Body) belongs on the TIMELINE rows, one per
+// line, "exactly as now". And, verbatim: *"power should not be labelled there
+// for just 1 exercise — power is just part of the Strength work."*
+//
+// These cells watch a real generated week, because the exhibit that produced the
+// ruling was one: a Tuesday whose power component held a single exercise and
+// whose card therefore read "Power".
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Every `VisiblePartKind`, spelled out — the closed union is the test's job to state. */
+const PART_KINDS = [
+  'strength', 'conditioning', 'recovery', 'team_training',
+  'game', 'power', 'speed', 'support',
+] as const;
+
+/**
+ * THE WORDS A DAY IS ALLOWED TO BE CALLED.
+ *
+ * Assembled from the SIGNED SHEET — the generic kind headline for every part
+ * kind, the three charter optional doors (which are themselves three of Sam's
+ * bucket words), and the day-level names for the days that have no parts to take
+ * a bucket from. Not from `partBucket`'s own table, which would make this cell
+ * agree with the implementation by construction.
+ */
+function bucketVocabulary(): Set<string> {
+  const words = new Set<string>();
+  for (const kind of PART_KINDS) words.add(signedCopy(`part.headline.${kind}`));
+  // THE CATEGORY ID IS `prehab`; THE ATHLETE'S WORD IS "Accessories" (Sam,
+  // ruling 6-IV-1). Writing `accessories` here reds immediately — the registry
+  // throws on an unregistered id rather than inventing a word, which is how this
+  // cell learned the id on its first run.
+  for (const optional of ['gunshow', 'mobility', 'prehab']) {
+    words.add(signedCopy(`part.headline.optional.${optional}`));
+  }
+  for (const day of ['training', 'rest', 'game', 'practice_match']) {
+    words.add(signedCopy(`day.headline.${day}`));
+  }
+  return words;
+}
+
+run('every day is titled with a BUCKET word, never a session variant name', () => {
+  world();
+  const vocabulary = bucketVocabulary();
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      const title = visibleDayLeadHeadline(day);
+      checked += 1;
+      if (!vocabulary.has(title)) offenders.push(`${day.date}="${title}"`);
+    }
+  }
+  // NON-VACUITY FIRST. A world that produced no days, or a vocabulary that
+  // swallowed everything, would pass this cell while proving nothing.
+  assert(checked >= 21, `only ${checked} day(s) read — the world is not built`);
+  assert(vocabulary.size >= 10 && !vocabulary.has('Upper Push'),
+    'the bucket vocabulary is wrong: it must not contain a session variant name, '
+    + 'or this cell passes on exactly what it exists to catch');
+  assert(offenders.length === 0,
+    `${offenders.length} day(s) are titled with something that is not a bucket `
+    + `word: ${offenders.join(', ')}. Sam ruled bucket words only on the week rows `
+    + 'and the day title; the variant name belongs on the timeline.');
+});
+
+run('a charter door\'s own word IS the bucket — Gunshow does not become Strength', () => {
+  // WRITTEN BECAUSE A MUTATION SURVIVED. Deleting the charter-optional branch
+  // from `partBucket` left every cell above green: a Gunshow day would quietly
+  // read "Strength", and "Strength" is a perfectly legal bucket word, so the
+  // vocabulary cell could not see it. Three of the seven words Sam listed —
+  // Gunshow, Mobility, Accessories — are the Add-menu's doors, and an athlete
+  // who tapped one must find their day filed under the word they tapped.
+  world();
+  const titles: string[] = [];
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) titles.push(visibleDayLeadHeadline(day));
+  }
+  const gunshow = signedCopy('part.headline.optional.gunshow');
+  assert(titles.includes(gunshow),
+    `no day in three generated weeks is titled "${gunshow}". Either the charter `
+    + 'optional door stopped naming its own day — which is this cell\'s whole '
+    + 'point — or the generator stopped producing one, in which case this cell '
+    + 'is standing on nothing and needs a day that reaches the door.');
+  // AND IT IS NOT THE STRENGTH FALLBACK WEARING THE RIGHT WORD BY ACCIDENT.
+  assert(gunshow !== signedCopy('part.headline.strength'),
+    'the two ids resolve to the same word, so the assertion above cannot tell '
+    + 'the door\'s answer from the fallback');
+});
+
+run('POWER never titles a day — and the word did not vanish, it moved', () => {
+  world();
+  let powerDays = 0;
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      const title = visibleDayLeadHeadline(day);
+      assert(title !== signedCopy('part.headline.power'),
+        `${day.date} is titled "${title}". Sam, verbatim: power should not be `
+        + 'labelled there for just one exercise — power is part of the Strength '
+        + 'work, and "Power" never appears as a week row or a day title.');
+      if (day.parts.some((part) => part.kind === 'power')) {
+        powerDays += 1;
+        // THE EXHIBIT, PINNED. This is the day whose card read "Power" and made
+        // Sam rule: its leading part IS the power component.
+        assert(day.parts[0].kind === 'power',
+          `${day.date} has a power part but does not lead with it — this cell is `
+          + 'no longer standing on the day the ruling was about');
+        assert(title === signedCopy('part.headline.strength'),
+          `${day.date} leads with a power part and is titled "${title}". A day `
+          + 'whose strength work contains power exercises is a Strength day.');
+        // AND THE NAME IS NOT DELETED. It moved to the timeline, which is the
+        // whole shape of this ruling: one enumeration, in one place.
+        const timeline = dayTimeline(day, null);
+        assert(timeline.some((entry) => entry.headline === signedCopy('part.headline.power')),
+          `${day.date}'s timeline no longer names its power component. The ruling `
+          + 'moves the word off the title; it does not take the athlete\'s power '
+          + 'work off the only screen that lists it.');
+      }
+    }
+  }
+  assert(powerDays >= 1,
+    'no day in three generated weeks carries a power part — this cell proved '
+    + 'nothing about the exhibit it was written for');
+});
+
+run('the day card composes no name of its own', () => {
+  const home = homeScreenSource();
+  // THE COMPOSITION IS THE DEFECT, NOT THE LINE. "+ Conditioning" was built in
+  // the row by joining part headlines, which is a surface making a name out of
+  // other names. The gate watches for the JOIN returning, in the two shapes it
+  // took (a template literal and an `Array.join` over headlines).
+  assert(!/`\+ \$\{/.test(home),
+    'a "+ ..." line is being composed in HomeScreenV2 again. The timeline is the '
+    + 'day\'s one enumeration; a title that restates it is the double-labelling '
+    + 'Sam ruled out on 2026-08-08.');
+  assert(!/\.map\(\(part\) => part\.headline\)\.join\(/.test(home),
+    'the row is joining part headlines into one string again — same defect, '
+    + 'different spelling.');
+  assert(!/contextLabel/.test(home),
+    'the secondary context line is back in HomeScreenV2.');
+  // AND THE TITLE STILL COMES FROM THE PROJECTION. Deleting the line would also
+  // "pass" if the whole title were deleted, so the surviving half is asserted.
+  assert(/cardLeadHeadline\(visibleDay\)/.test(home) && /visibleDayLeadHeadline/.test(home),
+    'the row no longer takes its title from the projection\'s one lead-headline '
+    + 'rule — which is the only thing keeping the card and the day screen from '
+    + 'disagreeing about what a day is called');
 });
 
 run('no clock times, and the timeline entry shape is pinned', () => {

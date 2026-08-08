@@ -1168,3 +1168,41 @@ is the one that invents nothing.
 `profileResetUITests` — they are still in the file, in the accessible position.
 If Sam signs the short labels AND rules that the sentences go, that is a
 separate, later deletion with those three pins as its receipt.
+
+---
+
+## Batch 13 — the bucket vocabulary (Sam, 2026-08-08): NO NEW WORDS
+
+**STATUS: NOT A COPY PROPOSAL. Every word below is already signed or already
+PROPOSED; not one string is new.** It is recorded here because it changes WHICH
+signed word the athlete reads in the most-looked-at position in the app, and this
+file exists so that never happens quietly.
+
+**THE RULING, Sam's own sentence:** *"week row = buckets, day title = buckets,
+timeline = the variant names stacked one per line, exactly as now."* The bucket
+words are Strength, Conditioning, Rest, Mobility, Accessories, Gunshow — and
+Speed.
+
+**13-a. WHAT MOVED.** A training day's week row and day title used to read the
+session's VARIANT name (`part.headline.strength.<variant>` — "Upper Push",
+"Lower Squat", "Full Body Strength"). They now read the leading part's BUCKET
+(`part.headline.<kind>` — "Strength", "Conditioning", "Speed"). The variant name
+is not retired and not deleted: it is what the timeline row says, which is the
+one place the day's parts are enumerated.
+
+**13-b. "Power" IS NOT RETIRED, IT IS DEMOTED.** Sam, verbatim: *"power should
+not be labelled there for just 1 exercise — power is just part of the Strength
+work."* `part.headline.power` ("Power") still names a power component ON THE
+TIMELINE. It can no longer title a day: a day whose leading part is a power
+component reads "Strength". Stated so its disappearance from the week view is not
+read as a retirement nobody signed — and so the opposite is not assumed either.
+
+**13-c. THE "+ X" SECOND LINE IS RETIRED FROM THE PROGRAM SCREEN.** It was never
+a string: the row COMPOSED it by joining part headlines with " + ". Nothing in
+`HomeScreenV2` composes a name from other names any more.
+
+**13-d. UNCHANGED, and checked rather than assumed:** "Rest Day", "Game Day",
+"Practice Match", "Team Training", "Gunshow", "Mobility", "Accessories" all read
+exactly as before — measured on three generated weeks, before and after. The
+three charter doors keep their own word BECAUSE they are buckets, and a gate now
+holds that (a mutation that dropped it left every other cell green).
