@@ -621,21 +621,51 @@ export default function HomeScreenV2() {
                 fixture's state node, a session card, a saved-feedback receipt.
                 Without this, changing the shape of the screen would silently
                 narrow what the explorer can observe, and a day-first view would
-                start reporting that six of the athlete's days do not exist. */}
-            {weekDays.map((day, idx) => (idx === dayFirstIdx ? null : (
-              <DayStateLeaves
-                key={day.date}
-                day={day}
-                feedbackReceipts={receiptIdsForDate(day.date)}
-                progressionReceipts={progressionReceiptsForDate(day.date)}
-                stateToken={dayStateToken({
-                  day,
-                  isSelected: false,
-                  isMoveSource: false,
-                  isMoveTarget: false,
-                })}
-              />
-            )))}
+                start reporting that six of the athlete's days do not exist.
+
+                THEY LIVE IN ONE LAYOUT-INERT WRAPPER, AND THAT IS A FIX, NOT
+                TIDYING (Sam's screenshot, 2026-08-08 11:04 — a dead zone under
+                the day card).
+
+                `DayStateLeaves` returns a FRAGMENT, so its witnesses used to
+                flatten into direct children of this container — and this
+                container has `gap: spacing.sm`. Six days x two-to-four
+                witnesses each is a dozen-plus invisible children, and the gap
+                is inserted between EVERY one of them. **Invisible nodes were
+                participating in layout**, and the dead zone GREW as an athlete
+                accrued feedback receipts, which is why it looked like a spacing
+                bug that spacing changes could not fix.
+
+                `position: 'absolute'` is the load-bearing property, not the
+                zero size: an absolutely-positioned child is out of the flex
+                flow entirely, so `gap` never applies to it. A merely 0x0 static
+                wrapper still occupies a flex slot and still earns one gap —
+                better than a dozen, but not zero, and Sam's report is that the
+                gap should not be there at all. This is inert at ANY witness
+                count, which is the half a margin tweak could never buy.
+
+                NOTHING ABOUT THE WITNESSES THEMSELVES CHANGED — same
+                components, same testIDs, same count, same order. Only where
+                the layout engine is allowed to see them. */}
+            <View
+              pointerEvents="none"
+              style={styles.stateLeafWell}
+            >
+              {weekDays.map((day, idx) => (idx === dayFirstIdx ? null : (
+                <DayStateLeaves
+                  key={day.date}
+                  day={day}
+                  feedbackReceipts={receiptIdsForDate(day.date)}
+                  progressionReceipts={progressionReceiptsForDate(day.date)}
+                  stateToken={dayStateToken({
+                    day,
+                    isSelected: false,
+                    isMoveSource: false,
+                    isMoveTarget: false,
+                  })}
+                />
+              )))}
+            </View>
           </View>
         ) : (
           <View style={styles.dayList}>
@@ -3582,6 +3612,17 @@ const styles = StyleSheet.create({
 
   // ── Day-first view ──
   dayFirst: { gap: spacing.sm, marginTop: spacing.sm },
+  // THE STATE-LEAF WELL — where the explorer's witnesses live so that LAYOUT
+  // CANNOT SEE THEM. `position: 'absolute'` is the property doing the work: an
+  // absolutely-positioned child is out of the flex flow, so `dayFirst`'s `gap`
+  // is never inserted around it, at any witness count. The zero size and the
+  // clip are belt-and-braces for the children themselves.
+  //
+  // ANY container that mounts `DayStateLeaves` and has a `gap` needs this. The
+  // component returns a FRAGMENT, so without a wrapper its witnesses become
+  // direct children of whatever mounts it, and a gapped parent then spaces the
+  // invisible ones exactly as generously as the visible ones.
+  stateLeafWell: { position: 'absolute', width: 0, height: 0, overflow: 'hidden' },
   viewToggle: {
     flexDirection: 'row',
     alignSelf: 'center',
