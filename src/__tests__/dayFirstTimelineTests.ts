@@ -71,7 +71,7 @@ import {
   projectParts,
 } from '../rules/projectVisibleWeek';
 import { dayTimeline } from '../rules/dayTimeline';
-import { visibleDayLeadHeadline } from '../rules/visibleDayDetail';
+import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { isSignedCopyText, joinSignedCopy, signedCopy } from '../rules/signedCopy';
 import { registerProjectionCopy } from '../rules/projectionCopy';
 import type { VisibleDay } from '../rules/visibleProjection';
@@ -839,6 +839,55 @@ run('a compound name is SIGNED, and one unsigned half makes the whole thing unsi
     'two signed words joined by a separator NOBODY SIGNED read as signed. The '
     + 'separator is athlete-visible text and it comes from the sheet like every '
     + 'other character.');
+});
+
+run('the glyph keys on ONE bucket word — a compound name never reaches the icon table', () => {
+  // A LIVE REGRESSION THIS UNIT CAUSED, CAUGHT BY MEASURING THE TABLE RATHER
+  // THAN REASONING ABOUT IT. The row's icon and accent colour resolve by
+  // matching the day's name against `displayLabelIconKind`, which is a list of
+  // label EQUALITIES ('strength', 'upper push', 'gunshow'). "Strength + Team
+  // Training" matches no row in it, so every joined day would have dropped to
+  // the grey generic activity glyph — four of the six rows this ruling changes.
+  //
+  // The slice-2 report had already looked at this table and concluded nothing
+  // regressed because "Strength" resolved. That was true until the title stopped
+  // being one word. `a-ruling-premise-is-a-claim-too`: the premise aged out.
+  world();
+  const vocabulary = bucketVocabulary();
+  let checked = 0;
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      const key = String(visibleDayLeadBucket(day));
+      checked += 1;
+      assert(!key.includes(String(JOINER)),
+        `${day.date}'s icon key is "${key}" — a JOINED name reaching the icon `
+        + 'table, which matches on equalities and will return the generic glyph.');
+      assert(vocabulary.has(key),
+        `${day.date}'s icon key is "${key}", which is not a bucket word. The glyph `
+        + 'table is keyed on these; anything else falls through.');
+    }
+  }
+  assert(checked >= 21, `only ${checked} day(s) read — the world is not built`);
+  // AND IT IS THE SAME ANSWER THE TITLE USED TO GIVE, which is the whole reason
+  // no glyph can have moved: the leading bucket IS the pre-compound title rule.
+  for (const week of WEEKS) {
+    for (const day of visibleDays(week)) {
+      const expected = day.kind === 'game' || day.parts.length === 0
+        ? String(day.headline)
+        : String(day.parts[0].bucket);
+      assert(String(visibleDayLeadBucket(day)) === expected,
+        `${day.date}'s icon key is "${visibleDayLeadBucket(day)}" where the rule `
+        + `before the compound ruling gave "${expected}". If these can differ, a `
+        + 'glyph moved on a day this ruling was never about.');
+    }
+  }
+  // THE SURFACE ACTUALLY USES IT. Deleting the wiring would leave every
+  // assertion above green while the screen went on passing the compound title.
+  const home = homeScreenSource();
+  assert(/titleIconKind\(\{[^}]*title: iconKey/.test(home)
+    && /getDayRowAccentColor\(\{[\s\S]{0,200}?title: iconKey/.test(home),
+    'the row no longer feeds the leading-bucket key to its icon and accent '
+    + 'colour — the compound title is reaching the equality table again.');
 });
 
 run('joining is a SHEET operation — no surface picks its own separator', () => {

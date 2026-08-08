@@ -131,6 +131,37 @@ export function visibleDayLeadHeadline(day: VisibleDay): SignedCopy {
 const DAY_NAME_JOINER = 'copy.joiner.plus';
 
 /**
+ * THE DAY'S LEADING BUCKET — ONE WORD, FOR THE THINGS THAT ARE NOT WORDS.
+ *
+ * A row's GLYPH and its ACCENT COLOUR are chosen by matching the day's name
+ * against a table of labels (`displayLabelIconKind` in `HomeScreenV2`). That
+ * table is a list of EQUALITIES — "strength", "upper push", "gunshow" — so a
+ * compound name matches nothing in it and every joined row falls through to the
+ * grey generic glyph.
+ *
+ * FOUND BY MEASURING RATHER THAN BY ARGUING, and it was a live regression: the
+ * slice-2 report had already noted the icon comes from a title-STRING table and
+ * reasoned that "Strength" resolved so nothing had broken. That reasoning stops
+ * holding the moment the title stops being one word, which is this commit.
+ *
+ * So the icon and the colour get the day's LEADING bucket — which is exactly
+ * what `visibleDayLeadHeadline` returned before the compound ruling, so their
+ * input is byte-for-byte what it has always been and no glyph can move. The
+ * TITLE says every bucket; the GLYPH says the first one. That is the honest
+ * split: one word cannot depict two kinds of work, and a row that shows the
+ * generic activity icon has told the athlete less than it did yesterday.
+ *
+ * A REAL FIX FOR THE TABLE — keying the glyph off the typed `VisiblePartKind`
+ * instead of off a display string — is a bigger and better change, and it is NOT
+ * made here: it would move glyphs on days this ruling never touched, which is a
+ * device-pass change riding an unrelated commit. Named, not done.
+ */
+export function visibleDayLeadBucket(day: VisibleDay): SignedCopy {
+  const buckets = dayBuckets(day);
+  return buckets.length === 0 ? day.headline : buckets[0];
+}
+
+/**
  * THE DAY'S BUCKETS, IN TIMELINE ORDER, EACH ONE ONCE.
  *
  * Deduplicated by the WORD, not by the part kind. Two parts can share a bucket

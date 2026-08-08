@@ -23,7 +23,7 @@ import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visibleProjection';
-import { visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
+import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
@@ -1574,6 +1574,19 @@ function cardLeadHeadline(day: VisibleDay | undefined): string | null {
 }
 
 /**
+ * The day's LEADING bucket — what the glyph and the accent colour key on.
+ *
+ * Same `undefined`-tolerant wrapper shape as `cardLeadHeadline`, over the rule
+ * stated once in `rules/visibleDayDetail.ts`. It exists because an icon table of
+ * label EQUALITIES cannot match a compound name, and a row silently demoted to
+ * the generic activity glyph tells the athlete less than it did before.
+ */
+function cardLeadIconKey(day: VisibleDay | undefined): string | null {
+  if (!day) return null;
+  return visibleDayLeadBucket(day);
+}
+
+/**
  * WHAT THIS DAY IS, AS THE EXPLORER READS IT — one owner for both shapes.
  *
  * The token is a canonical state leaf: the dev-e2e explorer resolves an athlete
@@ -1679,11 +1692,20 @@ function DayRow({
   // every fixture. It is `SignedCopy`, so this can only ever render an
   // authored string, and it is the only string this row shows about the work.
   const title: string | null = cardLeadHeadline(visibleDay);
+  // THE GLYPH AND THE COLOUR KEY ON THE LEADING BUCKET, NOT ON THE TITLE, and
+  // that is not a preference — it is what stops this ruling breaking them.
+  // Both resolve by matching the day's name against a table of label
+  // EQUALITIES ("strength", "upper push", "gunshow"), so a joined name like
+  // "Strength + Team Training" matches nothing and the row falls through to the
+  // grey generic. `cardLeadIconKey` is the day's FIRST bucket — byte-for-byte
+  // what `cardLeadHeadline` returned before the compound ruling — so no glyph
+  // and no colour moves on any day. See `visibleDayLeadBucket`.
+  const iconKey: string | null = cardLeadIconKey(visibleDay);
   const accentColor = getDayRowAccentColor({
     hasWorkout,
     isGame,
     sessionTier: day.workout?.sessionTier,
-    title,
+    title: iconKey,
   });
   // THE SECONDARY "+ X" LINE IS GONE, BOTH SHAPES (Sam, 2026-08-08). It read
   // "+ Conditioning" under a title of "Upper Push", and then the timeline inside
@@ -1696,7 +1718,7 @@ function DayRow({
   // DELETED, NOT DISABLED. Nothing in this file joins part names with "+" any
   // more; that composition was the last place a surface here made a name out of
   // other names, which is what "no surface composes its own words" forbids.
-  const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
+  const titleIcon = titleIconKind({ hasWorkout, isGame, title: iconKey, workout: day.workout });
   const isTeamOnly = hasWorkout && isTeamTrainingOnlyWorkout(day.workout);
   const isRecoverySession = hasWorkout && (
     day.workout.workoutType === 'Recovery' ||
