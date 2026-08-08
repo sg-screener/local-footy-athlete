@@ -4,6 +4,146 @@
 
 (none)
 
+## Processed 2026-08-08 (thirty-seventh pass) — SLICE 2 AND THE BUCKET VOCABULARY BOTH BUILT AND LANDED
+
+- LOOP CHECK: **`a count taken for a record` — SIGHTING 5**, and it fired in a
+  gate I had just written, on its FIRST run: the leftover-bar cell counted a door
+  FILE-wide, found two, and called the second a leftover. It is the readiness
+  sheet's own "Something hurts" row — the documented SECOND DOOR to one owner,
+  older than this unit. **The number named the FILE while the claim was about the
+  SCREEN.** Secondary and worse: **a green gate that was watching nothing** — the
+  copy-binding gate reads quoted strings in TABLE ROWS, my batch-12 table quoted
+  the OLD sentences, so it bound five strings nobody needed watching and zero of
+  the five new labels while printing PASS. The same defect had already swallowed
+  slice 1's "Today"/"Week", parked in a bullet list no gate reads.
+- **BOTH ORDERS ARE ON HIS PHONE.** `e8d227ac` (layout + chip row + spacing) and
+  `c140a2d0` (bucket vocabulary). docs/DAY_FIRST_SLICE2_BOUNDARY_2026-08-08.md
+- **THE ORDER IS HIS, WRITTEN OUT:** toggle → seven-day strip DIRECTLY under it →
+  today's card → the chip row → Coach Notes. The missed-session prompt and the
+  phase-skew disclosure moved down with the notes. **The picker banners stayed
+  above the days they instruct about** — a picker forces the week shape, and
+  "tap the day to move the game to" under the days would be wrong.
+- **FIVE BARS ARE ONE ROW OF CHIPS, AND NOT ONE DOOR MOVED.** Same handler, same
+  testID, same accessibility label on all five — including the two whose testID
+  changes when a fact is already active. The sentence each bar showed is now the
+  chip's SPOKEN name: no words deleted, demoted to where a five-across row can
+  carry them. **Labels PROPOSED and unsigned:** Time / Away / Sick / Injured /
+  Equipment (batch 12, with "Today"/"Week"). "Equipment" beat "Kit" and "Gear" —
+  a shortened label should not also be a new noun.
+- **THE DAY SAYS ITS NAME ONCE.** Title = the day's BUCKET; the timeline is the
+  one enumeration; nothing on this screen composes a name out of other names any
+  more. **"Power" is gone from the week view** — the exhibit day reads "Strength"
+  — and the word is NOT retired: it still names that component on the timeline.
+- **MEASURED IN BOTH WORLDS BEFORE A WORD CHANGED.** A tape over three real
+  generated weeks, diffed: every training day's row and title → its bucket;
+  Power → Strength; Rest / Practice Match / Game / Team Training unchanged; **the
+  TIMELINE BYTE-IDENTICAL**. And **Gunshow kept "Gunshow" ON ITS OWN**, through
+  the charter-door branch rather than a special case — that day carries a typed
+  `composedOptionalKind`. Measured, not assumed.
+- **THE PROJECTION OWNS THE WORD, as the order required.** `VisiblePart` carries
+  `bucket` beside `headline`; `PART_BUCKET_KIND` is a table the type system forces
+  to be complete, not an `if`. It sits on the WORDS half, so a missing copy entry
+  still cannot disarm the structural laws.
+- **EIGHT NEW CELLS, TWELVE MUTATIONS, TWELVE REDS.** The order cell also refuses
+  anything re-inserted BETWEEN the toggle and the strip — "directly under it" is
+  the half of the ruling an ordering assertion cannot see.
+- **A MUTATION SURVIVED, and it is the one worth reading.** Deleting the
+  charter-optional branch from `partBucket` left every cell green: a Gunshow day
+  quietly reading "Strength" is a LEGAL bucket word, so the vocabulary cell was
+  blind to it. A cell of its own now holds it.
+- **THREE PINS MOVED, ALL OUT LOUD, all the legitimate case (the RULING moved, on
+  a date, from the owner):** A4 rider (a) "notes above the week" → below the card,
+  still asserting a POSITION not mere presence; `coachNoteDisplayTests`' helper
+  pin → the structural form (duplication is now impossible, not suppressed); and
+  the readiness entry's button ROLE, asserted at its new owner (the chip) with the
+  identity still asserted at the call site.
+- **THE COPY CEILING DROPPED IN THE SAME COMMIT: 141 → 130**, honestly labelled —
+  five sentences left the EXTRACTOR'S VIEW, not the app.
+- **NORTH STAR: TOWARD, and a convergence step this time**, not merely a new
+  window: zero new stored state, and one COMPOSITION removed — the screen went
+  from two answers about what a day is called to one.
+- **SEVEN QUESTIONS PARKED** (docs/PARKED_QUESTIONS/DAY_FIRST_SLICE2_2026-08-08.md):
+  whether an active fact should light its chip (**not built on purpose** — only 2
+  of 5 chips know, and lighting 2 of 5 is worse than none); **a zoomed-out week row
+  now shows ONE word** and that is a real loss at that size; power still gets its
+  own timeline row for one exercise; **the day SCREEN has the same double-labelling
+  one screen over** ("Team Training" twice), outside the order; the five labels for
+  signing; the Gunshow-without-a-typed-door gap; and where the readiness owner's
+  title went.
+- **NOT COVERED, first line of it: NO DEVICE EVIDENCE** — chip sizing, label
+  lengths, every tightened gap and how a one-word row scans are unverified by eye;
+  this repo has no render-level test. The row icon still comes from a title-STRING
+  table ("Strength" resolves, "Power" did not, so nothing regressed) — argued from
+  the table, not rendered. `coachNoteDisplayTests` does not run at all: it crashes
+  at HEAD on a missing TodayWorkoutCard.tsx, pre-existing and not in the chain; its
+  pin was updated anyway rather than left as a trap.
+- **GATE:** full `test:bible` UNPIPED both commits — `TRUE_EXIT=1` at
+  `test:program-control-durable`, the declared red, same text, **1 FAIL line**.
+  Sweep **2 of 157 = the declared set exactly**. `test:compile` EXIT 0.
+
+## Processed 2026-08-08 (thirty-seventh pass) — the two orders as the seat wrote them
+
+0. SAM RULED (with screenshots on file): DAY-FIRST SLICE 2 — layout
+   + chip row. Commit as authored, build under standing conditions.
+   LOOP CHECK: design iteration from the owner's eye — the intended
+   loop; iterate.
+   (a) LAYOUT REORDER, Sam's exact words: Today/Week toggle → the
+   seven-day strip with numbers DIRECTLY under it → today's card →
+   then below the card: the icon chip row → then Coach Notes (moved
+   BELOW the card; they currently sit above the strip).
+   (b) THE ICON CHIP ROW (Sam picked option a — his own Aug 1
+   design): the five stacked life-fact bars (Short on time / Away
+   this week / Sick-flat / Injured / Missing equipment) become ONE
+   horizontal row of small round icon chips with a tiny label under
+   each, always visible, sitting just under the daily card. Existing
+   icons from the landed icon batch; any shortened labels are NEW
+   strings → PROPOSED, Title Case short-label law, queued for the
+   signing batch (join "Today"/"Week" already parked). Same doors
+   behind the chips — presentation only, no behaviour moves.
+   (c) SPACING PASS: tighten the vertical gaps Sam flagged
+   ("too many UI gaps") across the Program screen — reasonable
+   judgment, no design system invented; his eye judges next build.
+   Full test:bible UNPIPED per commit; walker surface laws; one
+   batched report; park Sam questions. Sam holds a veto on sight.
+
+   [RESTORED BY THE TERMINAL. This order was never committed — it
+   lived only as a working-tree edit, and the seat's next write
+   replaced it in place before it reached a commit. Copied back
+   verbatim from the terminal's read of it at 2026-08-08, because a
+   processed section that records one of two orders is a record of
+   half the work. Numbered 0 to keep the seat's own numbering of the
+   order that followed it intact.]
+
+
+1. SAM RULED (screenshots on file, 2026-08-08 morning): BUCKET
+   VOCABULARY + kill the double-labelling. Joins slice 2's order;
+   commit as authored.
+   (a) THE DUPLICATION DIES: the day card currently says the session
+   twice (title "Upper Push + Conditioning", then the timeline lists
+   the same again). The TIMELINE becomes the single enumeration of
+   the day's parts; the card title stops restating it (the "+ X"
+   subtitle line goes).
+   (b) BUCKET WORDS ONLY on the week view rows AND the day title:
+   "Strength", "Conditioning", "Rest", "Mobility", "Accessories",
+   "Gunshow" — and "Speed" is a bucket too. The variant (Upper
+   Push, Full Body, Lower Squat...) lives on the TIMELINE rows —
+   Sam confirmed the current daily layout is right: "upper push on
+   one line with conditioning below it is good." So: week row =
+   buckets, day title = buckets, timeline = the variant names
+   stacked one per line, exactly as now. Bucket words are signed
+   menu vocabulary; anything new ships PROPOSED.
+   (c) POWER IS NOT A LABEL, Sam verbatim: "power should not be
+   labelled there for just 1 exercise — power is just part of the
+   Strength work." A day whose strength work contains power
+   exercises is titled "Strength"; "Power" never appears as a week
+   row, day title, or bucket. (Exhibit 1's Monday "Power" title is
+   exactly what dies.)
+   This is athlete-visible naming — L-P/one-name-per-session laws
+   apply; projection owns the words, no surface composes its own.
+   Build with slice 2, one report, Sam's eye judges the next build.
+
+
+
 ## Processed 2026-08-08 (thirty-sixth pass) — DAY-FIRST SLICE 1 BUILT AND LANDED; COMPLETION SHOWN, NOT WRITTEN
 
 - LOOP CHECK: **`a count taken for a record` — SIGHTING 4 — COMPRESSED**, and it

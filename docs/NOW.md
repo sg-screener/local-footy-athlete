@@ -1,63 +1,82 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `2796f6d1` (day-first slice 1; docs follow it).
-- **UNIT: DAY-FIRST UI, SLICE 1 — BUILT AND LANDED.** Sam ruled **fork A**
-  (completion shown, not written) and the overnight authorisation carried the
-  build. docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md
-- **WHAT IS ON HIS PHONE:** the Program tab **leads with today** — a seven-day
-  week strip with the **game-day anchor**, the selected day at full size with
-  every door it already had, and the day's session as a **tappable component
-  timeline** between the day's name and its CTA. **No clock times.** A
-  **Today / Week** control zooms out to the existing seven-row list.
-- **COMPLETION IS SHOWN, NOT WRITTEN.** A filled node means the athlete's SAVED
-  outcome recorded that component; hollow means not answered yet. Nothing on the
-  screen writes. Gated, not merely intended: frozen inputs plus a source
-  assertion that the timeline module reaches no writer.
-- **TWO SHAPES OF ONE SCREEN, NOT TWO SCREENS.** Both render the same
-  `visibleWeek` through the same `DayRow` from **one row call site**. A rival
-  day-first screen behind a third `DESIGN_VERSION` — the switch the unit plan
-  named — would have been two live truths about one week. The week list is one
-  tap away and is the FORCED shape on another week (no today) and in a game
-  picker (a week-level act), so no door and no testID moved.
-- **THE GATE, on the FINAL tree `2796f6d1`, both instruments:** full `test:bible`
-  **UNPIPED `TRUE_EXIT=1` at `test:program-control-durable`, 1 FAIL cell line**
-  (*"a move committed durably reaches the visible week"*, 18 passed / 1 failed) —
-  byte-for-byte main's declared red. **Sweep: 2 of 157 =
-  `program-control-durable` + `fixture-identity`, the declared set EXACTLY**
-  (157 = 156 + this unit's suite). `test:compile` EXIT 0, no file regressed.
-  Copy extraction **130 before and after**, measured in a worktree. The chain ran
-  on the final tree, **not once per commit** — and the first full run is what
-  caught the profile-census red below.
-- **CORRECTION, AND IT IS THE UNIT PLAN'S OWN:** §2f named *conditioning +
-  finisher* as the live `kind` collision. **Measured at the emitter, that day
-  cannot exist** — `getSessionComponents` emits one or the other. The reachable
-  pair is **`recovery` + `recovery_addon`**, now built by the suite. "Key on
-  `id`" was right for a wrong reason and is now right for a measured one. A
-  consequence is NAMED not patched: two `recovery` parts render identically,
-  because headline and rows both key on kind.
-- **CORRECTION, MINE:** the new suite reached the profile store around its owner
-  — `profileMirrorNarrowing`'s one-door census caught it on the full chain, and
-  it is routed through `applyProfileOnboardingWrite` rather than joining ~50
-  entries of declared debt. **The value of running the whole chain rather than
-  the suites I thought were related.**
-- **LOOP CHECK, SIGHTING 4, COMPRESSED:** `a count taken for a record` fired
-  inside a gate I wrote, on its first mutation test — it counted call sites and
-  passed while the loop feeding them was empty. AGENTS.md now carries the source-
-  scan half of that law. **Seven mutations, seven reds** across the new suite.
-- **PARKED FOR SAM (five, in the boundary report §7):** mid-session ticks do not
-  survive an app kill (fork A's known edge); `Today`/`Week` ship PROPOSED,
-  unsigned; icons are terminal-proposed from existing assets; the Today/Week
-  choice is not persisted (persisting it would be new stored state); the two
-  identical `recovery` rows.
-- **NOT COVERED, first line of it: NO DEVICE EVIDENCE.** Nothing here has been on
-  a phone, and the layout/spacing/colour of the strip and timeline are unverified
-  by eye. This repo has no render-level test, so no cell asserts the day-first
-  branch mounts — the three source-scan assertions read the block's shape and
-  that limit is stated. Rulings 1–12 of the home-screen redesign remain owed.
-- **NEXT:** Sam's veto on fork A and on the shape; then either the device pass on
-  slice 1 or the next slice (the icon shortcut row / the four-action menu). The
-  **LR-29 replay unit** still builds after day-first UI and remains the measured
-  payer of main's `fixture-identity` red.
+- **BRANCH:** `main` · **HEAD:** `c140a2d0` (day-first slice 2 + the bucket
+  vocabulary; docs follow it).
+- **UNIT: DAY-FIRST UI, SLICE 2 — BUILT AND LANDED, both of Sam's 2026-08-08
+  orders.** `e8d227ac` (layout + chip row + spacing) and `c140a2d0` (bucket
+  vocabulary). docs/DAY_FIRST_SLICE2_BOUNDARY_2026-08-08.md
+- **WHAT IS ON HIS PHONE, in the order he wrote out:** the Today/Week control,
+  **the seven-day strip directly under it**, today's card with its component
+  timeline, **the life-fact chip row**, then Coach Notes. The missed-session
+  prompt and the phase-skew disclosure moved below the card with the notes; the
+  picker banners stayed above the days they instruct about.
+- **FIVE STACKED BARS ARE ONE ROW OF ICON CHIPS, AND NOT ONE DOOR MOVED.** Same
+  handler, same testID, same accessibility label on all five — including the two
+  whose testID changes when their fact is active. Each bar's sentence is now the
+  chip's SPOKEN name. **Labels PROPOSED, unsigned:** Time / Away / Sick / Injured
+  / Equipment (copy batch 12, with slice 1's "Today"/"Week").
+- **THE DAY SAYS ITS NAME ONCE.** The week row and the day title are the day's
+  **BUCKET** (Strength, Conditioning, Rest, Mobility, Accessories, Gunshow,
+  Speed); the **timeline is the one enumeration** and carries the variant name.
+  **"Power" is gone from the week view** — the exhibit day reads "Strength" — and
+  is NOT retired: it still names that component on the timeline.
+- **THE PROJECTION OWNS THE WORD.** `VisiblePart` carries `bucket` beside
+  `headline`; `PART_BUCKET_KIND` is a table the type system forces to be
+  complete. It sits on the WORDS half of the projection, so a missing copy entry
+  still cannot disarm the structural laws. **Nothing on the Program screen
+  composes a name out of other names any more.**
+- **MEASURED IN BOTH WORLDS BEFORE A WORD CHANGED** — a tape over three real
+  generated weeks, diffed: every training day's row and title → its bucket;
+  Power → Strength; Rest / Practice Match / Game / Team Training unchanged; **the
+  TIMELINE BYTE-IDENTICAL**; and **Gunshow kept "Gunshow" on its own**, through
+  the typed charter-door branch rather than a special case.
+- **THE GATE, both commits:** full `test:bible` **UNPIPED `TRUE_EXIT=1` at
+  `test:program-control-durable`, 1 FAIL line** — main's declared red, same
+  assertion text. **Sweep 2 of 157 = the declared set EXACTLY.** `test:compile`
+  EXIT 0, no file regressed. Copy extraction ceiling **DROPPED 141 → 130 in the
+  commit that earned it**, honestly labelled: five sentences left the
+  EXTRACTOR'S view, not the app.
+- **EIGHT NEW CELLS, TWELVE MUTATIONS, TWELVE REDS — and one mutation SURVIVED
+  first.** Deleting the charter-optional branch from `partBucket` left every cell
+  green, because a Gunshow day quietly reading "Strength" is a *legal bucket
+  word*. A cell of its own now holds it. **That is the finding to carry: a
+  vocabulary gate is blind to a wrong word from its own vocabulary.**
+- **THREE PINS MOVED, ALL OUT LOUD**, all the legitimate case (the ruling moved,
+  on a date, from the owner): A4 rider (a) "notes above the week" → below the
+  card, still asserting a POSITION; `coachNoteDisplayTests`' helper pin → the
+  structural form; and the readiness entry's button ROLE → asserted at its new
+  owner, identity still asserted at the call site.
+- **LOOP CHECK, SIGHTING 5:** `a count taken for a record` fired again, inside a
+  gate I had just written, on its first run — it counted a door FILE-wide and
+  called a legitimate second owner a leftover. **The number named the FILE while
+  the claim was about the SCREEN.** Secondary: **a green gate watching nothing** —
+  the copy-binding gate reads quoted strings in TABLE ROWS, and my table quoted
+  the OLD sentences, so it bound five strings nobody needed watching and none of
+  the new labels while printing PASS. 29 → 41 bound, mutation-proven.
+- **SEVEN QUESTIONS PARKED**
+  (docs/PARKED_QUESTIONS/DAY_FIRST_SLICE2_2026-08-08.md): whether an active fact
+  should light its chip (**not built on purpose** — only 2 of 5 chips know);
+  **a zoomed-out week row now shows ONE word**, a real loss at that size; power
+  still gets its own timeline row for one exercise; **the day SCREEN has the same
+  double-labelling one screen over**, outside the order; the five labels for
+  signing; the Gunshow-without-a-typed-door gap; where the readiness owner's
+  title went.
+- **NOT COVERED, first line of it: NO DEVICE EVIDENCE.** Chip sizing, label
+  lengths, every tightened gap and how a one-word row scans are unverified by
+  eye; this repo has no render-level test, so the gates read source SHAPE and
+  projection OUTPUT. The row icon still comes from a title-STRING table
+  ("Strength" resolves, "Power" did not, so nothing regressed) — argued from the
+  table, not rendered. `coachNoteDisplayTests` does not run at all (crashes at
+  HEAD on a missing `TodayWorkoutCard.tsx`, pre-existing, not in the chain); its
+  pin was updated anyway rather than left as a trap. Rulings 1–12 of the
+  home-screen redesign remain owed.
+- **SLICE 1 STILL STANDS BEHIND IT** (`2796f6d1`, fork A — completion SHOWN, not
+  written; two shapes of one screen, one row call site).
+  docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md
+- **NEXT:** Sam's eye on slice 2 — he holds a veto on all of it, and the parked
+  seven are his. Then either the device pass or the next slice. The **LR-29
+  replay unit** still builds after day-first UI and remains the measured payer of
+  main's `fixture-identity` red.
 
 - **STILL TRUE FROM THE MERGE (2026-08-07, `89b540f9`):** main carries Stage B
   stages 1 + 2; **a green main went to a 2-red main knowingly** —
