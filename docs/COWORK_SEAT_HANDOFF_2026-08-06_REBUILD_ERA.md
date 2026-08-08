@@ -191,3 +191,44 @@ twice-hit wall without having offered an alternative has failed this
 law, whatever else it got right. This applies to the seat's OWN
 strategies above all — the loop-audit points at the plan, not just
 the steps.
+
+## §9 STATE STAMP 2026-08-08 morning (supersedes §5; read §1-§8 — every
+law there was paid for in blood on 2026-08-07)
+
+THE REBUILD IS MERGED TO MAIN (89b540f9; declared reds
+program-control-durable + fixture-identity ride knowingly, payer =
+LR-29 replay unit). V3 was BANKED not closed — remainder is the replay
+unit (docs/REPLAY_UNIT_KICKOFF + DEPENDENCY_LIST), re-slotted AFTER
+day-first UI, before beta. Era now: DAY-FIRST UI. Slice 1 LANDED (the
+today-first Program view, fork A completion-shown). Slice 2 ordered in
+the inbox: layout reorder (toggle → strip → card → chip row → coach
+notes), the five life-fact bars → icon chip row (Sam's Aug 1 design),
+spacing pass, BUCKET VOCABULARY ruling (week rows + day titles say
+Strength/Conditioning/Rest/Mobility/Accessories/Gunshow/Speed; the
+variant lives on the timeline rows; POWER IS NEVER A LABEL — folds
+under Strength), kill the title/timeline double-labelling.
+
+Mechanics now live: Stop-hook (.claude/settings.json +
+scripts/seat-inbox-hook.sh, twice-burned and now tested 6/6) keeps the
+terminal working while unprocessed inbox orders exist; inbox empty
+marker is UNNUMBERED "(none)" — a numbered marker false-blocks the
+hook. Sam killed the seat's 15-min timer loop (it failed twice);
+checks happen when Sam says "check". Terminal re-orient paste after
+/clear: Read docs/NOW.md, docs/SEAT_INBOX.md and this doc, then check
+inbox. Opus for builds/deletes; Fable only for judgment moments; the
+replay unit's model gets chosen from its dependency list when it opens.
+
+Sam-handling additions this era, each learned the hard way: NO
+completeness claims ever (three buckets only: measured-done /
+attributed / open-unknown); SCREENSHOTS BEAT DESCRIPTIONS — ask for
+them, they resolved in minutes what tap lists couldn't; tap lists are
+written from SCREENS never code names; don't tell him to rest/pack up
+— he hates it; when he repeats an instinct CHECK THE LEDGER (his
+sweep/batch/matrix instinct is 4-for-4); his rage names real defects
+more often than not — decode it before defending. Queues for him:
+signing batch ("Today"/"Week", chip labels, anything slice 2
+proposes), icon-pick session (power/speed share the bolt), 5 parked
+one-liners in docs/PARKED_QUESTIONS/DAY_FIRST_SLICE1_2026-08-08.md,
+COACHING_QUALITY_EXHIBITS file grows until its unit opens (post-UI).
+Roadmap after UI: journal → replay unit → coach rebuild → quality pass
+→ Renee/TestFlight → App Store.

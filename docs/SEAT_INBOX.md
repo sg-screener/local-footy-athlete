@@ -2,6 +2,32 @@
 
 ## Unprocessed (newest first)
 
+1. SAM ANSWERED the slice-2 boundary (2026-08-08): batch 12 SIGNED,
+   chips stay unlit, week rows go COMPOUND BUCKET. Full record +
+   verbatim quote: docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md
+   — commit as authored.
+   LOOP CHECK: naming-refined-on-sight — sighting 2 — iterate; the
+   compression already exists (projection owns the words + the signed-
+   copy regime makes each refinement a one-row/one-batch change).
+   (a) SIGNED, all seven as proposed: "Today", "Week", "Time", "Away",
+   "Sick", "Injured", "Equipment". Copy sheet batch 12 PROPOSED →
+   SIGNED, equality-bound both directions.
+   (b) Parked Q1 CLOSED: chips do not light (Sam: "a"). Leave as
+   built; lit-chips is its own later unit if ever wanted.
+   (c) BUILD: week view rows say ALL the day's buckets, joined
+   " + ", timeline order, each word once — "Strength + Conditioning";
+   "Strength" alone when that is all there is. Signed bucket set
+   unchanged; Power folds under Strength BEFORE joining; Rest /
+   Practice Match / Game / Team Training rows unchanged. Derived in
+   the projection's words half — no surface composes it.
+   (d) SEAT-RULED, Sam holds the veto (grounds in the doc: his own
+   duplication ruling + one-name-per-session): the day TITLE carries
+   the SAME compound name; daily granularity stays on the timeline
+   ("upper push on one line with conditioning below it is good").
+   The title does NOT revert to variant names.
+   One report; the tape-before-tape-after discipline from slice 2
+   applies (three generated weeks, timeline byte-identical).
+
 (none)
 
 ## Processed 2026-08-08 (thirty-seventh pass) — SLICE 2 AND THE BUCKET VOCABULARY BOTH BUILT AND LANDED
