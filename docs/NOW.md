@@ -1,7 +1,40 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `d07e3fad` (the day-first dead-zone fix; the
-  compound day name and a harness fix behind it).
+- **BRANCH:** `main` · **HEAD:** the journal unit's plan commit (day-first work
+  behind it; `d07e3fad` was the dead-zone fix).
+- **CURRENT UNIT: THE JOURNAL — OPENED, MEASURED, NOTHING BUILT.**
+  docs/JOURNAL_UNIT_PLAN_2026-08-09.md is the dependency list the V3 law
+  requires before a build.
+  - **TWO OF THE KICKOFF'S THREE "MUST SETTLE FIRST" ITEMS DO NOT EXIST.** The
+    logging tree (`WorkoutLoggerScreen`, `SetLoggerRow`, `useWorkoutLog`,
+    `workoutService`, `src/screens/journal/`) and `src/types/domain.d.ts` were
+    deleted in `2df51650` on 2026-07-25; `actualRpe` is in no source file;
+    `cluster-B-logged-set-fields` owns zero baseline entries. **The Journal is
+    GREENFIELD** — no baseline to extend, no `LoggedSet` decision owed.
+    Corrected in place in BOTH the kickoff and the base design doc it was
+    inherited from.
+  - **THE JOURNAL IS ALMOST ENTIRELY A READ.** `SessionFeedback`
+    (`programStore.ts:1693`) is a persisted, never-pruned input already carrying
+    completion, per-component completions, feeling, difficulty, soreness,
+    teamNightSize, skip/partial reasons, a conditioning log, `notes`, a durable
+    receipt — and a `strength` field whose own comment says *"for future
+    progression/diary use"*.
+  - **THE ONE MONDAY-CARD ITEM WITH NO OWNER AT ALL: load vs normal
+    (ACWR-lite).** Zero files match `acwr|chronicLoad|acuteLoad|weeklyVolume`.
+    What "load" means is a coaching question for Sam — it blocks that item only.
+  - **THREE NEW STORED INPUTS, ALL ANSWERS, ZERO DERIVED STATE:** free notes +
+    tags (own armoured store, joins the hydration gate + reset day one),
+    post-game feel rating and the "felt different" tap (both ride
+    `SessionFeedback` on the EXISTING door — "Log Game" already routes through
+    `startFinished: true`). North star: **TOWARD.**
+  - **LR-18 RULED (mine, veto open): DELETE `workoutLogStore`, do not persist.**
+    Nothing writes it; `resultsPersistOwnershipTests.ts:317` already holds that
+    line. Sam's own model rules per-set entry out, so persisting would mint a
+    durable key for cancelled work.
+  - **SLICE 1 HAS NO STOP CONDITIONS:** the tab + this week read-only, zero new
+    stored state. NOT BUILT — awaiting Sam.
+  - **TWO OPEN QUESTIONS FOR SAM:** what "load" means; and the week-shape strip
+    has no Moderate (the app knows hard/not-hard only, `hardDay: 0|1`).
 - **LAST UNIT: THE DEAD ZONE UNDER THE DAY CARD — FIXED** (`d07e3fad`), from
   Sam's 11:04 screenshot while building for Renee. **Invisible witness nodes were
   participating in layout:** `DayStateLeaves` returns a FRAGMENT, so its

@@ -38,17 +38,35 @@ Everything in both design docs:
 
 ## THE UNIT MUST SETTLE FIRST (inherited, named in the base doc)
 
-- The logging tree has never run: `LoggedSet` lacks `actualRpe`/
-  `completed` while the code reads and writes both; the journal screens
-  are unmounted (barrel files nothing imports). NOT a working baseline to
-  extend — decide the type deliberately, fix type + implementation
-  together. The 15 errors are baseline-suppressed naming the design doc
-  as owner.
-- The hand-maintained `src/types/domain.d.ts` beside `domain.ts` is
-  standing drift — one owner, per L15/one-write-format law.
+**CORRECTED IN PLACE 2026-08-09, MEASURED AT `804a7e0f`: two of these three
+items no longer exist.** They were inherited verbatim from the base design doc
+(written 2026-07-23) and were already false when this kickoff was written —
+resolved by deletion on 2026-07-25. Full receipts in
+docs/JOURNAL_UNIT_PLAN_2026-08-09.md §1. Struck rather than deleted, so a
+future reader does not re-derive them from the base doc a third time.
+
+- ~~The logging tree has never run: `LoggedSet` lacks `actualRpe`/`completed`
+  while the code reads and writes both; the journal screens are unmounted
+  (barrel files nothing imports). NOT a working baseline to extend — decide the
+  type deliberately, fix type + implementation together. The 15 errors are
+  baseline-suppressed naming the design doc as owner.~~
+  **MOOT.** `WorkoutLoggerScreen`, `SetLoggerRow`, `useWorkoutLog`,
+  `workoutService` and all of `src/screens/journal/` were deleted in `2df51650`
+  (ancestor of `main`, verified by `merge-base`). `actualRpe` appears in no
+  source file. `cluster-B-logged-set-fields` owns **zero** live entries in
+  `scripts/typecheck-baseline.json`, whose own `_ownership` note records the
+  deletion. **There is no baseline to extend and no type decision owed — this
+  is greenfield.**
+- ~~The hand-maintained `src/types/domain.d.ts` beside `domain.ts` is standing
+  drift — one owner, per L15/one-write-format law.~~
+  **MOOT.** `src/types/domain.d.ts` does not exist; only `domain.ts` remains.
 - **LR-18 rides this unit** (census ruling): `workoutLogStore` is
   in-memory, logged sets don't survive relaunch — diagnose, then persist
   or delete under the store-armour recipe (one door/tape/quarantine).
+  **STANDS — and it is already diagnosed and gated.** Nothing writes the store;
+  `resultsPersistOwnershipTests.ts:317` holds that line and reds the moment a
+  set-logging surface appears. Ruled DELETE (not persist) in the plan §5,
+  because Sam's own logging model rules per-set entry out. Sam holds a veto.
 
 ## STANDING RIDERS (honoured, from the addendum)
 

@@ -9,6 +9,22 @@ re-litigated at build time.
 
 ## Inherited defect the 5C build must settle first (added 2026-07-24)
 
+> **RESOLVED BY DELETION 2026-07-25 — re-measured 2026-08-09. THIS SECTION IS
+> HISTORY, NOT A LIVE HAZARD.** Every file it names was deleted in `2df51650`
+> (ancestor of `main`): `WorkoutLoggerScreen`, `SetLoggerRow`, `useWorkoutLog`,
+> `workoutService`, `calculations`, and all of `src/screens/journal/`.
+> `actualRpe` appears in no source file. The 15 errors are gone from
+> `scripts/typecheck-baseline.json` (`cluster-B-logged-set-fields` owns zero
+> live entries). `src/types/domain.d.ts` no longer exists, so the secondary
+> drift hazard is closed too.
+>
+> **The Journal build is greenfield: no baseline to extend, no `LoggedSet` type
+> decision owed.** This banner exists because the stale text below was inherited
+> verbatim into JOURNAL_UNIT_KICKOFF_2026-08-08.md and shipped as a live
+> "must settle first" list for two weeks after it stopped being true. Receipts:
+> docs/JOURNAL_UNIT_PLAN_2026-08-09.md §1. Read the rest of this section as the
+> record of a defect that was paid, not as work owed.
+
 The typecheck-gate unit found that in-session logging does not type-check
 against its own domain model, and the logging screens are **not mounted**.
 
