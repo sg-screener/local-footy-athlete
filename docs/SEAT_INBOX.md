@@ -86,12 +86,33 @@
   erased types. **The threshold failed a correct module, and on a bigger module
   it would have passed an empty match.** Re-aimed to prove the block by a KNOWN
   MEMBER.
+- **A REAL DEFECT, FOUND BY PROBING THE READER BY HAND AND NOT BY ANY RED.**
+  *"What am I doing on friday this week?"* carries a day marker AND a week
+  marker; the subject table was searched in ORDER with `week_shape` above
+  `day_work`, **so the coach answered with the week's shape and never mentioned
+  Friday.** The gate was 72/72 green throughout — no message in the cell set
+  carried two markers, **which is exactly the gap a table-ordered resolver
+  leaves and the reason the cells could not have found it.** Fixed by making the
+  rule SPECIFICITY rather than table order, with four regression cells including
+  two controls so the fix is not a blanket "a day always wins".
+- **TWO MUTATIONS WERE INERT BEFORE THEY WERE RED, AND BOTH WERE RE-PROBED.**
+  M6's substitution missed the file entirely; N9's applied but compared
+  `'2026-08-15' > '2026-08-14z'`, which is still true, so the same fixture was
+  found. **A mutation that does not move the output is not a survivor and must
+  not be recorded as one.** Same class as the journal-hidden pass's M6 prefix.
 - **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
-  **1 FAIL cell** — main's declared red, 92 suites reached. `test:compile`
-  PASSED, totals byte-identical **35/51/373**. New gate
-  `test:coach-tab-slice2` **72 cells, 10 mutations 10 red**;
+  **1 FAIL cell** — main's declared red, 92 suites reached; run TWICE, once at
+  the slice and once after the fix. `test:compile` PASSED, totals byte-identical
+  **35/51/373**. **Sweep 2 of 173 = the declared set exactly**; denominator
+  moved 172 → 173 in the commit that earned it. New gate
+  `test:coach-tab-slice2` **76 cells, 11 mutations 11 red**;
   `test:coach-tab-slice1` **73 cells** (57 → 66 → 73), **8 mutations 8 red**.
   Copy extraction ceiling UNCHANGED at 576.
+- **A PROCESS NOTE, OWNED:** the first sweep ran while a throwaway probe file
+  existed for seconds under `src/dev/`. It read 2 of 173, the declared set — but
+  a sweep over a tree with an extra file in it is not one to quote, so it was
+  re-run clean and the number above is the clean one. Recorded rather than
+  quietly replaced; this is a shared worktree.
 - **NOT COVERED, first line: DEPTH 0, NOBODY HAS ASKED THIS COACH ANYTHING.** No
   screen mounted, no athlete walked, every week hand-built. **Not one keyboard
   case exercised — still the half L-C3 calls a GATE failure, and it matters more

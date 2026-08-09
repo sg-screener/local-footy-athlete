@@ -20,7 +20,7 @@
 - **COACH SLICE 2 (2026-08-10).** `5ff09347` (the seat's parked ideas) ·
   `24617f53` (batch 30 ruled, the greeting signed) · `e533f1ec` (the slice).
   **READ:** docs/COACH_SLICE2_BOUNDARY_2026-08-10.md · gate
-  `test:coach-tab-slice2` (72 cells).
+  `test:coach-tab-slice2` (76 cells, 11 mutations 11 red).
   - **THE GREETING IS SAM'S SENTENCE, VERBATIM, AND IT IS THE ONE BATCH-30
     STRING IN THE SIGNED-COPY SHEET.** A verbatim quote is the strongest
     provenance the sheet has. It ships AHEAD OF THE ABILITY by his own ruling;
@@ -48,6 +48,13 @@
     slice 1's cell was not looking — the screen's list would stay spotless and
     the gate would stay green. It now sweeps the screen's `rules/` imports one
     hop out, **excluding `import type`, which is erased.**
+  - **A REAL DEFECT FOUND BY PROBING, NOT BY A RED.** *"What am I doing on
+    friday this week?"* carries a day marker AND a week marker; the table was
+    searched in ORDER and the coach answered with the WEEK and never mentioned
+    Friday — **72/72 green throughout, because no cell fed it a message matching
+    two markers.** Now precedence is SPECIFICITY, not table order. **The class
+    for S3: a first-match-wins resolver needs at least one input matching two
+    rules, per pair that can co-occur.**
   - **NOT COVERED, first line: DEPTH 0, NOBODY HAS ASKED THIS COACH ANYTHING.**
     No keyboard case exercised — still the half L-C3 calls a gate failure, and
     it matters more now that the tab has to be TYPED into. **The reader has
@@ -239,7 +246,9 @@
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
   `test:program-control-durable`, 1 FAIL line** — main's declared red, 92
   suites reached. `test:compile` PASSED, totals byte-identical to baseline
-  (35/51/373). **Sweep 2 of 172** = the declared set exactly. **The denominator
+  (35/51/373). **Sweep 2 of 173** = the declared set exactly. **The denominator
+  moved 172 → 173 in the commit that earned it** (`test:coach-tab-slice2`).
+  Previously: **The denominator
   moved 171 → 172 in the commit that earned it** (`test:coach-tab-slice1`,
   which sits past the chain's exit — the sweep is what proves it).
   **THE DENOMINATOR MOVED 169 → 170 IN THE COMMIT THAT EARNED IT**

@@ -1,7 +1,8 @@
 # COACH REBUILD SLICE 2 — BOUNDARY
 
 `5ff09347` (the seat's parked ideas, as authored) · `24617f53` (batch 30 ruled,
-Sam's greeting signed) · `e533f1ec` (the slice). Branch `main`.
+Sam's greeting signed) · `e533f1ec` (the slice) · the precedence fix. Branch
+`main`.
 
 Order: docs/SEAT_INBOX.md item 1, 2026-08-09 night — (a) greeting, (b) the
 parked file, (c) slice 2. Kickoff: docs/COACH_REBUILD_KICKOFF_2026-08-09.md.
@@ -196,6 +197,23 @@ string — **but a gate coupled to a dependency array is coupled to the wrong
 thing.** Re-anchored on the closing brace at the producer's own indentation, and
 it still proves its last line is inside the slice.
 
+**A REAL DEFECT, FOUND BY PROBING THE READER BY HAND AND NOT BY ANY RED.**
+*"What am I doing on friday this week?"* carries a day marker AND a week marker.
+`SUBJECT_MARKERS` was searched in ORDER and `week_shape` sat above `day_work`,
+**so the coach answered with the week's shape and never mentioned Friday.** The
+gate was 72/72 green throughout, because no message in the cell set carried two
+markers — **which is exactly the gap a table-ordered resolver leaves, and the
+reason the cell set could not have found it.** Fixed by making the rule
+SPECIFICITY rather than table order: a named day is narrower than a week and
+wins; `next_game` stays above both, because *"is my next game on saturday?"*
+names a day and is still a fixture question. Four regression cells, two of them
+controls that stop the fix becoming a blanket *"a day always wins"*.
+
+**The general shape, and it belongs beside the anchoring law:** *a resolver that
+picks the FIRST matching rule from an ordered table answers by table order, and
+a test set with one marker per message can never observe the ordering.* Any cell
+set for such a resolver needs at least one input that matches two rules.
+
 **A COUNT WAS THE WRONG INSTRUMENT FOR "THE IMPORT BLOCK WAS FOUND", TWICE OVER.**
 The slice-2 gate's locate-the-block cell required two runtime imports.
 `coachQuestion` has exactly ONE, because its other two are `import type` and
@@ -215,18 +233,40 @@ other, and **the reply that comes back is the honest sentence with
 with an ordinary headline, which must answer normally — a gate that refuses
 everything is not a gate.
 
+**TWO MUTATIONS WERE INERT BEFORE THEY WERE RED, AND BOTH WERE RE-PROBED RATHER
+THAN COUNTED.** M6 (deleting the beta-gate re-check note) did not apply — the
+substitution missed and the phrase was still in the file, so the green run was
+the INSTRUMENT reporting nothing. N9 (making the fixture question inherit the
+opener's suppression) applied but changed no behaviour: it compared
+`day.date > todayISO + 'z'`, and `'2026-08-15' > '2026-08-14z'` is still true, so
+the same fixture was found. **A mutation that does not move the output is not a
+survivor and must not be recorded as one** — both were re-probed with a mutation
+proven to bite, and both reddened. Same class as the journal-hidden pass's M6
+prefix incident.
+
 ## GATE
 
-- Full unpiped chain `GATE_EXIT=1`: **see the pass report** — main's declared red
-  at `test:program-control-durable` is unchanged by this unit.
+- Full unpiped chain `GATE_EXIT=1`: exits at `test:program-control-durable`
+  with **1 FAIL cell** — *"a move committed durably reaches the visible week"* —
+  **main's declared red**, 92 suites reached. Run twice: once at the slice, once
+  after the precedence fix.
 - `test:compile` **PASSED**, totals **35 / 51 / 373 — byte-identical to
   baseline.**
-- New gate `test:coach-tab-slice2`, **72 cells**, in the chain (past its exit, so
-  the sweep is what proves it).
-- `test:coach-tab-slice1` **73 cells** (was 57 at slice 1, 66 after the
-  signing). Three cells re-aimed, none deleted.
-- Copy extraction ceiling **UNCHANGED** — batch 31 lives in `rules/`, which the
-  extractor does not walk.
+- **Sweep 2 of 173 = the declared set exactly** (`program-control-durable`,
+  `fixture-identity`). **The denominator moved 172 → 173 in the commit that
+  earned it** (`test:coach-tab-slice2`, which sits past the chain's exit — the
+  sweep is what proves it).
+- New gate `test:coach-tab-slice2`, **76 cells, 11 mutations 11 red.**
+- `test:coach-tab-slice1` **73 cells** (57 at slice 1 → 66 after the signing →
+  73), **8 mutations 8 red.** Three cells re-aimed, none deleted.
+- Copy extraction ceiling **UNCHANGED at 576** — batch 31 lives in `rules/`,
+  which the extractor does not walk.
+- **A PROCESS NOTE, OWNED:** the first sweep ran while a throwaway probe file
+  existed for a few seconds under `src/dev/`. It reported 2 of 173, the declared
+  set — but a sweep run over a tree that had an extra file in it is not a sweep
+  anybody should quote, so it was re-run clean after the fix and the number
+  above is the clean one. Recorded rather than quietly replaced; this is a
+  shared worktree.
 
 ## NOT COVERED
 
@@ -253,9 +293,10 @@ bucket. **No walker run, no accumulated world — L13 depth 0.** A day with four
 parts would produce a longer answer than any cell has seen, and the
 under-80-characters cell is measured over a fixture with at most two.
 
-**THE COACH STILL KNOWS NOTHING ABOUT THE BIBLE OR SAM'S RULINGS.** L-C1 says
-the coach's knowledge IS the Bible plus recorded rulings, and slice 2's
-knowledge is the VISIBLE WEEK. Every answer is grounded, none is *"your rule
+**THE ORDER SAID "THE PROGRAM, THE WEEK, AND RECORDED RULES" AND THIS SLICE
+DELIVERS THE WEEK.** That is the largest thing left undone and it is a scope
+statement, not an omission: L-C1 says the coach's knowledge IS the Bible plus
+recorded rulings, and slice 2's knowledge is the VISIBLE WEEK. Every answer is grounded, none is *"your rule
 says…"*. **"Why is Friday heavy?" is refused, not answered** — which is L-C1
 running at its boundary, and it is also the largest thing S2's own kickoff line
 promised that this slice does not deliver. The wow-list's item 4 (*ASK WHY ABOUT
@@ -281,7 +322,14 @@ depends on, **and it is not in `test:bible`.**
    first that it refused — that list is worth more than any cell here.
 3. **"WHY IS FRIDAY HEAVY?"** — the Bible-grounded answer is not built and is
    the biggest gap between S2's kickoff line and this slice. It is the wow-list's
-   item 4. Say whether it belongs before S3 or after.
+   item 4. **Say whether it belongs before S3 or after** — it is a slice-sized
+   piece of work (the Bible sheets, provenance-travels-with-the-number, its own
+   copy batch), not a finishing touch, and building it badly would put invented
+   policy in the coach's mouth, which is the one thing L-C1 forbids outright.
+   **One nearer-term half exists and was not taken either:** `VisibleDay`
+   already carries a typed `capabilities.refusal`, which is a recorded rule the
+   coach could speak — *"why can't I move Saturday?"* — without reaching the
+   Bible at all. Named as the cheapest next rung.
 4. Carried, unchanged: the frozen coach tree's 41,220 lines rooted at a
    protected module; the athlete-tap-attributed-to-coach writer id
    (`coachActions.ts:246-248`); the ledger's three unbuilt fact destinations;
@@ -299,11 +347,25 @@ choosing between two things that both looked like reuse.
 
 ## L12 — WHAT CATCHES THE NEXT DEFECT OF THIS CLASS
 
-The class this pass found is **a gate whose scope was correct when it was
-written and became narrow when the code moved** — the import ban that swept one
-file while the thinking migrated to three. The general form: *a ban on a
-LOCATION expires when the thing it bans can move to a new location.* The one-hop
-sweep is the fix for this instance; the class needs the ban to be expressed over
-the screen's REACHABLE SET rather than its import list, and that is not built.
-Named here so the next slice, which will add S3's change-card modules under the
-same screen, knows the cell it must extend rather than trust.
+**Two classes, and only one of them has a fix in this commit.**
+
+**(1) A GATE WHOSE SCOPE WAS CORRECT WHEN WRITTEN AND BECAME NARROW WHEN THE
+CODE MOVED** — the import ban that swept one file while the thinking migrated to
+three. General form: *a ban on a LOCATION expires when the thing it bans can
+move to a new location.* The one-hop sweep fixes this instance; the class needs
+the ban expressed over the screen's REACHABLE SET rather than its import list,
+and that is **not built**. Named here so the next slice, which adds S3's
+change-card modules under the same screen, knows the cell it must extend rather
+than trust.
+
+**(2) A CELL SET THAT CANNOT OBSERVE THE THING IT IS TESTING** — the precedence
+defect. Every cell fed the reader a message matching ONE marker, so the ORDER of
+the table was never under test, and a 72/72 green said nothing about it. General
+form: *a resolver that returns the first match from an ordered table is answering
+by table order, and a test set with one match per input measures the matches
+rather than the ordering.* What would catch the next one: **for any
+first-match-wins resolver, at least one input that matches two rules, per pair
+that can co-occur.** That is a rule about how to write the cells, not a cell, and
+it is the thing to apply to S3's change-card resolver before it ships rather than
+after — this one was found by hand, and hand-probing does not scale to a table
+with more rows.
