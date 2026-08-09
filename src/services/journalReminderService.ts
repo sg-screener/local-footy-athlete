@@ -120,7 +120,46 @@ export async function enableJournalReminder(now: Date): Promise<JournalReminderO
 }
 
 /**
- * The weekly trigger itself.
+ * THE WEEKLY TRIGGER, AS ONE OBJECT WITH ONE OWNER.
+ *
+ * EXPORTED SO THE PROOF PATH FIRES THE REAL THING. The dev panel asks the OS
+ * what date THIS trigger would next fire — which is the only honest way to
+ * check the `+ 1` below. **A proof that built its own trigger would prove its
+ * own trigger**, and the weekday conversion is exactly the byte a hand-written
+ * copy would get right by accident and the real one wrong.
+ *
+ * THE `+ 1` IS THE LINE THE BOUNDARY REPORT FLAGGED. `JOURNAL_REMINDER_WEEKDAY`
+ * is 1 in `Date.getDay()` terms (Sunday 0); expo's `WeeklyTriggerInput` counts
+ * Sunday as 1. Both are documented; neither has ever been observed on a device,
+ * and a unit test cannot observe it either — the OS does the conversion.
+ */
+export function journalReminderWeeklyTrigger(): Notifications.WeeklyTriggerInput {
+  return {
+    type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+    weekday: JOURNAL_REMINDER_WEEKDAY + 1, // expo counts Sunday as 1
+    hour: JOURNAL_REMINDER_HOUR,
+    minute: JOURNAL_REMINDER_MINUTE,
+  };
+}
+
+/**
+ * THE CONTENT, ALSO ONE OBJECT WITH ONE OWNER, and for the same reason: the
+ * 2-minute proof must deliver the sentence the athlete will actually get,
+ * including the payload the tap handler reads. A proof that sent "test" would
+ * prove the notification centre works and nothing about this feature.
+ */
+export function journalReminderContent(): Notifications.NotificationContentInput {
+  return {
+    title: JOURNAL_REMINDER_COPY.title,
+    body: JOURNAL_REMINDER_COPY.body,
+    // READ BY THE TAP HANDLER TO OPEN THE JOURNAL TAB — C6's "opens the
+    // Journal tab". The route name is the navigator's own, not a copy.
+    data: { route: 'JournalTab' },
+  };
+}
+
+/**
+ * The weekly schedule itself.
  *
  * CANCEL FIRST, ALWAYS. See `JOURNAL_REMINDER_IDENTIFIER` — without the cancel
  * this stacks a duplicate on every call.
@@ -136,19 +175,8 @@ async function scheduleJournalReminder(): Promise<void> {
     .catch(() => undefined);
   await Notifications.scheduleNotificationAsync({
     identifier: JOURNAL_REMINDER_IDENTIFIER,
-    content: {
-      title: JOURNAL_REMINDER_COPY.title,
-      body: JOURNAL_REMINDER_COPY.body,
-      // READ BY THE TAP HANDLER TO OPEN THE JOURNAL TAB — C6's "opens the
-      // Journal tab". The route name is the navigator's own, not a copy.
-      data: { route: 'JournalTab' },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-      weekday: JOURNAL_REMINDER_WEEKDAY + 1, // expo counts Sunday as 1
-      hour: JOURNAL_REMINDER_HOUR,
-      minute: JOURNAL_REMINDER_MINUTE,
-    },
+    content: journalReminderContent(),
+    trigger: journalReminderWeeklyTrigger(),
   });
 }
 

@@ -39,6 +39,13 @@ import {
   readJournalReminderState,
   type JournalReminderOutcome,
 } from '../../services/journalReminderService';
+
+// Dev-only proof panel — tree-shaken in production builds. The require site is
+// half of the double gate `signedCopyExtractionTests` asserts for every file
+// under `components/dev/`; the render site below is the other half.
+const JournalReminderProofPanel = __DEV__
+  ? require('../../components/dev/JournalReminderProofPanel').JournalReminderProofPanel
+  : null;
 import {
   buildJournalNiggleHistory,
   flaggedNiggleRegions,
@@ -1646,6 +1653,14 @@ export default function JournalScreen() {
           exception rule's whole point is that the screen is about their week.
         */}
         <MondayReminderRow />
+
+        {/*
+          SAM'S PROOF PANEL — DEV ONLY, and this is the render half of the
+          double gate. It sits below everything an athlete reads, because in the
+          build where it exists it is a bench instrument and not part of the
+          screen's design.
+        */}
+        {__DEV__ && JournalReminderProofPanel && <JournalReminderProofPanel />}
       </ScrollView>
     </SafeAreaView>
   );

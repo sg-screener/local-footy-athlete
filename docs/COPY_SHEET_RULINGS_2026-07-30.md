@@ -2020,11 +2020,11 @@ which is the whole return on listing copy that nothing renders yet: had they not
 been listed, half the front page would have lit up carrying unsigned words, in a
 commit that touched no surface file and would have looked like a no-op.
 
-## Batch 27 — the month word (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 27 — the month word (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED.** The twelve full month names have Sam's decision C5 behind
-them but not his eye on the words themselves; they ship PROPOSED under the
-transitional rule. **The DECISION is signed, the twelve strings are not.**
+**STATUS: SIGNED BY SAM, 2026-08-09** — *"yeah add the 2 min thing"*, read by the
+seat as signing both this batch and 28 as proposed, with his veto standing and
+told to him. The decision C5 was already his; the twelve words now are too.
 
 **27-a. C5, VERBATIM:** *"since {date} renders the MONTH WORD ("since March") —
 the closed-twelve month table already exists on the screen; no locale
@@ -2039,7 +2039,7 @@ beside it**, because two literal twelves of the same fact agree until somebody
 edits one. A cell asserts the derived twelve are byte-identical to the twelve
 batch 26 shipped, so the week label provably did not move.
 
-| Month | PROPOSED word | Derived abbreviation (batch 26, unchanged) |
+| Month | SIGNED word | Derived abbreviation (batch 26, unchanged) |
 | --- | --- | --- |
 | 1 | "January" | Jan |
 | 2 | "February" | Feb |
@@ -2082,10 +2082,17 @@ A date that will not parse returns null and the sentence does not render. Fallin
 back to the raw string is the exact thing C5 removes, and the exception rule
 already knows what to do with a block that has nothing it can honestly say.
 
-## Batch 28 — the Monday notification (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 28 — the Monday notification (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature — and unlike every other
-batch, that is not a transitional state. It is a GATE.**
+**STATUS: SIGNED BY SAM, 2026-08-09** — *"yeah add the 2 min thing"*, the seat
+reading the yeah as signing this batch as proposed; his veto stands.
+
+**THIS SIGNATURE IS A SWITCH, NOT A RECORD, AND IT IS THE SECOND TIME TODAY.**
+While 28-a below read PROPOSED the reminder could not be scheduled and no
+permission could be requested. Signing it ARMS the feature — the same shape as
+this morning's eight load constants, and the second sighting of
+`signature-arms-a-dark-surface`. **Nothing fires without the athlete's own opt-in
+tap and iOS permission on top**; arming removes the terminal's gate, not theirs.
 
 **28-a. WHY THIS BATCH IS DIFFERENT FROM THE OTHER TWENTY-SEVEN.** Every other
 PROPOSED string in this app is a string on a screen: if it ships before Sam rules
@@ -2099,7 +2106,7 @@ is scheduled at all.** The feature is dark on the day it ships and **Sam's
 signature alone turns it on, with no code change** — the same mechanism as the
 eight load constants he signed this morning.
 
-| Where | PROPOSED string |
+| Where | SIGNED string |
 | --- | --- |
 | Notification title | "Last week" |
 | Notification body | "Your week is in the Journal." |

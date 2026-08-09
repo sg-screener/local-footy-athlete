@@ -33,8 +33,18 @@ export type JournalReminderCopyProvenance = 'signed' | 'proposed';
 export const JOURNAL_REMINDER_COPY_ID = 'journal.reminder.monday';
 
 /**
- * PROPOSED — batch 28. Every word here is the terminal's and none of it has
- * Sam's signature.
+ * SIGNED — batch 28, Sam 2026-08-09.
+ *
+ * THE SECOND SURFACE A SIGNATURE HAS ARMED IN ONE DAY. This entry read
+ * `proposed` for the length of one slice, during which the reminder could not be
+ * scheduled and no permission could be requested. Sam signed it and the feature
+ * became reachable — no code change, the same mechanism as the eight load
+ * constants that morning.
+ *
+ * ARMING IS NOT ENABLING, AND THE DISTINCTION IS THE WHOLE SAFETY MARGIN.
+ * Signing removed THIS terminal's gate. The athlete's own opt-in tap and iOS
+ * permission both still stand in front of every notification, and neither is
+ * something a signature can grant.
  *
  * THE SENTENCE IS DELIBERATELY NOT A COACHING CLAIM. It does not say the week
  * went well or badly, does not name a number, and does not tell the athlete
@@ -51,8 +61,8 @@ export const JOURNAL_REMINDER_COPY = {
   id: JOURNAL_REMINDER_COPY_ID,
   title: 'Last week',
   body: 'Your week is in the Journal.',
-  provenance: 'proposed' as JournalReminderCopyProvenance,
-  source: 'PROPOSED — C6 requires Sam sees the sentence before it ever fires',
+  provenance: 'signed' as JournalReminderCopyProvenance,
+  source: 'Sam 2026-08-09, batch 28 — signed as proposed, arming the reminder',
 } as const;
 
 /**

@@ -592,15 +592,84 @@ console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
 const extracted = extract();
 
-run('the dev panel excluded from the sheet is genuinely unreachable', () => {
-  // Sam's instruction: verify, do not assume. Both gates must hold, or those 13
-  // strings are athlete vocabulary and the exclusion above is a lie.
-  const host = fs.readFileSync(path.join(SRC, 'screens/home/HomeScreen.tsx'), 'utf8');
-  assert(/const ScheduleDebugPanel = __DEV__/.test(host),
-    'ScheduleDebugPanel is no longer __DEV__-gated at its require site — it now '
-    + 'ships, so its strings are athlete-visible and belong on the sheet');
-  assert(/\{__DEV__ && ScheduleDebugPanel &&/.test(host),
-    'ScheduleDebugPanel is no longer __DEV__-gated at its render site');
+/**
+ * THE SET IS DERIVED FROM THE DIRECTORY, NOT NAMED — widened 2026-08-09.
+ *
+ * This cell asserted the double gate for `ScheduleDebugPanel` BY NAME, while
+ * the `components/dev/` OFF_SHEET prefix above excludes **every file in that
+ * directory**. So the moment a second dev component arrived, its strings would
+ * have been excluded from the sheet by a prefix whose justification — "double
+ * gated, asserted below" — was not true of it. **The exclusion would have been
+ * a lie and the cell would have gone on passing**, which is
+ * `a green gate watching nothing` at the seam between two gates rather than
+ * inside one.
+ *
+ * It is the same compression this file already applied to SURFACE_ROOTS and the
+ * binder applied to its scope: **derive the set from the tree.** A new dev
+ * component is now gated the day it appears rather than the day somebody
+ * notices.
+ */
+function devComponentsOnDisk(): string[] {
+  const dir = path.join(SRC, 'components/dev');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((name) => name.endsWith('.tsx'));
+}
+
+/** Every file that could render a dev component, so the host need not be named. */
+function possibleHosts(): { file: string; text: string }[] {
+  const out: { file: string; text: string }[] = [];
+  const walk = (dir: string) => {
+    const full = path.join(SRC, dir);
+    if (!fs.existsSync(full)) return;
+    for (const entry of fs.readdirSync(full, { withFileTypes: true })) {
+      const rel = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(rel);
+      else if (entry.name.endsWith('.tsx')) {
+        out.push({ file: rel, text: fs.readFileSync(path.join(SRC, rel), 'utf8') });
+      }
+    }
+  };
+  ['screens', 'components', 'navigation'].forEach(walk);
+  return out;
+}
+
+run('every dev component excluded from the sheet is genuinely unreachable', () => {
+  // Sam's instruction: verify, do not assume. Both gates must hold for EACH of
+  // them, or their strings are athlete vocabulary and the exclusion is a lie.
+  const components = devComponentsOnDisk();
+  assert(components.length > 0,
+    'no dev components found — the OFF_SHEET prefix for components/dev/ is now '
+    + 'excluding nothing, and should be removed rather than left as decoration');
+
+  const hosts = possibleHosts();
+  const offences: string[] = [];
+  for (const file of components) {
+    const name = file.replace(/\.tsx$/, '');
+    // THE REQUIRE SITE — proven present before anything is claimed about it.
+    // An `indexOf`-style search that found nothing would otherwise compare
+    // perfectly well against nothing (AGENTS.md, the anchoring law).
+    const requireSite = new RegExp(`const ${name} = __DEV__`);
+    // BOTH RENDER SHAPES ARE ACCEPTED, and that is deliberate rather than lax.
+    // `{__DEV__ && X && <X/>}` and `{__DEV__ && X ? <X/> : null}` gate
+    // identically; a regex that knew only the first would RED on correct code,
+    // and a false red is how a gate gets weakened by whoever next has to make
+    // it pass. What is still required is `__DEV__ &&` immediately before the
+    // name — an ungated `{X && <X/>}` fails either way.
+    const renderSite = new RegExp(`\\{__DEV__ && ${name}\\s*[&?]`);
+    const requiredIn = hosts.filter((h) => requireSite.test(h.text));
+    const renderedIn = hosts.filter((h) => renderSite.test(h.text));
+
+    if (requiredIn.length === 0) {
+      offences.push(`${name}: no __DEV__-gated require site found in any surface`);
+    }
+    if (renderedIn.length === 0) {
+      offences.push(`${name}: no __DEV__-gated render site found in any surface`);
+    }
+  }
+  assert(offences.length === 0,
+    'a component under components/dev/ is not double-gated, so it ships and its '
+    + `strings belong on the sheet:\n        ${offences.join('\n        ')}`);
+  console.log(`      dev components double-gated: ${components.length}`);
 });
 
 run('scope is DERIVED from the tree, so a new surface cannot be invisible', () => {

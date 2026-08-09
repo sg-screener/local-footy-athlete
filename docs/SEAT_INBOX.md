@@ -2,7 +2,31 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. BATCHES 27 + 28 SIGNED + THE 2-MINUTE PROOF PATH (Sam,
+   2026-08-09: "yeah add the 2 min thing" — the seat read the yeah
+   as signing both batches as proposed; Sam holds the veto and the
+   seat told him so).
+   LOOP CHECK: signature-arms-a-dark-surface — sighting 2 (after the
+   constants flip) — the mechanism is now precedent, iterate.
+   (a) Copy sheet: batch 27 (month word) + batch 28 (notification
+   title "Last week", body "Your week is in the Journal.", offer row
+   "Remind me on Monday mornings" + "One notification a week, when
+   your week is ready to look back on.") → SIGNED 2026-08-09. The
+   reminder gate arms; nothing fires without the athlete's opt-in +
+   iOS permission, as built.
+   (b) BUILD the dev-only proof path: a way for SAM (never an
+   athlete) to make the journal reminder fire ~2 minutes from now on
+   his own device, proving the native scheduling + the weekday
+   conversion the boundary report flagged as read-off-documentation.
+   Gate it by the repo's existing diagnostics convention — pick the
+   honest gate that is REACHABLE in the build Sam actually installs
+   and UNREACHABLE in anything an athlete could hold; if those
+   conflict, say so and give Sam the choice instead of weakening the
+   gate. The report ends with plain window-labelled steps: exactly
+   what Sam taps/types to see the notification fire.
+   Full unpiped chain, boundary report, then STOP — Sam rebuilds and
+   runs the whole-journal eye pass.
+
 
 ## Processed 2026-08-09 (forty-ninth pass) — THE SIGNATURE LANDS; AND A SIGNATURE TAKES THE PROOF WITH IT
 

@@ -71,11 +71,56 @@ const WEDNESDAY = new Date(2026, 7, 12, 15, 30, 0, 0);
 
 console.log('\n[1] THE SENTENCE MUST BE SIGNED BEFORE ANYTHING FIRES');
 {
-  ok('the sentence is PROPOSED today, so the whole feature is dark',
-    JOURNAL_REMINDER_COPY.provenance === 'proposed'
-    && isJournalReminderSentenceSigned() === false);
-  ok('and the PROPOSED entry says so in its source, for Sam\'s eye',
-    JOURNAL_REMINDER_COPY.source.includes('PROPOSED'));
+  // ─── SIGNED 2026-08-09, AND THESE TWO CELLS ARE RE-AIMED ───────────────
+  //
+  // They asserted `proposed` and went red the day Sam signed batch 28 — which
+  // is what they were for. Re-aimed rather than deleted: an entry that stops
+  // being checked is an entry that can drift back.
+  ok('the sentence is SIGNED — batch 28, and that is what arms the feature',
+    JOURNAL_REMINDER_COPY.provenance === 'signed'
+    && isJournalReminderSentenceSigned() === true);
+  ok('and the SIGNED entry names Sam and no longer reads PROPOSED',
+    JOURNAL_REMINDER_COPY.source.includes('Sam 2026-08-09')
+    && !JOURNAL_REMINDER_COPY.source.includes('PROPOSED'),
+    JOURNAL_REMINDER_COPY.source);
+
+  // ─── THE VACUITY CHECK — this morning's compression, applied ───────────
+  //
+  // "WHEN A GATE'S SUBJECT CHANGES STATE, ASK NOT ONLY WHICH CELLS RED BUT
+  // WHICH ARE NOW VACUOUS." Two cells reddened and announced themselves. The
+  // silent problem is below them: **every cell in this section passes
+  // `copySigned` explicitly**, so not one of them exercises the DEFAULT path —
+  // the `??` that reads the module. Delete `isJournalReminderSentenceSigned()`
+  // from `decideJournalReminder` and this suite stays green, because nothing
+  // ever calls it without an override.
+  //
+  // THAT GAP EXISTED BEFORE THE SIGNING TOO, and the signing is only what made
+  // it visible: while the module read `proposed`, "the feature is dark" was true
+  // for a reason nobody had tied to the wiring. So the copy entry is mutated AT
+  // RUNTIME and the DEFAULT path read back, exactly as `journalLoadTests` [2b]
+  // does for the constants.
+  {
+    const entry = JOURNAL_REMINDER_COPY as unknown as { provenance: string };
+    const restore = entry.provenance;
+
+    entry.provenance = 'proposed';
+    const applied = isJournalReminderSentenceSigned() === false;
+    // NO `copySigned` ARGUMENT — that omission is the entire subject.
+    const darkByDefault = decideJournalReminder({ permission: GRANTED, now: WEDNESDAY })
+      .kind === 'unsigned_copy';
+
+    entry.provenance = restore;
+    const restored = isJournalReminderSentenceSigned() === true;
+    const litByDefault = decideJournalReminder({ permission: GRANTED, now: WEDNESDAY })
+      .kind === 'scheduled';
+
+    ok('the DEFAULT path reads the copy module — un-signing it darkens, signing lights',
+      applied && darkByDefault && restored && litByDefault,
+      { applied, darkByDefault, restored, litByDefault });
+  }
+
+  ok('and the entry is left exactly as Sam signed it',
+    JOURNAL_REMINDER_COPY.provenance === 'signed');
 
   ok('an unsigned sentence returns `unsigned_copy`, naming the entry',
     decideJournalReminder({ permission: GRANTED, now: WEDNESDAY, copySigned: false })
@@ -311,6 +356,98 @@ console.log('\n[5] ONE FILE TOUCHES THE NATIVE MODULE, AND THE RULE STAYS PURE')
 
 // ─── [6] The native dependency is declared ───────────────────────────────
 
+// ─── [5b] The proof path — Sam's bench instrument ────────────────────────
+//
+// Ordered 2026-08-09: a way for SAM (never an athlete) to make the reminder
+// fire ~2 minutes from now on his own device.
+//
+// THE CELLS BELOW GUARD TWO THINGS THAT MATTER MORE THAN THE BUTTONS. First,
+// that the proof fires the REAL trigger and the REAL content — a proof that
+// built its own would prove its own, and the weekday conversion is exactly the
+// byte a hand-written copy gets right by accident. Second, that the proof is
+// UNREACHABLE for an athlete, which is the order's own constraint.
+
+console.log('\n[5b] THE PROOF PATH — real objects, and a door an athlete cannot open');
+{
+  const root = join(__dirname, '..');
+  const strip = (text: string) =>
+    text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const proof = strip(readFileSync(join(root, 'services', 'journalReminderProof.ts'), 'utf8'));
+  const service = strip(readFileSync(
+    join(root, 'services', 'journalReminderService.ts'), 'utf8'));
+  const screen = strip(readFileSync(join(root, 'screens', 'journal', 'JournalScreen.tsx'), 'utf8'));
+  ok('the proof module was read', proof.length > 1000, proof.length);
+
+  // THE REAL OBJECTS, NOT COPIES. `a fixture is a claim too` — the whole value
+  // of this path is that it exercises what ships.
+  ok('the proof fires the REAL weekly trigger from the service',
+    proof.includes('journalReminderWeeklyTrigger()')
+    && !/SchedulableTriggerInputTypes\.WEEKLY/.test(proof), proof.match(/WEEKLY/g));
+  ok('and the REAL content, so the tap proves the navigation too',
+    proof.includes('journalReminderContent()')
+    && !proof.includes('Your week is in the Journal'));
+  ok('the service exports them rather than holding two copies',
+    service.includes('export function journalReminderWeeklyTrigger')
+    && service.includes('export function journalReminderContent'));
+
+  // THE SCHEDULER USES THE SAME EXPORTS — otherwise the proof would exercise a
+  // trigger the athlete never gets, which is the failure it exists to prevent.
+  const scheduleStart = service.indexOf('async function scheduleJournalReminder');
+  const scheduleEnd = service.indexOf('\nexport async function', scheduleStart + 1);
+  ok('the scheduler was located', scheduleStart > 0 && scheduleEnd > scheduleStart);
+  const scheduleFn = service.slice(scheduleStart, scheduleEnd);
+  ok('and the REAL scheduler reads the same two exports — one owner each',
+    scheduleFn.includes('journalReminderContent()')
+    && scheduleFn.includes('journalReminderWeeklyTrigger()'), scheduleFn);
+
+  // A SEPARATE IDENTIFIER, so running the proof can never cancel or overwrite a
+  // real pending Monday reminder.
+  //
+  // THIS CELL SURVIVED ITS OWN MUTATION, AND IT IS THE SAME SHAPE AS N7 IN THIS
+  // FILE — the second time in one slice. It asserted that the source mentions
+  // `JOURNAL_REMINDER_PROOF_IDENTIFIER`; the mutation changed that constant's
+  // VALUE to the athlete's string and left the name alone. **The instrument
+  // counted a name, the claim was about two schedule slots being distinct.**
+  // Both constants are exported, so the honest assertion is a comparison of
+  // VALUES rather than a search for words — and a source scan was never the
+  // right tool for a claim two imports could settle.
+  // THE VALUES ARE PARSED, NOT IMPORTED, and the reason is worth recording: both
+  // modules import `expo-notifications`, which cannot load in node at all. That
+  // is exactly why this whole section reads source as text — so the comparison
+  // is done on the literals lifted out of it, which is still the VALUE and not
+  // the name.
+  const literal = (text: string, name: string): string | null =>
+    new RegExp(`${name} = '([^']+)'`).exec(text)?.[1] ?? null;
+  const realId = literal(service, 'JOURNAL_REMINDER_IDENTIFIER');
+  const proofId = literal(proof, 'JOURNAL_REMINDER_PROOF_IDENTIFIER');
+  ok('both identifier literals were found — proven present before compared',
+    realId !== null && proofId !== null, { realId, proofId });
+  ok('the proof\'s identifier is a DIFFERENT string from the athlete\'s',
+    realId !== null && proofId !== null && realId !== proofId,
+    { proof: proofId, real: realId });
+
+  // THE WEEKDAY CHECK IS THE POINT. A 2-minute fire uses TIME_INTERVAL and
+  // never touches the weekday — proving delivery while leaving the one flagged
+  // unknown exactly as unproven, which would read as a pass.
+  ok('there is a weekday check that asks the OS, not our own arithmetic',
+    proof.includes('getNextTriggerDateAsync'));
+  ok('and its verdict is the weekday the OS lands on, compared with Monday',
+    proof.includes('landsOnMonday')
+    && proof.includes('getDay() === JOURNAL_REMINDER_WEEKDAY'));
+  ok('the preview schedules nothing and requests nothing',
+    !proof.slice(proof.indexOf('export async function previewWeeklyFireDate'),
+      proof.indexOf('export async function fireJournalReminderIn'))
+      .includes('scheduleNotificationAsync'));
+
+  // UNREACHABLE FOR AN ATHLETE — the order's constraint, at the door.
+  ok('the panel is required behind __DEV__',
+    /const JournalReminderProofPanel = __DEV__/.test(screen));
+  ok('and rendered behind __DEV__ too — the double gate, both halves',
+    /\{__DEV__ && JournalReminderProofPanel\s*[&?]/.test(screen));
+  ok('the athlete-facing service does not reach the proof module at all',
+    !service.includes('journalReminderProof'));
+}
+
 console.log('\n[6] THE DEPENDENCY AND THE PLUGIN — Sam rebuilds with pods');
 {
   const root = join(__dirname, '..', '..');
@@ -336,7 +473,13 @@ console.log('  NOT COVERED, and it is most of what matters: NO NOTIFICATION HAS 
   + 'notification centre at all. That the permission prompt appears, that iOS accepts a '
   + 'WEEKLY trigger with this shape, that expo\'s Sunday-is-1 weekday numbering is what '
   + 'this code assumes, that the payload survives a cold start, and that tapping the '
-  + 'notification lands on the Journal tab are ALL unverified. The weekday +1 conversion '
-  + 'is the single most likely thing to be wrong and the only instrument for it is a '
-  + 'device. Everything above proves the DECISION; nothing proves the DELIVERY.');
+  + 'notification lands on the Journal tab are ALL unverified. Everything above proves '
+  + 'the DECISION; nothing proves the DELIVERY.');
+console.log('  WHAT CHANGED 2026-08-09: the weekday conversion is still UNVERIFIED but it '
+  + 'is no longer UNVERIFIABLE. The dev proof panel asks the OS what date the real weekly '
+  + 'trigger would next fire and names the weekday it lands on — so the one thing this '
+  + 'suite flagged as most likely to be wrong now has an instrument, and it takes Sam a '
+  + 'tap rather than a week of waiting. THE CELLS HERE PROVE THE INSTRUMENT IS WIRED TO '
+  + 'THE REAL TRIGGER. They do not and cannot run it: only a device with the rebuilt '
+  + 'binary can, and until Sam taps it the answer is unknown rather than assumed.');
 if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);
