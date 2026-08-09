@@ -2,7 +2,27 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. JOURNAL UI POLISH SLICE — Sam ruled the direction (2026-08-09):
+   docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md + the v2 mock
+   beside it (docs/JOURNAL_UI_MOCK_V2_2026-08-09.html) — commit both
+   as authored, build the slice.
+   LOOP CHECK: appearance-pass-ruled-from-mock — sighting 1 —
+   iterate; mock-first beat words-first on the first try, keep the
+   method.
+   Summary: EXCEPTION-BASED front page. Default screen = hero
+   (status headline + job + load band) / 3-stat strip / week bars
+   (letters DIE, supersedes batch 15-b presentation) / lifts /
+   Your month drawer / note box — NOTHING else. Earned cards
+   (region hot, balance drift) only past Sam-signed thresholds,
+   placed ABOVE lifts, vanish when back in range. Niggle history
+   only when active/repeat. What-changed = one hero credit line on
+   weeks it happened. Thresholds ship PROPOSED into the constants
+   batch. STYLE LAW: match the app — reuse existing tokens/
+   components, no second design language. All new/changed words
+   PROPOSED into the copy sheet under the derived-scope gate.
+   Full unpiped chain per commit, boundary report, end on the
+   phone.
+
 
 ## Processed 2026-08-09 (forty-seventh pass) — THE JOURNAL UNIT IS COMPLETE
 

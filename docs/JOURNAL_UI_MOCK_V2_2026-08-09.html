@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journal — v2, exception-based</title>
+<style>
+  :root{
+    --bg:#0C0C0C; --card:#151517; --card2:#1B1B1E; --line:#26262A;
+    --ink:#F2F3F0; --ink2:#9EA0A6; --ink3:#5F6167;
+    --volt:#D7F94C; --volt-dim:#8FA63A; --good:#39D98A; --warn:#FFB16B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{background:#000;display:flex;gap:34px;justify-content:center;align-items:flex-start;
+    padding:28px;font-family:-apple-system,'SF Pro Display','Helvetica Neue',Inter,Arial,sans-serif;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .caselbl{color:#8A8C92;font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase}
+  .caselbl b{color:var(--volt)}
+  .phone{width:390px;background:var(--bg);border-radius:44px;padding:14px 0 28px;
+    border:1px solid #222;overflow:hidden}
+  .screen{padding:0 20px}
+  .status{display:flex;justify-content:space-between;color:var(--ink2);
+    font-size:12px;padding:6px 26px 2px;font-weight:600}
+  .tabhead{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 4px}
+  .tabhead h1{color:var(--ink);font-size:34px;font-weight:800;letter-spacing:-0.5px}
+  .weeknav{color:var(--ink2);font-size:13px;font-weight:600}
+  .weeknav b{color:var(--volt);font-weight:700}
+
+  .hero{background:linear-gradient(160deg,#191A14 0%,#141416 55%);border:1px solid #23251C;
+    border-radius:24px;padding:22px 20px 18px;margin-top:14px}
+  .kicker{color:var(--volt);font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
+  .hero h2{color:var(--ink);font-size:27px;line-height:1.08;font-weight:800;
+    letter-spacing:-0.4px;margin:8px 0 6px}
+  .hero .job{color:var(--ink2);font-size:14px;line-height:1.35;font-weight:500}
+  .credit{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--ink2);
+    font-size:12.5px;font-weight:600}
+  .credit .dot{width:6px;height:6px;border-radius:3px;background:var(--good)}
+
+  .band{margin-top:16px}
+  .band .lbl{display:flex;justify-content:space-between;margin-bottom:8px}
+  .band .lbl span{color:var(--ink3);font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase}
+  .band .lbl em{color:var(--ink);font-size:12.5px;font-style:normal;font-weight:700}
+  .track{position:relative;height:14px;border-radius:7px;background:#232327}
+  .zone{position:absolute;left:34%;width:34%;top:0;bottom:0;background:#2E3324;border-radius:7px}
+  .marker{position:absolute;top:-3px;width:20px;height:20px;border-radius:50%;
+    background:var(--volt);border:4px solid #0C0C0C;box-shadow:0 0 0 1.5px var(--volt)}
+  .band .cap{color:var(--ink3);font-size:11px;margin-top:9px;font-weight:500}
+  .band .cap i{font-style:normal;color:var(--volt-dim);font-weight:700}
+
+  .stats{display:flex;gap:10px;margin-top:12px}
+  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:14px 8px 12px;text-align:center}
+  .stat .v{color:var(--ink);font-size:21px;font-weight:800;letter-spacing:-0.3px}
+  .stat .v .up{color:var(--good);font-size:15px;vertical-align:2px}
+  .stat .k{color:var(--ink3);font-size:9.5px;font-weight:800;letter-spacing:1.2px;
+    text-transform:uppercase;margin-top:4px}
+
+  .weekcard{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px 16px 12px;margin-top:12px}
+  .rowlbl{color:var(--ink3);font-size:10.5px;font-weight:800;letter-spacing:1.4px;
+    text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between}
+  .rowlbl a{color:var(--ink3);text-decoration:none;font-weight:600;letter-spacing:0}
+  .bars{display:flex;align-items:flex-end;gap:9px;height:64px}
+  .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+  .bar{width:100%;border-radius:5px 5px 3px 3px}
+  .b .d{color:var(--ink3);font-size:10px;font-weight:700}
+  .b.today .d{color:var(--volt)}
+  .hard{height:100%;background:var(--volt)}
+  .mod{height:58%;background:#7D8F3E}
+  .easy{height:26%;background:#3C4030}
+  .rest{height:8px;background:#26262A;border-radius:4px}
+  .game{height:100%;background:transparent;border:2px solid var(--volt);border-radius:5px;
+    display:flex;align-items:center;justify-content:center;color:var(--volt);
+    font-size:10px;font-weight:800}
+
+  .lifts{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px;margin-top:12px}
+  .lift{display:flex;align-items:center;justify-content:space-between;padding:9px 0}
+  .lift + .lift{border-top:1px solid #1E1E22}
+  .lift .n{color:var(--ink);font-size:14.5px;font-weight:700}
+  .lift .r{display:flex;align-items:center;gap:10px}
+  .lift .w{color:var(--ink);font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .lift .w small{color:var(--ink3);font-weight:600;font-size:11px}
+  .arrow{font-size:13px;font-weight:800;width:16px;text-align:center}
+  .a-up{color:var(--good)} .a-flat{color:var(--ink3)}
+
+  /* attention cards — only exist on weeks that earn them */
+  .alert{border-radius:18px;padding:15px 16px;margin-top:10px;display:flex;
+    align-items:center;justify-content:space-between;border:1px solid #33301F;
+    background:linear-gradient(150deg,#1D1A12,#151517)}
+  .alert .l{display:flex;align-items:center;gap:12px}
+  .ic{width:34px;height:34px;border-radius:11px;background:#242017;display:flex;
+    align-items:center;justify-content:center;font-size:15px}
+  .alert .t{color:var(--ink);font-size:15px;font-weight:700}
+  .alert .m{color:var(--ink2);font-size:11.5px;font-weight:600;margin-top:2px}
+  .alert .m b{color:var(--warn);font-weight:800}
+  .chev{color:var(--ink3);font-size:16px}
+
+  .drawer{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:15px 16px;margin-top:10px;display:flex;align-items:center;justify-content:space-between}
+  .drawer .l{display:flex;align-items:center;gap:12px}
+  .drawer .ic{background:var(--card2)}
+  .drawer .t{color:var(--ink);font-size:15px;font-weight:700}
+  .drawer .m{color:var(--ink3);font-size:11.5px;font-weight:600;margin-top:2px}
+  .drawer .m b{color:var(--volt-dim);font-weight:700}
+
+  .note{margin-top:14px;display:flex;gap:10px}
+  .note input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:16px;
+    color:var(--ink3);font-size:13.5px;padding:14px 16px;outline:none}
+  .note button{background:var(--volt);border:none;border-radius:16px;color:#101204;
+    font-weight:800;font-size:13.5px;padding:0 18px}
+  .foot{color:#3A3B40;font-size:10px;text-align:center;margin-top:16px;letter-spacing:0.4px}
+</style>
+</head>
+<body>
+
+<!-- ============ CASE 1: MOST WEEKS ============ -->
+<div class="col">
+  <div class="caselbl">Most weeks — <b>nothing to report, nothing shown</b></div>
+  <div class="phone"><div class="status"><span>11:04</span><span>&#9679;&#9679;&#9679;</span></div>
+  <div class="screen">
+    <div class="tabhead"><h1>Journal</h1><div class="weeknav">&#8249;&nbsp; <b>3 – 9 Aug</b> &nbsp;&#8250;</div></div>
+
+    <div class="hero">
+      <div class="kicker">This week</div>
+      <h2>Key work was<br>protected.</h2>
+      <div class="job">Hold your strength, one speed exposure, arrive fresh for Saturday.</div>
+      <div class="band">
+        <div class="lbl"><span>Load vs your normal</span><em>About normal</em></div>
+        <div class="track"><div class="zone"></div><div class="marker" style="left:48%"></div></div>
+        <div class="cap">In your <i>sweet spot</i> — the shaded zone is your normal range.</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v">5<small style="color:var(--ink3);font-size:13px">/5</small></div><div class="k">Sessions</div></div>
+      <div class="stat"><div class="v"><span class="up">&#9650;</span> 2%</div><div class="k">Load</div></div>
+      <div class="stat"><div class="v">4<small style="color:var(--ink3);font-size:13px">/5</small></div><div class="k">Game feel</div></div>
+    </div>
+
+    <div class="weekcard">
+      <div class="rowlbl"><span>Week shape</span></div>
+      <div class="bars">
+        <div class="b"><div class="bar rest"></div><div class="d">M</div></div>
+        <div class="b"><div class="bar hard"></div><div class="d">T</div></div>
+        <div class="b"><div class="bar mod"></div><div class="d">W</div></div>
+        <div class="b"><div class="bar hard"></div><div class="d">T</div></div>
+        <div class="b"><div class="bar easy"></div><div class="d">F</div></div>
+        <div class="b today"><div class="bar game">G</div><div class="d">S</div></div>
+        <div class="b"><div class="bar rest"></div><div class="d">S</div></div>
+      </div>
+    </div>
+
+    <div class="lifts">
+      <div class="rowlbl"><span>Your lifts</span><a>vs last week</a></div>
+      <div class="lift"><div class="n">Trap Bar Deadlift</div><div class="r"><span class="w">110<small> kg &times;5</small></span><span class="arrow a-up">&#9650;</span></div></div>
+      <div class="lift"><div class="n">Bench Press</div><div class="r"><span class="w">80<small> kg &times;8</small></span><span class="arrow a-flat">&#8212;</span></div></div>
+      <div class="lift"><div class="n">RDL</div><div class="r"><span class="w">95<small> kg &times;8</small></span><span class="arrow a-up">&#9650;</span></div></div>
+    </div>
+
+    <div class="drawer">
+      <div class="l"><div class="ic">&#128200;</div><div><div class="t">Your month</div><div class="m">Trap bar <b>+12.5 kg</b> since March</div></div></div>
+      <div class="chev">&#8250;</div>
+    </div>
+
+    <div class="note">
+      <input placeholder="Anything worth remembering about this week?">
+      <button>Save</button>
+    </div>
+    <div class="foot">THE WHOLE SCREEN, MOST WEEKS — balance fine, no niggles, nothing moved</div>
+  </div></div>
+</div>
+
+<!-- ============ CASE 2: A WEEK THAT EARNED ATTENTION ============ -->
+<div class="col">
+  <div class="caselbl">A week that <b>earned attention</b></div>
+  <div class="phone"><div class="status"><span>11:04</span><span>&#9679;&#9679;&#9679;</span></div>
+  <div class="screen">
+    <div class="tabhead"><h1>Journal</h1><div class="weeknav">&#8249;&nbsp; <b>10 – 16 Aug</b> &nbsp;&#8250;</div></div>
+
+    <div class="hero">
+      <div class="kicker">This week</div>
+      <h2>A big week —<br>recovery needs watching.</h2>
+      <div class="job">Hold your strength, one speed exposure, arrive fresh for Saturday.</div>
+      <div class="credit"><div class="dot"></div>Thursday upper moved to Friday — everything still got done.</div>
+      <div class="band">
+        <div class="lbl"><span>Load vs your normal</span><em>Well above</em></div>
+        <div class="track"><div class="zone"></div><div class="marker" style="left:82%"></div></div>
+        <div class="cap">Past your <i>sweet spot</i> — biggest week in six.</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v">6<small style="color:var(--ink3);font-size:13px">/6</small></div><div class="k">Sessions</div></div>
+      <div class="stat"><div class="v"><span class="up" style="color:var(--warn)">&#9650;</span> 31%</div><div class="k">Load</div></div>
+      <div class="stat"><div class="v">2<small style="color:var(--ink3);font-size:13px">/5</small></div><div class="k">Game feel</div></div>
+    </div>
+
+    <div class="weekcard">
+      <div class="rowlbl"><span>Week shape</span></div>
+      <div class="bars">
+        <div class="b"><div class="bar mod"></div><div class="d">M</div></div>
+        <div class="b"><div class="bar hard"></div><div class="d">T</div></div>
+        <div class="b"><div class="bar hard"></div><div class="d">W</div></div>
+        <div class="b"><div class="bar hard"></div><div class="d">T</div></div>
+        <div class="b"><div class="bar mod"></div><div class="d">F</div></div>
+        <div class="b today"><div class="bar game">G</div><div class="d">S</div></div>
+        <div class="b"><div class="bar rest"></div><div class="d">S</div></div>
+      </div>
+    </div>
+
+    <!-- EARNED CARDS — exist only this week -->
+    <div class="alert">
+      <div class="l"><div class="ic">&#129657;</div><div><div class="t">Hamstrings ran hot</div><div class="m">Heavy lower Tuesday, speed Friday — <b>biggest week in a month</b></div></div></div>
+      <div class="chev">&#8250;</div>
+    </div>
+    <div class="alert">
+      <div class="l"><div class="ic">&#9878;</div><div><div class="t">Balance drifting</div><div class="m">Push running <b>+32%</b> over pull this month</div></div></div>
+      <div class="chev">&#8250;</div>
+    </div>
+
+    <div class="lifts">
+      <div class="rowlbl"><span>Your lifts</span><a>vs last week</a></div>
+      <div class="lift"><div class="n">Trap Bar Deadlift</div><div class="r"><span class="w">112.5<small> kg &times;5</small></span><span class="arrow a-up">&#9650;</span></div></div>
+      <div class="lift"><div class="n">Bench Press</div><div class="r"><span class="w">80<small> kg &times;8</small></span><span class="arrow a-flat">&#8212;</span></div></div>
+      <div class="lift"><div class="n">RDL</div><div class="r"><span class="w">95<small> kg &times;8</small></span><span class="arrow a-up">&#9650;</span></div></div>
+    </div>
+
+    <div class="drawer">
+      <div class="l"><div class="ic">&#128200;</div><div><div class="t">Your month</div><div class="m">Trap bar <b>+15 kg</b> since March</div></div></div>
+      <div class="chev">&#8250;</div>
+    </div>
+
+    <div class="note">
+      <input placeholder="Anything worth remembering about this week?">
+      <button>Save</button>
+    </div>
+    <div class="foot">EARNED CARDS SIT ABOVE THE LIFTS — hamstrings + balance appeared; they vanish when back in range</div>
+  </div></div>
+</div>
+
+</body>
+</html>
