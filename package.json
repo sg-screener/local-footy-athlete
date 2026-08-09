@@ -341,7 +341,8 @@
     "test:journal-reminder": "TZ=Australia/Melbourne sucrase-node src/__tests__/journalReminderTests.ts",
     "test:journal-hidden": "TZ=Australia/Melbourne sucrase-node src/__tests__/journalHiddenContractTests.ts",
     "tape:lr29-boot-replay": "TZ=Australia/Melbourne sucrase-node src/__tests__/lr29BootReplayTape.ts",
-    "tape:lr29-undo-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/lr29UndoDurabilityTape.ts"
+    "tape:lr29-undo-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/lr29UndoDurabilityTape.ts",
+    "tape:exercise-edit-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditDurabilityTape.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
