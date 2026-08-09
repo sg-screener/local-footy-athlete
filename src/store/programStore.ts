@@ -1714,6 +1714,36 @@ export interface SessionFeedback {
    * smallest mechanism small.
    */
   teamNightSize?: import('../rules/teamNightSize').TeamNightSize;
+  /**
+   * THE POST-GAME BODY-FEEL RATING — 1-5, the design's "linchpin".
+   *
+   * Rides `SessionFeedback` for the same reason `teamNightSize` does: the app
+   * already records a completed session per date through a transaction with a
+   * receipt, and "Log Game" already routes into that flow via
+   * `startFinished: true`. A second door for a per-session answer arriving at
+   * the same moment would be a second representation of "what the athlete said
+   * about this session".
+   *
+   * ONLY EVER SET ON A GAME. The flag that decides whether the question is asked
+   * is the flag that decides whether the answer is sent, so the app cannot store
+   * an answer to a question it did not put on the screen.
+   */
+  gameFeel?: import('../types/sessionOutcome').FeedbackGameFeel;
+  /**
+   * "Did it match the prescription?" — the one-tap exception, and the ONLY thing
+   * that records effort on a strength session (`difficulty` is written from the
+   * conditioning RPE input alone).
+   *
+   * NOT `feeling`, which answers how HARD it was. A very_hard session can be
+   * exactly as expected; one field for both questions is the two-owners defect.
+   */
+  expectation?: import('../types/sessionOutcome').FeedbackExpectation;
+  /**
+   * Why it differed. Present only when `expectation` asks why — the three
+   * non-`as_expected` answers. Absent is not "no reason": it means the question
+   * was never put.
+   */
+  expectationReason?: import('../types/sessionOutcome').FeedbackExpectationReason;
   /** Optional reason when an athlete completed only part of the session. */
   partialReason?: FeedbackPartialReason;
   /** Required reason when an athlete skips the session from the feedback form. */

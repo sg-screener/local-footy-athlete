@@ -1484,3 +1484,82 @@ one table (`JOURNAL_LOAD_CONSTANTS`, `src/rules/journalLoad.ts`) and
 `streamWeighting`, `sweetSpotBand`, `tonnageModulatedByEffort`,
 `regionNormalWindowWeeks`, `regionSecondaryShare`, `patternDriftThreshold`,
 `minimumWeekCoverage`.
+
+## Batch 18 — the feel slice: post-game rating + the "felt different" tap (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.**
+
+**18-a. THE THREE QUESTIONS.** The game question is the design doc's own wording
+("How were your legs / energy?", docs/JOURNAL_DESIGN_2026-07-23.md) lightly
+regularised; the other two are this terminal's and are flagged as such.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Post-game body-feel question (games only) | "How were your legs and energy?" |
+| The one-tap exception | "How did it compare with what was planned?" |
+| The follow-up, asked only when it differed | "What made the difference?" |
+
+**18-b. THE BODY-FEEL SCALE — WORDS, NOT A NUMBER.** The stored value is 1–5
+because a scale is what the design ruled and what a trend needs. What the athlete
+READS is a word, because "3" is not an answer to "how were your legs". **These
+five are entirely mine and want Sam's eye most** — they are footy-changing-room
+words and I am guessing at his register.
+
+| Stored | PROPOSED label |
+| --- | --- |
+| 1 | "Empty" |
+| 2 | "Heavy" |
+| 3 | "Okay" |
+| 4 | "Good" |
+| 5 | "Flying" |
+
+**18-c. THE TAP'S FOUR ANSWERS.** The keys are the addendum's vocabulary
+(item 8); the labels are shortened for a chip row.
+
+| Key | PROPOSED label |
+| --- | --- |
+| as_expected | "As expected" |
+| harder_than_expected | "Harder" |
+| easier_than_expected | "Easier" |
+| stopped_early | "Stopped early" |
+
+**18-d. THE SEVEN REASONS.** Sam's addendum lists them as *soreness, energy,
+sleep, time, pain, equipment, motivation*; these are those words capitalised, and
+nothing was added or dropped.
+
+| Key | PROPOSED label |
+| --- | --- |
+| soreness | "Soreness" |
+| energy | "Energy" |
+| sleep | "Sleep" |
+| time | "Time" |
+| pain | "Pain" |
+| equipment | "Equipment" |
+| motivation | "Motivation" |
+
+**18-e. THE JOURNAL'S TWO COUNTED LINES**, in template form for batch 15-d's
+reason — they take a number and cannot be quoted as literals:
+
+- "Legs and energy rated after {n} games." (singular arm: "…after 1 game.")
+- "{n} sessions did not go as planned." (singular arm: "One session did not go as planned.")
+
+Counted, never interpreted. The design calls the post-game rating the linchpin
+that "powers the observation lines" — those lines belong to the monthly-review
+slice, and this slice deliberately says only that the answers exist.
+
+**18-f. NOT SIGNED, AND ONE WORDING CHOICE IS A CLAIM.** "did not go as planned"
+is deliberately neutral: it reports that the athlete said it differed and says
+nothing about whether that is good or bad. "Harder" and "Easier" are both in that
+count, and an easier session is not a failure.
+
+**18-g. NEITHER COPY GATE CAN SEE ANY OF THIS, AND THAT IS A MEASURED HOLE, NOT
+A GUESS.** The extraction gate's scope is `screens/`, `components/` and
+`navigation/` (`signedCopyExtractionTests.ts:95`). Every string above lives in
+`utils/sessionFeedbackForm.ts`, which surfaces render but no gate reads — so the
+ceiling did not move and would not have moved if these had shipped unlisted.
+**Measured: ~150 label strings across 20+ modules in `utils/` and `rules/` are in
+the same position, including the feedback form's existing vocabulary ("Busy / no
+time", "How was training?", every feeling and soreness option) — none of which
+has ever appeared on this sheet.** The compression is filed with that measurement
+in the feel slice's boundary report; it is a unit of its own and is deliberately
+not folded into this slice.

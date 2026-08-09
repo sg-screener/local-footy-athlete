@@ -19,7 +19,12 @@
  * same stated reason: "carried, not derived by the surface".
  */
 
-import type { FeedbackCompletion } from '../types/sessionOutcome';
+import type {
+  FeedbackCompletion,
+  FeedbackExpectation,
+  FeedbackGameFeel,
+} from '../types/sessionOutcome';
+import { expectationAsksWhy } from '../types/sessionOutcome';
 import type { VisibleDay } from './visibleProjection';
 import type { WeeklyExposureCounts } from './weeklyExposureCounts';
 
@@ -96,6 +101,16 @@ export interface JournalSessionOutcome {
   readonly reason: string | null;
   readonly feeling: string | null;
   readonly soreness: string | null;
+  /**
+   * The post-game body-feel rating, or null on any session that is not a game —
+   * and on a game the athlete did not answer. THE TWO ARE THE SAME null HERE on
+   * purpose: the Journal counts what was recorded, and "not asked" and "asked,
+   * not answered" are both "nothing recorded". A surface that needed to tell
+   * them apart would be asking a different question than this one.
+   */
+  readonly gameFeel: FeedbackGameFeel | null;
+  /** Did it match the prescription? Null when the tap went unanswered. */
+  readonly expectation: FeedbackExpectation | null;
 }
 
 export interface BuildJournalWeekInput {
@@ -156,6 +171,13 @@ export interface JournalLoad {
 export interface JournalFelt {
   readonly feelingsRecorded: number;
   readonly sorenessRecorded: number;
+  /** Games the athlete rated their legs and energy on. */
+  readonly gameFeelsRecorded: number;
+  /**
+   * Sessions the athlete said did NOT match the prescription. Counted, never
+   * interpreted — the Journal says how many differed, not what to do about it.
+   */
+  readonly differedFromPlan: number;
   /** True when the athlete recorded nothing about how the week felt. */
   readonly nothingRecorded: boolean;
 }
@@ -244,11 +266,20 @@ export function buildJournalWeek(input: BuildJournalWeekInput): JournalWeek {
   let missingReasons = 0;
   let feelingsRecorded = 0;
   let sorenessRecorded = 0;
+  let gameFeelsRecorded = 0;
+  let differedFromPlan = 0;
 
   for (const day of days) {
     if (day.outcome) {
       if (day.outcome.feeling !== null) feelingsRecorded += 1;
       if (day.outcome.soreness !== null) sorenessRecorded += 1;
+      if (day.outcome.gameFeel !== null) gameFeelsRecorded += 1;
+      // THE PREDICATE HAS AN OWNER. `expectationAsksWhy` is the one place that
+      // decides which answers mean "it differed" — the form asks its follow-up
+      // from it, the payload sends a reason from it, and the Journal counts from
+      // it. A fourth copy of `!== 'as_expected'` here is how three readers start
+      // disagreeing about one word.
+      if (expectationAsksWhy(day.outcome.expectation)) differedFromPlan += 1;
     }
     if (!day.isSession) continue;
     if (!day.outcome) {
@@ -293,7 +324,16 @@ export function buildJournalWeek(input: BuildJournalWeekInput): JournalWeek {
     felt: {
       feelingsRecorded,
       sorenessRecorded,
-      nothingRecorded: feelingsRecorded === 0 && sorenessRecorded === 0,
+      gameFeelsRecorded,
+      differedFromPlan,
+      // EVERY "FELT" FACT COUNTS TOWARD "NOTHING RECORDED", not just the two
+      // that existed first. A week where the athlete rated a game and nothing
+      // else used to render "you haven't recorded how anything felt" beside the
+      // rating they had just given.
+      nothingRecorded: feelingsRecorded === 0
+        && sorenessRecorded === 0
+        && gameFeelsRecorded === 0
+        && differedFromPlan === 0,
     },
     dataState,
   };

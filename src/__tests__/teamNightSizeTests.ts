@@ -178,7 +178,7 @@ console.log('\n[3] A HARD NIGHT INFORMS NEXT WEEK, NEVER NEXT DAY');
 console.log('\n[4] THE QUESTION IS ASKED ON A TEAM NIGHT THAT HAPPENED — AND NOWHERE ELSE');
 {
   const asks = (completion: 'full' | 'partial' | 'skipped' | null, isTeamNight: boolean) =>
-    getVisibleFeedbackSections(completion, false, isTeamNight)
+    getVisibleFeedbackSections(completion, { isTeamTrainingDay: isTeamNight })
       .some((section) => section.id === 'teamNightSize');
 
   ok('a completed team night is asked', asks('full', true));
@@ -193,7 +193,7 @@ console.log('\n[4] THE QUESTION IS ASKED ON A TEAM NIGHT THAT HAPPENED — AND N
   }
 
   ok('the question is not required — an athlete may decline to answer',
-    getVisibleFeedbackSections('full', false, true)
+    getVisibleFeedbackSections('full', { isTeamTrainingDay: true })
       .find((section) => section.id === 'teamNightSize')?.required === false);
 }
 

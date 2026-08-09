@@ -56,9 +56,14 @@ section('1. Initial form asks completion first');
 
 section('2. Fully completed flow');
 {
+  // THE APP MOVED, NOT THE EXPECTATION. The feel slice added the one-tap
+  // exception ("how did it compare with what was planned?") to every performed
+  // session, so `expectation` is genuinely a new question in this list — the
+  // side that changed is the form. Stated because an edited expectation is only
+  // honest when it names which side moved.
   const fullIds = ids('full');
   assert(
-    fullIds.join(',') === 'completion,feeling,soreness,notes',
+    fullIds.join(',') === 'completion,expectation,feeling,soreness,notes',
     `full flow expands feel, soreness, note (${fullIds.join(',')})`,
   );
   assert(labels('full').includes('How did the session feel?'), 'full uses session feel copy');
@@ -69,7 +74,7 @@ section('3. Partially completed flow');
 {
   const partialIds = ids('partial');
   assert(
-    partialIds.join(',') === 'completion,partialReason,feeling,soreness,notes',
+    partialIds.join(',') === 'completion,expectation,partialReason,feeling,soreness,notes',
     `partial flow puts reason directly after completion (${partialIds.join(',')})`,
   );
   assert(

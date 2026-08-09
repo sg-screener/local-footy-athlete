@@ -7,6 +7,13 @@ import type {
   SessionFeedback,
   SessionFeedbackComponent,
 } from '../store/programStore';
+import {
+  expectationAsksWhy,
+  parseFeedbackGameFeel,
+  type FeedbackExpectation,
+  type FeedbackExpectationReason,
+  type FeedbackGameFeel,
+} from '../types/sessionOutcome';
 import type { ConditioningPerformanceLog } from './conditioningLogging';
 import type { SessionComponent } from './sessionComponents';
 import type { TeamNightSize } from '../rules/teamNightSize';
@@ -15,6 +22,9 @@ import type { StrengthExercisePerformanceLog } from './strengthLogging';
 export type FeedbackFormSectionId =
   | 'completion'
   | 'teamNightSize'
+  | 'gameFeel'
+  | 'expectation'
+  | 'expectationReason'
   | 'feeling'
   | 'soreness'
   | 'partialReason'
@@ -34,6 +44,12 @@ export const FEEDBACK_FORM_SECTION_LABELS = {
   // (`team_night_size_question`) — this constant is where the panel reads it, the sheet
   // is where its provenance lives.
   teamNightSize: 'How was training?',
+  // PROPOSED, batch 18. The game question is the design's own wording; the
+  // expectation questions are this terminal's and are flagged as such on the
+  // sheet. None is signed.
+  gameFeel: 'How were your legs and energy?',
+  expectation: 'How did it compare with what was planned?',
+  expectationReason: 'What made the difference?',
   feeling: 'How did the session feel?',
   partialFeeling: 'How did the completed part feel?',
   soreness: 'How sore are you?',
@@ -67,10 +83,59 @@ export const SKIP_REASON_OPTIONS: {
   { key: 'other', label: 'Other' },
 ];
 
+/**
+ * The five body-feel taps, PROPOSED (batch 18).
+ *
+ * WORDS, NOT BARE NUMBERS, on the surface. The stored value is 1-5 because a
+ * scale is what the design ruled and what a trend needs; what the athlete READS
+ * is a sentence, because "3" is not an answer to "how were your legs".
+ */
+export const GAME_FEEL_OPTIONS: {
+  key: FeedbackGameFeel;
+  label: string;
+}[] = [
+  { key: 1, label: 'Empty' },
+  { key: 2, label: 'Heavy' },
+  { key: 3, label: 'Okay' },
+  { key: 4, label: 'Good' },
+  { key: 5, label: 'Flying' },
+];
+
+/** The one-tap exception's four answers, PROPOSED (batch 18). */
+export const EXPECTATION_OPTIONS: {
+  key: FeedbackExpectation;
+  label: string;
+}[] = [
+  { key: 'as_expected', label: 'As expected' },
+  { key: 'harder_than_expected', label: 'Harder' },
+  { key: 'easier_than_expected', label: 'Easier' },
+  { key: 'stopped_early', label: 'Stopped early' },
+];
+
+/** Why it differed, PROPOSED (batch 18). Asked only for the last three above. */
+export const EXPECTATION_REASON_OPTIONS: {
+  key: FeedbackExpectationReason;
+  label: string;
+}[] = [
+  { key: 'soreness', label: 'Soreness' },
+  { key: 'energy', label: 'Energy' },
+  { key: 'sleep', label: 'Sleep' },
+  { key: 'time', label: 'Time' },
+  { key: 'pain', label: 'Pain' },
+  { key: 'equipment', label: 'Equipment' },
+  { key: 'motivation', label: 'Motivation' },
+];
+
 export interface FeedbackFormDraft {
   completion: FeedbackCompletion | null;
   /** Only ever set on a team-training day — see `getVisibleFeedbackSections`. */
   teamNightSize?: TeamNightSize | null;
+  /** Only ever set on a GAME day — same law as the team night answer above. */
+  gameFeel?: FeedbackGameFeel | null;
+  /** The one-tap exception. Optional: an unanswered tap is not a wrong answer. */
+  expectation?: FeedbackExpectation | null;
+  /** Required only when the expectation asks why (`expectationAsksWhy`). */
+  expectationReason?: FeedbackExpectationReason | null;
   componentCompletions?: Record<string, FeedbackCompletion | null>;
   componentReasons?: Record<string, ComponentFeedbackReasonState>;
   feeling: FeedbackFeeling | null;
@@ -101,11 +166,36 @@ export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
  * night that did not happen. That is why it rides `completion` rather than sitting at the
  * top of the form.
  */
+/**
+ * WHICH QUESTIONS THE FORM PUTS, given what the athlete has answered so far.
+ *
+ * THE FLAGS BECAME AN OPTIONS OBJECT WHEN THE THIRD ONE ARRIVED, and that is a
+ * fix rather than a tidy-up: `(completion, true, false, true)` is a call nobody
+ * can read and every caller can get wrong by transposition, and these flags
+ * decide whether a question is ASKED — which decides whether its answer may be
+ * stored at all. The old positional form is gone rather than kept beside it;
+ * one door, per L15's spirit.
+ */
+export interface VisibleFeedbackSectionOptions {
+  /** The conditioning performance block is only offered for trackable work. */
+  readonly includeConditioningPerformance?: boolean;
+  readonly isTeamTrainingDay?: boolean;
+  /** A GAME asks the body-feel rating, and only a game may store one. */
+  readonly isGameDay?: boolean;
+  /** What the athlete has tapped so far — the reason question follows it. */
+  readonly expectation?: FeedbackExpectation | null;
+}
+
 export function getVisibleFeedbackSections(
   completion: FeedbackCompletion | null,
-  includeConditioningPerformance = false,
-  isTeamTrainingDay = false,
+  options: VisibleFeedbackSectionOptions = {},
 ): FeedbackFormSection[] {
+  const {
+    includeConditioningPerformance = false,
+    isTeamTrainingDay = false,
+    isGameDay = false,
+    expectation = null,
+  } = options;
   const sections: FeedbackFormSection[] = [
     {
       id: 'completion',
@@ -114,12 +204,42 @@ export function getVisibleFeedbackSections(
     },
   ];
 
+  // THE PERFORMED-SESSION QUESTIONS. All of them ride `completion` rather than
+  // sitting at the top of the form, for the reason the team-night comment above
+  // gives: a session that did not happen has no size, no body-feel and nothing
+  // to compare against a prescription, and asking would collect an answer about
+  // a session that did not exist.
   if (completion === 'full' || completion === 'partial') {
     if (isTeamTrainingDay) {
       sections.push({
         id: 'teamNightSize',
         label: FEEDBACK_FORM_SECTION_LABELS.teamNightSize,
         required: false,
+      });
+    }
+    if (isGameDay) {
+      sections.push({
+        id: 'gameFeel',
+        label: FEEDBACK_FORM_SECTION_LABELS.gameFeel,
+        required: false,
+      });
+    }
+    // OPTIONAL, DELIBERATELY. The tap is a new question on a flow athletes
+    // already use; making it required would change what an existing save costs
+    // them. An unanswered tap is not a wrong answer — it is a question they
+    // chose not to answer, and the app stores nothing for it.
+    sections.push({
+      id: 'expectation',
+      label: FEEDBACK_FORM_SECTION_LABELS.expectation,
+      required: false,
+    });
+    // ...but once they HAVE said it differed, the why is required. The addendum:
+    // "Only the last three ask why."
+    if (expectationAsksWhy(expectation)) {
+      sections.push({
+        id: 'expectationReason',
+        label: FEEDBACK_FORM_SECTION_LABELS.expectationReason,
+        required: true,
       });
     }
   }
@@ -423,6 +543,13 @@ export function canSaveFeedbackDraft(draft: FeedbackFormDraft): boolean {
     if (completion === 'partial' && componentEntries.length === 0 && !draft.partialReason) {
       return false;
     }
+    // A HALF-ANSWERED TAP IS REFUSED AT THE DRAFT, not silently dropped at the
+    // payload. "It was harder than expected" with no why is a question the
+    // athlete opened and left open; saving it would store an expectation whose
+    // reason nothing can ever supply, because the form will not ask again.
+    if (expectationAsksWhy(draft.expectation) && !draft.expectationReason) {
+      return false;
+    }
     return !!(draft.feeling && draft.soreness);
   }
 
@@ -489,6 +616,25 @@ export function buildSessionFeedbackPayload(
     // skipped night returns above without it, which is deliberate: there is no size for a
     // night that did not happen, and a stored `normal` would be a measurement of nothing.
     ...(input.teamNightSize ? { teamNightSize: input.teamNightSize } : {}),
+    // THE GAME RATING TRAVELS THE SAME WAY, and its guard is the same one: the
+    // caller passes null unless the form ASKED, so the app cannot hold an answer
+    // to a question it never put. `parse` rather than a cast, because a draft is
+    // athlete-shaped data arriving from a surface.
+    ...(parseFeedbackGameFeel(input.gameFeel) !== null
+      ? { gameFeel: parseFeedbackGameFeel(input.gameFeel)! }
+      : {}),
+    // THE TAP, AND ITS WHY, TRAVEL TOGETHER OR NOT AT ALL. The draft gate above
+    // already refuses a half-answered pair, so this is the second half of one
+    // rule rather than a second rule: a reason without its expectation would be
+    // an answer to a question with no subject.
+    ...(input.expectation
+      ? {
+        expectation: input.expectation,
+        ...(expectationAsksWhy(input.expectation) && input.expectationReason
+          ? { expectationReason: input.expectationReason }
+          : {}),
+      }
+      : {}),
     ...(includeConditioning && Number.isFinite(input.difficulty)
       ? { difficulty: input.difficulty }
       : {}),

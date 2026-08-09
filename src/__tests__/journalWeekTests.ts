@@ -148,7 +148,8 @@ const outcome = (
   completion: JournalSessionOutcome['completion'],
   over: Partial<JournalSessionOutcome> = {},
 ): JournalSessionOutcome => ({
-  completion, reason: null, feeling: null, soreness: null, ...over,
+  completion, reason: null, feeling: null, soreness: null,
+  gameFeel: null, expectation: null, ...over,
 });
 
 function build(args: {

@@ -213,6 +213,27 @@ function HowTheWeekFelt({ week }: { week: JournalWeek }) {
             felt.sorenessRecorded === 1 ? 'session' : 'sessions'}.`}
         </Text>
       ) : null}
+      {/*
+        THE TWO NEW ANSWERS, COUNTED AND NOT INTERPRETED. The design calls the
+        post-game rating the linchpin that powers the observation lines — those
+        lines are the monthly review's, and reading a field into a model in the
+        same slice that mints it would ship the second half of a feature nobody
+        has seen work yet. So the Journal shows that the answers exist and says
+        nothing about what they mean.
+      */}
+      {felt.gameFeelsRecorded > 0 ? (
+        <Text variant="body" style={styles.body} testID="journal-felt-game">
+          {`Legs and energy rated after ${felt.gameFeelsRecorded} ${
+            felt.gameFeelsRecorded === 1 ? 'game' : 'games'}.`}
+        </Text>
+      ) : null}
+      {felt.differedFromPlan > 0 ? (
+        <Text variant="body" style={styles.body} testID="journal-felt-differed">
+          {felt.differedFromPlan === 1
+            ? 'One session did not go as planned.'
+            : `${felt.differedFromPlan} sessions did not go as planned.`}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -508,6 +529,8 @@ export default function JournalScreen() {
         reason: feedback.skipReason ?? feedback.partialReason ?? null,
         feeling: feedback.feeling ?? null,
         soreness: feedback.soreness ?? null,
+        gameFeel: feedback.gameFeel ?? null,
+        expectation: feedback.expectation ?? null,
       };
     }
 

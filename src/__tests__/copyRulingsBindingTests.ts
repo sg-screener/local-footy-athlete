@@ -99,6 +99,16 @@ function replacements(): { old: string; next: string }[] {
  * comments.
  */
 const AUTHORING_MODULES = [
+  // THE FEEDBACK FORM'S VOCABULARY, added 2026-08-09 by the feel slice, and it
+  // is the same finding as `planChangeProducer.ts` above at a second address:
+  // every question the post-session form puts and every chip the athlete taps —
+  // the completion prompts, the feeling and soreness scales, the skip and
+  // partial reasons, the team-night question, and now the body-feel rating and
+  // the "felt different" tap — is AUTHORED here and merely RENDERED by
+  // `SessionFeedbackPanel`. Recording batch 18 made this gate red for strings
+  // plainly in the app, which is the third time that exact symptom has named a
+  // scope hole rather than a copy defect.
+  'utils/sessionFeedbackForm.ts',
   'utils/planChangeProducer.ts',
   'utils/coachRevisionTemplates.ts',
   'data/strengthSessionVariants.ts',

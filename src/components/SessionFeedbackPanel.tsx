@@ -45,7 +45,10 @@ import {
   type SessionFeedback,
 } from '../store/programStore';
 import {
+  EXPECTATION_OPTIONS,
+  EXPECTATION_REASON_OPTIONS,
   FEEDBACK_FORM_SECTION_LABELS,
+  GAME_FEEL_OPTIONS,
   PARTIAL_REASON_OPTIONS,
   SKIP_REASON_OPTIONS,
   buildSessionFeedbackPayload,
@@ -86,6 +89,13 @@ import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObserv
 import { explorerTestId } from '../utils/stableTestId';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { TEAM_NIGHT_SIZE_OPTIONS, type TeamNightSize } from '../rules/teamNightSize';
+import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import {
+  expectationAsksWhy,
+  type FeedbackExpectation,
+  type FeedbackExpectationReason,
+  type FeedbackGameFeel,
+} from '../types/sessionOutcome';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 import { logger } from '../utils/logger';
 
@@ -225,6 +235,15 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   const [teamNightSize, setTeamNightSize] = useState<TeamNightSize | null>(
     existing?.teamNightSize ?? null,
   );
+  const [gameFeel, setGameFeel] = useState<FeedbackGameFeel | null>(
+    existing?.gameFeel ?? null,
+  );
+  const [expectation, setExpectation] = useState<FeedbackExpectation | null>(
+    existing?.expectation ?? null,
+  );
+  const [expectationReason, setExpectationReason] = useState<FeedbackExpectationReason | null>(
+    existing?.expectationReason ?? null,
+  );
   const [partialReason, setPartialReason] = useState(existingDraft.partialReason);
   const [skipReason, setSkipReason] = useState(existingDraft.skipReason);
   const [notes, setNotes] = useState(existing?.notes ?? '');
@@ -261,6 +280,9 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     setComponentCompletions(nextDraft.componentCompletions ?? {});
     setComponentReasons(nextDraft.componentReasons ?? {});
     setTeamNightSize(existing?.teamNightSize ?? null);
+    setGameFeel(existing?.gameFeel ?? null);
+    setExpectation(existing?.expectation ?? null);
+    setExpectationReason(existing?.expectationReason ?? null);
     setPartialReason(nextDraft.partialReason);
     setSkipReason(nextDraft.skipReason);
     setNotes(existing?.notes ?? '');
@@ -281,6 +303,9 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     componentCompletions,
     componentReasons,
     teamNightSize,
+    gameFeel,
+    expectation,
+    expectationReason,
     feeling,
     soreness,
     partialReason,
@@ -311,13 +336,26 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   // second answer threaded down from a caller is exactly the two-owners shape the repo
   // keeps paying for.
   const isTeamNight = useMemo(() => isTeamTrainingSession(workout), [workout]);
+  // THE SAME MOVE FOR "IS THIS A GAME", AND IT NEEDED SAYING OUT LOUD: the app
+  // has FOUR spellings of that predicate today (`coachCommandRouter:1326`,
+  // `scheduleDebug:379`, `weekStructureValidator:127`,
+  // `projectVisibleWeek:137`) and no owner. `classifyDaySessions` IS the owner —
+  // its own header says detection has one home — so this asks it rather than
+  // adding a fifth `workoutType === 'Game'`.
+  const isGameDay = useMemo(
+    () => classifyDaySessions(workout).some((unit) => unit.category === 'game'),
+    [workout],
+  );
   const visibleSections = useMemo(
-    () => getVisibleFeedbackSections(
-      activeCompletion,
-      conditioningConfig.level === 'trackable' && conditioningWasPerformed,
-      isTeamNight,
-    ),
-    [activeCompletion, conditioningConfig.level, conditioningWasPerformed, isTeamNight],
+    () => getVisibleFeedbackSections(activeCompletion, {
+      includeConditioningPerformance:
+        conditioningConfig.level === 'trackable' && conditioningWasPerformed,
+      isTeamTrainingDay: isTeamNight,
+      isGameDay,
+      expectation,
+    }),
+    [activeCompletion, conditioningConfig.level, conditioningWasPerformed, isTeamNight,
+      isGameDay, expectation],
   );
   const hasSection = useCallback(
     (id: FeedbackFormSectionId) => visibleSections.some((section) => section.id === id),
@@ -525,6 +563,16 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       // whether the question was ASKED, so the app cannot store an answer to a question
       // it did not put on the screen.
       teamNightSize: isTeamNight ? teamNightSize : null,
+      // THE SAME GUARD, FOR THE SAME REASON. `isGameDay` is the flag that decided
+      // whether the question was ASKED, so it is the flag that decides whether the
+      // answer is SENT — the app cannot store a body-feel rating for a session it
+      // never asked about.
+      gameFeel: isGameDay ? gameFeel : null,
+      expectation,
+      // A REASON WITHOUT ITS EXPECTATION IS AN ANSWER TO NO QUESTION. The draft
+      // gate refuses the half-answered pair; this stops a stale reason riding
+      // along after the athlete taps back to "as expected".
+      expectationReason: expectationAsksWhy(expectation) ? expectationReason : null,
       feeling,
       soreness,
       partialReason,
@@ -778,6 +826,77 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
                 selected={teamNightSize === opt.key}
                 selectedColor={opt.color}
                 onPress={() => setTeamNightSize(teamNightSize === opt.key ? null : opt.key)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {hasSection('gameFeel') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.gameFeel}
+          </SectionLabel>
+          <View style={styles.row}>
+            {GAME_FEEL_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                testID={`feedback-game-feel-${opt.key}`}
+                label={opt.label}
+                selectedColor={colors.accent.lime}
+                selected={gameFeel === opt.key}
+                onPress={() => setGameFeel(gameFeel === opt.key ? null : opt.key)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {hasSection('expectation') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.expectation}
+          </SectionLabel>
+          <View style={styles.row}>
+            {EXPECTATION_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                testID={`feedback-expectation-${opt.key}`}
+                label={opt.label}
+                selectedColor={colors.accent.lime}
+                selected={expectation === opt.key}
+                onPress={() => {
+                  const next = expectation === opt.key ? null : opt.key;
+                  setExpectation(next);
+                  // TAPPING BACK CLEARS THE WHY. Leaving a stale reason behind
+                  // would let "as expected" carry "because of soreness" in the
+                  // draft — the payload drops it, but a form that shows one
+                  // answer and sends another is the surface half of the same
+                  // defect.
+                  if (!expectationAsksWhy(next)) setExpectationReason(null);
+                }}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {hasSection('expectationReason') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.expectationReason}
+          </SectionLabel>
+          <View style={styles.row}>
+            {EXPECTATION_REASON_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                testID={`feedback-expectation-reason-${opt.key}`}
+                label={opt.label}
+                selectedColor={colors.accent.lime}
+                selected={expectationReason === opt.key}
+                onPress={() => setExpectationReason(
+                  expectationReason === opt.key ? null : opt.key,
+                )}
               />
             ))}
           </View>
