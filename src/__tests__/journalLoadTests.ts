@@ -370,6 +370,26 @@ console.log('\n[5] RATIO SPACE — the normal, and when the comparison is REFUSE
     doubled.headline.value !== null && Math.abs(doubled.headline.value.ratio - 2) < 1e-9,
     doubled.headline.value);
 
+  // THE WINDOW IS A BOUND, NOT A LABEL. A fifth week exists and is deliberately
+  // unlike the other four; the normal must ignore it. Without this cell the
+  // window constant could be deleted entirely and every other comparison cell
+  // would stay green — they never supply more history than the window holds,
+  // which is exactly how a mutation survives a suite that looks thorough.
+  const olderThanTheWindow = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      ...measuredWeek(THIS_WEEK, 100),
+      ...fourWeeksOfHistory,
+      ...measuredWeek(weeksBefore(THIS_WEEK, 5), 900),
+    ],
+    sessionsPlannedThisWeek: 4,
+    plannedStrength: [],
+  });
+  const windowed = olderThanTheWindow.strengthStream.value;
+  ok('a week OLDER than the window does not move the normal',
+    windowed !== null && windowed.normal === 400 && windowed.weeksUsed === 4,
+    windowed);
+
   const tooLittleHistory = buildJournalLoadModel({
     weekStart: THIS_WEEK,
     sessions: [
