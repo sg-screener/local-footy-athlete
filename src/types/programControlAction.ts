@@ -94,6 +94,21 @@ export type ProgramControlScreen =
   | 'session_detail'
   | 'profile'
   | 'coach_notes'
+  /**
+   * THE REBUILT COACH TAB (slice 3, 2026-08-10).
+   *
+   * Added because the ledger records this action VERBATIM, so `source.screen` is
+   * where a decision's authorship is written down. Without it a change the coach
+   * proposed and the athlete confirmed would land on the ledger indistinguishable
+   * from a tap on the Program tab — and "who authored this decision" is a
+   * question undo, replay and the parked coach-provenance item all need to ask.
+   *
+   * It is `coach_tab` and not `coach`: `coach_notes` above is the FROZEN beta
+   * surface's id (LR-6), and one word between them is what stops a census of
+   * coach-authored decisions from counting the old pipeline's writes as the new
+   * one's.
+   */
+  | 'coach_tab'
   | 'setup'
   | 'system'
   | 'test';

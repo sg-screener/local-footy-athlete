@@ -100,12 +100,11 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
   // rename from useless, a ban on `store/` is not.
   const FORBIDDEN: ReadonlyArray<{ readonly pattern: RegExp; readonly why: string }> = [
     { pattern: /from '[^']*\/store\//, why: 'a zustand store is a writer with a getter attached' },
-    { pattern: /programControlActions/, why: 'the door that executes a ProgramControlAction (S3, behind the change card)' },
     { pattern: /decisionLedger/, why: 'appending a decision is a mutation even when it reads like a log' },
     { pattern: /Transaction/, why: 'accepted-state transactions are the write path' },
     { pattern: /coachActions|coachTurnController|coachCommand/, why: 'the frozen beta pipeline (LR-6)' },
     { pattern: /applyProgramAdjustment|weekRebuild|generateProgram/, why: 'generation and adjustment writers' },
-    { pattern: /AsyncStorage|persist/, why: 'slice 1 stores nothing — the conversation dies with the screen' },
+    { pattern: /AsyncStorage|persist/, why: 'the conversation dies with the screen — zero stored state' },
   ];
   for (const { pattern, why } of FORBIDDEN) {
     const offenders = imports.filter((line) => pattern.test(line));
@@ -115,6 +114,42 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
       offenders.join(' | '),
     );
   }
+
+  // ── SLICE 3: THE BAN ON THE DOOR BECAME A BAN ON A SECOND DOOR ─────────────
+  //
+  // `programControlActions` left the list above on 2026-08-10, and that is the
+  // slice this gate was waiting for: S3 is *"it changes things"*, and a screen
+  // that changes things reaches a writer by definition. A ban that outlives the
+  // reason for it is a ban somebody deletes in a hurry, so it is REPLACED
+  // rather than removed, by the claim that actually protects the athlete now:
+  //
+  //   **exactly one writer, named, and it is the athlete's own tap door.**
+  //
+  // Counting is not the instrument — `a count taken for a record`, fourteen
+  // sightings. The set of imported writer SYMBOLS is compared to a declared
+  // set, so a second door arriving reds this cell whether or not the first one
+  // is still there, and a rename reds it too.
+  const doorImports = imports.filter((line) => /programControlActions/.test(line));
+  const doorSymbols = doorImports
+    .flatMap((line) => [...line.matchAll(/\b(execute|route)[A-Za-z]+\b/g)].map((m) => m[0]))
+    .sort();
+  ok(
+    'the screen reaches EXACTLY the athlete tap door and nothing else in it',
+    doorSymbols.join(',') === 'executeProgramControlActionDurably',
+    doorSymbols.join(',') || '(no door imported)',
+  );
+  ok(
+    'and it is the DURABLE door, not the synchronous one',
+    !/\bexecuteProgramControlAction\b(?!Durably)/.test(screenCode),
+    'the synchronous variant skips the accepted-state commit, so a coach change '
+      + 'made through it would not survive a relaunch — the exact loss the '
+      + 'overnight pass measured on the exercise door',
+  );
+  ok(
+    'the door is entered from exactly one place in the screen',
+    (screenCode.match(/executeProgramControlActionDurably\(/g) ?? []).length === 1,
+    'two call sites is two chances to send an action the card never showed',
+  );
 
   // AND THE ABSENCE OF A VIOLATION IS NOT THE PRESENCE OF THE PRACTICE. A screen
   // importing nothing at all would satisfy every cell above.
@@ -461,48 +496,62 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
   // character sequence; the claim is about replies the screen can EMIT, and
   // only the state updater emits any.
   //
-  // THE ANCHOR DOES NOT NAME THE DEPENDENCY LIST, and that is a caught defect
-  // rather than a precaution: it did, and slice 2 adding `visibleWeek` to the
-  // deps made the region unfindable. The prove-the-region cell reddened FIRST
-  // and the three claims about the region reddened behind it — which is the
-  // anchoring law working, but a cell that reds on a correct edit is a cell
-  // coupled to the wrong thing. It is anchored on the closing brace at the
-  // producer's own indentation instead, and it still proves its last line is
-  // inside the slice.
-  const sendBody = /const handleSend = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[[^\]]*\]\);/
+  // ── RE-AIMED AT SLICE 3, AND THE ANCHOR MOVED OFF THE FUNCTION BODY ────────
+  //
+  // SECOND TIME THIS ANCHOR HAS REDDENED ON A CORRECT EDIT, and twice is the
+  // sighting that changes the instrument rather than the pattern. Slice 2 added
+  // `visibleWeek` to a dependency array; slice 1's fix re-anchored on the
+  // producer's closing brace — and slice 3 split `handleSend` into a delegating
+  // one-liner plus a `send` that has three branches, so the brace anchor missed
+  // too. **An anchor on a function BODY is coupled to the body**, and the body
+  // is the thing every slice edits.
+  //
+  // So the claim is expressed where it is actually stable: there is ONE
+  // appender of coach turns in this file, it takes its text as an ARGUMENT, and
+  // no caller of it passes words. That is the law slice 1 wrote ("the screen
+  // authors no reply") stated so that adding a branch cannot break the cell and
+  // adding a SENTENCE cannot pass it.
+  const sayBody = /const say = useCallback\(\(text: string\) => \{[\s\S]*?\n  \}, \[\]\);/
     .exec(screenCode)?.[0] ?? '';
   ok(
-    'the turn producer was located and is substantial',
-    sendBody.length > 200 && /setTurns\(/.test(sendBody)
-      && /\}, \[[^\]]*\]\);\s*$/.test(sendBody),
-    `${sendBody.length} chars`,
+    'the coach-turn appender was located and is substantial',
+    sayBody.length > 100 && /setTurns\(/.test(sayBody)
+      && /\}, \[\]\);\s*$/.test(sayBody),
+    `${sayBody.length} chars`,
   );
-  // RE-AIMED AT SLICE 2, NOT LOOSENED. Until 2026-08-10 this cell required the
-  // screen's one reply to be the literal `noAnswerYet`, which was the right
-  // claim while there was nothing to derive. Now there is, and the claim it was
-  // really making survives intact and gets stronger: THE SCREEN STILL AUTHORS
-  // NO REPLY. Its single coach turn takes whatever the answering rule returned,
-  // and it has no branch of its own — including no fallback wording for "the
-  // coach had nothing", which the rule owns (`coachAnswer` returns
-  // `noAnswerYet` itself on the `unknown` subject).
+  // COUNTED ON THE OBJECT LITERAL, NOT THE WORD — `a count taken for a record`,
+  // caught on this cell's first run at slice 1: a file-wide sweep for
+  // `speaker: 'coach'` counted TWO and the second was the TYPE DECLARATION
+  // (`readonly speaker: 'coach' | 'athlete'`). The trailing comma is what
+  // separates an emitted turn from a declared shape.
   ok(
-    'the screen emits exactly one coach turn per athlete turn',
-    (sendBody.match(/speaker: 'coach'/g) ?? []).length === 1,
-    'two replies would be the screen deciding an answer needed company',
+    'exactly one place in the screen emits a coach turn',
+    (screenCode.match(/speaker: 'coach',/g) ?? []).length === 1,
+    'a second appender is a second voice, one edit from disagreeing with the first',
   );
   ok(
-    'and that turn\'s text is the answering rule\'s, unaltered (L-C1)',
-    /text: answer\.text/.test(sendBody)
-      && /coachAnswer\(\{ question, week: visibleWeek, todayISO \}\)/.test(sendBody),
-    'a screen that reworded, trimmed or prefixed the answer would be a second '
-      + 'voice, and the truth gate the rule runs would be gating the wrong string',
+    'and it takes the sentence as an argument rather than choosing one',
+    /const say = useCallback\(\(text: string\)/.test(screenCode)
+      && /text,?\s*\}/.test(sayBody),
+    'an appender that could pick a word is a screen that authors replies',
+  );
+  // EVERY CALLER OF IT PASSES A RULE'S RETURN VALUE. Enumerated rather than
+  // asserted in the negative: a ban on literals would pass a caller that read a
+  // copy constant, which is how the cancel path very nearly shipped.
+  const sayCalls = [...screenCode.matchAll(/\bsay\(([\s\S]*?)\);/g)].map((m) => m[1].trim());
+  ok(
+    'every coach sentence in the screen is a rule call and there are some',
+    sayCalls.length >= 3 && sayCalls.every((argument) =>
+      /^(coachAnswer|coachChangeOutcome|coachChangeDeclined)\(/.test(argument)
+      || /^proposal\.text$/.test(argument)),
+    sayCalls.join(' | '),
   );
   ok(
-    'the screen chooses no words of its own on the send path',
-    !/COACH_TAB_COPY\.[A-Za-z]+/.test(sendBody)
-      && !/text: '[^']+'/.test(sendBody),
-    'the fallback lives in the rule; a copy constant here would be the screen '
-      + 'owning the case where the coach has nothing to say',
+    'the screen names no copy constant on any coach-turn path',
+    sayCalls.every((argument) => !/COACH_[A-Z_]+_COPY\./.test(argument))
+      && !/text: '[^']+'/.test(screenCode),
+    'the fallback, the refusal and the decline all live in rules/ — a copy '
+      + 'constant reached from here would be the screen owning a case',
   );
 }
 

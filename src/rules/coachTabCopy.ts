@@ -154,6 +154,95 @@ export const COACH_ANSWER_COPY = {
   dayNotInWeek: 'I can only see this week.',
 } as const;
 
+/**
+ * BATCH 31, SLICE 3's HALF — WHAT THE COACH SAYS WHEN IT CHANGES SOMETHING.
+ * PROPOSED 2026-08-10, ONE SIGNING SITTING WITH THE FIVE ABOVE.
+ *
+ * The seat's order: *"Batch 31 stays PROPOSED; new S3 strings join it — ONE
+ * signing sitting when S3's surface settles, not a drip."* So these are batch
+ * 31, not a batch 32.
+ *
+ * ## WHY THERE ARE THIS FEW, AND WHERE THE REST OF THE CARD'S WORDS COME FROM
+ *
+ * The change card names two days and says what is on each of them. **Not one of
+ * those words is here** — they come out of `describeVisibleDay`, which is the
+ * projection's own naming, the same call the answer and the week row make. What
+ * is left is the card's frame (two field labels, two button labels), the coach's
+ * two asks, and the sentences for a change it cannot make or did not make.
+ *
+ * ## THE ONE THAT NEEDED A RULING AND GOT A REFUSAL INSTEAD
+ *
+ * `cannotMoveLead` says *"I can't move"* and NOT why. The why for a fixture is
+ * *"a game is fixed in your week"*, which is COACHING POLICY, and L-C1 forbids
+ * the coach stating policy no recorded rule authorised. Where a rule DOES
+ * answer, the coach speaks it verbatim: `DayCapabilities.refusal` is already a
+ * signed sentence and `coachProposal` prefers it over anything in this module.
+ * This lead is the honest floor for the days that carry no recorded refusal.
+ */
+export const COACH_CHANGE_COPY = {
+  /** The card's own name for what it is about to do. */
+  moveTitle: 'Move a session',
+  fromLabel: 'From',
+  toLabel: 'To',
+  whyLabel: 'Why',
+  /**
+   * THE WHY, AND IT IS THE TRUE ONE. An athlete-requested move has no coaching
+   * reason behind it — the reason is that they asked. Anything more would be
+   * the coach inventing a rationale for the athlete's own decision.
+   */
+  whyYouAsked: 'You asked me to.',
+  confirmLabel: 'Make the change',
+  cancelLabel: 'Not now',
+  /**
+   * THE TWO ASKS — L-C1's *"it ASKS the athlete"*, as coach turns.
+   *
+   * BOTH TEACH THE WHOLE SHAPE, and that is not politeness — it is the slice's
+   * limit said out loud. Slice 3 carries no conversation context: a reply of
+   * *"friday"* to a bare *"which day?"* has no move verb in it, so the reader
+   * would read it as a question about Friday and answer with Friday's work.
+   * **An ask whose answer the asker cannot understand is a dead end**, and the
+   * honest repair is not to guess from the previous turn — it is to ask for a
+   * message that stands on its own. Follow-up context is the named gap; these
+   * two sentences are what makes its absence survivable rather than hidden.
+   */
+  askWhichDay: 'Which day do you want to move? Say the whole thing — like "move Friday to Sunday".',
+  askWhereTo: 'Where should it go? Say the whole thing — like "move Friday to Sunday".',
+  /** The one chip. One kind is built, so one affordance has somewhere to send. */
+  moveChipLabel: 'Move a session',
+  /** Leads *"I can't move"* + a day name from the projection + a full stop. */
+  cannotMoveLead: "I can't move",
+  /** The destination is the day it is already on. */
+  alreadyThere: "It's already on that day.",
+  /** The athlete declined the card. Not an error, and not silence either. */
+  changeCancelled: 'Left it as it was.',
+  /**
+   * THE DOOR REFUSED, AND THE COACH HAS NO WORDS OF ITS OWN FOR THAT.
+   *
+   * Used only when the door returns a refusal carrying no message. When it
+   * carries one, the coach speaks the DOOR's sentence verbatim — the door is
+   * the owner of why it refused, and paraphrasing it here would be a second
+   * account of one refusal.
+   */
+  changeRefused: "I couldn't make that change.",
+  /**
+   * THE DOOR RAN AND THE WEEK DID NOT MOVE. Distinct from a refusal: nothing
+   * went wrong and nothing happened, and the athlete is owed the difference.
+   */
+  changeNoOp: 'That left your week the same.',
+  /**
+   * LEADS THE CONFIRMATION: *"I moved"* + the two day names + a full stop.
+   *
+   * FIRST PERSON ON PURPOSE, and it is the one wording decision in this batch
+   * made by a gate rather than by taste. `FORBIDDEN_WHEN_NO_APPLIED` scans for
+   * claims that require a verified visible change, and it scans for phrases —
+   * *"I moved"* is one it can catch, *"Moved"* is not. A confirmation the truth
+   * gate cannot read is a confirmation the truth gate cannot refuse, which
+   * would make slice 2's keystone decorative for the one sentence slice 3 adds.
+   */
+  movedLead: 'I moved',
+  movedJoin: ' to ',
+} as const;
+
 /** The tab's own chrome and its one answer. */
 export const COACH_TAB_COPY = {
   /** The tab bar label and the screen title — the mock's own word. */

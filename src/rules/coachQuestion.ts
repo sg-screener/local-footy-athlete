@@ -176,39 +176,95 @@ const WEEKDAY_INDEX: ReadonlyMap<string, number> = new Map(
 );
 
 /**
- * WHICH DAY THE MESSAGE NAMED, AND IT IS LOOKED UP IN THE WEEK RATHER THAN
- * COMPUTED.
+ * ONE NAMED DAY.
  *
- * "Friday" does not become a date by arithmetic here; it becomes a date by
- * finding the day IN THE WEEK THE COACH WAS GIVEN whose weekday matches. So the
- * coach can only ever name a day it can see, by construction, and the whole
- * class of "the coach answered about a day outside your week" is unreachable
- * rather than tested for.
+ * `null` dateISO with `named: true` is a day the athlete named that the coach
+ * cannot see — the distinction the answering layer turns into *"I can only see
+ * this week."* rather than *"I don't know."*
+ */
+export interface NamedDay {
+  readonly dateISO: string | null;
+  /** Where in the message the day was named. The ordering key — see below. */
+  readonly at: number;
+}
+
+/**
+ * EVERY DAY THE MESSAGE NAMED, IN THE ORDER THE ATHLETE SAID THEM.
  *
- * `today` and `tomorrow` resolve through the same lookup: they name a date and
- * the date is then required to be in the week.
+ * "Friday" does not become a date by arithmetic; it becomes a date by finding
+ * the day IN THE WEEK THE COACH WAS GIVEN whose weekday matches. So the coach
+ * can only ever name a day it can see, by construction, and the whole class of
+ * "the coach answered about a day outside your week" is unreachable rather than
+ * tested for. `today` and `tomorrow` resolve through the same lookup.
+ *
+ * ── ORDERED BY POSITION IN THE MESSAGE, AND THAT IS A FIX ──────────────────
+ *
+ * This used to walk `WEEKDAY_INDEX` and return the first weekday whose word
+ * appeared anywhere — so the day the coach picked was decided by the order of
+ * `WEEKDAY_NAMES` (Sunday first), not by the order of the sentence. *"Move
+ * friday to sunday"* resolved SUNDAY as the day being asked about, and *"am I
+ * training friday or monday?"* answered about Monday.
+ *
+ * It is the slice-2 precedence defect a third time — **an ordered table
+ * answering a question about specificity** — and slice 3 is what forced it out,
+ * because a move needs TWO days and their ORDER is the whole difference between
+ * "from" and "to". The rule is now the athlete's word order, which is the only
+ * ordering that is about the message rather than about this file.
+ */
+export function namedDaysInMessageOrder(
+  message: string,
+  week: VisibleWeek,
+  todayISO: string,
+): readonly NamedDay[] {
+  const lower = message.toLowerCase();
+  const found: NamedDay[] = [];
+
+  const relative: ReadonlyArray<readonly [RegExp, string]> = [
+    [/\btoday\b/, todayISO],
+    [/\btomorrow\b/, nextDayISO(todayISO)],
+  ];
+  for (const [pattern, dateISO] of relative) {
+    const at = lower.search(pattern);
+    if (at >= 0) found.push({ dateISO: dateInWeek(week, dateISO), at });
+  }
+
+  for (const [word, index] of WEEKDAY_INDEX) {
+    const at = lower.search(new RegExp(`\\b${word}\\b`));
+    if (at < 0) continue;
+    found.push({ dateISO: match(week, index), at });
+  }
+
+  // NOT DEDUPED BY DATE, AND THE FIRST VERSION OF THIS FUNCTION WAS.
+  //
+  // Collapsing two markers that resolve to one date looks like tidying and is a
+  // behaviour change: *"move today to monday"* on a Monday names the same day
+  // twice, and that is a REQUEST WITH A SOURCE AND A DESTINATION — the coach
+  // has to be able to see both to say *"it's already on that day."* Deduping
+  // left it holding one day and asking where to, which is the coach failing to
+  // notice what the athlete said. Two markers are two slots; whether they point
+  // at the same day is the proposal's question, not this function's.
+
+  return found.sort((a, b) => a.at - b.at);
+}
+
+function match(week: VisibleWeek, weekdayIndex: number): string | null {
+  return week.days.find((day) => jsWeekday(day.date) === weekdayIndex)?.date ?? null;
+}
+
+/**
+ * The one day a QUESTION is about: the first the athlete named.
+ *
+ * A question carries one subject, so the first named day is it. A REQUEST can
+ * carry two (from and to) and reads the ordered list above directly.
  */
 function namedDate(
   message: string,
   week: VisibleWeek,
   todayISO: string,
 ): { readonly dateISO: string | null; readonly named: boolean } {
-  const lower = message.toLowerCase();
-
-  if (/\btoday\b/.test(lower)) {
-    return { dateISO: dateInWeek(week, todayISO), named: true };
-  }
-  if (/\btomorrow\b/.test(lower)) {
-    return { dateISO: dateInWeek(week, nextDayISO(todayISO)), named: true };
-  }
-
-  for (const [word, index] of WEEKDAY_INDEX) {
-    if (!new RegExp(`\\b${word}\\b`, 'i').test(lower)) continue;
-    const match = week.days.find((day) => jsWeekday(day.date) === index);
-    return { dateISO: match ? match.date : null, named: true };
-  }
-
-  return { dateISO: null, named: false };
+  const days = namedDaysInMessageOrder(message, week, todayISO);
+  if (days.length === 0) return { dateISO: null, named: false };
+  return { dateISO: days[0].dateISO, named: true };
 }
 
 function dateInWeek(week: VisibleWeek, dateISO: string): string | null {

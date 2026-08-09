@@ -227,20 +227,46 @@ function draftAnswer(args: {
  * deciding what a rest day is called, and the projection has already decided.
  */
 function dayAnswer(day: VisibleDay): CoachAnswer {
+  const described = describeVisibleDay(day);
+  return {
+    text: described.text + COACH_OPENER_COPY.fullStop,
+    verdict: 'answered',
+    grounds: { dates: [day.date], usedProjectionNames: described.usedProjectionNames },
+    violations: [],
+  };
+}
+
+/**
+ * ONE DAY, NAMED AND ENUMERATED — THE COACH'S ONLY ACCOUNT OF A DAY.
+ *
+ * EXPORTED FOR SLICE 3, and the export is the point. The change card has to say
+ * what is on the day a session is leaving and what is on the day it is landing
+ * on. Composing that inside the card would be a SECOND account of a day inside
+ * the same screen — ruling 1's `summariseDay` defect, one slice later, exactly
+ * as *"what's on this week"* would have been had it not returned the opener's
+ * own sentence.
+ *
+ * So the card calls this. The day the card and the answer disagree about what
+ * Friday holds is the day somebody deletes this function, not the day somebody
+ * writes a second one.
+ *
+ * No trailing full stop: an answer is a sentence and a card line is a line.
+ * The caller adds the punctuation its own surface needs, and that is the only
+ * thing either of them chooses.
+ */
+export function describeVisibleDay(day: VisibleDay): {
+  readonly text: string;
+  readonly usedProjectionNames: readonly string[];
+} {
   const items: string[] = day.parts.length > 0
     ? day.parts.map((part) => String(part.headline))
     : [String(visibleDayLeadHeadline(day))];
 
-  const text = weekdayName(day.date)
-    + COACH_ANSWER_COPY.dayLabelJoin
-    + items.join(COACH_ANSWER_COPY.itemJoin)
-    + COACH_OPENER_COPY.fullStop;
-
   return {
-    text,
-    verdict: 'answered',
-    grounds: { dates: [day.date], usedProjectionNames: items },
-    violations: [],
+    text: weekdayName(day.date)
+      + COACH_ANSWER_COPY.dayLabelJoin
+      + items.join(COACH_ANSWER_COPY.itemJoin),
+    usedProjectionNames: items,
   };
 }
 

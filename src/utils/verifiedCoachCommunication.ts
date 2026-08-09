@@ -150,6 +150,22 @@ export const FORBIDDEN_WHEN_NO_APPLIED: readonly RegExp[] = [
   /\bI(?:'ve|\s+have)?\s+pulled\s+back\b/i,
   /\bpulled\s+back\b/i,
   /\bnow\s+adjusted\b/i,
+  // ── THE LIST HAD NO VOCABULARY FOR A MOVE, AND SLICE 3 IS WHAT FOUND IT ────
+  //
+  // Every pattern above came out of the substitution incident — a card claiming
+  // work it had inserted. Nothing here could catch a coach claiming it had
+  // MOVED a session it had not moved, which is the first thing the rebuilt
+  // coach learns to say (docs/COACH_REBUILD_KICKOFF_2026-08-09.md, S3).
+  //
+  // Added rather than worked around, because the alternative was wording the
+  // confirmation to trip a pattern that already existed, and a sentence chosen
+  // to satisfy a validator is a sentence the athlete did not need. A forbidden
+  // phrase is INPUT DATA to this gate, not wiring: extending the list makes the
+  // gate strictly stricter, so it can red an unverified claim and can never
+  // permit one it used to refuse.
+  /\bI\s+moved\b/i,
+  /\bI(?:'ve|\s+have)\s+moved\b/i,
+  /\bmoved\s+your\b/i,
 ] as const;
 
 // ─── Build path: visible diff → AppliedChange[] ─────────────────────
