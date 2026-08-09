@@ -1432,9 +1432,19 @@ precedent, for the same reason: it takes numbers and cannot be quoted as a
 literal, so a table row would bind vacuously.
 
 - "Load is measured from the sessions you log — {measured} of {planned} this week have detail recorded."
+- "Load is measured from the sessions you log — {measured} this week have detail recorded."
+  — the SECOND form, used only when measured exceeds planned.
 
-Sam still owns that sentence; it is written here in template form precisely so
-it is not invisible for being unquotable. Its wording is fixed by
+**WHY THERE ARE TWO.** `planned` counts the days the week ASKS work of;
+`measured` counts the dates the athlete actually logged detail on. Those answer
+different questions, so measured can exceed planned — log a session, then have
+the week change under it — and "6 of 5" on the one line that actually ships
+would cost trust in every other number on the screen. The denominator is
+DROPPED in that case rather than clamped, because clamping states a falsehood
+quietly instead of loudly.
+
+Sam still owns both sentences; they are written here in template form precisely
+so they are not invisible for being unquotable. Its wording is fixed by
 `journalLoadTests` and the counts by the derivation's own cells.
 
 **17-b. WRITTEN, WIRED, AND DARK — the lines Sam's signature turns on.** These

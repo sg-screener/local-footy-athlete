@@ -31,6 +31,7 @@ import {
   journalWeekStartOf,
   signedValue,
   type BandVerdict,
+  type JournalLoadCoverage,
   type JournalLoadModel,
   type JournalLoadSessionInput,
   type PlannedLift,
@@ -234,6 +235,31 @@ const HEADLINE_COPY: Readonly<Record<BandVerdict, string>> = {
 const MAX_REGION_LINES = 2;
 
 /**
+ * The Load section's evidence sentence — PROPOSED, batch 17-a.
+ *
+ * THREE FORMS, AND THE THIRD IS NOT DEFENSIVE PADDING. `sessionsPlanned` counts
+ * the days the PROJECTION asks work of; `sessionsMeasured` counts the dates the
+ * athlete actually logged detail on. Those are different questions, so measured
+ * CAN exceed planned — log a session, then have the week change under it, and
+ * the sentence would read "6 of 5", which is the kind of visibly-broken number
+ * that costs an athlete's trust in every other number on the screen.
+ *
+ * The fix is not to clamp the count, because clamping would state a falsehood
+ * quietly instead of loudly. It is to drop the denominator in exactly the case
+ * where the denominator is not the right frame, and say the true thing without
+ * it.
+ */
+function loadEvidenceLine(coverage: JournalLoadCoverage | null): string {
+  if (coverage === null || coverage.sessionsPlanned === 0) {
+    return 'Load is measured from the sessions you log.';
+  }
+  if (coverage.sessionsMeasured > coverage.sessionsPlanned) {
+    return `Load is measured from the sessions you log — ${coverage.sessionsMeasured} this week have detail recorded.`;
+  }
+  return `Load is measured from the sessions you log — ${coverage.sessionsMeasured} of ${coverage.sessionsPlanned} this week have detail recorded.`;
+}
+
+/**
  * THE LOAD SECTION — the load slice.
  *
  * WHAT CHANGED, AND WHY IT IS THE ONLY THING THAT COULD: the section used to say
@@ -260,9 +286,7 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
   return (
     <View>
       <Text variant="body" style={styles.body} testID="journal-load-evidence">
-        {coverage === null || coverage.sessionsPlanned === 0
-          ? 'Load is measured from the sessions you log.'
-          : `Load is measured from the sessions you log — ${coverage.sessionsMeasured} of ${coverage.sessionsPlanned} this week have detail recorded.`}
+        {loadEvidenceLine(coverage)}
       </Text>
 
       {/*

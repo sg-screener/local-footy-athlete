@@ -653,6 +653,25 @@ console.log('\n[9] WEEK IDENTITY, AND THE SURFACE READS ONLY THROUGH THE DOOR');
   ok('the Load section never reads `.value` off a derived value',
     !/\bload\.[A-Za-z]+\.value\b/.test(loadRegion), loadRegion.match(/\b\w+\.value\b/g));
 
+  // THE COVERAGE SENTENCE HAS THREE FORMS, and the third is the one that would
+  // otherwise ship a visibly broken number. `sessionsPlanned` counts the days
+  // the projection asks work of; `sessionsMeasured` counts dates the athlete
+  // logged detail on. They answer different questions, so measured CAN exceed
+  // planned — and "6 of 5" on the one line that actually ships would cost trust
+  // in every other number on the screen. The denominator is DROPPED there, not
+  // clamped: clamping states a falsehood quietly instead of loudly.
+  const evidenceStart = screen.indexOf('function loadEvidenceLine');
+  const evidenceEnd = screen.indexOf('\n}', evidenceStart);
+  ok('the evidence line builder was located',
+    evidenceStart > 0 && evidenceEnd > evidenceStart, { evidenceStart, evidenceEnd });
+  const evidence = screen.slice(evidenceStart, evidenceEnd);
+  ok('and the located builder is substantial, not an empty slice',
+    evidence.length > 200, evidence.length);
+  ok('it drops the denominator when measured exceeds planned',
+    /sessionsMeasured\s*>\s*coverage\.sessionsPlanned/.test(evidence));
+  ok('and it never clamps the count to hide the case',
+    !/Math\.(min|max)/.test(evidence));
+
   // THE HONEST STATES ARE RENDERED, not merely derivable — anchored by testID
   // so an on-device explorer can find them.
   for (const testId of ['journal-load-evidence', 'journal-load-building']) {
