@@ -82,6 +82,26 @@
   assert PRESENCE and every string is present — but the sheet's silent
   implication is false for the journal's share of it. Precedent: "Ask Coach",
   DORMANT under batch 11-e.
+- **ITEM 1(b) OPENED, AND ITS BLOCKING MEASUREMENT IS IN** (`1596d450`,
+  docs/LR29_ITEM1_BOOT_REPLAY_TAPE_2026-08-09.md, instrument
+  `npm run tape:lr29-boot-replay`, NOT in the chain). **The opening law held:
+  built from the measured map, item 1 first.**
+  **ITEM 1 IS NOT ANSWERED, AND SAYING SO IS THE RESULT.** `6 → 6 → 6` — a
+  whole-day delete put NOTHING in the accumulator, so "the boot reconstructed
+  it" and "there was nothing to reconstruct" are the same reading. **The reason
+  is a CONDITION, not a gap:** a typed reduction is what a delete produces *when
+  the week cannot absorb it* (`addFrequencyReduction`: "relocation and
+  substitution were exhausted"). **One act away, not one investigation away.**
+  Established anyway: every reduction in that world is GENERATION-authored
+  policy and survives because the boot RE-GENERATES — no replay involved; the
+  delete landed in `userRemovalConstraints`, which the boot DID reconstruct.
+  **Carry into the build: the answering RUNG moved while the answer did not** —
+  a past week's overlay did not survive the boot and the covering microcycle
+  answered instead, row-for-row identical, so nothing visible changed.
+  **The instrument had its own defect, caught mid-run** (it read
+  `exposureContractsByWeek`, empty in all three worlds; the declaration lives on
+  the overlay or the covering microcycle), **and an existing law caught it on its
+  first full chain** (the one-door profile census — debt PAID, not declared).
 - **L12 — the class is A SURFACE CUT THAT LEAVES SOMETHING RUNNING BEHIND IT.**
   R5.7's remainder was a gate; this cut's remainder was **state held OUTSIDE the
   app**, and no gate asks that question because no previous cut had any. In

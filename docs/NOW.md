@@ -1,9 +1,9 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `7f9e54ab` — **THE JOURNAL IS HIDDEN.** Sam's
-  eye-pass ruling processed in full. **NEXT UNIT: LR-29 REPLAY, with UNDO as its
-  athlete-visible face** — opening now from the measured dependency list, not
-  from serial discovery.
+- **BRANCH:** `main` · **HEAD:** `1596d450` — **THE JOURNAL IS HIDDEN AND THE LR-29
+  REPLAY UNIT IS OPEN.** Sam's eye-pass ruling processed in full; the replay
+  unit's blocking item 1 is MEASURED and **not answered — the probe was too
+  easy, and it is one act away.**
 
 - **⚠ SAM: NOTHING TO DO ON THE PHONE FOR THE JOURNAL.** The tab is gone at the
   next build. **If he tapped the reminder opt-in during the proof pass, one
