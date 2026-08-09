@@ -1563,3 +1563,46 @@ time", "How was training?", every feeling and soreness option) — none of which
 has ever appeared on this sheet.** The compression is filed with that measurement
 in the feel slice's boundary report; it is a unit of its own and is deliberately
 not folded into this slice.
+
+## Batch 19 — the strength line, Monday card item 2 (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.**
+
+**19-a. THE TWO STRINGS THE EXTRACTOR CAN SEE.**
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "Your lifts" |
+| No lift carried a recorded weight this week | "No lifts recorded with a weight this week." |
+
+**19-b. THE ARROW WORDS.** A glyph alone is not readable by a screen reader and
+not legible at small sizes, so the direction is a WORD. These live in a keyed
+object (`TREND_COPY`) and are therefore invisible to the extraction gate — listed
+here anyway, because being invisible to the instrument is not a reason to be
+invisible to Sam.
+
+| Direction | PROPOSED wording |
+| --- | --- |
+| up | "up on last week" |
+| flat | "same as last week" |
+| down | "down on last week" |
+| new | "first time this week" |
+
+**19-c. THE COMPOSED LINE**, in template form for batch 15-d's reason:
+
+- "{lift} — {kg}kg, {direction}." — e.g. "Back Squat — 120kg, up on last week."
+
+**19-d. THIS IS THE FIRST NUMBER THE JOURNAL SHIPS TO THE ATHLETE, AND IT CAN
+SHIP BECAUSE IT WAITS ON NOTHING.** Every load-model headline is held behind
+`signedValue` because it is downstream of an unsigned constant. This line has no
+constant at all: "10kg heavier than last week" is a comparison of two recorded
+weights, not a judgement against a threshold. **If a tolerance is ever added
+("within 2.5kg counts as flat") it becomes a constant and joins the load model's
+signing table** — it does not get decided in the surface.
+
+**19-e. TWO WORDING CHOICES THAT ARE CLAIMS.** "first time this week" is used
+where the lift has no previous CALENDAR week — it does not claim the athlete has
+never done the lift, only that there is nothing to compare against. And a skipped
+lift never appears at all, because its recorded weight is the one that was
+*prescribed and not lifted*; a row for it would report a best for a session the
+athlete said they did not do.

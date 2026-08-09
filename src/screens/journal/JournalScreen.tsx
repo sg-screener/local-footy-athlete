@@ -27,6 +27,10 @@ import {
   type JournalWeek,
 } from '../../rules/journalWeek';
 import {
+  buildJournalStrengthTrend,
+  type StrengthLiftTrend,
+} from '../../rules/journalStrengthTrend';
+import {
   buildJournalLoadModel,
   journalWeekStartOf,
   signedValue,
@@ -364,6 +368,50 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
   );
 }
 
+/**
+ * ARROWS AS WORDS, PROPOSED (batch 19). A glyph alone is not readable by a
+ * screen reader and not legible at small sizes; the word carries the meaning and
+ * the symbol carries the glance.
+ */
+const TREND_COPY: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
+  up: 'up on last week',
+  flat: 'same as last week',
+  down: 'down on last week',
+  new: 'first time this week',
+};
+
+/**
+ * THE STRENGTH LINE — Monday card item 2, and the first Journal line that ships
+ * a NUMBER to the athlete.
+ *
+ * It can, where the load model's cannot, because it waits on no constant: "10kg
+ * heavier than last week" is a comparison of two recorded weights, not a
+ * judgement against a threshold Sam has yet to sign.
+ */
+function StrengthLines({ lifts }: { lifts: readonly StrengthLiftTrend[] }) {
+  if (lifts.length === 0) {
+    return (
+      <Text variant="body" style={styles.muted} testID="journal-strength-none">
+        {'No lifts recorded with a weight this week.'}
+      </Text>
+    );
+  }
+  return (
+    <View>
+      {lifts.map((lift) => (
+        <Text
+          key={lift.exerciseName}
+          variant="body"
+          style={styles.body}
+          testID={`journal-strength-${lift.exerciseName}`}
+        >
+          {`${lift.exerciseName} — ${lift.thisWeek.weightKg}kg, ${TREND_COPY[lift.direction]}.`}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 // ─── The note (slice 2) ──────────────────────────────────────────────────
 
 /**
@@ -589,6 +637,19 @@ export default function JournalScreen() {
     });
   }, [week, weekDays, sessionFeedback]);
 
+  // THE SAME RECORDED HISTORY, READ FOR A DIFFERENT QUESTION. Two derivations
+  // over one input set rather than one derivation answering two questions —
+  // "what did this week cost" and "did the bar go up" are different enough that
+  // one module answering both would need a mode flag, and a mode flag is how a
+  // derivation becomes a second model.
+  const strengthLifts = useMemo<readonly StrengthLiftTrend[]>(() => buildJournalStrengthTrend({
+    weekStart: week.weekStart,
+    sessions: Object.entries(sessionFeedback ?? {}).map(([date, feedback]) => ({
+      date,
+      strength: feedback?.strength ?? [],
+    })),
+  }), [week.weekStart, sessionFeedback]);
+
   return (
     <SafeAreaView style={styles.root} testID="journal-screen">
       <ScrollView contentContainerStyle={styles.content}>
@@ -604,6 +665,10 @@ export default function JournalScreen() {
 
         <Section title="How the week felt">
           <HowTheWeekFelt week={week} />
+        </Section>
+
+        <Section title="Your lifts">
+          <StrengthLines lifts={strengthLifts} />
         </Section>
 
         <Section title="Load">

@@ -439,7 +439,18 @@ function extract(): ExtractedString[] {
  * because being invisible to the instrument is not a reason to be invisible to
  * Sam. Widening the extractor to keyed copy objects is named here as owed.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 566;
+/**
+ * 566 -> 568 (the Monday card's strength line, same commit that earned it): TWO
+ * genuinely new sentences the extractor can see — the "Your lifts" section
+ * heading and "No lifts recorded with a weight this week." Batch 16's kind of
+ * rise: the app gained words, the instrument did not change.
+ *
+ * RECORDED AS BATCH 19 BEFORE THIS COMMIT LANDED, with the four arrow words and
+ * the composed line listed there too even though this extractor cannot see
+ * either — they live in a keyed object and a template literal, the two shapes
+ * named as owed at the 566 rise below.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 568;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
