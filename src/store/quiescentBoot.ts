@@ -42,7 +42,7 @@ import {
 } from './decisionLedgerStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
-import { replayableEntries } from '../rules/decisionLedgerReplay';
+import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
 import { logger } from '../utils/logger';
 
 // The parking key + old-shape detector live at the boundary that enforces
@@ -386,14 +386,47 @@ export async function rebuildDerivedWorld(): Promise<void> {
     // replayed, so the world the boot builds is the world the remaining
     // decisions imply — which is the same body that answered the athlete the
     // moment they tapped undo (`settleDerivedWorldAfterDecision`).
-    for (const entry of replayableEntries(decisionLedgerEntries())) {
-      try {
-        replayEntry(entry);
-      } catch (error) {
-        logger.warn('[quiescentBoot] replay threw for a ledger entry', {
-          entryId: entry.id, error,
+    //
+    // ── THE REPLAY PHASE CANNOT KILL THE BOOT (2026-08-09, after a device
+    // ── failed to open on real accumulated data) ──────────────────────────
+    //
+    // The base world above is already committed by the time we get here, so a
+    // replay that cannot finish costs the athlete ONE decision's effect. A
+    // replay that THROWS used to cost them the whole app: the boot error
+    // screen, on data this app itself wrote.
+    //
+    // The per-entry catch below is older and narrower — it never covered the
+    // computation of the replay SET, which is where the throw came from. This
+    // outer catch covers the phase rather than a kind, which is the difference
+    // between armour and a patch: whatever a future decision kind, a future
+    // filter or a corrupt persisted row does, it degrades the world by one
+    // decision instead of closing the door.
+    //
+    // A FAILURE TO BUILD THE BASE WORLD IS DELIBERATELY *NOT* CAUGHT. There is
+    // nothing to degrade to — an athlete with no program is not better served
+    // by a blank app than by the error screen and its Try Again. The scope is
+    // the claim: replay is recoverable, generation is not.
+    try {
+      const entries = decisionLedgerEntries();
+      const unreadable = unreadableEntryCount(entries);
+      if (unreadable > 0) {
+        logger.error('[quiescentBoot] persisted ledger rows could not be read', {
+          unreadable, total: entries.length,
         });
       }
+      for (const entry of replayableEntries(entries)) {
+        try {
+          replayEntry(entry);
+        } catch (error) {
+          logger.warn('[quiescentBoot] replay threw for a ledger entry', {
+            entryId: entry.id, error,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('[quiescentBoot] the replay phase failed; the base world stands', {
+        error,
+      });
     }
   } finally {
     endLedgerReplay();

@@ -1,8 +1,31 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** the undo toast below — **UNDO IS BUILT,
-  COMPLETE FOR A MOVE, AND HAS AN ATHLETE-VISIBLE FACE.** The journal is hidden;
-  LR-29's replay item 1 is measured and not answered.
+- **BRANCH:** `main` · **HEAD:** the boot armour below — **A BOOT DIED ON A
+  SHAPE; THE FATAL CLASS IS FIXED, AND SAM'S OWN FAILURE IS UNCONFIRMED.**
+
+- **⚠ SAM: TRY THE BUILD AGAIN.** The regression found is real and was mine:
+  ONE unreadable persisted ledger row could kill the whole boot. It cannot now.
+  **But his exact failure was never read off his phone** — if it still fails,
+  the next thing needed is the install-over accumulated-world reproduction that
+  this pass did NOT build.
+
+- **THE BOOT ARMOUR (fifty-fifth pass).**
+  - **THE REGRESSION WAS MINE, at `ca89ff7f`:** `replayableEntries` throws on a
+    row whose `decision` is missing, and it runs OUTSIDE the per-entry
+    try/catch. Before the filter existed a bad row broke only its own replay.
+  - **FIXED IN TWO HALVES:** every exported ledger reader is TOTAL (unreadable
+    rows dropped and COUNTED, `unreadableEntryCount`); and the boot's **replay
+    PHASE** is wrapped — not one kind, because the per-entry catch never covered
+    computing the replay SET.
+  - **GENERATION IS DELIBERATELY NOT CAUGHT.** Replay is recoverable; generation
+    is not, and a blank app serves nobody better than the error screen. Cell
+    [17] pins that scope in both directions.
+  - **SUSPECT (b) — the deleted mark-writer — IS NOT CLEARED.** The fix would
+    stop it being FATAL, which is a reason to expect his phone to open, not
+    evidence of which suspect fired.
+  - **ORDER 1 WAS NOT DONE AS SPECIFIED:** the install-over accumulated-world
+    boot is still UNBUILT, and the order's own L13 point stands — my new cells
+    are fresh-world cells too. **That is the next pass's first debt.**
 
 - **⚠ SAM: THE FIRST THING TO LOOK AT ON THE PHONE — move a session on the
   Program screen.** A toast should say *"You moved a session"* with **Undo**.

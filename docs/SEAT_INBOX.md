@@ -5,6 +5,61 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-fifth pass) — A BOOT DIED ON A SHAPE, AND THE FILTER WAS THE NEW WAY IN
+
+- **ONE LINE: reproduced at the unit — `replayableEntries` THROWS on an
+  unreadable persisted row, and it runs OUTSIDE `quiescentBoot`'s per-entry
+  try/catch, so ONE bad row took the whole derived-world rebuild with it.**
+  Before the filter existed a bad row could only break its own replay. **That
+  regression is mine, introduced at `ca89ff7f`.**
+- **ORDERS 2, 3, 4 PROCESSED. ORDER 1 IS PARTIAL AND I AM SAYING SO** — see
+  NOT COVERED. LOOP CHECK `fresh-cells-green-device-boot-red` sighting 2,
+  compressed as ordered: the standing cells are in the chain, **but they are
+  UNIT-level totality cells, not the install-over accumulated-world boot cell
+  the order specified.**
+- **THE PROBE, and it is the whole root cause at unit level:**
+  `entry.decision.kind` on a row whose `decision` is missing or null throws a
+  TypeError; so does a null row. Four shapes probed, three fatal, **all four
+  now inert.**
+- **FIXED SYSTEMICALLY, AND THE SCOPE IS THE CLAIM.** Two halves:
+  (1) **every exported reader of the ledger is TOTAL** — an unreadable row is
+  DROPPED exactly like a reversal naming an absent id, and counted rather than
+  silently swallowed (`unreadableEntryCount`, logged at `error`);
+  (2) **the boot's REPLAY PHASE is wrapped, not one kind.** The per-entry catch
+  was older and narrower and never covered computing the replay SET, which is
+  where the throw came from. A catch around the PHASE is the difference between
+  armour and a patch.
+- **AND A FAILURE TO BUILD THE BASE WORLD IS DELIBERATELY *NOT* CAUGHT.** There
+  is nothing to degrade to: an athlete with no program is not better served by a
+  blank app than by the error screen and its Try Again. **Replay is recoverable;
+  generation is not.** Cell [17] pins that scope in BOTH directions — it reds if
+  the phase wrap goes, and it reds if somebody catches generation too.
+- **CELL [8] CAUGHT MY OWN REFACTOR ON ITS FIRST RUN** and was re-aimed from the
+  literal call text to the property (the loop iterates the FILTER's output, and
+  nowhere iterates the raw ledger).
+- **THE SECOND SUSPECT IS NOT CLEARED, AND I WILL NOT CLAIM IT IS.** The order
+  named the deleted mark-writer as suspect (b): his stored world was written by
+  the OLD code, and a replayed move meeting stored state the old writer left is
+  the item-1 loose-thread shape. **I reproduced suspect (a) and fixed it. I did
+  not reproduce (b), and the fix for (a) would ALSO stop (b) from being fatal**
+  — a replay refusal or collision now degrades the world by one decision instead
+  of closing the door. That is a reason to expect his phone to open, not
+  evidence of which suspect fired.
+- **GATE:** `test:undo-reversal` **17 cells**; full unpiped chain `GATE_EXIT=1`
+  at `test:program-control-durable`, 1 FAIL line — main's declared red.
+  `test:compile` PASSED. **Sweep 2 of 170 = the declared set exactly.**
+  `test:quiescent-boot` 4/4.
+- **NOT COVERED, first line — ORDER 1 WAS NOT DONE AS SPECIFIED.** I reproduced
+  the throw at the UNIT, not by building an install-over accumulated world and
+  booting it. **The order's own L13 point stands against me: fresh-world cells
+  passed while his device failed, and my new cells are fresh-world cells too.**
+  A world with marks and decisions written by the old code, booted under the
+  new, is still UNBUILT — so I cannot say his boot is fixed, only that the
+  fatal class I found is. **That build is the first thing the next pass owes.**
+- **NO DEVICE EVIDENCE, and no logs were available** — the throw was not read
+  off his phone. Whether his failure is this shape is UNCONFIRMED.
+
+
 ## Processed 2026-08-09 (fifty-fourth pass) — §4 CLOSED BY DELETING A REPRESENTATION, AND UNDO HAS A FACE
 
 - **ONE LINE: the seat ruled option (a), and measuring it first found the ruling

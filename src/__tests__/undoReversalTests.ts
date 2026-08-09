@@ -47,6 +47,7 @@ import {
   replayableEntries,
   undoableEntries,
   lastUndoableEntry,
+  unreadableEntryCount,
 } from '../rules/decisionLedgerReplay';
 import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
 import type { AthleteDecision, DecisionLedgerEntry } from '../types/decisionLedger';
@@ -185,8 +186,14 @@ run('7 the last change is chosen by LEDGER ORDER, not by the device clock', () =
 run('8 the boot replays through the filter, with no second opinion', () => {
   const source = fs.readFileSync(
     path.resolve(__dirname, '..', 'store', 'quiescentBoot.ts'), 'utf8');
-  assert(/for \(const entry of replayableEntries\(decisionLedgerEntries\(\)\)\)/.test(source),
+  // AIMED AT THE PROPERTY, NOT THE LITERAL. This cell first pinned the exact
+  // call text and reddened when the replay phase was wrapped in its own
+  // try/catch — a correct change. What must hold is that the boot's replay loop
+  // iterates the FILTER's output and nothing else.
+  assert(/for \(const entry of replayableEntries\(/.test(source),
     'the boot no longer replays through replayableEntries');
+  assert(!/for \(const entry of decisionLedgerEntries\(\)\)/.test(source),
+    'the boot iterates the raw ledger somewhere — annulled decisions would replay');
   // A SECOND COPY OF THE RULE IS THE DEFECT THIS GATE EXISTS FOR. The boot must
   // not decide for itself what a reversal means.
   const body = source.slice(source.indexOf('function replayEntry'));
@@ -294,6 +301,82 @@ run('14 an unmapped decision kind shows NO toast, never its code name', () => {
     { kind: 'migrated_day_placement', date: '2026-08-08', workout: {} } as never)];
   assert(undoToastFor(ledger, null) === null,
     'an unmapped decision kind reached the athlete as a toast');
+});
+
+// ── [15-17] A BOOT MUST NOT DIE ON DATA THE APP ITSELF WROTE ────────────────
+
+run('15 an unreadable persisted row is DROPPED, never thrown on', () => {
+  // A DEVICE FAILED TO OPEN BECAUSE OF THIS. `entry.decision.kind` on a row
+  // whose `decision` is missing throws a TypeError, and the replay SET is
+  // computed OUTSIDE quiescentBoot's per-entry try/catch — so one unreadable
+  // row took the whole derived-world rebuild with it and the athlete met the
+  // boot error screen. Before the filter existed, a bad row could only break
+  // its own replay.
+  const corrupt = [
+    { id: 'dl-1', occurredAt: 'x', provenance: 'athlete_tap' },
+    { id: 'dl-2', occurredAt: 'x', provenance: 'athlete_tap', decision: null },
+    null,
+    entry('dl-3', move('2026-08-08', '2026-08-09')),
+  ] as never as DecisionLedgerEntry[];
+  const replayed = replayableEntries(corrupt).map((row) => row.id);
+  assert(JSON.stringify(replayed) === JSON.stringify(['dl-3']),
+    `the readable decision did not survive its corrupt neighbours: ${JSON.stringify(replayed)}`);
+  assert(unreadableEntryCount(corrupt) === 3,
+    `unreadable rows should be counted, got ${unreadableEntryCount(corrupt)}`);
+  // The whole point: the athlete keeps the app AND keeps the decision that
+  // could still be read.
+  assert(lastUndoableEntry(corrupt)?.id === 'dl-3',
+    'a corrupt neighbour hid the undoable decision');
+});
+
+run('16 every reader of the ledger is total — no shape can throw', () => {
+  // Asserted as a PROPERTY over the whole exported surface rather than on the
+  // one shape that bit us, because the next corrupt payload will not be the
+  // same shape as the last one.
+  const shapes: unknown[][] = [
+    [], [null], [undefined], [{}], [{ id: 1 }],
+    [{ id: 'a', decision: {} }],
+    [{ id: 'a', decision: { kind: 'reversal' } }],
+    [{ id: 'a', decision: { kind: 'reversal', reversedEntryId: 7 } }],
+    [{ id: 'a', decision: { kind: 'not_a_kind' } }],
+  ];
+  for (const shape of shapes) {
+    for (const [name, fn] of [
+      ['annulledEntryIds', annulledEntryIds],
+      ['replayableEntries', replayableEntries],
+      ['undoableEntries', undoableEntries],
+      ['lastUndoableEntry', lastUndoableEntry],
+      ['unreadableEntryCount', unreadableEntryCount],
+    ] as [string, (e: never) => unknown][]) {
+      try {
+        fn(shape as never);
+      } catch (error) {
+        assert(false,
+          `${name} threw on ${JSON.stringify(shape)}: ${(error as Error).message}`);
+      }
+    }
+  }
+});
+
+run('17 the boot tolerates a failed replay PHASE, not just a failed entry', () => {
+  // The per-entry catch is older and narrower — it never covered computing the
+  // replay SET, which is where the device's throw came from. A catch around
+  // the PHASE is the difference between armour and a patch.
+  //
+  // And a failure to build the BASE world must still surface: there is nothing
+  // to degrade to, and a blank app serves an athlete worse than the error
+  // screen with its Try Again. This cell pins the scope, in both directions.
+  const source = fs.readFileSync(
+    path.resolve(__dirname, '..', 'store', 'quiescentBoot.ts'), 'utf8');
+  const replayPhase = source.slice(source.indexOf('THE REPLAY PHASE CANNOT KILL THE BOOT'));
+  assert(/try \{[\s\S]*replayableEntries\(entries\)[\s\S]*\} catch/.test(replayPhase),
+    'the replay phase is no longer wrapped — one corrupt row can kill the boot again');
+  const generation = source.slice(
+    source.indexOf('const program = generateProgramLocally'),
+    source.indexOf('THE REPLAY PHASE CANNOT KILL THE BOOT'));
+  assert(!/\} catch/.test(generation),
+    'generation is now caught too — an athlete with no program would get a blank '
+    + 'app instead of the boot error screen, which is not an improvement');
 });
 
 console.log(`\nUndo reversal totals: ${passed} passed, ${failed} failed`);

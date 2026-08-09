@@ -55,14 +55,52 @@ export function annulledEntryIds(
   entries: readonly DecisionLedgerEntry[],
 ): ReadonlySet<string> {
   const annulled = new Set<string>();
-  const present = new Set(entries.map((entry) => entry.id));
-  for (const entry of entries) {
+  const present = new Set(readable(entries).map((entry) => entry.id));
+  for (const entry of readable(entries)) {
     if (entry.decision.kind !== 'reversal') continue;
     const target = entry.decision.reversedEntryId;
     if (!present.has(target)) continue;      // (2) inert, never fatal
+    if (typeof target !== 'string') continue;
     annulled.add(target);                    // (4) a Set makes this idempotent
   }
   return annulled;
+}
+
+/**
+ * THE FUNCTIONS ABOVE AND BELOW ARE TOTAL, AND THIS IS WHY THEY HAVE TO BE.
+ *
+ * **A boot died here.** These read a PERSISTED payload, and the first version
+ * trusted its shape: `entry.decision.kind` on an entry whose `decision` was
+ * missing throws a TypeError. That throw happens while COMPUTING the replay
+ * set — outside `quiescentBoot`'s per-entry try/catch — so one unreadable row
+ * took the whole derived-world rebuild with it and the athlete met the boot
+ * error screen instead of their program. Before the filter existed, a bad row
+ * could only break its own replay.
+ *
+ * So an entry that cannot be read is DROPPED, exactly like a reversal naming an
+ * id that is not there: **inert, never fatal.** The app cannot act on a
+ * decision it cannot read, and refusing to open at all is the one response that
+ * helps nobody. Dropping is not silent — `unreadableEntryCount` exists so a
+ * caller can report it.
+ */
+function isReadable(entry: DecisionLedgerEntry | null | undefined): boolean {
+  return !!entry
+    && typeof entry.id === 'string'
+    && !!entry.decision
+    && typeof entry.decision.kind === 'string';
+}
+
+function readable(
+  entries: readonly DecisionLedgerEntry[],
+): readonly DecisionLedgerEntry[] {
+  return (entries ?? []).filter(isReadable);
+}
+
+/** How many persisted rows this ledger could not read. Zero in every sane world. */
+export function unreadableEntryCount(
+  entries: readonly DecisionLedgerEntry[],
+): number {
+  return (entries ?? []).length - readable(entries).length;
 }
 
 /**
@@ -75,7 +113,7 @@ export function replayableEntries(
   entries: readonly DecisionLedgerEntry[],
 ): DecisionLedgerEntry[] {
   const annulled = annulledEntryIds(entries);
-  return entries.filter((entry) =>
+  return readable(entries).filter((entry) =>
     entry.decision.kind !== 'reversal' && !annulled.has(entry.id));
 }
 
