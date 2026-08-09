@@ -5,6 +5,167 @@
 (none)
 
 
+## Processed 2026-08-10 (sixty-first pass) — THE DOOR HAD NEVER RUN, AND WHEN IT RAN THE COACH'S MOVE WAS INERT
+
+- **ONE LINE: the tape the seat ordered was built and run, and on its first run it
+  measured the athlete's own tap moving the week and recording a `plan_change`
+  while the coach's identical move — same world, same two days, same door, same
+  run — returned `ok: false` and changed nothing.** Every free claim downstream
+  was VACUOUS rather than false: nothing to record, nothing to undo, nothing to
+  survive the night. Boundary:
+  docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md · tape
+  `npm run tape:coach-move-durability`
+- **ALL THREE ITEMS PROCESSED IN FULL; ITEM 4's HOLD OBSERVED — S4 AND THE BIBLE
+  LAYER NOT STARTED.**
+- **THE CAUSE IS ONE ARGUMENT.** `handleConfirm` called the door as
+  `executeProgramControlActionDurably(action, { todayISO })`, and
+  `executePlanChangeAction` opens with `if (!context.visibleWeek ||
+  !context.todayISO) return fallbackResult(…)`. **The coach proposed correctly,
+  drew the card correctly, took the yes — and the door refused the call before it
+  looked at the action.** `useResolvedWeek()` was already returning `{ weekDays,
+  visibleWeek }` from ONE `projectWeekFor` call; the screen destructured half of
+  one derivation. It now passes `weekDays`, the identical argument
+  `PlanChangeSheet` passes at the identical door.
+- **AND SLICE 3's 116 CELLS WERE ALL GREEN THROUGH IT, WHICH IS THE FINDING WORTH
+  CARRYING.** [5] proves the coach OUTPUTS a door action; [6] proves
+  `move_session` reaches `applyPlanChange` and that `applyPlanChange` appends.
+  Both readings TRUE while the feature was dead. **Every one of them is a claim
+  about which FUNCTION is called, and the defect was in an ARGUMENT** — and the
+  door's context is optional, so forgetting it is a runtime sentence rather than
+  a compile error.
+- **A SECOND DEFECT, AND IT SURVIVES THE FIRST ONE'S FIX.** The coach spoke the
+  door's refusal verbatim — by design, the door owns why it refused — so the
+  athlete was told *"Cannot safely apply this day/session action without the
+  current visible week."* **A sentence addressed to a caller, in the coach's
+  mouth, to Sam's face.** Fixed as a TYPED distinction, not a phrase: the coach
+  borrows words only on `outcome === 'refused'`, the arm where the door authored
+  an athlete-facing sentence. A door returning `ok: false` with no outcome failed
+  a PRECONDITION and gets the coach's own signed refusal.
+- **THE TRUTH GATE WAS NOT AT FAULT AND DID NOT FIRE**, and saying so matters: the
+  coach REFUSED, it did not claim a move it had not made. The mouth was honest.
+  **The failure was upstream of everything slice 3 gated.**
+- **OPTION B WAS PRICED AND REJECTED FOR A REASON WORTH KEEPING.** The door could
+  derive the week itself and delete the argument class entirely. **But the
+  caller's week is not always the app's week** — the Program tab navigates, and a
+  door that re-derived "the current week" would be free to act on a week nobody
+  is reading. The door asks the caller BECAUSE the caller knows which week the
+  athlete is looking at. The optionality is the flaw; the argument is correct.
+- **WHAT THE TAPE REPORTS NOW:** COACH-ACTED vs TAP-ACTED **IDENTICAL**;
+  COACH-BOOTED vs TAP-BOOTED **IDENTICAL**; the decision each arm recorded
+  **byte-identical**; undo over the coach-landed move `undone`, back to the floor,
+  and still undone after another relaunch. **The control ran first and is clean** —
+  the two arms are separately-reached worlds, so the tape reaches the world twice
+  with nothing landed and prints *"is reaching the world repeatable? YES"* before
+  it compares anything else.
+- **THE PROBE ASSERTS ITS OWN PRECONDITIONS.** The source day is chosen through
+  `capabilities.canMoveWholeDay` — the field `coachProposal` itself consults — so
+  a REFUSAL can never be reported as a durability finding; and if the athlete's
+  own tap fails to move the week the run says the reading is VACUOUS and refuses
+  to publish a coach verdict.
+- **THE MIRROR IS PINNED, NOT ELIMINATED.** The tap arm CALLS
+  `programControlActionForPlanChange`, the sheet's own extracted owner.
+  `handleConfirm` has no such owner, so the tape COPIES its context object — the
+  exact thing that just went wrong one layer over. Section [7] reads the screen's
+  own call site and reds if it stops passing a week, and a further cell compares
+  it to the SHEET's call site, so *"the same door"* is a claim about the ARGUMENTS
+  and not only about the function. Extracting a coach door-owner would move the
+  executor import out of the screen and re-aim slice 1's one-writer ban — **named,
+  not done in a fix.**
+- **ITEM 2 (DOC-TRUTH) DONE, AND MEASURED RATHER THAN COPIED FROM THE COMMIT.**
+  Every gate re-run: `test:coach-tab-slice3` **127** (116 at the slice, +11 this
+  pass), `test:coach-tab-slice1` **80**, `test:coach-tab-slice2` **76**,
+  `test:coach-truth-gate` **61/61**, `test:keyboard-convention` **43/43**. NOW.md
+  also said the marker matrix was *"nine rows, five matching three families"* —
+  it is **eleven rows, seven**. Corrected.
+- **ITEM 3 (THE STANDING RULE) RECORDED WHERE IT BINDS — AGENTS.md**, not in a
+  boundary doc, because a rule that lives in a dated doc is one the next reader
+  never finds. NOW.md's Sam block is rewritten so every line carries its cell
+  name inline or says OPEN-UNKNOWN; **two are marked OPEN-UNKNOWN and both are
+  real** — the Undo TOAST over a coach-landed move (nothing mounts it), and both
+  card buttons reachable with the keyboard up (every keyboard cell reads SOURCE).
+  LOOP CHECK `claim-in-prose-only` — **sighting 2, and it was found by the very
+  pass that wrote the rule.** Per the rule's own escalation this is where every
+  Sam-facing line starts carrying its cell name, and NOW.md now does.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  **1 FAIL cell** — *"a move committed durably reaches the visible week"*, main's
+  declared red, **92 suites reached**. `test:compile` PASSED, totals
+  byte-identical **35/51/373**. `test:coach-tab-slice3` **127 cells, 8 new
+  mutations 8 red, no survivors** — including both real defects re-introduced,
+  and a CONTROL for the copy fix without which a module that never speaks the
+  door's words would have satisfied the new cell and silently deleted [4]'s
+  behaviour.
+- **NOT COVERED, first line: NO REACT, AND NO DEVICE.** The tape calls the
+  screens' own rule functions with the screens' own arguments in the screens' own
+  order, but **nothing is mounted** — render order, a stale closure, the settling
+  effect's timing, and whether `handleConfirm` captures a `weekDays` one render
+  behind are all outside what it can see. **One action kind, one week, one world,
+  L13 depth 1.** The keyboard is still unproven on glass and this pass did not
+  touch it.
+- **PARKED FOR SAM:** the ledger records the coach's move and the athlete's move
+  **identically — now MEASURED byte-for-byte, not inferred**; whether it SHOULD
+  is still his ruling and is the other half of the athlete-tap-attributed-to-coach
+  item. Carried unchanged: batch 31 (one signing sitting), the *"You asked me
+  to."* why-line, which request it refused that it should have proposed, the
+  frozen coach tree, the three unbuilt ledger fact destinations, the two chips,
+  the journal/copy items.
+
+
+### The orders the sixty-first pass processed, as the seat wrote them
+
+1. THE DURABILITY TAPE — S3's OWN FIRST DEBT, BUILD IT NOW (seat,
+   2026-08-10 morning, fresh Opus review seat). S3 is ACCEPTED and the
+   keyboard fix is accepted IN SHAPE; the boundary's own first line of
+   NOT COVERED is the order: *"No screen is mounted, no store is
+   touched, executeProgramControlActionDurably is not called by any
+   cell in this suite... It is the first thing the next pass owes."*
+   Build it in the shape of `tape:lr29-undo-durability`: propose a
+   move through the coach's own path, confirm it, read the week,
+   relaunch, read the week again. The claim under test is the one the
+   slice currently reads at SOURCE level only — that a coach-proposed
+   move lands, appends its decision, and survives a relaunch
+   BYTE-FOR-BYTE the same as the athlete's own tap. Run the athlete's
+   own tap through the same tape as the CONTROL, on the same week —
+   a tape that only exercises the coach cannot show they are the same
+   door. Undo over a coach-landed move belongs in the same tape (it is
+   claimed to come free; free claims are the ones that rot).
+   NOT a device task: this closes at depth, in the repo, without Sam.
+
+2. DOC-TRUTH: NOW.md's SLICE-3 NUMBERS ARE STALE (seat, 2026-08-10).
+   NOW.md states `test:coach-tab-slice3` **99 cells, 14 mutations 14
+   red**; the commit that closed item 0 states **116 cells, 19
+   mutations 19 red**. NOW.md is the single status surface, so it is
+   the copy that is wrong. Correct it, and check the same commit's
+   other totals while you are in there.
+
+3. NEW STANDING RULE — A BEHAVIOUR CLAIM SAM CAN READ MUST BE HELD BY
+   A CELL OR MARKED OPEN-UNKNOWN (seat, 2026-08-10). Born from this
+   pass's best catch: *"why is friday heavy?"* was written as REFUSED
+   in the slice-2 boundary AND in NOW.md, Sam was told it, and it was
+   false — **no cell held the claim; it lived in prose only.** That is
+   DOC-TRUTH's sibling for behaviour: doc-truth already forbids a
+   "built" claim without a code receipt; this forbids a "it does /
+   does not do X" claim without a CELL receipt. From now on, every
+   sentence in NOW.md's SAM block and in a boundary's behaviour prose
+   is either (a) pinned by a named cell, or (b) written as
+   OPEN-UNKNOWN / "read at source, not measured". Apply it
+   retroactively to the S3 boundary's behaviour prose in the same pass
+   as item 2 — anything unpinned gets re-worded, not deleted.
+   LOOP CHECK: claim-in-prose-only — sighting 1 (S2's refusal claim,
+   caught on the free device evidence one slice later) — iterate; a
+   second unpinned claim reaching Sam = every Sam-facing line carries
+   its cell name inline before the next slice ships.
+
+4. HELD, DO NOT START: S4 (journal context) and the Bible "why" layer.
+   Both wait on Sam's device pass of S3 + the ONE batch-31 signing
+   sitting. The reason arm now exists as a SEAM (this pass), so the
+   Bible layer has somewhere to land — that is the reason to hold it,
+   not a reason to open it.
+   LOOP CHECK: kind-by-kind-behind-one-card — sighting 1 carried
+   forward, unchanged; the second kind is what triggers both the card
+   generalisation AND the truth-gate `COACH_PROPOSABLE_ACTION_TYPES`
+   generalisation the boundary priced. Do not pay either early.
+
+
 ## Processed 2026-08-10 (sixtieth pass) — IT CHANGES THINGS, AND THE FREE DEVICE EVIDENCE HAD A DEFECT IN IT
 
 - **ONE LINE: the coach proposes a change as a `ProgramControlAction`, the card

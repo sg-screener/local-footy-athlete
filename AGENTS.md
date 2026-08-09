@@ -198,6 +198,43 @@ Counting is one instance of anchoring, not the other way round. If a gate finds
 its subject before asserting on it, prove the finding first; the assertion is
 only meaningful afterwards.
 
+## A behaviour claim the owner can read is held by a CELL, or written OPEN-UNKNOWN
+
+**Seat-ruled 2026-08-10.** DOC-TRUTH already forbids a *"built"* claim without a
+code receipt. This is its sibling for behaviour: **a sentence saying the app does
+or does not do X — anywhere Sam reads it — is either (a) pinned by a NAMED cell
+or tape, or (b) written as OPEN-UNKNOWN / "read at source, not measured".**
+
+That covers `docs/NOW.md`'s Sam-facing block and every boundary report's
+behaviour prose. Both forms are acceptable. What is forbidden is the third form:
+a confident behavioural sentence held by nothing.
+
+*Founding case.* The slice-2 boundary said *"why is Friday heavy?"* was refused.
+`docs/NOW.md` told Sam it was refused. **No cell held the claim — it lived in
+prose only, and it was false**: the coach answered *"Friday: Lower Squat."*, so
+the athlete asked WHY and was told WHAT, which is worse than the refusal that was
+being reported as a limitation. It survived two reports and reached the owner.
+
+*Second case, one pass later, and it is why the rule names TAPES too.* Slice 3
+reported that the coach's move *"goes through the SAME door as your own tap, so
+the toast and Undo work on it exactly as they do."* 116 cells were green. **The
+door had never been executed** — the boundary said so in its own first NOT
+COVERED line — and when a tape finally ran it, the coach's move was inert:
+`handleConfirm` omitted the door's required visible week. **Every green cell was
+a claim about which FUNCTION is called; the defect was in an ARGUMENT.**
+
+Two practical consequences:
+
+- **A cell that names a function does not cover its arguments.** Where a door
+  takes an optional context that changes whether it acts at all, the call-site
+  cell asserts the CONTEXT, and a second cell compares it against the
+  established caller's. `coachTabSlice3Tests` [7] is the worked example.
+- **"The door has never run" in a NOT-COVERED section is a debt with a deadline,
+  not a disclosure.** A slice whose own first uncovered line is that its
+  mechanism was never executed should not be followed by another slice before it
+  is. Sighting 2 of a source-level reading standing in for a run; the overnight
+  pass predicted its own in writing and was right about that one too.
+
 ## Instrumentation must be alive where the defects are
 
 **A diagnostic that is off on the build the defect lives on is a green gate that

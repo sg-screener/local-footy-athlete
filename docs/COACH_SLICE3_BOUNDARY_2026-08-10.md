@@ -7,6 +7,28 @@ docs/COACH_SLICE2_BOUNDARY_2026-08-10.md.
 
 ---
 
+> ## ⚠ CORRECTION, 2026-08-10 (sixty-first pass) — READ THIS BEFORE THE REPORT
+>
+> **This report's behaviour prose about the DOOR was a source-level reading, and
+> where it reads as a statement of fact about what the app does, it was WRONG.**
+> Its own NOT COVERED section said so first (*"the door has never run … the
+> likeliest place this slice is wrong"*), and the tape the seat ordered off that
+> line found it: `handleConfirm` omitted the door's required visible week, so
+> **the coach's move never ran at all.**
+>
+> Re-worded rather than deleted, per the standing rule this correction produced
+> (AGENTS.md, *"a behaviour claim the owner can read is held by a CELL, or
+> written OPEN-UNKNOWN"*). Read every sentence below about executing, recording,
+> undoing or surviving a relaunch as **"the source says this, and at the time of
+> writing nothing had run it"**. As of
+> docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md they are measured and true —
+> after a one-argument fix, and not before it.
+>
+> Everything in this report about the READER, the PROPOSAL, the CARD and the
+> TRUTH GATE was executed by cells when written and is unaffected.
+
+---
+
 ## ONE LINE
 
 The coach proposes a change as a `ProgramControlAction`, the card the athlete
@@ -15,6 +37,10 @@ athlete's own tap door executes it, the ledger records it inside the door, undo
 covers it because it already covered the door — and the confirmation sentence is
 one the truth gate can refuse, which it could not have been yesterday because
 **the gate had no vocabulary for a move at all**.
+
+*(Correction, per the block above: at the time of writing, everything after
+"the athlete's own tap door executes it" was read at source and had never been
+run. It was not true — the door refused the call. It is true now.)*
 
 ## SCOPE — ONE KIND, FULL CHAIN, STOPPED BEFORE S4
 
@@ -339,6 +365,13 @@ likeliest place this slice is wrong, exactly as the overnight pass said of its
 own union reading. The instrument that would close it is a tape in the shape of
 `tape:lr29-undo-durability`: propose, confirm, photograph the week, relaunch,
 photograph again. **It is the first thing the next pass owes.**
+
+> **PAID, 2026-08-10, and this line was right.** `npm run
+> tape:coach-move-durability`. The coach's move was INERT — the door was called
+> without the visible week every plan-change action requires, so it refused the
+> call before it looked at the action, and the athlete was shown the developer's
+> sentence. Fixed; both arms are now byte-identical through a relaunch.
+> docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md
 
 **L-C3 IS FIXED IN SHAPE AND NOT PROVEN ON GLASS, AND THE SEAT'S ORDER SAID IT
 BLOCKS THIS BOUNDARY.** Item 0's four end-states are cells and the reported cause

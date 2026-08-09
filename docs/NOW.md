@@ -1,33 +1,68 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** slice 3 — **THE COACH CHANGES THINGS NOW.**
-  S4 not started, as ordered. Sam's boot fix below is still UNSEEN on his phone
-  and is still the first thing to look at.
+- **BRANCH:** `main` · **HEAD:** the coach's move actually lands. S4 not started,
+  as ordered. Sam's boot fix below is still UNSEEN on his phone and is still the
+  first thing to look at.
 
-- **⚠ SAM: THE COACH TAB CAN NOW MOVE A SESSION, AND IT ASKS BEFORE IT DOES.**
-  Type **"move Friday to Sunday"** (or tap the *Move a session* chip). A card
-  comes up above the keypad — what changes, from what, to what, and why — with
-  **Make the change** and **Not now**. Nothing happens until you tap. When you
-  do, it goes through the SAME door as the Program tab's own move, so the toast
-  and Undo work on it exactly as they do on your own tap.
-  **THE THING TO WATCH, and it is the exact case you named: bring the keyboard
-  up while the card is showing and check both buttons are still reachable.**
-  The card rides the keypad with the composer; if anything overshoots or sits
-  under the keys, this is the slice that will show it.
-  It still ANSWERS the same three questions. **And the thing I told you it
-  refused — *"why is Friday heavy?"* — it did NOT refuse: it answered "Friday:
-  Lower Squat."** You asked WHY and it told you WHAT. That is fixed; it now says
-  it has no answer, honestly, and the Bible layer is what fills it.
-  **Tell me the first request it refused that it should have proposed.**
+- **⚠ SAM: I TOLD YOU THE COACH COULD MOVE A SESSION. IT COULDN'T — AND NOW IT
+  CAN.** The seat ordered a tape that actually runs the door instead of reading
+  it. First run: your own tap on the Program tab moved the week and recorded it;
+  **the coach's identical move, same world, same two days, same run, did nothing
+  and told you *"Cannot safely apply this day/session action without the current
+  visible week."*** One missing argument, fixed. What the tape says now: the two
+  moves produce a **byte-identical** week, a byte-identical ledger entry, the
+  same week after a relaunch, and Undo unwinds the coach's move and it stays
+  unwound. `npm run tape:coach-move-durability` ·
+  docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md
+
+- **⚠ SAM: WHAT THE COACH TAB DOES, WITH WHAT HOLDS EACH CLAIM.** Every line
+  below is either pinned by a named cell or marked **OPEN-UNKNOWN** — the new
+  standing rule (AGENTS.md), written because *"why is Friday heavy? is refused"*
+  reached you here and was false.
+  - Type **"move Friday to Sunday"** or *"can you move Friday to Sunday?"* and
+    it is read as a change, not a question — `test:coach-tab-slice3` [1], the
+    marker matrix, 11 rows.
+  - A card comes up in the strip above the keypad — what changes, from what, to
+    what, and why — with **Make the change** and **Not now** — [3] and [6].
+  - **Nothing happens until you tap** — [3]: a proposed action always arrives
+    with its card, and the screen holds no executable it cannot show.
+  - **Tapping it goes through the same door as your own tap, and Undo covers it**
+    — `tape:coach-move-durability`, both arms byte-identical through a relaunch,
+    and section [7] pins the argument the tape found missing.
+  - **The Undo TOAST on a coach move: OPEN-UNKNOWN.** The toast reads the ledger
+    and the coach's decision is byte-identical to yours, so it should appear —
+    **but nothing mounts the toast over a coach-landed move, so that is a
+    reading, not a measurement.**
+  - **Both card buttons reachable with the keyboard up: OPEN-UNKNOWN, and it is
+    the thing to watch.** Every keyboard cell reads SOURCE; no keyboard has been
+    raised in this repo. The card adds height to the strip that rides the keypad
+    — if anything overshoots or sits under the keys, this is the slice that
+    shows it.
+  - It still ANSWERS the same three questions — `test:coach-tab-slice2`, 76 cells.
+  - **And the thing I told you it refused — *"why is Friday heavy?"* — it did
+    NOT refuse: it answered "Friday: Lower Squat."** You asked WHY and it told
+    you WHAT. Fixed; it now says it has no answer, honestly — [2], *"a reason
+    question about a day is placed as a REASON"* + *"Sam's own message is placed
+    as a reason question"*. The Bible layer is what fills it.
+  - **Tell me the first request it refused that it should have proposed.**
 
 - **COACH SLICE 3 (2026-08-10).** **READ:**
-  docs/COACH_SLICE3_BOUNDARY_2026-08-10.md · gate `test:coach-tab-slice3`
-  (99 cells, 14 mutations 14 red).
+  docs/COACH_SLICE3_BOUNDARY_2026-08-10.md ·
+  docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md · gate
+  `test:coach-tab-slice3` (**127 cells** — 116 at the slice, +11 for the tape's
+  finding; **27 mutations, 27 red** across the suite's life).
+  - **THE DOOR HAD NEVER RUN, AND WHEN IT WAS RUN IT DID NOT WORK.** The
+    confirm handler passed the door `{ todayISO }` and every plan-change action
+    needs a visible week, so the coach's move was inert while 116 cells stayed
+    green — **all of them claims about which FUNCTION is called, and the defect
+    was in an ARGUMENT.** Fixed; section [7] pins the argument and compares it
+    to the sheet's. See the durability boundary above.
   - **ONE READING SEAM, NOT TWO READERS.** *"Can you move Friday to Sunday?"*
     carries an interrogative AND a move verb; two readers tried in sequence
     answer by table order, which is the slice-2 class exactly. The MARKER MATRIX
-    was written before the resolver, as ordered — nine rows, five matching three
-    families at once, and it is what reds when the precedence is reversed.
+    was written before the resolver, as ordered — **eleven rows, seven matching
+    three families at once**, and it is what reds when the precedence is
+    reversed.
   - **THE CARD IS A PROJECTION OF THE ACTION** (L-C2). `changeCardFor` sees the
     action and the week and nothing else — no message, no request, no
     conversation — so card and change cannot drift. A kind it cannot draw gets
@@ -64,12 +99,15 @@
     list. Both the slice-2 boundary and this file said otherwise; **no cell held
     the claim.** Fixed as a `reason` subject, recognised positively and answered
     honestly — the arm the Bible layer lands on.
-  - **NOT COVERED, first line: THE DOOR HAS NEVER RUN.** No cell executes
-    `executeProgramControlActionDurably`; that a coach move lands, records and
-    survives a relaunch is a source-level reading. **A durability tape is the
-    first thing the next pass owes.** **Item 0 is fixed in SHAPE, not proven on
-    glass** — every one of its cells reads source, no keyboard has been raised
-    here, and the inset is a Reanimated layout animation only a device can judge.
+  - **NOT COVERED, first line: ~~THE DOOR HAS NEVER RUN~~ — PAID, AND IT WAS
+    RIGHT TO WORRY.** The tape exists (`tape:coach-move-durability`), the door
+    runs, and the run found the slice inert. What is still uncovered: **no
+    React** — nothing is mounted, so render order, a stale closure and the
+    settling effect's timing are outside what the tape sees; **one action kind,
+    one week, L13 depth 1**; and the Undo TOAST over a coach move is
+    OPEN-UNKNOWN. **Item 0 is fixed in SHAPE, not proven on glass** — every one
+    of its cells reads source, no keyboard has been raised here, and the inset
+    is a Reanimated layout animation only a device can judge.
     **No follow-up context:** both asks teach the whole shape because a bare
     *"friday"* in reply would be read as a question.
 
@@ -122,8 +160,8 @@
   `c25c8b77` (the slice) · `adab18df` (the survivor + the duplicate).
   **READ:** docs/COACH_SLICE1_BOUNDARY_2026-08-09.md · kickoff
   docs/COACH_REBUILD_KICKOFF_2026-08-09.md · gate `test:coach-tab-slice1`
-  (57 cells at slice 1; **73 today** — the signing and slice 2 each added to
-  it, and three cells were re-aimed, none deleted).
+  (57 cells at slice 1; **80 today** — the signing, slice 2 and slice 3 each
+  added to it, and cells were re-aimed, none deleted).
   - **THE TAB MOUNTS THE REBUILD, NOT THE SCREEN R5.7 CUT.** `CoachScreen` and
     its stack stay frozen and UNREACHED — the kickoff's supersession answer to
     the parked 41,220-line question, started rather than promised.
@@ -300,10 +338,15 @@
     instrument counted a NAME; the claim was about CALL SITES.
 
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
-  `test:program-control-durable`, 1 FAIL line** — main's declared red, 92
-  suites reached, run TWICE. `test:compile` PASSED, totals byte-identical to
-  baseline (35/51/373). **Sweep 2 of 174** = the declared set exactly. **The
-  denominator moved 173 → 174 in the commit that earned it**
+  `test:program-control-durable`, 1 FAIL cell** — *"a move committed durably
+  reaches the visible week"*, main's declared red, 92 suites reached.
+  `test:compile` PASSED, totals byte-identical to baseline (35/51/373).
+  **Sweep 2 of 174** = the declared set exactly
+  (`program-control-durable`, `fixture-identity`). **The denominator did NOT
+  move this pass — `tape:coach-move-durability` is a TAPE: it asserts nothing,
+  prints a measurement, and is deliberately not in the chain. Section [7] of
+  `test:coach-tab-slice3` is what the chain sees of its finding.** Previously,
+  **the denominator moved 173 → 174 in the commit that earned it**
   (`test:coach-tab-slice3`). Previously: **the denominator
   moved 172 → 173 in the commit that earned it** (`test:coach-tab-slice2`).
   Previously: **The denominator

@@ -345,6 +345,7 @@
     "tape:lr29-boot-replay": "TZ=Australia/Melbourne sucrase-node src/__tests__/lr29BootReplayTape.ts",
     "tape:lr29-undo-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/lr29UndoDurabilityTape.ts",
     "tape:exercise-edit-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseEditDurabilityTape.ts",
+    "tape:coach-move-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachMoveDurabilityTape.ts",
     "test:program-control-decisions": "TZ=Australia/Melbourne sucrase-node src/__tests__/programControlDecisionTests.ts",
     "test:coach-tab-slice3": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice3Tests.ts"
   },

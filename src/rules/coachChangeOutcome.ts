@@ -155,9 +155,25 @@ export function coachChangeOutcome(args: {
   const communication = communicationFor(appliedChanges);
 
   // THE DOOR SELECTS THE SITUATION.
+  //
+  // AND ITS WORDS ARE ONLY BORROWED WHEN IT ACTUALLY REFUSED. `outcome` is the
+  // door's own typed account of itself, and `'refused'` is the arm on which it
+  // authored an athlete-facing sentence — *"That edit can't be applied safely."*
+  // A door that returns `ok: false` with NO outcome has not refused the athlete;
+  // it has failed a PRECONDITION, and its message is addressed to the caller.
+  //
+  // MEASURED, and this is why the distinction is drawn rather than assumed:
+  // `npm run tape:coach-move-durability` caught the coach saying *"Cannot safely
+  // apply this day/session action without the current visible week."* — an
+  // internal sentence, in the coach's mouth, to Sam's face. The wiring defect
+  // that produced it is fixed at the screen; this is the arm that stops the NEXT
+  // such sentence reaching an athlete, and it is a typed distinction the door
+  // already draws, not a phrase this module recognises.
   if (!door.ok || door.outcome === 'refused') {
     return gate({
-      text: door.message ?? COACH_CHANGE_COPY.changeRefused,
+      text: door.outcome === 'refused' && door.message
+        ? door.message
+        : COACH_CHANGE_COPY.changeRefused,
       verdict: 'refused',
       appliedChanges,
       communication,

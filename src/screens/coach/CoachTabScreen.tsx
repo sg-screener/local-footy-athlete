@@ -179,7 +179,23 @@ interface SettlingChange {
 }
 
 export default function CoachTabScreen() {
-  const { visibleWeek } = useResolvedWeek();
+  // BOTH HALVES OF ONE PROJECTION, AND THE SECOND ONE IS NOT OPTIONAL.
+  //
+  // MEASURED, `npm run tape:coach-move-durability`, 2026-08-10: this destructured
+  // `visibleWeek` alone and handed the door `{ todayISO }`. Every plan-change
+  // action reaches `executePlanChangeAction`, whose FIRST line is
+  // `if (!context.visibleWeek || !context.todayISO) return fallbackResult(...)`
+  // — so the coach's move never ran. The athlete's identical move through
+  // `PlanChangeSheet` landed and recorded a `plan_change` on the same world in
+  // the same run; the coach's returned `ok: false` and changed nothing.
+  //
+  // `weekDays` is not a second week and not a second derivation: `projectWeekFor`
+  // computes it and then computes `visibleWeek` as `project()` OVER IT, in one
+  // call, and this is the SAME argument `PlanChangeSheet` passes at the same
+  // door. The screen is handing the door the week the athlete is looking at,
+  // which is exactly why the door asks the caller instead of deriving its own —
+  // a door that re-derived would be free to act on a week nobody is reading.
+  const { weekDays, visibleWeek } = useResolvedWeek();
   const todayISO = todayISOLocal();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
@@ -276,13 +292,16 @@ export default function CoachTabScreen() {
     const { action } = pending;
     const before = visibleWeek;
     setPending(null);
-    const result = await executeProgramControlActionDurably(action, { todayISO });
+    const result = await executeProgramControlActionDurably(
+      action,
+      { visibleWeek: weekDays, todayISO },
+    );
     setSettling({
       action,
       before,
       door: { ok: result.ok, outcome: result.outcome, message: result.message },
     });
-  }, [pending, visibleWeek, todayISO]);
+  }, [pending, weekDays, visibleWeek, todayISO]);
 
   const handleCancel = useCallback(() => {
     setPending(null);

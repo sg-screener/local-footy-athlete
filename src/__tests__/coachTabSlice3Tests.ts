@@ -940,12 +940,170 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
   );
 }
 
+// ─── [7] THE DOOR IS HANDED THE WEEK — THE TAPE'S FINDING, AS CELLS ──────────
+
+console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND');
+{
+  // MEASURED FIRST, `npm run tape:coach-move-durability`, 2026-08-10. Slice 3
+  // shipped with `handleConfirm` calling the door as
+  // `executeProgramControlActionDurably(action, { todayISO })`, and
+  // `executePlanChangeAction`'s first statement is
+  // `if (!context.visibleWeek || !context.todayISO) return fallbackResult(...)`.
+  // So the coach's move NEVER RAN. The tape put the athlete's identical move
+  // through `PlanChangeSheet`'s own door on the same world in the same run: the
+  // tap landed and recorded a `plan_change`, the coach's returned `ok: false`
+  // and changed nothing.
+  //
+  // Sections [5] and [6] were green throughout, and they could not have been
+  // otherwise: they read that the coach OUTPUTS a door action and that the door
+  // records it. Both true. Neither is a claim about the ARGUMENTS the call site
+  // passes, and the defect was entirely in the arguments. That is the gap these
+  // cells close — and the reason the tape had to exist at all.
+
+  // ── THE CALL SITE, PROVEN FOUND BEFORE IT IS ASSERTED ON ──
+  //
+  // The anchoring law (AGENTS.md): an `indexOf`/`slice` region that missed
+  // returns something a regex passes over. The import line mentions the same
+  // symbol, so the anchor is the AWAITED call and the region must carry its own
+  // closing line before a word of it is read.
+  const callAnchor = screenCode.indexOf('await executeProgramControlActionDurably(');
+  const callEnd = callAnchor >= 0 ? screenCode.indexOf(');', callAnchor) : -1;
+  const doorCall = callAnchor >= 0 && callEnd > callAnchor
+    ? screenCode.slice(callAnchor, callEnd + 2)
+    : '';
+  ok(
+    'the screen\'s door call was located and holds its own closing line',
+    doorCall.length > 40 && doorCall.endsWith(');'),
+    `${doorCall.length} chars: ${JSON.stringify(doorCall.slice(0, 120))}`,
+  );
+  ok(
+    'and it hands the door a visibleWeek — WITHOUT IT THE MOVE DOES NOT RUN',
+    /visibleWeek:/.test(doorCall),
+    'executePlanChangeAction returns fallbackResult("Cannot safely apply this '
+      + 'day/session action without the current visible week.") when the context '
+      + 'has none, and the coach then reports a change it never made an attempt at',
+  );
+  ok(
+    'and what it hands over is weekDays, the door\'s own representation',
+    /visibleWeek:\s*weekDays/.test(doorCall),
+    'the door takes ResolvedDay[]; `visibleWeek` on this screen is the PROJECTION '
+      + 'of that array. Passing the projection would be a type error today and a '
+      + 'second representation in the door\'s input if it ever stopped being one',
+  );
+  ok(
+    'and both halves come out of ONE useResolvedWeek call',
+    /const \{ weekDays, visibleWeek \} = useResolvedWeek\(\);/.test(screenCode),
+    'projectWeekFor computes weekDays and then projects IT — two destructured '
+      + 'names, one derivation. Two hook calls would be two weeks that can differ',
+  );
+
+  // ── THE PRECONDITION IS QUOTED AT ITS OWNER, so this cell set reds if the
+  // door stops requiring the week rather than only if the screen stops passing
+  // it. A gate that watches one side of a contract watches half a contract.
+  const doorCode = stripComments(read('utils', 'programControlActions.ts'));
+  ok(
+    'the door still REQUIRES the visible week for a plan-change action',
+    /if \(!context\.visibleWeek \|\| !context\.todayISO\) \{[\s\S]{0,200}?fallbackResult\(/
+      .test(doorCode),
+    'if this precondition goes, the cells above are pinning an argument nothing '
+      + 'reads — and the next reader would delete them as dead weight',
+  );
+
+  // ── SAMENESS AT THE SOURCE, because the tape is not in the chain. ──
+  const sheetCode = stripComments(read('screens', 'home', 'PlanChangeSheet.tsx'));
+  const sheetAnchor = sheetCode.indexOf('await executeProgramControlActionDurably(');
+  const sheetEnd = sheetAnchor >= 0 ? sheetCode.indexOf(')', sheetAnchor + 45) : -1;
+  const sheetCall = sheetAnchor >= 0 && sheetEnd > sheetAnchor
+    ? sheetCode.slice(sheetAnchor, sheetEnd + 1)
+    : '';
+  ok(
+    'the athlete\'s own sheet call was located',
+    sheetCall.length > 40 && /executeProgramControlActionDurably/.test(sheetCall),
+    JSON.stringify(sheetCall.slice(0, 140)),
+  );
+  ok(
+    'and the coach passes the SAME context the sheet does',
+    /visibleWeek:\s*weekDays/.test(sheetCall) && /visibleWeek:\s*weekDays/.test(doorCall)
+      && /todayISO/.test(sheetCall) && /todayISO/.test(doorCall),
+    '"the coach goes through the same door as your own tap" is a claim about the '
+      + 'ARGUMENTS as much as about the function — the same door given different '
+      + 'context is two doors, which is what the tape measured',
+  );
+
+  // ── AND THE DOOR'S WORDS ARE BORROWED ONLY WHEN IT ADDRESSED THE ATHLETE ──
+  //
+  // The tape's second finding: the coach said *"Cannot safely apply this
+  // day/session action without the current visible week."* out loud. That
+  // sentence is addressed to a CALLER. `outcome` is the door's own typed account
+  // of itself and `'refused'` is the arm on which it authored an athlete-facing
+  // sentence, so the coach borrows words on that arm and on no other. A typed
+  // distinction the door already draws — not a phrase this suite recognises.
+  const moveAction: ProgramControlAction = {
+    type: 'move_session',
+    source: { screen: 'coach_tab', surface: 'coach_change_card', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: { fromDate: FRIDAY, toDate: SUNDAY },
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: true,
+  };
+  const precondition = coachChangeOutcome({
+    action: moveAction, before: WEEK, after: WEEK,
+    door: {
+      ok: false,
+      message: 'Cannot safely apply this day/session action without the current visible week.',
+    },
+  });
+  ok(
+    'a door that failed a PRECONDITION does not put its words in the coach\'s mouth',
+    precondition.verdict === 'refused'
+      && precondition.text === COACH_CHANGE_COPY.changeRefused,
+    `${precondition.verdict}: ${precondition.text}`,
+  );
+  ok(
+    'and the sentence it uses instead is the signed one from rules/',
+    !/visible week|Cannot safely apply/i.test(precondition.text),
+    precondition.text,
+  );
+  // THE CONTROL, and without it the cell above is satisfied by a module that
+  // never speaks the door's words at all — which would delete the behaviour
+  // [4] pins two sections up.
+  const authored = coachChangeOutcome({
+    action: moveAction, before: WEEK, after: WEEK,
+    door: {
+      ok: false, outcome: 'refused',
+      message: "I couldn't safely make that change, so the plan is untouched.",
+    },
+  });
+  ok(
+    'CONTROL — a door that REFUSED is still spoken verbatim',
+    authored.verdict === 'refused'
+      && authored.text === "I couldn't safely make that change, so the plan is untouched.",
+    authored.text,
+  );
+
+  // ── AND THE DEPTH IS NAMED, because [7] is source and behaviour, not a run ──
+  ok(
+    'the RUN that found this is a tape, and it is not in the chain',
+    /tape:coach-move-durability/.test(
+      read('..', 'package.json'),
+    ),
+    'npm run tape:coach-move-durability — it asserts nothing and prints a '
+      + 'measurement, so it is a tape and not a gate. These cells are what the '
+      + 'chain sees; the tape is what a person reads',
+  );
+}
+
 const total = passed + failures.length;
 console.log(`\nCoach tab slice 3 totals: passed=${passed}/${total} failures=${failures.length}`);
 console.log(
-  '  DEPTH (L13): 0 — the weeks above are hand-built and no door was executed. '
-  + 'The change has never run against a real store, no walker was used, no '
-  + 'accumulated world, no screen mounted, no keyboard raised.',
+  '  DEPTH (L13): 0 IN THIS SUITE — the weeks above are hand-built and no door '
+  + 'is executed here; no walker, no accumulated world, no screen mounted, no '
+  + 'keyboard raised. THE DOOR IS RUN ELSEWHERE: `npm run '
+  + 'tape:coach-move-durability` drives the coach\'s move through the real '
+  + 'executor over a generated world at depth 1, with the athlete\'s own tap '
+  + 'beside it as the control. That tape is not in the chain — section [7] is '
+  + 'what the chain sees of its finding.',
 );
 totalsPrinted(failures.length);
 if (failures.length > 0) {
