@@ -450,7 +450,23 @@ function extract(): ExtractedString[] {
  * either — they live in a keyed object and a template literal, the two shapes
  * named as owed at the 566 rise below.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 568;
+/**
+ * 568 -> 570 (this week's job, same commit that earned it): TWO genuinely new
+ * sentences the extractor can see — the "This week's job" section heading and
+ * "No plan recorded for this week." Batch 16's kind of rise: the app gained
+ * words, the instrument did not change.
+ *
+ * IT WAS BRIEFLY THREE. The section also rendered "All of it is done." from the
+ * contract's stored achieved tallies, and `section18ShortfallCopyTests` refused
+ * that read — a stored tally is derived output and goes stale. The sentence was
+ * WITHDRAWN from batch 20 rather than left proposed, and this ceiling is the one
+ * the corrected surface earns.
+ *
+ * Recorded as BATCH 20 before this commit landed, with the counted line listed
+ * there in template form — it takes numbers and the athlete's own domain words,
+ * so a table row would bind vacuously.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 570;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

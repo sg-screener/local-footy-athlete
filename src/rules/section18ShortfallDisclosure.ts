@@ -47,8 +47,13 @@ export const ATHLETE_FORBIDDEN_VOCABULARY: readonly string[] = [
  * athlete-facing rendering and must never be disclosed by name — `identity`,
  * `migration` and `anchor_credit` are bookkeeping about the contract itself,
  * not about anything the athlete would recognise as training.
+ *
+ * EXPORTED 2026-08-09 for the Journal's "this week's job" line, which needs the
+ * same translation and must not grow a second one. A private copy in the Journal
+ * would be a rival vocabulary for the words the athlete reads — and the two would
+ * disagree the first time either was edited.
  */
-const ATHLETE_WORD_FOR_DOMAIN: Record<Section18FindingDomain, string | null> = {
+export const ATHLETE_WORD_FOR_DOMAIN: Record<Section18FindingDomain, string | null> = {
   main_strength: 'strength',
   strength_patterns: 'strength',
   conditioning: 'conditioning',

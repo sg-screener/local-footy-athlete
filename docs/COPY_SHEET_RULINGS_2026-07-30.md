@@ -1606,3 +1606,48 @@ never done the lift, only that there is nothing to compare against. And a skippe
 lift never appears at all, because its recorded weight is the one that was
 *prescribed and not lifted*; a row for it would report a best for a session the
 athlete said they did not do.
+
+## Batch 20 — this week's job (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Monday card / addendum
+Group 1 items 3 and 4.
+
+**20-a. THE THREE STRINGS THE EXTRACTOR CAN SEE.**
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "This week's job" |
+| No contract governs this week | "No plan recorded for this week." |
+
+**20-b. THE ONE COUNTED LINE**, in template form for batch 15-d's reason:
+
+- "This week asks for {n} {word}, {n} {word}." — e.g. "This week asks for 3
+  strength, 2 conditioning."
+
+**20-c. THE WORDS IN THOSE TEMPLATES ARE NOT MINE, AND THAT IS THE POINT.**
+`{word}` is filled from `ATHLETE_WORD_FOR_DOMAIN` in
+`rules/section18ShortfallDisclosure.ts` — the EXISTING owner of the athlete's
+word for each contract domain, which Sam's shortfall sentence already uses. A
+private table in the Journal would be a rival vocabulary, and the two would
+disagree the first time either was edited. The table was exported for this
+purpose rather than copied.
+
+**Sam's `ATHLETE_FORBIDDEN_VOCABULARY` is enforced on this surface too**: a cell
+asserts no rendered word is "exposure"/"exposures".
+
+**20-d. THERE IS NO COMPLETION VERDICT HERE, AND THAT IS A CORRECTION.** The
+first version of this section rendered "All of it is done." / "1 strength to go."
+from the contract's stored achieved tallies. `section18ShortfallCopyTests`
+refused it — *"no caller reads an achieved tally off a stored contract"* — and
+the gate was right: a stored tally is derived output, so the athlete would have
+read Monday's snapshot as Thursday's truth. **Those two sentences are withdrawn
+from this batch rather than left proposed**, because a proposal for wording
+nothing uses wastes a ruling.
+
+The completion question is already answered one section down by "Did the work
+happen", from recorded outcomes. A second verdict here would be two answers to
+one question.
+
+**20-e. WHEN THE STATUS LINE IS BUILT** — from a freshly-derived ledger, by the
+owners that gate names — its wording comes to Sam as its own batch. It is a claim
+about his athlete's week and gets ruled as one.

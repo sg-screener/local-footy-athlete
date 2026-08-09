@@ -26,6 +26,7 @@ import {
   type JournalSessionOutcome,
   type JournalWeek,
 } from '../../rules/journalWeek';
+import { buildJournalWeekJob, type JournalWeekJob } from '../../rules/journalWeekJob';
 import {
   buildJournalStrengthTrend,
   type StrengthLiftTrend,
@@ -369,6 +370,37 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
 }
 
 /**
+ * THIS WEEK'S JOB — Monday card / addendum Group 1 item 4, PROPOSED (batch 20).
+ *
+ * IT STATES WHAT THE WEEK ASKS AND NOTHING ABOUT WHETHER IT IS DONE. The first
+ * version rendered a satisfied/short verdict from the contract's stored achieved
+ * tallies, and `section18ShortfallCopyTests` refused it: a stored tally is
+ * derived output and goes stale beside the facts it came from, so the athlete
+ * would have read Monday's snapshot as Thursday's truth. The verdict needs a
+ * freshly-built ledger and belongs to the owners that gate names.
+ *
+ * "Did the work happen" one section down already answers the completion question
+ * from recorded outcomes, so the athlete is not left without one.
+ */
+function WeekJob({ job }: { job: JournalWeekJob | null }) {
+  if (job === null) {
+    return (
+      <Text variant="body" style={styles.muted} testID="journal-job-none">
+        {'No plan recorded for this week.'}
+      </Text>
+    );
+  }
+
+  const asks = job.asks.map((ask) => `${ask.target} ${ask.athleteWord}`).join(', ');
+
+  return (
+    <Text variant="body" style={styles.body} testID="journal-job-asks">
+      {`This week asks for ${asks}.`}
+    </Text>
+  );
+}
+
+/**
  * ARROWS AS WORDS, PROPOSED (batch 19). A glyph alone is not readable by a
  * screen reader and not legible at small sizes; the word carries the meaning and
  * the symbol carries the glance.
@@ -542,6 +574,7 @@ export default function JournalScreen() {
   // sites is two chances to pass different inputs".
   const { weekDays, visibleWeek } = useResolvedWeek();
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
+  const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   // THE PROFILE IS READ THROUGH ITS CONSOLIDATED OWNER, NOT OFF THE MIRROR.
   //
   // The first version of this screen selected `onboardingData` straight off
@@ -642,6 +675,14 @@ export default function JournalScreen() {
   // "what did this week cost" and "did the bar go up" are different enough that
   // one module answering both would need a mode flag, and a mode flag is how a
   // derivation becomes a second model.
+  // THE CONTRACT IS READ, NEVER REBUILT. It is a typed fact the Section 18
+  // resolver already authored onto the microcycle; deriving a second one here
+  // would be a second answer to what the week asks of the athlete.
+  const weekJob = useMemo<JournalWeekJob | null>(
+    () => buildJournalWeekJob(currentMicrocycle?.exposureContractV2 ?? null),
+    [currentMicrocycle],
+  );
+
   const strengthLifts = useMemo<readonly StrengthLiftTrend[]>(() => buildJournalStrengthTrend({
     weekStart: week.weekStart,
     sessions: Object.entries(sessionFeedback ?? {}).map(([date, feedback]) => ({
@@ -658,6 +699,10 @@ export default function JournalScreen() {
         <Text variant="bodySmall" style={styles.muted}>This week</Text>
 
         <WeekShapeStrip days={week.days} />
+
+        <Section title="This week's job">
+          <WeekJob job={weekJob} />
+        </Section>
 
         <Section title="Did the work happen">
           <DidTheWorkHappen week={week} />
