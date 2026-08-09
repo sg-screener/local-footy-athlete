@@ -2,22 +2,85 @@
 
 ## Unprocessed (newest first)
 
-1. SAM SIGNED THE JOURNAL SHEET (2026-08-09) — everything as
-   recommended: docs/JOURNAL_SIGNING_SESSION_2026-08-09.md, commit
-   as authored and APPLY.
-   LOOP CHECK: signing-batched-to-one-sitting — sighting 1 — the
-   compression working as designed (26 batches + 8 constants + 6
-   decisions = one Sam-line).
-   Work order: (i) flip the eight constants to signed — the screen
-   lights; (ii) batch statuses PROPOSED → SIGNED as the doc says;
-   (iii) C2 question wording → "How did that go?"; (iv) C3 restore
-   the lifts empty-state line; (v) C5 month word in "since {date}".
-   One commit-set, full unpiped chain, boundary report stating what
-   the athlete now sees that they did not before. THEN (vi) the
-   Monday-notification slice as its own build per the doc's C6 —
-   native dependency, report must tell Sam in plain words that a
-   pod rebuild is needed. C4 (bar colours) stays open for Sam's
-   eye — no change.
+(none)
+
+## Processed 2026-08-09 (forty-ninth pass) — THE SIGNATURE LANDS; AND A SIGNATURE TAKES THE PROOF WITH IT
+
+- **ONE LINE: Sam signed eight constants and half the Journal front page turned
+  on — the load band, the load stat tile and both earned cards — in a commit
+  that edited no surface code.** `09c29fb7` + `646116d3` + `8b12fcdd`, full
+  unpiped chain `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line,
+  **sweep 2 of 170 = the declared set exactly**. Boundaries:
+  docs/JOURNAL_SIGNING_BOUNDARY_2026-08-09.md ·
+  docs/JOURNAL_NOTIFICATION_BOUNDARY_2026-08-09.md. Ruling committed as authored
+  first at `b4335d2a`.
+- **ALL SIX WORK-ORDER ITEMS PROCESSED IN FULL.** C4 untouched as instructed.
+  LOOP CHECK `signing-batched-to-one-sitting` sighting 1 — **the compression is
+  worth keeping and it paid twice**: one Sam-line moved 26 batches, 8 constants
+  and 6 decisions, and the eight constants alone lit four surfaces.
+- **⚠ SAM MUST REBUILD WITH PODS.** `expo-notifications` is a new NATIVE
+  dependency with its plugin in `app.json`. A JS reload will not pick it up.
+- **THE FINDING OF THE PASS: A SIGNATURE TAKES THE PROOF WITH IT.** Until this
+  morning, section [2] of the load suite proved the whole provenance mechanism
+  for free — real constants were proposed, so real outputs were dark, and
+  asserting the darkness asserted the wiring. **Signing every constant removed
+  that evidence and left the assertions looking fine.** Every remaining proof ran
+  over hand-built values. The next author could write
+  `{ value, provenance: 'signed' }` by hand instead of `derived(value, …)` and
+  nothing would red — **the mechanism dead while reading green.** New section
+  [2b] un-signs a constant AT RUNTIME and rebuilds the real model, both
+  directions, mutation proven applied and the table proven restored.
+- **PROPOSED COMPRESSION, and it generalises past this repo: when a gate's
+  subject changes state, ask not only "which cells red?" but "WHICH CELLS ARE NOW
+  VACUOUS?"** The eleven that reddened announced themselves. The ones that
+  silently emptied did not, and they were the dangerous half. Two more in the
+  same commit: the `every PROPOSED constant says so` cell now asserts over an
+  empty set (kept, labelled vacuous, counterpart added), and seven cells became
+  TYPE ERRORS because `as const` narrowed provenance to `'signed'`.
+- **ELEVEN CELLS WENT RED ON THE FLIP AND EVERY ONE WAS RE-AIMED, NOT DELETED** —
+  they existed to red on exactly this day. **Their VALUES are unchanged**, so
+  cells that only watched provenance would have let the numbers move on the same
+  day; values are asserted beside signatures now.
+- **A CONFLATION IN THE DOOR, CAUGHT BY THE NEW CELL ON ITS FIRST RUN:**
+  `signedValue` returns null for UNSIGNED and for ABSENT alike, so "it came back"
+  read false for a legitimately-null conditioning stream.
+- **A COMMENT IS NOT A SHIPPED STRING — FOURTH SIGHTING, FIXED** (`646116d3`).
+  **This gate was filed as latent debt yesterday and stopped being latent this
+  morning.** Mutation-testing C3 reddened both journal suites and left the copy
+  binder GREEN, kept green by a docblock about the very ruling being violated.
+  **It found four strings the sheet claimed were shipping**: "Niggles" (a genuine
+  omission in yesterday's batch 26, fixed) and three named in `KNOWN_ABSENT` with
+  the record that ruled on each. **"Ask Coach" must NOT be withdrawn** — 11-e
+  rules it DORMANT for the beta cut, and withdrawing it would BE the retirement
+  it says nobody signed.
+- **C5's PREMISE WAS ONE WORD OFF AND CHECKING IT WAS THE WORK.** "The
+  closed-twelve month table already exists on the screen" — it did, holding
+  `Mar`, not `March`. One table of full words with the abbreviations DERIVED, and
+  a cell proving the derived twelve are byte-identical to what batch 26 shipped.
+  **Four sites were rendering "since 2026-04-06" while a comment three lines up
+  claimed "since 6 Apr"** — the claim and the code disagreed for a whole slice.
+- **THE NOTIFICATION IS BUILT AND DELIBERATELY DARK.** **ZERO new stored state —
+  the OS is the store.** "A refusal is a fact, not an error" is a returned state
+  beside `scheduled`, and `refused` renders nothing. **The sentence gate refuses
+  even with permission ALREADY GRANTED**, because iOS grants ONE prompt and
+  burning it on a feature that cannot fire does not get it back.
+- **`a count taken for a record` — EIGHTH SIGHTING**, and the second time this
+  week inside a brand-new gate on its first mutation run. N7 survived: "a
+  reschedule cancels first" was asserted FILE-WIDE and `disableJournalReminder`
+  satisfied it. Re-aimed at the located region, with the ORDER asserted.
+- **A NUMBER IN THE LAST TWO REPORTS WAS WRONG.** They said "sweep 2 of 167"; the
+  chain held **169** at both commits, measured, byte-identical script list. The
+  failure count was right and the denominator was not. It is 170 now.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE, and it matters more this pass
+  than any before it. DEPTH 0.** Four surfaces rendered for the first time today
+  and **not one has been seen**; the band's track and marker are GEOMETRY no cell
+  draws. **No notification has ever been scheduled or delivered** — the weekday
+  `+ 1` for expo's Sunday-is-1 numbering is read off documentation and is the
+  single most likely thing to be wrong.
+- **SEVEN PARKED FOR SAM**, two of them live: **batch 28's notification sentence
+  (blocking that feature on purpose)** and **C4, his own open item on the bar
+  colours**. Then: the restored lifts line showing on a non-lifting week; "March
+  2025"; batch 27's twelve words; 08:00 as the hour; no in-app off switch.
 
 
 ## Processed 2026-08-09 (forty-eighth pass) — THE EXCEPTION-BASED FRONT PAGE; AND HALF OF IT WAITS ON ONE SIGNATURE
