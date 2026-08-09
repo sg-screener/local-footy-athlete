@@ -199,6 +199,20 @@ export const PERSISTED_STORE_OWNERSHIP: readonly PersistedStoreOwnership[] = [
       + '(`ledger_rewrite_without_reset`); undo appends a reversal (LR-29 by construction).',
   },
   {
+    file: 'store/journalNoteStore.ts',
+    persistKey: 'journal-note-store',
+    owner: 'applyJournalNoteWrite',
+    taped: true,
+    caveat: 'BORN ARMOURED (journal slice 2, 2026-08-09): the Journal\'s free notes — '
+      + 'the athlete\'s own words about a week, which are an ANSWER and therefore an '
+      + 'input the north star allows. Recipe applied at birth, not retro-fitted: one '
+      + 'door, both wipe refusals, quarantine boundary, and the tape carries COUNTS ONLY '
+      + 'because the note text is the athlete\'s answer. Joined the hydration gate and '
+      + 'BOTH fresh-install reset paths in the same commit. A NOTE NEVER DERIVES PROGRAM '
+      + 'STATE (Journal design, non-negotiable) — `journalNoteOwnershipTests` [5] asserts '
+      + 'no rules/, utils/, services/ or hooks/ module reads this store at all.',
+  },
+  {
     file: 'store/athletePreferencesStore.ts',
     persistKey: 'athlete-preferences-store',
     owner: 'applyAthletePrefsWrite',

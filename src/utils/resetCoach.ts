@@ -48,6 +48,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
+import { useJournalNoteStore } from '../store/journalNoteStore';
 import { useCoachStore } from '../store/coachStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
 import { useCoachMemoryStore } from '../store/coachMemoryStore';
@@ -134,6 +135,7 @@ export interface DevPostOnboardingResetDeps {
   coachPreferencesStore: { clearAllModalityPreferences: () => void };
   coachMemoryStore: { clearNotes: () => void };
   workoutLogStore: { clear: () => void };
+  journalNoteStore: { clear: () => void };
   fireResetSignal: () => void;
   runDevOnboardingSkip: typeof runDevOnboardingSkip;
 }
@@ -220,6 +222,9 @@ function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
     },
     workoutLogStore: {
       clear: () => useWorkoutLogStore.getState().clear(),
+    },
+    journalNoteStore: {
+      clear: () => useJournalNoteStore.getState().clear(),
     },
     fireResetSignal,
     runDevOnboardingSkip,
@@ -665,6 +670,7 @@ export async function resetToDevPostOnboardingState(opts?: {
   deps.athletePreferencesStore.clear();
   deps.coachStore.clear();
   deps.workoutLogStore.clear();
+  deps.journalNoteStore.clear();
   deps.fireResetSignal();
 
   const result = await deps.runDevOnboardingSkip({
@@ -681,6 +687,7 @@ export async function resetToDevPostOnboardingState(opts?: {
   deps.coachUpdatesStore.clearAllCoachUpdates();
   deps.coachStore.clear();
   deps.workoutLogStore.clear();
+  deps.journalNoteStore.clear();
   deps.fireResetSignal();
 
   const message = result.usedFallback

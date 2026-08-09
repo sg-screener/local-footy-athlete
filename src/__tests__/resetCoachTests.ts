@@ -485,6 +485,7 @@ async function runAsyncSections() {
         coachPreferencesStore: { clearAllModalityPreferences: () => calls.push('coachPrefs') },
         coachMemoryStore: { clearNotes: () => calls.push('coachMemory') },
         workoutLogStore: { clear: () => calls.push('workoutLog') },
+        journalNoteStore: { clear: () => calls.push('journalNote') },
         fireResetSignal: () => calls.push('resetSignal'),
         runDevOnboardingSkip: async (args: any) => {
           calls.push('devSkip');

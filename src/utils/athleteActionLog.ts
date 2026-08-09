@@ -147,6 +147,8 @@ const DECISION_EVENTS: ReadonlySet<string> = new Set([
   'program_override_write',
   // The rebuild's ledger (R1.1): every athlete decision is one of these.
   'decision_ledger_write',
+  // The Journal's free notes: the athlete's own words are an answer.
+  'journal_note_write',
   // 'auth_write' and 'ui_store_write' RETIRED with their stores
   // (Sam's §6 ruling, 2026-08-03) — no writer emits them any more.
   'profile_rehydrated',

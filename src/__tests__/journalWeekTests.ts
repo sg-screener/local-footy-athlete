@@ -362,10 +362,18 @@ console.log('\n[7] SURFACE LAWS');
     && tabOrder[0].at < tabOrder[1].at && tabOrder[1].at < tabOrder[2].at,
     tabOrder);
 
-  // THE LOAD-BEARING LAW OF SLICE 1: the Journal is a reading surface. It opens
-  // no door, commits no transaction and writes no store. This is the cell that
-  // reds the day someone adds the note input to this screen instead of building
-  // it as its own input with its own armoured store.
+  // THE LOAD-BEARING LAW, RE-POINTED FOR SLICE 2 RATHER THAN LOOSENED.
+  //
+  // Slice 1 asserted the screen reached NO writer, and that was true. Slice 2
+  // adds the note input, which is an ANSWER and therefore a legitimate input
+  // write — so the cell now asserts the SHAPE of what may write: exactly one
+  // door, `recordJournalNote`, and still no transaction, no ledger append and
+  // no raw store write.
+  //
+  // Written this way because "a cell that reds when its own unit lands" is only
+  // half the hazard; the other half is a cell QUIETLY DELETED because its unit
+  // made it red. The forbidden list below is unchanged from slice 1 — nothing
+  // was relaxed, one thing was named.
   ok('the screen source was found and is non-trivial', screen.length > 1000, screen.length);
 
   const WRITER_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
@@ -374,12 +382,17 @@ console.log('\n[7] SURFACE LAWS');
     ['a direct store write', /\.\s*setState\s*\(/],
     ['a ledger append', /\bappend[A-Za-z]*(Decision|Entry|Ledger)\s*\(/],
     ['a persisted-store setter', /\buse[A-Za-z]*Store\.getState\(\)\.\s*set/],
+    ['the note store\'s own write owner, bypassing its door', /\bapplyJournalNoteWrite\s*\(/],
   ];
   const writers = WRITER_PATTERNS
     .filter(([, pattern]) => pattern.test(screen))
     .map(([name]) => name);
-  ok('the Journal screen reaches NO writer — it is a reading surface',
+  ok('the Journal screen reaches no transaction, ledger or raw store write',
     writers.length === 0, writers);
+
+  const doors = [...screen.matchAll(/\brecordJournalNote\s*\(/g)];
+  ok('and its ONE door is the note door, used exactly once',
+    doors.length === 1, doors.length);
 
   // The honest states are RENDERED, not merely derivable. Each is anchored by a
   // testID so the assertion is about a node the athlete can be shown, and so an

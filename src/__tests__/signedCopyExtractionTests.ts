@@ -397,7 +397,19 @@ function extract(): ExtractedString[] {
  * of 3, 4 string shapes instead of 2, 46 files instead of 11. From this commit
  * the number may only fall again.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 561;
+/**
+ * 561 -> 565 (journal slice 2, same commit that earned it): FOUR GENUINELY NEW
+ * SENTENCES, and this rise is the OTHER kind — the app gained words, the
+ * instrument did not change.
+ *
+ * "Your note", the note-box placeholder, "Save note" and "No notes yet this
+ * week." They ship PROPOSED and are recorded as batch 16 in
+ * docs/COPY_SHEET_RULINGS_2026-07-30.md BEFORE this commit landed, which is the
+ * transitional rule exactly: a string may ship PROPOSED, and may never ship
+ * unlisted. This comment is the "justify raising the ceiling" the assertion
+ * below asks for, and it names the four so a later reader can count them.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 565;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

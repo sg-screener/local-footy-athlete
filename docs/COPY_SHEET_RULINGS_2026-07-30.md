@@ -1347,3 +1347,58 @@ recorded but not equality-bound by that gate. The extraction gate now *counts*
 these strings and forbids new unlisted ones, which is a different and weaker
 claim than "the sheet and the app agree". Extending the binder to every PROPOSED
 batch is named here as owed and is not done in this commit.
+
+---
+
+## Batch 16 — the Journal's week note, slice 2 (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Recorded in the same
+commit that ships it, under the new derived-scope gate — which is what batch 15
+was written to make impossible to skip.
+
+**16-a. THE NOTE BOX.** The prompt is the base design's own sentence, quoted
+from the approved doc rather than reworded, so the words the athlete reads are
+the words the design was approved with.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "Your note" |
+| Note box placeholder | "Anything worth remembering about this week?" |
+| Save button | "Save note" |
+| No notes recorded for this week yet | "No notes yet this week." |
+
+**16-b. THE TAG LABELS.** The tag KEYS are the design's vocabulary — the base
+five (recovery, mobility, injury, diet, work stress) plus the addendum's three
+(sleep, illness, travel), all in scope under Sam's full-scope ruling. What is
+PROPOSED here is only their athlete-facing spelling.
+
+| Tag key | PROPOSED label |
+| --- | --- |
+| recovery | "Recovery" |
+| mobility | "Mobility" |
+| injury | "Injury" |
+| diet | "Diet" |
+| work_stress | "Work stress" |
+| sleep | "Sleep" |
+| illness | "Illness" |
+| travel | "Travel" |
+
+**THE VOCABULARY IS CLOSED, AND THAT IS THE POINT.** The NOTE is free text; the
+TAGS are not. `journalNoteStore` types them as a closed union and its door drops
+anything outside it, so a surface cannot introduce a ninth tag — a free-text tag
+set would be an unauthored vocabulary growing on the athlete's device, which is
+the exact thing this whole sheet exists to prevent. `journalNoteOwnershipTests`
+holds both directions.
+
+**16-c. THE CEILING ROSE, AND THIS IS THE JUSTIFICATION IT ASKED FOR.**
+`signedCopyExtractionTests` moved 561 → 565: four genuinely NEW athlete-visible
+sentences ("Your note", the placeholder, "Save note", "No notes yet this week.").
+Unlike batch 15's re-baseline — where the number moved because the instrument
+improved — **these are new words in the app**, and the ratchet demanded a
+deliberate edit somebody has to justify. This paragraph is that edit. They ship
+PROPOSED, which the transitional rule allows; what it forbids is shipping them
+unlisted, and they are listed here before the commit lands.
+
+**16-d. NOT SIGNED, AND ONE OF THEM IS A CLAIM.** "No notes yet this week." is
+the honest-absence line for notes, in the family of batch 15-c. The rest are
+labels. Sam's veto is one line on any of them.

@@ -95,6 +95,10 @@ export type AthleteActionEventName =
   // answers and stay on the device.
   | 'program_override_write'
   | 'decision_ledger_write'
+  // The Journal's free notes (journal slice 2): the athlete's own words about a
+  // week, applied or refused, named on the tape. COUNTS ONLY — the note's text
+  // and its tags are the athlete's answer and never leave the device here.
+  | 'journal_note_write'
   // 'auth_write' / 'ui_store_write' RETIRED with their stores (Sam's §6
   // ruling, 2026-08-03): both shells persisted only never-written defaults.
   | 'profile_rehydrated'

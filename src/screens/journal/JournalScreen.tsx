@@ -1,5 +1,10 @@
-import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+// THE KEYBOARD CONVENTION: no screen renders a raw TextInput
+// (`keyboardConventionTests`). The shared owner handles avoidance and
+// dismissal, so a screen that rolls its own is a screen the keyboard can
+// cover. Caught by the full chain on this slice's first run.
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -7,6 +12,13 @@ import { Text } from '../../components/common/Text';
 import { useAthleteContext, useResolvedWeek } from '../../hooks/useSchedule';
 import { useProgramStore } from '../../store/programStore';
 import { countWeeklyExposures } from '../../rules/weeklyExposureCounts';
+import { appDateNow } from '../../utils/appDate';
+import {
+  JOURNAL_NOTE_TAGS,
+  recordJournalNote,
+  useJournalNoteStore,
+  type JournalNoteTag,
+} from '../../store/journalNoteStore';
 import {
   buildJournalWeek,
   type JournalDay,
@@ -16,19 +28,29 @@ import {
 } from '../../rules/journalWeek';
 
 /**
- * THE JOURNAL — slice 1: the tab, and this week, read-only.
+ * THE JOURNAL — slice 1 (this week, read-only) + slice 2 (the week note).
  *
- * THIS SCREEN IS A READING SURFACE AND NOTHING ELSE. It opens no door, commits
- * no transaction and stores nothing. Every number on it is derived on read by
- * `rules/journalWeek.ts` from facts the app already stores as inputs — which is
- * the north star stated as a feature rather than as an architecture note.
+ * EVERYTHING SHOWN IS DERIVED; THE ONE THING WRITTEN IS AN ANSWER. Every number
+ * on this screen is derived on read by `rules/journalWeek.ts` from facts the app
+ * already stores. The single write is the athlete's own note, through
+ * `recordJournalNote` — one door, and it is an INPUT, which is the only kind of
+ * new stored state the north star allows.
  *
- * WHAT IT DELIBERATELY DOES NOT DO YET (slice 1 boundary, not an oversight):
- * no note input, no post-game rating, no "felt different" tap, no load
- * comparison, no monthly review, no niggle history. Each of those is either a
- * new input or a derivation over recorded history, and both belong to later
- * slices. Where the data does not exist yet, this screen says so in words
- * rather than showing a zero.
+ * SLICE 1 ASSERTED "NO WRITER AT ALL", AND THAT WAS TRUE THEN. Slice 2 makes it
+ * deliberately false, so the cell was RE-POINTED, not deleted: exactly one door,
+ * and still no transaction, no ledger append, no raw store write. A cell that
+ * quietly loosens when its own unit lands is how a gate stops meaning anything.
+ *
+ * NOTES NEVER DERIVE PROGRAM STATE — the design's non-negotiable. Nothing here
+ * feeds generation, repair or placement, and `journalNoteStore` exports nothing
+ * a resolver reads.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO YET (slice boundary, not an oversight):
+ * no post-game rating, no "felt different" tap, no load comparison, no monthly
+ * review, no niggle history, and NO RESURFACING of old notes at relevant
+ * moments — that last one is named as owed in the design and is its own slice.
+ * Where the data does not exist yet, this screen says so in words rather than
+ * showing a zero.
  *
  * COPY: every athlete-visible sentence below is PROPOSED, NOT SIGNED — recorded
  * as **batch 15** in docs/COPY_SHEET_RULINGS_2026-07-30.md, queued for Sam. They
@@ -208,6 +230,128 @@ function LoadSection({ week }: { week: JournalWeek }) {
   );
 }
 
+// ─── The note (slice 2) ──────────────────────────────────────────────────
+
+/**
+ * PROPOSED tag labels — batch 16. The tag KEYS are the design's vocabulary
+ * (base five + the addendum's three); these are their athlete-facing spellings.
+ */
+const TAG_LABELS: Readonly<Record<JournalNoteTag, string>> = {
+  recovery: 'Recovery',
+  mobility: 'Mobility',
+  injury: 'Injury',
+  diet: 'Diet',
+  work_stress: 'Work stress',
+  sleep: 'Sleep',
+  illness: 'Illness',
+  travel: 'Travel',
+};
+
+/**
+ * THE ONE PLACE THIS SCREEN WRITES ANYTHING.
+ *
+ * Slice 1's gate asserted the Journal reached NO writer. That was true and is
+ * now deliberately false: a note is an ANSWER, so recording one is an input
+ * write and the north star allows it. The cell was RE-POINTED rather than
+ * deleted — it now requires exactly one door and still forbids every
+ * transaction, ledger append and raw store write.
+ *
+ * The door refuses blank text itself, so this component never has to decide
+ * what counts as a note.
+ */
+function WeekNote({ weekStart }: { weekStart: string }) {
+  const notes = useJournalNoteStore((s) => s.notes);
+  const [text, setText] = useState('');
+  const [tags, setTags] = useState<readonly JournalNoteTag[]>([]);
+
+  const weekNotes = useMemo(
+    () => notes.filter((note) => note.weekStart === weekStart)
+      .slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [notes, weekStart],
+  );
+
+  const toggleTag = (tag: JournalNoteTag) => {
+    setTags((current) => (current.includes(tag)
+      ? current.filter((t) => t !== tag)
+      : [...current, tag]));
+  };
+
+  const save = () => {
+    const outcome = recordJournalNote({
+      weekStart,
+      text,
+      tags,
+      nowISO: appDateNow().toISOString(),
+    });
+    if (!outcome.ok) return;
+    setText('');
+    setTags([]);
+  };
+
+  const canSave = text.trim().length > 0;
+
+  return (
+    <View>
+      <AppTextInput
+        style={styles.noteInput}
+        value={text}
+        onChangeText={setText}
+        multiline
+        placeholder="Anything worth remembering about this week?"
+        placeholderTextColor={colors.text.tertiary}
+        testID="journal-note-input"
+        accessibilityLabel="Week note"
+      />
+      <View style={styles.tagRow}>
+        {JOURNAL_NOTE_TAGS.map((tag) => {
+          const on = tags.includes(tag);
+          return (
+            <TouchableOpacity
+              key={tag}
+              onPress={() => toggleTag(tag)}
+              style={[styles.tag, on ? styles.tagOn : null]}
+              testID={`journal-note-tag-${tag}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={TAG_LABELS[tag]}
+            >
+              <Text variant="caption" style={on ? styles.tagTextOn : styles.tagText}>
+                {TAG_LABELS[tag]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <TouchableOpacity
+        onPress={save}
+        disabled={!canSave}
+        style={[styles.saveButton, canSave ? null : styles.saveButtonOff]}
+        testID="journal-note-save"
+        accessibilityRole="button"
+      >
+        <Text variant="buttonSmall" style={styles.saveButtonText}>Save note</Text>
+      </TouchableOpacity>
+
+      {weekNotes.length === 0 ? (
+        <Text variant="bodySmall" style={styles.muted} testID="journal-no-notes-yet">
+          {'No notes yet this week.'}
+        </Text>
+      ) : (
+        weekNotes.map((note) => (
+          <View key={note.id} style={styles.noteRow} testID={`journal-note-${note.id}`}>
+            <Text variant="body" style={styles.body}>{note.text}</Text>
+            {note.tags.length > 0 ? (
+              <Text variant="caption" style={styles.muted}>
+                {note.tags.map((tag) => TAG_LABELS[tag]).join(' · ')}
+              </Text>
+            ) : null}
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
 // ─── Screen ──────────────────────────────────────────────────────────────
 
 export default function JournalScreen() {
@@ -285,6 +429,10 @@ export default function JournalScreen() {
         <Section title="Load">
           <LoadSection week={week} />
         </Section>
+
+        <Section title="Your note">
+          <WeekNote weekStart={week.weekStart} />
+        </Section>
       </ScrollView>
     </SafeAreaView>
   );
@@ -336,6 +484,39 @@ const styles = StyleSheet.create({
   },
   stripDay: { alignItems: 'center', gap: spacing.xs },
   stripWeekday: { color: colors.text.tertiary },
+  noteInput: {
+    backgroundColor: colors.surface.tertiary,
+    borderRadius: borderRadius.md,
+    color: colors.text.primary,
+    minHeight: 72,
+    padding: spacing.sm,
+    textAlignVertical: 'top',
+  },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  tag: {
+    borderColor: colors.surface.tertiary,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  tagOn: { backgroundColor: colors.text.accent, borderColor: colors.text.accent },
+  tagText: { color: colors.text.secondary },
+  tagTextOn: { color: colors.text.inverse },
+  saveButton: {
+    alignItems: 'center',
+    backgroundColor: colors.text.accent,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+  },
+  saveButtonOff: { opacity: 0.4 },
+  saveButtonText: { color: colors.text.inverse },
+  noteRow: {
+    borderTopColor: colors.surface.tertiary,
+    borderTopWidth: 1,
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+  },
   stripDot: {
     width: 32,
     height: 32,

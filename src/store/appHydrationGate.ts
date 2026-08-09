@@ -9,6 +9,7 @@ import { useCoachPreferencesStore } from './coachPreferencesStore';
 import { useCoachUpdatesStore } from './coachUpdatesStore';
 import { useAthletePreferencesStore } from './athletePreferencesStore';
 import { useDecisionLedgerStore, DECISION_LEDGER_PERSISTENCE_KEY } from './decisionLedgerStore';
+import { useJournalNoteStore, JOURNAL_NOTE_PERSISTENCE_KEY } from './journalNoteStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { logger } from '../utils/logger';
 
@@ -79,6 +80,9 @@ export const PERSISTED_STORE_HYDRATION_REGISTRY: readonly PersistedStoreHandle[]
   // The rebuild's decision ledger (R1.1): an input store, hydrated before
   // first render like every other input.
   handle(DECISION_LEDGER_PERSISTENCE_KEY, useDecisionLedgerStore),
+  // The Journal's notes (journal slice 2): an input store, hydrated before
+  // first render like every other input.
+  handle(JOURNAL_NOTE_PERSISTENCE_KEY, useJournalNoteStore),
 ];
 
 /**
