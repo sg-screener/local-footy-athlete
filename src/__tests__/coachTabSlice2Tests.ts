@@ -212,6 +212,37 @@ console.log('\n[2] THE READER — positive recognition, and the refusals are the
       && ask('what about wednesday?').targetDateISO === '2026-08-12',
     JSON.stringify(ask('what about wednesday?')));
 
+  // ── TWO MARKERS IN ONE MESSAGE, AND THE NARROWER ONE WINS ──────────────────
+  //
+  // THIS IS A REGRESSION CELL FOR A DEFECT NO CELL FOUND. "What am I doing on
+  // friday this week?" carries a day marker AND a week marker; the table was
+  // searched in order and `week_shape` sat above `day_work`, so the coach
+  // answered with the week's shape and never mentioned Friday. It was found by
+  // probing the reader by hand, not by a red — the cell set had no message
+  // carrying two markers, which is exactly the gap a table-ordered resolver
+  // leaves.
+  for (const message of [
+    'what am I doing on friday this week?',
+    'what have I got this week on wednesday?',
+  ]) {
+    const both = ask(message);
+    ok(
+      `a named day beats a named week: "${message}"`,
+      both.subject === 'day_work' && both.targetDateISO !== null,
+      JSON.stringify(both),
+    );
+  }
+  ok(
+    'and a week question with no day in it is still the week',
+    ask('what does my week look like?').subject === 'week_shape',
+    JSON.stringify(ask('what does my week look like?')),
+  );
+  ok(
+    'while the fixture stays above both — a game question may name a day',
+    ask('is my next game on saturday?').subject === 'next_game',
+    JSON.stringify(ask('is my next game on saturday?')),
+  );
+
   ok('the fixture question is recognised as its own subject',
     ask("when's my next game?").subject === 'next_game',
     JSON.stringify(ask("when's my next game?")));

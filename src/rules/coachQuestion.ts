@@ -231,10 +231,27 @@ export const lexicalQuestionReader: CoachQuestionReader = {
 
     const day = namedDate(text, week, todayISO);
 
-    const hit = SUBJECT_MARKERS.find(({ marker }) => marker.test(text));
-    // A NAMED DAY IS ITSELF A SUBJECT MARKER. "What about Friday?" carries no
-    // verb this table knows, and it is unambiguously about Friday's work.
-    const subject = hit?.subject ?? (day.named ? 'day_work' : 'unknown');
+    const marked = SUBJECT_MARKERS.find(({ marker }) => marker.test(text))?.subject;
+
+    // ── PRECEDENCE, AND IT IS A NAMED DAY BEATING A NAMED WEEK ────────────────
+    //
+    // FOUND BY PROBING RATHER THAN BY A CELL, which is the honest provenance:
+    // "what am I doing on friday this week?" carries BOTH markers, the table is
+    // searched in order, and week_shape sits above day_work — so the coach
+    // answered with the week's shape and never mentioned Friday. Nothing was
+    // red; the cell set simply had no message carrying two markers.
+    //
+    // The rule is specificity, not table order: a NAMED DAY is a narrower
+    // question than a week, so it wins. `next_game` stays above both because
+    // "is my next game on saturday?" names a day and is still a fixture
+    // question. A named day is also a subject in its own right — "what about
+    // Friday?" carries no verb this table knows and is unmistakably about
+    // Friday's work.
+    const subject: CoachQuestionSubject = marked === 'next_game'
+      ? 'next_game'
+      : day.named
+        ? 'day_work'
+        : marked ?? 'unknown';
     if (subject === 'unknown') return UNKNOWN;
 
     // A DAY QUESTION WITH NO DAY IN IT IS NOT A DAY QUESTION. "What am I

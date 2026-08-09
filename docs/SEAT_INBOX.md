@@ -2,6 +2,115 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+
+## Processed 2026-08-10 (fifty-ninth pass) — IT ANSWERS, AND THE TRUTH GATE HOLDS ITS MOUTH
+
+- **ONE LINE: the coach opens in Sam's own words and then answers questions
+  about his week — every word of every answer taken out of the projection the
+  Program tab renders — and the frozen pipeline's own TRUTH GATE now sits on the
+  one exit, validating each reply against a communication with zero applied
+  changes, so "slice 2 changes nothing" is a property of the SENTENCES as well
+  as of the imports.** `5ff09347` (the seat's parked ideas, as authored) ·
+  `24617f53` (batch 30 ruled, the greeting signed) · `e533f1ec` (the slice).
+  Boundary: docs/COACH_SLICE2_BOUNDARY_2026-08-10.md
+- **ALL THREE ITEMS PROCESSED IN FULL, STOPPED BEFORE S3 AS ORDERED.**
+  LOOP CHECK `owner-signs-in-own-words` sighting 1 — **iterate, and it paid in
+  a way worth naming.** The seat's own draft greeting would have been written to
+  be SAFE about what the coach can do. Sam's is not: *"I can … make changes to
+  your program"* is a promise S3 has not delivered. Getting the words from the
+  owner produced a sentence the seat would not have dared write **and a ruling
+  about the gap with it** — which is the mechanism, not a side effect.
+- **THE GREETING IS THE ONE BATCH-30 STRING THAT EARNS A REGISTRY ROW.** A
+  verbatim quote is the strongest provenance `signedCopy.ts` has, so it enters
+  the sheet as `signed_sentence` while the rest of batch 30 stays module
+  constants. **The re-check condition — a beta gate arriving before S3 — is
+  written in the module that holds the words and PINNED BY A CELL**, because a
+  condition that lives only in a boundary doc is one the next reader never
+  finds.
+- **THE REST OF BATCH 30 IS RULED, NOT STRICTLY SIGNED, AND THE PRICE IS
+  STATED.** The opener COMPOSES — a space, `". "`, a trailing full stop — and
+  `joinSignedCopy` cannot express a suffix; the alternative is widening
+  `FILLED_PLACEHOLDER` to admit WORDS, a global loosening of the L-P2 runtime
+  law that `signedCopy.ts` warns against by name. So the claim is made at
+  RUNTIME instead: **strip every fragment the opener may use and every
+  projection-given day name from each of the week's seven sentences, and nothing
+  may remain** — with a control, because a strip-everything proves nothing.
+- **THE TRUTH GATE IS THE KEYSTONE AND IT IS SALVAGE USED UNCHANGED.**
+  `verifiedCoachCommunication` exists because the coach once rendered *"Sub in:
+  easy aerobic conditioning…"* against a program containing no such session.
+  Slice 2's `appliedChanges` is ALWAYS empty, which is the flag that arms
+  `FORBIDDEN_WHEN_NO_APPLIED`. **Proven to BITE on a real answer rather than on
+  the validator**: the projection is handed a part headlined *"I adjusted your
+  week"*, the answer is assembled from it exactly as from any other, and the
+  reply comes back `refused` with the honest sentence and the violation named.
+  Control beside it — an ordinary headline must pass. **It is also the piece
+  that does not move at S3: only the input changes.**
+- **THE SALVAGE TARGET RESOLVER COULD NOT BE RE-POINTED, AND SAYING SO IS THE
+  RESULT.** `resolveCoachTargetFrame` consumes `ResolvedDay[]`, so feeding it
+  means a SECOND representation of the week inside the coach's read path — the
+  exact count the architecture reassessment ruled against — and it imports a
+  zustand store constant, which would drag a store into a read-only screen's
+  graph where the screen's own ban cannot see it. **A salvage module written
+  against a retired representation cannot be re-pointed without restoring the
+  representation.** Slice 2 targets a DATE looked up in the week it was handed,
+  which is what `decisionLedger.ts:9-11` says a decision may name anyway.
+- **THE INTENT VOCABULARY IS RE-POINTED AND THE COMPILER PROVES IT.**
+  `Extract<CoachIntentKind, …>` over the frozen union — three matching literals
+  satisfy "re-pointed" on day one and stop being true the day somebody renames
+  one upstream. `import type` is erased, so **no frozen module enters the
+  runtime graph**: the salvage layer is consumed as a CONTRACT, not as code.
+- **THE READER RECOGNISES POSITIVELY, AND THE DIRECTION IS THE SAFETY.** There
+  is no "is this a mutation request" test anywhere and none is needed: anything
+  unplaced is `unknown` and the coach says it does not know. **A negative test
+  must be exhaustive to be safe; a positive one is safe by being incomplete.**
+  Six refusals are pinned as hard as the recognitions, including *"what am I
+  doing?"* with no day named — guessing "today" would be answering a question
+  nobody asked.
+- **THE IMPORT BAN WAS ONE HOP TOO SHORT, AND SLICE 2 IS WHAT MADE IT VISIBLE.**
+  Slice 1 swept the SCREEN's import lines; slice 2 moved the thinking into
+  `rules/`, so **the cheapest way to hand the coach a store is now a module that
+  cell was not looking at — the screen's list stays spotless and the gate stays
+  green.** Now every `rules/` module the screen imports is opened and swept with
+  the same patterns, one hop, **excluding `import type` or it would have lied the
+  other way** (the overnight pass's eleventh sighting, in reverse).
+- **A CELL OF MINE REDDENED ON A CORRECT EDIT, WHICH IS A DEFECT IN THE CELL.**
+  The turn-producer anchor named the DEPENDENCY LIST; slice 2 correctly added
+  `visibleWeek` and the region became unfindable. The anchoring law worked —
+  the prove-the-region cell fired first — **but a gate coupled to a dependency
+  array is coupled to the wrong thing.** Re-anchored on the closing brace.
+- **`a count taken for a record` — FOURTEENTH SIGHTING**, in the new gate on its
+  first run: "the import block was located" was a COUNT of two, and
+  `coachQuestion` has exactly ONE runtime import because its other two are
+  erased types. **The threshold failed a correct module, and on a bigger module
+  it would have passed an empty match.** Re-aimed to prove the block by a KNOWN
+  MEMBER.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  **1 FAIL cell** — main's declared red, 92 suites reached. `test:compile`
+  PASSED, totals byte-identical **35/51/373**. New gate
+  `test:coach-tab-slice2` **72 cells, 10 mutations 10 red**;
+  `test:coach-tab-slice1` **73 cells** (57 → 66 → 73), **8 mutations 8 red**.
+  Copy extraction ceiling UNCHANGED at 576.
+- **NOT COVERED, first line: DEPTH 0, NOBODY HAS ASKED THIS COACH ANYTHING.** No
+  screen mounted, no athlete walked, every week hand-built. **Not one keyboard
+  case exercised — still the half L-C3 calls a GATE failure, and it matters more
+  now that the tab has to be TYPED into.** The reader has never seen a sentence
+  Sam wrote; **the likeliest failure is a refused GOOD question**, which is the
+  safe direction to fail in and is still a failure. **The coach still knows
+  nothing about the Bible or Sam's rulings** — "why is Friday heavy?" is
+  refused, and that is the largest gap between S2's own kickoff line and this
+  slice. `test:coach-truth-gate` (58 cells), the suite that guards the module
+  slice 2 now depends on, is NOT in `test:bible`.
+- **PARKED FOR SAM:** batch 31's five strings; the answerable set (and which
+  question he tried first that was refused); whether the Bible-grounded "why"
+  belongs before or after S3. Carried unchanged: the frozen coach tree, the
+  athlete-tap-attributed-to-coach writer id, the three unbuilt ledger fact
+  destinations, the chips, the journal/copy items.
+
+
+### The order the fifty-ninth pass processed, as the seat wrote it
+
 1. BATCH 30 SIGNED IN SAM'S OWN WORDS + SLICE 2 OPENS (seat,
    2026-08-09 night).
    (a) GREETING SIGNED, Sam verbatim (2026-08-09): "G'day, I'm your
@@ -24,8 +133,6 @@
    mutation paths. Full chain, short boundary, stop before S3.
    LOOP CHECK: owner-signs-in-own-words — sighting 1 at this seam —
    iterate.
-
-(none)
 
 
 ## Processed 2026-08-09 (fifty-eighth pass) — THE TAB TALKS, AND THE WORDS ARE THE WEEK'S OWN

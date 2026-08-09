@@ -1,22 +1,66 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `adab18df` — **THE COACH TAB IS BACK AND IT
-  TALKS.** Slice 1 landed; S2 not started, as ordered. Sam's boot fix below is
-  still UNSEEN on his phone and is still the first thing to look at.
+- **BRANCH:** `main` · **HEAD:** `e533f1ec` — **THE COACH ANSWERS NOW.** Slice 2
+  landed; S3 not started, as ordered. Sam's boot fix below is still UNSEEN on
+  his phone and is still the first thing to look at.
 
-- **⚠ SAM: THE COACH TAB IS THE SECOND THING TO LOOK AT.** Third tab, between
-  Program and Profile. It opens with your week in one short sentence — *"Game
-  Saturday. Strength today. Conditioning tomorrow."* — built from the same
-  projection the Program tab renders. **Type something and it will honestly say
-  it has no answer yet; that is slice 1, not a bug.** Nothing on that tab can
-  change your program. **The thing to watch: tap the input and see whether the
-  composer jumps above the keypad and settles back.**
+- **⚠ SAM: THE COACH TAB IS THE SECOND THING TO LOOK AT, AND IT TALKS BACK.**
+  Third tab, between Program and Profile. It opens with **your greeting, in your
+  words**, then your week in one short sentence — *"Game Saturday. Strength
+  today. Conditioning tomorrow."* **Now ASK IT SOMETHING.** It answers three
+  questions: *"what am I doing Friday?"*, *"when's my next game?"*, *"what does
+  this week look like?"* Anything else it will honestly say it has no answer
+  for — **including "why is Friday heavy?", which is the biggest thing it still
+  cannot do.** Nothing on that tab can change your program.
+  **THE THING TO WATCH, still: tap the input and see whether the composer jumps
+  above the keypad and settles back.** And tell me the first question it
+  refused that it should have answered — that list is worth more than any test
+  I can write.
 
-- **COACH SLICE 1 (2026-08-09).** `ee85c40e` (kickoff + mock as authored) ·
+- **COACH SLICE 2 (2026-08-10).** `5ff09347` (the seat's parked ideas) ·
+  `24617f53` (batch 30 ruled, the greeting signed) · `e533f1ec` (the slice).
+  **READ:** docs/COACH_SLICE2_BOUNDARY_2026-08-10.md · gate
+  `test:coach-tab-slice2` (72 cells).
+  - **THE GREETING IS SAM'S SENTENCE, VERBATIM, AND IT IS THE ONE BATCH-30
+    STRING IN THE SIGNED-COPY SHEET.** A verbatim quote is the strongest
+    provenance the sheet has. It ships AHEAD OF THE ABILITY by his own ruling;
+    **the re-check condition (a beta gate before S3) is written in the module
+    that holds the words and pinned by a cell**, not left in a doc.
+  - **THE TRUTH GATE IS THE KEYSTONE, AND IT IS SALVAGE USED UNCHANGED.** Every
+    answer runs past `validateCoachCommunicationTruth` with ZERO applied
+    changes — the flag that arms `FORBIDDEN_WHEN_NO_APPLIED`. Read-only becomes
+    a claim about the coach's MOUTH, not just its imports. **Proven to BITE on a
+    real answer with a control beside it**, not on the validator.
+  - **THE SALVAGE TARGET RESOLVER COULD NOT BE RE-POINTED, AND THAT IS THE
+    FINDING.** `resolveCoachTargetFrame` consumes `ResolvedDay[]` — feeding it
+    means a SECOND week representation in the coach's read path, the exact count
+    the reassessment ruled against — and it imports a zustand store constant.
+    **A salvage module written against a retired representation cannot be
+    re-pointed without restoring the representation.** Slice 2 targets a DATE
+    looked up in the week it was handed, which is what the ledger's own
+    targeting law says a decision may name.
+  - **THE READER RECOGNISES POSITIVELY.** No "is this a mutation" test and none
+    needed: anything unplaced is `unknown` and the coach says so. **A negative
+    test must be exhaustive to be safe; a positive one is safe by being
+    incomplete.**
+  - **THE IMPORT BAN WAS ONE HOP TOO SHORT AND SLICE 2 IS WHAT EXPOSED IT.**
+    The cheapest way to hand the coach a store is now `rules/coachAnswer`, where
+    slice 1's cell was not looking — the screen's list would stay spotless and
+    the gate would stay green. It now sweeps the screen's `rules/` imports one
+    hop out, **excluding `import type`, which is erased.**
+  - **NOT COVERED, first line: DEPTH 0, NOBODY HAS ASKED THIS COACH ANYTHING.**
+    No keyboard case exercised — still the half L-C3 calls a gate failure, and
+    it matters more now that the tab has to be TYPED into. **The reader has
+    never seen a sentence Sam wrote**; the likeliest failure is a refused good
+    question. **Batch 31 is PROPOSED, on the module not the sheet.**
+
+- **COACH SLICE 1 (2026-08-09) — superseded above, kept for its findings.**
+  `ee85c40e` (kickoff + mock as authored) ·
   `c25c8b77` (the slice) · `adab18df` (the survivor + the duplicate).
   **READ:** docs/COACH_SLICE1_BOUNDARY_2026-08-09.md · kickoff
   docs/COACH_REBUILD_KICKOFF_2026-08-09.md · gate `test:coach-tab-slice1`
-  (57 cells).
+  (57 cells at slice 1; **73 today** — the signing and slice 2 each added to
+  it, and three cells were re-aimed, none deleted).
   - **THE TAB MOUNTS THE REBUILD, NOT THE SCREEN R5.7 CUT.** `CoachScreen` and
     its stack stay frozen and UNREACHED — the kickoff's supersession answer to
     the parked 41,220-line question, started rather than promised.
@@ -35,8 +79,8 @@
     pin the SET rather than the count.
   - **NOT COVERED, first line: DEPTH 0, NOBODY HAS SEEN THIS SCREEN.** No
     keyboard case exercised — which is the half L-C3 calls a gate failure. The
-    opener has never run over an accumulated world. **Batch 30 is PROPOSED and
-    on the module, not the sheet.**
+    opener has never run over an accumulated world. **Batch 30 was PROPOSED at
+    slice 1 and is RULED as of 2026-08-09 — see the slice-2 block above.**
 
 - **THE OVERNIGHT COACH GROUNDWORK (2026-08-09 night).**
   **READ:** docs/COACH_DOORS_BOUNDARY_2026-08-09.md ·
@@ -243,13 +287,16 @@
     fork above is no longer abstract: the calendar-mark finding is that same
     §3 fork, reproduced in the athlete's most visible feature.**
 
-- **COACH REBUILD IS OPEN AND SLICE 1 IS LANDED** (see the top of this file).
-  S2 (*it answers from the brain*) is next and is NOT started. Sam's note still
+- **COACH REBUILD IS OPEN AND SLICES 1 + 2 ARE LANDED** (see the top of this
+  file). **S3 (*it changes things*) is next and is NOT started** — it is the
+  slice that makes the greeting's second sentence true. Sam's note still
   governs S4: **the journal's behind-the-scenes record — load, regions, feel,
   niggles — is an INPUT to coach intelligence.** That is why the data layer
   stayed live and why every journal suite is pinned in the chain.
   Ten unordered coach feature ideas are parked at
-  docs/PARKED_QUESTIONS/COACH_WOW_IDEAS_2026-08-09.md (untracked, not mine).
+  docs/PARKED_QUESTIONS/COACH_WOW_IDEAS_2026-08-09.md (`5ff09347`, the seat's,
+  committed as authored). **Item 4 — ASK WHY ABOUT ANYTHING — is the named gap
+  between S2's kickoff line and what slice 2 delivers.**
 
 - **STRUCK BY THE HIDE:** C4 (the week bars' colours), the three proof answers,
   "March 2025", 08:00 as the hour, the restored lifts line, the in-app off
