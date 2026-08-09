@@ -1,7 +1,58 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** the anchor recovery below — **SAM'S BOOT
-  FAILURE IS ROOT-CAUSED AND FIXED; THE CURE IS UNSEEN ON HIS PHONE.**
+- **BRANCH:** `main` · **HEAD:** `4274e2f0` — **THE COACH UNIT'S LAW DOC IS
+  WRITTEN AND THE FIRST LEDGER DOOR IS BUILT.** Sam's boot fix below is still
+  UNSEEN on his phone and is still the first thing to look at.
+
+- **THE OVERNIGHT COACH GROUNDWORK (2026-08-09 night).**
+  **READ:** docs/COACH_DOORS_BOUNDARY_2026-08-09.md ·
+  law doc docs/COACH_ARCHITECTURE_REASSESSMENT_2026-08-09.md ·
+  gate `test:program-control-decisions` (11 cells) ·
+  instrument `npm run tape:exercise-edit-durability`.
+  - **THE RULING: ten representations of one athlete sentence, and the ledger
+    is not one of them.** The coach's output becomes a `ProgramControlAction`,
+    the athlete's own door executes it, the ledger records it verbatim. Ten
+    collapse to two. **The coach gets undo, replay and durability by NOT having
+    a writer.** AGENTS.md requires this doc APPROVED before further coach
+    pipeline code — tonight was door/engine work, which does not need it.
+  - **A REAL BUG, MEASURED THEN FIXED: an athlete's own exercise edit did not
+    survive a relaunch.** Tap remove, and it is back tomorrow with nothing shown
+    and nothing logged. The survey filed this as an INFERENCE; the tape observed
+    the three mechanisms together, then the fix made it durable. **Red before,
+    green after, with a control proving the boot reproduces an unedited day.**
+  - **ONE LEDGER KIND FOR A 26-MEMBER UNION** — `program_control`, carrying the
+    action unchanged. **ZERO new stored state; north star TOWARD.** An
+    allow-list keeps it honest: recording a type the boot cannot replay is worse
+    than recording nothing.
+  - **THE SIDE-WRITER CLASS GOT ITS CENSUS** (the compression `side-writer-
+    outside-the-ledger` asked for, not a fourth per-kind fix): undo, then diff
+    the WHOLE persisted envelope. **CENSUS CLEAN.** It found three side-writers
+    before it found none — **all three were the instrument's own** (unflushed
+    baseline, unequal relaunch, and a raw-string compare that read JSON KEY
+    ORDER as drift).
+  - **STILL HALF TRUE: two ledger destinations of five.** Injury, illness/
+    readiness and setup answers are NOT on the ledger and were deliberately not
+    attempted — they PERSIST today, so a ledger kind alone would be two stored
+    representations of one input. They need the fact slices to leave
+    `partialize` plus a migration, and **a mistake there loses facts that
+    currently survive.**
+  - **ITEM 3 RETURNED ZERO DELETIONS, AND THAT IS THE RESULT.** A real import
+    graph says cutting `CoachScreen.tsx` makes **40 modules / 41,220 lines**
+    unreachable — bigger than the survey's 28,160 name-scan lower bound, and 8
+    of them are not named `*coach*`. But **the tree is rooted at the one module
+    the order's rule protects** (`AppNavigator.tsx:10` imports it), so the rule
+    has no consistent deletion set. The three apparently-orphaned modules were
+    each checked and each KEPT — one is target-resolution SALVAGE, one is held
+    by three suites, one was a COMMENT mention. **Sam's call, parked.**
+  - **`a count taken for a record` — ELEVENTH AND TWELFTH SIGHTINGS**, both in
+    my own new instruments on their first runs: `import type` counted as a
+    runtime edge (it is erased — that alone made 6,296 lines look load-bearing),
+    and a byte-compare of JSON read key order as a state change.
+  - **NOT COVERED, first line: DEPTH 0, NO DEVICE EVIDENCE.** Only
+    `remove_exercise` was driven end to end of the three allow-listed types; a
+    swap's safety check on REPLAY is unexercised. **No coach turn was executed** —
+    that the coach's vocabulary fits `ProgramControlAction` is a type-level
+    reading of two unions, not a port, and is the likeliest place it is wrong.
 
 - **⚠ SAM: REBUILD RELEASE AND OPEN IT.** The boot error screen was
   `missing_generation_anchor` — **neither of the two suspects.** His world was
@@ -109,7 +160,11 @@
 
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
   `test:program-control-durable`, 1 FAIL line** — main's declared red.
-  `test:compile` PASSED. **Sweep 2 of 170** = the declared set exactly.
+  `test:compile` PASSED, totals byte-identical to baseline (35/51/373).
+  **Sweep 2 of 171** = the declared set exactly. **The denominator moved
+  170 → 171 in the commit that earned it** (`test:program-control-decisions`,
+  which sits at position 100, past the chain's exit at 91 — the sweep is what
+  proves it).
   **THE DENOMINATOR MOVED 169 → 170 IN THE COMMIT THAT EARNED IT**
   (`test:undo-reversal`), and it still names its instrument: chain steps /
   `npm run` suites / **sweep suites** are three different units (the sweep

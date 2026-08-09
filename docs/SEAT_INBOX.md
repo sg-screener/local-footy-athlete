@@ -2,6 +2,114 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+
+## Processed 2026-08-09 (fifty-seventh pass, OVERNIGHT) — TEN REPRESENTATIONS, AND A REAL BUG UNDER THEM
+
+- **ONE LINE: the coach unit's opening law doc is written and RULED — ten
+  representations of one athlete sentence, and the ledger is not one of them —
+  and the first of its consequences is built: an athlete's own exercise edit was
+  measured SILENTLY LOST on every relaunch, and now survives by being a
+  decision.** `099904e6` (order as authored) · `d4b20363` (reassessment) ·
+  `bcb80b98` (the measurement) · `d095b2e0` (the ledger route) · `4274e2f0`
+  (undo + census). Boundary: docs/COACH_DOORS_BOUNDARY_2026-08-09.md · law doc:
+  docs/COACH_ARCHITECTURE_REASSESSMENT_2026-08-09.md
+- **ITEM 1 PROCESSED IN FULL. ITEM 2 IS ONE DESTINATION OF FOUR, AND THE STOP
+  HAS A REASON. ITEM 3 RETURNED ZERO DELETIONS, WHICH IS ITS RESULT.**
+  LOOP CHECK `overnight-independent-work-while-design-parks` sighting 2 —
+  **ITERATE, and the evidence is specific: the ordering was load-bearing
+  twice.** Item 1's reassessment ruled the shape item 2 built, and item 1's §8
+  forced a MEASUREMENT that changed item 2's plan. Build-first would have been
+  correct only by luck. Nothing built presumes an answer to the kickoff mock,
+  the privacy opt-in, or the coach's voice.
+- **THE RULING, and it is a deletion rather than an addition.** The coach's
+  output becomes a `ProgramControlAction`, the athlete's own door executes it,
+  the ledger records the door's vocabulary VERBATIM. Ten representations
+  collapse to two (the LLM wire shape, which crosses a network, and the door
+  action). **The coach gets undo, replay and durability by NOT having a
+  writer.** AGENTS.md wants this doc APPROVED before further coach PIPELINE
+  code; tonight was door/engine work under LR-6, which does not need it.
+- **THE MEASUREMENT CAME FIRST AND IT CHANGED THE PLAN.** The survey filed
+  §5.2 as an INFERENCE and its §9.8 said the three mechanisms had never been
+  observed together. They have now: **ACTED `ok: true`, BOOTED reverted to the
+  generated day, `dateOverrides` 1 → 0.** The athlete taps remove on their own
+  session screen and the exercise is back tomorrow, **with nothing shown and
+  nothing logged.** Not a coach defect — an athlete-facing silent data loss.
+- **THE CONTROL, AND AN ABORT THAT SAVED A FALSE FINDING.** A relaunch with
+  nothing edited reproduces the day exactly, so "the boot diverges" is excluded.
+  And on its first run the probe read `row.name` where the name lives at
+  `row.exercise.name`, asked the door to remove `"undefined"`, and **ABORTED** —
+  a probe that cannot act must never read as a probe that acted and lost.
+- **ONE LEDGER KIND FOR A 26-MEMBER UNION.** `program_control`, carrying the
+  action unchanged, because a kind per capability needs a translation per
+  capability and a translation is where a field is lost by OMISSION. **ZERO new
+  stored state; north star TOWARD.** Undo arrived FREE — the replay filter is
+  kind-agnostic, so the edit became undoable the moment it became a decision.
+- **AN ALLOW-LIST, BECAUSE ONE GENERAL KIND IS OTHERWISE A TRAP:** recording a
+  type the boot cannot replay is WORSE than recording nothing — the edit would
+  look durable and vanish anyway. Cells [2] and [3] pin that every recorded type
+  has both an executor arm and a replay arm.
+- **THE SIDE-WRITER CLASS GOT ITS CENSUS** — the compression the standing LOOP
+  CHECK asked for, not a fourth per-kind fix. Undo, then diff the WHOLE
+  persisted envelope; anything that did not come back is something the edit
+  wrote that the ledger does not own. **CENSUS CLEAN.** Two exemptions, both
+  ARGUED. **It found three side-writers before it found none and ALL THREE WERE
+  THE INSTRUMENT'S OWN**: an unflushed baseline, a relaunch on one side only,
+  and a raw-string compare reading JSON KEY ORDER as drift.
+- **A MODULE CYCLE BROKE INNOCENT CODE, AND THE FIX IS A MOVE NOT A CAST.**
+  Naming the action type from `types/decisionLedger` closed a four-hop cycle and
+  `tsc` reported FOUR errors in `programControlActions`, **none at the edit** —
+  a correct type guard 1,200 lines away. Real as reported, false as diagnoses.
+  The alternative was `action: unknown`, which clears them by giving up the
+  whole claim the kind exists to make. The union moved below both consumers.
+  **Typecheck totals byte-identical: 35/51/373.**
+- **STILL HALF TRUE, AND SAYING SO IS THE RESULT: two ledger destinations of
+  five.** Injury, illness/readiness and setup answers were deliberately NOT
+  built. They PERSIST today, so a ledger kind alone is two stored
+  representations of one input — the north star's own objection. Doing it right
+  means the fact slices leave `partialize` plus a migration, and **a mistake
+  there loses facts that currently survive**, where a mistake in the exercise
+  door could only fail to fix a loss already happening. Cell [6] pins the
+  staging so the list cannot grow without the migration.
+- **ITEM 3: THE ORDER'S OWN RULE HAS NO CONSISTENT DELETION SET, and that is
+  the finding.** A real import graph (value edges only — `import type` is
+  ERASED) says cutting `CoachScreen.tsx` makes **40 modules / 41,220 lines**
+  unreachable, **larger than the survey's 28,160 lower bound**, and **8 of them
+  are not named `*coach*`** exactly as survey §9.1 predicted. But the 39
+  downstream modules are all held by `CoachScreen`, which HAS an importer
+  outside the coach tree (`AppNavigator.tsx:10`) and so does not qualify.
+  **The tree is rooted at the one module the rule protects.** The three
+  apparently-orphaned modules were each checked and each KEPT: one is
+  target-resolution SALVAGE, one is held by three suites, and one's fourth
+  reference **was a COMMENT**. "When in doubt, keep and list" is the order's own
+  instruction and zero deletions is what it produces here.
+- **`a count taken for a record` — ELEVENTH AND TWELFTH SIGHTINGS**, both in my
+  own brand-new instruments on their first runs: `import type` counted as a
+  runtime edge (that alone made 6,296 lines look load-bearing off one erased
+  import), and a byte-compare of JSON reading key order as a state change.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  1 FAIL cell — main's declared red, verified at a clean baseline BEFORE any
+  edit. `test:compile` PASSED. **Sweep 2 of 171 = the declared set exactly**;
+  denominator moved 170 → 171 in the commit that earned it. New gate
+  `test:program-control-decisions` 11/11, **8 mutations 8 red, no survivors.**
+- **NOT COVERED, first line: DEPTH 0, NO DEVICE EVIDENCE.** Only
+  `remove_exercise` of the three allow-listed types was driven end to end; **a
+  swap's safety check on REPLAY is unexercised.** **No coach turn was
+  executed** — that the coach's vocabulary fits `ProgramControlAction` is a
+  type-level reading of two unions, **not a port, and the likeliest place this
+  is wrong.** The 7 red orphaned coach suites were not re-run.
+- **PARKED FOR SAM, one new and it is the largest: the frozen coach tree cannot
+  be deleted under the order's rule** — 41,220 lines rooted at a protected
+  module, and LR-6 says frozen rather than retired. Also new: **an athlete tap
+  on their own session screen is attributed to the COACH**
+  (`coachActions.ts:246-248` stamps `writer: 'coach_action'`), so any census
+  partitioning override writes by writer id counts athlete taps as coach writes.
+  Plus the kickoff sign-off, destination 5, and the carried journal/copy items.
+
+
+### The order the fifty-seventh pass processed, as the seat wrote it
+
 1. OVERNIGHT — COACH REBUILD GROUNDWORK, NO SAM-FACING DECISIONS
    (seat, 2026-08-09 night; Sam ordered the build going overnight).
    The kickoff design (chat surface, privacy opt-in, coach voice,
@@ -40,8 +148,6 @@
    doc + doors landed + deletion receipts, short boundary.
    LOOP CHECK: overnight-independent-work-while-design-parks —
    sighting 2 (R5-era precedent) — iterate.
-
-(none)
 
 
 ## Processed 2026-08-09 (fifty-sixth pass) — THE ANCHOR WAS NEVER STORED, AND A CORRECT REFUSAL WAS A LIFE SENTENCE
