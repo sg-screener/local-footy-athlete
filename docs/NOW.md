@@ -1,7 +1,54 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `12da456f` — **THE LOAD MODEL IS BUILT.**
-- **LAST UNIT: THE LOAD SLICE** (`d0651fc3`, `285c5a20`, `61b7d74f`, `d44476c9`,
+- **BRANCH:** `main` · **HEAD:** `528e5c67` — **THE FEEL SLICE IS IN.**
+- **LAST UNIT: THE FEEL SLICE** (`41d847d7`, `528e5c67`).
+  docs/JOURNAL_FEEL_SLICE_BOUNDARY_2026-08-09.md · plan
+  docs/JOURNAL_FEEL_SLICE_PLAN_2026-08-09.md
+  - **The athlete can rate their legs after a game, and say whether any session
+    matched the plan.** Two new INPUTS on the door that already existed
+    (`startFinished: true` → the session-outcome transaction). Zero derived state,
+    no new store, no new transaction. North star: **TOWARD.**
+  - **EFFORT-ON-STRENGTH IS DELIVERED, AS THE TAP** — Sam's "one tap, no per-set
+    anything". No second numeric field was minted; the tap rides every performed
+    session, the only place a strength effort can be recorded today.
+  - **ASK-FLAG IS SEND-FLAG.** Rating asked only on a game, stored only on a game;
+    tapping back to "as expected" clears the why in BOTH form and payload; a
+    half-answered pair is refused at the DRAFT.
+  - **NO FIFTH SPELLING OF "IS THIS A GAME"** — it has four and no owner; the panel
+    asks `classifyDaySessions`. The other four are named census debt.
+  - **THE COPY GATES COULD NOT SEE A WORD OF IT — THIRD SIGHTING.** Both scope to
+    screens/components/navigation; these words are authored in
+    `utils/sessionFeedbackForm.ts`. Closed for that module via the existing
+    `AUTHORING_MODULES` hatch (bound 84 → 99). **SIZED, NOT FOLDED IN: ~150 label
+    strings across 20+ utils/rules modules are invisible to both gates**, including
+    the feedback form's pre-existing vocabulary, none ever on the sheet. Own unit.
+  - **A RED SUITE FOUND, REPORTED, NOT ABSORBED:** `test:session-feedback-form` is
+    ungated with **4 pre-existing failures** — they assert a power component
+    `getSessionComponents` no longer emits. Whether power should be separately
+    completable is Sam's call. My change is failure-neutral: 4 before, 4 after.
+  - **8 MUTATIONS, 8 REDS — TWO SURVIVED FIRST**, and both were one gap: the
+    payload cells handed the builder `null` themselves, so nothing checked the
+    PANEL computes it. **A builder tested with hand-written nulls proves the
+    builder and nothing about its caller.**
+  - **GATE:** full `test:bible` UNPIPED `GATE_EXIT=1` at
+    `test:program-control-durable`, 1 FAIL line — the declared red. `test:compile`
+    PASSED. New gated suite `test:journal-feel` **54 passed, 0 failed**.
+    **Sweep 2 of 161 = the declared set exactly**, at head `528e5c67`.
+  - **Copy batch 18 PROPOSED.** The five body-feel words (Empty/Heavy/Okay/Good/
+    Flying) are entirely mine and most want Sam's eye.
+  - **A PROCESS SLIP, OWNED:** I used `git stash` once — forbidden in this shared
+    worktree by AGENTS.md. Caught immediately, popped, every file verified restored
+    and compiling; the scratchpad-copy method used thereafter.
+- **NEXT: THE MONDAY CARD** — measured, docs/JOURNAL_MONDAY_CARD_PLAN_2026-08-09.md.
+  **Most of the card is already built** by slices 1/2/load/feel; what remains is
+  the strength line (new pure code), week status, this week's job, and what
+  changed/was protected.
+  - **THE WALL, MEASURED: there is NO notification infrastructure at all.**
+    `expo-notifications` is not a dependency. A local notification needs a new
+    NATIVE dependency + a permission prompt the athlete can refuse + a scheduling
+    policy — a Sam decision, PARKED not guessed. **The card builds in full without
+    it**, so the split is clean and this is not a stop.
+- **PREVIOUS: THE LOAD SLICE** (`d0651fc3`, `285c5a20`, `61b7d74f`, `d44476c9`,
   `12da456f`).
   docs/JOURNAL_LOAD_SLICE_BOUNDARY_2026-08-09.md · plan
   docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md
