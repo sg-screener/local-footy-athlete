@@ -46,16 +46,42 @@
   two passes said "2 of 170" using the chain-step unit while the sweep measured
   168 — the failure count was right, the denominator was another instrument's.
 
-- **NEXT: THE LR-29 REPLAY UNIT — UNDO IS ITS FACE** (Sam's addendum,
-  docs/REPLAY_UNIT_KICKOFF_2026-08-07.md §ADDENDUM; dependency list DELIVERED at
-  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md). **The opening law: build from
-  the measured map.** Its item 1 blocks everything and is ONE TAPE, not a build:
-  **does `quiescentBoot.rebuildDerivedWorld()` already reconstruct
-  `authorisedReductions`, or does it lose them?** Item 2 is a design fork needing
-  a RULING, not a measurement: **the ledger's six kinds cannot express illness,
-  injury, readiness or phase** — replay consumes ledger + fact stores, or the
-  ledger gains R3's fact decisions first. Undo's SHAPE (one-step vs a recent-
-  changes list) is Sam's open choice; the seat brings lettered options.
+- **THE LR-29 REPLAY UNIT IS OPEN — UNDO IS ITS FACE** (Sam's addendum,
+  docs/REPLAY_UNIT_KICKOFF_2026-08-07.md; dependency list at
+  docs/REPLAY_UNIT_DEPENDENCY_LIST_2026-08-07.md). **The opening law held:
+  built from the measured map, item 1 first, no serial discovery.**
+  **READ:** docs/LR29_ITEM1_BOOT_REPLAY_TAPE_2026-08-09.md ·
+  instrument `npm run tape:lr29-boot-replay` (NOT in `test:bible` — it asserts
+  nothing and prints a measurement).
+  - **ITEM 1 IS NOT ANSWERED, AND THE PROBE IS WHY.** `6 → 6 → 6`: a whole-day
+    delete put **nothing** in the accumulator, so "the boot reconstructed it"
+    and "there was nothing to reconstruct" are the same reading. Reporting that
+    beat opening the unit on a vacuous green.
+  - **AND THE REASON IS A CONDITION, NOT A GAP.** A typed reduction is not what
+    a delete produces — it is what a delete produces **when the week cannot
+    absorb it** (`userRemovalConstraints.addFrequencyReduction`: *"relocation
+    and substitution were exhausted"*). The world was reached correctly and the
+    probe was too easy. **Item 1 is ONE ACT away, not one investigation away:
+    delete enough of a pattern that §18 cannot repair it, then photograph.**
+  - **EVERY REDUCTION IN THAT WORLD IS GENERATION-AUTHORED POLICY**
+    (`game_load_protection` ×3, `deload_policy` ×3) and survives because **the
+    boot re-generates** — no ledger replay involved. The athlete's delete landed
+    in `userRemovalConstraints`, which the boot DID reconstruct (1 → 1).
+  - **THE FIND WORTH CARRYING INTO THE BUILD: the answering RUNG moved while
+    the answer did not.** A past week's overlay did not survive the boot and the
+    door answered from the covering microcycle instead — row-for-row identical,
+    so nothing visible changed, **which is exactly why it would never be
+    noticed.**
+  - **THE INSTRUMENT'S OWN DEFECT, CAUGHT MID-RUN:** the first photograph read
+    `programStore.exposureContractsByWeek` and reported ZERO contracts in all
+    three worlds. **The declaration lives on the overlay or the covering
+    microcycle** — it now asks through `selectStoredWeekDeclaration`, the door
+    every reader uses.
+  - **ITEM 2 IS A DESIGN FORK NEEDING A RULING, not a measurement:** the
+    ledger's six kinds cannot express illness, injury, readiness or phase, so
+    replay consumes ledger + fact stores, or the ledger gains R3's fact
+    decisions first. Undo's SHAPE (one-step vs a recent-changes list) is Sam's
+    open choice; the seat brings lettered options at the design moment.
 
 - **COACH REBUILD IS AFTER UNDO, NOT NOW** (seat is preparing its kickoff). Note
   for its design, per Sam: **the journal's behind-the-scenes record — load,
