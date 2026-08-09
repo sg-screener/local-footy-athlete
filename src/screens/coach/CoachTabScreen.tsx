@@ -6,7 +6,7 @@ import { Text } from '../../components/common/Text';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { coachOpener } from '../../rules/coachOpener';
-import { COACH_TAB_COPY } from '../../rules/coachTabCopy';
+import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
@@ -18,6 +18,10 @@ import { todayISOLocal } from '../../utils/appDate';
  * docs/COACH_REBUILD_KICKOFF_2026-08-09.md, S1: *"Coach tab restored at the
  * navigation owner. Conversation shell to L-C3's bar. SHORT opener composed
  * from real data — read-only, zero mutation paths. All copy PROPOSED."*
+ *
+ * **THE COPY IS NO LONGER PROPOSED.** Sam ruled batch 30 on 2026-08-09 and gave
+ * the greeting in his own words; it opens the conversation and the week-shape
+ * line follows it as the second bubble. See `rules/coachTabCopy`.
  *
  * ## THIS IS NOT `CoachScreen`, AND THAT IS THE POINT
  *
@@ -131,6 +135,12 @@ export default function CoachTabScreen() {
     setDraft('');
   }, [draft]);
 
+  // TWO OPENING BUBBLES, AND THE ORDER IS SAM'S RULING (2026-08-09): his own
+  // greeting introduces the coach, then the week's shape. Two bubbles rather
+  // than one sentence because they answer different questions — WHO is this,
+  // and WHAT is this week — and because only the second changes when the week
+  // does. The greeting is a constant; re-deriving it beside a live projection
+  // would imply it depends on something.
   const composer = (
     <View style={styles.composer}>
       <AppTextInput
@@ -179,6 +189,7 @@ export default function CoachTabScreen() {
           testID="coach-tab-conversation"
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
+          <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
           <Bubble speaker="coach" text={opener.text} testID="coach-tab-opener" />
           {turns.map((turn) => (
             <Bubble

@@ -37,7 +37,13 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import { coachOpener, coachOpenerGrounds } from '../rules/coachOpener';
-import { COACH_OPENER_COPY, COACH_TAB_COPY } from '../rules/coachTabCopy';
+import {
+  COACH_GREETING_COPY_ID,
+  COACH_OPENER_COPY,
+  COACH_TAB_COPY,
+  coachGreeting,
+} from '../rules/coachTabCopy';
+import { signedCopyEntry } from '../rules/signedCopy';
 import { WEEKDAY_NAMES, shortWeekdayDateLabel, weekdayName } from '../utils/appDate';
 import { visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import type { SignedCopy } from '../rules/signedCopy';
@@ -476,11 +482,14 @@ console.log('\n[6] WEEKDAYS — full words own the table, short forms are derive
 
 // ─── [7] BATCH 30 IS DECLARED, NOT SCATTERED ─────────────────────────────────
 
-console.log('\n[7] BATCH 30 — one module owns every new word');
+console.log('\n[7] BATCH 30 — one module owns every new word, and the greeting is Sam\'s');
 {
   const copySource = read('rules', 'coachTabCopy.ts');
-  ok('the batch declares itself PROPOSED and unruled',
-    /BATCH 30[\s\S]{0,200}PROPOSED/.test(copySource));
+  ok('the batch declares itself RULED, not PROPOSED',
+    /BATCH 30[\s\S]{0,120}RULED/.test(copySource)
+      && !/BATCH 30[\s\S]{0,120}PROPOSED/.test(copySource),
+    'Sam ruled these words on 2026-08-09; a module still calling itself '
+      + 'PROPOSED is a provenance claim that has gone stale');
   ok('the opener imports its fragments from the batch, not its own literals',
     /from '\.\/coachTabCopy'/.test(openerCode)
       && !/'\. '|'today'|'tomorrow'/.test(openerCode),
@@ -488,6 +497,147 @@ console.log('\n[7] BATCH 30 — one module owns every new word');
   ok('every batch-30 string is non-empty',
     [...Object.values(COACH_OPENER_COPY), ...Object.values(COACH_TAB_COPY)]
       .every((value) => typeof value === 'string' && value.length > 0));
+
+  // ── SAM'S GREETING, WORD FOR WORD ──────────────────────────────────────────
+  //
+  // PINNED AS THE WHOLE SENTENCE, not as a prefix and not as a length. This is
+  // the M10 lesson from this suite's own first run, applied before the drift
+  // rather than after it: a cell that checked the two ENDS of a weekday word
+  // stayed green while the middle changed and the athlete read "Game Tues".
+  // A verbatim quote is pinned verbatim or it is not pinned.
+  const GREETING = "G'day, I'm your S&C coach. I can answer fitness questions "
+    + 'and make changes to your program.';
+  ok('the greeting is exactly the sentence Sam gave, character for character',
+    coachGreeting() === GREETING,
+    coachGreeting());
+
+  // AND IT IS SIGNED IN THE STRICT SENSE — an entry in the sheet, with a
+  // provenance a reader can check. Batch 30's other words are module constants
+  // and say so; this one is the only verbatim quote in the batch and it is the
+  // only one that earns a registry row.
+  const entry = signedCopyEntry(COACH_GREETING_COPY_ID);
+  ok('the greeting is in the signed-copy sheet, not a module constant',
+    entry !== null && entry.text === GREETING,
+    JSON.stringify(entry));
+  ok('and its provenance is a signed sentence carrying the date it was signed',
+    entry?.source === 'signed_sentence' && /2026-08-09/.test(entry?.provenance ?? ''),
+    `${entry?.source} | ${entry?.provenance}`);
+
+  // THE HONESTY GAP IS RECORDED WHERE THE WORDS ARE. The greeting promises an
+  // ability S3 delivers; Sam ruled the gap acceptable because the app has no
+  // users but his devices. That ruling has a condition attached, and a
+  // condition nobody can find is a condition nobody honours — so the module
+  // that holds the sentence must hold the re-check trigger too.
+  ok('the module records the beta-gate re-check the greeting ships under',
+    /beta gate/i.test(copySource) && /S3/.test(copySource),
+    'the sentence becomes true at S3; if a beta gate arrives first, the seat '
+      + 're-checks it, and that is written beside the words');
+
+  // THE SCREEN SHOWS IT, AND SHOWS IT FIRST. Registering a sentence nobody
+  // renders is a sheet entry pretending to be a shipped string.
+  const greetingAt = screenCode.indexOf('coachGreeting()');
+  const openerAt = screenCode.indexOf('text={opener.text}');
+  ok('both opening bubbles were located in the screen',
+    greetingAt >= 0 && openerAt >= 0,
+    `greeting=${greetingAt} opener=${openerAt}`);
+  ok('the greeting bubble is rendered BEFORE the week-shape bubble',
+    greetingAt >= 0 && openerAt >= 0 && greetingAt < openerAt,
+    'Sam: the greeting opens, "the week-shape line stays as built, second bubble"');
+  ok('and they are two bubbles, not one concatenated sentence',
+    /<Bubble speaker="coach" text=\{coachGreeting\(\)\}/.test(screenCode)
+      && /<Bubble speaker="coach" text=\{opener\.text\}/.test(screenCode),
+    'joining them on the screen would be the screen authoring a separator');
+}
+
+// ─── [8] THE OPENER'S SENTENCE CONTAINS NOTHING BUT ITS SOURCES ──────────────
+
+console.log('\n[8] THE OPENER DECOMPOSES — every word in it came from somewhere named');
+{
+  // WHY THIS SECTION EXISTS, AND IT IS A STATED SUBSTITUTE FOR A STRONGER THING.
+  // `SignedCopy` makes "this string was authored" a COMPILE-TIME fact, and the
+  // opener cannot have it: it composes with a space, with ". ", and with a
+  // trailing full stop, and `joinSignedCopy` cannot express a suffix at all —
+  // the alternative is widening `FILLED_PLACEHOLDER` to admit words, which
+  // `signedCopy.ts` names as a loosening of the L-P2 runtime law. So the claim
+  // is made here at RUNTIME instead: strip every fragment the opener is allowed
+  // to use and every day name the projection gave it, and what remains must be
+  // nothing. A fourth word from anywhere reds this.
+  function day(date: string, kind: VisibleDayKind, bucket: string | null): VisibleDay {
+    return {
+      date,
+      kind,
+      headline: ('Game Day') as unknown as SignedCopy,
+      parts: bucket === null ? [] : [{
+        id: `${date}-p1`,
+        kind: 'strength',
+        headline: bucket as unknown as SignedCopy,
+        bucket: bucket as unknown as SignedCopy,
+        detail: null,
+        rows: [],
+        capabilities: {
+          canMove: false, canRemove: false, canSwap: false, canEditRows: false,
+        } as VisibleDay['parts'][number]['capabilities'],
+        countsTowardLoad: true,
+      }],
+      capabilities: {
+        canAdd: false, canMoveWholeDay: false, canRemoveWholeDay: false, refusal: null,
+      } as VisibleDay['capabilities'],
+      owner: 'generation' as VisibleDay['owner'],
+    };
+  }
+  const week: VisibleWeek = {
+    weekStart: '2026-08-10',
+    days: [
+      day('2026-08-10', 'training', 'Strength'),
+      day('2026-08-11', 'training', 'Conditioning'),
+      day('2026-08-12', 'rest', null),
+      day('2026-08-13', 'training', 'Strength'),
+      day('2026-08-14', 'rest', null),
+      day('2026-08-15', 'game', null),
+      day('2026-08-16', 'rest', null),
+    ],
+  };
+
+  const ALLOWED_FRAGMENTS: readonly string[] = [
+    COACH_OPENER_COPY.fixtureLead,
+    COACH_OPENER_COPY.today,
+    COACH_OPENER_COPY.tomorrow,
+    COACH_OPENER_COPY.clauseJoin,
+    COACH_OPENER_COPY.fullStop,
+    ...WEEKDAY_NAMES,
+    ' ',
+  ];
+
+  // Longest first, so "Strength" is never eaten by a shorter fragment that
+  // happens to be a prefix of it. Ordering is the whole correctness of a
+  // strip-and-check, and getting it wrong makes the cell pass on rubbish.
+  const dayNames = week.days.map((d) => String(visibleDayLeadHeadline(d)));
+  const strippers = [...ALLOWED_FRAGMENTS, ...dayNames]
+    .sort((a, b) => b.length - a.length);
+
+  const residues: string[] = [];
+  for (const todayISO of week.days.map((d) => d.date)) {
+    let text = coachOpener({ week, todayISO }).text;
+    for (const fragment of strippers) {
+      text = text.split(fragment).join('');
+    }
+    if (text.length > 0) residues.push(`${todayISO}: "${text}"`);
+  }
+  ok(
+    'every day of the week produces a sentence made only of named fragments',
+    residues.length === 0,
+    residues.join(' | '),
+  );
+
+  // THE CONTROL, because a strip-and-check that strips everything proves
+  // nothing. An invented word must survive the same strippers.
+  let control = 'Game Saturday. Strength today. Probably a light jog.';
+  for (const fragment of strippers) control = control.split(fragment).join('');
+  ok(
+    'and an invented clause DOES leave a residue — the instrument can fail',
+    control.length > 0,
+    `control residue: "${control}"`,
+  );
 }
 
 const total = passed + failures.length;

@@ -1,23 +1,50 @@
 /**
- * BATCH 30 — EVERY WORD THE COACH TAB PUTS ON THE GLASS. PROPOSED 2026-08-09.
+ * BATCH 30 — EVERY WORD THE COACH TAB PUTS ON THE GLASS. RULED 2026-08-09.
  *
- * Slice 1 of the coach rebuild. Nothing here is signed; the kickoff's own line
- * is *"All copy PROPOSED -> batch"*, and Sam rules the words against his
- * "get to the point" ruling once he has seen them on the phone.
+ * Slice 1 of the coach rebuild, and every string below now carries a ruling:
  *
- * WHY A MODULE AND NOT `SignedCopy` ENTRIES YET. The signed-copy sheet is where
- * words go once Sam has ruled them; putting unruled prose in it would make the
- * registry claim a provenance that does not exist. The `undoToastCopy`
- * precedent (batch 29) is the same shape: a plain module, one owner, declared
- * PROPOSED in its docblock, promoted to the sheet at signing.
+ * - **THE GREETING IS SAM'S OWN SENTENCE, VERBATIM** (2026-08-09): *"G'day, I'm
+ *   your S&C coach. I can answer fitness questions and make changes to your
+ *   program."* It is the one string in this batch that came out of his mouth
+ *   word for word, so it is the one string that goes into the SIGNED-COPY SHEET
+ *   rather than staying a module constant — `signed_sentence` provenance is
+ *   exactly what it has.
+ * - **THE OPENER FRAGMENTS ARE APPROVED AS SHIPPED** — *"the week-shape line
+ *   stays as built, second bubble"*. The words did not change; their status did.
+ * - **THE HONEST NO-ANSWER REPLY IS APPROVED AS SHIPPED** (slice-1 boundary
+ *   parked item 3).
+ *
+ * ## THE GREETING SHIPS AHEAD OF THE ABILITY, AND THAT IS RULED TOO
+ *
+ * *"I can … make changes to your program"* is not true on the day it ships —
+ * S3 is what makes it true. Sam ruled the gap himself: *"we aren't releasing
+ * the app yet - we are going to build that shit now."* The app has no users but
+ * his own devices, so the claim becomes true before any athlete reads it. **If
+ * a beta gate arrives before S3, this sentence is re-checked** — recorded here
+ * because a sentence whose honesty depends on a release plan should say so in
+ * the file that holds it, not only in a boundary doc.
+ *
+ * ## WHY THE REST IS STILL A MODULE AND NOT THE SHEET
+ *
+ * The opener does not merely SHOW its fragments, it COMPOSES them — a space
+ * between a day's name and "today", ". " between clauses, and a trailing full
+ * stop. Under the sheet's strict regime each of those separators is
+ * athlete-visible text and would need its own joiner entry, and `joinSignedCopy`
+ * cannot express a trailing suffix at all; the alternative is widening
+ * `FILLED_PLACEHOLDER` to admit WORDS, which is the global loosening of the L-P2
+ * runtime law that `signedCopy.ts` explicitly warns against. So the branded
+ * conversion of the OPENER is owed work with a stated price, not an oversight —
+ * and in its place `coachTabSlice1Tests` [8] decomposes the produced sentence
+ * back into these fragments plus projection-signed day names, and reds if a word
+ * from anywhere else ever appears in it.
  *
  * DECLARED, NOT RIDDEN SILENTLY: this module lives in `rules/`, which
  * `signedCopyExtractionTests` does not walk (it walks `screens`, `components`,
- * `navigation`). So batch 30 exists here and NOT on the sheet — the same known
- * ~150-string `utils`/`rules` gap batch 29 sits in. The copy gates staying green
- * is not evidence about these words, and `coachTabSlice1Tests` asserts the
- * SCREEN authors none of its own instead.
+ * `navigation`) — the same known ~150-string `utils`/`rules` gap batch 29 sits
+ * in. The copy gates staying green is not evidence about these words.
  */
+
+import { registerSignedCopy, signedCopy } from './signedCopy';
 
 /**
  * The opener's fragments.
@@ -49,6 +76,46 @@ export const COACH_OPENER_COPY = {
   noWeek: "I can't see your week yet.",
 } as const;
 
+/**
+ * SAM'S GREETING, IN THE SHEET.
+ *
+ * The registry is the only place in this repo where a string carries a
+ * provenance a reader can check without reading code, and this sentence is the
+ * only one in batch 30 that has the strongest kind — a verbatim quote. It is
+ * registered here, in the batch's own module, so the words and their receipt
+ * cannot end up in different files.
+ *
+ * `registerSignedCopy` throws when one id is registered twice with different
+ * words, so the id below is a lock on the sentence: changing Sam's greeting
+ * without changing this entry is not a thing that can happen quietly.
+ */
+export const COACH_GREETING_COPY_ID = 'coach.tab.greeting';
+
+registerSignedCopy([
+  {
+    id: COACH_GREETING_COPY_ID,
+    source: 'signed_sentence',
+    provenance: "Sam, 2026-08-09 — verbatim, relayed through docs/SEAT_INBOX.md "
+      + 'item 1(a) of the fifty-ninth pass. Ships ahead of the ability by his own '
+      + "ruling (\"we aren't releasing the app yet - we are going to build that "
+      + 'shit now"); the seat owns re-checking it if a beta gate arrives before S3.',
+    text: "G'day, I'm your S&C coach. I can answer fitness questions and make "
+      + 'changes to your program.',
+  },
+]);
+
+/**
+ * THE GREETING THE ATHLETE READS, THROUGH THE ONE CONSTRUCTOR.
+ *
+ * A function rather than a constant because `signedCopy` is the sheet's only
+ * door and it THROWS on a missing entry — calling it at use time means a
+ * deleted entry fails loudly at the screen instead of resolving to a stale
+ * literal captured at module load.
+ */
+export function coachGreeting() {
+  return signedCopy(COACH_GREETING_COPY_ID);
+}
+
 /** The tab's own chrome and its one answer. */
 export const COACH_TAB_COPY = {
   /** The tab bar label and the screen title — the mock's own word. */
@@ -66,6 +133,10 @@ export const COACH_TAB_COPY = {
    * boundary rather than a screen apologising for being unfinished. S2 replaces
    * it with answers grounded in the program; until then an invented answer
    * would be the exact failure the kickoff was written to prevent.
+   *
+   * SAM APPROVED THIS AS SHIPPED (2026-08-09), which is why it is still here
+   * after the greeting arrived: he was asked to choose between the coach saying
+   * this and the tab shipping with a dead input, and he chose this.
    */
   noAnswerYet: "I don't have an answer for that yet.",
 } as const;
