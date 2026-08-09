@@ -2,6 +2,65 @@
 
 ## Unprocessed (newest first)
 
+0. L-C3 GATE FAILURE ON DEVICE — FIX INSIDE S3, BEFORE ITS
+   BOUNDARY (seat, 2026-08-09 night, from Sam's screenshots + words
+   verbatim): "the chat history is stuck - it gets hidden behind the
+   keypad and it doesn't scroll down - so when I'm typing a new
+   question after a few questions I can't see the answers."
+   Confirmed by two screenshots (8:32pm): keyboard up, composer
+   visible, but the conversation list neither resizes nor pins to
+   bottom — latest answer hidden behind the keypad. This is the
+   defect family the S2 boundary predicted (two animations, two
+   clocks) presenting as the scroll variant, and it is exactly what
+   L-C3 declares a GATE failure, not polish.
+   Required end-state, all keyboard states: (1) the list's visible
+   area ends above the keyboard, never behind it; (2) new content
+   pins the list to bottom when the athlete is already at bottom;
+   (3) keyboard appearing re-pins to bottom; (4) nothing occludes
+   the composer or the latest bubble. Add these as cells per L-C3
+   (the kickoff's own words: keyboard cases are gate cases from
+   slice 1 — this is the debt of not having them).
+   Device evidence for free, worth banking: the answers Sam got
+   were RIGHT in bucket vocabulary ("Friday: Gunshow.",
+   "Wednesday: Rest Day."); "what should I eat before a game" was
+   refused (expected pre-Bible-layer; noted for that unit's list);
+   "Why do we do strength before team traininh" (typo included)
+   was asked — check what the resolver did with it and report.
+   LOOP CHECK: keyboard-cases-deferred-then-bitten — sighting 1
+   (L-C3 predicted it; first device contact confirmed) — iterate;
+   a second keyboard-family device catch = the keyboard matrix
+   harness becomes a standing pre-device gate for every
+   conversational surface.
+
+1. SAM RULED (a): CHANGES FIRST — SLICE 3 OPENS (seat, 2026-08-09
+   night). The Bible-grounded "why" layer follows S3, not before it.
+   Sam is device-testing slice 2 in parallel; his first
+   wrongly-refused question will arrive via the seat when he finds
+   one.
+   SLICE 3 per the kickoff: the coach's proposal becomes a
+   ProgramControlAction; THE CHANGE CARD (L-C2) renders FROM the
+   action itself; athlete confirms; executeProgramControlAction
+   executes; the ledger records; undo covers it because it already
+   covers the door. Allow-listed kinds first — start from the doors
+   that already reach the ledger (the exercise door landed
+   2026-08-09; move_session through the program-control path), one
+   kind at a time behind the same card. The chips held from S1
+   return HERE, now they have somewhere to send. The S2 boundary's
+   named resolver class (two-marker messages beat a table-ordered
+   resolver) applies to S3's request resolver from its first cell —
+   build the matrix before the resolver, not after its first
+   survivor. The cheap refusal rung (VisibleDay.capabilities.refusal
+   answering "why can't I move Saturday?") rides S3 only if it
+   costs a day nothing; otherwise it waits with the Bible layer.
+   L-C3 keyboard cases now BLOCK the boundary: the card's confirm
+   buttons with keyboard up is the exact Nike case Sam named.
+   Batch 31 stays PROPOSED; new S3 strings join it — ONE signing
+   sitting when S3's surface settles, not a drip.
+   Full chain, short boundary, stop before S4.
+   LOOP CHECK: kind-by-kind-behind-one-card — sighting 1 —
+   iterate; a second kind needing its own card variant = compress
+   into card-from-action generalisation before a third.
+
 (none)
 
 
