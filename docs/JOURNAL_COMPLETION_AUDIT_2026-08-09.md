@@ -56,15 +56,35 @@ OPEN-UNKNOWN.
 
 ## THE HONEST SUMMARY
 
-**Built: 16 of 22 items.** Six remain, and they fall into three kinds:
+**Built: 20 of 22 items** after the four buildable ones landed
+(`a440136c`, `8e46b7d9`, `c8a349a6`, and the week-kinds commit). Two remain, plus
+the items waiting on Sam.
+
+*Original count when this audit was written: 16 of 22, six remaining in three
+kinds — kept below so the correction above is legible rather than tidied away.*
 
 **(a) BUILDABLE NOW, no ruling needed** — consistency % + sessions banked, the
 balance picture, "your month in flags", key exposures. All four are readers of
 derivations that already exist. **These are the unit's remaining work.**
 
 **(b) BLOCKED ON A DERIVATION THAT MUST BE BUILT PROPERLY** — week status, and
-"what changed / what was protected". The first was refused by a gate for reading
-a stale tally and needs a freshly-derived ledger; the second needs the decision
+"what changed / what was protected".
+
+**CORRECTION, SAME DAY: week status is NOT blocked, and I called it too early.**
+Re-measured after the audit was written: `evaluateSection18EffectiveWeek`
+(`rules/section18EffectiveWeekEvaluator.ts:1083`) takes
+`{ contract: WeeklyExposureContractV2, workouts, weekStart }` — all three of
+which the Journal already holds — and **BUILDS A FRESH LEDGER internally**
+(`buildLedger(input)`), returning a freshly-assessed contract and its blocking
+findings. That is precisely the "freshly-derived ledger" the shortfall gate
+demanded, and it is the V2 owner rather than the superseded V1 path.
+
+The lesson is worth more than the item: **"blocked" was my inference from the
+gate's refusal, not a measurement.** The gate refused a STALE READ; it never said
+the derivation was unreachable. An honest "blocked" needs the same receipt as an
+honest "built".
+
+"What changed / what was protected" IS still blocked — it needs the decision
 ledger, whose vocabulary gap (no illness/injury/readiness/phase) is already
 measured by the LR-29 dependency list.
 

@@ -1811,3 +1811,40 @@ line alone cannot tell them apart.
 so — and using it would count a Saturday game three times on one screen: once as
 conditioning, once as a game, once in the strip. The line uses
 `extraConditioningSessions`, and a mutation swapping them reds a cell.
+
+## Batch 24 — week status, one calm line (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 3 —
+the line batch 20 promised would come as its own batch when the derivation was
+built properly. It now is.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Nothing blocking outstanding | "The week is on track." |
+
+Plus one counted line, in template form for batch 15-d's reason:
+
+- "Still outstanding: {word}, {word}." — e.g. "Still outstanding: strength, sprint."
+
+**24-a. EVERY NUMBER BEHIND THIS LINE WAS DERIVED THIS TURN.** Batch 20 withdrew
+a status sentence because it came from the contract's STORED achieved tallies,
+which go stale. This one comes from `evaluateSection18EffectiveWeek`, which
+builds a fresh ledger from THIS week's workouts. **Same sentence shape, honest
+source** — and that difference is the whole reason the wording waited.
+
+**24-b. THE WORDS ARE SAM'S, ROUTED BY HIS OWNER.** `{word}` is
+`ATHLETE_WORD_FOR_DOMAIN`, the same table the shortfall disclosure uses, so the
+status and the disclosure cannot call the same domain two different things. A
+domain with no athlete word — `identity`, `migration`, `anchor_credit` — is
+DROPPED rather than rendered by its code name.
+
+**24-c. ONE WORD PER DOMAIN, NOT ONE PER FINDING.** Two strength findings are one
+strength gap to an athlete; "Still outstanding: strength, strength" would be
+counting findings while claiming to count training.
+
+**24-d. "THE WEEK IS ON TRACK." IS DELIBERATELY FLAT.** No congratulation, no
+streak language — the design excludes gamification by name, and a week meeting
+its contract is information rather than an achievement to be celebrated at the
+athlete. It is also SILENT when there is no contract: an ungoverned week gets no
+line at all, because "on track" against a standard that does not exist is a claim
+about nothing.

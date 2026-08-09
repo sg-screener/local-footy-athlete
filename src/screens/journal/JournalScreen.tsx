@@ -27,6 +27,8 @@ import {
   type JournalWeek,
 } from '../../rules/journalWeek';
 import { buildJournalWeekJob, type JournalWeekJob } from '../../rules/journalWeekJob';
+import { buildJournalWeekStatus, type JournalWeekStatus } from '../../rules/journalWeekStatus';
+import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import { buildJournalMonth, type JournalMonth } from '../../rules/journalMonth';
 import { TrendChart } from '../../components/journal/TrendChart';
 import {
@@ -430,6 +432,30 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
  * "Did the work happen" one section down already answers the completion question
  * from recorded outcomes, so the athlete is not left without one.
  */
+/**
+ * WEEK STATUS — one calm line, PROPOSED (batch 24).
+ *
+ * EVERY NUMBER BEHIND THIS WAS DERIVED THIS TURN. The status comes from
+ * `evaluateSection18EffectiveWeek`, which builds a fresh ledger from THIS week's
+ * workouts — not from the contract's stored tallies, which a gate rightly
+ * refused because a stored tally goes stale beside the facts it came from.
+ */
+function WeekStatus({ status }: { status: JournalWeekStatus | null }) {
+  if (status === null) return null;
+  if (status.onTrack) {
+    return (
+      <Text variant="body" style={styles.body} testID="journal-status-on-track">
+        {'The week is on track.'}
+      </Text>
+    );
+  }
+  return (
+    <Text variant="body" style={styles.body} testID="journal-status-gaps">
+      {`Still outstanding: ${status.gaps.map((gap) => gap.athleteWord).join(', ')}.`}
+    </Text>
+  );
+}
+
 function WeekJob({ job }: { job: JournalWeekJob | null }) {
   if (job === null) {
     return (
@@ -893,6 +919,23 @@ export default function JournalScreen() {
     [currentMicrocycle],
   );
 
+  // THE STATUS IS DERIVED THIS TURN, NOT READ OFF THE CONTRACT. The evaluator
+  // builds a fresh ledger from THIS week's workouts; the contract's own stored
+  // tallies are the stale read a gate refused, and are never touched here.
+  const weekStatus = useMemo<JournalWeekStatus | null>(() => {
+    const contract = currentMicrocycle?.exposureContractV2;
+    if (!contract) return null;
+    const workouts = weekDays
+      .map((day) => day.workout)
+      .filter((workout): workout is NonNullable<typeof workout> => !!workout);
+    const evaluation = evaluateSection18EffectiveWeek({
+      contract,
+      workouts,
+      weekStart: week.weekStart,
+    });
+    return buildJournalWeekStatus(evaluation.blockingViolations);
+  }, [currentMicrocycle, weekDays, week.weekStart]);
+
   // BOTH INPUTS ALREADY EXIST AS INPUTS: the episodes live in the accepted
   // material context, the notes are the athlete's own words from slice 2. This
   // joins them and stores nothing.
@@ -956,6 +999,7 @@ export default function JournalScreen() {
 
         <Section title="This week's job">
           <WeekJob job={weekJob} />
+          <WeekStatus status={weekStatus} />
         </Section>
 
         <Section title="Did the work happen">

@@ -486,7 +486,17 @@ function extract(): ExtractedString[] {
  * Recorded as BATCH 22 before this commit landed, with the satisfaction lines
  * listed there in template form.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 576;
+/**
+ * 576 -> 577 (week status, same commit that earned it): ONE genuinely new
+ * sentence the extractor can see — "The week is on track." The outstanding line
+ * is a template and is listed in batch 24 rather than counted here.
+ *
+ * THE SENTENCE BATCH 20 WITHDREW IS NOT THIS ONE. That one read the contract's
+ * stored tallies and was refused; this one is derived this turn from a fresh
+ * ledger. Same shape, honest source — which is why the wording waited for the
+ * derivation rather than shipping with it.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 577;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

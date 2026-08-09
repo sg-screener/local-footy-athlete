@@ -36,6 +36,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 
 import { buildJournalWeekJob } from '../rules/journalWeekJob';
+import { buildJournalWeekStatus } from '../rules/journalWeekStatus';
 import {
   ATHLETE_FORBIDDEN_VOCABULARY,
   ATHLETE_WORD_FOR_DOMAIN,
@@ -165,6 +166,62 @@ console.log('\n[3] IT READS POLICY, NEVER A STORED TALLY');
   ok('and the job carries no verdict at all — that is the ledger\'s to give',
     withStaleTallies !== null && !('satisfied' in withStaleTallies),
     withStaleTallies && Object.keys(withStaleTallies));
+}
+
+// ─── [3b] WEEK STATUS — derived this turn, never read off the contract ────
+
+console.log('\n[3b] WEEK STATUS — the item I wrongly called blocked');
+{
+  const finding = (domain: string) => ({
+    code: 'x', severity: 'blocking', domain, expected: 1, actual: 0,
+    detail: '', evidence: [],
+  }) as never;
+
+  ok('no findings means the week is on track',
+    buildJournalWeekStatus([])?.onTrack === true);
+  ok('and nothing to evaluate yields NULL, not "on track"',
+    buildJournalWeekStatus(null) === null,
+    buildJournalWeekStatus(null));
+
+  const short = buildJournalWeekStatus([finding('main_strength')]);
+  ok('a blocking finding is a gap in the athlete\'s word',
+    short?.onTrack === false && short?.gaps[0]?.athleteWord === 'strength', short);
+
+  // ONE WORD PER DOMAIN, NOT ONE PER FINDING. Two strength findings are one
+  // strength gap to an athlete; `shortfallsFromFindings` merges domains for
+  // exactly this reason, and "strength, strength" would be counting FINDINGS
+  // while claiming to count training.
+  const doubled = buildJournalWeekStatus([
+    finding('main_strength'), finding('strength_patterns'),
+  ]);
+  ok('two findings in one domain read as ONE gap',
+    doubled?.gaps.length === 1, doubled?.gaps);
+
+  // BOOKKEEPING DOMAINS ARE NEVER DISCLOSED BY NAME — the honest-outcome law.
+  const bookkeeping = buildJournalWeekStatus([finding('identity'), finding('migration')]);
+  ok('bookkeeping domains are dropped, not rendered by their code name',
+    bookkeeping?.gaps.length === 0 && bookkeeping?.onTrack === true,
+    bookkeeping?.gaps);
+
+  const source = readFileSync(join(__dirname, '..', 'rules', 'journalWeekStatus.ts'), 'utf8');
+  ok('the status module source was read', source.length > 1500, source.length);
+  const statusCode = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  // THE SAME LAW AS [3]: no stored tally, anywhere near this answer.
+  ok('the status module reads no stored tally either',
+    !/achievedCount|unresolvedMinimumShortfall/.test(statusCode),
+    statusCode.match(/achieved\w*|unresolved\w*/g));
+
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  // THE EVALUATOR BUILDS THE LEDGER FRESH — that is what makes this honest, and
+  // it is the difference between this and the version a gate refused.
+  ok('the screen derives the status through the evaluator, this turn',
+    /\bevaluateSection18EffectiveWeek\s*\(/.test(screen));
+  ok('and it uses the BLOCKING violations, not every advisory',
+    /blockingViolations/.test(screen));
+  for (const testId of ['journal-status-on-track', 'journal-status-gaps']) {
+    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
+  }
 }
 
 // ─── [4] It asks. It does not count, and it does not build. ──────────────
