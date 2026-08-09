@@ -506,7 +506,44 @@ function extract(): ExtractedString[] {
  * the app changed nothing, which is a stronger claim than the ledger supports.
  * It is recorded as batch 25-a before this commit landed.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 580;
+/**
+ * 580 -> 572 (the exception-based front page, same commit that earned it): a
+ * DROP of eight, and the ratchet's own rule says a ceiling left standing above a
+ * real measurement is headroom. Dropped in the commit that earned it.
+ *
+ * ATTRIBUTED IN FULL, because "the count went down" is the shape a deletion
+ * hides behind. It is NOT one movement — it is three, and only the middle one is
+ * an athlete losing anything:
+ *
+ *   OUT, -6 SECTION HEADINGS. Sam's ruling replaces a stack of labelled sections
+ *   with a hero, a stat strip and earned cards. "Did the work happen", "How the
+ *   week felt", "Your note", "This week's job", "What you changed" and "Niggles"
+ *   name nothing that still exists as a section. **No sentence was lost — a
+ *   heading is a label on a box, and the boxes are gone.**
+ *
+ *   OUT, -3 EMPTY STATES. "You made no changes to this week.", "No lifts
+ *   recorded with a weight this week." and "No niggles recorded." are retired by
+ *   the exception rule; two of the three by Sam's own words. **One of them costs
+ *   something and is flagged for him** — batch 26-e — because an athlete who
+ *   lifted without logging weights now sees nothing rather than a reason.
+ *
+ *   OUT, -1 REPLACED. "Save note" became "Save" beside a narrower input.
+ *
+ *   IN, +2 THE EXTRACTOR CAN SEE. The band's "Load vs your normal" label and the
+ *   drawer's "Your trends, charts and totals." Every other new string this slice
+ *   authored is a template literal or a keyed object — the stat tile names, both
+ *   earned cards, the niggle titles, the week label and the credit overflow —
+ *   and they are listed in batch 26-c/26-d anyway, because the extractor's
+ *   blindness is not a reason a word escapes a ruling.
+ *
+ * -6 -3 -1 +2 = -8. The app says less; the instrument did not change.
+ *
+ * Recorded as BATCH 26 before this commit landed, including its NINE
+ * withdrawals — which is also why `copyRulingsBindingTests` grew a `WITHDRAWN:`
+ * form this commit: the sheet had a way to record a string that CHANGED and no
+ * way to record one that STOPPED.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 572;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

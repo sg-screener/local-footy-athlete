@@ -1290,8 +1290,8 @@ short-label law.
 | Tab accessibility label | "Journal tab" |
 | Screen heading | "Journal" |
 | Period subheading | "This week" |
-| Section heading | "Did the work happen" |
-| Section heading | "How the week felt" |
+| Section heading | WITHDRAWN: "Did the work happen" — batch 26-a |
+| Section heading | WITHDRAWN: "How the week felt" — batch 26-a |
 | Section heading | "Load" |
 
 **15-b. THE WEEK-SHAPE STRIP.** The five day-shape words are Sam's own taxonomy
@@ -1369,10 +1369,10 @@ the words the design was approved with.
 
 | Where | PROPOSED string |
 | --- | --- |
-| Section heading | "Your note" |
+| Section heading | WITHDRAWN: "Your note" — batch 26-a |
 | Note box placeholder | "Anything worth remembering about this week?" |
-| Save button | "Save note" |
-| No notes recorded for this week yet | "No notes yet this week." |
+| Save button | WITHDRAWN: "Save note" — batch 26-a, replaced by "Save" |
+| No notes recorded for this week yet | WITHDRAWN: "No notes yet this week." — batch 26-a |
 
 **16-b. THE TAG LABELS.** The tag KEYS are the design's vocabulary — the base
 five (recovery, mobility, injury, diet, work stress) plus the addendum's three
@@ -1573,7 +1573,7 @@ not folded into this slice.
 | Where | PROPOSED string |
 | --- | --- |
 | Section heading | "Your lifts" |
-| No lift carried a recorded weight this week | "No lifts recorded with a weight this week." |
+| No lift carried a recorded weight this week | WITHDRAWN: "No lifts recorded with a weight this week." — batch 26-a |
 
 **19-b. THE ARROW WORDS.** A glyph alone is not readable by a screen reader and
 not legible at small sizes, so the direction is a WORD. These live in a keyed
@@ -1616,7 +1616,7 @@ Group 1 items 3 and 4.
 
 | Where | PROPOSED string |
 | --- | --- |
-| Section heading | "This week's job" |
+| Section heading | WITHDRAWN: "This week's job" — batch 26-a |
 | No contract governs this week | "No plan recorded for this week." |
 
 **20-b. THE ONE COUNTED LINE**, in template form for batch 15-d's reason:
@@ -1661,7 +1661,7 @@ about his athlete's week and gets ruled as one.
 | Where | PROPOSED string |
 | --- | --- |
 | Section heading | "Niggles" |
-| No episodes recorded | "No niggles recorded." |
+| No episodes recorded | WITHDRAWN: "No niggles recorded." — batch 26-a |
 
 **21-b. THE TWO COUNTED LINES**, in template form for batch 15-d's reason:
 
@@ -1856,8 +1856,8 @@ the LAST unbuilt item in the Journal unit.
 
 | Where | PROPOSED string |
 | --- | --- |
-| Section heading | "What you changed" |
-| No decisions this week | "You made no changes to this week." |
+| Section heading | WITHDRAWN: "What you changed" — batch 26-a |
+| No decisions this week | WITHDRAWN: "You made no changes to this week." — batch 26-a |
 | The boundary, shown whenever there IS a list | "Changes the app made for you are not listed here yet." |
 
 Plus one counted line, in template form:
@@ -1890,3 +1890,83 @@ was protected**, and re-deriving it for a past week would re-run the decision
 against a week that has since changed: a reconstruction, not a record. Recording
 it is an engine-side change to the decision doors, not a Journal change, and it
 is named as owed rather than faked.
+
+## Batch 26 — the exception-based front page (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** The UI polish slice,
+against docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md.
+
+**26-a. THE SIX WITHDRAWALS COME FIRST, because a batch that only adds is hiding
+its subtractions.** Every one of these was PROPOSED to Sam in an earlier batch
+and is no longer in the app. They are struck rather than left standing, under the
+binder's own rule — *"a proposal for wording nothing uses wastes a ruling"* — and
+the same precedent batch 20-d set.
+
+| Batch | WITHDRAWN string | Why it is gone |
+| --- | --- | --- |
+| 15-a | WITHDRAWN: "Did the work happen" | Section heading. The count is a stat tile now; the tile is named "Sessions" and a heading above it would say the same word twice. |
+| 15-a | WITHDRAWN: "How the week felt" | Section heading. Its bookkeeping counts moved into the month drawer; what remains is one exception line that needs no heading. |
+| 16-a | WITHDRAWN: "Your note" | Section heading. The ruling puts the note box "quiet, at the bottom" — a heading is the opposite of quiet, and the placeholder already asks the question. |
+| 16-a | WITHDRAWN: "No notes yet this week." | An empty box under an empty list said the same thing twice. |
+| 19-a | WITHDRAWN: "No lifts recorded with a weight this week." | **Retired by the exception rule** — see 26-e, which is the one withdrawal that costs something. |
+| 20-a | WITHDRAWN: "This week's job" | Section heading. The job is the hero's second line; it needs no label above it. |
+| 24-d | WITHDRAWN: "What you changed" | Section heading. The ruling makes this a credit line INSIDE the hero, on weeks it happened. |
+| 25 | WITHDRAWN: "You made no changes to this week." | **Retired by the ruling itself**, verbatim: "one credit line inside the hero on weeks a change happened, nothing otherwise." |
+| 21 | WITHDRAWN: "No niggles recorded." | **Retired by the ruling itself**, verbatim: "never standing furniture." |
+
+**26-b. ONE REPLACEMENT, NOT A WITHDRAWAL.**
+
+| Batch | WAS | NOW | Why |
+| --- | --- | --- | --- |
+| 16-a | WITHDRAWN: "Save note" | "Save" | The button now sits BESIDE the input rather than under it, and two words do not fit beside a text box on a 390pt screen without shrinking the box. |
+
+**26-c. THE NEW STRINGS THE EXTRACTOR CAN SEE.**
+
+| Where | PROPOSED string |
+| --- | --- |
+| The load band's label | "Load vs your normal" |
+| Stat tile name | "Sessions" |
+| Stat tile name | "Load" |
+| Stat tile name | "Game feel" |
+| The month drawer's title | "Your month" |
+| The month drawer, before any gain exists | "Your trends, charts and totals." |
+| An earned card | "Balance drifting" |
+| The note box's save button | "Save" |
+
+**26-d. THE NEW COUNTED AND KEYED LINES**, in template form for batch 15-d's
+reason (the extractor cannot see a template literal or a keyed object):
+
+- "And {n} more changes this week." / "And one more change this week."
+  — the hero credit line's overflow. See 26-f.
+- "{region} ran hot" — the earned card's title. `{region}` is a muscle name from
+  the signed sheets, routed by its owner, exactly as batch 21-c requires.
+- "Your {pattern} work ran {n}% above what the week planned." / "…below…"
+- "{region} — going now" / "{region} — came back" — the niggle card's title.
+- "{n} episodes recorded." / "{n} episode recorded."
+- "{d} – {d} {Mon}" and "{d} {Mon} – {d} {Mon}" — the week label, e.g.
+  "3 – 9 Aug". The month abbreviations are a closed twelve (Jan…Dec) held in the
+  screen rather than taken from `Intl`: a locale-dependent month name is a string
+  no gate can enumerate and no ruling can sign.
+
+**26-e. THE ONE WITHDRAWAL THAT COSTS SOMETHING, AND IT IS SAM'S CALL TO CONFIRM.**
+"No lifts recorded with a weight this week." was the honest-absence line for an
+athlete who trained but logged no weights. Under the exception rule the whole
+lifts card is now absent instead — so **"you logged no weights" and "you did no
+lifting" look identical to the athlete**, and neither says anything.
+
+Every other withdrawal above is a heading or a duplicate. This one removes
+information. **It is built as ruled and flagged rather than narrowed** — if Sam
+wants it back, the smallest honest form is a single quiet line where the card
+would have been, and that is a one-line change.
+
+**26-f. THE CREDIT LINE IS ONE LINE, WHICH REQUIRED A NEW SENTENCE.** Sam's word
+is "credit line", singular. A week with four changes would otherwise grow the
+hero into a list, so the first change is spoken and the rest are counted. The
+alternative — silently showing only the first — would tell the athlete they made
+one change when they made four.
+
+**26-g. THE BAND, THE ARROW AND THE TWO EARNED CARDS ARE WRITTEN AND DARK.** All
+four are downstream of PROPOSED constants, so `signedValue` returns null and the
+athlete sees none of them today. They are listed here anyway: **the day Sam signs
+the load model's constants batch these words appear with no code change**, and a
+word that ships on a signature is a word that must be ruled before it.

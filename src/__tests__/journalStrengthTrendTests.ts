@@ -211,8 +211,34 @@ console.log('\n[7] THE SURFACE');
   ok('the screen source was read', screen.length > 4000, screen.length);
   ok('the screen builds the trend rather than deriving lifts itself',
     /\bbuildJournalStrengthTrend\s*\(/.test(screen));
-  ok('the honest empty state is rendered',
-    /testID="journal-strength-none"/.test(screen));
+
+  // ── `journal-strength-none` IS RETIRED, AND THE CELL IS RE-POINTED ──
+  //
+  // Sam's UI ruling (2026-08-09) makes the front page exception-based: "Nothing
+  // appears unless it has something to say." A week with no logged weights has
+  // nothing to say about lifts, so the whole card is absent where it used to
+  // render "No lifts recorded with a weight this week."
+  //
+  // THIS IS A REAL LOSS AND IT IS FLAGGED, NOT SMUGGLED. An athlete who lifted
+  // but logged no weights now sees no lifts card and no explanation of why —
+  // the two states are indistinguishable to them. The ruling is the owner's and
+  // it is built as ordered; the boundary report puts the question back to him.
+  const screenCode = screen
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok('the stripped screen source is substantial, not an empty slice',
+    screenCode.length > 4000, screenCode.length);
+  ok('the retired empty state is gone from the screen entirely',
+    !/journal-strength-none/.test(screenCode)
+    && !/No lifts recorded with a weight/.test(screenCode),
+    screenCode.match(/No lifts recorded[^\n]*/g));
+
+  const start = screenCode.indexOf('function StrengthLines');
+  const end = screenCode.indexOf('\nfunction ', start + 1);
+  ok('the StrengthLines component was located', start > 0 && end > start, { start, end });
+  const region = screenCode.slice(start, end);
+  ok('and the located region is substantial', region.length > 200, region.length);
+  ok('a week with no logged weights renders no lifts card at all',
+    /lifts\.length === 0\) return null/.test(region), region);
 
   // NO SIGNED-CONSTANT DOOR HERE, AND THE ABSENCE IS THE POINT: this module has
   // no constants to wait on, which is exactly why its number can ship while the

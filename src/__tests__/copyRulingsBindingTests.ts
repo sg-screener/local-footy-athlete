@@ -234,6 +234,49 @@ run('the template-blank law has no engine-internal filler', () => {
 // header.
 // ──────────────────────────────────────────────────────────────────────────
 
+/**
+ * Every string a batch WITHDREW — proposed once, and deliberately not in the app.
+ *
+ * WHY THIS EXISTS, ADDED 2026-08-09 BY THE UI SLICE. The sheet already had a
+ * `REPLACED: "old" → **"new"**` form, which covers a string that turned into a
+ * different string. It had nothing for a string that simply STOPS — and batch 26
+ * withdrew nine of them at once, when Sam's exception-based ruling retired six
+ * section headings and three empty states.
+ *
+ * WITHOUT A FORM, A WITHDRAWAL HAD TWO BAD OPTIONS. Record it in a table and
+ * this gate reads it as a fresh proposal, so the batch that retires a string
+ * proposes it again in the same breath — which is exactly what happened on this
+ * batch's first run. Record it in prose and nothing checks it at all, which is
+ * `a green gate watching nothing` in its purest form: the retirement is
+ * documented, and the string can quietly stay in the app forever.
+ *
+ * SO THE FORM ASSERTS THE STRONGER THING. A withdrawn string is not merely
+ * exempt from the "is it in the app?" cell — it must be ABSENT. A withdrawal
+ * that did not land is a defect, the same way a retirement that did not land is.
+ */
+function withdrawnStrings(): { batch: string; text: string }[] {
+  const raw = fs.readFileSync(RULINGS, 'utf8');
+  const out: { batch: string; text: string }[] = [];
+  let batch = '?';
+  for (const line of raw.split('\n')) {
+    const heading = /^#+ (\d+[a-z])\./.exec(line)
+      ?? /^\*\*(\d+)-([a-z])\./.exec(line);
+    if (heading) batch = heading.length > 2 ? `${heading[1]}${heading[2]}` : heading[1];
+    // THE STRING IMMEDIATELY AFTER THE MARKER, AND ONLY THAT ONE. The first
+    // version took every quoted string on the line and went red on "Sessions" —
+    // a word quoted in the row's REASON column ("the tile is named 'Sessions'")
+    // as an explanation of the withdrawal, not as a thing being withdrawn.
+    //
+    // `a count taken for a record` again: the instrument's unit was "a quoted
+    // string on a marked line", the domain noun is "the string this row
+    // retires". A withdrawal row explains itself in prose, and prose quotes
+    // things.
+    const subject = /WITHDRAWN:\s*"([^"]+)"/.exec(line);
+    if (subject) out.push({ batch, text: subject[1] });
+  }
+  return out;
+}
+
 /** Every string quoted in the PROPOSED batch, with its 5x sub-heading. */
 function proposedStrings(): { batch: string; text: string }[] {
   const raw = fs.readFileSync(RULINGS, 'utf8');
@@ -257,12 +300,17 @@ function proposedStrings(): { batch: string; text: string }[] {
       ?? /^\*\*(\d+)-([a-z])\./.exec(line);
     if (heading) batch = heading.length > 2 ? `${heading[1]}${heading[2]}` : heading[1];
     if (!line.trimStart().startsWith('|')) continue;
+    // A WITHDRAWAL ROW IS NOT A PROPOSAL. Without this the batch that retires a
+    // string proposes it again in the same table, and the gate demands the app
+    // contain the words the batch just took out of it.
+    if (line.includes('WITHDRAWN:')) continue;
     for (const match of line.matchAll(/"([^"]+)"/g)) out.push({ batch, text: match[1] });
   }
   return out;
 }
 
 const PROPOSED = proposedStrings();
+const WITHDRAWN = withdrawnStrings();
 
 run('the proposed batch is not empty', () => {
   // NON-VACUITY. Both cells below pass trivially on an empty list, and an empty
@@ -279,6 +327,39 @@ run('every PROPOSED string is actually in the app', () => {
   assert(missing.length === 0,
     `proposed to Sam and not in the app:\n        ${missing.join('\n        ')}\n      `
     + 'A proposal for wording nothing uses wastes a ruling.');
+});
+
+run('every WITHDRAWN string is actually gone from the app', () => {
+  // THE RETIREMENT DIRECTION, FOR STRINGS THAT STOP RATHER THAN CHANGE. A
+  // withdrawal recorded in the sheet while the words are still on a screen is
+  // the same defect as a REPLACED ruling that never landed — the sheet says one
+  // thing and the athlete reads another.
+  //
+  // NON-VACUITY IS NOT ASSERTED HERE ON PURPOSE, and that is a real difference
+  // from the cells above: a batch that withdraws nothing is normal, so an empty
+  // list is a legitimate state rather than a broken parse. What guards the parse
+  // is the PROPOSED cell above, which reads the same tables through the same
+  // heading logic and would go red if the format drifted.
+  // COMMENTS ARE STRIPPED, AND THIS CELL EARNED IT ON ITS FIRST RUN TOO. It went
+  // red on the Journal screen's own header, which documents each retirement by
+  // QUOTING the retired sentence — the most useful place that string can appear,
+  // and the one place it is invisible to an athlete.
+  //
+  // NOTED AND NOT FIXED HERE: the RETIRED cell above reads the same `SOURCES`
+  // raw and carries the identical latent gap — a wording Sam replaced could
+  // survive in a comment and red it. It has not fired, changing it would move a
+  // cell this slice has no business moving, and it is filed rather than
+  // ridden silently.
+  const stripped = SOURCES.map((source) => ({
+    file: source.file,
+    text: source.text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''),
+  }));
+  const survivors = WITHDRAWN
+    .filter((entry) => stripped.some((source) => source.text.includes(entry.text)))
+    .map((entry) => `${entry.batch}: "${entry.text}"`);
+  assert(survivors.length === 0,
+    `withdrawn in the sheet but still on a surface:\n        ${survivors.join('\n        ')}\n      `
+    + 'A withdrawal that did not land is a ruling the athlete never received.');
 });
 
 run('every athlete-visible string in the NEW surfaces is proposed', () => {

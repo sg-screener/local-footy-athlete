@@ -35,7 +35,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { buildJournalNiggleHistory } from '../rules/journalNiggleHistory';
+import { buildJournalNiggleHistory, flaggedNiggleRegions } from '../rules/journalNiggleHistory';
 import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
 import type { NiggleNoteView } from '../rules/journalNiggleHistory';
 import { readFileSync } from 'fs';
@@ -253,14 +253,87 @@ console.log('\n[5] OWNERSHIP AND THE SURFACE');
   ok('this rules/ module does not name the note store at all',
     !/journalNoteStore/.test(source), source.match(/journalNoteStore/g));
 
+  // ── [5b] WHICH NIGGLES EARN A CARD — behavioural, not a source scan ──
+  //
+  // Sam's UI ruling makes niggle history an EARNED card: "only with an active
+  // issue or repeat flag — never standing furniture". The predicate lives in
+  // `rules/` precisely so this block can call it; written in the JSX it would be
+  // assertable only as "a `.filter(` appears near the word niggle", which a
+  // filter with the wrong predicate satisfies perfectly.
+  console.log('\n[5b] THE EARNED-CARD PREDICATE');
+  {
+    // THE CASE THE RULING IS ABOUT: one healed niggle from March. Before the
+    // ruling this athlete carried a "Niggles" heading forever.
+    const healedOnce = build([episode({ status: 'resolved' })]);
+    ok('a single healed episode earns NO card',
+      flaggedNiggleRegions(healedOnce).length === 0,
+      healedOnce.regions.map((r) => ({ region: r.region, n: r.episodes.length })));
+
+    // A REPEAT IS THE SIGNAL, even when nothing is wrong right now — the second
+    // time a hamstring goes is news about the first time.
+    const healedTwice = build([
+      episode({ episodeId: 'ep-1', onsetOrReportedDate: '2026-01-05' }),
+      episode({ episodeId: 'ep-2', onsetOrReportedDate: '2026-03-02' }),
+    ]);
+    ok('two healed episodes in one region DO earn a card — a repeat is the flag',
+      flaggedNiggleRegions(healedTwice).length === 1,
+      flaggedNiggleRegions(healedTwice).map((r) => r.region));
+
+    // AND AN ACTIVE ONE ALWAYS DOES, first time or not.
+    const activeOnce = build([
+      episode({ status: 'active', resolvedAt: null }),
+    ]);
+    ok('one ACTIVE episode earns a card on its own',
+      flaggedNiggleRegions(activeOnce).length === 1,
+      activeOnce.regions.map((r) => ({ region: r.region, active: r.active })));
+
+    // TWO REGIONS, ONE FLAG — the predicate selects, it does not pass through.
+    // A `filter` that returned everything would satisfy the two cells above and
+    // fail this one, which is the whole reason it is here.
+    const mixed = build([
+      episode({ episodeId: 'k', bodyPart: 'knee', status: 'active', resolvedAt: null }),
+      episode({ episodeId: 'h', bodyPart: 'hamstring', status: 'resolved' }),
+    ]);
+    const flagged = flaggedNiggleRegions(mixed);
+    ok('the healed region is dropped while the active one is kept',
+      mixed.regions.length === 2 && flagged.length === 1 && flagged[0].region !== undefined,
+      { all: mixed.regions.map((r) => r.region), flagged: flagged.map((r) => r.region) });
+  }
+
   const screen = readFileSync(
     join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
   ok('the screen source was read', screen.length > 4000, screen.length);
   ok('the screen builds the history rather than joining episodes itself',
     /\bbuildJournalNiggleHistory\s*\(/.test(screen));
-  for (const testId of ['journal-niggles-none', 'journal-niggle-resurfaced']) {
-    ok(`the screen renders \`${testId}\``, new RegExp(`testID="${testId}"`).test(screen));
-  }
+  ok('the screen renders `journal-niggle-resurfaced`',
+    /testID="journal-niggle-resurfaced"/.test(screen));
+
+  // ── `journal-niggles-none` IS RETIRED, AND THE CELL IS RE-POINTED ──
+  //
+  // Sam's UI ruling (2026-08-09): "NIGGLE HISTORY surfaces only with an active
+  // issue or repeat flag — never standing furniture." So "No niggles recorded."
+  // is gone: an athlete with nothing wrong sees no niggle surface at all.
+  //
+  // THE CELL ASSERTS THE STRONGER LAW RATHER THAN DISAPPEARING WITH THE STRING.
+  // A cell quietly deleted because its own unit made it red is how a gate stops
+  // meaning anything — the same move slice 2 made for slice 1's "no writer"
+  // cell. What replaces it is BEHAVIOURAL, which the old one was not: the
+  // predicate moved out of the JSX into `flaggedNiggleRegions`, so "a healed
+  // single episode is not shown" is now proven by calling it.
+  // COMMENTS ARE STRIPPED FIRST, AND THIS CELL EARNED THAT ON ITS FIRST RUN: it
+  // went red on the screen's own header comment, which documents the retirement
+  // by QUOTING the retired sentence. The claim is "an athlete cannot see this
+  // string", and a comment is the one place the string can appear without being
+  // visible to anyone. Stripping is not loosening — a live literal still reds.
+  const screenCode = screen
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok('the stripped screen source is substantial, not an empty slice',
+    screenCode.length > 4000, screenCode.length);
+  ok('the retired empty state is gone from the screen entirely',
+    !/journal-niggles-none/.test(screenCode) && !/No niggles recorded/.test(screenCode),
+    screenCode.match(/No niggles recorded[^\n]*/g));
+  ok('and the screen asks the derivation which regions are worth showing',
+    /\bflaggedNiggleRegions\s*\(/.test(screen));
 
   // A ZUSTAND SELECTOR THAT MINTS A NEW ARRAY RE-RENDERS FOREVER. `?? []` inline
   // compares unequal every time; the frozen constant is the fix.

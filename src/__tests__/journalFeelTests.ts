@@ -373,6 +373,34 @@ console.log('\n[7] THE JOURNAL — counted, never interpreted');
   ok('"as expected" is not counted as a session that differed',
     silent.felt.differedFromPlan === 0 && silent.felt.nothingRecorded === true, silent.felt);
 
+  // ── THE RATING ITSELF, not the count of ratings — the UI slice's tile ──
+  //
+  // A COUNT AND A RATING ARE DIFFERENT FACTS. `gameFeelsRecorded` says how many
+  // games were rated; the ruling's glanceable shows what the athlete actually
+  // said. The value was stored per session from the feel slice onward and simply
+  // never aggregated — so this is a read, not a new field.
+  ok('the week carries the rating, not only the count',
+    week.felt.gameFeelLatest === 2, week.felt);
+  ok('and a week with no rated game carries null rather than a zero',
+    silent.felt.gameFeelLatest === null, silent.felt);
+
+  // IT IS THE LATEST, NEVER A MEAN, AND THIS IS THE CELL THAT HOLDS IT. Two
+  // games rated 2 and 5 average to 3.5 — a number no game earned, shown to the
+  // athlete as though one had. A mean would pass every cell above.
+  const twoGames = buildJournalWeek({
+    weekStart: '2026-08-10',
+    days: [day('2026-08-10', 'game'), day('2026-08-11', 'game')],
+    exposures,
+    outcomesByDate: {
+      '2026-08-10': outcome({ gameFeel: 2 }),
+      '2026-08-11': outcome({ gameFeel: 5 }),
+    },
+    weeksOfHistory: 1,
+  });
+  ok('two rated games report the LATEST, never a mean',
+    twoGames.felt.gameFeelLatest === 5 && twoGames.felt.gameFeelsRecorded === 2,
+    twoGames.felt);
+
   const screen = readFileSync(
     join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
   ok('the screen source was read', screen.length > 4000, screen.length);

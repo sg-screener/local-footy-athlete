@@ -226,3 +226,29 @@ export function buildJournalNiggleHistory(
 
   return { regions, resurfaced };
 }
+
+/**
+ * THE REGIONS THE JOURNAL MAY SHOW — active, or a repeat.
+ *
+ * SAM'S UI RULING, VERBATIM: "NIGGLE HISTORY surfaces only with an active issue
+ * or repeat flag — never standing furniture."
+ *
+ * IT LIVES HERE RATHER THAN ON THE SCREEN, and the reason is the whole point of
+ * the move. Written inline in the surface, "which niggles are worth showing"
+ * would be a rule provable only by reading JSX — a source scan asserting a
+ * `filter` exists, which is satisfied by a filter that filters wrong. As a pure
+ * function over the derivation's own output it is provable by CALLING it, so the
+ * cells below assert the behaviour: a healed single episode is not shown, a
+ * healed SECOND one is, and an active one is shown however many there are.
+ *
+ * A REPEAT IS TWO EPISODES, NOT TWO RECORDS. `NiggleRegion.episodes` is already
+ * deduplicated by the builder — a `superseded` record means the RECORD was
+ * replaced, and counting those would call one long hamstring problem a repeat.
+ */
+export function flaggedNiggleRegions(
+  history: JournalNiggleHistory,
+): readonly NiggleRegion[] {
+  return history.regions.filter(
+    (region) => region.active || region.episodes.length > 1,
+  );
+}

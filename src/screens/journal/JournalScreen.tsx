@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
+import { Card } from '../../components/common/Card';
 import { useAthleteContext, useResolvedWeek } from '../../hooks/useSchedule';
 import { useProgramStore } from '../../store/programStore';
 import { countWeeklyExposures } from '../../rules/weeklyExposureCounts';
@@ -35,6 +36,7 @@ import { buildJournalMonth, type JournalMonth } from '../../rules/journalMonth';
 import { TrendChart } from '../../components/journal/TrendChart';
 import {
   buildJournalNiggleHistory,
+  flaggedNiggleRegions,
   type JournalNiggleHistory,
 } from '../../rules/journalNiggleHistory';
 import type { InjuryEpisodeV1 } from '../../rules/injuryEpisode';
@@ -51,46 +53,63 @@ import {
   type JournalLoadCoverage,
   type JournalLoadModel,
   type JournalLoadSessionInput,
+  type PatternBalance,
   type PatternShare,
   type PlannedLift,
 } from '../../rules/journalLoad';
 
 /**
- * THE JOURNAL — slice 1 (this week, read-only) + slice 2 (the week note).
+ * THE JOURNAL — the athlete's week, and the UI ruling's exception-based front
+ * page (docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md, Sam 2026-08-09).
  *
  * EVERYTHING SHOWN IS DERIVED; THE ONE THING WRITTEN IS AN ANSWER. Every number
- * on this screen is derived on read by `rules/journalWeek.ts` from facts the app
- * already stores. The single write is the athlete's own note, through
- * `recordJournalNote` — one door, and it is an INPUT, which is the only kind of
- * new stored state the north star allows.
+ * on this screen is derived on read from facts the app already stores. The
+ * single write is the athlete's own note, through `recordJournalNote` — one
+ * door, and it is an INPUT, which is the only kind of new stored state the north
+ * star allows. The appearance pass added no writer and no stored field.
  *
- * SLICE 1 ASSERTED "NO WRITER AT ALL", AND THAT WAS TRUE THEN. Slice 2 makes it
- * deliberately false, so the cell was RE-POINTED, not deleted: exactly one door,
- * and still no transaction, no ledger append, no raw store write. A cell that
- * quietly loosens when its own unit lands is how a gate stops meaning anything.
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE ORGANISING RULE IS A STATEMENT ABOUT NULL, NOT ABOUT LAYOUT.
  *
- * NOTES NEVER DERIVE PROGRAM STATE — the design's non-negotiable. Nothing here
- * feeds generation, repair or placement, and `journalNoteStore` exports nothing
- * a resolver reads.
+ * Sam's ruling: "Nothing appears unless it has something to say. A surface
+ * earning its place by having news IS the design — an athlete learns that seeing
+ * a card means 'pay attention'."
  *
- * WHAT IT DELIBERATELY DOES NOT DO YET (slice boundary, not an oversight):
- * no post-game rating, no "felt different" tap, no load comparison, no monthly
- * review, no niggle history, and NO RESURFACING of old notes at relevant
- * moments — that last one is named as owed in the design and is its own slice.
- * Where the data does not exist yet, this screen says so in words rather than
- * showing a zero.
+ * So every block below the hero returns `null` when it has no news, and the
+ * screen composes them in the ruling's order. That is the whole mechanism. It is
+ * testable as a property (a block with nothing to say renders nothing) rather
+ * than as a list of cases, which is why three "honest empty state" lines from
+ * earlier slices are RETIRED here rather than hidden behind a flag — see
+ * THE THREE RETIRED EMPTY STATES below.
  *
- * COPY: every athlete-visible sentence below is PROPOSED, NOT SIGNED — recorded
- * as **batch 15** in docs/COPY_SHEET_RULINGS_2026-07-30.md, queued for Sam. They
- * are plain strings rather than `SignedCopy` because nothing here is signed yet;
- * the moment Sam signs the batch they move onto the sheet like every other
- * athlete-visible word.
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHAT IS DARK, AND WHY THAT IS THE MECHANISM WORKING.
  *
- * THIS COMMENT ORIGINALLY CITED "batch 13" AND THAT WAS WRONG TWICE: batch 13 is
- * the bucket vocabulary, and no journal batch existed at all — these words
- * shipped UNLISTED, which the sheet's transitional rule forbids ("a string may
- * ship PROPOSED, and it may never ship unlisted"). A citation is a claim; this
- * one pointed at someone else's work and nothing checked it.
+ * The load band, the load stat tile, the "ran hot" card and the "balance
+ * drifting" card are all downstream of PROPOSED constants, so `signedValue`
+ * returns null for them and they do not render. The ruling says these thresholds
+ * ship PROPOSED and join the load model's signing batch — so this is the ordered
+ * outcome, not a gap. **Sam's signature alone turns them on; no code change.**
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE THREE RETIRED EMPTY STATES, named because a quietly deleted line is how a
+ * gate stops meaning anything.
+ *
+ * "You made no changes to this week.", "No lifts recorded with a weight this
+ * week." and "No niggles recorded." each rendered on every ordinary week. The
+ * ruling retires all three by name (what-changed is "one credit line on weeks it
+ * happened, nothing otherwise"; niggle history is "never standing furniture").
+ * Their cells are RE-POINTED to assert the stronger new law — the block renders
+ * NOTHING — rather than deleted. A cell removed because its own unit made it red
+ * is the other half of that hazard.
+ *
+ * STYLE LAW (Sam's rider, verbatim "match the style of the rest of the app"):
+ * one design language. Every colour here is a `theme/colors` token, every gap a
+ * `theme/spacing` step, every card the shared `Card`. The mock's hexes and fonts
+ * are explicitly NOT law; the app's are.
+ *
+ * COPY: every athlete-visible sentence is PROPOSED, NOT SIGNED — the words this
+ * slice adds or changes are **batch 26** in docs/COPY_SHEET_RULINGS_2026-07-30.md.
  */
 
 /**
@@ -103,34 +122,104 @@ import {
  */
 const EMPTY_EPISODES: readonly InjuryEpisodeV1[] = [];
 
+// ─── The week label ──────────────────────────────────────────────────────
+
+/**
+ * PROPOSED month abbreviations — batch 26. A closed table rather than `Intl`,
+ * because a locale-dependent month name is a string no copy gate can enumerate
+ * and no ruling can sign.
+ */
+const MONTH_ABBREVIATIONS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+
+/**
+ * The week the screen is about, as "3 – 9 Aug" or "30 Jul – 5 Aug".
+ *
+ * PARSED AS UTC, like every other date in this unit. `new Date('2026-08-03')`
+ * is UTC midnight; reading it back with local getters can land on the 2nd in a
+ * negative offset, which would name the week wrong by a day for half the world.
+ *
+ * THE MOCK'S ‹ › ARROWS ARE NOT BUILT. `useResolvedWeek` resolves THIS week and
+ * nothing else, so browsing history is a feature rather than an appearance, and
+ * a chevron that does nothing is worse than no chevron. Named in the boundary
+ * report as not covered.
+ */
+function weekRangeLabel(weekStartISO: string): string | null {
+  const start = new Date(`${weekStartISO}T00:00:00Z`);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime());
+  end.setUTCDate(end.getUTCDate() + 6);
+
+  const startMonth = MONTH_ABBREVIATIONS[start.getUTCMonth()];
+  const endMonth = MONTH_ABBREVIATIONS[end.getUTCMonth()];
+  const startDay = start.getUTCDate();
+  const endDay = end.getUTCDate();
+
+  // The month is stated once when the week does not cross one — "3 – 9 Aug"
+  // rather than "3 Aug – 9 Aug", which is the shape the mock draws.
+  return startMonth === endMonth
+    ? `${startDay} – ${endDay} ${endMonth}`
+    : `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
+}
+
 // ─── The strip ───────────────────────────────────────────────────────────
 
 /**
- * The week-shape strip's letters and colours.
+ * The week-shape strip.
  *
- * Sam ruled the TAXONOMY (hard / moderate / easy / rest / game, 2026-08-08);
- * the single-letter abbreviation and the colour are a presentation choice made
- * here, and both are PROPOSED. The colours reuse the existing intensity tokens
- * rather than inventing a palette — a new colour scale would be a second
- * vocabulary for something the theme already says.
+ * THE LETTERS DIE HERE, BY SAM'S RULING: "WEEK SHAPE AS BARS, not letters:
+ * tall=Hard, mid=Moderate, short=Easy, flat dot=Rest, outlined=Game. SUPERSEDES
+ * batch 15-b's H/M/E/G letter presentation (the letters die; spoken names stay
+ * on accessibility)."
+ *
+ * SO THE `label` FIELD IS NOT LEFTOVER — it is the ruling's second half. The
+ * shape is now carried by height, which a screen reader cannot read at all, so
+ * the spoken name is the ONLY thing a non-sighted athlete gets. Deleting it
+ * along with the letter would have made this screen worse for them in the commit
+ * that made it better for everyone else.
+ *
+ * THE COLOURS ARE THE APP'S INTENSITY TOKENS, UNCHANGED. The mock ramps one
+ * accent through four shades; the app already has a vocabulary for how hard a
+ * thing is, and a second one born on this screen is the exact defect the style
+ * law names.
  */
 const SHAPE_PRESENTATION: Readonly<Record<JournalDayShape, {
-  letter: string; label: string; color: string;
+  label: string; color: string; heightFraction: number; outlined: boolean;
 }>> = {
-  hard: { letter: 'H', label: 'Hard', color: colors.intensity.high },
-  moderate: { letter: 'M', label: 'Moderate', color: colors.intensity.moderate },
-  easy: { letter: 'E', label: 'Easy', color: colors.intensity.light },
-  game: { letter: 'G', label: 'Game', color: colors.text.accent },
-  rest: { letter: '·', label: 'Rest', color: colors.text.tertiary },
+  hard: { label: 'Hard', color: colors.intensity.high, heightFraction: 1, outlined: false },
+  moderate: {
+    label: 'Moderate', color: colors.intensity.moderate, heightFraction: 0.58, outlined: false,
+  },
+  easy: { label: 'Easy', color: colors.intensity.light, heightFraction: 0.26, outlined: false },
+  game: { label: 'Game', color: colors.text.accent, heightFraction: 1, outlined: true },
+  rest: { label: 'Rest', color: colors.text.tertiary, heightFraction: 0, outlined: false },
 };
 
 const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+/** The bar well's height in points. Every fraction above is read against it. */
+const BAR_WELL_HEIGHT = 64;
+/** A rest day's flat dot. Not a zero-height bar — a zero-height bar is invisible. */
+const REST_DOT_HEIGHT = 6;
+/**
+ * The load band marker's diameter, in points.
+ *
+ * NAMED BECAUSE ITS CENTRING IS DERIVED FROM IT. The marker is positioned by its
+ * LEFT edge, so it must be pulled back by half its own width to sit ON the
+ * ratio rather than beside it — and a hand-written `-9` beside an `18` is two
+ * numbers that must agree with nobody watching. The new UI gate caught the bare
+ * literal; tying the two together is what it was actually asking for.
+ */
+const LOAD_MARKER_SIZE = 18;
 
 function WeekShapeStrip({ days }: { days: readonly JournalDay[] }) {
   return (
     <View style={styles.strip} testID="journal-week-shape-strip">
       {days.map((day, index) => {
         const presentation = SHAPE_PRESENTATION[day.shape];
+        const isRest = presentation.heightFraction === 0;
         return (
           <View
             key={day.date}
@@ -138,14 +227,29 @@ function WeekShapeStrip({ days }: { days: readonly JournalDay[] }) {
             testID={`journal-strip-day-${day.date}`}
             accessibilityLabel={`${presentation.label} day`}
           >
+            <View style={styles.barWell}>
+              <View
+                style={[
+                  styles.bar,
+                  isRest
+                    ? { height: REST_DOT_HEIGHT, backgroundColor: presentation.color }
+                    : {
+                      height: BAR_WELL_HEIGHT * presentation.heightFraction,
+                      // AN OUTLINED BAR IS A GAME. Sam's ruling names the game as
+                      // the one shape drawn rather than filled, so it reads as a
+                      // different KIND of day and not a harder one.
+                      backgroundColor: presentation.outlined
+                        ? 'transparent'
+                        : presentation.color,
+                      borderColor: presentation.color,
+                      borderWidth: presentation.outlined ? 2 : 0,
+                    },
+                ]}
+              />
+            </View>
             <Text variant="labelSmall" style={styles.stripWeekday}>
               {WEEKDAY_INITIALS[index] ?? ''}
             </Text>
-            <View style={[styles.stripDot, { borderColor: presentation.color }]}>
-              <Text variant="captionEmphasis" style={{ color: presentation.color }}>
-                {presentation.letter}
-              </Text>
-            </View>
           </View>
         );
       })}
@@ -155,25 +259,20 @@ function WeekShapeStrip({ days }: { days: readonly JournalDay[] }) {
 
 // ─── Sections ────────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text variant="overline" style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
 /**
  * WHAT KIND OF WORK THE WEEK HELD — PROPOSED (batch 23).
  *
  * The addendum's "key exposures, NOT completion counts": a week of five
  * completed sessions that were all conditioning is a different week from five
- * that were balanced, and the completion line one row down cannot tell them
- * apart.
+ * that were balanced, and the completion count cannot tell them apart.
  *
  * THE WORD "EXPOSURE" NEVER APPEARS. It is in Sam's forbidden vocabulary; these
  * are training words, and a cell asserts it.
+ *
+ * IT SITS ABOVE THE SESSIONS COUNT, which is batch 23-c's ordering kept through
+ * the restructure — the composition is the context for the count, so it reads
+ * before it. In this layout the sessions count is the first stat tile, so this
+ * line is the strip's caption rather than a section of its own.
  */
 function WeekKinds({ week }: { week: JournalWeek }) {
   const parts: string[] = [];
@@ -187,36 +286,43 @@ function WeekKinds({ week }: { week: JournalWeek }) {
 
   if (parts.length === 0) return null;
   return (
-    <Text variant="body" style={styles.body} testID="journal-week-kinds">
+    <Text variant="bodySmall" style={styles.muted} testID="journal-week-kinds">
       {`${parts.join(', ')}.`}
     </Text>
   );
 }
 
+/**
+ * THE EXCEPTIONS UNDER THE SESSIONS TILE.
+ *
+ * The tile carries "5 / 5". This carries what the tile cannot: what went wrong,
+ * and where the app does not know why. EVERY LINE IS ALREADY CONDITIONAL ON A
+ * NON-ZERO COUNT, which is the ruling's rule arriving at a block that was
+ * written before it — nothing here had to be re-authored to be exception-based,
+ * because "N missed" was never rendered for N of zero.
+ *
+ * THE WHOLE BLOCK RETURNS NULL when the week is clean, so an athlete who did
+ * everything and logged it sees the tile and no prose at all.
+ */
 function DidTheWorkHappen({ week }: { week: JournalWeek }) {
   const { work } = week;
 
-  // PROPOSED copy. "Sessions" deliberately counts easy days — Sam's ruling:
-  // easy days "don't effect fatigue but count as sessions".
   if (work.sessionsPlanned === 0) {
     return (
-      <Text variant="body" style={styles.body}>
+      <Text variant="bodySmall" style={styles.muted}>
         No sessions planned this week.
       </Text>
     );
   }
 
-  const done = work.completedFull + work.completedPartial;
+  if (work.skipped === 0 && work.notAnswered === 0 && work.missingReasons === 0) {
+    return null;
+  }
 
   return (
-    <View>
-      <Text variant="body" style={styles.body}>
-        {`${done} of ${work.sessionsPlanned} sessions done`}
-        {work.completedPartial > 0 ? `, ${work.completedPartial} in part` : ''}
-        {'.'}
-      </Text>
+    <View style={styles.exceptionLines}>
       {work.skipped > 0 ? (
-        <Text variant="body" style={styles.body}>
+        <Text variant="bodySmall" style={styles.muted}>
           {`${work.skipped} missed.`}
         </Text>
       ) : null}
@@ -241,6 +347,24 @@ function DidTheWorkHappen({ week }: { week: JournalWeek }) {
   );
 }
 
+/**
+ * HOW THE WEEK FELT — reduced to its NEWS by the ruling.
+ *
+ * THE BOOKKEEPING COUNTS ARE GONE FROM THE FRONT PAGE, and the cut is where the
+ * ruling's rule cuts. "Effort recorded on 5 sessions" and "Soreness recorded on
+ * 3 sessions" are facts about how much the athlete logged, not about their week
+ * — they say nothing an athlete would act on, and they appeared every single
+ * week. Both survive in "Your month in flags" inside the drawer, which is where
+ * a coverage count belongs.
+ *
+ * WHAT STAYS IS WHAT IS NEWS: a session that did not go to plan, and the honest
+ * "you recorded nothing" state — the second one because an empty screen and an
+ * unlogged week are indistinguishable to the athlete otherwise, which is the one
+ * absence that would read as the app being broken.
+ *
+ * THE GAME-FEEL RATING IS NOT HERE ANY MORE — it is the third stat tile, where
+ * the ruling puts it.
+ */
 function HowTheWeekFelt({ week }: { week: JournalWeek }) {
   const { felt } = week;
 
@@ -250,48 +374,20 @@ function HowTheWeekFelt({ week }: { week: JournalWeek }) {
     // inside a sentence hide it from that match. Both cost a red on this
     // batch's first run.
     return (
-      <Text variant="body" style={styles.muted} testID="journal-felt-nothing-recorded">
+      <Text variant="bodySmall" style={styles.muted} testID="journal-felt-nothing-recorded">
         {"You haven't recorded how anything felt this week."}
       </Text>
     );
   }
 
+  if (felt.differedFromPlan === 0) return null;
+
   return (
-    <View>
-      {felt.feelingsRecorded > 0 ? (
-        <Text variant="body" style={styles.body}>
-          {`Effort recorded on ${felt.feelingsRecorded} ${
-            felt.feelingsRecorded === 1 ? 'session' : 'sessions'}.`}
-        </Text>
-      ) : null}
-      {felt.sorenessRecorded > 0 ? (
-        <Text variant="body" style={styles.body}>
-          {`Soreness recorded on ${felt.sorenessRecorded} ${
-            felt.sorenessRecorded === 1 ? 'session' : 'sessions'}.`}
-        </Text>
-      ) : null}
-      {/*
-        THE TWO NEW ANSWERS, COUNTED AND NOT INTERPRETED. The design calls the
-        post-game rating the linchpin that powers the observation lines — those
-        lines are the monthly review's, and reading a field into a model in the
-        same slice that mints it would ship the second half of a feature nobody
-        has seen work yet. So the Journal shows that the answers exist and says
-        nothing about what they mean.
-      */}
-      {felt.gameFeelsRecorded > 0 ? (
-        <Text variant="body" style={styles.body} testID="journal-felt-game">
-          {`Legs and energy rated after ${felt.gameFeelsRecorded} ${
-            felt.gameFeelsRecorded === 1 ? 'game' : 'games'}.`}
-        </Text>
-      ) : null}
-      {felt.differedFromPlan > 0 ? (
-        <Text variant="body" style={styles.body} testID="journal-felt-differed">
-          {felt.differedFromPlan === 1
-            ? 'One session did not go as planned.'
-            : `${felt.differedFromPlan} sessions did not go as planned.`}
-        </Text>
-      ) : null}
-    </View>
+    <Text variant="bodySmall" style={styles.muted} testID="journal-felt-differed">
+      {felt.differedFromPlan === 1
+        ? 'One session did not go as planned.'
+        : `${felt.differedFromPlan} sessions did not go as planned.`}
+    </Text>
   );
 }
 
@@ -338,46 +434,51 @@ function loadEvidenceLine(coverage: JournalLoadCoverage | null): string {
 }
 
 /**
- * THE LOAD SECTION — the load slice.
+ * Where the marker sits on the band, as a fraction of the track.
  *
- * WHAT CHANGED, AND WHY IT IS THE ONLY THING THAT COULD: the section used to say
- * nothing but "coming next". It now LEADS with a statement about its own
- * evidence — what load is measured from, and how much of this week it has. That
- * line ships because it is derived from no constant at all: a count of logged
- * sessions needs no signature to be true.
+ * THE TRACK IS NOT THE RATIO. The band's shaded zone is Sam's sweet spot in
+ * ratio terms (0.8–1.3 proposed); the track has to hold ratios outside it too,
+ * so the scale runs from a little below the low edge to a little above the high
+ * one and CLAMPS at both ends.
  *
- * EVERYTHING ELSE IS BUILT, TESTED, AND DARK. The headline continuum, the
- * sweet-spot band and the region observations are all downstream of PROPOSED
- * constants, so `signedValue` returns null for them and their lines do not
- * render. This is a mechanism, not a habit — the section cannot read an unsigned
- * number even by accident, because `.value` is not a door it opens.
+ * CLAMPING A DRAWING IS NOT CLAMPING A NUMBER. The rule this unit follows —
+ * "drop the denominator rather than clamp the count" — is about what the athlete
+ * is TOLD. Here nothing is told: a marker two-and-a-half times normal has to be
+ * drawn somewhere on a finite track, and the alternative to pinning it at the
+ * end is drawing it off the screen. The spoken band word carries the magnitude.
+ */
+function markerFraction(ratio: number, band: { low: number; high: number }): number {
+  const span = band.high - band.low;
+  const trackLow = band.low - span;
+  const trackHigh = band.high + span;
+  const raw = (ratio - trackLow) / (trackHigh - trackLow);
+  return Math.min(1, Math.max(0, raw));
+}
+
+/**
+ * THE LOAD SECTION — now the hero's band, which is where the ruling puts it.
  *
- * The addendum's data-state rule still holds underneath: "empty space explains
- * what will appear and what's being collected", never a chart with one floating
- * dot.
+ * WHAT SHIPS AND WHAT IS DARK, STRUCTURALLY RATHER THAN BY CHOICE. The evidence
+ * sentence is derived from no constant at all — a count of logged sessions needs
+ * no signature to be true — so it ships. The headline continuum, the sweet-spot
+ * band and the region observations are all downstream of PROPOSED constants, so
+ * `signedValue` returns null and they do not render. This is a mechanism, not a
+ * habit: the section cannot read an unsigned number even by accident, because
+ * `.value` is not a door it opens.
+ *
+ * SO THE BAND SLOT HAS TWO STATES AND NEITHER IS BLANK. With the signature, the
+ * track, the shaded sweet spot and the marker. Without it, the honest building
+ * line — which is itself news to an athlete ("this is coming, here is what it
+ * needs"), and is the ruling's rule satisfied rather than dodged.
  */
 function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel }) {
   const coverage = signedValue(load.coverage);
   const headline = signedValue(load.headline);
+  const band = signedValue(load.sweetSpotBand);
   const observations = (signedValue(load.regionObservations) ?? []).slice(0, MAX_REGION_LINES);
 
   return (
-    <View>
-      <Text variant="body" style={styles.body} testID="journal-load-evidence">
-        {loadEvidenceLine(coverage)}
-      </Text>
-
-      {/*
-        RIDER 1 AGAIN, ONE LAYER DOWN. A lift with no weight recorded cannot be
-        counted, and the section says so rather than letting the athlete read a
-        smaller number as a smaller week.
-      */}
-      {coverage !== null && coverage.liftsUnmeasured > 0 ? (
-        <Text variant="bodySmall" style={styles.muted} testID="journal-load-unmeasured">
-          {'Some lifts had no weight recorded, so they sit outside that.'}
-        </Text>
-      ) : null}
-
+    <View style={styles.bandBlock}>
       {/*
         BARE JSX TEXT, EACH SENTENCE UNBROKEN ON ITS OWN LINE, and both halves of
         that are load-bearing. The extraction gate's line-spanning canary reads a
@@ -389,19 +490,61 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
       */}
       {headline === null ? (
         week.load.comparisonAvailable ? (
-          <Text variant="body" style={styles.muted} testID="journal-load-building">
+          <Text variant="bodySmall" style={styles.muted} testID="journal-load-building">
             Your normal is ready to compare against — that comparison is coming next.
           </Text>
         ) : (
-          <Text variant="body" style={styles.muted} testID="journal-load-building">
+          <Text variant="bodySmall" style={styles.muted} testID="journal-load-building">
             Once you have a few more weeks logged, this shows how the week compared with your normal.
           </Text>
         )
       ) : (
-        <Text variant="body" style={styles.body} testID="journal-load-headline">
-          {HEADLINE_COPY[headline.band]}
-        </Text>
+        <View>
+          <View style={styles.bandHeader}>
+            <Text variant="overline" style={styles.bandLabel}>Load vs your normal</Text>
+            <Text variant="bodySmallEmphasis" style={styles.body} testID="journal-load-headline">
+              {HEADLINE_COPY[headline.band]}
+            </Text>
+          </View>
+          {/*
+            THE TRACK RENDERS ONLY WITH THE BAND SIGNED. A shaded "sweet spot"
+            drawn from an unsigned edge is an unsigned number reaching the
+            athlete as a PICTURE rather than as a numeral, which is the same
+            violation wearing a different medium.
+          */}
+          {band !== null ? (
+            <View style={styles.track} testID="journal-load-track">
+              <View
+                style={[styles.trackZone, {
+                  left: `${markerFraction(band.low, band) * 100}%`,
+                  right: `${(1 - markerFraction(band.high, band)) * 100}%`,
+                }]}
+              />
+              <View
+                style={[styles.trackMarker, {
+                  left: `${markerFraction(headline.ratio, band) * 100}%`,
+                }]}
+                testID="journal-load-marker"
+              />
+            </View>
+          ) : null}
+        </View>
       )}
+
+      <Text variant="caption" style={styles.faint} testID="journal-load-evidence">
+        {loadEvidenceLine(coverage)}
+      </Text>
+
+      {/*
+        RIDER 1 AGAIN, ONE LAYER DOWN. A lift with no weight recorded cannot be
+        counted, and the section says so rather than letting the athlete read a
+        smaller number as a smaller week.
+      */}
+      {coverage !== null && coverage.liftsUnmeasured > 0 ? (
+        <Text variant="caption" style={styles.faint} testID="journal-load-unmeasured">
+          {'Some lifts had no weight recorded, so they sit outside that.'}
+        </Text>
+      ) : null}
 
       {/*
         OBSERVATION, NEVER DIAGNOSIS (the ruling's second law). An ordering fact
@@ -410,8 +553,8 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
       {observations.map((observation) => (
         <Text
           key={observation.region}
-          variant="bodySmall"
-          style={styles.muted}
+          variant="caption"
+          style={styles.faint}
           testID="journal-load-region"
         >
           {`Biggest week for ${observation.region} in the last ${observation.weeksCompared} weeks.`}
@@ -431,73 +574,12 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
  * would have read Monday's snapshot as Thursday's truth. The verdict needs a
  * freshly-built ledger and belongs to the owners that gate names.
  *
- * "Did the work happen" one section down already answers the completion question
- * from recorded outcomes, so the athlete is not left without one.
+ * THE COMPLETION PICTURE LIVES IN THE SESSIONS TILE, from recorded outcomes.
  */
-/**
- * WHAT YOU CHANGED THIS WEEK — PROPOSED (batch 25).
- *
- * THE BOUNDARY LINE IS NOT A DISCLAIMER, IT IS THE FEATURE'S HONESTY. The ledger
- * records the athlete's decisions and has no vocabulary for changes the APP made
- * — illness, injury, readiness, phase. A list without that sentence would imply
- * the app changed nothing, which is a stronger claim than the data supports and
- * exactly what rider 1 exists to prevent.
- */
-function WhatChanged({ changes }: { changes: JournalChanges }) {
-  if (changes.changes.length === 0) {
-    return (
-      <Text variant="body" style={styles.muted} testID="journal-changes-none">
-        {'You made no changes to this week.'}
-      </Text>
-    );
-  }
-  return (
-    <View>
-      {changes.changes.map((change) => (
-        <Text
-          key={change.entryId}
-          variant="body"
-          style={styles.body}
-          testID={`journal-change-${change.entryId}`}
-        >
-          {`You ${change.what}.`}
-        </Text>
-      ))}
-      <Text variant="bodySmall" style={styles.muted} testID="journal-changes-boundary">
-        {'Changes the app made for you are not listed here yet.'}
-      </Text>
-    </View>
-  );
-}
-
-/**
- * WEEK STATUS — one calm line, PROPOSED (batch 24).
- *
- * EVERY NUMBER BEHIND THIS WAS DERIVED THIS TURN. The status comes from
- * `evaluateSection18EffectiveWeek`, which builds a fresh ledger from THIS week's
- * workouts — not from the contract's stored tallies, which a gate rightly
- * refused because a stored tally goes stale beside the facts it came from.
- */
-function WeekStatus({ status }: { status: JournalWeekStatus | null }) {
-  if (status === null) return null;
-  if (status.onTrack) {
-    return (
-      <Text variant="body" style={styles.body} testID="journal-status-on-track">
-        {'The week is on track.'}
-      </Text>
-    );
-  }
-  return (
-    <Text variant="body" style={styles.body} testID="journal-status-gaps">
-      {`Still outstanding: ${status.gaps.map((gap) => gap.athleteWord).join(', ')}.`}
-    </Text>
-  );
-}
-
 function WeekJob({ job }: { job: JournalWeekJob | null }) {
   if (job === null) {
     return (
-      <Text variant="body" style={styles.muted} testID="journal-job-none">
+      <Text variant="body" style={styles.heroJob} testID="journal-job-none">
         {'No plan recorded for this week.'}
       </Text>
     );
@@ -506,10 +588,308 @@ function WeekJob({ job }: { job: JournalWeekJob | null }) {
   const asks = job.asks.map((ask) => `${ask.target} ${ask.athleteWord}`).join(', ');
 
   return (
-    <Text variant="body" style={styles.body} testID="journal-job-asks">
+    <Text variant="body" style={styles.heroJob} testID="journal-job-asks">
       {`This week asks for ${asks}.`}
     </Text>
   );
+}
+
+/**
+ * WHAT YOU CHANGED THIS WEEK — PROPOSED (batch 25), now the hero's credit line.
+ *
+ * SAM'S RULING PUT IT IN THE HERO AND RETIRED ITS EMPTY STATE: "one credit line
+ * inside the hero on weeks a change happened, nothing otherwise. Data stays
+ * stored/derived regardless." So this returns NULL on a week with no changes,
+ * where it used to render "You made no changes to this week."
+ *
+ * ONE LINE MEANS ONE LINE. A week with four changes shows the first and counts
+ * the rest, rather than growing the hero into a list — the ruling's word is
+ * "credit line", singular, and a hero that can be six lines tall on a busy week
+ * is not a hero.
+ *
+ * THE BOUNDARY SENTENCE RIDES WITH IT, and that is deliberate rather than
+ * inherited. The ledger records the athlete's decisions and has no vocabulary
+ * for changes the APP made — illness, injury, readiness, phase. A credit line
+ * without it implies the app changed nothing, which is a stronger claim than the
+ * data supports. It appears only where the claim appears.
+ */
+function WhatChanged({ changes }: { changes: JournalChanges }) {
+  const [first, ...rest] = changes.changes;
+  if (!first) return null;
+
+  return (
+    <View style={styles.creditBlock}>
+      <View style={styles.creditRow}>
+        <View style={styles.creditDot} />
+        <Text
+          variant="bodySmall"
+          style={styles.body}
+          testID={`journal-change-${first.entryId}`}
+        >
+          {`You ${first.what}.`}
+        </Text>
+      </View>
+      {rest.length > 0 ? (
+        <Text variant="caption" style={styles.faint} testID="journal-changes-more">
+          {rest.length === 1
+            ? 'And one more change this week.'
+            : `And ${rest.length} more changes this week.`}
+        </Text>
+      ) : null}
+      <Text variant="caption" style={styles.faint} testID="journal-changes-boundary">
+        {'Changes the app made for you are not listed here yet.'}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * WEEK STATUS — the hero's headline, PROPOSED (batch 24).
+ *
+ * EVERY NUMBER BEHIND THIS WAS DERIVED THIS TURN. The status comes from
+ * `evaluateSection18EffectiveWeek`, which builds a fresh ledger from THIS week's
+ * workouts — not from the contract's stored tallies, which a gate rightly
+ * refused because a stored tally goes stale beside the facts it came from.
+ *
+ * THE WORDS DID NOT CHANGE WHEN IT BECAME A HEADLINE, and that was the point of
+ * putting it here. Sam's ruling asks for "week status as the headline (big
+ * type)"; batch 24's sentences already say it in one calm line, so this slice
+ * changed the SIZE and not the copy. A headline written fresh would have been a
+ * second answer to a question batch 24 already ruled on.
+ */
+function WeekStatus({ status }: { status: JournalWeekStatus | null }) {
+  if (status === null) return null;
+  if (status.onTrack) {
+    return (
+      <Text variant="h3" style={styles.heroHeadline} testID="journal-status-on-track">
+        {'The week is on track.'}
+      </Text>
+    );
+  }
+  return (
+    <Text variant="h3" style={styles.heroHeadline} testID="journal-status-gaps">
+      {`Still outstanding: ${status.gaps.map((gap) => gap.athleteWord).join(', ')}.`}
+    </Text>
+  );
+}
+
+// ─── The stat strip ──────────────────────────────────────────────────────
+
+/**
+ * ONE GLANCEABLE. Value on top, name under it, and NOTHING renders when the
+ * value cannot be spoken honestly — a tile is a claim like any other line.
+ */
+function Stat({ value, unit, name, testID, tone }: {
+  value: string;
+  unit?: string;
+  name: string;
+  testID: string;
+  tone?: string;
+}) {
+  return (
+    <View style={styles.stat} testID={testID}>
+      <View style={styles.statValueRow}>
+        <Text variant="h3" style={[styles.statValue, tone ? { color: tone } : null]}>
+          {value}
+        </Text>
+        {unit ? <Text variant="caption" style={styles.faint}>{unit}</Text> : null}
+      </View>
+      <Text variant="labelSmall" style={styles.statName}>{name}</Text>
+    </View>
+  );
+}
+
+/**
+ * THE THREE GLANCEABLES — sessions done, load vs normal, game feel.
+ *
+ * THE STRIP IS AS WIDE AS THE HONEST TILES, which is the ruling's rule applied
+ * to itself. The load tile is downstream of PROPOSED constants and so returns
+ * null today; the game-feel tile needs a game that was actually rated. A strip
+ * of three placeholders would be furniture pretending to be news, and a "—" in a
+ * tile is a number the athlete has to learn to ignore.
+ *
+ * THE WHOLE STRIP DISAPPEARS when no tile can speak.
+ */
+function StatStrip({ week, load }: { week: JournalWeek; load: JournalLoadModel }) {
+  const headline = signedValue(load.headline);
+  const { work, felt } = week;
+
+  const tiles: React.ReactNode[] = [];
+
+  if (work.sessionsPlanned > 0) {
+    tiles.push(
+      <Stat
+        key="sessions"
+        testID="journal-stat-sessions"
+        value={`${work.completedFull + work.completedPartial}`}
+        unit={`/ ${work.sessionsPlanned}`}
+        name="Sessions"
+      />,
+    );
+  }
+
+  if (headline !== null) {
+    // THE PERCENTAGE IS THE RATIO SPOKEN, NEVER A RAW UNIT — the load ruling's
+    // first law. "+31%" is a comparison with the athlete's own normal; the AU it
+    // came from never leaves the model.
+    const percent = Math.round((headline.ratio - 1) * 100);
+    tiles.push(
+      <Stat
+        key="load"
+        testID="journal-stat-load"
+        value={`${percent > 0 ? '+' : ''}${percent}%`}
+        name="Load"
+        tone={headline.band === 'in' ? colors.text.primary : colors.status.warning}
+      />,
+    );
+  }
+
+  if (felt.gameFeelLatest !== null) {
+    tiles.push(
+      <Stat
+        key="gamefeel"
+        testID="journal-felt-game"
+        value={`${felt.gameFeelLatest}`}
+        unit="/ 5"
+        name="Game feel"
+      />,
+    );
+  }
+
+  if (tiles.length === 0) return null;
+  return <View style={styles.statStrip}>{tiles}</View>;
+}
+
+// ─── Earned cards ────────────────────────────────────────────────────────
+
+/**
+ * AN EARNED CARD — the ruling's attention surface.
+ *
+ * "EARNED CARDS (exist only on weeks that cross a line) … Placement: ABOVE the
+ * lifts — attention beats routine. They vanish when back in range; reappearance
+ * is the signal."
+ *
+ * ONE COMPONENT FOR ALL OF THEM, so a fourth earned card cannot be born with its
+ * own shape, its own padding and its own idea of what an attention card looks
+ * like. The three that exist differ in their WORDS and their PREDICATE, which is
+ * the only thing that should differ.
+ */
+function EarnedCard({ title, detail, testID }: {
+  title: string; detail: string; testID: string;
+}) {
+  return (
+    <Card variant="outlined" style={styles.earned} testID={testID}>
+      <Text variant="bodySmallEmphasis" style={styles.body}>{title}</Text>
+      <Text variant="caption" style={styles.muted}>{detail}</Text>
+    </Card>
+  );
+}
+
+/**
+ * REGION HOT + BALANCE DRIFTING — PROPOSED (batch 26), and both DARK today.
+ *
+ * BOTH SIT BEHIND `signedValue` BECAUSE BOTH ARE THRESHOLD JUDGEMENTS, which is
+ * exactly what Sam's ruling says they are: "What counts as 'out of whack'
+ * (balance skew line, region-hot line, load-band edges) are athlete-affecting
+ * constants: ship PROPOSED, join the load model's constants batch, ONE signing
+ * sitting."
+ *
+ * SO THE MECHANISM AND THE RULING AGREE WITHOUT BEING MADE TO. Nothing here
+ * checks whether a threshold is signed; the values simply arrive as null while
+ * they are not, and a card with no value renders nothing.
+ */
+function AttentionCards({
+  observations,
+  balance,
+  niggles,
+}: {
+  observations: readonly { region: string; weeksCompared: number }[];
+  balance: PatternBalance | null;
+  niggles: JournalNiggleHistory;
+}) {
+  const cards: React.ReactNode[] = [];
+
+  // ONE CARD, NOT ONE PER REGION. Two attention cards about muscles in one week
+  // is a wall, and the ruling's whole point is that a card means something.
+  const [hottest] = observations;
+  if (hottest) {
+    cards.push(
+      <EarnedCard
+        key="region"
+        testID="journal-earned-region"
+        title={`${hottest.region} ran hot`}
+        detail={`Biggest week for ${hottest.region} in the last ${hottest.weeksCompared} weeks.`}
+      />,
+    );
+  }
+
+  const [drift] = balance?.drifts ?? [];
+  if (drift) {
+    // THE SIGN IS SPOKEN, NOT ABSOLUTED. More than planned and less than planned
+    // are different news, and one sentence for both would report a missed
+    // pattern as an overdone one.
+    const percent = Math.abs(Math.round(drift.delta * 100));
+    cards.push(
+      <EarnedCard
+        key="balance"
+        testID="journal-earned-balance"
+        title="Balance drifting"
+        detail={drift.delta > 0
+          ? `Your ${drift.pattern} work ran ${percent}% above what the week planned.`
+          : `Your ${drift.pattern} work ran ${percent}% below what the week planned.`}
+      />,
+    );
+  }
+
+  // NIGGLES ARE AN EARNED CARD NOW, NOT A SECTION. The ruling: "NIGGLE HISTORY
+  // surfaces only with an active issue or repeat flag — never standing
+  // furniture." An athlete with one healed episode from March had a "Niggles"
+  // heading on their screen every week; they do not now.
+  //
+  // THE PREDICATE IS THE DERIVATION'S, NOT THIS SCREEN'S. Written here it would
+  // be provable only by reading JSX; `flaggedNiggleRegions` is a pure function
+  // its own suite calls, so "a healed single episode is not shown" is a cell
+  // that runs rather than a regex that matches.
+  const flagged = flaggedNiggleRegions(niggles);
+  for (const region of flagged) {
+    cards.push(
+      <EarnedCard
+        key={`niggle-${region.region}`}
+        testID={`journal-niggle-${region.region}`}
+        title={region.active ? `${region.region} — going now` : `${region.region} — came back`}
+        detail={`${region.episodes.length} ${
+          region.episodes.length === 1 ? 'episode' : 'episodes'} recorded.`}
+      />,
+    );
+  }
+
+  // THE RESURFACED NOTE RIDES ITS REGION'S CARD, never on its own. A note with
+  // no niggle beside it is a diary entry the app decided to reprint.
+  const flaggedRegions = new Set(flagged.map((region) => region.region));
+  for (const entry of niggles.resurfaced) {
+    if (!flaggedRegions.has(entry.region)) continue;
+    cards.push(
+      <Card
+        key={`resurfaced-${entry.episodeId}-${entry.note.id}`}
+        variant="outlined"
+        style={styles.earned}
+        testID="journal-niggle-resurfaced"
+      >
+        {/*
+          OBSERVATION, NEVER DIAGNOSIS (the load ruling's second law, verbatim).
+          The introducing line states only WHEN it was written; the note itself
+          is the athlete's own words, returned unread.
+        */}
+        <Text variant="caption" style={styles.muted}>
+          {`You wrote this the last time your ${entry.region} flared:`}
+        </Text>
+        <Text variant="bodySmall" style={styles.body}>{entry.note.text}</Text>
+      </Card>,
+    );
+  }
+
+  if (cards.length === 0) return null;
+  return <View style={styles.earnedStack}>{cards}</View>;
 }
 
 /**
@@ -534,7 +914,7 @@ function MonthlyReview({
 }) {
   if (month.building) {
     return (
-      <Text variant="body" style={styles.muted} testID="journal-month-building">
+      <Text variant="bodySmall" style={styles.muted} testID="journal-month-building">
         {'This builds as you train. A few more weeks and your trends appear here.'}
       </Text>
     );
@@ -546,14 +926,14 @@ function MonthlyReview({
     .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 
   return (
-    <View>
+    <View style={styles.drawerBody}>
       {/*
         CONSISTENCY WITH ITS DENOMINATOR ATTACHED. "80%" over five sessions and
         over fifty are different facts wearing one number, so the count travels
         with the percentage rather than behind a tap.
       */}
       {month.consistency ? (
-        <Text variant="body" style={styles.body} testID="journal-month-consistency">
+        <Text variant="bodySmall" style={styles.body} testID="journal-month-consistency">
           {`${Math.round(month.consistency.rate * 100)}% of your planned sessions done — ${
             month.consistency.sessionsDone} of ${month.consistency.sessionsPlanned} over ${
             month.consistency.weeksCounted} weeks.`}
@@ -581,7 +961,7 @@ function MonthlyReview({
         count.
       */}
       {month.flags ? (
-        <Text variant="body" style={styles.body} testID="journal-month-flags">
+        <Text variant="bodySmall" style={styles.body} testID="journal-month-flags">
           {`Across ${month.flags.weeksCounted} weeks you logged soreness ${
             month.flags.sorenessRecorded} times, ${
             month.flags.sessionsThatDiffered} sessions that did not go to plan, and rated ${
@@ -596,7 +976,7 @@ function MonthlyReview({
         is a measurement.
       */}
       {balance !== null && balance.length > 0 ? (
-        <Text variant="body" style={styles.body} testID="journal-month-balance">
+        <Text variant="bodySmall" style={styles.body} testID="journal-month-balance">
           {`Your strength work: ${balance
             .map((share) => `${share.pattern} ${Math.round(share.doneShare * 100)}%`)
             .join(', ')}.`}
@@ -611,7 +991,7 @@ function MonthlyReview({
       {month.gains.slice(0, 1).map((gain) => (
         <Text
           key={gain.exerciseName}
-          variant="body"
+          variant="bodySmall"
           style={styles.body}
           testID="journal-month-gain"
         >
@@ -625,48 +1005,55 @@ function MonthlyReview({
 }
 
 /**
- * NIGGLES, AND WHAT THE ATHLETE WROTE LAST TIME — PROPOSED (batch 21).
+ * YOUR MONTH — the ruling's ONE permanent drawer.
  *
- * OBSERVATION, NEVER DIAGNOSIS (the load ruling's second law, verbatim). A
- * resurfaced note sits BESIDE the niggle as something the athlete said before,
- * never as a cause of it — so the line that introduces it states only when it was
- * written, and the note itself is their own words, returned unread.
+ * "the one permanent drawer (progress always has something to say once history
+ * exists) — charts live behind it."
+ *
+ * PERMANENT IS SAM'S WORD AND IT IS HONOURED LITERALLY: this row renders on
+ * every week, unlike every other block below the hero. It is the one place the
+ * exception rule does not apply, because progress is the thing an athlete opens
+ * the app to see even on a week where nothing happened.
+ *
+ * THE COLLAPSED ROW CARRIES THE HEADLINE FACT, not just a chevron. A drawer that
+ * says only "Your month" gives the athlete no reason to open it; one that says
+ * "Trap Bar Deadlift +12.5kg since 6 Apr" is the progress, and opening it is for
+ * the detail.
  */
-function Niggles({ history }: { history: JournalNiggleHistory }) {
-  if (history.regions.length === 0) {
-    return (
-      <Text variant="body" style={styles.muted} testID="journal-niggles-none">
-        {'No niggles recorded.'}
-      </Text>
-    );
-  }
+function MonthDrawer({
+  month,
+  balance,
+}: {
+  month: JournalMonth;
+  balance: readonly PatternShare[] | null;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const [gain] = month.gains;
+  const teaser = gain
+    ? (gain.deltaKg > 0
+      ? `${gain.exerciseName} +${gain.deltaKg}kg since ${gain.fromWeekStart}`
+      : `${gain.exerciseName} ${gain.deltaKg}kg since ${gain.fromWeekStart}`)
+    : 'Your trends, charts and totals.';
+
   return (
-    <View>
-      {history.regions.map((region) => (
-        <Text
-          key={region.region}
-          variant="body"
-          style={styles.body}
-          testID={`journal-niggle-${region.region}`}
-        >
-          {`${region.region} — ${region.episodes.length} ${
-            region.episodes.length === 1 ? 'episode' : 'episodes'}${
-            region.active ? ', going now' : ''}.`}
-        </Text>
-      ))}
-      {history.resurfaced.map((entry) => (
-        <View
-          key={`${entry.episodeId}-${entry.note.id}`}
-          style={styles.noteRow}
-          testID="journal-niggle-resurfaced"
-        >
-          <Text variant="bodySmall" style={styles.muted}>
-            {`You wrote this the last time your ${entry.region} flared:`}
-          </Text>
-          <Text variant="body" style={styles.body}>{entry.note.text}</Text>
+    <Card style={styles.card} testID="journal-month-drawer">
+      <TouchableOpacity
+        onPress={() => setOpen((current) => !current)}
+        style={styles.drawerRow}
+        testID="journal-month-drawer-toggle"
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel="Your month"
+      >
+        <View style={styles.drawerText}>
+          <Text variant="bodySmallEmphasis" style={styles.body}>Your month</Text>
+          <Text variant="caption" style={styles.faint}>{teaser}</Text>
         </View>
-      ))}
-    </View>
+        <Text variant="body" style={styles.chevron}>{open ? '−' : '+'}</Text>
+      </TouchableOpacity>
+      {open ? <MonthlyReview month={month} balance={balance} /> : null}
+    </Card>
   );
 }
 
@@ -674,12 +1061,31 @@ function Niggles({ history }: { history: JournalNiggleHistory }) {
  * ARROWS AS WORDS, PROPOSED (batch 19). A glyph alone is not readable by a
  * screen reader and not legible at small sizes; the word carries the meaning and
  * the symbol carries the glance.
+ *
+ * THE GLYPH JOINS THE WORD RATHER THAN REPLACING IT (batch 26). The ruling's
+ * lift row is "names, kg × reps, up/flat/down arrows" — so the arrow is drawn,
+ * and the word rides the accessibility label, which is the same split the week
+ * bars make one card up.
  */
 const TREND_COPY: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
   up: 'up on last week',
   flat: 'same as last week',
   down: 'down on last week',
   new: 'first time this week',
+};
+
+const TREND_GLYPH: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
+  up: '▲',
+  flat: '—',
+  down: '▼',
+  new: '·',
+};
+
+const TREND_TONE: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
+  up: colors.status.success,
+  flat: colors.text.tertiary,
+  down: colors.status.warning,
+  new: colors.text.tertiary,
 };
 
 /**
@@ -689,28 +1095,42 @@ const TREND_COPY: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
  * It can, where the load model's cannot, because it waits on no constant: "10kg
  * heavier than last week" is a comparison of two recorded weights, not a
  * judgement against a threshold Sam has yet to sign.
+ *
+ * ITS EMPTY STATE IS RETIRED BY THE RULING (see the header). A week with no
+ * logged weights renders no lifts card at all, where it used to render "No lifts
+ * recorded with a weight this week." The cell that asserted that sentence now
+ * asserts the block returns null.
  */
 function StrengthLines({ lifts }: { lifts: readonly StrengthLiftTrend[] }) {
-  if (lifts.length === 0) {
-    return (
-      <Text variant="body" style={styles.muted} testID="journal-strength-none">
-        {'No lifts recorded with a weight this week.'}
-      </Text>
-    );
-  }
+  if (lifts.length === 0) return null;
   return (
-    <View>
+    <Card style={styles.card} testID="journal-lifts">
+      <Text variant="overline" style={styles.cardTitle}>Your lifts</Text>
       {lifts.map((lift) => (
-        <Text
+        <View
           key={lift.exerciseName}
-          variant="body"
-          style={styles.body}
+          style={styles.liftRow}
           testID={`journal-strength-${lift.exerciseName}`}
+          accessibilityLabel={
+            `${lift.exerciseName}, ${lift.thisWeek.weightKg}kg, ${TREND_COPY[lift.direction]}`
+          }
         >
-          {`${lift.exerciseName} — ${lift.thisWeek.weightKg}kg, ${TREND_COPY[lift.direction]}.`}
-        </Text>
+          <Text variant="bodySmall" style={styles.body}>{lift.exerciseName}</Text>
+          <View style={styles.liftRight}>
+            <Text variant="bodySmallEmphasis" style={styles.body}>
+              {`${lift.thisWeek.weightKg}kg`}
+              {lift.thisWeek.reps !== null ? ` × ${lift.thisWeek.reps}` : ''}
+            </Text>
+            <Text
+              variant="captionEmphasis"
+              style={[styles.liftArrow, { color: TREND_TONE[lift.direction] }]}
+            >
+              {TREND_GLYPH[lift.direction]}
+            </Text>
+          </View>
+        </View>
       ))}
-    </View>
+    </Card>
   );
 }
 
@@ -742,6 +1162,10 @@ const TAG_LABELS: Readonly<Record<JournalNoteTag, string>> = {
  *
  * The door refuses blank text itself, so this component never has to decide
  * what counts as a note.
+ *
+ * IT IS QUIET AND IT IS AT THE BOTTOM, which is the ruling's placement. The tag
+ * chips appear only once the athlete has started writing — an empty box with
+ * eight chips under it is a form; an empty box is an invitation.
  */
 function WeekNote({ weekStart }: { weekStart: string }) {
   const notes = useJournalNoteStore((s) => s.notes);
@@ -775,63 +1199,68 @@ function WeekNote({ weekStart }: { weekStart: string }) {
   const canSave = text.trim().length > 0;
 
   return (
-    <View>
-      <AppTextInput
-        style={styles.noteInput}
-        value={text}
-        onChangeText={setText}
-        multiline
-        placeholder="Anything worth remembering about this week?"
-        placeholderTextColor={colors.text.tertiary}
-        testID="journal-note-input"
-        accessibilityLabel="Week note"
-      />
-      <View style={styles.tagRow}>
-        {JOURNAL_NOTE_TAGS.map((tag) => {
-          const on = tags.includes(tag);
-          return (
-            <TouchableOpacity
-              key={tag}
-              onPress={() => toggleTag(tag)}
-              style={[styles.tag, on ? styles.tagOn : null]}
-              testID={`journal-note-tag-${tag}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              accessibilityLabel={TAG_LABELS[tag]}
-            >
-              <Text variant="caption" style={on ? styles.tagTextOn : styles.tagText}>
-                {TAG_LABELS[tag]}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <TouchableOpacity
-        onPress={save}
-        disabled={!canSave}
-        style={[styles.saveButton, canSave ? null : styles.saveButtonOff]}
-        testID="journal-note-save"
-        accessibilityRole="button"
-      >
-        <Text variant="buttonSmall" style={styles.saveButtonText}>Save note</Text>
-      </TouchableOpacity>
+    <View style={styles.noteBlock}>
+      {weekNotes.map((note) => (
+        <View key={note.id} style={styles.noteRow} testID={`journal-note-${note.id}`}>
+          <Text variant="bodySmall" style={styles.body}>{note.text}</Text>
+          {note.tags.length > 0 ? (
+            <Text variant="caption" style={styles.faint}>
+              {note.tags.map((tag) => TAG_LABELS[tag]).join(' · ')}
+            </Text>
+          ) : null}
+        </View>
+      ))}
 
-      {weekNotes.length === 0 ? (
-        <Text variant="bodySmall" style={styles.muted} testID="journal-no-notes-yet">
-          {'No notes yet this week.'}
-        </Text>
-      ) : (
-        weekNotes.map((note) => (
-          <View key={note.id} style={styles.noteRow} testID={`journal-note-${note.id}`}>
-            <Text variant="body" style={styles.body}>{note.text}</Text>
-            {note.tags.length > 0 ? (
-              <Text variant="caption" style={styles.muted}>
-                {note.tags.map((tag) => TAG_LABELS[tag]).join(' · ')}
-              </Text>
-            ) : null}
-          </View>
-        ))
-      )}
+      <View style={styles.noteComposer}>
+        <AppTextInput
+          style={styles.noteInput}
+          value={text}
+          onChangeText={setText}
+          multiline
+          placeholder="Anything worth remembering about this week?"
+          placeholderTextColor={colors.text.tertiary}
+          testID="journal-note-input"
+          accessibilityLabel="Week note"
+        />
+        <TouchableOpacity
+          onPress={save}
+          disabled={!canSave}
+          style={[styles.saveButton, canSave ? null : styles.saveButtonOff]}
+          testID="journal-note-save"
+          accessibilityRole="button"
+        >
+          <Text variant="buttonSmall" style={styles.saveButtonText}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/*
+        THE CHIPS APPEAR WITH THE WRITING. They are how a note is filed, and a
+        note that does not exist yet cannot be filed — so eight chips under an
+        empty box are eight controls with nothing to act on. This is the ruling's
+        rule reaching the quietest block on the screen.
+      */}
+      {canSave ? (
+        <View style={styles.tagRow}>
+          {JOURNAL_NOTE_TAGS.map((tag) => {
+            const on = tags.includes(tag);
+            return (
+              <TouchableOpacity
+                key={tag}
+                onPress={() => toggleTag(tag)}
+                style={[styles.tag, on ? styles.tagOn : null]}
+                testID={`journal-note-tag-${tag}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={TAG_LABELS[tag]}
+              >
+                <Text variant="caption" style={on ? styles.tagTextOn : styles.tagText}>
+                  {TAG_LABELS[tag]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1034,59 +1463,63 @@ export default function JournalScreen() {
     })),
   }), [week.weekStart, sessionFeedback]);
 
+  const weekLabel = weekRangeLabel(week.weekStart);
+
   return (
     <SafeAreaView style={styles.root} testID="journal-screen">
       <ScrollView contentContainerStyle={styles.content}>
-        <Text variant="h2" style={styles.heading}>Journal</Text>
-        {/* PROPOSED copy, batch 13. */}
-        <Text variant="bodySmall" style={styles.muted}>This week</Text>
+        <View style={styles.header}>
+          <Text variant="h2" style={styles.heading}>Journal</Text>
+          {weekLabel !== null ? (
+            <Text variant="bodySmallEmphasis" style={styles.weekLabel} testID="journal-week-label">
+              {weekLabel}
+            </Text>
+          ) : null}
+        </View>
 
-        <WeekShapeStrip days={week.days} />
-
-        <Section title="This week's job">
-          <WeekJob job={weekJob} />
+        {/*
+          ────────────────────────────────────────────────────────────────
+          THE HERO. Status headline, the week's job under it, the credit line
+          on weeks a change happened, and the load band. Sam's ruling, in his
+          order, and the only block on the screen that is not exception-based —
+          a week always has a job, even if that job is "no plan recorded".
+        */}
+        <Card style={styles.hero} testID="journal-hero">
+          <Text variant="overline" style={styles.kicker}>This week</Text>
           <WeekStatus status={weekStatus} />
-        </Section>
-
-        <Section title="Did the work happen">
-          {/*
-            WHAT it was, then WHETHER it happened. The addendum's distinction,
-            in that order because the composition is the context for the count.
-          */}
-          <WeekKinds week={week} />
-          <DidTheWorkHappen week={week} />
-        </Section>
-
-        <Section title="How the week felt">
-          <HowTheWeekFelt week={week} />
-        </Section>
-
-        <Section title="Your lifts">
-          <StrengthLines lifts={strengthLifts} />
-        </Section>
-
-        <Section title="Load">
-          <LoadSection week={week} load={loadModel} />
-        </Section>
-
-        <Section title="Your month">
-          <MonthlyReview
-            month={month}
-            balance={signedValue(loadModel.patternSharesDone)}
-          />
-        </Section>
-
-        <Section title="What you changed">
+          <WeekJob job={weekJob} />
           <WhatChanged changes={changes} />
-        </Section>
+          <LoadSection week={week} load={loadModel} />
+        </Card>
 
-        <Section title="Niggles">
-          <Niggles history={niggles} />
-        </Section>
+        {/* WHAT THE WEEK HELD, above the count of it — batch 23-c's order. */}
+        <WeekKinds week={week} />
 
-        <Section title="Your note">
+        <StatStrip week={week} load={loadModel} />
+        <DidTheWorkHappen week={week} />
+        <HowTheWeekFelt week={week} />
+
+        <Card style={styles.card} testID="journal-week-card">
+          <WeekShapeStrip days={week.days} />
+        </Card>
+
+        {/*
+          EARNED CARDS SIT ABOVE THE LIFTS — "attention beats routine", the
+          ruling's own reason. Everything in here is absent on an ordinary week.
+        */}
+        <AttentionCards
+          observations={signedValue(loadModel.regionObservations) ?? []}
+          balance={signedValue(loadModel.patternBalance)}
+          niggles={niggles}
+        />
+
+        <StrengthLines lifts={strengthLifts} />
+
+        <MonthDrawer month={month} balance={signedValue(loadModel.patternSharesDone)} />
+
+        <Card style={styles.card} testID="journal-note-card">
           <WeekNote weekStart={week.weekStart} />
-        </Section>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1119,31 +1552,122 @@ function countWeeksOfHistory(
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface.primary },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  heading: { color: colors.text.primary },
-  body: { color: colors.text.primary },
-  muted: { color: colors.text.secondary },
-  section: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  sectionTitle: { color: colors.text.tertiary },
-  strip: {
+  content: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.sm },
+  header: {
+    alignItems: 'baseline',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface.secondary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    marginBottom: spacing.xs,
   },
-  stripDay: { alignItems: 'center', gap: spacing.xs },
+  heading: { color: colors.text.primary },
+  weekLabel: { color: colors.text.secondary },
+  body: { color: colors.text.primary },
+  muted: { color: colors.text.secondary },
+  faint: { color: colors.text.tertiary },
+
+  // ── The hero ──
+  hero: { gap: spacing.xs },
+  kicker: { color: colors.text.accent },
+  heroHeadline: { color: colors.text.primary, marginTop: spacing.xs },
+  heroJob: { color: colors.text.secondary },
+  creditBlock: { gap: spacing.xs, marginTop: spacing.xs },
+  creditRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  creditDot: {
+    backgroundColor: colors.status.success,
+    borderRadius: borderRadius.full,
+    height: 6,
+    width: 6,
+  },
+
+  // ── The load band ──
+  bandBlock: { gap: spacing.xs, marginTop: spacing.sm },
+  bandHeader: { gap: spacing.xs },
+  bandLabel: { color: colors.text.tertiary },
+  track: {
+    backgroundColor: colors.surface.tertiary,
+    borderRadius: borderRadius.full,
+    height: 12,
+    marginTop: spacing.sm,
+  },
+  trackZone: {
+    backgroundColor: colors.accent.limeDark,
+    borderRadius: borderRadius.full,
+    bottom: 0,
+    opacity: 0.35,
+    position: 'absolute',
+    top: 0,
+  },
+  trackMarker: {
+    backgroundColor: colors.text.accent,
+    borderColor: colors.surface.primary,
+    borderRadius: borderRadius.full,
+    borderWidth: 3,
+    height: LOAD_MARKER_SIZE,
+    // Pulled back by half its own width so it sits ON the ratio, not beside it.
+    marginLeft: -LOAD_MARKER_SIZE / 2,
+    position: 'absolute',
+    top: -3,
+    width: LOAD_MARKER_SIZE,
+  },
+
+  // ── The stat strip ──
+  statStrip: { flexDirection: 'row', gap: spacing.sm },
+  stat: {
+    alignItems: 'center',
+    backgroundColor: colors.card.background,
+    borderColor: colors.card.border,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  statValueRow: { alignItems: 'baseline', flexDirection: 'row', gap: spacing.xs },
+  statValue: { color: colors.text.primary },
+  statName: { color: colors.text.tertiary },
+
+  exceptionLines: { gap: spacing.xs },
+
+  // ── Cards ──
+  card: { gap: spacing.sm },
+  cardTitle: { color: colors.text.tertiary },
+  earned: { borderColor: colors.text.accent, gap: spacing.xs },
+  earnedStack: { gap: spacing.sm },
+
+  // ── The week bars ──
+  strip: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' },
+  stripDay: { alignItems: 'center', flex: 1, gap: spacing.xs },
   stripWeekday: { color: colors.text.tertiary },
+  barWell: { height: BAR_WELL_HEIGHT, justifyContent: 'flex-end', width: '100%' },
+  bar: { borderRadius: borderRadius.sm, width: '100%' },
+
+  // ── The lifts ──
+  liftRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  liftRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  liftArrow: { width: 14 },
+
+  // ── The month drawer ──
+  drawerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  drawerText: { gap: spacing.xs },
+  drawerBody: { gap: spacing.sm },
+  chevron: { color: colors.text.tertiary },
+
+  // ── The note ──
+  noteBlock: { gap: spacing.sm },
+  noteComposer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm },
   noteInput: {
     backgroundColor: colors.surface.tertiary,
     borderRadius: borderRadius.md,
     color: colors.text.primary,
-    minHeight: 72,
+    flex: 1,
+    minHeight: 44,
     padding: spacing.sm,
     textAlignVertical: 'top',
   },
@@ -1162,6 +1686,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.text.accent,
     borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   saveButtonOff: { opacity: 0.4 },
@@ -1171,13 +1696,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     gap: spacing.xs,
     paddingTop: spacing.sm,
-  },
-  stripDot: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

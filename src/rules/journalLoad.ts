@@ -167,9 +167,35 @@ export const JOURNAL_LOAD_CONSTANTS = {
     source: 'PROPOSED — the sheets author WHICH muscles, never how much',
   },
   /**
+   * How far above its own previous best a region must run before the Journal
+   * shows the "ran hot" card. The UI ruling names the region-hot line as one of
+   * the three athlete-affecting thresholds that are Sam's to sign.
+   *
+   * IT EXISTS BECAUSE THE ALTERNATIVE IS A CARD EVERY WEEK. Before this, a
+   * region was "observed" on ANY exceedance of its previous best — so an athlete
+   * who trained one kilogram harder than last month earned an attention card,
+   * and a card that appears every week is the exact opposite of the ruling's
+   * organising rule ("an athlete learns that seeing a card means pay
+   * attention").
+   *
+   * 1.15 IS THE TERMINAL'S NUMBER AND NOTHING MORE. The ruling says the line is
+   * Sam's; it does not say where the line is.
+   */
+  regionHotRatio: {
+    value: 1.15,
+    provenance: 'proposed',
+    source: 'PROPOSED — UI ruling names the region-hot line as Sam\'s threshold',
+  },
+  /**
    * How far a completed pattern share may drift from the planned one before the
    * journal says so. The ruling: "the threshold for 'outweighs' is a Sam-signed
    * constant in the same signing batch".
+   *
+   * UNTIL THE UI SLICE, NOTHING CONSUMED THIS VALUE. `patternBalance` carried
+   * its PROVENANCE — so everything downstream was correctly dark — but no code
+   * ever compared anything to 0.25, which means signing it would have changed
+   * nothing on any screen. The drift verdict below is the first reader, and
+   * that is what makes this entry mean what the table says it means.
    */
   patternDriftThreshold: {
     value: 0.25,
@@ -325,10 +351,29 @@ export interface PatternShare {
   readonly doneShare: number;
 }
 
+/**
+ * One pattern whose completed share has drifted past the signed threshold.
+ *
+ * THE SIGN IS KEPT, NOT ABSOLUTED. "You did more pushing than the week planned"
+ * and "you did less" are different news to an athlete, and a magnitude alone
+ * would report them identically.
+ */
+export interface PatternDrift {
+  readonly pattern: MainStrengthPattern;
+  /** Done share minus planned share. Positive means MORE than the plan asked. */
+  readonly delta: number;
+}
+
 export interface PatternBalance {
   readonly shares: readonly PatternShare[];
   readonly upperSharePlanned: number;
   readonly upperShareDone: number;
+  /**
+   * The patterns past `patternDriftThreshold`, biggest drift first. Empty on a
+   * balanced week — which is what makes the UI ruling's "balance drifting" card
+   * an EARNED card rather than furniture.
+   */
+  readonly drifts: readonly PatternDrift[];
 }
 
 export interface JournalLoadCoverage {
@@ -347,6 +392,19 @@ export interface JournalLoadModel {
   readonly strengthStream: Derived<StreamComparison | null>;
   readonly conditioningStream: Derived<StreamComparison | null>;
   readonly headline: Derived<JournalLoadHeadline | null>;
+  /**
+   * The sweet-spot edges, in ratio-of-normal terms, for a surface that DRAWS the
+   * band rather than speaking it.
+   *
+   * THE CONSTANT IS NOT READ DIRECTLY BY THE SURFACE, and that is the whole
+   * reason this field exists. A screen that shaded a zone from
+   * `JOURNAL_LOAD_CONSTANTS.sweetSpotBand.value` would put an unsigned number in
+   * front of the athlete as a PICTURE — the same violation as printing it,
+   * wearing a different medium, and invisible to the gate that watches for
+   * `.value` on derived reads. Routed through `Derived` it is dark until Sam
+   * signs it, exactly like the words are.
+   */
+  readonly sweetSpotBand: Derived<{ readonly low: number; readonly high: number }>;
   readonly regionObservations: Derived<readonly RegionObservation[]>;
   readonly patternBalance: Derived<PatternBalance | null>;
   /** Pattern shares alone are derived from NO constant, so they stand signed. */
@@ -822,7 +880,13 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
         (best, week) => Math.max(best, week?.regions[muscle as MuscleGroup] ?? 0),
         0,
       );
-      if (previousBest > 0 && load > previousBest) {
+      // THE THRESHOLD IS APPLIED TO THE EXISTING VALUE, NOT BESIDE IT. A second
+      // derived value meaning "ran hot" next to one meaning "exceeded its best"
+      // is two representations of one fact, and the second one to be written is
+      // the one that goes stale. The line this feeds ("biggest week for X in
+      // the last N weeks") stays true a fortiori under a stricter test.
+      if (previousBest > 0
+        && load >= previousBest * JOURNAL_LOAD_CONSTANTS.regionHotRatio.value) {
         observations.push({
           region: muscle as MuscleGroup,
           thisWeek: load,
@@ -837,6 +901,7 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     observations,
     JOURNAL_LOAD_CONSTANTS.regionNormalWindowWeeks.provenance,
     JOURNAL_LOAD_CONSTANTS.regionSecondaryShare.provenance,
+    JOURNAL_LOAD_CONSTANTS.regionHotRatio.provenance,
   );
 
   // ── Layer 4: plan vs done ──
@@ -866,12 +931,23 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
 
   const hasPlan = input.plannedStrength.length > 0;
   const hasDone = STRENGTH_PATTERN_ORDER.some((p) => thisWeek.patternTonnageKg[p] > 0);
+
+  // THE FIRST READER THE THRESHOLD HAS EVER HAD. The constant has been in the
+  // signing table since the load slice and no code compared anything to it, so
+  // `patternBalance` depended on a number it never used. It uses it now.
+  const driftThreshold = JOURNAL_LOAD_CONSTANTS.patternDriftThreshold.value;
+  const drifts: PatternDrift[] = shares
+    .map((share) => ({ pattern: share.pattern, delta: share.doneShare - share.plannedShare }))
+    .filter((drift) => Math.abs(drift.delta) >= driftThreshold)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
   const patternBalance = derived<PatternBalance | null>(
     hasPlan && hasDone
       ? {
         shares,
         upperSharePlanned: upperLowerShare(plannedUpperLower),
         upperShareDone: upperLowerShare(thisWeek.upperLowerTonnageKg),
+        drifts,
       }
       : null,
     JOURNAL_LOAD_CONSTANTS.patternDriftThreshold.provenance,
@@ -891,6 +967,10 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     strengthStream,
     conditioningStream,
     headline,
+    sweetSpotBand: derived(
+      JOURNAL_LOAD_CONSTANTS.sweetSpotBand.value,
+      JOURNAL_LOAD_CONSTANTS.sweetSpotBand.provenance,
+    ),
     regionObservations,
     patternBalance,
     patternSharesDone,

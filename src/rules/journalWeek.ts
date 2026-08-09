@@ -174,6 +174,20 @@ export interface JournalFelt {
   /** Games the athlete rated their legs and energy on. */
   readonly gameFeelsRecorded: number;
   /**
+   * THE LATEST GAME'S RATING, 1–5, or null when no game was rated.
+   *
+   * A COUNT AND A RATING ARE DIFFERENT FACTS, and the UI ruling's glanceable
+   * wants the second one. `gameFeelsRecorded` says how many games were rated;
+   * this says what the athlete actually said about the most recent one.
+   *
+   * IT IS THE LATEST, NEVER A MEAN, and that is the load-bearing half. Two games
+   * rated 2 and 5 average to 3.5 — a number no game earned, presented as though
+   * a game had earned it. The latest game is a fact about a game that happened.
+   * A week with two games is rare enough that a mean would be wrong in exactly
+   * the weeks it got used.
+   */
+  readonly gameFeelLatest: FeedbackGameFeel | null;
+  /**
    * Sessions the athlete said did NOT match the prescription. Counted, never
    * interpreted — the Journal says how many differed, not what to do about it.
    */
@@ -295,13 +309,20 @@ export function buildJournalWeek(input: BuildJournalWeekInput): JournalWeek {
   let feelingsRecorded = 0;
   let sorenessRecorded = 0;
   let gameFeelsRecorded = 0;
+  let gameFeelLatest: FeedbackGameFeel | null = null;
   let differedFromPlan = 0;
 
   for (const day of days) {
     if (day.outcome) {
       if (day.outcome.feeling !== null) feelingsRecorded += 1;
       if (day.outcome.soreness !== null) sorenessRecorded += 1;
-      if (day.outcome.gameFeel !== null) gameFeelsRecorded += 1;
+      if (day.outcome.gameFeel !== null) {
+        gameFeelsRecorded += 1;
+        // LAST WRITER WINS BECAUSE `days` IS IN WEEK ORDER — the same ordering
+        // the strip renders. Reading "latest" off an unordered collection is
+        // how a Tuesday rating becomes Saturday's headline.
+        gameFeelLatest = day.outcome.gameFeel;
+      }
       // THE PREDICATE HAS AN OWNER. `expectationAsksWhy` is the one place that
       // decides which answers mean "it differed" — the form asks its follow-up
       // from it, the payload sends a reason from it, and the Journal counts from
@@ -367,6 +388,7 @@ export function buildJournalWeek(input: BuildJournalWeekInput): JournalWeek {
       feelingsRecorded,
       sorenessRecorded,
       gameFeelsRecorded,
+      gameFeelLatest,
       differedFromPlan,
       // EVERY "FELT" FACT COUNTS TOWARD "NOTHING RECORDED", not just the two
       // that existed first. A week where the athlete rated a game and nothing

@@ -18,6 +18,16 @@ interface CardProps {
   style?: StyleProp<ViewStyle>;
   variant?: CardVariant;
   onPress?: (event: GestureResponderEvent) => void;
+  /**
+   * ANCHORS THE CARD FOR A GATE OR AN ON-DEVICE EXPLORER.
+   *
+   * Added by the Journal UI slice, where whole cards appear and vanish by the
+   * exception rule and "did this card render" is the thing worth asserting. A
+   * shared card with no testID forces every caller to wrap it in a bare `View`
+   * just to be findable — which adds a layout node to make a card observable,
+   * and this repo has already paid for invisible nodes participating in layout.
+   */
+  testID?: string;
 }
 
 export const Card = ({
@@ -25,6 +35,7 @@ export const Card = ({
   style,
   variant = 'default',
   onPress,
+  testID,
 }: CardProps) => {
   const isInteractive = !!onPress;
 
@@ -52,7 +63,7 @@ export const Card = ({
   };
 
   const content = (
-    <View style={[styles.container, containerStyle, style]}>
+    <View style={[styles.container, containerStyle, style]} testID={testID}>
       {children}
     </View>
   );

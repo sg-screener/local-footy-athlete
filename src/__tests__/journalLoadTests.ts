@@ -577,6 +577,49 @@ console.log('\n[7] REGION LAYER — observation, never diagnosis');
   });
   ok('a region that did NOT beat its window is not observed — no filler lines',
     quietWeek.regionObservations.value.length === 0);
+
+  // ── THE HOT THRESHOLD — the UI slice's earned card, and why it exists ──
+  //
+  // BEFORE THIS, ANY EXCEEDANCE WAS AN OBSERVATION. An athlete who trained one
+  // kilogram harder than last month earned an attention card, every week, which
+  // is the exact opposite of Sam's organising rule ("an athlete learns that
+  // seeing a card means pay attention"). His UI ruling names the region-hot line
+  // as one of his constants, so a threshold now stands between the two.
+  //
+  // THE CELL MOVES THE WEEK ACROSS THE LINE IN BOTH DIRECTIONS, which is what
+  // makes it a threshold test rather than a bigger-number test. A single
+  // assertion that 200-over-100 is hot would pass with no threshold at all.
+  const hotRatio = JOURNAL_LOAD_CONSTANTS.regionHotRatio.value;
+  const atRatio = (multiplier: number) => buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      ...measuredWeek(THIS_WEEK, 100 * multiplier),
+      ...measuredWeek(weeksBefore(THIS_WEEK, 1), 100),
+    ],
+    sessionsPlannedThisWeek: 4,
+    plannedStrength: [],
+  }).regionObservations.value;
+
+  ok('a region a hair over its previous best is NOT hot',
+    atRatio(1.01).length === 0, atRatio(1.01));
+  ok('a region exactly ON the threshold IS hot — the edge is inclusive, stated',
+    atRatio(hotRatio).length > 0, { hotRatio, observed: atRatio(hotRatio).length });
+  ok('and a region well past it is hot',
+    atRatio(2).length > 0, atRatio(2).length);
+
+  // THE CARD IS DARK UNTIL SAM SIGNS, and that is the mechanism rather than a
+  // habit — the new constant joins the provenance the value already carried.
+  ok('the observations stay PROPOSED, so the earned card cannot render yet',
+    atRatio(2).length > 0
+    && signedValue(buildJournalLoadModel({
+      weekStart: THIS_WEEK,
+      sessions: [
+        ...measuredWeek(THIS_WEEK, 200),
+        ...measuredWeek(weeksBefore(THIS_WEEK, 1), 100),
+      ],
+      sessionsPlannedThisWeek: 4,
+      plannedStrength: [],
+    }).regionObservations) === null);
 }
 
 // ─── [8] Pattern balance — plan vs done ──────────────────────────────────
@@ -619,6 +662,54 @@ console.log('\n[8] PATTERN BALANCE — plan vs done, from the existing pattern o
   ok('but the completed shares still stand, and stay signed',
     noPlan.patternSharesDone.value.length === 4
     && noPlan.patternSharesDone.provenance === 'signed');
+
+  // ── THE DRIFT VERDICT — and the finding that came with it ──
+  //
+  // `patternDriftThreshold` HAS BEEN IN THE SIGNING TABLE SINCE THE LOAD SLICE
+  // AND NOTHING CONSUMED ITS VALUE. `patternBalance` carried its PROVENANCE — so
+  // everything downstream was correctly dark — but no code ever compared
+  // anything to 0.25, which means Sam signing it would have changed nothing on
+  // any screen. A constant listed for signature that no reader reads is a worse
+  // record than an omission, because the table asserts it matters.
+  //
+  // It has a reader now, and these cells are what make that true rather than
+  // claimed.
+  const threshold = JOURNAL_LOAD_CONSTANTS.patternDriftThreshold.value;
+  const squatDrift = balance?.drifts.find((d) => d.pattern === 'squat');
+  const pushDrift = balance?.drifts.find((d) => d.pattern === 'push');
+  ok('a pattern done far above its plan is a drift, and the sign says which way',
+    squatDrift !== undefined && squatDrift.delta > 0, balance?.drifts);
+  ok('a pattern done far BELOW its plan is a drift too, with the opposite sign',
+    pushDrift !== undefined && pushDrift.delta < 0, balance?.drifts);
+  ok('and the drifts are ordered biggest first',
+    (balance?.drifts.length ?? 0) >= 2
+    && Math.abs(balance!.drifts[0].delta) >= Math.abs(balance!.drifts[1].delta),
+    balance?.drifts);
+
+  // THE THRESHOLD IS PROVEN TO BE A THRESHOLD — a week inside it earns nothing.
+  // Without this the feature is "list every pattern", which the cells above
+  // would not distinguish from a working line.
+  const balanced = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [session(THIS_WEEK, {
+      strength: [
+        lift({ prescribedSets: 1, prescribedRepsMin: 1, prescribedRepsMax: 1, weightKg: 100 }),
+        lift({
+          exerciseName: 'Bench Press',
+          prescribedSets: 1, prescribedRepsMin: 1, prescribedRepsMax: 1, weightKg: 100,
+        }),
+      ],
+    })],
+    sessionsPlannedThisWeek: 1,
+    plannedStrength: plan,
+  });
+  ok('a week that matched its plan drifts NOWHERE — the earned card stays away',
+    balanced.patternBalance.value?.drifts.length === 0,
+    { threshold, drifts: balanced.patternBalance.value?.drifts });
+
+  // AND IT IS DARK UNTIL SIGNED, like every other threshold judgement.
+  ok('the balance verdict stays PROPOSED, so its card cannot render yet',
+    signedValue(drifted.patternBalance) === null);
 }
 
 // ─── [9] Week identity, and the surface's one door ───────────────────────
