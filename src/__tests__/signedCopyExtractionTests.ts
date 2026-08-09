@@ -567,7 +567,26 @@ function extract(): ExtractedString[] {
  * jumped on the day of a signature would have meant unsigned words shipped on a
  * signature.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 573;
+/**
+ * 573 -> 576 (the Monday notification, same commit that earned it): THREE
+ * genuinely new sentences, all of them on the screen.
+ *
+ *   IN, +3 THE EXTRACTOR CAN SEE — the reminder offer's two lines ("Remind me
+ *   on Monday mornings" / "One notification a week, when your week is ready to
+ *   look back on.") and the confirmation once it is on.
+ *
+ * THE NOTIFICATION'S OWN TWO SENTENCES ARE NOT IN THIS NUMBER, and that is the
+ * finding worth carrying rather than a footnote. "Last week" and "Your week is
+ * in the Journal." are authored in `rules/journalReminderCopy.ts`, which this
+ * extractor does not read — **so the one athlete-visible string in this app
+ * that nobody will ever review by using the app is also the one this instrument
+ * cannot see.** They are bound by `copyRulingsBindingTests` (the module joined
+ * its authoring hatch this commit) and gated a third time by the provenance
+ * check in the module itself, which refuses to schedule while they read
+ * PROPOSED. Three readers, because the usual one — a person looking at a screen
+ * — does not exist for a lock screen.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 576;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

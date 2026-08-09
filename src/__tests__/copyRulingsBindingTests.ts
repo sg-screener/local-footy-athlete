@@ -121,6 +121,18 @@ const AUTHORING_MODULES = [
   // shortfall-copy regime; what this list adds is the RETIRED direction, so a
   // sentence Sam replaces cannot quietly survive here.
   'rules/deloadWeekRules.ts',
+  // THE MONDAY NOTIFICATION'S SENTENCE (batch 28, C6), added 2026-08-09 — and it
+  // is the FOURTH time this hatch has been opened for the same reason, which is
+  // now worth stating as a pattern rather than a coincidence: **words are
+  // authored where the feature's decision lives, and the feature's decision is
+  // almost never in `screens/`.**
+  //
+  // IT MATTERS MORE HERE THAN AT THE OTHER THREE ADDRESSES. A screen string
+  // shipping unbound is caught the next time somebody looks at the screen. A
+  // notification string ships to a lock screen at 8am on a Monday, where nobody
+  // is looking and Sam cannot review it by using the app — so this gate is the
+  // only reader it has other than the provenance gate in the module itself.
+  'rules/journalReminderCopy.ts',
 ];
 
 /**

@@ -2,6 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import Svg, { Path } from 'react-native-svg';
 import { logger } from '../utils/logger';
 import HomeScreen from '../screens/home/HomeScreen';
@@ -109,11 +111,50 @@ function ProfileStackNavigator() {
 }
 
 export default function AppNavigator() {
+  const navigation = useNavigation();
+
   React.useEffect(() => {
     logger.info('[app-navigator] initialRouteName=ProgramTab');
     logger.info('[tabs-mounted] true');
     return () => logger.info('[tabs-mounted] false');
   }, []);
+
+  /*
+    C6 (Sam, 2026-08-09): THE MONDAY NOTIFICATION "OPENS THE JOURNAL TAB".
+
+    THE ROUTE TRAVELS IN THE NOTIFICATION, NOT IN THIS HANDLER. The scheduler
+    puts `{ route: 'JournalTab' }` in the payload and this reads it back, so a
+    second scheduled notification aimed somewhere else needs no change here —
+    and, more to the point, a handler that hardcoded `JournalTab` would send an
+    athlete to the Journal for a notification about something else.
+
+    IT IS GUARDED AGAINST AN UNKNOWN ROUTE. A payload naming a tab that does not
+    exist is ignored rather than navigated to; `navigate` with a bad name throws,
+    and a crash on tapping a notification is the worst place in the app to have
+    one — the athlete is not even in the app yet.
+
+    THE LISTENER HANDLES A TAP, NEVER AN ARRIVAL. `addNotificationResponse
+    ReceivedListener` fires when the athlete TAPS. A notification that merely
+    arrives while they are using the app must not yank them out of whatever they
+    are doing.
+  */
+  React.useEffect(() => {
+    let subscription: { remove: () => void } | undefined;
+    try {
+      subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const route = response.notification.request.content.data?.route;
+        if (route !== 'JournalTab') return;
+        logger.info('[notification-tap] journal');
+        navigation.navigate('JournalTab' as never);
+      });
+    } catch (error) {
+      // THE NATIVE MODULE IS ABSENT UNTIL SAM REBUILDS WITH PODS, and that is
+      // the normal state on the running binary rather than an edge case. A
+      // throw here would take the whole navigator down on mount.
+      logger.info(`[notification-tap] listener unavailable: ${String(error)}`);
+    }
+    return () => subscription?.remove();
+  }, [navigation]);
 
   return (
     <View style={{ flex: 1 }} testID="main-tabs-root" accessibilityLabel="Main tabs">

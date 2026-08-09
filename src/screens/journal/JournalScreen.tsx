@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 // THE KEYBOARD CONVENTION: no screen renders a raw TextInput
 // (`keyboardConventionTests`). The shared owner handles avoidance and
@@ -34,6 +34,11 @@ import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import { buildJournalMonth, type JournalMonth } from '../../rules/journalMonth';
 import { TrendChart } from '../../components/journal/TrendChart';
+import {
+  enableJournalReminder,
+  readJournalReminderState,
+  type JournalReminderOutcome,
+} from '../../services/journalReminderService';
 import {
   buildJournalNiggleHistory,
   flaggedNiggleRegions,
@@ -174,10 +179,12 @@ const MONTH_ABBREVIATIONS = MONTH_WORDS
  * to the ISO is what this decision exists to remove, and a line that cannot be
  * said honestly is a line the exception rule already knows how to drop.
  *
- * "THIS YEAR" IS THE VIEWED WEEK'S YEAR, NEVER THE DEVICE CLOCK. The screen has
- * no `new Date()` anywhere and this function does not introduce one: the gain is
- * spoken relative to the week being read, which is the same anchor every other
- * date on this screen uses.
+ * "THIS YEAR" IS THE VIEWED WEEK'S YEAR, NEVER THE DEVICE CLOCK. The screen
+ * reaches for a clock through `appDateNow()` and nowhere else — a bare
+ * `new Date()` would be a second owner of "now" AND would be invisible to the
+ * dev E2E clock, so a walked athlete could never be moved past it. This
+ * function needs no clock at all: the gain is spoken relative to the week being
+ * read, which is the same anchor every other date on this screen uses.
  */
 function monthWordSince(fromWeekStartISO: string, viewedWeekStartISO: string): string | null {
   const from = new Date(`${fromWeekStartISO}T00:00:00Z`);
@@ -1632,8 +1639,95 @@ export default function JournalScreen() {
         <Card style={styles.card} testID="journal-note-card">
           <WeekNote weekStart={week.weekStart} />
         </Card>
+
+        {/*
+          THE MONDAY REMINDER OFFER — last on the screen, below even the note.
+          It is app furniture rather than news about the athlete's week, and the
+          exception rule's whole point is that the screen is about their week.
+        */}
+        <MondayReminderRow />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * THE MONDAY REMINDER — Sam's C6, the polite half.
+ *
+ * *"permission asked politely and refusable (a refusal is a fact, not an
+ * error)"*, and every clause of that is a rendering rule here:
+ *
+ * POLITELY — the offer is a row the athlete taps, never a prompt on mount. The
+ * state is read with `getPermissionsAsync`, which cannot raise a system dialog;
+ * only the tap reaches `requestPermissionsAsync`. **An athlete who opens the
+ * Journal tab is never interrupted by iOS asking them for anything.**
+ *
+ * A REFUSAL IS A FACT — so `refused` renders NOTHING. Not a disabled row, not
+ * "notifications are off", not a link to Settings. The athlete said no; telling
+ * them so every week is the nagging the ruling forbids, and a row they cannot
+ * act on is furniture by definition.
+ *
+ * AND SO DOES `unsigned_copy`, WHICH IS THE STATE ON THE DAY THIS SHIPS. The
+ * sentence is PROPOSED (batch 28), so the whole feature is dark — no offer, no
+ * prompt, no schedule. **Sam signing the sentence turns it on with no code
+ * change**, exactly as his eight constants did this morning.
+ *
+ * AND SO DOES `unavailable` — which is the state on Sam's CURRENT BINARY, until
+ * he rebuilds with pods. A row saying "notifications are unavailable" would be
+ * a build detail on an athlete's screen.
+ *
+ * THREE OF THE FIVE STATES RENDER NOTHING, and that is not caution. It is the
+ * exception rule holding for a block that had every excuse to become furniture.
+ */
+function MondayReminderRow() {
+  // NAMED `setReminder`, NOT `setState`, AND THE GATE IS WHY. `journalUiLaws
+  // Tests` sweeps this screen for writer idioms and one of them is `setState(`
+  // — a local setter of that name trips it. The collision is accidental but the
+  // sweep is not, so the name yields rather than the gate: a forbidden-idiom
+  // list that gets an exception the first time it is inconvenient stops being a
+  // list.
+  const [reminder, setReminder] = useState<JournalReminderOutcome | null>(null);
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    readJournalReminderState(appDateNow()).then((next) => { if (alive) setReminder(next); });
+    return () => { alive = false; };
+  }, []);
+
+  if (reminder === null) return null;
+  if (reminder.kind !== 'may_ask' && reminder.kind !== 'scheduled') return null;
+
+  // ALREADY ON: one quiet confirmation, no toggle. Turning it off belongs in
+  // the OS Settings app, which is where an athlete already looks for it — a
+  // second switch here would be a second owner of "is this on".
+  if (reminder.kind === 'scheduled') {
+    return (
+      <Text variant="caption" style={styles.faint} testID="journal-reminder-on">
+        Monday mornings, we will remind you to look back at your week.
+      </Text>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={styles.reminderRow}
+      testID="journal-reminder-offer"
+      accessibilityRole="button"
+      accessibilityLabel="Remind me on Monday mornings"
+      disabled={asking}
+      onPress={() => {
+        setAsking(true);
+        enableJournalReminder(appDateNow())
+          .then(setReminder)
+          .finally(() => setAsking(false));
+      }}
+    >
+      <Text variant="bodySmall" style={styles.body}>Remind me on Monday mornings</Text>
+      <Text variant="caption" style={styles.faint}>
+        One notification a week, when your week is ready to look back on.
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1760,6 +1854,9 @@ const styles = StyleSheet.create({
   },
   liftRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   liftArrow: { width: 14 },
+
+  // ── The Monday reminder (C6) ──
+  reminderRow: { gap: spacing.xs, paddingVertical: spacing.sm },
 
   // ── The month drawer ──
   drawerRow: {

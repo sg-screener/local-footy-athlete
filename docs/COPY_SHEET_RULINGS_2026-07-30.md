@@ -2081,3 +2081,47 @@ difference between a true and a false statement about when, so it is built —
 A date that will not parse returns null and the sentence does not render. Falling
 back to the raw string is the exact thing C5 removes, and the exception rule
 already knows what to do with a block that has nothing it can honestly say.
+
+## Batch 28 — the Monday notification (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature — and unlike every other
+batch, that is not a transitional state. It is a GATE.**
+
+**28-a. WHY THIS BATCH IS DIFFERENT FROM THE OTHER TWENTY-SEVEN.** Every other
+PROPOSED string in this app is a string on a screen: if it ships before Sam rules
+on it, he sees it on his own phone, in context, and says so. **A notification is
+the one athlete-visible surface he cannot review by using the app**, because it
+appears on a lock screen at 8am on a Monday and nowhere else. So C6's *"the
+notification sentence comes to Sam PROPOSED before it ever fires"* is not a note
+to remember — `decideJournalReminder` returns `unsigned_copy` while the entry
+below reads PROPOSED, and in that state **no permission is requested and nothing
+is scheduled at all.** The feature is dark on the day it ships and **Sam's
+signature alone turns it on, with no code change** — the same mechanism as the
+eight load constants he signed this morning.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Notification title | "Last week" |
+| Notification body | "Your week is in the Journal." |
+| The offer row on the Journal | "Remind me on Monday mornings" |
+| The offer row's second line | "One notification a week, when your week is ready to look back on." |
+| Once it is on | "Monday mornings, we will remind you to look back at your week." |
+
+**28-b. THE SENTENCE IS DELIBERATELY NOT A COACHING CLAIM.** It does not say the
+week went well or badly, does not name a number, and does not tell the athlete
+what to do. It says the week is over and the Journal is there. **Anything
+stronger would be a verdict delivered to a lock screen before the athlete has
+opened anything**, which is the opposite of the unit's "observation, never
+diagnosis" law — and a verdict is exactly what a notification cannot take back.
+
+**28-c. IT CARRIES NO DERIVED VALUE, AND THAT IS A SECOND DELIBERATE LIMIT.** A
+title like "You did 4 of 5 sessions" would need the whole projection resolved in
+a background task, on a schedule, with no screen to fall back to. **A
+notification that is WRONG about the athlete's week is worse than one that is
+plain**, and it is wrong in the place they cannot correct it.
+
+**28-d. THE PERMISSION PROMPT IS BEHIND THE SAME GATE, ON PURPOSE.** iOS gives an
+app ONE chance to ask. Spending it on a feature that cannot fire yet would burn
+the prompt and leave the athlete having refused something they never got — and
+the OS does not hand it back. So the sentence check runs BEFORE the permission
+branch, and a cell asserts it refuses even when permission is already granted.
