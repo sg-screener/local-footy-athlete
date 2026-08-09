@@ -1,9 +1,39 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `1596d450` — **THE JOURNAL IS HIDDEN AND THE LR-29
-  REPLAY UNIT IS OPEN.** Sam's eye-pass ruling processed in full; the replay
-  unit's blocking item 1 is MEASURED and **not answered — the probe was too
-  easy, and it is one act away.**
+- **BRANCH:** `main` · **HEAD:** see below — **THE UNDO SHAPE IS RULED (ONE-STEP)
+  AND THE MOCK IS WAITING ON SAM.** The journal is hidden; the LR-29 replay unit
+  is open; its blocking item 1 is measured and **not answered — one act away.**
+
+- **⚠ SAM: ONE THING TO LOOK AT — docs/UNDO_MOCK_2026-08-09.html.** Five phone
+  states and four questions at the bottom. **No undo screen gets built until you
+  have ruled on it** — that is your own condition, and it is the journal lesson
+  as practice.
+
+- **THE UNDO UNIT — SHAPE RULED, MECHANISM MEASURED, NOTHING BUILT.**
+  Ruling as authored `cdea5c6c`: **UNDO LAST CHANGE, a single step**, not a
+  recent-changes list. **READ:** docs/LR29_UNDO_ROUTE_TAPE_2026-08-09.md ·
+  ruling docs/UNDO_SHAPE_RULING_2026-08-09.md · instrument
+  `npm run tape:lr29-undo-durability` (NOT in `test:bible`).
+  - **THE RULING'S GROUNDS WERE A CLAIM, AND HALF OF IT IS FALSE IN THE MEASURED
+    WORLD.** A Coach Notes undo route exists — but it returned
+    **`safely-rejected`** and the week did not move.
+  - **THE CONTROL ISOLATES THE VARIABLE TO THE ROUTE.** The identical unwinding
+    as a forward `move_session` **LANDED and reproduced the pre-move week
+    exactly.** Same world, same week, same dates.
+  - **A CONDITION, NOT A GAP — second sighting in two tapes.**
+    `acceptedStateTransaction.ts:509`: **accept-and-reduce is FORWARD ONLY**; a
+    restoration THROWS where a forward decision would be accepted and disclosed.
+    **Undo-by-snapshot is held to a stricter standard than the act it reverses.**
+  - **SO THE KICKOFF'S RULED MECHANISM IS NOW MEASURED, NOT JUST PREFERRED:**
+    annul + re-derive goes forward by construction. **The ledger route is the one
+    that can complete.**
+  - **THE SEAM IS TYPED AND NAMES THIS UNIT AS ITS HEIR** —
+    `decisionLedger.ts:38` declares `reversal`, `quiescentBoot.ts:122` returns
+    early on it. **The replay honouring reversals is UPSTREAM of any button;**
+    until it does, an undo dies at the app boundary. `athleteSessionMoveTests`
+    cell 21 reds the day a producer lands.
+  - **DURABILITY IS STILL UNMEASURED** — the question needs a successful undo to
+    ask it of, and this world would not produce one.
 
 - **⚠ SAM: NOTHING TO DO ON THE PHONE FOR THE JOURNAL.** The tab is gone at the
   next build. **If he tapped the reminder opt-in during the proof pass, one

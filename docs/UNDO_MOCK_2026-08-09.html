@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Undo last change — mock for Sam</title>
+<style>
+  :root{
+    --bg:#0C0C0C; --card:#151517; --card2:#1B1B1E; --line:#26262A;
+    --ink:#F2F3F0; --ink2:#9EA0A6; --ink3:#5F6167;
+    --volt:#D7F94C; --volt-dim:#8FA63A; --good:#39D98A; --warn:#FFB16B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{background:#000;display:flex;gap:34px;justify-content:center;align-items:flex-start;
+    padding:28px;font-family:-apple-system,'SF Pro Display','Helvetica Neue',Inter,Arial,sans-serif;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:390px}
+  .caselbl{color:#8A8C92;font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;text-align:center}
+  .caselbl b{color:var(--volt)}
+  .note{color:#6E7076;font-size:12px;line-height:1.5;text-align:left;padding:0 4px}
+  .note b{color:#9EA0A6}
+  .phone{width:390px;background:var(--bg);border-radius:44px;padding:14px 0 28px;
+    border:1px solid #222;overflow:hidden}
+  .screen{padding:0 20px}
+  .status{display:flex;justify-content:space-between;color:var(--ink2);
+    font-size:12px;padding:6px 26px 2px;font-weight:600}
+  .tabhead{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 4px}
+  .tabhead h1{color:var(--ink);font-size:34px;font-weight:800;letter-spacing:-0.5px}
+  .weeknav{color:var(--ink2);font-size:13px;font-weight:600}
+
+  .daycard{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:14px 16px;margin-top:10px;display:flex;align-items:center;gap:13px}
+  .daycard .d{width:38px;color:var(--ink3);font-size:11px;font-weight:800;
+    letter-spacing:1.2px;text-transform:uppercase;line-height:1.3}
+  .daycard .d b{display:block;color:var(--ink2);font-size:16px;font-weight:800;letter-spacing:0}
+  .daycard .t{flex:1}
+  .daycard .t h3{color:var(--ink);font-size:15.5px;font-weight:700;letter-spacing:-0.2px}
+  .daycard .t p{color:var(--ink3);font-size:12.5px;font-weight:500;margin-top:3px}
+  .daycard.moved{border-color:#3A3F26;background:linear-gradient(160deg,#191A14 0%,#151517 60%)}
+  .daycard.empty{background:transparent;border-style:dashed;border-color:#232327}
+  .daycard.empty .t h3{color:var(--ink3);font-weight:600;font-size:14px}
+
+  /* THE BAR — the whole surface, and the reason this mock is one screen */
+  .undobar{margin-top:16px;background:var(--card2);border:1px solid #2E3324;
+    border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .undobar .txt{flex:1}
+  .undobar .txt .k{color:var(--volt);font-size:10.5px;font-weight:800;
+    letter-spacing:1.6px;text-transform:uppercase}
+  .undobar .txt h4{color:var(--ink);font-size:14.5px;font-weight:700;margin-top:5px;line-height:1.3}
+  .undobar .txt p{color:var(--ink3);font-size:12px;font-weight:500;margin-top:4px}
+  .btn{background:var(--volt);color:#12140A;font-size:13.5px;font-weight:800;
+    padding:11px 18px;border-radius:13px;letter-spacing:-0.1px;white-space:nowrap}
+  .btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+
+  .toast{margin-top:14px;background:#14170E;border:1px solid #2E3324;border-radius:16px;
+    padding:13px 16px;display:flex;align-items:center;gap:11px}
+  .toast .dot{width:7px;height:7px;border-radius:4px;background:var(--good);flex:none}
+  .toast p{color:var(--ink2);font-size:13px;font-weight:600;flex:1}
+  .toast .u{color:var(--volt);font-size:13px;font-weight:800}
+
+  .sheet{margin-top:16px;background:var(--card);border:1px solid var(--line);
+    border-radius:22px;padding:18px 18px 16px}
+  .sheet h4{color:var(--ink);font-size:17px;font-weight:800;letter-spacing:-0.3px}
+  .sheet .sub{color:var(--ink3);font-size:12.5px;margin-top:6px;line-height:1.45;font-weight:500}
+  .diff{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+  .diffrow{display:flex;align-items:center;gap:10px;background:var(--card2);
+    border:1px solid var(--line);border-radius:13px;padding:11px 13px}
+  .diffrow .arrow{color:var(--ink3);font-size:13px;font-weight:800}
+  .diffrow span{color:var(--ink2);font-size:12.5px;font-weight:600}
+  .diffrow b{color:var(--ink);font-weight:800}
+  .diffrow.was b{color:var(--ink3);text-decoration:line-through;text-decoration-color:#44464C}
+  .acts{display:flex;gap:10px;margin-top:16px}
+  .acts .btn{flex:1;text-align:center}
+
+  .warn{margin-top:14px;background:#1A1611;border:1px solid #3A2F1E;border-radius:14px;
+    padding:12px 14px;color:var(--warn);font-size:12.5px;font-weight:600;line-height:1.4}
+  .warn b{color:#FFD3A6}
+</style>
+</head>
+<body>
+
+<!-- ══════════ A — THE RESTING STATE ══════════ -->
+<div class="col">
+  <div class="caselbl">A · <b>resting</b> — nothing to undo</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>This week</h1><div class="weeknav">3–9 Aug</div></div>
+      <div class="daycard"><div class="d">Thu<b>7</b></div><div class="t"><h3>Upper Push</h3><p>Strength · 48 min</p></div></div>
+      <div class="daycard"><div class="d">Fri<b>8</b></div><div class="t"><h3>Lower Hinge</h3><p>Strength · 52 min</p></div></div>
+      <div class="daycard empty"><div class="d">Sat<b>9</b></div><div class="t"><h3>Rest day</h3></div></div>
+    </div>
+  </div>
+  <div class="note"><b>No undo affordance exists when nothing has changed.</b>
+  Same law as the journal's front page — nothing appears unless it has something
+  to say. The bar is not a permanent chrome element.</div>
+</div>
+
+<!-- ══════════ B — JUST AFTER A CHANGE ══════════ -->
+<div class="col">
+  <div class="caselbl">B · <b>just changed</b> — the toast</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>This week</h1><div class="weeknav">3–9 Aug</div></div>
+      <div class="daycard"><div class="d">Thu<b>7</b></div><div class="t"><h3>Upper Push</h3><p>Strength · 48 min</p></div></div>
+      <div class="daycard empty"><div class="d">Fri<b>8</b></div><div class="t"><h3>Rest day</h3></div></div>
+      <div class="daycard moved"><div class="d">Sat<b>9</b></div><div class="t"><h3>Lower Hinge</h3><p>Strength · 52 min · moved from Friday</p></div></div>
+      <div class="toast">
+        <div class="dot"></div>
+        <p>Moved Lower Hinge to Saturday</p>
+        <div class="u">Undo</div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>The immediate route, and it is the one athletes will
+  actually use.</b> Inline, next to the sentence naming what happened. It is the
+  same single step as the bar in C — one affordance, two placements, never two
+  mechanisms.</div>
+</div>
+
+<!-- ══════════ C — THE BAR, LATER ══════════ -->
+<div class="col">
+  <div class="caselbl">C · <b>later</b> — the standing bar</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>This week</h1><div class="weeknav">3–9 Aug</div></div>
+      <div class="daycard"><div class="d">Thu<b>7</b></div><div class="t"><h3>Upper Push</h3><p>Strength · 48 min</p></div></div>
+      <div class="daycard empty"><div class="d">Fri<b>8</b></div><div class="t"><h3>Rest day</h3></div></div>
+      <div class="daycard moved"><div class="d">Sat<b>9</b></div><div class="t"><h3>Lower Hinge</h3><p>Strength · 52 min</p></div></div>
+      <div class="undobar">
+        <div class="txt">
+          <div class="k">Last change</div>
+          <h4>You moved Lower Hinge to Saturday</h4>
+          <p>Yesterday, 7:12pm</p>
+        </div>
+        <div class="btn">Undo</div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>ONE step, exactly as ruled.</b> It names the single most
+  recent change and offers no list, no depth, no history. Undo it and the bar
+  either disappears or names the change before it — <b>that is the open
+  question in ①.</b></div>
+</div>
+
+<!-- ══════════ D — THE CONFIRM ══════════ -->
+<div class="col">
+  <div class="caselbl">D · <b>tapped</b> — what it will do</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>This week</h1><div class="weeknav">3–9 Aug</div></div>
+      <div class="sheet">
+        <h4>Undo this change?</h4>
+        <div class="sub">Your program goes back to how it was before you moved
+          the session. Nothing you've already logged is affected.</div>
+        <div class="diff">
+          <div class="diffrow was"><span>Sat 9</span><div class="arrow">→</div><b>Lower Hinge</b></div>
+          <div class="diffrow"><span>Fri 8</span><div class="arrow">→</div><b>Lower Hinge</b></div>
+        </div>
+        <div class="acts">
+          <div class="btn ghost">Keep it</div>
+          <div class="btn">Undo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>The diff is shown before the tap commits, not after.</b>
+  Sam's own preference on the AI-coach path — proposed plan → diff → validation →
+  verification — applied to the smallest possible edit. <b>Whether this sheet
+  should exist at all is ② below.</b></div>
+</div>
+
+<!-- ══════════ E — THE REFUSAL ══════════ -->
+<div class="col">
+  <div class="caselbl">E · <b>refused</b> — the honest case</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>This week</h1><div class="weeknav">3–9 Aug</div></div>
+      <div class="sheet">
+        <h4>Undo this change?</h4>
+        <div class="sub">Your program goes back to how it was before you moved
+          the session.</div>
+        <div class="warn">Undoing this won't put the week back exactly — you've
+          logged a session since. <b>What you logged stays.</b></div>
+        <div class="acts">
+          <div class="btn ghost">Keep it</div>
+          <div class="btn">Undo anyway</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>Built into the mock deliberately, because it is the case
+  the measurement says will happen.</b> Undo re-derives forward from the
+  remaining decisions — it does not restore a photograph — so the week it lands
+  on can differ from the week that was there before. <b>Saying so is the
+  feature.</b> A logged session never silently vanishes.</div>
+</div>
+
+<!-- ══════════ THE QUESTIONS ══════════ -->
+<div class="col" style="max-width:820px">
+  <div class="caselbl" style="margin-top:10px">what the seat needs ruled</div>
+  <div class="note" style="font-size:13px;line-height:1.7">
+    <b>① After one undo, does the bar name the change before it?</b> One tap
+    then a second tap unwinds two changes — which is a recent-changes list
+    reached one step at a time. The ruling says one step. The seat reads that as
+    <b>the bar disappears after an undo</b> until the athlete makes a new change,
+    and wants that confirmed rather than assumed.<br><br>
+    <b>② Does the confirm sheet in D exist, or does the bar undo on tap?</b>
+    A one-tap undo is undoable-by-undoing in most apps, but this one is not
+    (there is no redo), so the seat leans to keeping D. Sam's call.<br><br>
+    <b>③ Where does the bar live?</b> Drawn here on the week screen. It could
+    equally sit in Coach Notes beside the older changes it is a shortcut past.<br><br>
+    <b>④ The words.</b> "You moved Lower Hinge to Saturday" is the seat's
+    phrasing and goes to a copy batch, not to the build.<br><br>
+    <b>NOT DRAWN, and named rather than quietly omitted:</b> what the bar says
+    when the last change was made by the COACH rather than the athlete; what it
+    says for a change with no clean sentence (a whole-day delete that §18
+    absorbed); and the empty state after the last undo.
+  </div>
+</div>
+
+</body>
+</html>

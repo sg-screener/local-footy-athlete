@@ -5,6 +5,67 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-second pass) — THE UNDO SHAPE IS RULED, AND ITS GROUNDS' OWN SURFACE REFUSES
+
+- **ONE LINE: Sam's one-step ruling is recorded and unaffected — and measuring
+  the surface his grounds rest on found that the Coach Notes undo REFUSES, while
+  the identical unwinding expressed as a forward decision LANDS.** `cdea5c6c`
+  (ruling as authored) + this commit. Boundary:
+  docs/LR29_UNDO_ROUTE_TAPE_2026-08-09.md · ruling:
+  docs/UNDO_SHAPE_RULING_2026-08-09.md · **MOCK FOR SAM:
+  docs/UNDO_MOCK_2026-08-09.html**
+- **ITEM 1 PROCESSED IN FULL. No undo code was written**, per the ruling's own
+  condition that the surface comes mock-first.
+  LOOP CHECK `design-question-answered-by-owner-early` sighting 1 — **worth
+  keeping: the cheapest design moment is the one that never has to be staged.**
+  The seat had lettered options queued and never needed them.
+- **THE PREMISE WAS A CLAIM, AND CHECKING IT WAS THE WORK.** *"you can already
+  undo changes using coaches notes"* has two halves. Half one — a route exists
+  (`clearReversibleAdjustment` off `ActiveCoachNote.reversibleAdjustmentId`) —
+  is TRUE by inspection. **Half two is false in the measured world:** the
+  restore returned `safely-rejected`, the week was untouched, the adjustment
+  stayed `active`.
+- **AND A CONTROL IS WHAT MAKES THAT READABLE.** One refusal cannot distinguish
+  *this world refuses this change* from *this world refuses RESTORATIONS*. So
+  the same unwinding was expressed as a forward `move_session` back — same
+  world, same week, same two dates, only the ROUTE differs. **It LANDED and
+  reproduced the pre-move week exactly.** The variable is isolated to the route.
+- **THE REASON IS A CONDITION, NOT A GAP — second sighting in two tapes.**
+  `acceptedStateTransaction.ts:509` says it out loud: **accept-and-reduce is
+  FORWARD ONLY**; a restoration throws on a blocking violation instead of
+  reducing, because a snapshot it cannot reproduce is treated as corrupt.
+  **CONSEQUENCE: undo-by-snapshot is held to a stricter standard than the act it
+  reverses.** The blocker cited was `maximum_breach` in **a past week the move
+  never touched**.
+- **THAT IS A MEASURED ARGUMENT FOR THE MECHANISM THE KICKOFF ALREADY RULED.**
+  Annul + re-derive re-derives FORWARD from the remaining decisions, so it takes
+  the accept-and-reduce path by construction. **The ledger route is not merely
+  tidier — it is the one that can complete.** Before this run the only argument
+  for it was the north star's.
+- **THE SEAM IS TYPED AND INERT, AND IT NAMES THIS UNIT AS ITS HEIR.**
+  `decisionLedger.ts:38` declares `reversal` (*"Undo is a decision too: a
+  reversal APPENDS, it never rewrites"*); `quiescentBoot.ts:122` returns early
+  on it (*"No reversal producer exists yet … declared, typed, and inert until
+  then"*). All five photographs confirm it: `ledger holds a reversal? : NO`.
+  **`athleteSessionMoveTests` cell 21 already reds on the day a producer lands.**
+- **SO THE UNIT IS THREE THINGS, AND THE BUTTON IS THE SMALLEST:** a reversal
+  producer; **the replay honouring it** (upstream of any screen — until then an
+  undo dies at the app boundary); then the one-step surface.
+- **NOT COVERED, first line: DURABILITY WAS NOT MEASURED, because the restore
+  never succeeded** — the question needs a successful undo to ask it of. ONE
+  decision kind, ONE week, ONE world, DEPTH 1. No device evidence. **Three loose
+  threads from the pre-control run are NAMED, not concluded**: the boot logged
+  the move's replay `refused`, came back with zero reversible adjustments where
+  one was active, and produced a week matching neither photograph.
+- **FOUR QUESTIONS ON THE MOCK FOR SAM**, in the file: does the bar name the
+  next change after an undo (the seat reads the ruling as NO); does the confirm
+  sheet exist or does it undo on tap; where the bar lives; and the words.
+- **A PROCESS NOTE, OWNED:** a stale zero-byte `.git/index.lock` from 18:58
+  blocked the first commit. No git process was running; removed after checking,
+  and recorded rather than quietly fixed — this is a shared worktree.
+
+
+
 ## Processed 2026-08-09 (fifty-first pass) — THE JOURNAL IS HIDDEN, AND THE OS STILL HELD WHAT THE SURFACE PUT THERE
 
 - **ONE LINE: the Journal tab is gone in one edit at the navigation owner, the
