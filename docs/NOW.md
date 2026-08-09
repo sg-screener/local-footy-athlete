@@ -1,6 +1,39 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `67f80e0b` — **FOUR SLICES IN, CONTINUOUSLY.**
+- **BRANCH:** `main` · **HEAD:** `b75cc63f` — **SIX SLICES IN, CONTINUOUSLY.**
+- **LAST UNIT: NIGGLE HISTORY + NOTE RESURFACING** (`b75cc63f`), addendum Group 2
+  item 9. docs/JOURNAL_NIGGLE_SLICE_BOUNDARY_2026-08-09.md · plan
+  docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md
+  - **Niggle history by region, plus what the athlete wrote the last time that
+    region flared.** Zero new stored state — both inputs already exist as INPUTS.
+  - **RESURFACING IS BY TIME, because a note CANNOT be knee-tagged** — the tag
+    vocabulary is the closed eight with no region. Route (b), a region on a note,
+    reopens a vocabulary Sam closed and is **HIS call, not assumed**.
+  - **TWO WRONG ASSUMPTIONS OF MINE, EACH CAUGHT BY AN EXISTING LAW.**
+    (1) `journalNoteOwnershipTests` refused the module: **no `rules/` module reads
+    the note store** — and "the type import is erased" would have traded a
+    non-negotiable for a convenience. The note now arrives as a NARROW STRUCTURAL
+    VIEW. (2) The COMPILER refused `episode.region` as a key: it is
+    `upper_body|lower_body|back_midline|other`, a coarse constraint bucket — it
+    would have filed knee and hamstring together AND put an internal word on the
+    athlete's screen. Keyed on `bodyPart` through `resolveInjuryRegion` now.
+  - **7 MUTATIONS, 6 REDS, 1 GENUINE SURVIVOR** (the region tie-break; no fixture
+    had tied). **The harness now PROVES each mutation applied before reading its
+    result** — the strength line's lesson, built in.
+  - **GATE:** `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line — the
+    declared red. **Sweep 2 of 164 = the declared set exactly**, head `b75cc63f`.
+    `test:compile` PASSED. `test:journal-niggle-history` **30 passed, 0 failed**.
+    Copy batch 21 PROPOSED; ceiling **570 → 572**.
+- **NEXT MEASURED — THE LAST SLICE IN THE ORDER: THE MONTHLY REVIEW**
+  (docs/JOURNAL_MONTHLY_REVIEW_PLAN_2026-08-09.md). **NO CHART WALL:**
+  `react-native-svg` is a dependency AND genuinely wired (AppNavigator,
+  PlanChangeSheet, GuidedInjuryFlowSheet all render it today), so drawing works on
+  the build Sam already runs. `victory-native` and Skia are dependencies but
+  **imported nowhere** — unproven on device, so recommended AGAINST by default.
+  **Almost every series already exists** (`JournalLoadModel.history`,
+  `patternSharesDone`, `JournalWork`); the one new derivation is a MULTI-WEEK
+  strength series beside the existing week-over-week arrow.
+- **PREVIOUS: THIS WEEK'S JOB** (`67f80e0b`), Monday card item 4.
 - **LAST UNIT: THIS WEEK'S JOB** (`67f80e0b`), Monday card / addendum Group 1
   item 4. "This week asks for 3 strength, 2 conditioning." — read off the
   contract the Section 18 resolver already authored onto the microcycle.

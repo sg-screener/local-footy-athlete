@@ -26,6 +26,62 @@
    session.
 
 
+## Processed 2026-08-09 (forty-sixth pass) — NIGGLE HISTORY + RESURFACING; TWO WRONG ASSUMPTIONS CAUGHT BY EXISTING LAWS
+
+- **ONE LINE: the athlete sees their niggle history by region, and what they
+  wrote the last time that region flared — joined by TIME, because a note cannot
+  be knee-tagged.** `b75cc63f`, full unpiped chain `GATE_EXIT=1` at
+  `program-control-durable`, 1 FAIL line, **sweep 2 of 164 = the declared set
+  exactly**. Boundary: docs/JOURNAL_NIGGLE_SLICE_BOUNDARY_2026-08-09.md
+- **SIXTH SLICE THIS SESSION, STILL CONTINUOUS UNDER ITEM 1:** load model → feel
+  → strength line → this week's job → niggles. Zero new stored state in all but
+  the feel slice, which added two INPUTS on an existing door.
+- **THE DESIGN'S EXAMPLE WAS NOT BUILDABLE, AND SAYING SO WAS THE WORK.** "A
+  knee-tagged note resurfaces" assumes a region tag; `JOURNAL_NOTE_TAGS` is the
+  closed eight with no region, closed deliberately in slice 2. **Route (a)
+  resurfaces BY TIME** — injury-tagged notes written during an earlier episode's
+  weeks — which is a FACT rather than an inference. **Route (b), a region on a
+  note, reopens a vocabulary Sam ruled and is HIS call: not assumed.**
+- **TWO WRONG ASSUMPTIONS OF MINE, EACH CAUGHT BY A LAW THAT ALREADY EXISTED —
+  and that is the finding of the pass.**
+  (1) `journalNoteOwnershipTests` refused the module outright: **no `rules/`
+  module reads the note store.** The tempting argument was that a type-only
+  import is erased at compile and therefore harmless — that would have traded a
+  non-negotiable for a convenience and left the next reader one keystroke from a
+  real import. The note now arrives as a NARROW STRUCTURAL VIEW, the same shape
+  `journalWeek` already uses for a session outcome.
+  (2) The **COMPILER** refused `episode.region` as a grouping key: it is typed
+  `upper_body | lower_body | back_midline | other` — a coarse CONSTRAINT bucket,
+  not one of Sam's thirteen. It would have filed a knee and a hamstring together
+  AND put an internal word on an athlete's screen. Keyed on the athlete's own
+  `bodyPart` through `resolveInjuryRegion` now — the owner whose header records
+  five divergent copies that once disagreed.
+- **OBSERVATION, NEVER DIAGNOSIS**, enforced not promised: the note returns as the
+  athlete's own words, unparsed; the introducing line states only WHEN it was
+  written; a cell sweeps the module for causal vocabulary.
+- **A RECORD COUNT IS NOT AN INJURY COUNT.** `superseded` means the RECORD was
+  replaced; counting it would say two niggles where there was one.
+- **7 MUTATIONS, 6 REDS, 1 GENUINE SURVIVOR** — the region tie-break, which no
+  fixture had tied. **THE HARNESS NOW PROVES EACH MUTATION APPLIED BEFORE READING
+  ITS RESULT**, which is the strength line's lesson built in rather than
+  remembered; all seven printed `applied`, so the survivor was real.
+- **THE LAST SLICE IN THE ORDER IS MEASURED, AND THERE IS NO CHART WALL**
+  (docs/JOURNAL_MONTHLY_REVIEW_PLAN_2026-08-09.md): `react-native-svg` is a
+  dependency **and genuinely wired** — AppNavigator, PlanChangeSheet and
+  GuidedInjuryFlowSheet all render it today, so drawing works on the build Sam
+  already runs. `victory-native` and Skia are dependencies **imported nowhere in
+  `src/`** — unproven on device, so recommended AGAINST by default rather than
+  reached for. **Almost every series already exists** in `JournalLoadModel.history`
+  / `patternSharesDone` / `JournalWork`; the one new derivation is a MULTI-WEEK
+  strength series beside the existing week-over-week arrow.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE.** And whether `affectedWeeks` is
+  kept complete by the episode transaction on a live device is NOT asserted — the
+  one thing that would silently resurface nothing while every cell stayed green.
+- **SAM'S QUESTIONS PARKED:** should a note carry a region (route b); the region
+  words on screen ("ankle/foot — 2 episodes") want an eye; batch 21's copy. Plus
+  everything queued: **copy batches 15-21** and the load model's **7 unsigned
+  constants of 9**.
+
 ## Processed 2026-08-09 (forty-fifth pass) — THIS WEEK'S JOB; AND A GATE CAUGHT ME READING A STALE TALLY
 
 - **ONE LINE: "This week asks for 3 strength, 2 conditioning." — read off the
