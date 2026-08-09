@@ -11,13 +11,12 @@
  * something can never disagree**: the moment the athlete taps, and every
  * relaunch after. They are one filter, and these cells hold them to it.
  *
- * WHAT IT DELIBERATELY DOES NOT CLAIM. The undo is NOT yet complete for a
- * `move_session`, and the tape says so with a measurement
- * (`docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md`): a move also writes a
- * calendar `rest` mark, which is not a ledger decision and therefore survives
- * an annul-and-re-derive. Cell [7] pins that gap OPEN rather than hiding it —
- * an undo that leaves a mark behind must be visible to this suite, not
- * discovered later on a phone.
+ * WHAT IT CLAIMS AND WHAT IT DOES NOT. Undo is complete for `move_session`,
+ * proven end to end by `npm run tape:lr29-undo-durability` after the move door
+ * stopped writing a calendar mark. It is UNPROVEN for every other decision
+ * kind: a second non-ledger side-writer would produce the identical symptom
+ * somewhere else, and cell [10] guards the one instance that is closed rather
+ * than the class, which stays open.
  *
  * Run: npm run test:undo-reversal
  */
@@ -49,6 +48,7 @@ import {
   undoableEntries,
   lastUndoableEntry,
 } from '../rules/decisionLedgerReplay';
+import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
 import type { AthleteDecision, DecisionLedgerEntry } from '../types/decisionLedger';
 
 let passed = 0;
@@ -226,22 +226,74 @@ run('9 the undo door is the only writer of reversal entries', () => {
 
 // ── [10] THE GAP, PINNED OPEN ────────────────────────────────────────────────
 
-run('10 the calendar-mark gap is declared, not silently carried', () => {
-  // MEASURED 2026-08-09 (`npm run tape:lr29-undo-durability`): a `move_session`
-  // writes a calendar `rest` mark on the source day. That mark is NOT a ledger
-  // decision, so annul + re-derive leaves it behind and the undone week is not
-  // the pre-change week.
+run('10 the move door never authors a calendar mark — the gap stays closed', () => {
+  // MEASURED 2026-08-09: a `move_session` wrote `markedDays[sourceDate] = 'rest'`.
+  // A mark is not a ledger decision, so annul + re-derive could not take it
+  // back and the undone week was not the pre-change week.
   //
-  // This cell does not assert the DEFECT — a cell that passes because a bug is
-  // present is a cell that reds when somebody fixes it. It asserts that the
-  // gap is DECLARED where the next reader will meet it, so the undo door
-  // cannot quietly ship as complete.
-  const door = fs.readFileSync(
-    path.resolve(__dirname, '..', 'store', 'undoLastDecision.ts'), 'utf8');
-  assert(/NOT COMPLETE|INCOMPLETE/.test(door),
-    'the undo door no longer declares that undo is incomplete for a move — '
-    + 'either the calendar-mark gap was closed (delete this cell and say so in '
-    + 'the boundary report) or the declaration was dropped, which is worse');
+  // It was fixed at the SOURCE, not in the undo door — under the ruling Sam
+  // already made for the sibling deletion door ("A DELETION DOOR NEVER WRITES A
+  // CALENDAR MARK", 2026-07-30), because the move's own constraint already
+  // owned the emptiness via the canonical rest stub.
+  //
+  // This cell reds if the write comes back. It is a SOURCE assertion because
+  // the defect is an authoring act, and the world-level proof (the tape) is not
+  // in the chain.
+  const source = fs.readFileSync(
+    path.resolve(__dirname, '..', 'store', 'acceptedStateTransaction.ts'), 'utf8');
+  const code = source.split('\n')
+    .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
+    .join('\n');
+  assert(!/markedDays\[sourceDate\]\s*=\s*'rest'/.test(code),
+    'the move door authors a calendar rest mark again — undo cannot take that '
+    + "back, and Sam's 2026-07-30 ruling says a door does not speak for the "
+    + 'calendar');
+});
+
+// ── [11-14] THE TOAST — undo's only screen-level affordance ──────────────────
+
+run('11 the toast is a READING of the ledger, so no door has to raise it', () => {
+  const ledger = [entry('dl-1', move('2026-08-08', '2026-08-09'))];
+  const toast = undoToastFor(ledger, null);
+  assert(toast?.entryId === 'dl-1', 'a landed decision raised no toast');
+  assert(toast?.sentence === 'moved a session',
+    `the toast did not use the phrase owner's words: ${toast?.sentence}`);
+});
+
+run('12 a toast appears only when the newest decision CHANGES', () => {
+  // Transience without a clock. A timestamp window would raise a toast for a
+  // change made in a previous session if the app relaunched quickly enough,
+  // and would misbehave when the device clock moves backwards.
+  const ledger = [entry('dl-1', move('2026-08-08', '2026-08-09'))];
+  assert(undoToastFor(ledger, 'dl-1') === null,
+    'an already-seen decision raised the toast again');
+  const later = [...ledger, entry('dl-2', move('2026-08-06', '2026-08-07'))];
+  assert(undoToastFor(later, 'dl-1')?.entryId === 'dl-2',
+    'a NEW decision did not raise a toast');
+});
+
+run('13 one tap is one step — an undo does not re-offer what it uncovers', () => {
+  // After the undo the target is annulled, so the marker is the decision
+  // BEFORE it. Sam ruled one step; a toast that immediately offered the next
+  // one would be a recent-changes list reached one tap at a time.
+  const afterUndo = [
+    entry('dl-1', move('2026-08-06', '2026-08-07')),
+    entry('dl-2', move('2026-08-08', '2026-08-09')),
+    reversal('dl-3', 'dl-2'),
+  ];
+  const marker = undoToastSeenMarker(afterUndo);
+  assert(marker === 'dl-1', `the seen marker should be dl-1, got ${marker}`);
+  assert(undoToastFor(afterUndo, marker) === null,
+    'the toast re-offered the change the undo uncovered');
+});
+
+run('14 an unmapped decision kind shows NO toast, never its code name', () => {
+  // The honest-outcome law. `phraseFor` returns null for anything it has no
+  // athlete word for, and the toast must drop rather than render `remove_x`.
+  const ledger = [entry('dl-1',
+    { kind: 'migrated_day_placement', date: '2026-08-08', workout: {} } as never)];
+  assert(undoToastFor(ledger, null) === null,
+    'an unmapped decision kind reached the athlete as a toast');
 });
 
 console.log(`\nUndo reversal totals: ${passed} passed, ${failed} failed`);

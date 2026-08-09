@@ -65,7 +65,7 @@ export interface JournalChanges {
  * migration bookkeeping that no writer creates, and it describes a decision
  * nobody made this week.
  */
-function phraseFor(entry: DecisionLedgerEntry): string | null {
+export function phraseFor(entry: DecisionLedgerEntry): string | null {
   const decision = entry.decision;
   switch (decision.kind) {
     case 'fixture_add': return 'added a fixture';

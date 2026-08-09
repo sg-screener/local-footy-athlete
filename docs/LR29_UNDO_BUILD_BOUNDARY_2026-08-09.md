@@ -173,3 +173,89 @@ as separate and to red on the day somebody unifies them.
   provenance but the door does not read it, and whether an athlete may undo a
   coach's change is a design question nobody has asked.
 - The `maximum_breach` in `2026-07-27` is still not traced to a cause.
+
+---
+
+# ADDENDUM — §4 CLOSED AND THE TOAST BUILT (2026-08-09, later)
+
+Inbox item 1 (a)(b)(c). Rulings committed as authored first: `d60aecb8`.
+
+## §4 — RULED (a), AND THE DECISION TURNED OUT TO BE ALREADY MADE
+
+The seat ruled option (a), *"the mark becomes part of the decision"*. Measuring
+it first found **the ruling already existed, for the sibling door, in the same
+file, 160 lines above the offending line**:
+
+> **A DELETION DOOR NEVER WRITES A CALENDAR MARK (Sam, 2026-07-30)** … *"there
+> is no session here today" and "this is a rest day" are different claims.*
+
+The MOVE door still did exactly what the deletion door was ruled out of. And
+the emptiness was **already owned twice**: the constraint this same function
+builds carries `wholeDayRestOwned`, and `rules/userRemovalConstraints` already
+pushes the canonical rest stub for that shape — the mechanism installed when the
+deletion ruling found that removing the mark ALONE put the derived G-1 session
+straight back onto the cleared day.
+
+**So the fix is a DELETION, not a replacement:** one of two representations
+goes, the decision's vocabulary grows by nothing. That is option (a)'s intent
+reached by the seat's own preferred mechanism (Elegant Solution Requirement —
+prefer what removes representations).
+
+```
+ACTED   marks: (none in week)   — no mark written; the day still empties
+UNDONE  week shape IDENTICAL to BEFORE, marks (none)
+BOOTED  IDENTICAL — durable
+both routes restore; probe non-vacuous
+```
+
+**Undo is COMPLETE for `move_session`, which it was not at `ca89ff7f`.**
+
+## THE TOAST — undo's athlete-visible face
+
+`rules/undoToast.ts` (pure model) · `components/UndoToast.tsx` ·
+`rules/undoToastCopy.ts` (batch 29, PROPOSED) · mounted once on `HomeScreenV2`.
+
+**IT READS THE LEDGER; NO DOOR RAISES IT.** `useHomeScreen` alone lands changes
+at **ten** `executeProgramControlActionDurably` call sites. A toast raised at
+each is ten places to forget and ten to word differently. Every landed decision
+already appends exactly one ledger entry, so the toast is a READING — a door
+gets its toast by existing. A coach-authored change would appear for free, which
+is exactly why whether it SHOULD is parked (item (c)) rather than answered by a
+missing wire.
+
+**TRANSIENCE WITHOUT A CLOCK.** The first model compared `occurredAt` to now;
+that is a device clock, and it raises a toast for a previous session's change if
+the app relaunches quickly. It watches the newest undoable entry's IDENTITY
+instead — same reason `lastUndoableEntry` picks by ledger order.
+
+**ONE TAP IS ONE STEP.** After an undo the seen-marker is taken from the ledger
+again, so it becomes the decision BEFORE the annulled one and the toast does not
+re-offer what the undo uncovered. A toast that did would be a recent-changes
+list reached one tap at a time — the thing Sam ruled against.
+
+**THE WORDS ARE NOT MINE.** `phraseFor` is exported from `rules/journalChanges`
+and reused, so the toast cannot grow a rival vocabulary; its `default: return
+null` is the honest-outcome law, and cell [14] proves an unmapped kind shows
+NOTHING rather than a code name. Only the frame (`"You"`) and the action
+(`"Undo"`) are new, and both are PROPOSED.
+
+## NOT COVERED — honestly
+
+- **NO DEVICE EVIDENCE. DEPTH 0.** No cell mounts the toast; the fade, the
+  6-second dwell, where it sits over the week and whether it covers anything are
+  unverified by eye. **The whole surface is unseen.**
+- **THE COPY GATES ARE GREEN AND THAT IS NOT EVIDENCE.** The extractor walks
+  `screens`/`components`/`navigation` (`SURFACE_ROOTS`); the toast's strings live
+  in `rules/`, so they are invisible to it and the ceiling did not move. This is
+  the known ~150-string `utils`/`rules` gap, **declared rather than ridden** —
+  batch 29 exists in the module and NOT on the sheet.
+- **UNDO IS PROVEN COMPLETE FOR ONE DECISION KIND.** Every other kind may have
+  its own non-ledger side-writer producing the identical symptom. `side-writer-
+  outside-the-ledger` sighting 1; the compression rule is a CENSUS, not another
+  per-kind fix.
+- **The toast is mounted on `HomeScreenV2` only.** A change landed from
+  `DayWorkoutScreenV2` appends its entry and raises the toast when the athlete
+  returns — not where they were standing. Named, not fixed.
+- **Item (c), undo of a coach-authored decision, is PARKED** to the coach
+  kickoff as ordered. The mechanism does not read provenance, so it would
+  currently offer one.

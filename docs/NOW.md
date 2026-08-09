@@ -1,41 +1,38 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** the undo build below — **UNDO'S MACHINERY IS
-  BUILT AND DURABLE; THE SURFACE WAITS ON SAM.** The journal is hidden; LR-29's
-  replay item 1 is measured and not answered.
+- **BRANCH:** `main` · **HEAD:** the undo toast below — **UNDO IS BUILT,
+  COMPLETE FOR A MOVE, AND HAS AN ATHLETE-VISIBLE FACE.** The journal is hidden;
+  LR-29's replay item 1 is measured and not answered.
 
-- **⚠ SAM: ONE THING TO LOOK AT — docs/UNDO_MOCK_2026-08-09.html.** Five phone
-  states, four questions at the bottom. **No undo screen is built until you rule
-  on it** — your own condition, and it cost nothing: two thirds of the unit
-  landed while it waited.
+- **⚠ SAM: THE FIRST THING TO LOOK AT ON THE PHONE — move a session on the
+  Program screen.** A toast should say *"You moved a session"* with **Undo**.
+  Tap it: the week goes back, and it stays back after a relaunch. **Nothing else
+  changed on that screen.** Batch 29 is two words (`"You"`, `"Undo"`), PROPOSED.
 
-- **THE UNDO UNIT — TWO THIRDS BUILT, GATED, AND HONESTLY INCOMPLETE.**
-  **READ:** docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md · ruling
-  docs/UNDO_SHAPE_RULING_2026-08-09.md · gate `test:undo-reversal` (10 cells,
-  **5 mutations 5 red**) · instrument `npm run tape:lr29-undo-durability`.
-  - **DURABLE: YES.** `undone` → `UNDONE → BOOTED IDENTICAL` → the change does
-    not come back, ledger holds `[plan_change, reversal]`. **ZERO new stored
-    state — north star TOWARD.**
-  - **BUILT:** `rules/decisionLedgerReplay.ts` (one filter deciding what a
-    replay replays), `store/undoLastDecision.ts` (append a reversal, re-derive —
-    two statements), and `quiescentBoot`'s early return finally has its producer.
-  - **THE FINDING: A DECISION IS NOT THE ONLY THING A DECISION WRITES.** A move
-    also writes a calendar `rest` mark, which is **not a decision**, so annul +
-    re-derive leaves it behind and the undone week is not the pre-change week.
-    **NOT PATCHED** — §4 of the boundary puts three lettered options to Sam and
-    recommends the mark becoming part of the decision.
-  - **THE SECOND DOOR IS A STOP WITH A REASON.** Coach Notes' snapshot restore
-    was NOT re-pointed at the ledger route: it carries `calendarFacts` and CAN
-    put the mark back, so re-pointing today would **cost the athlete material
-    they currently get back.** `athleteSessionMoveTests` cell 21 re-aimed to pin
-    the two routes SEPARATE and red the day somebody unifies them.
-  - **A CORRECTION TO THE LAST PASS:** the Coach Notes refusal it reported is
-    real **but world-dependent** — on a world that has BOOTED once, which is
-    every world an athlete opens, that route returns `restored`. The forward-only
-    asymmetry stands in the source; it is not evidence the athlete's undo is
-    broken. **The previous report over-reached.**
-  - **A GUARD OF MINE WAS DEAD CODE and a mutation found it** — deleted, cell
-    re-aimed where a genuine redo now reds.
+- **THE UNDO UNIT — BUILT, GATED, WITH ITS CLASS STILL OPEN.**
+  **READ:** docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md (+ its addendum) ·
+  rulings docs/UNDO_SHAPE_RULING_2026-08-09.md ·
+  docs/UNDO_SURFACE_RULING_2026-08-09.md · gate `test:undo-reversal` (14 cells) ·
+  instrument `npm run tape:lr29-undo-durability`.
+  - **UNDO = APPEND A `reversal`, RE-DERIVE.** Two statements, **zero new stored
+    state**, durable across a process death. The kind has been declared since
+    R1.1 and inert; this is the heir `quiescentBoot.ts` named.
+  - **§4 CLOSED BY DELETING A REPRESENTATION.** A move wrote a calendar `rest`
+    mark that is not a decision, so undo could not take it back. **Sam had
+    already ruled that exact write out of the sibling deletion door on
+    2026-07-30**, and the move's own constraint already owned the emptiness. The
+    write is gone; nothing was added to the undo door.
+  - **THE TOAST IS UNDO'S ONLY SCREEN-LEVEL AFFORDANCE** (surface ruling: the
+    bar and sheet are dead, change-talk belongs to the coach tab). It **reads the
+    ledger** rather than being raised by ten call sites, so every door gets it by
+    existing.
+  - **THE CLASS IS OPEN:** undo is proven complete for **one** decision kind.
+    `side-writer-outside-the-ledger` sighting 1 — the compression rule is a
+    CENSUS of decision side-writers, not another per-kind fix.
+  - **COPY GATES GREEN IS NOT EVIDENCE:** batch 29 lives in `rules/`, invisible
+    to the extractor. On the module, **not on the sheet.**
+  - **PARKED to the coach kickoff:** undo of a COACH-authored decision. The
+    mechanism does not read provenance, so it would currently offer one.
 
 - **THE HIDE** (`7f9e54ab`, ruling committed as authored first at `47312bd9`;
   native rebuild artifacts at `77f5e415`).

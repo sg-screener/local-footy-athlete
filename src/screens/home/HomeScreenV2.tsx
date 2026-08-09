@@ -43,6 +43,7 @@ import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
+import { UndoToast } from '../../components/UndoToast';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
   WEEK_DAYS,
@@ -1214,6 +1215,14 @@ export default function HomeScreenV2() {
         onAnswerNoUsualGameDay={answerNoUsualGameDay}
         onAdvance={handleAdvancePhaseShift}
       />
+      {/*
+        UNDO'S ONLY SCREEN-LEVEL AFFORDANCE (ruled 2026-08-09).
+        Mounted ONCE, at the screen root, and wired to nothing: it reads the
+        decision ledger, so every door that lands a change raises it without
+        knowing this component exists. That is why there is one mount here and
+        no toast call at any of the ten program-control call sites.
+      */}
+      <UndoToast />
     </SafeAreaView>
   );
 }

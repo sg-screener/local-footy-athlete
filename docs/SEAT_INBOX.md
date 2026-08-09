@@ -5,6 +5,65 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-fourth pass) — §4 CLOSED BY DELETING A REPRESENTATION, AND UNDO HAS A FACE
+
+- **ONE LINE: the seat ruled option (a), and measuring it first found the ruling
+  already existed — Sam made it for the sibling door on 2026-07-30, 160 lines
+  above the offending line in the same file.** Rulings as authored `d60aecb8`,
+  §4 `120115c3`, toast in this commit. Boundary addendum:
+  docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md.
+- **ITEMS (a) AND (b) PROCESSED IN FULL. (c) PARKED as ordered.**
+  LOOP CHECK `side-writer-outside-the-ledger` sighting 1 — **iterate**: the
+  instance is closed, **the class is not.** Undo is proven complete for ONE
+  decision kind; a second non-ledger side-writer would produce the identical
+  symptom elsewhere, and the compression rule is a CENSUS rather than another
+  per-kind fix.
+- **§4 CLOSED AS A DELETION, NOT A REPLACEMENT.** *"A DELETION DOOR NEVER WRITES
+  A CALENDAR MARK (Sam, 2026-07-30) — 'there is no session here today' and 'this
+  is a rest day' are different claims."* The MOVE door still did exactly what the
+  deletion door was ruled out of. **And the emptiness was already owned twice:**
+  the constraint that same function builds carries `wholeDayRestOwned`, and the
+  canonical rest stub already covers it — the mechanism installed when the
+  deletion ruling found that removing the mark ALONE put the derived G-1 session
+  straight back on the cleared day. So one of two representations went and the
+  decision's vocabulary grew by nothing. **Option (a)'s intent, by the seat's own
+  preferred mechanism.**
+- **MEASURED:** `ACTED marks: (none)` — no mark written, the day still empties;
+  **`UNDONE` week IDENTICAL to `BEFORE`**; `BOOTED` identical. **Undo is COMPLETE
+  for `move_session`, which it was not at `ca89ff7f`.**
+- **THE TOAST READS THE LEDGER; NO DOOR RAISES IT.** `useHomeScreen` lands
+  changes at **ten** call sites — a toast at each is ten places to forget and ten
+  to word differently. Every landed decision already appends one ledger entry, so
+  the toast is a READING and a door gets its toast by existing. **A coach change
+  would appear for free, which is exactly why (c) is parked rather than answered
+  by a missing wire.**
+- **TRANSIENCE WITHOUT A CLOCK.** The first model compared `occurredAt` to now —
+  a device clock, which raises a toast for a previous session's change after a
+  quick relaunch. It watches the newest undoable entry's IDENTITY instead.
+- **ONE TAP IS ONE STEP, enforced:** after an undo the seen-marker is re-read
+  from the ledger, so it becomes the decision BEFORE the annulled one. A toast
+  that re-offered what the undo uncovered would be a recent-changes list reached
+  one tap at a time — **the thing Sam ruled against.**
+- **THE WORDS ARE NOT MINE.** `phraseFor` is EXPORTED from `rules/journalChanges`
+  and reused, so the toast cannot grow a rival vocabulary; cell [14] proves an
+  unmapped kind shows NOTHING rather than a code name. Only `"You"` and `"Undo"`
+  are new — **batch 29, PROPOSED.**
+- **THE COPY GATES ARE GREEN AND THAT IS NOT EVIDENCE — declared, not ridden.**
+  The extractor walks `screens`/`components`/`navigation`; the toast's strings
+  live in `rules/`, so they are invisible to it and the ceiling did not move.
+  **Batch 29 exists in the module and NOT on the sheet** — the known ~150-string
+  `utils`/`rules` gap.
+- **GATE:** `test:undo-reversal` now **14 cells**; full unpiped chain
+  `GATE_EXIT=1` at `test:program-control-durable`, 1 FAIL line — main's declared
+  red. `test:compile` PASSED. **Sweep 2 of 170 = the declared set exactly**, run
+  twice: once with a core transaction file changed, once with the surface added.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE — the whole surface is unseen,
+  DEPTH 0.** No cell mounts the toast; the fade, the 6-second dwell and what it
+  covers are unverified by eye. **The toast is mounted on `HomeScreenV2` only**,
+  so a change landed from `DayWorkoutScreenV2` raises it when the athlete
+  returns, not where they were standing — named, not fixed.
+
+
 ## Processed 2026-08-09 (fifty-third pass) — UNDO IS DURABLE, AND A DECISION IS NOT THE ONLY THING A DECISION WRITES
 
 - **ONE LINE: the reversal producer and the replay that honours it are built and

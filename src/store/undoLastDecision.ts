@@ -24,20 +24,26 @@
  * and its shortfall disclosed. **A re-derivation is a forward derivation**, so
  * this route never meets that arm.
  *
- * ⚠ UNDO IS NOT COMPLETE FOR A `move_session`, AND THAT IS MEASURED RATHER
- * THAN SUSPECTED. `npm run tape:lr29-undo-durability`, 2026-08-09: a move also
- * writes a calendar `rest` mark on the source day. **A calendar mark is not a
- * ledger decision**, so annulling the decision and re-deriving leaves the mark
- * behind — the source day stays empty and the session stays where it was moved
- * to. The reversal IS honoured (the annulled decision is never replayed, before
- * or after a relaunch); the world simply has a second author for the same act.
+ * A DECISION IS NOT ALWAYS THE ONLY THING A DECISION WRITES — and that was
+ * measured here, on this door, before it was fixed. `move_session` also wrote a
+ * calendar `rest` mark, which is not a ledger decision, so annul + re-derive
+ * left it behind and the undone week was not the pre-change week.
  *
- * This is the dependency list's §3 fork arriving in the athlete's most visible
- * feature: *"the replay's input set is the ledger PLUS the fact stores."*
- * **It is NOT patched here.** Making this door reach into the calendar store
- * would give the mark a second owner and put the special case exactly where
- * this repo's rules say it must not go. It needs an ownership ruling —
- * `docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md` §4 states the options.
+ * IT WAS NOT PATCHED HERE, and that is the point worth keeping. Reaching into
+ * the calendar store from this door would have given the mark a second owner
+ * and put a per-decision-kind special case in the one door that must stay
+ * kind-agnostic. **The write was removed at its source instead**
+ * (`acceptedStateTransaction`, 2026-08-09) — under a ruling Sam had already
+ * made for the sibling deletion door on 2026-07-30, and because the move's own
+ * constraint already owned the emptiness through the canonical rest stub. One
+ * of two representations went; nothing was added to this door.
+ *
+ * THE CLASS IS OPEN EVEN THOUGH THIS INSTANCE IS CLOSED. Undo is complete for
+ * `move_session` and is UNPROVEN for every other kind: a second non-ledger
+ * side-writer would produce the identical symptom somewhere else. The seat's
+ * LOOP CHECK `side-writer-outside-the-ledger` is at sighting 1, and its
+ * compression rule is a census of decision side-writers rather than another
+ * per-kind fix.
  *
  * WHAT THIS DOOR DOES NOT COVER, by the kickoff addendum's own boundary:
  * recorded FACTS. A logged session outcome or a journal note is not a program
@@ -62,10 +68,10 @@ export type UndoOutcome =
 /**
  * WHAT THE SURFACE ASKS BEFORE IT DRAWS ANYTHING.
  *
- * Returns the decision an undo would annul, or null. The bar in the mock
- * renders from this and from nothing else — *"nothing appears unless it has
- * something to say"*, the journal front page's law, applied to an affordance
- * rather than a block.
+ * Returns the decision an undo would annul, or null. The TOAST — undo's only
+ * screen-level affordance after the 2026-08-09 surface ruling killed the
+ * standing bar — renders from this and from nothing else, so nothing appears
+ * unless it has something to say.
  *
  * READ-ONLY BY CONSTRUCTION: this is the same set the replay uses, so the
  * surface can never offer to undo something the world has already stopped
