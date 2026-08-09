@@ -1725,6 +1725,22 @@ month the athlete would name, and converting one to the other would be a
 presentation guess dressed as a fact. **Sam may prefer the month word — that is a
 ruling, and the data supports either.**
 
+**22-f. THE CONSISTENCY LINE**, added in the same slice, in template form:
+
+- "{n}% of your planned sessions done — {done} of {planned} over {weeks} weeks."
+
+**A PERCENTAGE WITHOUT ITS DENOMINATOR IS A CLAIM WITHOUT ITS EVIDENCE.** "80%"
+over five sessions and over fifty are different facts wearing one number, so the
+count travels with the percentage rather than behind a tap — and the line says
+how many WEEKS it counted, so the number cannot quietly imply a month it has not
+seen. **Today it counts one week**, because `JournalWork` derives from the
+projection and only this week is projectable; the line states that rather than
+hiding it.
+
+**A week with no plan is excluded from the rate.** A bye, or a week before the
+athlete onboarded, is not a week they missed — counting it would drag the number
+down for something that never asked anything of them.
+
 **22-e. NO NUMBER APPEARS ON A CHART.** No axis, no gridline, no value label —
 the ruling's "athlete never sees raw AU" and the design's calm register together
 mean the SHAPE is the story and the words sit beside it. The only number the

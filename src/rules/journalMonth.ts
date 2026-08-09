@@ -51,9 +51,19 @@ export const MIN_POINTS_FOR_A_TREND = TREND_MIN_WEEKS;
 
 // ─── Inputs ──────────────────────────────────────────────────────────────
 
+/** One week's completion facts, as `JournalWork` already derived them. */
+export interface MonthWeekWork {
+  readonly weekStart: string;
+  readonly sessionsPlanned: number;
+  readonly completedFull: number;
+  readonly completedPartial: number;
+}
+
 export interface BuildJournalMonthInput {
   /** Per-week totals the load model already derived, any order. */
   readonly weeks: readonly JournalLoadWeekTotals[];
+  /** Per-week completion, from `journalWeek`. Empty when unknown. */
+  readonly work?: readonly MonthWeekWork[];
   /** Per-lift top sets by week, from the strength owner. */
   readonly strengthSeries: ReadonlyMap<
     string,
@@ -78,7 +88,27 @@ export interface StrengthGain {
   readonly deltaKg: number;
 }
 
+/**
+ * Consistency, and the sessions banked behind it.
+ *
+ * A PERCENTAGE WITHOUT ITS DENOMINATOR IS A CLAIM WITHOUT ITS EVIDENCE — "80%"
+ * over five sessions and over fifty are different facts wearing one number, so
+ * both halves travel together and the surface shows both.
+ */
+export interface MonthConsistency {
+  readonly sessionsDone: number;
+  readonly sessionsPlanned: number;
+  /** 0-1. Only meaningful beside the counts above. */
+  readonly rate: number;
+  readonly weeksCounted: number;
+}
+
 export interface JournalMonth {
+  /**
+   * NULL when no week carried a plan. A consistency figure over nothing is 0%,
+   * which reads as total failure to an athlete who simply has no history.
+   */
+  readonly consistency: MonthConsistency | null;
   /**
    * Conditioning volume over time, in the stream's own unit. NULL until there
    * are enough points to be honest — never a one-dot chart.
@@ -107,6 +137,30 @@ export interface JournalMonth {
  */
 function honestSeries(points: readonly MonthPoint[]): readonly MonthPoint[] | null {
   return points.length >= MIN_POINTS_FOR_A_TREND ? points : null;
+}
+
+/**
+ * Consistency over the month's weeks.
+ *
+ * PARTIAL SESSIONS COUNT AS DONE, and that is the same ruling
+ * `DidTheWorkHappen` already applies one screen up ("`done` = full + partial").
+ * A second answer to "did that session happen" would be the two-owners defect at
+ * a different time scale.
+ */
+function consistencyFrom(work: readonly MonthWeekWork[]): MonthConsistency | null {
+  const withPlan = work.filter((week) => week.sessionsPlanned > 0);
+  if (withPlan.length === 0) return null;
+  const sessionsPlanned = withPlan.reduce((sum, w) => sum + w.sessionsPlanned, 0);
+  const sessionsDone = withPlan.reduce(
+    (sum, w) => sum + w.completedFull + w.completedPartial, 0,
+  );
+  if (sessionsPlanned === 0) return null;
+  return {
+    sessionsDone,
+    sessionsPlanned,
+    rate: sessionsDone / sessionsPlanned,
+    weeksCounted: withPlan.length,
+  };
 }
 
 export function buildJournalMonth(input: BuildJournalMonthInput): JournalMonth {
@@ -157,10 +211,18 @@ export function buildJournalMonth(input: BuildJournalMonthInput): JournalMonth {
 
   const conditioningSeries = honestSeries(conditioningPoints);
 
+  const consistency = consistencyFrom(input.work ?? []);
+
   return {
+    consistency,
     conditioningSeries,
     strengthSeries,
     gains,
-    building: conditioningSeries === null && strengthSeries.size === 0,
+    // THE BUILDING STATE NOW ACCOUNTS FOR CONSISTENCY TOO. A month with a real
+    // consistency figure and no chart yet is NOT empty, and telling that athlete
+    // "this builds as you train" beside a number they can already read would be
+    // the honest-absence line lying about a presence.
+    building: conditioningSeries === null && strengthSeries.size === 0
+      && consistency === null,
   };
 }

@@ -446,6 +446,18 @@ function MonthlyReview({ month }: { month: JournalMonth }) {
 
   return (
     <View>
+      {/*
+        CONSISTENCY WITH ITS DENOMINATOR ATTACHED. "80%" over five sessions and
+        over fifty are different facts wearing one number, so the count travels
+        with the percentage rather than behind a tap.
+      */}
+      {month.consistency ? (
+        <Text variant="body" style={styles.body} testID="journal-month-consistency">
+          {`${Math.round(month.consistency.rate * 100)}% of your planned sessions done — ${
+            month.consistency.sessionsDone} of ${month.consistency.sessionsPlanned} over ${
+            month.consistency.weeksCounted} weeks.`}
+        </Text>
+      ) : null}
       {month.conditioningSeries ? (
         <TrendChart
           testID="journal-month-conditioning"
@@ -823,6 +835,16 @@ export default function JournalScreen() {
   // owner already produced per week.
   const month = useMemo<JournalMonth>(() => buildJournalMonth({
     weeks: [loadModel.thisWeek, ...loadModel.history],
+    // THIS WEEK'S COMPLETION ONLY, and that is a stated limit rather than a
+    // silent one: `JournalWork` is derived from the PROJECTION, which exists for
+    // this week and no past one. So consistency is honest about how many weeks
+    // it counted (`weeksCounted`) instead of implying a month it cannot see.
+    work: [{
+      weekStart: week.weekStart,
+      sessionsPlanned: week.work.sessionsPlanned,
+      completedFull: week.work.completedFull,
+      completedPartial: week.work.completedPartial,
+    }],
     strengthSeries: buildJournalStrengthSeries({
       weekStart: week.weekStart,
       weeks: 12,

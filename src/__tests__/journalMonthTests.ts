@@ -206,6 +206,69 @@ console.log('\n[4] OLDEST FIRST, AND THE GAIN IS FIRST-TO-LAST');
       .gains.length === 0);
 }
 
+// ─── [4b] Consistency carries its denominator ────────────────────────────
+
+console.log('\n[4b] CONSISTENCY — a percentage without its evidence is a claim');
+{
+  const work = (weekStart: string, planned: number, full: number, partial = 0) =>
+    ({ weekStart, sessionsPlanned: planned, completedFull: full, completedPartial: partial });
+
+  const consistent = buildJournalMonth({
+    weeks: [], strengthSeries: EMPTY_SERIES,
+    work: [work(WEEKS[0], 5, 4), work(WEEKS[1], 5, 5)],
+  }).consistency;
+  ok('the rate is done over planned across the counted weeks',
+    consistent?.sessionsDone === 9 && consistent?.sessionsPlanned === 10
+    && consistent?.rate === 0.9, consistent);
+  ok('and it says how many weeks it counted, so the number cannot overclaim',
+    consistent?.weeksCounted === 2, consistent);
+
+  // PARTIALS COUNT AS DONE — the same ruling `DidTheWorkHappen` already applies
+  // one screen up. A second answer to "did that session happen" would be the
+  // two-owners defect at a different time scale.
+  ok('a partial session counts as done, exactly as the weekly section counts it',
+    buildJournalMonth({
+      weeks: [], strengthSeries: EMPTY_SERIES, work: [work(WEEKS[0], 4, 2, 2)],
+    }).consistency?.rate === 1);
+
+  // A WEEK THE ATHLETE HAD NO PLAN IN IS NOT A WEEK THEY MISSED. Counting it
+  // would drag the rate down for a bye or a pre-onboarding week, and `weeksCounted`
+  // would overclaim how much month the number speaks for. No other fixture mixes
+  // a planned week with an unplanned one, which is exactly why a mutation
+  // deleting this filter survived the first pass.
+  const mixed = buildJournalMonth({
+    weeks: [], strengthSeries: EMPTY_SERIES,
+    work: [work(WEEKS[0], 5, 5), work(WEEKS[1], 0, 0)],
+  }).consistency;
+  ok('a week with no plan is excluded, not counted as a missed one',
+    mixed?.weeksCounted === 1 && mixed?.sessionsPlanned === 5 && mixed?.rate === 1,
+    mixed);
+
+  // A RATE OVER NOTHING IS 0%, WHICH READS AS TOTAL FAILURE to an athlete who
+  // simply has no history. Null is the honest answer.
+  ok('no planned sessions yields NULL, never 0%',
+    buildJournalMonth({
+      weeks: [], strengthSeries: EMPTY_SERIES, work: [work(WEEKS[0], 0, 0)],
+    }).consistency === null);
+  ok('and no work data at all yields null too',
+    buildJournalMonth({ weeks: [], strengthSeries: EMPTY_SERIES }).consistency === null);
+
+  // THE BUILDING STATE MUST NOT LIE ABOUT A PRESENCE. A month with a real
+  // consistency figure and no chart yet is not empty.
+  ok('a month with consistency but no chart is NOT "still building"',
+    buildJournalMonth({
+      weeks: [], strengthSeries: EMPTY_SERIES, work: [work(WEEKS[0], 5, 5)],
+    }).building === false);
+  ok('and a month with nothing at all still is',
+    buildJournalMonth({ weeks: [], strengthSeries: EMPTY_SERIES }).building === true);
+
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the surface shows the COUNT beside the percentage, not the percentage alone',
+    /journal-month-consistency/.test(screen)
+    && /sessionsDone\}/.test(screen) && /sessionsPlanned\}/.test(screen));
+}
+
 // ─── [5] A flat series is not a collapse ─────────────────────────────────
 
 console.log('\n[5] THE CHART\'S GEOMETRY');
