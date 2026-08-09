@@ -1,38 +1,59 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `a168b7bb` — **THE JOURNAL HAS A NOTE BOX.**
-- **LAST UNIT: JOURNAL SLICE 2 + THE COPY GATE** (`a168b7bb`, `a49daa80`).
-  docs/JOURNAL_SLICE2_BOUNDARY_2026-08-09.md
-  - **The athlete can write about their week and it survives a relaunch.** Note
-    box, eight tag chips, this week's notes listed under it.
-  - **ONE NEW INPUT, ARMOURED AT BIRTH** — one door, both wipe refusals,
-    quarantine, guarded storage; joined the hydration gate, BOTH reset paths,
-    `DECISION_EVENTS` and the census ownership registry in the same commit.
-    **The tape carries counts only** — a note's text is the athlete's words.
-  - **"NOTES NEVER DERIVE PROGRAM STATE" IS A GATE NOW, NOT A PROMISE:** a cell
-    sweeps rules/utils/services/hooks and requires NO engine module reads it.
-  - **THE COPY DEFECT WAS MINE.** Slice 1's words shipped **UNLISTED** and cited
-    a batch that was someone else's work. Batches **15 and 16** now recorded,
-    PROPOSED, with **H/M/E/G called out as terminal-chosen** — Sam ruled the five
-    SHAPES, never that a shape shows as one letter.
-  - **THE COMPRESSION: gate scope is DERIVED from the tree, in BOTH copy gates.**
-    They carried the identical hand-maintained list, which is exactly how a whole
-    screen shipped unseen. **The binder had the same hole** and reported
-    confident falsehoods about strings plainly in the app.
-  - **THE EXTRACTOR NOW SPANS LINES.** Ceiling **130 → 561, UP, attributed**
-    (+102 scope, +329 shape): the instrument improved, the app did not get
-    wordier. Then 561 → 565 for slice 2's four genuinely new sentences.
-  - **THREE REDS THE FULL CHAIN CAUGHT THAT MY MODEL DID NOT CONTAIN:** LR-4
-    71→72 (read the profile MIRROR), `keyboard-convention` (a raw TextInput),
-    LR-2 0→1 (a new persisted store is UNOWNED until its door is declared).
-    **All three fixed at the violation, never at the number.**
-  - **EIGHTEEN MUTATIONS, EIGHTEEN REDS.** **GATE:** full `test:bible` UNPIPED
-    `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line; **sweep 2 of 159 =
-    the declared set EXACTLY**; `test:compile` PASSED, no file regressed.
-  - **A SLIP OWNED:** `git add -A` swept the seat's load-model ruling into the
-    commit **before I had read it**. Now read and honoured.
-  - **NOT COVERED:** NO DEVICE EVIDENCE, no cell mounts the screen;
-    **RESURFACING NOT BUILT**; the load comparison still unbuilt.
+- **BRANCH:** `main` · **HEAD:** `12da456f` — **THE LOAD MODEL IS BUILT.**
+- **LAST UNIT: THE LOAD SLICE** (`d0651fc3`, `285c5a20`, `61b7d74f`, `d44476c9`,
+  `12da456f`).
+  docs/JOURNAL_LOAD_SLICE_BOUNDARY_2026-08-09.md · plan
+  docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md
+  - **ZERO NEW STORED STATE** — every number derives on read from
+    `SessionFeedback`. North star: **TOWARD**, by the widest margin in this unit.
+  - **PROVENANCE TRAVELS WITH THE NUMBER.** One constants table, each entry
+    carrying `signed`/`proposed`; every derived value carries the COMBINED
+    provenance of what fed it; `signedValue()` is the only door a surface may
+    read through. **Sam's signature alone turns the lines on — no code change.**
+    Mutation-proven both ways.
+  - **ATHLETE-VISIBLE:** the Load section leads with its own evidence ("Load is
+    measured from the sessions you log — 3 of 5 this week have detail recorded"),
+    which needs no signature because no constant feeds a count. Headline
+    continuum, band and region lines are **built, tested and DARK**.
+  - **THE FALLBACK RUNG CANNOT ENTER RATIO SPACE** — past weeks have no derivable
+    day shape, and re-deriving hardness from stored component kinds is REFUSED (a
+    second hardness authority). **Sam's one open question.**
+  - **THREE DEFECTS I CAUGHT IN MY OWN MODULE AFTER IT HAD ALREADY PASSED A FULL
+    GATE.** **(1)** The four-week normal was the four most recently LOGGED weeks, not
+    the four CALENDAR weeks — weeks -1/-2/-3/-20 is not a four-week normal
+    (`61b7d74f`). **Every fixture logged contiguously, which is exactly when the
+    two readings agree.** **(2)** The model held Sam's 2/1/0 rung as a SECOND OWNER
+    of `JournalWeek.load.thisWeek`, over a different input set, and summed ZERO
+    for a week with nothing recorded (`d44476c9`). **The rung is now absent from
+    the module entirely** — "it never enters ratio space" became inexpressible
+    rather than tested. **(3)** The coverage line could read **"6 of 5"** — planned counts DAYS the week
+    asks work of, measured counts DATES logged, so measured can exceed planned.
+    Denominator DROPPED, never clamped (`12da456f`).
+  - **THE PATTERN IN ALL THREE:** each was a wrong ASSUMPTION, not a wrong line —
+    invisible to a suite written by whoever made it. What found them was reading
+    the finished module back asking "what does this quietly assume?", AFTER the
+    gate was green. **No mutation could have surfaced any of the three.**
+  - **24 MUTATIONS, 24 REDS — TWO SURVIVED THEIR FIRST RUN:** the window did not
+    exist (no fixture ever exceeded it), and "an unlisted string ships" reds on
+    the BINDER not the extraction ceiling (a count cannot see a swap).
+  - **GATE:** full `test:bible` UNPIPED `GATE_EXIT=1` at
+    `test:program-control-durable`, 1 FAIL line — main's declared red, same
+    assertion text. `test:compile` PASSED, no file regressed. New suite
+    `test:journal-load` **91 passed, 0 failed**, registered in `test:bible`.
+    **Sweep 2 of 160 = the declared set exactly**, at head `12da456f`.
+  - **Copy batch 17 PROPOSED**; two batch-15 lines superseded before Sam ruled on
+    them. Extraction ceiling **565 → 566, attributed four-in / two-out**.
+  - **NOT COVERED:** NO DEVICE EVIDENCE, no cell mounts the screen; DEPTH 0;
+    the effort tap on strength NOT built (its constant defaults OFF); charts are
+    layer 5, deferred; **the extractor cannot see keyed copy objects or template
+    literals** — named as owed; resurfacing still owed from slice 2.
+- **STANDING AUTHORISATION IN THE INBOX (Sam, 2026-08-09): RUN THE WHOLE JOURNAL
+  CONTINUOUSLY.** No waiting for eye passes between slices. Remaining order:
+  post-game body-feel rating + "felt different" tap (+ effort-on-strength) →
+  Monday card composition (+ local notification) → niggle history + note
+  resurfacing + progress markers → monthly review incl. the ruled charts.
+  **Looks/polish deferred to ONE pass at the end** — favour completeness.
 - **THE LOAD MODEL IS RULED, NOT BUILT** (Sam, 2026-08-08 pm —
   docs/JOURNAL_LOAD_MODEL_RULING_2026-08-08.md). **2/1/0 is DEMOTED to the
   fallback rung, not retired; the day-shape derivation stands.** Three layers:

@@ -117,3 +117,28 @@ and `sessionResolver` already do, and what the other eight door callers cannot.
 - the stored declaration's physical deletion, already a line item in R5's big
   delete and explicitly **deferred out of R5** by Sam's ruling until this unit
   retires the read path.
+
+## ADDENDUM 2026-08-09 (Sam): UNDO IS THIS UNIT'S VISIBLE FACE
+
+Sam, verbatim: "there should just be an undo button somewhere probably?
+for everything as well that is - not just adding and removing a game."
+
+RULED DIRECTION, recorded by the seat: universal undo becomes the
+replay unit's athlete-visible deliverable (VISIBLE-FIRST applied to the
+one unit that had no visible face). Grounds: the ledger IS the enabler —
+undo a program decision = annul its ledger entry and re-derive; that is
+only honest once replay can reconstruct state from the remaining
+decisions, which is this unit's exact job. Undo is therefore not scope
+creep on LR-29; it is its proof on a phone.
+
+Boundaries the seat holds until Sam rules otherwise:
+- Program DECISIONS undo via the ledger. Recorded FACTS (a saved session
+  outcome, a journal note) are NOT program decisions — their undo is
+  remove-last-entry at their own store's door, designed separately, and
+  a logged session should not silently vanish.
+- Depth/shape (one-step undo vs a wind-back "recent changes" list) is an
+  OPEN design choice — seat brings lettered options + recommendation at
+  unit opening. Not pre-decided here.
+- The dependency list's finding stands: the ledger has no vocabulary yet
+  for illness/injury/readiness/phase — what "everything" covers at v1
+  follows from that map, stated honestly, never overclaimed.

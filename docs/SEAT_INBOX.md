@@ -2,7 +2,107 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. STANDING AUTHORISATION — RUN THE WHOLE JOURNAL (Sam,
+   2026-08-09: "i just want to get it all on there then we can
+   worry about how it looks"). You may be a FRESH session: orient
+   first if you haven't (docs/NOW.md, docs/JOURNAL_UNIT_KICKOFF_
+   2026-08-08.md + the two design docs it names, docs/JOURNAL_LOAD_
+   MODEL_RULING_2026-08-08.md).
+   LOOP CHECK: stop-per-slice-when-owner-wants-continuous —
+   sighting 1 — compressed by this authorisation.
+   Build the remaining slices CONTINUOUSLY, no waiting for eye
+   passes between them: load slice (item 2) → post-game body-feel
+   rating + "felt different" tap (+ effort-on-strength) → Monday
+   card composition (+ local notification) → niggle history + note
+   resurfacing + progress markers → monthly review incl. the ruled
+   charts. Looks/polish are explicitly deferred: Sam judges
+   appearance in ONE pass at the end, so favour completeness over
+   pixel work. Laws unchanged: full unpiped chain per commit,
+   boundary report per slice, every word listed PROPOSED (the
+   derived-scope gate holds you to it), honest states until history
+   earns a surface, park Sam-questions and continue, checkpoint +
+   handover before context runs low, stop only at a genuine wall or
+   the unit's end. Signing batches accumulate for one end-of-unit
+   session.
+
+
+## Processed 2026-08-09 (forty-second pass) — THE LOAD MODEL IS BUILT, AND PROVENANCE TRAVELS WITH THE NUMBER
+
+- **ONE LINE: Sam's five-layer load model is built as a pure derivation with ZERO
+  new stored state, and no athlete-facing number can be derived from an unsigned
+  constant — because provenance now travels with the number rather than with a
+  promise.** `12da456f`, full unpiped chain `GATE_EXIT=1` at
+  `program-control-durable`, 1 FAIL line, sweep 2 of 160 = the declared
+  set exactly. Boundary: docs/JOURNAL_LOAD_SLICE_BOUNDARY_2026-08-09.md ·
+  dependency list measured first: docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md
+- **ITEM 2 PROCESSED IN FULL. Item 1 (the standing authorisation) is now the
+  live order** and the next slice opens under it without waiting.
+- **THE COMPRESSION THE ORDER ASKED FOR, BUILT AS A MECHANISM.** "The
+  athlete-facing line shows no number derived from unsigned constants" is a rule
+  somebody has to keep every time they add a line. Instead: one constants table,
+  each entry carrying `signed`/`proposed`; every derived value carrying the
+  COMBINED provenance of what fed it; `signedValue()` the only door a surface may
+  read through. **Sam's signature alone turns the lines on — no code change** —
+  and a new constant cannot leak, because everything downstream of a proposed one
+  goes proposed automatically. Mutation-proven in both directions.
+- **ATHLETE-VISIBLE, and it is what honesty allowed:** the Load section stops
+  promising a feature and states its own evidence — "Load is measured from the
+  sessions you log — 3 of 5 this week have detail recorded". No constant feeds a
+  count, so it needs no signature. Headline continuum, band and region lines are
+  built, tested, listed as batch 17 and DARK.
+- **EFFORT-TAP-ON-STRENGTH DID NOT RIDE THIS SLICE, on the order's own fallback.**
+  Measured: `SessionFeedback.difficulty` is written from exactly one source
+  (`SessionFeedbackPanel.tsx:533`, the conditioning RPE), so a strength session
+  stores no rating at all. But `tonnageModulatedByEffort` is PROPOSED and defaults
+  OFF, and tonnage is a native measurement needing no rating — with the constant
+  off, the tap would change no visible number. It lands with the "felt different"
+  slice, which is the next one.
+- **THREE DEFECTS I CAUGHT IN MY OWN MODULE AFTER IT HAD ALREADY PASSED A FULL
+  GATE**, and this is the finding of the pass. (1) The "four-week normal" was the
+  four most recently LOGGED weeks, not the four CALENDAR weeks — weeks
+  -1/-2/-3/-20 is not a four-week normal, and every ratio against it would have
+  been confidently false. (2) The model held Sam's 2/1/0 rung as a SECOND OWNER of
+  `JournalWeek.load.thisWeek`, over a different input set, summing ZERO for a week
+  with nothing recorded. (3) The coverage line could read **"6 of 5"** — planned
+  counts DAYS the week asks work of, measured counts DATES logged.
+- **LOOP CHECK — a shape worth a name: `an assumption is invisible to the suite
+  its author wrote`. SIGHTING 1.** None of the three was a wrong line; each was a
+  wrong ASSUMPTION, and the fixtures were built in the geometry where the
+  assumption holds (every fixture logged contiguously, which is exactly when
+  "calendar weeks" and "logged weeks" agree). **Twenty-four mutations could not
+  surface any of them, because a mutation tests existing code against existing
+  cells.** What found all three was reading the finished module back asking "what
+  does this quietly assume?" AFTER the gate went green. **Proposed compression:
+  that read-back becomes a named step of the boundary routine, not a lucky habit.**
+- **THE RUNG FIX IS THE NORTH STAR'S OWN MOVE:** the rung is now absent from the
+  module entirely, so "it never enters ratio space" stopped being something a cell
+  checks and became something the module cannot express. A representation removed,
+  not guarded. The signed VALUE stays listed in the table and POINTS AT
+  `journalWeek`'s object — identity, not equality.
+- **24 MUTATIONS, 24 REDS — TWO SURVIVED THEIR FIRST RUN.** The four-week window
+  did not exist (no fixture ever supplied more history than it holds — fixed by a
+  new discriminating cell). And "an unlisted string ships" reds on the BINDER, not
+  the extraction ceiling: a ceiling is a COUNT and cannot see a swap. **The
+  attribution was what was wrong, not the coverage** — both halves are covered and
+  neither covers the other.
+- **A DEFECT FOUND IN AN EXISTING GATE.** The extraction gate's line-spanning
+  canary was pinned to one literal sentence this slice rewrote. It went red
+  correctly — but re-pointing it exposed that it only asserted a sentence was
+  FOUND, which a single-line ternary would satisfy. It now requires the match to
+  come from the `jsx_text` pattern. **Stronger than it was.**
+- **NO NEW MAPPING WAS AUTHORED** — patterns from
+  `mainPatternForExerciseMovement`, muscles from the two signed sheets,
+  upper/lower from `getExerciseTags`. Gated by a source sweep.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE**, no cell mounts the screen,
+  DEPTH 0. The extractor cannot see keyed copy objects or template literals — the
+  three band sentences and two counted lines are invisible to it and are listed in
+  batch 17 anyway; **widening it is named as owed**. Charts are layer 5, deferred.
+  Resurfacing still owed from slice 2.
+- **SAM'S QUESTIONS PARKED, NOT WAITED ON:** (1) should the 2/1/0 rung ever enter
+  ratio space — it cannot today without recording a session's SHAPE as a fact;
+  (2) the signing batch is **7 PROPOSED of 9 constants**, one of which
+  (`minimumWeekCoverage`) is MINE and not in his ruling, flagged rather than
+  slipped in; (3) the words of batch 17.
 
 ## Processed 2026-08-09 (forty-first pass) — THE NOTE INPUT LANDED; THE COPY GATE'S SCOPE MADE UNDERIVABLE-BY-HAND
 
