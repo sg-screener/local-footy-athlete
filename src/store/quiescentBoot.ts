@@ -42,6 +42,7 @@ import {
 } from './decisionLedgerStore';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import { replayableEntries } from '../rules/decisionLedgerReplay';
 import { logger } from '../utils/logger';
 
 // The parking key + old-shape detector live at the boundary that enforces
@@ -120,8 +121,12 @@ function replayEntry(entry: DecisionLedgerEntry): void {
   const occurredOn = entry.occurredAt.slice(0, 10);
   const decision = entry.decision;
   if (decision.kind === 'reversal') {
-    // No reversal producer exists yet (undo door lands with LR-29's heir);
-    // a reversal entry is declared, typed, and inert until then.
+    // UNREACHABLE BY CONSTRUCTION, and kept as the exhaustiveness arm.
+    // `replayableEntries` drops reversals before this function is called — a
+    // reversal is not an action, it is a statement about one, and its whole
+    // effect is the ENTRY IT REMOVES from the replay set. Deleting this arm
+    // would make the switch non-exhaustive; making it throw would turn a
+    // filter regression into a bricked boot.
     return;
   }
   if (decision.kind === 'migrated_day_placement') {
@@ -377,7 +382,11 @@ export async function rebuildDerivedWorld(): Promise<void> {
       selectedDate: todayISOLocal(),
       reason: 'quiescent_boot',
     });
-    for (const entry of decisionLedgerEntries()) {
+    // THE UNDO IS HONOURED HERE, AND ONLY HERE. An annulled decision is not
+    // replayed, so the world the boot builds is the world the remaining
+    // decisions imply — which is the same body that answered the athlete the
+    // moment they tapped undo (`settleDerivedWorldAfterDecision`).
+    for (const entry of replayableEntries(decisionLedgerEntries())) {
       try {
         replayEntry(entry);
       } catch (error) {

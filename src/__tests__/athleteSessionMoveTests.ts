@@ -1162,12 +1162,26 @@ async function finish(): Promise<void> {
     );
     assert(restored.outcome === 'restored', JSON.stringify(restored));
     assert(semantic(FUTURE_WEEK) === before, 'durable Restore did not restore the exact week');
-    // R1.3, PINNED GAP: no reversal producer exists yet — the ledger declares
-    // reversal entries typed and INERT until LR-29's heir lands, so an undo
-    // has NO durable record and does not survive a relaunch. That is R1's
-    // declared scope, not this cell's to hide: the pin below reds the moment
-    // a reversal producer starts writing, and this cell then asserts the
-    // reversal's own durability instead.
+    // RE-AIMED 2026-08-09 — LR-29's heir HAS landed, and this cell's original
+    // prediction was half right, so it is corrected rather than deleted.
+    //
+    // The reversal producer now exists (`store/undoLastDecision.ts`) and the
+    // boot honours reversals (`rules/decisionLedgerReplay.ts`), proven durable
+    // by `npm run tape:lr29-undo-durability`. But THIS route — the snapshot
+    // restore Coach Notes calls — was deliberately NOT re-pointed at it, and
+    // the reason is a measurement rather than a delivery boundary:
+    //
+    //   the snapshot route carries `displacedOriginalState.calendarFacts` and
+    //   can therefore put back a `move_session`'s calendar `rest` mark; the
+    //   ledger route re-derives from decisions and CANNOT, because a calendar
+    //   mark is not a decision. Re-pointing this door today would trade a
+    //   complete-but-brittle undo for a robust-but-incomplete one, and the
+    //   athlete would lose material they currently get back.
+    //
+    // So the assertion stands, and its meaning has changed: it now pins that
+    // the two routes are still SEPARATE. It reds on the day somebody unifies
+    // them — which is the right day to require the calendar-mark ownership
+    // ruling (docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md §4) to be answered.
     const restoreLedger = await AsyncStorage.getItem('decision-ledger-store');
     const entriesAfterRestore = (JSON.parse(restoreLedger ?? '{}') as {
       state?: { entries?: { decision?: { kind?: string } }[] };

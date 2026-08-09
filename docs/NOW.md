@@ -1,45 +1,41 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `3ea7f5d6` — **THE UNDO SHAPE IS RULED (ONE-STEP)
-  AND THE MOCK IS WAITING ON SAM.** The journal is hidden; the LR-29 replay unit
-  is open; its blocking item 1 is measured and **not answered — one act away.**
+- **BRANCH:** `main` · **HEAD:** the undo build below — **UNDO'S MACHINERY IS
+  BUILT AND DURABLE; THE SURFACE WAITS ON SAM.** The journal is hidden; LR-29's
+  replay item 1 is measured and not answered.
 
 - **⚠ SAM: ONE THING TO LOOK AT — docs/UNDO_MOCK_2026-08-09.html.** Five phone
-  states and four questions at the bottom. **No undo screen gets built until you
-  have ruled on it** — that is your own condition, and it is the journal lesson
-  as practice.
+  states, four questions at the bottom. **No undo screen is built until you rule
+  on it** — your own condition, and it cost nothing: two thirds of the unit
+  landed while it waited.
 
-- **THE UNDO UNIT — SHAPE RULED, MECHANISM MEASURED, NOTHING BUILT.**
-  Ruling as authored `cdea5c6c`: **UNDO LAST CHANGE, a single step**, not a
-  recent-changes list. **READ:** docs/LR29_UNDO_ROUTE_TAPE_2026-08-09.md ·
-  ruling docs/UNDO_SHAPE_RULING_2026-08-09.md · instrument
-  `npm run tape:lr29-undo-durability` (NOT in `test:bible`).
-  - **THE RULING'S GROUNDS WERE A CLAIM, AND HALF OF IT IS FALSE IN THE MEASURED
-    WORLD.** A Coach Notes undo route exists — but it returned
-    **`safely-rejected`** and the week did not move.
-  - **THE CONTROL ISOLATES THE VARIABLE TO THE ROUTE.** The identical unwinding
-    as a forward `move_session` **LANDED and reproduced the pre-move week
-    exactly.** Same world, same week, same dates.
-  - **A CONDITION, NOT A GAP — second sighting in two tapes.**
-    `acceptedStateTransaction.ts:509`: **accept-and-reduce is FORWARD ONLY**; a
-    restoration THROWS where a forward decision would be accepted and disclosed.
-    **Undo-by-snapshot is held to a stricter standard than the act it reverses.**
-  - **SO THE KICKOFF'S RULED MECHANISM IS NOW MEASURED, NOT JUST PREFERRED:**
-    annul + re-derive goes forward by construction. **The ledger route is the one
-    that can complete.**
-  - **THE SEAM IS TYPED AND NAMES THIS UNIT AS ITS HEIR** —
-    `decisionLedger.ts:38` declares `reversal`, `quiescentBoot.ts:122` returns
-    early on it. **The replay honouring reversals is UPSTREAM of any button;**
-    until it does, an undo dies at the app boundary. `athleteSessionMoveTests`
-    cell 21 reds the day a producer lands.
-  - **DURABILITY IS STILL UNMEASURED** — the question needs a successful undo to
-    ask it of, and this world would not produce one.
-
-- **⚠ SAM: NOTHING TO DO ON THE PHONE FOR THE JOURNAL.** The tab is gone at the
-  next build. **If he tapped the reminder opt-in during the proof pass, one
-  launch cancels it** — the navigator cancels on mount. If he never launches
-  again, his phone keeps whatever the OS accepted; nothing in a binary can
-  cancel for a binary that is never run.
+- **THE UNDO UNIT — TWO THIRDS BUILT, GATED, AND HONESTLY INCOMPLETE.**
+  **READ:** docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md · ruling
+  docs/UNDO_SHAPE_RULING_2026-08-09.md · gate `test:undo-reversal` (10 cells,
+  **5 mutations 5 red**) · instrument `npm run tape:lr29-undo-durability`.
+  - **DURABLE: YES.** `undone` → `UNDONE → BOOTED IDENTICAL` → the change does
+    not come back, ledger holds `[plan_change, reversal]`. **ZERO new stored
+    state — north star TOWARD.**
+  - **BUILT:** `rules/decisionLedgerReplay.ts` (one filter deciding what a
+    replay replays), `store/undoLastDecision.ts` (append a reversal, re-derive —
+    two statements), and `quiescentBoot`'s early return finally has its producer.
+  - **THE FINDING: A DECISION IS NOT THE ONLY THING A DECISION WRITES.** A move
+    also writes a calendar `rest` mark, which is **not a decision**, so annul +
+    re-derive leaves it behind and the undone week is not the pre-change week.
+    **NOT PATCHED** — §4 of the boundary puts three lettered options to Sam and
+    recommends the mark becoming part of the decision.
+  - **THE SECOND DOOR IS A STOP WITH A REASON.** Coach Notes' snapshot restore
+    was NOT re-pointed at the ledger route: it carries `calendarFacts` and CAN
+    put the mark back, so re-pointing today would **cost the athlete material
+    they currently get back.** `athleteSessionMoveTests` cell 21 re-aimed to pin
+    the two routes SEPARATE and red the day somebody unifies them.
+  - **A CORRECTION TO THE LAST PASS:** the Coach Notes refusal it reported is
+    real **but world-dependent** — on a world that has BOOTED once, which is
+    every world an athlete opens, that route returns `restored`. The forward-only
+    asymmetry stands in the source; it is not evidence the athlete's undo is
+    broken. **The previous report over-reached.**
+  - **A GUARD OF MINE WAS DEAD CODE and a mutation found it** — deleted, cell
+    re-aimed where a genuine redo now reds.
 
 - **THE HIDE** (`7f9e54ab`, ruling committed as authored first at `47312bd9`;
   native rebuild artifacts at `77f5e415`).
@@ -70,11 +66,13 @@
 
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
   `test:program-control-durable`, 1 FAIL line** — main's declared red.
-  `test:compile` PASSED. **Sweep 2 of 169** = the declared set exactly.
-  **THE DENOMINATOR NAMES ITS INSTRUMENT NOW:** 171 chain steps / 170 `npm run`
-  suites / **169 sweep suites** (the runner excludes `test:compile`). The last
-  two passes said "2 of 170" using the chain-step unit while the sweep measured
-  168 — the failure count was right, the denominator was another instrument's.
+  `test:compile` PASSED. **Sweep 2 of 170** = the declared set exactly.
+  **THE DENOMINATOR MOVED 169 → 170 IN THE COMMIT THAT EARNED IT**
+  (`test:undo-reversal`), and it still names its instrument: chain steps /
+  `npm run` suites / **sweep suites** are three different units (the sweep
+  runner excludes `test:compile`). **`test:undo-reversal` sits PAST the gate
+  exit at position 92, so the chain never reaches it — the sweep is what proves
+  it green.**
 
 - **THE LR-29 REPLAY UNIT IS OPEN — UNDO IS ITS FACE** (Sam's addendum,
   docs/REPLAY_UNIT_KICKOFF_2026-08-07.md; dependency list at
@@ -110,8 +108,9 @@
   - **ITEM 2 IS A DESIGN FORK NEEDING A RULING, not a measurement:** the
     ledger's six kinds cannot express illness, injury, readiness or phase, so
     replay consumes ledger + fact stores, or the ledger gains R3's fact
-    decisions first. Undo's SHAPE (one-step vs a recent-changes list) is Sam's
-    open choice; the seat brings lettered options at the design moment.
+    decisions first. **Undo's SHAPE IS RULED — one step (2026-08-09), and the
+    fork above is no longer abstract: the calendar-mark finding is that same
+    §3 fork, reproduced in the athlete's most visible feature.**
 
 - **COACH REBUILD IS AFTER UNDO, NOT NOW** (seat is preparing its kickoff). Note
   for its design, per Sam: **the journal's behind-the-scenes record — load,

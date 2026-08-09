@@ -14,33 +14,30 @@
  *   (2) That route is a DURABLE undo — the athlete's unwinding is still
  *       unwound after they close the app. **NOT measured anywhere.**
  *
- * Half (2) is what this tape measures, and it is the one that decides the
- * unit's size. `types/decisionLedger.ts:38` declares `reversal` and
- * `quiescentBoot.ts:122` refuses to replay it — *"No reversal producer exists
- * yet … a reversal entry is declared, typed, and inert until then."* So the
- * decision ledger has no record that an undo happened, while the boot replays
- * the ORIGINAL decision from that same ledger. If the restore is material-only,
- * the boot puts the change back.
+ * Half (2) is what this tape was built to measure. IT NOW MEASURES MORE, because
+ * the first run answered it in the negative and the unit built the answer:
+ * `undoLastDecision` (`store/undoLastDecision.ts`) appends the ledger's declared
+ * `reversal` and re-derives, and `replayableEntries`
+ * (`rules/decisionLedgerReplay.ts`) is what the boot's early return was waiting
+ * for.
  *
- * `athleteSessionMoveTests` cell 21 pins the ABSENCE of a reversal entry and
- * says in its own comment that an undo *"does not survive a relaunch"* — but a
- * comment is output, never evidence. No cell relaunches. This one does.
+ * SO THE TAPE RUNS BOTH ROUTES OVER ONE WORLD, BACK TO BACK — the strongest
+ * available presentation, because every variable but the route is held fixed.
  *
- * THIS IS AN INSTRUMENT, NOT A GATE. Deliberately NOT in `test:bible`: it
- * asserts nothing and passes nothing. It prints a measurement, and the undo
- * unit's shape rests on the number it prints.
- *
- * FOUR PHOTOGRAPHS OF THE SAME WEEK:
+ * FIVE PHOTOGRAPHS OF THE SAME WEEK:
  *
  *   BEFORE   — generated, no decision landed. The floor, and the target.
  *   ACTED    — after one real move lands through the program-control door.
- *   RESTORED — after Coach Notes' own undo route clears that adjustment.
+ *   SNAPSHOT — after Coach Notes' `clearReversibleAdjustment` is asked to undo it.
+ *   LEDGER   — after `undoLastDecision` annuls the decision and re-derives.
  *   BOOTED   — after the heap dies, the disk is restored, and the boot replays.
  *
- * The answer is which of ACTED / RESTORED the BOOTED week equals. RESTORED
- * means the existing undo is durable and Sam's grounds hold as stated. ACTED
- * means the undo is a display that dies at the app boundary — the same class as
- * the journal's reminder, on the other side of the wall.
+ * THE PROBE ASSERTS ITS OWN PRECONDITIONS. Item 1's tape reported nothing
+ * because a delete the week could absorb put nothing in the accumulator, and
+ * "it worked" was indistinguishable from "there was nothing to do". So the
+ * acted week must DIFFER from the floor and the ledger must hold a live
+ * decision before any verdict is read — and the run says VACUOUS out loud if
+ * not, rather than printing a comparison nobody can interpret.
  *
  * Run: npm run tape:lr29-undo-durability
  */
@@ -81,6 +78,7 @@ import {
   programControlActionForPlanChange,
 } from '../utils/programControlActions';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { undoLastDecision, pendingUndoTarget } from '../store/undoLastDecision';
 import { seedManualOverride } from './support/programOverrideHarness';
 import { runQuiescentBoot } from '../store/quiescentBoot';
 import {
@@ -233,31 +231,19 @@ async function undoThroughCoachNotesRoute(): Promise<string> {
 }
 
 /**
- * THE CONTROL, and it is what makes the refusal above readable.
+ * THE LEDGER ROUTE — the door this unit built, driven end to end.
  *
- * A refusal on its own has two readings: *this world refuses this material
- * change* or *this world refuses RESTORATIONS*. They are indistinguishable from
- * one refusal, and the sibling tape's whole lesson was that an unreadable
- * comparison must not be reported as a finding.
- *
- * So the same unwinding is expressed the other way — as a forward
- * `move_session` back to where it came from, through the door the athlete used
- * to move it in the first place. Same world, same week, same two dates, same
- * material end state. Only the ROUTE differs. If this lands while the restore
- * refused, the variable is isolated to the route.
+ * Asserts its own precondition before acting: if nothing is undoable the run is
+ * vacuous and says so, rather than reporting a comparison nobody can read.
  */
-async function controlMoveBack(from: string, to: string): Promise<boolean> {
-  const week = quiet(() => resolveWeekWithConditioning(WEEK, buildScheduleStateImperative()));
-  const change = { kind: 'move_session', fromDate: to, toDate: from } as never as PlanChange;
-  const action = programControlActionForPlanChange(change);
-  if (!action) throw new Error('TAPE ABORT: no program control action for the control move');
-  const result = await quietAsync(() => executeProgramControlActionDurably(action, {
-    visibleWeek: week, todayISO: TODAY,
-    applyOverride: (date, workout, ctx) => seedManualOverride(date, workout, ctx),
-  })) as { ok?: boolean; outcome?: string; reason?: string };
-  console.log(`\n   [control] forward move BACK ${to} → ${from} : `
-    + `${result.ok ? 'LANDED' : `REFUSED (${result.outcome ?? ''} ${result.reason ?? ''})`}`);
-  return result.ok === true;
+async function undoThroughLedgerRoute(): Promise<string> {
+  const target = pendingUndoTarget();
+  if (!target) throw new Error('TAPE ABORT: nothing undoable — the probe is vacuous');
+  console.log(`\n   [ledger-undo] target : ${target.id} (${target.decision.kind})`);
+  const result = await quietAsync(() => undoLastDecision());
+  console.log(`   [ledger-undo] OUTCOME: ${result.outcome}`);
+  if (result.outcome === 'refused') console.log(`   [ledger-undo] REASON : ${result.reason}`);
+  return result.outcome;
 }
 
 async function relaunch(): Promise<void> {
@@ -307,6 +293,13 @@ function photograph(label: string): Record<string, unknown> {
   const adjustments = state.reversibleAdjustmentLedger?.adjustments ?? [];
   const byStatus: Record<string, number> = {};
   for (const row of adjustments) byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+  // THE CALENDAR MARKS ARE PHOTOGRAPHED TOO, because a decision's effect may
+  // not live entirely on the ledger — and if it does not, an undo that annuls
+  // the ledger half cannot be complete. Measured rather than assumed.
+  const marks = useCalendarStore.getState().markedDays ?? {};
+  const markLine = Object.entries(marks)
+    .filter(([date]) => date >= WEEK && date <= '2026-08-09')
+    .map(([date, mark]) => `${date}:${String(mark)}`).sort().join(' ') || '(none in week)';
   const entries = decisionLedgerEntries();
   const kinds = entries.map((entry) => entry.decision.kind);
 
@@ -314,9 +307,10 @@ function photograph(label: string): Record<string, unknown> {
   console.log(`   week shape                   : ${shape}`);
   console.log(`   dateOverrides                : ${Object.keys(state.dateOverrides ?? {}).length}`);
   console.log(`   reversible adjustments       : ${adjustments.length} ${JSON.stringify(byStatus)}`);
+  console.log(`   calendar marks, this week    : ${markLine}`);
   console.log(`   ledger entries               : ${entries.length} [${kinds.join(', ')}]`);
   console.log(`   ledger holds a reversal?     : ${kinds.includes('reversal') ? 'YES' : 'NO'}`);
-  return { shape, adjustments: adjustments.length, byStatus, kinds };
+  return { shape, adjustments: adjustments.length, byStatus, kinds, markLine };
 }
 
 const main = async (): Promise<void> => {
@@ -327,69 +321,112 @@ const main = async (): Promise<void> => {
   reachWorldByActing();
   const before = photograph('BEFORE — generated, no decision landed');
 
+  // THE CONTROL, RUN FIRST AND ON AN EMPTY LEDGER.
+  //
+  // Every verdict below compares a re-derived week against BEFORE, and that
+  // comparison is only about UNDO if a re-derivation with NOTHING to undo
+  // reproduces BEFORE. A boot whose own regeneration diverges would make a
+  // perfect undo look broken — the misattribution this repo has paid for
+  // before ("a control red belongs to the instrument only if removing it
+  // helps"). So: relaunch with an empty ledger, and photograph.
+  await relaunch();
+  const bootClean = photograph('BOOT-CLEAN — relaunched with an EMPTY ledger (control)');
+  const bootIsFaithful = bootClean.shape === before.shape;
+  console.log(`\n   [control] does a boot with NO decisions reproduce the generated week? `
+    + `${bootIsFaithful ? 'YES' : 'NO'}`);
+  if (!bootIsFaithful) {
+    console.log('   ⚠ NO — so the boot\'s own regeneration diverges from generation, and');
+    console.log('     NO comparison against BEFORE below can be attributed to undo.');
+    console.log('     The undo verdict is re-aimed at BOOT-CLEAN, which is the week a');
+    console.log('     faithful undo should actually produce.');
+  }
+
   const moved = await actOneMove();
   console.log(`\n   [acted] one move landed: ${moved.from} → ${moved.to}`);
   const acted = photograph('ACTED — one real move through the program-control door');
 
-  await undoThroughCoachNotesRoute();
-  const restored = photograph('RESTORED — Coach Notes\' own undo route cleared it');
-
-  const controlLanded = await controlMoveBack(moved.from, moved.to);
-  const control = photograph('CONTROL — the same unwinding, as a FORWARD decision');
+  // THE LEDGER ROUTE RUNS FIRST, AND THE ORDER IS LOAD-BEARING.
+  //
+  // The first version of this sequence asked the SNAPSHOT route first. It
+  // succeeded, put the week back, and the ledger undo then ran against a week
+  // that was already restored — so "the ledger route restored the week" was
+  // TRUE and VACUOUS in the same breath, which is precisely the reading item
+  // 1's tape refused to publish. Each route now gets a world it actually has
+  // to change.
+  const undoOutcome = await undoThroughLedgerRoute();
+  const undone = photograph('LEDGER ROUTE — undoLastDecision: annul + re-derive');
 
   await relaunch();
   const booted = photograph('BOOTED — heap died, disk restored, boot replayed');
 
+  // THE SNAPSHOT ROUTE, RE-MEASURED ON A POST-BOOT WORLD — and this exists to
+  // CORRECT the fifty-second pass rather than to confirm it. That pass measured
+  // this route refusing with `maximum_breach`, in a freshly generated and
+  // committed world. A boot clears that violation, and an athlete's app is a
+  // booted world every time they open it. So the refusal is re-asked where it
+  // actually matters, on its own act.
+  const second = await actOneMove();
+  console.log(`\n   [acted #2] ${second.from} → ${second.to}`);
+  const acted2 = photograph('ACTED #2 — a fresh move on the booted world');
+  await undoThroughCoachNotesRoute();
+  const restored = photograph('SNAPSHOT ROUTE — clearReversibleAdjustment, post-boot');
+
   console.log('\n════ THE ANSWER ════');
   const actedMoved = acted.shape !== before.shape;
-  const undoWorked = restored.shape === before.shape;
-  const survived = booted.shape === restored.shape;
+  // AIMED AT THE CONTROL, not at BEFORE — see the control block above. When the
+  // boot is faithful these are the same target and nothing changes.
+  const target = bootIsFaithful ? before.shape : bootClean.shape;
+  const ledgerWorked = undone.shape === target;
+  // The snapshot route is judged against the week IT was asked to unwind.
+  const snapshotWorked = restored.shape === booted.shape && acted2.shape !== booted.shape;
+  const survived = booted.shape === undone.shape;
   const returned = booted.shape === acted.shape;
 
-  console.log(`   did the ACT change the week?       ${actedMoved ? 'YES' : 'NO'}`);
-  console.log(`   did the UNDO restore the week?     ${undoWorked ? 'YES' : 'NO'}`);
-  console.log(`   RESTORED → BOOTED                  : ${survived ? 'IDENTICAL' : 'DIFFERENT'}`);
-  console.log(`   BOOTED equals the ACTED week?      : ${returned ? 'YES' : 'NO'}`);
+  // THE PRECONDITION IS ASSERTED BEFORE ANY VERDICT IS READ. Item 1's tape
+  // reported nothing because its probe was too easy and a vacuous comparison
+  // read as agreement; this one says so at the top instead of at the bottom.
+  console.log(`   PROBE — did the ACT change the week? ${actedMoved ? 'YES' : 'NO — VACUOUS'}`);
+  console.log('');
+  console.log(`   compared against                    : `
+    + `${bootIsFaithful ? 'BEFORE (boot is faithful)' : 'BOOT-CLEAN (boot diverges)'}`);
+  console.log(`   SNAPSHOT route restored the week?   ${snapshotWorked ? 'YES' : 'NO'}`);
+  console.log(`   LEDGER route restored the week?     ${ledgerWorked ? 'YES' : 'NO'} `
+    + `(${undoOutcome})`);
+  console.log('');
+  console.log(`   ── DURABILITY, the question item (b) asked ──`);
+  console.log(`   UNDONE → BOOTED                     : ${survived ? 'IDENTICAL' : 'DIFFERENT'}`);
+  console.log(`   did the change come BACK on boot?   : ${returned ? 'YES' : 'NO'}`);
+  console.log(`   ledger after boot                   : `
+    + `${(booted.kinds as string[]).join(', ')}`);
+
+  if (actedMoved && ledgerWorked && survived && !returned) {
+    console.log('\n   ✓✓ THE UNDO IS DURABLE, AND IT IS THE LEDGER ROUTE THAT CARRIES IT.');
+    console.log('      The athlete unwound the change, the app died, the boot replayed a');
+    console.log('      ledger that still HOLDS the original decision — and the week came');
+    console.log('      back undone, because the reversal annuls it in the replay set.');
+    console.log('      No snapshot was restored and no new stored state was written.');
+    if (!snapshotWorked) {
+      console.log('      **On the same world, in the same run, the snapshot route REFUSED.**');
+    }
+  }
 
   if (!actedMoved) {
     console.log('\n   ⚠ THIS RUN ANSWERS NOTHING, and saying so is the result.');
     console.log('     The acted week is identical to the floor, so "the undo worked" and');
     console.log('     "there was nothing to undo" are the same reading — the same vacuous');
     console.log('     comparison the boot-replay tape refused to report as a finding.');
-  } else if (!undoWorked) {
-    console.log('\n   ⚠ THE UNDO DID NOT RESTORE THE WEEK IN THE FIRST PLACE.');
-    console.log('     Durability is not the question this run answers; the restore itself');
-    console.log('     is. Read the RESTORED photograph, not the BOOTED one.');
-    if (controlLanded && control.shape === before.shape) {
-      console.log('\n   ✗✗ AND THE CONTROL ISOLATES THE VARIABLE TO THE ROUTE.');
-      console.log('      The SAME unwinding, expressed as a forward decision, LANDED and');
-      console.log('      reproduced the pre-move week exactly. So this world does not');
-      console.log('      refuse the material change — it refuses the RESTORATION.');
-      console.log('      `acceptedStateTransaction.ts:509` is why, and it says so out loud:');
-      console.log('      accept-and-reduce is FORWARD ONLY; `operation === \'restoration\'`');
-      console.log('      throws on a blocking violation instead of reducing.');
-      console.log('      **Undo-by-snapshot is held to a stricter standard than the act it');
-      console.log('      reverses. Undo-by-annul-and-re-derive is not — it re-derives');
-      console.log('      forward, so it takes the forward path by construction.**');
-    } else if (!controlLanded) {
-      console.log('\n   … and the CONTROL was refused too, so the variable is NOT isolated:');
-      console.log('     this world may refuse the material change by either route. The');
-      console.log('     restoration finding above is UNPROVEN by this run.');
-    }
-  } else if (survived && !returned) {
-    console.log('\n   ✓ THE EXISTING UNDO IS DURABLE. Sam\'s grounds hold exactly as stated:');
-    console.log('     Coach Notes already carries a real, surviving undo for older changes,');
-    console.log('     and UNDO LAST CHANGE is a shortcut to a mechanism that works.');
+  } else if (!ledgerWorked) {
+    console.log('\n   ✗ THE LEDGER ROUTE DID NOT RESTORE THE WEEK. Durability is not the');
+    console.log('     question this run answers; the undo itself is. Read the LEDGER');
+    console.log(`     photograph, not the BOOTED one. Outcome was: ${undoOutcome}`);
   } else if (returned) {
-    console.log('\n   ✗ THE UNDO DIED AT THE APP BOUNDARY. The athlete unwound the change,');
-    console.log('     closed the app, and the boot replayed the original decision from a');
-    console.log('     ledger that has no record the undo ever happened.');
-    console.log('     `reversal` is declared at types/decisionLedger.ts:38 and refused at');
-    console.log('     quiescentBoot.ts:122 — typed, and inert. THAT is the undo unit\'s');
-    console.log('     first build, and it is upstream of any button.');
-  } else {
-    console.log('\n   ? THE BOOTED WEEK MATCHES NEITHER PHOTOGRAPH. A third world — read the');
-    console.log('     shapes above before concluding anything about undo.');
+    console.log('\n   ✗ THE UNDO DIED AT THE APP BOUNDARY. The week came back on boot, so');
+    console.log('     the replay is not honouring the reversal the door appended.');
+    console.log('     `replayableEntries` (rules/decisionLedgerReplay.ts) is the filter');
+    console.log('     that should have dropped it — read the ledger line above first.');
+  } else if (!survived) {
+    console.log('\n   ? THE BOOTED WEEK MATCHES NEITHER THE UNDONE NOR THE ACTED WEEK.');
+    console.log('     A third world. Read the shapes above before concluding anything.');
   }
 
   console.log('\n   NOT COVERED: one decision kind, one week, one world, depth 1. No device');

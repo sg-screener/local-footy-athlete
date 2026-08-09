@@ -5,6 +5,81 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-third pass) — UNDO IS DURABLE, AND A DECISION IS NOT THE ONLY THING A DECISION WRITES
+
+- **ONE LINE: the reversal producer and the replay that honours it are built and
+  proven durable across a process death — and the same run measured that undo is
+  NOT yet complete, because a move also writes a calendar mark that is not a
+  decision.** Boundary: docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md · gate
+  `test:undo-reversal` (10 cells, **5 mutations 5 red**) · instrument
+  `npm run tape:lr29-undo-durability`.
+- **ITEMS (a)-first-door, (b), (c) and (d) PROCESSED. (a)'s SECOND DOOR IS A
+  STOP WITH A REASON**, stated below, not an omission.
+  LOOP CHECK `surface-waits-while-machinery-proceeds` sighting 1 — **the law
+  held and cost nothing**: two thirds of the unit landed with the surface still
+  unruled, and nothing built here presumes an answer to the mock's questions.
+- **DURABILITY, ITEM (b)'s QUESTION, ANSWERED YES.** `[ledger-undo] undone` →
+  `UNDONE → BOOTED: IDENTICAL` → `did the change come BACK on boot? NO`, with
+  the ledger holding `[plan_change, reversal]`. The annulled decision is never
+  replayed, before or after the heap dies. **ZERO new stored state; north star
+  TOWARD** — the reversal was already in the vocabulary and now means something.
+- **THE FINDING: A DECISION IS NOT THE ONLY THING A DECISION WRITES.** A
+  `move_session` also writes a calendar `rest` mark on the source day. That mark
+  is not a ledger decision, so annul + re-derive leaves it — Friday stays empty,
+  the session stays where it was moved to, **and the athlete's undo visibly did
+  not undo.** The dependency list's §3 fork, predicted as an architecture note,
+  now a reproducible symptom. **NOT PATCHED: reaching into the calendar store
+  from the undo door is the special case CLAUDE.md names.** §4 of the boundary
+  puts three lettered options up, recommending that the mark become part of the
+  decision.
+- **THE CONTROL IS WHAT MAKES IT BELIEVABLE.** The tape relaunches on an EMPTY
+  ledger first and asks *does a boot with no decisions reproduce the generated
+  week?* — **YES.** Had it not, a perfect undo would have looked broken and this
+  report would have blamed the wrong layer.
+- **A CORRECTION TO THE FIFTY-SECOND PASS, AND IT IS NOT SMALL.** That pass
+  reported the Coach Notes snapshot route REFUSING and built a route-asymmetry
+  finding on it. The refusal is real **and world-dependent in a way the pass did
+  not say**: it happens in a freshly generated world, and on a world that has
+  BOOTED once — which is every world an athlete opens — the same route returns
+  `restored`. The forward-only asymmetry is still real in the source; it is no
+  longer evidence the athlete's existing undo is broken. **`a ruling premise is a
+  claim too`, applied to my own report.**
+- **A VACUITY CAUGHT BEFORE IT WAS REPORTED, not by a red cell.** The first
+  sequence asked the snapshot route first; it succeeded, put the week back, and
+  the ledger undo then ran against an already-restored week — *"the ledger route
+  restored the week: YES"*, true and meaningless together. Each route now gets a
+  world it has to change.
+- **A GUARD OF MINE WAS DEAD CODE, AND A MUTATION FOUND IT.** M3 SURVIVED: the
+  no-redo guard could not change any output, because reversals are dropped by
+  KIND anyway. **Deleted rather than kept** — an unobservable representation is
+  the north star's own objection — and cell 4 re-aimed at `annulledEntryIds`,
+  where a genuine redo implementation now reds it.
+- **THE THREE LOOSE THREADS ARE SETTLED, none survives** (boundary §"three loose
+  threads"): the `refused` replay was an occupied target in an uncontrolled
+  world; the zero adjustments are `rebuildDerivedWorld` wiping a derived record
+  **by design**; the third-world week **was the calendar mark, seen before it
+  was understood.**
+- **`athleteSessionMoveTests` cell 21 RE-AIMED, NOT DELETED.** Its prediction was
+  half right: the producer landed, but this route was deliberately not
+  re-pointed. It now pins the two routes as SEPARATE and reds the day somebody
+  unifies them — which is the right day to require §4's ruling.
+- **WHY THE SECOND DOOR IS A STOP:** the snapshot route carries
+  `displacedOriginalState.calendarFacts` and CAN put the mark back; the ledger
+  route cannot until §4 is ruled. **Re-pointing it today would trade a
+  complete-but-brittle undo for a robust-but-incomplete one, and the athlete
+  would lose material they currently get back.**
+- **NOT COVERED, first line: NO SURFACE, DEPTH 0, and `undoLastDecision` has no
+  product caller** — the tape drives it, no screen does. **ONE decision kind
+  measured end to end**; another kind may have its own non-ledger writer and this
+  report cannot say it does not. Undo of a COACH-authored decision is untested
+  and is a design question nobody has asked.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  1 FAIL line — main's declared red. `test:compile` PASSED. **Sweep 2 of 170 =
+  the declared set exactly**; the denominator moved 169 → 170 in the commit that
+  earned it.
+- **SAM'S QUEUE UNCHANGED AND STILL ONE ITEM: the undo mock's four questions.**
+
+
 ## Processed 2026-08-09 (fifty-second pass) — THE UNDO SHAPE IS RULED, AND ITS GROUNDS' OWN SURFACE REFUSES
 
 - **ONE LINE: Sam's one-step ruling is recorded and unaffected — and measuring

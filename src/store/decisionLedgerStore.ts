@@ -137,6 +137,8 @@ export type DecisionLedgerWriterId =
   | 'fixture_door'
   | 'migration'
   | 'reset'
+  /** LR-29's undo door — the only writer of `reversal` entries. */
+  | 'undo_door'
   | 'harness';
 
 export interface DecisionLedgerWriteOutcome {
