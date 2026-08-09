@@ -1651,3 +1651,44 @@ one question.
 **20-e. WHEN THE STATUS LINE IS BUILT** — from a freshly-derived ledger, by the
 owners that gate names — its wording comes to Sam as its own batch. It is a claim
 about his athlete's week and gets ruled as one.
+
+## Batch 21 — niggles + note resurfacing (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 2 item 9.
+
+**21-a. THE TWO STRINGS THE EXTRACTOR CAN SEE.**
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "Niggles" |
+| No episodes recorded | "No niggles recorded." |
+
+**21-b. THE TWO COUNTED LINES**, in template form for batch 15-d's reason:
+
+- "{region} — {n} episodes." (singular arm: "{region} — 1 episode.") and, while
+  it is still going, "{region} — {n} episodes, going now."
+- "You wrote this the last time your {region} flared:" — the line that introduces
+  a resurfaced note.
+
+**21-c. `{region}` IS SAM'S OWN VOCABULARY, ROUTED BY ITS OWNER.** The word is one
+of the thirteen authored injury regions, resolved from the athlete's body part by
+`resolveInjuryRegion` (`data/injuryRegions.ts`) — the single owner whose header
+records that five divergent copies of that mapping once existed and disagreed
+with each other and with Sam's ruling. **A body part the owner cannot route keeps
+the athlete's own word** rather than being dropped: they said it, and a niggle
+the app cannot classify is still one they had.
+
+**21-d. THE RESURFACING LINE IS AN OBSERVATION AND IS WORDED TO STAY ONE.** "You
+wrote this the last time your hamstring flared" states WHEN they wrote it and
+nothing about why anything happened. The load ruling's second law — observation,
+never diagnosis — binds here verbatim, and the note itself is returned as the
+athlete's own words, unparsed. **No sentence anywhere in this feature connects a
+note to a cause.**
+
+**21-e. WHAT IS NOT SAID, AND WHY.** The design's example was "a knee-tagged note
+resurfaces". **A note cannot be knee-tagged** — `JOURNAL_NOTE_TAGS` is the closed
+eight and carries no region, closed deliberately in slice 2. So the join is by
+TIME (a note written during an earlier episode's weeks, injury-tagged), and the
+copy says "the last time your {region} flared" rather than implying the athlete
+tagged it that way. **Adding a region to a note is Sam's ruling and is not
+assumed** (docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md §2).

@@ -28,6 +28,11 @@ import {
 } from '../../rules/journalWeek';
 import { buildJournalWeekJob, type JournalWeekJob } from '../../rules/journalWeekJob';
 import {
+  buildJournalNiggleHistory,
+  type JournalNiggleHistory,
+} from '../../rules/journalNiggleHistory';
+import type { InjuryEpisodeV1 } from '../../rules/injuryEpisode';
+import {
   buildJournalStrengthTrend,
   type StrengthLiftTrend,
 } from '../../rules/journalStrengthTrend';
@@ -79,6 +84,16 @@ import {
  * ship PROPOSED, and it may never ship unlisted"). A citation is a claim; this
  * one pointed at someone else's work and nothing checked it.
  */
+
+/**
+ * A STABLE EMPTY ARRAY for the episodes selector.
+ *
+ * `?? []` inside a Zustand selector mints a NEW array every render, which
+ * compares unequal every time and re-renders the screen forever. One frozen
+ * constant is the fix, and it is the reason this exists rather than an inline
+ * default.
+ */
+const EMPTY_EPISODES: readonly InjuryEpisodeV1[] = [];
 
 // ─── The strip ───────────────────────────────────────────────────────────
 
@@ -401,6 +416,52 @@ function WeekJob({ job }: { job: JournalWeekJob | null }) {
 }
 
 /**
+ * NIGGLES, AND WHAT THE ATHLETE WROTE LAST TIME — PROPOSED (batch 21).
+ *
+ * OBSERVATION, NEVER DIAGNOSIS (the load ruling's second law, verbatim). A
+ * resurfaced note sits BESIDE the niggle as something the athlete said before,
+ * never as a cause of it — so the line that introduces it states only when it was
+ * written, and the note itself is their own words, returned unread.
+ */
+function Niggles({ history }: { history: JournalNiggleHistory }) {
+  if (history.regions.length === 0) {
+    return (
+      <Text variant="body" style={styles.muted} testID="journal-niggles-none">
+        {'No niggles recorded.'}
+      </Text>
+    );
+  }
+  return (
+    <View>
+      {history.regions.map((region) => (
+        <Text
+          key={region.region}
+          variant="body"
+          style={styles.body}
+          testID={`journal-niggle-${region.region}`}
+        >
+          {`${region.region} — ${region.episodes.length} ${
+            region.episodes.length === 1 ? 'episode' : 'episodes'}${
+            region.active ? ', going now' : ''}.`}
+        </Text>
+      ))}
+      {history.resurfaced.map((entry) => (
+        <View
+          key={`${entry.episodeId}-${entry.note.id}`}
+          style={styles.noteRow}
+          testID="journal-niggle-resurfaced"
+        >
+          <Text variant="bodySmall" style={styles.muted}>
+            {`You wrote this the last time your ${entry.region} flared:`}
+          </Text>
+          <Text variant="body" style={styles.body}>{entry.note.text}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
  * ARROWS AS WORDS, PROPOSED (batch 19). A glyph alone is not readable by a
  * screen reader and not legible at small sizes; the word carries the meaning and
  * the symbol carries the glance.
@@ -575,6 +636,10 @@ export default function JournalScreen() {
   const { weekDays, visibleWeek } = useResolvedWeek();
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
+  const injuryEpisodes = useProgramStore(
+    (s) => s.acceptedMaterialContext?.injuryEpisodes ?? EMPTY_EPISODES,
+  );
+  const journalNotes = useJournalNoteStore((s) => s.notes);
   // THE PROFILE IS READ THROUGH ITS CONSOLIDATED OWNER, NOT OFF THE MIRROR.
   //
   // The first version of this screen selected `onboardingData` straight off
@@ -683,6 +748,19 @@ export default function JournalScreen() {
     [currentMicrocycle],
   );
 
+  // BOTH INPUTS ALREADY EXIST AS INPUTS: the episodes live in the accepted
+  // material context, the notes are the athlete's own words from slice 2. This
+  // joins them and stores nothing.
+  const niggles = useMemo<JournalNiggleHistory>(() => buildJournalNiggleHistory({
+    episodes: injuryEpisodes,
+    // MAPPED AT THE SURFACE, DELIBERATELY. `rules/` may not read the note store
+    // at all — notes never derive program state — so the derivation takes a
+    // narrow structural view and this is where the store's shape stops.
+    notes: journalNotes.map((n) => ({
+      id: n.id, weekStart: n.weekStart, text: n.text, tags: n.tags,
+    })),
+  }), [injuryEpisodes, journalNotes]);
+
   const strengthLifts = useMemo<readonly StrengthLiftTrend[]>(() => buildJournalStrengthTrend({
     weekStart: week.weekStart,
     sessions: Object.entries(sessionFeedback ?? {}).map(([date, feedback]) => ({
@@ -718,6 +796,10 @@ export default function JournalScreen() {
 
         <Section title="Load">
           <LoadSection week={week} load={loadModel} />
+        </Section>
+
+        <Section title="Niggles">
+          <Niggles history={niggles} />
         </Section>
 
         <Section title="Your note">

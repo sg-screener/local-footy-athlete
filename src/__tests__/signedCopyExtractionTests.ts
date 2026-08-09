@@ -466,7 +466,17 @@ function extract(): ExtractedString[] {
  * there in template form — it takes numbers and the athlete's own domain words,
  * so a table row would bind vacuously.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 570;
+/**
+ * 570 -> 572 (niggles + resurfacing, same commit that earned it): TWO genuinely
+ * new sentences the extractor can see — the "Niggles" section heading and "No
+ * niggles recorded." Batch 16's kind of rise: the app gained words, the
+ * instrument did not change.
+ *
+ * Recorded as BATCH 21 before this commit landed, with the counted lines and the
+ * resurfacing introduction listed there in template form — they take the
+ * athlete's own region word and a count, so a table row would bind vacuously.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 572;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
