@@ -1,6 +1,6 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** see below — **THE UNDO SHAPE IS RULED (ONE-STEP)
+- **BRANCH:** `main` · **HEAD:** `3ea7f5d6` — **THE UNDO SHAPE IS RULED (ONE-STEP)
   AND THE MOCK IS WAITING ON SAM.** The journal is hidden; the LR-29 replay unit
   is open; its blocking item 1 is measured and **not answered — one act away.**
 
