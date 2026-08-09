@@ -2,6 +2,97 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+
+## Processed 2026-08-09 (fifty-first pass) — THE JOURNAL IS HIDDEN, AND THE OS STILL HELD WHAT THE SURFACE PUT THERE
+
+- **ONE LINE: the Journal tab is gone in one edit at the navigation owner, the
+  machinery is frozen exactly as R5.7 left the coach — and the hide needed a
+  second half the ruling's own wording does not cover.** `7f9e54ab`, ruling
+  committed as authored first at `47312bd9`, native rebuild artifacts at
+  `77f5e415`. Full unpiped chain `GATE_EXIT=1` at `program-control-durable`,
+  1 FAIL line, **sweep 2 of 169 = the declared set exactly**. Boundary:
+  docs/JOURNAL_HIDDEN_BOUNDARY_2026-08-09.md
+- **ITEM 1(a) PROCESSED IN FULL. (b) IS OPEN AND ITS FIRST MEASUREMENT IS
+  NAMED; (c) NOT STARTED, as ordered.**
+  LOOP CHECK `eye-pass-vetoes-a-unit` sighting 1 — **carried into undo as
+  instructed**: the lesson is not "the journal was bad", it is that this unit's
+  SURFACE outran its design, and undo's shape is Sam's ruling before it is a
+  build (the seat brings lettered options at the design moment).
+- **THE FINDING: "UNREACHABLE = NOTHING CAN EVER FIRE" IS HALF TRUE, and the
+  ruling's own parenthetical is where it was checked.** True of every FUTURE
+  schedule — `enableJournalReminder` has exactly one product caller and that
+  caller is the hidden screen, asserted as a caller SET so an opt-in that MOVED
+  to a reachable screen cannot satisfy it. **False of a schedule already
+  accepted:** this feature's own design says *the OS is the store*, and a WEEKLY
+  trigger fires every Monday whether the app is opened or not. Sam rebuilt with
+  pods and ran the proof path; whether he tapped the opt-in is not knowable from
+  this repo.
+- **AND IT WOULD NOT MERELY HAVE FIRED — IT WOULD HAVE CRASHED.** The tap
+  handler navigated to `JournalTab` by name; navigating to a name the navigator
+  does not know throws. The old handler's own comment called that the worst
+  place in this app to crash — *"the athlete is not even in the app yet"* — and
+  the hide would have created exactly that case. So the hide is two removals and
+  one addition, all at the navigation owner: the tab, the tap door, and a
+  **cancel on mount** through the service's existing door. **Stateless,
+  idempotent, no "have I cancelled" flag. North star: NEUTRAL.**
+- **WHAT THE CANCEL CANNOT REACH, stated rather than implied:** an athlete who
+  never opens the app again keeps whatever the OS accepted.
+- **RULING 3 NEEDED NO CODE, AND THAT IS MEASURED RATHER THAN ASSUMED.** The two
+  data-creating taps live on `SessionFeedbackPanel` → `DayWorkoutScreenV2` →
+  the Program stack. The gate walks every hop, because "it still exists" is not
+  the claim — "an athlete can still answer it" is. **Sam's veto stays open.**
+- **NEW GATE `test:journal-hidden`, 35 cells** — the gate must watch the deleted
+  surface. It sweeps the whole PRODUCT tree rather than the navigator, because
+  the door that comes back is rarely the door that left; it pins every frozen
+  module; and it pins **every journal suite in the chain**, because a hidden
+  surface's suites are the first thing a tidy-up drops and they are not testing
+  the screen — they are testing the coach rebuild's input.
+- **SIX CELLS WENT RED AND EVERY ONE WAS RE-AIMED, NOT DELETED.** Four
+  reachability cells written as the lesson of the purge: that lesson has not
+  changed, it has been RULED ON — deliberate unreachability with the machinery
+  kept is a different thing from an unwired screen nobody decided about. The two
+  reminder cells were INVERTED and the second is now the stronger claim: the
+  navigator must CANCEL, not merely decline to navigate.
+- **9 MUTATIONS, 9 RED — AND ONE REFUSED TO BE READ.** M6's probe
+  `<SessionFeedbackPanel` is a prefix of its own mutation
+  `<SessionFeedbackPanelRetired`, so the count did not move and **the harness
+  said so instead of reading a green suite as a weak cell**. The gate cell was
+  already word-boundary-correct, which is why the re-probed mutation reds — the
+  same law on both sides of the instrument in one run.
+- **`a count taken for a record` — TENTH SIGHTING**, in the new gate on its first
+  run: the opt-in sweep read its own OWNER as a second caller, because the
+  service DECLARES the function. Instrument counted a NAME; claim was about CALL
+  SITES. Split into owner-by-declaration + callers-minus-owner.
+- **AND THE SAME LAW APPLIED TO MY OWN DENOMINATOR.** Three units have been
+  called "the chain": **171** steps / **170** `npm run` suites / **169** sweep
+  suites (the runner excludes `test:compile`). The last two passes reported
+  "2 of 170" while the sweep was measuring 168. The failure count was right; the
+  denominator was another instrument's. **The number above is the one the sweep
+  printed, in the sweep's unit.**
+- **NOT COVERED, first line: NOBODY HAS SEEN THE TAB BAR WITH TWO TABS IN IT.
+  DEPTH 0.** The cancel is proven as far as "the door is called on mount" and no
+  further — no cell reaches the notification centre. **The weekday `+1`
+  conversion is now unproven AND unprovable without restoring the tab**: the
+  proof panel lives on the hidden screen. Closed by removal, not by an answer.
+- **FILED, NOT RIDDEN SILENTLY: no instrument in this repo distinguishes
+  "shipped" from "shipped and reachable".** The sheet now records ~100 signed
+  strings that are present in source and unreachable. Nothing reds — the gates
+  assert PRESENCE and every string is present — but the sheet's silent
+  implication is false for the journal's share of it. Precedent: "Ask Coach",
+  DORMANT under batch 11-e.
+- **L12 — the class is A SURFACE CUT THAT LEAVES SOMETHING RUNNING BEHIND IT.**
+  R5.7's remainder was a gate; this cut's remainder was **state held OUTSIDE the
+  app**, and no gate asks that question because no previous cut had any. In
+  place: the two halves are paired in one block so "nothing can fire" cannot be
+  satisfied by the arming half alone. **NOT in place, honestly: there is no
+  general census of app state that lives outside the app** — notifications
+  today; widgets, calendar entries and background tasks if they ever arrive.
+
+
+### The order the fifty-first pass processed, as the seat wrote it
+
 1. JOURNAL HIDDEN + REPLAY/UNDO UNIT OPENS (Sam ruled after his
    eye pass, 2026-08-09): docs/JOURNAL_HIDDEN_RULING_2026-08-09.md —
    commit as authored, then execute in order.
