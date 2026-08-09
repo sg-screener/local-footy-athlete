@@ -3267,12 +3267,32 @@ export function stageAthleteSessionMoveTransaction(
     swap: !!swappedWorkout,
     provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
   });
+  // A MOVE DOOR NEVER WRITES A CALENDAR MARK EITHER (LR-29 undo, 2026-08-09).
+  //
+  // This wrote `markedDays[sourceDate] = 'rest'`, and it is the SAME write Sam
+  // ruled out of the deletion door on 2026-07-30 — the ruling is 160 lines up
+  // in this file, and the reasoning transfers verbatim: "there is no session
+  // here today" and "this is a rest day" are different claims, and only the
+  // first is what the athlete said by dragging a session off Friday.
+  //
+  // WHAT MADE IT VISIBLE was undo. A calendar mark is not a ledger decision, so
+  // annul-and-re-derive could not take it back: the athlete undid the move and
+  // the source day stayed empty for a reason nothing on their path could reach
+  // (`docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md`).
+  //
+  // THE EMPTINESS IS ALREADY OWNED, WHICH IS WHY THIS IS A DELETION AND NOT A
+  // REPLACEMENT. The constraint built above carries `wholeDayRestOwned:
+  // !swappedWorkout`, and `rules/userRemovalConstraints` already pushes the
+  // canonical rest stub for exactly that shape — the mechanism the deletion
+  // ruling installed after removing the mark ALONE put the derived G-1 session
+  // straight back onto the cleared day. A move was carrying both: the stub that
+  // owns the emptiness and a standing instruction to the planner beside it.
+  //
+  // The target-date clear STAYS: moving a session ONTO a day is a reason to
+  // stop calling that day rest, and that is a removal of a mark, not an
+  // authoring of one.
   const markedDays = { ...prior.markedDays };
-  if (swappedWorkout) {
-    if (markedDays[sourceDate] === 'rest') delete markedDays[sourceDate];
-  } else {
-    markedDays[sourceDate] = 'rest';
-  }
+  if (markedDays[sourceDate] === 'rest' && swappedWorkout) delete markedDays[sourceDate];
   if (markedDays[targetDate] === 'rest') delete markedDays[targetDate];
   return stageAthleteMutationConstraint({
     reason: args.reason,
