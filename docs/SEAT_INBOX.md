@@ -2,6 +2,45 @@
 
 ## Unprocessed (newest first)
 
+1. OVERNIGHT — COACH REBUILD GROUNDWORK, NO SAM-FACING DECISIONS
+   (seat, 2026-08-09 night; Sam ordered the build going overnight).
+   The kickoff design (chat surface, privacy opt-in, coach voice,
+   any athlete-visible word) is NOT tonight's work — it waits on
+   Sam's mock + sign-off. Tonight is the work that is independent
+   of every open Sam-question, in order:
+   1. THE SEVEN-QUESTION REASSESSMENT (AGENTS.md escalation rule)
+      written against docs/COACH_REBUILD_SURVEY_2026-08-09.md §5 —
+      the mandated compression of the four sittings that all
+      concluded representation-count. Doc first, before any
+      pipeline code. This is the coach unit's opening law doc.
+   2. LEDGER DOORS: the survey's measured fork — only 2 of
+      executeProgramControlAction's 5 destinations reach the
+      decision ledger. Route the remaining destinations (injury /
+      illness / readiness / exercise-level) through ledger
+      decisions. This is door/engine work, NOT coach work under
+      LR-6's ratified boundary (routing through an owned door
+      changes no coach decision), and it is what makes "coach acts
+      through the same doors, undo covers it free" true instead of
+      half-true. Undo's replay must honour the new kinds; extend
+      test:undo-reversal per kind. Watch for kind-specific
+      side-writers — the calendar-mark class, sighting rule in the
+      standing LOOP CHECK.
+   3. DEAD COACH WEIGHT, census-before-retirement: replace the
+      survey's name-scan with a real import graph; delete ONLY
+      modules with zero importers outside the coach tree AND no
+      role as rebuild salvage — the survey's living understanding
+      layer (intent, targets, clarifiers, truth gate, the 347-cell
+      contract) is SALVAGE, not weight; when in doubt, keep and
+      list. Orphaned suites of deleted modules go with them;
+      receipts per deletion.
+   Overnight law applies: park every Sam-question that surfaces,
+   checkpoint + handover doc before context runs low, full chain
+   per commit, never end turn while own gate runs. Do not touch
+   what a coach path DECIDES. Morning deliverable: reassessment
+   doc + doors landed + deletion receipts, short boundary.
+   LOOP CHECK: overnight-independent-work-while-design-parks —
+   sighting 2 (R5-era precedent) — iterate.
+
 (none)
 
 
