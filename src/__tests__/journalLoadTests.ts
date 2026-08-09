@@ -116,7 +116,6 @@ function session(
     date,
     strength: [],
     conditioning: null,
-    fallbackWeight: null,
     ...over,
   };
 }
@@ -150,10 +149,8 @@ console.log('\n[1] SAM\'S NUMBERS, ASSERTED AS NUMBERS');
   // ONE VALUE, TWO READERS. The day-shape derivation in `journalWeek` consumes
   // the same rung; if the two ever disagree the athlete's week total and the
   // load model's fallback would be different numbers for one ruling.
-  ok('the rung in the constants table IS the rung `journalWeek` applies',
-    c.fallbackDayWeights.value.hard === JOURNAL_LOAD_WEIGHTS.hard
-    && c.fallbackDayWeights.value.moderate === JOURNAL_LOAD_WEIGHTS.moderate
-    && c.fallbackDayWeights.value.easy === JOURNAL_LOAD_WEIGHTS.easy);
+  ok('the rung in the constants table IS `journalWeek`\'s object, not a copy',
+    c.fallbackDayWeights.value === JOURNAL_LOAD_WEIGHTS);
 
   ok('the stream window is four weeks, and SIGNED (it is in the ruling body)',
     c.streamNormalWindowWeeks.value === 4 && c.streamNormalWindowWeeks.provenance === 'signed');
@@ -227,8 +224,6 @@ console.log('\n[2] PROVENANCE PROPAGATION — the mechanism, in both directions'
 
   ok('coverage is SIGNED — no constant feeds a count of what was logged',
     model.coverage.provenance === 'signed');
-  ok('the fallback rung is SIGNED — Sam signed 2/1/0',
-    model.fallbackLoad.provenance === 'signed');
   ok('the headline continuum is PROPOSED — weighting and band are unsigned',
     model.headline.provenance === 'proposed');
   ok('the per-stream comparison is PROPOSED — the coverage floor is unsigned',
@@ -470,41 +465,55 @@ console.log('\n[5] RATIO SPACE — the normal, and when the comparison is REFUSE
     thinlyLogged.coverage.value);
 }
 
-// ─── [6] The fallback rung stops where the plan doc ruled ────────────────
+// ─── [6] The fallback rung is NOT here, and cannot be ───────────────────
 
-console.log('\n[6] THE FALLBACK RUNG — whole for this week, never a term in a ratio');
+console.log('\n[6] THE FALLBACK RUNG — one owner, and this module cannot reach it');
 {
-  const allShapesKnown = buildJournalLoadModel({
-    weekStart: THIS_WEEK,
-    sessions: [
-      session(THIS_WEEK, { fallbackWeight: 2 }),
-      session('2026-08-12', { fallbackWeight: 1 }),
-      session('2026-08-14', { fallbackWeight: 0 }),
-    ],
-    sessionsPlannedThisWeek: 3,
-    plannedStrength: [],
-  });
-  ok('with every shape known the rung sums Sam\'s weights',
-    allShapesKnown.fallbackLoad.value === 3, allShapesKnown.fallbackLoad.value);
+  // THE STRONGEST FORM OF "IT NEVER ENTERS RATIO SPACE" IS THAT IT CANNOT.
+  //
+  // The first version of this module took a per-session rung weight at its door
+  // and summed one, which made it a SECOND OWNER of a number `journalWeek`
+  // already derives — from the week's DAYS rather than from its recorded
+  // sessions, so the two disagreed for any week not yet fully logged, and a week
+  // with nothing recorded read as a rung of zero.
+  //
+  // The rung is now absent from the input, the session shape and the model. This
+  // cell asserts that absence STRUCTURALLY, because a behavioural assertion
+  // about a field that no longer exists is not an assertion at all.
+  const modulePath = join(__dirname, '..', 'rules', 'journalLoad.ts');
+  const source = readFileSync(modulePath, 'utf8');
+  ok('the module source was actually read (anchor before claiming)',
+    source.length > 4000, source.length);
 
-  // A PARTIAL SUM WOULD READ AS A SMALL WEEK, which is worse than no number.
-  const oneShapeUnknown = buildJournalLoadModel({
+  const codeOnly = source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+  ok('the code declares no rung weight on a session or a model',
+    !/\bfallbackWeight\b|\bfallbackLoad\b/.test(codeOnly),
+    codeOnly.match(/\bfallback\w*/g));
+
+  // BUT THE SIGNED VALUE IS STILL LISTED, because a signing table that omits the
+  // signed constants is a worse record than none — and it POINTS AT the owner
+  // rather than restating it. Identity, not equality: two literals that happen
+  // to match is the shape nothing notices until they stop matching.
+  ok('the table lists the rung by pointing at `journalWeek`\'s own object',
+    JOURNAL_LOAD_CONSTANTS.fallbackDayWeights.value === JOURNAL_LOAD_WEIGHTS);
+
+  // AND THE BOUNDARY THE PLAN DOC RULED still holds where it can be observed: a
+  // week with recorded sessions and no measured history gets no comparison.
+  // Nothing stands in for the streams.
+  const noMeasuredHistory = buildJournalLoadModel({
     weekStart: THIS_WEEK,
     sessions: [
-      session(THIS_WEEK, { fallbackWeight: 2 }),
-      session('2026-08-12', { fallbackWeight: null }),
+      session(THIS_WEEK, { strength: [lift()] }),
+      session('2026-08-12', { strength: [lift()] }),
     ],
     sessionsPlannedThisWeek: 2,
     plannedStrength: [],
   });
-  ok('one unknown shape makes the whole rung null, never a partial sum',
-    oneShapeUnknown.fallbackLoad.value === null);
-
-  // THE BOUNDARY THE PLAN DOC RULED. A week with a full rung and no measured
-  // history still has no comparison — the rung is not a stand-in denominator.
-  ok('a whole rung does NOT produce a comparison the streams cannot support',
-    allShapesKnown.headline.value === null
-    && allShapesKnown.strengthStream.value === null);
+  ok('no measured history means NO comparison — nothing stands in for the streams',
+    noMeasuredHistory.headline.value === null
+    && noMeasuredHistory.strengthStream.value === null);
 }
 
 // ─── [7] The region layer ────────────────────────────────────────────────

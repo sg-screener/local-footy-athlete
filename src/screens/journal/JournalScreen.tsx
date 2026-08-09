@@ -506,24 +506,18 @@ export default function JournalScreen() {
    * pruned. Nothing new is stored to make this work; the whole comparison is
    * derived here on read.
    *
-   * THE FALLBACK RUNG IS SUPPLIED ONLY WHERE IT IS KNOWABLE. A day's shape comes
-   * from the projection, which exists for THIS week and no past one, so past
-   * sessions pass `null` and the model reports the rung as unavailable rather
-   * than inventing a shape from the stored component kinds — that would be a
-   * second hardness authority, which is the thing `journalWeek` opens by
-   * refusing.
+   * THE FALLBACK RUNG IS NOT PASSED IN, because it is not this model's to hold:
+   * `week.load.thisWeek` already carries Sam's 2/1/0 over the week's DAYS, which
+   * is where a shape exists. Handing the load model a per-session copy made it a
+   * second owner of that number, computed over recorded sessions instead — the
+   * two disagreed for any week the athlete had not finished logging.
    */
   const loadModel = useMemo<JournalLoadModel>(() => {
-    const fallbackByDate = new Map<string, number | null>(
-      week.days.map((day) => [day.date, day.isSession ? day.loadWeight : null]),
-    );
-
     const sessions: JournalLoadSessionInput[] = Object.entries(sessionFeedback ?? {})
       .map(([date, feedback]) => ({
         date,
         strength: feedback?.strength ?? [],
         conditioning: feedback?.conditioning ?? null,
-        fallbackWeight: fallbackByDate.get(date) ?? null,
       }));
 
     // THE PLAN HALF OF LAYER 4, read off the same resolved week the rest of the

@@ -41,13 +41,18 @@
  * `countWeeklyExposures`; main-strength patterns belong to
  * `mainPatternForExerciseMovement`; muscles belong to the two signed sheets.
  * A second authority for any of them is the defect class this repo has already
- * paid for twice (`intensity-never-feeds-identity`, phase skew), and it is the
- * reason the fallback rung stops where it does — see THE FALLBACK RUNG below.
+ * paid for twice (`intensity-never-feeds-identity`, phase skew).
+ *
+ * It also does not carry Sam's 2/1/0 FALLBACK RUNG, and that absence is a
+ * ruling rather than a gap — `journalWeek` already derives it, from the week's
+ * days rather than from its recorded sessions. See the note where the rung used
+ * to be computed.
  */
 
 import { conditioningSessionMuscles } from '../data/conditioningMuscleMetadata';
 import { getExerciseTags } from '../data/exerciseTags';
 import { muscleMetadataFor, type MuscleGroup } from '../data/muscleExperienceMetadata';
+import { JOURNAL_LOAD_WEIGHTS } from './journalWeek';
 import {
   STRENGTH_PATTERN_ORDER,
   mainPatternForExerciseMovement,
@@ -82,12 +87,22 @@ export interface JournalLoadConstant<T> {
 export const JOURNAL_LOAD_CONSTANTS = {
   /**
    * The fallback rung. Sam's own numbers, 2026-08-08: "do 2 - 1 - 0 though,
-   * easy days don't effect fatigue but count as sessions." Re-exported through
-   * `journalWeek.JOURNAL_LOAD_WEIGHTS`, which is where the day-shape derivation
-   * that consumes them lives — one value, two readers, no second copy.
+   * easy days don't effect fatigue but count as sessions."
+   *
+   * THE VALUE IS `journalWeek`'S OBJECT, NOT A COPY THAT AGREES WITH IT. The
+   * rung is APPLIED by the day-shape derivation, which owns it; this table's job
+   * is to be the one place Sam's signing batch is read from, and it does that by
+   * pointing at the owner rather than restating the numbers. Two literals that
+   * happen to match is the shape a gate can only notice after they stop
+   * matching.
+   *
+   * NOTHING IN THIS MODULE CONSUMES IT, and that is deliberate — see the note on
+   * `JournalLoadModel`. It is listed here because it is a load constant Sam
+   * signed, and a signing table that omits the signed ones is a worse record
+   * than no table.
    */
   fallbackDayWeights: {
-    value: { hard: 2, moderate: 1, easy: 0 },
+    value: JOURNAL_LOAD_WEIGHTS,
     provenance: 'signed',
     source: 'Sam 2026-08-08, JOURNAL_LOAD_AND_DAY_SHAPE_RULING §1',
   },
@@ -222,11 +237,6 @@ export interface JournalLoadSessionInput {
   readonly strength: readonly StrengthExercisePerformanceLog[];
   /** The conditioning log as stored, or null when the flow never asked. */
   readonly conditioning: ConditioningPerformanceLog | null;
-  /**
-   * The fallback rung's weight for this session's day, or NULL when it is not
-   * derivable — which is every past week. See THE FALLBACK RUNG.
-   */
-  readonly fallbackWeight: number | null;
 }
 
 export interface BuildJournalLoadInput {
@@ -269,7 +279,6 @@ export interface JournalSessionLoad {
   readonly liftsUnmeasured: number;
   /** True when either stream produced a number. */
   readonly measured: boolean;
-  readonly fallbackWeight: number | null;
   /** Per-muscle load. NEVER summed across regions — see distributeToRegions. */
   readonly regions: Readonly<Partial<Record<MuscleGroup, number>>>;
   readonly patternTonnageKg: Readonly<Record<MainStrengthPattern, number>>;
@@ -335,11 +344,6 @@ export interface JournalLoadModel {
   readonly history: readonly JournalLoadWeekTotals[];
   /** Constant-free facts about the evidence — signed by having no constants. */
   readonly coverage: Derived<JournalLoadCoverage>;
-  /**
-   * THE FALLBACK RUNG for THIS WEEK, or null when any of its sessions has no
-   * derivable shape. See THE FALLBACK RUNG.
-   */
-  readonly fallbackLoad: Derived<number | null>;
   readonly strengthStream: Derived<StreamComparison | null>;
   readonly conditioningStream: Derived<StreamComparison | null>;
   readonly headline: Derived<JournalLoadHeadline | null>;
@@ -608,7 +612,6 @@ export function deriveSessionLoad(
     conditioningSRPE: srpe,
     liftsUnmeasured,
     measured: strengthMeasuredLifts > 0 || srpe !== null,
-    fallbackWeight: session.fallbackWeight,
     regions,
     patternTonnageKg,
     upperLowerTonnageKg: upperLower,
@@ -730,26 +733,27 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     liftsUnmeasured: thisWeek.liftsUnmeasured,
   });
 
-  // ── THE FALLBACK RUNG ──
+  // ── THE FALLBACK RUNG IS NOT HERE, AND ITS ABSENCE IS THE RULING ──
   //
-  // Sam's rung keeps the number whole when nothing was measured. It is scored
-  // from the day's SHAPE, and a shape needs the projection plus the hardness
-  // owner — so it exists for THIS week and for no past week (measured:
-  // docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md §2b). The available shortcut is
-  // to re-derive hardness from the stored component kinds; that is REFUSED,
-  // because a second hardness authority inside the Journal is the exact class
-  // `journalWeek.ts` opens by refusing.
+  // Sam's 2/1/0 rung keeps the week's number whole when nothing was measured. It
+  // is scored from a day's SHAPE, and a shape needs the projection plus the
+  // hardness owner — so it exists for THIS week and for no past week (measured:
+  // docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md §2b). It therefore cannot be a
+  // term in a ratio, because a ratio needs both sides in the same unit.
   //
-  // The consequence, stated rather than hidden: the rung describes the current
-  // week, and never appears as a term inside a ratio. If ANY session's shape is
-  // unknown the whole rung is null — a partial sum would read as a small week.
-  const fallbackKnown = thisWeekSessions.every((s) => s.fallbackWeight !== null);
-  const fallbackLoad = derived<number | null>(
-    fallbackKnown
-      ? thisWeekSessions.reduce((sum, s) => sum + (s.fallbackWeight ?? 0), 0)
-      : null,
-    JOURNAL_LOAD_CONSTANTS.fallbackDayWeights.provenance,
-  );
+  // THE FIRST VERSION OF THIS MODULE CARRIED IT ANYWAY, taking a per-session
+  // weight at its door and summing one. That was a SECOND OWNER of a number
+  // `journalWeek` already derives (`JournalWeek.load.thisWeek`), computed over a
+  // different input set — recorded sessions rather than the week's days — so the
+  // two would have disagreed for any week the athlete had not finished logging.
+  // It also read 0 for a week with nothing recorded, which is the "small week"
+  // lie in its most direct form.
+  //
+  // So the rung is not passed in, not derived here, and not returned. The claim
+  // "the rung never enters ratio space" stops being something a cell has to
+  // check and becomes something this module cannot express: it has no access to
+  // the rung at all. That is the same move the north star asks for everywhere —
+  // remove the representation instead of guarding it.
 
   const coverageOk = input.sessionsPlannedThisWeek === 0
     ? false
@@ -884,7 +888,6 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     thisWeek,
     history,
     coverage,
-    fallbackLoad,
     strengthStream,
     conditioningStream,
     headline,
