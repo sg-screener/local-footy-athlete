@@ -1,7 +1,41 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `528e5c67` — **THE FEEL SLICE IS IN.**
-- **LAST UNIT: THE FEEL SLICE** (`41d847d7`, `528e5c67`).
+- **BRANCH:** `main` · **HEAD:** `64d142d7` — **THE JOURNAL SHIPS ITS FIRST NUMBER.**
+- **LAST UNIT: THE STRENGTH LINE** (`64d142d7`), Monday card item 2.
+  docs/JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md · plan
+  docs/JOURNAL_MONDAY_CARD_PLAN_2026-08-09.md
+  - **"Back Squat — 120kg, up on last week."** Pure derivation over
+    `SessionFeedback.strength[]`, which the app has recorded for months "for
+    future progression/diary use". **Zero new stored state.**
+  - **IT SHIPS A NUMBER WHERE THE LOAD HEADLINE CANNOT, structurally:** this
+    module has NO constants to wait on. `flat` is exact equality — a fact, not a
+    tolerance. **A tolerance would BE a constant and joins the signing table.**
+  - **THREE ABSENCES ARE FIRST-CLASS:** a SKIPPED lift is excluded (its stored kg
+    is what was PRESCRIBED and not lifted); a lift with no previous CALENDAR week
+    is `new`, never `flat`; reps are null when unlogged, never the prescription.
+  - **"ANCHOR LIFT" HAS NO OWNER IN THIS APP** — `isAnchor` elsewhere means a
+    game/team-training anchor DAY. Read as "the main lifts the app already
+    records"; a narrower authored set is **Sam's ruling, not a guess**.
+  - **6 MUTATIONS, 6 REDS — AND ONE FALSE GREEN THAT IS THE LESSON.** A `perl`
+    substitution silently matched nothing, so the mutation never applied and
+    reported as a SURVIVOR. **A mutation that fails to apply is indistinguishable
+    from one that survives, and it points you at your test instead of your
+    tooling. Assert the replacement is PRESENT in the file before reading the
+    result.** Third address of `a fixture is a claim too`.
+  - **GATE:** full `test:bible` UNPIPED `GATE_EXIT=1` at
+    `test:program-control-durable`, 1 FAIL line — the declared red. **Sweep 2 of
+    162 = the declared set exactly**, at head `64d142d7`. `test:compile` PASSED.
+    New gated suite `test:journal-strength-trend` **23 passed, 0 failed**.
+  - **Copy batch 19 PROPOSED**; ceiling **566 → 568**, attributed to the two
+    sentences the extractor can see.
+- **NEXT, MEASURED WITH RECEIPTS** (plan doc §3b): week status + this week's job
+  both derive from the week's CONTRACT (`weeklyExposureContractBuilders.ts`,
+  evaluated by `evaluateWeeklyExposureContract`); phase has one owner
+  (`ownSeasonPhase`). **THE TRAP TO REFUSE: `useResolvedWeek` exposes neither the
+  contract nor the phase, so the next builder must find where the generation path
+  already resolves the contract and READ it — building a second one is a second
+  answer to "what does this week ask of the athlete".**
+- **PREVIOUS: THE FEEL SLICE** (`41d847d7`, `528e5c67`).
   docs/JOURNAL_FEEL_SLICE_BOUNDARY_2026-08-09.md · plan
   docs/JOURNAL_FEEL_SLICE_PLAN_2026-08-09.md
   - **The athlete can rate their legs after a game, and say whether any session

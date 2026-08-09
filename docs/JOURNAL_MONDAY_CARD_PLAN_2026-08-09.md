@@ -82,6 +82,47 @@ load model, not inside the card: it is a fact about the athlete's history
 (`rules/journalStrengthTrend.ts`), and the card is one of at least two readers
 (the monthly review's anchor-lift charts are the other, already ruled).
 
+## 3b. THE REMAINING THREE ITEMS — measured owners, for whoever builds them next
+
+Read-only measurement done 2026-08-09 after the strength line landed, so the next
+session starts from receipts rather than a search.
+
+**Week status ("one calm line") and This week's job.** Both derive from the
+week's CONTRACT:
+
+- The contract is built per phase by `rules/weeklyExposureContractBuilders.ts` —
+  `buildInSeasonExposureContract`, `buildInSeasonGameWeekExposureContract`,
+  `buildEarlyOffseasonExposureContract`, and siblings.
+- Its shape (`WeeklyExposureContract`, `weeklyExposureContract.ts:90`) carries
+  exactly what "this week's job" is a sentence about: `strength.requiredPatterns`,
+  `strength.targetCount`, `conditioning.targetCount`, `sprintCod.targetCount`,
+  plus `identity.phase / subphase / mode / weekKind`.
+- Satisfaction is `evaluateWeeklyExposureContract(contract, ledger)`
+  (`weeklyExposureContract.ts:604`), with the ledger from
+  `ledgerFromEffectiveWorkouts`.
+- Season phase has ONE owner, `ownSeasonPhase` (`rules/seasonPhaseOwner.ts:114`),
+  already used by `useSchedule.ts:153`.
+
+**THE OPEN QUESTION, AND IT IS THE SAME TRAP THIS UNIT KEEPS MEETING:** the
+Journal must ASK for the week's contract, not rebuild one. `useResolvedWeek`
+returns `{ weekDays, visibleWeek, weekLabel, … }` and **does not expose the
+contract or the phase**, so the next builder's first job is to find where the
+generation path already resolves the contract for the visible week and read it
+from there. **Building a second contract from the same inputs would be a second
+answer to "what does this week ask of the athlete"** — which is the defect class
+every slice in this unit has had to refuse.
+
+**What changed / what was protected.** `useDecisionLedgerStore` plus
+`rules/section18ShortfallDisclosure.ts` — whose `renderSection18Shortfall` is
+already Sam's SIGNED sentence, so that half needs no new copy. **Caveat measured
+by the LR-29 dependency list and still standing: the ledger has no vocabulary for
+illness / injury / readiness / phase**, so "no reason recorded" is load-bearing
+here rather than politeness.
+
+**Both status lines are CLAIMS the app makes about the athlete's week**, so every
+candidate sentence is PROPOSED copy in its own batch — the same rule the load
+slice's band words follow.
+
 ## 4. NOT COVERED BY THIS PLAN
 
 - The notification itself (parked, above).

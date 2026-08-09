@@ -26,6 +26,72 @@
    session.
 
 
+## Processed 2026-08-09 (forty-fourth pass) — THE JOURNAL SHIPS ITS FIRST NUMBER; AND A MUTATION THAT NEVER APPLIED
+
+- **ONE LINE: "Back Squat — 120kg, up on last week" — Monday card item 2, the
+  first number the Journal shows an athlete, and it ships because it waits on
+  nothing.** `64d142d7`, full unpiped chain `GATE_EXIT=1` at
+  `program-control-durable`, 1 FAIL line, sweep 2 of 162 = the
+  declared set exactly. Boundary:
+  docs/JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md
+- **STILL RUNNING CONTINUOUSLY UNDER ITEM 1.** Load slice → feel slice → strength
+  line, no stop between them. Zero new stored state in all three.
+- **WHY THIS NUMBER SHIPS AND THE LOAD HEADLINE DOES NOT — structurally, not by
+  choice.** Every load headline sits behind `signedValue` because it is
+  downstream of an unsigned constant. This module has NO constants: "10kg heavier
+  than last week" compares two recorded weights rather than judging against a
+  threshold, and `flat` is exact equality — a fact, not a tolerance. **A cell
+  asserts the module declares no threshold constant, and the mutation inserting a
+  2.5kg tolerance reds it.** If Sam ever wants that tolerance it becomes a
+  constant and joins the load model's signing table.
+- **THREE ABSENCES ARE FIRST-CLASS ANSWERS**, because each alternative is a
+  *record of work nobody did* — worse than a wrong number because it is
+  believable. A SKIPPED lift is excluded (its stored kg is what was PRESCRIBED
+  and not lifted). A lift with no previous CALENDAR week is `new`, never `flat`.
+  Reps are null when unlogged, never the prescribed range.
+- **"ANCHOR LIFT" HAS NO OWNER IN THIS APP, MEASURED.** The design says "one line
+  per anchor lift"; `isAnchor` in `sessionClassificationAdapter` and
+  `workoutCanonicalisation` means a game/team-training anchor **DAY**, a different
+  noun. Read as "the main lifts the app already records"
+  (`strengthLogging.isMainStrengthExercise`), with **no rival predicate invented**.
+  A narrower authored set is Sam's ruling — named in NOT-COVERED, not decided.
+- **LOOP CHECK — a new shape, worth a name: `a mutation that never applied reports
+  as a survivor`. SIGHTING 1.** One mutation came back GREEN and my first reading
+  was that the cell was weak. It was not: the `perl` substitution had silently
+  matched nothing, so the mutation never entered the file. Re-applied with the
+  replacement **verified present**, the cell went red immediately. **A failed
+  mutation and a surviving mutation are indistinguishable in the output, and the
+  failed one points the author at their TEST instead of their TOOLING — so it
+  costs a weakened cell, or a rewrite of a cell that was already correct.**
+  **PROPOSED COMPRESSION: assert the replacement is PRESENT in the file before
+  reading any mutation result.** A `grep -c` costs nothing. This is the third
+  address of `a fixture is a claim too` / `instrumentation must be alive where the
+  defects are` — the instrument, not the subject, was the thing that lied.
+- **6 MUTATIONS, 6 REDS** once measured honestly: skipped lift becoming a top set;
+  a first-time lift claiming `flat`; the unsigned 2.5kg tolerance; "last week"
+  becoming "the last week I trained"; the tie-break dropped so the order wobbles;
+  and the prescription standing in for unlogged reps.
+- **THE REST OF THE MONDAY CARD IS MEASURED WITH RECEIPTS** (plan doc §3b), so the
+  next session starts from addresses rather than a search: week status and this
+  week's job both derive from the week's CONTRACT
+  (`weeklyExposureContractBuilders.ts`, evaluated by
+  `evaluateWeeklyExposureContract`); phase has one owner (`ownSeasonPhase`).
+  **THE TRAP NAMED IN ADVANCE: `useResolvedWeek` exposes neither the contract nor
+  the phase, so the next builder must find where the generation path ALREADY
+  resolves the contract and read it. Building a second one is a second answer to
+  "what does this week ask of the athlete"** — the defect class every slice in
+  this unit has had to refuse.
+- **STILL PARKED, STILL SAM'S:** the notification needs a NATIVE dependency
+  (`expo-notifications` is absent) + a permission prompt the athlete can refuse +
+  a scheduling policy. The card composes in full without it.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE** — the kg figure, the line length
+  and how several lift rows stack are unverified by eye. DEPTH 0. The four arrow
+  words are invisible to the extraction gate (keyed object) and are listed in
+  batch 19 anyway.
+- **SAM'S QUESTIONS PARKED:** (1) should "anchor lift" be a narrower authored set;
+  (2) is `flat` right as exact equality — a half-kilo more currently reads "up",
+  and a tolerance would join his signing batch; (3) batch 19's words.
+
 ## Processed 2026-08-09 (forty-third pass) — THE FEEL SLICE; AND THE MONDAY CARD HITS A MEASURED WALL
 
 - **ONE LINE: the athlete can rate their legs after a game and say whether any
