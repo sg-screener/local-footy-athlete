@@ -2,29 +2,53 @@
 
 ## Unprocessed (newest first)
 
-1. STANDING AUTHORISATION — RUN THE WHOLE JOURNAL (Sam,
-   2026-08-09: "i just want to get it all on there then we can
-   worry about how it looks"). You may be a FRESH session: orient
-   first if you haven't (docs/NOW.md, docs/JOURNAL_UNIT_KICKOFF_
-   2026-08-08.md + the two design docs it names, docs/JOURNAL_LOAD_
-   MODEL_RULING_2026-08-08.md).
-   LOOP CHECK: stop-per-slice-when-owner-wants-continuous —
-   sighting 1 — compressed by this authorisation.
-   Build the remaining slices CONTINUOUSLY, no waiting for eye
-   passes between them: load slice (item 2) → post-game body-feel
-   rating + "felt different" tap (+ effort-on-strength) → Monday
-   card composition (+ local notification) → niggle history + note
-   resurfacing + progress markers → monthly review incl. the ruled
-   charts. Looks/polish are explicitly deferred: Sam judges
-   appearance in ONE pass at the end, so favour completeness over
-   pixel work. Laws unchanged: full unpiped chain per commit,
-   boundary report per slice, every word listed PROPOSED (the
-   derived-scope gate holds you to it), honest states until history
-   earns a surface, park Sam-questions and continue, checkpoint +
-   handover before context runs low, stop only at a genuine wall or
-   the unit's end. Signing batches accumulate for one end-of-unit
-   session.
+(none)
 
+## Processed 2026-08-09 (forty-seventh pass) — THE JOURNAL UNIT IS COMPLETE
+
+**ITEM 1, THE STANDING AUTHORISATION, IS PROCESSED IN FULL.** Sam: *"i just want
+to get it all on there then we can worry about how it looks."* It is all on
+there. **22 of 22 design + addendum items built, or measured and named with the
+reason.** END-OF-UNIT BOUNDARY: docs/JOURNAL_UNIT_BOUNDARY_2026-08-09.md ·
+audit: docs/JOURNAL_COMPLETION_AUDIT_2026-08-09.md
+
+- **TEN SLICES, CONTINUOUS, NO STOP BETWEEN ANY OF THEM** — load model, feel,
+  strength line, this week's job, niggles + resurfacing, monthly review,
+  consistency/balance/flags, week kinds, week status, what changed.
+  **Every one: full unpiped `test:bible` `GATE_EXIT=1` at
+  `program-control-durable`, 1 FAIL line, and a sweep equal to the declared set
+  EXACTLY** (2 of 160 → 2 of 166 as the suite count grew). `test:compile` PASSED
+  throughout. HEAD `e9bec76e`.
+- **THE WHOLE UNIT ADDED TWO PIECES OF STORED STATE**, both INPUTS on a door that
+  already existed (`gameFeel`, `expectation`/`expectationReason`). Everything
+  else derives on read from facts the app already persists. **No stored derived
+  output, no exception requested, none needed. North star: TOWARD.**
+- **THE IDEA THAT PAID FOR ITSELF: provenance travels with the number.** Built in
+  slice 1 to satisfy one order, it later decided on its own — with no further
+  thought — that the strength line and the balance picture could ship and the
+  load headline could not. **A surface four slices later asked for a value and
+  got the right answer about whether it was safe to show.**
+- **FIVE FINDINGS WORTH MORE THAN THE FEATURES THEY CAME FROM**, each with a
+  receipt in the boundary report: an assumption is invisible to the suite its
+  author wrote; a mutation that never applied reports as a survivor; a filter is
+  only tested by a fixture that would fail without it; a green gate can be
+  watching nothing (sighting 3, ~150 strings SIZED and filed); and **"blocked"
+  needs the same receipt as "built"** — I called week status blocked from a
+  gate's refusal rather than a measurement, and the derivation was reachable the
+  whole time.
+- **NINE NEW GATED SUITES.** Copy batches **15-25 PROPOSED**; the load model's
+  **7 unsigned constants of 9** await the one signing session the order reserved.
+  One of those seven (`minimumWeekCoverage`) is MINE and not in Sam's ruling —
+  flagged, not slipped in.
+- **A PROCESS SLIP OWNED:** `git stash`, forbidden in this shared worktree.
+  Caught immediately, popped, every file verified restored and compiling;
+  scratchpad-copy used thereafter.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE FOR ANY OF IT.** DEPTH 0
+  everywhere. **This is where Sam's reserved appearance pass belongs** — the
+  monthly charts are the first thing in the unit whose defects are VISUAL rather
+  than testable, and no test in this repo can give him that.
+- **TEN RULINGS PARKED, NONE BLOCKING**, listed in the boundary report — the
+  notification's native dependency being the largest.
 
 ## Processed 2026-08-09 (forty-sixth pass) — NIGGLE HISTORY + RESURFACING; TWO WRONG ASSUMPTIONS CAUGHT BY EXISTING LAWS
 

@@ -1,5 +1,26 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **BRANCH:** `main` · **HEAD:** `e9bec76e` — **THE JOURNAL UNIT IS COMPLETE.**
+- **END-OF-UNIT BOUNDARY: docs/JOURNAL_UNIT_BOUNDARY_2026-08-09.md** — read this
+  first. The standing authorisation's whole list is built; **22 of 22 design +
+  addendum items built, or measured and named with the reason.**
+  Audit: docs/JOURNAL_COMPLETION_AUDIT_2026-08-09.md
+  - **TEN SLICES, ALL GATED, ALL SWEPT TO THE DECLARED SET** — load model, feel,
+    strength line, this week's job, niggles + resurfacing, monthly review,
+    consistency/balance/flags, week kinds, week status, what changed.
+    Final: `GATE_EXIT=1` at `program-control-durable`, **sweep 2 of 166**.
+  - **THE WHOLE UNIT ADDED TWO PIECES OF STORED STATE**, both INPUTS on an
+    existing door (`gameFeel`, `expectation`/`expectationReason`). Everything
+    else derives on read. **North star: TOWARD.**
+  - **PROVENANCE TRAVELS WITH THE NUMBER, and it paid for itself:** built in
+    slice 1, it later decided on its own that the strength line and the balance
+    picture could ship and the load headline could not.
+  - **NINE NEW GATED SUITES.** Copy batches **15-25 PROPOSED**; the load model's
+    **7 unsigned constants of 9** await one signing session.
+  - **SAM'S APPEARANCE PASS IS THE NEXT STEP** — the order reserved one, and the
+    monthly charts are the first thing here whose defects are VISUAL.
+  - **NOT COVERED, first line: NO DEVICE EVIDENCE FOR ANY OF IT.** DEPTH 0
+    everywhere. A `git stash` slip owned and repaired.
 - **BRANCH:** `main` · **HEAD:** `b75cc63f` — **SIX SLICES IN, CONTINUOUSLY.**
 - **LAST UNIT: NIGGLE HISTORY + NOTE RESURFACING** (`b75cc63f`), addendum Group 2
   item 9. docs/JOURNAL_NIGGLE_SLICE_BOUNDARY_2026-08-09.md · plan

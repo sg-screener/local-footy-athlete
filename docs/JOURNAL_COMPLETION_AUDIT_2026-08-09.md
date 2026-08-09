@@ -56,9 +56,18 @@ OPEN-UNKNOWN.
 
 ## THE HONEST SUMMARY
 
-**Built: 20 of 22 items** after the four buildable ones landed
-(`a440136c`, `8e46b7d9`, `c8a349a6`, and the week-kinds commit). Two remain, plus
-the items waiting on Sam.
+**FINAL: 22 of 22 items built or measured-and-named.** After the four buildable
+items (`a440136c`, `8e46b7d9`, `c8a349a6`, week kinds), week status (`ff12921f`)
+and what-changed landed, nothing in the design or the addendum is unaccounted
+for. What remains is Sam's, and one half-item whose FACT does not exist:
+
+- **"What was protected"** — the app's answer is a disclosure at the DOOR, not a
+  stored record. Re-deriving it for a past week would be a reconstruction rather
+  than a record. **Recording it is an engine-side change to the decision doors**,
+  named as owed with the reason (batch 25-d).
+- **The "facts beside each other" observation lines** (Monday item 4) — the
+  region lines exist and are dark; the wider set is downstream of the same
+  unsigned constants.
 
 *Original count when this audit was written: 16 of 22, six remaining in three
 kinds — kept below so the correction above is legible rather than tidied away.*
