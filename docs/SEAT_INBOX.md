@@ -2,7 +2,32 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. JOURNAL HIDDEN + REPLAY/UNDO UNIT OPENS (Sam ruled after his
+   eye pass, 2026-08-09): docs/JOURNAL_HIDDEN_RULING_2026-08-09.md —
+   commit as authored, then execute in order.
+   LOOP CHECK: eye-pass-vetoes-a-unit — sighting 1 (the journal is
+   the first unit to FAIL Sam's eye outright) — iterate; the lesson
+   is already law elsewhere: mock-first beat words-first, and this
+   unit's surface outran its design. Carry that into undo.
+   (a) HIDE the journal per the ruling: one hide at the navigation
+   owner (R5.7 precedent — entry gone, machinery frozen not
+   deleted); data layer + suites stay live; the two data-creating
+   taps STAY (seat-ruled, Sam veto open); no notification can fire.
+   Full chain, short boundary.
+   (b) OPEN THE REPLAY UNIT — UNDO IS ITS FACE (Sam's instinct,
+   recorded in the kickoff addendum). The dependency list is
+   delivered; its opening law holds: build from the measured map,
+   no serial discovery. Seat brings Sam the undo shape options
+   (one-step vs recent-changes list) when the design moment
+   arrives; until then park-and-build within the ruled boundaries
+   (program decisions via ledger; recorded facts undo separately at
+   their own doors; a logged session never silently vanishes).
+   (c) The COACH REBUILD is next after undo — do not start it now;
+   the seat is preparing its kickoff separately. Note for its
+   design: the journal's behind-the-scenes record (load, regions,
+   feel, niggles) is an INPUT to coach intelligence, per Sam's
+   ruling.
+
 
 ## Processed 2026-08-09 (fiftieth pass) — THE REMINDER IS ARMED, AND A 2-MINUTE FIRE IS HALF A PROOF
 
