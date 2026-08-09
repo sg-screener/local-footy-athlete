@@ -8,6 +8,7 @@ import { disableJournalReminder } from '../services/journalReminderService';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import CoachScreen from '../screens/coach/CoachScreen';
+import CoachTabScreen from '../screens/coach/CoachTabScreen';
 import JournalScreen from '../screens/journal/JournalScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import FAQScreen from '../screens/profile/FAQScreen';
@@ -205,7 +206,44 @@ export default function AppNavigator() {
           LR-6 HOLDS: `CoachStackNavigator`, `CoachScreen` and the pipeline stay
           in the tree, FROZEN. This is a scope cut, not a retirement — §6's own
           words. Restoring the tab is one `Tab.Screen` block.
+
+          AND THE TAB IS BACK, 2026-08-09 — BUT NOT THE SURFACE THAT WAS CUT.
+          Sam approved docs/COACH_TAB_MOCK_2026-08-09.html and
+          docs/COACH_REBUILD_KICKOFF_2026-08-09.md opened SLICE 1. The block
+          below mounts `CoachTabScreen`, which is the rebuild: read-only, zero
+          mutation paths, its words derived from the same projection the Program
+          tab renders.
+
+          `CoachScreen` and `CoachStackNavigator` above are UNCHANGED and
+          UNREACHED. The beta chat surface C(a) cut stays cut — this is not its
+          restoration, and `coachEntrySurfaceContractTests` section [4] was
+          re-aimed at exactly that distinction rather than deleted. The frozen
+          root is retired by SUPERSESSION when S1-S3 have replaced its every
+          reachable duty, which is the kickoff's own answer to the parked
+          question of what to do with 41,220 unreachable lines.
         */}
+        <Tab.Screen
+          name="CoachTab"
+          component={CoachTabScreen}
+          options={{
+            title: 'Coach',
+            tabBarIcon: ({ color }) => <CoachIcon color={color} size={22} />,
+            tabBarButtonTestID: 'tab-coach',
+            tabBarAccessibilityLabel: 'Coach tab',
+            /*
+              L-C3, THE NIKE BAR, AT THE ONE PLACE THIS SCREEN CANNOT SOLVE IT
+              ITSELF. The composer rides `KeyboardStickyView`, which lifts by the
+              keyboard height measured from the true screen bottom. An 84pt tab
+              bar sitting under it is a STATIC bottom inset, and a sticky footer
+              resting one inset up overshoots the keypad by exactly that inset —
+              the run-3 onboarding finding, in a place a screen cannot reach
+              because the tab bar is not its own layout. Hiding the bar while the
+              keyboard is up removes the inset instead of compensating for it.
+            */
+            tabBarHideOnKeyboard: true,
+          }}
+          listeners={{ tabPress: () => logger.info('[tab-press] coach') }}
+        />
         {/*
           THE JOURNAL IS HIDDEN — Sam, 2026-08-09, after his own eye pass:
           "i'd like all the journal stuff hidden for now - keep the data behind

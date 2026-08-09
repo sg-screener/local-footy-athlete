@@ -124,11 +124,21 @@ console.log('\n[1] THE ENTRY SURFACE IS GONE (ruling 1)');
     !/<Tab\.Screen[^>]*name=["'`]JournalTab["'`]/s.test(navigator));
 
   // A COUNT IS NEVER THE WHOLE ASSERTION. The number is meaningless unless the
-  // two tabs that SURVIVE are named — a navigator holding two tabs neither of
-  // which is Program would satisfy a bare count perfectly.
+  // tabs that SURVIVE are named — a navigator holding three tabs none of which
+  // is Program would satisfy a bare count perfectly.
+  //
+  // RE-AIMED 2026-08-09, NOT LOOSENED. This read "two tabs remain, not three".
+  // The two was never this gate's law: the journal's absence is, and the total
+  // was whatever the navigator happened to hold on the day it was written. Sam
+  // approved the coach tab (docs/COACH_TAB_MOCK_2026-08-09.html) and slice 1
+  // mounted it, so the total moved to three with the journal still gone. The
+  // cell that matters is the one directly above — no `JournalTab` block — and
+  // this one now pins the exact SET, which is strictly stronger than a number:
+  // it reds both when a tab appears and when one silently vanishes.
   const tabBlocks = navigator.match(/<Tab\.Screen\b/g) ?? [];
-  ok('two tabs remain, not three', tabBlocks.length === 2, tabBlocks.length);
-  const survivors = ['ProgramTab', 'ProfileTab']
+  ok('three tabs remain, and none of them is the journal',
+    tabBlocks.length === 3, tabBlocks.length);
+  const survivors = ['ProgramTab', 'CoachTab', 'ProfileTab']
     .map((name) => ({ name, at: navigator.indexOf(`name="${name}"`) }));
   const missing = survivors.filter((tab) => tab.at < 0).map((tab) => tab.name);
   ok('and both surviving tabs are PRESENT before any claim is made about them',

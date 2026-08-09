@@ -124,12 +124,43 @@ export function dayOfMonthLabel(dateISO: string): string {
 }
 
 /**
+ * THE SEVEN WEEKDAYS, IN FULL — batch 30, PROPOSED 2026-08-09.
+ *
+ * ONE TABLE OF FULL WORDS, WITH THE ABBREVIATIONS DERIVED. This is the C5
+ * precedent from the journal signing (2026-08-09), where the twelve months were
+ * about to be authored twice — once long, once short — and the second table is
+ * where the two silently disagree. The three-letter forms below are exactly the
+ * first three characters of these seven words, which is why the abbreviation is
+ * a `slice` rather than a list, and why `coachTabSlice1Tests` proves the derived
+ * seven are byte-identical to the seven this function shipped before today.
+ *
+ * Indexed JS-style (Sunday 0) to match `dayOfWeekForISODate`, which is the one
+ * owner of that conversion.
+ */
+export const WEEKDAY_NAMES: readonly string[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+/** The weekday a date falls on, named in full — "Saturday". */
+export function weekdayName(dateISO: string): string {
+  return WEEKDAY_NAMES[dayOfWeekForISODate(dateISO)];
+}
+
+/** The same weekday, abbreviated — "Sat". Derived, never a second table. */
+export function shortWeekdayName(dateISO: string): string {
+  return weekdayName(dateISO).slice(0, 3);
+}
+
+/**
  * Weekday + short date, e.g. "Fri 3/7". For surfaces that don't already
  * render their own weekday label.
  */
 export function shortWeekdayDateLabel(dateISO: string): string {
-  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
-    dayOfWeekForISODate(dateISO)
-  ];
-  return `${weekday} ${shortDayMonthLabel(dateISO)}`;
+  return `${shortWeekdayName(dateISO)} ${shortDayMonthLabel(dateISO)}`;
 }

@@ -303,12 +303,67 @@ console.log('\n[4] R5.7 — THE BETA COACH CUT: the entry surface is GONE and st
   );
   const navigatorSource = productSources
     .find(([file]) => file.endsWith('AppNavigator.tsx'))?.[1] ?? '';
+
+  // ── RE-AIMED 2026-08-09, NOT DELETED, AND THE DISTINCTION IS THE WHOLE CELL ──
+  //
+  // This asserted "AppNavigator registers no CoachTab tab screen". Sam approved
+  // docs/COACH_TAB_MOCK_2026-08-09.html and the kickoff opened SLICE 1, so a
+  // Coach tab is now RULED. The cell's law was never "no tab" — it is R5.7's own
+  // sentence, *"zero paths to a chat surface"*, and the surface it meant is the
+  // beta pipeline behind `CoachScreen`.
+  //
+  // So the claim moves from the tab's EXISTENCE to its DESTINATION. A tab that
+  // mounts the rebuild is the ruling; a tab that mounts the frozen screen is the
+  // cut coming back, and that is the only one of the two a future edit could
+  // make by accident — restoring `component={CoachStackNavigator}` is one word.
+  //
+  // Both anchors are proven FOUND before anything is claimed about them: an
+  // absent tab block and an absent navigator would both satisfy a bare
+  // "does not mount CoachScreen" test perfectly (AGENTS.md, the anchoring law).
   ok(
-    'AppNavigator registers no CoachTab tab screen',
+    'AppNavigator was found and registers a CoachTab tab screen (Sam, 2026-08-09)',
     navigatorSource.length > 0
-      && !/<Tab\.Screen[^>]*name=["'`]CoachTab["'`]/s.test(navigatorSource),
-    'the tab is the surface C(a) hides entirely; the stack and CoachScreen '
-      + 'stay in the tree FROZEN, which is a scope cut, not a retirement',
+      && /<Tab\.Screen[^>]*name=["'`]CoachTab["'`]/s.test(navigatorSource),
+    'slice 1 of the coach rebuild restores the tab at the navigation owner; a '
+      + 'missing tab here would make every cell below vacuous',
+  );
+  // The closing `/>` is anchored at the block's own indentation: a bare
+  // `[\s\S]*?\/>` stops at the INLINE `<CoachIcon … />` in `tabBarIcon` and
+  // returns a slice that looks like a block and is not one.
+  const coachTabBlock = /<Tab\.Screen\s+name="CoachTab"[\s\S]*?\n\s{8}\/>/.exec(navigatorSource)?.[0] ?? '';
+  ok(
+    'the WHOLE CoachTab block was located — its last line is in the slice',
+    coachTabBlock.length > 300 && /listeners=/.test(coachTabBlock),
+    `matched ${coachTabBlock.length} chars — a slice between two missed anchors `
+      + 'reads as a pass for every assertion made about it',
+  );
+  ok(
+    'the CoachTab tab mounts the REBUILD, never the frozen beta chat surface',
+    /component=\{CoachTabScreen\}/.test(coachTabBlock)
+      && !/component=\{CoachStackNavigator\}/.test(coachTabBlock)
+      && !/component=\{CoachScreen\}/.test(coachTabBlock),
+    'R5.7 cut the beta chat surface, not the idea of a coach. C(a) stays in '
+      + 'force: nothing may route to `CoachScreen` or its stack while LR-6 '
+      + 'freezes them, and the rebuild retires them by supersession',
+  );
+  // THE DOOR THAT RETURNS IS RARELY THE DOOR THAT LEFT, so the sweep is over the
+  // product tree rather than the navigator that happens to hold the tabs today.
+  //
+  // It asks about TAB mounts specifically, and the reason is a caught defect
+  // rather than a precaution: the frozen `CoachStackNavigator` still contains
+  // `<CoachStack.Screen ... component={CoachScreen} />`, which is LR-6's freeze
+  // working exactly as cell [4] below requires. A sweep for "anything mounting
+  // CoachScreen" would red on the freeze itself and would have to be loosened —
+  // the claim is that no TAB reaches it, and that is what is asked.
+  const frozenTabMounts = productSources.filter(([, body]) =>
+    (body.match(/<Tab\.Screen[\s\S]*?\/>/g) ?? []).some((block) =>
+      /component=\{CoachStackNavigator\}/.test(block)
+      || /component=\{CoachScreen\}/.test(block)));
+  ok(
+    'no product source mounts the frozen coach surface as a TAB',
+    frozenTabMounts.length === 0,
+    `a tab reaching the frozen pipeline is C(a) undone: ${
+      frozenTabMounts.map(([file]) => file).join(', ') || 'none'}`,
   );
   ok(
     'the frozen coach stack is still in the tree (LR-6, not a retirement)',
