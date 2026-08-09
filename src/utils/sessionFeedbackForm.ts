@@ -44,11 +44,17 @@ export const FEEDBACK_FORM_SECTION_LABELS = {
   // (`team_night_size_question`) — this constant is where the panel reads it, the sheet
   // is where its provenance lives.
   teamNightSize: 'How was training?',
-  // PROPOSED, batch 18. The game question is the design's own wording; the
-  // expectation questions are this terminal's and are flagged as such on the
-  // sheet. None is signed.
+  // SIGNED, batch 18, Sam 2026-08-09.
+  //
+  // `expectation` IS THE ONE HE REWORDED (decision C2). It read "How did it
+  // compare with what was planned?" — a question that asks the athlete to hold
+  // the plan in their head before they can answer. "How did that go?" asks for
+  // the same three answers with none of that work. THE ANSWERS ARE UNCHANGED,
+  // which is what makes this a wording change rather than a new question: no
+  // stored value moves, and every session already recorded still means what it
+  // meant.
   gameFeel: 'How were your legs and energy?',
-  expectation: 'How did it compare with what was planned?',
+  expectation: 'How did that go?',
   expectationReason: 'What made the difference?',
   feeling: 'How did the session feel?',
   partialFeeling: 'How did the completed part feel?',

@@ -163,6 +163,13 @@ console.log('\n[3] EXCEPTION-BASED — a block with nothing to say renders nothi
   // ASSERTED PER BLOCK, AT THE BLOCK. A file-wide count of `return null` would
   // be satisfied by any five components returning null, including five that
   // always do.
+  //
+  // `StrengthLines` LEFT THIS LIST ON 2026-08-09 and that is a ruling, not a
+  // regression. Sam's decision C3 restored "No lifts recorded with a weight this
+  // week." — so a week with no weighted lifts now says so instead of vanishing.
+  // It is asserted below as a NAMED exception, beside the month drawer, because
+  // a block silently dropping out of this list is how the exception rule would
+  // erode one component at a time.
   const blocks = [
     'WeekKinds',
     'DidTheWorkHappen',
@@ -171,7 +178,6 @@ console.log('\n[3] EXCEPTION-BASED — a block with nothing to say renders nothi
     'WeekStatus',
     'StatStrip',
     'AttentionCards',
-    'StrengthLines',
   ];
   for (const block of blocks) {
     const start = code.indexOf(`function ${block}(`);
@@ -194,13 +200,34 @@ console.log('\n[3] EXCEPTION-BASED — a block with nothing to say renders nothi
   ok('and the month drawer is PERMANENT — the one block that never returns null',
     !/return null/.test(drawer), drawer.match(/return null[^\n]*/g));
 
-  // THE THREE RETIRED EMPTY STATES, swept at the screen rather than only in the
-  // three suites that owned them. Each of those suites asserts its own; this
-  // asserts they are gone as a SET, so re-adding one does not merely red the
-  // suite whose author is most likely to re-point it.
+  // THE SECOND NAMED EXCEPTION — SAM'S DECISION C3, 2026-08-09.
+  //
+  // THE EXCEPTION RULE IS ABOUT NEWS, NOT ABOUT SILENCE, and this is where the
+  // two come apart. A week with no weighted lifts HAS something to say to an
+  // athlete who lifted: we have no weights for you. The card vanishing said the
+  // same thing as a rest week, which is why this one withdrawal cost honesty and
+  // why he reversed it. The block is asserted to render its line rather than
+  // nothing — the inverse of the cell above, at the same altitude.
+  const liftsStart = code.indexOf('function StrengthLines(');
+  const liftsEnd = code.indexOf('\nfunction ', liftsStart + 1);
+  const liftsRegion = liftsStart >= 0 && liftsEnd > liftsStart
+    ? code.slice(liftsStart, liftsEnd) : '';
+  ok('the lifts block was located', liftsRegion.length > 200, liftsRegion.length);
+  ok('and the lifts block SPEAKS on an empty week — C3, the reversed withdrawal',
+    !/return null/.test(liftsRegion)
+    && /No lifts recorded with a weight this week\./.test(liftsRegion),
+    liftsRegion.match(/return null[^\n]*/g));
+
+  // THE RETIRED EMPTY STATES, swept at the screen rather than only in the suites
+  // that owned them. Each of those suites asserts its own; this asserts they are
+  // gone as a SET, so re-adding one does not merely red the suite whose author is
+  // most likely to re-point it.
+  //
+  // THE SET IS TWO, AND THE THIRD IS ASSERTED PRESENT DIRECTLY ABOVE. Shrinking
+  // a forbidden-list is the easiest way to make a sweep stop meaning anything,
+  // so the entry that left it did not simply disappear — it changed sides.
   for (const retired of [
     'You made no changes to this week',
-    'No lifts recorded with a weight',
     'No niggles recorded',
   ]) {
     ok(`the retired empty state "${retired}" is gone`,
@@ -304,11 +331,17 @@ console.log('\n[5] THE NORTH STAR — an appearance pass stores nothing');
   // for the first time on the day Sam signed his constants** — in a commit that
   // touched no code. Building behind a signature hides your own duplicates.
   //
-  // So the count is asserted, not the absence: exactly one testID per dark fact.
-  for (const darkFact of ['journal-load-region', 'journal-load-headline']) {
-    const renderers = (code.match(new RegExp(`testID="${darkFact}"`, 'g')) ?? []).length;
-    ok(`\`${darkFact}\` has exactly ONE renderer, not two waiting to both light up`,
-      renderers === 1, { darkFact, renderers });
+  // So the count is asserted, not the absence: exactly one testID per fact.
+  //
+  // THE DAY ARRIVED ON 2026-08-09 AND THE COUNT HELD. Sam signed the eight
+  // constants; these two facts are lit now, and had the duplicate still been
+  // there the athlete would have read the same observation twice on a screen no
+  // commit had touched. The cell stays — it is no less true of a lit fact, and
+  // its subject was never the darkness.
+  for (const fact of ['journal-load-region', 'journal-load-headline']) {
+    const renderers = (code.match(new RegExp(`testID="${fact}"`, 'g')) ?? []).length;
+    ok(`\`${fact}\` has exactly ONE renderer, not two lighting up together`,
+      renderers === 1, { fact, renderers });
   }
   ok('and the band edges are read through the door too, not off the constant',
     /signedValue\(load\.sweetSpotBand\)/.test(code)

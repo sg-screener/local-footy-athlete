@@ -212,24 +212,27 @@ console.log('\n[7] THE SURFACE');
   ok('the screen builds the trend rather than deriving lifts itself',
     /\bbuildJournalStrengthTrend\s*\(/.test(screen));
 
-  // ── `journal-strength-none` IS RETIRED, AND THE CELL IS RE-POINTED ──
+  // ── `journal-strength-none` WAS RETIRED, AND SAM PUT IT BACK ──
   //
-  // Sam's UI ruling (2026-08-09) makes the front page exception-based: "Nothing
-  // appears unless it has something to say." A week with no logged weights has
-  // nothing to say about lifts, so the whole card is absent where it used to
-  // render "No lifts recorded with a weight this week."
+  // THIS CELL HAS NOW BEEN RE-POINTED TWICE IN TWO DAYS, and the second move is
+  // the interesting one. Sam's UI ruling (2026-08-09 morning) made the front
+  // page exception-based, so the whole lifts card went absent on a week with no
+  // logged weights and this cell asserted the sentence was GONE. The boundary
+  // report flagged it as the one withdrawal of nine that removed INFORMATION —
+  // "you logged no weights" and "you did no lifting" became indistinguishable —
+  // and his signing session (same day, decision C3) reversed exactly that one.
   //
-  // THIS IS A REAL LOSS AND IT IS FLAGGED, NOT SMUGGLED. An athlete who lifted
-  // but logged no weights now sees no lifts card and no explanation of why —
-  // the two states are indistinguishable to them. The ruling is the owner's and
-  // it is built as ordered; the boundary report puts the question back to him.
+  // SO THE ASSERTION IS INVERTED RATHER THAN DELETED, and it is stronger than
+  // either previous form: the line must be PRESENT, and it must be the sentence
+  // the copy sheet carries. A cell that merely stopped forbidding the string
+  // would pass against a screen that dropped it again.
   const screenCode = screen
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
   ok('the stripped screen source is substantial, not an empty slice',
     screenCode.length > 4000, screenCode.length);
-  ok('the retired empty state is gone from the screen entirely',
-    !/journal-strength-none/.test(screenCode)
-    && !/No lifts recorded with a weight/.test(screenCode),
+  ok('the restored empty state is on the screen, in code and not in a comment',
+    /journal-strength-none/.test(screenCode)
+    && /No lifts recorded with a weight this week\./.test(screenCode),
     screenCode.match(/No lifts recorded[^\n]*/g));
 
   const start = screenCode.indexOf('function StrengthLines');
@@ -237,8 +240,18 @@ console.log('\n[7] THE SURFACE');
   ok('the StrengthLines component was located', start > 0 && end > start, { start, end });
   const region = screenCode.slice(start, end);
   ok('and the located region is substantial', region.length > 200, region.length);
-  ok('a week with no logged weights renders no lifts card at all',
-    /lifts\.length === 0\) return null/.test(region), region);
+
+  // THE LINE IS IN THE EMPTY BRANCH, NOT MERELY IN THE FILE. A source scan that
+  // only proved the string exists somewhere would pass with it rendered beside
+  // a populated lifts card — `a-count-taken-for-a-record`, source-scan form:
+  // locate the region, then assert what makes it run.
+  ok('a week with no logged weights renders the honest line, in the zero branch',
+    /lifts\.length === 0\)\s*\{/.test(region)
+    && /journal-strength-none/.test(region)
+    && /No lifts recorded with a weight this week\./.test(region), region);
+  ok('and the line does NOT ride along when there are lifts to show',
+    (region.match(/No lifts recorded with a weight this week\./g) ?? []).length === 1,
+    region.match(/No lifts recorded with a weight this week\./g));
 
   // NO SIGNED-CONSTANT DOOR HERE, AND THE ABSENCE IS THE POINT: this module has
   // no constants to wait on, which is exactly why its number can ship while the

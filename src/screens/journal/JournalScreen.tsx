@@ -83,25 +83,35 @@ import {
  * THE THREE RETIRED EMPTY STATES below.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * WHAT IS DARK, AND WHY THAT IS THE MECHANISM WORKING.
+ * WHAT WAS DARK, AND WHAT TURNED IT ON — 2026-08-09.
  *
  * The load band, the load stat tile, the "ran hot" card and the "balance
- * drifting" card are all downstream of PROPOSED constants, so `signedValue`
- * returns null for them and they do not render. The ruling says these thresholds
- * ship PROPOSED and join the load model's signing batch — so this is the ordered
- * outcome, not a gap. **Sam's signature alone turns them on; no code change.**
+ * drifting" card were all downstream of PROPOSED constants, so `signedValue`
+ * returned null for them and they did not render. **Sam signed the load model's
+ * eight remaining constants on 2026-08-09 and all four now render — this file
+ * was not edited to make that happen.** The mechanism did what it was built to
+ * do; the commit that lit half this screen changed a provenance field in
+ * `journalLoad.ts` and nothing here.
+ *
+ * WHAT STILL GATES THEM IS UNCHANGED, and that is the point of saying so. Every
+ * one of these reads through `signedValue`, so the next constant that arrives
+ * PROPOSED darkens whatever it feeds, with no line here to remember.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * THE THREE RETIRED EMPTY STATES, named because a quietly deleted line is how a
- * gate stops meaning anything.
+ * THE RETIRED EMPTY STATES — TWO, NOT THREE, SINCE 2026-08-09. Named because a
+ * quietly deleted line is how a gate stops meaning anything.
  *
- * "You made no changes to this week.", "No lifts recorded with a weight this
- * week." and "No niggles recorded." each rendered on every ordinary week. The
- * ruling retires all three by name (what-changed is "one credit line on weeks it
- * happened, nothing otherwise"; niggle history is "never standing furniture").
- * Their cells are RE-POINTED to assert the stronger new law — the block renders
- * NOTHING — rather than deleted. A cell removed because its own unit made it red
- * is the other half of that hazard.
+ * "You made no changes to this week." and "No niggles recorded." each rendered
+ * on every ordinary week. The ruling retires both by name (what-changed is "one
+ * credit line on weeks it happened, nothing otherwise"; niggle history is
+ * "never standing furniture"). Their cells are RE-POINTED to assert the stronger
+ * new law — the block renders NOTHING — rather than deleted. A cell removed
+ * because its own unit made it red is the other half of that hazard.
+ *
+ * "No lifts recorded with a weight this week." WAS THE THIRD AND SAM PUT IT
+ * BACK (decision C3). It is the only withdrawal of the nine that removed
+ * INFORMATION rather than a heading or a duplicate, 26-e said so and asked him,
+ * and the answer was restore. See `StrengthLines`.
  *
  * STYLE LAW (Sam's rider, verbatim "match the style of the rest of the app"):
  * one design language. Every colour here is a `theme/colors` token, every gap a
@@ -125,14 +135,60 @@ const EMPTY_EPISODES: readonly InjuryEpisodeV1[] = [];
 // ─── The week label ──────────────────────────────────────────────────────
 
 /**
- * PROPOSED month abbreviations — batch 26. A closed table rather than `Intl`,
- * because a locale-dependent month name is a string no copy gate can enumerate
- * and no ruling can sign.
+ * THE CLOSED TWELVE — batch 26 (abbreviations, SIGNED 2026-08-09) and batch 27
+ * (the full words, PROPOSED). A table rather than `Intl`, because a
+ * locale-dependent month name is a string no copy gate can enumerate and no
+ * ruling can sign.
+ *
+ * ONE TABLE, NOT TWO, AND THAT IS THE NORTH STAR'S MOVE HERE. Sam's decision C5
+ * asks the progress line to read "since March" where it read "since
+ * 2026-03-02", and his premise was that "the closed-twelve month table already
+ * exists on the screen". It did — but it held `Mar`, not `March`, so honouring
+ * the example needed the longer word. Writing a second literal twelve beside the
+ * first is two representations of one fact that agree until somebody edits one;
+ * the abbreviation is DERIVED from the word instead. A cell asserts the derived
+ * twelve are exactly the abbreviations the week label shipped before this
+ * change, so the week label provably did not move.
  */
-const MONTH_ABBREVIATIONS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+const MONTH_WORDS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ] as const;
+
+const MONTH_ABBREVIATION_LENGTH = 3;
+
+const MONTH_ABBREVIATIONS = MONTH_WORDS
+  .map((word) => word.slice(0, MONTH_ABBREVIATION_LENGTH));
+
+/**
+ * "March", or "March 2025" when the month is not in the current year.
+ *
+ * THE YEAR IS A RIDER ON C5 AND IT IS FLAGGED, NOT SLIPPED IN. Sam's example is
+ * "since March" and that is what an athlete reads for almost every gain. But
+ * `JournalLoadModel.history` is UNBOUNDED — it holds every week the athlete ever
+ * recorded — so a first entry from March last year would render "since March"
+ * and mean this March. That is not a wording choice, it is a wrong statement
+ * about when, so the year appears exactly when leaving it out would be false.
+ *
+ * NULL RATHER THAN THE RAW DATE when either string will not parse. Falling back
+ * to the ISO is what this decision exists to remove, and a line that cannot be
+ * said honestly is a line the exception rule already knows how to drop.
+ *
+ * "THIS YEAR" IS THE VIEWED WEEK'S YEAR, NEVER THE DEVICE CLOCK. The screen has
+ * no `new Date()` anywhere and this function does not introduce one: the gain is
+ * spoken relative to the week being read, which is the same anchor every other
+ * date on this screen uses.
+ */
+function monthWordSince(fromWeekStartISO: string, viewedWeekStartISO: string): string | null {
+  const from = new Date(`${fromWeekStartISO}T00:00:00Z`);
+  const viewed = new Date(`${viewedWeekStartISO}T00:00:00Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(viewed.getTime())) return null;
+  const word = MONTH_WORDS[from.getUTCMonth()];
+  if (word === undefined) return null;
+  return from.getUTCFullYear() === viewed.getUTCFullYear()
+    ? word
+    : `${word} ${from.getUTCFullYear()}`;
+}
 
 /**
  * The week the screen is about, as "3 – 9 Aug" or "30 Jul – 5 Aug".
@@ -392,12 +448,14 @@ function HowTheWeekFelt({ week }: { week: JournalWeek }) {
 }
 
 /**
- * The headline continuum's words. PROPOSED — batch 17.
+ * The headline continuum's words. SIGNED — batch 17, Sam 2026-08-09.
  *
  * NO RAW AU EVER REACHES THE ATHLETE (the ruling's first law), so the band is
- * spoken, never printed as a score. These lines are written and wired NOW even
- * though nothing renders them yet: they sit behind `signedValue`, and the day
- * Sam signs the band and the stream weighting they appear with no code change.
+ * spoken, never printed as a score. These lines were written and wired while
+ * nothing rendered them; they sat behind `signedValue`, and the day Sam signed
+ * the band and the stream weighting they appeared with no code change. That day
+ * was 2026-08-09 and this is the first sentence of the load model an athlete
+ * has ever read.
  */
 const HEADLINE_COPY: Readonly<Record<BandVerdict, string>> = {
   below: 'A lighter week than your normal.',
@@ -472,18 +530,18 @@ function markerFraction(ratio: number, band: { low: number; high: number }): num
 /**
  * THE LOAD SECTION — now the hero's band, which is where the ruling puts it.
  *
- * WHAT SHIPS AND WHAT IS DARK, STRUCTURALLY RATHER THAN BY CHOICE. The evidence
- * sentence is derived from no constant at all — a count of logged sessions needs
- * no signature to be true — so it ships. The headline continuum, the sweet-spot
- * band and the region observations are all downstream of PROPOSED constants, so
- * `signedValue` returns null and they do not render. This is a mechanism, not a
- * habit: the section cannot read an unsigned number even by accident, because
- * `.value` is not a door it opens.
- *
- * SO THE BAND SLOT HAS TWO STATES AND NEITHER IS BLANK. With the signature, the
- * track, the shaded sweet spot and the marker. Without it, the honest building
+ * THE BAND SLOT HAS TWO STATES AND NEITHER IS BLANK. With the signature: the
+ * track, the shaded sweet spot and the marker. Without it: the honest building
  * line — which is itself news to an athlete ("this is coming, here is what it
  * needs"), and is the ruling's rule satisfied rather than dodged.
+ *
+ * SAM SIGNED ON 2026-08-09, SO THE FIRST STATE IS THE LIVE ONE NOW — for an
+ * athlete with four weeks of logged history and half a week measured. THE
+ * SECOND STATE IS NOT DEAD CODE: an athlete without that history still gets the
+ * building line, because the headline is null on the FACTS as well as on the
+ * provenance. Signing did not remove the honest case, it removed one reason for
+ * it, and confusing the two would have deleted the empty state a new athlete
+ * sees on their first week.
  */
 function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel }) {
   const coverage = signedValue(load.coverage);
@@ -702,10 +760,11 @@ function Stat({ value, unit, name, testID, tone }: {
  * THE THREE GLANCEABLES — sessions done, load vs normal, game feel.
  *
  * THE STRIP IS AS WIDE AS THE HONEST TILES, which is the ruling's rule applied
- * to itself. The load tile is downstream of PROPOSED constants and so returns
- * null today; the game-feel tile needs a game that was actually rated. A strip
- * of three placeholders would be furniture pretending to be news, and a "—" in a
- * tile is a number the athlete has to learn to ignore.
+ * to itself. The load tile was downstream of PROPOSED constants and returned
+ * null until Sam's signature on 2026-08-09; it now speaks for an athlete whose
+ * history supports a comparison. The game-feel tile still needs a game that was
+ * actually rated. A strip of three placeholders would be furniture pretending to
+ * be news, and a "—" in a tile is a number the athlete has to learn to ignore.
  *
  * THE WHOLE STRIP DISAPPEARS when no tile can speak.
  */
@@ -785,17 +844,20 @@ function EarnedCard({ title, detail, testID }: {
 }
 
 /**
- * REGION HOT + BALANCE DRIFTING — PROPOSED (batch 26), and both DARK today.
+ * REGION HOT + BALANCE DRIFTING — SIGNED (batch 26, Sam 2026-08-09), and both
+ * LIVE since that signature.
  *
  * BOTH SIT BEHIND `signedValue` BECAUSE BOTH ARE THRESHOLD JUDGEMENTS, which is
  * exactly what Sam's ruling says they are: "What counts as 'out of whack'
  * (balance skew line, region-hot line, load-band edges) are athlete-affecting
  * constants: ship PROPOSED, join the load model's constants batch, ONE signing
- * sitting."
+ * sitting." The sitting happened; the cards appeared.
  *
  * SO THE MECHANISM AND THE RULING AGREE WITHOUT BEING MADE TO. Nothing here
  * checks whether a threshold is signed; the values simply arrive as null while
- * they are not, and a card with no value renders nothing.
+ * they are not, and a card with no value renders nothing. That is still true —
+ * it is the reason these cards remain EXCEPTIONS rather than furniture, because
+ * a week that ran nothing hot supplies no observation and the card stays away.
  */
 function AttentionCards({
   observations,
@@ -910,10 +972,13 @@ function AttentionCards({
 function MonthlyReview({
   month,
   balance,
+  viewedWeekStart,
 }: {
   month: JournalMonth;
   /** Completed pattern shares, or null while their provenance is unsigned. */
   balance: readonly PatternShare[] | null;
+  /** The week being read — the anchor for "is that month this year?". */
+  viewedWeekStart: string;
 }) {
   if (month.building) {
     return (
@@ -991,18 +1056,25 @@ function MonthlyReview({
         changes — because a review that only speaks when the news is good is a
         cheerleader, and the design excludes gamification by name.
       */}
-      {month.gains.slice(0, 1).map((gain) => (
-        <Text
-          key={gain.exerciseName}
-          variant="bodySmall"
-          style={styles.body}
-          testID="journal-month-gain"
-        >
-          {gain.deltaKg > 0
-            ? `You have added ${gain.deltaKg}kg to your ${gain.exerciseName} since ${gain.fromWeekStart}.`
-            : `Your ${gain.exerciseName} is ${Math.abs(gain.deltaKg)}kg lighter than ${gain.fromWeekStart}.`}
-        </Text>
-      ))}
+      {month.gains.slice(0, 1).map((gain) => {
+        // C5, SAM 2026-08-09: the month WORD, never the ISO date. A gain whose
+        // month cannot be said is dropped rather than spoken as "2026-03-02" —
+        // see `monthWordSince`.
+        const since = monthWordSince(gain.fromWeekStart, viewedWeekStart);
+        if (since === null) return null;
+        return (
+          <Text
+            key={gain.exerciseName}
+            variant="bodySmall"
+            style={styles.body}
+            testID="journal-month-gain"
+          >
+            {gain.deltaKg > 0
+              ? `You have added ${gain.deltaKg}kg to your ${gain.exerciseName} since ${since}.`
+              : `Your ${gain.exerciseName} is ${Math.abs(gain.deltaKg)}kg lighter than in ${since}.`}
+          </Text>
+        );
+      })}
     </View>
   );
 }
@@ -1020,23 +1092,32 @@ function MonthlyReview({
  *
  * THE COLLAPSED ROW CARRIES THE HEADLINE FACT, not just a chevron. A drawer that
  * says only "Your month" gives the athlete no reason to open it; one that says
- * "Trap Bar Deadlift +12.5kg since 6 Apr" is the progress, and opening it is for
+ * "Trap Bar Deadlift +12.5kg since April" is the progress, and opening it is for
  * the detail.
  */
 function MonthDrawer({
   month,
   balance,
+  viewedWeekStart,
 }: {
   month: JournalMonth;
   balance: readonly PatternShare[] | null;
+  /** The week being read — the anchor for "is that month this year?". */
+  viewedWeekStart: string;
 }) {
   const [open, setOpen] = useState(false);
 
+  // C5, SAM 2026-08-09. The collapsed row was the worst of the four date sites:
+  // "Trap Bar Deadlift +12.5kg since 2026-04-06" is the ONE line an athlete
+  // reads without opening anything, and this comment used to claim it read
+  // "since 6 Apr" while the code rendered the ISO — the claim and the code
+  // disagreed for a whole slice.
   const [gain] = month.gains;
-  const teaser = gain
+  const since = gain ? monthWordSince(gain.fromWeekStart, viewedWeekStart) : null;
+  const teaser = gain && since !== null
     ? (gain.deltaKg > 0
-      ? `${gain.exerciseName} +${gain.deltaKg}kg since ${gain.fromWeekStart}`
-      : `${gain.exerciseName} ${gain.deltaKg}kg since ${gain.fromWeekStart}`)
+      ? `${gain.exerciseName} +${gain.deltaKg}kg since ${since}`
+      : `${gain.exerciseName} ${gain.deltaKg}kg since ${since}`)
     : 'Your trends, charts and totals.';
 
   return (
@@ -1055,7 +1136,9 @@ function MonthDrawer({
         </View>
         <Text variant="body" style={styles.chevron}>{open ? '−' : '+'}</Text>
       </TouchableOpacity>
-      {open ? <MonthlyReview month={month} balance={balance} /> : null}
+      {open ? (
+        <MonthlyReview month={month} balance={balance} viewedWeekStart={viewedWeekStart} />
+      ) : null}
     </Card>
   );
 }
@@ -1099,13 +1182,35 @@ const TREND_TONE: Readonly<Record<StrengthLiftTrend['direction'], string>> = {
  * heavier than last week" is a comparison of two recorded weights, not a
  * judgement against a threshold Sam has yet to sign.
  *
- * ITS EMPTY STATE IS RETIRED BY THE RULING (see the header). A week with no
- * logged weights renders no lifts card at all, where it used to render "No lifts
- * recorded with a weight this week." The cell that asserted that sentence now
- * asserts the block returns null.
+ * ITS EMPTY STATE IS BACK — SAM RULED C3 ON 2026-08-09, AND IT IS THE ONLY
+ * WITHDRAWAL HE REVERSED.
+ *
+ * Batch 26 retired nine strings under the exception rule. Eight were headings
+ * or duplicates; this one removed INFORMATION, because with the card absent
+ * "you logged no weights" and "you did no lifting" look identical to the
+ * athlete and neither says anything. 26-e flagged it as the one that cost
+ * something and put it back to him; he sent it back.
+ *
+ * RESTORED IN ITS ORIGINAL FORM — one quiet line where the card would have
+ * been, unconditional on there being no weighted lifts, exactly as 26-e
+ * recommended and exactly as it read before the withdrawal.
+ *
+ * THE ONE THING THAT WANTS HIS EYE, AND IT IS NOT NARROWED HERE: this line also
+ * appears on a week the athlete never lifted at all — a rest week, a holiday —
+ * where it is true and says nothing, which is the one place it sits against his
+ * own organising rule. Making it conditional on "lifted but recorded no weight"
+ * would need the trend module to report a fact it currently only consumes, and
+ * that is a narrowing of his ruling rather than an implementation of it. Built
+ * as ruled, flagged in the boundary report.
  */
 function StrengthLines({ lifts }: { lifts: readonly StrengthLiftTrend[] }) {
-  if (lifts.length === 0) return null;
+  if (lifts.length === 0) {
+    return (
+      <Text variant="bodySmall" style={styles.muted} testID="journal-strength-none">
+        No lifts recorded with a weight this week.
+      </Text>
+    );
+  }
   return (
     <Card style={styles.card} testID="journal-lifts">
       <Text variant="overline" style={styles.cardTitle}>Your lifts</Text>
@@ -1518,7 +1623,11 @@ export default function JournalScreen() {
 
         <StrengthLines lifts={strengthLifts} />
 
-        <MonthDrawer month={month} balance={signedValue(loadModel.patternSharesDone)} />
+        <MonthDrawer
+          month={month}
+          balance={signedValue(loadModel.patternSharesDone)}
+          viewedWeekStart={week.weekStart}
+        />
 
         <Card style={styles.card} testID="journal-note-card">
           <WeekNote weekStart={week.weekStart} />

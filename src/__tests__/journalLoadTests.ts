@@ -56,6 +56,10 @@ import {
   journalWeekStartOf,
   liftTonnageKg,
   signedValue,
+  type ConstantProvenance,
+  type Derived,
+  type JournalLoadConstant,
+  type JournalLoadModel,
   type JournalLoadSessionInput,
   type PlannedLift,
 } from '../rules/journalLoad';
@@ -67,6 +71,33 @@ import { join } from 'path';
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
+
+/**
+ * THE TABLE'S ENTRIES, READ AT THE DECLARED TYPE RATHER THAN THE NARROWED ONE.
+ *
+ * `as const satisfies …` pins every entry's `provenance` to the LITERAL it
+ * currently holds. Once Sam signed the last constant on 2026-08-09 the compiler
+ * concluded that `provenance` can only ever be `'signed'`, and `e.provenance ===
+ * 'proposed'` stopped being a test and became a type error — seven of them.
+ *
+ * THAT IS THE COMPILER BEING RIGHT ABOUT TODAY AND WRONG ABOUT THE POINT. The
+ * cells it refused are the ones guarding the NEXT proposed constant, and the
+ * two easy answers both cost something: deleting them removes the guard, and
+ * dropping `as const` from the table loosens the values Sam just signed. So the
+ * READ is widened to `JournalLoadConstant`, the type the table already declares
+ * it satisfies, and the table keeps its literals.
+ */
+const CONSTANT_ENTRIES: readonly (readonly [string, JournalLoadConstant<unknown>])[] =
+  Object.entries(JOURNAL_LOAD_CONSTANTS);
+
+function provenanceOf(key: keyof typeof JOURNAL_LOAD_CONSTANTS): ConstantProvenance {
+  return (JOURNAL_LOAD_CONSTANTS[key] as JournalLoadConstant<unknown>).provenance;
+}
+
+/** The model's fields that carry provenance — the ones a signature can darken. */
+type DerivedField = {
+  [K in keyof JournalLoadModel]: JournalLoadModel[K] extends Derived<unknown> ? K : never;
+}[keyof JournalLoadModel];
 
 function ok(name: string, condition: unknown, detail?: unknown): void {
   if (condition) {
@@ -155,26 +186,52 @@ console.log('\n[1] SAM\'S NUMBERS, ASSERTED AS NUMBERS');
   ok('the stream window is four weeks, and SIGNED (it is in the ruling body)',
     c.streamNormalWindowWeeks.value === 4 && c.streamNormalWindowWeeks.provenance === 'signed');
 
-  ok('the stream weighting is the proposed 50/50, and PROPOSED',
+  // ─── THE SIGNING SESSION, 2026-08-09 ───────────────────────────────────
+  //
+  // THESE FOUR CELLS USED TO ASSERT `proposed`, AND THEY WENT RED THE DAY THE
+  // SIGNATURE LANDED. That is what they were for: `a-cell-that-reds-when-its-
+  // own-unit-lands`. They are RE-AIMED at the new truth rather than deleted,
+  // because a table nobody checks is how a value drifts away from the ruling
+  // that authorised it. The VALUES are unchanged by the signing — Sam took
+  // every number as proposed — so a cell that only watched provenance would
+  // have let the numbers move on the same day.
+
+  ok('the stream weighting is 50/50, and SIGNED 2026-08-09',
     c.streamWeighting.value.strength === 0.5
     && c.streamWeighting.value.conditioning === 0.5
-    && c.streamWeighting.provenance === 'proposed');
+    && c.streamWeighting.provenance === 'signed');
 
-  ok('the sweet-spot band is the proposed 0.8-1.3, and PROPOSED',
+  ok('the sweet-spot band is 0.8-1.3, and SIGNED 2026-08-09',
     c.sweetSpotBand.value.low === 0.8
     && c.sweetSpotBand.value.high === 1.3
-    && c.sweetSpotBand.provenance === 'proposed');
+    && c.sweetSpotBand.provenance === 'signed');
 
-  ok('tonnage-modulated-by-effort is OFF by default, as the order requires',
+  // SIGNED AS OFF IS NOT THE SAME AS OFF BY DEFAULT, and the distinction is the
+  // cell's subject. Turning it on is now a ruling, not a default flip.
+  ok('tonnage-modulated-by-effort is OFF, and that OFF is SIGNED',
     c.tonnageModulatedByEffort.value === false
-    && c.tonnageModulatedByEffort.provenance === 'proposed');
+    && c.tonnageModulatedByEffort.provenance === 'signed');
 
-  ok('the region-normal window is PROPOSED, separately from the stream window',
-    c.regionNormalWindowWeeks.provenance === 'proposed');
+  ok('the region-normal window is four weeks, and SIGNED',
+    c.regionNormalWindowWeeks.value === 4
+    && c.regionNormalWindowWeeks.provenance === 'signed');
+
+  ok('the region-hot ratio is 1.15, and SIGNED',
+    c.regionHotRatio.value === 1.15 && c.regionHotRatio.provenance === 'signed');
+
+  ok('the secondary share is half a primary, and SIGNED',
+    c.regionSecondaryShare.value === 0.5 && c.regionSecondaryShare.provenance === 'signed');
+
+  ok('the pattern-drift threshold is 0.25, and SIGNED',
+    c.patternDriftThreshold.value === 0.25
+    && c.patternDriftThreshold.provenance === 'signed');
+
+  ok('the coverage floor is 0.5, and SIGNED',
+    c.minimumWeekCoverage.value === 0.5 && c.minimumWeekCoverage.provenance === 'signed');
 
   // EVERY constant states where it came from. A number with no source is the
   // shape `a-ruling-premise-is-a-claim-too` is about.
-  const entries = Object.entries(c);
+  const entries = CONSTANT_ENTRIES;
   ok('every constant carries a non-empty source', entries.length > 0
     && entries.every(([, entry]) => typeof entry.source === 'string' && entry.source.length > 8),
     entries.filter(([, e]) => !e.source || e.source.length <= 8).map(([k]) => k));
@@ -184,11 +241,37 @@ console.log('\n[1] SAM\'S NUMBERS, ASSERTED AS NUMBERS');
     entries.filter(([, e]) => e.provenance === 'proposed' && !e.source.includes('PROPOSED'))
       .map(([k]) => k));
 
+  // THE CELL ABOVE IS VACUOUS TODAY AND SAYING SO IS THE POINT — the table holds
+  // zero proposed entries after 2026-08-09, so it asserts over an empty set
+  // (`a-bind-can-be-green-and-empty`). It is kept because it is the guard the
+  // NEXT constant needs, and the counterpart below is what carries weight now.
+  ok('every SIGNED constant names who signed it, and no longer reads PROPOSED',
+    entries.filter(([, e]) => e.provenance === 'signed')
+      .every(([, e]) => e.source.includes('Sam ') && !e.source.includes('PROPOSED')),
+    entries.filter(([, e]) => e.provenance === 'signed'
+      && (!e.source.includes('Sam ') || e.source.includes('PROPOSED'))).map(([k]) => k));
+
+  // THE EIGHT SAM SIGNED ON 2026-08-09, BY NAME. The work order lists them, and
+  // a list in a report is checked as a list — `a-ruling-premise-is-a-claim-too`.
+  // Two entries were signed EARLIER (the rung, the stream window) and are
+  // asserted absent from this set, so the batch cannot quietly grow or shrink.
+  const SIGNING_SESSION = 'Sam 2026-08-09, signing session';
+  const signedToday = entries.filter(([, e]) => e.source.startsWith(SIGNING_SESSION))
+    .map(([k]) => k).sort();
+  ok('the signing session moved EXACTLY the eight the order names',
+    JSON.stringify(signedToday) === JSON.stringify([
+      'minimumWeekCoverage', 'patternDriftThreshold', 'regionHotRatio',
+      'regionNormalWindowWeeks', 'regionSecondaryShare', 'streamWeighting',
+      'sweetSpotBand', 'tonnageModulatedByEffort',
+    ]), signedToday);
+
   // The signing batch is a FACT about the table, printed so the boundary report
   // and Sam's batch cannot drift apart by hand-counting.
   const proposed = entries.filter(([, e]) => e.provenance === 'proposed').map(([k]) => k);
   console.log(`      SIGNING BATCH: ${proposed.length} PROPOSED of ${entries.length} constants `
     + `(distinct keys): ${proposed.join(', ')}`);
+  console.log(`      SIGNED 2026-08-09: ${signedToday.length} of ${entries.length} `
+    + `(distinct keys): ${signedToday.join(', ')}`);
 }
 
 // ─── [2] Provenance travels with the number ──────────────────────────────
@@ -224,25 +307,147 @@ console.log('\n[2] PROVENANCE PROPAGATION — the mechanism, in both directions'
 
   ok('coverage is SIGNED — no constant feeds a count of what was logged',
     model.coverage.provenance === 'signed');
-  ok('the headline continuum is PROPOSED — weighting and band are unsigned',
-    model.headline.provenance === 'proposed');
-  ok('the per-stream comparison is PROPOSED — the coverage floor is unsigned',
-    model.strengthStream.provenance === 'proposed'
-    && model.conditioningStream.provenance === 'proposed');
-  ok('the region observations are PROPOSED — window and secondary share unsigned',
-    model.regionObservations.provenance === 'proposed');
-  ok('the plan-vs-done verdict is PROPOSED — its threshold is unsigned',
-    model.patternBalance.provenance === 'proposed');
-  ok('but the completed pattern SHARES stand signed — no constant feeds them',
+
+  // ─── AFTER THE SIGNATURE: EVERY OUTPUT IS SIGNED ───────────────────────
+  //
+  // These five cells asserted `proposed` until 2026-08-09 and are the reason
+  // the flip could not be silent. The claim they carry now is the OTHER half of
+  // the same mechanism: Sam signed the constants and the OUTPUTS followed, with
+  // no line of surface code touched.
+  ok('the headline continuum is SIGNED — weighting and band both carry Sam',
+    model.headline.provenance === 'signed');
+  ok('the per-stream comparison is SIGNED — the coverage floor is signed',
+    model.strengthStream.provenance === 'signed'
+    && model.conditioningStream.provenance === 'signed');
+  ok('the region observations are SIGNED — window and secondary share signed',
+    model.regionObservations.provenance === 'signed');
+  ok('the plan-vs-done verdict is SIGNED — its threshold is signed',
+    model.patternBalance.provenance === 'signed');
+  ok('and the completed pattern SHARES still stand signed — no constant feeds them',
     model.patternSharesDone.provenance === 'signed');
 
-  // THE HEADLINE EXISTS. A model that simply never computed one would satisfy
-  // "the headline is hidden" forever — so the number is asserted present behind
-  // the refusal, which is what makes Sam's signature alone enough to ship it.
-  ok('the headline IS computed behind the refusal, not merely absent',
+  // THE HEADLINE EXISTS, AND IT NOW REACHES THE SURFACE. The old form of this
+  // cell asserted the number was computed BEHIND the refusal; today the same
+  // number comes back through the door.
+  ok('the headline IS computed, and the value is the ratio it always was',
     model.headline.value !== null && Math.abs(model.headline.value.ratio - 1) < 1e-9,
     model.headline.value);
-  ok('and `signedValue` is what hides it', signedValue(model.headline) === null);
+  ok('and `signedValue` now RELEASES it — this is what Sam\'s signature bought',
+    signedValue(model.headline) === model.headline.value);
+}
+
+// ─── [2b] The refusal still works, proven over the REAL model ────────────
+//
+// THE HAZARD THIS CELL EXISTS FOR. Before 2026-08-09, section [2] proved the
+// darkening end-to-end for free: real constants were proposed, so real outputs
+// were dark. Signing every constant took that evidence away — every remaining
+// proof of the refusal ran over HAND-BUILT `Derived` values, which prove
+// `signedValue` and say nothing about whether `buildJournalLoadModel` still
+// WIRES its constants into what it returns.
+//
+// That gap is not theoretical. The next author adds a constant, writes
+// `{ value, provenance: 'signed' }` by hand instead of `derived(value, ...)`,
+// and nothing reds: everything is signed today, so a hardcoded 'signed' and a
+// live combination are indistinguishable. The mechanism would be dead while
+// reading green — `a-green-gate-is-a-claim`, and the exact shape the load
+// slice's own comment warned about ("a cell that only checked 'the headline is
+// hidden today' would pass forever").
+//
+// So the constant is un-signed AT RUNTIME and the real model is rebuilt. The
+// table is a plain object (`as const` is a type-level claim, not a freeze), so
+// this is a cast rather than a new door in the module: adding an injection
+// point for a test would be a second representation of the constants.
+
+console.log('\n[2b] THE REFUSAL, PROVEN OVER THE REAL MODEL AFTER THE SIGNING');
+{
+  function modelNow() {
+    return buildJournalLoadModel({
+      weekStart: THIS_WEEK,
+      sessions: [
+        ...measuredWeek(THIS_WEEK, 100),
+        ...measuredWeek(weeksBefore(THIS_WEEK, 1), 100),
+        ...measuredWeek(weeksBefore(THIS_WEEK, 2), 100),
+        ...measuredWeek(weeksBefore(THIS_WEEK, 3), 100),
+        ...measuredWeek(weeksBefore(THIS_WEEK, 4), 100),
+      ],
+      sessionsPlannedThisWeek: 4,
+      plannedStrength: [
+        { exerciseName: 'Back Squat', sets: 1, repsMin: 1, repsMax: 1, weightKg: 100 },
+        { exerciseName: 'Bench Press', sets: 1, repsMin: 1, repsMax: 1, weightKg: 100 },
+      ],
+    });
+  }
+
+  // Each entry: the constant to un-sign, and the outputs that must go dark.
+  const WIRING: readonly {
+    key: keyof typeof JOURNAL_LOAD_CONSTANTS;
+    darkens: readonly DerivedField[];
+  }[] = [
+    { key: 'sweetSpotBand', darkens: ['headline'] },
+    { key: 'streamWeighting', darkens: ['headline'] },
+    { key: 'minimumWeekCoverage', darkens: ['headline', 'strengthStream', 'conditioningStream'] },
+    { key: 'regionSecondaryShare', darkens: ['regionObservations'] },
+    { key: 'regionHotRatio', darkens: ['regionObservations'] },
+    { key: 'regionNormalWindowWeeks', darkens: ['regionObservations'] },
+    { key: 'patternDriftThreshold', darkens: ['patternBalance'] },
+  ];
+
+  // THE ASSERTION IS ON `provenance`, NOT ON `signedValue`, AND THE FIRST DRAFT
+  // OF THIS CELL GOT IT WRONG. `signedValue` returns null for an UNSIGNED value
+  // and for an ABSENT one alike — so "it came back" read false for
+  // `conditioningStream` on a strength-only fixture, where the comparison is
+  // legitimately null. Reading the refusal through a door that conflates two
+  // answers cannot tell them apart; provenance can. `signedValue` is then
+  // asserted separately, on an output whose value is known present.
+  for (const { key, darkens } of WIRING) {
+    const entry = JOURNAL_LOAD_CONSTANTS[key] as unknown as { provenance: string };
+    const restore = entry.provenance;
+
+    // PROVE THE MUTATION APPLIED BEFORE READING ITS RESULT — the strength
+    // line's lesson (`a mutation that never applied reports as a survivor`),
+    // and it applies to a mutation the harness performs on itself too.
+    entry.provenance = 'proposed';
+    const applied = provenanceOf(key) === 'proposed';
+
+    const mutated = modelNow();
+    const wentDark = darkens.every((output) => mutated[output].provenance === 'proposed');
+
+    entry.provenance = restore;
+    const restored = provenanceOf(key) === restore;
+    const lit = modelNow();
+    const cameBack = darkens.every((output) => lit[output].provenance === 'signed');
+
+    ok(`un-signing \`${key}\` darkens ${darkens.join(' + ')} — and signing it back lights them`,
+      applied && wentDark && restored && cameBack,
+      { applied, wentDark, restored, cameBack });
+  }
+
+  // AND THE DOOR ITSELF STILL REFUSES, over a value that is demonstrably THERE.
+  // Without the `!== null` half this would pass against a model that computed
+  // nothing at all — the vacuous form the load slice already had to refuse once.
+  {
+    const entry = JOURNAL_LOAD_CONSTANTS.sweetSpotBand as unknown as { provenance: string };
+    entry.provenance = 'proposed';
+    const applied = provenanceOf('sweetSpotBand') === 'proposed';
+    const dark = modelNow();
+    entry.provenance = 'signed';
+    const litAgain = modelNow();
+
+    ok('`signedValue` refuses a headline that EXISTS, and releases the same one after',
+      applied
+      && dark.headline.value !== null
+      && signedValue(dark.headline) === null
+      && signedValue(litAgain.headline) === litAgain.headline.value
+      && litAgain.headline.value !== null,
+      { applied, computedWhileDark: dark.headline.value });
+  }
+
+  // THE TABLE IS LEFT EXACTLY AS FOUND. A cell that mutates shared module state
+  // and does not prove it put it back is a fixture that poisons every cell
+  // after it, and the failure would appear somewhere else entirely.
+  ok('the constants table is restored — every entry SIGNED, as Sam left it',
+    CONSTANT_ENTRIES.every(([, e]) => e.provenance === 'signed'),
+    CONSTANT_ENTRIES.filter(([, e]) => e.provenance !== 'signed').map(([k]) => k));
 }
 
 // ─── [3] The two native streams ──────────────────────────────────────────
@@ -607,9 +812,10 @@ console.log('\n[7] REGION LAYER — observation, never diagnosis');
   ok('and a region well past it is hot',
     atRatio(2).length > 0, atRatio(2).length);
 
-  // THE CARD IS DARK UNTIL SAM SIGNS, and that is the mechanism rather than a
-  // habit — the new constant joins the provenance the value already carried.
-  ok('the observations stay PROPOSED, so the earned card cannot render yet',
+  // THE CARD WAS DARK UNTIL SAM SIGNED, AND NOW IT IS NOT. This cell read
+  // `=== null` until 2026-08-09; the ratio and the observation are unchanged,
+  // and the only thing that moved is the signature on `regionHotRatio`.
+  ok('the observations are SIGNED, so the earned card renders — the flip, seen',
     atRatio(2).length > 0
     && signedValue(buildJournalLoadModel({
       weekStart: THIS_WEEK,
@@ -619,7 +825,7 @@ console.log('\n[7] REGION LAYER — observation, never diagnosis');
       ],
       sessionsPlannedThisWeek: 4,
       plannedStrength: [],
-    }).regionObservations) === null);
+    }).regionObservations)?.length === atRatio(2).length);
 }
 
 // ─── [8] Pattern balance — plan vs done ──────────────────────────────────
@@ -707,9 +913,12 @@ console.log('\n[8] PATTERN BALANCE — plan vs done, from the existing pattern o
     balanced.patternBalance.value?.drifts.length === 0,
     { threshold, drifts: balanced.patternBalance.value?.drifts });
 
-  // AND IT IS DARK UNTIL SIGNED, like every other threshold judgement.
-  ok('the balance verdict stays PROPOSED, so its card cannot render yet',
-    signedValue(drifted.patternBalance) === null);
+  // AND IT IS LIT NOW, which is what the threshold's first signature bought.
+  // The identity check is deliberate: `signedValue` must hand back the SAME
+  // object the model computed, not a truthy stand-in.
+  ok('the balance verdict is SIGNED, so its card renders — the first reader, lit',
+    signedValue(drifted.patternBalance) === drifted.patternBalance.value
+    && drifted.patternBalance.value !== null);
 }
 
 // ─── [9] Week identity, and the surface's one door ───────────────────────

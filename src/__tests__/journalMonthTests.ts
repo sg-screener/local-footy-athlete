@@ -413,6 +413,97 @@ console.log('\n[6] NO CHART WALLS');
     { chartAt, start, end });
 }
 
+// ─── [7] C5 — the month WORD, never the ISO date ─────────────────────────
+//
+// SAM'S DECISION C5, 2026-08-09: '"since {date}" renders the MONTH WORD ("since
+// March") — the closed-twelve month table already exists on the screen; no
+// locale dependence.'
+//
+// HIS PREMISE WAS ONE WORD OFF AND CHECKING IT WAS THE WORK. A closed twelve did
+// exist on the screen — but it held `Mar`, not `March`, so "the table already
+// exists" was true of the mechanism and false of the word. The fix is one table
+// of full words with the abbreviations DERIVED from it, rather than a second
+// literal twelve that agrees until somebody edits one.
+//
+// THESE ARE SOURCE CELLS AND THAT IS A REAL LIMIT, STATED. `monthWordSince`
+// lives in a `.tsx` that cannot be imported by a node test, and moving it to
+// `rules/` would take athlete-visible words out of the copy gates' scope —
+// which is `a green gate watching nothing`, already paid for three times in
+// this unit. So the words are checked where they are authored, by parsing the
+// table out of the source and computing over it.
+
+console.log('\n[7] C5 — THE MONTH WORD (Sam 2026-08-09)');
+{
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  const code = screen.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok('the stripped screen source is substantial', code.length > 4000, code.length);
+
+  // ── The table, parsed rather than assumed ──
+  const wordsBlock = /const MONTH_WORDS = \[([\s\S]*?)\] as const;/.exec(code);
+  ok('the MONTH_WORDS table was located in code, not in a comment',
+    wordsBlock !== null, wordsBlock?.[1]);
+  const words = (wordsBlock?.[1] ?? '').match(/'([A-Za-z]+)'/g)?.map((q) => q.slice(1, -1)) ?? [];
+
+  const EXPECTED_WORDS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  ok('it is a CLOSED TWELVE, in calendar order, spelled in full',
+    JSON.stringify(words) === JSON.stringify(EXPECTED_WORDS), words);
+
+  // ── The abbreviations are DERIVED, and the week label provably did not move ──
+  //
+  // THIS IS THE CELL THAT MAKES THE REFACTOR SAFE. Batch 26 shipped the week
+  // label as "3 – 9 Aug" off a literal twelve; that literal is gone, so nothing
+  // else would notice if the derivation produced "Augu" or "Au". The previous
+  // table is written out here as the CONTRACT the derivation must reproduce.
+  const PREVIOUS_ABBREVIATIONS = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  const lengthMatch = /const MONTH_ABBREVIATION_LENGTH = (\d+);/.exec(code);
+  const abbreviationLength = Number(lengthMatch?.[1] ?? NaN);
+  ok('the abbreviation length is declared, not inlined at the call',
+    abbreviationLength === 3, lengthMatch?.[1]);
+  ok('and the DERIVED abbreviations are exactly the twelve batch 26 shipped',
+    JSON.stringify(words.map((w) => w.slice(0, abbreviationLength)))
+      === JSON.stringify(PREVIOUS_ABBREVIATIONS),
+    words.map((w) => w.slice(0, abbreviationLength)));
+  ok('the abbreviations are derived from the words, not a second literal twelve',
+    /MONTH_ABBREVIATIONS = MONTH_WORDS/.test(code)
+    && !/'Jan',\s*'Feb'/.test(code),
+    code.match(/'Jan'[^\n]*/g));
+
+  // ── No ISO date reaches the athlete through the gain sentence ──
+  //
+  // THE DEFECT C5 FIXES, ASSERTED AS AN ABSENCE. `${gain.fromWeekStart}` put
+  // "2026-04-06" in the one line an athlete reads without opening anything, and
+  // a comment three lines above claimed it read "since 6 Apr" — the claim and
+  // the code disagreed for a whole slice, which is why the absence is gated now
+  // rather than trusted to a reviewer's eye.
+  ok('no sentence interpolates the raw week-start date any more',
+    !/\$\{gain\.fromWeekStart\}/.test(code),
+    code.match(/\$\{gain\.fromWeekStart\}[^\n]*/g));
+
+  const sinceCalls = code.match(/monthWordSince\s*\(/g) ?? [];
+  ok('both gain sentences go through `monthWordSince` — the drawer row and the review',
+    sinceCalls.length === 3, sinceCalls.length);
+
+  // ── The year rider, and the anchor it uses ──
+  ok('the year is spoken only when the month is not in the viewed week\'s year',
+    /getUTCFullYear\(\) === viewed\.getUTCFullYear\(\)/.test(code));
+  ok('and "this year" is the VIEWED WEEK, never the device clock',
+    !/new Date\(\)/.test(code), code.match(/new Date\(\)[^\n]*/g));
+
+  // ── An unsayable month drops the line rather than falling back to the ISO ──
+  ok('an unparseable date returns null instead of the raw string',
+    /if \(Number\.isNaN\(from\.getTime\(\)\) \|\| Number\.isNaN\(viewed\.getTime\(\)\)\) return null;/
+      .test(code));
+  ok('and the review DROPS a gain it cannot date, rather than printing the ISO',
+    /if \(since === null\) return null;/.test(code));
+}
+
 console.log(`\njournalMonthTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 console.log('  DEPTH (L13): 0 — a unit sweep over the pure derivation plus SOURCE reads of '

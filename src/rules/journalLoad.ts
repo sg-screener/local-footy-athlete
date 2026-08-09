@@ -122,8 +122,8 @@ export const JOURNAL_LOAD_CONSTANTS = {
    */
   streamWeighting: {
     value: { strength: 0.5, conditioning: 0.5 },
-    provenance: 'proposed',
-    source: 'PROPOSED — ruling lists it in Sam\'s signing batch, default 50/50',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — 50/50 as proposed',
   },
   /**
    * The sweet-spot band, in ratio-of-normal terms. The ruling records the
@@ -132,19 +132,21 @@ export const JOURNAL_LOAD_CONSTANTS = {
    */
   sweetSpotBand: {
     value: { low: 0.8, high: 1.3 },
-    provenance: 'proposed',
-    source: 'PROPOSED — ruling lists it in Sam\'s signing batch, ~0.8-1.3 of normal',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — 0.8-1.3 of normal as proposed',
   },
   /**
-   * Whether tonnage is modulated by the session's effort rating. DEFAULT OFF,
-   * as the order requires — and off is why the effort-tap-on-strength feature
-   * does not ride this slice: with this false, the tap would change no number
-   * the athlete can see.
+   * Whether tonnage is modulated by the session's effort rating.
+   *
+   * SIGNED AS OFF, which is a decision and not a default. Sam's signing session
+   * took the recommendation "OFF" rather than leaving it unruled — so the
+   * effort tap does not enter the load number, and if that is ever to change it
+   * is a new ruling rather than a flipped default nobody signed.
    */
   tonnageModulatedByEffort: {
     value: false,
-    provenance: 'proposed',
-    source: 'PROPOSED — ruling lists it in Sam\'s signing batch; OFF by default',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — signed as OFF',
   },
   /**
    * The window a REGION is compared with itself over. Proposed separately from
@@ -153,8 +155,8 @@ export const JOURNAL_LOAD_CONSTANTS = {
    */
   regionNormalWindowWeeks: {
     value: 4,
-    provenance: 'proposed',
-    source: 'PROPOSED — ruling names the region-normal window in Sam\'s batch',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — 4 weeks as proposed',
   },
   /**
    * How much of a session's load a SECONDARY muscle carries, relative to a
@@ -163,8 +165,8 @@ export const JOURNAL_LOAD_CONSTANTS = {
    */
   regionSecondaryShare: {
     value: 0.5,
-    provenance: 'proposed',
-    source: 'PROPOSED — the sheets author WHICH muscles, never how much',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — half a primary, as proposed',
   },
   /**
    * How far above its own previous best a region must run before the Journal
@@ -178,13 +180,13 @@ export const JOURNAL_LOAD_CONSTANTS = {
    * organising rule ("an athlete learns that seeing a card means pay
    * attention").
    *
-   * 1.15 IS THE TERMINAL'S NUMBER AND NOTHING MORE. The ruling says the line is
-   * Sam's; it does not say where the line is.
+   * 1.15 WAS THE TERMINAL'S NUMBER AND SAM TOOK IT. The ruling said the line is
+   * his; the signing session put it where the proposal put it.
    */
   regionHotRatio: {
     value: 1.15,
-    provenance: 'proposed',
-    source: 'PROPOSED — UI ruling names the region-hot line as Sam\'s threshold',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — 1.15 as proposed',
   },
   /**
    * How far a completed pattern share may drift from the planned one before the
@@ -195,12 +197,13 @@ export const JOURNAL_LOAD_CONSTANTS = {
    * its PROVENANCE — so everything downstream was correctly dark — but no code
    * ever compared anything to 0.25, which means signing it would have changed
    * nothing on any screen. The drift verdict below is the first reader, and
-   * that is what makes this entry mean what the table says it means.
+   * that is what makes this entry mean what the table says it means — the
+   * signature that landed on 2026-08-09 is the first one to change a screen.
    */
   patternDriftThreshold: {
     value: 0.25,
-    provenance: 'proposed',
-    source: 'PROPOSED — ruling addendum layer 4 names the threshold as Sam\'s',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — 0.25 as proposed',
   },
   /**
    * How much of a week must be measured before a comparison against it is
@@ -210,8 +213,9 @@ export const JOURNAL_LOAD_CONSTANTS = {
    */
   minimumWeekCoverage: {
     value: 0.5,
-    provenance: 'proposed',
-    source: 'PROPOSED — the terminal\'s honesty floor, not in the ruling',
+    provenance: 'signed',
+    source: 'Sam 2026-08-09, signing session — the honesty floor, flagged as '
+      + 'the terminal\'s own and signed anyway',
   },
 } as const satisfies Record<string, JournalLoadConstant<unknown>>;
 

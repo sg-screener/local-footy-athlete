@@ -543,7 +543,31 @@ function extract(): ExtractedString[] {
  * form this commit: the sheet had a way to record a string that CHANGED and no
  * way to record one that STOPPED.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 572;
+/**
+ * 572 -> 573 (the signing session, same commit that earned it): a rise of ONE,
+ * and it is a withdrawal being reversed rather than a new sentence.
+ *
+ *   IN, +1 RESTORED. "No lifts recorded with a weight this week." Batch 26
+ *   retired it and 26-e flagged it as **the one withdrawal of nine that removed
+ *   INFORMATION**; Sam's decision C3 put it back. So this is the -3 above
+ *   becoming a -2, four hours later, by the owner's own ruling.
+ *
+ * NOTHING ELSE THIS COMMIT ADDED IS VISIBLE HERE, AND THAT IS MEASURED RATHER
+ * THAN ASSUMED. The twelve month words (batch 27) sit in a `const` array, and
+ * C2's reworded question is authored in `utils/sessionFeedbackForm.ts` — both
+ * outside what this extractor reads. **Both are bound by
+ * `copyRulingsBindingTests` instead, which is why that gate's count moved and
+ * this one moved by exactly one.** Two instruments, two units; neither number
+ * is the other's.
+ *
+ * THE SIGNING ITSELF MOVED THIS COUNT BY ZERO, WHICH IS THE POINT. Sam signing
+ * eight constants lit the load band, the load tile and both earned cards — four
+ * surfaces that had never rendered. **Not one of their words is new here**,
+ * because 26-g listed every one of them while they were dark. A ceiling that had
+ * jumped on the day of a signature would have meant unsigned words shipped on a
+ * signature.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 573;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

@@ -1264,9 +1264,9 @@ Sam's power ruling (13-b) holding in the new place it could have broken out.
 
 ---
 
-## Batch 15 — the Journal, slice 1 (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 15 — the Journal, slice 1 (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Every string below ships
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Every string below ships
 in the app today (`1659d664`) and is queued for his eye.
 
 **15-0. WHY THIS BATCH EXISTS AT ALL, STATED PLAINLY: these words shipped
@@ -1357,9 +1357,9 @@ batch is named here as owed and is not done in this commit.
 
 ---
 
-## Batch 16 — the Journal's week note, slice 2 (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 16 — the Journal's week note, slice 2 (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Recorded in the same
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Recorded in the same
 commit that ships it, under the new derived-scope gate — which is what batch 15
 was written to make impossible to skip.
 
@@ -1410,9 +1410,9 @@ unlisted, and they are listed here before the commit lands.
 the honest-absence line for notes, in the family of batch 15-c. The rest are
 labels. Sam's veto is one line on any of them.
 
-## Batch 17 — the Journal's Load section, the load slice (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 17 — the Journal's Load section, the load slice (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Recorded in the same
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Recorded in the same
 commit that ships it, under the derived-scope gate.
 
 **17-a. WHAT THE ATHLETE ACTUALLY SEES TODAY.** These two lines are the only
@@ -1485,19 +1485,32 @@ one table (`JOURNAL_LOAD_CONSTANTS`, `src/rules/journalLoad.ts`) and
 `regionNormalWindowWeeks`, `regionSecondaryShare`, `patternDriftThreshold`,
 `minimumWeekCoverage`.
 
-## Batch 18 — the feel slice: post-game rating + the "felt different" tap (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 18 — the feel slice: post-game rating + the "felt different" tap (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.**
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling.
 
 **18-a. THE THREE QUESTIONS.** The game question is the design doc's own wording
 ("How were your legs / energy?", docs/JOURNAL_DESIGN_2026-07-23.md) lightly
 regularised; the other two are this terminal's and are flagged as such.
 
-| Where | PROPOSED string |
+| Where | SIGNED string |
 | --- | --- |
 | Post-game body-feel question (games only) | "How were your legs and energy?" |
-| The one-tap exception | "How did it compare with what was planned?" |
+| The one-tap exception | WITHDRAWN: "How did it compare with what was planned?" — superseded by C2, below |
+| The one-tap exception, as Sam reworded it | "How did that go?" |
 | The follow-up, asked only when it differed | "What made the difference?" |
+
+**18-a-i. C2 — THE ONE STRING SAM REWORDED, AND THE REASON IS THE ATHLETE'S
+WORKING MEMORY.** "How did it compare with what was planned?" asks the athlete to
+recall the plan before they can answer a question about how they feel. **"How did
+that go?" asks for the same three answers with none of that work.**
+
+**THE ANSWERS ARE UNCHANGED, WHICH IS WHAT MAKES THIS A WORDING CHANGE RATHER
+THAN A NEW QUESTION.** `as_expected` / `harder_than_expected` /
+`easier_than_expected` / `stopped_early` all keep their keys and their labels, so
+**no stored value moves and every session already recorded still means what it
+meant.** Had the answers moved with the question this would have needed a read
+lift, not a sheet entry.
 
 **18-b. THE BODY-FEEL SCALE — WORDS, NOT A NUMBER.** The stored value is 1–5
 because a scale is what the design ruled and what a trend needs. What the athlete
@@ -1564,16 +1577,31 @@ has ever appeared on this sheet.** The compression is filed with that measuremen
 in the feel slice's boundary report; it is a unit of its own and is deliberately
 not folded into this slice.
 
-## Batch 19 — the strength line, Monday card item 2 (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 19 — the strength line, Monday card item 2 (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.**
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling.
 
 **19-a. THE TWO STRINGS THE EXTRACTOR CAN SEE.**
 
-| Where | PROPOSED string |
+| Where | SIGNED string |
 | --- | --- |
 | Section heading | "Your lifts" |
-| No lift carried a recorded weight this week | WITHDRAWN: "No lifts recorded with a weight this week." — batch 26-a |
+| No lift carried a recorded weight this week | "No lifts recorded with a weight this week." |
+
+**19-a-i. C3 — WITHDRAWN BY BATCH 26-a, AND SAM PUT IT BACK THE SAME DAY.** The
+row above read `WITHDRAWN` for a few hours. Batch 26 retired nine strings under
+the exception rule; 26-e flagged this one as **the only withdrawal of the nine
+that removed INFORMATION** rather than a heading or a duplicate, and asked him
+directly. **He restored it.** The un-withdrawal is recorded here rather than by
+deleting the row's history, because a string that left the sheet and came back
+is a different fact from one that never left.
+
+**IT IS BACK IN ITS ORIGINAL FORM — unconditional, one quiet line where the card
+would have been**, which is what 26-e recommended. **The one thing that still
+wants his eye:** it also appears on a week the athlete never lifted at all, where
+it is true and says nothing. Making it conditional on "lifted but recorded no
+weight" would be a narrowing of his ruling rather than an implementation of it,
+so it is built as ruled and flagged.
 
 **19-b. THE ARROW WORDS.** A glyph alone is not readable by a screen reader and
 not legible at small sizes, so the direction is a WORD. These live in a keyed
@@ -1607,9 +1635,9 @@ lift never appears at all, because its recorded weight is the one that was
 *prescribed and not lifted*; a row for it would report a best for a session the
 athlete said they did not do.
 
-## Batch 20 — this week's job (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 20 — this week's job (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Monday card / addendum
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Monday card / addendum
 Group 1 items 3 and 4.
 
 **20-a. THE THREE STRINGS THE EXTRACTOR CAN SEE.**
@@ -1652,9 +1680,9 @@ one question.
 owners that gate names — its wording comes to Sam as its own batch. It is a claim
 about his athlete's week and gets ruled as one.
 
-## Batch 21 — niggles + note resurfacing (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 21 — niggles + note resurfacing (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 2 item 9.
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 2 item 9.
 
 **21-a. THE TWO STRINGS THE EXTRACTOR CAN SEE.**
 
@@ -1693,9 +1721,9 @@ copy says "the last time your {region} flared" rather than implying the athlete
 tagged it that way. **Adding a region to a note is Sam's ruling and is not
 assumed** (docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md §2).
 
-## Batch 22 — the monthly review (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 22 — the monthly review (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Design §"Monthly review";
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Design §"Monthly review";
 load ruling layer 5.
 
 **22-a. THE STRINGS THE EXTRACTOR CAN SEE.**
@@ -1782,9 +1810,9 @@ readiness/temporary-fact stores rather than in `JournalFelt`, and reading a seco
 store into this line was not done in the same slice that minted it. Named as owed
 rather than quietly dropped.
 
-## Batch 23 — what kind of work the week held (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 23 — what kind of work the week held (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 1,
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 1,
 "key exposures, not completion counts".
 
 **23-a. ONE COUNTED LINE**, in template form for batch 15-d's reason:
@@ -1812,9 +1840,9 @@ so — and using it would count a Saturday game three times on one screen: once 
 conditioning, once as a game, once in the strip. The line uses
 `extraConditioningSessions`, and a mutation swapping them reds a cell.
 
-## Batch 24 — week status, one calm line (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 24 — week status, one calm line (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 3 —
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 3 —
 the line batch 20 promised would come as its own batch when the derivation was
 built properly. It now is.
 
@@ -1849,9 +1877,9 @@ athlete. It is also SILENT when there is no contract: an ungoverned week gets no
 line at all, because "on track" against a standard that does not exist is a claim
 about nothing.
 
-## Batch 25 — what you changed this week (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 25 — what you changed this week (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 2 —
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. Addendum Group 1 item 2 —
 the LAST unbuilt item in the Journal unit.
 
 | Where | PROPOSED string |
@@ -1891,16 +1919,24 @@ against a week that has since changed: a reconstruction, not a record. Recording
 it is an engine-side change to the decision doors, not a Journal change, and it
 is named as owed rather than faked.
 
-## Batch 26 — the exception-based front page (2026-08-09): PROPOSED, NOT SIGNED
+## Batch 26 — the exception-based front page (2026-08-09): SIGNED (Sam, 2026-08-09)
 
-**STATUS: PROPOSED. Nothing here has Sam's signature.** The UI polish slice,
+**STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling. The UI polish slice,
 against docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md.
 
-**26-a. THE SIX WITHDRAWALS COME FIRST, because a batch that only adds is hiding
-its subtractions.** Every one of these was PROPOSED to Sam in an earlier batch
-and is no longer in the app. They are struck rather than left standing, under the
+**26-a. THE WITHDRAWALS COME FIRST, because a batch that only adds is hiding its
+subtractions.** Every one of these was PROPOSED to Sam in an earlier batch and is
+no longer in the app. They are struck rather than left standing, under the
 binder's own rule — *"a proposal for wording nothing uses wastes a ruling"* — and
 the same precedent batch 20-d set.
+
+**IT WAS NINE WHEN THIS BATCH WAS WRITTEN AND IT IS EIGHT NOW.** 26-e named "No
+lifts recorded with a weight this week." as **the one withdrawal of the nine that
+removed information** and put it back to Sam; his decision C3 restored it the
+same day. Its row has left this table and stands as a signed string at 19-a. The
+count is corrected here rather than left reading "six" or "nine", because a
+subtraction table that miscounts its own subtractions is the thing it exists to
+prevent.
 
 | Batch | WITHDRAWN string | Why it is gone |
 | --- | --- | --- |
@@ -1908,7 +1944,6 @@ the same precedent batch 20-d set.
 | 15-a | WITHDRAWN: "How the week felt" | Section heading. Its bookkeeping counts moved into the month drawer; what remains is one exception line that needs no heading. |
 | 16-a | WITHDRAWN: "Your note" | Section heading. The ruling puts the note box "quiet, at the bottom" — a heading is the opposite of quiet, and the placeholder already asks the question. |
 | 16-a | WITHDRAWN: "No notes yet this week." | An empty box under an empty list said the same thing twice. |
-| 19-a | WITHDRAWN: "No lifts recorded with a weight this week." | **Retired by the exception rule** — see 26-e, which is the one withdrawal that costs something. |
 | 20-a | WITHDRAWN: "This week's job" | Section heading. The job is the hero's second line; it needs no label above it. |
 | 24-d | WITHDRAWN: "What you changed" | Section heading. The ruling makes this a credit line INSIDE the hero, on weeks it happened. |
 | 25 | WITHDRAWN: "You made no changes to this week." | **Retired by the ruling itself**, verbatim: "one credit line inside the hero on weeks a change happened, nothing otherwise." |
@@ -1948,16 +1983,22 @@ reason (the extractor cannot see a template literal or a keyed object):
   screen rather than taken from `Intl`: a locale-dependent month name is a string
   no gate can enumerate and no ruling can sign.
 
-**26-e. THE ONE WITHDRAWAL THAT COSTS SOMETHING, AND IT IS SAM'S CALL TO CONFIRM.**
+**26-e. THE ONE WITHDRAWAL THAT COST SOMETHING — ASKED, AND ANSWERED: RESTORE.**
 "No lifts recorded with a weight this week." was the honest-absence line for an
 athlete who trained but logged no weights. Under the exception rule the whole
-lifts card is now absent instead — so **"you logged no weights" and "you did no
-lifting" look identical to the athlete**, and neither says anything.
+lifts card went absent instead — so **"you logged no weights" and "you did no
+lifting" looked identical to the athlete**, and neither said anything.
 
-Every other withdrawal above is a heading or a duplicate. This one removes
-information. **It is built as ruled and flagged rather than narrowed** — if Sam
-wants it back, the smallest honest form is a single quiet line where the card
-would have been, and that is a one-line change.
+Every other withdrawal above is a heading or a duplicate. This one removed
+information. **It was built as ruled and flagged rather than narrowed**, and the
+flag did its job: **Sam's decision C3, 2026-08-09, restored it** in exactly the
+form this paragraph recommended — a single quiet line where the card would have
+been. It is a signed string at 19-a and no longer a withdrawal.
+
+**THAT IS THE FLAG PAYING FOR ITSELF, AND IT IS WORTH SAYING WHY IT WORKED.** The
+withdrawal was correct against the ruling and wrong against the athlete. Nothing
+in the gate could have caught that — a retired string reads as a retired string —
+so the only instrument was naming the cost out loud in the batch that made it.
 
 **26-f. THE CREDIT LINE IS ONE LINE, WHICH REQUIRED A NEW SENTENCE.** Sam's word
 is "credit line", singular. A week with four changes would otherwise grow the
@@ -1965,8 +2006,77 @@ hero into a list, so the first change is spoken and the rest are counted. The
 alternative — silently showing only the first — would tell the athlete they made
 one change when they made four.
 
-**26-g. THE BAND, THE ARROW AND THE TWO EARNED CARDS ARE WRITTEN AND DARK.** All
-four are downstream of PROPOSED constants, so `signedValue` returns null and the
-athlete sees none of them today. They are listed here anyway: **the day Sam signs
-the load model's constants batch these words appear with no code change**, and a
-word that ships on a signature is a word that must be ruled before it.
+**26-g. THE BAND, THE ARROW AND THE TWO EARNED CARDS WERE WRITTEN AND DARK — AND
+THE SIGNATURE LIT THEM.** All four were downstream of PROPOSED constants, so
+`signedValue` returned null and the athlete saw none of them. They were listed
+here anyway, on the reasoning that **the day Sam signs the load model's constants
+batch these words appear with no code change**, and a word that ships on a
+signature must be ruled before it.
+
+**THAT DAY WAS THE SAME DAY.** He signed all eight constants on 2026-08-09 and
+these four surfaces appeared. **Every word they show had already been ruled**,
+which is the whole return on listing copy that nothing renders yet: had they not
+been listed, half the front page would have lit up carrying unsigned words, in a
+commit that touched no surface file and would have looked like a no-op.
+
+## Batch 27 — the month word (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED.** The twelve full month names have Sam's decision C5 behind
+them but not his eye on the words themselves; they ship PROPOSED under the
+transitional rule. **The DECISION is signed, the twelve strings are not.**
+
+**27-a. C5, VERBATIM:** *"since {date} renders the MONTH WORD ("since March") —
+the closed-twelve month table already exists on the screen; no locale
+dependence."*
+
+**27-b. THE PREMISE WAS ONE WORD OFF, AND CHECKING IT WAS THE WORK.** A closed
+twelve did exist on the screen — batch 26-d's `Jan…Dec`, held there rather than
+taken from `Intl` for exactly the reason C5 restates. **But it holds `Mar`, not
+`March`.** His example needs the long word, so the table of long words is new and
+appears below; **the abbreviations are now DERIVED from it rather than written
+beside it**, because two literal twelves of the same fact agree until somebody
+edits one. A cell asserts the derived twelve are byte-identical to the twelve
+batch 26 shipped, so the week label provably did not move.
+
+| Month | PROPOSED word | Derived abbreviation (batch 26, unchanged) |
+| --- | --- | --- |
+| 1 | "January" | Jan |
+| 2 | "February" | Feb |
+| 3 | "March" | Mar |
+| 4 | "April" | Apr |
+| 5 | "May" | May |
+| 6 | "June" | Jun |
+| 7 | "July" | Jul |
+| 8 | "August" | Aug |
+| 9 | "September" | Sep |
+| 10 | "October" | Oct |
+| 11 | "November" | Nov |
+| 12 | "December" | Dec |
+
+**27-c. THE TWO SENTENCES THAT CHANGED**, in template form (the extractor cannot
+see a template literal):
+
+- "You have added {n}kg to your {lift} since {Month}." — was "…since
+  {2026-04-06}.", batch 22.
+- "Your {lift} is {n}kg lighter than in {Month}." — was "…lighter than
+  {2026-04-06}."; **the "in" is new**, because "lighter than March" is not
+  English and "lighter than 2026-04-06" hid that.
+- "{lift} +{n}kg since {Month}" — the month drawer's collapsed row, batch 26.
+  **This was the worst of the four sites**: it is the one line an athlete reads
+  without opening anything, and the code comment above it claimed it read "since
+  6 Apr" while the code rendered the ISO. The claim and the code disagreed for a
+  whole slice and no gate was watching the difference; one is now.
+
+**27-d. THE YEAR IS A RIDER ON C5, AND IT IS FLAGGED RATHER THAN SLIPPED IN.**
+Sam's example is "since March" and that is what an athlete reads for almost every
+gain. But the load model's history is UNBOUNDED — it holds every week the athlete
+ever recorded — so a first entry from March last year would render "since March"
+and be read as this March. **The year is spoken exactly when leaving it out would
+be false**: "since March 2025". That is not a wording choice, it is the
+difference between a true and a false statement about when, so it is built —
+**but the phrasing "March 2025" is the terminal's and wants his eye.**
+
+**27-e. AN UNSAYABLE MONTH DROPS THE LINE RATHER THAN FALLING BACK TO THE ISO.**
+A date that will not parse returns null and the sentence does not render. Falling
+back to the raw string is the exact thing C5 removes, and the exception rule
+already knows what to do with a block that has nothing it can honestly say.
