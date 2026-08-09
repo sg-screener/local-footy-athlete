@@ -2,7 +2,23 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. SAM SIGNED THE JOURNAL SHEET (2026-08-09) — everything as
+   recommended: docs/JOURNAL_SIGNING_SESSION_2026-08-09.md, commit
+   as authored and APPLY.
+   LOOP CHECK: signing-batched-to-one-sitting — sighting 1 — the
+   compression working as designed (26 batches + 8 constants + 6
+   decisions = one Sam-line).
+   Work order: (i) flip the eight constants to signed — the screen
+   lights; (ii) batch statuses PROPOSED → SIGNED as the doc says;
+   (iii) C2 question wording → "How did that go?"; (iv) C3 restore
+   the lifts empty-state line; (v) C5 month word in "since {date}".
+   One commit-set, full unpiped chain, boundary report stating what
+   the athlete now sees that they did not before. THEN (vi) the
+   Monday-notification slice as its own build per the doc's C6 —
+   native dependency, report must tell Sam in plain words that a
+   pod rebuild is needed. C4 (bar colours) stays open for Sam's
+   eye — no change.
+
 
 ## Processed 2026-08-09 (forty-eighth pass) — THE EXCEPTION-BASED FRONT PAGE; AND HALF OF IT WAITS ON ONE SIGNATURE
 
