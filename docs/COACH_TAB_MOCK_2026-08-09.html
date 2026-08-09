@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coach tab — mock for Sam</title>
+<style>
+  :root{
+    --bg:#0C0C0C; --card:#161616; --card2:#1B1B1B; --line:#262626;
+    --ink:#F2F3F0; --ink2:#9EA0A6; --ink3:#5F6167;
+    --lime:#C8FF00; --limedark:#A3CC00;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{background:#000;display:flex;gap:34px;justify-content:center;align-items:flex-start;
+    padding:28px;font-family:-apple-system,'SF Pro Display','Helvetica Neue',Inter,Arial,sans-serif;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:390px}
+  .caselbl{color:#8A8C92;font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;text-align:center}
+  .caselbl b{color:var(--lime)}
+  .note{color:#6E7076;font-size:12px;line-height:1.55;text-align:left;padding:0 4px}
+  .note b{color:#9EA0A6}
+  .phone{width:390px;background:var(--bg);border-radius:44px;padding:14px 0 0;
+    border:1px solid #222;overflow:hidden;display:flex;flex-direction:column;height:760px}
+  .status{display:flex;justify-content:space-between;color:var(--ink2);
+    font-size:12px;padding:6px 26px 2px;font-weight:600}
+  .screen{padding:0 18px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .tabhead{margin:16px 0 10px}
+  .tabhead h1{color:var(--ink);font-size:34px;font-weight:800;letter-spacing:-0.5px}
+
+  .chat{flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;padding-bottom:10px}
+  .bubble{max-width:86%;border-radius:18px;padding:12px 15px;font-size:14.5px;line-height:1.45;font-weight:500}
+  .coachb{background:var(--card);border:1px solid var(--line);color:var(--ink);align-self:flex-start;border-bottom-left-radius:6px}
+  .athleteb{background:#2A330A;border:1px solid #3A4514;color:var(--ink);align-self:flex-end;border-bottom-right-radius:6px}
+
+  .changecard{background:var(--card2);border:1px solid var(--line);border-radius:16px;
+    padding:14px 15px;align-self:flex-start;max-width:92%}
+  .changecard .k{color:var(--lime);font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;margin-bottom:9px}
+  .diffrow{display:flex;align-items:center;gap:10px;background:var(--bg);
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:7px}
+  .diffrow .d{width:36px;color:var(--ink3);font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+  .diffrow span{color:var(--ink2);font-size:13px;font-weight:600}
+  .diffrow b{color:var(--ink);font-weight:800;font-size:13.5px}
+  .diffrow.was b{color:var(--ink3);text-decoration:line-through;text-decoration-color:#44464C}
+  .acts{display:flex;gap:9px;margin-top:12px}
+  .btn{flex:1;text-align:center;background:var(--lime);color:#12140A;font-size:13.5px;font-weight:800;
+    padding:11px 14px;border-radius:12px}
+  .btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 12px}
+  .chip{background:var(--card);border:1px solid var(--line);color:var(--ink2);
+    font-size:13px;font-weight:700;padding:9px 14px;border-radius:20px}
+  .inputrow{display:flex;gap:9px;align-items:center;padding:0 0 14px}
+  .input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:22px;
+    padding:13px 16px;color:var(--ink3);font-size:14px;font-weight:500}
+  .send{width:42px;height:42px;border-radius:21px;background:var(--lime);display:flex;
+    align-items:center;justify-content:center;color:#12140A;font-weight:900;font-size:18px}
+
+  .tabbar{display:flex;border-top:1px solid var(--line);background:var(--bg);padding:10px 0 22px}
+  .tab{flex:1;text-align:center;color:var(--ink3);font-size:10.5px;font-weight:700;letter-spacing:0.3px}
+  .tab .ic{font-size:20px;display:block;margin-bottom:3px}
+  .tab.on{color:var(--lime)}
+
+  .weekstrip{background:var(--card2);border:1px solid var(--line);border-radius:14px;
+    padding:11px 13px;align-self:flex-start;max-width:92%;margin-top:2px}
+  .weekstrip .k{color:var(--ink3);font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:8px}
+  .wrow{display:flex;align-items:center;gap:9px;padding:5px 0;border-top:1px solid #202020}
+  .wrow:first-of-type{border-top:none}
+  .wrow .d{width:34px;color:var(--ink3);font-size:10.5px;font-weight:800;text-transform:uppercase}
+  .wrow span{color:var(--ink);font-size:13px;font-weight:700}
+  .wrow .sub{color:var(--ink3);font-size:11.5px;font-weight:500;margin-left:auto}
+  .wrow.hot span{color:var(--lime)}
+</style>
+</head>
+<body>
+
+<!-- A — THE TAB -->
+<div class="col">
+  <div class="caselbl">A · <b>the coach tab</b> — it opens knowing your week</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>Coach</h1></div>
+      <div class="chat">
+        <div class="bubble coachb">Morning Sam. Game Saturday, so this week trains
+          heavy early — Strength today, Conditioning tomorrow, then we back off
+          Friday. Anything you want to change?</div>
+      </div>
+      <div class="chips">
+        <div class="chip">Move a session</div>
+        <div class="chip">Something hurts</div>
+        <div class="chip">Make this week easier</div>
+      </div>
+      <div class="inputrow">
+        <div class="input">Ask your coach anything…</div>
+        <div class="send">↑</div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><span class="ic">▦</span>Program</div>
+      <div class="tab on"><span class="ic">◉</span>Coach</div>
+      <div class="tab"><span class="ic">◻</span>Profile</div>
+    </div>
+  </div>
+  <div class="note"><b>Third tab, back where R5.7 cut it.</b> It speaks first and
+  it speaks from real data — fixtures, the week's shape, what's been logged.
+  Chips are the same requests as typing; one signal path, not two.</div>
+</div>
+
+<!-- B — A CHANGE, ASKED IN PLAIN WORDS -->
+<div class="col">
+  <div class="caselbl">B · <b>asking for a change</b> — it shows before it touches</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>Coach</h1></div>
+      <div class="chat">
+        <div class="bubble athleteb">hammys are tight from sunday — can thursday
+          be lighter?</div>
+        <div class="bubble coachb">Fair call with a game Saturday. Here's what
+          I'd do — swap Thursday's heavy hinge work for a lighter day and leave
+          the rest alone.</div>
+        <div class="changecard">
+          <div class="k">The change</div>
+          <div class="diffrow was"><div class="d">Thu</div><b>Strength</b><span>· heavy hinge</span></div>
+          <div class="diffrow"><div class="d">Thu</div><b>Lighter day</b><span>· easy movement, no heavy hinge</span></div>
+          <div class="acts">
+            <div class="btn ghost">Leave it</div>
+            <div class="btn">Make the change</div>
+          </div>
+        </div>
+      </div>
+      <div class="inputrow">
+        <div class="input">Ask your coach anything…</div>
+        <div class="send">↑</div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><span class="ic">▦</span>Program</div>
+      <div class="tab on"><span class="ic">◉</span>Coach</div>
+      <div class="tab"><span class="ic">◻</span>Profile</div>
+    </div>
+  </div>
+  <div class="note"><b>Nothing changes until you say so.</b> The coach proposes,
+  shows the exact before/after, and waits. Your own rule from the engine work:
+  proposed plan → diff → your yes. Same guardrails as your own taps — if a
+  change would break the week, the coach says so instead of doing it.</div>
+</div>
+
+<!-- C — DONE, AND UNDO IS FREE -->
+<div class="col">
+  <div class="caselbl">C · <b>done</b> — and undo comes free</div>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>􀙇 􀛨 􀋨</span></div>
+    <div class="screen">
+      <div class="tabhead"><h1>Coach</h1></div>
+      <div class="chat">
+        <div class="bubble coachb">Done — Thursday's a lighter day now. Rest of
+          the week stays as planned.</div>
+        <div class="weekstrip">
+          <div class="k">This week</div>
+          <div class="wrow"><div class="d">Tue</div><span>Strength</span><div class="sub">as planned</div></div>
+          <div class="wrow hot"><div class="d">Thu</div><span>Lighter day</span><div class="sub">changed</div></div>
+          <div class="wrow"><div class="d">Sat</div><span>Game day</span><div class="sub">as planned</div></div>
+        </div>
+        <div class="bubble coachb">If the hammys come good, just say <b>undo</b>
+          and Thursday goes back to how it was.</div>
+      </div>
+      <div class="inputrow">
+        <div class="input">Ask your coach anything…</div>
+        <div class="send">↑</div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><span class="ic">▦</span>Program</div>
+      <div class="tab on"><span class="ic">◉</span>Coach</div>
+      <div class="tab"><span class="ic">◻</span>Profile</div>
+    </div>
+  </div>
+  <div class="note"><b>A coach change is recorded exactly like your own tap</b> —
+  same doors, same record — which is why "say undo" works on it with zero extra
+  machinery, and why closing the app never loses it.</div>
+</div>
+
+<!-- WHAT'S DELIBERATELY NOT HERE -->
+<div class="col" style="max-width:820px">
+  <div class="caselbl" style="margin-top:10px">deliberately not in v1</div>
+  <div class="note" style="font-size:13px;line-height:1.7">
+    <b>Your written notes stay private.</b> The first coach reads your training
+    record — load, regions, how sessions felt, niggles — but NOT the free-text
+    notes you typed. Reading those is a separate opt-in decision (your earlier
+    ruling) and nothing here needs it.<br><br>
+    <b>No settings, no forms, no menus.</b> The tab is the conversation.<br><br>
+    <b>Every word above is placeholder</b> — all coach copy goes to your signing
+    batches before an athlete ever reads it.
+  </div>
+</div>
+
+</body>
+</html>
