@@ -2,7 +2,88 @@
 
 ## Unprocessed (newest first)
 
-1. SAM RULED next slice: (b) THE NOTE INPUT (2026-08-08). Build
+(none)
+
+## Processed 2026-08-09 (forty-first pass) — THE NOTE INPUT LANDED; THE COPY GATE'S SCOPE MADE UNDERIVABLE-BY-HAND
+
+- **ONE LINE: the athlete can write about their week and it survives a relaunch —
+  `a168b7bb`, full unpiped chain `GATE_EXIT=1` at `program-control-durable`,
+  1 FAIL line, sweep 2 of 159 = the declared set exactly.** Copy fix at
+  `a49daa80`. Boundary: docs/JOURNAL_SLICE2_BOUNDARY_2026-08-09.md
+- LOOP CHECK: **`a green gate watching nothing` — SIGHTING 2**, and it was the
+  MECHANISM behind the seat's `proposed-copy-ships-unlisted` sighting 2. Both
+  copy gates carried the identical hand-maintained scope list, so a whole screen
+  shipped unseen while the extractor sat exactly on its ceiling and printed PASS.
+  **COMPRESSED: scope is now DERIVED from the source tree in both gates.**
+- **ALL THREE ITEMS PROCESSED.** (1) the load ruling committed as authored and
+  honoured in `journalWeek.ts`; (2) the note input built; (3) the copy defect
+  fixed and the gate compressed.
+- **THE COPY DEFECT WAS MINE AND THE SEAT WAS RIGHT.** Batch 15 recorded, with
+  **the H/M/E/G letters called out as terminal-chosen** — Sam ruled the five
+  SHAPES, never that a shape shows as one letter. Batch 16 recorded for slice 2
+  BEFORE its commit landed.
+- **THE BINDER CARRIED THE SAME HOLE, AND RECORDING BATCH 15 EXPOSED IT** — it
+  went red for strings plainly in the app, on a screen it was not looking at. **A
+  hand-scoped gate does not merely miss things; it reports confident falsehoods
+  about what it misses.**
+- **THE EXTRACTOR NOW SPANS LINES**, the fix that file named as owed and deferred
+  as "a unit of its own". **Ceiling 130 → 561, UP, attributed: +102 scope, +329
+  shape** — the instrument improved, the app did not get wordier. Then 561 → 565
+  for slice 2's four genuinely new sentences, which is the OTHER kind of rise.
+- **A PARSER LYING FOR FIVE BATCHES**, found on the way: the binder's sub-heading
+  regex matched only `### 5a.` while every batch from 10 on writes `**15-a.**`.
+- **THE NOTE STORE IS ARMOURED AT BIRTH** — one door, both wipe refusals,
+  quarantine, guarded storage; joined the hydration gate, BOTH reset paths,
+  `DECISION_EVENTS` and the census ownership registry in the same commit. **The
+  tape carries counts only** — a note's text is the athlete's words.
+- **"NOTES NEVER DERIVE PROGRAM STATE" IS NOW A GATE, NOT A PROMISE:** cell [5]
+  sweeps rules/, utils/, services/ and hooks/ and requires that NO engine module
+  reads the store at all.
+- **SLICE 1'S "NO WRITER" CELL WAS RE-POINTED, NOT DELETED.** It asserts the
+  SHAPE now — exactly one door, forbidden list unchanged. A cell quietly deleted
+  because its own unit made it red is the other half of that hazard.
+- **EIGHTEEN MUTATIONS ACROSS THE TWO COMMITS, EIGHTEEN REDS.**
+- **THREE REDS THE FULL CHAIN CAUGHT THAT MY MODEL DID NOT CONTAIN:** LR-4 71→72
+  (the screen read the profile MIRROR); `keyboard-convention` (a raw TextInput);
+  LR-2 0→1 (a new persisted store is UNOWNED until the registry declares its
+  door). **All three fixed at the violation, never at the number.**
+- **A PROCESS SLIP OF MINE, OWNED:** `git add -A` swept the seat's load-model
+  ruling into `a168b7bb` **before I had read it**. Correct to commit, and it did
+  not change slice 2's scope — but committing a document I had not read is the
+  shape this repo has a law about. Recorded rather than quietly fixed; the ruling
+  is now read and honoured.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE** — note box, tag chips, keyboard
+  behaviour and the strip are unverified by eye and **no cell mounts the screen**.
+  **RESURFACING IS NOT BUILT** (named as owed). Relaunch survival is asserted by
+  hydration-gate membership, not an actual restart. The load comparison is still
+  unbuilt and the new three-layer model is ruled-not-built. The order's literal
+  "resolves to NO sheet entry is a RED" is **reported, not faked** — it would red
+  on ~565 pre-existing strings, which is stage 4. All journal copy is PROPOSED.
+
+## Processed 2026-08-09 (the seat's orders, as written)
+
+1. LOAD MODEL RULED (Sam, 2026-08-08 afternoon):
+   docs/JOURNAL_LOAD_MODEL_RULING_2026-08-08.md — commit as
+   authored. Supersedes-in-part the morning load ruling (2/1/0 →
+   fallback rung; day-shape derivation stands). Summary: two native
+   streams (strength TONNAGE, conditioning sRPE AU), combined in
+   RATIO SPACE only vs each stream's own 4-week normal, one headline
+   continuum + Sam-signed sweet-spot band; REGION LAYER distributes
+   load over the signed muscle data for observation lines; effort
+   tap extends to strength via the "felt different" surface; athlete
+   never sees raw AU; observation never diagnosis; constants arrive
+   as ONE signing batch at the load slice. Region-stress-influences-
+   placement is PARKED, named, engine-unit-later. ADDENDUM same
+   conversation, in the ruling doc: layer 4 PATTERN BALANCE (tonnage
+   per squat/hinge/push/pull + uppers-vs-lowers, PLAN vs DONE drift,
+   observation only, threshold Sam-signed) and layer 5 CHARTS
+   (monthly review set + load-over-time + balance picture; no chart
+   walls; progressive data states — no dishonest single-dot chart).
+   Sequencing unchanged: note input first.
+   LOOP CHECK: ruling-recorded-before-build-opens — sighting 1 —
+   iterate.
+
+2. SAM RULED next slice: (b) THE NOTE INPUT (2026-08-08). Build
    after item 2's copy fix lands.
    LOOP CHECK: slice-choice-ruled-by-owner — sighting 1 — iterate.
    Scope from the approved design, not re-litigated: the freeform
@@ -18,7 +99,7 @@
    the copy sheet PROPOSED under the new gate. Full unpiped chain
    per commit; boundary report; end athlete-visible on the phone.
 
-2. COPY DEFECT + THE PERMANENT GATE (seat review of slice 1,
+3. COPY DEFECT + THE PERMANENT GATE (seat review of slice 1,
    2026-08-08): the Journal's athlete-visible words are NOT in the
    copy sheet — the report cited "journal batch 13" but batch 13 is
    the bucket vocabulary and no journal batch exists. Words shipped
@@ -37,7 +118,6 @@
    that gate can't be built honestly (say, dynamic strings), report
    the boundary instead of a weaker gate that prints PASS.
    One report, full unpiped chain per commit as always.
-
 
 ## Processed 2026-08-09 (fortieth pass) — JOURNAL SLICE 1 BUILT, GATED, LANDED; SAM'S TWO RULINGS BUILT AS RULED
 

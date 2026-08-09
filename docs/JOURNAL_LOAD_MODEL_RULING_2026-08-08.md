@@ -52,3 +52,29 @@ different" tap surface — one tap, no per-set anything.
 
 Sequencing unchanged: note-input slice first, then the load slice
 builds this model.
+
+## ADDENDUM (Sam, same conversation): CHARTS + PATTERN BALANCE
+
+Sam: "would like some graphs and charts i think in there as well - as
+well as something about balancing the body i.e. when push outweighs pull
+or more squatting then hinging or more lowers than uppers etc"
+
+4. PATTERN-BALANCE LAYER. Tonnage per strengthPattern (squat / hinge /
+   push / pull — already on every exercise; strengthPatternContributions
+   for hybrids) from COMPLETED work, plus uppers-vs-lowers. The story is
+   PLAN vs DONE: the generator already balances the plan
+   (pattern_balance_repair exists in the engine) — the journal shows
+   whether what the athlete actually did drifted. Observation language
+   only ("your pushing outran your pulling by about a third this
+   month"); the threshold for "outweighs" is a Sam-signed constant in
+   the same signing batch. No diagnosis, no auto-correction — if drift
+   should ever feed programming, that joins the parked engine unit.
+
+5. CHARTS. The monthly review's ruled set (anchor-lift trends,
+   conditioning progression) EXTENDS with: the load continuum over time
+   (weekly ratio vs the signed sweet-spot band) and the balance picture.
+   Guards, Sam's own: NO chart walls — few charts, each telling one
+   story; progressive data states hold — no chart renders until its
+   history is honest (never one floating dot; "builds as you train"
+   copy until then). Chart placement: monthly review first; anything on
+   the weekly card stays a line of words, not a graph.

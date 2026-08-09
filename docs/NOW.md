@@ -1,47 +1,46 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `1659d664` — **JOURNAL SLICE 1 IS ON HIS PHONE.**
-- **LAST UNIT: THE JOURNAL, SLICE 1 — BUILT, GATED, LANDED** (`1659d664`).
-  docs/JOURNAL_SLICE1_BOUNDARY_2026-08-09.md
-  - **A THIRD TAB, between Program and Profile.** This week's **shape strip**
-    (Hard/Moderate/Easy/Game/Rest), **did the work happen** (with "no reason
-    recorded" where the app does not know why), **how the week felt**, and the
-    **honest building state** for load.
-  - **ZERO NEW STORED STATE. It opens no door** — a cell scans the screen for
-    five writer idioms and requires zero. North star: **TOWARD, and a
-    convergence step** — it shows facts stored for months and never surfaced,
-    without minting a copy of any of them.
-  - **SAM'S RULINGS BUILT AS RULED:** shape derived, nothing stored; weights his
-    signed **2 / 1 / 0**.
-  - **ONE PREDICATE READ TWICE** — his "two questions, one store" made
-    structural. Shape short-circuits on Rest/Game, load does not, so **a game
-    takes the HARD weight through the existing owner** (`stressClassification`
-    returns `'high'`) and **no game constant exists** — the ruling never had to
-    price one. Written as `loadWeight > 0`, the session count would have dropped
-    every easy day; a cell asserts the two answers **DISAGREE** there.
-  - **HARDNESS IS READ FROM ITS OWNER**, never re-derived — the cell moves only
-    the classifier's answer and requires the result to follow.
-  - **TWELVE MUTATIONS, TWELVE REDS — ONE SURVIVED FIRST.** The tab-order cell
-    compared `indexOf` results directly, and `-1` is less than everything, so a
-    renamed anchor passed vacuously. **AGENTS.md now carries the compression:
-    the source-scan law's subject is ANCHORING, not counting** — prove every
-    anchor was FOUND before claiming a relationship.
-  - **A RED THAT WAS MINE, CAUGHT BY AN EXISTING GATE.** The first chain stopped
-    early at `test:legacy-census`: LR-4's `mirrorDecisionReads` **71 → 72**,
-    because the screen read `onboardingData` off the profile MIRROR. **The
-    violation was fixed, not the number** — it reads through `useAthleteContext`
-    now, the owner the census names as LR-4's destination.
-  - **GATE:** full `test:bible` UNPIPED **`GATE_EXIT=1` at
-    `test:program-control-durable`, 1 FAIL line**, same assertion text. **Sweep
-    `2 of 158` = the declared set EXACTLY** (157 + this unit's suite).
-    `test:compile` PASSED, no file regressed. New suite **46 cells, 46 pass**.
-  - **COPY IS PROPOSED, UNSIGNED** — journal batch 13, queued for Sam. The
-    H/M/E/G letters are my presentation choice, not his ruling.
-  - **NOT COVERED, first line: NO DEVICE EVIDENCE.** Strip legibility, dot
-    sizing and the tab icon are unverified by eye; no cell mounts the screen.
-    **The load COMPARISON is not built** — slice 1 ships the honest state only.
-    No note input, no post-game rating, no "felt different" tap: each is a new
-    input and its own slice.
+- **BRANCH:** `main` · **HEAD:** `a168b7bb` — **THE JOURNAL HAS A NOTE BOX.**
+- **LAST UNIT: JOURNAL SLICE 2 + THE COPY GATE** (`a168b7bb`, `a49daa80`).
+  docs/JOURNAL_SLICE2_BOUNDARY_2026-08-09.md
+  - **The athlete can write about their week and it survives a relaunch.** Note
+    box, eight tag chips, this week's notes listed under it.
+  - **ONE NEW INPUT, ARMOURED AT BIRTH** — one door, both wipe refusals,
+    quarantine, guarded storage; joined the hydration gate, BOTH reset paths,
+    `DECISION_EVENTS` and the census ownership registry in the same commit.
+    **The tape carries counts only** — a note's text is the athlete's words.
+  - **"NOTES NEVER DERIVE PROGRAM STATE" IS A GATE NOW, NOT A PROMISE:** a cell
+    sweeps rules/utils/services/hooks and requires NO engine module reads it.
+  - **THE COPY DEFECT WAS MINE.** Slice 1's words shipped **UNLISTED** and cited
+    a batch that was someone else's work. Batches **15 and 16** now recorded,
+    PROPOSED, with **H/M/E/G called out as terminal-chosen** — Sam ruled the five
+    SHAPES, never that a shape shows as one letter.
+  - **THE COMPRESSION: gate scope is DERIVED from the tree, in BOTH copy gates.**
+    They carried the identical hand-maintained list, which is exactly how a whole
+    screen shipped unseen. **The binder had the same hole** and reported
+    confident falsehoods about strings plainly in the app.
+  - **THE EXTRACTOR NOW SPANS LINES.** Ceiling **130 → 561, UP, attributed**
+    (+102 scope, +329 shape): the instrument improved, the app did not get
+    wordier. Then 561 → 565 for slice 2's four genuinely new sentences.
+  - **THREE REDS THE FULL CHAIN CAUGHT THAT MY MODEL DID NOT CONTAIN:** LR-4
+    71→72 (read the profile MIRROR), `keyboard-convention` (a raw TextInput),
+    LR-2 0→1 (a new persisted store is UNOWNED until its door is declared).
+    **All three fixed at the violation, never at the number.**
+  - **EIGHTEEN MUTATIONS, EIGHTEEN REDS.** **GATE:** full `test:bible` UNPIPED
+    `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line; **sweep 2 of 159 =
+    the declared set EXACTLY**; `test:compile` PASSED, no file regressed.
+  - **A SLIP OWNED:** `git add -A` swept the seat's load-model ruling into the
+    commit **before I had read it**. Now read and honoured.
+  - **NOT COVERED:** NO DEVICE EVIDENCE, no cell mounts the screen;
+    **RESURFACING NOT BUILT**; the load comparison still unbuilt.
+- **THE LOAD MODEL IS RULED, NOT BUILT** (Sam, 2026-08-08 pm —
+  docs/JOURNAL_LOAD_MODEL_RULING_2026-08-08.md). **2/1/0 is DEMOTED to the
+  fallback rung, not retired; the day-shape derivation stands.** Three layers:
+  strength TONNAGE + conditioning sRPE as two native streams, combined **only in
+  ratio space** vs each stream's own 4-week normal, plus a region layer for
+  observation lines. Constants arrive as ONE signing batch when that slice opens.
+- **SLICE 1 STILL STANDS BEHIND IT** (`1659d664`): the tab, the week-shape strip,
+  did-the-work-happen, how-it-felt, zero new stored state.
 - **PREVIOUS: THE JOURNAL UNIT — OPENED AND MEASURED** (`bdef6a00`), plus Sam's
   load + day-shape rulings (`65bff3b3`).
   docs/JOURNAL_UNIT_PLAN_2026-08-09.md is the dependency list the V3 law

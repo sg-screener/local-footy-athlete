@@ -40,6 +40,16 @@ export type JournalDayShape = 'hard' | 'moderate' | 'easy' | 'rest' | 'game';
  * ruling): "do 2 - 1 - 0 though, easy days don't effect fatigue but count as
  * sessions."
  *
+ * DEMOTED TO THE FALLBACK RUNG, NOT RETIRED (Sam, 2026-08-08 afternoon —
+ * docs/JOURNAL_LOAD_MODEL_RULING_2026-08-08.md). The load slice builds a
+ * three-layer model: strength TONNAGE and conditioning sRPE as two native
+ * streams, combined only in RATIO space against each stream's own four-week
+ * normal, plus a region layer for observation lines. **These weights become the
+ * rung for any session with no rating** — "the number never has a hole and never
+ * invents precision". So this constant is not the load model; it is the floor
+ * under it, and the day-shape derivation below (§2 of the first ruling) stands
+ * untouched by the newer one.
+ *
  * These are athlete-affecting constants and they are Sam-authored, so the
  * provenance law is satisfied at the value, not merely at the mechanism.
  *
