@@ -1781,3 +1781,33 @@ absence of one.
 readiness/temporary-fact stores rather than in `JournalFelt`, and reading a second
 store into this line was not done in the same slice that minted it. Named as owed
 rather than quietly dropped.
+
+## Batch 23 — what kind of work the week held (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 1,
+"key exposures, not completion counts".
+
+**23-a. ONE COUNTED LINE**, in template form for batch 15-d's reason:
+
+- "{n} strength, {n} conditioning, {n} sprint, {n} team training, {n} games, {n} recovery."
+
+Only the kinds the week actually held appear; a kind with none is absent rather
+than shown as zero.
+
+**23-b. THE WORD "EXPOSURE" NEVER APPEARS, AND A CELL HOLDS THAT.** It is in
+Sam's `ATHLETE_FORBIDDEN_VOCABULARY`; the addendum's item is titled with the
+internal noun and the athlete reads training words. The words here — strength,
+conditioning, sprint, team training, game, recovery — are the app's existing
+training vocabulary.
+
+**23-c. IT SITS ABOVE "DID THE WORK HAPPEN", AND THAT ORDER IS THE POINT.** The
+addendum asks for kinds INSTEAD OF completion counts; the composition is the
+context the count is read in. A week of five completed sessions that were all
+conditioning is a different week from five that were balanced, and the completion
+line alone cannot tell them apart.
+
+**23-d. CONDITIONING IS THE APP'S OWN, NOT THE TOTAL.**
+`conditioningExposures` INCLUDES team training and games — its own comment says
+so — and using it would count a Saturday game three times on one screen: once as
+conditioning, once as a game, once in the strip. The line uses
+`extraConditioningSessions`, and a mutation swapping them reds a cell.

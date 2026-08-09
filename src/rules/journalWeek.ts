@@ -182,12 +182,40 @@ export interface JournalFelt {
   readonly nothingRecorded: boolean;
 }
 
+/**
+ * WHAT KIND OF WORK THE WEEK HELD — addendum Group 1 item 1, "key exposures, not
+ * completion counts".
+ *
+ * A DIFFERENT QUESTION FROM `JournalWork`, and the addendum's title says so.
+ * `JournalWork` answers "did it happen"; this answers "what was it". A week of
+ * five completed sessions that were all conditioning is a different week from
+ * five that were balanced, and a completion count cannot tell them apart.
+ *
+ * THE COUNTS ARE THE CLASSIFIER'S, NOT THIS MODULE'S. `countWeeklyExposures` is
+ * the owner the Journal already asks for hardness; asking it for the composition
+ * too is one reader of one answer, where counting sessions here would be a second
+ * authority on what a session IS.
+ *
+ * THE ATHLETE'S WORD IS NEVER "EXPOSURE". That noun is in Sam's
+ * `ATHLETE_FORBIDDEN_VOCABULARY`; the surface renders training words.
+ */
+export interface JournalWeekKinds {
+  readonly strength: number;
+  readonly conditioning: number;
+  readonly sprint: number;
+  readonly teamTraining: number;
+  readonly games: number;
+  readonly recovery: number;
+}
+
 export interface JournalWeek {
   readonly weekStart: string;
   readonly days: readonly JournalDay[];
   readonly work: JournalWork;
   readonly load: JournalLoad;
   readonly felt: JournalFelt;
+  /** What kind of work the week held — see JournalWeekKinds. */
+  readonly kinds: JournalWeekKinds;
   readonly dataState: JournalDataState;
 }
 
@@ -320,6 +348,20 @@ export function buildJournalWeek(input: BuildJournalWeekInput): JournalWeek {
       // state — never a number, never "normal".
       comparison: null,
       comparisonAvailable: input.weeksOfHistory >= LOAD_COMPARISON_MIN_WEEKS,
+    },
+    kinds: {
+      // READ STRAIGHT OFF THE CLASSIFIER. Every one of these is a field
+      // `countWeeklyExposures` already produced; none is recounted here.
+      strength: input.exposures.mainStrengthExposures,
+      // THE APP'S OWN CONDITIONING, NOT THE TOTAL. `conditioningExposures`
+      // INCLUDES team training and games (its own comment says so), so using it
+      // would count a Saturday game three times over on one screen — once as
+      // conditioning, once as a game, once in the strip.
+      conditioning: input.exposures.extraConditioningSessions,
+      sprint: input.exposures.sprintCodExposures,
+      teamTraining: input.exposures.teamTrainingSessions,
+      games: input.exposures.games,
+      recovery: input.exposures.recoverySessions,
     },
     felt: {
       feelingsRecorded,

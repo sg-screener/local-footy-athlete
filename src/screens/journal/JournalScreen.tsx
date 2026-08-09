@@ -160,6 +160,35 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/**
+ * WHAT KIND OF WORK THE WEEK HELD — PROPOSED (batch 23).
+ *
+ * The addendum's "key exposures, NOT completion counts": a week of five
+ * completed sessions that were all conditioning is a different week from five
+ * that were balanced, and the completion line one row down cannot tell them
+ * apart.
+ *
+ * THE WORD "EXPOSURE" NEVER APPEARS. It is in Sam's forbidden vocabulary; these
+ * are training words, and a cell asserts it.
+ */
+function WeekKinds({ week }: { week: JournalWeek }) {
+  const parts: string[] = [];
+  const add = (n: number, word: string) => { if (n > 0) parts.push(`${n} ${word}`); };
+  add(week.kinds.strength, 'strength');
+  add(week.kinds.conditioning, 'conditioning');
+  add(week.kinds.sprint, 'sprint');
+  add(week.kinds.teamTraining, 'team training');
+  add(week.kinds.games, week.kinds.games === 1 ? 'game' : 'games');
+  add(week.kinds.recovery, 'recovery');
+
+  if (parts.length === 0) return null;
+  return (
+    <Text variant="body" style={styles.body} testID="journal-week-kinds">
+      {`${parts.join(', ')}.`}
+    </Text>
+  );
+}
+
 function DidTheWorkHappen({ week }: { week: JournalWeek }) {
   const { work } = week;
 
@@ -930,6 +959,11 @@ export default function JournalScreen() {
         </Section>
 
         <Section title="Did the work happen">
+          {/*
+            WHAT it was, then WHETHER it happened. The addendum's distinction,
+            in that order because the composition is the context for the count.
+          */}
+          <WeekKinds week={week} />
           <DidTheWorkHappen week={week} />
         </Section>
 

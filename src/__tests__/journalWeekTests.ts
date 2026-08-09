@@ -327,6 +327,61 @@ console.log('\n[6] PROGRESSIVE DATA STATES (addendum 11)');
     grown.load.comparisonAvailable === true && grown.load.comparison === null);
 }
 
+// ─── [6b] WHAT KIND OF WORK — not a completion count ─────────────────────
+
+console.log('\n[6b] KEY EXPOSURES — a different question from "did it happen"');
+{
+  const counts = exposures([], [D(0)]);
+  const week = buildJournalWeek({
+    weekStart: WEEK_START,
+    days: [trainingLoadDay(D(0))],
+    exposures: {
+      ...counts,
+      mainStrengthExposures: 3,
+      conditioningExposures: 5,
+      extraConditioningSessions: 2,
+      sprintCodExposures: 1,
+      teamTrainingSessions: 2,
+      games: 1,
+      recoverySessions: 1,
+    },
+    outcomesByDate: {},
+    weeksOfHistory: 1,
+  });
+
+  ok('the kinds come straight off the classifier',
+    week.kinds.strength === 3 && week.kinds.sprint === 1
+    && week.kinds.teamTraining === 2 && week.kinds.games === 1
+    && week.kinds.recovery === 1, week.kinds);
+
+  // `conditioningExposures` INCLUDES team training and games — its own comment
+  // says so. Using it would count a Saturday game three times on one screen:
+  // once as conditioning, once as a game, once in the strip.
+  ok('conditioning is the APP\'S OWN, not the total that includes games',
+    week.kinds.conditioning === 2, week.kinds.conditioning);
+
+  // A DIFFERENT QUESTION FROM `JournalWork`. The addendum's title says "key
+  // exposures, NOT completion counts", and a cell that let them collapse would
+  // miss the whole point.
+  ok('the kinds are independent of what was completed',
+    week.work.completedFull === 0 && week.kinds.strength === 3);
+
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the kinds line is rendered', /testID="journal-week-kinds"/.test(screen));
+
+  // SAM'S FORBIDDEN VOCABULARY ON A NEW SURFACE. "Exposure" is a contract noun
+  // and may never reach an athlete.
+  const kindsStart = screen.indexOf('function WeekKinds');
+  const kindsEnd = screen.indexOf('function DidTheWorkHappen');
+  ok('the kinds component was located',
+    kindsStart > 0 && kindsEnd > kindsStart, { kindsStart, kindsEnd });
+  const region = screen.slice(kindsStart, kindsEnd);
+  ok('and it renders no forbidden vocabulary',
+    !/exposure/i.test(region.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')),
+    region.match(/exposure/gi));
+}
+
 // ─── [7] THE SURFACE — reachable, and a READER ───────────────────────────
 
 console.log('\n[7] SURFACE LAWS');
