@@ -2,27 +2,89 @@
 
 ## Unprocessed (newest first)
 
-1. JOURNAL UI POLISH SLICE — Sam ruled the direction (2026-08-09):
-   docs/JOURNAL_UI_DIRECTION_RULING_2026-08-09.md + the v2 mock
-   beside it (docs/JOURNAL_UI_MOCK_V2_2026-08-09.html) — commit both
-   as authored, build the slice.
-   LOOP CHECK: appearance-pass-ruled-from-mock — sighting 1 —
-   iterate; mock-first beat words-first on the first try, keep the
-   method.
-   Summary: EXCEPTION-BASED front page. Default screen = hero
-   (status headline + job + load band) / 3-stat strip / week bars
-   (letters DIE, supersedes batch 15-b presentation) / lifts /
-   Your month drawer / note box — NOTHING else. Earned cards
-   (region hot, balance drift) only past Sam-signed thresholds,
-   placed ABOVE lifts, vanish when back in range. Niggle history
-   only when active/repeat. What-changed = one hero credit line on
-   weeks it happened. Thresholds ship PROPOSED into the constants
-   batch. STYLE LAW: match the app — reuse existing tokens/
-   components, no second design language. All new/changed words
-   PROPOSED into the copy sheet under the derived-scope gate.
-   Full unpiped chain per commit, boundary report, end on the
-   phone.
+(none)
 
+## Processed 2026-08-09 (forty-eighth pass) — THE EXCEPTION-BASED FRONT PAGE; AND HALF OF IT WAITS ON ONE SIGNATURE
+
+- **ONE LINE: the Journal's front page is exception-based, in Sam's order** —
+  hero / stat strip / week bars / earned cards / lifts / month drawer / note —
+  **and building it revealed that most of it is behind his signature, including
+  two thresholds no code had ever read.** `73232293` + `b6509f02`, full unpiped
+  chain `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line, **sweep 2 of 167
+  = the declared set exactly**. Boundary:
+  docs/JOURNAL_UI_SLICE_BOUNDARY_2026-08-09.md · plan measured first:
+  docs/JOURNAL_UI_SLICE_PLAN_2026-08-09.md
+- **ITEM 1 PROCESSED IN FULL.** Ruling + mock committed as authored at
+  `fca3ef77` before a line was built. LOOP CHECK `appearance-pass-ruled-from-mock`
+  sighting 1: **the method held and is worth keeping** — the mock answered
+  questions words would have round-tripped on, and the ruling's own ORDER became
+  a gate rather than a paragraph.
+- **THE ORGANISING RULE IS A STATEMENT ABOUT NULL, NOT A LAYOUT.** "Nothing
+  appears unless it has something to say" is built as: every block below the hero
+  returns null when it has no news. That is a PROPERTY, so `journalUiLawsTests`
+  asserts it per block rather than as a file-wide count of `return null`.
+- **HALF THE FRONT PAGE IS DARK, AND IT IS THE MECHANISM WORKING.** The load
+  band, the load tile and both attention cards are downstream of PROPOSED
+  constants, so `signedValue` returns null. The ruling says these ship PROPOSED —
+  so **one signing session turns half the screen on with no code change**, and
+  that is now the bottleneck rather than any build.
+- **TWO OF THOSE THRESHOLDS HAD NEVER BEEN READ BY ANY CODE.**
+  `patternDriftThreshold` has been in the signing table since the load slice;
+  `patternBalance` carried its PROVENANCE but nothing ever compared anything to
+  0.25. **Signing it would have changed nothing on any screen.** It has a reader
+  now, proven a threshold in both directions.
+- **THE FINDING OF THE PASS: BUILDING BEHIND A SIGNATURE HIDES YOUR OWN
+  DUPLICATES.** I shipped the region observation with TWO renderers — a faint
+  line in the load band and the earned card. Both dark, so the screen looked
+  right and every cell passed; **the duplication would have appeared for the
+  first time on the day Sam signed, in a commit that touched no code.** Caught by
+  reading the finished screen back, which is the load slice's habit paying again.
+  Fixed `b6509f02`; the cell asserts the COUNT — exactly one renderer per dark
+  fact — not the absence.
+- **THE STYLE LAW IS A GATE NOW.** "Match the style of the rest of the app"
+  degrades one hex at a time, never by a redesign — so the screen may declare no
+  raw colour literal, no rgb(), no bare padding/margin/gap, and must read the
+  tokens and mount the shared `Card`. **It caught two on its first run.** Scope
+  stated out loud: ONE FILE; the rest of the app is a unit of its own.
+- **`a count taken for a record` — SEVENTH SIGHTING, third inside a brand-new
+  gate on its first run.** My "the letters are dead" sweep went red on **`'M'` —
+  Monday's initial**, not a shape letter. Unit was "a quoted capital anywhere in
+  the file"; domain noun was "a shape abbreviation". Scoped to the table, plus a
+  cell protecting the weekday initials so the sweep cannot be "fixed" by deleting
+  them.
+- **A GATE READING SOURCE CANNOT TELL A COMMENT FROM A SHIPPED STRING — it fired
+  three times in one slice**, always on comments that document a retirement by
+  quoting it. Stripped to code at each cell, with the reason recorded.
+  **NAMED AND NOT FIXED: the binder's existing RETIRED cell has the identical
+  latent gap.** Filed, not ridden silently.
+- **THE BINDER GREW A `WITHDRAWN:` FORM**, because batch 26 retires NINE strings
+  and the sheet could record a string that CHANGED but not one that STOPPED — in
+  a table a withdrawal read as a fresh proposal, in prose nothing watched it. The
+  new form asserts the stronger thing: a withdrawn string must be ABSENT.
+  Mutation-proven both directions.
+- **22 MUTATIONS, 21 RED. The one survivor was MY BAD MUTATION**, not a weak cell
+  (I withdrew a string never in the app, which correctly passes); re-aimed, it
+  reds. **One mutation deliberately failed to apply and the harness REFUSED to
+  read its result** — the strength-line lesson built into the tooling.
+- **ZERO NEW STORED STATE.** Two new derivations, both reads: the game-feel tile
+  needed a RATING where the model had a COUNT (**the LATEST game, never a mean**
+  — 2 and 5 average to a number no game earned), and the drift verdict above. One
+  new PROPOSED constant, `regionHotRatio`, **applied to the existing value rather
+  than minted beside it**. North star: **TOWARD**.
+- **COPY BATCH 26 PROPOSED**, the first batch whose subtractions outweigh its
+  additions. Extraction ceiling **580 → 572, DROPPED in the commit that earned
+  it**, attributed −6 headings / −3 empty states / −1 replaced / +2 new.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE, and this is the slice where that
+  hurts most.** An appearance slice's defects are VISUAL; no cell mounts the
+  screen; every assertion is about the SHAPE of the code. **DEPTH 0. Sam's eye is
+  the only instrument and it has not run.** Week navigation is NOT built (the
+  mock's arrows need a hook that resolves other weeks).
+- **FIVE THINGS PARKED FOR SAM**, listed in the boundary report: the signing
+  session (now the bottleneck); **whether the lifts empty state should come
+  back** — the one retirement that costs an athlete information; the two
+  threshold values; batch 26's words; and **whether the week bars should keep the
+  app's red/orange/green intensity tokens** or take the mock's calmer
+  single-accent ramp — kept as the app's under the style law, but his call.
 
 ## Processed 2026-08-09 (forty-seventh pass) — THE JOURNAL UNIT IS COMPLETE
 

@@ -1,26 +1,49 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `e9bec76e` — **THE JOURNAL UNIT IS COMPLETE.**
-- **END-OF-UNIT BOUNDARY: docs/JOURNAL_UNIT_BOUNDARY_2026-08-09.md** — read this
-  first. The standing authorisation's whole list is built; **22 of 22 design +
-  addendum items built, or measured and named with the reason.**
-  Audit: docs/JOURNAL_COMPLETION_AUDIT_2026-08-09.md
-  - **TEN SLICES, ALL GATED, ALL SWEPT TO THE DECLARED SET** — load model, feel,
-    strength line, this week's job, niggles + resurfacing, monthly review,
-    consistency/balance/flags, week kinds, week status, what changed.
-    Final: `GATE_EXIT=1` at `program-control-durable`, **sweep 2 of 166**.
-  - **THE WHOLE UNIT ADDED TWO PIECES OF STORED STATE**, both INPUTS on an
-    existing door (`gameFeel`, `expectation`/`expectationReason`). Everything
-    else derives on read. **North star: TOWARD.**
-  - **PROVENANCE TRAVELS WITH THE NUMBER, and it paid for itself:** built in
-    slice 1, it later decided on its own that the strength line and the balance
-    picture could ship and the load headline could not.
-  - **NINE NEW GATED SUITES.** Copy batches **15-25 PROPOSED**; the load model's
-    **7 unsigned constants of 9** await one signing session.
-  - **SAM'S APPEARANCE PASS IS THE NEXT STEP** — the order reserved one, and the
-    monthly charts are the first thing here whose defects are VISUAL.
-  - **NOT COVERED, first line: NO DEVICE EVIDENCE FOR ANY OF IT.** DEPTH 0
-    everywhere. A `git stash` slip owned and repaired.
+- **BRANCH:** `main` · **HEAD:** `b6509f02` — **THE JOURNAL UI SLICE IS DONE; THE
+  INBOX IS CLEAR.**
+- **READ FIRST: docs/JOURNAL_UI_SLICE_BOUNDARY_2026-08-09.md** (plan measured
+  first: docs/JOURNAL_UI_SLICE_PLAN_2026-08-09.md). Sam's exception-based front
+  page is built in his order — hero / stat strip / week bars / earned cards /
+  lifts / month drawer / note.
+  - **GATE:** full `test:bible` UNPIPED `GATE_EXIT=1` at
+    `program-control-durable`, 1 FAIL line — the declared red. **Sweep 2 of 167 =
+    the declared set exactly.** `test:compile` PASSED. New gated suite
+    `test:journal-ui` **58 passed, 0 failed**. **22 mutations, 21 red** (the one
+    survivor was a BAD MUTATION of mine, re-aimed and red).
+  - **THE SIGNING SESSION IS NOW THE BOTTLENECK, not any build.** The load band,
+    the load stat tile and both earned cards are downstream of PROPOSED
+    constants, so they are DARK. **8 proposed of 10. One sitting turns half the
+    front page on with no code change.**
+  - **TWO OF THOSE THRESHOLDS HAD NEVER BEEN READ BY ANY CODE** —
+    `patternDriftThreshold` carried its provenance since the load slice while
+    nothing compared anything to 0.25. Signing it would have changed nothing.
+    It has a reader now.
+  - **THE FINDING TO CARRY: building behind a signature hides your own
+    duplicates.** The region observation shipped with TWO renderers, both dark,
+    every cell passing — **it would have appeared for the first time on the day
+    Sam signed, in a commit that touched no code** (`b6509f02`). The cell asserts
+    the COUNT now: exactly one renderer per dark fact.
+  - **THE STYLE LAW IS A GATE** — no raw hex, no rgb(), no bare padding/margin/
+    gap on this screen; tokens read; shared `Card` mounted. Caught two on its
+    first run. **Scope: ONE FILE**, stated out loud.
+  - **`a count taken for a record` — SIGHTING 7**, inside a brand-new gate on its
+    first run: the "letters are dead" sweep red on **Monday's `'M'`**.
+  - **THE BINDER GREW A `WITHDRAWN:` FORM** — the sheet could record a string
+    that CHANGED, never one that STOPPED, and batch 26 retires nine.
+  - **ZERO NEW STORED STATE. North star: TOWARD.** Copy batch 26 PROPOSED;
+    ceiling **580 → 572, DROPPED**, attributed.
+  - **NOT COVERED, first line: NO DEVICE EVIDENCE. DEPTH 0.** An appearance
+    slice's defects are VISUAL and no cell mounts the screen. **Sam's eye is the
+    only instrument and it has not run.** Week navigation NOT built.
+  - **PARKED FOR SAM (5):** the signing session; **whether the lifts empty state
+    should come back** (the one retirement that costs information); the two
+    threshold values; batch 26's words; **whether the week bars keep the app's
+    red/orange/green** or take the mock's calmer ramp.
+- **BEFORE IT: THE JOURNAL UNIT ITSELF IS COMPLETE** —
+  docs/JOURNAL_UNIT_BOUNDARY_2026-08-09.md, 22 of 22 items, ten slices, audit at
+  docs/JOURNAL_COMPLETION_AUDIT_2026-08-09.md.
+
 - **BRANCH:** `main` · **HEAD:** `b75cc63f` — **SIX SLICES IN, CONTINUOUSLY.**
 - **LAST UNIT: NIGGLE HISTORY + NOTE RESURFACING** (`b75cc63f`), addendum Group 2
   item 9. docs/JOURNAL_NIGGLE_SLICE_BOUNDARY_2026-08-09.md · plan
