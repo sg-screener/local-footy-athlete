@@ -1746,3 +1746,16 @@ the ruling's "athlete never sees raw AU" and the design's calm register together
 mean the SHAPE is the story and the words sit beside it. The only number the
 monthly section shows is the satisfaction line's kilos, which is a weight the
 athlete lifted rather than a derived score.
+
+**22-g. THE BALANCE PICTURE** (load-ruling layer 4), in template form:
+
+- "Your strength work: squat 40%, hinge 20%, push 25%, pull 15%."
+
+**IT SHIPS WHERE THE LOAD CONTINUUM CANNOT, and the reason is structural rather
+than a preference.** `patternSharesDone` is derived from NO constant, so it
+carries SIGNED provenance and passes `signedValue`; the plan-vs-done VERDICT — "your
+pushing outran your pulling" — is the half that waits on Sam's threshold. **What
+the athlete DID is a measurement; whether it is out of balance is a judgement.**
+
+The pattern words (squat / hinge / push / pull) are the app's existing
+`STRENGTH_PATTERN_ORDER` vocabulary, not new copy.

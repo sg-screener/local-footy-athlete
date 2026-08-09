@@ -269,6 +269,33 @@ console.log('\n[4b] CONSISTENCY — a percentage without its evidence is a claim
     && /sessionsDone\}/.test(screen) && /sessionsPlanned\}/.test(screen));
 }
 
+// ─── [4c] The balance picture ships because it waits on nothing ──────────
+
+console.log('\n[4c] THE BALANCE PICTURE — signed provenance, so it renders');
+{
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the screen source was read', screen.length > 4000, screen.length);
+
+  // LOAD-RULING LAYER 4, AND IT CAN SHIP WHERE THE CONTINUUM CANNOT.
+  // `patternSharesDone` is derived from NO constant, so it carries SIGNED
+  // provenance; the plan-vs-done VERDICT is the half that waits on Sam's
+  // threshold. What the athlete DID is a measurement, not a judgement.
+  ok('the balance line is rendered', /testID="journal-month-balance"/.test(screen));
+  ok('and it is read through `signedValue`, like every other derived value',
+    /signedValue\(loadModel\.patternSharesDone\)/.test(screen));
+
+  // IT MUST NOT READ `.value` AROUND THE DOOR — the mechanism the load slice
+  // built exists precisely so a new surface cannot bypass it.
+  const start = screen.indexOf('function MonthlyReview');
+  const end = screen.indexOf('\n/**', start);
+  const region = screen.slice(start, end);
+  ok('the monthly region was located and is substantial',
+    start > 0 && end > start && region.length > 400, region.length);
+  ok('the monthly section never reads `.value` off a derived value',
+    !/\bloadModel\.[A-Za-z]+\.value\b/.test(region), region.match(/\.value\b/g));
+}
+
 // ─── [5] A flat series is not a collapse ─────────────────────────────────
 
 console.log('\n[5] THE CHART\'S GEOMETRY');

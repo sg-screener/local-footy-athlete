@@ -47,6 +47,7 @@ import {
   type JournalLoadCoverage,
   type JournalLoadModel,
   type JournalLoadSessionInput,
+  type PatternShare,
   type PlannedLift,
 } from '../../rules/journalLoad';
 
@@ -430,7 +431,14 @@ function WeekJob({ job }: { job: JournalWeekJob | null }) {
  * break that rule if it tried: `rules/journalMonth.ts` returns null for a series
  * with too few points, so a one-dot chart is never handed here.
  */
-function MonthlyReview({ month }: { month: JournalMonth }) {
+function MonthlyReview({
+  month,
+  balance,
+}: {
+  month: JournalMonth;
+  /** Completed pattern shares, or null while their provenance is unsigned. */
+  balance: readonly PatternShare[] | null;
+}) {
   if (month.building) {
     return (
       <Text variant="body" style={styles.muted} testID="journal-month-building">
@@ -471,6 +479,20 @@ function MonthlyReview({ month }: { month: JournalMonth }) {
           label={`${topLift[0]} top set over time`}
           points={topLift[1]}
         />
+      ) : null}
+      {/*
+        THE BALANCE PICTURE — load-ruling layer 4, and it can ship where the
+        continuum cannot: `patternSharesDone` is derived from NO constant, so it
+        carries SIGNED provenance and passes `signedValue`. The plan-vs-done
+        VERDICT is the part that waits on Sam's threshold; what the athlete did
+        is a measurement.
+      */}
+      {balance !== null && balance.length > 0 ? (
+        <Text variant="body" style={styles.body} testID="journal-month-balance">
+          {`Your strength work: ${balance
+            .map((share) => `${share.pattern} ${Math.round(share.doneShare * 100)}%`)
+            .join(', ')}.`}
+        </Text>
       ) : null}
       {/*
         THE SATISFACTION LINE (the design's "visible progress is the retention
@@ -903,7 +925,10 @@ export default function JournalScreen() {
         </Section>
 
         <Section title="Your month">
-          <MonthlyReview month={month} />
+          <MonthlyReview
+            month={month}
+            balance={signedValue(loadModel.patternSharesDone)}
+          />
         </Section>
 
         <Section title="Niggles">
