@@ -1,6 +1,10 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `64d142d7` — **THE JOURNAL SHIPS ITS FIRST NUMBER.**
+- **BRANCH:** `main` · **HEAD:** `65070c6a` — **THE JOURNAL SHIPS ITS FIRST NUMBER.**
+- **CHECKPOINT + HANDOVER COMMITTED (not a wall):**
+  docs/JOURNAL_UNIT_HANDOVER_2026-08-09.md — three slices landed continuously
+  under the standing authorisation, each gated, each swept to the declared set.
+  **Read it first if you are a fresh session.**
 - **LAST UNIT: THE STRENGTH LINE** (`64d142d7`), Monday card item 2.
   docs/JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md · plan
   docs/JOURNAL_MONDAY_CARD_PLAN_2026-08-09.md

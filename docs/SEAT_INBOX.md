@@ -26,6 +26,38 @@
    session.
 
 
+## CHECKPOINT 2026-08-09 — THREE SLICES LANDED CONTINUOUSLY; HANDOVER COMMITTED (not a wall)
+
+**docs/JOURNAL_UNIT_HANDOVER_2026-08-09.md** — written under item 1's own
+instruction ("checkpoint + handover before context runs low"). **HEAD `65070c6a`.**
+
+- **Load model, feel slice and strength line all landed with no stop between
+  them**, each with a full unpiped chain `GATE_EXIT=1` at the declared red and a
+  sweep equal to the declared set exactly (2 of 160, 2 of 161, 2 of 162).
+- **The Journal now shows the athlete a number** ("Back Squat — 120kg, up on last
+  week") and states the Load section's own evidence. Everything downstream of an
+  unsigned constant is built, tested and DARK.
+- **THE UNIT'S ONE GENUINE WALL IS SAM'S:** there is no notification
+  infrastructure at all — `expo-notifications` is absent, so the Monday
+  notification needs a native dependency, a permission prompt the athlete can
+  refuse, and a scheduling policy. **The card composes in full without it**, so
+  this parks rather than stops.
+- **THE NEXT SLICE'S TRAP IS NAMED IN ADVANCE:** `useResolvedWeek` exposes neither
+  the week's contract nor the season phase, so the builder must READ the contract
+  the generation path already resolves rather than building a second answer to
+  "what does this week ask of the athlete". Addresses in
+  docs/JOURNAL_MONDAY_CARD_PLAN_2026-08-09.md §3b.
+- **THREE LOOP-CHECK SHAPES PROPOSED FOR COMPRESSION**, all in the handover:
+  `an assumption is invisible to the suite its author wrote`; `a mutation that
+  never applied reports as a survivor`; `a green gate watching nothing` sighting 3
+  (closed for one module, **~150 strings across 20+ modules SIZED and filed as
+  its own unit**).
+- **SAM'S QUEUE: copy batches 15-19 and the load model's 7-of-9 constants, plus
+  seven rulings**, none blocking. Listed in the handover.
+- **OWED AND NAMED:** `test:session-feedback-form` ungated + red at HEAD (4
+  pre-existing failures, reported not absorbed); a `git stash` process slip, owned
+  and repaired; no device evidence anywhere in this unit.
+
 ## Processed 2026-08-09 (forty-fourth pass) — THE JOURNAL SHIPS ITS FIRST NUMBER; AND A MUTATION THAT NEVER APPLIED
 
 - **ONE LINE: "Back Squat — 120kg, up on last week" — Monday card item 2, the
