@@ -112,6 +112,11 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
       return [decision.fromDate, decision.toDate];
     case 'migrated_day_placement':
       return [decision.date];
+    case 'program_control': {
+      const payload = (decision.action as { payload?: Record<string, unknown> }).payload ?? {};
+      return [payload.date, payload.fromDate, payload.toDate]
+        .filter((value): value is string => typeof value === 'string');
+    }
     case 'reversal':
       return [];
   }
@@ -143,6 +148,44 @@ function replayEntry(entry: DecisionLedgerEntry): void {
       context: undefined,
       writer: 'program_control',
     });
+    return;
+  }
+  if (decision.kind === 'program_control') {
+    // THE DOOR REPLAYS ITS OWN DECISION. Not a re-implementation of what the
+    // door did — the door itself, called again with the action it recorded.
+    // This is the whole argument for storing the action verbatim: replay needs
+    // no interpreter, because the interpreter is the thing that ran first.
+    //
+    // The SYNCHRONOUS executor is used, deliberately. The durable twin wraps
+    // this same call in `runCoachMutationTransaction` (acceptance, rollback,
+    // semantic verification) and appends to the ledger — neither of which a
+    // replay wants: replay is not landing a new decision, it is reconstructing
+    // the effect of one that already landed, and `appendDecisionEntry` returns
+    // early under the latch anyway. Taking the transaction path would also make
+    // every boot pay for an acceptance cycle per recorded edit.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { executeProgramControlAction } = require('../utils/programControlActions');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+    const weeks = [...new Set(replayDates(entry).map(mondayOf))];
+    const state = buildScheduleStateImperative();
+    const visibleWeek = weeks.flatMap((week) => resolveWeekWithConditioning(week, state));
+    const result = executeProgramControlAction(decision.action, {
+      visibleWeek,
+      todayISO: occurredOn,
+    }) as { ok?: boolean; message?: string };
+    if (!result?.ok) {
+      // A recorded edit that no longer applies is REPORTED and dropped, exactly
+      // like a `plan_change` that no longer applies. The athlete loses that one
+      // edit's effect, never the boot.
+      logger.warn('[quiescentBoot] a recorded door action no longer applies on replay', {
+        entryId: entry.id,
+        actionType: (decision.action as { type?: string }).type,
+        message: result?.message,
+      });
+    }
     return;
   }
   // Lazy requires: the interpreters live in utils and import stores — the

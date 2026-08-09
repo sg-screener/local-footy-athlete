@@ -320,15 +320,35 @@ const main = async (): Promise<void> => {
   console.log(`   ledger kinds after the edit         : [${acted.kinds.join(', ') || '(empty)'}]`);
   console.log(`   dateOverrides  ACTED -> BOOTED      : ${acted.overrides} -> ${booted.overrides}`);
   console.log('');
-  if (!survived && reverted) {
-    console.log('   VERDICT: the survey\'s §5.2 inference is CONFIRMED by measurement.');
-    console.log('   The athlete\'s edit is gone and the generated day is back. The three');
-    console.log('   mechanisms have now been observed TOGETHER, on one world.');
-  } else if (survived) {
-    console.log('   VERDICT: the inference is REFUTED. The edit survived, so something');
-    console.log('   carries it that the three-mechanism reading did not account for.');
-    console.log('   Do NOT build the ledger route for destination 2 against a bug that');
-    console.log('   is not there — find the carrier first.');
+  // ── THE VERDICT, RE-AIMED WHEN THE FIX LANDED ───────────────────────────
+  //
+  // This tape was written against the PRE-FIX world and its first run confirmed
+  // the survey's §5.2 inference: the edit was gone and the generated day was
+  // back (`bcb80b98`). The ledger route for the exercise-level destination then
+  // landed, and the same run now reads the other way.
+  //
+  // The wording is re-aimed rather than the tape retired, because the reading
+  // it prints is the REGRESSION statement now: an edit that stops surviving is
+  // this instrument going red, and the pre-fix reading stays on the page so the
+  // two are never confused. What it measures did not change — only which answer
+  // is the good one.
+  if (survived) {
+    console.log('   VERDICT: THE EDIT IS DURABLE. It survived a real process death, so');
+    console.log('   the ledger recorded it and the boot reproduced it from the decision.');
+    console.log(`   Recorded as: [${acted.kinds.join(', ')}] — expected exactly [program_control].`);
+    if (!acted.kinds.includes('program_control')) {
+      console.log('   ⚠ BUT NOT THROUGH THE LEDGER. The edit survived without a');
+      console.log('     `program_control` entry, so something ELSE is carrying it and');
+      console.log('     this run is not evidence that the door route works.');
+    }
+    if (acted.kinds.length !== 1) {
+      console.log('   ⚠ MORE THAN ONE DECISION FOR ONE ACT. One tap must be one entry,');
+      console.log('     or the athlete needs two undos to undo one edit.');
+    }
+  } else if (reverted) {
+    console.log('   VERDICT: REGRESSION — the survey\'s §5.2 loss is BACK. The athlete\'s');
+    console.log('   edit is gone and the generated day has returned. Either the door');
+    console.log('   stopped recording the decision or the boot stopped replaying it.');
   } else {
     console.log('   VERDICT: NEITHER. The booted day matches neither the edit nor the');
     console.log('   floor, so a third thing moved. That is its own finding and it is');

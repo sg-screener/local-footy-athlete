@@ -16,6 +16,7 @@
  */
 
 import type { PlanChange } from '../utils/planChangeTypes';
+import type { ProgramControlAction } from './programControlAction';
 import type { Workout } from './domain';
 
 /** Who put this decision on the ledger. */
@@ -36,6 +37,30 @@ export type AthleteDecision =
   | { kind: 'fixture_move'; fromDate: string; toDate: string; fixtureKind: string }
   /** Undo is a decision too: a reversal APPENDS, it never rewrites (LR-29). */
   | { kind: 'reversal'; reversedEntryId: string }
+  /**
+   * THE DOOR'S OWN VOCABULARY, RECORDED VERBATIM
+   * (`docs/COACH_ARCHITECTURE_REASSESSMENT_2026-08-09.md` §5).
+   *
+   * `ProgramControlAction` is the athlete tap door's typed action — the same
+   * value the surface builds and `executeProgramControlAction` executes. This
+   * kind stores it unchanged, which is the law at the top of this union
+   * ("never paraphrases") applied to a door that previously had no kind at all.
+   *
+   * WHY ONE KIND FOR A 26-MEMBER UNION. A kind per capability would need a
+   * translation per capability, and a translation is where a field is lost by
+   * omission. There is nothing to translate: the decision IS the action.
+   *
+   * WHICH action types actually appear here is NOT open — it is the allow-list
+   * in `rules/programControlDecisions.ts`, and `programControlDecisionTests`
+   * pins that every recorded type has a replay arm and vice versa. Recording a
+   * type the boot cannot reproduce would be worse than recording nothing: the
+   * edit would look durable and vanish anyway.
+   *
+   * Session-level actions are NOT recorded here — they already append a
+   * `plan_change` inside `applyPlanChange`, and two decisions for one act would
+   * take two undos to undo.
+   */
+  | { kind: 'program_control'; action: ProgramControlAction }
   /**
    * R2 MIGRATION ONLY — the one kind that carries CONTENT instead of intent,
    * and the only place in this union where that is allowed.
