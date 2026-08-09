@@ -496,7 +496,17 @@ function extract(): ExtractedString[] {
  * ledger. Same shape, honest source — which is why the wording waited for the
  * derivation rather than shipping with it.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 577;
+/**
+ * 577 -> 580 (what you changed, same commit that earned it): THREE genuinely new
+ * sentences the extractor can see — the "What you changed" heading, the honest
+ * empty state, and the BOUNDARY line ("Changes the app made for you are not
+ * listed here yet.").
+ *
+ * The boundary sentence is the one that matters: without it the list would imply
+ * the app changed nothing, which is a stronger claim than the ledger supports.
+ * It is recorded as batch 25-a before this commit landed.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 580;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

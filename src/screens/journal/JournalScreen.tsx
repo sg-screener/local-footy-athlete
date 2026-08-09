@@ -28,6 +28,8 @@ import {
 } from '../../rules/journalWeek';
 import { buildJournalWeekJob, type JournalWeekJob } from '../../rules/journalWeekJob';
 import { buildJournalWeekStatus, type JournalWeekStatus } from '../../rules/journalWeekStatus';
+import { buildJournalChanges, type JournalChanges } from '../../rules/journalChanges';
+import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import { buildJournalMonth, type JournalMonth } from '../../rules/journalMonth';
 import { TrendChart } from '../../components/journal/TrendChart';
@@ -433,6 +435,42 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
  * from recorded outcomes, so the athlete is not left without one.
  */
 /**
+ * WHAT YOU CHANGED THIS WEEK — PROPOSED (batch 25).
+ *
+ * THE BOUNDARY LINE IS NOT A DISCLAIMER, IT IS THE FEATURE'S HONESTY. The ledger
+ * records the athlete's decisions and has no vocabulary for changes the APP made
+ * — illness, injury, readiness, phase. A list without that sentence would imply
+ * the app changed nothing, which is a stronger claim than the data supports and
+ * exactly what rider 1 exists to prevent.
+ */
+function WhatChanged({ changes }: { changes: JournalChanges }) {
+  if (changes.changes.length === 0) {
+    return (
+      <Text variant="body" style={styles.muted} testID="journal-changes-none">
+        {'You made no changes to this week.'}
+      </Text>
+    );
+  }
+  return (
+    <View>
+      {changes.changes.map((change) => (
+        <Text
+          key={change.entryId}
+          variant="body"
+          style={styles.body}
+          testID={`journal-change-${change.entryId}`}
+        >
+          {`You ${change.what}.`}
+        </Text>
+      ))}
+      <Text variant="bodySmall" style={styles.muted} testID="journal-changes-boundary">
+        {'Changes the app made for you are not listed here yet.'}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * WEEK STATUS — one calm line, PROPOSED (batch 24).
  *
  * EVERY NUMBER BEHIND THIS WAS DERIVED THIS TURN. The status comes from
@@ -811,6 +849,7 @@ export default function JournalScreen() {
     (s) => s.acceptedMaterialContext?.injuryEpisodes ?? EMPTY_EPISODES,
   );
   const journalNotes = useJournalNoteStore((s) => s.notes);
+  const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
   // THE PROFILE IS READ THROUGH ITS CONSOLIDATED OWNER, NOT OFF THE MIRROR.
   //
   // The first version of this screen selected `onboardingData` straight off
@@ -970,6 +1009,13 @@ export default function JournalScreen() {
     }),
   }), [loadModel, week.weekStart, sessionFeedback]);
 
+  // THE LEDGER IS AN INPUT — the athlete's own decisions, appended and never
+  // rewritten. Reading it is a read; nothing here writes or interprets.
+  const changes = useMemo<JournalChanges>(() => buildJournalChanges({
+    entries: ledgerEntries,
+    weekDates: new Set(week.days.map((day) => day.date)),
+  }), [ledgerEntries, week.days]);
+
   const niggles = useMemo<JournalNiggleHistory>(() => buildJournalNiggleHistory({
     episodes: injuryEpisodes,
     // MAPPED AT THE SURFACE, DELIBERATELY. `rules/` may not read the note store
@@ -1028,6 +1074,10 @@ export default function JournalScreen() {
             month={month}
             balance={signedValue(loadModel.patternSharesDone)}
           />
+        </Section>
+
+        <Section title="What you changed">
+          <WhatChanged changes={changes} />
         </Section>
 
         <Section title="Niggles">

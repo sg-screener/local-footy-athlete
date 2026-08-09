@@ -1848,3 +1848,45 @@ its contract is information rather than an achievement to be celebrated at the
 athlete. It is also SILENT when there is no contract: an ungoverned week gets no
 line at all, because "on track" against a standard that does not exist is a claim
 about nothing.
+
+## Batch 25 — what you changed this week (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Addendum Group 1 item 2 —
+the LAST unbuilt item in the Journal unit.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "What you changed" |
+| No decisions this week | "You made no changes to this week." |
+| The boundary, shown whenever there IS a list | "Changes the app made for you are not listed here yet." |
+
+Plus one counted line, in template form:
+
+- "You {phrase}." — e.g. "You removed a session.", "You moved a fixture.",
+  "You undid a change."
+
+**25-a. THE BOUNDARY SENTENCE IS NOT A DISCLAIMER — IT IS THE FEATURE'S HONESTY.**
+The decision ledger records what the ATHLETE did and has **no vocabulary for
+illness, injury, readiness or phase** (measured by the LR-29 dependency list
+before this unit began). A list without that sentence would imply the app changed
+nothing, which is a stronger claim than the data supports. It is rider 1 one level
+up: the same law that makes the Journal say "no reason recorded" rather than
+inventing a why.
+
+**25-b. NO `kind` STRING EVER REACHES THE ATHLETE.** `remove_session`,
+`swap_category`, `move_team_night` are internal vocabulary. The phrases above are
+athlete language, and **an unmapped decision kind is DROPPED rather than rendered
+by its code name** — a future kind must be given words before it can be spoken.
+A cell asserts no rendered phrase contains an underscore.
+
+**25-c. "UNDID A CHANGE" IS A DECISION TOO**, per LR-29's own law that a reversal
+APPENDS rather than rewrites. An undo the athlete performed is part of what they
+did that week, not an erasure of it.
+
+**25-d. "WHAT WAS PROTECTED" IS NOT BUILT, and the reason is a measurement.**
+The app's answer to that is `renderSection18Shortfall` — Sam's SIGNED sentence,
+shown at the DOOR at the moment of a decision. **The ledger does not store what
+was protected**, and re-deriving it for a past week would re-run the decision
+against a week that has since changed: a reconstruction, not a record. Recording
+it is an engine-side change to the decision doors, not a Journal change, and it
+is named as owed rather than faked.
