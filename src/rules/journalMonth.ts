@@ -51,6 +51,20 @@ export const MIN_POINTS_FOR_A_TREND = TREND_MIN_WEEKS;
 
 // ─── Inputs ──────────────────────────────────────────────────────────────
 
+/**
+ * One week's FELT facts, as `JournalFelt` already derived them.
+ *
+ * "YOUR MONTH IN FLAGS" IS A COUNT OF WHAT THE ATHLETE SAID, not a reading of
+ * how they were. Every field here is something they answered; nothing is
+ * inferred, and the module adds no interpretation to any of it.
+ */
+export interface MonthWeekFlags {
+  readonly weekStart: string;
+  readonly sorenessRecorded: number;
+  readonly differedFromPlan: number;
+  readonly gameFeelsRecorded: number;
+}
+
 /** One week's completion facts, as `JournalWork` already derived them. */
 export interface MonthWeekWork {
   readonly weekStart: string;
@@ -64,6 +78,8 @@ export interface BuildJournalMonthInput {
   readonly weeks: readonly JournalLoadWeekTotals[];
   /** Per-week completion, from `journalWeek`. Empty when unknown. */
   readonly work?: readonly MonthWeekWork[];
+  /** Per-week felt facts, from `journalWeek`. Empty when unknown. */
+  readonly flags?: readonly MonthWeekFlags[];
   /** Per-lift top sets by week, from the strength owner. */
   readonly strengthSeries: ReadonlyMap<
     string,
@@ -103,7 +119,25 @@ export interface MonthConsistency {
   readonly weeksCounted: number;
 }
 
+/**
+ * The month in flags — the design's "fatigue/soreness/illness trend".
+ *
+ * COUNTS, NEVER A TREND WORD. The design calls it a trend; what the app can
+ * honestly produce is how many times the athlete said each thing. Turning three
+ * soreness answers into "your soreness is rising" would be a direction claimed
+ * from a count, and the load ruling's "observation, never diagnosis" forbids
+ * exactly that move.
+ */
+export interface MonthFlags {
+  readonly sorenessRecorded: number;
+  readonly sessionsThatDiffered: number;
+  readonly gamesRated: number;
+  readonly weeksCounted: number;
+}
+
 export interface JournalMonth {
+  /** NULL when nothing was recorded at all — silence rather than a row of zeroes. */
+  readonly flags: MonthFlags | null;
   /**
    * NULL when no week carried a plan. A consistency figure over nothing is 0%,
    * which reads as total failure to an athlete who simply has no history.
@@ -163,6 +197,22 @@ function consistencyFrom(work: readonly MonthWeekWork[]): MonthConsistency | nul
   };
 }
 
+/**
+ * The month's flags, or nothing.
+ *
+ * A ROW OF ZEROES IS NOT A MONTH IN FLAGS. An athlete who answered nothing
+ * should see the honest absence, not "soreness 0, differed 0, games 0" — which
+ * reads like a report about a month rather than the absence of one.
+ */
+function flagsFrom(weeks: readonly MonthWeekFlags[]): MonthFlags | null {
+  if (weeks.length === 0) return null;
+  const sorenessRecorded = weeks.reduce((n, w) => n + w.sorenessRecorded, 0);
+  const sessionsThatDiffered = weeks.reduce((n, w) => n + w.differedFromPlan, 0);
+  const gamesRated = weeks.reduce((n, w) => n + w.gameFeelsRecorded, 0);
+  if (sorenessRecorded + sessionsThatDiffered + gamesRated === 0) return null;
+  return { sorenessRecorded, sessionsThatDiffered, gamesRated, weeksCounted: weeks.length };
+}
+
 export function buildJournalMonth(input: BuildJournalMonthInput): JournalMonth {
   // OLDEST FIRST — a trend is read left to right, and the load model returns its
   // history most-recent-first.
@@ -212,8 +262,10 @@ export function buildJournalMonth(input: BuildJournalMonthInput): JournalMonth {
   const conditioningSeries = honestSeries(conditioningPoints);
 
   const consistency = consistencyFrom(input.work ?? []);
+  const flags = flagsFrom(input.flags ?? []);
 
   return {
+    flags,
     consistency,
     conditioningSeries,
     strengthSeries,
@@ -223,6 +275,6 @@ export function buildJournalMonth(input: BuildJournalMonthInput): JournalMonth {
     // "this builds as you train" beside a number they can already read would be
     // the honest-absence line lying about a presence.
     building: conditioningSeries === null && strengthSeries.size === 0
-      && consistency === null,
+      && consistency === null && flags === null,
   };
 }

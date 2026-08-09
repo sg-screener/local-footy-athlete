@@ -1759,3 +1759,25 @@ the athlete DID is a measurement; whether it is out of balance is a judgement.**
 
 The pattern words (squat / hinge / push / pull) are the app's existing
 `STRENGTH_PATTERN_ORDER` vocabulary, not new copy.
+
+**22-h. "YOUR MONTH IN FLAGS"**, in template form:
+
+- "Across {n} weeks you logged soreness {n} times, {n} sessions that did not go
+  to plan, and rated {n} games."
+
+**COUNTS, NEVER A TREND WORD, AND THAT IS A DELIBERATE NARROWING OF THE DESIGN.**
+The base design calls this a "fatigue/soreness/illness trend". What the app can
+honestly produce is **how many times the athlete said each thing** — turning three
+soreness answers into "your soreness is rising" claims a DIRECTION from a COUNT,
+which is exactly the diagnosis the load ruling forbids. A cell sweeps the module
+for direction vocabulary (rising / falling / worsening / improving / trending) and
+requires none of it.
+
+**A month where nothing was answered shows NOTHING**, not "soreness 0, differed 0,
+games 0" — a row of zeroes reads like a report about a month rather than the
+absence of one.
+
+**ILLNESS IS NOT IN THIS LINE YET.** The design names it; illness lives in the
+readiness/temporary-fact stores rather than in `JournalFelt`, and reading a second
+store into this line was not done in the same slice that minted it. Named as owed
+rather than quietly dropped.

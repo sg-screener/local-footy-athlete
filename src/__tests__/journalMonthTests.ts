@@ -269,6 +269,52 @@ console.log('\n[4b] CONSISTENCY — a percentage without its evidence is a claim
     && /sessionsDone\}/.test(screen) && /sessionsPlanned\}/.test(screen));
 }
 
+// ─── [4d] The month in flags ─────────────────────────────────────────────
+
+console.log('\n[4d] FLAGS — counts of what was SAID, never a trend word');
+{
+  const flag = (weekStart: string, soreness: number, differed: number, games: number) =>
+    ({ weekStart, sorenessRecorded: soreness, differedFromPlan: differed, gameFeelsRecorded: games });
+
+  const flags = buildJournalMonth({
+    weeks: [], strengthSeries: EMPTY_SERIES,
+    flags: [flag(WEEKS[0], 2, 1, 1), flag(WEEKS[1], 1, 0, 1)],
+  }).flags;
+  ok('the flags are summed across the weeks',
+    flags?.sorenessRecorded === 3 && flags?.sessionsThatDiffered === 1
+    && flags?.gamesRated === 2, flags);
+  ok('and it says how many weeks it counted',
+    flags?.weeksCounted === 2, flags);
+
+  // A ROW OF ZEROES IS NOT A MONTH IN FLAGS. An athlete who answered nothing
+  // should see the honest absence, not a report about a month that did not
+  // happen.
+  ok('a month where nothing was answered yields NULL, not a row of zeroes',
+    buildJournalMonth({
+      weeks: [], strengthSeries: EMPTY_SERIES, flags: [flag(WEEKS[0], 0, 0, 0)],
+    }).flags === null);
+  ok('and no flag data at all yields null too',
+    buildJournalMonth({ weeks: [], strengthSeries: EMPTY_SERIES }).flags === null);
+
+  ok('a month with flags but no chart is NOT "still building"',
+    buildJournalMonth({
+      weeks: [], strengthSeries: EMPTY_SERIES, flags: [flag(WEEKS[0], 1, 0, 0)],
+    }).building === false);
+
+  // NO TREND WORD ANYWHERE. The design calls this a trend; the app can only
+  // honestly count. A direction claimed from a count is the diagnosis the load
+  // ruling forbids.
+  const source = readFileSync(join(__dirname, '..', 'rules', 'journalMonth.ts'), 'utf8');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok('the module claims no direction about the flags',
+    !/rising|falling|worsening|improving|trending/i.test(code),
+    code.match(/rising|falling|worsening|improving|trending/gi));
+
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the flags line is rendered', /testID="journal-month-flags"/.test(screen));
+}
+
 // ─── [4c] The balance picture ships because it waits on nothing ──────────
 
 console.log('\n[4c] THE BALANCE PICTURE — signed provenance, so it renders');

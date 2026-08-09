@@ -481,6 +481,21 @@ function MonthlyReview({
         />
       ) : null}
       {/*
+        YOUR MONTH IN FLAGS — counts of what the athlete SAID, never a trend
+        word. The design calls it a trend; what the app can honestly produce is
+        how many times they answered each thing, and turning three soreness
+        answers into "your soreness is rising" would claim a direction from a
+        count.
+      */}
+      {month.flags ? (
+        <Text variant="body" style={styles.body} testID="journal-month-flags">
+          {`Across ${month.flags.weeksCounted} weeks you logged soreness ${
+            month.flags.sorenessRecorded} times, ${
+            month.flags.sessionsThatDiffered} sessions that did not go to plan, and rated ${
+            month.flags.gamesRated} games.`}
+        </Text>
+      ) : null}
+      {/*
         THE BALANCE PICTURE — load-ruling layer 4, and it can ship where the
         continuum cannot: `patternSharesDone` is derived from NO constant, so it
         carries SIGNED provenance and passes `signedValue`. The plan-vs-done
@@ -866,6 +881,12 @@ export default function JournalScreen() {
       sessionsPlanned: week.work.sessionsPlanned,
       completedFull: week.work.completedFull,
       completedPartial: week.work.completedPartial,
+    }],
+    flags: [{
+      weekStart: week.weekStart,
+      sorenessRecorded: week.felt.sorenessRecorded,
+      differedFromPlan: week.felt.differedFromPlan,
+      gameFeelsRecorded: week.felt.gameFeelsRecorded,
     }],
     strengthSeries: buildJournalStrengthSeries({
       weekStart: week.weekStart,
