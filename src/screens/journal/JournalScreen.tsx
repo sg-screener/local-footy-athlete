@@ -405,8 +405,22 @@ const HEADLINE_COPY: Readonly<Record<BandVerdict, string>> = {
   above: 'A heavier week than your normal.',
 };
 
-/** How many observation lines the section will show. Sam's "no chart walls". */
-const MAX_REGION_LINES = 2;
+/**
+ * How many region observations may earn a card. Sam's "no chart walls", and now
+ * also his "an athlete learns that seeing a card means pay attention".
+ *
+ * IT MOVED FROM THE LOAD SECTION TO THE EARNED CARD, because the observation had
+ * quietly acquired TWO renderers. The load band drew it as a faint line and the
+ * new attention card drew it as a card — the same fact, twice, on one screen.
+ * Both are dark today (the observation is downstream of proposed constants), so
+ * nothing showed it and no cell could: **the duplication would have appeared for
+ * the first time on the day Sam signed his constants**, in a commit that touched
+ * nothing.
+ *
+ * That is the hazard of building behind a signature. The card is the ruling's
+ * placement, so the card is the one owner and the faint line is gone.
+ */
+const MAX_REGION_CARDS = 1;
 
 /**
  * The Load section's evidence sentence — PROPOSED, batch 17-a.
@@ -475,7 +489,6 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
   const coverage = signedValue(load.coverage);
   const headline = signedValue(load.headline);
   const band = signedValue(load.sweetSpotBand);
-  const observations = (signedValue(load.regionObservations) ?? []).slice(0, MAX_REGION_LINES);
 
   return (
     <View style={styles.bandBlock}>
@@ -546,20 +559,6 @@ function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel
         </Text>
       ) : null}
 
-      {/*
-        OBSERVATION, NEVER DIAGNOSIS (the ruling's second law). An ordering fact
-        beside the weeks it was measured over — no injury-risk claim, no advice.
-      */}
-      {observations.map((observation) => (
-        <Text
-          key={observation.region}
-          variant="caption"
-          style={styles.faint}
-          testID="journal-load-region"
-        >
-          {`Biggest week for ${observation.region} in the last ${observation.weeksCompared} weeks.`}
-        </Text>
-      ))}
     </View>
   );
 }
@@ -810,15 +809,19 @@ function AttentionCards({
   const cards: React.ReactNode[] = [];
 
   // ONE CARD, NOT ONE PER REGION. Two attention cards about muscles in one week
-  // is a wall, and the ruling's whole point is that a card means something.
-  const [hottest] = observations;
-  if (hottest) {
+  // is a wall, and the ruling's whole point is that a card means something. This
+  // is also the ONE renderer of a region observation on this screen — the load
+  // band used to draw the same fact as a faint line, and both would have
+  // appeared together the day Sam signed.
+  for (const observation of observations.slice(0, MAX_REGION_CARDS)) {
     cards.push(
       <EarnedCard
-        key="region"
-        testID="journal-earned-region"
-        title={`${hottest.region} ran hot`}
-        detail={`Biggest week for ${hottest.region} in the last ${hottest.weeksCompared} weeks.`}
+        key={`region-${observation.region}`}
+        testID="journal-load-region"
+        title={`${observation.region} ran hot`}
+        detail={
+          `Biggest week for ${observation.region} in the last ${observation.weeksCompared} weeks.`
+        }
       />,
     );
   }

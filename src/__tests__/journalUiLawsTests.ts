@@ -291,6 +291,25 @@ console.log('\n[5] THE NORTH STAR — an appearance pass stores nothing');
   // a new card is exactly where someone would reach for `.value`.
   ok('no derived value is read around `signedValue`',
     !/\bloadModel\.[A-Za-z]+\.value\b/.test(code), code.match(/\.value\b/g));
+
+  // ── ONE RENDERER PER DERIVED FACT, AND THIS CELL EXISTS BECAUSE I BROKE IT ──
+  //
+  // The first version of this slice drew the region observation TWICE: a faint
+  // line inside the load band, and the new earned card. One fact, two owners, on
+  // one screen — the defect class this whole repo is organised against.
+  //
+  // NOTHING COULD HAVE SHOWN IT, AND THAT IS THE LESSON. The observation is
+  // downstream of PROPOSED constants, so both renderers were dark; the screen
+  // looked correct, every cell passed, and **the duplication would have appeared
+  // for the first time on the day Sam signed his constants** — in a commit that
+  // touched no code. Building behind a signature hides your own duplicates.
+  //
+  // So the count is asserted, not the absence: exactly one testID per dark fact.
+  for (const darkFact of ['journal-load-region', 'journal-load-headline']) {
+    const renderers = (code.match(new RegExp(`testID="${darkFact}"`, 'g')) ?? []).length;
+    ok(`\`${darkFact}\` has exactly ONE renderer, not two waiting to both light up`,
+      renderers === 1, { darkFact, renderers });
+  }
   ok('and the band edges are read through the door too, not off the constant',
     /signedValue\(load\.sweetSpotBand\)/.test(code)
     && !/JOURNAL_LOAD_CONSTANTS/.test(code));
