@@ -1,11 +1,40 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `65070c6a` — **THE JOURNAL SHIPS ITS FIRST NUMBER.**
-- **CHECKPOINT + HANDOVER COMMITTED (not a wall):**
-  docs/JOURNAL_UNIT_HANDOVER_2026-08-09.md — three slices landed continuously
-  under the standing authorisation, each gated, each swept to the declared set.
-  **Read it first if you are a fresh session.**
-- **LAST UNIT: THE STRENGTH LINE** (`64d142d7`), Monday card item 2.
+- **BRANCH:** `main` · **HEAD:** `67f80e0b` — **FOUR SLICES IN, CONTINUOUSLY.**
+- **LAST UNIT: THIS WEEK'S JOB** (`67f80e0b`), Monday card / addendum Group 1
+  item 4. "This week asks for 3 strength, 2 conditioning." — read off the
+  contract the Section 18 resolver already authored onto the microcycle.
+  - **A GATE CAUGHT ME PUTTING A STALE NUMBER ON THE ATHLETE'S SCREEN.** The
+    first version rendered a completion verdict from `achievedCount` /
+    `unresolvedMinimumShortfall` on the **stored** contract;
+    `section18ShortfallCopyTests` refused it — *"no caller reads an achieved tally
+    off a stored contract"*. **A TARGET is policy; an ACHIEVED TALLY is derived
+    output and a stored one goes stale.** The verdict is gone, the module reads
+    targets only, and the two withdrawn sentences were **REMOVED from batch 20**
+    rather than left proposed.
+  - **Week STATUS (item 3) is therefore NOT built** — it needs a freshly-derived
+    ledger (`ledgerFromEffectiveWorkouts` + `evaluateWeeklyExposureContract`) and
+    belongs to the owners that gate names. Its wording comes to Sam as its own
+    batch when built. **"Did the work happen" already answers completion** from
+    recorded outcomes, so the athlete is not left without one.
+  - `ATHLETE_WORD_FOR_DOMAIN` is **EXPORTED from its owner, not copied**;
+    `ATHLETE_FORBIDDEN_VOCABULARY` asserted on this surface too.
+  - **GATE:** full `test:bible` UNPIPED `GATE_EXIT=1` at
+    `test:program-control-durable`, 1 FAIL line — the declared red. **Sweep 2 of
+    163 = the declared set exactly**, at head `67f80e0b`. `test:compile` PASSED.
+    New gated suite `test:journal-week-job` **24 passed, 0 failed**. Copy batch 20
+    PROPOSED; ceiling **568 → 570**, attributed.
+  - Boundary: docs/JOURNAL_WEEK_JOB_BOUNDARY_2026-08-09.md
+- **NEXT MEASURED: NIGGLE HISTORY + RESURFACING** —
+  docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md. Niggle history is FREE over
+  `InjuryEpisodeV1`. **BUT: a note CANNOT be knee-tagged** — `JOURNAL_NOTE_TAGS`
+  is a closed eight with no region. Resurfacing by tag-region is not buildable;
+  **route (a) resurfaces BY TIME** (notes written during an earlier episode's
+  `affectedWeeks`, injury-tagged) and needs nothing new. Route (b), a region on a
+  note, reopens a vocabulary Sam closed — **his call**.
+- **CHECKPOINT + HANDOVER:** docs/JOURNAL_UNIT_HANDOVER_2026-08-09.md — **read it
+  first if you are a fresh session.** (Written at three slices; four are in now.)
+- **PREVIOUS: THE STRENGTH LINE** (`64d142d7`), Monday card item 2.
   docs/JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md · plan
   docs/JOURNAL_MONDAY_CARD_PLAN_2026-08-09.md
   - **"Back Squat — 120kg, up on last week."** Pure derivation over

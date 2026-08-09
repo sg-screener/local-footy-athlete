@@ -26,6 +26,62 @@
    session.
 
 
+## Processed 2026-08-09 (forty-fifth pass) — THIS WEEK'S JOB; AND A GATE CAUGHT ME READING A STALE TALLY
+
+- **ONE LINE: "This week asks for 3 strength, 2 conditioning." — read off the
+  contract the Section 18 resolver already authored, and the completion verdict I
+  first built beside it was REFUSED BY A GATE.** `67f80e0b`, full unpiped chain
+  `GATE_EXIT=1` at `program-control-durable`, 1 FAIL line, **sweep 2 of 163 = the
+  declared set exactly**. Boundary:
+  docs/JOURNAL_WEEK_JOB_BOUNDARY_2026-08-09.md
+- **FOURTH SLICE THIS SESSION, STILL CONTINUOUS UNDER ITEM 1:** load model → feel
+  → strength line → this week's job. No stop between any of them.
+- **THE CORRECTION IS THE REPORT.** The first version rendered "All of it is
+  done." / "1 strength to go." from `achievedCount` and
+  `unresolvedMinimumShortfall` on the **STORED** contract.
+  `section18ShortfallCopyTests` went red on its first run with exactly the right
+  sentence: *"no caller reads an achieved tally off a stored contract"*.
+  **A TARGET is policy — stable, safe to read. An ACHIEVED TALLY is derived
+  output, and a stored one goes stale beside the facts it came from: the athlete
+  trains on Thursday and the snapshot still says what it said on Monday.** I
+  would have put that on their screen and called it their week.
+- **CONSEQUENCE, TAKEN HONESTLY:** week STATUS (Group 1 item 3) is **NOT BUILT**.
+  It needs a freshly-derived ledger (`ledgerFromEffectiveWorkouts` +
+  `evaluateWeeklyExposureContract`) and belongs to the owners that gate names; its
+  wording reaches Sam as its own batch when built. **"Did the work happen"
+  already answers completion** from recorded outcomes, so the athlete keeps a
+  completion picture and the app keeps ONE answer to that question.
+- **THE TWO WITHDRAWN SENTENCES WERE REMOVED FROM BATCH 20, not left proposed** —
+  a proposal for wording nothing uses wastes a ruling, and the binder says so.
+  Ceiling went 568 → 571 → **570**, and the comment records the retraction rather
+  than quietly landing on the lower number.
+- **WHAT WAS RIGHT FIRST TIME:** the contract is READ, never rebuilt (the trap the
+  Monday card plan named in advance, gated by a source sweep);
+  `ATHLETE_WORD_FOR_DOMAIN` is **EXPORTED from its owner rather than copied**, so
+  the Journal cannot grow a rival vocabulary for the words the athlete reads; and
+  Sam's `ATHLETE_FORBIDDEN_VOCABULARY` is asserted on this new surface too.
+- **L12 — what catches the next one:** the app-wide gate already sweeps for this
+  class and is why it fired. What this slice adds is a LOCAL assertion at the new
+  reader: cells [3] and [4] forbid both tally names here, and a fixture with
+  wildly wrong stored tallies (`achievedCount: 99`, shortfall 7) proves they
+  cannot change what is reported. **The next person reaching for the convenient
+  number reds two suites, not one.**
+- **NEXT MEASURED, WITH A GAP THAT CHANGES THE FEATURE**
+  (docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md): niggle history is FREE over
+  `InjuryEpisodeV1`. **But a note CANNOT be knee-tagged** — `JOURNAL_NOTE_TAGS` is
+  a closed eight with no region, deliberately closed in slice 2. So the design's
+  "a knee-tagged note resurfaces" is not buildable as written. **Route (a):
+  resurface BY TIME** — notes written during an earlier episode's `affectedWeeks`,
+  injury-tagged — needs nothing new and keeps the claim factual. **Route (b), a
+  region on a note, reopens a vocabulary Sam closed and is his call.**
+  RECOMMENDED: (a).
+- **NOT COVERED, first line: NO DEVICE EVIDENCE**, no cell mounts the screen,
+  DEPTH 0. And a week that SHOULD have a contract but has none renders identically
+  to one that legitimately has none — no unit test can tell those apart.
+- **SAM'S QUESTIONS PARKED:** the ask line's sentence shape (the domain words are
+  already his); the week-status wording when it is built; plus everything already
+  queued — copy batches 15-20 and the load model's 7 unsigned constants of 9.
+
 ## CHECKPOINT 2026-08-09 — THREE SLICES LANDED CONTINUOUSLY; HANDOVER COMMITTED (not a wall)
 
 **docs/JOURNAL_UNIT_HANDOVER_2026-08-09.md** — written under item 1's own
