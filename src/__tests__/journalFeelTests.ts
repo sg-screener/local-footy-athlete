@@ -281,6 +281,33 @@ console.log('\n[6] OWNERSHIP — no fifth spelling of "is this a game"');
     code.match(/workoutType\s*===\s*'Game'/g));
   ok('the team-night predicate is still asked of ITS owner too',
     /\bisTeamTrainingSession\s*\(/.test(code));
+
+  // THE PANEL'S OWN GUARDS, AND THEY WERE UNASSERTED UNTIL A MUTATION SAID SO.
+  //
+  // Section [5] above proves the PAYLOAD BUILDER stores only what it is handed —
+  // but every one of its cells hands the builder `null` itself. Nothing checked
+  // that the panel decides to hand it null, so removing both guards left the
+  // whole suite green while a non-game happily stored a body-feel rating. That
+  // is the ask-flag/send-flag claim failing at the exact seam it is about.
+  //
+  // No cell in this repo mounts the panel, so the honest instrument is its
+  // source — anchored to the payload call first, because a regex that finds
+  // nothing passes every "does not contain" test ever written.
+  const payloadStart = code.indexOf('buildSessionFeedbackPayload({');
+  const payloadEnd = code.indexOf('});', payloadStart);
+  ok('the panel\'s payload call was located',
+    payloadStart > 0 && payloadEnd > payloadStart, { payloadStart, payloadEnd });
+  const payloadCall = code.slice(payloadStart, payloadEnd);
+  ok('and the located call is substantial, not an empty slice',
+    payloadCall.length > 200, payloadCall.length);
+
+  ok('the panel sends a body-feel rating ONLY when it asked for one',
+    /gameFeel:\s*isGameDay\s*\?\s*gameFeel\s*:\s*null/.test(payloadCall), payloadCall);
+  ok('and it sends a why ONLY while the tap is still asking for one',
+    /expectationReason:\s*expectationAsksWhy\(expectation\)\s*\?\s*expectationReason\s*:\s*null/
+      .test(payloadCall), payloadCall);
+  ok('the team-night answer keeps the same guard it always had',
+    /teamNightSize:\s*isTeamNight\s*\?\s*teamNightSize\s*:\s*null/.test(payloadCall));
 }
 
 // ─── [7] The Journal counts them, and interprets nothing ─────────────────
