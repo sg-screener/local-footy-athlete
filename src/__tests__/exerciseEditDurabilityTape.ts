@@ -354,6 +354,162 @@ const main = async (): Promise<void> => {
     console.log('   floor, so a third thing moved. That is its own finding and it is');
     console.log('   reported as one rather than forced into a yes/no.');
   }
+  if (!survived) return;
+
+  // ── UNDO, AND THE SIDE-WRITER CENSUS ────────────────────────────────────
+  //
+  // The order that authorised this unit required undo's replay to honour the
+  // new kind, and named the hazard by its own loop-check:
+  // `side-writer-outside-the-ledger`, sighting 1. That class is why a move's
+  // undo looked complete for four passes and was not — the move wrote a
+  // calendar `rest` mark that was not a decision, so annulling the decision
+  // left half the effect standing.
+  //
+  // A per-kind assertion cannot find the NEXT one of those. A census can: undo
+  // everything, then ask whether the PERSISTED WORLD came back to exactly what
+  // it was before the edit. Anything that did not come back is, by definition,
+  // something the edit wrote that the ledger does not own.
+  console.log('\n════ UNDO, AND WHAT THE EDIT WROTE OUTSIDE THE LEDGER ════');
+  /**
+   * CANONICALISED, because a raw string comparison is a claim about KEY ORDER
+   * and the claim being made is about STATE.
+   *
+   * The first version compared the stored strings and reported `coach-updates`
+   * as a side-writer. Its content was identical — `activeInjury` and
+   * `activeConstraints` had simply been serialised in the other order after a
+   * re-derivation rebuilt the object. `a count taken for a record`: the
+   * instrument's unit was BYTES, the domain noun is what the athlete's world
+   * holds. Sorting keys recursively makes the two the same question.
+   */
+  const canonical = (raw: string | undefined): string | undefined => {
+    if (raw === undefined) return undefined;
+    const sort = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(sort);
+      if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.keys(value as object).sort()
+          .map((key) => [key, sort((value as Record<string, unknown>)[key])]));
+      }
+      return value;
+    };
+    try { return JSON.stringify(sort(JSON.parse(raw))); } catch { return raw; }
+  };
+  /**
+   * True for a payload holding no athlete material: every leaf is `null`, an
+   * empty object or an empty array. A store that persists itself for the first
+   * time writes one of these, and it is not a side-writer — it wrote nothing.
+   * Structural, not a regex over the serialisation: the point of this whole
+   * census is that the bytes are not the state.
+   */
+  const isEmptyPayload = (raw: string | undefined): boolean => {
+    if (raw === undefined) return true;
+    const barren = (value: unknown): boolean => {
+      if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return value.length === 0;
+      if (typeof value === 'object') return Object.values(value as object).every(barren);
+      if (typeof value === 'number') return value === 0;
+      return false;
+    };
+    try {
+      const parsed = JSON.parse(raw) as { state?: unknown };
+      return barren(parsed.state ?? parsed);
+    } catch { return false; }
+  };
+  const envelope = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of durable) out[key] = canonical(value)!;
+    return out;
+  };
+  reachWorldByActing();
+  // FLUSH BEFORE PHOTOGRAPHING, and this line is here because its absence
+  // manufactured a finding. The first run of this census reported THREE
+  // unexplained side-writers; two of them (`program-store`,
+  // `coach-preferences-store`) read as "absent before, present after" purely
+  // because the baseline was taken while their first persist was still pending.
+  // A store that had not yet written itself looked like a store the edit wrote.
+  // `a fixture is a claim too` — the baseline is half of every difference.
+  await settleWrites();
+  const cleanEnvelope = envelope();
+  const cleanDay = exercisesOn(target.date);
+  await actOneExerciseRemoval(target);
+  await settleWrites();
+
+  const { undoLastDecision, pendingUndoTarget } =
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('../store/undoLastDecision');
+  const pending = pendingUndoTarget();
+  console.log(`   undo target : ${pending ? `${pending.id} (${pending.decision.kind})` : 'NONE'}`);
+  if (!pending) {
+    console.log('   ⚠ VACUOUS: nothing is undoable after a recorded edit. Undo does not');
+    console.log('     reach this kind, which is the whole question. No verdict.');
+    return;
+  }
+  const undone = await quietAsync(() => undoLastDecision()) as { outcome?: string };
+  console.log(`   undo outcome: ${undone.outcome}`);
+  const undoneDay = exercisesOn(target.date);
+  console.log(`   day after undo : ${undoneDay.join(' | ')}`);
+  console.log(`   back to the floor? ${undoneDay.join('|') === cleanDay.join('|') ? 'YES' : 'NO'}`);
+
+  // THE CENSUS SNAPSHOT IS TAKEN HERE — after the undo, BEFORE the relaunch —
+  // so it compares like with like. Taken after the relaunch it reported
+  // `coach-preferences-store` as a side-writer of the edit, when what actually
+  // happened was that the RELAUNCH rehydrates stores the baseline had never
+  // touched, and one of them persisted an empty payload for the first time. A
+  // difference between two worlds that also differ in how they were reached is
+  // not evidence about the edit.
+  await settleWrites();
+  const afterUndo = envelope();
+
+  await relaunch();
+  const undoneBooted = exercisesOn(target.date);
+  console.log(`   after relaunch : ${undoneBooted.join(' | ')}`);
+  console.log(`   undo is DURABLE? ${undoneBooted.join('|') === cleanDay.join('|') ? 'YES' : 'NO'}`);
+
+  // The census. Keys are compared, then contents — the ledger is EXPECTED to
+  // differ (it holds the edit and its reversal; append-only means an undone
+  // world is not a byte-identical world, by design). Everything else must match.
+  const after = afterUndo;
+  const keys = [...new Set([...Object.keys(cleanEnvelope), ...Object.keys(after)])].sort();
+  const drifted = keys.filter((key) => cleanEnvelope[key] !== after[key]);
+  // TWO KEYS ARE EXPECTED TO DIFFER, AND THE EXEMPTION IS ARGUED RATHER THAN
+  // ASSUMED — an exemption list is how a census stops finding things.
+  //
+  //   `decision-ledger-store`   — append-only BY DESIGN. An undone world holds
+  //     the decision and its reversal; a byte-identical ledger would mean undo
+  //     had rewritten history, which is the one thing this ledger forbids.
+  //   `lfa.athlete-action-log.v1` — the diagnostics TRACE, not program state.
+  //     It records that the athlete acted, which remains true after an undo.
+  //     Unwriting it would be falsifying an audit log.
+  //
+  // Everything else is program state, and program state that does not come
+  // back is a side-writer the ledger does not own.
+  const EXPECTED_TO_DIFFER = /decision-ledger-store|athlete-action-log/;
+  const expectedToDiffer = drifted.filter((key) => EXPECTED_TO_DIFFER.test(key));
+  // A store writing itself for the first time with an EMPTY payload wrote no
+  // athlete material, so it cannot be something an undo failed to take back.
+  // Reported separately rather than folded into the exemption list, because
+  // "nothing appeared" and "nothing is there" are different claims and only
+  // one of them is checkable.
+  const firstWriteEmpty = drifted.filter((key) => !EXPECTED_TO_DIFFER.test(key)
+    && isEmptyPayload(cleanEnvelope[key]) && isEmptyPayload(after[key]));
+  const unexplained = drifted.filter((key) => !EXPECTED_TO_DIFFER.test(key)
+    && !firstWriteEmpty.includes(key));
+  console.log(`\n   persisted keys            : ${keys.length}`);
+  console.log(`   differ, EXPECTED (ledger) : ${expectedToDiffer.join(', ') || '(none)'}`);
+  console.log(`   differ, empty first write : ${firstWriteEmpty.join(', ') || '(none)'}`);
+  console.log(`   differ, UNEXPLAINED       : ${unexplained.join(', ') || '(none)'}`);
+  if (unexplained.length === 0) {
+    console.log('\n   CENSUS CLEAN: the edit wrote nothing persisted except its own decision,');
+    console.log('   so undo is COMPLETE for this kind — not by inspection, by difference.');
+  } else {
+    console.log('\n   ⚠ SIDE-WRITER FOUND. The edit put something on disk that the ledger');
+    console.log('     does not own, so annulling the decision cannot take it back. This');
+    console.log('     is the calendar-mark class again, in a new destination.');
+    for (const key of unexplained) {
+      console.log(`     ${key}`);
+      console.log(`       before: ${(cleanEnvelope[key] ?? '(absent)').slice(0, 220)}`);
+      console.log(`       after : ${(after[key] ?? '(absent)').slice(0, 220)}`);
+    }
+  }
 };
 
 main().catch((error) => {
