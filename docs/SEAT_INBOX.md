@@ -2,30 +2,80 @@
 
 ## Unprocessed (newest first)
 
-1. BATCHES 27 + 28 SIGNED + THE 2-MINUTE PROOF PATH (Sam,
-   2026-08-09: "yeah add the 2 min thing" — the seat read the yeah
-   as signing both batches as proposed; Sam holds the veto and the
-   seat told him so).
-   LOOP CHECK: signature-arms-a-dark-surface — sighting 2 (after the
-   constants flip) — the mechanism is now precedent, iterate.
-   (a) Copy sheet: batch 27 (month word) + batch 28 (notification
-   title "Last week", body "Your week is in the Journal.", offer row
-   "Remind me on Monday mornings" + "One notification a week, when
-   your week is ready to look back on.") → SIGNED 2026-08-09. The
-   reminder gate arms; nothing fires without the athlete's opt-in +
-   iOS permission, as built.
-   (b) BUILD the dev-only proof path: a way for SAM (never an
-   athlete) to make the journal reminder fire ~2 minutes from now on
-   his own device, proving the native scheduling + the weekday
-   conversion the boundary report flagged as read-off-documentation.
-   Gate it by the repo's existing diagnostics convention — pick the
-   honest gate that is REACHABLE in the build Sam actually installs
-   and UNREACHABLE in anything an athlete could hold; if those
-   conflict, say so and give Sam the choice instead of weakening the
-   gate. The report ends with plain window-labelled steps: exactly
-   what Sam taps/types to see the notification fire.
-   Full unpiped chain, boundary report, then STOP — Sam rebuilds and
-   runs the whole-journal eye pass.
+(none)
+
+## Processed 2026-08-09 (fiftieth pass) — THE REMINDER IS ARMED, AND A 2-MINUTE FIRE IS HALF A PROOF
+
+- **ONE LINE: batches 27 + 28 signed — which ARMED the reminder — and the proof
+  path is TWO instruments, because the one Sam ordered would not have proven the
+  thing it was ordered for.** `b203c6af`, full unpiped chain `GATE_EXIT=1` at
+  `program-control-durable`, 1 FAIL line, **sweep 2 of 170 = the declared set
+  exactly**. Boundary: docs/JOURNAL_PROOF_PATH_BOUNDARY_2026-08-09.md — **§6 is
+  the tap-by-tap script for Sam.**
+- **BOTH PARTS PROCESSED IN FULL. THEN STOPPED, as ordered.**
+  LOOP CHECK `signature-arms-a-dark-surface` sighting 2 — **confirmed as
+  precedent and worth keeping**: it is now the second feature whose release was a
+  provenance field rather than a deploy.
+- **THE ORDER'S OWN INSTRUMENT WOULD NOT HAVE PROVEN THE ORDER'S OWN TARGET, and
+  saying so was the work.** A notification firing in ~2 minutes uses a
+  **TIME_INTERVAL** trigger — **the weekday never enters it.** It proves the
+  native module, the permission, the sentence and the tap, and leaves the
+  weekday conversion exactly as unproven as before **while feeling like a pass.**
+  So the panel has two buttons and labels which proves what: button 1 asks the OS
+  what date the REAL weekly trigger would next fire and names the weekday
+  (`getNextTriggerDateAsync`) — **that is the conversion proof, and it needs no
+  waiting and no permission**; button 2 is the 2-minute fire as ordered.
+- **BOTH FIRE THE REAL OBJECTS.** `journalReminderWeeklyTrigger()` and
+  `journalReminderContent()` are exported and read by **the scheduler and the
+  proof** — one owner each. A proof that built its own trigger would prove its own
+  trigger, and the conversion is exactly the byte a hand-written copy gets right
+  by accident.
+- **THE GATE: `__DEV__`, DOUBLE-GATED — AND THE TWO HALVES OF YOUR TEST DO NOT
+  CONFLICT, for a reason worth naming rather than assuming.** Sam must rebuild
+  with pods anyway, and `npx expo run:ios` produces a **Debug** build. An
+  athlete's build is Release, where the module is not bundled. **ONE CONDITION,
+  and it is the failure mode to know about: build `--configuration Release` or
+  install via TestFlight and the panel is simply absent — which looks identical
+  to broken.** The report leads with the one command.
+- **A `__DEV__` DIAGNOSTIC IS NORMALLY WRONG IN THIS REPO** (AGENTS.md; three
+  device round trips paid for it). Right here because of what it is: **not a
+  diagnostic watching for a defect on somebody else's build, but a bench
+  instrument for the one person doing the rebuilding.**
+- **THE VACUITY CHECK PAID THE SAME DAY IT WAS PROPOSED.** Signing 28 reddened two
+  cells that announced themselves. The silent gap underneath: **every cell in that
+  section passed `copySigned` explicitly, so none exercised the DEFAULT path that
+  reads the copy module** — severing it left the suite green. **That gap predated
+  the signing**; the signing is only what made it visible. Closed by the runtime
+  mutation, mutation-proven.
+- **AN OFF_SHEET EXCLUSION WAS A LIE WAITING TO HAPPEN, and this is the unplanned
+  finding.** `components/dev/` excludes EVERY file in that directory from the copy
+  sheet, justified as *"double gated, asserted below"* — **but the assertion named
+  ScheduleDebugPanel BY NAME.** A second dev component would have been excluded by
+  a prefix whose justification was untrue of it, with the cell still passing.
+  `a green gate watching nothing` **at the seam between two gates rather than
+  inside one** — both lived in the same file and still drifted. Derived from the
+  directory now, and the regex accepts both render shapes so correct code cannot
+  red falsely.
+- **`a count taken for a record` — NINTH SIGHTING, and the second genuine survivor
+  in two commits from the identical shape.** P5: "the proof uses its own
+  identifier" asserted the source **mentions the NAME**; the mutation changed the
+  **VALUE** to the athlete's string. N7 counted a call site file-wide; P5 counted
+  a name. Both re-aimed at the claim. **The values are parsed rather than
+  imported, because both modules pull `expo-notifications`, which cannot load in
+  node at all** — which is also why that whole section reads source as text.
+- **7 MUTATIONS, 7 RED** after the re-aim. Extraction ceiling **UNCHANGED at
+  576** — the dev panel's strings are excluded, and now honestly so.
+- **NOT COVERED, first line: I HAVE STILL NEVER SEEN A NOTIFICATION FIRE.** DEPTH
+  0. The whole of §6 is instructions I cannot run. **The weekday conversion is
+  still UNVERIFIED — but no longer UNVERIFIABLE, and that is the delta.** The
+  proof panel itself has never rendered. **And one assumption is named because it
+  is the suspect if the two answers disagree:** `getNextTriggerDateAsync` is
+  assumed to use the same conversion for previewing as the scheduler does for
+  scheduling — very likely, not proven.
+- **EVERYTHING NOW WAITS ON HIS DEVICE.** Three answers close every open unknown
+  in this feature: does the weekday check say Monday, does the notification
+  arrive, does tapping it land on the Journal tab. Then the whole-journal eye
+  pass, with **C4 (bar colours) still his open item.**
 
 
 ## Processed 2026-08-09 (forty-ninth pass) — THE SIGNATURE LANDS; AND A SIGNATURE TAKES THE PROOF WITH IT
