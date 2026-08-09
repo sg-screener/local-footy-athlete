@@ -476,7 +476,17 @@ function extract(): ExtractedString[] {
  * resurfacing introduction listed there in template form — they take the
  * athlete's own region word and a count, so a table row would bind vacuously.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 572;
+/**
+ * 572 -> 576 (the monthly review, same commit that earned it): FOUR genuinely new
+ * sentences the extractor can see — the "Your month" heading, the
+ * "builds as you train" state, and the two chart labels (one of which is a
+ * template whose literal half the extractor still catches). Batch 16's kind of
+ * rise: the app gained words, the instrument did not change.
+ *
+ * Recorded as BATCH 22 before this commit landed, with the satisfaction lines
+ * listed there in template form.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 576;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

@@ -1,0 +1,291 @@
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+(globalThis as unknown as { window: unknown }).window = {
+  localStorage: {
+    getItem: () => null,
+    setItem: () => undefined,
+    removeItem: () => undefined,
+    clear: () => undefined,
+  },
+};
+
+/**
+ * THE MONTHLY REVIEW — the design's "where progression lives", layer 5 of the
+ * load ruling.
+ *
+ * VERIFICATION STRATEGY (L12). This is the unit's first DRAWN surface, so the
+ * defect classes change shape: a chart lies by its geometry, not by its number.
+ *
+ *   - A DISHONEST CHART CAN RENDER. Sam ruled "never one floating dot". [2]
+ *     asserts the guard lives in the DERIVATION — a too-short series comes back
+ *     null, so the surface cannot render it even if a future author forgets.
+ *     A cell that only checked the component would leave the rule one refactor
+ *     from being lost.
+ *   - AN ABSENCE CAN BE PLOTTED AS A ZERO. A week the athlete did not condition
+ *     is not a week of zero conditioning; plotting it draws a collapse that never
+ *     happened. [3] asserts absent weeks are excluded, not zeroed.
+ *   - A FLAT SERIES CAN READ AS A COLLAPSE. With every value identical the range
+ *     is zero, and the naive scale puts the line on the floor. [5] asserts the
+ *     flat case sits mid-height — the honest picture of no change.
+ *   - A CHART WALL CAN GROW. [6] asserts the surface renders at most two charts,
+ *     because building one per available series is the easy failure Sam's guard
+ *     names.
+ *
+ * Run: npm run test:journal-month
+ */
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
+import { MIN_POINTS_FOR_A_TREND, buildJournalMonth } from '../rules/journalMonth';
+import { TREND_MIN_WEEKS } from '../rules/journalWeek';
+import type { JournalLoadWeekTotals } from '../rules/journalLoad';
+import type { StrengthTopSet } from '../rules/journalStrengthTrend';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+let pass = 0;
+let fail = 0;
+const failures: string[] = [];
+
+function ok(name: string, condition: unknown, detail?: unknown): void {
+  if (condition) {
+    pass += 1;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail += 1;
+    failures.push(name);
+    console.log(`  ✗ ${name}${detail === undefined ? '' : `\n      ${JSON.stringify(detail)}`}`);
+  }
+}
+
+// ─── Fixtures ────────────────────────────────────────────────────────────
+
+const week = (weekStart: string, conditioningSRPE: number): JournalLoadWeekTotals => ({
+  weekStart,
+  strengthMainLiftTonnageKg: 0,
+  conditioningSRPE,
+  sessionsMeasured: 1,
+  sessionsRecorded: 1,
+  liftsUnmeasured: 0,
+  regions: {},
+  patternTonnageKg: { squat: 0, hinge: 0, push: 0, pull: 0 },
+  upperLowerTonnageKg: { upper: 0, lower: 0 },
+});
+
+const topSet = (weightKg: number): StrengthTopSet => ({ weightKg, reps: null });
+
+const WEEKS = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22',
+  '2026-06-29', '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27'];
+
+const series = (
+  name: string,
+  kgs: readonly number[],
+): ReadonlyMap<string, readonly { weekStart: string; topSet: StrengthTopSet }[]> =>
+  new Map([[name, kgs.map((kg, i) => ({ weekStart: WEEKS[i], topSet: topSet(kg) }))]]);
+
+const EMPTY_SERIES: ReadonlyMap<
+  string, readonly { weekStart: string; topSet: StrengthTopSet }[]
+> = new Map();
+
+// ─── [1] The threshold is not a new constant ─────────────────────────────
+
+console.log('\n[1] THE THRESHOLD IS BORROWED, NOT INVENTED');
+{
+  // A SECOND THRESHOLD WOULD LET A CHART APPEAR WHILE THE WORDS BESIDE IT STILL
+  // SAID "your Journal is building". The data-state schedule already answers
+  // "when may the app claim a direction".
+  ok('the trend threshold IS the data-state schedule\'s own number',
+    MIN_POINTS_FOR_A_TREND === TREND_MIN_WEEKS,
+    { MIN_POINTS_FOR_A_TREND, TREND_MIN_WEEKS });
+}
+
+// ─── [2] Never one floating dot — enforced in the DERIVATION ─────────────
+
+console.log('\n[2] SAM\'S GUARD LIVES WHERE IT CANNOT BE FORGOTTEN');
+{
+  const oneWeek = buildJournalMonth({
+    weeks: [week(WEEKS[0], 300)],
+    strengthSeries: EMPTY_SERIES,
+  });
+  ok('a single week yields NO conditioning series — not a one-dot chart',
+    oneWeek.conditioningSeries === null, oneWeek.conditioningSeries);
+  ok('and it reports the building state', oneWeek.building === true);
+
+  const justUnder = buildJournalMonth({
+    weeks: WEEKS.slice(0, MIN_POINTS_FOR_A_TREND - 1).map((w) => week(w, 300)),
+    strengthSeries: EMPTY_SERIES,
+  });
+  ok('one point short of the threshold still yields nothing',
+    justUnder.conditioningSeries === null, justUnder.conditioningSeries?.length);
+
+  const exactly = buildJournalMonth({
+    weeks: WEEKS.slice(0, MIN_POINTS_FOR_A_TREND).map((w) => week(w, 300)),
+    strengthSeries: EMPTY_SERIES,
+  });
+  ok('at the threshold the series appears',
+    exactly.conditioningSeries?.length === MIN_POINTS_FOR_A_TREND,
+    exactly.conditioningSeries?.length);
+  ok('and the building state clears', exactly.building === false);
+
+  // THE SAME GUARD FOR STRENGTH, asserted separately because a shared helper
+  // could be applied to one and not the other.
+  const shortLift = buildJournalMonth({
+    weeks: [], strengthSeries: series('Back Squat', [100, 105]),
+  });
+  ok('a lift with too little history gets no chart either',
+    shortLift.strengthSeries.size === 0, Array.from(shortLift.strengthSeries.keys()));
+}
+
+// ─── [3] An absence is not a zero ────────────────────────────────────────
+
+console.log('\n[3] AN UNTRAINED WEEK IS ABSENT, NOT ZERO');
+{
+  // Plotting a week the athlete did not condition at 0 draws a collapse that
+  // never happened — the number is right and the picture is a lie.
+  // SIX TRAINED WEEKS AND TWO BLANK ONES — the trained count must clear the
+  // threshold on its own, or this cell would be measuring the guard from [2]
+  // instead of the absent-is-not-zero rule it is about.
+  const withGaps = buildJournalMonth({
+    weeks: [
+      week(WEEKS[0], 300), week(WEEKS[1], 0), week(WEEKS[2], 320),
+      week(WEEKS[3], 0), week(WEEKS[4], 310), week(WEEKS[5], 330),
+      week(WEEKS[6], 340), week(WEEKS[7], 350),
+    ],
+    strengthSeries: EMPTY_SERIES,
+  });
+  ok('weeks with no conditioning are excluded from the series',
+    withGaps.conditioningSeries?.every((point) => point.value > 0) === true,
+    withGaps.conditioningSeries);
+  ok('and only the trained weeks are plotted — six, not eight',
+    withGaps.conditioningSeries?.length === 6, withGaps.conditioningSeries?.length);
+}
+
+// ─── [4] Order and the satisfaction line ─────────────────────────────────
+
+console.log('\n[4] OLDEST FIRST, AND THE GAIN IS FIRST-TO-LAST');
+{
+  const outOfOrder = buildJournalMonth({
+    weeks: [week(WEEKS[3], 300), week(WEEKS[0], 100), week(WEEKS[1], 200),
+      week(WEEKS[2], 250), week(WEEKS[4], 350), week(WEEKS[5], 400)],
+    strengthSeries: EMPTY_SERIES,
+  });
+  ok('the series is oldest-first however the weeks arrive',
+    outOfOrder.conditioningSeries?.map((p) => p.value).join(',') === '100,200,250,300,350,400',
+    outOfOrder.conditioningSeries?.map((p) => p.value));
+
+  const gained = buildJournalMonth({
+    weeks: [], strengthSeries: series('Trap Bar Deadlift', [100, 102.5, 105, 110, 115, 112.5]),
+  });
+  ok('the gain is measured first point to last, not best to last',
+    gained.gains[0]?.deltaKg === 12.5, gained.gains[0]);
+  ok('and it names both ends so the sentence can say "since"',
+    gained.gains[0]?.fromWeekStart === WEEKS[0]
+    && gained.gains[0]?.toWeekStart === WEEKS[5], gained.gains[0]);
+
+  // A GAIN NEEDS TWO POINTS, NOT SIX. It is a comparison of two recorded
+  // weights rather than a claimed direction, so the chart threshold does not
+  // bind it — a chart needs shape, a sentence needs only both ends.
+  const twoPoints = buildJournalMonth({
+    weeks: [], strengthSeries: series('Back Squat', [100, 110]),
+  });
+  ok('two points are enough for the sentence even with no chart',
+    twoPoints.gains[0]?.deltaKg === 10 && twoPoints.strengthSeries.size === 0,
+    twoPoints.gains[0]);
+
+  // A LOSS IS REPORTED, NOT HIDDEN. A review that only speaks when the news is
+  // good is a cheerleader, and the design excludes gamification by name.
+  const lost = buildJournalMonth({
+    weeks: [], strengthSeries: series('Bench Press', [100, 90]),
+  });
+  ok('a loss is reported honestly rather than dropped',
+    lost.gains[0]?.deltaKg === -10, lost.gains[0]);
+
+  ok('a lift that did not move produces no sentence at all',
+    buildJournalMonth({ weeks: [], strengthSeries: series('Row', [100, 100]) })
+      .gains.length === 0);
+}
+
+// ─── [5] A flat series is not a collapse ─────────────────────────────────
+
+console.log('\n[5] THE CHART\'S GEOMETRY');
+{
+  const chart = readFileSync(
+    join(__dirname, '..', 'components', 'journal', 'TrendChart.tsx'), 'utf8');
+  ok('the chart source was read', chart.length > 2000, chart.length);
+  const code = chart.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+  // WITH EVERY VALUE IDENTICAL THE RANGE IS ZERO. The naive scale divides by it
+  // and puts the line on the floor, which reads as "you collapsed" to an athlete
+  // who was perfectly consistent.
+  ok('a zero range is handled explicitly rather than divided by',
+    /range === 0/.test(code), code.match(/range[^\n]*/g));
+  ok('and the flat case sits mid-height, not at the bottom',
+    /height \/ 2/.test(code));
+
+  // SVG Y GROWS DOWNWARD. Without the flip a heavier lift would be drawn LOWER,
+  // which inverts the whole story the chart tells.
+  ok('the y axis is flipped so a bigger value sits higher',
+    /height - \(\(value - min\) \/ range\)/.test(code));
+
+  ok('it draws with the PROVEN library, not an unimported one',
+    /from 'react-native-svg'/.test(code)
+    && !/victory-native|react-native-skia/.test(code));
+}
+
+// ─── [6] No chart walls ──────────────────────────────────────────────────
+
+console.log('\n[6] NO CHART WALLS');
+{
+  const screen = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the screen source was read', screen.length > 4000, screen.length);
+
+  const start = screen.indexOf('function MonthlyReview');
+  const end = screen.indexOf('\n/**', start);
+  ok('the monthly section was located', start > 0 && end > start, { start, end });
+  const region = screen.slice(start, end);
+  ok('and the located region is substantial', region.length > 400, region.length);
+
+  // AT MOST TWO CHARTS. Building one per available series is the easy failure
+  // Sam's guard names, and the data for five of them is already sitting there.
+  const charts = region.match(/<TrendChart\b/g) ?? [];
+  ok('the monthly section renders AT MOST two charts', charts.length <= 2, charts.length);
+
+  // ONE LIFT, NOT ALL OF THEM.
+  ok('only one lift is charted, chosen deterministically',
+    /sort\(\(a, b\) => b\[1\]\.length - a\[1\]\.length \|\| a\[0\]\.localeCompare\(b\[0\]\)\)/
+      .test(region));
+
+  ok('the building state is rendered rather than an empty box',
+    /testID="journal-month-building"/.test(screen));
+
+  // THE WEEKLY SECTIONS STAY WORDS. Sam: "anything on the weekly card stays a
+  // line of words, not a graph."
+  //
+  // ASSERTED BY CONTAINMENT, NOT BY A LINE RANGE. The first version of this cell
+  // sliced from `LoadSection` to the note marker and failed — because
+  // `MonthlyReview` is DEFINED inside that span. A source range is about where
+  // code sits in a file; the claim is about which component draws. Every
+  // `<TrendChart` must lie inside the monthly region and nowhere else.
+  const chartAt: number[] = [];
+  for (let i = screen.indexOf('<TrendChart'); i !== -1; i = screen.indexOf('<TrendChart', i + 1)) {
+    chartAt.push(i);
+  }
+  ok('every chart in the app sits inside the monthly section',
+    chartAt.length > 0 && chartAt.every((at) => at > start && at < end),
+    { chartAt, start, end });
+}
+
+console.log(`\njournalMonthTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
+console.log('  DEPTH (L13): 0 — a unit sweep over the pure derivation plus SOURCE reads of '
+  + 'the chart and the screen. NOTHING HERE RENDERS AN SVG: no cell mounts a component, so '
+  + 'the geometry is argued from the scaling code rather than measured from a drawn frame.');
+console.log('  NOT COVERED, and it matters more here than anywhere else in this unit: '
+  + 'A CHART IS THE FIRST THING WHOSE DEFECTS ARE MOSTLY VISUAL. Line weight, how 6-12 '
+  + 'points read at 64px tall, whether the last-point dot is visible, and whether two '
+  + 'charts stacked feel like a wall are ALL unverified — Sam\'s eye is the instrument for '
+  + 'this slice. The load-continuum chart (ruling layer 5) is NOT built: it is downstream '
+  + 'of the unsigned band constants and would be dark anyway.');
+if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);

@@ -1692,3 +1692,41 @@ TIME (a note written during an earlier episode's weeks, injury-tagged), and the
 copy says "the last time your {region} flared" rather than implying the athlete
 tagged it that way. **Adding a region to a note is Sam's ruling and is not
 assumed** (docs/JOURNAL_NIGGLE_SLICE_PLAN_2026-08-09.md §2).
+
+## Batch 22 — the monthly review (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Design §"Monthly review";
+load ruling layer 5.
+
+**22-a. THE STRINGS THE EXTRACTOR CAN SEE.**
+
+| Where | PROPOSED string |
+| --- | --- |
+| Section heading | "Your month" |
+| Not enough history for any trend | "This builds as you train. A few more weeks and your trends appear here." |
+| Chart label — conditioning | "Conditioning over time" |
+
+**22-b. THE TWO COUNTED LINES**, in template form for batch 15-d's reason:
+
+- Chart label — strength: "{lift} top set over time."
+- The satisfaction line, up: "You have added {n}kg to your {lift} since {date}."
+- The satisfaction line, down: "Your {lift} is {n}kg lighter than {date}."
+
+**22-c. A LOSS IS REPORTED, AND THAT IS A RULING NOT AN OVERSIGHT.** The design
+calls the satisfaction line the retention mechanism — "visible progress… not
+badges" — and the same section excludes gamification by name. **A review that
+only speaks when the news is good is a cheerleader**, so a lift that went down
+gets a sentence too; only the wording changes. A lift that did not move gets no
+sentence at all, because "unchanged" is not news.
+
+**22-d. THE DATE IN "SINCE {date}" IS A WEEK START, NOT A MONTH NAME.** The design's
+example reads "since March". The app knows the week the series begins, not a
+month the athlete would name, and converting one to the other would be a
+presentation guess dressed as a fact. **Sam may prefer the month word — that is a
+ruling, and the data supports either.**
+
+**22-e. NO NUMBER APPEARS ON A CHART.** No axis, no gridline, no value label —
+the ruling's "athlete never sees raw AU" and the design's calm register together
+mean the SHAPE is the story and the words sit beside it. The only number the
+monthly section shows is the satisfaction line's kilos, which is a weight the
+athlete lifted rather than a derived score.

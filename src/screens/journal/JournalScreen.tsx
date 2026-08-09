@@ -27,12 +27,15 @@ import {
   type JournalWeek,
 } from '../../rules/journalWeek';
 import { buildJournalWeekJob, type JournalWeekJob } from '../../rules/journalWeekJob';
+import { buildJournalMonth, type JournalMonth } from '../../rules/journalMonth';
+import { TrendChart } from '../../components/journal/TrendChart';
 import {
   buildJournalNiggleHistory,
   type JournalNiggleHistory,
 } from '../../rules/journalNiggleHistory';
 import type { InjuryEpisodeV1 } from '../../rules/injuryEpisode';
 import {
+  buildJournalStrengthSeries,
   buildJournalStrengthTrend,
   type StrengthLiftTrend,
 } from '../../rules/journalStrengthTrend';
@@ -416,6 +419,70 @@ function WeekJob({ job }: { job: JournalWeekJob | null }) {
 }
 
 /**
+ * THE MONTHLY REVIEW — PROPOSED (batch 22).
+ *
+ * SAM'S "NO CHART WALLS" GUARD, OBEYED BY COUNTING. At most two charts render:
+ * conditioning progression, and the single lift with the most history. Building
+ * one chart per available series is the failure mode his guard names, and it is
+ * the easy thing to do because the data is all there.
+ *
+ * NOTHING RENDERS UNTIL ITS HISTORY IS HONEST — and this component could not
+ * break that rule if it tried: `rules/journalMonth.ts` returns null for a series
+ * with too few points, so a one-dot chart is never handed here.
+ */
+function MonthlyReview({ month }: { month: JournalMonth }) {
+  if (month.building) {
+    return (
+      <Text variant="body" style={styles.muted} testID="journal-month-building">
+        {'This builds as you train. A few more weeks and your trends appear here.'}
+      </Text>
+    );
+  }
+
+  // ONE LIFT, NOT ALL OF THEM — the lift with the most history, because a screen
+  // of five identical charts is the wall Sam ruled against.
+  const [topLift] = Array.from(month.strengthSeries.entries())
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+
+  return (
+    <View>
+      {month.conditioningSeries ? (
+        <TrendChart
+          testID="journal-month-conditioning"
+          label="Conditioning over time"
+          points={month.conditioningSeries}
+        />
+      ) : null}
+      {topLift ? (
+        <TrendChart
+          testID="journal-month-strength"
+          label={`${topLift[0]} top set over time`}
+          points={topLift[1]}
+        />
+      ) : null}
+      {/*
+        THE SATISFACTION LINE (the design's "visible progress is the retention
+        mechanism, not badges"). A LOSS IS REPORTED TOO — only the wording
+        changes — because a review that only speaks when the news is good is a
+        cheerleader, and the design excludes gamification by name.
+      */}
+      {month.gains.slice(0, 1).map((gain) => (
+        <Text
+          key={gain.exerciseName}
+          variant="body"
+          style={styles.body}
+          testID="journal-month-gain"
+        >
+          {gain.deltaKg > 0
+            ? `You have added ${gain.deltaKg}kg to your ${gain.exerciseName} since ${gain.fromWeekStart}.`
+            : `Your ${gain.exerciseName} is ${Math.abs(gain.deltaKg)}kg lighter than ${gain.fromWeekStart}.`}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/**
  * NIGGLES, AND WHAT THE ATHLETE WROTE LAST TIME — PROPOSED (batch 21).
  *
  * OBSERVATION, NEVER DIAGNOSIS (the load ruling's second law, verbatim). A
@@ -751,6 +818,21 @@ export default function JournalScreen() {
   // BOTH INPUTS ALREADY EXIST AS INPUTS: the episodes live in the accepted
   // material context, the notes are the athlete's own words from slice 2. This
   // joins them and stores nothing.
+  // A SECOND TIME SCALE OVER THE SAME DERIVATIONS — never a second reading of
+  // the stores. The month composes from what the load model and the strength
+  // owner already produced per week.
+  const month = useMemo<JournalMonth>(() => buildJournalMonth({
+    weeks: [loadModel.thisWeek, ...loadModel.history],
+    strengthSeries: buildJournalStrengthSeries({
+      weekStart: week.weekStart,
+      weeks: 12,
+      sessions: Object.entries(sessionFeedback ?? {}).map(([date, feedback]) => ({
+        date,
+        strength: feedback?.strength ?? [],
+      })),
+    }),
+  }), [loadModel, week.weekStart, sessionFeedback]);
+
   const niggles = useMemo<JournalNiggleHistory>(() => buildJournalNiggleHistory({
     episodes: injuryEpisodes,
     // MAPPED AT THE SURFACE, DELIBERATELY. `rules/` may not read the note store
@@ -796,6 +878,10 @@ export default function JournalScreen() {
 
         <Section title="Load">
           <LoadSection week={week} load={loadModel} />
+        </Section>
+
+        <Section title="Your month">
+          <MonthlyReview month={month} />
         </Section>
 
         <Section title="Niggles">

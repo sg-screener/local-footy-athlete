@@ -117,6 +117,52 @@ function directionFor(
 }
 
 /**
+ * The SAME lift's best top set across many weeks, oldest first.
+ *
+ * THE MULTI-WEEK SERIES THE MONTHLY REVIEW NEEDS, and it lives here rather than
+ * in a month module for one reason: "the best top set in a week" is already
+ * defined in this file, and a second definition of it — even an identical one —
+ * is the shape this repo keeps paying for. The week-over-week arrow and the
+ * trend line are two READERS of one answer.
+ *
+ * WEEKS WITH NO RECORD ARE ABSENT, NOT ZERO. A gap is a week the athlete did not
+ * train that lift; plotting it at 0kg would draw a collapse that never happened.
+ * The caller decides how to render a gap — this module refuses to invent a point.
+ */
+export function buildJournalStrengthSeries(input: {
+  readonly weekStart: string;
+  readonly weeks: number;
+  readonly sessions: readonly JournalStrengthSessionInput[];
+}): ReadonlyMap<string, readonly { weekStart: string; topSet: StrengthTopSet }[]> {
+  const byWeek = new Map<string, JournalStrengthSessionInput[]>();
+  for (const session of input.sessions) {
+    const weekStart = journalWeekStartOf(session.date);
+    if (weekStart === null) continue;
+    const bucket = byWeek.get(weekStart);
+    if (bucket) bucket.push(session);
+    else byWeek.set(weekStart, [session]);
+  }
+
+  // OLDEST FIRST, because a trend is read left to right. `calendarWeeksBefore`
+  // returns most-recent-first, so this reverses it rather than re-deriving the
+  // week arithmetic a second time.
+  const window = [input.weekStart, ...calendarWeeksBefore(input.weekStart, input.weeks - 1)]
+    .slice()
+    .reverse();
+
+  const series = new Map<string, { weekStart: string; topSet: StrengthTopSet }[]>();
+  for (const weekStart of window) {
+    const tops = topSetsForSessions(byWeek.get(weekStart) ?? []);
+    for (const [exerciseName, topSet] of tops.entries()) {
+      const points = series.get(exerciseName);
+      if (points) points.push({ weekStart, topSet });
+      else series.set(exerciseName, [{ weekStart, topSet }]);
+    }
+  }
+  return series;
+}
+
+/**
  * One line per lift trained this week, heaviest first.
  *
  * ORDERED DETERMINISTICALLY, and the tie-break is not decoration: two lifts at
