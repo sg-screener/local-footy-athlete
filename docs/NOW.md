@@ -1,8 +1,42 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `4274e2f0` — **THE COACH UNIT'S LAW DOC IS
-  WRITTEN AND THE FIRST LEDGER DOOR IS BUILT.** Sam's boot fix below is still
-  UNSEEN on his phone and is still the first thing to look at.
+- **BRANCH:** `main` · **HEAD:** `adab18df` — **THE COACH TAB IS BACK AND IT
+  TALKS.** Slice 1 landed; S2 not started, as ordered. Sam's boot fix below is
+  still UNSEEN on his phone and is still the first thing to look at.
+
+- **⚠ SAM: THE COACH TAB IS THE SECOND THING TO LOOK AT.** Third tab, between
+  Program and Profile. It opens with your week in one short sentence — *"Game
+  Saturday. Strength today. Conditioning tomorrow."* — built from the same
+  projection the Program tab renders. **Type something and it will honestly say
+  it has no answer yet; that is slice 1, not a bug.** Nothing on that tab can
+  change your program. **The thing to watch: tap the input and see whether the
+  composer jumps above the keypad and settles back.**
+
+- **COACH SLICE 1 (2026-08-09).** `ee85c40e` (kickoff + mock as authored) ·
+  `c25c8b77` (the slice) · `adab18df` (the survivor + the duplicate).
+  **READ:** docs/COACH_SLICE1_BOUNDARY_2026-08-09.md · kickoff
+  docs/COACH_REBUILD_KICKOFF_2026-08-09.md · gate `test:coach-tab-slice1`
+  (57 cells).
+  - **THE TAB MOUNTS THE REBUILD, NOT THE SCREEN R5.7 CUT.** `CoachScreen` and
+    its stack stay frozen and UNREACHED — the kickoff's supersession answer to
+    the parked 41,220-line question, started rather than promised.
+  - **THE COACH'S WORDS FOR A DAY ARE THE WEEK ROW'S WORDS** —
+    `visibleDayLeadHeadline`, the same call `HomeScreenV2` makes, asserted on
+    both sides. Ruling 1 holds by construction, not by care.
+  - **L-C1 IS RETURNED AS DATA:** the opener carries the `grounds` it used, so
+    "the coach invented a fact" is a testable claim rather than a worry.
+  - **READ-ONLY IS AN IMPORT BAN,** not a promise — module families, because a
+    ban on a symbol is one rename from useless. **Zero new stored state.**
+  - **A MUTATION SURVIVED AND IT WAS THE INTERESTING ONE:** `'Tuesday'` →
+    `'Tues'` left 56/56 green, because the derived abbreviation `'Tue'` was
+    still correct. Both cells true; the athlete reads "Game Tues".
+  - **THE SWEEP FOUND A DUPLICATE PREDICATE THE CHAIN CANNOT SEE** — the same
+    tab-count cell in two suites. Four suites censused, all four re-aimed to
+    pin the SET rather than the count.
+  - **NOT COVERED, first line: DEPTH 0, NOBODY HAS SEEN THIS SCREEN.** No
+    keyboard case exercised — which is the half L-C3 calls a gate failure. The
+    opener has never run over an accumulated world. **Batch 30 is PROPOSED and
+    on the module, not the sheet.**
 
 - **THE OVERNIGHT COACH GROUNDWORK (2026-08-09 night).**
   **READ:** docs/COACH_DOORS_BOUNDARY_2026-08-09.md ·
@@ -159,12 +193,11 @@
     instrument counted a NAME; the claim was about CALL SITES.
 
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
-  `test:program-control-durable`, 1 FAIL line** — main's declared red.
-  `test:compile` PASSED, totals byte-identical to baseline (35/51/373).
-  **Sweep 2 of 171** = the declared set exactly. **The denominator moved
-  170 → 171 in the commit that earned it** (`test:program-control-decisions`,
-  which sits at position 100, past the chain's exit at 91 — the sweep is what
-  proves it).
+  `test:program-control-durable`, 1 FAIL line** — main's declared red, 92
+  suites reached. `test:compile` PASSED, totals byte-identical to baseline
+  (35/51/373). **Sweep 2 of 172** = the declared set exactly. **The denominator
+  moved 171 → 172 in the commit that earned it** (`test:coach-tab-slice1`,
+  which sits past the chain's exit — the sweep is what proves it).
   **THE DENOMINATOR MOVED 169 → 170 IN THE COMMIT THAT EARNED IT**
   (`test:undo-reversal`), and it still names its instrument: chain steps /
   `npm run` suites / **sweep suites** are three different units (the sweep
@@ -210,10 +243,13 @@
     fork above is no longer abstract: the calendar-mark finding is that same
     §3 fork, reproduced in the athlete's most visible feature.**
 
-- **COACH REBUILD IS AFTER UNDO, NOT NOW** (seat is preparing its kickoff). Note
-  for its design, per Sam: **the journal's behind-the-scenes record — load,
-  regions, feel, niggles — is an INPUT to coach intelligence.** That is why the
-  data layer stayed live and why every journal suite is pinned in the chain.
+- **COACH REBUILD IS OPEN AND SLICE 1 IS LANDED** (see the top of this file).
+  S2 (*it answers from the brain*) is next and is NOT started. Sam's note still
+  governs S4: **the journal's behind-the-scenes record — load, regions, feel,
+  niggles — is an INPUT to coach intelligence.** That is why the data layer
+  stayed live and why every journal suite is pinned in the chain.
+  Ten unordered coach feature ideas are parked at
+  docs/PARKED_QUESTIONS/COACH_WOW_IDEAS_2026-08-09.md (untracked, not mine).
 
 - **STRUCK BY THE HIDE:** C4 (the week bars' colours), the three proof answers,
   "March 2025", 08:00 as the hour, the restored lifts line, the in-app off

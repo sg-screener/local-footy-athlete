@@ -5,6 +5,110 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-eighth pass) — THE TAB TALKS, AND THE WORDS ARE THE WEEK'S OWN
+
+- **ONE LINE: the coach tab is back at the navigation owner and it speaks from
+  the same projection the Program tab renders — the day's name in the coach's
+  mouth is the SAME FUNCTION CALL the week row makes, not an equivalent rule —
+  and it can change nothing, structurally, because it imports no writer.**
+  `ee85c40e` (kickoff + mock as authored) · `c25c8b77` (the slice) · `adab18df`
+  (the survivor and the duplicate). Boundary:
+  docs/COACH_SLICE1_BOUNDARY_2026-08-09.md
+- **ITEM 1 PROCESSED IN FULL, STOPPED BEFORE S2 AS ORDERED.**
+  LOOP CHECK `kickoff-carries-owner-rulings-as-laws` sighting 2 — **iterate,
+  and it paid before a line was written.** L-C1 decided a wording question Sam
+  would otherwise have had to rule: ruling 1 asked for a shorter opener, and the
+  LAW said which part to cut — the mock's three clauses of REASONING ("so this
+  week trains heavy early… then we back off Friday") are exactly the part that
+  would have had to be invented.
+- **THE ONE DECISION THAT WAS NOT OBVIOUS: THE TAB DOES NOT MOUNT THE SCREEN
+  R5.7 CUT.** The R5.7 comment's promise — *"restoring the tab is one
+  `Tab.Screen` block"* — is true and was the wrong move: that block restores a
+  mutation-capable pipeline with unsigned copy on day one of a rebuild whose
+  ruling is that ten representations collapse to two. `CoachScreen` and its
+  stack are **untouched and UNREACHED**. The kickoff's answer to the parked
+  41,220-line question is supersession, and this is it started rather than
+  promised.
+- **RULING 1 HOLDS BY CONSTRUCTION, NOT BY CARE.** The opener names a day
+  through `visibleDayLeadHeadline` — the same call `HomeScreenV2` makes — and
+  BOTH SIDES are asserted, so the day they disagree is the day somebody deletes
+  the shared owner, not the day somebody writes a second rule. It goes stricter
+  than the existing `coachView`, which drops `bucket` and would have forced
+  exactly that second rule.
+- **L-C1 IS RETURNED AS DATA RATHER THAN ASSERTED AS PROSE.** The opener carries
+  the `grounds` it was entitled to use, so *"does every day the coach names
+  exist in the week it was given, under that day's own projected name?"* is a
+  cell instead of a worry. **READ-ONLY IS AN IMPORT BAN** of module FAMILIES —
+  a ban on `programStore` is one rename from useless. **Zero new stored state;
+  north star NEUTRAL, edging TOWARD** — the slice adds a reader and deliberately
+  declines to add a writer, which is the whole mechanism by which the coach gets
+  undo and durability free.
+- **A MUTATION SURVIVED AND IT WAS THE INTERESTING ONE.** `'Tuesday'` → `'Tues'`
+  left the gate **56/56 green**: the cell checked the length and the two ENDS,
+  and the derived-abbreviation cell stayed green beside it because
+  `'Tues'.slice(0,3)` is still `'Tue'`. **Both cells true, and the athlete reads
+  "Game Tues".** The seven words ARE batch 30 copy — copy is pinned by its
+  words. Re-aimed to all seven plus seven consecutive real dates walked through
+  the table, because a correct set in the wrong ORDER passes a set comparison.
+- **THE SWEEP FOUND A DUPLICATE PREDICATE THE CHAIN CANNOT SEE.** Re-aiming
+  "two tabs, not three" in `journalHiddenContractTests` left an IDENTICAL cell
+  red in `journalWeekTests` — one predicate, two suites, counted once, both past
+  the chain's exit. **Censused rather than assumed: four suites assert on the
+  tab set, all four re-aimed, no fifth** — and the census had to run twice,
+  because the first grep matched the literal `Tab.Screen` and missed every suite
+  that spells it `Tab\.Screen` inside a regex. All four now pin the SET, which
+  reds on an arrival AND on a silent disappearance where a count reds on one.
+- **MY OWN INSTRUMENT FAILED THE ANCHORING LAW ON ITS FIRST RUN:**
+  `<Tab\.Screen…[\s\S]*?\/>` stopped at the INLINE `<CoachIcon … />` and
+  returned a slice that was non-trivial, read as a block, and did not contain
+  the option being asserted. A length check passed it; proving the region
+  contains its LAST LINE reds it. **`a count taken for a record` — THIRTEENTH
+  SIGHTING**, same gate, same run: a file-wide sweep for `speaker: 'coach'`
+  counted two, and the second was the TYPE DECLARATION.
+- **A RECORD WHOSE STATED REASON CAME TRUE.** Batch 11-e's dormancy record for
+  "Ask Coach" said the tab was *"one `Tab.Screen` block from returning"*. It has
+  returned; the ruling is unchanged (the rebuilt tab is a new screen without
+  those words) but the record is corrected rather than left reading as a
+  prediction.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  **1 FAIL cell** — main's declared red, 92 suites reached. `test:compile`
+  PASSED, totals byte-identical **35/51/373**. **Sweep 2 of 172 = the declared
+  set exactly**; denominator moved 171 → 172 in the commit that earned it. New
+  gate `test:coach-tab-slice1` **57 cells, 12 mutations 12 red.** Copy
+  extraction ceiling UNCHANGED at 576.
+- **NOT COVERED, first line: DEPTH 0, NOBODY HAS SEEN THIS SCREEN.** Not one
+  keyboard case has been exercised — **which is precisely the half L-C3 declares
+  a GATE failure**, and this pass cannot close it. The likeliest defect is
+  named with its symptom: `tabBarHideOnKeyboard` and `KeyboardStickyView` are
+  two animations on two clocks, which is the run-4 overshoot's exact shape —
+  watch for the composer jumping above the keypad and settling back. **The
+  opener has never run over an accumulated world (L13 depth 0.)**
+- **PARKED FOR SAM:** batch 30's words; the mock's three chips, held to S3 with
+  a reason; and whether the coach should say *"I don't have an answer for that
+  yet"* rather than the tab shipping with a dead input. Carried unchanged: the
+  frozen coach tree, the athlete-tap-attributed-to-coach writer id, the three
+  unbuilt ledger fact destinations, the journal/copy items.
+
+
+### The order the fifty-eighth pass processed, as the seat wrote it
+
+1. COACH REBUILD OPENS — KICKOFF SIGNED BY MOCK (seat, 2026-08-09).
+   Sam approved docs/COACH_TAB_MOCK_2026-08-09.html with three
+   rulings; docs/COACH_REBUILD_KICKOFF_2026-08-09.md carries them as
+   laws L-C1 (the coach's knowledge IS the Bible + rulings; never
+   invents policy; asks when no rule answers), L-C2 (no mutation
+   without the change card, rendered from the action itself), L-C3
+   (Nike bar: keyboard occlusion / dead zones / reachability are
+   GATE failures from slice 1). Commit both docs as authored, then
+   open SLICE 1: the tab restored at the navigation owner, the
+   conversation shell to the L-C3 bar, a SHORT real-data opener,
+   read-only, zero mutation paths, every word PROPOSED. Full chain,
+   short boundary, stop before S2. LR-6 lifts exactly as far as the
+   kickoff's slice plan says and no further.
+   LOOP CHECK: kickoff-carries-owner-rulings-as-laws — sighting 2
+   (undo's one-step ruling was 1) — iterate.
+
+
 ## Processed 2026-08-09 (fifty-seventh pass, OVERNIGHT) — TEN REPRESENTATIONS, AND A REAL BUG UNDER THEM
 
 - **ONE LINE: the coach unit's opening law doc is written and RULED — ten
