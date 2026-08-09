@@ -138,12 +138,45 @@ const AUTHORING_MODULES = [
  */
 const SURFACE_ROOTS = ['screens', 'components', 'navigation'];
 
+/**
+ * A COMMENT IS NOT A SHIPPED STRING, AND THIS GATE COULD NOT TELL — FIXED
+ * 2026-08-09, FOURTH SIGHTING, AND IT WAS FILED AS LATENT DEBT IN THIS EXACT
+ * GATE THE DAY BEFORE.
+ *
+ * The UI slice hit this shape three times in one commit and closed it at each of
+ * its own new cells, then wrote down that the binder's RETIRED cell had the
+ * identical gap and did not fix it. It stopped being latent the next morning.
+ *
+ * HOW IT SURFACED, WHICH IS THE ONLY REASON IT IS FIXED RATHER THAN FILED AGAIN.
+ * Sam's decision C3 restored "No lifts recorded with a weight this week." to the
+ * lifts card. Mutation-testing that restoration — deleting the line again —
+ * reddened both journal suites and left THIS gate green, because the sentence
+ * also appears in a docblock four hundred lines up explaining that Sam restored
+ * it. **The gate would have reported a signed string as shipping while the app
+ * did not say it**, and the comment keeping it green was a comment about the
+ * very ruling being violated.
+ *
+ * IT IS THE WRONG ANSWER IN BOTH DIRECTIONS, not just this one. A RETIRED string
+ * quoted in a comment that documents its retirement reads as the old wording
+ * surviving in the app — a false RED, which is how a gate gets weakened by
+ * whoever next has to make it pass.
+ *
+ * SO THE STRIP IS AT THE SOURCE READER, once, rather than at each of the four
+ * cells that read `SOURCES`. Four call sites remembering to strip is three
+ * chances to forget.
+ */
+function stripComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+}
+
 function surfaceSources(): { file: string; text: string }[] {
   const dirs = SURFACE_ROOTS;
   const out: { file: string; text: string }[] = [];
+  const add = (rel: string, full: string) =>
+    out.push({ file: rel, text: stripComments(fs.readFileSync(full, 'utf8')) });
   for (const rel of AUTHORING_MODULES) {
     const full = path.join(ROOT, 'src', rel);
-    if (fs.existsSync(full)) out.push({ file: rel, text: fs.readFileSync(full, 'utf8') });
+    if (fs.existsSync(full)) add(rel, full);
   }
   const walk = (dir: string) => {
     const full = path.join(ROOT, 'src', dir);
@@ -151,9 +184,7 @@ function surfaceSources(): { file: string; text: string }[] {
     for (const entry of fs.readdirSync(full, { withFileTypes: true })) {
       const rel = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(rel);
-      else if (/\.(ts|tsx)$/.test(entry.name)) {
-        out.push({ file: rel, text: fs.readFileSync(path.join(ROOT, 'src', rel), 'utf8') });
-      }
+      else if (/\.(ts|tsx)$/.test(entry.name)) add(rel, path.join(ROOT, 'src', rel));
     }
   };
   dirs.forEach(walk);
@@ -190,10 +221,66 @@ run('every string Sam RETIRED is gone from the surfaces', () => {
     `wording Sam replaced is still in the app:\n        ${offences.join('\n        ')}`);
 });
 
+/**
+ * STRINGS THE SHEET RECORDS AS LIVE THAT THE APP NO LONGER SAYS — EACH WITH THE
+ * RECORD THAT ALREADY RULED ON IT.
+ *
+ * ALL THREE WERE FOUND THE MOMENT COMMENTS STOPPED COUNTING, on 2026-08-09, and
+ * none of them is new: each has been absent from the app for at least one unit
+ * while this gate reported it shipping, because in every case the sentence
+ * survives in a comment explaining its own removal. **A gate that reads a
+ * comment as a shipped string does not merely miss a defect — it reports the
+ * opposite of the truth, and it reports it most confidently about exactly the
+ * strings someone took the trouble to document.**
+ *
+ * THEY ARE NAMED AND NOT FIXED HERE, WHICH IS A SCOPE CALL. This list is
+ * pre-existing debt surfaced by a new instrument during a signing session about
+ * the Journal. Re-litigating three older batches inside that commit is how a
+ * unit stops being reviewable; each entry cites the record that already covers
+ * it, and an entry with no record cannot be added.
+ */
+const KNOWN_ABSENT: readonly { text: string; record: string }[] = [
+  {
+    text: 'Ask Coach',
+    record: 'batch 11-e — RULED DORMANT, NOT RETIRED. The R5.7 beta cut removed '
+      + 'the coach surfaces; LR-6 freezes CoachScreen and the pipeline in the tree '
+      + 'and the tab is one Tab.Screen block from returning, so 11-e states in so '
+      + 'many words that its absence from the UI must not be read as a retirement '
+      + 'nobody signed. Withdrawing it here would BE that retirement.',
+  },
+  {
+    text: 'Edit this session',
+    record: 'batch 6-III, Task 4 ruling 7 — the intermediate menu was deleted and '
+      + 'its strings retired with it, recorded in prose and in the ceiling drop '
+      + '(166 -> 164) but never in a form this parser reads.',
+  },
+  {
+    text: 'Edit exercises',
+    record: 'batch 6-III, Task 8 ruling 12 — the modal was retired for inline '
+      + 'editing. Same shape as the row above: the retirement is recorded, the '
+      + 'string was left standing as a proposal.',
+  },
+];
+
+const ABSENT_TEXT = new Set(KNOWN_ABSENT.map((entry) => entry.text));
+
+run('every known-absent string names the record that ruled on it', () => {
+  // AN EXCEPTION LIST IS A PLACE TO HIDE THINGS UNLESS IT COSTS SOMETHING TO ADD
+  // TO. Each entry must cite a batch, so "it was already broken" cannot be
+  // written down as a reason.
+  const unjustified = KNOWN_ABSENT
+    .filter((entry) => !/batch \d+/.test(entry.record) || entry.record.length < 60)
+    .map((entry) => `"${entry.text}"`);
+  assert(unjustified.length === 0,
+    `a known-absent string does not cite the batch that ruled on it: ${unjustified.join(', ')}`);
+  console.log(`      known-absent, each with a record: ${KNOWN_ABSENT.length}`);
+});
+
 run('every string Sam SIGNED is in the surfaces', () => {
   // Direction two. A ruling that was recorded but never applied is a ruling he
   // will have to make twice.
   const missing = RULED
+    .filter((ruling) => !ABSENT_TEXT.has(ruling.next))
     .filter((ruling) => !SOURCES.some((source) => source.text.includes(ruling.next)))
     .map((ruling) => `"${ruling.next}"`);
   assert(missing.length === 0,
@@ -322,6 +409,7 @@ run('the proposed batch is not empty', () => {
 
 run('every PROPOSED string is actually in the app', () => {
   const missing = PROPOSED
+    .filter((entry) => !ABSENT_TEXT.has(entry.text))
     .filter((entry) => !SOURCES.some((source) => source.text.includes(entry.text)))
     .map((entry) => `${entry.batch}: "${entry.text}"`);
   assert(missing.length === 0,

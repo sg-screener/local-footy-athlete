@@ -1688,7 +1688,7 @@ about his athlete's week and gets ruled as one.
 
 | Where | PROPOSED string |
 | --- | --- |
-| Section heading | "Niggles" |
+| Section heading | WITHDRAWN: "Niggles" — batch 26-a |
 | No episodes recorded | WITHDRAWN: "No niggles recorded." — batch 26-a |
 
 **21-b. THE TWO COUNTED LINES**, in template form for batch 15-d's reason:
@@ -1948,6 +1948,7 @@ prevent.
 | 24-d | WITHDRAWN: "What you changed" | Section heading. The ruling makes this a credit line INSIDE the hero, on weeks it happened. |
 | 25 | WITHDRAWN: "You made no changes to this week." | **Retired by the ruling itself**, verbatim: "one credit line inside the hero on weeks a change happened, nothing otherwise." |
 | 21 | WITHDRAWN: "No niggles recorded." | **Retired by the ruling itself**, verbatim: "never standing furniture." |
+| 21 | WITHDRAWN: "Niggles" | Section heading. **MISSED BY THIS TABLE WHEN IT WAS WRITTEN and added 2026-08-09**: 26-a's own extraction attribution counts "Niggles" among its six retired headings, and the heading did leave the app — but no row here said so, so the binder went on asserting a heading that no longer exists. Found by the comment-strip below, not by a reader. |
 
 **26-b. ONE REPLACEMENT, NOT A WITHDRAWAL.**
 
