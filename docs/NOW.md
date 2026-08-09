@@ -1,13 +1,36 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** the boot armour below — **A BOOT DIED ON A
-  SHAPE; THE FATAL CLASS IS FIXED, AND SAM'S OWN FAILURE IS UNCONFIRMED.**
+- **BRANCH:** `main` · **HEAD:** the anchor recovery below — **SAM'S BOOT
+  FAILURE IS ROOT-CAUSED AND FIXED; THE CURE IS UNSEEN ON HIS PHONE.**
 
-- **⚠ SAM: TRY THE BUILD AGAIN.** The regression found is real and was mine:
-  ONE unreadable persisted ledger row could kill the whole boot. It cannot now.
-  **But his exact failure was never read off his phone** — if it still fails,
-  the next thing needed is the install-over accumulated-world reproduction that
-  this pass did NOT build.
+- **⚠ SAM: REBUILD RELEASE AND OPEN IT.** The boot error screen was
+  `missing_generation_anchor` — **neither of the two suspects.** His world was
+  built across pre-2026-08-06 eras and never stored a generation anchor at all,
+  so the boot refused **permanently** and Try Again was correctly useless.
+
+- **THE ANCHOR RECOVERY (fifty-sixth pass).**
+  - **ROOT CAUSE, with receipts:** "the anchor rides the program it anchors"
+    (Sam, 2026-08-06); `generateProgram.ts:998` is the only stamp and it
+    postdates his program; the old-shape envelope migration carries the absence
+    forward (`programStore.ts:361`). **Never written — not a wipe, not a
+    partialize gap.**
+  - **THE REFUSAL STAYS RIGHT.** `?? todayISOLocal()` deleted worn athletes'
+    weeks; **nothing here reads the device clock.**
+  - **THE WORLD IS ASKED WHAT IT REMEMBERS** instead
+    (`rules/generationAnchorRecovery.ts`): stored anchor → **its own earliest
+    microcycle start** → oldest ledger decision. **A world testifying to
+    NOTHING still refuses, typed.**
+  - **NO WRITE, NO NEW STORED STATE.** The recovery is derived; the rebuild
+    re-stamps the anchor, so the world heals itself without reaching around the
+    store's write owner.
+  - **`wornWorldBootTests` CAUGHT IT AND WAS RE-AIMED, NOT LOOSENED** — its law
+    is "do not invent today", never "always refuse". It now pins that a
+    recovered world reproduces the athlete's weeks EXACTLY and never lands on
+    today. **This is also the install-over reproduction the standing order
+    demanded: red before, green after, on an ACCUMULATED world. The
+    fifty-fifth pass's debt is PAID.**
+  - **NEITHER SUSPECT FIRED.** (a) was real, mine, and fixed at `1682f6fd` —
+    but it was not his failure. (b) was never implicated.
 
 - **THE BOOT ARMOUR (fifty-fifth pass).**
   - **THE REGRESSION WAS MINE, at `ca89ff7f`:** `replayableEntries` throws on a

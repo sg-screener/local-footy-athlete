@@ -43,6 +43,7 @@ import {
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
+import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
 import { logger } from '../utils/logger';
 
 // The parking key + old-shape detector live at the boundary that enforces
@@ -328,7 +329,44 @@ export async function rebuildDerivedWorld(): Promise<void> {
   // decision never rebases from a stored week" — a derivation quietly
   // authoring an input it was supposed to read. Absent anchor is a typed
   // REFUSAL, reported through the boot's own failure surface, never a guess.
-  const generationISO = storeState.generationAnchorISO;
+  // A LEGACY WORLD IS ASKED WHAT IT REMEMBERS BEFORE IT IS REFUSED
+  // (2026-08-09, after a real device could not open).
+  //
+  // The refusal below is CORRECT and stays: `?? todayISOLocal()` was not a
+  // fallback, it was the only branch that ever ran, and it deleted the week
+  // worn athletes were standing in. Nothing here consults the device clock.
+  //
+  // But a world built across pre-2026-08-06 eras never stored an anchor at all
+  // — "the anchor rides the program it anchors", and a program generated before
+  // that ruling carries no such field — so the refusal was permanent and the
+  // athlete's app could never open again. `recoverGenerationAnchor` reads what
+  // the world itself testifies to (its own earliest week, or its oldest
+  // decision) and refuses only a world that testifies to nothing. Same move as
+  // `preRebuildEnvelopeMigration`: read the result the old world stored rather
+  // than invent the intent it never recorded.
+  let generationISO = storeState.generationAnchorISO;
+  if (!generationISO) {
+    const recovered = recoverGenerationAnchor({
+      storedAnchorISO: storeState.generationAnchorISO,
+      program: useProgramStore.getState().currentProgram as never,
+      ledger: decisionLedgerEntries(),
+    });
+    if (recovered) {
+      generationISO = recovered.anchorISO;
+      // REPORTED, NEVER SILENT. A recovered anchor is a world being repaired,
+      // and a repair nobody can see is indistinguishable from a world that was
+      // always fine.
+      logger.error('[quiescentBoot] generation anchor RECOVERED from the world itself', {
+        anchorISO: recovered.anchorISO, evidence: recovered.evidence,
+      });
+      // NOTHING IS WRITTEN HERE, deliberately. The recovery is DERIVED from
+      // the world's own program, so it is the same answer on every boot — and
+      // the rebuild below stamps the anchor onto the program it commits
+      // (`weekRebuild.ts:800`), so the world heals itself without this door
+      // reaching around the store's write owner. No new stored state; the
+      // store-armour law is not bent for a repair.
+    }
+  }
   if (!generationISO) {
     throw new MissingGenerationAnchorError();
   }

@@ -300,18 +300,51 @@ const main = async () => {
       + 'that is the week-identity law');
   });
 
-  // ── 4. NO ANCHOR IS A REFUSAL, NOT TODAY ────────────────────────────────
-  // The forbidden fallback's replacement, proved rather than asserted in a
-  // comment. A world whose persisted inputs carry no anchor must REFUSE
-  // audibly — `appHydrationGate` turns this into the boot error screen with
-  // its Try Again — because the alternative is the defect this unit closed:
-  // deriving a confident, wrong week from a guessed day.
-  await run('a world with no recorded anchor REFUSES, and does not invent today', async () => {
+  // ── 4. NO ANCHOR IS NEVER TODAY — RECOVERED WHERE THE WORLD TESTIFIES,
+  // ──    REFUSED WHERE IT DOES NOT ───────────────────────────────────────
+  //
+  // RE-AIMED 2026-08-09, after a real device could not open. This cell used to
+  // assert that a world with no anchor ALWAYS refuses, and it reddened the day
+  // recovery landed — correctly, because it is the gate on this exact line.
+  //
+  // Its law was never "always refuse". Its law is the one in its own title:
+  // **do not invent today.** `?? todayISOLocal()` was not a fallback, it was
+  // the only branch that ever ran, and it re-anchored worn athletes to today
+  // and deleted the week they stood in. A world's OWN earliest week is not
+  // today and cannot drift forward, so recovering from it breaks no part of
+  // that ruling — while permanent refusal left Sam's install-over world unable
+  // to open, ever, with Try Again correctly useless.
+  //
+  // So the cell now pins BOTH halves, and the second is the one that keeps the
+  // ruling: a world that testifies to NOTHING still refuses, audibly and
+  // typed, and no recovery may ever land on today.
+  await run('no anchor RECOVERS from the world\'s own evidence, never from today', async () => {
     reachWornWorldByActing();
     await relaunch();
-    // Take the anchor away — the shape a pre-ruling world can still be in.
     useProgramStore.setState({ generationAnchorISO: null } as never);
     const beforeWeeks = programState().weeks.join(', ');
+    await quietAsync(() => rebuildDerivedWorld());
+    const afterWeeks = programState().weeks.join(', ');
+    assert(afterWeeks === beforeWeeks,
+      `recovery moved the athlete's weeks: ${beforeWeeks} → ${afterWeeks}. `
+      + 'A recovered anchor must reproduce the world, not re-cut it.');
+    // THE RULING, ASSERTED DIRECTLY: whatever was recovered, it is not today.
+    const todayISO = todayISOLocal();
+    assert(!afterWeeks.includes(todayISO),
+      `the recovered world contains today (${todayISO}) as a week start — that is `
+      + 'the re-anchoring this unit deleted');
+  });
+
+  await run('a world that testifies to NOTHING still refuses, typed and audibly', async () => {
+    // The boundary of the recovery, and the half that keeps the ruling intact.
+    // No program, no ledger: there is no honest anchor to read, and inventing
+    // one is the forbidden move.
+    reachWornWorldByActing();
+    await relaunch();
+    useProgramStore.setState({
+      generationAnchorISO: null, currentProgram: null, currentMicrocycle: null,
+    } as never);
+    useDecisionLedgerStore.getState().clear();
     let refusal: Error | null = null;
     try {
       await quietAsync(() => rebuildDerivedWorld());
@@ -319,14 +352,9 @@ const main = async () => {
       refusal = error as Error;
     }
     assert(refusal !== null,
-      `no anchor, and the rebuild proceeded anyway (weeks: ${programState().weeks.join(', ')}). `
-      + 'That is the guess this unit deleted.');
+      'a world with no evidence at all did not refuse — recovery invented an anchor');
     assert((refusal as unknown as { code?: string }).code === 'missing_generation_anchor',
       `the refusal is not typed — code was ${(refusal as unknown as { code?: string }).code}`);
-    const afterWeeks = programState().weeks.join(', ');
-    assert(afterWeeks === beforeWeeks,
-      `the refusal still moved the program: ${beforeWeeks} → ${afterWeeks}. `
-      + 'A refusal changes nothing (L-C4).');
   });
 
   console.log(`\n  Worn-world boot totals: ${passed} passed, ${failed} failed`);

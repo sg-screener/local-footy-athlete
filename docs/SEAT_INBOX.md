@@ -5,6 +5,66 @@
 (none)
 
 
+## Processed 2026-08-09 (fifty-sixth pass) — THE ANCHOR WAS NEVER STORED, AND A CORRECT REFUSAL WAS A LIFE SENTENCE
+
+- **ONE LINE: root-caused with receipts — Sam's world was built across
+  pre-2026-08-06 eras, "the anchor rides the program it anchors", and a program
+  generated before that ruling carries no such field — so his world reaches boot
+  with no anchor ANYWHERE and the refusal is permanent.** Items 0a, 0 and 1
+  processed together; 0a supersedes the other two.
+- **THE RECEIPTS, all three named as ordered:** `generationAnchorForProgram`
+  (`programStore.ts:328`) returns null when `program.generationAnchorISO` is
+  absent; `generateProgram.ts:998` is the only stamp and it postdates his
+  program; and **the old-shape envelope migration faithfully carries the absence
+  forward** (`programStore.ts:361`, `state.generationAnchorISO ?? null`). **Not
+  a partialize gap and not a wipe — it was never written.**
+- **THE REFUSAL WAS RIGHT AND STAYS RIGHT.** `?? todayISOLocal()` was not a
+  fallback, it was the only branch that ever ran, and it deleted the week worn
+  athletes stood in. **Nothing in this pass consults the device clock.**
+- **SO THE WORLD IS ASKED WHAT IT REMEMBERS** (`rules/generationAnchorRecovery.ts`,
+  the `preRebuildEnvelopeMigration` precedent — read the result the old world
+  stored rather than invent the intent it never recorded). Strongest evidence
+  first: a stored anchor; **the program's own earliest microcycle start**; the
+  oldest ledger decision. **A world that testifies to NOTHING is still refused,
+  typed and audibly** — that boundary is the half that keeps the ruling.
+- **ZERO NEW STORED STATE, AND NO WRITE AT ALL.** The recovery is DERIVED, so it
+  is the same answer every boot, and `commitRebuiltProgram` stamps the anchor
+  onto the program it commits (`weekRebuild.ts:800`) — **the world heals itself
+  without the boot reaching around the store's write owner.** North star: TOWARD.
+- **THE STANDING GATE CAUGHT IT AND WAS RE-AIMED, NOT LOOSENED.**
+  `wornWorldBootTests` cell 4 reddened the moment recovery landed — correctly,
+  it is the gate on this exact line. **Its law was never "always refuse"; it is
+  the one in its own title: do not invent today.** It now pins BOTH halves: a
+  recovered world must reproduce the athlete's weeks EXACTLY (asserted
+  byte-for-byte against the pre-recovery week list) and must not contain today
+  as a week start; and a world with no evidence still refuses. **5 cells, 5
+  pass.**
+- **THIS IS THE INSTALL-OVER REPRODUCTION THE STANDING ORDER DEMANDED, and the
+  debt from the fifty-fifth pass is PAID.** It runs on `reachWornWorldByActing`
+  — an ACCUMULATED world, not a fresh one — strips the anchor to the shape a
+  pre-ruling world is genuinely in, and boots. **Red before the fix
+  (`missing_generation_anchor`), green after.** It is a standing chain member,
+  which is the ordered compression.
+- **NEITHER SUSPECT FIRED, and both are now closed out honestly:** (a) the
+  unreadable-row throw was real, mine, and fixed at `1682f6fd` — **but it was
+  not Sam's failure**; (b) the deleted mark-writer was never implicated. The
+  device line named a third thing neither of us had listed.
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  1 FAIL line — main's declared red. `test:compile` PASSED. **Sweep 2 of 170 =
+  the declared set exactly.** `test:worn-world-boot` 5/5, `test:quiescent-boot`
+  4/4, `test:undo-reversal` 17/17.
+- **NOT COVERED, first line: NO DEVICE EVIDENCE FOR THE FIX.** The failure was
+  read off Sam's screenshot; **the cure has not been seen on his phone.** The
+  recovery is proven on the worn-world fixture, whose anchor was REMOVED to
+  simulate his world — a real pre-ruling program may be missing more than the
+  anchor, and this pass cannot say it is not. **Sam rebuilds Release; that is
+  the only instrument that closes this.**
+- **ALSO NOT COVERED:** which evidence tier his world will actually use is
+  unknown (almost certainly `earliest_microcycle_start`), and a world whose
+  stored program is itself unreadable would fall through to the ledger tier,
+  which no cell exercises against a real program shape.
+
+
 ## Processed 2026-08-09 (fifty-fifth pass) — A BOOT DIED ON A SHAPE, AND THE FILTER WAS THE NEW WAY IN
 
 - **ONE LINE: reproduced at the unit — `replayableEntries` THROWS on an
