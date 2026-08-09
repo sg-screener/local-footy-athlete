@@ -367,6 +367,32 @@ export function journalWeekStartOf(dateISO: string): string | null {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * The `count` CALENDAR weeks immediately before `weekStart`, most recent first.
+ *
+ * THE WORD "CALENDAR" IS THE WHOLE POINT, and the first version of this module
+ * got it wrong. It took the four most recently RECORDED weeks, which is a
+ * different set the moment an athlete stops logging: a normal built from weeks
+ * -1, -2, -3 and -20 is not a four-week normal, it is four scattered weeks
+ * wearing that name, and the ratio computed against it would be confidently
+ * false. "Rolling 4-week normal" in Sam's ruling means the four weeks that just
+ * happened, and a gap in them is a gap — which the coverage rules then refuse
+ * on, rather than quietly reaching further back to fill.
+ */
+export function calendarWeeksBefore(
+  weekStart: string,
+  count: number,
+): readonly string[] {
+  const weeks: string[] = [];
+  const date = new Date(`${weekStart}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return weeks;
+  for (let index = 0; index < count; index += 1) {
+    date.setUTCDate(date.getUTCDate() - 7);
+    weeks.push(date.toISOString().slice(0, 10));
+  }
+  return weeks;
+}
+
 // ─── Layer 1: the two native streams ─────────────────────────────────────
 
 function positive(value: unknown): number | null {
@@ -646,10 +672,10 @@ function totalsForWeek(
  */
 function compareStream(
   thisWeek: number,
-  history: readonly number[],
+  /** The window's weeks in calendar order, 0 where the week holds nothing. */
+  windowValues: readonly number[],
 ): StreamComparison | null {
-  const window = history.slice(0, JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value);
-  const withData = window.filter((value) => value > 0);
+  const withData = windowValues.filter((value) => value > 0);
   if (withData.length < JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value) return null;
   const normal = withData.reduce((sum, value) => sum + value, 0) / withData.length;
   if (normal <= 0) return null;
@@ -681,6 +707,21 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     .filter((weekStart) => weekStart < input.weekStart)
     .sort((a, b) => b.localeCompare(a))
     .map((weekStart) => totalsForWeek(weekStart, byWeek.get(weekStart) ?? []));
+
+  /**
+   * A window's weeks, resolved to totals. A calendar week the athlete recorded
+   * nothing in resolves to `null` — an absent week, not a zero one — and each
+   * reader decides what absence means for it. Both readers exclude it, and both
+   * then find themselves short of their window, which is the refusal.
+   */
+  const windowTotals = (count: number): readonly (JournalLoadWeekTotals | null)[] =>
+    calendarWeeksBefore(input.weekStart, count)
+      .map((weekStart) => {
+        const sessions = byWeek.get(weekStart);
+        return sessions ? totalsForWeek(weekStart, sessions) : null;
+      });
+
+  const streamWindow = windowTotals(JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value);
 
   // ── Coverage: derived from NO constant, so it stands signed ──
   const coverage = derived<JournalLoadCoverage>({
@@ -718,13 +759,13 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
   const strengthComparison = coverageOk
     ? compareStream(
       thisWeek.strengthMainLiftTonnageKg,
-      history.map((week) => week.strengthMainLiftTonnageKg),
+      streamWindow.map((week) => week?.strengthMainLiftTonnageKg ?? 0),
     )
     : null;
   const conditioningComparison = coverageOk
     ? compareStream(
       thisWeek.conditioningSRPE,
-      history.map((week) => week.conditioningSRPE),
+      streamWindow.map((week) => week?.conditioningSRPE ?? 0),
     )
     : null;
 
@@ -757,23 +798,32 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
   );
 
   // ── Layer 3: observation lines, never diagnosis ──
-  const regionWindow = history.slice(
-    0,
+  //
+  // THE SAME CALENDAR WINDOW, for the same reason. "Biggest week in the last
+  // four weeks" is a sentence about four weeks that happened; counting the last
+  // four weeks the athlete happened to log would make it a sentence about an
+  // unbounded stretch of time, and the line says a number of weeks out loud.
+  const regionWindow = windowTotals(
     JOURNAL_LOAD_CONSTANTS.regionNormalWindowWeeks.value,
   );
+  // Weeks that actually hold a record — what the line is honest to claim it
+  // looked at. A brand-new athlete does not hear "in the last 4 weeks".
+  const regionWeeksRecorded = regionWindow.filter((week) => week !== null).length;
   const observations: RegionObservation[] = [];
-  if (regionWindow.length > 0) {
+  if (regionWeeksRecorded > 0) {
     for (const [muscle, amount] of Object.entries(thisWeek.regions)) {
       const load = amount ?? 0;
       if (load <= 0) continue;
-      const previous = regionWindow.map((week) => week.regions[muscle as MuscleGroup] ?? 0);
-      const previousBest = previous.reduce((best, value) => Math.max(best, value), 0);
+      const previousBest = regionWindow.reduce(
+        (best, week) => Math.max(best, week?.regions[muscle as MuscleGroup] ?? 0),
+        0,
+      );
       if (previousBest > 0 && load > previousBest) {
         observations.push({
           region: muscle as MuscleGroup,
           thisWeek: load,
           previousBest,
-          weeksCompared: regionWindow.length,
+          weeksCompared: regionWeeksRecorded,
         });
       }
     }

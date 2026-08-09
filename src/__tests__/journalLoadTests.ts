@@ -49,6 +49,7 @@ armTotalsOrRed();
 import {
   JOURNAL_LOAD_CONSTANTS,
   buildJournalLoadModel,
+  calendarWeeksBefore,
   combineProvenance,
   conditioningSRPE,
   deriveSessionLoad,
@@ -389,6 +390,36 @@ console.log('\n[5] RATIO SPACE — the normal, and when the comparison is REFUSE
   ok('a week OLDER than the window does not move the normal',
     windowed !== null && windowed.normal === 400 && windowed.weeksUsed === 4,
     windowed);
+
+  // THE WINDOW IS CALENDAR WEEKS, NOT "THE LAST FOUR WEEKS I LOGGED IN". This
+  // is the cell that separates those two readings, and the first version of the
+  // module got it wrong: three recent weeks plus one from four months ago is
+  // four RECORDED weeks and is not a four-week normal. Nothing above would have
+  // noticed — every other fixture logs contiguously, which is exactly the
+  // condition under which the two readings agree.
+  const gappedHistory = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      ...measuredWeek(THIS_WEEK, 100),
+      ...measuredWeek(weeksBefore(THIS_WEEK, 1), 100),
+      ...measuredWeek(weeksBefore(THIS_WEEK, 2), 100),
+      ...measuredWeek(weeksBefore(THIS_WEEK, 3), 100),
+      ...measuredWeek(weeksBefore(THIS_WEEK, 17), 100), // four months ago
+    ],
+    sessionsPlannedThisWeek: 4,
+    plannedStrength: [],
+  });
+  ok('a gap in the window is a GAP — the normal does not reach back to fill it',
+    gappedHistory.strengthStream.value === null,
+    gappedHistory.strengthStream.value);
+  ok('and the module still REPORTS the old week as recorded history',
+    gappedHistory.history.length === 4,
+    gappedHistory.history.map((week) => week.weekStart));
+
+  ok('the calendar window is the four weeks that just happened, most recent first',
+    calendarWeeksBefore(THIS_WEEK, 4).join(',')
+      === [1, 2, 3, 4].map((n) => weeksBefore(THIS_WEEK, n)).join(','),
+    calendarWeeksBefore(THIS_WEEK, 4));
 
   const tooLittleHistory = buildJournalLoadModel({
     weekStart: THIS_WEEK,
