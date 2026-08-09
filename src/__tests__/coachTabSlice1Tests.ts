@@ -431,9 +431,29 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
 
 console.log('\n[6] WEEKDAYS — full words own the table, short forms are derived');
 {
-  ok('seven weekdays, Sunday first (JS order, matching dayOfWeekForISODate)',
-    WEEKDAY_NAMES.length === 7 && WEEKDAY_NAMES[0] === 'Sunday' && WEEKDAY_NAMES[6] === 'Saturday',
+  // ALL SEVEN WORDS, NOT THE TWO ENDS — a survivor found this cell, and the
+  // survivor is worth recording. It read `length === 7 && [0] === 'Sunday' &&
+  // [6] === 'Saturday'`, and a mutation changing 'Tuesday' to 'Tues' PASSED it:
+  // the derived-abbreviation cell below stayed green too, because 'Tues'.slice(
+  // 0, 3) is still 'Tue'. So both cells were true and the athlete would have
+  // read "Game Tues". These seven are BATCH 30 COPY, and copy is pinned by its
+  // words — the abbreviation is what is derived, never the word it comes from.
+  const EXPECTED_WEEKDAYS = [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ];
+  ok('the seven weekday words are exactly the seven batch 30 declares',
+    JSON.stringify(WEEKDAY_NAMES) === JSON.stringify(EXPECTED_WEEKDAYS),
     WEEKDAY_NAMES.join(','));
+
+  // AND THE TABLE IS INDEXED, NOT MERELY POPULATED. A correct set in the wrong
+  // ORDER satisfies the cell above perfectly. 2026-08-09 is a Sunday, so these
+  // seven consecutive dates walk the table start to finish through the one
+  // owner of the JS-weekday conversion.
+  const walkedWeek = ['09', '10', '11', '12', '13', '14', '15']
+    .map((dayOfMonth) => weekdayName(`2026-08-${dayOfMonth}`));
+  ok('and seven consecutive real dates read the table in order',
+    JSON.stringify(walkedWeek) === JSON.stringify(EXPECTED_WEEKDAYS),
+    walkedWeek.join(','));
 
   // THE C5 PRECEDENT, PROVEN RATHER THAN ASSERTED. Before today the abbreviation
   // list was its own array of seven literals. These are the seven it held; if

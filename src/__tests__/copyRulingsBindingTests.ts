@@ -255,10 +255,16 @@ const KNOWN_ABSENT: readonly { text: string; record: string }[] = [
   {
     text: 'Ask Coach',
     record: 'batch 11-e — RULED DORMANT, NOT RETIRED. The R5.7 beta cut removed '
-      + 'the coach surfaces; LR-6 freezes CoachScreen and the pipeline in the tree '
-      + 'and the tab is one Tab.Screen block from returning, so 11-e states in so '
-      + 'many words that its absence from the UI must not be read as a retirement '
-      + 'nobody signed. Withdrawing it here would BE that retirement.',
+      + 'the coach surfaces; LR-6 freezes CoachScreen and the pipeline in the tree, '
+      + 'so 11-e states in so many words that its absence from the UI must not be '
+      + 'read as a retirement nobody signed. Withdrawing it here would BE that '
+      + 'retirement. CORRECTED 2026-08-09: this said the tab was "one Tab.Screen '
+      + 'block from returning" and THE TAB HAS RETURNED (coach slice 1). The '
+      + 'ruling is unchanged and the string is still dormant — the rebuilt tab is '
+      + 'a NEW screen that does not carry these words, and the frozen CoachScreen '
+      + 'that does carry them is still unreached. A record whose stated reason has '
+      + 'come true is a record the next reader cannot trust, so it is corrected '
+      + 'rather than left to read as a prediction.',
   },
   {
     text: 'Edit this session',
