@@ -332,15 +332,31 @@ console.log('\n[5] ONE FILE TOUCHES THE NATIVE MODULE, AND THE RULE STAYS PURE')
   ok('a reschedule CANCELS FIRST inside the scheduler, so visits do not stack',
     cancelAt > 0 && scheduleAt > cancelAt, { cancelAt, scheduleAt });
 
-  // C6: "opens the Journal tab". The route travels in the payload.
+  // C6: "opens the Journal tab". The route travels in the payload — and it
+  // still does, because the machinery is FROZEN rather than retired.
   ok('the scheduled notification carries the Journal route in its payload',
     strip(service).includes("route: 'JournalTab'"));
+
+  // ─── RE-AIMED 2026-08-09: THE TAP DOOR WENT WITH THE TAB ───────────────
+  //
+  // These two cells asserted the navigator HANDLED a tap and guarded the
+  // route. Sam hid the Journal (docs/JOURNAL_HIDDEN_RULING_2026-08-09.md), so
+  // the tab the handler navigated to no longer exists — and navigating to a
+  // name the navigator does not know THROWS, with the athlete not yet in the
+  // app. The old cells' own comment called that the worst place in this app to
+  // crash, which is why the door is removed rather than left guarded.
+  //
+  // THEY ARE INVERTED, NOT DELETED, AND THE SECOND ONE IS THE STRONGER CLAIM.
+  // "Nothing can ever fire" is the ruling's own wording and it is only true of
+  // FUTURE schedules: the OS is this feature's store, and a weekly trigger it
+  // accepted before today keeps firing whether this app is opened or not. So
+  // the navigator must CANCEL, not merely decline to navigate.
   const nav = strip(readFileSync(join(root, 'navigation', 'AppNavigator.tsx'), 'utf8'));
-  ok('and the navigator handles a TAP, reading the route from the payload',
-    nav.includes('addNotificationResponseReceivedListener')
-    && nav.includes('content.data?.route'));
-  ok('the tap handler is guarded against an unknown route rather than navigating blind',
-    nav.includes("route !== 'JournalTab'"));
+  ok('the navigator handles NO notification tap — the door went with the tab',
+    !nav.includes('addNotificationResponseReceivedListener')
+    && !nav.includes('content.data?.route'));
+  ok('and it cancels the reminder on mount, because the OS kept what it was given',
+    /disableJournalReminder\s*\(\s*\)/.test(nav));
 
   // THREE OF THE FIVE STATES RENDER NOTHING — the exception rule, holding for
   // the block with every excuse to become furniture.

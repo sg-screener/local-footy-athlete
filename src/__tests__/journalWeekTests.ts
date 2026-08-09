@@ -382,28 +382,39 @@ console.log('\n[6b] KEY EXPOSURES — a different question from "did it happen"'
     region.match(/exposure/gi));
 }
 
-// ─── [7] THE SURFACE — reachable, and a READER ───────────────────────────
+// ─── [7] THE SURFACE — HIDDEN, still KEPT, and still a READER ────────────
 
 console.log('\n[7] SURFACE LAWS');
 {
   const navigator = readFileSync(join(__dirname, '../navigation/AppNavigator.tsx'), 'utf8');
   const screen = readFileSync(join(__dirname, '../screens/journal/JournalScreen.tsx'), 'utf8');
 
-  // THE LESSON OF THE PURGE, MADE A CELL. The previous journal tree was deleted
-  // because it was unreachable from App.tsx — barrel files nothing imported. A
-  // Journal that exists but is not wired is the same defect wearing this unit's
-  // name, so reachability is asserted, not assumed.
-  ok('AppNavigator imports the Journal screen',
+  // ─── RE-AIMED 2026-08-09: SAM HID THE JOURNAL ──────────────────────────
+  //
+  // Four cells here went red the day the tab left the tab bar, and they are
+  // the cells that existed to red on exactly this day. They are re-aimed, not
+  // deleted — a cell quietly removed because its own unit made it red is the
+  // other half of the hazard this file has already written down once.
+  //
+  // WHAT THEY ASSERTED AND WHAT THEY ASSERT NOW. They asserted the screen was
+  // REACHABLE, which was the lesson of the purge: the previous journal tree
+  // was deleted for being unreachable from App.tsx. That lesson has not
+  // changed — it has been RULED ON. Sam's hide is deliberate unreachability
+  // with the machinery kept (docs/JOURNAL_HIDDEN_RULING_2026-08-09.md), so
+  // the surviving claim here is that the screen is still KEPT, and the
+  // absence of the route is owned by `journalHiddenContractTests`, which
+  // sweeps the whole product tree rather than this one file.
+  ok('AppNavigator still imports the Journal screen — frozen, not retired',
     /import\s+JournalScreen\s+from\s+['"]\.\.\/screens\/journal\/JournalScreen['"]/.test(navigator));
-  ok('AppNavigator registers a JournalTab wired to that component',
-    /<Tab\.Screen\b[\s\S]{0,200}?name="JournalTab"[\s\S]{0,200}?component=\{JournalScreen\}/.test(navigator),
+  ok('and registers NO Journal tab — hidden by Sam\'s ruling, 2026-08-09',
+    !/<Tab\.Screen\b[\s\S]{0,200}?name="JournalTab"/.test(navigator),
   );
 
   // A COUNT IS NEVER THE WHOLE ASSERTION (AGENTS.md source-scan law). Locate
   // the region, prove it was found, THEN assert what makes it run.
   const tabBlocks = navigator.match(/<Tab\.Screen\b/g) ?? [];
-  ok('the region was found — three tabs now, not two',
-    tabBlocks.length === 3, tabBlocks.length);
+  ok('the region was found — two tabs now, not three',
+    tabBlocks.length === 2, tabBlocks.length);
   // A MUTATION SURVIVED HERE AND THE CELL IS WRITTEN THE WAY IT IS BECAUSE OF
   // IT. The first version compared three `indexOf` results directly. `indexOf`
   // returns -1 when the anchor is MISSING, and -1 is less than everything — so
@@ -412,14 +423,17 @@ console.log('\n[7] SURFACE LAWS');
   // AGENTS.md's source-scan law in its exact wording: "prove the region was
   // found" before asserting anything about it. The positions are proven present
   // FIRST; only then are they compared.
-  const tabOrder = ['ProgramTab', 'JournalTab', 'ProfileTab']
+  //
+  // THE HIDE MAKES THAT LAW LOAD-BEARING RATHER THAN RETIRING IT. The order
+  // claim is now about the two SURVIVORS, and if either anchor vanished the
+  // remaining comparison would be exactly the vacuous pass described above.
+  const tabOrder = ['ProgramTab', 'ProfileTab']
     .map((name) => ({ name, at: navigator.indexOf(`name="${name}"`) }));
   const missing = tabOrder.filter((tab) => tab.at < 0).map((tab) => tab.name);
-  ok('all three tab anchors are PRESENT before any order is claimed',
+  ok('both surviving tab anchors are PRESENT before any order is claimed',
     missing.length === 0, missing);
-  ok('and the Journal tab sits between Program and Profile',
-    missing.length === 0
-    && tabOrder[0].at < tabOrder[1].at && tabOrder[1].at < tabOrder[2].at,
+  ok('and Program still comes before Profile',
+    missing.length === 0 && tabOrder[0].at < tabOrder[1].at,
     tabOrder);
 
   // THE LOAD-BEARING LAW, RE-POINTED FOR SLICE 2 RATHER THAN LOOSENED.

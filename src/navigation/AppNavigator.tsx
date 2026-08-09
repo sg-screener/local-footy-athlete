@@ -2,10 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
 import Svg, { Path } from 'react-native-svg';
 import { logger } from '../utils/logger';
+import { disableJournalReminder } from '../services/journalReminderService';
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import CoachScreen from '../screens/coach/CoachScreen';
@@ -111,8 +110,6 @@ function ProfileStackNavigator() {
 }
 
 export default function AppNavigator() {
-  const navigation = useNavigation();
-
   React.useEffect(() => {
     logger.info('[app-navigator] initialRouteName=ProgramTab');
     logger.info('[tabs-mounted] true');
@@ -120,41 +117,38 @@ export default function AppNavigator() {
   }, []);
 
   /*
-    C6 (Sam, 2026-08-09): THE MONDAY NOTIFICATION "OPENS THE JOURNAL TAB".
+    THE JOURNAL IS HIDDEN (Sam, 2026-08-09, after his eye pass) — AND THE OS
+    STILL HOLDS WHAT THE SURFACE PUT THERE.
 
-    THE ROUTE TRAVELS IN THE NOTIFICATION, NOT IN THIS HANDLER. The scheduler
-    puts `{ route: 'JournalTab' }` in the payload and this reads it back, so a
-    second scheduled notification aimed somewhere else needs no change here —
-    and, more to the point, a handler that hardcoded `JournalTab` would send an
-    athlete to the Journal for a notification about something else.
+    The ruling reads "unreachable = nothing can ever fire". That is true of
+    every FUTURE schedule — the opt-in tap lives on a screen no tab reaches
+    any more, so nothing can arm the reminder again. It is NOT true of a
+    schedule already handed to the notification centre. The reminder unit's own
+    design says so in as many words: **the OS is the store**. A weekly trigger
+    accepted before today keeps firing every Monday whether this app is opened
+    or not, and hiding the surface does not reach into that store.
 
-    IT IS GUARDED AGAINST AN UNKNOWN ROUTE. A payload naming a tab that does not
-    exist is ignored rather than navigated to; `navigate` with a bad name throws,
-    and a crash on tapping a notification is the worst place in the app to have
-    one — the athlete is not even in the app yet.
+    So the hide has two halves, and this is the second one. It cancels by the
+    reminder's stable identifier through the service's own door, on every
+    launch: stateless, idempotent, and no "have I cancelled yet" flag to store.
 
-    THE LISTENER HANDLES A TAP, NEVER AN ARRIVAL. `addNotificationResponse
-    ReceivedListener` fires when the athlete TAPS. A notification that merely
-    arrives while they are using the app must not yank them out of whatever they
-    are doing.
+    THE TAP DOOR IS GONE WITH THE TAB, and that is the same removal R5.7 made
+    for the coach cut — the entry surface and every door that targeted it. It
+    also has to go: the old handler navigated to a tab that no longer exists,
+    and navigating to a name the navigator does not know throws. A crash on
+    tapping a notification is the worst place in the app to have one, and a
+    notification delivered from before the cancel is exactly the case that
+    would have found it.
+
+    WHAT THIS CANNOT REACH: an athlete who never opens the app again. Their
+    phone keeps the schedule the OS accepted. Nothing inside a binary can
+    cancel a notification for a binary that is never run.
   */
   React.useEffect(() => {
-    let subscription: { remove: () => void } | undefined;
-    try {
-      subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        const route = response.notification.request.content.data?.route;
-        if (route !== 'JournalTab') return;
-        logger.info('[notification-tap] journal');
-        navigation.navigate('JournalTab' as never);
-      });
-    } catch (error) {
-      // THE NATIVE MODULE IS ABSENT UNTIL SAM REBUILDS WITH PODS, and that is
-      // the normal state on the running binary rather than an edge case. A
-      // throw here would take the whole navigator down on mount.
-      logger.info(`[notification-tap] listener unavailable: ${String(error)}`);
-    }
-    return () => subscription?.remove();
-  }, [navigation]);
+    void disableJournalReminder().then((outcome) => {
+      logger.info(`[journal-hidden] reminder cancelled: ${outcome?.kind ?? 'ok'}`);
+    });
+  }, []);
 
   return (
     <View style={{ flex: 1 }} testID="main-tabs-root" accessibilityLabel="Main tabs">
@@ -213,25 +207,27 @@ export default function AppNavigator() {
           words. Restoring the tab is one `Tab.Screen` block.
         */}
         {/*
-          THE JOURNAL TAB (journal unit, slice 1) — the permanent home Sam ruled
-          in the design review: "the Journal TAB is the permanent home and ships
-          in the launch build". It sits between Program and Profile because it
-          is a training surface, not a settings one.
+          THE JOURNAL IS HIDDEN — Sam, 2026-08-09, after his own eye pass:
+          "i'd like all the journal stuff hidden for now - keep the data behind
+          the scenses because it might be useful for the coach."
+          Ruling: docs/JOURNAL_HIDDEN_RULING_2026-08-09.md
 
-          It is a READING SURFACE: no door, no transaction, no stored state. It
-          renders a derivation over facts the app already keeps as inputs.
+          ONE HIDE AT THE NAVIGATION OWNER, not a scatter of conditionals, and
+          it is the R5.7 shape exactly: ENTRY SURFACE GONE, MACHINERY FROZEN
+          NOT DELETED. The tab block and the notification's tap door are the
+          only two things removed. `JournalScreen` stays imported above and
+          every derivation, store and suite behind it stays alive in the chain,
+          because the record they keep is the input the coach rebuild is going
+          to read. Restoring the surface is one Tab.Screen block.
+
+          It was NOT a retirement, so nothing here is deleted and no word is
+          withdrawn from the copy sheet: batches 15-28 stay signed against a
+          screen that still exists and no longer renders.
+
+          `journalHiddenContractTests` is the ratchet that keeps it hidden —
+          the gate must watch the deleted surface, or one restored line brings
+          a screen Sam has ruled on back with nothing noticing.
         */}
-        <Tab.Screen
-          name="JournalTab"
-          component={JournalScreen}
-          options={{
-            title: 'Journal',
-            tabBarIcon: ({ color }) => <JournalIcon color={color} size={22} />,
-            tabBarButtonTestID: 'tab-journal',
-            tabBarAccessibilityLabel: 'Journal tab',
-          }}
-          listeners={{ tabPress: () => logger.info('[tab-press] journal') }}
-        />
         <Tab.Screen
           name="ProfileTab"
           component={ProfileStackNavigator}
