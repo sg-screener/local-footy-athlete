@@ -409,7 +409,37 @@ function extract(): ExtractedString[] {
  * unlisted. This comment is the "justify raising the ceiling" the assertion
  * below asks for, and it names the four so a later reader can count them.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 565;
+/**
+ * 565 -> 566 (the load slice, same commit that earned it): the Load section was
+ * rewritten, and the net is ONE. The app gained words; the instrument did not
+ * change, so this is batch 16's kind of rise, not batch 15's.
+ *
+ * FOUR IN, TWO OUT, and both halves are named so a later reader can count them
+ * rather than trust the arithmetic:
+ *
+ *   IN  — "Load is measured from the sessions you log.", "Some lifts had no
+ *         weight recorded, so they sit outside that.", "Once you have a few more
+ *         weeks logged, this shows how the week compared with your normal.",
+ *         "Your normal is ready to compare against — that comparison is coming
+ *         next."
+ *   OUT — "Your Journal is building. Once you have a few weeks logged, this
+ *         shows how the week compared with your normal." and "Comparing this
+ *         week with your normal is coming next." Both were PROPOSED in batch
+ *         15-c and superseded before Sam ruled on either.
+ *
+ * All four new sentences are recorded as batch 17 in
+ * docs/COPY_SHEET_RULINGS_2026-07-30.md BEFORE this commit landed — the
+ * transitional rule exactly.
+ *
+ * WHAT THE COUNT DOES NOT INCLUDE, said out loud because a ceiling is a claim:
+ * the headline band's three sentences and the two counted templates are also new
+ * athlete-facing words, and this extractor does not see them — the band lines
+ * live in a keyed object rather than JSX, and a template literal is not one of
+ * the four shapes the extractor matches. They are listed in batch 17 anyway,
+ * because being invisible to the instrument is not a reason to be invisible to
+ * Sam. Widening the extractor to keyed copy objects is named here as owed.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 566;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 
@@ -467,12 +497,23 @@ run('the extractor sees a multi-line JSX sentence', () => {
   // not prove that — a scope change alone would do it. So this asserts a
   // specific sentence that is multi-line in the source and was provably
   // invisible before: the Journal's building state.
+  //
+  // THE SUBJECT MOVED WHEN THE LOAD SLICE REWROTE THAT SECTION, and it was
+  // re-pointed rather than deleted — a canary quietly dropped because its own
+  // unit changed the line it watched is how a widening claim stops being
+  // checked. The cell is STRONGER than it was: it now also requires the match
+  // to come from the `jsx_text` pattern, which is the one that spans lines. The
+  // old version would have been satisfied by a ternary string literal on a
+  // single line, which proves nothing about spanning at all.
   const found = extracted.filter((item) => item.file.startsWith('screens/journal'));
   assert(found.length > 0, 'no journal strings extracted — scope regressed');
-  const multiLine = found.find((item) => /Your Journal is building/.test(item.text));
+  const multiLine = found.find((item) => /Once you have a few more weeks logged/.test(item.text));
   assert(multiLine !== undefined,
     'the multi-line JSX sentence in JournalScreen was not extracted — the widened '
     + `extractor is not spanning lines. Found instead: ${found.map((f) => f.text).join(' | ')}`);
+  assert(multiLine.field === 'jsx_text',
+    'the sentence was matched by a single-line pattern, so this cell proves nothing '
+    + `about line-spanning. It came from: ${multiLine.field}`);
   assert(/weeks logged, this shows how the week compared/.test(multiLine.text),
     `the sentence was truncated at a line break: "${multiLine.text}"`);
 });

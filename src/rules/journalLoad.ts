@@ -1,0 +1,845 @@
+/**
+ * THE LOAD MODEL — Sam's ruling (docs/JOURNAL_LOAD_MODEL_RULING_2026-08-08.md)
+ * as a pure derivation over facts the app already stores.
+ *
+ * L14 domain purity: no React, no navigation, no stores, no device clock. Every
+ * input arrives explicitly, so this module is callable from a plain test. The
+ * only modules it reaches for are AUTHORED DATA and their existing owners —
+ * never a surface, never a store.
+ *
+ * THE NORTH STAR ANSWER, up front: this slice stores NOTHING. Every number below
+ * is derived on read from `SessionFeedback` — an input the app already persists —
+ * so none of it can go stale beside the facts it came from. Measured before it
+ * was built: docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md.
+ *
+ * ── THE ONE ARCHITECTURAL IDEA: PROVENANCE TRAVELS WITH THE NUMBER ──
+ *
+ * The seat order requires that no athlete-facing number be derived from an
+ * unsigned constant. Written as a rule for the surface to obey, that is a
+ * promise somebody has to keep every time they add a line. Written this way it
+ * is a mechanism:
+ *
+ *   - every constant is an entry in ONE table carrying its own provenance;
+ *   - every derived value carries the COMBINED provenance of the constants that
+ *     fed it — `signed` only if all of them were;
+ *   - `signedValue()` is the only door a surface may read through, and it
+ *     returns null for anything proposed.
+ *
+ * Two properties fall out, and both are why it is built this way rather than
+ * documented:
+ *
+ *   1. SAM'S SIGNATURE ALONE TURNS THE LINES ON. Flipping a constant to
+ *      `signed` makes its line appear with no code change — which is also how
+ *      the gate mutation-proves the mechanism in both directions.
+ *   2. A NEW CONSTANT CANNOT LEAK. Adding one without provenance fails the
+ *      compiler; adding one marked proposed makes everything downstream of it
+ *      proposed automatically, so nobody has to remember which lines to hide.
+ *
+ * ── WHAT THIS MODULE DELIBERATELY REFUSES TO DO ──
+ *
+ * It never re-derives a fact that has an owner. Hardness belongs to
+ * `countWeeklyExposures`; main-strength patterns belong to
+ * `mainPatternForExerciseMovement`; muscles belong to the two signed sheets.
+ * A second authority for any of them is the defect class this repo has already
+ * paid for twice (`intensity-never-feeds-identity`, phase skew), and it is the
+ * reason the fallback rung stops where it does — see THE FALLBACK RUNG below.
+ */
+
+import { conditioningSessionMuscles } from '../data/conditioningMuscleMetadata';
+import { getExerciseTags } from '../data/exerciseTags';
+import { muscleMetadataFor, type MuscleGroup } from '../data/muscleExperienceMetadata';
+import {
+  STRENGTH_PATTERN_ORDER,
+  mainPatternForExerciseMovement,
+  type MainStrengthPattern,
+} from './strengthPatternContributions';
+import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
+import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
+
+// ─── Provenance ──────────────────────────────────────────────────────────
+
+/**
+ * Whether Sam has signed the number, or it is this terminal's proposal awaiting
+ * his signing batch. There is no third state on purpose: "probably fine" is how
+ * an unsigned number reaches an athlete.
+ */
+export type ConstantProvenance = 'signed' | 'proposed';
+
+export interface JournalLoadConstant<T> {
+  readonly value: T;
+  readonly provenance: ConstantProvenance;
+  /** Where the value came from — a ruling line, or the proposal it awaits. */
+  readonly source: string;
+}
+
+/**
+ * EVERY CONSTANT IN THE LOAD MODEL, IN ONE PLACE (the seat order's requirement).
+ *
+ * SIGNED entries quote Sam. PROPOSED entries are this terminal's numbers and
+ * are the load slice's signing batch — nothing derived from one of them can
+ * reach the athlete while it reads `proposed`.
+ */
+export const JOURNAL_LOAD_CONSTANTS = {
+  /**
+   * The fallback rung. Sam's own numbers, 2026-08-08: "do 2 - 1 - 0 though,
+   * easy days don't effect fatigue but count as sessions." Re-exported through
+   * `journalWeek.JOURNAL_LOAD_WEIGHTS`, which is where the day-shape derivation
+   * that consumes them lives — one value, two readers, no second copy.
+   */
+  fallbackDayWeights: {
+    value: { hard: 2, moderate: 1, easy: 0 },
+    provenance: 'signed',
+    source: 'Sam 2026-08-08, JOURNAL_LOAD_AND_DAY_SHAPE_RULING §1',
+  },
+  /**
+   * The window each stream is compared with itself over. SIGNED because it is
+   * in the ruling's own body: "Each stream vs ITS OWN rolling 4-week normal."
+   */
+  streamNormalWindowWeeks: {
+    value: 4,
+    provenance: 'signed',
+    source: 'Sam 2026-08-08, JOURNAL_LOAD_MODEL_RULING §2',
+  },
+  /**
+   * How the two unitless stream ratios weigh into the one headline. The ruling
+   * names this as Sam's to sign and records the seat's proposal: "stream
+   * weighting for the headline (default proposal 50/50)".
+   */
+  streamWeighting: {
+    value: { strength: 0.5, conditioning: 0.5 },
+    provenance: 'proposed',
+    source: 'PROPOSED — ruling lists it in Sam\'s signing batch, default 50/50',
+  },
+  /**
+   * The sweet-spot band, in ratio-of-normal terms. The ruling records the
+   * literature reference it is proposed from: "sweet-spot band edges
+   * (literature reference ~0.8-1.3 of normal)".
+   */
+  sweetSpotBand: {
+    value: { low: 0.8, high: 1.3 },
+    provenance: 'proposed',
+    source: 'PROPOSED — ruling lists it in Sam\'s signing batch, ~0.8-1.3 of normal',
+  },
+  /**
+   * Whether tonnage is modulated by the session's effort rating. DEFAULT OFF,
+   * as the order requires — and off is why the effort-tap-on-strength feature
+   * does not ride this slice: with this false, the tap would change no number
+   * the athlete can see.
+   */
+  tonnageModulatedByEffort: {
+    value: false,
+    provenance: 'proposed',
+    source: 'PROPOSED — ruling lists it in Sam\'s signing batch; OFF by default',
+  },
+  /**
+   * The window a REGION is compared with itself over. Proposed separately from
+   * the stream window because the ruling names it separately: "and the
+   * region-normal window".
+   */
+  regionNormalWindowWeeks: {
+    value: 4,
+    provenance: 'proposed',
+    source: 'PROPOSED — ruling names the region-normal window in Sam\'s batch',
+  },
+  /**
+   * How much of a session's load a SECONDARY muscle carries, relative to a
+   * primary. The signed sheets say which muscles a session loads; they do not
+   * say how much, so this share is the terminal's and it is proposed.
+   */
+  regionSecondaryShare: {
+    value: 0.5,
+    provenance: 'proposed',
+    source: 'PROPOSED — the sheets author WHICH muscles, never how much',
+  },
+  /**
+   * How far a completed pattern share may drift from the planned one before the
+   * journal says so. The ruling: "the threshold for 'outweighs' is a Sam-signed
+   * constant in the same signing batch".
+   */
+  patternDriftThreshold: {
+    value: 0.25,
+    provenance: 'proposed',
+    source: 'PROPOSED — ruling addendum layer 4 names the threshold as Sam\'s',
+  },
+  /**
+   * How much of a week must be measured before a comparison against it is
+   * honest. See THE COVERAGE REFUSAL below — this constant exists because a
+   * well-logged week measured against thinly-logged history reads as a spike
+   * that never happened.
+   */
+  minimumWeekCoverage: {
+    value: 0.5,
+    provenance: 'proposed',
+    source: 'PROPOSED — the terminal\'s honesty floor, not in the ruling',
+  },
+} as const satisfies Record<string, JournalLoadConstant<unknown>>;
+
+/** A value plus the provenance of every constant that fed it. */
+export interface Derived<T> {
+  readonly value: T;
+  readonly provenance: ConstantProvenance;
+}
+
+/**
+ * Signed only when EVERY contributing constant was signed. Zero contributors is
+ * `signed` on purpose and is load-bearing: a count of logged sessions is derived
+ * from no constant at all, so it is honest without a signature.
+ */
+export function combineProvenance(
+  ...provenances: readonly ConstantProvenance[]
+): ConstantProvenance {
+  return provenances.some((p) => p === 'proposed') ? 'proposed' : 'signed';
+}
+
+function derived<T>(value: T, ...from: readonly ConstantProvenance[]): Derived<T> {
+  return { value, provenance: combineProvenance(...from) };
+}
+
+/**
+ * THE ONLY DOOR A SURFACE MAY READ A DERIVED VALUE THROUGH.
+ *
+ * Returns null for anything whose provenance is `proposed`, so an athlete-facing
+ * line cannot render an unsigned number even by accident. A surface that reads
+ * `.value` directly is the violation this exists to make visible, and the gate
+ * asserts no surface does.
+ */
+export function signedValue<T>(value: Derived<T>): T | null {
+  return value.provenance === 'signed' ? value.value : null;
+}
+
+// ─── Inputs ──────────────────────────────────────────────────────────────
+
+/**
+ * One recorded session, as the load model reads it.
+ *
+ * THE TYPES ARE THE REAL STORED ONES, imported rather than re-declared, so a
+ * change to what the app records reaches this module through the compiler
+ * instead of through a hand-copied duplicate that quietly drifts.
+ */
+export interface JournalLoadSessionInput {
+  readonly date: string;
+  /** Main-lift snapshot as stored. Empty means no main lifts were recorded. */
+  readonly strength: readonly StrengthExercisePerformanceLog[];
+  /** The conditioning log as stored, or null when the flow never asked. */
+  readonly conditioning: ConditioningPerformanceLog | null;
+  /**
+   * The fallback rung's weight for this session's day, or NULL when it is not
+   * derivable — which is every past week. See THE FALLBACK RUNG.
+   */
+  readonly fallbackWeight: number | null;
+}
+
+export interface BuildJournalLoadInput {
+  readonly weekStart: string;
+  /** Every recorded session the app holds, this week's included, any order. */
+  readonly sessions: readonly JournalLoadSessionInput[];
+  /**
+   * How many sessions THIS WEEK asked anything of the athlete. Supplied by the
+   * caller because it is a fact about the projection, which this module does not
+   * read — it is the denominator of coverage.
+   */
+  readonly sessionsPlannedThisWeek: number;
+  /** This week's PLAN, for layer 4's plan-vs-done. Empty when unknown. */
+  readonly plannedStrength: readonly PlannedLift[];
+}
+
+/** One planned main lift — the plan half of layer 4. */
+export interface PlannedLift {
+  readonly exerciseName: string;
+  readonly sets: number;
+  readonly repsMin: number;
+  readonly repsMax: number;
+  readonly weightKg: number | null;
+}
+
+// ─── Output ──────────────────────────────────────────────────────────────
+
+export interface JournalSessionLoad {
+  readonly date: string;
+  /**
+   * THE UNIT IS IN THE NAME, and that is not decoration. `SessionFeedback.strength`
+   * holds MAIN LIFTS ONLY (`strengthLogging.isMainStrengthExercise`), so this is
+   * main-lift tonnage and never whole-session tonnage. Naming it `tonnage` would
+   * be `a-count-taken-for-a-record` in a new instrument.
+   */
+  readonly strengthMainLiftTonnageKg: number | null;
+  /** sRPE AU — the athlete's difficulty rating times the session's minutes. */
+  readonly conditioningSRPE: number | null;
+  /** Lifts whose tonnage could not be computed — reported, never assumed zero. */
+  readonly liftsUnmeasured: number;
+  /** True when either stream produced a number. */
+  readonly measured: boolean;
+  readonly fallbackWeight: number | null;
+  /** Per-muscle load. NEVER summed across regions — see distributeToRegions. */
+  readonly regions: Readonly<Partial<Record<MuscleGroup, number>>>;
+  readonly patternTonnageKg: Readonly<Record<MainStrengthPattern, number>>;
+  readonly upperLowerTonnageKg: Readonly<{ upper: number; lower: number }>;
+}
+
+export interface JournalLoadWeekTotals {
+  readonly weekStart: string;
+  readonly strengthMainLiftTonnageKg: number;
+  readonly conditioningSRPE: number;
+  readonly sessionsMeasured: number;
+  readonly sessionsRecorded: number;
+  readonly liftsUnmeasured: number;
+  readonly regions: Readonly<Partial<Record<MuscleGroup, number>>>;
+  readonly patternTonnageKg: Readonly<Record<MainStrengthPattern, number>>;
+  readonly upperLowerTonnageKg: Readonly<{ upper: number; lower: number }>;
+}
+
+export interface StreamComparison {
+  readonly thisWeek: number;
+  /** The mean of the window's weeks that carried any measurement. */
+  readonly normal: number;
+  readonly ratio: number;
+  readonly weeksUsed: number;
+}
+
+export type BandVerdict = 'below' | 'in' | 'above';
+
+export interface JournalLoadHeadline {
+  readonly ratio: number;
+  readonly band: BandVerdict;
+}
+
+export interface RegionObservation {
+  readonly region: MuscleGroup;
+  readonly thisWeek: number;
+  readonly previousBest: number;
+  readonly weeksCompared: number;
+}
+
+export interface PatternShare {
+  readonly pattern: MainStrengthPattern;
+  readonly plannedShare: number;
+  readonly doneShare: number;
+}
+
+export interface PatternBalance {
+  readonly shares: readonly PatternShare[];
+  readonly upperSharePlanned: number;
+  readonly upperShareDone: number;
+}
+
+export interface JournalLoadCoverage {
+  readonly sessionsMeasured: number;
+  readonly sessionsPlanned: number;
+  readonly liftsUnmeasured: number;
+}
+
+export interface JournalLoadModel {
+  readonly weekStart: string;
+  readonly thisWeek: JournalLoadWeekTotals;
+  /** Completed weeks before this one, most recent first. */
+  readonly history: readonly JournalLoadWeekTotals[];
+  /** Constant-free facts about the evidence — signed by having no constants. */
+  readonly coverage: Derived<JournalLoadCoverage>;
+  /**
+   * THE FALLBACK RUNG for THIS WEEK, or null when any of its sessions has no
+   * derivable shape. See THE FALLBACK RUNG.
+   */
+  readonly fallbackLoad: Derived<number | null>;
+  readonly strengthStream: Derived<StreamComparison | null>;
+  readonly conditioningStream: Derived<StreamComparison | null>;
+  readonly headline: Derived<JournalLoadHeadline | null>;
+  readonly regionObservations: Derived<readonly RegionObservation[]>;
+  readonly patternBalance: Derived<PatternBalance | null>;
+  /** Pattern shares alone are derived from NO constant, so they stand signed. */
+  readonly patternSharesDone: Derived<readonly PatternShare[]>;
+}
+
+// ─── Week identity ───────────────────────────────────────────────────────
+
+/**
+ * The Monday an ISO date belongs to.
+ *
+ * Pure string in, string out — no device clock, so L14 holds. This is the ONE
+ * owner of "which week does this record belong to" for the Journal; the screen's
+ * history count reads it rather than repeating the arithmetic, because two
+ * copies of a week boundary is `week-identity-two-owners` in miniature.
+ */
+export function journalWeekStartOf(dateISO: string): string | null {
+  const date = new Date(`${dateISO}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  const offsetToMonday = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - offsetToMonday);
+  return date.toISOString().slice(0, 10);
+}
+
+// ─── Layer 1: the two native streams ─────────────────────────────────────
+
+function positive(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function midpointReps(min: number, max: number): number | null {
+  const lo = positive(min);
+  const hi = positive(max);
+  if (lo === null && hi === null) return null;
+  if (lo === null) return hi;
+  if (hi === null) return lo;
+  return (lo + hi) / 2;
+}
+
+/**
+ * One main lift's tonnage — sets x reps x kg, from what was actually recorded.
+ *
+ * PREFERS THE ACTUAL, FALLS BACK TO THE PRESCRIBED, AND NEVER INVENTS. Real
+ * logged sets win when the athlete logged them; otherwise the prescribed
+ * snapshot stands in, which is the ruling's "assume-prescribed completion".
+ *
+ * THE ONE CASE THAT RETURNS NULL RATHER THAN A NUMBER: a PARTIAL completion with
+ * no per-set detail. The app knows some of it happened and does not know how
+ * much. Scaling the prescription by a guess would be exactly the "invents
+ * precision" the ruling forbids, so the lift goes unmeasured and says so.
+ */
+export function liftTonnageKg(lift: StrengthExercisePerformanceLog): number | null {
+  if (lift.completion === 'skipped') return 0;
+
+  const weight = positive(lift.weightKg);
+  if (weight === null) return null;
+
+  const loggedSets = positive(lift.completedSets);
+  if (lift.completion === 'partial' && loggedSets === null) return null;
+
+  const sets = loggedSets ?? positive(lift.prescribedSets);
+  if (sets === null) return null;
+
+  const reps = positive(lift.actualReps)
+    ?? midpointReps(lift.prescribedRepsMin, lift.prescribedRepsMax);
+  if (reps === null) return null;
+
+  return sets * reps * weight;
+}
+
+/**
+ * A conditioning session's sRPE AU — the athlete's rating times its minutes.
+ *
+ * Both halves are stored (`ConditioningPerformanceLog.rpe`, `.totalTimeMinutes`)
+ * and both are optional, so a session logged without one is unmeasured rather
+ * than half-counted.
+ */
+export function conditioningSRPE(log: ConditioningPerformanceLog | null): number | null {
+  if (!log) return null;
+  const rpe = positive(log.rpe);
+  const minutes = positive(log.totalTimeMinutes);
+  if (rpe === null || minutes === null) return null;
+  return rpe * minutes;
+}
+
+// ─── Layer 3: the region distribution ────────────────────────────────────
+
+function addRegion(
+  into: Partial<Record<MuscleGroup, number>>,
+  muscle: MuscleGroup,
+  amount: number,
+): void {
+  into[muscle] = (into[muscle] ?? 0) + amount;
+}
+
+/**
+ * Spread one session's load over the muscles the SIGNED sheets say it loads.
+ *
+ * A primary muscle carries the whole load, a secondary carries
+ * `regionSecondaryShare` of it. That deliberately does NOT conserve the total —
+ * and it does not have to, because a region series is only ever compared with
+ * ITS OWN history. Summing across regions would be meaningless and this module
+ * never does it; the gate holds that line.
+ */
+function distributeToRegions(
+  into: Partial<Record<MuscleGroup, number>>,
+  load: number,
+  primary: readonly MuscleGroup[],
+  secondary: readonly MuscleGroup[],
+): void {
+  const share = JOURNAL_LOAD_CONSTANTS.regionSecondaryShare.value;
+  for (const muscle of primary) addRegion(into, muscle, load);
+  for (const muscle of secondary) addRegion(into, muscle, load * share);
+}
+
+/**
+ * Which modality spelling the muscle sheet's owner understands.
+ *
+ * The logging vocabulary and the template vocabulary are two different sets and
+ * always were — the logger says `assault_bike` and `rower` where the sheet says
+ * `air_bike` and `row`. Translated ONCE, here, at the boundary between them,
+ * rather than at every call site. A mode with no muscle row (`swim`, `other`)
+ * answers null and its session simply carries no region load — an absent answer,
+ * never an invented one.
+ */
+function modalityForMuscleLookup(
+  mode: ConditioningPerformanceLog['mode'],
+): 'run' | 'bike' | 'air_bike' | 'ski' | 'row' | 'mixed' | null {
+  switch (mode) {
+    case 'run': return 'run';
+    case 'bike': return 'bike';
+    case 'assault_bike': return 'air_bike';
+    case 'ski': return 'ski';
+    case 'rower': return 'row';
+    case 'mixed': return 'mixed';
+    default: return null;
+  }
+}
+
+// ─── Layer 4: the pattern ledger ─────────────────────────────────────────
+
+function emptyPatternLedger(): Record<MainStrengthPattern, number> {
+  return { squat: 0, hinge: 0, push: 0, pull: 0 };
+}
+
+/**
+ * Which main pattern an exercise NAME belongs to.
+ *
+ * Two existing owners in series, no new mapping: `getExerciseTags` owns name →
+ * movement, and `mainPatternForExerciseMovement` owns movement → main pattern.
+ * A third table here would be the `one-predicate-grows-copies` shape, and this
+ * repo has already paid for that one.
+ */
+function patternForExerciseName(name: string): MainStrengthPattern | null {
+  return mainPatternForExerciseMovement(getExerciseTags(name)?.movement);
+}
+
+function upperOrLowerForExerciseName(name: string): 'upper' | 'lower' | null {
+  const region = getExerciseTags(name)?.region;
+  if (region === 'upper') return 'upper';
+  if (region === 'lower') return 'lower';
+  return null;
+}
+
+function plannedLiftTonnageKg(lift: PlannedLift): number | null {
+  const weight = positive(lift.weightKg);
+  const sets = positive(lift.sets);
+  const reps = midpointReps(lift.repsMin, lift.repsMax);
+  if (weight === null || sets === null || reps === null) return null;
+  return sets * reps * weight;
+}
+
+function sharesFromLedger(
+  ledger: Record<MainStrengthPattern, number>,
+): Record<MainStrengthPattern, number> {
+  const total = STRENGTH_PATTERN_ORDER.reduce((sum, p) => sum + ledger[p], 0);
+  const shares = emptyPatternLedger();
+  if (total <= 0) return shares;
+  for (const pattern of STRENGTH_PATTERN_ORDER) {
+    shares[pattern] = ledger[pattern] / total;
+  }
+  return shares;
+}
+
+// ─── Session derivation ──────────────────────────────────────────────────
+
+export function deriveSessionLoad(
+  session: JournalLoadSessionInput,
+): JournalSessionLoad {
+  const regions: Partial<Record<MuscleGroup, number>> = {};
+  const patternTonnageKg = emptyPatternLedger();
+  const upperLower = { upper: 0, lower: 0 };
+
+  let strengthTotal = 0;
+  let strengthMeasuredLifts = 0;
+  let liftsUnmeasured = 0;
+
+  for (const lift of session.strength) {
+    const tonnage = liftTonnageKg(lift);
+    if (tonnage === null) {
+      liftsUnmeasured += 1;
+      continue;
+    }
+    strengthMeasuredLifts += 1;
+    strengthTotal += tonnage;
+
+    const pattern = patternForExerciseName(lift.exerciseName);
+    if (pattern) patternTonnageKg[pattern] += tonnage;
+
+    const side = upperOrLowerForExerciseName(lift.exerciseName);
+    if (side) upperLower[side] += tonnage;
+
+    const muscles = muscleMetadataFor(lift.exerciseName);
+    if (muscles) distributeToRegions(regions, tonnage, muscles.primary, muscles.secondary);
+  }
+
+  const srpe = conditioningSRPE(session.conditioning);
+  if (srpe !== null && session.conditioning) {
+    const muscles = conditioningSessionMuscles({
+      exercise: session.conditioning.sessionName ?? '',
+      modality: modalityForMuscleLookup(session.conditioning.mode),
+    });
+    if (muscles) distributeToRegions(regions, srpe, muscles.primary, muscles.secondary);
+  }
+
+  // AN EMPTY STRENGTH ARRAY IS ZERO, NOT UNKNOWN — a session that recorded no
+  // main lifts genuinely put no main-lift tonnage on the athlete. Unknown is
+  // reserved for lifts that exist and could not be computed, which is why the
+  // two are counted separately rather than collapsed into one nullable number.
+  const strengthMainLiftTonnageKg = session.strength.length === 0
+    ? 0
+    : (strengthMeasuredLifts > 0 ? strengthTotal : null);
+
+  return {
+    date: session.date,
+    strengthMainLiftTonnageKg,
+    conditioningSRPE: srpe,
+    liftsUnmeasured,
+    measured: strengthMeasuredLifts > 0 || srpe !== null,
+    fallbackWeight: session.fallbackWeight,
+    regions,
+    patternTonnageKg,
+    upperLowerTonnageKg: upperLower,
+  };
+}
+
+// ─── Week totals ─────────────────────────────────────────────────────────
+
+function totalsForWeek(
+  weekStart: string,
+  sessions: readonly JournalSessionLoad[],
+): JournalLoadWeekTotals {
+  const regions: Partial<Record<MuscleGroup, number>> = {};
+  const patternTonnageKg = emptyPatternLedger();
+  const upperLower = { upper: 0, lower: 0 };
+  let strength = 0;
+  let conditioning = 0;
+  let measured = 0;
+  let liftsUnmeasured = 0;
+
+  for (const session of sessions) {
+    strength += session.strengthMainLiftTonnageKg ?? 0;
+    conditioning += session.conditioningSRPE ?? 0;
+    if (session.measured) measured += 1;
+    liftsUnmeasured += session.liftsUnmeasured;
+    for (const [muscle, amount] of Object.entries(session.regions)) {
+      addRegion(regions, muscle as MuscleGroup, amount ?? 0);
+    }
+    for (const pattern of STRENGTH_PATTERN_ORDER) {
+      patternTonnageKg[pattern] += session.patternTonnageKg[pattern];
+    }
+    upperLower.upper += session.upperLowerTonnageKg.upper;
+    upperLower.lower += session.upperLowerTonnageKg.lower;
+  }
+
+  return {
+    weekStart,
+    strengthMainLiftTonnageKg: strength,
+    conditioningSRPE: conditioning,
+    sessionsMeasured: measured,
+    sessionsRecorded: sessions.length,
+    liftsUnmeasured,
+    regions,
+    patternTonnageKg,
+    upperLowerTonnageKg: upperLower,
+  };
+}
+
+// ─── Layer 2: ratio space ────────────────────────────────────────────────
+
+/**
+ * THE COVERAGE REFUSAL.
+ *
+ * A ratio is only honest when its two sides were measured the same way. A week
+ * where the athlete logged everything, held against weeks where they logged
+ * little, reads as a spike that never happened — the number would be right and
+ * the story it tells would be false. So a comparison is REFUSED rather than
+ * returned when this week is too thinly measured, and history weeks with no
+ * measurement at all are excluded from the normal instead of averaged in as
+ * zeroes.
+ */
+function compareStream(
+  thisWeek: number,
+  history: readonly number[],
+): StreamComparison | null {
+  const window = history.slice(0, JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value);
+  const withData = window.filter((value) => value > 0);
+  if (withData.length < JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value) return null;
+  const normal = withData.reduce((sum, value) => sum + value, 0) / withData.length;
+  if (normal <= 0) return null;
+  return { thisWeek, normal, ratio: thisWeek / normal, weeksUsed: withData.length };
+}
+
+function bandFor(ratio: number): BandVerdict {
+  const band = JOURNAL_LOAD_CONSTANTS.sweetSpotBand.value;
+  if (ratio < band.low) return 'below';
+  if (ratio > band.high) return 'above';
+  return 'in';
+}
+
+// ─── The model ───────────────────────────────────────────────────────────
+
+export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoadModel {
+  const byWeek = new Map<string, JournalSessionLoad[]>();
+  for (const session of input.sessions) {
+    const weekStart = journalWeekStartOf(session.date);
+    if (weekStart === null) continue;
+    const bucket = byWeek.get(weekStart);
+    if (bucket) bucket.push(deriveSessionLoad(session));
+    else byWeek.set(weekStart, [deriveSessionLoad(session)]);
+  }
+
+  const thisWeekSessions = byWeek.get(input.weekStart) ?? [];
+  const thisWeek = totalsForWeek(input.weekStart, thisWeekSessions);
+  const history = Array.from(byWeek.keys())
+    .filter((weekStart) => weekStart < input.weekStart)
+    .sort((a, b) => b.localeCompare(a))
+    .map((weekStart) => totalsForWeek(weekStart, byWeek.get(weekStart) ?? []));
+
+  // ── Coverage: derived from NO constant, so it stands signed ──
+  const coverage = derived<JournalLoadCoverage>({
+    sessionsMeasured: thisWeek.sessionsMeasured,
+    sessionsPlanned: input.sessionsPlannedThisWeek,
+    liftsUnmeasured: thisWeek.liftsUnmeasured,
+  });
+
+  // ── THE FALLBACK RUNG ──
+  //
+  // Sam's rung keeps the number whole when nothing was measured. It is scored
+  // from the day's SHAPE, and a shape needs the projection plus the hardness
+  // owner — so it exists for THIS week and for no past week (measured:
+  // docs/JOURNAL_LOAD_SLICE_PLAN_2026-08-09.md §2b). The available shortcut is
+  // to re-derive hardness from the stored component kinds; that is REFUSED,
+  // because a second hardness authority inside the Journal is the exact class
+  // `journalWeek.ts` opens by refusing.
+  //
+  // The consequence, stated rather than hidden: the rung describes the current
+  // week, and never appears as a term inside a ratio. If ANY session's shape is
+  // unknown the whole rung is null — a partial sum would read as a small week.
+  const fallbackKnown = thisWeekSessions.every((s) => s.fallbackWeight !== null);
+  const fallbackLoad = derived<number | null>(
+    fallbackKnown
+      ? thisWeekSessions.reduce((sum, s) => sum + (s.fallbackWeight ?? 0), 0)
+      : null,
+    JOURNAL_LOAD_CONSTANTS.fallbackDayWeights.provenance,
+  );
+
+  const coverageOk = input.sessionsPlannedThisWeek === 0
+    ? false
+    : thisWeek.sessionsMeasured / input.sessionsPlannedThisWeek
+      >= JOURNAL_LOAD_CONSTANTS.minimumWeekCoverage.value;
+
+  const strengthComparison = coverageOk
+    ? compareStream(
+      thisWeek.strengthMainLiftTonnageKg,
+      history.map((week) => week.strengthMainLiftTonnageKg),
+    )
+    : null;
+  const conditioningComparison = coverageOk
+    ? compareStream(
+      thisWeek.conditioningSRPE,
+      history.map((week) => week.conditioningSRPE),
+    )
+    : null;
+
+  const streamProvenance = combineProvenance(
+    JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.provenance,
+    JOURNAL_LOAD_CONSTANTS.minimumWeekCoverage.provenance,
+  );
+  const strengthStream = derived(strengthComparison, streamProvenance);
+  const conditioningStream = derived(conditioningComparison, streamProvenance);
+
+  // ── The headline: ratios only, never raw units (the ruling's law) ──
+  const weighting = JOURNAL_LOAD_CONSTANTS.streamWeighting.value;
+  let headlineValue: JournalLoadHeadline | null = null;
+  if (strengthComparison && conditioningComparison) {
+    const ratio = strengthComparison.ratio * weighting.strength
+      + conditioningComparison.ratio * weighting.conditioning;
+    headlineValue = { ratio, band: bandFor(ratio) };
+  } else if (strengthComparison || conditioningComparison) {
+    // ONE STREAM IS STILL A HONEST CONTINUUM — weighting two ratios when only
+    // one exists would silently halve it, which is the arithmetic version of
+    // inventing data.
+    const only = (strengthComparison ?? conditioningComparison) as StreamComparison;
+    headlineValue = { ratio: only.ratio, band: bandFor(only.ratio) };
+  }
+  const headline = derived(
+    headlineValue,
+    streamProvenance,
+    JOURNAL_LOAD_CONSTANTS.streamWeighting.provenance,
+    JOURNAL_LOAD_CONSTANTS.sweetSpotBand.provenance,
+  );
+
+  // ── Layer 3: observation lines, never diagnosis ──
+  const regionWindow = history.slice(
+    0,
+    JOURNAL_LOAD_CONSTANTS.regionNormalWindowWeeks.value,
+  );
+  const observations: RegionObservation[] = [];
+  if (regionWindow.length > 0) {
+    for (const [muscle, amount] of Object.entries(thisWeek.regions)) {
+      const load = amount ?? 0;
+      if (load <= 0) continue;
+      const previous = regionWindow.map((week) => week.regions[muscle as MuscleGroup] ?? 0);
+      const previousBest = previous.reduce((best, value) => Math.max(best, value), 0);
+      if (previousBest > 0 && load > previousBest) {
+        observations.push({
+          region: muscle as MuscleGroup,
+          thisWeek: load,
+          previousBest,
+          weeksCompared: regionWindow.length,
+        });
+      }
+    }
+    observations.sort((a, b) => b.thisWeek - a.thisWeek);
+  }
+  const regionObservations = derived<readonly RegionObservation[]>(
+    observations,
+    JOURNAL_LOAD_CONSTANTS.regionNormalWindowWeeks.provenance,
+    JOURNAL_LOAD_CONSTANTS.regionSecondaryShare.provenance,
+  );
+
+  // ── Layer 4: plan vs done ──
+  const plannedLedger = emptyPatternLedger();
+  const plannedUpperLower = { upper: 0, lower: 0 };
+  for (const lift of input.plannedStrength) {
+    const tonnage = plannedLiftTonnageKg(lift);
+    if (tonnage === null) continue;
+    const pattern = patternForExerciseName(lift.exerciseName);
+    if (pattern) plannedLedger[pattern] += tonnage;
+    const side = upperOrLowerForExerciseName(lift.exerciseName);
+    if (side) plannedUpperLower[side] += tonnage;
+  }
+
+  const doneShares = sharesFromLedger(thisWeek.patternTonnageKg);
+  const plannedShares = sharesFromLedger(plannedLedger);
+  const shares: PatternShare[] = STRENGTH_PATTERN_ORDER.map((pattern) => ({
+    pattern,
+    plannedShare: plannedShares[pattern],
+    doneShare: doneShares[pattern],
+  }));
+
+  const upperLowerShare = (totals: { upper: number; lower: number }): number => {
+    const total = totals.upper + totals.lower;
+    return total > 0 ? totals.upper / total : 0;
+  };
+
+  const hasPlan = input.plannedStrength.length > 0;
+  const hasDone = STRENGTH_PATTERN_ORDER.some((p) => thisWeek.patternTonnageKg[p] > 0);
+  const patternBalance = derived<PatternBalance | null>(
+    hasPlan && hasDone
+      ? {
+        shares,
+        upperSharePlanned: upperLowerShare(plannedUpperLower),
+        upperShareDone: upperLowerShare(thisWeek.upperLowerTonnageKg),
+      }
+      : null,
+    JOURNAL_LOAD_CONSTANTS.patternDriftThreshold.provenance,
+  );
+
+  // The completed shares alone are derived from no constant at all, so they
+  // stand signed even while the plan-vs-done VERDICT waits on its threshold.
+  const patternSharesDone = derived<readonly PatternShare[]>(
+    hasDone ? shares : [],
+  );
+
+  return {
+    weekStart: input.weekStart,
+    thisWeek,
+    history,
+    coverage,
+    fallbackLoad,
+    strengthStream,
+    conditioningStream,
+    headline,
+    regionObservations,
+    patternBalance,
+    patternSharesDone,
+  };
+}

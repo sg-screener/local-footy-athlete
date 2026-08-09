@@ -1324,8 +1324,15 @@ and never invents a why.
 | No sessions this week | "No sessions planned this week." |
 | A missed session with no recorded reason | "No reason recorded for one of them." |
 | Nothing recorded about how the week felt | "You haven't recorded how anything felt this week." |
-| Not enough history for a load comparison | "Your Journal is building. Once you have a few weeks logged, this shows how the week compared with your normal." |
-| Enough history, comparison not built yet | "Comparing this week with your normal is coming next." |
+| Not enough history for a load comparison | SUPERSEDED before Sam ruled — see batch 17-a |
+| Enough history, comparison not built yet | SUPERSEDED before Sam ruled — see batch 17-a |
+
+**15-c RIDER — TWO ROWS WERE SUPERSEDED, NOT SIGNED AND THEN CHANGED.** Both
+load lines were PROPOSED here and re-worded by the load slice before Sam ruled on
+either version, because the section they belong to stopped being a placeholder.
+Their quotes are removed from this table rather than left beside the live ones —
+a proposal for wording nothing uses wastes a ruling, and the binding gate says so
+out loud. The replacements are batch 17-a.
 
 **15-d. THE COUNTED LINES ARE COMPOSED, AND ARE DELIBERATELY NOT IN A BOUND
 TABLE ROW.** Five sentences take a number and cannot be quoted as a literal:
@@ -1402,3 +1409,68 @@ unlisted, and they are listed here before the commit lands.
 **16-d. NOT SIGNED, AND ONE OF THEM IS A CLAIM.** "No notes yet this week." is
 the honest-absence line for notes, in the family of batch 15-c. The rest are
 labels. Sam's veto is one line on any of them.
+
+## Batch 17 — the Journal's Load section, the load slice (2026-08-09): PROPOSED, NOT SIGNED
+
+**STATUS: PROPOSED. Nothing here has Sam's signature.** Recorded in the same
+commit that ships it, under the derived-scope gate.
+
+**17-a. WHAT THE ATHLETE ACTUALLY SEES TODAY.** These two lines are the only
+new words that RENDER. Both are derived from no constant at all — a count of
+what was logged needs no signature to be true — which is why they ship while
+the rest of the section stays dark.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Load section, the evidence line (no sessions planned) | "Load is measured from the sessions you log." |
+| A lift with no weight recorded | "Some lifts had no weight recorded, so they sit outside that." |
+| Not enough history yet | "Once you have a few more weeks logged, this shows how the week compared with your normal." |
+| Enough history, comparison withheld pending signature | "Your normal is ready to compare against — that comparison is coming next." |
+
+**ONE COUNTED LINE, DELIBERATELY NOT IN A BOUND TABLE ROW** — batch 15-d's
+precedent, for the same reason: it takes numbers and cannot be quoted as a
+literal, so a table row would bind vacuously.
+
+- "Load is measured from the sessions you log — {measured} of {planned} this week have detail recorded."
+
+Sam still owns that sentence; it is written here in template form precisely so
+it is not invisible for being unquotable. Its wording is fixed by
+`journalLoadTests` and the counts by the derivation's own cells.
+
+**17-b. WRITTEN, WIRED, AND DARK — the lines Sam's signature turns on.** These
+render the moment the constants behind them read `signed`, with no code change.
+They are listed here so the words are reviewable BEFORE they can appear, not
+after.
+
+| Where | PROPOSED string | Waits on |
+| --- | --- | --- |
+| Headline continuum, below the band | "A lighter week than your normal." | stream weighting + band edges |
+| Headline continuum, inside the band | "About your normal week." | stream weighting + band edges |
+| Headline continuum, above the band | "A heavier week than your normal." | stream weighting + band edges |
+
+The region observation is the second counted line, and is listed in template
+form for the same reason as 17-a's:
+
+- "Biggest week for {region} in the last {n} weeks." — waits on the region
+  window and the secondary share.
+
+**17-c. TWO OF SAM'S OWN LAWS ARE VISIBLE IN THE WORDING.** "Athlete never sees
+raw AU" — the band is SPOKEN, never printed as a score out of anything, and no
+line above contains a load number. "Observation, never diagnosis" — the region
+line is an ordering fact beside the weeks it was measured over, with no
+injury-risk claim and no advice attached to it.
+
+**17-d. THE ONE PLACE "COMING NEXT" SURVIVES, AND WHY THAT IS HONEST.** The seat
+order asked the Load section to stop saying "coming next" wherever honesty
+allows. It now LEADS with a statement about its own evidence rather than a
+promise. But where the comparison is computable and withheld pending Sam's
+signature, the athlete genuinely cannot see it yet — so saying it is coming is
+the true sentence, and removing it would be the dishonest edit.
+
+**17-e. THE SIGNING BATCH IS NINE CONSTANTS, SEVEN OF THEM PROPOSED.** The words
+above are one half of what Sam signs; the numbers are the other. They live in
+one table (`JOURNAL_LOAD_CONSTANTS`, `src/rules/journalLoad.ts`) and
+`journalLoadTests` prints the batch rather than anyone hand-counting it:
+`streamWeighting`, `sweetSpotBand`, `tonnageModulatedByEffort`,
+`regionNormalWindowWeeks`, `regionSecondaryShare`, `patternDriftThreshold`,
+`minimumWeekCoverage`.

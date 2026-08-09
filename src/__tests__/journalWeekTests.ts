@@ -318,7 +318,11 @@ console.log('\n[6] PROGRESSIVE DATA STATES (addendum 11)');
     days: [trainingLoadDay(D(0))],
     weeksOfHistory: LOAD_COMPARISON_MIN_WEEKS,
   });
-  ok('at four weeks the comparison becomes available (still unbuilt in slice 1)',
+  // AT FOUR WEEKS THE DATA-STATE OPENS, and this module STILL answers null —
+  // which is the ownership boundary, not an omission. The comparison is
+  // `rules/journalLoad.ts`'s to make, from recorded history; a second one here
+  // would be two answers to one question.
+  ok('at four weeks the data-state opens and this module still holds no comparison',
     grown.load.comparisonAvailable === true && grown.load.comparison === null);
 }
 
@@ -419,8 +423,9 @@ totalsPrinted(fail);
 console.log('  DEPTH (L13): 0 — a unit sweep over the pure derivation with hand-built '
   + 'projection days. It does NOT walk an athlete through a real week, and no cell '
   + 'here mounts a surface.');
-console.log('  NOT COVERED: the load COMPARISON is not built (slice 1 ships the honest '
-  + 'state only), so `comparisonAvailable` is asserted as a gate and never as a number. '
-  + 'The rolling four-week average derives from RECORDED HISTORY, not from projections '
-  + 'of past weeks, and that derivation is its own slice.');
+console.log('  NOT COVERED: `JournalWeek.load` is the DATA-STATE gate only — this suite '
+  + 'asserts `comparisonAvailable` and never a comparison, because the comparison is not '
+  + 'this module\'s to make. It was built in the load slice and lives in '
+  + '`rules/journalLoad.ts`, gated by `npm run test:journal-load`; the four-week normal '
+  + 'derives from RECORDED HISTORY there, not from projections of past weeks.');
 if (failures.length > 0) console.log(`Failures:\n  - ${failures.join('\n  - ')}`);

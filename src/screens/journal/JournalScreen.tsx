@@ -26,6 +26,15 @@ import {
   type JournalSessionOutcome,
   type JournalWeek,
 } from '../../rules/journalWeek';
+import {
+  buildJournalLoadModel,
+  journalWeekStartOf,
+  signedValue,
+  type BandVerdict,
+  type JournalLoadModel,
+  type JournalLoadSessionInput,
+  type PlannedLift,
+} from '../../rules/journalLoad';
 
 /**
  * THE JOURNAL — slice 1 (this week, read-only) + slice 2 (the week note).
@@ -208,25 +217,105 @@ function HowTheWeekFelt({ week }: { week: JournalWeek }) {
 }
 
 /**
- * THE BUILDING STATE — addendum item 11, and the reason it is a component
- * rather than a bare `null`: "empty space explains what will appear and what's
- * being collected", never a chart with one floating dot.
+ * The headline continuum's words. PROPOSED — batch 17.
+ *
+ * NO RAW AU EVER REACHES THE ATHLETE (the ruling's first law), so the band is
+ * spoken, never printed as a score. These lines are written and wired NOW even
+ * though nothing renders them yet: they sit behind `signedValue`, and the day
+ * Sam signs the band and the stream weighting they appear with no code change.
  */
-function LoadSection({ week }: { week: JournalWeek }) {
-  if (!week.load.comparisonAvailable) {
-    return (
-      <Text variant="body" style={styles.muted} testID="journal-load-building">
-        {'Your Journal is building. Once you have a few weeks logged, this shows how the week compared with your normal.'}
-      </Text>
-    );
-  }
-  // The comparison itself is a later slice. Until it exists, the honest state
-  // is the only state — a number with nothing to compare it to would be worse
-  // than silence.
+const HEADLINE_COPY: Readonly<Record<BandVerdict, string>> = {
+  below: 'A lighter week than your normal.',
+  in: 'About your normal week.',
+  above: 'A heavier week than your normal.',
+};
+
+/** How many observation lines the section will show. Sam's "no chart walls". */
+const MAX_REGION_LINES = 2;
+
+/**
+ * THE LOAD SECTION — the load slice.
+ *
+ * WHAT CHANGED, AND WHY IT IS THE ONLY THING THAT COULD: the section used to say
+ * nothing but "coming next". It now LEADS with a statement about its own
+ * evidence — what load is measured from, and how much of this week it has. That
+ * line ships because it is derived from no constant at all: a count of logged
+ * sessions needs no signature to be true.
+ *
+ * EVERYTHING ELSE IS BUILT, TESTED, AND DARK. The headline continuum, the
+ * sweet-spot band and the region observations are all downstream of PROPOSED
+ * constants, so `signedValue` returns null for them and their lines do not
+ * render. This is a mechanism, not a habit — the section cannot read an unsigned
+ * number even by accident, because `.value` is not a door it opens.
+ *
+ * The addendum's data-state rule still holds underneath: "empty space explains
+ * what will appear and what's being collected", never a chart with one floating
+ * dot.
+ */
+function LoadSection({ week, load }: { week: JournalWeek; load: JournalLoadModel }) {
+  const coverage = signedValue(load.coverage);
+  const headline = signedValue(load.headline);
+  const observations = (signedValue(load.regionObservations) ?? []).slice(0, MAX_REGION_LINES);
+
   return (
-    <Text variant="body" style={styles.muted} testID="journal-load-building">
-      Comparing this week with your normal is coming next.
-    </Text>
+    <View>
+      <Text variant="body" style={styles.body} testID="journal-load-evidence">
+        {coverage === null || coverage.sessionsPlanned === 0
+          ? 'Load is measured from the sessions you log.'
+          : `Load is measured from the sessions you log — ${coverage.sessionsMeasured} of ${coverage.sessionsPlanned} this week have detail recorded.`}
+      </Text>
+
+      {/*
+        RIDER 1 AGAIN, ONE LAYER DOWN. A lift with no weight recorded cannot be
+        counted, and the section says so rather than letting the athlete read a
+        smaller number as a smaller week.
+      */}
+      {coverage !== null && coverage.liftsUnmeasured > 0 ? (
+        <Text variant="bodySmall" style={styles.muted} testID="journal-load-unmeasured">
+          {'Some lifts had no weight recorded, so they sit outside that.'}
+        </Text>
+      ) : null}
+
+      {/*
+        BARE JSX TEXT, EACH SENTENCE UNBROKEN ON ITS OWN LINE, and both halves of
+        that are load-bearing. The extraction gate's line-spanning canary reads a
+        sentence here that its tags do not share a line with — written as a
+        ternary of string literals it would be caught by a different pattern and
+        would stop proving the widening. And the sentence itself stays on ONE
+        line because the binding gate equality-matches the file, where a line
+        break inside a sentence hides it (batch 11's note, paid for twice).
+      */}
+      {headline === null ? (
+        week.load.comparisonAvailable ? (
+          <Text variant="body" style={styles.muted} testID="journal-load-building">
+            Your normal is ready to compare against — that comparison is coming next.
+          </Text>
+        ) : (
+          <Text variant="body" style={styles.muted} testID="journal-load-building">
+            Once you have a few more weeks logged, this shows how the week compared with your normal.
+          </Text>
+        )
+      ) : (
+        <Text variant="body" style={styles.body} testID="journal-load-headline">
+          {HEADLINE_COPY[headline.band]}
+        </Text>
+      )}
+
+      {/*
+        OBSERVATION, NEVER DIAGNOSIS (the ruling's second law). An ordering fact
+        beside the weeks it was measured over — no injury-risk claim, no advice.
+      */}
+      {observations.map((observation) => (
+        <Text
+          key={observation.region}
+          variant="bodySmall"
+          style={styles.muted}
+          testID="journal-load-region"
+        >
+          {`Biggest week for ${observation.region} in the last ${observation.weeksCompared} weeks.`}
+        </Text>
+      ))}
+    </View>
   );
 }
 
@@ -409,6 +498,56 @@ export default function JournalScreen() {
     });
   }, [weekDays, visibleWeek, sessionFeedback, athlete]);
 
+  /**
+   * THE LOAD MODEL — every recorded session the app holds, not just this week's.
+   *
+   * The four-week normal is a read over HISTORY, and history is exactly what
+   * `sessionFeedback` already is: an input keyed by date, persisted and never
+   * pruned. Nothing new is stored to make this work; the whole comparison is
+   * derived here on read.
+   *
+   * THE FALLBACK RUNG IS SUPPLIED ONLY WHERE IT IS KNOWABLE. A day's shape comes
+   * from the projection, which exists for THIS week and no past one, so past
+   * sessions pass `null` and the model reports the rung as unavailable rather
+   * than inventing a shape from the stored component kinds — that would be a
+   * second hardness authority, which is the thing `journalWeek` opens by
+   * refusing.
+   */
+  const loadModel = useMemo<JournalLoadModel>(() => {
+    const fallbackByDate = new Map<string, number | null>(
+      week.days.map((day) => [day.date, day.isSession ? day.loadWeight : null]),
+    );
+
+    const sessions: JournalLoadSessionInput[] = Object.entries(sessionFeedback ?? {})
+      .map(([date, feedback]) => ({
+        date,
+        strength: feedback?.strength ?? [],
+        conditioning: feedback?.conditioning ?? null,
+        fallbackWeight: fallbackByDate.get(date) ?? null,
+      }));
+
+    // THE PLAN HALF OF LAYER 4, read off the same resolved week the rest of the
+    // screen uses. Every prescribed row is offered; the model asks the pattern
+    // owner which of them are main-strength and ignores the rest.
+    const plannedStrength: PlannedLift[] = weekDays.flatMap((day) =>
+      (day.workout?.exercises ?? []).map((exercise) => ({
+        exerciseName: exercise.exercise?.name ?? '',
+        sets: Number(exercise.prescribedSets) || 0,
+        repsMin: Number(exercise.prescribedRepsMin) || 0,
+        repsMax: Number(exercise.prescribedRepsMax) || 0,
+        weightKg: typeof exercise.prescribedWeightKg === 'number'
+          ? exercise.prescribedWeightKg
+          : null,
+      })));
+
+    return buildJournalLoadModel({
+      weekStart: week.weekStart,
+      sessions,
+      sessionsPlannedThisWeek: week.work.sessionsPlanned,
+      plannedStrength,
+    });
+  }, [week, weekDays, sessionFeedback]);
+
   return (
     <SafeAreaView style={styles.root} testID="journal-screen">
       <ScrollView contentContainerStyle={styles.content}>
@@ -427,7 +566,7 @@ export default function JournalScreen() {
         </Section>
 
         <Section title="Load">
-          <LoadSection week={week} />
+          <LoadSection week={week} load={loadModel} />
         </Section>
 
         <Section title="Your note">
@@ -445,6 +584,11 @@ export default function JournalScreen() {
  * stored counter would be derived state — the exact thing the north star
  * presumes wrong. Weeks are keyed by their Monday so the count means "weeks
  * with any record", not "days".
+ *
+ * THE MONDAY ARITHMETIC IS NOT REPEATED HERE ANY MORE. It used to be inlined,
+ * and the load model needs the same answer to group history into weeks — two
+ * copies of a week boundary is `week-identity-two-owners` in miniature, so both
+ * readers now ask `journalWeekStartOf`.
  */
 function countWeeksOfHistory(
   sessionFeedback: Record<string, unknown> | undefined,
@@ -452,12 +596,8 @@ function countWeeksOfHistory(
   if (!sessionFeedback) return 0;
   const mondays = new Set<string>();
   for (const dateStr of Object.keys(sessionFeedback)) {
-    const date = new Date(`${dateStr}T00:00:00`);
-    if (Number.isNaN(date.getTime())) continue;
-    const dayOfWeek = date.getDay();
-    const offsetToMonday = (dayOfWeek + 6) % 7;
-    date.setDate(date.getDate() - offsetToMonday);
-    mondays.add(date.toISOString().slice(0, 10));
+    const weekStart = journalWeekStartOf(dateStr);
+    if (weekStart !== null) mondays.add(weekStart);
   }
   return mondays.size;
 }
