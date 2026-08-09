@@ -1,0 +1,274 @@
+/**
+ * WHAT THE ATHLETE ASKED, AS A TYPE — SLICE 2's READING LAYER.
+ *
+ * docs/COACH_REBUILD_KICKOFF_2026-08-09.md, S2: *"Read-only Q&A grounded in the
+ * program, the week, and recorded rules per L-C1. The salvage layer (intent,
+ * target resolution, clarifiers, truth gate) is re-pointed here, not
+ * rewritten."*
+ *
+ * ## THE VOCABULARY IS THE SALVAGE LAYER'S, AND THE COMPILER PROVES IT
+ *
+ * `CoachAnswerableKind` is an `Extract<>` over `CoachIntentKind` — the frozen
+ * pipeline's own intent union. Not a copy of three strings, not a parallel
+ * enum: a NARROWING, so the day somebody renames or deletes
+ * `program_explanation` upstream, this file stops compiling instead of quietly
+ * owning a second vocabulary. That is what "re-pointed, not rewritten" has to
+ * mean in a type system, and it costs nothing at runtime because
+ * `import type` is erased — no frozen module enters the graph.
+ *
+ * ## THE TARGET IS A DATE, BY THE LEDGER'S OWN LAW
+ *
+ * `decisionLedger.ts:9-11`: decisions name DATE + SLOT and never derived session
+ * ids, *"a derived id can drift across engine versions, a date cannot"*. A
+ * question about a day resolves to the day's ISO date in the week the coach was
+ * handed, and to nothing else. There is no session id, no item id and no
+ * `targetItemId` anywhere in this module — those are S3's problem and, per the
+ * ledger's law, they are not the shape S3 should reach for either.
+ *
+ * ## WHAT IT WILL NOT DO, AND THE DIRECTION IS THE SAFETY
+ *
+ * The reader recognises questions POSITIVELY. It has no notion of "is this a
+ * mutation request" — it does not need one, because anything it fails to place
+ * as an answerable question becomes `unknown`, and `unknown` is answered by the
+ * coach saying it does not know. "Move Friday's session to Sunday" is not
+ * recognised, so it is not answered. A negative test (*is this a mutation?*)
+ * would have to be exhaustive to be safe; a positive one is safe by being
+ * incomplete, which is the direction a read-only slice should fail in.
+ *
+ * ## THIS IMPLEMENTATION IS THE SEAM'S FIRST, NOT THE SEAM'S CONTRACT
+ *
+ * `CoachQuestionReader` is the interface; `lexicalQuestionReader` is a LEXICAL
+ * implementation of it. The salvage layer's own architecture is the same shape
+ * — `CoachIntentClassifier` (`utils/coachIntent.ts:443`) with an LLM-backed
+ * implementation behind it — and this is that seam re-pointed at data the
+ * rebuild actually has. Stated plainly because AGENTS.md is right that phrase
+ * matching is not an intelligence layer: what makes this legitimate is that the
+ * OUTPUT is typed and the answer is DERIVED from the projection, so a better
+ * reader replaces this one without a single answer changing.
+ *
+ * L14: pure. No React, no store, no navigation, no clock — `todayISO` is an
+ * argument, as it is for the opener.
+ */
+
+import type { CoachIntentKind } from '../utils/coachIntent';
+import { WEEKDAY_NAMES } from '../utils/appDate';
+import type { VisibleWeek } from './visibleProjection';
+
+/**
+ * THE KINDS SLICE 2 MAY ANSWER — a subset of the salvage intent union.
+ *
+ * `Extract` rather than a literal union: if one of these three names leaves
+ * `CoachIntentKind`, this line is a type error rather than a divergence.
+ *
+ * - `program_explanation` — "what am I doing Friday", "what's on this week".
+ * - `session_mismatch_question` — reserved by the same narrowing; slice 2 does
+ *   not yet produce it, and it is listed so the subset is the salvage layer's
+ *   READ-ONLY family rather than an arbitrary three.
+ * - `general_question` — the honest floor: a question with no rule behind it.
+ */
+export type CoachAnswerableKind = Extract<
+  CoachIntentKind,
+  'program_explanation' | 'session_mismatch_question' | 'general_question'
+>;
+
+/**
+ * WHAT THE QUESTION IS ABOUT.
+ *
+ * Deliberately coarse. Each subject is a thing the VISIBLE WEEK can answer
+ * completely, which is the test for whether a subject belongs here at all: if
+ * answering it would need a fact the projection does not carry, the coach does
+ * not have a rule for it and the honest answer is `unknown`.
+ */
+export type CoachQuestionSubject =
+  /** "What am I doing Friday / today / tomorrow?" — one day's work. */
+  | 'day_work'
+  /** "When's my next game?" — the fixture in the week. */
+  | 'next_game'
+  /** "What's on this week?" — the week's shape. */
+  | 'week_shape'
+  /** No recorded rule answers this. L-C1's floor. */
+  | 'unknown';
+
+export interface CoachQuestion {
+  readonly kind: CoachAnswerableKind;
+  readonly subject: CoachQuestionSubject;
+  /**
+   * The day the question is about, as an ISO date in the week the reader was
+   * given — never a session id (the ledger's targeting law).
+   *
+   * `null` means the question named no day OR named one the coach cannot see;
+   * the two are distinguished by `outOfWeek`, because "you didn't say which
+   * day" and "that day is not in your week" are different answers.
+   */
+  readonly targetDateISO: string | null;
+  /** True when a day WAS named and it is not in the week the coach can see. */
+  readonly outOfWeek: boolean;
+}
+
+export interface ReadCoachQuestionInput {
+  readonly message: string;
+  readonly week: VisibleWeek;
+  readonly todayISO: string;
+}
+
+/**
+ * THE SEAM. One method, data in, a typed question out, no side effects.
+ *
+ * The LLM-backed reader implements this same interface when it arrives; nothing
+ * downstream of it changes, because everything downstream consumes
+ * `CoachQuestion` and the projection.
+ */
+export interface CoachQuestionReader {
+  read(input: ReadCoachQuestionInput): CoachQuestion;
+}
+
+const UNKNOWN: CoachQuestion = {
+  kind: 'general_question',
+  subject: 'unknown',
+  targetDateISO: null,
+  outOfWeek: false,
+};
+
+/**
+ * IS THIS A QUESTION AT ALL?
+ *
+ * A question mark, or an opening interrogative. Both, because athletes drop the
+ * mark constantly and "whats on friday" is unmistakably a question — and
+ * because requiring the mark would make punctuation the difference between an
+ * answer and a shrug.
+ */
+const INTERROGATIVE = /^\s*(what|whats|what's|when|whens|when's|which|do|does|am|is|are|have|how)\b/i;
+
+/**
+ * SUBJECT MARKERS — a table, so the subjects are a list somebody can read and
+ * count rather than a chain of conditions somebody has to trace.
+ *
+ * Order matters and is the specific-before-general rule: "when is my next game"
+ * mentions no day but does mention a fixture, and "what am I doing on game day"
+ * must not be read as a fixture question. `next_game` is therefore tested
+ * against a phrase that names the fixture as the SUBJECT, not merely mentions
+ * it.
+ */
+const SUBJECT_MARKERS: ReadonlyArray<{
+  readonly subject: Exclude<CoachQuestionSubject, 'unknown'>;
+  readonly marker: RegExp;
+}> = [
+  {
+    subject: 'next_game',
+    marker: /\b(?:next\s+(?:game|match|fixture)|when\s+(?:is|are|s)?\s*(?:my|the)?\s*(?:next\s+)?(?:game|match|fixture))\b/i,
+  },
+  {
+    subject: 'week_shape',
+    marker: /\b(?:this\s+week|the\s+week|my\s+week|week\s+look|on\s+this\s+week)\b/i,
+  },
+  {
+    subject: 'day_work',
+    marker: /\b(?:doing|training|on|session|workout|scheduled|got)\b/i,
+  },
+];
+
+/** Weekday word → its index in `WEEKDAY_NAMES`, built from the one table. */
+const WEEKDAY_INDEX: ReadonlyMap<string, number> = new Map(
+  WEEKDAY_NAMES.flatMap((name, index) => [
+    [name.toLowerCase(), index] as const,
+    [name.slice(0, 3).toLowerCase(), index] as const,
+  ]),
+);
+
+/**
+ * WHICH DAY THE MESSAGE NAMED, AND IT IS LOOKED UP IN THE WEEK RATHER THAN
+ * COMPUTED.
+ *
+ * "Friday" does not become a date by arithmetic here; it becomes a date by
+ * finding the day IN THE WEEK THE COACH WAS GIVEN whose weekday matches. So the
+ * coach can only ever name a day it can see, by construction, and the whole
+ * class of "the coach answered about a day outside your week" is unreachable
+ * rather than tested for.
+ *
+ * `today` and `tomorrow` resolve through the same lookup: they name a date and
+ * the date is then required to be in the week.
+ */
+function namedDate(
+  message: string,
+  week: VisibleWeek,
+  todayISO: string,
+): { readonly dateISO: string | null; readonly named: boolean } {
+  const lower = message.toLowerCase();
+
+  if (/\btoday\b/.test(lower)) {
+    return { dateISO: dateInWeek(week, todayISO), named: true };
+  }
+  if (/\btomorrow\b/.test(lower)) {
+    return { dateISO: dateInWeek(week, nextDayISO(todayISO)), named: true };
+  }
+
+  for (const [word, index] of WEEKDAY_INDEX) {
+    if (!new RegExp(`\\b${word}\\b`, 'i').test(lower)) continue;
+    const match = week.days.find((day) => jsWeekday(day.date) === index);
+    return { dateISO: match ? match.date : null, named: true };
+  }
+
+  return { dateISO: null, named: false };
+}
+
+function dateInWeek(week: VisibleWeek, dateISO: string): string | null {
+  return week.days.some((day) => day.date === dateISO) ? dateISO : null;
+}
+
+/**
+ * THE LEXICAL READER — the seam's first implementation.
+ *
+ * Three steps, in this order, and the order is the safety: it must look like a
+ * question, it must be about something the week can answer, and only then does
+ * it get a day. A message that fails any step is `unknown`, which the answering
+ * layer turns into the coach saying it does not know.
+ */
+export const lexicalQuestionReader: CoachQuestionReader = {
+  read({ message, week, todayISO }: ReadCoachQuestionInput): CoachQuestion {
+    const text = (message ?? '').trim();
+    if (text.length === 0) return UNKNOWN;
+    if (!text.includes('?') && !INTERROGATIVE.test(text)) return UNKNOWN;
+
+    const day = namedDate(text, week, todayISO);
+
+    const hit = SUBJECT_MARKERS.find(({ marker }) => marker.test(text));
+    // A NAMED DAY IS ITSELF A SUBJECT MARKER. "What about Friday?" carries no
+    // verb this table knows, and it is unambiguously about Friday's work.
+    const subject = hit?.subject ?? (day.named ? 'day_work' : 'unknown');
+    if (subject === 'unknown') return UNKNOWN;
+
+    // A DAY QUESTION WITH NO DAY IN IT IS NOT A DAY QUESTION. "What am I
+    // doing?" without a day is a question the coach cannot target, and
+    // guessing "today" would be the coach answering a question nobody asked.
+    if (subject === 'day_work' && !day.named) return UNKNOWN;
+
+    return {
+      kind: 'program_explanation',
+      subject,
+      targetDateISO: subject === 'day_work' ? day.dateISO : null,
+      outOfWeek: subject === 'day_work' && day.named && day.dateISO === null,
+    };
+  },
+};
+
+/**
+ * The JS weekday index (0 = Sunday) of an ISO date, by UTC arithmetic on a
+ * date with no time in it. The same choice `coachOpener.nextDayISO` makes and
+ * for the same reason: this module claims purity, and `new Date(iso)` with a
+ * local timezone is where that claim would quietly become false.
+ */
+function jsWeekday(dateISO: string): number {
+  const [year, month, day] = isoParts(dateISO);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+function nextDayISO(dateISO: string): string {
+  const [year, month, day] = isoParts(dateISO);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+}
+
+function isoParts(dateISO: string): readonly [number, number, number] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateISO.slice(0, 10));
+  if (!match) throw new Error(`Invalid ISO date: ${dateISO}`);
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}

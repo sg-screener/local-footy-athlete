@@ -5,7 +5,9 @@ import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
+import { coachAnswer } from '../../rules/coachAnswer';
 import { coachOpener } from '../../rules/coachOpener';
+import { lexicalQuestionReader } from '../../rules/coachQuestion';
 import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { colors } from '../../theme/colors';
@@ -64,7 +66,19 @@ import { todayISOLocal } from '../../utils/appDate';
  * keypad and rendering both put the toolbar on top of the CTA (simulator pass,
  * 2026-07-24). Here the send control IS the exit.
  *
- * ## WHAT SLICE 1 DELIBERATELY DOES NOT HAVE
+ * ## SLICE 2 — IT ANSWERS, AND THE SCREEN STILL DECIDES NOTHING
+ *
+ * The turn is `lexicalQuestionReader.read(...)` then `coachAnswer(...)`, both
+ * pure, both in `rules/`. The screen does not classify, does not resolve a day,
+ * does not choose a sentence and has no branch for "the coach had no answer" —
+ * the answering rule owns that case, because a screen with its own fallback
+ * wording is a second voice one edit away from disagreeing with the first.
+ *
+ * Still zero mutation paths: the answering layer imports the truth gate and the
+ * projection and nothing else, and every reply it produces is validated against
+ * a communication with NO applied changes (see `rules/coachAnswer`).
+ *
+ * ## WHAT SLICE 2 DELIBERATELY DOES NOT HAVE
  *
  * The mock's three chips ("Move a session", "Something hurts", "Make this week
  * easier") are not here. They are requests to CHANGE things, and slice 1 has
@@ -120,20 +134,23 @@ export default function CoachTabScreen() {
   const handleSend = useCallback(() => {
     const message = draft.trim();
     if (message.length === 0) return;
-    // SLICE 1'S WHOLE TURN: the athlete is heard and the coach says what is
-    // true — it has no answer yet (L-C1). No intent is parsed, nothing is
-    // resolved, nothing is written.
+    // SLICE 2'S WHOLE TURN, AND IT IS THREE PURE CALLS. Read the question,
+    // derive the answer from the projection, show it. The screen chooses no
+    // words: when nothing answers, the ANSWERING RULE returns the honest
+    // sentence, so the screen has no "else" branch to word differently.
+    const question = lexicalQuestionReader.read({ message, week: visibleWeek, todayISO });
+    const answer = coachAnswer({ question, week: visibleWeek, todayISO });
     setTurns((previous) => [
       ...previous,
       { id: `athlete-${previous.length}`, speaker: 'athlete', text: message },
       {
         id: `coach-${previous.length}`,
         speaker: 'coach',
-        text: COACH_TAB_COPY.noAnswerYet,
+        text: answer.text,
       },
     ]);
     setDraft('');
-  }, [draft]);
+  }, [draft, visibleWeek, todayISO]);
 
   // TWO OPENING BUBBLES, AND THE ORDER IS SAM'S RULING (2026-08-09): his own
   // greeting introduces the coach, then the week's shape. Two bubbles rather

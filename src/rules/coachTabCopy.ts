@@ -116,6 +116,44 @@ export function coachGreeting() {
   return signedCopy(COACH_GREETING_COPY_ID);
 }
 
+/**
+ * BATCH 31 — WHAT THE COACH SAYS WHEN IT ANSWERS. PROPOSED 2026-08-10.
+ *
+ * Slice 2. Five entries, and the smallness is the point: every answer the coach
+ * gives is built from the PROJECTION's own signed words — a day's name, a
+ * part's headline — so the only new athlete-visible text is the punctuation
+ * between them and the two sentences for the things the week cannot answer.
+ *
+ * THE SEPARATORS ARE ENTRIES for the reason `joinSignedCopy` exists: a call
+ * site choosing `': '` is a call site authoring athlete-visible text. Batch 30's
+ * opener still spells its single space inline (`${lead} ${weekday}`) and that
+ * inconsistency is NAMED rather than fixed here — slice 1 is Sam-approved as
+ * shipped and re-cutting it to route one space through a constant is a change
+ * to signed-off code for no athlete-visible difference.
+ *
+ * PROPOSED, not ruled: Sam has not read these. They go to him with the slice.
+ */
+export const COACH_ANSWER_COPY = {
+  /** Between the day's name and what is on it — "Friday: Upper Push". */
+  dayLabelJoin: ': ',
+  /** Between two things on the same day. */
+  itemJoin: ', ',
+  /** Between two words of one clause — "Game" + "Saturday". */
+  wordJoin: ' ',
+  /**
+   * THE WEEK HOLDS NO FIXTURE. Said as what the coach can SEE rather than as a
+   * fact about the athlete's season — the projection is one week, and "you have
+   * no game" would be a claim about a horizon the coach was not given.
+   */
+  noGameInWeek: "No game in the week I can see.",
+  /**
+   * THE DAY IS REAL AND THE COACH CANNOT SEE IT. Distinct from the no-answer
+   * reply on purpose: the athlete asked a perfectly good question and the
+   * limit is the coach's, not theirs.
+   */
+  dayNotInWeek: 'I can only see this week.',
+} as const;
+
 /** The tab's own chrome and its one answer. */
 export const COACH_TAB_COPY = {
   /** The tab bar label and the screen title — the mock's own word. */

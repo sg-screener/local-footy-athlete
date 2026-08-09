@@ -2,6 +2,29 @@
 
 ## Unprocessed (newest first)
 
+1. BATCH 30 SIGNED IN SAM'S OWN WORDS + SLICE 2 OPENS (seat,
+   2026-08-09 night).
+   (a) GREETING SIGNED, Sam verbatim (2026-08-09): "G'day, I'm your
+   S&C coach. I can answer fitness questions and make changes to
+   your program." — ships NOW, slice 1, ahead of the ability. Sam's
+   own ruling on the honesty gap: "we aren't releasing the app yet -
+   we are going to build that shit now." The app has no users but
+   his devices (recorded 2026-07-28); the claim becomes true before
+   any athlete reads it. If a beta gate ever arrives before S3, the
+   seat owns re-checking this sentence. The week-shape line stays as
+   built, second bubble. Items 2 (chips to S3) and 3 (honest
+   no-answer reply) are Sam-approved as shipped.
+   (b) Commit docs/PARKED_QUESTIONS/COACH_WOW_IDEAS_2026-08-09.md as
+   authored (seat's file).
+   (c) OPEN SLICE 2 — IT ANSWERS FROM THE BRAIN (kickoff S2):
+   read-only Q&A grounded in the program, the week, and recorded
+   rules per L-C1. Re-point the salvage layer (intent, target
+   resolution, clarifiers, truth gate) — do not rewrite it. Every
+   answer carries its grounds as data (slice 1's pattern). No
+   mutation paths. Full chain, short boundary, stop before S3.
+   LOOP CHECK: owner-signs-in-own-words — sighting 1 at this seam —
+   iterate.
+
 (none)
 
 

@@ -137,6 +137,48 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
       && !/useEffect\([^)]*\)[\s\S]{0,200}(save|persist|write|append)/i.test(screenCode),
     'zero new stored state — the slice is read-only in the north-star sense too',
   );
+
+  // ── AND THE BAN GOES ONE HOP FURTHER, BECAUSE IT HAD TO ────────────────────
+  //
+  // A BAN ON THE SCREEN'S OWN IMPORT LIST IS A BAN ON ONE LINE OF A GRAPH.
+  // Slice 2 moved the thinking into `rules/` modules, and the cheapest way to
+  // give the coach a store from now on is not to import one here — it is to
+  // import one from `rules/coachAnswer`, where this section was not looking.
+  // The screen's list would stay spotless and the gate would stay green.
+  //
+  // So every `rules/` module the screen pulls in is opened and swept with the
+  // SAME patterns. One hop, not a full transitive walk: one hop is what covers
+  // the modules this slice authored, and a claim about a whole graph is a claim
+  // this cell cannot honestly make.
+  const ruleModules = [...screenCode.matchAll(/from '\.\.\/\.\.\/rules\/([A-Za-z]+)'/g)]
+    .map((match) => match[1]);
+  ok(
+    'the screen\'s rules/ imports were enumerated and there are some',
+    ruleModules.length >= 3,
+    ruleModules.join(', '),
+  );
+  const FORBIDDEN_ONE_HOP: ReadonlyArray<RegExp> = [
+    /from '[^']*\/store\//,
+    /programControlActions/,
+    /decisionLedger/,
+    /Transaction/,
+    /applyProgramAdjustment|weekRebuild|generateProgram/,
+    /AsyncStorage/,
+  ];
+  for (const moduleName of ruleModules) {
+    const source = stripComments(read('rules', `${moduleName}.ts`));
+    // `import type` is ERASED — it creates no runtime edge, and counting it as
+    // one is the eleventh-sighting mistake from the overnight pass. A type from
+    // a store module is a shape, not a store.
+    const runtimeImports = source.match(/^import(?!\s+type\s)[\s\S]*?from\s+'[^']+';/gm) ?? [];
+    const offenders = runtimeImports.filter((line) =>
+      FORBIDDEN_ONE_HOP.some((pattern) => pattern.test(line)));
+    ok(
+      `rules/${moduleName} reaches no writer either`,
+      offenders.length === 0,
+      offenders.join(' | '),
+    );
+  }
 }
 
 // ─── [2] THE COACH'S WORDS FOR A DAY ARE THE WEEK ROW'S WORDS ────────────────
@@ -418,18 +460,49 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
   // (`readonly speaker: 'coach' | 'athlete'`). The instrument counted a
   // character sequence; the claim is about replies the screen can EMIT, and
   // only the state updater emits any.
-  const sendBody = /const handleSend = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[draft\]\);/
+  //
+  // THE ANCHOR DOES NOT NAME THE DEPENDENCY LIST, and that is a caught defect
+  // rather than a precaution: it did, and slice 2 adding `visibleWeek` to the
+  // deps made the region unfindable. The prove-the-region cell reddened FIRST
+  // and the three claims about the region reddened behind it — which is the
+  // anchoring law working, but a cell that reds on a correct edit is a cell
+  // coupled to the wrong thing. It is anchored on the closing brace at the
+  // producer's own indentation instead, and it still proves its last line is
+  // inside the slice.
+  const sendBody = /const handleSend = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[[^\]]*\]\);/
     .exec(screenCode)?.[0] ?? '';
   ok(
     'the turn producer was located and is substantial',
-    sendBody.length > 200 && /setTurns\(/.test(sendBody),
+    sendBody.length > 200 && /setTurns\(/.test(sendBody)
+      && /\}, \[[^\]]*\]\);\s*$/.test(sendBody),
     `${sendBody.length} chars`,
   );
+  // RE-AIMED AT SLICE 2, NOT LOOSENED. Until 2026-08-10 this cell required the
+  // screen's one reply to be the literal `noAnswerYet`, which was the right
+  // claim while there was nothing to derive. Now there is, and the claim it was
+  // really making survives intact and gets stronger: THE SCREEN STILL AUTHORS
+  // NO REPLY. Its single coach turn takes whatever the answering rule returned,
+  // and it has no branch of its own — including no fallback wording for "the
+  // coach had nothing", which the rule owns (`coachAnswer` returns
+  // `noAnswerYet` itself on the `unknown` subject).
   ok(
-    'the only reply the screen can produce is the honest no-answer (L-C1)',
-    /text: COACH_TAB_COPY\.noAnswerYet/.test(sendBody)
-      && (sendBody.match(/speaker: 'coach'/g) ?? []).length === 1,
-    'a second coach reply in slice 1 would be an answer nobody derived',
+    'the screen emits exactly one coach turn per athlete turn',
+    (sendBody.match(/speaker: 'coach'/g) ?? []).length === 1,
+    'two replies would be the screen deciding an answer needed company',
+  );
+  ok(
+    'and that turn\'s text is the answering rule\'s, unaltered (L-C1)',
+    /text: answer\.text/.test(sendBody)
+      && /coachAnswer\(\{ question, week: visibleWeek, todayISO \}\)/.test(sendBody),
+    'a screen that reworded, trimmed or prefixed the answer would be a second '
+      + 'voice, and the truth gate the rule runs would be gating the wrong string',
+  );
+  ok(
+    'the screen chooses no words of its own on the send path',
+    !/COACH_TAB_COPY\.[A-Za-z]+/.test(sendBody)
+      && !/text: '[^']+'/.test(sendBody),
+    'the fallback lives in the rule; a copy constant here would be the screen '
+      + 'owning the case where the coach has nothing to say',
   );
 }
 
