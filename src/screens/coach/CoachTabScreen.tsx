@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Keyboard,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
@@ -181,6 +189,38 @@ export default function CoachTabScreen() {
   >(null);
   const [settling, setSettling] = useState<SettlingChange | null>(null);
 
+  // ── THE CONVERSATION FOLLOWS THE ATHLETE, NOT THE OTHER WAY ROUND ──────────
+  //
+  // SAM'S DEVICE, 2026-08-09: *"it doesn't scroll down - so when I'm typing a
+  // new question after a few questions I can't see the answers."*
+  //
+  // A REF AND NOT STATE, because this is read inside a scroll handler that runs
+  // on every frame and must not re-render the conversation to record where it
+  // is. `true` initially: an empty conversation is at its bottom.
+  const atBottomRef = useRef(true);
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    // A TOLERANCE, because an exact equality is never true on a real device:
+    // rubber-banding, fractional layout and the inertial tail all land a few
+    // points short, and "a few points short" must still count as at the bottom
+    // or the list stops following after the athlete's first flick.
+    atBottomRef.current =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - 24;
+  }, []);
+  const pinToBottom = useCallback((animated: boolean) => {
+    if (!atBottomRef.current) return;
+    scrollRef.current?.scrollToEnd({ animated });
+  }, []);
+
+  // THE KEYPAD OPENING SHRINKS THE LIST, AND A SHRUNK LIST IS NO LONGER AT ITS
+  // BOTTOM. `didShow` rather than `willShow`: the body's inset rides the same
+  // native keyboard frame, so the frame is only final once the keyboard is, and
+  // scrolling to a bottom that is about to move is scrolling to the wrong place.
+  useEffect(() => {
+    const subscription = Keyboard.addListener('keyboardDidShow', () => pinToBottom(false));
+    return () => subscription.remove();
+  }, [pinToBottom]);
+
   // The opener is the conversation's first line and is re-derived whenever the
   // week does — a coach whose greeting went stale after an edit would be the
   // stored-output defect the north star exists to make unrepresentable.
@@ -326,7 +366,13 @@ export default function CoachTabScreen() {
           // control never needs a blank-space tap first (dogfood finding E4).
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          // PINS ONLY WHEN THE ATHLETE IS ALREADY AT THE BOTTOM. Scrolling
+          // unconditionally would yank them back to the newest turn while they
+          // are reading an older one — the same disrespect as not scrolling at
+          // all, pointing the other way.
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={() => pinToBottom(true)}
           testID="coach-tab-conversation"
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >

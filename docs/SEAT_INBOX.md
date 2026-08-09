@@ -2,6 +2,134 @@
 
 ## Unprocessed (newest first)
 
+(none)
+
+
+## Processed 2026-08-10 (sixtieth pass) — IT CHANGES THINGS, AND THE FREE DEVICE EVIDENCE HAD A DEFECT IN IT
+
+- **ONE LINE: the coach proposes a change as a `ProgramControlAction`, the card
+  the athlete says yes to is rendered FROM that action and from nothing else, the
+  athlete's own tap door executes it, the ledger records it inside the door, undo
+  covers it because it already covered the door — and the confirmation is a
+  sentence the truth gate can refuse, which it could not have been yesterday
+  because the gate had no vocabulary for a MOVE at all.**
+  `03147b35` (the order as authored) · `f87335f2` (the seat's era handoff, as
+  authored) · `ff95b5cb` (the slice) · item 0's fix and the reason subject in the
+  commit after it. Boundary: docs/COACH_SLICE3_BOUNDARY_2026-08-10.md
+- **ALL THREE ITEMS PROCESSED IN FULL, STOPPED BEFORE S4 AS ORDERED.** 0-pre is
+  committed unchanged; item 0's cause was found and fixed at the shared keyboard
+  owner; item 1 is slice 3 for one kind.
+- **ITEM 0's CAUSE WAS A HOLE IN `KeyboardSafeArea`, NOT IN THE COACH SCREEN.**
+  `KeyboardStickyView` lifts the footer and **nothing ever moved the body** — it
+  is `flex: 1` inside a root that does not shrink, so its frame runs to the true
+  screen bottom and its last content sits behind the keypad. A
+  `KeyboardAwareScrollView` body hid that everywhere else by scrolling the FOCUSED
+  INPUT clear, and **a screen whose input lives in the FOOTER has no focused input
+  inside the body at all**, so nothing was ever adjusted. The bare `View` branch
+  owned nothing; the coach tab is simply the first screen shaped that way. The
+  body now reserves the keyboard's height from **the same shared value the footer
+  rides** — one native frame, read twice, because the slice-1 boundary named the
+  alternative by name. The scrollable branch is deliberately left alone and a cell
+  says why. All four required end-states are cells; `test:keyboard-convention`
+  **43/43**.
+  LOOP CHECK `keyboard-cases-deferred-then-bitten` sighting 1 — **iterate**, and
+  the honest reading is that L-C3 predicted this IN WRITING at slice 1 and two
+  slices shipped without keyboard cells anyway. The compression named (a keyboard
+  matrix as a standing pre-device gate for every conversational surface) is **NOT
+  built** — what exists is four cells on one screen.
+- **AND THE FREE DEVICE EVIDENCE CONTAINED A DEFECT NOBODY WAS LOOKING FOR.** The
+  order banked Sam's answers as evidence the coach was right. Probing by hand
+  found the opposite: **`"why is friday heavy?"` WAS NOT REFUSED — it answered
+  `"Friday: Lower Squat."`** The slice-2 boundary says it is refused; NOW.md told
+  Sam it is refused; **both were wrong, and no cell held the claim — it lived in
+  prose only.** The day marker beat the week by slice 2's own specificity rule.
+  **The athlete asks WHY and is told WHAT, with nothing to signal the question was
+  missed** — worse than a refusal, and the exact failure L-C1 exists to prevent.
+  Fixed as a SUBJECT (`reason`), recognised positively and answered honestly,
+  outranking the whole subject table but **not** swallowing *"why can't I move
+  saturday?"*, which reaches the change path on its move verb. **The Bible layer
+  lands on that arm: it is a seam instead of a hole.** Sam's typo'd *"Why do we do
+  strength before team traininh"* places there too — same honest reply, but it
+  reaches the arm instead of falling off the end of the reader.
+  *(`"what should I eat before a game"` is `unknown` and refused, as expected.)*
+- **THE ORDER'S OWN WARNING WAS THE WHOLE ARCHITECTURE OF ITEM 1.** A
+  `CoachRequestReader` beside slice 2's `CoachQuestionReader` is a TABLE, and the
+  message that exposes it is the first anybody would type: *"can you move Friday
+  to Sunday?"* carries an interrogative AND a move verb. **So there is ONE reading
+  seam**, and the matrix was written before the resolver as ordered — eleven rows,
+  seven matching three marker families at once, both readings represented.
+  Reintroducing the defect reds four matrix rows.
+- **THE PRECEDENCE FAVOURS THE CHANGE, AND ONLY L-C2 MAKES THAT SAFE.** A change
+  request produces a CARD, never a mutation: mis-reading a question as a request
+  costs a card the athlete declines; mis-reading a request as a question costs
+  them the feature. **The change card is doing structural work, not decorative
+  work.**
+- **THE TRUTH GATE HAD NO VOCABULARY FOR A MOVE, AND THAT IS THE KEYSTONE.** All
+  fourteen `FORBIDDEN_WHEN_NO_APPLIED` patterns came from the substitution
+  incident; **not one could catch a coach claiming a move it had not made.** Three
+  added, confirmation worded in the first person so the gate can read it.
+  **Measured, not assumed:** `test:coach-truth-gate` 61/61, and the frozen
+  `coach-command-router` — whose replies literally say *"I moved Wednesday's
+  session to Friday"* — reproduces its single pre-existing red BYTE-IDENTICALLY
+  against a restored baseline copy of the module.
+- **THE REFUSAL RUNG COST A DAY NOTHING, EXACTLY AS THE ORDER CONDITIONED.** It is
+  the check ORDER, not a feature: capability is asked before the destination
+  because L-C1 forbids proposing what the door would refuse. Where the projection
+  carries a recorded refusal the coach **speaks it verbatim.**
+- **A REAL DEFECT IN SLICE 2's SHIPPED CODE, THIRD SIGHTING OF THE SAME CLASS.**
+  Day resolution walked `WEEKDAY_INDEX`, so the day the coach picked was decided
+  by the order of `WEEKDAY_NAMES` rather than by the sentence — *"am I training
+  friday or monday?"* answered about MONDAY. Found by needing TWO days.
+- **TWO MUTATIONS SURVIVED AND BOTH WERE MY OWN CELLS PASSING FOR THE WRONG
+  REASON.** M3 (deleting the message-order sort) survived because every two-day
+  message in the suite carried *"to"* and the preposition rule decided alone —
+  **a cell set in which one rule always decides cannot observe a second rule.**
+  M8 (deleting the card's kind guard) survived because the probe's payload was
+  missing `fromDate`, so the card came back null by ACCIDENT. Both re-aimed, both
+  re-probed, both red.
+- **TWO SCREEN BRANCHES WERE CHOOSING THEIR OWN WORDS AND A RE-AIMED CELL FOUND
+  THEM.** Both gone: the proposal returns action-and-card together, and declining
+  is a rule call. **Every sentence the coach says comes out of `rules/`.**
+- **THE ANCHOR MOVED OFF THE FUNCTION BODY AT ITS SECOND SIGHTING.** *An anchor on
+  the thing every slice edits is an anchor every slice breaks.*
+- **THE LEDGER RECORDS THE CHANGE AND NOT THE COACH — MEASURED, NAMED, NOT
+  PATCHED.** A landed move appends `{kind:'plan_change'}` carrying the PlanChange,
+  which has no author, so the `coach_tab` source this slice added does not reach
+  the ledger for this kind. The reading that makes it correct is L-C2's own — the
+  yes is the athlete's — **but it is a ruling, and it is the other half of the
+  parked athlete-tap-attributed-to-coach item.**
+- **GATE:** full unpiped chain `GATE_EXIT=1` at `test:program-control-durable`,
+  **1 FAIL cell** — main's declared red, 92 suites reached, **run THREE times**
+  (the slice, the cell re-aims, item 0's fix). `test:compile` PASSED, totals
+  byte-identical **35/51/373**. **Sweep 2 of 174 = the declared set exactly**;
+  denominator moved 173 → 174 in the commit that earned it. New gate
+  `test:coach-tab-slice3` **116 cells, 19 mutations 19 red**;
+  `test:coach-tab-slice1` **80 cells** (73 → 80), 4 re-aimed, none deleted;
+  `test:coach-tab-slice2` **76 cells, unchanged and green**;
+  `test:keyboard-convention` **43/43**; `test:coach-truth-gate` **61/61**.
+- **NOT COVERED, first line: THE DOOR HAS NEVER RUN.** No cell calls
+  `executeProgramControlActionDurably`; **that a coach move lands, records a
+  decision and survives a relaunch is a source-level reading, not a
+  measurement**, and it is the likeliest place this slice is wrong. A durability
+  tape is the first thing the next pass owes. **ITEM 0 IS FIXED IN SHAPE, NOT
+  PROVEN ON GLASS** — every one of its cells reads SOURCE; no keyboard has been
+  raised in this repo, and the inset is a Reanimated LAYOUT animation whose
+  smoothness beside the footer's transform only a device can judge. **No
+  follow-up context:** a bare *"friday"* in reply to an ask would read as a
+  question, so both asks teach the whole shape. L13 depth 0.
+- **PARKED FOR SAM:** batch 31 is larger and still PROPOSED (one signing sitting,
+  as ordered); the card's *"You asked me to."* why-line; whether the ledger should
+  know the coach drafted it; and which request it refused that it should have
+  proposed. Carried unchanged: the frozen coach tree, the three unbuilt ledger
+  fact destinations, the two remaining chips, the journal/copy items.
+
+
+### The orders the sixtieth pass processed, as the seat wrote them
+
+0-pre. Commit docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md
+   as authored (seat's file — era handoff; the review seat is moving
+   to a fresh Opus session).
+
 0. L-C3 GATE FAILURE ON DEVICE — FIX INSIDE S3, BEFORE ITS
    BOUNDARY (seat, 2026-08-09 night, from Sam's screenshots + words
    verbatim): "the chat history is stuck - it gets hidden behind the
@@ -60,8 +188,6 @@
    LOOP CHECK: kind-by-kind-behind-one-card — sighting 1 —
    iterate; a second kind needing its own card variant = compress
    into card-from-action generalisation before a third.
-
-(none)
 
 
 ## Processed 2026-08-10 (fifty-ninth pass) — IT ANSWERS, AND THE TRUTH GATE HOLDS ITS MOUTH

@@ -1,21 +1,77 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** `e533f1ec` — **THE COACH ANSWERS NOW.** Slice 2
-  landed; S3 not started, as ordered. Sam's boot fix below is still UNSEEN on
-  his phone and is still the first thing to look at.
+- **BRANCH:** `main` · **HEAD:** slice 3 — **THE COACH CHANGES THINGS NOW.**
+  S4 not started, as ordered. Sam's boot fix below is still UNSEEN on his phone
+  and is still the first thing to look at.
 
-- **⚠ SAM: THE COACH TAB IS THE SECOND THING TO LOOK AT, AND IT TALKS BACK.**
-  Third tab, between Program and Profile. It opens with **your greeting, in your
-  words**, then your week in one short sentence — *"Game Saturday. Strength
-  today. Conditioning tomorrow."* **Now ASK IT SOMETHING.** It answers three
-  questions: *"what am I doing Friday?"*, *"when's my next game?"*, *"what does
-  this week look like?"* Anything else it will honestly say it has no answer
-  for — **including "why is Friday heavy?", which is the biggest thing it still
-  cannot do.** Nothing on that tab can change your program.
-  **THE THING TO WATCH, still: tap the input and see whether the composer jumps
-  above the keypad and settles back.** And tell me the first question it
-  refused that it should have answered — that list is worth more than any test
-  I can write.
+- **⚠ SAM: THE COACH TAB CAN NOW MOVE A SESSION, AND IT ASKS BEFORE IT DOES.**
+  Type **"move Friday to Sunday"** (or tap the *Move a session* chip). A card
+  comes up above the keypad — what changes, from what, to what, and why — with
+  **Make the change** and **Not now**. Nothing happens until you tap. When you
+  do, it goes through the SAME door as the Program tab's own move, so the toast
+  and Undo work on it exactly as they do on your own tap.
+  **THE THING TO WATCH, and it is the exact case you named: bring the keyboard
+  up while the card is showing and check both buttons are still reachable.**
+  The card rides the keypad with the composer; if anything overshoots or sits
+  under the keys, this is the slice that will show it.
+  It still ANSWERS the same three questions. **And the thing I told you it
+  refused — *"why is Friday heavy?"* — it did NOT refuse: it answered "Friday:
+  Lower Squat."** You asked WHY and it told you WHAT. That is fixed; it now says
+  it has no answer, honestly, and the Bible layer is what fills it.
+  **Tell me the first request it refused that it should have proposed.**
+
+- **COACH SLICE 3 (2026-08-10).** **READ:**
+  docs/COACH_SLICE3_BOUNDARY_2026-08-10.md · gate `test:coach-tab-slice3`
+  (99 cells, 14 mutations 14 red).
+  - **ONE READING SEAM, NOT TWO READERS.** *"Can you move Friday to Sunday?"*
+    carries an interrogative AND a move verb; two readers tried in sequence
+    answer by table order, which is the slice-2 class exactly. The MARKER MATRIX
+    was written before the resolver, as ordered — nine rows, five matching three
+    families at once, and it is what reds when the precedence is reversed.
+  - **THE CARD IS A PROJECTION OF THE ACTION** (L-C2). `changeCardFor` sees the
+    action and the week and nothing else — no message, no request, no
+    conversation — so card and change cannot drift. A kind it cannot draw gets
+    no card, and `coachProposal` returns action-and-card together, so *"a
+    proposed action without a card"* is unrepresentable.
+  - **THE TRUTH GATE HAD NO VOCABULARY FOR A MOVE.** All fourteen forbidden
+    phrases came from the substitution incident; none could catch a coach
+    claiming a move it had not made. Three added, the confirmation worded in the
+    first person so the gate can read it. **Measured, not assumed:**
+    `test:coach-truth-gate` 61/61, and the frozen command-router's single red
+    reproduces byte-identically against a restored baseline copy.
+  - **THE REFUSAL RUNG CAME FREE.** Capability is checked before the destination
+    is asked for — because L-C1 requires it — so *"why can't I move Saturday?"*
+    is answered with the day's own recorded refusal, spoken verbatim.
+  - **A DEFECT IN SLICE 2's SHIPPED CODE, found by needing two days:** day
+    resolution walked `WEEKDAY_INDEX`, so the day the coach picked was decided by
+    the order of `WEEKDAY_NAMES` rather than by the sentence. *"Am I training
+    friday or monday?"* answered about Monday. Third sighting of an ordered table
+    answering a question about specificity.
+  - **TWO MUTATIONS SURVIVED AND BOTH WERE MY CELLS PASSING FOR THE WRONG
+    REASON** — a sort no input could observe, and a no-card probe whose payload
+    was missing the field rather than the kind. Re-aimed and re-probed, both red.
+  - **THE L-C3 DEVICE FAILURE (inbox item 0) IS FIXED AT THE SHARED OWNER.**
+    `KeyboardStickyView` lifted the footer and **nothing ever moved the body** —
+    `flex: 1` inside a root that does not shrink, so the list ran behind the
+    keypad. Hidden everywhere else because `KeyboardAwareScrollView` scrolls the
+    FOCUSED INPUT clear, and **a screen whose input is in the FOOTER has no
+    focused input in the body at all.** The body now reserves the keyboard's
+    height off the same native frame the footer rides; the conversation pins to
+    bottom on new content when already at bottom, and re-pins on
+    `keyboardDidShow`. `test:keyboard-convention` 43/43.
+  - **AND THE FREE DEVICE EVIDENCE HELD A DEFECT: *"why is Friday heavy?"* was
+    NOT refused** — the day marker won and it answered with Friday's session
+    list. Both the slice-2 boundary and this file said otherwise; **no cell held
+    the claim.** Fixed as a `reason` subject, recognised positively and answered
+    honestly — the arm the Bible layer lands on.
+  - **NOT COVERED, first line: THE DOOR HAS NEVER RUN.** No cell executes
+    `executeProgramControlActionDurably`; that a coach move lands, records and
+    survives a relaunch is a source-level reading. **A durability tape is the
+    first thing the next pass owes.** **Item 0 is fixed in SHAPE, not proven on
+    glass** — every one of its cells reads source, no keyboard has been raised
+    here, and the inset is a Reanimated layout animation only a device can judge.
+    **No follow-up context:** both asks teach the whole shape because a bare
+    *"friday"* in reply would be read as a question.
 
 - **COACH SLICE 2 (2026-08-10).** `5ff09347` (the seat's parked ideas) ·
   `24617f53` (batch 30 ruled, the greeting signed) · `e533f1ec` (the slice).
@@ -245,8 +301,10 @@
 
 - **GATE:** full `test:bible` **UNPIPED `GATE_EXIT=1` at
   `test:program-control-durable`, 1 FAIL line** — main's declared red, 92
-  suites reached. `test:compile` PASSED, totals byte-identical to baseline
-  (35/51/373). **Sweep 2 of 173** = the declared set exactly. **The denominator
+  suites reached, run TWICE. `test:compile` PASSED, totals byte-identical to
+  baseline (35/51/373). **Sweep 2 of 174** = the declared set exactly. **The
+  denominator moved 173 → 174 in the commit that earned it**
+  (`test:coach-tab-slice3`). Previously: **the denominator
   moved 172 → 173 in the commit that earned it** (`test:coach-tab-slice2`).
   Previously: **The denominator
   moved 171 → 172 in the commit that earned it** (`test:coach-tab-slice1`,
@@ -296,9 +354,10 @@
     fork above is no longer abstract: the calendar-mark finding is that same
     §3 fork, reproduced in the athlete's most visible feature.**
 
-- **COACH REBUILD IS OPEN AND SLICES 1 + 2 ARE LANDED** (see the top of this
-  file). **S3 (*it changes things*) is next and is NOT started** — it is the
-  slice that makes the greeting's second sentence true. Sam's note still
+- **COACH REBUILD IS OPEN AND SLICES 1 + 2 + 3 ARE LANDED** (see the top of this
+  file). **The greeting's second sentence — *"I can … make changes to your
+  program"* — is TRUE as of slice 3, for one kind.** S4 (*it knows how you're
+  tracking*) is next and is NOT started. Sam's note still
   governs S4: **the journal's behind-the-scenes record — load, regions, feel,
   niggles — is an INPUT to coach intelligence.** That is why the data layer
   stayed live and why every journal suite is pinned in the chain.

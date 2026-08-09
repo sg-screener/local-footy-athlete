@@ -293,6 +293,15 @@ bucket. **No walker run, no accumulated world — L13 depth 0.** A day with four
 parts would produce a longer answer than any cell has seen, and the
 under-80-characters cell is measured over a fixture with at most two.
 
+> **CORRECTION, 2026-08-10, from the sixtieth pass — this section's claim below
+> that *"why is Friday heavy?" is refused* WAS FALSE.** The message carries a day
+> marker, the day beat the week by this slice's own specificity rule, and the
+> coach answered *"Friday: Lower Squat."* — the athlete asks WHY and is told
+> WHAT. **No cell held the claim; it lived in this paragraph only**, which is
+> `a ruling premise is a claim too` applied to a boundary's own words. Slice 3
+> adds a `reason` subject so the question is placed and answered honestly, and
+> pins it. Corrected here rather than left reading as a fact.
+
 **THE ORDER SAID "THE PROGRAM, THE WEEK, AND RECORDED RULES" AND THIS SLICE
 DELIVERS THE WEEK.** That is the largest thing left undone and it is a scope
 statement, not an omission: L-C1 says the coach's knowledge IS the Bible plus

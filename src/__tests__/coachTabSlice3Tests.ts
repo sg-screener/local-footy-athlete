@@ -50,7 +50,7 @@ import {
   coachChangeDeclined,
   coachChangeOutcome,
 } from '../rules/coachChangeOutcome';
-import { describeVisibleDay } from '../rules/coachAnswer';
+import { coachAnswer, describeVisibleDay } from '../rules/coachAnswer';
 import { COACH_ANSWER_COPY, COACH_CHANGE_COPY } from '../rules/coachTabCopy';
 import { FORBIDDEN_WHEN_NO_APPLIED } from '../utils/verifiedCoachCommunication';
 import { LEDGER_RECORDED_ACTION_TYPES } from '../rules/programControlDecisions';
@@ -215,6 +215,15 @@ console.log('\n[1] THE MATRIX — every pair of markers that can share one messa
     // ── PAIRS WITHOUT A MOVE VERB — the slice-2 precedence, still binding. ──
     { markers: 'Q+D+W', message: 'what am I doing on friday this week?', expect: 'question',
       why: 'the slice-2 defect: a named day is narrower than a named week' },
+    { markers: 'Y+D', message: 'why is friday heavy?', expect: 'question',
+      why: 'FOUND ON SAM\'S DEVICE. A reason marker beside a day marker — the '
+        + 'day won and the coach answered with Friday\'s session list. Which '
+        + 'reading it gets is section [2]\'s cell; that it is a QUESTION and '
+        + 'not a change is this row' },
+    { markers: 'Y+M+D', message: 'why can\'t I move saturday?', expect: 'change',
+      why: 'and a reason marker does NOT capture a move request — the refusal '
+        + 'rung answers it by attempting the move, so the why must not swallow '
+        + 'it on the way past' },
   ];
 
   for (const row of MATRIX) {
@@ -276,6 +285,34 @@ console.log('\n[2] WHAT MOVES, WHERE TO, AND WHAT THE COACH REFUSES');
       : backward.fromDate === SUNDAY && backward.toDate === FRIDAY,
     JSON.stringify(backward ?? proposeIt('move sunday to friday')?.text),
   );
+  // ── AND THE TWO CELLS A SURVIVOR ADDED. ────────────────────────────────────
+  //
+  // M3 (deleting the sort that puts named days in MESSAGE order) SURVIVED the
+  // first run at 97/97, and the reason is this suite's own blind spot rather
+  // than a harmless mutation: every two-day message above carries "to", and the
+  // preposition rule picks the destination by POSITION, so it produced the same
+  // answer from an unsorted list. **A cell set in which one rule always decides
+  // cannot observe a second rule** — the slice-2 class again, this time in the
+  // gate written to honour it. Two inputs where the sort is the only thing
+  // deciding:
+  const noPreposition = movePayload(proposeIt('move friday sunday')?.action);
+  ok(
+    'with no preposition, the day named FIRST is still the one that moves',
+    noPreposition?.fromDate === FRIDAY && noPreposition.toDate === SUNDAY,
+    JSON.stringify(noPreposition ?? proposeIt('move friday sunday')?.text),
+  );
+  // AND THE QUESTION PATH, WHICH IS WHERE THE DEFECT SHIPPED. Two days named in
+  // a question: the first is the subject. Under the old table walk this answered
+  // about MONDAY, because Monday precedes Friday in `WEEKDAY_NAMES`.
+  const twoDayQuestion = readIt('am I training friday or monday?');
+  ok(
+    'a question naming two days is about the first one said',
+    twoDayQuestion.intent === 'question'
+      && twoDayQuestion.question.targetDateISO === FRIDAY,
+    `${twoDayQuestion.intent}: ${JSON.stringify(
+      twoDayQuestion.intent === 'question' ? twoDayQuestion.question : null)}`,
+  );
+
   // THE PREPOSITION BEATS WORD ORDER WHEN IT DISAGREES WITH IT.
   const prepositionFirst = movePayload(proposeIt('move to sunday the friday session')?.action);
   ok(
@@ -373,6 +410,46 @@ console.log('\n[2] WHAT MOVES, WHERE TO, AND WHAT THE COACH REFUSES');
     `${outside?.verdict}: ${outside?.text}`,
   );
 
+  // ── THE DEVICE CASE, AS A REGRESSION ──────────────────────────────────────
+  //
+  // SEAT INBOX item 0's free evidence, probed by hand: the slice-2 boundary and
+  // NOW.md both told Sam *"why is Friday heavy?"* was REFUSED. It was not — the
+  // day marker won and the coach answered *"Friday: Lower Squat."* **The
+  // athlete asks WHY and is told WHAT**, with nothing to signal the question was
+  // missed, which is worse than a refusal and is the failure L-C1 exists to
+  // prevent. No cell held the claim; it lived in prose only.
+  const whyDay = readIt('why is friday heavy?');
+  ok(
+    'a reason question about a day is placed as a REASON, not as the day\'s work',
+    whyDay.intent === 'question' && whyDay.question.subject === 'reason',
+    whyDay.intent === 'question' ? whyDay.question.subject : whyDay.intent,
+  );
+  const whyAnswer = whyDay.intent === 'question'
+    ? coachAnswer({ question: whyDay.question, week: WEEK, todayISO: TODAY }) : null;
+  ok(
+    'and it is answered honestly rather than with the session list',
+    whyAnswer?.verdict === 'no_rule'
+      && !whyAnswer.text.includes('Lower Squat'),
+    whyAnswer?.text,
+  );
+  // THE CONTROL, AND IT IS WHAT STOPS THE FIX BECOMING A BLANKET "WHY WINS".
+  // Without it, a reason marker could swallow every message it appears in.
+  const plainDay = readIt('what am I doing friday?');
+  ok(
+    'a day question with no reason marker still answers with the day',
+    plainDay.intent === 'question' && plainDay.question.subject === 'day_work',
+    plainDay.intent === 'question' ? plainDay.question.subject : plainDay.intent,
+  );
+  // AND SAM'S OWN TYPO'D SENTENCE, WHICH IS NOW PLACED RATHER THAN UNPARSEABLE.
+  // The reply is the same honest sentence either way; what changed is that it
+  // reaches the arm the Bible layer will fill instead of falling off the end.
+  const typed = readIt('Why do we do strength before team traininh');
+  ok(
+    "Sam's own message is placed as a reason question",
+    typed.intent === 'question' && typed.question.subject === 'reason',
+    typed.intent === 'question' ? typed.question.subject : typed.intent,
+  );
+
   // ── AND SWAP IS NOT A MOVE. The verb list is one kind's, not a family's. ──
   ok(
     'a swap request is not read as a move',
@@ -456,10 +533,22 @@ console.log('\n[3] L-C2 — the card is a function of the action and of nothing 
   ok('and an invented clause DOES leave a residue', invented.length > 0, invented);
 
   // A KIND WITH NO CARD IS A KIND WITH NO CHANGE.
+  //
+  // THE PROBE IS `move_team_night` AND THE FIRST ONE WAS `bin_session`, WHICH
+  // IS WHY M8 SURVIVED. A bin payload has no `fromDate`, so deleting the kind
+  // guard still returned null — the card came back empty because a field was
+  // missing, not because the kind was refused, and the cell read as proof of a
+  // guard that was no longer there. `move_team_night` carries `fromDate` and
+  // `toDate`, so without the guard it renders a full card: the only probe that
+  // can tell the guard from the accident.
   ok(
-    'an action this slice cannot draw returns no card',
+    'an action this slice cannot draw returns no card, even when its payload fits',
     changeCardFor({
-      action: { ...action, type: 'bin_session', payload: { date: FRIDAY } } as ProgramControlAction,
+      action: {
+        ...action,
+        type: 'move_team_night',
+        payload: { fromDate: FRIDAY, toDate: SUNDAY, route: 'this_week_only' },
+      } as ProgramControlAction,
       week: WEEK,
     }) === null,
     'a generic card is how a second kind ships without anybody deciding it should',
@@ -749,11 +838,105 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
     'every string on the card came from changeCardFor',
   );
 
+  // ── THE FOUR CASES SAM'S DEVICE FOUND, AS CELLS ────────────────────────────
+  //
+  // SEAT INBOX item 0, 2026-08-09 night, from Sam's screenshots and his words:
+  // *"the chat history is stuck - it gets hidden behind the keypad and it
+  // doesn't scroll down - so when I'm typing a new question after a few
+  // questions I can't see the answers."* L-C3 calls that a GATE failure, and
+  // the kickoff says keyboard cases are gate cases from slice 1 — **these cells
+  // are the debt of not having had them.** The required end state, numbered as
+  // the order numbers it.
+  const safeArea = stripComments(read('components', 'keyboard', 'KeyboardSafeArea.tsx'));
+
+  // (1) THE LIST'S VISIBLE AREA ENDS ABOVE THE KEYBOARD, NEVER BEHIND IT.
+  ok(
+    '(1) the non-scrollable body reserves the keyboard\'s height',
+    /paddingBottom: Math\.abs\(reanimated\.height\.value\)/.test(safeArea)
+      && /<Animated\.View style=\{\[styles\.body, keyboardInset\]\}>/.test(safeArea),
+    'a flex:1 body inside a root that does not shrink runs to the true screen '
+      + 'bottom, and its last content sits behind the keypad',
+  );
+  ok(
+    'and it rides the SAME keyboard frame the footer does — one clock',
+    /useKeyboardContext/.test(safeArea) && /KeyboardStickyView/.test(safeArea),
+    'two animations on two clocks is the failure mode the slice-1 boundary '
+      + 'named; both values here come from the one native keyboard frame',
+  );
+  // ANCHORED ON THE ELEMENT, NOT ON A WINDOW AFTER ITS NAME. A `[\s\S]{0,400}`
+  // span from the component name reached across the ternary into the OTHER
+  // branch and reddened a correct file — a proximity scan answering a question
+  // about an element's own props.
+  const awareElement = /<KeyboardAwareScrollView\b[\s\S]*?\n    >/.exec(safeArea)?.[0] ?? '';
+  ok(
+    'the scrollable branch was located and is the element, not a fragment',
+    awareElement.length > 200 && /bottomOffset=/.test(awareElement),
+    `${awareElement.length} chars`,
+  );
+  ok(
+    'and it is deliberately NOT padded as well',
+    !/keyboardInset/.test(awareElement),
+    'KeyboardAwareScrollView already moves its focused field; a second '
+      + 'adjustment to content it is already moving is the stacked-primitives '
+      + 'defect this owner was rewritten to end',
+  );
+
+  // (2) NEW CONTENT PINS TO BOTTOM WHEN THE ATHLETE IS ALREADY AT BOTTOM.
+  ok(
+    '(2) new content pins the conversation to its bottom',
+    /onContentSizeChange=\{\(\) => pinToBottom\(true\)\}/.test(screenCode),
+  );
+  ok(
+    'and pinning is CONDITIONAL on the athlete already being there',
+    /if \(!atBottomRef\.current\) return;/.test(screenCode)
+      && /onScroll=\{handleScroll\}/.test(screenCode),
+    'yanking a reader back to the newest turn is the same disrespect as not '
+      + 'scrolling at all, pointing the other way',
+  );
+  ok(
+    'the at-bottom test carries a tolerance rather than an equality',
+    // A NON-ZERO tolerance. `- 0` matches `\d+` and is the same equality this
+    // cell exists to forbid, so the digit class starts at one.
+    /contentSize\.height - [1-9]\d*/.test(screenCode),
+    'an exact equality is never true on a device — rubber-banding, fractional '
+      + 'layout and the inertial tail all land short, and the list would stop '
+      + 'following after the first flick',
+  );
+  ok(
+    'and it is a ref, so recording the position re-renders nothing',
+    /const atBottomRef = useRef\(true\);/.test(screenCode)
+      && /scrollEventThrottle=\{16\}/.test(screenCode),
+  );
+
+  // (3) THE KEYBOARD APPEARING RE-PINS TO BOTTOM.
+  ok(
+    '(3) the keyboard appearing re-pins the conversation',
+    /Keyboard\.addListener\('keyboardDidShow', \(\) => pinToBottom\(false\)\)/.test(screenCode),
+    'the keypad shrinks the list, and a shrunk list is no longer at its bottom',
+  );
+  ok(
+    'and it listens to didShow, not willShow',
+    !/keyboardWillShow/.test(screenCode),
+    'the body\'s inset rides the native keyboard frame, so the frame is only '
+      + 'final once the keyboard is — scrolling to a bottom that is about to '
+      + 'move is scrolling to the wrong place',
+  );
+  ok(
+    'the listener is removed when the screen goes',
+    /return \(\) => subscription\.remove\(\);/.test(screenCode),
+  );
+
+  // (4) NOTHING OCCLUDES THE COMPOSER OR THE LATEST BUBBLE — the placement
+  // cells above are half of this, and the inset is the other half: the body
+  // ends above the footer's own strip, which is itself above the keypad.
+
   // ── AND THE DEVICE HALF, NAMED SO IT CANNOT READ AS CLOSED ──
   ok(
     'this section is source placement and says so',
     true,
-    'DEPTH 0 — no screen mounted, no keyboard raised, no tap made',
+    'DEPTH 0 — no screen mounted, no keyboard raised, no tap made. The four '
+      + 'cases above are the SHAPE of the fix; only Sam\'s phone can say the '
+      + 'defect is gone.',
   );
 }
 

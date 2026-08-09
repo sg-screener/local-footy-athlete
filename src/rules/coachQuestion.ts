@@ -86,6 +86,25 @@ export type CoachQuestionSubject =
   | 'next_game'
   /** "What's on this week?" — the week's shape. */
   | 'week_shape'
+  /**
+   * "WHY IS FRIDAY HEAVY?" — a request for a REASON, and the week holds none.
+   *
+   * ADDED 2026-08-10 AFTER SAM'S DEVICE, AND IT IS A DEFECT FIX RATHER THAN A
+   * FEATURE. Both the slice-2 boundary and NOW.md told Sam that *"why is Friday
+   * heavy?"* was refused. **It was not.** The message carries a day marker, the
+   * day beat the week by the specificity rule, and the coach answered
+   * *"Friday: Lower Squat."* — the athlete asks WHY and is told WHAT, with no
+   * sign that the question was missed. That is worse than a refusal, and it is
+   * the failure L-C1 exists to prevent: confidently answering a question nobody
+   * asked.
+   *
+   * It is a SUBJECT and not a filter because the reader recognises positively:
+   * a reason question is a real, well-formed question about a thing the visible
+   * week cannot answer, so it is placed and then answered honestly. **The
+   * Bible-grounded "why" layer fills this arm; until it does, this is a seam
+   * rather than a hole.**
+   */
+  | 'reason'
   /** No recorded rule answers this. L-C1's floor. */
   | 'unknown';
 
@@ -137,7 +156,18 @@ const UNKNOWN: CoachQuestion = {
  * because requiring the mark would make punctuation the difference between an
  * answer and a shrug.
  */
-const INTERROGATIVE = /^\s*(what|whats|what's|when|whens|when's|which|do|does|am|is|are|have|how)\b/i;
+const INTERROGATIVE = /^\s*(what|whats|what's|when|whens|when's|which|why|do|does|am|is|are|have|how)\b/i;
+
+/**
+ * A REQUEST FOR A REASON.
+ *
+ * `why` and `how come`, word-bounded. It is tested BEFORE the subject table and
+ * outranks every entry in it, because a reason question that also names a day
+ * is still a reason question — which is exactly the two-marker shape the
+ * slice-2 boundary said an ordered table cannot see, and exactly how this
+ * defect reached Sam's phone.
+ */
+const REASON_MARKER = /\b(?:why|how\s+come)\b/i;
 
 /**
  * SUBJECT MARKERS — a table, so the subjects are a list somebody can read and
@@ -303,11 +333,19 @@ export const lexicalQuestionReader: CoachQuestionReader = {
     // question. A named day is also a subject in its own right — "what about
     // Friday?" carries no verb this table knows and is unmistakably about
     // Friday's work.
-    const subject: CoachQuestionSubject = marked === 'next_game'
-      ? 'next_game'
-      : day.named
-        ? 'day_work'
-        : marked ?? 'unknown';
+    //
+    // AND A REASON OUTRANKS ALL THREE, which is the same rule one step further
+    // out: *"why is friday heavy?"* names a day AND asks for a reason, and the
+    // day won. The athlete got Friday's session list. A reason is the narrowest
+    // thing a message can be about — it is about the WHY of whatever else it
+    // names — so it wins over anything it co-occurs with.
+    const subject: CoachQuestionSubject = REASON_MARKER.test(text)
+      ? 'reason'
+      : marked === 'next_game'
+        ? 'next_game'
+        : day.named
+          ? 'day_work'
+          : marked ?? 'unknown';
     if (subject === 'unknown') return UNKNOWN;
 
     // A DAY QUESTION WITH NO DAY IN IT IS NOT A DAY QUESTION. "What am I

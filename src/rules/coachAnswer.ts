@@ -211,6 +211,19 @@ function draftAnswer(args: {
       };
     }
 
+    // A REASON QUESTION IS WELL FORMED AND UNANSWERABLE, AND THOSE ARE
+    // DIFFERENT FACTS. The week carries what is on a day, never why it is
+    // there. L-C1: *"when NO rule answers, it says it doesn't know — it never
+    // invents policy."* Composing a plausible reason here from the day's
+    // contents is precisely the invention the law forbids, and it is what the
+    // coach was effectively doing by answering with the session list.
+    //
+    // THIS ARM IS WHERE THE BIBLE LAYER LANDS. It reads as a duplicate of
+    // `unknown` today and it is not: one is "I could not place this", the other
+    // is "I placed it, and I have no rule for it yet".
+    case 'reason':
+      return honest(COACH_TAB_COPY.noAnswerYet, 'no_rule');
+
     case 'unknown':
     default:
       return honest(COACH_TAB_COPY.noAnswerYet, 'no_rule');

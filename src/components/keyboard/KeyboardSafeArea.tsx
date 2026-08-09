@@ -11,7 +11,9 @@ import {
 import {
   KeyboardAwareScrollView,
   KeyboardStickyView,
+  useKeyboardContext,
 } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { KeyboardDoneAccessory } from './KeyboardDoneAccessory';
 
 /**
@@ -86,6 +88,37 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
   dismissOnBackgroundTap = true,
   hasTextInput = true,
 }) => {
+  // ── THE BODY MUST END WHERE THE KEYPAD BEGINS ──────────────────────────────
+  //
+  // SAM'S DEVICE, 2026-08-09, verbatim: *"the chat history is stuck - it gets
+  // hidden behind the keypad and it doesn't scroll down - so when I'm typing a
+  // new question after a few questions I can't see the answers."*
+  //
+  // The cause is a gap in THIS owner, not in the screen that found it.
+  // `KeyboardStickyView` lifts the footer, and nothing ever moved the body: it
+  // is `flex: 1` inside a root that does not shrink, so its frame still runs to
+  // the true screen bottom and its last content sits behind the keypad. A
+  // `KeyboardAwareScrollView` body hides that, because it scrolls the FOCUSED
+  // INPUT clear — but a screen whose input lives in the FOOTER has no focused
+  // input inside the body at all, so nothing was ever adjusted. **The bare
+  // `View` branch owned nothing, and that is the hole.**
+  //
+  // So the non-scrollable body reserves the keyboard's height. The value is the
+  // shared value `KeyboardStickyView` itself rides — one native keyboard frame,
+  // read twice — because the slice-1 boundary named the failure mode of the
+  // alternative by name: two animations on two clocks. `Math.abs` because this
+  // reads as a height here and as a translation there, and a sign convention is
+  // not something a layout should depend on remembering.
+  //
+  // The scrollable branch is deliberately NOT padded: `KeyboardAwareScrollView`
+  // already owns keeping its focused field clear of the keypad, and adding a
+  // second adjustment to content it is already moving is the "two primitives
+  // shifting the same content" defect this file was rewritten to end.
+  const { reanimated } = useKeyboardContext();
+  const keyboardInset = useAnimatedStyle(() => ({
+    paddingBottom: Math.abs(reanimated.height.value),
+  }));
+
   const body = scrollable ? (
     <KeyboardAwareScrollView
       style={styles.body}
@@ -99,7 +132,7 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
       {children}
     </KeyboardAwareScrollView>
   ) : (
-    <View style={styles.body}>{children}</View>
+    <Animated.View style={[styles.body, keyboardInset]}>{children}</Animated.View>
   );
 
   return (

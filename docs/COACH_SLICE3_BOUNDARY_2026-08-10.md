@@ -138,6 +138,79 @@ Four consumers, one function. Composing the card's day description separately
 would have been ruling 1's `summariseDay` defect returning inside the same
 screen, one slice after *"what's on this week"* declined it.
 
+## ITEM 0 — THE L-C3 GATE FAILURE SAM'S DEVICE FOUND, FIXED AT THE OWNER
+
+The seat's item 0 arrived mid-slice with Sam's screenshots and his words: *"the
+chat history is stuck - it gets hidden behind the keypad and it doesn't scroll
+down - so when I'm typing a new question after a few questions I can't see the
+answers."*
+
+**THE CAUSE WAS A HOLE IN THE SHARED KEYBOARD OWNER, NOT IN THE COACH SCREEN.**
+`KeyboardStickyView` lifts the footer and **nothing ever moved the body**: it is
+`flex: 1` inside a root that does not shrink, so its frame runs to the true
+screen bottom and its last content sits behind the keypad. A
+`KeyboardAwareScrollView` body hid that for every other screen, because it
+scrolls the FOCUSED INPUT clear — **and a screen whose input lives in the FOOTER
+has no focused input inside the body at all, so nothing was ever adjusted.** The
+bare `View` branch owned nothing. The coach tab is simply the first screen shaped
+that way.
+
+So the fix is in `KeyboardSafeArea`: the non-scrollable body reserves the
+keyboard's height, read from the **same shared value `KeyboardStickyView` itself
+rides** — one native keyboard frame, read twice, because the slice-1 boundary
+named the alternative by name (two animations on two clocks). The scrollable
+branch is deliberately left alone and a cell says so: adding a second adjustment
+to content `KeyboardAwareScrollView` is already moving is the stacked-primitives
+defect that file was rewritten to end.
+
+The pin-to-bottom half is the coach screen's, because it is a property of a
+conversation rather than of keyboards: the list follows new content **only when
+the athlete is already at the bottom** (yanking a reader back to the newest turn
+is the same disrespect pointing the other way), with a non-zero tolerance because
+an exact equality is never true on a device, and the keypad opening re-pins on
+`keyboardDidShow` — not `willShow`, because the body's inset rides the native
+frame and scrolling to a bottom that is about to move is scrolling to the wrong
+place.
+
+**All four of the order's required end-states are cells** ([6], numbered as the
+order numbers them). `test:keyboard-convention` **43/43 green** — the owner's own
+gate, including its *"does not stack two avoidance primitives"* law.
+
+LOOP CHECK `keyboard-cases-deferred-then-bitten` sighting 1 — **iterate**, and
+the honest reading is that L-C3 predicted this in writing at slice 1 and two
+slices shipped without keyboard cells anyway. The compression the seat named (a
+keyboard matrix harness as a standing pre-device gate) is **not built**; what
+exists is four cells on one screen.
+
+## AND THE FREE DEVICE EVIDENCE CONTAINED A DEFECT NOBODY WAS LOOKING FOR
+
+The order banked Sam's answers as evidence the coach was right. Probing the third
+one by hand found the opposite:
+
+**`"why is friday heavy?"` WAS NOT REFUSED. It answered `"Friday: Lower Squat."`**
+
+The slice-2 boundary says it is refused. NOW.md told Sam it is refused. **Both
+were wrong, and no cell held the claim — it lived in prose only.** The message
+carries a day marker, the day beat the week by slice 2's own specificity rule,
+and the coach answered with the session list. **The athlete asks WHY and is told
+WHAT, with nothing to signal the question was missed** — which is worse than a
+refusal, and is exactly the failure L-C1 exists to prevent.
+
+Fixed as a SUBJECT rather than a filter, because the reader recognises
+positively: `reason` is a real, well-formed question about something the visible
+week cannot answer, so it is placed and then answered honestly. A reason marker
+outranks every entry in the subject table — a reason question that also names a
+day is still a reason question, which is the two-marker shape a third time — and
+it does **not** swallow *"why can't I move Saturday?"*, which reaches the change
+path on its move verb and is answered by attempting the move. Both are matrix
+rows now. **The Bible-grounded "why" layer lands on this arm: it is a seam
+instead of a hole.**
+
+Sam's own typo'd sentence (*"Why do we do strength before team traininh"*) now
+places as a reason question too. **The reply is the same honest sentence either
+way** — what changed is that it reaches the arm the Bible layer will fill instead
+of falling off the end of the reader.
+
 ## FINDINGS
 
 **A REAL DEFECT IN SLICE 2's SHIPPED CODE, AND IT IS THE SAME CLASS A THIRD
@@ -187,6 +260,26 @@ A cell asserting the card rule reads no `message`, `request`, `turn` or `draft`
 reddened a correct module, because **`return` contains `turn`**. Word boundaries,
 and the vocabulary changed to identifiers the module could actually hold.
 
+**TWO MUTATIONS SURVIVED, AND BOTH WERE MY CELLS PASSING FOR THE WRONG REASON.**
+Neither was recorded as a survivor and neither was written off; both were
+re-probed after the cell was re-aimed, and both then reddened.
+
+- **M3 — deleting the sort that puts named days in MESSAGE order left 97/97
+  green.** Every two-day message in the suite carries *"to"*, and the
+  preposition rule picks the destination by POSITION, so it returned the same
+  answer from an unsorted list. **A cell set in which one rule always decides
+  cannot observe a second rule** — the slice-2 class a fourth time, this time
+  inside the gate written to honour it. Two inputs where the sort is the only
+  thing deciding now exist: a two-day move with no preposition, and *"am I
+  training friday or monday?"*, which is the question path where the defect
+  actually shipped.
+- **M8 — deleting the card's kind guard left 97/97 green**, because the probe
+  was a `bin_session` action whose payload has no `fromDate`. The card came back
+  null because a FIELD was missing, not because the KIND was refused, and the
+  cell read as proof of a guard that was no longer there. Re-probed with
+  `move_team_night`, whose payload fits the card exactly — the only probe that
+  can tell the guard from the accident.
+
 ## THE LEDGER RECORDS THE CHANGE AND NOT THE COACH — MEASURED, NAMED, NOT PATCHED
 
 A landed move appends `{ kind: 'plan_change', change }` inside `applyPlanChange`
@@ -207,13 +300,22 @@ own door for a coach concern is the special case CLAUDE.md names.
 
 ## GATE
 
-- Full unpiped chain `GATE_EXIT=1`: **see the run recorded at commit time** —
-  main's declared red (`test:program-control-durable`) is the expected exit.
+- Full unpiped chain `GATE_EXIT=1`: exits at `test:program-control-durable` with
+  **1 FAIL cell** — *"a move committed durably reaches the visible week"*,
+  **main's declared red**, 92 suites reached. **Run twice**, once at the slice
+  and once after the two cells the mutation run re-aimed; identical both times.
 - `test:compile` **PASSED**, totals **35 / 51 / 373 — byte-identical to
   baseline.**
-- New gate `test:coach-tab-slice3`, **97 cells**, added to the chain after
-  `test:coach-tab-slice2` — the denominator moves 173 → 174 in the commit that
-  earns it.
+- **Sweep 2 of 174 = the declared set exactly** (`program-control-durable`,
+  `fixture-identity`). **The denominator moved 173 → 174 in the commit that
+  earned it** (`test:coach-tab-slice3`, which sits past the chain's exit — the
+  sweep is what proves it).
+- New gate `test:coach-tab-slice3`, **116 cells, 19 mutations 19 red** (12 red on
+  the first run of the first 14; the two survivors are recorded above and
+  reddened after their cells were re-aimed; five more cover item 0's fix and the
+  reason subject). Added to the chain after `test:coach-tab-slice2`.
+- `test:keyboard-convention` **43/43** — the shared owner's own gate, run because
+  item 0's fix is in that owner and not in the coach screen.
 - `test:coach-tab-slice1` **80 cells** (73 → 80), 4 cells re-aimed, none deleted:
   the `programControlActions` ban became a ONE-DOOR assertion (the imported
   writer SYMBOLS are compared to a declared set, so a second door reds it and a
@@ -238,15 +340,17 @@ own union reading. The instrument that would close it is a tape in the shape of
 `tape:lr29-undo-durability`: propose, confirm, photograph the week, relaunch,
 photograph again. **It is the first thing the next pass owes.**
 
-**L-C3 IS NOT CLOSED AND THE SEAT'S ORDER SAID IT BLOCKS THIS BOUNDARY.** Section
-[6] proves PLACEMENT — the card is inside the `KeyboardSafeArea` footer, not in
-the scroll; it is rendered exactly once; both controls are 44 high, carry hit
-slops, accessibility roles and labels taken from the card. **What source cannot
-prove is what the glass does.** No keyboard has been raised, no tap made. The
-composer-overshoot symptom named at slice 1 (`tabBarHideOnKeyboard` and
-`KeyboardStickyView` on two clocks) is unchanged and unwatched, and the card now
-adds height to the strip that rides the keypad — **if anything overshoots, this
-is the slice that will show it.**
+**L-C3 IS FIXED IN SHAPE AND NOT PROVEN ON GLASS, AND THE SEAT'S ORDER SAID IT
+BLOCKS THIS BOUNDARY.** Item 0's four end-states are cells and the reported cause
+is repaired at the owner — **but every one of those cells reads SOURCE.** No
+keyboard has been raised in this repo, no scroll measured, no tap made.
+`Math.abs(reanimated.height.value)` as a `paddingBottom` is a Reanimated LAYOUT
+animation on the UI thread, and whether it lands smoothly beside the footer's
+transform is a device question this pass cannot answer. **Sam's phone is the only
+instrument that closes item 0**, and until it does, the fix is a claim.
+The composer-overshoot symptom named at slice 1 is unchanged and unwatched, and
+the card now adds height to the strip that rides the keypad — **if anything
+overshoots, this is the slice that will show it.**
 
 **NO FOLLOW-UP CONTEXT, AND THE ASKS ARE SHAPED AROUND ITS ABSENCE.** A reply of
 *"friday"* to a bare *"which day?"* carries no move verb and would be read as a
