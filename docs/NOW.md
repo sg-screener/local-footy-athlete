@@ -36,6 +36,30 @@
   unwound. `npm run tape:coach-move-durability` ·
   docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md
 
+- **⚠ SAM: YOUR MULTI-SESSION CATCH — I COULD NOT REPRODUCE WHAT YOU SAW, AND I
+  FOUND A DIFFERENT REAL DEFECT LOOKING FOR IT.** You said *"i tried moving
+  monday S&C to wednesday and it only moved the strength"*. Measured in
+  `tape:coach-move-durability` (new multi-part section):
+  - **On a plain two-part day (strength+conditioning) the move carries BOTH
+    parts** — coach and your own tap, identical. **Your partial-move symptom did
+    NOT reproduce.** I am not reporting it as fixed; I am reporting that this
+    world did not reach it.
+  - **On an ANCHORED day (Monday = strength + team training, your exact day
+    shape) the coach is REFUSED** — *"This would remove or replace a protected
+    game/team anchor"* — and it tells you *"I couldn't make that change."*
+  - **AND HERE IS THE DEFECT, MEASURED:** on that same day, your own tap
+    carrying the picker's own *"Just the gym session"* row **APPLIED** — the
+    strength moved, team training stayed. **The coach is refused exactly where
+    you succeed.** Same day, same destination, same door. That is an L-C4 parity
+    break, measured rather than argued (arm D).
+  - **THE LIKELIEST EXPLANATION OF WHAT YOU SAW, AND IT IS A HYPOTHESIS — no
+    cell holds it:** if you tapped *"Just the gym session"* on a Monday that also
+    carried conditioning, **only the strength would move, which is exactly what
+    you describe.** *"Gym session"* may be reading to you as *"my whole S&C"*.
+    **Tell me what Monday actually carried** (strength + conditioning + team
+    training?) and whether you used the coach or the picker — that one answer
+    decides whether this is a copy defect or a door defect.
+
 - **⚠ SAM: WHAT THE COACH TAB DOES, WITH WHAT HOLDS EACH CLAIM.** Every line
   below is either pinned by a named cell or marked **OPEN-UNKNOWN** — the new
   standing rule (AGENTS.md), written because *"why is Friday heavy? is refused"*

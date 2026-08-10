@@ -101,6 +101,7 @@ import {
   executeProgramControlActionDurably,
   programControlActionForPlanChange,
 } from '../utils/programControlActions';
+import { listPlanChangeOptionsForDay } from '../utils/planChangeProducer';
 import { readCoachMessage } from '../rules/coachRead';
 import { coachProposal } from '../rules/coachProposal';
 import { coachChangeOutcome } from '../rules/coachChangeOutcome';
@@ -152,18 +153,18 @@ async function settleWrites(): Promise<void> {
  * That matters more than it looks, and the tape prints both for a reason — see
  * the coach arm.
  */
-function readWeekBothWays(): { weekDays: unknown[]; visibleWeek: VisibleWeek } {
+function readWeekBothWays(mondayISO: string = WEEK): { weekDays: unknown[]; visibleWeek: VisibleWeek } {
   const state = buildScheduleStateImperative();
   const overrideContexts = useProgramStore.getState().overrideContexts ?? {};
   const weekDays = quiet(() => buildProgramTabProjectedWeek({
-    mondayISO: WEEK,
+    mondayISO,
     todayISO: TODAY,
     state,
     overrideContexts,
     modalityPreferences: (state as unknown as { modalityPreferences?: Record<string, unknown> })
       .modalityPreferences,
   }));
-  const visibleWeek = quiet(() => project({ week: weekDays, weekStart: WEEK }));
+  const visibleWeek = quiet(() => project({ week: weekDays, weekStart: mondayISO }));
   return { weekDays: weekDays as unknown[], visibleWeek };
 }
 
@@ -242,6 +243,150 @@ function chooseMove(visibleWeek: VisibleWeek): { from: string; to: string } {
   return { from: movable[movable.length - 1]!.date, to: empty[empty.length - 1]!.date };
 }
 
+// ─── SAM'S MULTI-PART CATCH (2026-08-10) ────────────────────────────────────
+//
+// *"i tried moving monday S&C to wednesday and it only moved the strength - so
+// multi session days dont work yet"*
+//
+// The arms above move a day chosen through `canMoveWholeDay` and say nothing
+// about a day carrying TWO parts, which is the shape Sam actually moved. The
+// existing photograph is blind to it by construction: it prints a per-date
+// HEADLINE, and a day whose conditioning stayed behind still has a headline.
+// **A photograph that cannot see the defect cannot clear it**, so the section
+// below photographs PART KINDS and nothing else.
+
+/**
+ * THE WEEK AFTER `WEEK` — and the reason the section needs it is a finding.
+ *
+ * This world's `TODAY` is Wednesday 2026-08-05, and its anchored day is Monday
+ * 2026-08-03 (`strength+team_training`) — Sam's *"monday S&C"* EXACTLY, sitting
+ * two days in the PAST. Every remaining future day of that week is unanchored,
+ * so the current week cannot reproduce his shape at all: the first run of this
+ * section moved an unanchored Saturday and printed NOT REPRODUCED, which looked
+ * like a clean result and was a probe that never reached the case.
+ *
+ * The next Monday is still inside `PLAN_CHANGE_EDIT_HORIZON_WEEKS` (3), so it is
+ * a day the athlete may legally move.
+ */
+function nextMondayISO(mondayISO: string): string {
+  const [year, month, day] = mondayISO.split('-').map(Number);
+  const date = new Date(Date.UTC(year!, month! - 1, day!));
+  date.setUTCDate(date.getUTCDate() + 7);
+  return date.toISOString().slice(0, 10);
+}
+
+const NEXT_WEEK = nextMondayISO(WEEK);
+
+/** The day's parts as the projection kinds them — the unit the defect lives in. */
+function partsOf(visibleWeek: VisibleWeek, dateISO: string): string {
+  const day = visibleWeek.days.find((candidate) => candidate.date === dateISO);
+  if (!day) return '(no such day)';
+  if (day.parts.length === 0) return '—';
+  return day.parts.map((part) => part.kind).sort().join('+');
+}
+
+/**
+ * A SOURCE DAY WITH TWO OR MORE DISTINCT PART KINDS, and a destination with none.
+ *
+ * DISTINCT kinds, not `parts.length`: two strength parts on one day is not the
+ * shape Sam described, and a length would count it as if it were. Same law the
+ * photograph above is written under — `a count taken for a record`.
+ */
+function choosePartedMove(visibleWeek: VisibleWeek): { from: string; to: string } {
+  const parted = visibleWeek.days.filter((day) => {
+    if (day.date <= TODAY) return false;
+    return new Set(day.parts.map((part) => part.kind)).size >= 2;
+  });
+  const empty = visibleWeek.days.filter((day) => day.date > TODAY && day.parts.length === 0);
+  // PREFER AN ANCHORED DAY, AND THE REASON IS THE TYPE'S OWN DOCSTRING.
+  // `PlanChangeMoveScopeId`: *"`whole_day` is offered only on days that carry no
+  // anchor, because on a combined day it would take the anchor with it."* So a
+  // two-part day WITHOUT a team night is the easy case — the picker offers
+  // whole_day and the door has a whole day to move. Sam's day was "monday S&C",
+  // and Monday is a team-training night. **Choosing the last parted day reached
+  // the easy case on the first run and reported NOT REPRODUCED**, which is a
+  // probe finding, not a product one. Anchored days are tried FIRST.
+  const anchored = parted.filter((day) =>
+    day.parts.some((part) => part.kind === 'team_training'));
+  const preferred = anchored.length > 0 ? anchored : parted;
+  if (parted.length === 0) {
+    throw new Error(
+      'TAPE ABORT (multi-part section): no future day in this world carries two distinct '
+      + 'part kinds, so Sam\'s shape cannot be reproduced here. That is a finding about '
+      + 'the WORLD, not a pass — do not read the single-part result above as covering it.',
+    );
+  }
+  if (empty.length === 0) {
+    throw new Error('TAPE ABORT (multi-part section): no empty future day to land on');
+  }
+  console.log(`   [probe] parted future days: ${parted.length}`
+    + ` · of those, ANCHORED (carry team_training): ${anchored.length}`
+    + ` → trying ${anchored.length > 0 ? 'an ANCHORED day (Sam\'s shape)' : 'an UNANCHORED day'}`);
+  return { from: preferred[preferred.length - 1]!.date, to: empty[empty.length - 1]!.date };
+}
+
+/**
+ * WHAT THE ATHLETE'S OWN PICKER OFFERS FOR THIS DAY — read from the owner.
+ *
+ * `listPlanChangeOptionsForDay` is the exported entry to `moveOptionsForDay`,
+ * which is the module the census found the coach never consults. Printing it
+ * beside the coach's action is the parity claim made VISIBLE: the athlete is
+ * asked a question, and the tape shows what that question's options were while
+ * the coach answered none of them.
+ */
+function scopeIdsOfferedFor(weekDays: unknown[], dateISO: string): string[] {
+  try {
+    const options = quiet(() => listPlanChangeOptionsForDay({
+      visibleWeek: weekDays as never,
+      date: dateISO,
+      todayISO: TODAY,
+    }));
+    return ((options.move?.scopes ?? []) as ReadonlyArray<{ id: string }>).map((s) => s.id);
+  } catch {
+    return [];
+  }
+}
+
+function scopesOfferedFor(weekDays: unknown[], dateISO: string): string {
+  try {
+    const options = quiet(() => listPlanChangeOptionsForDay({
+      visibleWeek: weekDays as never,
+      date: dateISO,
+      todayISO: TODAY,
+    }));
+    const scopes = (options.move?.scopes ?? []) as ReadonlyArray<{ id: string; label: string }>;
+    if (scopes.length === 0) return '(none offered)';
+    return scopes.map((scope) => `${scope.id}="${scope.label}"`).join(' · ');
+  } catch (error) {
+    return `(producer threw: ${(error as Error).message})`;
+  }
+}
+
+/**
+ * THE ATHLETE'S TAP WITH AN EXPLICIT SCOPE — the third arm, and the one that
+ * separates the two defects.
+ *
+ * Arms 1 and 2 both send NO scope, so they cannot tell "the door mishandles a
+ * whole-day move" from "the coach never said which part". This arm sends the
+ * scope the picker actually offers, which is what a real athlete tap carries.
+ */
+async function scopedTapArm(
+  chosen: { from: string; to: string },
+  scope: string,
+  mondayISO: string = WEEK,
+): Promise<{ ok: boolean; outcome?: string; message?: string }> {
+  const { weekDays } = readWeekBothWays(mondayISO);
+  const change = {
+    kind: 'move_session', fromDate: chosen.from, toDate: chosen.to, scope,
+  } as never as PlanChange;
+  const action = programControlActionForPlanChange(change);
+  if (!action) throw new Error('TAPE ABORT: the sheet owner produced no action for a scoped move');
+  return await quietAsync(() => executeProgramControlActionDurably(
+    action,
+    { visibleWeek: weekDays as never, todayISO: TODAY },
+  )) as { ok: boolean; outcome?: string; message?: string };
+}
+
 /**
  * THE COACH'S TURN, THROUGH THE COACH'S OWN PATH, IN THE SCREEN'S OWN ORDER.
  *
@@ -263,7 +408,10 @@ function chooseMove(visibleWeek: VisibleWeek): { from: string; to: string } {
  * it reads the screen's own call site and reds if that call stops passing a
  * visible week. The mirror is honest only while that cell is green.
  */
-async function coachArm(chosen: { from: string; to: string }): Promise<{
+async function coachArm(
+  chosen: { from: string; to: string },
+  mondayISO: string = WEEK,
+): Promise<{
   message: string;
   intent: string;
   verdict: string;
@@ -273,7 +421,7 @@ async function coachArm(chosen: { from: string; to: string }): Promise<{
   saidVerdict: string;
   action: ProgramControlAction | null;
 }> {
-  const { weekDays, visibleWeek } = readWeekBothWays();
+  const { weekDays, visibleWeek } = readWeekBothWays(mondayISO);
   // The first message anybody would type — the matrix's Q+M+D row, composed from
   // the two days the probe picked so the reader is genuinely exercised rather
   // than bypassed with a hand-built request.
@@ -314,7 +462,7 @@ async function coachArm(chosen: { from: string; to: string }): Promise<{
   if (result.message) console.log(`   [door] message       : "${result.message}"`);
 
   // ── AND THE SETTLING EFFECT: what the athlete is actually told. ───────────
-  const after = readWeekBothWays().visibleWeek;
+  const after = readWeekBothWays(mondayISO).visibleWeek;
   const outcome = coachChangeOutcome({
     action,
     before,
@@ -348,11 +496,14 @@ async function coachArm(chosen: { from: string; to: string }): Promise<{
  * it and that owner exists for precisely this reason (its own doc comment says
  * so).
  */
-async function tapArm(chosen: { from: string; to: string }): Promise<{
+async function tapArm(
+  chosen: { from: string; to: string },
+  mondayISO: string = WEEK,
+): Promise<{
   door: { ok: boolean; outcome?: string; message?: string };
   action: ProgramControlAction | null;
 }> {
-  const { weekDays } = readWeekBothWays();
+  const { weekDays } = readWeekBothWays(mondayISO);
   const change = {
     kind: 'move_session', fromDate: chosen.from, toDate: chosen.to,
   } as never as PlanChange;
@@ -568,6 +719,193 @@ const main = async (): Promise<void> => {
     console.log('   ? BOTH ARMS MOVED THE WEEK AND THE TWO WEEKS DIFFER. Two doors, or one');
     console.log('     door given different arguments. Diff the two ACTED shapes above.');
   }
+
+  // ══ SAM'S MULTI-PART DAY (2026-08-10) ═════════════════════════════════════
+  console.log('\n\n════ SAM\'S CATCH — A DAY WITH TWO PARTS ════');
+  console.log('"i tried moving monday S&C to wednesday and it only moved the strength');
+  console.log(' - so multi session days dont work yet"');
+  console.log('\nthe question this section answers: is that the DOOR losing a part on any');
+  console.log('whole-day move, or the COACH never saying which part? One run tells them');
+  console.log('apart, because the athlete\'s own tap is run on the same day.');
+
+  reachWorldByActing();
+  // NEXT WEEK, not this one — this world's only anchored day is Monday
+  // 2026-08-03 and it is already in the past. See `nextMondayISO`.
+  const partedFloor = readWeekBothWays(NEXT_WEEK).visibleWeek;
+  // THE WORLD, PRINTED. The first run of this section picked a day with no team
+  // anchor, reported NOT REPRODUCED, and looked like a clean result. Printing
+  // every day's parts is what makes "which shape did the probe actually reach?"
+  // answerable from the output instead of from the chooser's source.
+  console.log(`\n   [world] EVERY day of week ${NEXT_WEEK} and what it carries`
+    + ` (today is ${TODAY}, ${weekdayName(TODAY)}):`);
+  for (const day of partedFloor.days) {
+    const kinds = new Set(day.parts.map((part) => part.kind));
+    const when = day.date < TODAY ? 'past  ' : day.date === TODAY ? 'TODAY ' : 'future';
+    console.log(`     ${day.date} ${weekdayName(day.date).padEnd(9)} ${when}  ${
+      day.parts.length === 0 ? '—' : [...kinds].sort().join('+')}`
+      + `${kinds.has('team_training') ? '   ← ANCHORED' : ''}`);
+  }
+  const parted = choosePartedMove(partedFloor);
+  const srcParts = partsOf(partedFloor, parted.from);
+  const dstParts = partsOf(partedFloor, parted.to);
+  console.log(`\n   [probe] source day    : ${parted.from} (${weekdayName(parted.from)}) parts = ${srcParts}`);
+  console.log(`   [probe] destination   : ${parted.to} (${weekdayName(parted.to)}) parts = ${dstParts}`);
+  console.log(`   [probe] the PICKER offers the athlete:`);
+  console.log(`     ${scopesOfferedFor(readWeekBothWays(NEXT_WEEK).weekDays, parted.from)}`);
+
+  // ── ARM A: THE COACH, ON A TWO-PART DAY ───────────────────────────────────
+  console.log('\n──── ARM A — THE COACH (sends NO scope) ────');
+  const partedCoach = await coachArm(parted, NEXT_WEEK);
+  const coachSrcAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.from);
+  const coachDstAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.to);
+  console.log(`\n   source ${parted.from}: ${srcParts}  →  ${coachSrcAfter}`);
+  console.log(`   dest   ${parted.to}: ${dstParts}  →  ${coachDstAfter}`);
+
+  // ── ARM B: THE ATHLETE'S TAP, SAME (SCOPELESS) ACTION ─────────────────────
+  console.log('\n──── ARM B — THE ATHLETE\'S TAP, also scopeless (the control) ────');
+  reachWorldByActing();
+  const partedTap = await tapArm(parted, NEXT_WEEK);
+  const tapSrcAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.from);
+  const tapDstAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.to);
+  console.log(`   door ok: ${partedTap.door.ok} (${partedTap.door.outcome ?? 'no outcome'})`);
+  console.log(`   source ${parted.from}: ${srcParts}  →  ${tapSrcAfter}`);
+  console.log(`   dest   ${parted.to}: ${dstParts}  →  ${tapDstAfter}`);
+
+  // ── ARM C: THE ATHLETE'S TAP WITH THE SCOPE THE PICKER OFFERS ─────────────
+  console.log('\n──── ARM C — THE ATHLETE\'S TAP carrying an explicit whole_day scope ────');
+  reachWorldByActing();
+  let scopedSrcAfter = '(not run)';
+  let scopedDstAfter = '(not run)';
+  let scopedDoor: { ok: boolean; outcome?: string; message?: string } | null = null;
+  try {
+    scopedDoor = await scopedTapArm(parted, 'whole_day', NEXT_WEEK);
+    scopedSrcAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.from);
+    scopedDstAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.to);
+    console.log(`   door ok: ${scopedDoor.ok} (${scopedDoor.outcome ?? 'no outcome'})`);
+    if (scopedDoor.message) console.log(`   door says: "${scopedDoor.message}"`);
+    console.log(`   source ${parted.from}: ${srcParts}  →  ${scopedSrcAfter}`);
+    console.log(`   dest   ${parted.to}: ${dstParts}  →  ${scopedDstAfter}`);
+  } catch (error) {
+    console.log(`   ARM C could not run: ${(error as Error).message}`);
+  }
+
+  // ── ARM D: THE ATHLETE'S TAP USING A SCOPE THE PICKER ACTUALLY OFFERS ─────
+  //
+  // Arms A-C all send either nothing or `whole_day`. On an anchored day the
+  // picker offers NEITHER — it offers component scopes. This arm takes the
+  // first row the owner actually lists, which is the route a real athlete has,
+  // and it is what turns "the coach lacks parity" from a reading into a
+  // measurement: same day, same destination, athlete succeeds, coach refused.
+  console.log('\n──── ARM D — THE ATHLETE\'S TAP with a scope the PICKER offers ────');
+  reachWorldByActing();
+  const offeredIds = scopeIdsOfferedFor(readWeekBothWays(NEXT_WEEK).weekDays, parted.from);
+  const realScope = offeredIds.find((id) => id !== 'whole_day') ?? offeredIds[0] ?? null;
+  let offeredDoor: { ok: boolean; outcome?: string; message?: string } | null = null;
+  let offeredSrcAfter = '(not run)';
+  let offeredDstAfter = '(not run)';
+  if (!realScope) {
+    console.log('   the picker offers no scope at all for this day — arm D cannot run.');
+  } else {
+    console.log(`   using scope: ${realScope} (of [${offeredIds.join(', ')}])`);
+    try {
+      offeredDoor = await scopedTapArm(parted, realScope, NEXT_WEEK);
+      offeredSrcAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.from);
+      offeredDstAfter = partsOf(readWeekBothWays(NEXT_WEEK).visibleWeek, parted.to);
+      console.log(`   door ok: ${offeredDoor.ok} (${offeredDoor.outcome ?? 'no outcome'})`);
+      if (offeredDoor.message) console.log(`   door says: "${offeredDoor.message}"`);
+      console.log(`   source ${parted.from}: ${srcParts}  →  ${offeredSrcAfter}`);
+      console.log(`   dest   ${parted.to}: ${dstParts}  →  ${offeredDstAfter}`);
+    } catch (error) {
+      console.log(`   ARM D could not run: ${(error as Error).message}`);
+    }
+  }
+
+  // ── THE READING, AND IT NAMES WHICH DEFECT ────────────────────────────────
+  //
+  // THE DOOR'S OUTCOME IS READ BEFORE THE PARTS, AND THAT ORDER IS THE WHOLE
+  // CORRECTNESS OF THIS BLOCK. The first version of this verdict compared parts
+  // only: on an anchored day all three arms were REFUSED, nothing moved, and it
+  // printed "DOOR DEFECT — a scopeless whole-day move does not carry the whole
+  // day." A refusal read as a partial move. That is the exact hazard
+  // `chooseMove` above is documented against — *"a source day chosen any other
+  // way could produce a REFUSAL that the tape would then have to report as if it
+  // were a durability finding"* — reintroduced in a new section, and caught only
+  // because the door printed its reason. **A refusal is not a defect; it is the
+  // app declining, and it must be classified before any part is compared.**
+  console.log('\n──── WHICH DEFECT IS IT? ────');
+  const srcKindCount = new Set(srcParts.split('+')).size;
+  const coachRefused = partedCoach.door.ok !== true;
+  const tapRefused = partedTap.door.ok !== true;
+  const scopedRefused = scopedDoor ? scopedDoor.ok !== true : true;
+  const coachLostAPart = !coachRefused && coachDstAfter !== srcParts;
+  const tapLostAPart = !tapRefused && tapDstAfter !== srcParts;
+  console.log(`   source day carried            : ${srcParts} (${srcKindCount} distinct kinds)`);
+  console.log(`   coach arm: door ok?           : ${!coachRefused} → dest = ${coachDstAfter}`);
+  console.log(`   tap   arm: door ok?           : ${!tapRefused} → dest = ${tapDstAfter}`);
+  console.log(`   scoped tap: door ok?          : ${!scopedRefused} → dest = ${scopedDstAfter}`);
+  console.log(`   coach arm == tap arm?         : ${coachDstAfter === tapDstAfter ? 'IDENTICAL' : 'DIFFERENT'}`);
+  const offeredWorked = offeredDoor?.ok === true;
+  console.log(`   ARM D (picker's own scope)    : ${
+    offeredDoor === null ? 'not run' : `${offeredWorked ? 'APPLIED' : 'refused'} → dest = ${offeredDstAfter}`}`);
+  console.log('');
+  if (coachRefused && tapRefused) {
+    console.log('   ⊘ NOT A MOVE AT ALL — BOTH ARMS WERE REFUSED, so this run says NOTHING');
+    console.log('     about parts being lost. The door declined identically for the coach and');
+    console.log('     for the athlete\'s own tap:');
+    console.log(`       "${partedCoach.door.message ?? '(no message)'}"`);
+    console.log('     THIS IS NOT SAM\'S REPORTED SHAPE. He saw a move that PARTIALLY applied');
+    console.log('     ("it only moved the strength"), not a refusal. Do not report this as');
+    console.log('     his defect reproduced, and do not report it as cleared.');
+    console.log('');
+    console.log('     WHAT IT DOES SHOW IS A PARITY FACT (L-C4), AND IT IS WORTH THE RUN:');
+    console.log('     on this anchored day the athlete\'s own picker offers scope rows and');
+    console.log('     NO whole_day row — exactly as PlanChangeMoveScopeId\'s docstring says');
+    console.log('     — so an athlete CAN move part of this day by choosing a scope, while');
+    console.log('     the coach, which never sends one, can only be refused. The athlete has');
+    console.log('     a route here and the coach does not.');
+    if (offeredWorked) {
+      console.log('');
+      console.log('     ✗✗ AND ARM D MEASURED IT RATHER THAN ARGUING IT: the athlete\'s tap,');
+      console.log(`        carrying the picker's own "${realScope}" row, APPLIED on the same`);
+      console.log('        day the coach was refused. Same day, same destination, same door.');
+      console.log('        **THE COACH IS REFUSED WHERE THE ATHLETE SUCCEEDS** — an L-C4');
+      console.log('        parity defect, measured, not read off a constant.');
+    }
+  } else if (coachLostAPart && tapLostAPart && coachDstAfter === tapDstAfter) {
+    console.log('   ✗✗ DOOR DEFECT, NOT A COACH DEFECT — and it has been shipping under');
+    console.log('      EVERY athlete tap, not just the coach\'s. A scopeless whole-day move');
+    console.log('      does not carry the whole day. That breaks the Bible\'s own move law,');
+    console.log('      "Do not lose the session", and the coach is merely the surface that');
+    console.log('      made it visible. Fix it at the door and say so plainly.');
+    if (!scopedRefused && scopedDstAfter === srcParts) {
+      console.log('      NOTE: the SCOPED tap (arm C) carried every part, so the door is');
+      console.log('      correct when TOLD the scope — the defect is what an OMITTED scope');
+      console.log('      means, which is exactly coachProposal\'s recorded assumption.');
+    }
+  } else if (coachLostAPart && !tapLostAPart && !tapRefused) {
+    console.log('   ✗✗ COACH DEFECT — the athlete\'s tap moved every part and the coach\'s');
+    console.log('      move did not. The assumption recorded in coachProposal.ts §4 —');
+    console.log('      "An omitted scope is the door\'s whole-day move, which is what was');
+    console.log('      asked for" — is FALSE for a multi-part day.');
+  } else if (coachRefused !== tapRefused) {
+    console.log('   ✗✗ PARITY BREAK AT THE DOOR — one arm was refused and the other was not,');
+    console.log('      on the same day, with the same two dates. Read both door messages');
+    console.log('      above: the coach and the athlete are NOT reaching the same door with');
+    console.log('      the same arguments, which is the slice\'s central claim.');
+  } else if (!coachLostAPart && !tapLostAPart) {
+    console.log('   ✓ Both arms carried every part of the day. Sam\'s shape is NOT');
+    console.log('     reproduced by this world/day — which does not clear the defect, it');
+    console.log('     means this probe did not reach it. Report as NOT REPRODUCED, never');
+    console.log('     as fixed, and say which day was tried.');
+  } else {
+    console.log('   ? Mixed result — read the three arms above before concluding anything.');
+  }
+  console.log('');
+  console.log('   AND THE CARD — L-C2 asks whether what Sam READ matched what happened:');
+  for (const line of partedCoach.cardLines) console.log(`     [card] ${line}`);
+  console.log(`     [coach SAYS] "${partedCoach.said}" (${partedCoach.saidVerdict})`);
+  console.log('     A card that named the whole day while one part stayed is an L-C2');
+  console.log('     failure on its own, independent of which defect above is true.');
 
   console.log('\n   NOT COVERED: one action kind, one week, one world, depth 1, no device.');
   console.log('   NO REACT: the arms call the screens\' own rule functions with the screens\'');
