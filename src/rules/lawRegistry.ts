@@ -705,9 +705,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Every seat order and boundary report OPENS with "LOOP CHECK: <shape> — sighting N — iterate or compress". No line, no valid order.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §6 "FORMAT LAW 2026-08-07" (Sam-forced)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A repo check over docs/*BOUNDARY*.md and the inbox\'s order blocks requiring the LOOP CHECK line. CHEAPEST GUARD ON THE SHEET — it is a literal string match, and the law\'s own text says "no line, no valid order".',
-      receipt: 'Born because the seat wrote post-failure reminders and then failed the same way — "reminders don\'t execute", which is this whole registry\'s thesis stated three days earlier. Nothing executes it either.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10. Every boundary report dated on or after the FORMAT LAW (2026-08-07) must open with a LOOP CHECK line. **ITS FIRST RUN IS AN INDICTMENT OF THE LAW IT GUARDS: of 27 reports written UNDER the law, 21 CARRY NO LINE.** The law was written on 2026-08-07 with the founding sentence \'reminders don\'t execute\', and then 78% of the reports written under it ignored it — which is the registry\'s whole thesis, arriving in the law that exists to prevent exactly this. The 21 are NAMED, DATED debt with a ratchet cell; reports predating the law are out of scope. Mutation: stripping the line from COMPOUND_BUCKET_BOUNDARY_2026-08-08.md reds this cell and only it.',
     },
   },
   {
@@ -725,9 +726,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'When the same SHAPE of wall is hit twice, an elegant alternative goes on the table before a third attempt down the same path.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §8 "SECOND-WALL LAW" (Sam-ordered)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable as "the same shape twice" — no script can classify a wall. PROPOSED RE-WORDING FOR SAM: the LOOP CHECK line already carries a sighting number, so the guard is "a report whose LOOP CHECK says sighting >= 2 must name an alternative". That IS mechanisable, and it makes LAW-loop-check-line load-bearing rather than ceremonial.',
-      receipt: 'The same law as AGENTS.md "Coach Architecture Escalation Rule" one level up (LAW-coach-escalation), which is also UNENFORCED. COLLAPSE CANDIDATE.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10 AS PART OF THE LOOP-CHECK COLLAPSE — three laws, one cell, which is the answer to Sam\'s \'49 guards is 49 more things to maintain\'. The row\'s own proposed re-wording is what shipped: the LOOP CHECK line already carries `sighting N`, so a report at N>=2 must state its DISPOSITION. **CORRECTED ON ITS FIRST RUN:** the cell demanded an alternative and flagged COACH_SLICE1_BOUNDARY, whose line reads \'sighting 2 — iterate, and it paid before any code was written\'. A LOOP CHECK reports repeated WALLS (compress) and practices that PAY (iterate); the FORMAT LAW\'s own template is \'iterate or compress\'. **A cell stricter than the law it guards produces reds nobody can act on and gets turned off.** PARTIAL by construction: it holds that a disposition is STATED, not that the alternative offered is a good one.',
     },
   },
   {
@@ -735,9 +737,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Third sighting of any repeated ruling-shape, round-trip, toll or rediscovery is a mandatory compression proposal, never a fourth silent run.',
     ruledAt: 'docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md; AGENTS.md §1b reference; Sam 2026-08-07',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Same mechanism as LAW-second-wall: read the sighting number out of the LOOP CHECK line and require a compression at N>=3. The two laws differ only in what they count.',
-      receipt: 'COLLAPSE CANDIDATE with LAW-second-wall and LAW-loop-check-line — three laws, one structural check over the LOOP CHECK line.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10, same cell as LAW-second-wall — the two differ only in what they count (N>=2 for a repeated wall, N>=3 for a repeated ruling-shape/toll/rediscovery) and both read the number the LOOP CHECK line already carries. PARTIAL by construction: the cell holds that a disposition is stated at a repeat sighting, not that the compression proposed is the right one. Its founding case was a ruling that took NINE stops to exist.',
     },
   },
   {

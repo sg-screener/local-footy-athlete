@@ -374,6 +374,122 @@ run('an inbox item that re-scopes an instruction quotes the instruction', () => 
     + 'Silent re-scoping is the defect (LAW-do-as-instructed); disagreeing out loud is allowed.');
 });
 
+// ── THE LOOP CHECK LINE, AND THE TWO LAWS THAT RIDE ON IT ─────────────────
+//
+// THE COLLAPSE the batch-2 audit named: `LAW-loop-check-line` already requires
+// every boundary report to open with "LOOP CHECK: <shape> — sighting N". **Read
+// that number and `LAW-second-wall` (an alternative on the table at N>=2) and
+// `LAW-loop-audit` (a compression proposal at N>=3) stop being unmechanisable
+// and become the same check.** Three laws, one cell — which is the answer to
+// Sam's "49 guards is 49 more things to maintain".
+//
+// THE FORMAT LAW'S OWN TEXT IS "No line, no valid order", effective 2026-08-07,
+// and its founding sentence is *"reminders don't execute"*. **Measured when this
+// landed: of 27 boundary reports dated on or after that day, 21 CARRY NO LOOP
+// CHECK LINE.** The law was written, and then ignored by 78% of the reports
+// written under it — which is the registry's whole thesis, in the law that
+// exists to stop exactly this.
+//
+// The 21 are DATED DEBT with a ratchet. Reports dated before the law are out of
+// scope; a report dated on or after it is in scope from today.
+
+const FORMAT_LAW_DATE = '2026-08-07';
+
+/** Boundary reports written under the FORMAT LAW with no LOOP CHECK line. */
+const LOOP_CHECK_DEBT: readonly string[] = [
+  'COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md', 'COACH_ROW1_L_C4_BOUNDARY_2026-08-10.md',
+  'COACH_SLICE1_BOUNDARY_2026-08-09.md', 'COACH_SLICE2_BOUNDARY_2026-08-10.md',
+  'COACH_SLICE3_BOUNDARY_2026-08-10.md', 'DAY_FIRST_SLICE2_BOUNDARY_2026-08-08.md',
+  'JOURNAL_FEEL_SLICE_BOUNDARY_2026-08-09.md', 'JOURNAL_HIDDEN_BOUNDARY_2026-08-09.md',
+  'JOURNAL_LOAD_SLICE_BOUNDARY_2026-08-09.md', 'JOURNAL_MONTHLY_REVIEW_BOUNDARY_2026-08-09.md',
+  'JOURNAL_NIGGLE_SLICE_BOUNDARY_2026-08-09.md', 'JOURNAL_NOTIFICATION_BOUNDARY_2026-08-09.md',
+  'JOURNAL_PROOF_PATH_BOUNDARY_2026-08-09.md', 'JOURNAL_SIGNING_BOUNDARY_2026-08-09.md',
+  'JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md', 'JOURNAL_UI_SLICE_BOUNDARY_2026-08-09.md',
+  'JOURNAL_UNIT_BOUNDARY_2026-08-09.md', 'JOURNAL_WEEK_JOB_BOUNDARY_2026-08-09.md',
+  'LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md', 'R5_BOUNDARY_REPORT_2026-08-07.md',
+  'V3_BOUNDARY_BANKED_2026-08-07.md',
+];
+
+/** Reports written under the FORMAT LAW, by basename. */
+function reportsUnderTheFormatLaw(
+  docs: readonly { readonly file: string; readonly text: string }[],
+): { readonly name: string; readonly text: string }[] {
+  return docs
+    .filter((doc) => /BOUNDARY/.test(path.basename(doc.file)))
+    .map((doc) => ({ name: path.basename(doc.file), text: doc.text }))
+    .filter((doc) => (/(\d{4}-\d{2}-\d{2})/.exec(doc.name)?.[1] ?? '') >= FORMAT_LAW_DATE);
+}
+
+/** Pure: reports with no LOOP CHECK line in their opening. */
+function reportsWithoutALoopCheck(
+  reports: readonly { readonly name: string; readonly text: string }[],
+): string[] {
+  return reports
+    .filter((r) => !/LOOP CHECK/i.test(r.text.split('\n').slice(0, 14).join('\n')))
+    .map((r) => r.name);
+}
+
+/**
+ * Pure: reports whose LOOP CHECK reports sighting >= 2 and state no DISPOSITION.
+ * `LAW-second-wall` and `LAW-loop-audit` made mechanical — both said in their own
+ * rows that the sighting number is what a guard would read.
+ *
+ * **CORRECTED ON ITS FIRST RUN, AND THE CORRECTION IS THE LAW'S OWN WORDS.** The
+ * first version demanded an alternative or a compression, and flagged
+ * `COACH_SLICE1_BOUNDARY_2026-08-09.md` — whose line reads *"sighting 2 …
+ * **iterate, and it paid before any code was written**"*. That is not a
+ * violation: a LOOP CHECK reports repeated WALLS (compress) **and practices that
+ * PAY (iterate)**, and the FORMAT LAW's own template is
+ * "sighting N — **iterate or compress**". A cell stricter than the law it
+ * guards produces reds nobody can act on, and gets turned off. So the
+ * requirement is a stated DISPOSITION, which is what the law asks for.
+ */
+function repeatSightingsWithNoDisposition(
+  reports: readonly { readonly name: string; readonly text: string }[],
+): string[] {
+  return reports
+    .filter((r) => {
+      const sighting = /sighting\s+(\d+)/i.exec(r.text);
+      return !!sighting && Number(sighting[1]) >= 2;
+    })
+    .filter((r) => !/COMPRESS|COMPRESSION|alternative|reassessment|iterate/i.test(r.text))
+    .map((r) => r.name);
+}
+
+run('every boundary report written under the FORMAT LAW opens with a LOOP CHECK', () => {
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const reports = reportsUnderTheFormatLaw(docs);
+  assert(reports.length > 10, `only ${reports.length} in-scope reports — the scan is wrong`);
+  const missing = reportsWithoutALoopCheck(reports);
+  const unexpected = missing.filter((name) => !LOOP_CHECK_DEBT.includes(name));
+  assert(unexpected.length === 0,
+    `report(s) written under the FORMAT LAW with no LOOP CHECK line: ${unexpected.join(', ')}. `
+    + 'The law\'s own words are "No line, no valid order".');
+  console.log(`      (${reports.length} reports under the law; ${LOOP_CHECK_DEBT.length} pre-existing omissions carried as dated debt)`);
+});
+
+run('a repeated sighting states its disposition — iterate or compress', () => {
+  // LAW-second-wall (N>=2) and LAW-loop-audit (N>=3), both riding the number the
+  // LOOP CHECK line already carries.
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const bad = repeatSightingsWithNoDisposition(reportsUnderTheFormatLaw(docs));
+  assert(bad.length === 0,
+    `report(s) reporting sighting >= 2 that state no disposition: ${bad.join(', ')}. `
+    + 'The FORMAT LAW\'s template is "sighting N — iterate or compress"; second-wall '
+    + 'requires an alternative on the table before a third attempt at the same wall.');
+});
+
+run('the LOOP CHECK debt only shrinks', () => {
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const missing = new Set(reportsWithoutALoopCheck(reportsUnderTheFormatLaw(docs)));
+  const paid = LOOP_CHECK_DEBT.filter((name) => !missing.has(name));
+  assert(paid.length === 0,
+    `these reports gained a LOOP CHECK line — delete them from LOOP_CHECK_DEBT: ${paid.join(', ')}`);
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
   // A GREEN GATE IS A CLAIM. Each checker is fed something it must catch; if the
   // reads above were reduced to no-ops, every cell would still pass.
@@ -421,6 +537,26 @@ run('the checkers red on fabricated violations (liveness)', () => {
     'a re-scope that QUOTES the instruction was flagged — disagreeing out loud is allowed');
   assert(rescopeBlocksMissingTheirQuote(['1. **[TERMINAL, 2026-08-10 — both ancestors carry a SUPERSEDED banner.]**']).length === 0,
     'a terminal REPORT using the word descriptively was read as a re-scoping ORDER');
+
+  const under = [{ name: 'X_BOUNDARY_2026-08-09.md', text: 'we built things' }];
+  assert(reportsWithoutALoopCheck(under).length === 1, 'a report with no LOOP CHECK line passed');
+  assert(reportsWithoutALoopCheck(
+    [{ name: 'X_BOUNDARY_2026-08-09.md', text: 'LOOP CHECK: shape — sighting 1' }]).length === 0,
+    'a report WITH a LOOP CHECK line was flagged');
+  // Scope: the law is dated, so an older report is not in breach of it.
+  assert(reportsUnderTheFormatLaw(
+    [{ file: 'd/X_BOUNDARY_2026-07-23.md', text: 'no loop check here' }]).length === 0,
+    'a report predating the FORMAT LAW was pulled into its scope');
+
+  assert(repeatSightingsWithNoDisposition(
+    [{ name: 'Y_BOUNDARY_2026-08-09.md', text: 'LOOP CHECK shape — sighting 3. moving on.' }]).length === 1,
+    'a third sighting with no disposition passed — that is the loop-audit law');
+  assert(repeatSightingsWithNoDisposition(
+    [{ name: 'Y_BOUNDARY_2026-08-09.md', text: 'sighting 2 — iterate, and it paid.' }]).length === 0,
+    'a stated disposition of ITERATE was read as a violation — the law says "iterate or compress"');
+  assert(repeatSightingsWithNoDisposition(
+    [{ name: 'Y_BOUNDARY_2026-08-09.md', text: 'sighting 1 — first time, nothing owed.' }]).length === 0,
+    'a FIRST sighting was required to carry a disposition');
 
   assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\nthe road to done' }]).length === 1,
     'a rival plan with no SUPERSEDED marker passed — the 2026-08-10 case exactly');
