@@ -99,6 +99,17 @@ nowhere else.
    HIDDEN until he says.
 5. **Beta, then App Store.**
 
+### 4b. Female-friendly version — Sam placed it BEFORE accounts
+
+- [ ] **A TWEAK, IN HIS WORDS: *"no it's a fucking tweak, its the exact same
+      bible with some very minor changes"*.** Shape: **one onboarding step, plus
+      the small set of changes Sam names when the phase opens.** Same Bible.
+      **Nobody scopes this larger and no terminal or seat invents the changes** —
+      L-C1 and BIBLE-FIRST both forbid it. Ask Sam for them when the phase opens.
+      (One measured fact for planning, not a re-scope: `LFA_PROGRAMMING_BIBLE.md`
+      currently has no female-specific lines and there is no sex field in
+      onboarding, so his changes are additions rather than edits.)
+
 ### Between 4 and 5 — four open items, each with its receipt
 
 - [ ] **THE ACCOUNTS DECISION IS UNMADE AND UNBUILT — SAM'S CALL, NOT THE

@@ -1,5 +1,9 @@
 # Buttons/UI Unit Implementation Plan
 
+> **A UNIT PLAN, SUPERSEDED AS A STATUS SURFACE.** Its boxes describe one unit's
+> intent at 2026-07-31. The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Finish the one-projection migration (every athlete-facing surface consumes `project()`) and implement the 13 Sam-signed design rulings, ending with the combined device-pass checklist that closes branch `fix/g1-ownership-and-move-scoping`.

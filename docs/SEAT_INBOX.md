@@ -2,7 +2,29 @@
 
 ## Unprocessed (newest first)
 
-1. **SAM CORRECTED THE SEAT TWICE, 2026-08-10. BOTH CORRECTIONS BIND.**
+1. **[TERMINAL, 2026-08-10 — BOTH CORRECTIONS DONE AS GIVEN, PLUS ITEMS
+   2 AND 3.** (1a) `docs/V1_LAUNCH_DEFINITION.md` and
+   `docs/MASTER_PLAN_2026-07-23.md` are **DELETED** — `git rm`, not
+   bannered; git history keeps them. **SAFE BECAUSE PROCESS LAW L1-L10
+   WAS LIFTED VERBATIM INTO AGENTS.md FIRST** (`a458b45f`); the ten
+   registry rows cite AGENTS.md and still resolve. FINAL_QA repointed.
+   (1b) The female version is recorded in the roadmap as **A TWEAK** —
+   one onboarding step plus the changes Sam names — with a line
+   forbidding anyone from inventing them. **Item 3(a)'s
+   "BIBLE-AUTHORING job" framing is not used: item 1(b) withdrew it and
+   item 1 is newer.**
+   (2) **`LAW-do-as-instructed` IS REGISTERED AND GUARDED** — an ORDER
+   that re-scopes an instruction must quote the words used. **The cell
+   was too broad on its first run** and flagged four terminal REPORTS
+   using "superseded" descriptively — the word, not the act — so it is
+   scoped to orders, which is what the law says.
+   (3b) **The "am i going to get given an old roadmap again?" guard is
+   BUILT and it is the widened one:** any doc carrying 3+ status boxes
+   must BE the plan or say what it is. **Nine such docs existed; all
+   nine now carry an honest banner.**
+   **62 rows, 16 guarded, 46 UNENFORCED.**]**
+
+   **SAM CORRECTED THE SEAT TWICE, 2026-08-10. BOTH CORRECTIONS BIND.**
 
    **(a) DELETE THE OLD ROADMAPS. NOT BANNERS.** His words: *"i want
    one fucking roadmap - delete the others so that you never fucking

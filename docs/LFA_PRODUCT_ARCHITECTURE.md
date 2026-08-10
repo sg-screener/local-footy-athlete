@@ -1,5 +1,9 @@
 # Local Footy Athlete — Product Architecture
 
+> **AN ARCHITECTURE REFERENCE, SUPERSEDED AS A PLAN.** §16's checklist is a
+> shippability DEFINITION, not a schedule — each line carries its own receipt as of
+> 2026-08-10. The one governing plan is `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 This document is the canonical reference for what Local Footy Athlete (LFA) is, how it must behave for a real athlete, and the architectural rules every change must respect.
 
 If implementation drifts from this document, **update this document**. It is the source of truth, not the code.

@@ -281,6 +281,37 @@ run('exactly one document presents itself as the plan', () => {
     + `A retired plan that does not say so is indistinguishable from ${GOVERNING_PLAN}.`);
 });
 
+/** A doc carrying real status boxes is a status surface, plan or not. */
+const STATUS_BOX = /^\s*- \[[ x]\]/gm;
+const SUPERSESSION_BANNER = /SUPERSEDED|PARKED|ARCHIVE|HISTORIC|NOT A PLAN/i;
+
+/** Pure: status-carrying docs that neither ARE the plan nor say they are not. */
+function unmarkedStatusSurfaces(
+  docs: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return docs
+    .filter((doc) => path.basename(doc.file) !== GOVERNING_PLAN)
+    // Two or fewer boxes is a note, not a checklist. Three is a surface.
+    .filter((doc) => (doc.text.match(STATUS_BOX) ?? []).length >= 3)
+    .filter((doc) => !SUPERSESSION_BANNER.test(doc.text.split('\n').slice(0, 12).join('\n')))
+    .map((doc) => path.basename(doc.file));
+}
+
+run('no second document ships an unmarked status checklist', () => {
+  // SAM ASKED IT DIRECTLY, 2026-08-10: "am i going to get given an old roadmap
+  // again?" — answered with a guard rather than a promise. A doc does not have
+  // to CALL itself a plan to be handed over as one; carrying status boxes is
+  // enough. Measured when this landed: nine such docs, all nine bannered.
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  assert(docs.length > 100, `only ${docs.length} docs found — the scan is reading the wrong tree`);
+  const unmarked = unmarkedStatusSurfaces(docs);
+  assert(unmarked.length === 0,
+    `doc(s) carrying a status checklist with no supersession/archive banner in their `
+    + `opening lines: ${unmarked.join(', ')}. Either it is ${GOVERNING_PLAN}, or it says `
+    + 'plainly what it is — otherwise it can be handed over as the plan.');
+});
+
 run('no release gate points readers at a superseded plan', () => {
   const gate = fs.readFileSync(path.join(repoRoot, 'docs', 'FINAL_QA_CHECKLIST.md'), 'utf8');
   // The checklist may DISCUSS a retired plan; it may not send the reader to it
@@ -291,6 +322,56 @@ run('no release gate points readers at a superseded plan', () => {
   assert(sendsReaderAway.length === 0,
     `FINAL_QA_CHECKLIST has checkbox line(s) pointing at a superseded plan: `
     + `${sendsReaderAway.map((l) => l.trim().slice(0, 70)).join(' | ')}`);
+});
+
+// ── LAW-do-as-instructed ───────────────────────────────────────────────────
+//
+// Sam, 2026-08-10: *"why can't we ever be on the same page? seriously, tell me"*.
+// Four times in one day an instruction came back re-scoped instead of done: "it's
+// a tweak" answered with why it was bigger; "delete them" answered with a banner;
+// "every law guarded" answered with a ranked shortlist; "parity" answered with a
+// kind-by-kind slice plan. **Each one cost him a message to drag it back.**
+//
+// The law is not "never disagree" — it is **never re-scope SILENTLY**. So the
+// guard checks the only part of this that touches the repo: an inbox item that
+// withdraws or re-shapes an instruction must QUOTE HIS WORDS and say what is
+// being changed. Disagreeing out loud passes; quietly substituting a different
+// unit does not.
+
+const RESCOPE_WORDS = /\b(WITHDRAWN|withdraw|re-?scope|re-?shape|instead of|supersede[sd]?|narrow(ed)?|widen(ed)?)\b/i;
+
+/**
+ * Pure: does a re-scoping ORDER quote the instruction and name the change?
+ *
+ * SCOPED TO ORDERS, NOT REPORTS, AND ITS FIRST RUN IS WHY. The law's own text
+ * governs "an order in this inbox that RE-SCOPES a Sam instruction". The first
+ * version tested every block and flagged four — **all four were terminal
+ * ANNOTATIONS using the word "superseded" descriptively**, e.g. "both ancestors
+ * now carry a SUPERSEDED banner". That is the word, not the act: a vocabulary
+ * gate reading a legal use as a violation. Terminal blocks are marked
+ * `[TERMINAL,` and are reports of work done, not instructions being re-shaped.
+ */
+function rescopeBlocksMissingTheirQuote(blocks: readonly string[]): number[] {
+  return blocks
+    .map((block, index) => ({ block, index }))
+    .filter(({ block }) => !block.includes('[TERMINAL,'))
+    .filter(({ block }) => RESCOPE_WORDS.test(block))
+    // His words, quoted. The inbox quotes with *"…"* or > blockquote.
+    .filter(({ block }) => !/\*"[^"]{8,}"\*/.test(block) && !/^\s*>\s+/m.test(block))
+    .map(({ index }) => index);
+}
+
+run('an inbox item that re-scopes an instruction quotes the instruction', () => {
+  const inbox = fs.readFileSync(path.join(repoRoot, 'docs', 'SEAT_INBOX.md'), 'utf8');
+  const unprocessed = inbox.split(/^## /m).find((section) => section.startsWith('Unprocessed'));
+  assert(unprocessed, 'no Unprocessed section to read');
+  // One block per top-level item.
+  const blocks = unprocessed.split(/\n(?=[0-9]+[a-z]*\. )/).filter((b) => b.trim().length > 0);
+  assert(blocks.length > 0, 'the Unprocessed queue parsed to no items');
+  const bad = rescopeBlocksMissingTheirQuote(blocks);
+  assert(bad.length === 0,
+    `${bad.length} queue order(s) re-scope an instruction without quoting it. `
+    + 'Silent re-scoping is the defect (LAW-do-as-instructed); disagreeing out loud is allowed.');
 });
 
 run('the checkers red on fabricated violations (liveness)', () => {
@@ -325,6 +406,21 @@ run('the checkers red on fabricated violations (liveness)', () => {
     'a boundary doc with no NOT-COVERED section passed');
   assert(docsMissingNotCovered([{ file: 'a/B_BOUNDARY.md', text: '## NOT COVERED\nnothing' }]).length === 0,
     'a doc WITH the section was reported missing');
+
+  const boxes = '- [x] a\n- [ ] b\n- [x] c\n';
+  assert(unmarkedStatusSurfaces([{ file: 'd/OLD_PLAN.md', text: `# Old\n${boxes}` }]).length === 1,
+    'a second doc shipping an unmarked status checklist passed — Sam\'s "am i going to get given an old roadmap again?" case');
+  assert(unmarkedStatusSurfaces([{ file: 'd/OLD_PLAN.md', text: `# Old\n> **SUPERSEDED**\n${boxes}` }]).length === 0,
+    'a bannered status doc was flagged');
+  assert(unmarkedStatusSurfaces([{ file: 'd/NOTE.md', text: '# Note\n- [x] one thing\n' }]).length === 0,
+    'a one-box note was treated as a status surface — the gate would be noise');
+
+  assert(rescopeBlocksMissingTheirQuote(['1. The unit is WITHDRAWN and re-scoped smaller.']).length === 1,
+    'a silent re-scope passed — the exact defect LAW-do-as-instructed names');
+  assert(rescopeBlocksMissingTheirQuote(['1. WITHDRAWN. His words: *"no it is a tweak"* — narrowing to one step.']).length === 0,
+    'a re-scope that QUOTES the instruction was flagged — disagreeing out loud is allowed');
+  assert(rescopeBlocksMissingTheirQuote(['1. **[TERMINAL, 2026-08-10 — both ancestors carry a SUPERSEDED banner.]**']).length === 0,
+    'a terminal REPORT using the word descriptively was read as a re-scoping ORDER');
 
   assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\nthe road to done' }]).length === 1,
     'a rival plan with no SUPERSEDED marker passed — the 2026-08-10 case exactly');

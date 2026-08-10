@@ -1,5 +1,8 @@
 # Fix Groups C & D Worklist
 
+> **A DATED WORKLIST, SUPERSEDED AS A STATUS SURFACE.** The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 Derived from the 2026-07-21 area audits: `docs/audits/PROGRAM_2026-07-21.md`,
 `docs/audits/WORKOUT_2026-07-21.md`, `docs/audits/HOMEV2_2026-07-21.md`,
 `docs/audits/PROFILE_2026-07-21.md`. Deduplicated checklist for:

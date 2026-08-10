@@ -1,5 +1,10 @@
 # Final QA Checklist — Release Candidate
 
+> **A RELEASE-GATE SCRIPT, NOT A PLAN.** Its boxes are things to RUN at
+> release-candidate time, not a record of what is built. The one governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`, and this checklist is SUPERSEDED as a
+> source of status.
+
 Drafted 2026-07-23. This is the release-gate script referenced as v1
 blocker #9 in `docs/V1_LAUNCH_DEFINITION.md` ("Final full QA pass — re-run
 the screen audits + Maestro smoke on the release candidate; `test:bible`

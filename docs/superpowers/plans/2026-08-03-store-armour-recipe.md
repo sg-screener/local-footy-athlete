@@ -1,5 +1,9 @@
 # Store Armour Unit (LR-1+LR-2 opening) Implementation Plan
 
+> **A UNIT RECIPE, SUPERSEDED AS A STATUS SURFACE.** Its boxes are that unit's
+> steps, not app status. The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Distil the transferable store-armour recipe from the profile/program stores' protections and apply it to the two highest-risk unowned persisted stores — `calendarStore` and `athletePreferencesStore` — with walker refusal replays, writer-audit debt paydown, and census ratchet paydown, proving the recipe before the remaining stores are parallelized.

@@ -1,5 +1,9 @@
 # Implementation Checklist - Core UI Components
 
+> **ARCHIVE — SUPERSEDED, NOT A PLAN AND NOT A STATUS.** Its 372 boxes are a
+> snapshot of 2026-07-10 and mean nothing about the app today. The one governing
+> plan is `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 ## Project: Local Footy Athlete React Native App
 ## Date: March 1, 2026
 ## Status: COMPLETE ✓

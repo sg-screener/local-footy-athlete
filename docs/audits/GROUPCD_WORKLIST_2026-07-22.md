@@ -1,5 +1,9 @@
 # Group C/D Execution Worklist — 2026-07-22
 
+> **A DATED WORKLIST, SUPERSEDED AS A STATUS SURFACE.** Its boxes are one audit's
+> findings at 2026-07-22. The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 **Lane:** 2 (audit/docs only — no code changes). **Branch/HEAD:** `main` @
 `26de647` (merge: fix group B visible verification, items 1/3/4 — phase-card
 single source, anchor-day relocate-first). Findings only, per instructions —

@@ -1,5 +1,9 @@
 # Exercise Authoring Template (2026-07-28)
 
+> **AN AUTHORING TEMPLATE, SUPERSEDED AS A STATUS SURFACE.** Its boxes are fields
+> to fill per exercise, not app status. The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 Read-only research report. **No code was changed to produce this.** Every field, allowed-value
 list, and "what breaks" claim below was derived from reading the actual current schema, data
 files, and enforcement tests — not from convention or memory. File:line citations are given so

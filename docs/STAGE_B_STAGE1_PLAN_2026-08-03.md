@@ -1,5 +1,9 @@
 # Stage B — Stage 1 implementation plan (L16 vertical slice), 2026-08-03
 
+> **A STAGE PLAN, SUPERSEDED AS A STATUS SURFACE.** Stage B stages 1+2 merged to
+> main at `89b540f9`. The governing plan is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans
 > (inline execution, this session). Steps use checkbox (`- [ ]`) syntax.
 
