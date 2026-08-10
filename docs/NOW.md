@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `b8a7e9de` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `4a84bbd7` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -86,8 +86,9 @@ and this file gets one line pointing at it.**
   its reason: `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`. **First thing to
   check: whether `runRebuild` closes over day-screen state.**
 - **THE UI MERGE — SLICES 2, 3 AND 5 LANDED** (`25565430`, `2752c90a`,
-  `226531b2`). **THE WEEK NOW USES HER ONE CARD STRUCTURE FOR ALL SEVEN DAYS**
-  (`b8a7e9de`): simulator tape green, Sam's iPhone acceptance still owed.
+  `226531b2`). **THE WEEK NOW USES HER CARD STRUCTURE AND PROPORTIONS FOR ALL
+  SEVEN DAYS** (`4a84bbd7`): large dates, compact badges and an acted active-
+  modifier line are green on the simulator; Sam's iPhone acceptance still owed.
   **STILL OPEN: slice 3b** — the status screen's buttons are a NO-OP and the day
   screen keeps every control, because wiring them needs
   `handleCoachNoteAction` and the phase-shift machine lifted out of
