@@ -197,7 +197,24 @@
      directly at `AppNavigator.tsx:88`, and **census `useHomeScreen`
      (2,113 lines) for anything only the dead branch needed** — that
      hook is where the saving actually is.
-   - **(d) The frozen coach tree — DELETE.** `AppNavigator.tsx:10` +
+   - **(d) CENSUSED — NOT CUT. THREE FINDINGS, ONE OF THEM A BLOCKER
+     THE ITEM DOES NOT MENTION.** docs/FROZEN_COACH_CUT_CENSUS_2026-08-10.md.
+     (1) **The tree is ALREADY unreachable** — `CoachStackNavigator` is
+     defined and never mounted, `CoachScreen` has ONE product importer.
+     So the cut removes lines, not behaviour, and cannot break a path
+     the athlete uses. (2) **NINE SUITES READ `CoachScreen.tsx` AS
+     SOURCE**, at least three of them chain members — deleting the file
+     crashes them ENOENT, **the exact defect retired hours ago**
+     (`test:coach-update-card-ui`). **An import-graph census would have
+     reported ZERO dependents.** (3) **LR-6 says the opposite and had NO
+     REGISTRY ROW** — a live standing rule with a chain gate encoding it
+     and nothing in the registry. Sam's *"obviously!!!"* supersedes it and
+     that is taken as ruled; **the row is now added so the supersession
+     is a RECORDED EVENT, not a silent guard deletion.** This exposes
+     LAW ZERO's blind spot from the other side: **the registry finds laws
+     with no guard; nothing yet finds GUARDS WITH NO LAW.**
+     `coachBuildInfo` is a non-issue — it imports only `./logger`.
+   - **(d, as originally written) The frozen coach tree — DELETE.** `AppNavigator.tsx:10` +
      `:94-100`, and the 13 modules / 6,081 lines it roots.
      **`App.tsx:7` imports `coachBuildInfo` from that set at module
      scope — move or drop that import FIRST**, then cut. This also

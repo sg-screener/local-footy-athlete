@@ -740,6 +740,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-LR6-coach-pipeline-frozen',
+    law: 'The beta coach pipeline and CoachScreen are FROZEN — no coach-pipeline work lands on them; UI-surface changes only.',
+    ruledAt: 'src/navigation/AppNavigator.tsx:206 ("LR-6 HOLDS"); docs/LEGACY_RECKONING_CENSUS_2026-07-30.md; standing since 2026-07-30',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-entry-surface',
+      chainStatus: 'in_chain',
+      receipt: 'REGISTERED 2026-08-10 BY THE DELETION CENSUS, AND IT IS ABOUT TO BE RETIRED — which is the point of registering it. coachEntrySurfaceContractTests section [3] asserts every pipeline symbol CoachScreen owned is still named there, so the suite\'s job is to FAIL when the frozen tree is cut. Sam ruled the cut on 2026-08-10 ("delete all the old coach shit then? obviously!!!"), which supersedes LR-6. **The row exists so the supersession is a RECORDED EVENT rather than a silent guard deletion.** grep LR-6 over this file returned ZERO before this row — a live standing rule with a chain gate and no row, which is LAW ZERO\'s blind spot from the other side: the registry finds laws with no guard, and nothing yet finds GUARDS WITH NO LAW. See docs/FROZEN_COACH_CUT_CENSUS_2026-08-10.md.',
+    },
+  },
+  {
     id: 'LAW-census-before-retirement',
     law: 'Nothing is retired until it has been censused — you count what a deletion takes with it before deleting.',
     ruledAt: 'docs/COACH_REBUILD_KICKOFF_2026-08-09.md:101; practised in docs/LEGACY_RECKONING_* and the R5 deletion reckoning',
