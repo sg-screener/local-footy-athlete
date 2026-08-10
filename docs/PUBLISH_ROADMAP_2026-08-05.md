@@ -95,6 +95,9 @@ Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
             written** (Sam's fork A), no clock times, a Today/Week zoom control.
             docs/DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md. **Awaiting Sam's veto
             and a device pass — no device evidence exists yet.**
+      - [x] **SLICE 2 + buckets landed** (the projection owns the bucket;
+            a day is named by EVERY bucket it carries). Compound day names
+            and the chip row are on main.
       - [ ] Later slices — rulings 1-12 remain owed: the repeat-week DELETION
             (1), the bottom button stack split into the icon shortcut row (2-5),
             the intermediate menu's death and the four-action menu (7-9),
@@ -103,11 +106,37 @@ Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
             INVESTIGATION, not a UI slice:** Sam asked where a free-text injury
             answer goes, and a stored answer that affects nothing is the worst
             class. Traced with receipts, reported.
-- [ ] 2. Journal — finished to JOURNAL_DESIGN_2026-07-23 (storage proven
-      in R4; LR-18 journal-store retirement rides this unit)
-- [ ] 3. Coach rebuild — free-text coach on the clean shell (LR-6 lifts;
-      propose decision → diff → accept → derive; MetCon rename lands
-      here)
+- [~] 2. Journal — **BUILT COMPLETE, THEN HIDDEN THE SAME DAY. NOT
+      "to be finished".** (Refreshed 2026-08-10 against measured state.)
+      Ten slices, all gated, landed 2026-08-08/09; Sam's eye pass killed the
+      surface — *"looks really bad... keep the data because it might be
+      useful for the coach"* (docs/JOURNAL_HIDDEN_RULING_2026-08-09.md,
+      `7f9e54ab`). The tab is removed at the navigation owner; **the data
+      layer and every journal suite stay LIVE as coach fuel**, and the two
+      data-creating taps ("How did that go?", post-game legs/energy) are
+      still athlete-visible. **Sam, 2026-08-10: *"the journal should be
+      built but not shown anywhere - we are coming back to that."***
+      So this line is neither open nor done: it is BUILT-AND-DELIBERATELY-
+      UNREACHABLE, and a sweep must not delete it as dead weight.
+      - [ ] The return: redesigned mock-first, post-coach, Sam's call.
+      - [ ] LR-18 journal-store retirement still rides that return.
+- [~] 3. Coach rebuild — **SLICES 1, 2 AND 3 ARE LANDED; S4 NOT STARTED.**
+      (Refreshed 2026-08-10.) The tab talks (`test:coach-tab-slice1`), it
+      answers (`test:coach-tab-slice2`, 76 cells), and **it changes things**
+      (`test:coach-tab-slice3`, 137 cells) — one action kind, `move_session`,
+      through the athlete's own door with undo. `COACH_PROPOSABLE_ACTION_TYPES`
+      is `['move_session']` (`src/rules/coachProposal.ts:82`).
+      - [ ] **THE GAP IS MEASURED, NOT ESTIMATED: 1 of 26.**
+            docs/COACH_PARITY_CENSUS_2026-08-10.md counts the coach against
+            the athlete's own 26 action types (`LAW-LC4-parity`). That census
+            is the build order, and it is the honest size of "coach rebuild".
+      - [ ] S4 — *it knows how you're tracking*. Not started. The journal's
+            record (load, regions, feel, niggles) is its input, which is why
+            the journal data layer stayed live.
+      - [ ] LR-6 lifts, MetCon rename, free text — all still owed.
+      - [ ] **NOTHING IS ON GLASS.** No coach slice has been seen on a
+            device; the scope chooser has never been tapped and the undo
+            toast over a coach move is OPEN-UNKNOWN.
 
 ## Phase 3 — beta
 - [ ] Renee + 2-3 trusted athletes on TestFlight
