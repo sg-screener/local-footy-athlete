@@ -490,6 +490,45 @@ run('the LOOP CHECK debt only shrinks', () => {
     `these reports gained a LOOP CHECK line — delete them from LOOP_CHECK_DEBT: ${paid.join(', ')}`);
 });
 
+// ── LAW-claim-needs-a-cell, ON THE SURFACE SAM ACTUALLY READS ─────────────
+//
+// The law: *a sentence saying the app does or does not do X, anywhere Sam reads
+// it, is pinned by a named cell or written OPEN-UNKNOWN.* Its founding case is
+// *"why is Friday heavy? is refused"* — a claim that reached him and was FALSE,
+// with no cell holding it.
+//
+// The general form is not mechanisable; **the highest-value instance is.**
+// `docs/NOW.md` is the single status surface and its `⚠` blocks are what Sam
+// reads first. **Measured when this landed: 10 such blocks, FIVE with no receipt
+// and no OPEN-UNKNOWN — two of them written the same day by the author of this
+// cell.** All five now carry a named cell, tape, commit, or an explicit
+// OPEN-UNKNOWN / NOT ON GLASS.
+//
+// A completeness-word gate was measured first and REJECTED: the whole of docs/
+// yields two hits and both use "exhaustive" descriptively. **A cell that cannot
+// fail is worse than no cell** — `LAW-green-gate-is-a-claim`.
+
+const CLAIM_RECEIPT = /`test:|`npm run|`tape:|\b[0-9a-f]{7,40}\b|\.tsx?:\d+|OPEN-UNKNOWN|NOT ON GLASS/;
+
+/** Pure: Sam-facing blocks with neither a receipt nor an honest unknown. */
+function samFacingClaimsWithoutAReceipt(nowFile: string): string[] {
+  return nowFile
+    .split(/\n(?=- \*\*)/)
+    .filter((block) => block.slice(0, 40).includes('\u26a0'))
+    .filter((block) => !CLAIM_RECEIPT.test(block))
+    .map((block) => block.trim().split('\n')[0].slice(0, 70));
+}
+
+run('every Sam-facing claim in NOW.md carries a receipt or says OPEN-UNKNOWN', () => {
+  const now = fs.readFileSync(path.join(repoRoot, 'docs', 'NOW.md'), 'utf8');
+  const blocks = now.split(/\n(?=- \*\*)/).filter((b) => b.slice(0, 40).includes('\u26a0'));
+  assert(blocks.length >= 3, `only ${blocks.length} Sam-facing blocks found — the scan is wrong`);
+  const bare = samFacingClaimsWithoutAReceipt(now);
+  assert(bare.length === 0,
+    `Sam-facing claim(s) with no named cell/tape/commit and no OPEN-UNKNOWN: `
+    + `${bare.join(' | ')}. The founding case reached him and was FALSE.`);
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
   // A GREEN GATE IS A CLAIM. Each checker is fed something it must catch; if the
   // reads above were reduced to no-ops, every cell would still pass.
@@ -557,6 +596,15 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(repeatSightingsWithNoDisposition(
     [{ name: 'Y_BOUNDARY_2026-08-09.md', text: 'sighting 1 — first time, nothing owed.' }]).length === 0,
     'a FIRST sighting was required to carry a disposition');
+
+  assert(samFacingClaimsWithoutAReceipt('- **\u26a0 SAM: the app now does X.** Trust me.').length === 1,
+    'a bare Sam-facing claim passed — the founding case reached him and was FALSE');
+  assert(samFacingClaimsWithoutAReceipt('- **\u26a0 SAM: the app does X.** Held by `test:thing`.').length === 0,
+    'a receipted claim was flagged');
+  assert(samFacingClaimsWithoutAReceipt('- **\u26a0 SAM: it might do X.** OPEN-UNKNOWN.').length === 0,
+    'an honest OPEN-UNKNOWN was flagged — the law offers it as the alternative');
+  assert(samFacingClaimsWithoutAReceipt('- **A note with no warning mark.** No receipt here.').length === 0,
+    'a non-Sam-facing note was pulled into scope');
 
   assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\nthe road to done' }]).length === 1,
     'a rival plan with no SUPERSEDED marker passed — the 2026-08-10 case exactly');

@@ -13,7 +13,10 @@
   **BUT IT IS NOT FULLY GONE:** the same old check still runs in three other places
   with no guard on it, so the undercount can still reach a current week. That is
   measured as open, not claimed as fixed. Full sweep before and after the cut: the
-  same four reds, so nothing else moved.
+  same four reds, so nothing else moved. `2ec4d49b` ·
+  docs/V1_EXPOSURE_CONTRACT_CUT_2026-08-10.md · green after the cut:
+  `test:section18-gateway`, `test:exposure-contract-equality`,
+  `test:bible-anchors`, `test:stage-b-generation-differential`.
 
 - **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 46 of 60.** `915c58fe`
   flipped the law registry's default on Sam's stop-the-line ruling
@@ -46,7 +49,10 @@
   not what is stored.** Until I read the stored day directly, *"your power work
   was deleted"* is not established. **Two possibilities, neither checked yet:**
   the move never carried it, or it is still there and the screen isn't drawing
-  it. Next probe is one line. docs/POWER_REMOVAL_REASON_XS_2026-08-10.md
+  it. Next probe is one line. **NO CELL HOLDS ANY OF THIS — it is a measurement,
+  and whether the row was deleted at all is OPEN-UNKNOWN.**
+  `npm run tape:coach-move-durability` · `3f0295f9` ·
+  docs/POWER_REMOVAL_REASON_XS_2026-08-10.md
 
 - **🔴 THE COURIER TOLL IS PAID (`f168b48b`).** The stop hook detected an order by
   matching `^1\.` only, so **every order the seat wrote as `00.`/`0.`/`000.` was
@@ -120,7 +126,8 @@
   the coach says *"Done. Session moved."* The same day moved to an empty day
   keeps everything. **I have not proven this is what bit you** — yours was
   conditioning, and conditioning survives this path in every seed I can generate.
-  Same defect shape, different part. **I am not saying your case is closed.**
+  Same defect shape, different part. **I am not saying your case is closed — it is
+  OPEN-UNKNOWN.** Measured in `npm run tape:coach-move-durability`.
   Two suspects, both named, neither proven: the landing code carries a
   hand-maintained list of what survives, or the §18 power budget re-decides the
   day once it becomes a team night.
@@ -402,6 +409,7 @@
   `missing_generation_anchor` — **neither of the two suspects.** His world was
   built across pre-2026-08-06 eras and never stored a generation anchor at all,
   so the boot refused **permanently** and Try Again was correctly useless.
+  Held by `test:worn-world-boot`; **NOT ON GLASS — no device evidence.**
 
 - **THE ANCHOR RECOVERY (fifty-sixth pass).**
   - **ROOT CAUSE, with receipts:** "the anchor rides the program it anchors"
@@ -448,7 +456,9 @@
 - **⚠ SAM: THE FIRST THING TO LOOK AT ON THE PHONE — move a session on the
   Program screen.** A toast should say *"You moved a session"* with **Undo**.
   Tap it: the week goes back, and it stays back after a relaunch. **Nothing else
-  changed on that screen.** Batch 29 is two words (`"You"`, `"Undo"`), PROPOSED.
+  changed on that screen.** Batch 29 is two words (`"You"`, `"Undo"`), PROPOSED. Held by
+  `test:undo-reversal` and `npm run tape:lr29-undo-durability`;
+  **NOT ON GLASS — no device evidence.**
 
 - **THE UNDO UNIT — BUILT, GATED, WITH ITS CLASS STILL OPEN.**
   **READ:** docs/LR29_UNDO_BUILD_BOUNDARY_2026-08-09.md (+ its addendum) ·

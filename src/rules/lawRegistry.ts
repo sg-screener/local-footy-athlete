@@ -191,9 +191,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'A sentence saying the app does or does not do X, anywhere Sam reads it, is pinned by a named cell or written OPEN-UNKNOWN.',
     ruledAt: 'AGENTS.md "A behaviour claim the owner can read is held by a CELL"; seat-ruled 2026-08-10',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A gate parsing docs/NOW.md and boundary reports for behavioural sentences and requiring an adjacent cell name or OPEN-UNKNOWN marker.',
-      receipt: 'grep for DOC-TRUTH and OPEN-UNKNOWN across src/ returns ZERO files. The law that this week leaned on hardest has no guard at all.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10 on the surface Sam actually reads. The general form is not mechanisable; the highest-value INSTANCE is: every `\u26a0` block in docs/NOW.md — the single status surface — must carry a named cell/tape/commit or say OPEN-UNKNOWN / NOT ON GLASS. **FIRST RUN: 10 blocks, FIVE bare, TWO of them written the same day by the author of this cell.** All five now carry one. A completeness-word gate was measured FIRST and REJECTED — the whole of docs/ yields two hits and both use \'exhaustive\' descriptively, and a cell that cannot fail is worse than no cell. PARTIAL by construction: it holds that a receipt is PRESENT, not that it is the right one, and it reads NOW.md only — a claim in a boundary report or in chat is not covered.',
     },
   },
   {
