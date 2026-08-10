@@ -308,6 +308,26 @@ function nextMondayISO(mondayISO: string): string {
 
 const NEXT_WEEK = nextMondayISO(WEEK);
 
+
+/**
+ * THE DAY'S ROWS BY ROLE — the unit that tells CONTENT LOSS from NAMING LOSS.
+ *
+ * A part missing from `partsOf` could be a day that stopped DECLARING something
+ * it still carries. A row that is gone is gone. Printing both means the reader
+ * never has to guess which of the two they are looking at.
+ */
+function roleCensusFor(weekDays: unknown[], dateISO: string): string {
+  const workout = (weekDays as { date: string; workout: { exercises?: unknown[] } | null }[])
+    .find((candidate) => candidate.date === dateISO)?.workout ?? null;
+  if (!workout) return 'no workout';
+  const counts = new Map<string, number>();
+  for (const row of (workout.exercises ?? []) as { role?: string }[]) {
+    const role = String(row.role ?? '-');
+    counts.set(role, (counts.get(role) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([role, count]) => `${role}:${count}`).join(' ') || 'no rows';
+}
+
 /** The day's parts as the projection kinds them — the unit the defect lives in. */
 function partsOf(visibleWeek: VisibleWeek, dateISO: string): string {
   const day = visibleWeek.days.find((candidate) => candidate.date === dateISO);
@@ -981,7 +1001,85 @@ const main = async (): Promise<void> => {
   console.log('     A card that named the whole day while one part stayed is an L-C2');
   console.log('     failure on its own, independent of which defect above is true.');
 
+  // ══ THE DESTINATION AXIS (2026-08-10) ═════════════════════════════════════
+  //
+  // WHY THIS SECTION EXISTS, AND IT IS A FLAW IN THIS TAPE RATHER THAN IN THE
+  // PRODUCT. Every arm above lands on an EMPTY day, because both `chooseMove`
+  // and `choosePartedMove` pick their destination from days with no parts. So
+  // `stackSessionOntoTeamAnchor` — the ABSORB path, taken whenever the target
+  // carries a team anchor — had never been exercised by any arm of any tape.
+  //
+  // Sam moved onto a WEDNESDAY. Every Wednesday in this world is a team night.
+  // The destination was the un-reached case all along, and the source (which
+  // the seat suspected) was already generated.
+  await reachWorldByActing();
+  await settleWrites();
+  console.log('\n\n════ THE DESTINATION AXIS — LANDING ON A TEAM NIGHT ════');
+  {
+    const world = readWeekBothWays(NEXT_WEEK);
+    const source = world.visibleWeek.days.find((day) =>
+      day.date > TODAY && new Set(day.parts.map((part) => part.kind)).size >= 2
+      && !day.parts.some((part) => part.kind === 'team_training'));
+    const teamNight = world.visibleWeek.days.find((day) =>
+      day.date > TODAY && day.date !== source?.date
+      && day.parts.some((part) => part.kind === 'team_training'));
+    if (!source || !teamNight) {
+      console.log('   NOT REACHED: this world has no unanchored multi-part day, or no team');
+      console.log('   night to land it on. That is a fact about the WORLD, not a pass.');
+    } else {
+      const before = partsOf(world.visibleWeek, source.date);
+      const rowsBefore = roleCensusFor(world.weekDays, source.date);
+      console.log(`   source ${source.date} ${weekdayName(source.date)}: ${before}  rows[${rowsBefore}]`);
+      console.log(`   dest   ${teamNight.date} ${weekdayName(teamNight.date)}: `
+        + `${partsOf(world.visibleWeek, teamNight.date)}  ← TEAM NIGHT (absorb)`);
+      await coachArm({ from: source.date, to: teamNight.date }, NEXT_WEEK);
+      await settleWrites();
+      const after = readWeekBothWays(NEXT_WEEK);
+      const landed = partsOf(after.visibleWeek, teamNight.date);
+      const rowsAfter = roleCensusFor(after.weekDays, teamNight.date);
+      console.log(`\n   AFTER  dest ${teamNight.date}: ${landed}  rows[${rowsAfter}]`);
+      const lost = before.split('+').filter((kind) => !landed.split('+').includes(kind));
+      if (lost.length === 0) {
+        console.log('   ✓ every part of the source arrived on the team night.');
+      } else {
+        console.log(`   ✗✗ PARTS THAT DID NOT ARRIVE: ${lost.join(', ')}`);
+        console.log('      A part the athlete had is not on the day it moved to, and the');
+        console.log('      coach said "Done". That is the Bible\'s "Do not lose the session".');
+        console.log('      ATTRIBUTION IS OPEN and this tape does not settle it: either');
+        console.log('      `stackTemplate` carries an ALLOW-LIST of fields and this one is');
+        console.log('      not on it, or the §18 finaliser\'s `power_removed` budget path');
+        console.log('      re-decided the day once it became a team night. Read the ROW');
+        console.log('      counts above — a row that vanished is content, not naming.');
+      }
+      console.log('\n   AND THE CONTROL, WHICH IS WHAT MAKES THE ABOVE READABLE: the same');
+      console.log('   source day to an EMPTY destination. If the parts survive there and');
+      console.log('   not here, the DESTINATION is the cause and not the source.');
+      await reachWorldByActing();
+      await settleWrites();
+      const controlWorld = readWeekBothWays(NEXT_WEEK);
+      const empty = controlWorld.visibleWeek.days.find((day) =>
+        day.date > TODAY && day.date !== source.date && day.parts.length === 0);
+      if (!empty) {
+        console.log('   (no empty destination in this world — the control could not run)');
+      } else {
+        await coachArm({ from: source.date, to: empty.date }, NEXT_WEEK);
+        await settleWrites();
+        const controlAfter = readWeekBothWays(NEXT_WEEK);
+        const controlLanded = partsOf(controlAfter.visibleWeek, empty.date);
+        console.log(`\n   CONTROL dest ${empty.date}: ${controlLanded}`
+          + `  rows[${roleCensusFor(controlAfter.weekDays, empty.date)}]`);
+        const controlLost = before.split('+').filter((kind) => !controlLanded.split('+').includes(kind));
+        console.log(`   CONTROL parts that did not arrive: `
+          + `${controlLost.length === 0 ? '(none)' : controlLost.join(', ')}`);
+      }
+    }
+  }
+
   console.log('\n   NOT COVERED: one action kind, one week, one world, depth 1, no device.');
+  console.log('   THE DESTINATION AXIS IS NOW COVERED AND IT WAS NOT BEFORE — every arm');
+  console.log('   above this section lands on an EMPTY day. A THIRD destination shape is');
+  console.log('   still unreached: a day that already carries a full gym session but no');
+  console.log('   anchor, where the move TRADES rather than absorbs.');
   console.log('   NO REACT: the arms call the screens\' own rule functions with the screens\'');
   console.log('   own arguments, but nothing is mounted — a defect that lives in render');
   console.log('   order, in a stale closure, or in the settling effect\'s timing is outside');
