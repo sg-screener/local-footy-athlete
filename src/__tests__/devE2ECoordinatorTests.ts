@@ -390,6 +390,22 @@ async function main() {
       defaultCoordinatorSource.includes('applyProgramOverrideWrite({') &&
       defaultCoordinatorSource.includes('createOrUpdateInjuryEpisode({') &&
       defaultCoordinatorSource.includes('commitSessionOutcomeTransaction(intent)'));
+  const exactInstallStart = defaultCoordinatorSource.indexOf(
+    'function installAcceptedSeedProgram',
+  );
+  const exactInstallEnd = defaultCoordinatorSource.indexOf(
+    'async function applyAuxiliaryState',
+    exactInstallStart,
+  );
+  ok('the exact seed install region is found before its persisted-input assertions',
+    exactInstallStart >= 0 && exactInstallEnd > exactInstallStart);
+  const exactInstallSource = exactInstallStart >= 0 && exactInstallEnd > exactInstallStart
+    ? defaultCoordinatorSource.slice(exactInstallStart, exactInstallEnd)
+    : '';
+  ok('the exact seed install records the program-owned generation anchor',
+    exactInstallSource.includes(
+      'generationAnchorISO: generationAnchorForProgram(program)',
+    ));
   for (const storageKey of [
     'profile-store',
     'program-store',

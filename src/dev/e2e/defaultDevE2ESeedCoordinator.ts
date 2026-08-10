@@ -1,5 +1,9 @@
 import { useProfileStore } from '../../store/profileStore';
-import { applyProgramOverrideWrite, useProgramStore } from '../../store/programStore';
+import {
+  applyProgramOverrideWrite,
+  generationAnchorForProgram,
+  useProgramStore,
+} from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -178,6 +182,12 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
             currentMicrocycle: null,
             todayWorkout: null,
             blockState: deriveStoredBlockStateFromProgram(program),
+            // The exact seed seam deliberately bypasses setCurrentProgram's
+            // canonicalisation, but it does not own a second definition of
+            // the persisted generation decision. Read the same program-owned
+            // anchor as the real onboarding door or reload cannot derive the
+            // world it just installed.
+            generationAnchorISO: generationAnchorForProgram(program),
           },
           profile: seed.profile,
           preserveExactAcceptedWorkouts: true,
