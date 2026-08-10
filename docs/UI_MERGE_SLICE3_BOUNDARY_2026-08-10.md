@@ -525,3 +525,57 @@ the next size up, and there is a proven pattern for it now.**
 flows that photographed nothing, and a rig whose 23-day silence had no alarm —
 **and two separate checks were found asking questions they were not written to
 answer.** Every one of those was invisible to a green chain.
+
+---
+
+# ADDENDUM 8 — THE KNOT IS NOT ONE ROPE, AND ONE STRAND WAS NEVER TIED
+
+**ADDENDUM 7 SAID THE KNOT WAS NOT BEGUN. THAT WAS TRUE OF THE EXTRACTION AND
+FALSE AS A DESCRIPTION OF THE PROBLEM** — it treated the knot as one thing,
+which is exactly the mistake this pass has now caught three times elsewhere.
+
+**MEASURED, NOT ASSUMED:** `handleDismissCoachNote` is
+
+```ts
+const handleDismissCoachNote = useCallback((noteId: string) => {
+  dismissActiveCoachNote(noteId);
+}, []);
+```
+
+**An empty dependency array.** `dismissActiveCoachNote` is module-level in
+`utils/activeCoachNotes.ts` and reads its own store. **It was never tangled in
+`useHomeScreen` at all** — it was only ever *behind* it.
+
+## SO `dismiss_note` IS LIVE ON THE STATUS SCREEN TODAY
+
+Through the **same module-level door the day screen calls**, not a copy — the
+merge plan's binding rule holds, and a cell asserts the import and the call.
+
+**AND THE NOT-YET STATE BECAME PER-ACTION, WHICH IS A DEFECT FIX IN ITS OWN
+RIGHT.** Dimming a control that works is the dead-affordance law broken in the
+opposite direction: telling the athlete to go elsewhere for something they can do
+right here. The caption now appears only on notes that still hold an inert
+action, and it disappears on its own as each strand is freed.
+
+**`LIVE_ACTION_KINDS` is a LIST, not a boolean**, for the same reason: the flag
+that says "this screen cannot act" was itself one thing carrying two meanings.
+
+## WHAT IS STILL TIED, AND IT IS THE MAJORITY
+
+Every other action opens a **confirmation sheet** whose writers —
+`handleClearCoachNote`, `handleUpdateCoachNoteStatus` — close over
+`handleProgramControlResult`, `clearCoachNoteAction`,
+`registerSourceFactRenderObservation`, `temporarySourceFacts` and two `Alert`
+paths. **Those need the ownership extraction priced in addendum 2 and it is still
+not begun.** The phase-shift control is untouched, so **ruling 6's removal stays
+held** and nothing has left the day screen.
+
+## NOT COVERED
+
+- **THE DISMISS IS NOT PROVEN ON GLASS.** The flow reaches the status screen and
+  asserts the caption; it does not TAP dismiss. The seeded modifier is an
+  equipment restriction, whose actions are all in the tied half —
+  `dismissActiveCoachNote` refuses anything that is not
+  `presentationOnlyDismiss` or a reversible adjustment, so **the live strand has
+  no world to exercise it in yet.** Named rather than left as an assumed pass.
+- **THE MAJORITY OF THE KNOT IS UNTOUCHED.** One strand of several.

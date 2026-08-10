@@ -1335,7 +1335,10 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     /actionsNotYet\b/.test(status),
     'the status screen mounts the list in live mode while its actions cannot run');
   ok('a not-yet control is dimmed, untappable AND captioned',
-    /disabled=\{actionsNotYet\}/.test(section)
+    // `notYet`, not `actionsNotYet` — the flag became PER-ACTION when the first
+    // strand of the knot came loose. Same property, and the cell moved with it
+    // rather than being deleted.
+    /disabled=\{notYet\}/.test(section)
       && /coachNoteActionNotYet/.test(section)
       && /coach\.status\.actions_not_yet/.test(section),
     'one of dim / disable / caption is missing — dimming alone reads as broken, '
@@ -1344,6 +1347,27 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     /Change this on your program screen/.test(
       read('rules/projectionCopy.ts')),
     'a not-yet caption that does not name the live door leaves the athlete stuck');
+  // THE KNOT IS NOT ONE ROPE, AND THE NOT-YET STATE IS PER-ACTION.
+  ok('the one untangled action is LIVE on the status screen',
+    /LIVE_ACTION_KINDS[\s\S]{0,200}'dismiss_note'/.test(status)
+      && /liveActionKinds=\{LIVE_ACTION_KINDS\}/.test(status),
+    'dismiss_note runs a module-level function with zero hook dependencies — '
+      + 'dimming a control that WORKS is the dead-affordance law broken in the '
+      + 'opposite direction');
+  ok('a live action is neither disabled nor dimmed',
+    /const notYet = actionsNotYet[\s\S]{0,120}liveActionKinds/.test(section)
+      && /disabled=\{notYet\}/.test(section),
+    'the not-yet state is still per-SCREEN — a working control would be dimmed');
+  ok('the caption only appears when something on THAT note is inert',
+    /note\.actions\.some\(\(a\) =>[\s\S]{0,120}liveActionKinds/.test(section),
+    'a note whose every action works would still tell the athlete to go '
+      + 'elsewhere');
+  ok('the coach tab dismisses through the SAME module-level door',
+    /dismissActiveCoachNote\(note\.id\)/.test(coachTab)
+      && /import \{ dismissActiveCoachNote \}/.test(coachTab),
+    '"my status MOUNTS the existing doors" — a second dismiss path here would be '
+      + 'the representation the merge plan forbids');
+
   ok('the day screen still mounts the list LIVE',
     !/actionsNotYet/.test(home),
     'the day screen has picked up not-yet mode — its controls are the working '

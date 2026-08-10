@@ -100,12 +100,29 @@ export default function CoachStatusScreen({
                dimmed, untappable and captioned with where the live one is,
                rather than looking ready and lying. */
             actionsNotYet
+            /* THE ONE STRAND THAT WAS NEVER TANGLED. `dismiss_note` runs
+               `dismissActiveCoachNote`, a module-level function with zero hook
+               dependencies — it needed no extraction, so it works here today.
+               Cut the knot where it is already loose rather than waiting for the
+               whole rope. */
+            liveActionKinds={LIVE_ACTION_KINDS}
           />
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+/**
+ * WHAT THIS SCREEN CAN ACTUALLY DO TODAY.
+ *
+ * A LIST, NOT A BOOLEAN, because the knot is not one rope: every other action
+ * routes through a confirmation sheet whose writers live in `useHomeScreen` and
+ * need the ownership extraction priced in
+ * `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 2. As each is freed it
+ * joins this list, and the caption under it disappears on its own.
+ */
+const LIVE_ACTION_KINDS: readonly string[] = ['dismiss_note'];
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },

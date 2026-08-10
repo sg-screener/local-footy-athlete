@@ -43,13 +43,27 @@ export interface ActiveModifiersSectionProps {
    * pretending the screen is finished.
    */
   readonly actionsNotYet?: boolean;
+  /**
+   * ACTION KINDS THAT ARE LIVE EVEN WHEN `actionsNotYet` IS SET.
+   *
+   * THE KNOT IS NOT ONE ROPE. `dismiss_note` runs `dismissActiveCoachNote`, a
+   * module-level function with ZERO hook dependencies — it was never tangled in
+   * `useHomeScreen` at all. Every other action routes through a confirmation
+   * sheet whose writers ARE tangled.
+   *
+   * **So the not-yet state is per-ACTION, not per-screen.** Dimming a control
+   * that works would be the dead-affordance law broken in the opposite
+   * direction: telling the athlete to go elsewhere for something they can do
+   * right here.
+   */
+  readonly liveActionKinds?: readonly string[];
   notes: ActiveCoachNote[];
   equipmentFactIds: ReadonlySet<string>;
   onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
 }
 
 export function ActiveModifiersSection({
-  notes, equipmentFactIds, onAction, actionsNotYet = false,
+  notes, equipmentFactIds, onAction, actionsNotYet = false, liveActionKinds,
 }: ActiveModifiersSectionProps) {
   if (notes.length === 0) return null;
 
@@ -81,6 +95,8 @@ export function ActiveModifiersSection({
               <View style={styles.coachNoteActions}>
                 {note.actions.map((action, index) => {
                   const primary = index === 0;
+                  const notYet = actionsNotYet
+                    && !(liveActionKinds ?? []).includes(action.kind);
                   const sourceFactId = note.temporarySourceFactIds?.[0];
                   const isEquipmentFact = sourceFactId
                     ? equipmentFactIds.has(sourceFactId)
@@ -101,13 +117,13 @@ export function ActiveModifiersSection({
                   return (
                     <Pressable
                       key={action.kind}
-                      disabled={actionsNotYet}
+                      disabled={notYet}
                       onPress={() => onAction(note, action)}
                       style={({ pressed }) => [
                         styles.coachNoteAction,
                         primary && styles.coachNotePrimaryAction,
-                        actionsNotYet && styles.coachNoteActionNotYet,
-                        pressed && !actionsNotYet && { opacity: 0.72 },
+                        notYet && styles.coachNoteActionNotYet,
+                        pressed && !notYet && { opacity: 0.72 },
                       ]}
                       testID={actionTestID}
                       accessibilityRole="button"
@@ -126,7 +142,8 @@ export function ActiveModifiersSection({
                   );
                 })}
               </View>
-              {actionsNotYet ? (
+              {actionsNotYet && note.actions.some((a) =>
+                !(liveActionKinds ?? []).includes(a.kind)) ? (
                 // THE CAPTION IS THE POINT. Dimming alone reads as "disabled
                 // right now"; the sentence says WHERE the working control is,
                 // so the athlete is never stuck looking at it.

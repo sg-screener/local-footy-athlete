@@ -22,6 +22,7 @@ import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChange
 import { COACH_CHANGE_COPY, COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
+import { dismissActiveCoachNote } from '../../utils/activeCoachNotes';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
@@ -481,7 +482,14 @@ export default function CoachTabScreen() {
           <CoachStatusScreen
             modifiers={modifiers}
             equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}
-            onAction={() => { /* SLICE 3b — see below. */ }}
+            onAction={(note, action) => {
+              // THE LIVE STRAND, THROUGH THE SAME MODULE-LEVEL DOOR THE DAY
+              // SCREEN CALLS — `dismissActiveCoachNote`, not a copy of it. The
+              // merge plan's binding rule holds: my status MOUNTS the existing
+              // door. Every other kind is inert here and says so on screen; see
+              // LIVE_ACTION_KINDS in CoachStatusScreen.
+              if (action.kind === 'dismiss_note') dismissActiveCoachNote(note.id);
+            }}
             onClose={() => setStatusVisible(false)}
           />
         </View>
