@@ -43,38 +43,60 @@ export interface ModifiersStripProps {
 
 export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps) {
   if (count <= 0) return null;
+  const weekSurface = surface === 'week';
+  const countLabel = signedCopy(
+    count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
+    { count },
+  );
+  const weekLabel = signedCopy(
+    count === 1 ? 'modifiers.strip.week_one' : 'modifiers.strip.week',
+    { count },
+  );
   return (
     <Pressable
       onPress={onPress}
       testID={`modifiers-strip-${surface}`}
       accessibilityRole="button"
-      accessibilityLabel={`${signedCopy(
-        count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
-        { count },
-      )}. ${signedCopy('modifiers.strip.subline')}`}
-      style={({ pressed }) => [styles.strip, pressed && { opacity: 0.7 }]}
+      accessibilityLabel={weekSurface
+        ? weekLabel
+        : `${countLabel}. ${signedCopy('modifiers.strip.subline')}`}
+      style={({ pressed }) => [weekSurface ? styles.weekStrip : styles.strip,
+        pressed && { opacity: 0.7 }]}
     >
-      <View style={styles.icon}>
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-          stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <Circle cx="12" cy="12" r="9" />
-          <Path d="M12 16v-5" />
-          <Path d="M12 8h.01" />
-        </Svg>
-      </View>
-      <View style={styles.text}>
-        <Text style={styles.count} testID={`modifiers-strip-${surface}-count`}>
-          {signedCopy(
-            count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
-            { count },
-          )}
-        </Text>
-        <Text style={styles.subline}>{signedCopy('modifiers.strip.subline')}</Text>
-      </View>
-      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-        stroke="#8A8A8A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <Path d="M9 18l6-6-6-6" />
-      </Svg>
+      {weekSurface ? (
+        <>
+          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none"
+            stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Circle cx="12" cy="12" r="9" />
+            <Path d="M12 16v-5" />
+            <Path d="M12 8h.01" />
+          </Svg>
+          <Text style={styles.weekText} testID={`modifiers-strip-${surface}-count`}>
+            {weekLabel}
+          </Text>
+        </>
+      ) : (
+        <>
+          <View style={styles.icon}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+              stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Circle cx="12" cy="12" r="9" />
+              <Path d="M12 16v-5" />
+              <Path d="M12 8h.01" />
+            </Svg>
+          </View>
+          <View style={styles.text}>
+            <Text style={styles.count} testID={`modifiers-strip-${surface}-count`}>
+              {countLabel}
+            </Text>
+            <Text style={styles.subline}>{signedCopy('modifiers.strip.subline')}</Text>
+          </View>
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+            stroke="#8A8A8A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M9 18l6-6-6-6" />
+          </Svg>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -83,6 +105,19 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
 // value here is already on these screens: the info blue is the "Time" chip's,
 // the greys are the day card's, and the sizes are the timeline's.
 const styles = StyleSheet.create({
+  weekStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    backgroundColor: 'transparent',
+  },
+  weekText: {
+    color: '#C8FF00', fontSize: 10, fontWeight: '800', lineHeight: 13,
+    letterSpacing: 0.25,
+  },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',

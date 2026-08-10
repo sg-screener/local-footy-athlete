@@ -15,7 +15,7 @@ import { Text } from '../common/Text';
  */
 
 export type V2BadgeTone = 'accent' | 'outline' | 'muted' | 'success' | 'warning' | 'danger';
-export type V2BadgeSize = 'xs' | 'sm';
+export type V2BadgeSize = 'xxs' | 'xs' | 'sm';
 
 export interface V2BadgeProps {
   label: string;
@@ -54,7 +54,7 @@ export function Badge({
         style,
       ]}
     >
-      <Text style={[styles.text, { color: t.text, fontSize: s.font }]}>
+      <Text style={[styles.text, { color: t.text, fontSize: s.font, lineHeight: s.line }]}>
         {label.toUpperCase()}
       </Text>
     </View>
@@ -81,11 +81,13 @@ function toneStyles(tone: V2BadgeTone) {
 
 function sizeStyles(size: V2BadgeSize) {
   switch (size) {
+    case 'xxs':
+      return { box: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 3 } as ViewStyle, font: 8, line: 10 };
     case 'sm':
-      return { box: { paddingHorizontal: 10, paddingVertical: 4 } as ViewStyle, font: 11 };
+      return { box: { paddingHorizontal: 10, paddingVertical: 4 } as ViewStyle, font: 11, line: 14 };
     case 'xs':
     default:
-      return { box: { paddingHorizontal: 7, paddingVertical: 3 } as ViewStyle, font: 10 };
+      return { box: { paddingHorizontal: 7, paddingVertical: 3 } as ViewStyle, font: 10, line: 12 };
   }
 }
 

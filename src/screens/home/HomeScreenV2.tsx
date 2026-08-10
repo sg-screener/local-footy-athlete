@@ -1886,7 +1886,7 @@ function WeekDayCardHeader({
           {dayOfMonthLabel(day.date)}
         </Text>
         {day.isToday ? (
-          <Badge label="Today" tone="accent" testID="day-week-today-pill" />
+          <Badge label="Today" tone="accent" size="xxs" testID="day-week-today-pill" />
         ) : null}
       </View>
 
@@ -1895,20 +1895,20 @@ function WeekDayCardHeader({
       <View style={styles.weekCardMain}>
         <View style={styles.weekCardCategoryRow}>
           {isMoveSource ? (
-            <Badge label="Moving" tone="outline" />
+            <Badge label="Moving" tone="outline" size="xxs" />
           ) : isGame ? (
-            <GameBadge />
+            null
           ) : hasWorkout && day.workout.sessionTier ? (
-            <SessionTierBadge tier={day.workout.sessionTier} />
+            <SessionTierBadge compact tier={day.workout.sessionTier} />
           ) : null}
-          {isCompleted ? <Badge label="Done" tone="success" /> : null}
+          {isCompleted ? <Badge label="Done" tone="success" size="xxs" /> : null}
         </View>
 
         <View style={styles.weekCardTitleLine}>
           <RowIcon kind={titleIcon} size={15} color={accentColor} />
           <Text
-            style={[hasWorkout ? styles.workoutTitle : styles.restLabel,
-              styles.selectedWorkoutTitle,
+            style={[styles.weekCardTitle,
+              !hasWorkout && styles.weekCardRestTitle,
               isMoveSource && { opacity: 0.4 }]}
             numberOfLines={2}
             ellipsizeMode="tail"
@@ -1922,7 +1922,7 @@ function WeekDayCardHeader({
             {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
           </Text>
         ) : rowCount > 0 ? (
-          <Text style={styles.timelinePartMeta} testID={`day-row-${dayToken}-count`}>
+          <Text style={styles.weekCardMeta} testID={`day-row-${dayToken}-count`}>
             {signedCopy(
               rowCount === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
               { count: rowCount },
@@ -3891,7 +3891,7 @@ const styles = StyleSheet.create({
   // pieces; today differs only through Card's existing selected treatment and
   // the existing Today badge. No colour, typeface or icon system is introduced.
   weekDayCard: { minHeight: 86 },
-  weekDayCardInner: { paddingHorizontal: spacing.md, paddingVertical: 10 },
+  weekDayCardInner: { paddingHorizontal: 12, paddingVertical: 10 },
   weekCardHeader: {
     minHeight: 64,
     flexDirection: 'row',
@@ -3899,14 +3899,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   weekCardDateColumn: {
-    width: 64,
+    width: 48,
     minHeight: 58,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
-  weekCardWeekday: { minWidth: 0, textAlign: 'center' },
-  weekCardDateNumeral: { textAlign: 'center', lineHeight: 21 },
+  weekCardWeekday: { minWidth: 0, textAlign: 'center', fontSize: 9, letterSpacing: 0.7 },
+  weekCardDateNumeral: { textAlign: 'center', fontSize: 27, fontWeight: '700', lineHeight: 29 },
   weekCardDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
@@ -3914,6 +3914,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
   weekCardMain: { flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 4 },
+  weekCardTitle: {
+    color: '#F2F2F2', fontSize: 15, fontWeight: '700', lineHeight: 18,
+    textAlign: 'left', flexShrink: 1,
+  },
+  weekCardRestTitle: { color: '#777B77', fontSize: 13, fontWeight: '600' },
+  weekCardMeta: { color: '#8A8A8A', fontSize: 10, lineHeight: 13 },
   weekCardCategoryRow: {
     minHeight: 17,
     flexDirection: 'row',

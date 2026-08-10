@@ -288,6 +288,22 @@ export function registerProjectionCopy(): void {
         + 'athlete — the same limit the Monday notification was held to.',
       text: 'Currently impacting your program',
     },
+    {
+      id: 'modifiers.strip.week',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam compared the built week '
+        + 'against the signed prototype and called out that its active-modifier '
+        + 'line was absent. This is the exact one-line week wording visible in '
+        + 'the reference he supplied; its number is the list length.',
+      text: '{count} active modifiers impacting program',
+    },
+    {
+      id: 'modifiers.strip.week_one',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Singular half of the same week '
+        + 'line; the visual tape reaches one modifier by acting.',
+      text: '{count} active modifier impacting program',
+    },
 
     // ── The coach page's status screen, ruling 9. PROPOSED, batch 34. ──
     {

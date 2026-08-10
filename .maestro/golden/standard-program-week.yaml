@@ -34,6 +34,31 @@ tags:
 - assertVisible:
     id: "day-row-mon"
 
+# Reach the active-modifier coordinate by ACTING, never by seeding a hand-built
+# store snapshot. A clean week has zero and correctly renders no line; that is
+# why the first visual pass hid this part of the signed design entirely.
+- scrollUntilVisible:
+    element:
+      id: "home-life-fact-chips"
+    direction: DOWN
+- tapOn:
+    id: "equipment-preset-open"
+- extendedWaitUntil:
+    visible:
+      id: "equipment-preset-barbell"
+    timeout: 10000
+- tapOn:
+    id: "equipment-preset-barbell"
+- tapOn: "Apply for this week"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-strip-day"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "program-view-toggle"
+    direction: UP
+
 # ── THE WEEK SHAPE: all seven ──
 - runFlow:
     file: ../common/show-week-shape.yaml
@@ -47,6 +72,9 @@ tags:
     id: "day-row-thu"
 - assertVisible:
     id: "day-row-fri"
+- assertVisible:
+    id: "modifiers-strip-week"
+- assertVisible: "1 active modifier impacting program"
 
 # ── RULING 7: ALL SEVEN USE HER CARD, INCLUDING TODAY ───────────────────────
 # Sam answered the one remaining fork on 2026-08-11: her card design for all
@@ -62,6 +90,13 @@ tags:
     id: "view-workout-button"
 - assertNotVisible:
     id: "make-change-link"
+# The acted modifier can leave today selected while it rebuilds. Collapse it so
+# the screenshot compares seven card heads, not one deliberately opened card.
+- tapOn:
+    id: "day-row-mon-card-header"
+- assertNotVisible:
+    id: "day-timeline"
+- takeScreenshot: artifacts/ui-walk/week-prototype-parity
 
 # A different card opens onto the SAME details while its card head stays put.
 - assertVisible:

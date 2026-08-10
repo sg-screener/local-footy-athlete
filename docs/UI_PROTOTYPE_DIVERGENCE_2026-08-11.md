@@ -109,3 +109,73 @@ the already-held season-phase removal; the prior/next-week "Completed" treatment
 the separately deferred team-training badge. The last two are not claimed fixed
 by this current-week screen tape, so this is gates-green simulator evidence, not
 Sam device acceptance.
+
+---
+
+## SAM EYE PASS 2 — THE STRUCTURE WAS RIGHT AND THE PROPORTIONS WERE NOT
+
+**Sam, with the reference and the build side by side:** *"still doesn't quite
+look the same. The badges are far too big on mine, the numbers look too small
+compared to here - there's no active modifiers at the top".* All three were
+correct. The first checkpoint took the card's parts but did not yet take their
+visual hierarchy, and its zero-modifier tape could not show the modifier line at
+all.
+
+**MEASURED CAUSES:**
+
+- The date reused the day-card title style: 18pt. The signed prototype's week
+  date is 27pt. The number was structurally present and visually wrong.
+- The category and Today badges set small font sizes but inherited the shared
+  Text component's 24pt body line-height. Padding was not the main inflation;
+  the hidden line box was. The week card also invented a separate GAME badge
+  which the prototype does not carry.
+- `ModifiersStrip` correctly renders nothing when the active list is empty, but
+  the visual tape created no modifier before taking its screenshot. Worse, if it
+  had appeared, the week surface would have used the larger two-line day/coach
+  card rather than the prototype's compact lime line. The zero world hid both
+  the feature and the wrong treatment.
+
+**THE TWO OPTIONS COMPARED:** (1) override padding and type locally in the week
+card while leaving the shared badge's line box wrong, or (2) make each badge size
+own its font AND line-height, then select the compact size at the week-card
+boundary. Option 2 landed. It fixes the size abstraction instead of compensating
+for it with card margins. The one shared modifier component now has a week
+presentation selected by its existing `surface` input; no second count or second
+list was introduced.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 32 named cells run, 32 passed. The new cells pin the
+  27pt date, compact badges including their line-height, absence of the invented
+  GAME badge, the compact week modifier treatment, and a tape that reaches the
+  modifier by acting.
+- `test:signed-copy-extraction`, `test:copy-rulings-binding`,
+  `test:coach-tab-slice3`, `test:maestro-element-contract` and `test:compile`:
+  green. The exact one-line week wording is registered rather than assembled on
+  the surface; the day and coach versions of the shared component remain held.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator.
+  It starts in a clean zero-modifier world, creates a real equipment modifier
+  through the athlete's existing door, reaches the week, proves the line and its
+  singular wording, compares the collapsed cards, opens Wednesday, and reaches
+  Saturday and Sunday.
+- `artifacts/ui-walk/week-prototype-parity.png`: looked at after the final run.
+  The badges are compact, the dates carry the left column, and the active
+  modifier line is visible above the same seven-card list.
+
+**FIRST-RUN FINDINGS, NOT FIXED QUIETLY:** both new source cells first failed on
+the old build. The first device attempt died before app evidence when XCUITest
+lost its UI element; the retry completed. The first resulting screenshot showed
+the badge font had shrunk while its inherited 24pt line box had not; the badge
+primitive was corrected and the complete tape reran. The next screenshot showed
+the acted world had left Monday open; the comparison tap was re-anchored on the
+card head, its collapsed state was asserted, and the full tape reran again.
+
+**NORTH STAR:** toward it. No stored state and no second modifier derivation were
+added. The visual tape reaches a modifier by a real athlete action; the strip's
+number is still the length of the one list it opens.
+
+**NOT COVERED:** Sam's physical iPhone; a rendered plural line with two active
+modifiers (the registered plural copy is source-held, the device tape reaches
+one); prior/next-week Completed treatment; the separately deferred team-training
+badge; the already-held season-phase removal. This is simulator acceptance, not
+phone acceptance.

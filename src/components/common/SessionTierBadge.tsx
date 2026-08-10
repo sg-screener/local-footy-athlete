@@ -7,6 +7,8 @@ import type { SessionTier } from '../../types/domain';
 interface SessionTierBadgeProps {
   tier: SessionTier;
   style?: ViewStyle;
+  /** The signed week-card treatment is deliberately smaller than day/card badges. */
+  compact?: boolean;
 }
 
 const TIER_CONFIG: Record<SessionTier, { label: string; color: string; bg: string }> = {
@@ -27,13 +29,15 @@ const TIER_CONFIG: Record<SessionTier, { label: string; color: string; bg: strin
   },
 };
 
-export const SessionTierBadge: React.FC<SessionTierBadgeProps> = ({ tier, style }) => {
+export const SessionTierBadge: React.FC<SessionTierBadgeProps> = ({ tier, style, compact = false }) => {
   const config = TIER_CONFIG[tier];
   if (!config) return null;
 
   return (
-    <View style={[styles.badge, { backgroundColor: config.bg }, style]}>
-      <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, color: config.color }}>{config.label}</Text>
+    <View style={[styles.badge, compact && styles.compactBadge, { backgroundColor: config.bg }, style]}>
+      <Text style={[styles.text, compact && styles.compactText, { color: config.color }]}>
+        {config.label}
+      </Text>
     </View>
   );
 };
@@ -44,5 +48,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
+  },
+  compactBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  text: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  compactText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
 });

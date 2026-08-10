@@ -689,6 +689,55 @@ run('all seven week days use her one card head, including today', () => {
     + 'day can still fall into a different head, recreating the divergence Sam caught.');
 });
 
+run('the week card keeps her proportions — large date, compact badges', () => {
+  const home = homeScreenSource();
+  const componentAt = home.indexOf('function WeekDayCardHeader(');
+  const dayRowAt = home.indexOf('function DayRow(');
+  assert(componentAt > 0 && dayRowAt > componentAt,
+    'the WeekDayCardHeader region could not be found');
+  const component = home.slice(componentAt, dayRowAt);
+  assert(/weekCardDateNumeral:\s*\{[^}]*fontSize:\s*27\b/.test(home),
+    'the week date numeral is not the signed prototype\'s 27pt anchor');
+  assert(/<SessionTierBadge\s+compact\s+tier=\{day\.workout\.sessionTier\}/.test(component),
+    'the week category still uses the full-size session badge');
+  assert(/label="Today"[\s\S]{0,100}size="xxs"/.test(component),
+    'the Today marker still uses the full-size badge treatment');
+  assert(!/<GameBadge/.test(component),
+    'the week Game Day card added a GAME badge that is not in the signed card');
+  const tierBadge = fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'common', 'SessionTierBadge.tsx'), 'utf8');
+  const uiBadge = fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'ui', 'Badge.tsx'), 'utf8');
+  assert(/compactText:\s*\{[^}]*fontSize:\s*8[^}]*lineHeight:\s*10/.test(tierBadge),
+    'the compact category font shrank but kept the normal 24pt text line-height');
+  assert(/fontSize: s\.font, lineHeight: s\.line/.test(uiBadge)
+    && /case 'xxs':[\s\S]{0,180}font:\s*8, line:\s*10/.test(uiBadge),
+  'the tiny Today badge shrank its font but kept the normal 24pt text line-height');
+});
+
+run('an acted active modifier appears above the week as her compact lime line', () => {
+  const strip = fs.readFileSync(path.join(__dirname, '..', 'components', 'ModifiersStrip.tsx'), 'utf8');
+  assert(/const weekSurface = surface === 'week'/.test(strip),
+    'the shared modifier component has no explicit week treatment');
+  assert(/modifiers\.strip\.week_one/.test(strip) && /modifiers\.strip\.week/.test(strip),
+    'the week modifier line does not read its one signed sentence');
+  assert(/weekStrip:\s*\{[\s\S]{0,260}backgroundColor:\s*'transparent'/.test(strip),
+    'the week modifier line has drifted back into the large dark card treatment');
+  assert(/weekText:\s*\{[^}]*color:\s*'#C8FF00'[^}]*fontSize:\s*10\b/.test(strip),
+    'the week modifier line is not the compact lime prototype treatment');
+
+  const flow = fs.readFileSync(
+    path.join(__dirname, '..', '..', '.maestro', 'golden', 'standard-program-week.yaml'),
+    'utf8',
+  );
+  const createAt = flow.indexOf('id: "equipment-preset-open"');
+  const weekAt = flow.indexOf('file: ../common/show-week-shape.yaml');
+  const stripAt = flow.indexOf('id: "modifiers-strip-week"');
+  assert(createAt > 0 && weekAt > createAt && stripAt > weekAt,
+    'the visual tape does not reach an active modifier by acting before checking '
+    + 'the week strip — a zero-modifier screenshot can hide the whole feature');
+});
+
 run('the week cards expand details only — session and change controls stay on the day screen', () => {
   const home = homeScreenSource();
   const dayRowAt = home.indexOf('function DayRow(');
