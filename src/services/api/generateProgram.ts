@@ -54,7 +54,6 @@ import {
   resolveConditioningSubstitutionPolicy,
   resolveWeeklyConditioningFeasibility,
 } from '../../rules/conditioningFeasibility';
-import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
@@ -777,30 +776,21 @@ export function buildGeneratedMicrocycles(args: {
         governedFromISO: boundary?.governedFromISO ?? null,
       }),
     }).workouts;
+    // THE V1 GENERATION-TIME FALLBACK IS RETIRED (Sam, 2026-08-10: "well
+    // fucking delete the old shit here?"). Contract v2 is the accepted-week
+    // authority. **V1 cannot represent two valid credits stacked on one day**
+    // (team training PLUS an app core block), so it UNDERCOUNTS exactly the
+    // combined days the app now builds — and it was still the acceptance gate
+    // whenever v2 was absent, i.e. on pre-rebuild saved programs. A week with
+    // no v2 contract now regenerates rather than being accepted by a weaker
+    // set of rules.
+    //
+    // The value is still READ here because the microcycle persists it below;
+    // retiring the STORED field is a separate unit with a migration, and
+    // `evaluateEffectiveWeekExposureContract` still runs at three sites in
+    // postGenerationConstraintValidation — see
+    // docs/V1_EXPOSURE_CONTRACT_CUT_2026-08-10.md.
     const exposureContract = weekPlan.weeklyExposureContract;
-    // Contract v2 is the accepted-week authority. The legacy ledger cannot
-    // represent two valid credits stacked on one day (for example TT plus an
-    // app core block), so it remains a compatibility gate only when v2 is
-    // absent.
-    if (exposureContract && !exposureContractV2) {
-      const finalValidation = evaluateEffectiveWeekExposureContract(
-        exposureContract,
-        workouts,
-        blockState.weekStart,
-      );
-      if (!finalValidation.accepted) {
-        const detail = finalValidation.unresolvedShortfalls
-          .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
-          .join(', ');
-        logger.error('[ProgramGen] Final effective-week exposure rejection', {
-          weekNumber: blockState.weekNumber,
-          contract: exposureContract,
-          ledger: finalValidation.ledger,
-          unresolvedShortfalls: finalValidation.unresolvedShortfalls,
-        });
-        throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
-      }
-    }
     if (isDevBuild()) {
       const sourceByDay = new Map(sourceCoachWorkouts.map((workout) => [workout.dayOfWeek, workout]));
       const planByDay = new Map(
