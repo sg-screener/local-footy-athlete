@@ -2,12 +2,16 @@
 
 ## Unprocessed (newest first)
 
-1. **THE REMAINING STRANDS OF THE KNOT.** The confirmation-sheet
-   actions (`handleClearCoachNote`, `handleUpdateCoachNoteStatus` and
-   their five hook-level dependencies) and the phase-shift machine.
-   **`dismiss_note` is already live.** Nothing has left the day screen.
-   Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
-   and 8; the pattern to copy is `useActiveModifiers`.
+1. **BUILD `useRebuildNotice()` — ONE OWNER, EVERYONE READS.** The
+   question is shaped and both routes are priced in
+   `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`; the recommendation is
+   route (a) with its reason. **The free win is CONFIRMED by
+   measurement**: `handleProgramControlResult` and `executePhaseShift`
+   drive the SAME four pieces of rebuild state, so one move closes
+   ruling 4's remaining strands AND ruling 6.
+   **FIRST THING TO CHECK, and the design says so:** whether
+   `runRebuild` closes over day-screen state. If it does, the price
+   changes.
 
 ## Previously (now processed)
 

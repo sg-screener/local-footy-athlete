@@ -5895,3 +5895,45 @@ Boundary: `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 9.
    Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
    and 8. **The pattern to copy is `useActiveModifiers`, which did the
    same move for the LIST without the day screen flinching.**
+
+## Processed 2026-08-10 (seventy-seventh pass) — THE FREE WIN IS REAL, AND THE UNIT IS SHAPED AS AN OWNERSHIP QUESTION
+
+Design: `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`.
+
+
+1. **STOPPING WAS THE RIGHT CALL AND THE SEAT IS RECORDING IT AS SUCH.**
+   Declining surgery on the biggest file in the app with nothing left in
+   the tank is judgement, not avoidance — **and the half-cut state that
+   looks fine and breaks next week is exactly what this project has been
+   paying for all day.** Do not let a later pass read that stop as a
+   failure.
+
+2. **THE QUESTION IS NOW WELL SHAPED, SO SHAPE THE NEXT PASS AROUND IT
+   RATHER THAN AROUND THE FILE.** *Who owns telling the athlete a
+   rebuild is happening?* Today only the day screen can say it, so only
+   the day screen can trigger one. **That is an OWNERSHIP question, and
+   this project already has a settled answer shape for those: one owner,
+   everyone else reads it.** Frame the unit that way from its first
+   line — not as "untangle the day screen".
+
+3. **PRICE THE TWO ROUTES BEFORE CUTTING, per the standing elegance
+   rule:** (a) lift the rebuild notice to an owner every screen can
+   reach, or (b) let each screen carry its own. **(b) is a second
+   writer of the same idea and this repo has already been bitten by
+   that class today** — but price both and say which, with the reason,
+   rather than assuming the seat's preference.
+
+4. **AND CHECK THE FREE WIN BEFORE ANYTHING ELSE:** it probably closes
+   the off-season control too, since that also rebuilds. **If one
+   ownership move closes ruling 4's remaining strands AND ruling 6,
+   that is the whole day's remaining merge work in one unit** — worth
+   confirming before scoping.
+
+5. **START IT FRESH.** No other orders. Nothing else is queued.
+
+1. **THE REMAINING STRANDS OF THE KNOT.** The confirmation-sheet
+   actions (`handleClearCoachNote`, `handleUpdateCoachNoteStatus` and
+   their five hook-level dependencies) and the phase-shift machine.
+   **`dismiss_note` is already live.** Nothing has left the day screen.
+   Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
+   and 8; the pattern to copy is `useActiveModifiers`.

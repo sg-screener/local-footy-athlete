@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `e9e9f4d9` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `716a551c` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -78,6 +78,13 @@ and this file gets one line pointing at it.**
   rebuild.** No flow launches with a bad input to prove the marker appears; that
   flow is the next cheap act and is deliberately not written blind.
   `docs/LAUNCH_DIAGNOSTIC_REFUSAL_BOUNDARY_2026-08-10.md`.
+- **THE MERGE'S REMAINING WORK IS ONE UNIT, AND IT IS SHAPED**:
+  `useRebuildNotice()` — one owner of "a rebuild is happening", everyone else
+  reads it. **Measured, not hoped:** the modifier actions and the phase shift
+  drive the SAME four pieces of rebuild state, so one move closes ruling 4's
+  remaining strands AND ruling 6. Both routes priced, recommendation given with
+  its reason: `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`. **First thing to
+  check: whether `runRebuild` closes over day-screen state.**
 - **THE UI MERGE — SLICES 2, 3 AND 5 LANDED** (`25565430`, `2752c90a`,
   `226531b2`). **STILL OPEN: slice 3b** — the status screen's buttons are a NO-OP
   and the day screen keeps every control, because wiring them needs
